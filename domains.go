@@ -4,16 +4,29 @@ import "fmt"
 
 const domainsBasePath = "v2/domains"
 
-// DomainsService handles communication wit the domain related methods of the
+// DomainsService is an interface for managing DNS with the Digital Ocean API.
+// See: https://developers.digitalocean.com/#domains and
+// https://developers.digitalocean.com/#domain-records
+type DomainsService interface {
+	Records(string, *DomainRecordsOptions) ([]DomainRecord, *Response, error)
+	Record(string, int) (*DomainRecord, *Response, error)
+	DeleteRecord(string, int) (*Response, error)
+	EditRecord(string, int, *DomainRecordEditRequest) (*DomainRecord, *Response, error)
+	CreateRecord(string, *DomainRecordEditRequest) (*DomainRecord, *Response, error)
+}
+
+// DomainsServiceOp handles communication with the domain related methods of the
 // DigitalOcean API.
-type DomainsService struct {
+type DomainsServiceOp struct {
 	client *Client
 }
 
+// DomainRecordRoot is the root of an individual Domain Record response
 type DomainRecordRoot struct {
 	DomainRecord *DomainRecord `json:"domain_record"`
 }
 
+// DomainRecordsRoot is the root of a group of Domain Record responses
 type DomainRecordsRoot struct {
 	DomainRecords []DomainRecord `json:"domain_records"`
 }
@@ -29,6 +42,7 @@ type DomainRecord struct {
 	Weight   int    `json:"weight,omitempty"`
 }
 
+// DomainRecordsOptions are options for DomainRecords
 type DomainRecordsOptions struct {
 	ListOptions
 }
@@ -54,7 +68,7 @@ func (d DomainRecordEditRequest) String() string {
 }
 
 // Records returns a slice of DomainRecords for a domain
-func (s *DomainsService) Records(domain string, opt *DomainRecordsOptions) ([]DomainRecord, *Response, error) {
+func (s *DomainsServiceOp) Records(domain string, opt *DomainRecordsOptions) ([]DomainRecord, *Response, error) {
 	path := fmt.Sprintf("%s/%s/records", domainsBasePath, domain)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -76,7 +90,7 @@ func (s *DomainsService) Records(domain string, opt *DomainRecordsOptions) ([]Do
 }
 
 // Record returns the record id from a domain
-func (s *DomainsService) Record(domain string, id int) (*DomainRecord, *Response, error) {
+func (s *DomainsServiceOp) Record(domain string, id int) (*DomainRecord, *Response, error) {
 	path := fmt.Sprintf("%s/%s/records/%d", domainsBasePath, domain, id)
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -94,7 +108,7 @@ func (s *DomainsService) Record(domain string, id int) (*DomainRecord, *Response
 }
 
 // DeleteRecord deletes a record from a domain identified by id
-func (s *DomainsService) DeleteRecord(domain string, id int) (*Response, error) {
+func (s *DomainsServiceOp) DeleteRecord(domain string, id int) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/records/%d", domainsBasePath, domain, id)
 
 	req, err := s.client.NewRequest("DELETE", path, nil)
@@ -108,7 +122,7 @@ func (s *DomainsService) DeleteRecord(domain string, id int) (*Response, error) 
 }
 
 // EditRecord edits a record using a DomainRecordEditRequest
-func (s *DomainsService) EditRecord(
+func (s *DomainsServiceOp) EditRecord(
 	domain string,
 	id int,
 	editRequest *DomainRecordEditRequest) (*DomainRecord, *Response, error) {
@@ -129,7 +143,7 @@ func (s *DomainsService) EditRecord(
 }
 
 // CreateRecord creates a record using a DomainRecordEditRequest
-func (s *DomainsService) CreateRecord(
+func (s *DomainsServiceOp) CreateRecord(
 	domain string,
 	createRequest *DomainRecordEditRequest) (*DomainRecord, *Response, error) {
 	path := fmt.Sprintf("%s/%s/records", domainsBasePath, domain)

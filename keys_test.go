@@ -8,6 +8,12 @@ import (
 	"testing"
 )
 
+func TestKeys_KeysServiceOpImplementsKeysService(t *testing.T) {
+	if !Implements((*KeysService)(nil), new(KeysServiceOp)) {
+		t.Error("KeysServiceOp does not implement KeysService")
+	}
+}
+
 func TestKeys_List(t *testing.T) {
 	setup()
 	defer teardown()

@@ -1,8 +1,15 @@
 package godo
 
-// ImagesService handles communication with the image related methods of the
+// ImagesService is an interface for interfacing with the images
+// endpoints of the Digital Ocean API
+// See: https://developers.digitalocean.com/#images
+type ImagesService interface {
+	List() ([]Image, *Response, error)
+}
+
+// ImagesServiceOp handles communication with the image related methods of the
 // DigitalOcean API.
-type ImagesService struct {
+type ImagesServiceOp struct {
 	client *Client
 }
 
@@ -29,7 +36,7 @@ func (i Image) String() string {
 }
 
 // List all sizes
-func (s *ImagesService) List() ([]Image, *Response, error) {
+func (s *ImagesServiceOp) List() ([]Image, *Response, error) {
 	path := "v2/images"
 
 	req, err := s.client.NewRequest("GET", path, nil)

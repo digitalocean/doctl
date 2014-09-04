@@ -8,6 +8,12 @@ import (
 	"testing"
 )
 
+func TestAction_DomainsServiceOpImplementsDomainsService(t *testing.T) {
+	if !Implements((*DomainsService)(nil), new(DomainsServiceOp)) {
+		t.Error("DomainsServiceOp does not implement DomainsService")
+	}
+}
+
 func TestDomains_AllRecordsForDomainName(t *testing.T) {
 	setup()
 	defer teardown()

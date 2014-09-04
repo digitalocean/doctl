@@ -1,8 +1,15 @@
 package godo
 
-// RegionsService handles communication with the region related methods of the
+// RegionsService is an interface for interfacing with the regions
+// endpoints of the Digital Ocean API
+// See: https://developers.digitalocean.com/#regions
+type RegionsService interface {
+	List() ([]Region, *Response, error)
+}
+
+// RegionsServiceOp handles communication with the region related methods of the
 // DigitalOcean API.
-type RegionsService struct {
+type RegionsServiceOp struct {
 	client *Client
 }
 
@@ -27,7 +34,7 @@ func (r Region) String() string {
 }
 
 // List all regions
-func (s *RegionsService) List() ([]Region, *Response, error) {
+func (s *RegionsServiceOp) List() ([]Region, *Response, error) {
 	path := "v2/regions"
 
 	req, err := s.client.NewRequest("GET", path, nil)

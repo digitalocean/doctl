@@ -43,15 +43,15 @@ type Client struct {
 	Rate Rate
 
 	// Services used for communicating with the API
-	Actions        *ActionsService
-	Domains        *DomainsService
-	Droplet        *DropletsService
-	DropletActions *DropletActionsService
-	Images         *ImagesService
-	ImageActions   *ImageActionsService
-	Keys           *KeysService
-	Regions        *RegionsService
-	Sizes          *SizesService
+	Actions        ActionsService
+	Domains        DomainsService
+	Droplet        DropletsService
+	DropletActions DropletActionsService
+	Images         ImagesService
+	ImageActions   ImageActionsService
+	Keys           KeysService
+	Regions        RegionsService
+	Sizes          SizesService
 }
 
 // ListOptions specifies the optional parameters to various List methods that
@@ -135,15 +135,15 @@ func NewClient(httpClient *http.Client) *Client {
 	baseURL, _ := url.Parse(defaultBaseURL)
 
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
-	c.Actions = &ActionsService{client: c}
-	c.Domains = &DomainsService{client: c}
-	c.Droplet = &DropletsService{client: c}
-	c.DropletActions = &DropletActionsService{client: c}
-	c.Images = &ImagesService{client: c}
-	c.ImageActions = &ImageActionsService{client: c}
-	c.Keys = &KeysService{client: c}
-	c.Regions = &RegionsService{client: c}
-	c.Sizes = &SizesService{client: c}
+	c.Actions = &ActionsServiceOp{client: c}
+	c.Domains = &DomainsServiceOp{client: c}
+	c.Droplet = &DropletsServiceOp{client: c}
+	c.DropletActions = &DropletActionsServiceOp{client: c}
+	c.Images = &ImagesServiceOp{client: c}
+	c.ImageActions = &ImageActionsServiceOp{client: c}
+	c.Keys = &KeysServiceOp{client: c}
+	c.Regions = &RegionsServiceOp{client: c}
+	c.Sizes = &SizesServiceOp{client: c}
 
 	return c
 }

@@ -367,3 +367,12 @@ func TestResponse_populatePageValues_invalid(t *testing.T) {
 		},
 	}
 }
+
+func Implements(interfaceObject interface{}, object interface{}, msgAndArgs ...interface{}) bool {
+	interfaceType := reflect.TypeOf(interfaceObject).Elem()
+	if !reflect.TypeOf(object).Implements(interfaceType) {
+		return false
+	}
+
+	return true
+}
