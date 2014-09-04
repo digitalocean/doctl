@@ -12,9 +12,16 @@ const (
 	ActionCompleted = "completed"
 )
 
-// ImageActionsService handles communition with the image action related methods of the
+// ActionsService handles communction with action related methods of the
+// DigitalOcean API: https://developers.digitalocean.com/#actions
+type ActionsService interface {
+	List() ([]Action, *Response, error)
+	Get(int) (*Action, *Response, error)
+}
+
+// ActionsServiceOp handles communition with the image action related methods of the
 // DigitalOcean API.
-type ActionsService struct {
+type ActionsServiceOp struct {
 	client *Client
 }
 
@@ -38,7 +45,7 @@ type Action struct {
 }
 
 // List all actions
-func (s *ActionsService) List() ([]Action, *Response, error) {
+func (s *ActionsServiceOp) List() ([]Action, *Response, error) {
 	path := actionsBasePath
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -55,7 +62,8 @@ func (s *ActionsService) List() ([]Action, *Response, error) {
 	return root.Actions, resp, err
 }
 
-func (s *ActionsService) Get(id int) (*Action, *Response, error) {
+// Get an action by ID
+func (s *ActionsServiceOp) Get(id int) (*Action, *Response, error) {
 	path := fmt.Sprintf("%s/%d", actionsBasePath, id)
 	req, err := s.client.NewRequest("GET", path, nil)
 	if err != nil {

@@ -4,9 +4,21 @@ import "fmt"
 
 const keysBasePath = "v2/account/keys"
 
-// KeysService handles communication with key related method of the
+// KeysService is an interface for interfacing with the keys
+// endpoints of the Digital Ocean API
+// See: https://developers.digitalocean.com/#keys
+type KeysService interface {
+	List() ([]Key, *Response, error)
+	GetByID(int) (*Key, *Response, error)
+	GetByFingerprint(string) (*Key, *Response, error)
+	Create(*KeyCreateRequest) (*Key, *Response, error)
+	DeleteByID(int) (*Response, error)
+	DeleteByFingerprint(string) (*Response, error)
+}
+
+// KeysServiceOp handles communication with key related method of the
 // DigitalOcean API.
-type KeysService struct {
+type KeysServiceOp struct {
 	client *Client
 }
 
@@ -37,7 +49,7 @@ type KeyCreateRequest struct {
 }
 
 // List all keys
-func (s *KeysService) List() ([]Key, *Response, error) {
+func (s *KeysServiceOp) List() ([]Key, *Response, error) {
 	req, err := s.client.NewRequest("GET", keysBasePath, nil)
 	if err != nil {
 		return nil, nil, err
@@ -53,7 +65,7 @@ func (s *KeysService) List() ([]Key, *Response, error) {
 }
 
 // Performs a get given a path
-func (s *KeysService) get(path string) (*Key, *Response, error) {
+func (s *KeysServiceOp) get(path string) (*Key, *Response, error) {
 	req, err := s.client.NewRequest("GET", path, nil)
 	if err != nil {
 		return nil, nil, err
@@ -69,19 +81,19 @@ func (s *KeysService) get(path string) (*Key, *Response, error) {
 }
 
 // GetByID gets a Key by id
-func (s *KeysService) GetByID(keyID int) (*Key, *Response, error) {
+func (s *KeysServiceOp) GetByID(keyID int) (*Key, *Response, error) {
 	path := fmt.Sprintf("%s/%d", keysBasePath, keyID)
 	return s.get(path)
 }
 
 // GetByFingerprint gets a Key by by fingerprint
-func (s *KeysService) GetByFingerprint(fingerprint string) (*Key, *Response, error) {
+func (s *KeysServiceOp) GetByFingerprint(fingerprint string) (*Key, *Response, error) {
 	path := fmt.Sprintf("%s/%s", keysBasePath, fingerprint)
 	return s.get(path)
 }
 
 // Create a key using a KeyCreateRequest
-func (s *KeysService) Create(createRequest *KeyCreateRequest) (*Key, *Response, error) {
+func (s *KeysServiceOp) Create(createRequest *KeyCreateRequest) (*Key, *Response, error) {
 	req, err := s.client.NewRequest("POST", keysBasePath, createRequest)
 	if err != nil {
 		return nil, nil, err
@@ -97,7 +109,7 @@ func (s *KeysService) Create(createRequest *KeyCreateRequest) (*Key, *Response, 
 }
 
 // Delete key using a path
-func (s *KeysService) delete(path string) (*Response, error) {
+func (s *KeysServiceOp) delete(path string) (*Response, error) {
 	req, err := s.client.NewRequest("DELETE", path, nil)
 	if err != nil {
 		return nil, err
@@ -109,13 +121,13 @@ func (s *KeysService) delete(path string) (*Response, error) {
 }
 
 // DeleteByID deletes a key by its id
-func (s *KeysService) DeleteByID(keyID int) (*Response, error) {
+func (s *KeysServiceOp) DeleteByID(keyID int) (*Response, error) {
 	path := fmt.Sprintf("%s/%d", keysBasePath, keyID)
 	return s.delete(path)
 }
 
 // DeleteByFingerprint deletes a key by its fingerprint
-func (s *KeysService) DeleteByFingerprint(fingerprint string) (*Response, error) {
+func (s *KeysServiceOp) DeleteByFingerprint(fingerprint string) (*Response, error) {
 	path := fmt.Sprintf("%s/%s", keysBasePath, fingerprint)
 	return s.delete(path)
 }

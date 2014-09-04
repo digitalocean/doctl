@@ -4,9 +4,20 @@ import "fmt"
 
 const dropletBasePath = "v2/droplets"
 
-// DropletsService handles communication with the droplet related methods of the
+// DropletsService is an interface for interfacing with the droplet
+// endpoints of the Digital Ocean API
+// See: https://developers.digitalocean.com/#droplets
+type DropletsService interface {
+	List() ([]Droplet, *Response, error)
+	Get(int) (*DropletRoot, *Response, error)
+	Create(*DropletCreateRequest) (*DropletRoot, *Response, error)
+	Delete(int) (*Response, error)
+	dropletActionStatus(string) (string, error)
+}
+
+// DropletsServiceOp handles communication with the droplet related methods of the
 // DigitalOcean API.
-type DropletsService struct {
+type DropletsServiceOp struct {
 	client *Client
 }
 
@@ -98,7 +109,7 @@ type Link struct {
 }
 
 // List all droplets
-func (s *DropletsService) List() ([]Droplet, *Response, error) {
+func (s *DropletsServiceOp) List() ([]Droplet, *Response, error) {
 	path := dropletBasePath
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -116,7 +127,7 @@ func (s *DropletsService) List() ([]Droplet, *Response, error) {
 }
 
 // Get individual droplet
-func (s *DropletsService) Get(dropletID int) (*DropletRoot, *Response, error) {
+func (s *DropletsServiceOp) Get(dropletID int) (*DropletRoot, *Response, error) {
 	path := fmt.Sprintf("%s/%d", dropletBasePath, dropletID)
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -134,7 +145,7 @@ func (s *DropletsService) Get(dropletID int) (*DropletRoot, *Response, error) {
 }
 
 // Create droplet
-func (s *DropletsService) Create(createRequest *DropletCreateRequest) (*DropletRoot, *Response, error) {
+func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*DropletRoot, *Response, error) {
 	path := dropletBasePath
 
 	req, err := s.client.NewRequest("POST", path, createRequest)
@@ -152,7 +163,7 @@ func (s *DropletsService) Create(createRequest *DropletCreateRequest) (*DropletR
 }
 
 // Delete droplet
-func (s *DropletsService) Delete(dropletID int) (*Response, error) {
+func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
 	path := fmt.Sprintf("%s/%d", dropletBasePath, dropletID)
 
 	req, err := s.client.NewRequest("DELETE", path, nil)
@@ -165,7 +176,7 @@ func (s *DropletsService) Delete(dropletID int) (*Response, error) {
 	return resp, err
 }
 
-func (s *DropletsService) dropletActionStatus(uri string) (string, error) {
+func (s *DropletsServiceOp) dropletActionStatus(uri string) (string, error) {
 	action, _, err := s.client.DropletActions.GetByURI(uri)
 
 	if err != nil {

@@ -1,8 +1,15 @@
 package godo
 
-// SizesService handles communication with the size related methods of the
+// SizesService is an interface for interfacing with the size
+// endpoints of the Digital Ocean API
+// See: https://developers.digitalocean.com/#sizes
+type SizesService interface {
+	List() ([]Size, *Response, error)
+}
+
+// SizesServiceOp handles communication with the size related methods of the
 // DigitalOcean API.
-type SizesService struct {
+type SizesServiceOp struct {
 	client *Client
 }
 
@@ -26,7 +33,7 @@ type sizesRoot struct {
 }
 
 // List all images
-func (s *SizesService) List() ([]Size, *Response, error) {
+func (s *SizesServiceOp) List() ([]Size, *Response, error) {
 	path := "v2/sizes"
 
 	req, err := s.client.NewRequest("GET", path, nil)

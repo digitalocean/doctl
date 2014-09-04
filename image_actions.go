@@ -2,14 +2,22 @@ package godo
 
 import "fmt"
 
-// ImageActionsService handles communition with the image action related methods of the
+// ImageActionsService is an interface for interfacing with the image actions
+// endpoints of the Digital Ocean API
+// See: https://developers.digitalocean.com/#image-actions
+type ImageActionsService interface {
+	Get(int, int) (*Action, *Response, error)
+	Transfer(int, *ActionRequest) (*Action, *Response, error)
+}
+
+// ImageActionsServiceOp handles communition with the image action related methods of the
 // DigitalOcean API.
-type ImageActionsService struct {
+type ImageActionsServiceOp struct {
 	client *Client
 }
 
 // Transfer an image
-func (i *ImageActionsService) Transfer(imageID int, transferRequest *ActionRequest) (*Action, *Response, error) {
+func (i *ImageActionsServiceOp) Transfer(imageID int, transferRequest *ActionRequest) (*Action, *Response, error) {
 	path := fmt.Sprintf("v2/images/%d/actions", imageID)
 
 	req, err := i.client.NewRequest("POST", path, transferRequest)
@@ -27,7 +35,7 @@ func (i *ImageActionsService) Transfer(imageID int, transferRequest *ActionReque
 }
 
 // Get an action for a particular image by id.
-func (i *ImageActionsService) Get(imageID, actionID int) (*Action, *Response, error) {
+func (i *ImageActionsServiceOp) Get(imageID, actionID int) (*Action, *Response, error) {
 	path := fmt.Sprintf("v2/images/%d/actions/%d", imageID, actionID)
 
 	req, err := i.client.NewRequest("GET", path, nil)

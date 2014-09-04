@@ -7,6 +7,12 @@ import (
 	"testing"
 )
 
+func TestSizes_SizesServiceOpImplementsSizesService(t *testing.T) {
+	if !Implements((*SizesService)(nil), new(SizesServiceOp)) {
+		t.Error("SizesServiceOp does not implement SizesService")
+	}
+}
+
 func TestSizes_List(t *testing.T) {
 	setup()
 	defer teardown()

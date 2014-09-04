@@ -8,6 +8,12 @@ import (
 	"testing"
 )
 
+func TestImageActions_ImageActionsServiceOpImplementsImageActionsService(t *testing.T) {
+	if !Implements((*ImageActionsService)(nil), new(ImageActionsServiceOp)) {
+		t.Error("ImageActionsServiceOp does not implement ImageActionsService")
+	}
+}
+
 func TestImageActions_Transfer(t *testing.T) {
 	setup()
 	defer teardown()
