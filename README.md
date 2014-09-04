@@ -17,7 +17,7 @@ Currently, Personal Access Token (PAT) is the only method of
 authenticating with the API. You can manage your tokens
 at the Digital Ocean Control Panel [Applications Page](https://cloud.digitalocean.com/settings/applications).
 
-You can then use your token to creat a new client:
+You can then use your token to create a new client:
 
 ```go
 import "code.google.com/p/goauth2/oauth"
