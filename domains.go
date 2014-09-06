@@ -8,7 +8,12 @@ const domainsBasePath = "v2/domains"
 // See: https://developers.digitalocean.com/#domains and
 // https://developers.digitalocean.com/#domain-records
 type DomainsService interface {
-	Records(string, *DomainRecordsOptions) ([]DomainRecord, *Response, error)
+	List(*ListOptions) ([]Domain, *Response, error)
+	Get(string) (*DomainRoot, *Response, error)
+	Create(*DomainCreateRequest) (*DomainRoot, *Response, error)
+	Delete(string) (*Response, error)
+
+	Records(string, *ListOptions) ([]DomainRecord, *Response, error)
 	Record(string, int) (*DomainRecord, *Response, error)
 	DeleteRecord(string, int) (*Response, error)
 	EditRecord(string, int, *DomainRecordEditRequest) (*DomainRecord, *Response, error)
@@ -21,6 +26,29 @@ type DomainsServiceOp struct {
 	client *Client
 }
 
+// Domain represents a Digital Ocean domain
+type Domain struct {
+	Name     string `json:"name"`
+	TTL      int    `json:"ttl"`
+	ZoneFile string `json:"zone_file"`
+}
+
+// DomainRoot represents a response from the Digital Ocean API
+type DomainRoot struct {
+	Domain *Domain `json:"domain"`
+}
+
+type domainsRoot struct {
+	Domains []Domain `json:"domains"`
+	Links   *Links   `json:"links"`
+}
+
+// DomainCreateRequest respresents a request to create a domain.
+type DomainCreateRequest struct {
+	Name      string `json:"name"`
+	IPAddress string `json:"ip_address"`
+}
+
 // DomainRecordRoot is the root of an individual Domain Record response
 type DomainRecordRoot struct {
 	DomainRecord *DomainRecord `json:"domain_record"`
@@ -29,6 +57,7 @@ type DomainRecordRoot struct {
 // DomainRecordsRoot is the root of a group of Domain Record responses
 type DomainRecordsRoot struct {
 	DomainRecords []DomainRecord `json:"domain_records"`
+	Links         *Links         `json:"links"`
 }
 
 // DomainRecord represents a DigitalOcean DomainRecord
@@ -42,16 +71,6 @@ type DomainRecord struct {
 	Weight   int    `json:"weight,omitempty"`
 }
 
-// DomainRecordsOptions are options for DomainRecords
-type DomainRecordsOptions struct {
-	ListOptions
-}
-
-// Converts a DomainRecord to a string.
-func (d DomainRecord) String() string {
-	return Stringify(d)
-}
-
 // DomainRecordEditRequest represents a request to update a domain record.
 type DomainRecordEditRequest struct {
 	Type     string `json:"type,omitempty"`
@@ -62,13 +81,97 @@ type DomainRecordEditRequest struct {
 	Weight   int    `json:"weight,omitempty"`
 }
 
+func (d Domain) String() string {
+	return Stringify(d)
+}
+
+// List all domains
+func (s DomainsServiceOp) List(opt *ListOptions) ([]Domain, *Response, error) {
+	path := domainsBasePath
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(domainsRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+
+	return root.Domains, resp, err
+}
+
+// Get individual domain
+func (s *DomainsServiceOp) Get(name string) (*DomainRoot, *Response, error) {
+	path := fmt.Sprintf("%s/%s", domainsBasePath, name)
+
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(DomainRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root, resp, err
+}
+
+// Create a new domain
+func (s *DomainsServiceOp) Create(createRequest *DomainCreateRequest) (*DomainRoot, *Response, error) {
+	path := domainsBasePath
+
+	req, err := s.client.NewRequest("POST", path, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(DomainRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root, resp, err
+}
+
+// Delete droplet
+func (s *DomainsServiceOp) Delete(name string) (*Response, error) {
+	path := fmt.Sprintf("%s/%s", domainsBasePath, name)
+
+	req, err := s.client.NewRequest("DELETE", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := s.client.Do(req, nil)
+
+	return resp, err
+}
+
+// Converts a DomainRecord to a string.
+func (d DomainRecord) String() string {
+	return Stringify(d)
+}
+
 // Converts a DomainRecordEditRequest to a string.
 func (d DomainRecordEditRequest) String() string {
 	return Stringify(d)
 }
 
 // Records returns a slice of DomainRecords for a domain
-func (s *DomainsServiceOp) Records(domain string, opt *DomainRecordsOptions) ([]DomainRecord, *Response, error) {
+func (s *DomainsServiceOp) Records(domain string, opt *ListOptions) ([]DomainRecord, *Response, error) {
 	path := fmt.Sprintf("%s/%s/records", domainsBasePath, domain)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -80,13 +183,16 @@ func (s *DomainsServiceOp) Records(domain string, opt *DomainRecordsOptions) ([]
 		return nil, nil, err
 	}
 
-	records := new(DomainRecordsRoot)
-	resp, err := s.client.Do(req, records)
+	root := new(DomainRecordsRoot)
+	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
 
-	return records.DomainRecords, resp, err
+	return root.DomainRecords, resp, err
 }
 
 // Record returns the record id from a domain

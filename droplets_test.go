@@ -23,7 +23,7 @@ func TestDroplets_ListDroplets(t *testing.T) {
 		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
 	})
 
-	droplets, _, err := client.Droplet.List()
+	droplets, _, err := client.Droplets.List(nil)
 	if err != nil {
 		t.Errorf("Droplets.List returned error: %v", err)
 	}
@@ -32,6 +32,70 @@ func TestDroplets_ListDroplets(t *testing.T) {
 	if !reflect.DeepEqual(droplets, expected) {
 		t.Errorf("Droplets.List returned %+v, expected %+v", droplets, expected)
 	}
+}
+
+func TestDroplets_ListDropletsMultiplePages(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+
+		dr := dropletsRoot{
+			Droplets: []Droplet{
+				Droplet{ID: 1},
+				Droplet{ID: 2},
+			},
+			Links: &Links{
+				Pages: &Pages{Next: "http://example.com/v2/droplets/?page=2"},
+			},
+		}
+
+		b, err := json.Marshal(dr)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fmt.Fprint(w, string(b))
+	})
+
+	_, resp, err := client.Droplets.List(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkCurrentPage(t, resp, 1)
+}
+
+func TestDroplets_RetrievePageByNumber(t *testing.T) {
+	setup()
+	defer teardown()
+
+	jBlob := `
+	{
+		"droplets": [{"id":1},{"id":2}],
+		"links":{
+			"pages":{
+				"next":"http://example.com/v2/droplets/?page=3",
+				"prev":"http://example.com/v2/droplets/?page=1",
+				"last":"http://example.com/v2/droplets/?page=3",
+				"first":"http://example.com/v2/droplets/?page=1"
+			}
+		}
+	}`
+
+	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, jBlob)
+	})
+
+	opt := &ListOptions{Page: 2}
+	_, resp, err := client.Droplets.List(opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkCurrentPage(t, resp, 2)
 }
 
 func TestDroplets_GetDroplet(t *testing.T) {
@@ -43,7 +107,7 @@ func TestDroplets_GetDroplet(t *testing.T) {
 		fmt.Fprint(w, `{"droplet":{"id":12345}}`)
 	})
 
-	droplets, _, err := client.Droplet.Get(12345)
+	droplets, _, err := client.Droplets.Get(12345)
 	if err != nil {
 		t.Errorf("Droplet.Get returned error: %v", err)
 	}
@@ -77,7 +141,7 @@ func TestDroplets_Create(t *testing.T) {
 		fmt.Fprintf(w, `{"droplet":{"id":1}}`)
 	})
 
-	droplet, _, err := client.Droplet.Create(createRequest)
+	droplet, _, err := client.Droplets.Create(createRequest)
 	if err != nil {
 		t.Errorf("Droplets.Create returned error: %v", err)
 	}
@@ -96,32 +160,10 @@ func TestDroplets_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Droplet.Delete(12345)
+	_, err := client.Droplets.Delete(12345)
 	if err != nil {
 		t.Errorf("Droplet.Delete returned error: %v", err)
 	}
-}
-
-func TestLinks_Actions(t *testing.T) {
-	setup()
-	defer teardown()
-
-	aLink := Link{ID: 1, Rel: "a", HREF: "http://example.com/a"}
-
-	links := Links{
-		Actions: []Link{
-			aLink,
-			Link{ID: 2, Rel: "b", HREF: "http://example.com/b"},
-			Link{ID: 2, Rel: "c", HREF: "http://example.com/c"},
-		},
-	}
-
-	link := links.Action("a")
-
-	if *link != aLink {
-		t.Errorf("expected %+v, got %+v", aLink, link)
-	}
-
 }
 
 func TestNetwork_String(t *testing.T) {

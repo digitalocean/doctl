@@ -300,74 +300,6 @@ func TestDo_rateLimit_errorResponse(t *testing.T) {
 	}
 }
 
-func TestResponse_populatePageValues(t *testing.T) {
-	r := http.Response{
-		Header: http.Header{
-			"Link": {`<https://api.digitalocean.com/?page=1>; rel="first",` +
-				` <https://api.digitalocean.com/?page=2>; rel="prev",` +
-				` <https://api.digitalocean.com/?page=4>; rel="next",` +
-				` <https://api.digitalocean.com/?page=5>; rel="last"`,
-			},
-		},
-	}
-
-	response := newResponse(&r)
-
-	links := map[string]string{
-		"first": "https://api.digitalocean.com/?page=1",
-		"prev":  "https://api.digitalocean.com/?page=2",
-		"next":  "https://api.digitalocean.com/?page=4",
-		"last":  "https://api.digitalocean.com/?page=5",
-	}
-
-	if expected, got := links["first"], response.FirstPage; expected != got {
-		t.Errorf("response.FirstPage: %v, expected %v", got, expected)
-	}
-	if expected, got := links["prev"], response.PrevPage; expected != got {
-		t.Errorf("response.PrevPage: %v, expected %v", got, expected)
-	}
-	if expected, got := links["next"], response.NextPage; expected != got {
-		t.Errorf("response.NextPage: %v, expected %v", got, expected)
-	}
-	if expected, got := links["last"], response.LastPage; expected != got {
-		t.Errorf("response.LastPage: %v, expected %v", got, expected)
-	}
-}
-
-func TestResponse_populatePageValues_invalid(t *testing.T) {
-	r := http.Response{
-		Header: http.Header{
-			"Link": {`<https://api.digitalocean.com/?page=1>,` +
-				`<https://api.digitalocean.com/?page=abc>; rel="first",` +
-				`https://api.digitalocean.com/?page=2; rel="prev",` +
-				`<https://api.digitalocean.com/>; rel="next",` +
-				`<https://api.digitalocean.com/?page=>; rel="last"`,
-			},
-		},
-	}
-
-	response := newResponse(&r)
-	if expected, got := "", response.FirstPage; expected != got {
-		t.Errorf("response.FirstPage: %v, expected %v", expected, got)
-	}
-	if expected, got := "", response.PrevPage; expected != got {
-		t.Errorf("response.PrevPage: %v, expected %v", expected, got)
-	}
-	if expected, got := "", response.NextPage; expected != got {
-		t.Errorf("response.NextPage: %v, expected %v", expected, got)
-	}
-	if expected, got := "", response.LastPage; expected != got {
-		t.Errorf("response.LastPage: %v, expected %v", expected, got)
-	}
-
-	// more invalid URLs
-	r = http.Response{
-		Header: http.Header{
-			"Link": {`<https://api.digitalocean.com/%?page=2>; rel="first"`},
-		},
-	}
-}
-
 func Implements(interfaceObject interface{}, object interface{}, msgAndArgs ...interface{}) bool {
 	interfaceType := reflect.TypeOf(interfaceObject).Elem()
 	if !reflect.TypeOf(object).Implements(interfaceType) {
@@ -375,4 +307,16 @@ func Implements(interfaceObject interface{}, object interface{}, msgAndArgs ...i
 	}
 
 	return true
+}
+
+func checkCurrentPage(t *testing.T, resp *Response, expectedPage int) {
+	links := resp.Links
+	p, err := links.CurrentPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if p != expectedPage {
+		t.Fatalf("expected current page to be '%d', was '%d'", expectedPage, p)
+	}
 }

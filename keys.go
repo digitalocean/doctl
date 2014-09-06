@@ -8,7 +8,7 @@ const keysBasePath = "v2/account/keys"
 // endpoints of the Digital Ocean API
 // See: https://developers.digitalocean.com/#keys
 type KeysService interface {
-	List() ([]Key, *Response, error)
+	List(*ListOptions) ([]Key, *Response, error)
 	GetByID(int) (*Key, *Response, error)
 	GetByFingerprint(string) (*Key, *Response, error)
 	Create(*KeyCreateRequest) (*Key, *Response, error)
@@ -31,7 +31,8 @@ type Key struct {
 }
 
 type keysRoot struct {
-	SSHKeys []Key `json:"ssh_keys"`
+	SSHKeys []Key  `json:"ssh_keys"`
+	Links   *Links `json:"links"`
 }
 
 type keyRoot struct {
@@ -49,19 +50,28 @@ type KeyCreateRequest struct {
 }
 
 // List all keys
-func (s *KeysServiceOp) List() ([]Key, *Response, error) {
-	req, err := s.client.NewRequest("GET", keysBasePath, nil)
+func (s *KeysServiceOp) List(opt *ListOptions) ([]Key, *Response, error) {
+	path := keysBasePath
+	path, err := addOptions(path, opt)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	keys := new(keysRoot)
-	resp, err := s.client.Do(req, keys)
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(keysRoot)
+	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
 
-	return keys.SSHKeys, resp, err
+	return root.SSHKeys, resp, err
 }
 
 // Performs a get given a path

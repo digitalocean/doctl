@@ -8,7 +8,7 @@ const dropletBasePath = "v2/droplets"
 // endpoints of the Digital Ocean API
 // See: https://developers.digitalocean.com/#droplets
 type DropletsService interface {
-	List() ([]Droplet, *Response, error)
+	List(*ListOptions) ([]Droplet, *Response, error)
 	Get(int) (*DropletRoot, *Response, error)
 	Create(*DropletCreateRequest) (*DropletRoot, *Response, error)
 	Delete(int) (*Response, error)
@@ -52,6 +52,7 @@ type DropletRoot struct {
 
 type dropletsRoot struct {
 	Droplets []Droplet `json:"droplets"`
+	Links    *Links    `json:"links"`
 }
 
 // DropletCreateRequest represents a request to create a droplet.
@@ -85,45 +86,29 @@ func (n Network) String() string {
 	return Stringify(n)
 }
 
-// Links are extra links for a droplet
-type Links struct {
-	Actions []Link `json:"actions,omitempty"`
-}
-
-// Action extracts Link
-func (l *Links) Action(action string) *Link {
-	for _, a := range l.Actions {
-		if a.Rel == action {
-			return &a
-		}
-	}
-
-	return nil
-}
-
-// Link represents a link
-type Link struct {
-	ID   int    `json:"id,omitempty"`
-	Rel  string `json:"rel,omitempty"`
-	HREF string `json:"href,omitempty"`
-}
-
 // List all droplets
-func (s *DropletsServiceOp) List() ([]Droplet, *Response, error) {
+func (s *DropletsServiceOp) List(opt *ListOptions) ([]Droplet, *Response, error) {
 	path := dropletBasePath
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	req, err := s.client.NewRequest("GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	droplets := new(dropletsRoot)
-	resp, err := s.client.Do(req, droplets)
+	root := new(dropletsRoot)
+	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
 
-	return droplets.Droplets, resp, err
+	return root.Droplets, resp, err
 }
 
 // Get individual droplet

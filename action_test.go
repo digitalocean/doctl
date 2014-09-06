@@ -22,7 +22,7 @@ func TestAction_List(t *testing.T) {
 		testMethod(t, r, "GET")
 	})
 
-	actions, _, err := client.Actions.List()
+	actions, _, err := client.Actions.List(nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -31,6 +31,54 @@ func TestAction_List(t *testing.T) {
 	if len(actions) != len(expected) || actions[0].ID != expected[0].ID || actions[1].ID != expected[1].ID {
 		t.Fatalf("unexpected response")
 	}
+}
+
+func TestAction_ListActionMultiplePages(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/actions", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"actions": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/droplets/?page=2"}}}`)
+		testMethod(t, r, "GET")
+	})
+
+	_, resp, err := client.Actions.List(nil)
+	if err != nil {
+		t.Fatal(nil)
+	}
+
+	checkCurrentPage(t, resp, 1)
+}
+
+func TestAction_RetrievePageByNumber(t *testing.T) {
+	setup()
+	defer teardown()
+
+	jBlob := `
+	{
+		"actions": [{"id":1},{"id":2}],
+		"links":{
+			"pages":{
+				"next":"http://example.com/v2/actions/?page=3",
+				"prev":"http://example.com/v2/actions/?page=1",
+				"last":"http://example.com/v2/actions/?page=3",
+				"first":"http://example.com/v2/actions/?page=1"
+			}
+		}
+	}`
+
+	mux.HandleFunc("/v2/actions", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, jBlob)
+	})
+
+	opt := &ListOptions{Page: 2}
+	_, resp, err := client.Actions.List(opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkCurrentPage(t, resp, 2)
 }
 
 func TestAction_Get(t *testing.T) {

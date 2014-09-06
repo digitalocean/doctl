@@ -45,7 +45,7 @@ type Client struct {
 	// Services used for communicating with the API
 	Actions        ActionsService
 	Domains        DomainsService
-	Droplet        DropletsService
+	Droplets       DropletsService
 	DropletActions DropletActionsService
 	Images         ImagesService
 	ImageActions   ImageActionsService
@@ -68,15 +68,9 @@ type ListOptions struct {
 type Response struct {
 	*http.Response
 
-	// These fields provide the page values for paginating through a set of
-	// results.  Any or all of these may be set to the zero value for
-	// responses that are not part of a paginated set, or for which there
-	// are no additional pages.
-
-	NextPage  string
-	PrevPage  string
-	FirstPage string
-	LastPage  string
+	// Links that were returned with the response. These are parsed from
+	// request body and not the header.
+	Links *Links
 
 	// Monitoring URI
 	Monitor string
@@ -137,7 +131,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
 	c.Actions = &ActionsServiceOp{client: c}
 	c.Domains = &DomainsServiceOp{client: c}
-	c.Droplet = &DropletsServiceOp{client: c}
+	c.Droplets = &DropletsServiceOp{client: c}
 	c.DropletActions = &DropletActionsServiceOp{client: c}
 	c.Images = &ImagesServiceOp{client: c}
 	c.ImageActions = &ImageActionsServiceOp{client: c}
@@ -181,52 +175,9 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 // newResponse creates a new Response for the provided http.Response
 func newResponse(r *http.Response) *Response {
 	response := Response{Response: r}
-	response.populatePageValues()
 	response.populateRate()
-	response.populateMonitor()
 
 	return &response
-}
-
-// populatePageValues parses the HTTP Link response headers and populates the
-// various pagination link values in the Response.
-func (r *Response) populatePageValues() {
-	links, err := r.links()
-
-	if err == nil {
-		var l headerLink.Link
-		var ok bool
-
-		l, ok = links["next"]
-		if ok {
-			r.NextPage = l.URI
-		}
-		l, ok = links["prev"]
-		if ok {
-			r.PrevPage = l.URI
-		}
-
-		l, ok = links["first"]
-		if ok {
-			r.FirstPage = l.URI
-		}
-
-		l, ok = links["last"]
-		if ok {
-			r.LastPage = l.URI
-		}
-	}
-}
-
-func (r *Response) populateMonitor() {
-	links, err := r.links()
-
-	if err == nil {
-		link, ok := links["monitor"]
-		if ok {
-			r.Monitor = link.URI
-		}
-	}
 }
 
 func (r *Response) links() (map[string]headerLink.Link, error) {
