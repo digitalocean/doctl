@@ -38,8 +38,6 @@ GLOBAL OPTIONS:
 
 doctl is licensed under the Apache License, Version 2.0. See LICENSE.txt for full license text.
 
-(c) 2014 Steve Rude
-
 ## Author
 
 Steve Rude <steve@slantview.com>
