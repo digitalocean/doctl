@@ -1,0 +1,16 @@
+#cloud-config
+
+coreos:
+  etcd:
+    discovery: DISCOVERY_URL
+    addr: $private_ipv4:4001
+    peer-addr: $private_ipv4:7001
+  fleet:
+    public-ip: $private_ipv4   # used for fleetctl ssh command
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+    - name: docker.service
+      command: start

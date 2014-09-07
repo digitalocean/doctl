@@ -1,0 +1,19 @@
+{
+	"ImportPath": "github.com/slantview/doct",
+	"GoVersion": "go1.3.1",
+	"Deps": [
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-24-g7381bc4",
+			"Rev": "7381bc4e62942763475703c7edd405f1e42adf4f"
+		},
+		{
+			"ImportPath": "github.com/jmcvetta/napping",
+			"Rev": "5292ff1b0132449a9a928004afd03f23be9d750d"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v1",
+			"Rev": "feb4ca79644e8e7e39c06095246ee54b1282c118"
+		}
+	]
+}
