@@ -19,7 +19,7 @@ WIN_EXECUTABLES := \
 COMPRESSED_EXECUTABLES=$(UNIX_EXECUTABLES:%=%.tar.bz2) $(WIN_EXECUTABLES:%.exe=%.zip)
 COMPRESSED_EXECUTABLE_TARGETS=$(COMPRESSED_EXECUTABLES:%=bin/%)
 
-UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t "$(GIT_LOG)" -n $(subst /,-,$(FILE)) -f bin/$(FILE)
+UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t $(LAST_TAG) -n $(subst /,-,$(FILE)) -f bin/$(FILE)
 
 all: $(EXECUTABLE)
 
@@ -55,7 +55,7 @@ bin/windows/amd64/$(EXECUTABLE).exe:
 release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test
 	git push && git push --tags
 	$(GHRELEASE) release -u $(USER) -r $(EXECUTABLE) \
-		-t $(LAST_TAG) -n $(LAST_TAG) || true
+		-t $(LAST_TAG) -n $(LAST_TAG) -d "$(GIT_LOG)" || true
 	$(foreach FILE,$(COMPRESSED_EXECUTABLES),$(UPLOAD_CMD);)
 
 .deps: install_godep
