@@ -1,5 +1,8 @@
 VERSION := 0.0.3
 LAST_TAG := $(shell git describe --abbrev=0 --tags)
+PREV_VERSION := $(shell git tag -l | egrep '\d+.\d+\.\d+' | tail -2 | head -1)
+
+GIT_LOG := $(shell git shortlog $(PREV_VERSION)..$(LAST_TAG))
 
 USER := slantview
 EXECUTABLE := doctl
@@ -16,7 +19,7 @@ WIN_EXECUTABLES := \
 COMPRESSED_EXECUTABLES=$(UNIX_EXECUTABLES:%=%.tar.bz2) $(WIN_EXECUTABLES:%.exe=%.zip)
 COMPRESSED_EXECUTABLE_TARGETS=$(COMPRESSED_EXECUTABLES:%=bin/%)
 
-UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t $(LAST_TAG) -n $(subst /,-,$(FILE)) -f bin/$(FILE)
+UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t "$(GIT_LOG)" -n $(subst /,-,$(FILE)) -f bin/$(FILE)
 
 all: $(EXECUTABLE)
 
