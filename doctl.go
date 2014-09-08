@@ -16,6 +16,8 @@ func main() {
 	app.Commands = []cli.Command{
 		DropletCommand,
 		SSHCommand,
+		RegionCommand,
+		SizeCommand,
 	}
 
 	app.Run(os.Args)
