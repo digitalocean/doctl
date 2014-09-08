@@ -6,8 +6,6 @@ EXECUTABLE := doctl
 
 GHRELEASE := github-release
 
-# only include the amd64 binaries, otherwise the github release will become
-# too big
 UNIX_EXECUTABLES := \
 	darwin/amd64/$(EXECUTABLE) \
 	freebsd/amd64/$(EXECUTABLE) \
@@ -46,23 +44,17 @@ bin/linux/amd64/$(EXECUTABLE):
 bin/windows/amd64/$(EXECUTABLE).exe:
 	GOARCH=amd64 GOOS=windows go build -o "$@"
 
-# compressed artifacts, makes a huge difference (Go executable is ~9MB,
-# after compressing ~2MB)
 %.tar.bz2: %
 	tar -jcvf "$<.tar.bz2" "$<"
 %.zip: %.exe
 	zip "$@" "$<"
 
-# git tag -a v$(RELEASE) -m 'release $(RELEASE)'
 release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release
 	git push && git push --tags
 	$(GHRELEASE) release -u $(USER) -r $(EXECUTABLE) \
 		-t $(LAST_TAG) -n $(LAST_TAG) || true
 	$(foreach FILE,$(COMPRESSED_EXECUTABLES),$(UPLOAD_CMD);)
 
-# install and/or update all dependencies, run this from the project directory
-# go get -u ./...
-# go test -i ./
 .deps: install_godep
 	godep restore
 	touch .deps
