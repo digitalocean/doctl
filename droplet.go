@@ -55,7 +55,7 @@ func dropletCreate(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	// Add domain to end if available.
 	name := ctx.Args().First()
@@ -99,11 +99,12 @@ func dropletCreate(ctx *cli.Context) {
 }
 
 func dropletList(ctx *cli.Context) {
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	dropletList, err := client.ListDroplets()
 	if err != nil {
 		fmt.Printf("Unable to list Droplets: %s\n", err)
+		os.Exit(1)
 	}
 
 	fmt.Printf("ID\t%-16s\t%-16s\tStatus\tMemory\tDisk\tRegion\n", "Name", "IP Address")
@@ -139,7 +140,7 @@ func dropletShow(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	dropletList, err := client.ListDroplets()
 	if err != nil {
@@ -167,7 +168,7 @@ func dropletDestroy(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	err := client.DestroyDroplet(name)
 	if err != nil {

@@ -34,7 +34,7 @@ func sizeShow(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	size, err := client.LoadSize(name)
 	if err != nil {
@@ -51,7 +51,7 @@ func sizeShow(ctx *cli.Context) {
 }
 
 func sizeList(ctx *cli.Context) {
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	sizeList, err := client.ListAllSizes()
 	if err != nil {

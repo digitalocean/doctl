@@ -43,7 +43,7 @@ func sshCreate(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	key := client.NewSSHKey()
 	key.Name = ctx.Args().First()
@@ -77,7 +77,7 @@ func sshCreate(ctx *cli.Context) {
 }
 
 func sshList(ctx *cli.Context) {
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	keyList, err := client.ListAllKeys()
 	if err != nil {
@@ -99,7 +99,7 @@ func sshShow(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	keyList, err := client.ListAllKeys()
 	if err != nil {
@@ -127,7 +127,7 @@ func sshDestroy(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	err := client.DestroyKey(name)
 	if err != nil {

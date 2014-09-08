@@ -2,3 +2,4 @@
 Godeps/_workspace*
 bin*
 .deps
+doctl

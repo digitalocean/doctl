@@ -34,7 +34,7 @@ func regionShow(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	region, err := client.LoadRegion(name)
 	if err != nil {
@@ -51,7 +51,7 @@ func regionShow(ctx *cli.Context) {
 }
 
 func regionList(ctx *cli.Context) {
-	client := apiv2.NewClient(os.Getenv("DIGITAL_OCEAN_API_KEY"))
+	client := apiv2.NewClient(APIKey)
 
 	regionList, err := client.ListAllRegions()
 	if err != nil {
