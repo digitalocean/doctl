@@ -6,7 +6,7 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-const AppVersion = "0.0.1"
+const AppVersion = "0.0.2"
 
 func main() {
 	app := cli.NewApp()
