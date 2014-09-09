@@ -49,7 +49,7 @@ bin/windows/amd64/$(EXECUTABLE).exe:
 %.zip: %.exe
 	zip -j "$@" "$<"
 
-release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test
+release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test releaselog-$(LAST_TAG).txt
 	git push && git push --tags
 	$(GHRELEASE) release -u $(USER) -r $(EXECUTABLE) \
 		-t $(LAST_TAG) -n $(LAST_TAG) -d "`cat releaselog-$(LAST_TAG).txt`" || true
