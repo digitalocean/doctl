@@ -2,8 +2,6 @@ VERSION := 0.0.4
 LAST_TAG := $(shell git describe --abbrev=0 --tags)
 PREV_VERSION := $(shell git tag -l | egrep '\d+.\d+\.\d+' | tail -2 | head -1)
 
-GIT_LOG := $(shell git shortlog $(PREV_VERSION)..$(LAST_TAG))
-
 USER := slantview
 EXECUTABLE := doctl
 
@@ -55,8 +53,11 @@ bin/windows/amd64/$(EXECUTABLE).exe:
 release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test
 	git push && git push --tags
 	$(GHRELEASE) release -u $(USER) -r $(EXECUTABLE) \
-		-t $(LAST_TAG) -n $(LAST_TAG) -d "$(GIT_LOG)" || true
+		-t $(LAST_TAG) -n $(LAST_TAG) -d "`cat releaselog-$(LAST_TAG).txt`" || true
 	$(foreach FILE,$(COMPRESSED_EXECUTABLES),$(UPLOAD_CMD);)
+
+releaselog-$(LAST_TAG).txt:
+	git shortlog $(PREV_VERSION)..$(LAST_TAG) > releaselog-$(LAST_TAG).txt
 
 .deps: install_godep
 	godep restore
