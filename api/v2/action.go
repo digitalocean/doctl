@@ -1,7 +1,6 @@
 package apiv2
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -50,6 +49,10 @@ type ActionListResponse struct {
 	} `json:"meta"`
 }
 
+type ActionResponse struct {
+	Action *Action `json:"action"`
+}
+
 func (c *Client) NewAction() *Action {
 	return &Action{
 		client: c,
@@ -57,18 +60,14 @@ func (c *Client) NewAction() *Action {
 }
 
 func (c *Client) LoadAction(id int) (*Action, error) {
-	action := &Action{}
+	var action ActionResponse
 
-	err := c.Get(fmt.Sprintf("actions/%d", id), nil, action, nil)
+	err := c.Get(fmt.Sprintf("actions/%d", id), nil, &action, nil)
 	if err != nil {
-		return nil, errors.New(err.Message)
+		return nil, fmt.Errorf("API Error: %s", err.Message)
 	}
 
-	if action.ID == 0 {
-		return nil, errors.New("Action not found.")
-	}
-
-	return action, nil
+	return action.Action, nil
 }
 
 func (c *Client) ListAllActions() (*ActionListResponse, error) {
@@ -76,7 +75,7 @@ func (c *Client) ListAllActions() (*ActionListResponse, error) {
 
 	err := c.Get("actions", nil, &actionList, nil)
 	if err != nil {
-		return nil, errors.New(err.Message)
+		return nil, fmt.Errorf("API Error: %s", err.Message)
 	}
 
 	return actionList, nil
