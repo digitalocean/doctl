@@ -49,7 +49,7 @@ bin/windows/amd64/$(EXECUTABLE).exe:
 %.zip: %.exe
 	zip -j "$@" "$<"
 
-release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test releaselog-$(LAST_TAG).txt
+release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test releaselog-$(LAST_TAG).txt update_internal_version
 	git push && git push --tags
 	$(GHRELEASE) release -u $(USER) -r $(EXECUTABLE) \
 		-t $(LAST_TAG) -n $(LAST_TAG) -d "`cat releaselog-$(LAST_TAG).txt`" || true
@@ -61,6 +61,9 @@ releaselog-$(LAST_TAG).txt:
 .deps: install_godep
 	godep restore
 	touch .deps
+
+update_internal_version:
+	sed -i '' 's/const AppVersion = ".*"/const AppVersion = "0.0.5"/' doctl.go
 
 $(EXECUTABLE): .deps
 	go build -o "$@"
@@ -81,4 +84,4 @@ clean:
 test:
 	go test -v ./...
 
-.PHONY: clean release install test install_godep install_github_release
+.PHONY: clean release install test install_godep install_github_release update_internal_version
