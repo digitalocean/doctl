@@ -26,7 +26,7 @@ const (
 // resource_id		number	A unique identifier for the resource that the action is associated with.
 // resource_type	string	The type of resource that the action is associated with.
 // region			string	A slug representing the region where the action occurred.
-type DropletAction struct {
+type Action struct {
 	ID           int    `json:"id,omitempty"`
 	Status       string `json:"status"`
 	Type         string `json:"type"`
@@ -38,9 +38,8 @@ type DropletAction struct {
 	client       *Client
 }
 
-func (c *Client) NewDropletAction(action string) *DropletAction {
-	return &DropletAction{
-		Type:   action,
+func (c *Client) NewAction() *Action {
+	return &Action{
 		client: c,
 	}
 }
