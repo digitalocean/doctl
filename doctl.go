@@ -38,6 +38,7 @@ func main() {
 		return nil
 	}
 	app.Commands = []cli.Command{
+		ActionCommand,
 		DropletCommand,
 		SSHCommand,
 		RegionCommand,

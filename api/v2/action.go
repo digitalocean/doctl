@@ -1,5 +1,10 @@
 package apiv2
 
+import (
+	"errors"
+	"fmt"
+)
+
 const (
 	ActionReboot                  = "reboot"
 	ActionPowerCycle              = "power_cycle"
@@ -7,7 +12,7 @@ const (
 	ActionPowerOff                = "power_off"
 	ActionPowerOn                 = "power_on"
 	ActionPasswordReset           = "password_reset"
-	ActionResize                  = "resize"
+	ActionReaction                = "reaction"
 	ActionRestore                 = "restore"
 	ActionRebuild                 = "rebuild"
 	ActionRename                  = "rename"
@@ -38,8 +43,41 @@ type Action struct {
 	client       *Client
 }
 
+type ActionListResponse struct {
+	Actions []*Action `json:"actions"`
+	Meta    struct {
+		Total int `json:"total"`
+	} `json:"meta"`
+}
+
 func (c *Client) NewAction() *Action {
 	return &Action{
 		client: c,
 	}
+}
+
+func (c *Client) LoadAction(id int) (*Action, error) {
+	action := &Action{}
+
+	err := c.Get(fmt.Sprintf("actions/%d", id), nil, action, nil)
+	if err != nil {
+		return nil, errors.New(err.Message)
+	}
+
+	if action.ID == 0 {
+		return nil, errors.New("Action not found.")
+	}
+
+	return action, nil
+}
+
+func (c *Client) ListAllActions() (*ActionListResponse, error) {
+	var actionList *ActionListResponse
+
+	err := c.Get("actions", nil, &actionList, nil)
+	if err != nil {
+		return nil, errors.New(err.Message)
+	}
+
+	return actionList, nil
 }
