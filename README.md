@@ -21,7 +21,7 @@ USAGE:
    doctl [global options] command [command options] [arguments...]
 
 VERSION:
-   0.0.8
+   0.0.9
 
 COMMANDS:
    action   Action commands.
@@ -34,6 +34,7 @@ COMMANDS:
    
 GLOBAL OPTIONS:
    --api-key, -k    API Key for DO APIv2.
+   --format, -f 'yaml'  Format for output.
    --help, -h       show help
    --version, -v    print the version
 
