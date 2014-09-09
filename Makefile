@@ -1,4 +1,4 @@
-VERSION := 0.0.3
+VERSION := 0.0.4
 LAST_TAG := $(shell git describe --abbrev=0 --tags)
 PREV_VERSION := $(shell git tag -l | egrep '\d+.\d+\.\d+' | tail -2 | head -1)
 
@@ -48,9 +48,9 @@ bin/windows/amd64/$(EXECUTABLE).exe:
 	GOARCH=amd64 GOOS=windows go build -o "$@"
 
 %.tar.bz2: %
-	tar -jcvf "$<.tar.bz2" "$<"
+	tar -jcvf -C $(shell dirname $@) "$<.tar.bz2" "$<"
 %.zip: %.exe
-	zip "$@" "$<"
+	zip -j "$@" "$<"
 
 release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test
 	git push && git push --tags
