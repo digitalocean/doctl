@@ -15,12 +15,12 @@ var SizeCommand = cli.Command{
 	Subcommands: []cli.Command{
 		{
 			Name:   "show",
-			Usage:  "Show a Size.",
+			Usage:  "Show a size.",
 			Action: sizeShow,
 		},
 		{
 			Name:   "list",
-			Usage:  "List All Sizes.",
+			Usage:  "List all sizes.",
 			Action: sizeList,
 		},
 	},

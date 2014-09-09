@@ -16,22 +16,22 @@ var SSHCommand = cli.Command{
 	Subcommands: []cli.Command{
 		{
 			Name:   "create",
-			Usage:  "Create SSH Key.",
+			Usage:  "Create SSH key.",
 			Action: sshCreate,
 		},
 		{
 			Name:   "list",
-			Usage:  "List SSH Keys.",
+			Usage:  "List all SSH keys.",
 			Action: sshList,
 		},
 		{
 			Name:   "show",
-			Usage:  "Show SSH Key.",
+			Usage:  "Show SSH key.",
 			Action: sshShow,
 		},
 		{
 			Name:   "destroy",
-			Usage:  "Destroy SSH Key.",
+			Usage:  "Destroy SSH key.",
 			Action: sshDestroy,
 		},
 	},
