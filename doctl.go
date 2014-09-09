@@ -39,10 +39,11 @@ func main() {
 	}
 	app.Commands = []cli.Command{
 		ActionCommand,
+		DomainCommand,
 		DropletCommand,
-		SSHCommand,
 		RegionCommand,
 		SizeCommand,
+		SSHCommand,
 	}
 
 	app.Run(os.Args)
