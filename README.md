@@ -21,16 +21,19 @@ USAGE:
    doctl [global options] command [command options] [arguments...]
 
 VERSION:
-   0.0.1
+   0.0.7
 
 COMMANDS:
-   droplet	Droplet commands.
-   sshkey	SSH Key commands.
-   help, h	Shows a list of commands or help for one command
+   droplet  Droplet commands.
+   sshkey   SSH Key commands.
+   region   Region commands.
+   size     Size commands.
+   help, h  Shows a list of commands or help for one command
    
 GLOBAL OPTIONS:
-   --help, -h		show help
-   --version, -v	print the version
+   --api-key, -k    API Key for DO APIv2.
+   --help, -h       show help
+   --version, -v    print the version
 
 ```
 
