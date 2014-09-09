@@ -1,4 +1,3 @@
-VERSION := 0.0.4
 LAST_TAG := $(shell git describe --abbrev=0 --tags)
 PREV_VERSION := $(shell git tag -l | egrep '\d+.\d+\.\d+' | tail -2 | head -1)
 
