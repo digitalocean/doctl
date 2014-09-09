@@ -63,7 +63,7 @@ releaselog-$(LAST_TAG).txt:
 	touch .deps
 
 update_internal_version:
-	sed -i '' 's/const AppVersion = ".*"/const AppVersion = "0.0.5"/' doctl.go
+	sed -i '' 's/const AppVersion = ".*"/const AppVersion = "$(LAST_TAG)"/' doctl.go
 
 $(EXECUTABLE): .deps
 	go build -o "$@"
