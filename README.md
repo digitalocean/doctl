@@ -24,10 +24,12 @@ VERSION:
    0.0.7
 
 COMMANDS:
+   action   Action commands.
+   domain   Domain commands.
    droplet  Droplet commands.
-   sshkey   SSH Key commands.
    region   Region commands.
    size     Size commands.
+   sshkey   SSH Key commands.
    help, h  Shows a list of commands or help for one command
    
 GLOBAL OPTIONS:
