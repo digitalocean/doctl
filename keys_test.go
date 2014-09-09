@@ -20,10 +20,10 @@ func TestKeys_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/account/keys", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		fmt.Fprint(w, `{"ssh_keys":[{"id":1},{"id":2}]}   `)
+		fmt.Fprint(w, `{"ssh_keys":[{"id":1},{"id":2}]}`)
 	})
 
-	keys, _, err := client.Keys.List()
+	keys, _, err := client.Keys.List(nil)
 	if err != nil {
 		t.Errorf("Keys.List returned error: %v", err)
 	}
@@ -32,6 +32,52 @@ func TestKeys_List(t *testing.T) {
 	if !reflect.DeepEqual(keys, expected) {
 		t.Errorf("Keys.List returned %+v, expected %+v", keys, expected)
 	}
+}
+
+func TestKeys_ListKeysMultiplePages(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/account/keys", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/account/keys/?page=2"}}}`)
+	})
+
+	_, resp, err := client.Keys.List(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkCurrentPage(t, resp, 1)
+}
+
+func TestKeys_RetrievePageByNumber(t *testing.T) {
+	setup()
+	defer teardown()
+
+	jBlob := `
+	{
+		"keys": [{"id":1},{"id":2}],
+		"links":{
+			"pages":{
+				"next":"http://example.com/v2/account/keys/?page=3",
+				"prev":"http://example.com/v2/account/keys/?page=1",
+				"last":"http://example.com/v2/account/keys/?page=3",
+				"first":"http://example.com/v2/account/keys/?page=1"
+			}
+		}
+	}`
+
+	mux.HandleFunc("/v2/account/keys", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, jBlob)
+	})
+
+	opt := &ListOptions{Page: 2}
+	_, resp, err := client.Keys.List(opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkCurrentPage(t, resp, 2)
 }
 
 func TestKeys_GetByID(t *testing.T) {

@@ -22,7 +22,7 @@ func TestImages_List(t *testing.T) {
 		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
 	})
 
-	images, _, err := client.Images.List()
+	images, _, err := client.Images.List(nil)
 	if err != nil {
 		t.Errorf("Images.List returned error: %v", err)
 	}
@@ -31,6 +31,53 @@ func TestImages_List(t *testing.T) {
 	if !reflect.DeepEqual(images, expected) {
 		t.Errorf("Images.List returned %+v, expected %+v", images, expected)
 	}
+}
+
+func TestImages_ListImagesMultiplePages(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/images", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"images": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/images/?page=2"}}}`)
+	})
+
+	_, resp, err := client.Images.List(&ListOptions{Page: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkCurrentPage(t, resp, 1)
+}
+
+func TestImages_RetrievePageByNumber(t *testing.T) {
+	setup()
+	defer teardown()
+
+	jBlob := `
+	{
+		"images": [{"id":1},{"id":2}],
+		"links":{
+			"pages":{
+				"next":"http://example.com/v2/images/?page=3",
+				"prev":"http://example.com/v2/images/?page=1",
+				"last":"http://example.com/v2/images/?page=3",
+				"first":"http://example.com/v2/images/?page=1"
+			}
+		}
+	}`
+
+	mux.HandleFunc("/v2/images", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, jBlob)
+	})
+
+	opt := &ListOptions{Page: 2}
+	_, resp, err := client.Images.List(opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkCurrentPage(t, resp, 2)
 }
 
 func TestImage_String(t *testing.T) {

@@ -2,9 +2,9 @@ package godo
 
 import (
 	"bytes"
-	"reflect"
-	"io"
 	"fmt"
+	"io"
+	"reflect"
 )
 
 var timestampType = reflect.TypeOf(Timestamp{})

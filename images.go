@@ -4,7 +4,7 @@ package godo
 // endpoints of the Digital Ocean API
 // See: https://developers.digitalocean.com/#images
 type ImagesService interface {
-	List() ([]Image, *Response, error)
+	List(*ListOptions) ([]Image, *Response, error)
 }
 
 // ImagesServiceOp handles communication with the image related methods of the
@@ -29,6 +29,7 @@ type imageRoot struct {
 
 type imagesRoot struct {
 	Images []Image
+	Links  *Links `json:"links"`
 }
 
 func (i Image) String() string {
@@ -36,19 +37,26 @@ func (i Image) String() string {
 }
 
 // List all sizes
-func (s *ImagesServiceOp) List() ([]Image, *Response, error) {
+func (s *ImagesServiceOp) List(opt *ListOptions) ([]Image, *Response, error) {
 	path := "v2/images"
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	req, err := s.client.NewRequest("GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	images := new(imagesRoot)
-	resp, err := s.client.Do(req, images)
+	root := new(imagesRoot)
+	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
 
-	return images.Images, resp, err
+	return root.Images, resp, err
 }

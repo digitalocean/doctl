@@ -15,7 +15,7 @@ const (
 // ActionsService handles communction with action related methods of the
 // DigitalOcean API: https://developers.digitalocean.com/#actions
 type ActionsService interface {
-	List() ([]Action, *Response, error)
+	List(*ListOptions) ([]Action, *Response, error)
 	Get(int) (*Action, *Response, error)
 }
 
@@ -27,6 +27,7 @@ type ActionsServiceOp struct {
 
 type actionsRoot struct {
 	Actions []Action `json:"actions"`
+	Links   *Links   `json:"links"`
 }
 
 type actionRoot struct {
@@ -45,8 +46,12 @@ type Action struct {
 }
 
 // List all actions
-func (s *ActionsServiceOp) List() ([]Action, *Response, error) {
+func (s *ActionsServiceOp) List(opt *ListOptions) ([]Action, *Response, error) {
 	path := actionsBasePath
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	req, err := s.client.NewRequest("GET", path, nil)
 	if err != nil {
@@ -57,6 +62,9 @@ func (s *ActionsServiceOp) List() ([]Action, *Response, error) {
 	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
 	}
 
 	return root.Actions, resp, err

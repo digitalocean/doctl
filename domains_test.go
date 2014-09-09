@@ -14,6 +14,149 @@ func TestAction_DomainsServiceOpImplementsDomainsService(t *testing.T) {
 	}
 }
 
+func TestDomains_ListDomains(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/domains", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"domains": [{"name":"foo.com"},{"name":"bar.com"}]}`)
+	})
+
+	domains, _, err := client.Domains.List(nil)
+	if err != nil {
+		t.Errorf("Domains.List returned error: %v", err)
+	}
+
+	expected := []Domain{{Name: "foo.com"}, {Name: "bar.com"}}
+	if !reflect.DeepEqual(domains, expected) {
+		t.Errorf("Domains.List returned %+v, expected %+v", domains, expected)
+	}
+}
+
+func TestDomains_ListDomainsMultiplePages(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/domains", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"domains": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/domains/?page=2"}}}`)
+	})
+
+	_, resp, err := client.Domains.List(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkCurrentPage(t, resp, 1)
+}
+
+func TestDomains_RetrievePageByNumber(t *testing.T) {
+	setup()
+	defer teardown()
+
+	jBlob := `
+	{
+		"domains": [{"id":1},{"id":2}],
+		"links":{
+			"pages":{
+				"next":"http://example.com/v2/domains/?page=3",
+				"prev":"http://example.com/v2/domains/?page=1",
+				"last":"http://example.com/v2/domains/?page=3",
+				"first":"http://example.com/v2/domains/?page=1"
+			}
+		}
+	}`
+
+	mux.HandleFunc("/v2/domains", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, jBlob)
+	})
+
+	opt := &ListOptions{Page: 2}
+	_, resp, err := client.Domains.List(opt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	checkCurrentPage(t, resp, 2)
+}
+
+func TestDomains_GetDomain(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/domains/example.com", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"domain":{"name":"example.com"}}`)
+	})
+
+	domains, _, err := client.Domains.Get("example.com")
+	if err != nil {
+		t.Errorf("domain.Get returned error: %v", err)
+	}
+
+	expected := &DomainRoot{Domain: &Domain{Name: "example.com"}}
+	if !reflect.DeepEqual(domains, expected) {
+		t.Errorf("domains.Get returned %+v, expected %+v", domains, expected)
+	}
+}
+
+func TestDomains_Create(t *testing.T) {
+	setup()
+	defer teardown()
+
+	createRequest := &DomainCreateRequest{
+		Name:      "example.com",
+		IPAddress: "127.0.0.1",
+	}
+
+	mux.HandleFunc("/v2/domains", func(w http.ResponseWriter, r *http.Request) {
+		v := new(DomainCreateRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, "POST")
+		if !reflect.DeepEqual(v, createRequest) {
+			t.Errorf("Request body = %+v, expected %+v", v, createRequest)
+		}
+
+		dr := DomainRoot{&Domain{Name: v.Name}}
+		b, err := json.Marshal(dr)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fmt.Fprint(w, string(b))
+	})
+
+	domain, _, err := client.Domains.Create(createRequest)
+	if err != nil {
+		t.Errorf("Domains.Create returned error: %v", err)
+	}
+
+	expected := &DomainRoot{Domain: &Domain{Name: "example.com"}}
+	if !reflect.DeepEqual(domain, expected) {
+		t.Errorf("Domains.Create returned %+v, expected %+v", domain, expected)
+	}
+}
+
+func TestDomains_Destroy(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/domains/example.com", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "DELETE")
+	})
+
+	_, err := client.Domains.Delete("example.com")
+	if err != nil {
+		t.Errorf("Domains.Delete returned error: %v", err)
+	}
+}
+
 func TestDomains_AllRecordsForDomainName(t *testing.T) {
 	setup()
 	defer teardown()
@@ -47,7 +190,7 @@ func TestDomains_AllRecordsForDomainName_PerPage(t *testing.T) {
 		fmt.Fprint(w, `{"domain_records":[{"id":1},{"id":2}]}`)
 	})
 
-	dro := &DomainRecordsOptions{ListOptions{PerPage: 2}}
+	dro := &ListOptions{PerPage: 2}
 	records, _, err := client.Domains.Records("example.com", dro)
 	if err != nil {
 		t.Errorf("Domains.List returned error: %v", err)

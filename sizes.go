@@ -4,7 +4,7 @@ package godo
 // endpoints of the Digital Ocean API
 // See: https://developers.digitalocean.com/#sizes
 type SizesService interface {
-	List() ([]Size, *Response, error)
+	List(*ListOptions) ([]Size, *Response, error)
 }
 
 // SizesServiceOp handles communication with the size related methods of the
@@ -30,22 +30,30 @@ func (s Size) String() string {
 
 type sizesRoot struct {
 	Sizes []Size
+	Links *Links `json:"links"`
 }
 
 // List all images
-func (s *SizesServiceOp) List() ([]Size, *Response, error) {
+func (s *SizesServiceOp) List(opt *ListOptions) ([]Size, *Response, error) {
 	path := "v2/sizes"
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	req, err := s.client.NewRequest("GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	sizes := new(sizesRoot)
-	resp, err := s.client.Do(req, sizes)
+	root := new(sizesRoot)
+	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
 
-	return sizes.Sizes, resp, err
+	return root.Sizes, resp, err
 }
