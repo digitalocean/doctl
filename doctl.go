@@ -31,6 +31,7 @@ func main() {
 		}
 
 		if APIKey == "" {
+			cli.ShowAppHelp(ctx)
 			fmt.Println("Must provide API Key via DIGITAL_OCEAN_API_KEY environment variable or via CLI argument.")
 			os.Exit(1)
 		}
