@@ -21,7 +21,7 @@ USAGE:
    doctl [global options] command [command options] [arguments...]
 
 VERSION:
-   0.0.7
+   0.0.8
 
 COMMANDS:
    action   Action commands.
