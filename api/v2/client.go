@@ -97,7 +97,7 @@ func (c *Client) Session() *napping.Session {
 
 	return &napping.Session{
 		Header: header,
-		Log:    true,
+		Log:    false,
 	}
 }
 
