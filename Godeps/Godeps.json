@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/slantview/doct",
+	"ImportPath": "github.com/slantview/doctl",
 	"GoVersion": "go1.3.1",
 	"Deps": [
 		{
