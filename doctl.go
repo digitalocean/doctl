@@ -7,7 +7,7 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-const AppVersion = "0.0.8"
+const AppVersion = "0.0.9"
 
 var (
 	APIKey       string
