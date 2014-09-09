@@ -48,7 +48,7 @@ bin/windows/amd64/$(EXECUTABLE).exe:
 	GOARCH=amd64 GOOS=windows go build -o "$@"
 
 %.tar.bz2: %
-	tar -C $(shell dirname $@) -jcvf $(shell basename $<.tar.bz2) $(shell basename $<)
+	tar -C $(shell dirname $@) -jcvf "$<.tar.bz2" $(shell basename $<)
 %.zip: %.exe
 	zip -j "$@" "$<"
 
