@@ -21,27 +21,27 @@ UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t $(LAST_TAG) -n $
 all: $(EXECUTABLE)
 
 # arm
-bin/linux/arm/5/$(EXECUTABLE):
+bin/linux/arm/5/$(EXECUTABLE): update_internal_version
 	GOARM=5 GOARCH=arm GOOS=linux go build -o "$@"
-bin/linux/arm/7/$(EXECUTABLE):
+bin/linux/arm/7/$(EXECUTABLE): update_internal_version
 	GOARM=7 GOARCH=arm GOOS=linux go build -o "$@"
 
 # 386
-bin/darwin/386/$(EXECUTABLE):
+bin/darwin/386/$(EXECUTABLE): update_internal_version
 	GOARCH=386 GOOS=darwin go build -o "$@"
-bin/linux/386/$(EXECUTABLE):
+bin/linux/386/$(EXECUTABLE): update_internal_version
 	GOARCH=386 GOOS=linux go build -o "$@"
-bin/windows/386/$(EXECUTABLE):
+bin/windows/386/$(EXECUTABLE): update_internal_version
 	GOARCH=386 GOOS=windows go build -o "$@"
 
 # amd64
-bin/freebsd/amd64/$(EXECUTABLE):
+bin/freebsd/amd64/$(EXECUTABLE): update_internal_version
 	GOARCH=amd64 GOOS=freebsd go build -o "$@"
-bin/darwin/amd64/$(EXECUTABLE):
+bin/darwin/amd64/$(EXECUTABLE): update_internal_version
 	GOARCH=amd64 GOOS=darwin go build -o "$@"
-bin/linux/amd64/$(EXECUTABLE):
+bin/linux/amd64/$(EXECUTABLE): update_internal_version
 	GOARCH=amd64 GOOS=linux go build -o "$@"
-bin/windows/amd64/$(EXECUTABLE).exe:
+bin/windows/amd64/$(EXECUTABLE).exe: update_internal_version
 	GOARCH=amd64 GOOS=windows go build -o "$@"
 
 %.tar.bz2: %
@@ -49,7 +49,7 @@ bin/windows/amd64/$(EXECUTABLE).exe:
 %.zip: %.exe
 	zip -j "$@" "$<"
 
-release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test releaselog-$(LAST_TAG).txt update_internal_version
+release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test releaselog-$(LAST_TAG).txt 
 	git push && git push --tags
 	$(GHRELEASE) release -u $(USER) -r $(EXECUTABLE) \
 		-t $(LAST_TAG) -n $(LAST_TAG) -d "`cat releaselog-$(LAST_TAG).txt`" || true
@@ -62,7 +62,7 @@ releaselog-$(LAST_TAG).txt:
 	godep restore
 	touch .deps
 
-update_internal_version:
+update_internal_version: doctl.go
 	sed -i '' 's/const AppVersion = ".*"/const AppVersion = "$(LAST_TAG)"/' doctl.go
 
 $(EXECUTABLE): .deps
