@@ -17,9 +17,9 @@ type DomainRecord struct {
 	Type     string `json:"type"`
 	Name     string `json:"name"`
 	Data     string `json:"data"`
-	Priority int    `json:"priority"`
-	Port     int    `json:"port"`
-	Weight   int    `json:"weight"`
+	Priority int    `json:"priority,omitempty"`
+	Port     int    `json:"port,omitempty"`
+	Weight   int    `json:"weight,omitempty"`
 	client   *Client
 }
 
@@ -31,6 +31,10 @@ type DomainRecordListResponse struct {
 }
 
 type DomainRecordList []*DomainRecord
+
+type DomainRecordResponse struct {
+	DomainRecord *DomainRecord `json:"domain_record"`
+}
 
 func (c *Client) NewDomainRecord() *DomainRecord {
 	return &DomainRecord{
@@ -84,4 +88,41 @@ func (c *Client) FindDomainFromName(search string) (*Domain, error) {
 	}
 
 	return nil, fmt.Errorf("%s Not Found", search)
+}
+
+func (c *Client) CreateDomainRecord(domainRecord *DomainRecord, domain *Domain) (*DomainRecord, error) {
+	var response DomainRecordResponse
+
+	domain, err := c.FindDomainFromName(domainRecord.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	domainRecord.Name = strings.Replace(domainRecord.Name, fmt.Sprintf(".%s", domain.Name), "", 1)
+
+	apiErr := c.Post(fmt.Sprintf("domains/%s/records", domain.Name), domainRecord, &response, nil)
+	if apiErr != nil {
+		return nil, fmt.Errorf("API Error: %s", apiErr.Message)
+	}
+
+	return response.DomainRecord, nil
+}
+
+func (c *Client) DestroyDomainRecord(name string) error {
+	domain, err := c.FindDomainFromName(name)
+	if err != nil {
+		return err
+	}
+
+	record, loadErr := c.LoadDomainRecord(name)
+	if loadErr != nil {
+		return loadErr
+	}
+
+	apiErr := c.Delete(fmt.Sprintf("domains/%s/records/%d", domain.Name, record.ID), nil, nil)
+	if apiErr != nil {
+		return fmt.Errorf("API Error: %s", apiErr.Message)
+	}
+
+	return nil
 }

@@ -23,9 +23,19 @@ var DomainRecordCommand = cli.Command{
 			Action: domainRecordShow,
 		},
 		{
-			Name:   "create",
-			Usage:  "Create domain record.",
+			Name:  "create",
+			Usage: "Create domain record.",
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "priority", Value: 0, Usage: "Priority for domain record. (Type: MX, SRV)"},
+				cli.IntFlag{Name: "port", Value: 0, Usage: "Port for domain record. (Type: SRV)"},
+				cli.IntFlag{Name: "weight", Value: 0, Usage: "Weight for domain record. (Type: SRV)"},
+			},
 			Action: domainRecordCreate,
+		},
+		{
+			Name:   "destroy",
+			Usage:  "Destroy domain record.",
+			Action: domainRecordDestroy,
 		},
 	},
 }
@@ -73,9 +83,55 @@ func domainRecordShow(ctx *cli.Context) {
 }
 
 func domainRecordCreate(ctx *cli.Context) {
+	if len(ctx.Args()) < 3 {
+		cli.ShowAppHelp(ctx)
+		fmt.Printf("Invalid arguments.\n")
+		os.Exit(1)
+	}
 
+	client := apiv2.NewClient(APIKey)
+
+	domainRecord := client.NewDomainRecord()
+	domainRecord.Name = ctx.Args().First()
+	domainRecord.Type = ctx.Args()[1]
+	domainRecord.Data = ctx.Args()[2]
+	if domainRecord.Type == "MX" || domainRecord.Type == "SRV" {
+		domainRecord.Priority = ctx.Int("priority")
+	}
+	if domainRecord.Type == "SRV" {
+		domainRecord.Port = ctx.Int("port")
+		domainRecord.Weight = ctx.Int("weight")
+	}
+
+	domain, err := client.FindDomainFromName(domainRecord.Name)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+	}
+
+	domainRecord, createErr := client.CreateDomainRecord(domainRecord, domain)
+	if createErr != nil {
+		fmt.Printf("%s\n", createErr)
+		os.Exit(1)
+	}
+
+	WriteOutput(domainRecord)
 }
 
 func domainRecordDestroy(ctx *cli.Context) {
+	if len(ctx.Args()) == 0 {
+		fmt.Printf("Error: Must provide FQDN for domain record.\n")
+		os.Exit(1)
+	}
 
+	name := ctx.Args().First()
+
+	client := apiv2.NewClient(APIKey)
+
+	err := client.DestroyDomainRecord(name)
+	if err != nil {
+		fmt.Printf("Unable to destroy domain record: %s\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Domain record %s destroyed.\n", name)
 }
