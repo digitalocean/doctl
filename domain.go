@@ -6,13 +6,13 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/slantview/doctl/api/v2"
-	"gopkg.in/yaml.v1"
 )
 
 var DomainCommand = cli.Command{
 	Name:  "domain",
 	Usage: "Domain commands.",
 	Subcommands: []cli.Command{
+		DomainRecordCommand,
 		{
 			Name:   "show",
 			Usage:  "Show an domain.",
@@ -33,22 +33,6 @@ var DomainCommand = cli.Command{
 			Usage:  "Destroy a domain.",
 			Action: domainDestroy,
 		},
-		{
-			Name:  "record",
-			Usage: "Domain record commands.",
-			Subcommands: []cli.Command{
-				{
-					Name:   "list",
-					Usage:  "List domain records.",
-					Action: domainRecordList,
-				},
-				{
-					Name:   "show",
-					Usage:  "Show domain record.",
-					Action: domainRecordShow,
-				},
-			},
-		},
 	},
 }
 
@@ -68,12 +52,7 @@ func domainShow(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	data, errMarshal := yaml.Marshal(domain)
-	if errMarshal != nil {
-		fmt.Printf("YAML Error: %s", errMarshal)
-		os.Exit(1)
-	}
-	fmt.Printf("%s", string(data))
+	WriteOutput(domain)
 }
 
 func domainList(ctx *cli.Context) {
@@ -92,17 +71,46 @@ func domainList(ctx *cli.Context) {
 }
 
 func domainCreate(ctx *cli.Context) {
+	if len(ctx.Args()) < 2 {
+		fmt.Printf("Must provide domain name and droplet name.\n")
+		os.Exit(1)
+	}
 
+	client := apiv2.NewClient(APIKey)
+
+	droplet, err := client.FindDropletByName(ctx.Args()[1])
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(64)
+	}
+
+	domainRequest := client.NewDomainRequest(ctx.Args().First())
+	domainRequest.IPAddress = droplet.PublicIPAddress()
+
+	domain, createErr := client.CreateDomain(domainRequest)
+	if createErr != nil {
+		fmt.Printf("%s\n", createErr)
+		os.Exit(1)
+	}
+
+	WriteOutput(domain)
 }
 
 func domainDestroy(ctx *cli.Context) {
+	if len(ctx.Args()) == 0 {
+		fmt.Printf("Error: Must provide name for domain.\n")
+		os.Exit(1)
+	}
 
-}
+	name := ctx.Args().First()
 
-func domainRecordList(ctx *cli.Context) {
+	client := apiv2.NewClient(APIKey)
 
-}
+	err := client.DestroyDomain(name)
+	if err != nil {
+		fmt.Printf("Unable to destroy domain: %s\n", err)
+		os.Exit(1)
+	}
 
-func domainRecordShow(ctx *cli.Context) {
-
+	fmt.Printf("Domain %s destroyed.\n", name)
 }

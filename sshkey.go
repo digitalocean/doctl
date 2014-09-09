@@ -68,12 +68,7 @@ func sshCreate(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	yamlData, errMarshal := yaml.Marshal(key)
-	if errMarshal != nil {
-		fmt.Printf("YAML Error: %s", errMarshal)
-		os.Exit(1)
-	}
-	fmt.Printf("%s", string(yamlData))
+	WriteOutput(key)
 }
 
 func sshList(ctx *cli.Context) {
@@ -135,5 +130,5 @@ func sshDestroy(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Key %s destroyed.", name)
+	fmt.Printf("Key %s destroyed.\n", name)
 }

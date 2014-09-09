@@ -7,7 +7,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/slantview/doctl/api/v2"
-	"gopkg.in/yaml.v1"
 )
 
 var DropletCommand = cli.Command{
@@ -90,12 +89,7 @@ func dropletCreate(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	data, errMarshal := yaml.Marshal(droplet)
-	if errMarshal != nil {
-		fmt.Printf("YAML Error: %s", errMarshal)
-		os.Exit(1)
-	}
-	fmt.Printf("%s", string(data))
+	WriteOutput(droplet)
 }
 
 func dropletList(ctx *cli.Context) {
@@ -109,26 +103,8 @@ func dropletList(ctx *cli.Context) {
 
 	fmt.Printf("ID\t%-16s\t%-16s\tStatus\tMemory\tDisk\tRegion\n", "Name", "IP Address")
 	for _, droplet := range dropletList.Droplets {
-		var ipProtocol string
-		var ipIdx int
-		var ipAddress string
-		for net, networks := range droplet.Networks {
-			for idx, network := range networks {
-				if network.Type == "public" {
-					ipProtocol = net
-					ipIdx = idx
-				}
-			}
-		}
-
-		if len(droplet.Networks[ipProtocol]) > 0 {
-			ipAddress = droplet.Networks[ipProtocol][ipIdx].IPAddress
-		} else {
-			ipAddress = "0.0.0.0"
-		}
-
 		fmt.Printf("%d\t%-16s\t%-16s\t%s\t%dMB\t%dGB\t%s\n",
-			droplet.ID, droplet.Name, ipAddress, droplet.Status, droplet.Memory, droplet.Disk, droplet.Region.Slug)
+			droplet.ID, droplet.Name, droplet.PublicIPAddress(), droplet.Status, droplet.Memory, droplet.Disk, droplet.Region.Slug)
 	}
 }
 
@@ -150,12 +126,7 @@ func dropletShow(ctx *cli.Context) {
 
 	for _, droplet := range dropletList.Droplets {
 		if droplet.Name == name {
-			data, errMarshal := yaml.Marshal(droplet)
-			if errMarshal != nil {
-				fmt.Printf("YAML Error: %s", errMarshal)
-				os.Exit(1)
-			}
-			fmt.Printf("%s", string(data))
+			WriteOutput(droplet)
 		}
 	}
 }

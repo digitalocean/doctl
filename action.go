@@ -7,7 +7,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/slantview/doctl/api/v2"
-	"gopkg.in/yaml.v1"
 )
 
 var ActionCommand = cli.Command{
@@ -43,12 +42,7 @@ func actionShow(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	data, errMarshal := yaml.Marshal(action)
-	if errMarshal != nil {
-		fmt.Printf("YAML Error: %s", errMarshal)
-		os.Exit(1)
-	}
-	fmt.Printf("%s", string(data))
+	WriteOutput(action)
 }
 
 func actionList(ctx *cli.Context) {

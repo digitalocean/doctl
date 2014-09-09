@@ -6,7 +6,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/slantview/doctl/api/v2"
-	"gopkg.in/yaml.v1"
 )
 
 var SizeCommand = cli.Command{
@@ -42,12 +41,7 @@ func sizeShow(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	data, errMarshal := yaml.Marshal(size)
-	if errMarshal != nil {
-		fmt.Printf("YAML Error: %s", errMarshal)
-		os.Exit(1)
-	}
-	fmt.Printf("%s", string(data))
+	WriteOutput(size)
 }
 
 func sizeList(ctx *cli.Context) {

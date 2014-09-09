@@ -170,3 +170,40 @@ func (c *Client) DestroyDroplet(name string) error {
 
 	return errors.New(fmt.Sprintf("%s Not Found.", name))
 }
+
+func (c *Client) FindDropletByName(name string) (*Droplet, error) {
+	dropletList, err := c.ListDroplets()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, droplet := range dropletList.Droplets {
+		if droplet.Name == name {
+			return droplet, nil
+		}
+	}
+
+	return nil, fmt.Errorf("%s Not Found.", name)
+}
+
+func (d *Droplet) PublicIPAddress() string {
+	var ipProtocol string
+	var ipIdx int
+	var ipAddress string
+	for net, networks := range d.Networks {
+		for idx, network := range networks {
+			if network.Type == "public" {
+				ipProtocol = net
+				ipIdx = idx
+			}
+		}
+	}
+
+	if len(d.Networks[ipProtocol]) > 0 {
+		ipAddress = d.Networks[ipProtocol][ipIdx].IPAddress
+	} else {
+		ipAddress = "0.0.0.0"
+	}
+
+	return ipAddress
+}
