@@ -143,6 +143,9 @@ func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*Drople
 	if err != nil {
 		return nil, resp, err
 	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
 
 	return root, resp, err
 }
