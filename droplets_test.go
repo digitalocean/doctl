@@ -138,17 +138,20 @@ func TestDroplets_Create(t *testing.T) {
 			t.Errorf("Request body = %+v, expected %+v", v, createRequest)
 		}
 
-		fmt.Fprintf(w, `{"droplet":{"id":1}}`)
+		fmt.Fprintf(w, `{"droplet":{"id":1}, "links":{"actions": [{"id": 1, "href": "http://example.com", "rel": "create"}]}}`)
 	})
 
-	droplet, _, err := client.Droplets.Create(createRequest)
+	root, resp, err := client.Droplets.Create(createRequest)
 	if err != nil {
 		t.Errorf("Droplets.Create returned error: %v", err)
 	}
 
-	expected := &DropletRoot{Droplet: &Droplet{ID: 1}}
-	if !reflect.DeepEqual(droplet, expected) {
-		t.Errorf("Droplets.Create returned %+v, expected %+v", droplet, expected)
+	if id := root.Droplet.ID; id != 1 {
+		t.Errorf("expected id '%d', received '%d'", 1, id)
+	}
+
+	if a := resp.Links.Actions[0]; a.ID != 1 {
+		t.Errorf("expected action id '%d', received '%d'", 1, a.ID)
 	}
 }
 
