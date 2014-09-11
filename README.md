@@ -1,5 +1,8 @@
 # Digital Ocean Control TooL
 
+[![Build Status](https://travis-ci.org/slantview/doctl.svg)](https://travis-ci.org/slantview/doctl)
+
+
 doctl is a tool for controlling your digital ocean resources from the command line.  As an added benefit you get an API library for v2 of the DO API.
 
 ## Installation
