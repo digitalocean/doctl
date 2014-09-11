@@ -20,28 +20,14 @@ UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t $(LAST_TAG) -n $
 
 all: $(EXECUTABLE)
 
-# arm
-bin/linux/arm/5/$(EXECUTABLE): update_internal_version
-	GOARM=5 GOARCH=arm GOOS=linux go build -o "$@"
-bin/linux/arm/7/$(EXECUTABLE): update_internal_version
-	GOARM=7 GOARCH=arm GOOS=linux go build -o "$@"
-
-# 386
-bin/darwin/386/$(EXECUTABLE): update_internal_version
-	GOARCH=386 GOOS=darwin go build -o "$@"
-bin/linux/386/$(EXECUTABLE): update_internal_version
-	GOARCH=386 GOOS=linux go build -o "$@"
-bin/windows/386/$(EXECUTABLE): update_internal_version
-	GOARCH=386 GOOS=windows go build -o "$@"
-
-# amd64
-bin/freebsd/amd64/$(EXECUTABLE): update_internal_version
+# binaries
+bin/freebsd/amd64/$(EXECUTABLE): update_internal_version .deps
 	GOARCH=amd64 GOOS=freebsd go build -o "$@"
-bin/darwin/amd64/$(EXECUTABLE): update_internal_version
+bin/darwin/amd64/$(EXECUTABLE): update_internal_version .deps
 	GOARCH=amd64 GOOS=darwin go build -o "$@"
-bin/linux/amd64/$(EXECUTABLE): update_internal_version
+bin/linux/amd64/$(EXECUTABLE): update_internal_version .deps
 	GOARCH=amd64 GOOS=linux go build -o "$@"
-bin/windows/amd64/$(EXECUTABLE).exe: update_internal_version
+bin/windows/amd64/$(EXECUTABLE).exe: update_internal_version .deps
 	GOARCH=amd64 GOOS=windows go build -o "$@"
 
 %.tar.bz2: %
@@ -68,7 +54,7 @@ update_internal_version: doctl.go
 $(EXECUTABLE): .deps
 	go build -o "$@"
 
-install:
+install: .deps
 	go install
 
 install_godep:
@@ -81,7 +67,7 @@ clean:
 	rm .deps
 	rm -rf bin/
 
-test:
+test: .deps
 	go test -v ./...
 
 .PHONY: clean release install test install_godep install_github_release update_internal_version
