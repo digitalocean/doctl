@@ -18,7 +18,7 @@ COMPRESSED_EXECUTABLE_TARGETS=$(COMPRESSED_EXECUTABLES:%=bin/%)
 
 UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t $(LAST_TAG) -n $(subst /,-,$(FILE)) -f bin/$(FILE)
 
-all: $(EXECUTABLE)
+all: test $(EXECUTABLE)
 
 # binaries
 bin/freebsd/amd64/$(EXECUTABLE): update_internal_version .deps
@@ -35,7 +35,7 @@ bin/windows/amd64/$(EXECUTABLE).exe: update_internal_version .deps
 %.zip: %.exe
 	zip -j "$@" "$<"
 
-release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test releaselog-$(LAST_TAG).txt 
+release: test $(COMPRESSED_EXECUTABLE_TARGETS) $(GOPATH)/bin/github-release releaselog-$(LAST_TAG).txt 
 	git push && git push --tags
 	$(GHRELEASE) release -u $(USER) -r $(EXECUTABLE) \
 		-t $(LAST_TAG) -n $(LAST_TAG) -d "`cat releaselog-$(LAST_TAG).txt`" || true
@@ -44,7 +44,7 @@ release: $(COMPRESSED_EXECUTABLE_TARGETS) install_github_release test releaselog
 releaselog-$(LAST_TAG).txt:
 	git shortlog $(PREV_VERSION)..$(LAST_TAG) > releaselog-$(LAST_TAG).txt
 
-.deps: install_godep
+.deps: $(GOPATH)/bin/godep
 	godep restore
 	touch .deps
 
@@ -57,10 +57,10 @@ $(EXECUTABLE): .deps
 install: .deps
 	go install
 
-install_godep:
+$(GOPATH)/bin/godep:
 	go get github.com/tools/godep
 
-install_github_release:
+$(GOPATH)/bin/github-release:
 	go get github.com/aktau/github-release
 
 clean:
@@ -70,4 +70,4 @@ clean:
 test: .deps
 	go test -v ./...
 
-.PHONY: clean release install test install_godep install_github_release update_internal_version
+.PHONY: clean release install test update_internal_version
