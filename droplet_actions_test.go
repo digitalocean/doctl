@@ -76,6 +76,37 @@ func TestDropletAction_PowerOff(t *testing.T) {
 	}
 }
 
+func TestDropletAction_PowerOn(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		Type: "power_on",
+	}
+
+	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
+		v := new(ActionRequest)
+		json.NewDecoder(r.Body).Decode(v)
+
+		testMethod(t, r, "POST")
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.PowerOn(1)
+	if err != nil {
+		t.Errorf("DropletActions.PowerOn returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.PowerOn returned %+v, expected %+v", action, expected)
+	}
+}
+
 func TestDropletAction_Reboot(t *testing.T) {
 	setup()
 	defer teardown()

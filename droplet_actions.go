@@ -11,6 +11,7 @@ import (
 type DropletActionsService interface {
 	Shutdown(int) (*Action, *Response, error)
 	PowerOff(int) (*Action, *Response, error)
+	PowerOn(int) (*Action, *Response, error)
 	PowerCycle(int) (*Action, *Response, error)
 	Reboot(int) (*Action, *Response, error)
 	Restore(int, int) (*Action, *Response, error)
@@ -36,6 +37,12 @@ func (s *DropletActionsServiceOp) Shutdown(id int) (*Action, *Response, error) {
 // PowerOff a Droplet
 func (s *DropletActionsServiceOp) PowerOff(id int) (*Action, *Response, error) {
 	request := &ActionRequest{Type: "power_off"}
+	return s.doAction(id, request)
+}
+
+// PowerOn a Droplet
+func (s *DropletActionsServiceOp) PowerOn(id int) (*Action, *Response, error) {
+	request := &ActionRequest{Type: "power_on"}
 	return s.doAction(id, request)
 }
 
