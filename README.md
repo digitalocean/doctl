@@ -44,13 +44,13 @@ To create a new Droplet:
 dropletName := "super-cool-droplet"
 
 createRequest := &godo.DropletCreateRequest{
-    Name:   godo.String(dropletName),
-    Region: godo.String("nyc2"),
-    Size:   godo.String("512mb"),
-    Image:  godo.Int(3240036), // ubuntu 14.04 64bit
+    Name:   dropletName,
+    Region: "nyc3",
+    Size:   "512mb",
+    Image:  "ubuntu-14-04-x64",
 }
 
-newDroplet, _, err := client.Droplet.Create(createRequest)
+newDroplet, _, err := client.Droplets.Create(createRequest)
 
 if err != nil {
     fmt.Printf("Something bad happened: %s\n\n", err)
