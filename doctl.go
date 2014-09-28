@@ -5,17 +5,13 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
+	"github.com/slantview/doctl/commands"
 )
 
 const AppVersion = "0.0.9"
 
-var (
-	APIKey       string
-	OutputFormat string
-)
-
 func init() {
-	APIKey = os.Getenv("DIGITAL_OCEAN_API_KEY")
+	commands.APIKey = os.Getenv("DIGITAL_OCEAN_API_KEY")
 }
 
 func main() {
@@ -29,33 +25,34 @@ func main() {
 	}
 	app.Before = func(ctx *cli.Context) error {
 		if ctx.String("api-key") != "" {
-			APIKey = ctx.String("api-key")
+			commands.APIKey = ctx.String("api-key")
 		}
 
 		switch ctx.String("format") {
 		case "json":
-			OutputFormat = ctx.String("format")
+			commands.OutputFormat = ctx.String("format")
 		case "yaml":
-			OutputFormat = ctx.String("format")
+			commands.OutputFormat = ctx.String("format")
 		default:
 			fmt.Printf("Invalid output format: %s. Available output options: json, yaml.\n", ctx.String("format"))
 			os.Exit(64)
 		}
 
-		if APIKey == "" {
+		if commands.APIKey == "" {
 			cli.ShowAppHelp(ctx)
 			fmt.Println("Must provide API Key via DIGITAL_OCEAN_API_KEY environment variable or via CLI argument.")
 			os.Exit(1)
 		}
+
 		return nil
 	}
 	app.Commands = []cli.Command{
-		ActionCommand,
-		DomainCommand,
-		DropletCommand,
-		RegionCommand,
-		SizeCommand,
-		SSHCommand,
+		commands.ActionCommand,
+		commands.DomainCommand,
+		commands.DropletCommand,
+		commands.RegionCommand,
+		commands.SizeCommand,
+		commands.SSHCommand,
 	}
 
 	app.Run(os.Args)

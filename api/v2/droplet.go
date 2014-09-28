@@ -42,7 +42,7 @@ type Droplet struct {
 	BackupIDs   []int                  `json:"backup_ids"`
 	SnapshotIDs []int                  `json:"snapshot_ids"`
 	Features    []string               `json:"features"`
-	client      *Client
+	Client      *Client
 }
 
 // name					String	The human-readable string you wish to use when displaying the Droplet name. The name, if set to a domain name managed in the DigitalOcean DNS management system, will configure a PTR record for the Droplet. The name set during creation will also determine the hostname for the Droplet in its internal configuration.	Yes
@@ -110,7 +110,7 @@ type DropletResponse struct {
 
 func (c *Client) NewDroplet() *Droplet {
 	return &Droplet{
-		client: c,
+		Client: c,
 	}
 }
 
@@ -179,6 +179,7 @@ func (c *Client) FindDropletByName(name string) (*Droplet, error) {
 
 	for _, droplet := range dropletList.Droplets {
 		if droplet.Name == name {
+			droplet.Client = c
 			return droplet, nil
 		}
 	}

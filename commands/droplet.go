@@ -1,4 +1,4 @@
-package main
+package commands
 
 import (
 	"fmt"
@@ -13,6 +13,7 @@ var DropletCommand = cli.Command{
 	Name:  "droplet",
 	Usage: "Droplet commands.",
 	Subcommands: []cli.Command{
+		DropletActionCommand,
 		{
 			Name:   "create",
 			Usage:  "Create droplet.",
