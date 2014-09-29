@@ -54,11 +54,11 @@ func actionList(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%-10s\t%-6s\t%-10s\t%-10s\t%-10s\t%-16s\t%-16s\t%s\n",
-		"ID", "Region", "ResourceType", "ResourceID", "Type", "StartedAt", "CompletedAt", "Status")
+	cliOut := NewCLIOutput()
+	defer cliOut.Flush()
+	cliOut.Header("ID", "Region", "ResourceType", "ResourceID", "Type", "StartedAt", "CompletedAt", "Status")
 	for _, action := range actionList.Actions {
-		fmt.Printf("%-10d\t%-6s\t%-10s\t%-10d\t%-10s\t%-16s\t%-16s\t%s\n",
-			action.ID, action.Region, action.ResourceType, action.ResourceID, action.Type, action.StartedAt,
-			action.CompletedAt, action.Status)
+		cliOut.Writeln("%d\t%s\t%s\t%d\t%s\t%s\t%s\t%s\n", action.ID, action.Region, action.ResourceType,
+			action.ResourceID, action.Type, action.StartedAt, action.CompletedAt, action.Status)
 	}
 }

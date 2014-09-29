@@ -102,9 +102,11 @@ func dropletList(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("ID\t%-16s\t%-16s\tStatus\tMemory\tDisk\tRegion\n", "Name", "IP Address")
+	cliOut := NewCLIOutput()
+	defer cliOut.Flush()
+	cliOut.Header("ID", "Name", "IP Address", "Status", "Memory", "Disk", "Region")
 	for _, droplet := range dropletList.Droplets {
-		fmt.Printf("%d\t%-16s\t%-16s\t%s\t%dMB\t%dGB\t%s\n",
+		cliOut.Writeln("%d\t%s\t%s\t%s\t%dMB\t%dGB\t%s\n",
 			droplet.ID, droplet.Name, droplet.PublicIPAddress(), droplet.Status, droplet.Memory, droplet.Disk, droplet.Region.Slug)
 	}
 }

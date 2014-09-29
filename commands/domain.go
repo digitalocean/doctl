@@ -64,9 +64,11 @@ func domainList(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%-16s\t%s\n", "Name", "TTL")
+	cliOut := NewCLIOutput()
+	defer cliOut.Flush()
+	cliOut.Header("Name", "TTL")
 	for _, domain := range domainList.Domains {
-		fmt.Printf("%-16s\t%d\n", domain.Name, domain.TTL)
+		cliOut.Writeln("%s\t%d\n", domain.Name, domain.TTL)
 	}
 }
 

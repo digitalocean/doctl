@@ -53,9 +53,11 @@ func sizeList(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%-8s\t%s\t%s\t%s\t%-8s\t%-11s\t%s\n", "Slug", "Memory", "VCPUs", "Disk", "Transfer", "Price Monthly", "Price Hourly")
+	cliOut := NewCLIOutput()
+	defer cliOut.Flush()
+	cliOut.Header("Slug", "Memory", "VCPUs", "Disk", "Transfer", "Price Monthly", "Price Hourly")
 	for _, size := range sizeList.Sizes {
-		fmt.Printf("%-8s\t%dMB\t%d\t%dGB\t%-8d\t$%-11.0f\t$%0.5f\n",
+		cliOut.Writeln("%s\t%dMB\t%d\t%dGB\t%d\t$%.0f\t$%.5f\n",
 			size.Slug, size.Memory, size.VCPUS, size.Disk, size.Transfer, size.PriceMonthly, size.PriceHourly)
 	}
 }
