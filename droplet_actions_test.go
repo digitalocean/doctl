@@ -19,7 +19,7 @@ func TestDropletActions_Shutdown(t *testing.T) {
 	defer teardown()
 
 	request := &ActionRequest{
-		Type: "shutdown",
+		"type": "shutdown",
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
@@ -50,7 +50,7 @@ func TestDropletAction_PowerOff(t *testing.T) {
 	defer teardown()
 
 	request := &ActionRequest{
-		Type: "power_off",
+		"type": "power_off",
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +81,7 @@ func TestDropletAction_PowerOn(t *testing.T) {
 	defer teardown()
 
 	request := &ActionRequest{
-		Type: "power_on",
+		"type": "power_on",
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +112,7 @@ func TestDropletAction_Reboot(t *testing.T) {
 	defer teardown()
 
 	request := &ActionRequest{
-		Type: "reboot",
+		"type": "reboot",
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
@@ -143,13 +143,9 @@ func TestDropletAction_Restore(t *testing.T) {
 	setup()
 	defer teardown()
 
-	options := map[string]interface{}{
-		"image": float64(1),
-	}
-
 	request := &ActionRequest{
-		Type:   "restore",
-		Params: options,
+		"type":  "restore",
+		"image": float64(1),
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
@@ -181,13 +177,9 @@ func TestDropletAction_Resize(t *testing.T) {
 	setup()
 	defer teardown()
 
-	options := map[string]interface{}{
-		"size": "1024mb",
-	}
-
 	request := &ActionRequest{
-		Type:   "resize",
-		Params: options,
+		"type": "resize",
+		"size": "1024mb",
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
@@ -219,13 +211,9 @@ func TestDropletAction_Rename(t *testing.T) {
 	setup()
 	defer teardown()
 
-	options := map[string]interface{}{
-		"name": "Droplet-Name",
-	}
-
 	request := &ActionRequest{
-		Type:   "rename",
-		Params: options,
+		"type": "rename",
+		"name": "Droplet-Name",
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
@@ -257,7 +245,7 @@ func TestDropletAction_PowerCycle(t *testing.T) {
 	defer teardown()
 
 	request := &ActionRequest{
-		Type: "power_cycle",
+		"type": "power_cycle",
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
