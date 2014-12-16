@@ -18,8 +18,8 @@ type Region struct {
 	Slug      string   `json:"slug,omitempty"`
 	Name      string   `json:"name,omitempty"`
 	Sizes     []string `json:"sizes,omitempty"`
-	Available bool     `json:"available,omitempty`
-	Features  []string `json:"features,omitempty`
+	Available bool     `json:"available,omitempty"`
+	Features  []string `json:"features,omitempty"`
 }
 
 type regionsRoot struct {
