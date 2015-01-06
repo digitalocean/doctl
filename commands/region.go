@@ -53,8 +53,10 @@ func regionList(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("%-16s\t%s\t%s\n", "Name", "Slug", "Available")
+	cliOut := NewCLIOutput()
+	defer cliOut.Flush()
+	cliOut.Header("Name", "Slug", "Available")
 	for _, region := range regionList.Regions {
-		fmt.Printf("%-16s\t%s\t%t\n", region.Name, region.Slug, region.Available)
+		cliOut.Writeln("%s\t%s\t%t\n", region.Name, region.Slug, region.Available)
 	}
 }

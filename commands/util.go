@@ -4,9 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
+	"text/tabwriter"
 
 	"gopkg.in/yaml.v1"
 )
+
+type CLIOutput struct {
+	w *tabwriter.Writer
+}
+
+func NewCLIOutput() *CLIOutput {
+	return &CLIOutput{
+		w: tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0),
+	}
+}
 
 func WriteOutput(data interface{}) {
 	var output []byte
@@ -28,4 +40,16 @@ func WriteOutput(data interface{}) {
 		}
 	}
 	fmt.Printf("%s", string(output))
+}
+
+func (c *CLIOutput) Header(a ...string) {
+	fmt.Fprintln(c.w, strings.Join(a, "\t"))
+}
+
+func (c *CLIOutput) Writeln(format string, a ...interface{}) {
+	fmt.Fprintf(c.w, format, a...)
+}
+
+func (c *CLIOutput) Flush() {
+	c.w.Flush()
 }

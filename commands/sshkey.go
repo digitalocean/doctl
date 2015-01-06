@@ -80,9 +80,11 @@ func sshList(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("ID\t%-16s\t%-48s\n", "Name", "Fingerprint")
+	cliOut := NewCLIOutput()
+	defer cliOut.Flush()
+	cliOut.Header("ID", "Name", "Fingerprint")
 	for _, key := range keyList.SSHKeys {
-		fmt.Printf("%d\t%-16s\t%-48s\n", key.ID, key.Name, key.Fingerprint)
+		cliOut.Writeln("%d\t%s\t%s\n", key.ID, key.Name, key.Fingerprint)
 	}
 }
 
