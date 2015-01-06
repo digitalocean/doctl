@@ -71,7 +71,7 @@ func (c *Client) Put(url string, payload, result, errMsg interface{}) *APIErrorR
 
 	status := resp.Status() - (resp.Status() % 200)
 
-	if status != 2 {
+	if status != http.StatusOK {
 		return NewAPIErrorResponse(resp.RawText())
 	}
 	return nil

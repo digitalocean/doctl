@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/codegangsta/cli"
 	"github.com/slantview/doctl/api/v2"
@@ -26,6 +27,7 @@ var DomainRecordCommand = cli.Command{
 			Name:  "create",
 			Usage: "Create domain record.",
 			Flags: []cli.Flag{
+				cli.StringFlag{Name: "type", Value: "A", Usage: "Type for domain record."},
 				cli.IntFlag{Name: "priority", Value: 0, Usage: "Priority for domain record. (Type: MX, SRV)"},
 				cli.IntFlag{Name: "port", Value: 0, Usage: "Port for domain record. (Type: SRV)"},
 				cli.IntFlag{Name: "weight", Value: 0, Usage: "Weight for domain record. (Type: SRV)"},
@@ -83,7 +85,7 @@ func domainRecordShow(ctx *cli.Context) {
 }
 
 func domainRecordCreate(ctx *cli.Context) {
-	if len(ctx.Args()) < 3 {
+	if len(ctx.Args()) < 2 {
 		cli.ShowAppHelp(ctx)
 		fmt.Printf("Invalid arguments.\n")
 		os.Exit(1)
@@ -93,8 +95,9 @@ func domainRecordCreate(ctx *cli.Context) {
 
 	domainRecord := client.NewDomainRecord()
 	domainRecord.Name = ctx.Args().First()
-	domainRecord.Type = ctx.Args()[1]
-	domainRecord.Data = ctx.Args()[2]
+	domainRecord.Data = ctx.Args()[1]
+	domainRecord.Type = strings.ToUpper(ctx.String("type"))
+
 	if domainRecord.Type == "MX" || domainRecord.Type == "SRV" {
 		domainRecord.Priority = ctx.Int("priority")
 	}
