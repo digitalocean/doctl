@@ -1,7 +1,6 @@
 package apiv2
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -134,7 +133,7 @@ func (c *Client) CreateDroplet(request *DropletRequest) (*Droplet, error) {
 
 	apiErr := c.Post("droplets", request, &dropletResponse, nil)
 	if apiErr != nil {
-		return nil, errors.New(fmt.Sprintf("API Error: %s", apiErr.Message))
+		return nil, fmt.Errorf("API Error: %s", apiErr.Message)
 	}
 
 	return dropletResponse.Droplet, nil
@@ -145,14 +144,21 @@ func (c *Client) ListDroplets() (*DropletList, error) {
 
 	apiErr := c.Get("droplets", nil, &dropletList, nil)
 	if apiErr != nil {
-		return nil, errors.New(fmt.Sprintf("API Error: %s", apiErr.Message))
+		return nil, fmt.Errorf("API Error: %s", apiErr.Message)
 	}
 
 	return &dropletList, nil
-
 }
 
-func (c *Client) DestroyDroplet(name string) error {
+func (c *Client) DestroyDropletByID(id int) error {
+	err := c.Delete(fmt.Sprintf("droplets/%d", id), nil, nil)
+	if err != nil {
+		return fmt.Errorf("API Error: %s", err.Message)
+	}
+	return nil
+}
+
+func (c *Client) DestroyDropletByName(name string) error {
 	dropletList, err := c.ListDroplets()
 	if err != nil {
 		return err
@@ -162,13 +168,13 @@ func (c *Client) DestroyDroplet(name string) error {
 		if droplet.Name == name {
 			apiErr := c.Delete(fmt.Sprintf("droplets/%d", droplet.ID), nil, nil)
 			if apiErr != nil {
-				return errors.New(fmt.Sprintf("API Error: %s", apiErr.Message))
+				return fmt.Errorf("API Error: %s", apiErr.Message)
 			}
 			return nil
 		}
 	}
 
-	return errors.New(fmt.Sprintf("%s Not Found.", name))
+	return fmt.Errorf("%s Not Found.", name)
 }
 
 func (c *Client) FindDropletByName(name string) (*Droplet, error) {
@@ -185,6 +191,10 @@ func (c *Client) FindDropletByName(name string) (*Droplet, error) {
 	}
 
 	return nil, fmt.Errorf("%s Not Found.", name)
+}
+
+func (c *Client) FindDropletByID(id int) (*Droplet, error) {
+	return nil, fmt.Errorf("API Error: Unable to find Droplet %s.", id)
 }
 
 func (d *Droplet) PublicIPAddress() string {

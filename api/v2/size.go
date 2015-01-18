@@ -21,7 +21,7 @@ type Size struct {
 	Memory       int      `json:"memory"`
 	VCPUS        int      `json:"vcpus"`
 	Disk         int      `json:"disk"`
-	Transfer     int      `json:"transfer"`
+	Transfer     float32  `json:"transfer"`
 	PriceMonthly float32  `json:"price_monthly"`
 	PriceHourly  float32  `json:"price_hourly"`
 	Regions      []string `json:"regions"`

@@ -22,6 +22,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "api-key,k", Value: "", Usage: "API Key for DO APIv2."},
 		cli.StringFlag{Name: "format,f", Value: "yaml", Usage: "Format for output."},
+		cli.BoolFlag{Name: "debug,d", Usage: "Turn on debug output."},
 	}
 	app.Before = func(ctx *cli.Context) error {
 		if ctx.String("api-key") != "" {

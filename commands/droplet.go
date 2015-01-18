@@ -45,6 +45,9 @@ var DropletCommand = cli.Command{
 			Name:   "destroy",
 			Usage:  "Destroy droplet.",
 			Action: dropletDestroy,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+			},
 		},
 	},
 }
@@ -135,20 +138,25 @@ func dropletShow(ctx *cli.Context) {
 }
 
 func dropletDestroy(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 {
-		fmt.Printf("Error: Must provide name for Droplet.\n")
+	if ctx.Int("id") == 0 {
+		fmt.Printf("Error: Must provide ID for Droplet for Destroy.\n")
 		os.Exit(1)
 	}
 
-	name := ctx.Args().First()
-
+	id := ctx.Int("id")
 	client := apiv2.NewClient(APIKey)
 
-	err := client.DestroyDroplet(name)
+	droplet, err := client.FindDropletByID(id)
 	if err != nil {
-		fmt.Printf("Unable to destroy Droplet: %s\n", err)
+		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Droplet %s destroyed.\n", name)
+	dErr := client.DestroyDropletByID(id)
+	if dErr != nil {
+		fmt.Printf("Unable to destroy Droplet: %s\n", dErr)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Droplet %s destroyed.\n", droplet.Name)
 }

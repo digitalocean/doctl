@@ -1,7 +1,6 @@
 package apiv2
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 )
@@ -40,7 +39,7 @@ func (c *Client) ListAllKeys() (*SSHKeyList, error) {
 
 	apiErr := c.Get("account/keys", nil, &keyList, nil)
 	if apiErr != nil {
-		return nil, errors.New(fmt.Sprintf("API Error: %s", apiErr.Message))
+		return nil, fmt.Errorf("API Error: %s", apiErr.Message)
 	}
 
 	return &keyList, nil
@@ -58,7 +57,7 @@ func (c *Client) GetKeyByName(name string) (*SSHKey, error) {
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("SSH Key %s not found.", name))
+	return nil, fmt.Errorf("SSH Key %s not found.", name)
 }
 
 func (c *Client) GetKeyByID(id int) (*SSHKey, error) {
@@ -73,7 +72,7 @@ func (c *Client) GetKeyByID(id int) (*SSHKey, error) {
 		}
 	}
 
-	return nil, errors.New(fmt.Sprintf("SSH Key %s not found.", id))
+	return nil, fmt.Errorf("SSH Key %s not found.", id)
 }
 
 func (c *Client) FindKey(search string) (*SSHKey, error) {
@@ -90,7 +89,7 @@ func (c *Client) FindKey(search string) (*SSHKey, error) {
 	}
 
 	if key == nil {
-		return nil, errors.New(fmt.Sprintf("SSH Key %s not found.", search))
+		return nil, fmt.Errorf("SSH Key %s not found.", search)
 	}
 
 	return key, nil
@@ -102,7 +101,7 @@ func (c *Client) CreateKey(key *SSHKey) (*SSHKey, error) {
 
 	apiErr := c.Post("account/keys", key, &keyResponse, nil)
 	if apiErr != nil {
-		return nil, errors.New(fmt.Sprintf("API Error: %s", apiErr.Message))
+		return nil, fmt.Errorf("API Error: %s", apiErr.Message)
 	}
 
 	return keyResponse.SSHKey, nil
@@ -118,11 +117,11 @@ func (c *Client) DestroyKey(name string) error {
 		if key.Name == name {
 			apiErr := c.Delete(fmt.Sprintf("account/keys/%s", key.Fingerprint), nil, nil)
 			if apiErr != nil {
-				return errors.New(fmt.Sprintf("API Error: %s", apiErr.Message))
+				return fmt.Errorf("API Error: %s", apiErr.Message)
 			}
 			return nil
 		}
 	}
 
-	return errors.New(fmt.Sprintf("%s Not Found.", name))
+	return fmt.Errorf("%s Not Found.", name)
 }
