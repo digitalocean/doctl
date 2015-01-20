@@ -37,6 +37,7 @@ type Droplet struct {
 	Status      string    `json:"status,omitempty"`
 	Networks    *Networks `json:"networks,omitempty"`
 	ActionIDs   []int     `json:"action_ids,omitempty"`
+	Created     string    `json:"created_at,omitempty"`
 }
 
 // Convert Droplet to a string
