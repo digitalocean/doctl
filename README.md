@@ -1,4 +1,4 @@
-+[![Build Status](https://travis-ci.org/digitalocean/godo.svg)](https://travis-ci.org/digitalocean/godo)
+[![Build Status](https://travis-ci.org/digitalocean/godo.svg)](https://travis-ci.org/digitalocean/godo)
 
 # Godo
 
