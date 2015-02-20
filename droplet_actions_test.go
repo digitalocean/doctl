@@ -272,26 +272,6 @@ func TestDropletAction_PowerCycle(t *testing.T) {
 	}
 }
 
-func TestDropletActions_Get(t *testing.T) {
-	setup()
-	defer teardown()
-
-	mux.HandleFunc("/v2/droplets/123/actions/456", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "GET")
-		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
-	})
-
-	action, _, err := client.DropletActions.Get(123, 456)
-	if err != nil {
-		t.Errorf("DropletActions.Get returned error: %v", err)
-	}
-
-	expected := &Action{Status: "in-progress"}
-	if !reflect.DeepEqual(action, expected) {
-		t.Errorf("DropletActions.Get returned %+v, expected %+v", action, expected)
-	}
-}
-
 func TestDropletAction_Snapshot(t *testing.T) {
 	setup()
 	defer teardown()
@@ -322,5 +302,25 @@ func TestDropletAction_Snapshot(t *testing.T) {
 	expected := &Action{Status: "in-progress"}
 	if !reflect.DeepEqual(action, expected) {
 		t.Errorf("DropletActions.Snapshot returned %+v, expected %+v", action, expected)
+	}
+}
+
+func TestDropletActions_Get(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets/123/actions/456", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.Get(123, 456)
+	if err != nil {
+		t.Errorf("DropletActions.Get returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.Get returned %+v, expected %+v", action, expected)
 	}
 }
