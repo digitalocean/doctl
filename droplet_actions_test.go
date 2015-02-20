@@ -272,6 +272,39 @@ func TestDropletAction_PowerCycle(t *testing.T) {
 	}
 }
 
+func TestDropletAction_Snapshot(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "snapshot",
+		"name": "Image-Name",
+	}
+
+	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
+		v := new(ActionRequest)
+		json.NewDecoder(r.Body).Decode(v)
+
+		testMethod(t, r, "POST")
+
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.Snapshot(1, "Image-Name")
+	if err != nil {
+		t.Errorf("DropletActions.Snapshot returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.Snapshot returned %+v, expected %+v", action, expected)
+	}
+}
+
 func TestDropletActions_Get(t *testing.T) {
 	setup()
 	defer teardown()
