@@ -74,29 +74,28 @@ func DropletList(client *godo.Client) ([]godo.Droplet, error) {
     for {
         droplets, resp, err := client.Droplets.List(opt)
         if err != nil {
-            return err
+            return nil, err
         }
-        
+
         // append the current page's droplets to our list
         for _, d := range droplets {
             list = append(list, d)
         }
 
-       // if we are at the last page, break out the for loop
-       if resp.Links.IsLastPage() {
-           break
-       }
-
-       page, err := resp.Links.CurrentPage()
-       if err != nil {
-           return err
+        // if we are at the last page, break out the for loop
+        if resp.Links == nil || resp.Links.IsLastPage() {
+            break
         }
 
-       // set the page we want for the next request
-       opt.Page = page + 1
+        page, err := resp.Links.CurrentPage()
+        if err != nil {
+            return nil, err
+        }
+
+        // set the page we want for the next request
+        opt.Page = page + 1
     }
 
-    return nil
+    return list, nil
 }
-
 ```
