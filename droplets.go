@@ -75,19 +75,31 @@ func (d DropletCreateRequest) String() string {
 
 // Networks represents the droplet's networks
 type Networks struct {
-	V4 []Network `json:"v4,omitempty"`
-	V6 []Network `json:"v6,omitempty"`
+	V4 []NetworkV4 `json:"v4,omitempty"`
+	V6 []NetworkV6 `json:"v6,omitempty"`
 }
 
-// Network represents a DigitalOcean Network
-type Network struct {
+// NetworkV4 represents a DigitalOcean IPv4 Network
+type NetworkV4 struct {
 	IPAddress string `json:"ip_address,omitempty"`
 	Netmask   string `json:"netmask,omitempty"`
 	Gateway   string `json:"gateway,omitempty"`
 	Type      string `json:"type,omitempty"`
 }
 
-func (n Network) String() string {
+func (n NetworkV4) String() string {
+	return Stringify(n)
+}
+
+// NetworkV6 represents a DigitalOcean IPv6 network.
+type NetworkV6 struct {
+	IPAddress string `json:"ip_address,omitempty"`
+	Netmask   int    `json:"netmask,omitempty"`
+	Gateway   string `json:"gateway,omitempty"`
+	Type      string `json:"type,omitempty"`
+}
+
+func (n NetworkV6) String() string {
 	return Stringify(n)
 }
 

@@ -169,19 +169,32 @@ func TestDroplets_Destroy(t *testing.T) {
 	}
 }
 
-func TestNetwork_String(t *testing.T) {
-	network := &Network{
+func TestNetworkV4_String(t *testing.T) {
+	network := &NetworkV4{
 		IPAddress: "192.168.1.2",
 		Netmask:   "255.255.255.0",
 		Gateway:   "192.168.1.1",
 	}
 
 	stringified := network.String()
-	expected := `godo.Network{IPAddress:"192.168.1.2", Netmask:"255.255.255.0", Gateway:"192.168.1.1", Type:""}`
+	expected := `godo.NetworkV4{IPAddress:"192.168.1.2", Netmask:"255.255.255.0", Gateway:"192.168.1.1", Type:""}`
 	if expected != stringified {
-		t.Errorf("Distribution.String returned %+v, expected %+v", stringified, expected)
+		t.Errorf("NetworkV4.String returned %+v, expected %+v", stringified, expected)
 	}
 
+}
+
+func TestNetworkV6_String(t *testing.T) {
+	network := &NetworkV6{
+		IPAddress: "2604:A880:0800:0010:0000:0000:02DD:4001",
+		Netmask:   64,
+		Gateway:   "2604:A880:0800:0010:0000:0000:0000:0001",
+	}
+	stringified := network.String()
+	expected := `godo.NetworkV6{IPAddress:"2604:A880:0800:0010:0000:0000:02DD:4001", Netmask:64, Gateway:"2604:A880:0800:0010:0000:0000:0000:0001", Type:""}`
+	if expected != stringified {
+		t.Errorf("NetworkV6.String returned %+v, expected %+v", stringified, expected)
+	}
 }
 
 func TestDroplet_String(t *testing.T) {
@@ -208,13 +221,13 @@ func TestDroplet_String(t *testing.T) {
 		PriceHourly:  456,
 		Regions:      []string{"1", "2"},
 	}
-	network := &Network{
+	network := &NetworkV4{
 		IPAddress: "192.168.1.2",
 		Netmask:   "255.255.255.0",
 		Gateway:   "192.168.1.1",
 	}
 	networks := &Networks{
-		V4: []Network{*network},
+		V4: []NetworkV4{*network},
 	}
 
 	droplet := &Droplet{
@@ -235,7 +248,7 @@ func TestDroplet_String(t *testing.T) {
 	}
 
 	stringified := droplet.String()
-	expected := `godo.Droplet{ID:1, Name:"droplet", Memory:123, Vcpus:456, Disk:789, Region:godo.Region{Slug:"region", Name:"Region", Sizes:["1" "2"], Available:true}, Image:godo.Image{ID:1, Name:"Image", Distribution:"Ubuntu", Slug:"image", Public:true, Regions:["one" "two"]}, Size:godo.Size{Slug:"size", Memory:0, Vcpus:0, Disk:0, PriceMonthly:123, PriceHourly:456, Regions:["1" "2"]}, BackupIDs:[1], SnapshotIDs:[1], Locked:false, Status:"active", Networks:godo.Networks{V4:[godo.Network{IPAddress:"192.168.1.2", Netmask:"255.255.255.0", Gateway:"192.168.1.1", Type:""}]}, ActionIDs:[1], Created:""}`
+	expected := `godo.Droplet{ID:1, Name:"droplet", Memory:123, Vcpus:456, Disk:789, Region:godo.Region{Slug:"region", Name:"Region", Sizes:["1" "2"], Available:true}, Image:godo.Image{ID:1, Name:"Image", Distribution:"Ubuntu", Slug:"image", Public:true, Regions:["one" "two"]}, Size:godo.Size{Slug:"size", Memory:0, Vcpus:0, Disk:0, PriceMonthly:123, PriceHourly:456, Regions:["1" "2"]}, BackupIDs:[1], SnapshotIDs:[1], Locked:false, Status:"active", Networks:godo.Networks{V4:[godo.NetworkV4{IPAddress:"192.168.1.2", Netmask:"255.255.255.0", Gateway:"192.168.1.1", Type:""}]}, ActionIDs:[1], Created:""}`
 	if expected != stringified {
 		t.Errorf("Droplet.String returned %+v, expected %+v", stringified, expected)
 	}
