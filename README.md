@@ -6,7 +6,7 @@ Godo is a Go client library for accessing the DigitalOcean V2 API.
 
 You can view the client API docs here: [http://godoc.org/github.com/digitalocean/godo](http://godoc.org/github.com/digitalocean/godo)
 
-You can view Digital Ocean API docs here: [https://developers.digitalocean.com/v2/](https://developers.digitalocean.com/v2/)
+You can view Digital Ocean API docs here: [https://developers.digitalocean.com/documentation/v2/](https://developers.digitalocean.com/documentation/v2/)
 
 
 ## Usage

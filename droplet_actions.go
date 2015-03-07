@@ -10,7 +10,7 @@ type ActionRequest map[string]interface{}
 
 // DropletActionsService is an interface for interfacing with the droplet actions
 // endpoints of the Digital Ocean API
-// See: https://developers.digitalocean.com/#droplet-actions
+// See: https://developers.digitalocean.com/documentation/v2#droplet-actions
 type DropletActionsService interface {
 	Shutdown(int) (*Action, *Response, error)
 	PowerOff(int) (*Action, *Response, error)

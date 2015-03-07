@@ -13,7 +13,7 @@ const (
 )
 
 // ActionsService handles communction with action related methods of the
-// DigitalOcean API: https://developers.digitalocean.com/#actions
+// DigitalOcean API: https://developers.digitalocean.com/documentation/v2#actions
 type ActionsService interface {
 	List(*ListOptions) ([]Action, *Response, error)
 	Get(int) (*Action, *Response, error)

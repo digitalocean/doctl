@@ -5,8 +5,8 @@ import "fmt"
 const domainsBasePath = "v2/domains"
 
 // DomainsService is an interface for managing DNS with the Digital Ocean API.
-// See: https://developers.digitalocean.com/#domains and
-// https://developers.digitalocean.com/#domain-records
+// See: https://developers.digitalocean.com/documentation/v2#domains and
+// https://developers.digitalocean.com/documentation/v2#domain-records
 type DomainsService interface {
 	List(*ListOptions) ([]Domain, *Response, error)
 	Get(string) (*DomainRoot, *Response, error)
