@@ -180,6 +180,7 @@ func TestDropletAction_Resize(t *testing.T) {
 	request := &ActionRequest{
 		"type": "resize",
 		"size": "1024mb",
+		"disk": true,
 	}
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +197,7 @@ func TestDropletAction_Resize(t *testing.T) {
 
 	})
 
-	action, _, err := client.DropletActions.Resize(1, "1024mb")
+	action, _, err := client.DropletActions.Resize(1, "1024mb", true)
 	if err != nil {
 		t.Errorf("DropletActions.Resize returned error: %v", err)
 	}
