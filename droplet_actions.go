@@ -18,7 +18,7 @@ type DropletActionsService interface {
 	PowerCycle(int) (*Action, *Response, error)
 	Reboot(int) (*Action, *Response, error)
 	Restore(int, int) (*Action, *Response, error)
-	Resize(int, string) (*Action, *Response, error)
+	Resize(int, string, bool) (*Action, *Response, error)
 	Rename(int, string) (*Action, *Response, error)
 	Snapshot(int, string) (*Action, *Response, error)
 	doAction(int, *ActionRequest) (*Action, *Response, error)
@@ -73,11 +73,12 @@ func (s *DropletActionsServiceOp) Restore(id, imageID int) (*Action, *Response, 
 }
 
 // Resize a Droplet
-func (s *DropletActionsServiceOp) Resize(id int, sizeSlug string) (*Action, *Response, error) {
+func (s *DropletActionsServiceOp) Resize(id int, sizeSlug string, resizeDisk bool) (*Action, *Response, error) {
 	requestType := "resize"
 	request := &ActionRequest{
 		"type": requestType,
 		"size": sizeSlug,
+		"disk": resizeDisk,
 	}
 	return s.doAction(id, request)
 }
