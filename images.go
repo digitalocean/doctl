@@ -2,7 +2,7 @@ package godo
 
 // ImagesService is an interface for interfacing with the images
 // endpoints of the Digital Ocean API
-// See: https://developers.digitalocean.com/#images
+// See: https://developers.digitalocean.com/documentation/v2#images
 type ImagesService interface {
 	List(*ListOptions) ([]Image, *Response, error)
 }

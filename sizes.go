@@ -2,7 +2,7 @@ package godo
 
 // SizesService is an interface for interfacing with the size
 // endpoints of the Digital Ocean API
-// See: https://developers.digitalocean.com/#sizes
+// See: https://developers.digitalocean.com/documentation/v2#sizes
 type SizesService interface {
 	List(*ListOptions) ([]Size, *Response, error)
 }
