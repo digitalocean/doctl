@@ -99,3 +99,25 @@ func DropletList(client *godo.Client) ([]godo.Droplet, error) {
     return list, nil
 }
 ```
+
+## Versioning
+
+Each version of the client is tagged and the version is updated accordingly.
+
+Since Go does not have a built-in versioning, a package management tool is
+recommended - a good one that works with git tags is
+[gopkg.in](http://labix.org/gopkg.in).
+
+To see the list of past versions, run `git tag`.
+
+
+## Documentation
+
+For a comprehensive list of examples, check out the [API documentation](https://developers.digitalocean.com/documentation/v2/).
+
+For details on all the functionality in this library, see the [GoDoc](http://godoc.org/github.com/digitalocean/godo) documentation.
+
+
+## Contributing
+
+We love pull requests! Please see the [contribution guidelines](CONTRIBUTING.md).
