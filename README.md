@@ -49,7 +49,9 @@ createRequest := &godo.DropletCreateRequest{
     Name:   dropletName,
     Region: "nyc3",
     Size:   "512mb",
-    Image:  "ubuntu-14-04-x64",
+    Image: DropletCreateImage{
+        Slug: "ubuntu-14-04-x64",
+    },
 }
 
 newDroplet, _, err := client.Droplets.Create(createRequest)

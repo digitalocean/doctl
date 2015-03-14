@@ -1,6 +1,9 @@
 package godo
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 const dropletBasePath = "v2/droplets"
 
@@ -56,17 +59,45 @@ type dropletsRoot struct {
 	Links    *Links    `json:"links"`
 }
 
+// DropletCreateImage identifies an image for the create request. It prefers slug over ID.
+type DropletCreateImage struct {
+	ID   int
+	Slug string
+}
+
+func (d DropletCreateImage) MarshalJSON() ([]byte, error) {
+	if d.Slug != "" {
+		return json.Marshal(d.Slug)
+	} else {
+		return json.Marshal(d.ID)
+	}
+}
+
+// DropletCreateSSHKey identifies a SSH Key for the create request. It prefers fingerprint over ID.
+type DropletCreateSSHKey struct {
+	ID          int
+	Fingerprint string
+}
+
+func (d DropletCreateSSHKey) MarshalJSON() ([]byte, error) {
+	if d.Fingerprint != "" {
+		return json.Marshal(d.Fingerprint)
+	} else {
+		return json.Marshal(d.ID)
+	}
+}
+
 // DropletCreateRequest represents a request to create a droplet.
 type DropletCreateRequest struct {
-	Name              string        `json:"name"`
-	Region            string        `json:"region"`
-	Size              string        `json:"size"`
-	Image             string        `json:"image"`
-	SSHKeys           []interface{} `json:"ssh_keys"`
-	Backups           bool          `json:"backups"`
-	IPv6              bool          `json:"ipv6"`
-	PrivateNetworking bool          `json:"private_networking"`
-	UserData          string        `json:"user_data"`
+	Name              string                `json:"name"`
+	Region            string                `json:"region"`
+	Size              string                `json:"size"`
+	Image             DropletCreateImage    `json:"image"`
+	SSHKeys           []DropletCreateSSHKey `json:"ssh_keys"`
+	Backups           bool                  `json:"backups"`
+	IPv6              bool                  `json:"ipv6"`
+	PrivateNetworking bool                  `json:"private_networking"`
+	UserData          string                `json:"user_data"`
 }
 
 func (d DropletCreateRequest) String() string {

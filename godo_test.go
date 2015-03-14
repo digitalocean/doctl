@@ -79,7 +79,7 @@ func TestNewRequest(t *testing.T) {
 
 	inURL, outURL := "/foo", defaultBaseURL+"foo"
 	inBody, outBody := &DropletCreateRequest{Name: "l"},
-		`{"name":"l","region":"","size":"","image":"",`+
+		`{"name":"l","region":"","size":"","image":0,`+
 			`"ssh_keys":null,"backups":false,"ipv6":false,`+
 			`"private_networking":false,"user_data":""}`+"\n"
 	req, _ := c.NewRequest("GET", inURL, inBody)
