@@ -3,6 +3,7 @@ package godo
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -86,7 +87,7 @@ func TestAction_Get(t *testing.T) {
 	defer teardown()
 
 	mux.HandleFunc("/v2/actions/12345", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `{"action": {"id":12345}}`)
+		fmt.Fprint(w, `{"action": {"id":12345,"region":{"name":"name","slug":"slug","available":true,"sizes":["512mb"],"features":["virtio"]},"region_slug":"slug"}}`)
 		testMethod(t, r, "GET")
 	})
 
@@ -97,6 +98,21 @@ func TestAction_Get(t *testing.T) {
 
 	if action.ID != 12345 {
 		t.Fatalf("unexpected response")
+	}
+
+	region := &Region{
+		Name: "name",
+		Slug: "slug",
+		Available: true,
+		Sizes: []string{"512mb"},
+		Features: []string{"virtio"},
+	}
+	if !reflect.DeepEqual(action.Region, region) {
+		t.Fatalf("unexpected response, invalid region")
+	}
+
+	if action.RegionSlug != "slug" {
+		t.Fatalf("unexpected response, invalid region slug")
 	}
 }
 
@@ -119,7 +135,7 @@ func TestAction_String(t *testing.T) {
 	stringified := action.String()
 	expected := `godo.Action{ID:1, Status:"in-progress", Type:"transfer", ` +
 		`StartedAt:godo.Timestamp{2014-05-08 20:36:47 +0000 UTC}, ` +
-		`ResourceID:0, ResourceType:""}`
+		`ResourceID:0, ResourceType:"", RegionSlug:""}`
 	if expected != stringified {
 		t.Errorf("Action.Stringify returned %+v, expected %+v", stringified, expected)
 	}

@@ -43,6 +43,8 @@ type Action struct {
 	CompletedAt  *Timestamp `json:"completed_at"`
 	ResourceID   int        `json:"resource_id"`
 	ResourceType string     `json:"resource_type"`
+	Region       *Region    `json:"region,omitempty"`
+	RegionSlug   string     `json:"region_slug,omitempty"`
 }
 
 // List all actions
