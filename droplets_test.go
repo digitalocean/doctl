@@ -126,16 +126,32 @@ func TestDroplets_Create(t *testing.T) {
 		Name:   "name",
 		Region: "region",
 		Size:   "size",
-		Image:  "1",
+		Image: DropletCreateImage{
+			ID: 1,
+		},
 	}
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
-		v := new(DropletCreateRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		expected := map[string]interface{}{
+			"name":               "name",
+			"region":             "region",
+			"size":               "size",
+			"image":              float64(1),
+			"ssh_keys":           nil,
+			"backups":            false,
+			"ipv6":               false,
+			"private_networking": false,
+			"user_data":          "",
+		}
 
-		testMethod(t, r, "POST")
-		if !reflect.DeepEqual(v, createRequest) {
-			t.Errorf("Request body = %+v, expected %+v", v, createRequest)
+		var v map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if !reflect.DeepEqual(v, expected) {
+			t.Errorf("Request body = %#v, expected %#v", v, expected)
 		}
 
 		fmt.Fprintf(w, `{"droplet":{"id":1}, "links":{"actions": [{"id": 1, "href": "http://example.com", "rel": "create"}]}}`)
