@@ -16,6 +16,8 @@ type ImageActionsServiceOp struct {
 	client *Client
 }
 
+var _ ImageActionsService = &ImageActionsServiceOp{}
+
 // Transfer an image
 func (i *ImageActionsServiceOp) Transfer(imageID int, transferRequest *ActionRequest) (*Action, *Response, error) {
 	path := fmt.Sprintf("v2/images/%d/actions", imageID)

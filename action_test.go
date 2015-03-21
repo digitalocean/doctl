@@ -8,12 +8,6 @@ import (
 	"time"
 )
 
-func TestAction_ActionsServiceOpImplementsActionsService(t *testing.T) {
-	if !Implements((*ActionsService)(nil), new(ActionsServiceOp)) {
-		t.Error("ActionsServiceOp does not implement ActionsService")
-	}
-}
-
 func TestAction_List(t *testing.T) {
 	setup()
 	defer teardown()
@@ -101,11 +95,11 @@ func TestAction_Get(t *testing.T) {
 	}
 
 	region := &Region{
-		Name: "name",
-		Slug: "slug",
+		Name:      "name",
+		Slug:      "slug",
 		Available: true,
-		Sizes: []string{"512mb"},
-		Features: []string{"virtio"},
+		Sizes:     []string{"512mb"},
+		Features:  []string{"virtio"},
 	}
 	if !reflect.DeepEqual(action.Region, region) {
 		t.Fatalf("unexpected response, invalid region")

@@ -8,12 +8,6 @@ import (
 	"testing"
 )
 
-func TestAction_DropletsServiceOpImplementsActionService(t *testing.T) {
-	if !Implements((*DropletsService)(nil), new(DropletsServiceOp)) {
-		t.Error("DropletsServiceOp does not implement DropletsService")
-	}
-}
-
 func TestDroplets_ListDroplets(t *testing.T) {
 	setup()
 	defer teardown()

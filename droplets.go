@@ -24,6 +24,8 @@ type DropletsServiceOp struct {
 	client *Client
 }
 
+var _ DropletsService = &DropletsServiceOp{}
+
 // Droplet represents a DigitalOcean Droplet
 type Droplet struct {
 	ID          int       `json:"id,float64,omitempty"`

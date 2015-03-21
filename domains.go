@@ -26,6 +26,8 @@ type DomainsServiceOp struct {
 	client *Client
 }
 
+var _ DomainsService = &DomainsServiceOp{}
+
 // Domain represents a Digital Ocean domain
 type Domain struct {
 	Name     string `json:"name"`
