@@ -252,7 +252,11 @@ func TestDomains_CreateRecordForDomainName(t *testing.T) {
 	mux.HandleFunc("/v2/domains/example.com/records",
 		func(w http.ResponseWriter, r *http.Request) {
 			v := new(DomainRecordEditRequest)
-			json.NewDecoder(r.Body).Decode(v)
+			err := json.NewDecoder(r.Body).Decode(v)
+
+			if err != nil {
+				t.Fatalf("decode json: %v", err)
+			}
 
 			testMethod(t, r, "POST")
 			if !reflect.DeepEqual(v, createRequest) {
@@ -288,7 +292,10 @@ func TestDomains_EditRecordForDomainName(t *testing.T) {
 
 	mux.HandleFunc("/v2/domains/example.com/records/1", func(w http.ResponseWriter, r *http.Request) {
 		v := new(DomainRecordEditRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "PUT")
 		if !reflect.DeepEqual(v, editRequest) {

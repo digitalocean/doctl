@@ -223,7 +223,9 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		err = resp.Body.Close()
+	}()
 
 	response := newResponse(resp)
 	c.Rate = response.Rate
@@ -235,9 +237,15 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 
 	if v != nil {
 		if w, ok := v.(io.Writer); ok {
-			io.Copy(w, resp.Body)
+			_, err := io.Copy(w, resp.Body)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			json.NewDecoder(resp.Body).Decode(v)
+			err := json.NewDecoder(resp.Body).Decode(v)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -259,7 +267,10 @@ func CheckResponse(r *http.Response) error {
 	errorResponse := &ErrorResponse{Response: r}
 	data, err := ioutil.ReadAll(r.Body)
 	if err == nil && len(data) > 0 {
-		json.Unmarshal(data, errorResponse)
+		err := json.Unmarshal(data, errorResponse)
+		if err != nil {
+			return err
+		}
 	}
 
 	return errorResponse
@@ -297,6 +308,6 @@ func Bool(v bool) *bool {
 // StreamToString converts a reader to a string
 func StreamToString(stream io.Reader) string {
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(stream)
+	_, _ = buf.ReadFrom(stream)
 	return buf.String()
 }

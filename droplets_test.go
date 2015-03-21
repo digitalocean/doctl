@@ -147,7 +147,7 @@ func TestDroplets_Create(t *testing.T) {
 		var v map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&v)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("decode json: %v", err)
 		}
 
 		if !reflect.DeepEqual(v, expected) {
