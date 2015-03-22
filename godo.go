@@ -224,7 +224,9 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	}
 
 	defer func() {
-		err = resp.Body.Close()
+		if rerr := resp.Body.Close(); err == nil {
+			err = rerr
+		}
 	}()
 
 	response := newResponse(resp)
