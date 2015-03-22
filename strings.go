@@ -3,7 +3,6 @@ package godo
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"reflect"
 )
 
@@ -18,7 +17,7 @@ func Stringify(message interface{}) string {
 }
 
 // stringifyValue was graciously cargoculted from the goprotubuf library
-func stringifyValue(w io.Writer, val reflect.Value) {
+func stringifyValue(w *bytes.Buffer, val reflect.Value) {
 	if val.Kind() == reflect.Ptr && val.IsNil() {
 		_, _ = w.Write([]byte("<nil>"))
 		return
