@@ -22,7 +22,10 @@ func TestImageActions_Transfer(t *testing.T) {
 
 	mux.HandleFunc("/v2/images/12345/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 		if !reflect.DeepEqual(v, transferRequest) {

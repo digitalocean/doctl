@@ -131,7 +131,10 @@ func TestKeys_Create(t *testing.T) {
 
 	mux.HandleFunc("/v2/account/keys", func(w http.ResponseWriter, r *http.Request) {
 		v := new(KeyCreateRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 		if !reflect.DeepEqual(v, createRequest) {

@@ -24,7 +24,10 @@ func TestDropletActions_Shutdown(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 		if !reflect.DeepEqual(v, request) {
@@ -55,7 +58,10 @@ func TestDropletAction_PowerOff(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 		if !reflect.DeepEqual(v, request) {
@@ -86,7 +92,10 @@ func TestDropletAction_PowerOn(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 		if !reflect.DeepEqual(v, request) {
@@ -117,7 +126,10 @@ func TestDropletAction_Reboot(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 		if !reflect.DeepEqual(v, request) {
@@ -150,7 +162,10 @@ func TestDropletAction_Restore(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 
@@ -185,7 +200,10 @@ func TestDropletAction_Resize(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 
@@ -219,7 +237,10 @@ func TestDropletAction_Rename(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 
@@ -251,7 +272,10 @@ func TestDropletAction_PowerCycle(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 		if !reflect.DeepEqual(v, request) {
@@ -284,7 +308,10 @@ func TestDropletAction_Snapshot(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/1/actions", func(w http.ResponseWriter, r *http.Request) {
 		v := new(ActionRequest)
-		json.NewDecoder(r.Body).Decode(v)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
 
 		testMethod(t, r, "POST")
 

@@ -48,7 +48,11 @@ func testFormValues(t *testing.T, r *http.Request, values values) {
 		expected.Add(k, v)
 	}
 
-	r.ParseForm()
+	err := r.ParseForm()
+	if err != nil {
+		t.Fatalf("parseForm(): %v", err)
+	}
+
 	if !reflect.DeepEqual(expected, r.Form) {
 		t.Errorf("Request parameters = %v, expected %v", r.Form, expected)
 	}
@@ -141,7 +145,10 @@ func TestDo(t *testing.T) {
 
 	req, _ := client.NewRequest("GET", "/", nil)
 	body := new(foo)
-	client.Do(req, body)
+	_, err := client.Do(req, body)
+	if err != nil {
+		t.Fatalf("Do(): %v", err)
+	}
 
 	expected := &foo{"a"}
 	if !reflect.DeepEqual(body, expected) {
@@ -261,7 +268,10 @@ func TestDo_rateLimit(t *testing.T) {
 	}
 
 	req, _ := client.NewRequest("GET", "/", nil)
-	client.Do(req, nil)
+	_, err := client.Do(req, nil)
+	if err != nil {
+		t.Fatalf("Do(): %v", err)
+	}
 
 	if expected = 60; client.Rate.Limit != expected {
 		t.Errorf("Client rate limit = %v, expected %v", client.Rate.Limit, expected)
@@ -283,13 +293,13 @@ func TestDo_rateLimit_errorResponse(t *testing.T) {
 		w.Header().Add(headerRateLimit, "60")
 		w.Header().Add(headerRateRemaining, "59")
 		w.Header().Add(headerRateReset, "1372700873")
-		http.Error(w, "Bad Request", 400)
+		http.Error(w, `{"message":"bad request"}`, 400)
 	})
 
 	var expected int
 
 	req, _ := client.NewRequest("GET", "/", nil)
-	client.Do(req, nil)
+	_, _ = client.Do(req, nil)
 
 	if expected = 60; client.Rate.Limit != expected {
 		t.Errorf("Client rate limit = %v, expected %v", client.Rate.Limit, expected)
