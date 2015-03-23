@@ -49,7 +49,7 @@ createRequest := &godo.DropletCreateRequest{
     Name:   dropletName,
     Region: "nyc3",
     Size:   "512mb",
-    Image: DropletCreateImage{
+    Image: godo.DropletCreateImage{
         Slug: "ubuntu-14-04-x64",
     },
 }
