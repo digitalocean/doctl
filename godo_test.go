@@ -313,15 +313,6 @@ func TestDo_rateLimit_errorResponse(t *testing.T) {
 	}
 }
 
-func Implements(interfaceObject interface{}, object interface{}, msgAndArgs ...interface{}) bool {
-	interfaceType := reflect.TypeOf(interfaceObject).Elem()
-	if !reflect.TypeOf(object).Implements(interfaceType) {
-		return false
-	}
-
-	return true
-}
-
 func checkCurrentPage(t *testing.T, resp *Response, expectedPage int) {
 	links := resp.Links
 	p, err := links.CurrentPage()

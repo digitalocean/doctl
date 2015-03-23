@@ -22,6 +22,8 @@ type KeysServiceOp struct {
 	client *Client
 }
 
+var _ KeysService = &KeysServiceOp{}
+
 // Key represents a DigitalOcean Key.
 type Key struct {
 	ID          int    `json:"id,float64,omitempty"`

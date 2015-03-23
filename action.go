@@ -25,6 +25,8 @@ type ActionsServiceOp struct {
 	client *Client
 }
 
+var _ ActionsService = &ActionsServiceOp{}
+
 type actionsRoot struct {
 	Actions []Action `json:"actions"`
 	Links   *Links   `json:"links"`

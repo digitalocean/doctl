@@ -13,6 +13,8 @@ type RegionsServiceOp struct {
 	client *Client
 }
 
+var _ RegionsService = &RegionsServiceOp{}
+
 // Region represents a DigitalOcean Region
 type Region struct {
 	Slug      string   `json:"slug,omitempty"`

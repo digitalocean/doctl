@@ -32,6 +32,8 @@ type DropletActionsServiceOp struct {
 	client *Client
 }
 
+var _ DropletActionsService = &DropletActionsServiceOp{}
+
 // Shutdown a Droplet
 func (s *DropletActionsServiceOp) Shutdown(id int) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "shutdown"}

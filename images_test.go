@@ -7,12 +7,6 @@ import (
 	"testing"
 )
 
-func TestImages_ImagesServiceOpImplementsImagesService(t *testing.T) {
-	if !Implements((*ImagesService)(nil), new(ImagesServiceOp)) {
-		t.Error("ImagesServiceOp does not implement ImagesService")
-	}
-}
-
 func TestImages_List(t *testing.T) {
 	setup()
 	defer teardown()

@@ -13,6 +13,8 @@ type ImagesServiceOp struct {
 	client *Client
 }
 
+var _ ImagesService = &ImagesServiceOp{}
+
 // Image represents a DigitalOcean Image
 type Image struct {
 	ID           int      `json:"id,float64,omitempty"`

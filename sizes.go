@@ -13,6 +13,8 @@ type SizesServiceOp struct {
 	client *Client
 }
 
+var _ SizesService = &SizesServiceOp{}
+
 // Size represents a DigitalOcean Size
 type Size struct {
 	Slug         string   `json:"slug,omitempty"`
