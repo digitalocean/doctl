@@ -43,6 +43,7 @@ type Client struct {
 	Rate Rate
 
 	// Services used for communicating with the API
+	Account        AccountService
 	Actions        ActionsService
 	Domains        DomainsService
 	Droplets       DropletsService
@@ -129,6 +130,7 @@ func NewClient(httpClient *http.Client) *Client {
 	baseURL, _ := url.Parse(defaultBaseURL)
 
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	c.Account = &AccountServiceOp{client: c}
 	c.Actions = &ActionsServiceOp{client: c}
 	c.Domains = &DomainsServiceOp{client: c}
 	c.Droplets = &DropletsServiceOp{client: c}
