@@ -31,7 +31,8 @@ func TestAccountGet(t *testing.T) {
 		t.Errorf("Account.Get returned error: %v", err)
 	}
 
-	expected := &AccountRoot{Account: &Account{DropletLimit: 25, Email: "sammy@digitalocean.com", UUID: "b6fr89dbf6d9156cace5f3c78dc9851d957381ef", EmailVerified: true}}
+	expected := &AccountRoot{Account: &Account{DropletLimit: 25, Email: "sammy@digitalocean.com",
+		UUID: "b6fr89dbf6d9156cace5f3c78dc9851d957381ef", EmailVerified: true}}
 	if !reflect.DeepEqual(acct, expected) {
 		t.Errorf("Account.Get returned %+v, expected %+v", acct, expected)
 	}
