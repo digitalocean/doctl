@@ -99,7 +99,7 @@ type DropletCreateRequest struct {
 	Backups           bool                  `json:"backups"`
 	IPv6              bool                  `json:"ipv6"`
 	PrivateNetworking bool                  `json:"private_networking"`
-	UserData          string                `json:"user_data"`
+	UserData          string                `json:"user_data,omitempty"`
 }
 
 func (d DropletCreateRequest) String() string {
