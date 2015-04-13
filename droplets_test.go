@@ -37,8 +37,8 @@ func TestDroplets_ListDropletsMultiplePages(t *testing.T) {
 
 		dr := dropletsRoot{
 			Droplets: []Droplet{
-				Droplet{ID: 1},
-				Droplet{ID: 2},
+				{ID: 1},
+				{ID: 2},
 			},
 			Links: &Links{
 				Pages: &Pages{Next: "http://example.com/v2/droplets/?page=2"},
@@ -135,7 +135,6 @@ func TestDroplets_Create(t *testing.T) {
 			"backups":            false,
 			"ipv6":               false,
 			"private_networking": false,
-			"user_data":          "",
 		}
 
 		var v map[string]interface{}
