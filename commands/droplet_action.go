@@ -47,6 +47,7 @@ var DropletActionCommand = cli.Command{
 			Usage: "Resize droplet.",
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "size", Value: "512mb", Usage: "Size slug."},
+				cli.BoolFlag{Name: "disk", Usage: "Whether to increase disk size"},
 			},
 			Action: dropletActionResize,
 		},
@@ -204,7 +205,8 @@ func dropletActionResize(ctx *cli.Context) {
 	}
 
 	name := ctx.Args().First()
-	size := ctx.Args()[1]
+	size := ctx.String("size")
+	disk := ctx.Bool("disk")
 
 	client := apiv2.NewClient(APIKey)
 
@@ -214,7 +216,7 @@ func dropletActionResize(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	action, rebootErr := droplet.Resize(size)
+	action, rebootErr := droplet.Resize(size, disk)
 	if rebootErr != nil {
 		fmt.Println(rebootErr)
 		os.Exit(1)
