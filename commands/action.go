@@ -58,7 +58,7 @@ func actionList(ctx *cli.Context) {
 	defer cliOut.Flush()
 	cliOut.Header("ID", "Region", "ResourceType", "ResourceID", "Type", "StartedAt", "CompletedAt", "Status")
 	for _, action := range actionList.Actions {
-		cliOut.Writeln("%d\t%s\t%s\t%d\t%s\t%s\t%s\t%s\n", action.ID, action.Region, action.ResourceType,
+		cliOut.Writeln("%d\t%s\t%s\t%d\t%s\t%s\t%s\t%s\n", action.ID, action.RegionSlug, action.ResourceType,
 			action.ResourceID, action.Type, action.StartedAt, action.CompletedAt, action.Status)
 	}
 }
