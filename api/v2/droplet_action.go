@@ -6,7 +6,7 @@ import (
 
 type DropletAction struct {
 	Type   string `json:"type"`
-	Name   string `json:"name,moitempty"`
+	Name   string `json:"name,omitempty"`
 	Disk   bool   `json:"disk,omitempty"`
 	Size   string `json:"size,omitempty"`
 	Image  string `json:"image,omitempty"`
