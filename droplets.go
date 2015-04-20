@@ -15,6 +15,11 @@ type DropletsService interface {
 	Get(int) (*DropletRoot, *Response, error)
 	Create(*DropletCreateRequest) (*DropletRoot, *Response, error)
 	Delete(int) (*Response, error)
+	ListKernels(int, *ListOptions) ([]Kernel, *Response, error)
+	ListSnapshots(int, *ListOptions) ([]Image, *Response, error)
+	ListBackups(int, *ListOptions) ([]Image, *Response, error)
+	ListActions(int, *ListOptions) ([]Action, *Response, error)
+	ListNeighbors(int) ([]Droplet, *Response, error)
 	dropletActionStatus(string) (string, error)
 }
 
@@ -45,6 +50,13 @@ type Droplet struct {
 	Created     string    `json:"created_at,omitempty"`
 }
 
+// Kernel object
+type Kernel struct {
+	ID      int    `json:"id,float64,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Version string `json:"version,omitempty"`
+}
+
 // Convert Droplet to a string
 func (d Droplet) String() string {
 	return Stringify(d)
@@ -59,6 +71,21 @@ type DropletRoot struct {
 type dropletsRoot struct {
 	Droplets []Droplet `json:"droplets"`
 	Links    *Links    `json:"links"`
+}
+
+type kernelsRoot struct {
+	Kernels []Kernel `json:"kernels,omitempty"`
+	Links   *Links   `json:"links"`
+}
+
+type snapshotsRoot struct {
+	Snapshots []Image `json:"snapshots,omitempty"`
+	Links     *Links  `json:"links"`
+}
+
+type backupsRoot struct {
+	Backups []Image `json:"backups,omitempty"`
+	Links   *Links  `json:"links"`
 }
 
 // DropletCreateImage identifies an image for the create request. It prefers slug over ID.
@@ -212,6 +239,121 @@ func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
 	resp, err := s.client.Do(req, nil)
 
 	return resp, err
+}
+
+// List droplet available kernels
+func (s *DropletsServiceOp) ListKernels(dropletID int, opt *ListOptions) ([]Kernel, *Response, error) {
+	path := fmt.Sprintf("%s/%d/kernels", dropletBasePath, dropletID)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(kernelsRoot)
+	resp, err := s.client.Do(req, root)
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+
+	return root.Kernels, resp, err
+}
+
+// List droplet actions
+func (s *DropletsServiceOp) ListActions(dropletID int, opt *ListOptions) ([]Action, *Response, error) {
+	path := fmt.Sprintf("%s/%d/actions", dropletBasePath, dropletID)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(actionsRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+
+	return root.Actions, resp, err
+}
+
+// List droplet backups
+func (s *DropletsServiceOp) ListBackups(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
+	path := fmt.Sprintf("%s/%d/backups", dropletBasePath, dropletID)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(backupsRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+
+	return root.Backups, resp, err
+}
+
+// List droplet snapshots
+func (s *DropletsServiceOp) ListSnapshots(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
+	path := fmt.Sprintf("%s/%d/snapshots", dropletBasePath, dropletID)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(snapshotsRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+
+	return root.Snapshots, resp, err
+}
+
+// List droplet neighbors
+func (s *DropletsServiceOp) ListNeighbors(dropletID int) ([]Droplet, *Response, error) {
+	path := fmt.Sprintf("%s/%d/neighbors", dropletBasePath, dropletID)
+
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(dropletsRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Droplets, resp, err
 }
 
 func (s *DropletsServiceOp) dropletActionStatus(uri string) (string, error) {
