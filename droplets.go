@@ -15,11 +15,11 @@ type DropletsService interface {
 	Get(int) (*DropletRoot, *Response, error)
 	Create(*DropletCreateRequest) (*DropletRoot, *Response, error)
 	Delete(int) (*Response, error)
-	ListKernels(int, *ListOptions) ([]Kernel, *Response, error)
-	ListSnapshots(int, *ListOptions) ([]Image, *Response, error)
-	ListBackups(int, *ListOptions) ([]Image, *Response, error)
-	ListActions(int, *ListOptions) ([]Action, *Response, error)
-	ListNeighbors(int) ([]Droplet, *Response, error)
+	Kernels(int, *ListOptions) ([]Kernel, *Response, error)
+	Snapshots(int, *ListOptions) ([]Image, *Response, error)
+	Backups(int, *ListOptions) ([]Image, *Response, error)
+	Actions(int, *ListOptions) ([]Action, *Response, error)
+	Neighbors(int) ([]Droplet, *Response, error)
 	dropletActionStatus(string) (string, error)
 }
 
@@ -242,7 +242,7 @@ func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
 }
 
 // List droplet available kernels
-func (s *DropletsServiceOp) ListKernels(dropletID int, opt *ListOptions) ([]Kernel, *Response, error) {
+func (s *DropletsServiceOp) Kernels(dropletID int, opt *ListOptions) ([]Kernel, *Response, error) {
 	path := fmt.Sprintf("%s/%d/kernels", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -264,7 +264,7 @@ func (s *DropletsServiceOp) ListKernels(dropletID int, opt *ListOptions) ([]Kern
 }
 
 // List droplet actions
-func (s *DropletsServiceOp) ListActions(dropletID int, opt *ListOptions) ([]Action, *Response, error) {
+func (s *DropletsServiceOp) Actions(dropletID int, opt *ListOptions) ([]Action, *Response, error) {
 	path := fmt.Sprintf("%s/%d/actions", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -289,7 +289,7 @@ func (s *DropletsServiceOp) ListActions(dropletID int, opt *ListOptions) ([]Acti
 }
 
 // List droplet backups
-func (s *DropletsServiceOp) ListBackups(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
+func (s *DropletsServiceOp) Backups(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
 	path := fmt.Sprintf("%s/%d/backups", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -314,7 +314,7 @@ func (s *DropletsServiceOp) ListBackups(dropletID int, opt *ListOptions) ([]Imag
 }
 
 // List droplet snapshots
-func (s *DropletsServiceOp) ListSnapshots(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
+func (s *DropletsServiceOp) Snapshots(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
 	path := fmt.Sprintf("%s/%d/snapshots", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -339,7 +339,7 @@ func (s *DropletsServiceOp) ListSnapshots(dropletID int, opt *ListOptions) ([]Im
 }
 
 // List droplet neighbors
-func (s *DropletsServiceOp) ListNeighbors(dropletID int) ([]Droplet, *Response, error) {
+func (s *DropletsServiceOp) Neighbors(dropletID int) ([]Droplet, *Response, error) {
 	path := fmt.Sprintf("%s/%d/neighbors", dropletBasePath, dropletID)
 
 	req, err := s.client.NewRequest("GET", path, nil)

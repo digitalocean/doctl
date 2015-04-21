@@ -178,7 +178,7 @@ func TestDroplets_Destroy(t *testing.T) {
 	}
 }
 
-func TestDroplets_ListKernels(t *testing.T) {
+func TestDroplets_Kernels(t *testing.T) {
 	setup()
 	defer teardown()
 
@@ -188,18 +188,18 @@ func TestDroplets_ListKernels(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	kernels, _, err := client.Droplets.ListKernels(12345, opt)
+	kernels, _, err := client.Droplets.Kernels(12345, opt)
 	if err != nil {
-		t.Errorf("Droplets.ListKernels returned error: %v", err)
+		t.Errorf("Droplets.Kernels returned error: %v", err)
 	}
 
 	expected := []Kernel{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(kernels, expected) {
-		t.Errorf("Droplets.ListKernels returned %+v, expected %+v", kernels, expected)
+		t.Errorf("Droplets.Kernels returned %+v, expected %+v", kernels, expected)
 	}
 }
 
-func TestDroplets_ListSnapshots(t *testing.T) {
+func TestDroplets_Snapshots(t *testing.T) {
 	setup()
 	defer teardown()
 
@@ -209,18 +209,18 @@ func TestDroplets_ListSnapshots(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	snapshots, _, err := client.Droplets.ListSnapshots(12345, opt)
+	snapshots, _, err := client.Droplets.Snapshots(12345, opt)
 	if err != nil {
-		t.Errorf("Droplets.ListSnapshots returned error: %v", err)
+		t.Errorf("Droplets.Snapshots returned error: %v", err)
 	}
 
 	expected := []Image{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(snapshots, expected) {
-		t.Errorf("Droplets.ListSnapshots returned %+v, expected %+v", snapshots, expected)
+		t.Errorf("Droplets.Snapshots returned %+v, expected %+v", snapshots, expected)
 	}
 }
 
-func TestDroplets_ListBackups(t *testing.T) {
+func TestDroplets_Backups(t *testing.T) {
 	setup()
 	defer teardown()
 
@@ -230,18 +230,18 @@ func TestDroplets_ListBackups(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	backups, _, err := client.Droplets.ListBackups(12345, opt)
+	backups, _, err := client.Droplets.Backups(12345, opt)
 	if err != nil {
-		t.Errorf("Droplets.ListBackups returned error: %v", err)
+		t.Errorf("Droplets.Backups returned error: %v", err)
 	}
 
 	expected := []Image{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(backups, expected) {
-		t.Errorf("Droplets.ListBackups returned %+v, expected %+v", backups, expected)
+		t.Errorf("Droplets.Backups returned %+v, expected %+v", backups, expected)
 	}
 }
 
-func TestDroplets_ListActions(t *testing.T) {
+func TestDroplets_Actions(t *testing.T) {
 	setup()
 	defer teardown()
 
@@ -251,18 +251,18 @@ func TestDroplets_ListActions(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	actions, _, err := client.Droplets.ListActions(12345, opt)
+	actions, _, err := client.Droplets.Actions(12345, opt)
 	if err != nil {
-		t.Errorf("Droplets.ListActions returned error: %v", err)
+		t.Errorf("Droplets.Actions returned error: %v", err)
 	}
 
 	expected := []Action{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(actions, expected) {
-		t.Errorf("Droplets.ListActions returned %+v, expected %+v", actions, expected)
+		t.Errorf("Droplets.Actions returned %+v, expected %+v", actions, expected)
 	}
 }
 
-func TestDroplets_ListNeighbors(t *testing.T) {
+func TestDroplets_Neighbors(t *testing.T) {
 	setup()
 	defer teardown()
 
@@ -271,14 +271,14 @@ func TestDroplets_ListNeighbors(t *testing.T) {
 		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
 	})
 
-	neighbors, _, err := client.Droplets.ListNeighbors(12345)
+	neighbors, _, err := client.Droplets.Neighbors(12345)
 	if err != nil {
-		t.Errorf("Droplets.ListNeighbors returned error: %v", err)
+		t.Errorf("Droplets.Neighbors returned error: %v", err)
 	}
 
 	expected := []Droplet{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(neighbors, expected) {
-		t.Errorf("Droplets.ListNeighbors returned %+v, expected %+v", neighbors, expected)
+		t.Errorf("Droplets.Neighbors returned %+v, expected %+v", neighbors, expected)
 	}
 }
 
