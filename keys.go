@@ -12,6 +12,8 @@ type KeysService interface {
 	GetByID(int) (*Key, *Response, error)
 	GetByFingerprint(string) (*Key, *Response, error)
 	Create(*KeyCreateRequest) (*Key, *Response, error)
+	UpdateByID(int, *KeyUpdateRequest) (*Key, *Response, error)
+	UpdateByFingerprint(string, *KeyUpdateRequest) (*Key, *Response, error)
 	DeleteByID(int) (*Response, error)
 	DeleteByFingerprint(string) (*Response, error)
 }
@@ -30,6 +32,11 @@ type Key struct {
 	Name        string `json:"name,omitempty"`
 	Fingerprint string `json:"fingerprint,omitempty"`
 	PublicKey   string `json:"public_key,omitempty"`
+}
+
+// KeyUpdateRequest represents a request to update a DigitalOcean key.
+type KeyUpdateRequest struct {
+	Name string `json:"name"`
 }
 
 type keysRoot struct {
@@ -107,6 +114,40 @@ func (s *KeysServiceOp) GetByFingerprint(fingerprint string) (*Key, *Response, e
 // Create a key using a KeyCreateRequest
 func (s *KeysServiceOp) Create(createRequest *KeyCreateRequest) (*Key, *Response, error) {
 	req, err := s.client.NewRequest("POST", keysBasePath, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(keyRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return &root.SSHKey, resp, err
+}
+
+// Update a key name by ID
+func (s *KeysServiceOp) UpdateByID(keyID int, updateRequest *KeyUpdateRequest) (*Key, *Response, error) {
+	path := fmt.Sprintf("%s/%d", keysBasePath, keyID)
+	req, err := s.client.NewRequest("PUT", path, updateRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(keyRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return &root.SSHKey, resp, err
+}
+
+// Update a key name by fingerprint
+func (s *KeysServiceOp) UpdateByFingerprint(fingerprint string, updateRequest *KeyUpdateRequest) (*Key, *Response, error) {
+	path := fmt.Sprintf("%s/%s", keysBasePath, fingerprint)
+	req, err := s.client.NewRequest("PUT", path, updateRequest)
 	if err != nil {
 		return nil, nil, err
 	}
