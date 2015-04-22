@@ -178,6 +178,110 @@ func TestDroplets_Destroy(t *testing.T) {
 	}
 }
 
+func TestDroplets_Kernels(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets/12345/kernels", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"kernels": [{"id":1},{"id":2}]}`)
+	})
+
+	opt := &ListOptions{Page: 2}
+	kernels, _, err := client.Droplets.Kernels(12345, opt)
+	if err != nil {
+		t.Errorf("Droplets.Kernels returned error: %v", err)
+	}
+
+	expected := []Kernel{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(kernels, expected) {
+		t.Errorf("Droplets.Kernels returned %+v, expected %+v", kernels, expected)
+	}
+}
+
+func TestDroplets_Snapshots(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets/12345/snapshots", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"snapshots": [{"id":1},{"id":2}]}`)
+	})
+
+	opt := &ListOptions{Page: 2}
+	snapshots, _, err := client.Droplets.Snapshots(12345, opt)
+	if err != nil {
+		t.Errorf("Droplets.Snapshots returned error: %v", err)
+	}
+
+	expected := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(snapshots, expected) {
+		t.Errorf("Droplets.Snapshots returned %+v, expected %+v", snapshots, expected)
+	}
+}
+
+func TestDroplets_Backups(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets/12345/backups", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"backups": [{"id":1},{"id":2}]}`)
+	})
+
+	opt := &ListOptions{Page: 2}
+	backups, _, err := client.Droplets.Backups(12345, opt)
+	if err != nil {
+		t.Errorf("Droplets.Backups returned error: %v", err)
+	}
+
+	expected := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(backups, expected) {
+		t.Errorf("Droplets.Backups returned %+v, expected %+v", backups, expected)
+	}
+}
+
+func TestDroplets_Actions(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets/12345/actions", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"actions": [{"id":1},{"id":2}]}`)
+	})
+
+	opt := &ListOptions{Page: 2}
+	actions, _, err := client.Droplets.Actions(12345, opt)
+	if err != nil {
+		t.Errorf("Droplets.Actions returned error: %v", err)
+	}
+
+	expected := []Action{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(actions, expected) {
+		t.Errorf("Droplets.Actions returned %+v, expected %+v", actions, expected)
+	}
+}
+
+func TestDroplets_Neighbors(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets/12345/neighbors", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
+	})
+
+	neighbors, _, err := client.Droplets.Neighbors(12345)
+	if err != nil {
+		t.Errorf("Droplets.Neighbors returned error: %v", err)
+	}
+
+	expected := []Droplet{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(neighbors, expected) {
+		t.Errorf("Droplets.Neighbors returned %+v, expected %+v", neighbors, expected)
+	}
+}
+
 func TestNetworkV4_String(t *testing.T) {
 	network := &NetworkV4{
 		IPAddress: "192.168.1.2",
