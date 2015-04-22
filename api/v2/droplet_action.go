@@ -6,7 +6,8 @@ import (
 
 type DropletAction struct {
 	Type   string `json:"type"`
-	Name   string `json:"name,moitempty"`
+	Name   string `json:"name,omitempty"`
+	Disk   bool   `json:"disk,omitempty"`
 	Size   string `json:"size,omitempty"`
 	Image  string `json:"image,omitempty"`
 	Kernel int    `json:"kernel,omitempty"`
@@ -69,10 +70,11 @@ func (d *Droplet) PasswordReset() (*Action, error) {
 	return d.performAction(action)
 }
 
-func (d *Droplet) Resize(size string) (*Action, error) {
+func (d *Droplet) Resize(size string, disk bool) (*Action, error) {
 	action := &DropletAction{
 		Type: "resize",
 		Size: size,
+		Disk: disk,
 	}
 	return d.performAction(action)
 }

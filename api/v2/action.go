@@ -29,7 +29,8 @@ const (
 // completed_at		string	A time value given in ISO8601 combined date and time format that represents when the action was completed.
 // resource_id		number	A unique identifier for the resource that the action is associated with.
 // resource_type	string	The type of resource that the action is associated with.
-// region			string	A slug representing the region where the action occurred.
+// region			string	(deprecated) A slug representing the region where the action occurred.
+// region_slug		string A slug representing the region where the action occurred.
 type Action struct {
 	ID           int    `json:"id,omitempty"`
 	Status       string `json:"status"`
@@ -38,7 +39,7 @@ type Action struct {
 	CompletedAt  string `json:"completed_at"`
 	ResourceID   int    `json:"resource_id"`
 	ResourceType string `json:"resource_type"`
-	Region       string `json:"region"`
+	RegionSlug   string `json:"region_slug"`
 	client       *Client
 }
 
