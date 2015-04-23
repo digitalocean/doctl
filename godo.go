@@ -53,7 +53,13 @@ type Client struct {
 	Keys           KeysService
 	Regions        RegionsService
 	Sizes          SizesService
+
+	// Optional function called after every successful request made to the DO APIs
+	onRequestCompleted RequestCompletionCallback
 }
+
+// RequestCompletionCallback defines the type of the request callback function
+type RequestCompletionCallback func(*http.Request, *http.Response)
 
 // ListOptions specifies the optional parameters to various List methods that
 // support pagination.
@@ -174,6 +180,11 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 	return req, nil
 }
 
+// OnRequestCompleted sets the DO API request completion callback
+func (c *Client) OnRequestCompleted(rc RequestCompletionCallback) {
+	c.onRequestCompleted = rc
+}
+
 // newResponse creates a new Response for the provided http.Response
 func newResponse(r *http.Response) *Response {
 	response := Response{Response: r}
@@ -223,6 +234,9 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
+	}
+	if c.onRequestCompleted != nil {
+		c.onRequestCompleted(req, resp)
 	}
 
 	defer func() {
