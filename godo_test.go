@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"net/url"
 	"reflect"
 	"strings"
@@ -350,5 +351,45 @@ func checkCurrentPage(t *testing.T, resp *Response, expectedPage int) {
 
 	if p != expectedPage {
 		t.Fatalf("expected current page to be '%d', was '%d'", expectedPage, p)
+	}
+}
+
+func TestDo_completion_callback(t *testing.T) {
+	setup()
+	defer teardown()
+
+	type foo struct {
+		A string
+	}
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if m := "GET"; m != r.Method {
+			t.Errorf("Request method = %v, expected %v", r.Method, m)
+		}
+		fmt.Fprint(w, `{"A":"a"}`)
+	})
+
+	req, _ := client.NewRequest("GET", "/", nil)
+	body := new(foo)
+	var completedReq *http.Request
+	var completedResp string
+	client.OnRequestCompleted(func(req *http.Request, resp *http.Response) {
+		completedReq = req
+		b, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			t.Errorf("Failed to dump response: %s", err)
+		}
+		completedResp = string(b)
+	})
+	_, err := client.Do(req, body)
+	if err != nil {
+		t.Fatalf("Do(): %v", err)
+	}
+	if !reflect.DeepEqual(req, completedReq) {
+		t.Errorf("Completed request = %v, expected %v", completedReq, req)
+	}
+	expected := `{"A":"a"}`
+	if !strings.Contains(completedResp, expected) {
+		t.Errorf("expected response to contain %v, Response = %v", expected, completedResp)
 	}
 }
