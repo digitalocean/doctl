@@ -8,7 +8,7 @@ import (
 	"github.com/slantview/doctl/commands"
 )
 
-const AppVersion = "0.0.9"
+const AppVersion = "0.0.10"
 
 func init() {
 	commands.APIKey = os.Getenv("DIGITAL_OCEAN_API_KEY")
