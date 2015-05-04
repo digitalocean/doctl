@@ -84,10 +84,12 @@ func TestSize_String(t *testing.T) {
 		PriceMonthly: 123,
 		PriceHourly:  456,
 		Regions:      []string{"1", "2"},
+		Available:    true,
+		Transfer:     789,
 	}
 
 	stringified := size.String()
-	expected := `godo.Size{Slug:"slize", Memory:123, Vcpus:456, Disk:789, PriceMonthly:123, PriceHourly:456, Regions:["1" "2"]}`
+	expected := `godo.Size{Slug:"slize", Memory:123, Vcpus:456, Disk:789, PriceMonthly:123, PriceHourly:456, Regions:["1" "2"], Available:true, Transfer:789}`
 	if expected != stringified {
 		t.Errorf("Size.String returned %+v, expected %+v", stringified, expected)
 	}
