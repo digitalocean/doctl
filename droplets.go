@@ -41,6 +41,7 @@ type Droplet struct {
 	Region      *Region   `json:"region,omitempty"`
 	Image       *Image    `json:"image,omitempty"`
 	Size        *Size     `json:"size,omitempty"`
+	SizeSlug    string    `json:"size_slug,omitempty"`
 	BackupIDs   []int     `json:"backup_ids,omitempty"`
 	SnapshotIDs []int     `json:"snapshot_ids,omitempty"`
 	Locked      bool      `json:"locked,bool,omitempty"`
