@@ -5,14 +5,12 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
-	"github.com/slantview/doctl/commands"
 )
 
-const AppVersion = "0.0.10"
+const AppVersion = "0.0.1"
 
-func init() {
-	commands.APIKey = os.Getenv("DIGITAL_OCEAN_API_KEY")
-}
+var APIKey string
+var OutputFormat string
 
 func main() {
 	app := cli.NewApp()
@@ -20,40 +18,45 @@ func main() {
 	app.Version = AppVersion
 	app.Usage = "Digital Ocean Control TooL."
 	app.Flags = []cli.Flag{
-		cli.StringFlag{Name: "api-key,k", Value: "", Usage: "API Key for DO APIv2."},
+		cli.StringFlag{
+			Name:   "api-key,k",
+			Value:  "",
+			Usage:  "API Key for DO APIv2.",
+			EnvVar: "DIGITALOCEAN_API_KEY,DIGITAL_OCEAN_API_KEY",
+		},
 		cli.StringFlag{Name: "format,f", Value: "yaml", Usage: "Format for output."},
 		cli.BoolFlag{Name: "debug,d", Usage: "Turn on debug output."},
 	}
 	app.Before = func(ctx *cli.Context) error {
 		if ctx.String("api-key") != "" {
-			commands.APIKey = ctx.String("api-key")
+			APIKey = ctx.String("api-key")
+		}
+
+		if APIKey == "" && ctx.BoolT("help") != false {
+			cli.ShowAppHelp(ctx)
+			fmt.Println("Must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument.")
+			os.Exit(1)
 		}
 
 		switch ctx.String("format") {
 		case "json":
-			commands.OutputFormat = ctx.String("format")
+			OutputFormat = ctx.String("format")
 		case "yaml":
-			commands.OutputFormat = ctx.String("format")
+			OutputFormat = ctx.String("format")
 		default:
 			fmt.Printf("Invalid output format: %s. Available output options: json, yaml.\n", ctx.String("format"))
 			os.Exit(64)
 		}
 
-		if commands.APIKey == "" {
-			cli.ShowAppHelp(ctx)
-			fmt.Println("Must provide API Key via DIGITAL_OCEAN_API_KEY environment variable or via CLI argument.")
-			os.Exit(1)
-		}
-
 		return nil
 	}
 	app.Commands = []cli.Command{
-		commands.ActionCommand,
-		commands.DomainCommand,
-		commands.DropletCommand,
-		commands.RegionCommand,
-		commands.SizeCommand,
-		commands.SSHCommand,
+		ActionCommand,
+		DomainCommand,
+		DropletCommand,
+		RegionCommand,
+		SizeCommand,
+		SSHCommand,
 	}
 
 	app.Run(os.Args)

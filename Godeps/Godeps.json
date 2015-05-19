@@ -14,6 +14,13 @@
 		{
 			"ImportPath": "gopkg.in/yaml.v1",
 			"Rev": "feb4ca79644e8e7e39c06095246ee54b1282c118"
+		},
+		{
+			"ImportPath": "github.com/digitalocean/godo",
+			"Rev": "8eb611fd0cd8407c6341dafe28659218a1c42483"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2"
 		}
 	]
 }
