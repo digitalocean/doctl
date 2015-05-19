@@ -157,8 +157,15 @@ func dropletList(ctx *cli.Context) {
 	defer cliOut.Flush()
 	cliOut.Header("ID", "Name", "IP Address", "Status", "Memory", "Disk", "Region")
 	for _, droplet := range dropletList {
+		publicIP := ""
+		for _, network := range droplet.Networks.V4 {
+			if network.Type == "public" {
+				publicIP = network.IPAddress
+			}
+		}
+
 		cliOut.Writeln("%d\t%s\t%s\t%s\t%dMB\t%dGB\t%s\n",
-			droplet.ID, droplet.Name, droplet.Networks.V4[0].IPAddress, droplet.Status, droplet.Memory, droplet.Disk, droplet.Region.Slug)
+			droplet.ID, droplet.Name, publicIP, droplet.Status, droplet.Memory, droplet.Disk, droplet.Region.Slug)
 	}
 }
 
