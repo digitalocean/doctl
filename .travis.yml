@@ -10,5 +10,4 @@ install:
   - go get -v -u github.com/tools/godep
 
 script: 
-  - make test
   - make all

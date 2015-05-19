@@ -8,7 +8,6 @@ GHRELEASE := github-release
 
 UNIX_EXECUTABLES := \
 	darwin/amd64/$(EXECUTABLE) \
-	freebsd/amd64/$(EXECUTABLE) \
 	linux/amd64/$(EXECUTABLE)
 WIN_EXECUTABLES := \
 	windows/amd64/$(EXECUTABLE).exe
@@ -18,7 +17,7 @@ COMPRESSED_EXECUTABLE_TARGETS=$(COMPRESSED_EXECUTABLES:%=bin/%)
 
 UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t $(LAST_TAG) -n $(subst /,-,$(FILE)) -f bin/$(FILE)
 
-all: test $(EXECUTABLE)
+all: test $(COMPRESSED_EXECUTABLE_TARGETS)
 
 # binaries
 bin/freebsd/amd64/$(EXECUTABLE): update_internal_version .deps
@@ -44,14 +43,14 @@ release: test $(COMPRESSED_EXECUTABLE_TARGETS) $(GOPATH)/bin/github-release rele
 releaselog-$(LAST_TAG).txt:
 	git shortlog $(PREV_VERSION)..$(LAST_TAG) > releaselog-$(LAST_TAG).txt
 
-.deps: $(GOPATH)/bin/godep
-	godep restore
+.deps:
+	$(GOPATH)/bin/godep restore
 	touch .deps
 
-update_internal_version: doctl.go
-	sed -i '' 's/const AppVersion = ".*"/const AppVersion = "$(LAST_TAG)"/' doctl.go
+update_internal_version: main.go
+	sed -i '' 's/const AppVersion = ".*"/const AppVersion = "$(LAST_TAG)"/' main.go
 
-$(EXECUTABLE): .deps
+build: .deps
 	go build -o "$@"
 
 install: .deps
@@ -68,6 +67,6 @@ clean:
 	rm -rf bin/
 
 test: .deps
-	go test -v ./...
+	go test -v .
 
 .PHONY: clean release install test update_internal_version

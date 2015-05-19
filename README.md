@@ -7,11 +7,17 @@ doctl is a tool for controlling your digital ocean resources from the command li
 
 ## Installation
 
-Download pre-built binaries from this repository or simply run:
+Download [pre-built binaries](https://github.internal.digitalocean.com/phillip/doctl/releases) from this repository, or clone and build yourself:
 
 ```
-# Should probably have the makefile usage in here somewhere
-# $ GOPATH=`pwd` bin/godep restore
+$ git clone 
+$ go get 
+$ make all
+```
+
+Or using `go get`:
+
+```
 $ go get github.com/slantview/doctl
 ```
 

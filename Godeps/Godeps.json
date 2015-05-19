@@ -1,11 +1,10 @@
 {
-	"ImportPath": "github.com/slantview/doctl",
 	"GoVersion": "go1.3.1",
 	"Deps": [
 		{
 			"ImportPath": "github.com/codegangsta/cli",
 			"Comment": "1.2.0-24-g7381bc4",
-			"Rev": "7381bc4e62942763475703c7edd405f1e42adf4f"
+			"Rev": "942282e931e8286aa802a30b01fa7e16befb50f3"
 		},
 		{
 			"ImportPath": "github.com/jmcvetta/napping",
@@ -21,6 +20,10 @@
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2"
+		},
+		{
+			"ImportPath": "github.com/slantview/doctl",
+			"Comment": "Deprecated, but still needed until replaced by godo"
 		}
 	]
 }
