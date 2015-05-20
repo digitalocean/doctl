@@ -15,6 +15,7 @@ var ActionCommand = cli.Command{
 	Name:    "action",
 	Aliases: []string{"a"},
 	Usage:   "Action commands.",
+	Action:  actionList,
 	Subcommands: []cli.Command{
 		{
 			Name:    "show",
@@ -60,6 +61,11 @@ func actionShow(ctx *cli.Context) {
 }
 
 func actionList(ctx *cli.Context) {
+	if ctx.BoolT("help") == true {
+		cli.ShowAppHelp(ctx)
+		os.Exit(1)
+	}
+
 	tokenSource := &TokenSource{
 		AccessToken: APIKey,
 	}

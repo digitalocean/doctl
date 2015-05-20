@@ -107,6 +107,11 @@ func dropletCreate(ctx *cli.Context) {
 }
 
 func dropletList(ctx *cli.Context) {
+	if ctx.BoolT("help") == true {
+		cli.ShowAppHelp(ctx)
+		os.Exit(1)
+	}
+
 	tokenSource := &TokenSource{
 		AccessToken: APIKey,
 	}
