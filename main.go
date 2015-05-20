@@ -5,12 +5,25 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
+
+	"golang.org/x/oauth2"
 )
 
 const AppVersion = "0.0.11"
 
 var APIKey string
 var OutputFormat string
+
+type TokenSource struct {
+	AccessToken string
+}
+
+func (t *TokenSource) Token() (*oauth2.Token, error) {
+	token := &oauth2.Token{
+		AccessToken: t.AccessToken,
+	}
+	return token, nil
+}
 
 func main() {
 	app := cli.NewApp()
