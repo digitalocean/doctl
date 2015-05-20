@@ -47,13 +47,13 @@ var DropletCommand = cli.Command{
 		{
 			Name:    "find",
 			Aliases: []string{"f"},
-			Usage:   "Find the first Droplet whose name matches the first argument.",
+			Usage:   "<Droplet name> Find the first Droplet whose name matches the first argument.",
 			Action:  dropletFind,
 		},
 		{
 			Name:    "destroy",
 			Aliases: []string{"d"},
-			Usage:   "Destroy droplet.",
+			Usage:   "[--id | <name>] Destroy droplet.",
 			Action:  dropletDestroy,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
@@ -152,7 +152,7 @@ func dropletList(ctx *cli.Context) {
 	defer cliOut.Flush()
 	cliOut.Header("ID", "Name", "IP Address", "Status", "Memory", "Disk", "Region")
 	for _, droplet := range dropletList {
-		publicIP := ""
+		publicIP := "" // TODO replace with util
 		for _, network := range droplet.Networks.V4 {
 			if network.Type == "public" {
 				publicIP = network.IPAddress
@@ -179,7 +179,7 @@ func dropletFind(ctx *cli.Context) {
 	client := godo.NewClient(oauthClient)
 
 	opt := &godo.ListOptions{}
-	for {
+	for { // TODO Replace with util
 		dropletPage, resp, err := client.Droplets.List(opt)
 		if err != nil {
 			fmt.Printf("Unable to list Droplets: %s\n", err)
@@ -190,6 +190,7 @@ func dropletFind(ctx *cli.Context) {
 		for _, d := range dropletPage {
 			if d.Name == name {
 				WriteOutput(d)
+				os.Exit(1)
 			}
 		}
 
@@ -211,17 +212,27 @@ func dropletFind(ctx *cli.Context) {
 }
 
 func dropletDestroy(ctx *cli.Context) {
-	if ctx.Int("id") == 0 {
-		fmt.Printf("Error: Must provide ID for Droplet for Destroy.\n")
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		fmt.Printf("Error: Must provide ID or name for Droplet to destroy.\n")
 		os.Exit(1)
 	}
 
-	id := ctx.Int("id")
 	tokenSource := &TokenSource{
 		AccessToken: APIKey,
 	}
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
 	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			fmt.Printf("%s\n", err)
+			os.Exit(64)
+		} else {
+			id = droplet.ID
+		}
+	}
 
 	dropletRoot, _, err := client.Droplets.Get(id)
 	if err != nil {
