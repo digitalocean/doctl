@@ -37,6 +37,37 @@ func FindDropletByName(c *godo.Client, name string) (*godo.Droplet, error) {
 	}
 }
 
+func FindKeyByName(c *godo.Client, name string) (*godo.Key, error) {
+	opt := &godo.ListOptions{}
+	for {
+		keyPage, resp, err := c.Keys.List(opt)
+		if err != nil {
+			return nil, err
+		}
+
+		// append the current page's droplets to our list
+		for _, k := range keyPage {
+			if k.Name == name {
+				return &k, nil
+			}
+		}
+
+		// if we are at the last page, break out the for loop
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			fmt.Printf("Unable to find the SSH Key: %s\n", name)
+			return nil, fmt.Errorf("%s Not Found.", name)
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			return nil, err
+		}
+
+		// set the page we want for the next request
+		opt.Page = page + 1
+	}
+}
+
 func PublicIPForDroplet(d *godo.Droplet) string {
 	var publicIP string
 	for _, network := range d.Networks.V4 {

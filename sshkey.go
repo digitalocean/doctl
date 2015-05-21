@@ -6,33 +6,40 @@ import (
 	"os"
 
 	"github.com/codegangsta/cli"
-	"github.com/slantview/doctl/api/v2"
-	"gopkg.in/yaml.v1"
+	"github.com/digitalocean/godo"
+
+	"golang.org/x/oauth2"
 )
 
 var SSHCommand = cli.Command{
-	Name:  "sshkey",
-	Usage: "SSH Key commands.",
+	Name:    "sshkey",
+	Usage:   "SSH Key commands.",
+	Aliases: []string{"ssh", "keys"},
+	Action:  sshList,
 	Subcommands: []cli.Command{
 		{
-			Name:   "create",
-			Usage:  "Create SSH key.",
-			Action: sshCreate,
+			Name:    "create",
+			Usage:   "<name> <path to ssh key(~/.ssh/id_rsa)>Create SSH key.",
+			Aliases: []string{"c"},
+			Action:  sshCreate,
 		},
 		{
-			Name:   "list",
-			Usage:  "List all SSH keys.",
-			Action: sshList,
+			Name:    "list",
+			Usage:   "List all SSH keys.",
+			Aliases: []string{"l"},
+			Action:  sshList,
 		},
 		{
-			Name:   "show",
-			Usage:  "Show SSH key.",
-			Action: sshShow,
+			Name:    "show",
+			Usage:   "<name> Show SSH key.",
+			Aliases: []string{"s"},
+			Action:  sshShow,
 		},
 		{
-			Name:   "destroy",
-			Usage:  "Destroy SSH key.",
-			Action: sshDestroy,
+			Name:    "destroy",
+			Usage:   "<name> Destroy SSH key.",
+			Aliases: []string{"d"},
+			Action:  sshDestroy,
 		},
 	},
 }
@@ -43,10 +50,11 @@ func sshCreate(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	client := apiv2.NewClient(APIKey)
-
-	key := client.NewSSHKey()
-	key.Name = ctx.Args().First()
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
 
 	file, err := os.Open(ctx.Args()[1])
 	if err != nil {
@@ -54,15 +62,17 @@ func sshCreate(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	data, err := ioutil.ReadAll(file)
+	keyData, err := ioutil.ReadAll(file)
 	if err != nil {
 		fmt.Printf("Error reading key file: %s\n", err)
 		os.Exit(1)
 	}
 
-	key.PublicKey = string(data)
-
-	key, err = client.CreateKey(key)
+	createRequest := &godo.KeyCreateRequest{
+		Name:      ctx.Args().First(),
+		PublicKey: string(keyData),
+	}
+	key, _, err := client.Keys.Create(createRequest)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
@@ -72,63 +82,103 @@ func sshCreate(ctx *cli.Context) {
 }
 
 func sshList(ctx *cli.Context) {
-	client := apiv2.NewClient(APIKey)
-
-	keyList, err := client.ListAllKeys()
-	if err != nil {
-		fmt.Printf("Unable to list Keys: %s\n", err)
+	if ctx.BoolT("help") == true {
+		cli.ShowAppHelp(ctx)
 		os.Exit(1)
+	}
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	opt := &godo.ListOptions{}
+	keyList := []godo.Key{}
+
+	for {
+		keyPage, resp, err := client.Keys.List(opt)
+		if err != nil {
+			fmt.Printf("Unable to list SSH Keys: %s\n", err)
+			os.Exit(1)
+		}
+
+		// append the current page's droplets to our list
+		for _, d := range keyPage {
+			keyList = append(keyList, d)
+		}
+
+		// if we are at the last page, break out the for loop
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			fmt.Printf("Unable to get pagination: %s\n", err)
+			os.Exit(1)
+		}
+
+		// set the page we want for the next request
+		opt.Page = page + 1
 	}
 
 	cliOut := NewCLIOutput()
 	defer cliOut.Flush()
 	cliOut.Header("ID", "Name", "Fingerprint")
-	for _, key := range keyList.SSHKeys {
+	for _, key := range keyList {
 		cliOut.Writeln("%d\t%s\t%s\n", key.ID, key.Name, key.Fingerprint)
 	}
 }
 
 func sshShow(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 {
+	if len(ctx.Args()) != 1 {
 		fmt.Printf("Error: Must provide name for Key.\n")
 		os.Exit(1)
 	}
 
 	name := ctx.Args().First()
 
-	client := apiv2.NewClient(APIKey)
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
 
-	keyList, err := client.ListAllKeys()
+	key, err := FindKeyByName(client, name)
 	if err != nil {
-		fmt.Printf("Unable to list Keys: %s\n", err)
-		os.Exit(1)
+		fmt.Printf("%s\n", err)
+		os.Exit(64)
 	}
 
-	for _, key := range keyList.SSHKeys {
-		if key.Name == name {
-			data, errMarshal := yaml.Marshal(key)
-			if errMarshal != nil {
-				fmt.Printf("YAML Error: %s", errMarshal)
-				os.Exit(1)
-			}
-			fmt.Printf("%s", string(data))
-		}
-	}
+	WriteOutput(key)
 }
 
 func sshDestroy(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 {
-		fmt.Printf("Error: Must provide name for Key.\n")
+	if len(ctx.Args()) != 1 {
+		fmt.Printf("Error: Must provide name for SSH Key.\n")
 		os.Exit(1)
 	}
 
 	name := ctx.Args().First()
 
-	client := apiv2.NewClient(APIKey)
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
 
-	err := client.DestroyKey(name)
+	var id int
+	key, err := FindKeyByName(client, name)
 	if err != nil {
-		fmt.Printf("Unable to destroy Key: %s\n", err)
+		fmt.Printf("%s\n", err)
+		os.Exit(64)
+	}
+	id = key.ID
+
+	_, err = client.Keys.DeleteByID(id)
+	if err != nil {
+		fmt.Printf("Unable to destroy SSH Key: %s\n", err)
 		os.Exit(1)
 	}
 
