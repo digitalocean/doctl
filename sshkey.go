@@ -33,13 +33,17 @@ var SSHCommand = cli.Command{
 			Name:    "show",
 			Usage:   "<name> Show SSH key.",
 			Aliases: []string{"s"},
-			Action:  sshShow,
+			Action:  sshFind,
 		},
 		{
 			Name:    "destroy",
-			Usage:   "<name> Destroy SSH key.",
+			Usage:   "[--id | --fingerprint | <name>] Destroy SSH key.",
 			Aliases: []string{"d"},
 			Action:  sshDestroy,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for SSH Key. (e.g. 1234567)"},
+				cli.StringFlag{Name: "id", Usage: "Fingerprint for SSH Key. (e.g. aa:bb:cc)"},
+			},
 		},
 	},
 }
@@ -131,7 +135,7 @@ func sshList(ctx *cli.Context) {
 	}
 }
 
-func sshShow(ctx *cli.Context) {
+func sshFind(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		fmt.Printf("Error: Must provide name for Key.\n")
 		os.Exit(1)
@@ -155,12 +159,10 @@ func sshShow(ctx *cli.Context) {
 }
 
 func sshDestroy(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide name for SSH Key.\n")
+	if ctx.Int("id") == 0 && ctx.String("fingerprint") == "" && len(ctx.Args()) < 1 {
+		fmt.Printf("Error: Must provide ID, fingerprint or name for SSH Key to destroy.\n")
 		os.Exit(1)
 	}
-
-	name := ctx.Args().First()
 
 	tokenSource := &TokenSource{
 		AccessToken: APIKey,
@@ -168,19 +170,40 @@ func sshDestroy(ctx *cli.Context) {
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
 	client := godo.NewClient(oauthClient)
 
-	var id int
-	key, err := FindKeyByName(client, name)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(64)
+	id := ctx.Int("id")
+	fingerprint := ctx.String("fingerprint")
+	var key godo.Key
+	if id == 0 && fingerprint == "" {
+		key, err := FindKeyByName(client, ctx.Args().First())
+		if err != nil {
+			fmt.Printf("%s\n", err)
+			os.Exit(64)
+		} else {
+			id = key.ID
+		}
+	} else if id != 0 {
+		key, _, err := client.Keys.GetByID(id)
+		if err != nil {
+			fmt.Printf("Unable to find SSH Key: %s\n", err)
+			os.Exit(1)
+		} else {
+			id = key.ID
+		}
+	} else {
+		key, _, err := client.Keys.GetByFingerprint(fingerprint)
+		if err != nil {
+			fmt.Printf("Unable to find SSH Key: %s\n", err)
+			os.Exit(1)
+		} else {
+			id = key.ID
+		}
 	}
-	id = key.ID
 
-	_, err = client.Keys.DeleteByID(id)
+	_, err := client.Keys.DeleteByID(id)
 	if err != nil {
 		fmt.Printf("Unable to destroy SSH Key: %s\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Key %s destroyed.\n", name)
+	fmt.Printf("Key %s destroyed.\n", key.Name)
 }
