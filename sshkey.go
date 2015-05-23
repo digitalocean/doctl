@@ -19,7 +19,7 @@ var SSHCommand = cli.Command{
 	Subcommands: []cli.Command{
 		{
 			Name:    "create",
-			Usage:   "<name> <path to ssh key(~/.ssh/id_rsa)>Create SSH key.",
+			Usage:   "<name> <path to ssh key(~/.ssh/id_rsa)> Create SSH key.",
 			Aliases: []string{"c"},
 			Action:  sshCreate,
 		},
@@ -30,9 +30,9 @@ var SSHCommand = cli.Command{
 			Action:  sshList,
 		},
 		{
-			Name:    "show",
-			Usage:   "<name> Show SSH key.",
-			Aliases: []string{"s"},
+			Name:    "find",
+			Usage:   "<name> Find SSH key.",
+			Aliases: []string{"f"},
 			Action:  sshFind,
 		},
 		{
