@@ -152,12 +152,7 @@ func dropletList(ctx *cli.Context) {
 	defer cliOut.Flush()
 	cliOut.Header("ID", "Name", "IP Address", "Status", "Memory", "Disk", "Region")
 	for _, droplet := range dropletList {
-		publicIP := "" // TODO replace with util
-		for _, network := range droplet.Networks.V4 {
-			if network.Type == "public" {
-				publicIP = network.IPAddress
-			}
-		}
+		publicIP := PublicIPForDroplet(&droplet)
 
 		cliOut.Writeln("%d\t%s\t%s\t%s\t%dMB\t%dGB\t%s\n",
 			droplet.ID, droplet.Name, publicIP, droplet.Status, droplet.Memory, droplet.Disk, droplet.Region.Slug)
@@ -178,37 +173,13 @@ func dropletFind(ctx *cli.Context) {
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
 	client := godo.NewClient(oauthClient)
 
-	opt := &godo.ListOptions{}
-	for { // TODO Replace with util
-		dropletPage, resp, err := client.Droplets.List(opt)
-		if err != nil {
-			fmt.Printf("Unable to list Droplets: %s\n", err)
-			os.Exit(1)
-		}
-
-		// append the current page's droplets to our list
-		for _, d := range dropletPage {
-			if d.Name == name {
-				WriteOutput(d)
-				os.Exit(1)
-			}
-		}
-
-		// if we are at the last page, break out the for loop
-		if resp.Links == nil || resp.Links.IsLastPage() {
-			fmt.Printf("Unable to find the Droplet: %s\n", name)
-			break
-		}
-
-		page, err := resp.Links.CurrentPage()
-		if err != nil {
-			fmt.Printf("Unable to get pagination: %s\n", err)
-			os.Exit(1)
-		}
-
-		// set the page we want for the next request
-		opt.Page = page + 1
+	droplet, err := FindDropletByName(client, name)
+	if err != nil {
+		fmt.Printf("%s\n", err)
+		os.Exit(64)
 	}
+
+	WriteOutput(droplet)
 }
 
 func dropletDestroy(ctx *cli.Context) {
