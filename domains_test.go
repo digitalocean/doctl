@@ -90,7 +90,7 @@ func TestDomains_GetDomain(t *testing.T) {
 		t.Errorf("domain.Get returned error: %v", err)
 	}
 
-	expected := &DomainRoot{Domain: &Domain{Name: "example.com"}}
+	expected := &Domain{Name: "example.com"}
 	if !reflect.DeepEqual(domains, expected) {
 		t.Errorf("domains.Get returned %+v, expected %+v", domains, expected)
 	}
@@ -117,13 +117,7 @@ func TestDomains_Create(t *testing.T) {
 			t.Errorf("Request body = %+v, expected %+v", v, createRequest)
 		}
 
-		dr := DomainRoot{&Domain{Name: v.Name}}
-		b, err := json.Marshal(dr)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		fmt.Fprint(w, string(b))
+		fmt.Fprint(w, `{"domain":{"name":"example.com"}}`)
 	})
 
 	domain, _, err := client.Domains.Create(createRequest)
@@ -131,7 +125,7 @@ func TestDomains_Create(t *testing.T) {
 		t.Errorf("Domains.Create returned error: %v", err)
 	}
 
-	expected := &DomainRoot{Domain: &Domain{Name: "example.com"}}
+	expected := &Domain{Name: "example.com"}
 	if !reflect.DeepEqual(domain, expected) {
 		t.Errorf("Domains.Create returned %+v, expected %+v", domain, expected)
 	}

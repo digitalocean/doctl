@@ -12,8 +12,8 @@ const dropletBasePath = "v2/droplets"
 // See: https://developers.digitalocean.com/documentation/v2#droplets
 type DropletsService interface {
 	List(*ListOptions) ([]Droplet, *Response, error)
-	Get(int) (*DropletRoot, *Response, error)
-	Create(*DropletCreateRequest) (*DropletRoot, *Response, error)
+	Get(int) (*Droplet, *Response, error)
+	Create(*DropletCreateRequest) (*Droplet, *Response, error)
 	Delete(int) (*Response, error)
 	Kernels(int, *ListOptions) ([]Kernel, *Response, error)
 	Snapshots(int, *ListOptions) ([]Image, *Response, error)
@@ -64,7 +64,7 @@ func (d Droplet) String() string {
 }
 
 // DropletRoot represents a Droplet root
-type DropletRoot struct {
+type dropletRoot struct {
 	Droplet *Droplet `json:"droplet"`
 	Links   *Links   `json:"links,omitempty"`
 }
@@ -190,7 +190,7 @@ func (s *DropletsServiceOp) List(opt *ListOptions) ([]Droplet, *Response, error)
 }
 
 // Get individual droplet
-func (s *DropletsServiceOp) Get(dropletID int) (*DropletRoot, *Response, error) {
+func (s *DropletsServiceOp) Get(dropletID int) (*Droplet, *Response, error) {
 	path := fmt.Sprintf("%s/%d", dropletBasePath, dropletID)
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -198,17 +198,17 @@ func (s *DropletsServiceOp) Get(dropletID int) (*DropletRoot, *Response, error) 
 		return nil, nil, err
 	}
 
-	root := new(DropletRoot)
+	root := new(dropletRoot)
 	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return root, resp, err
+	return root.Droplet, resp, err
 }
 
 // Create droplet
-func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*DropletRoot, *Response, error) {
+func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*Droplet, *Response, error) {
 	path := dropletBasePath
 
 	req, err := s.client.NewRequest("POST", path, createRequest)
@@ -216,7 +216,7 @@ func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*Drople
 		return nil, nil, err
 	}
 
-	root := new(DropletRoot)
+	root := new(dropletRoot)
 	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
@@ -225,7 +225,7 @@ func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*Drople
 		resp.Links = l
 	}
 
-	return root, resp, err
+	return root.Droplet, resp, err
 }
 
 // Delete droplet
