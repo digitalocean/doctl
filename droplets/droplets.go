@@ -1,7 +1,6 @@
 package droplets
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/digitalocean/godo"
@@ -57,16 +56,6 @@ func PublicIP(droplet *godo.Droplet) string {
 func ToText(d *godo.Droplet) string {
 	return fmt.Sprintf("%s (ip: %s, status: %s, region: %s, id: %d)",
 		d.Name, PublicIP(d), status(d), d.Region.Slug, d.ID)
-}
-
-// ToJSON converts a list of droplets to JSON.
-func ToJSON(list []godo.Droplet) (string, error) {
-	b, err := json.MarshalIndent(list, "", "  ")
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
 }
 
 func status(d *godo.Droplet) string {

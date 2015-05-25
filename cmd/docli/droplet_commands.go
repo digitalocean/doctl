@@ -38,7 +38,7 @@ func dropletList() cli.Command {
 				panic(err)
 			}
 			if c.Bool("json") {
-				j, err := droplets.ToJSON(list)
+				j, err := toJSON(list)
 				if err != nil {
 					panic(err)
 				}

@@ -1,10 +1,6 @@
 package sshkeys
 
-import (
-	"encoding/json"
-
-	"github.com/digitalocean/godo"
-)
+import "github.com/digitalocean/godo"
 
 func List(client *godo.Client) ([]godo.Key, error) {
 	list := []godo.Key{}
@@ -36,14 +32,4 @@ func List(client *godo.Client) ([]godo.Key, error) {
 	}
 
 	return list, nil
-}
-
-// ToJSON converts a list of droplets to JSON.
-func ToJSON(list []godo.Key) (string, error) {
-	b, err := json.MarshalIndent(list, "", "  ")
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
 }

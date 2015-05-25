@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 
 	"code.google.com/p/goauth2/oauth"
@@ -40,4 +41,13 @@ func newClient(token string) *godo.Client {
 	}
 
 	return godo.NewClient(t.Client())
+}
+
+func toJSON(item interface{}) (string, error) {
+	b, err := json.MarshalIndent(item, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }

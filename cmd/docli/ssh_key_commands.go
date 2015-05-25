@@ -31,7 +31,7 @@ func sshKeyList() cli.Command {
 				panic(err)
 			}
 
-			j, err := sshkeys.ToJSON(list)
+			j, err := toJSON(list)
 			if err != nil {
 				panic(err)
 			}
