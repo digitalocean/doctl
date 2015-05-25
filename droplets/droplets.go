@@ -61,7 +61,7 @@ func ToText(d *godo.Droplet) string {
 
 // ToJSON converts a list of droplets to JSON.
 func ToJSON(list []godo.Droplet) (string, error) {
-	b, err := json.Marshal(list)
+	b, err := json.MarshalIndent(list, "", "  ")
 	if err != nil {
 		return "", err
 	}

@@ -20,6 +20,7 @@ func main() {
 
 	app.Commands = []cli.Command{
 		dropletCommands(),
+		sshKeyCommands(),
 	}
 
 	app.Run(os.Args)

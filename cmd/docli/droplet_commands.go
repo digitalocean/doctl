@@ -24,7 +24,6 @@ func dropletList() cli.Command {
 		Name:  "list",
 		Usage: "list droplets",
 		Flags: []cli.Flag{
-			tokenFlag(),
 			cli.BoolFlag{
 				Name:  "json",
 				Usage: "return list of droplets as JSON array",
