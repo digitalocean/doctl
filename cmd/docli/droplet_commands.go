@@ -31,7 +31,7 @@ func dropletList() cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) {
-			token := c.String("token")
+			token := c.GlobalString("token")
 			client := newClient(token)
 
 			list, err := droplets.List(client)
@@ -59,7 +59,6 @@ func dropletCreate() cli.Command {
 		Name:  "create",
 		Usage: "create droplet",
 		Flags: []cli.Flag{
-			tokenFlag(),
 
 			cli.StringFlag{
 				Name:  "name",
@@ -100,7 +99,7 @@ func dropletCreate() cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) {
-			client := newClient(c.String("token"))
+			client := newClient(c.GlobalString("token"))
 			cr := &droplets.CreateRequest{
 				Name:              c.String("name"),
 				Region:            c.String("region"),

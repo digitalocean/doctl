@@ -15,11 +15,7 @@ func main() {
 	app.Usage = "DigitalOcean API CLI"
 	app.Version = "0.1.0"
 	app.Flags = []cli.Flag{
-		cli.StringFlag{
-			Name:   "token",
-			Usage:  "DigitalOcean API V2 Token",
-			EnvVar: "DO_TOKEN",
-		},
+		tokenFlag(),
 	}
 
 	app.Commands = []cli.Command{
