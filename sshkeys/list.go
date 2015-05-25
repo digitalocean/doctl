@@ -1,34 +1,33 @@
 package sshkeys
 
-import "github.com/digitalocean/godo"
+import (
+	"github.com/bryanl/docli/docli"
+	"github.com/digitalocean/godo"
+)
 
 func List(client *godo.Client) ([]godo.Key, error) {
-	list := []godo.Key{}
-	opt := &godo.ListOptions{}
-	for {
-		keys, resp, err := client.Keys.List(opt)
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := client.Keys.List(opt)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		// append the current page's droplets to our list
-		for _, d := range keys {
-			list = append(list, d)
-
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
 		}
 
-		// if we are at the last page, break out the for loop
-		if resp.Links == nil || resp.Links.IsLastPage() {
-			break
-		}
+		return si, resp, err
+	}
 
-		page, err := resp.Links.CurrentPage()
-		if err != nil {
-			return nil, err
-		}
+	si, err := docli.PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
 
-		// set the page we want for the next request
-		opt.Page = page + 1
+	list := make([]godo.Key, len(si))
+	for i := range si {
+		list[i] = si[i].(godo.Key)
 	}
 
 	return list, nil

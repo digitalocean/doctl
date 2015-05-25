@@ -3,38 +3,35 @@ package droplets
 import (
 	"fmt"
 
+	"github.com/bryanl/docli/docli"
 	"github.com/digitalocean/godo"
 	"github.com/fatih/color"
 )
 
 // List returns a list of all droplets.
 func List(client *godo.Client) ([]godo.Droplet, error) {
-	list := []godo.Droplet{}
-	opt := &godo.ListOptions{}
-	for {
-		droplets, resp, err := client.Droplets.List(opt)
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := client.Droplets.List(opt)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		// append the current page's droplets to our list
-		for _, d := range droplets {
-			list = append(list, d)
-
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
 		}
 
-		// if we are at the last page, break out the for loop
-		if resp.Links == nil || resp.Links.IsLastPage() {
-			break
-		}
+		return si, resp, err
+	}
 
-		page, err := resp.Links.CurrentPage()
-		if err != nil {
-			return nil, err
-		}
+	si, err := docli.PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
 
-		// set the page we want for the next request
-		opt.Page = page + 1
+	list := make([]godo.Droplet, len(si))
+	for i := range si {
+		list[i] = si[i].(godo.Droplet)
 	}
 
 	return list, nil
