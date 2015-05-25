@@ -7,7 +7,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
-	"github.com/slantview/doctl/api/v2"
 
 	"golang.org/x/oauth2"
 )
@@ -25,16 +24,17 @@ var DropletCommand = cli.Command{
 			Usage:   "Create droplet.",
 			Action:  dropletCreate,
 			Flags: []cli.Flag{
-				cli.StringFlag{Name: "domain", Value: "", Usage: "Domain name to append to server name. (e.g. server01.example.com)"},
+				cli.StringFlag{Name: "domain, d", Value: "", Usage: "Domain name to append to server name. (e.g. server01.example.com)"},
 				cli.BoolFlag{Name: "add-region", Usage: "Append region to server name. (e.g. server01.sfo1)"},
-				cli.StringFlag{Name: "user-data", Value: "", Usage: "User data for creating server."},
-				cli.StringFlag{Name: "ssh-keys", Value: "", Usage: "Comma seperated list of SSH Keys for server access. (e.g. --ssh-keys Work,Home)"},
-				cli.StringFlag{Name: "size", Value: "512mb", Usage: "Size of Droplet."},
-				cli.StringFlag{Name: "region", Value: "nyc3", Usage: "Region of Droplet."},
-				cli.StringFlag{Name: "image", Value: "ubuntu-14-04-x64", Usage: "Image slug of Droplet."},
-				cli.BoolFlag{Name: "backups", Usage: "Turn on backups."},
-				cli.BoolFlag{Name: "ipv6", Usage: "Turn on IPv6 networking."},
-				cli.BoolFlag{Name: "private-networking", Usage: "Turn on private networking."},
+				cli.StringFlag{Name: "user-data, u", Value: "", Usage: "User data for creating server."},
+				cli.StringFlag{Name: "ssh-keys, k", Value: "", Usage: "Comma seperated list of SSH Key names for server access. (e.g. --ssh-keys Work,Home)"},
+				cli.StringFlag{Name: "size, s", Value: "512mb", Usage: "Size of Droplet."},
+				cli.StringFlag{Name: "region, r", Value: "nyc3", Usage: "Region of Droplet."},
+				cli.StringFlag{Name: "image, i", Value: "ubuntu-14-04-x64", Usage: "Image slug of Droplet."}, // TODO handle image id
+				cli.BoolFlag{Name: "backups, b", Usage: "Turn on backups."},
+				cli.BoolFlag{Name: "ipv6, 6", Usage: "Turn on IPv6 networking."},
+				cli.BoolFlag{Name: "private-networking, p", Usage: "Turn on private networking."},
+				cli.BoolFlag{Name: "wait-for-active", Usage: "Don't return until the create has succeeded or failed."},
 			},
 		},
 		{
@@ -63,47 +63,61 @@ var DropletCommand = cli.Command{
 }
 
 func dropletCreate(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 {
+	if len(ctx.Args()) != 1 {
 		fmt.Printf("Error: Must provide name for Droplet.\n")
 		os.Exit(1)
 	}
 
-	client := apiv2.NewClient(APIKey)
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
 
 	// Add domain to end if available.
-	name := ctx.Args().First()
+	dropletName := ctx.Args().First()
 	if ctx.String("add-region") != "" {
-		name = fmt.Sprintf("%s.%s", name, ctx.String("region"))
+		dropletName = fmt.Sprintf("%s.%s", dropletName, ctx.String("region"))
 	}
 	if ctx.String("domain") != "" {
-		name = fmt.Sprintf("%s.%s", name, ctx.String("domain"))
+		dropletName = fmt.Sprintf("%s.%s", dropletName, ctx.String("domain"))
 	}
 
-	request := client.NewDropletRequest(name)
-	request.Size = ctx.String("size")
-	request.Image = ctx.String("image")
-	request.PrivateNetworking = ctx.Bool("private-networking")
-	request.IPv6 = ctx.Bool("ipv6")
-	request.Backups = ctx.Bool("backups")
-	request.UserData = ctx.String("user-data")
-
-	// Loop through the SSH Keys and add by ID.  D.O. API should have handled this case as well.
-	var sshKeys []string
-	for _, key := range strings.Split(ctx.String("ssh-keys"), ",") {
-		sshKey, err := client.FindKey(key)
-		if sshKey != nil && err == nil {
-			sshKeys = append(sshKeys, fmt.Sprintf("%d", sshKey.ID))
+	// Loop through the SSH Keys and add by name. DO API should have handled this case as well.
+	var sshKeys []godo.DropletCreateSSHKey
+	keyNames := ctx.String("ssh-keys")
+	if keyNames != "" {
+		for _, keyName := range strings.Split(keyNames, ",") {
+			sshKey, err := FindKeyByName(client, keyName)
+			if sshKey != nil && err == nil {
+				sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: sshKey.ID})
+			} else {
+				fmt.Printf("Warning: Could not find key: %s.\n", keyName)
+			}
 		}
 	}
-	request.SSHKeys = sshKeys
 
-	droplet, errCreate := client.CreateDroplet(request)
-	if errCreate != nil {
-		fmt.Printf("Unable to create Droplet: %s\n", errCreate)
+	createRequest := &godo.DropletCreateRequest{
+		Name:   dropletName,
+		Region: ctx.String("region"),
+		Size:   ctx.String("size"),
+		Image: godo.DropletCreateImage{
+			Slug: ctx.String("image"),
+		},
+		SSHKeys:           sshKeys,
+		Backups:           ctx.Bool("backups"),
+		IPv6:              ctx.Bool("ipv6"),
+		PrivateNetworking: ctx.Bool("private-networking"),
+		UserData:          ctx.String("user-data"),
+	}
+
+	dropletRoot, _, err := client.Droplets.Create(createRequest)
+	if err != nil {
+		fmt.Printf("Unable to create Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	WriteOutput(droplet)
+	WriteOutput(dropletRoot.Droplet)
 }
 
 func dropletList(ctx *cli.Context) {
