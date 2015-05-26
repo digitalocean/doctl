@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"os"
 
 	"code.google.com/p/goauth2/oauth"
 
@@ -24,7 +23,7 @@ func main() {
 		sshKeyCommands(),
 	}
 
-	app.Run(os.Args)
+	app.RunAndExitOnError()
 }
 
 func tokenFlag() cli.Flag {

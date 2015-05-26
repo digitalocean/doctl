@@ -6,6 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/docli/sshkeys"
 	"github.com/codegangsta/cli"
+	"github.com/digitalocean/godo"
 )
 
 func sshKeyCommands() cli.Command {
@@ -15,6 +16,7 @@ func sshKeyCommands() cli.Command {
 		Subcommands: []cli.Command{
 			sshKeyList(),
 			sshKeyCreate(),
+			sshKeyGet(),
 		},
 	}
 }
@@ -73,6 +75,57 @@ func sshKeyCreate() cli.Command {
 			if err != nil {
 				log.WithField("err", err).Error("unable to create key")
 				return
+			}
+
+			j, err := toJSON(key)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+}
+
+func sshKeyGet() cli.Command {
+	return cli.Command{
+		Name:  "get",
+		Usage: "get ssh key",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "ssh key id",
+			},
+			cli.StringFlag{
+				Name:  "fingerprint",
+				Usage: "ssh key fingerprint",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			fingerprint := c.String("fingerprint")
+
+			return sshkeys.IsValidGetArgs(id, fingerprint)
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+			fingerprint := c.String("fingerprint")
+
+			var key *godo.Key
+			var err error
+
+			switch {
+			case id != 0:
+				key, err = sshkeys.RetrieveByID(client, id)
+			default:
+				key, err = sshkeys.RetrieveByFingerprint(client, fingerprint)
+			}
+
+			if err != nil {
+				panic(err)
 			}
 
 			j, err := toJSON(key)
