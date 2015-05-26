@@ -15,6 +15,7 @@ func domainCommands() cli.Command {
 		Subcommands: []cli.Command{
 			domainList(),
 			domainCreate(),
+			domainGet(),
 		},
 	}
 }
@@ -83,6 +84,45 @@ func domainCreate() cli.Command {
 			}
 
 			j, err := toJSON(key)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+}
+
+func domainGet() cli.Command {
+	return cli.Command{
+		Name:  "get",
+		Usage: "get domain",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "domain name",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			name := c.String("name")
+			if len(name) < 1 {
+				return fmt.Errorf("invalid domain name")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			name := c.String("name")
+
+			domain, err := domains.Retrieve(client, name)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(domain)
 			if err != nil {
 				panic(err)
 			}
