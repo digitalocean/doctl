@@ -15,6 +15,7 @@ func dropletCommands() cli.Command {
 		Subcommands: []cli.Command{
 			dropletList(),
 			dropletCreate(),
+			dropletGet(),
 		},
 	}
 }
@@ -118,6 +119,45 @@ func dropletCreate() cli.Command {
 			}
 
 			fmt.Printf("created droplet %d\n", root.Droplet.ID)
+		},
+	}
+}
+
+func dropletGet() cli.Command {
+	return cli.Command{
+		Name:  "get",
+		Usage: "get droplet",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "droplet id",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			if id < 1 {
+				return fmt.Errorf("invalid droplet id")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+
+			droplet, err := droplets.Get(client, id)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(droplet)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
 		},
 	}
 }
