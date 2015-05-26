@@ -16,6 +16,7 @@ func dropletCommands() cli.Command {
 			dropletList(),
 			dropletCreate(),
 			dropletGet(),
+			dropletKernels(),
 		},
 	}
 }
@@ -153,6 +154,45 @@ func dropletGet() cli.Command {
 			}
 
 			j, err := toJSON(droplet)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+}
+
+func dropletKernels() cli.Command {
+	return cli.Command{
+		Name:  "kernels",
+		Usage: "get kernels for droplet",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "droplet id",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			if id < 1 {
+				return fmt.Errorf("invalid droplet id")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+
+			list, err := droplets.Kernels(client, id)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(list)
 			if err != nil {
 				panic(err)
 			}
