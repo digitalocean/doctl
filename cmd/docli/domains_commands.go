@@ -173,6 +173,7 @@ func recordCommands() cli.Command {
 		Usage: "domain record commands",
 		Subcommands: []cli.Command{
 			recordList(),
+			recordCreate(),
 		},
 	}
 }
@@ -212,5 +213,80 @@ func recordList() cli.Command {
 
 			fmt.Println(j)
 		},
+	}
+}
+
+func recordCreate() cli.Command {
+	return cli.Command{
+		Name:  "create",
+		Usage: "create record",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "domain",
+				Usage: "record domain (required)",
+			},
+			cli.StringFlag{
+				Name:  "type",
+				Usage: "record type (required)",
+			},
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "record name (required for A, AAAA, CNAME, TXT, SRV records)",
+			},
+			cli.StringFlag{
+				Name:  "data",
+				Usage: "record data (required for A, AAAA, CNAME, MX, TXT, SRV, NS records)",
+			},
+			cli.IntFlag{
+				Name:  "priority",
+				Usage: "record priority (required for MX, SRV records)",
+			},
+			cli.IntFlag{
+				Name:  "port",
+				Usage: "record port (required for SRV records)",
+			},
+			cli.IntFlag{
+				Name:  "weight",
+				Usage: "record weight (required for SRV records)",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			cr := extractDomainRecordArgs(c)
+			if !cr.IsValid() {
+				return fmt.Errorf("invalid arguments")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			domain := c.String("domain")
+
+			cr := extractDomainRecordArgs(c)
+			r, err := domainrecs.Create(client, domain, cr)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(r)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+}
+
+func extractDomainRecordArgs(c *cli.Context) *domainrecs.CreateRequest {
+	return &domainrecs.CreateRequest{
+		Type:     c.String("type"),
+		Name:     c.String("name"),
+		Data:     c.String("data"),
+		Priority: c.Int("priority"),
+		Port:     c.Int("port"),
+		Weight:   c.Int("weight"),
 	}
 }
