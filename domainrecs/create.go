@@ -2,20 +2,7 @@ package domainrecs
 
 import "github.com/digitalocean/godo"
 
-type CreateRequest struct {
-	Type     string
-	Name     string
-	Data     string
-	Priority int
-	Port     int
-	Weight   int
-}
-
-func (cr *CreateRequest) IsValid() bool {
-	return true
-}
-
-func Create(client *godo.Client, domain string, cr *CreateRequest) (*godo.DomainRecord, error) {
+func Create(client *godo.Client, domain string, cr *EditRequest) (*godo.DomainRecord, error) {
 	drcr := &godo.DomainRecordEditRequest{
 		Type:     cr.Type,
 		Name:     cr.Name,
