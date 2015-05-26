@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli/domainrecs"
 	"github.com/bryanl/docli/domains"
 	"github.com/codegangsta/cli"
 )
@@ -17,6 +18,7 @@ func domainCommands() cli.Command {
 			domainCreate(),
 			domainGet(),
 			domainDelete(),
+			recordCommands(),
 		},
 	}
 }
@@ -161,6 +163,54 @@ func domainDelete() cli.Command {
 			if err != nil {
 				panic(err)
 			}
+		},
+	}
+}
+
+func recordCommands() cli.Command {
+	return cli.Command{
+		Name:  "records",
+		Usage: "domain record commands",
+		Subcommands: []cli.Command{
+			recordList(),
+		},
+	}
+}
+
+func recordList() cli.Command {
+	return cli.Command{
+		Name:  "list",
+		Usage: "list records",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "domain name",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			name := c.String("name")
+			if len(name) < 1 {
+				return fmt.Errorf("invalid arguments")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			name := c.String("name")
+			recs, err := domainrecs.List(client, name)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(recs)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
 		},
 	}
 }
