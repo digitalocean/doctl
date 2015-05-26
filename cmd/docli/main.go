@@ -23,6 +23,7 @@ func main() {
 		actionCommands(),
 		domainCommands(),
 		dropletCommands(),
+		dropletActionCommands(),
 		sshKeyCommands(),
 	}
 
