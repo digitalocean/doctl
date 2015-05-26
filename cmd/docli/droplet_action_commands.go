@@ -27,6 +27,7 @@ func dropletActionCommands() cli.Command {
 			dropletRestore(),
 			dropletShutdown(),
 			dropletUpgrade(),
+			dropletActionGet(),
 		},
 	}
 }
@@ -403,6 +404,55 @@ func noArgDropletCommand(name, usage string, fn noArgDropletFn) cli.Command {
 			id := c.Int("id")
 
 			a, err := fn(client, id)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(a)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+}
+
+func dropletActionGet() cli.Command {
+	return cli.Command{
+		Name:  "get",
+		Usage: "get droplet action",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "droplet id",
+			},
+			cli.StringFlag{
+				Name:  "action-id",
+				Usage: "action id",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			if id < 1 {
+				return fmt.Errorf("invalid droplet id")
+			}
+
+			actionID := c.Int("action-id")
+			if actionID < 1 {
+				return fmt.Errorf("invalid action id")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+			actionID := c.Int("action-id")
+
+			a, err := dropletactions.Get(client, id, actionID)
 			if err != nil {
 				panic(err)
 			}
