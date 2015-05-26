@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/docli/domains"
 	"github.com/codegangsta/cli"
 )
@@ -13,6 +14,7 @@ func domainCommands() cli.Command {
 		Usage: "domain commands",
 		Subcommands: []cli.Command{
 			domainList(),
+			domainCreate(),
 		},
 	}
 }
@@ -35,6 +37,56 @@ func domainList() cli.Command {
 			if err != nil {
 				panic(err)
 			}
+			fmt.Println(j)
+		},
+	}
+}
+
+func domainCreate() cli.Command {
+	return cli.Command{
+		Name:  "create",
+		Usage: "create domain",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "domain name",
+			},
+			cli.StringFlag{
+				Name:  "ip-address",
+				Usage: "domain ip address",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			cr := &domains.CreateRequest{
+				Name:      c.String("name"),
+				IPAddress: c.String("ip-address"),
+			}
+
+			if !cr.IsValid() {
+				return fmt.Errorf("invalid arguments")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+			cr := &domains.CreateRequest{
+				Name:      c.String("name"),
+				IPAddress: c.String("ip-address"),
+			}
+
+			key, err := domains.Create(client, cr)
+			if err != nil {
+				log.WithField("err", err).Error("unable to create key")
+				return
+			}
+
+			j, err := toJSON(key)
+			if err != nil {
+				panic(err)
+			}
+
 			fmt.Println(j)
 		},
 	}
