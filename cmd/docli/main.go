@@ -21,6 +21,7 @@ func main() {
 	app.Commands = []cli.Command{
 		accountCommands(),
 		actionCommands(),
+		domainCommands(),
 		dropletCommands(),
 		sshKeyCommands(),
 	}
