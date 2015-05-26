@@ -22,8 +22,7 @@ func accountGet() cli.Command {
 		Name:  "get",
 		Usage: "get account",
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+			client := newClient(c)
 
 			a, err := account.Get(client)
 			if err != nil {

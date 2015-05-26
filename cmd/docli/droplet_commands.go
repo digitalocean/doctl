@@ -37,8 +37,8 @@ func dropletList() cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			list, err := droplets.List(client)
 			if err != nil {
@@ -105,7 +105,7 @@ func dropletCreate() cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) {
-			client := newClient(c.GlobalString("token"))
+			client := newClient(c)
 			cr := &droplets.CreateRequest{
 				Name:              c.String("name"),
 				Region:            c.String("region"),
@@ -148,8 +148,8 @@ func dropletDelete() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 
@@ -180,8 +180,8 @@ func dropletGet() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 
@@ -219,8 +219,8 @@ func dropletKernels() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 
@@ -258,8 +258,8 @@ func dropletSnapshots() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 
@@ -297,8 +297,8 @@ func dropletBackups() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 
@@ -336,8 +336,8 @@ func dropletActions() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 
@@ -375,8 +375,8 @@ func dropletNeighbors() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 

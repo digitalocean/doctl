@@ -38,14 +38,6 @@ func tokenFlag() cli.Flag {
 	}
 }
 
-func newClient(token string) *godo.Client {
-	t := &oauth.Transport{
-		Token: &oauth.Token{AccessToken: token},
-	}
-
-	return godo.NewClient(t.Client())
-}
-
 func toJSON(item interface{}) (string, error) {
 	b, err := json.MarshalIndent(item, "", "  ")
 	if err != nil {
@@ -53,4 +45,13 @@ func toJSON(item interface{}) (string, error) {
 	}
 
 	return string(b), nil
+}
+
+func newClient(c *cli.Context) *godo.Client {
+	token := c.GlobalString("token")
+	t := &oauth.Transport{
+		Token: &oauth.Token{AccessToken: token},
+	}
+
+	return godo.NewClient(t.Client())
 }

@@ -28,8 +28,8 @@ func sshKeyList() cli.Command {
 		Name:  "list",
 		Usage: "list ssh keys",
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			list, err := sshkeys.List(client)
 			if err != nil {
@@ -61,8 +61,8 @@ func sshKeyCreate() cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 			cr := &sshkeys.CreateRequest{
 				Name:      c.String("name"),
 				PublicKey: c.String("public-key"),
@@ -110,8 +110,8 @@ func sshKeyGet() cli.Command {
 			return sshkeys.IsValidGetArgs(id, fingerprint)
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			fingerprint := c.String("fingerprint")
@@ -175,8 +175,8 @@ func sshKeyUpdate() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			fingerprint := c.String("fingerprint")
@@ -231,8 +231,7 @@ func sshKeyDelete() cli.Command {
 			return sshkeys.IsValidGetArgs(id, fingerprint)
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+			client := newClient(c)
 
 			id := c.Int("id")
 			fingerprint := c.String("fingerprint")

@@ -28,8 +28,7 @@ func domainList() cli.Command {
 		Name:  "list",
 		Usage: "list domains",
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+			client := newClient(c)
 
 			list, err := domains.List(client)
 			if err != nil {
@@ -73,8 +72,8 @@ func domainCreate() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 			cr := &domains.CreateRequest{
 				Name:      c.String("name"),
 				IPAddress: c.String("ip-address"),
@@ -115,8 +114,8 @@ func domainGet() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			name := c.String("name")
 
@@ -154,8 +153,8 @@ func domainDelete() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			name := c.String("name")
 
@@ -200,8 +199,8 @@ func recordList() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			name := c.String("name")
 			recs, err := domainrecs.List(client, name)
@@ -262,8 +261,8 @@ func recordCreate() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			domain := c.String("domain")
 
@@ -322,8 +321,8 @@ func recordGet() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			domain := c.String("domain")
 			id := c.Int("id")
@@ -390,8 +389,8 @@ func recordUpdate() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			domain := c.String("domain")
 			id := c.Int("id")
@@ -440,8 +439,8 @@ func recordDelete() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			domain := c.String("domain")
 			id := c.Int("id")

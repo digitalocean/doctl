@@ -22,8 +22,7 @@ func actionList() cli.Command {
 		Name:  "list",
 		Usage: "list actions",
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+			client := newClient(c)
 
 			list, err := actions.List(client)
 			if err != nil {

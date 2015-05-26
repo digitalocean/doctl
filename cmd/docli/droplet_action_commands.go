@@ -111,8 +111,8 @@ func dropletRestore() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			image := c.Int("image")
@@ -164,8 +164,8 @@ func dropletResize() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			size := c.String("size")
@@ -214,8 +214,8 @@ func dropletRebuild() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			image := c.String("image")
@@ -263,8 +263,8 @@ func dropletRename() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			name := c.String("name")
@@ -312,8 +312,8 @@ func dropletChangeKernel() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			kernel := c.Int("kernel")
@@ -356,8 +356,8 @@ func dropletSnapshot() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			name := c.String("name")
@@ -398,8 +398,8 @@ func noArgDropletCommand(name, usage string, fn noArgDropletFn) cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 
@@ -446,8 +446,8 @@ func dropletActionGet() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-			token := c.GlobalString("token")
-			client := newClient(token)
+
+			client := newClient(c)
 
 			id := c.Int("id")
 			actionID := c.Int("action-id")
