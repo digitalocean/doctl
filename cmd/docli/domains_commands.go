@@ -174,6 +174,7 @@ func recordCommands() cli.Command {
 		Subcommands: []cli.Command{
 			recordList(),
 			recordCreate(),
+			recordGet(),
 		},
 	}
 }
@@ -288,5 +289,54 @@ func extractDomainRecordArgs(c *cli.Context) *domainrecs.CreateRequest {
 		Priority: c.Int("priority"),
 		Port:     c.Int("port"),
 		Weight:   c.Int("weight"),
+	}
+}
+
+func recordGet() cli.Command {
+	return cli.Command{
+		Name:  "get",
+		Usage: "get domain record",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "domain",
+				Usage: "domain name (required)",
+			},
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "domain id (required)",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			domain := c.String("domain")
+			id := c.Int("id")
+			if len(domain) < 1 {
+				return fmt.Errorf("invalid domain")
+			}
+
+			if id < 1 {
+				return fmt.Errorf("invalid record id")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			domain := c.String("domain")
+			id := c.Int("id")
+
+			r, err := domainrecs.Retrieve(client, domain, id)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(r)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
 	}
 }
