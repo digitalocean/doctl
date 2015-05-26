@@ -17,6 +17,7 @@ func sshKeyCommands() cli.Command {
 			sshKeyList(),
 			sshKeyCreate(),
 			sshKeyGet(),
+			sshKeyUpdate(),
 		},
 	}
 }
@@ -136,4 +137,75 @@ func sshKeyGet() cli.Command {
 			fmt.Println(j)
 		},
 	}
+}
+
+func sshKeyUpdate() cli.Command {
+	return cli.Command{
+		Name:  "update",
+		Usage: "update ssh key",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "ssh key id",
+			},
+			cli.StringFlag{
+				Name:  "fingerprint",
+				Usage: "ssh key fingerprint",
+			},
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "ssh key name",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			fingerprint := c.String("fingerprint")
+
+			err := sshkeys.IsValidGetArgs(id, fingerprint)
+			if err != nil {
+				return err
+			}
+
+			name := c.String("name")
+			if l := len(name); l < 1 {
+				return fmt.Errorf("update requires name")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+			fingerprint := c.String("fingerprint")
+			name := c.String("name")
+
+			var key *godo.Key
+			var err error
+
+			ur := &sshkeys.UpdateRequest{
+				Name: name,
+			}
+
+			switch {
+			case id != 0:
+				key, err = sshkeys.UpdateByID(client, id, ur)
+			default:
+				key, err = sshkeys.UpdateByFingerprint(client, fingerprint, ur)
+			}
+
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(key)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+
 }
