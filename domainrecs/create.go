@@ -2,6 +2,7 @@ package domainrecs
 
 import "github.com/digitalocean/godo"
 
+// Create a domain record.
 func Create(client *godo.Client, domain string, cr *EditRequest) (*godo.DomainRecord, error) {
 	drcr := &godo.DomainRecordEditRequest{
 		Type:     cr.Type,

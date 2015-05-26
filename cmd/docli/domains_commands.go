@@ -176,6 +176,7 @@ func recordCommands() cli.Command {
 			recordCreate(),
 			recordGet(),
 			recordUpdate(),
+			recordDelete(),
 		},
 	}
 }
@@ -407,6 +408,48 @@ func recordUpdate() cli.Command {
 			}
 
 			fmt.Println(j)
+		},
+	}
+}
+
+func recordDelete() cli.Command {
+	return cli.Command{
+		Name:  "delete",
+		Usage: "delete domain record",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "domain",
+				Usage: "domain (required)",
+			},
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "record id (required)",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			domain := c.String("domain")
+			id := c.Int("id")
+			if len(domain) < 1 {
+				return fmt.Errorf("invalid domain")
+			}
+
+			if id < 1 {
+				return fmt.Errorf("invalid record id")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			domain := c.String("domain")
+			id := c.Int("id")
+
+			err := domainrecs.Delete(client, domain, id)
+			if err != nil {
+				panic(err)
+			}
 		},
 	}
 }

@@ -16,6 +16,7 @@ type EditRequest struct {
 	Weight   int
 }
 
+// IsValid returns if an edit request is valid or not.
 func (ur *EditRequest) IsValid() bool {
 	return true
 }

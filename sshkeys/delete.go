@@ -5,10 +5,6 @@ import "github.com/digitalocean/godo"
 // DeleteByID deletes a SSH key by id.
 func DeleteByID(client *godo.Client, id int) error {
 	_, err := client.Keys.DeleteByID(id)
-	if err != nil {
-		return err
-	}
-
 	return err
 }
 
