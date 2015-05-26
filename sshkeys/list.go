@@ -5,6 +5,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+// List lists all SSH keys.
 func List(client *godo.Client) ([]godo.Key, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Keys.List(opt)

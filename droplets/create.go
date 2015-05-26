@@ -6,6 +6,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+// CreateRequest is a struct that describes a droplet.
 type CreateRequest struct {
 	Name              string
 	Region            string
@@ -18,8 +19,8 @@ type CreateRequest struct {
 	UserData          string
 }
 
+// Create creates a droplet.
 func Create(client *godo.Client, cr *CreateRequest) (*godo.DropletRoot, error) {
-
 	image := godo.DropletCreateImage{}
 
 	if i, err := strconv.Atoi(cr.Image); err == nil {

@@ -2,10 +2,12 @@ package sshkeys
 
 import "github.com/digitalocean/godo"
 
+// UpdateRequest contains items which can be updated in a public SSH key.
 type UpdateRequest struct {
 	Name string
 }
 
+// UpdateByID updates a public SSH key by id.
 func UpdateByID(client *godo.Client, id int, ur *UpdateRequest) (*godo.Key, error) {
 	kur := &godo.KeyUpdateRequest{
 		Name: ur.Name,
@@ -19,6 +21,7 @@ func UpdateByID(client *godo.Client, id int, ur *UpdateRequest) (*godo.Key, erro
 	return key, err
 }
 
+// UpdateByFingerprint updates a public SSH key by fingerprint.
 func UpdateByFingerprint(client *godo.Client, fingerprint string, ur *UpdateRequest) (*godo.Key, error) {
 	kur := &godo.KeyUpdateRequest{
 		Name: ur.Name,

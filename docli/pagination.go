@@ -2,8 +2,10 @@ package docli
 
 import "github.com/digitalocean/godo"
 
+// Generator is a function that generates the list to be paginated.
 type Generator func(*godo.ListOptions) ([]interface{}, *godo.Response, error)
 
+// PaginateResp paginates a Response.
 func PaginateResp(gen Generator) ([]interface{}, error) {
 	opt := &godo.ListOptions{}
 	list := []interface{}{}
