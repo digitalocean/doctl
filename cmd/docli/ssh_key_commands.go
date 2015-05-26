@@ -18,6 +18,7 @@ func sshKeyCommands() cli.Command {
 			sshKeyCreate(),
 			sshKeyGet(),
 			sshKeyUpdate(),
+			sshKeyDelete(),
 		},
 	}
 }
@@ -207,5 +208,46 @@ func sshKeyUpdate() cli.Command {
 			fmt.Println(j)
 		},
 	}
+}
 
+func sshKeyDelete() cli.Command {
+	return cli.Command{
+		Name:  "delete",
+		Usage: "delete ssh key",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "id",
+				Usage: "ssh key id",
+			},
+			cli.StringFlag{
+				Name:  "fingerprint",
+				Usage: "ssh key fingerprint",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			fingerprint := c.String("fingerprint")
+
+			return sshkeys.IsValidGetArgs(id, fingerprint)
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+			fingerprint := c.String("fingerprint")
+
+			var err error
+			switch {
+			case id != 0:
+				err = sshkeys.DeleteByID(client, id)
+			default:
+				err = sshkeys.DeleteByFingerprint(client, fingerprint)
+			}
+
+			if err != nil {
+				panic(err)
+			}
+		},
+	}
 }
