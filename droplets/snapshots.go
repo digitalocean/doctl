@@ -5,6 +5,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+// Snapshots returns a list of snapshot images for a droplet.
 func Snapshots(client *godo.Client, id int) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Snapshots(id, opt)

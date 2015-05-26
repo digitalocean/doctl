@@ -5,10 +5,10 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// Kernels returns a list of available kernels for a droplet.
-func Kernels(client *godo.Client, id int) ([]godo.Kernel, error) {
+// Backups returns a list of backup images for a droplet.
+func Backups(client *godo.Client, id int) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Droplets.Kernels(id, opt)
+		list, resp, err := client.Droplets.Backups(id, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -26,9 +26,9 @@ func Kernels(client *godo.Client, id int) ([]godo.Kernel, error) {
 		return nil, err
 	}
 
-	list := make([]godo.Kernel, len(si))
+	list := make([]godo.Image, len(si))
 	for i := range si {
-		list[i] = si[i].(godo.Kernel)
+		list[i] = si[i].(godo.Image)
 	}
 
 	return list, nil

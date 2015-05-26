@@ -5,10 +5,10 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// Kernels returns a list of available kernels for a droplet.
-func Kernels(client *godo.Client, id int) ([]godo.Kernel, error) {
+// Actions returns a list of actions for a droplet.
+func Actions(client *godo.Client, id int) ([]godo.Action, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Droplets.Kernels(id, opt)
+		list, resp, err := client.Droplets.Actions(id, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -26,9 +26,9 @@ func Kernels(client *godo.Client, id int) ([]godo.Kernel, error) {
 		return nil, err
 	}
 
-	list := make([]godo.Kernel, len(si))
+	list := make([]godo.Action, len(si))
 	for i := range si {
-		list[i] = si[i].(godo.Kernel)
+		list[i] = si[i].(godo.Action)
 	}
 
 	return list, nil

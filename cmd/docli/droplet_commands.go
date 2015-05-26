@@ -18,6 +18,8 @@ func dropletCommands() cli.Command {
 			dropletGet(),
 			dropletKernels(),
 			dropletSnapshots(),
+			dropletBackups(),
+			dropletActions(),
 		},
 	}
 }
@@ -228,6 +230,84 @@ func dropletSnapshots() cli.Command {
 			id := c.Int("id")
 
 			list, err := droplets.Snapshots(client, id)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(list)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+}
+
+func dropletBackups() cli.Command {
+	return cli.Command{
+		Name:  "backups",
+		Usage: "get backups for droplet",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "droplet id",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			if id < 1 {
+				return fmt.Errorf("invalid droplet id")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+
+			list, err := droplets.Backups(client, id)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(list)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+}
+
+func dropletActions() cli.Command {
+	return cli.Command{
+		Name:  "actions",
+		Usage: "get actions for droplet",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "droplet id",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			if id < 1 {
+				return fmt.Errorf("invalid droplet id")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+
+			list, err := droplets.Actions(client, id)
 			if err != nil {
 				panic(err)
 			}
