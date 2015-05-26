@@ -15,9 +15,5 @@ func DeleteByID(client *godo.Client, id int) error {
 // DeleteByFingerprint deletes a SSH key by fingerprint.
 func DeleteByFingerprint(client *godo.Client, fingerprint string) error {
 	_, err := client.Keys.DeleteByFingerprint(fingerprint)
-	if err != nil {
-		return err
-	}
-
 	return err
 }

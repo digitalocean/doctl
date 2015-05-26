@@ -16,6 +16,7 @@ func domainCommands() cli.Command {
 			domainList(),
 			domainCreate(),
 			domainGet(),
+			domainDelete(),
 		},
 	}
 }
@@ -128,6 +129,38 @@ func domainGet() cli.Command {
 			}
 
 			fmt.Println(j)
+		},
+	}
+}
+
+func domainDelete() cli.Command {
+	return cli.Command{
+		Name:  "delete",
+		Usage: "delete domain",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "name",
+				Usage: "domain name",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			name := c.String("name")
+			if len(name) < 1 {
+				return fmt.Errorf("invalid arguments")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			name := c.String("name")
+
+			err := domains.Delete(client, name)
+			if err != nil {
+				panic(err)
+			}
 		},
 	}
 }
