@@ -20,6 +20,8 @@ func dropletCommands() cli.Command {
 			dropletSnapshots(),
 			dropletBackups(),
 			dropletActions(),
+			dropletDelete(),
+			dropletNeighbors(),
 		},
 	}
 }
@@ -340,6 +342,45 @@ func dropletActions() cli.Command {
 			id := c.Int("id")
 
 			list, err := droplets.Actions(client, id)
+			if err != nil {
+				panic(err)
+			}
+
+			j, err := toJSON(list)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Println(j)
+		},
+	}
+}
+
+func dropletNeighbors() cli.Command {
+	return cli.Command{
+		Name:  "neighbors",
+		Usage: "get neighbors for droplet",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "id",
+				Usage: "droplet id",
+			},
+		},
+		Before: func(c *cli.Context) error {
+			id := c.Int("id")
+			if id < 1 {
+				return fmt.Errorf("invalid droplet id")
+			}
+
+			return nil
+		},
+		Action: func(c *cli.Context) {
+			token := c.GlobalString("token")
+			client := newClient(token)
+
+			id := c.Int("id")
+
+			list, err := droplets.Neighbors(client, id)
 			if err != nil {
 				panic(err)
 			}
