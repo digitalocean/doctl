@@ -204,9 +204,7 @@ func imageUpdate() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid image id")
 			}
 
@@ -229,9 +227,7 @@ func imageDelete() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid image id")
 			}
 

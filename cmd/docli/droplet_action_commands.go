@@ -98,13 +98,11 @@ func dropletRestore() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
-			image := c.Int("image")
-			if image < 1 {
+			if !c.IsSet("image") {
 				return fmt.Errorf("invalid image")
 			}
 
@@ -151,13 +149,11 @@ func dropletResize() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
-			size := c.String("size")
-			if len(size) < 1 {
+			if !c.IsSet("size") {
 				return fmt.Errorf("invalid size slug")
 			}
 
@@ -201,13 +197,11 @@ func dropletRebuild() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
-			image := c.String("image")
-			if len(image) < 1 {
+			if !c.IsSet("image") {
 				return fmt.Errorf("invalid image")
 			}
 
@@ -250,20 +244,17 @@ func dropletRename() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
-			name := c.String("name")
-			if len(name) < 1 {
+			if !c.IsSet("name") {
 				return fmt.Errorf("invalid name")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -299,20 +290,17 @@ func dropletChangeKernel() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
-			kernel := c.Int("kernel")
-			if kernel < 1 {
+			if !c.IsSet("kernel") {
 				return fmt.Errorf("invalid kernel")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -348,15 +336,13 @@ func dropletSnapshot() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -390,15 +376,13 @@ func noArgDropletCommand(name, usage string, fn noArgDropletFn) cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -433,13 +417,11 @@ func dropletActionGet() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
-			actionID := c.Int("action-id")
-			if actionID < 1 {
+			if !c.IsSet("action-id") {
 				return fmt.Errorf("invalid action id")
 			}
 

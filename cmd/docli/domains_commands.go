@@ -106,8 +106,7 @@ func domainGet() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			name := c.String("name")
-			if len(name) < 1 {
+			if !c.IsSet("name") {
 				return fmt.Errorf("invalid domain name")
 			}
 
@@ -308,13 +307,11 @@ func recordGet() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			domain := c.String("domain")
-			id := c.Int("id")
-			if len(domain) < 1 {
+			if !c.IsSet("domain") {
 				return fmt.Errorf("invalid domain")
 			}
 
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid record id")
 			}
 
@@ -426,13 +423,11 @@ func recordDelete() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			domain := c.String("domain")
-			id := c.Int("id")
-			if len(domain) < 1 {
+			if !c.IsSet("domain") {
 				return fmt.Errorf("invalid domain")
 			}
 
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid record id")
 			}
 

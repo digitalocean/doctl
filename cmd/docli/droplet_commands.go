@@ -140,15 +140,13 @@ func dropletDelete() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -172,15 +170,13 @@ func dropletGet() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -211,15 +207,13 @@ func dropletKernels() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -250,15 +244,13 @@ func dropletSnapshots() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -289,15 +281,13 @@ func dropletBackups() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -328,15 +318,13 @@ func dropletActions() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")
@@ -367,15 +355,13 @@ func dropletNeighbors() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			if id < 1 {
+			if !c.IsSet("id") {
 				return fmt.Errorf("invalid droplet id")
 			}
 
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
 			client := newClient(c)
 
 			id := c.Int("id")

@@ -34,7 +34,6 @@ func regionList() cli.Command {
 			}
 
 			fmt.Println(j)
-
 		},
 	}
 }

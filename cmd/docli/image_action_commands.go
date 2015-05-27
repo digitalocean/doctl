@@ -33,13 +33,11 @@ func imageActionGet() cli.Command {
 			},
 		},
 		Before: func(c *cli.Context) error {
-			imageID := c.Int("image-id")
-			if imageID < 1 {
+			if !c.IsSet("image-id") {
 				return fmt.Errorf("image id required")
 			}
 
-			actionID := c.Int("action-id")
-			if actionID < 1 {
+			if !c.IsSet("action-id") {
 				return fmt.Errorf("action id required")
 			}
 
