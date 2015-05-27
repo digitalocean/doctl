@@ -27,6 +27,7 @@ func main() {
 		imageActionCommands(),
 		imageCommands(),
 		regionCommands(),
+		sizeCommands(),
 		sshKeyCommands(),
 	}
 
