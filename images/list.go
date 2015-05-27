@@ -5,6 +5,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+// List images.
 func List(client *godo.Client) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Images.List(opt)
@@ -33,6 +34,7 @@ func List(client *godo.Client) ([]godo.Image, error) {
 	return list, nil
 }
 
+// ListDistribution lists distributions that are available.
 func ListDistribution(client *godo.Client) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Images.ListDistribution(opt)
@@ -61,6 +63,7 @@ func ListDistribution(client *godo.Client) ([]godo.Image, error) {
 	return list, nil
 }
 
+// ListApplication lists application iamges.
 func ListApplication(client *godo.Client) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Images.ListApplication(opt)
@@ -89,6 +92,7 @@ func ListApplication(client *godo.Client) ([]godo.Image, error) {
 	return list, nil
 }
 
+// ListUser lists user images.
 func ListUser(client *godo.Client) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Images.ListUser(opt)

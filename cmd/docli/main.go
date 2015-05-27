@@ -24,6 +24,9 @@ func main() {
 		domainCommands(),
 		dropletCommands(),
 		dropletActionCommands(),
+		imageActionCommands(),
+		imageCommands(),
+		regionCommands(),
 		sshKeyCommands(),
 	}
 
