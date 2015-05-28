@@ -7,6 +7,7 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
+	"github.com/digitalocean/godo/util"
 
 	"golang.org/x/oauth2"
 )
@@ -83,7 +84,8 @@ func dropletCreate(ctx *cli.Context) {
 		dropletName = fmt.Sprintf("%s.%s", dropletName, ctx.String("domain"))
 	}
 
-	// Loop through the SSH Keys and add by name. DO API should have handled this case as well.
+	// Loop through the SSH Keys and add by name. DO API should have handled
+	// this case as well.
 	var sshKeys []godo.DropletCreateSSHKey
 	keyNames := ctx.String("ssh-keys")
 	if keyNames != "" {
@@ -111,12 +113,15 @@ func dropletCreate(ctx *cli.Context) {
 		UserData:          ctx.String("user-data"),
 	}
 
-	dropletRoot, _, err := client.Droplets.Create(createRequest)
+	dropletRoot, resp, err := client.Droplets.Create(createRequest)
 	if err != nil {
 		fmt.Printf("Unable to create Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
+	if ctx.Bool("wait-for-active") {
+		util.WaitForActive(client, resp.Links.Actions[0].HREF)
+	}
 	WriteOutput(dropletRoot.Droplet)
 }
 
