@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -25,10 +26,11 @@ var DropletCommand = cli.Command{
 			Usage:   "Create droplet.",
 			Action:  dropletCreate,
 			Flags: []cli.Flag{
-				cli.StringFlag{Name: "domain, d", Value: "", Usage: "Domain name to append to server name. (e.g. server01.example.com)"},
-				cli.BoolFlag{Name: "add-region", Usage: "Append region to server name. (e.g. server01.sfo1)"},
+				cli.StringFlag{Name: "domain, d", Value: "", Usage: "Domain name to append to the hostname. (e.g. server01.example.com)"},
+				cli.BoolFlag{Name: "add-region", Usage: "Append region to hostname. (e.g. server01.sfo1)"},
 				cli.StringFlag{Name: "user-data, u", Value: "", Usage: "User data for creating server."},
-				cli.StringFlag{Name: "ssh-keys, k", Value: "", Usage: "Comma seperated list of SSH Key names for server access. (e.g. --ssh-keys Work,Home)"},
+				cli.StringFlag{Name: "user-data-file, uf", Value: "", Usage: "A path to a file for user data."},
+				cli.StringFlag{Name: "ssh-keys, k", Value: "", Usage: "Comma seperated list of SSH Key names. (e.g. --ssh-keys Work,Home)"},
 				cli.StringFlag{Name: "size, s", Value: "512mb", Usage: "Size of Droplet."},
 				cli.StringFlag{Name: "region, r", Value: "nyc3", Usage: "Region of Droplet."},
 				cli.StringFlag{Name: "image, i", Value: "ubuntu-14-04-x64", Usage: "Image slug of Droplet."}, // TODO handle image id
@@ -99,6 +101,25 @@ func dropletCreate(ctx *cli.Context) {
 		}
 	}
 
+	userData := ""
+	userDataPath := ctx.String("user-data-file")
+	if userDataPath != "" {
+		file, err := os.Open(userDataPath)
+		if err != nil {
+			fmt.Printf("Error opening user data file: %s\n", err)
+			os.Exit(1)
+		}
+
+		userDataFile, err := ioutil.ReadAll(file)
+		if err != nil {
+			fmt.Printf("Error reading user data file: %s\n", err)
+			os.Exit(1)
+		}
+		userData = string(userDataFile)
+	} else {
+		userData = ctx.String("user-data")
+	}
+
 	createRequest := &godo.DropletCreateRequest{
 		Name:   dropletName,
 		Region: ctx.String("region"),
@@ -110,7 +131,7 @@ func dropletCreate(ctx *cli.Context) {
 		Backups:           ctx.Bool("backups"),
 		IPv6:              ctx.Bool("ipv6"),
 		PrivateNetworking: ctx.Bool("private-networking"),
-		UserData:          ctx.String("user-data"),
+		UserData:          userData,
 	}
 
 	dropletRoot, resp, err := client.Droplets.Create(createRequest)
