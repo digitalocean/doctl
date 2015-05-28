@@ -9,7 +9,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const AppVersion = "0.0.11"
+const AppVersion = "0.0.14"
 
 var APIKey string
 var OutputFormat string
@@ -32,10 +32,10 @@ func main() {
 	app.Usage = "Digital Ocean Control TooL."
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:   "api-key,k",
+			Name:   "api-key, k",
 			Value:  "",
 			Usage:  "API Key for DO APIv2.",
-			EnvVar: "DIGITALOCEAN_API_KEY,DIGITAL_OCEAN_API_KEY",
+			EnvVar: "DIGITALOCEAN_API_KEY, DIGITAL_OCEAN_API_KEY",
 		},
 		cli.StringFlag{Name: "format,f", Value: "yaml", Usage: "Format for output."},
 		cli.BoolFlag{Name: "debug,d", Usage: "Turn on debug output."},
@@ -64,6 +64,7 @@ func main() {
 		return nil
 	}
 	app.Commands = []cli.Command{
+		AccountCommand,
 		ActionCommand,
 		DomainCommand,
 		DropletCommand,
