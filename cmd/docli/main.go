@@ -3,11 +3,20 @@ package main
 import (
 	"encoding/json"
 
-	"code.google.com/p/goauth2/oauth"
-
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
+	"golang.org/x/oauth2"
 )
+
+type tokenSource struct {
+	AccessToken string
+}
+
+func (t *tokenSource) Token() (*oauth2.Token, error) {
+	return &oauth2.Token{
+		AccessToken: t.AccessToken,
+	}, nil
+}
 
 func main() {
 	app := cli.NewApp()
@@ -52,10 +61,11 @@ func toJSON(item interface{}) (string, error) {
 }
 
 func newClient(c *cli.Context) *godo.Client {
-	token := c.GlobalString("token")
-	t := &oauth.Transport{
-		Token: &oauth.Token{AccessToken: token},
+	pat := c.GlobalString("token")
+	tokenSource := &tokenSource{
+		AccessToken: pat,
 	}
 
-	return godo.NewClient(t.Client())
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	return godo.NewClient(oauthClient)
 }
