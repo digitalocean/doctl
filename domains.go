@@ -148,7 +148,7 @@ func (s *DomainsServiceOp) Create(createRequest *DomainCreateRequest) (*DomainRo
 	return root, resp, err
 }
 
-// Delete droplet
+// Delete domain
 func (s *DomainsServiceOp) Delete(name string) (*Response, error) {
 	path := fmt.Sprintf("%s/%s", domainsBasePath, name)
 
