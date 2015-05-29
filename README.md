@@ -10,9 +10,9 @@ doctl is a tool for controlling your digital ocean resources from the command li
 Download [pre-built binaries](https://github.internal.digitalocean.com/phillip/doctl/releases) from this repository, or clone and build yourself:
 
 ```
-$ git clone 
-$ go get 
-$ make all # Note that this compiles binaries for several architectures, make sure your go is pre-compiled with support, on homebrew: 
+$ git clone
+$ go get
+$ make all # Note that this compiles binaries for several architectures, make sure your go is pre-compiled with support, on homebrew: `brew install go --with-cc-common`
 ```
 
 Or using `go get`:
@@ -22,6 +22,8 @@ $ go get github.com/slantview/doctl
 ```
 
 ## Usage
+
+More details:
 
 ```
 NAME:
@@ -41,7 +43,7 @@ COMMANDS:
    size     Size commands.
    sshkey   SSH Key commands.
    help, h  Shows a list of commands or help for one command
-   
+
 GLOBAL OPTIONS:
    --api-key, -k  API Key for DO APIv2. [$DIGITALOCEAN_API_KEY, $DIGITAL_OCEAN_API_KEY]
    --format, -f 'yaml'  Format for output.
@@ -79,14 +81,17 @@ USAGE:
    doctl domain [global options] command [command options] [arguments...]
 
 VERSION:
-   0.0.11
+   0.0.15
 
 COMMANDS:
-   record   Domain record commands.
-   show     Show an domain.
-   list     List all domains.
-   create   Create new domain.
-   destroy  Destroy a domain.
+   show, s        <name> Show an domain.
+   list, l        List all domains.
+   create, c         <domain> <Droplet name> Create new domain.
+   destroy, d        <name> Destroy a domain.
+   list-records, records, r   <domain> List domain records for a domain.
+   show-record, record     <domain> <id> Show a domain record.
+   add, create-record      <domain> Create domain record.
+   destroy-record    <domain> <id> Destroy domain record.
 
 ```
 
@@ -104,11 +109,12 @@ VERSION:
 COMMANDS:
    action   Droplet Action Commands.
    create, c   Create droplet.
+   (--domain | --add-region) --user-data --ssh-keys --size "512mb" --region "nyc3" --image "ubuntu-14-04-x64" --backups --ipv6 --private-networking
    list, l  List droplets.
-   find, f  Find the first Droplet whose name matches the first argument.
-   destroy, d  Destroy droplet.
+   find, f <name> Find the first Droplet whose name matches the first argument.
+   destroy, d --id Destroy droplet.
    help, h  Shows a list of commands or help for one command
-   
+
 
 ```
 
