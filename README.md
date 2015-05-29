@@ -7,7 +7,7 @@ doctl is a tool for controlling your digital ocean resources from the command li
 
 ## Installation
 
-Download [pre-built binaries](https://github.com/doctl/releases) from this repository, or clone and build yourself:
+Download [pre-built binaries](https://github.com/digitalocean/doctl/releases) from this repository, or clone and build yourself:
 
 ```
 $ git clone

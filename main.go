@@ -9,7 +9,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const AppVersion = "0.0.14"
+const AppVersion = "0.0.16"
 
 var APIKey string
 var OutputFormat string
