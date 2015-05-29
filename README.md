@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/digitalocean/doctl.svg)](https://travis-ci.org/digitalocean/doctl)
 
 
-doctl is a tool for controlling your digital ocean resources from the command line.  As an added benefit you get an API library for v2 of the DO API.
+doctl is a tool for controlling your DigitalOcean resources from the command line. You can find your personal access tokens [on the control panel](https://cloud.digitalocean.com/settings/applications) or [generate a new one](https://cloud.digitalocean.com/settings/tokens/new).
 
 ## Installation
 

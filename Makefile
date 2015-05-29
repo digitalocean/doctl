@@ -34,7 +34,7 @@ bin/windows/amd64/$(EXECUTABLE).exe: update_internal_version .deps
 %.zip: %.exe
 	zip -j "$@" "$<"
 
-release: test $(COMPRESSED_EXECUTABLE_TARGETS) $(GOPATH)/bin/github-release releaselog-$(LAST_TAG).txt 
+release: test $(COMPRESSED_EXECUTABLE_TARGETS) $(GOPATH)/bin/github-release releaselog-$(LAST_TAG).txt
 	git push && git push --tags
 	$(GHRELEASE) release -u $(USER) -r $(EXECUTABLE) \
 		-t $(LAST_TAG) -n $(LAST_TAG) -d "`cat releaselog-$(LAST_TAG).txt`" || true
@@ -48,7 +48,7 @@ releaselog-$(LAST_TAG).txt:
 	touch .deps
 
 update_internal_version: main.go
-	sed -i '' 's/const AppVersion = ".*"/const AppVersion = "$(LAST_TAG)"/' main.go
+	sed -i.bak 's/const AppVersion = ".*"/const AppVersion = "$(LAST_TAG)"/' main.go && rm main.go.bak
 
 build: .deps
 	go build -o "$@"
