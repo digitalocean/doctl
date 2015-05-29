@@ -1,13 +1,13 @@
 # Digital Ocean Control TooL
 
-[![Build Status](https://travis-ci.org/slantview/doctl.svg)](https://travis-ci.org/slantview/doctl)
+[![Build Status](https://travis-ci.org/digitalocean/doctl.svg)](https://travis-ci.org/digitalocean/doctl)
 
 
 doctl is a tool for controlling your digital ocean resources from the command line.  As an added benefit you get an API library for v2 of the DO API.
 
 ## Installation
 
-Download [pre-built binaries](https://github.internal.digitalocean.com/phillip/doctl/releases) from this repository, or clone and build yourself:
+Download [pre-built binaries](https://github.com/doctl/releases) from this repository, or clone and build yourself:
 
 ```
 $ git clone
@@ -18,7 +18,7 @@ $ make all # Note that this compiles binaries for several architectures, make su
 Or using `go get`:
 
 ```
-$ go get github.com/slantview/doctl
+$ go get github.com/digitalocean/doctl
 ```
 
 ## Usage
@@ -104,18 +104,20 @@ USAGE:
    doctl droplet [global options] command [command options] [arguments...]
 
 VERSION:
-   0.0.11
+   0.0.15
 
 COMMANDS:
-   action   Droplet Action Commands.
-   create, c   Create droplet.
-   (--domain | --add-region) --user-data --ssh-keys --size "512mb" --region "nyc3" --image "ubuntu-14-04-x64" --backups --ipv6 --private-networking
-   list, l  List droplets.
-   find, f <name> Find the first Droplet whose name matches the first argument.
-   destroy, d --id Destroy droplet.
-   help, h  Shows a list of commands or help for one command
-
-
+   create, c   (--domain | --add-region) --user-data --ssh-keys --size "512mb" --region "nyc3" --image "ubuntu-14-04-x64" --backups --ipv6 --private-networking Create Droplet
+   list, l     List droplets.
+   find, f     <Droplet name> Find the first Droplet whose name matches the first argument.
+   destroy, d     [--id | <name>] Destroy droplet.
+   reboot      [--id | <name>] Reboot droplet.
+   power_cycle    [--id | <name>] Powercycle droplet.
+   shutdown    [--id | <name>] Shutdown droplet.
+   poweroff, off  [--id | <name>] Power off droplet.
+   poweron, on    [--id | <name>] Power on droplet.
+   password_reset [--id | <name>] Reset password for droplet.
+   resize      [--id | <name>] Resize droplet.
 ```
 
 ### Regions
@@ -132,7 +134,6 @@ VERSION:
 COMMANDS:
    show     Show a Region.
    list     List All Regions.
-   help, h  Shows a list of commands or help for one command
 ```
 
 ### Sizes
@@ -177,4 +178,5 @@ doctl is licensed under the Apache License, Version 2.0. See LICENSE.txt for ful
 
 ## Author
 
+Phillip Baker <phillip@digitalocean.com>
 Steve Rude <steve@slantview.com>
