@@ -6,7 +6,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
-	"github.com/slantview/doctl/api/v2"
 
 	"golang.org/x/oauth2"
 )
@@ -17,37 +16,12 @@ var RegionCommand = cli.Command{
 	Action: regionList,
 	Subcommands: []cli.Command{
 		{
-			Name:    "show",
-			Aliases: []string{"s"},
-			Usage:   "Show a Region.",
-			Action:  regionShow,
-		},
-		{
 			Name:    "list",
 			Aliases: []string{"l"},
 			Usage:   "List All Regions.",
 			Action:  regionList,
 		},
 	},
-}
-
-func regionShow(ctx *cli.Context) {
-	if len(ctx.Args()) == 0 {
-		fmt.Printf("Error: Must provide name for Region.\n")
-		os.Exit(64)
-	}
-
-	name := ctx.Args().First()
-
-	client := apiv2.NewClient(APIKey)
-
-	region, err := client.LoadRegion(name)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
-	}
-
-	WriteOutput(region)
 }
 
 func regionList(ctx *cli.Context) {

@@ -20,10 +20,6 @@
 		},
 		{
 			"ImportPath": "golang.org/x/oauth2"
-		},
-		{
-			"ImportPath": "github.com/slantview/doctl",
-			"Comment": "Deprecated, but still needed until replaced by godo"
 		}
 	]
 }

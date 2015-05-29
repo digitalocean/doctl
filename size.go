@@ -6,7 +6,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
-	"github.com/slantview/doctl/api/v2"
 
 	"golang.org/x/oauth2"
 )
@@ -17,37 +16,12 @@ var SizeCommand = cli.Command{
 	Action: sizeList,
 	Subcommands: []cli.Command{
 		{
-			Name:    "show",
-			Aliases: []string{"s"},
-			Usage:   "Show a size.",
-			Action:  sizeShow,
-		},
-		{
 			Name:    "list",
 			Aliases: []string{"s"},
 			Usage:   "List all sizes.",
 			Action:  sizeList,
 		},
 	},
-}
-
-func sizeShow(ctx *cli.Context) {
-	if len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide name for Size.\n")
-		os.Exit(64)
-	}
-
-	name := ctx.Args().First()
-
-	client := apiv2.NewClient(APIKey)
-
-	size, err := client.LoadSize(name)
-	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
-	}
-
-	WriteOutput(size)
 }
 
 func sizeList(ctx *cli.Context) {

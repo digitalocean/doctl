@@ -132,7 +132,6 @@ VERSION:
    0.0.11
 
 COMMANDS:
-   show     Show a Region.
    list     List All Regions.
 ```
 
@@ -148,7 +147,6 @@ VERSION:
    0.0.11
 
 COMMANDS:
-   show     Show a size.
    list     List all sizes.
 ```
 
