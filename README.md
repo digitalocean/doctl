@@ -1,6 +1,6 @@
 # Digital Ocean Control TooL
 
-[![Build Status](https://travis-ci.org/digitalocean/doctl.svg)](https://travis-ci.org/digitalocean/doctl)
+[![Build Status](https://travis-ci.org/digitalocean/doctl.svg)](https://travis-ci.org/digitalocean/doctl.svg?branch=master)
 
 
 doctl is a tool for controlling your DigitalOcean resources from the command line. You can find your personal access tokens [on the control panel](https://cloud.digitalocean.com/settings/applications) or [generate a new one](https://cloud.digitalocean.com/settings/tokens/new).
