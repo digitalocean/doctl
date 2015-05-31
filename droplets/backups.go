@@ -6,7 +6,7 @@ import (
 )
 
 // Backups returns a list of backup images for a droplet.
-func Backups(client *godo.Client, id int) ([]godo.Image, error) {
+func Backups(client *godo.Client, opts *docli.Opts, id int) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Backups(id, opt)
 		if err != nil {
@@ -21,7 +21,7 @@ func Backups(client *godo.Client, id int) ([]godo.Image, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}

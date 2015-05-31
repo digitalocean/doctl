@@ -6,7 +6,7 @@ import (
 )
 
 // List lists all actions.
-func List(client *godo.Client) ([]godo.Action, error) {
+func List(client *godo.Client, opts *docli.Opts) ([]godo.Action, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
 		if err != nil {
@@ -21,7 +21,7 @@ func List(client *godo.Client) ([]godo.Action, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}

@@ -28,10 +28,10 @@ func sshKeyList() cli.Command {
 		Name:  "list",
 		Usage: "list ssh keys",
 		Action: func(c *cli.Context) {
-
+			opts := loadOpts(c)
 			client := newClient(c)
 
-			list, err := sshkeys.List(client)
+			list, err := sshkeys.List(client, opts)
 			if err != nil {
 				// TODO this needs to be json
 				panic(err)

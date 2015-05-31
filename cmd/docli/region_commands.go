@@ -22,8 +22,9 @@ func regionList() cli.Command {
 		Name:  "list",
 		Usage: "list regions",
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
-			list, err := regions.List(client)
+			list, err := regions.List(client, opts)
 			if err != nil {
 				panic(err)
 			}

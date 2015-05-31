@@ -6,7 +6,7 @@ import (
 )
 
 // Kernels returns a list of available kernels for a droplet.
-func Kernels(client *godo.Client, id int) ([]godo.Kernel, error) {
+func Kernels(client *godo.Client, opts *docli.Opts, id int) ([]godo.Kernel, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Kernels(id, opt)
 		if err != nil {
@@ -21,7 +21,7 @@ func Kernels(client *godo.Client, id int) ([]godo.Kernel, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}

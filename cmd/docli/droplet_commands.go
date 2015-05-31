@@ -37,10 +37,10 @@ func dropletList() cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) {
-
+			opts := loadOpts(c)
 			client := newClient(c)
 
-			list, err := droplets.List(client)
+			list, err := droplets.List(client, opts)
 			if err != nil {
 				panic(err)
 			}
@@ -214,11 +214,12 @@ func dropletKernels() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
 
 			id := c.Int("id")
 
-			list, err := droplets.Kernels(client, id)
+			list, err := droplets.Kernels(client, opts, id)
 			if err != nil {
 				panic(err)
 			}
@@ -251,11 +252,12 @@ func dropletSnapshots() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
 
 			id := c.Int("id")
 
-			list, err := droplets.Snapshots(client, id)
+			list, err := droplets.Snapshots(client, opts, id)
 			if err != nil {
 				panic(err)
 			}
@@ -288,11 +290,12 @@ func dropletBackups() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
 
 			id := c.Int("id")
 
-			list, err := droplets.Backups(client, id)
+			list, err := droplets.Backups(client, opts, id)
 			if err != nil {
 				panic(err)
 			}
@@ -325,11 +328,12 @@ func dropletActions() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
 
 			id := c.Int("id")
 
-			list, err := droplets.Actions(client, id)
+			list, err := droplets.Actions(client, opts, id)
 			if err != nil {
 				panic(err)
 			}

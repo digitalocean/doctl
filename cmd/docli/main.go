@@ -2,7 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"os"
 
+	log "github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"golang.org/x/oauth2"
@@ -18,6 +21,11 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 	}, nil
 }
 
+func init() {
+	log.SetOutput(os.Stderr)
+	log.SetLevel(log.WarnLevel)
+}
+
 func main() {
 	app := cli.NewApp()
 	app.Name = "docli"
@@ -25,6 +33,7 @@ func main() {
 	app.Version = "0.1.0"
 	app.Flags = []cli.Flag{
 		tokenFlag(),
+		debugFlag(),
 	}
 
 	app.Commands = []cli.Command{
@@ -51,6 +60,13 @@ func tokenFlag() cli.Flag {
 	}
 }
 
+func debugFlag() cli.Flag {
+	return cli.BoolFlag{
+		Name:  "debug",
+		Usage: "Debug",
+	}
+}
+
 func toJSON(item interface{}) (string, error) {
 	b, err := json.MarshalIndent(item, "", "  ")
 	if err != nil {
@@ -68,4 +84,10 @@ func newClient(c *cli.Context) *godo.Client {
 
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
 	return godo.NewClient(oauthClient)
+}
+
+func loadOpts(c *cli.Context) *docli.Opts {
+	return &docli.Opts{
+		Debug: c.GlobalBool("debug"),
+	}
 }

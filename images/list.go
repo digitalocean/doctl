@@ -1,14 +1,17 @@
 package images
 
 import (
+	"fmt"
+
 	"github.com/bryanl/docli/docli"
 	"github.com/digitalocean/godo"
 )
 
 // List images.
-func List(client *godo.Client) ([]godo.Image, error) {
+func List(client *godo.Client, opts *docli.Opts) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Images.List(opt)
+		fmt.Printf("resp: %#v\n", resp)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -21,7 +24,7 @@ func List(client *godo.Client) ([]godo.Image, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +38,7 @@ func List(client *godo.Client) ([]godo.Image, error) {
 }
 
 // ListDistribution lists distributions that are available.
-func ListDistribution(client *godo.Client) ([]godo.Image, error) {
+func ListDistribution(client *godo.Client, opts *docli.Opts) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Images.ListDistribution(opt)
 		if err != nil {
@@ -50,7 +53,7 @@ func ListDistribution(client *godo.Client) ([]godo.Image, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +67,7 @@ func ListDistribution(client *godo.Client) ([]godo.Image, error) {
 }
 
 // ListApplication lists application iamges.
-func ListApplication(client *godo.Client) ([]godo.Image, error) {
+func ListApplication(client *godo.Client, opts *docli.Opts) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Images.ListApplication(opt)
 		if err != nil {
@@ -79,7 +82,7 @@ func ListApplication(client *godo.Client) ([]godo.Image, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +96,7 @@ func ListApplication(client *godo.Client) ([]godo.Image, error) {
 }
 
 // ListUser lists user images.
-func ListUser(client *godo.Client) ([]godo.Image, error) {
+func ListUser(client *godo.Client, opts *docli.Opts) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Images.ListUser(opt)
 		if err != nil {
@@ -108,7 +111,7 @@ func ListUser(client *godo.Client) ([]godo.Image, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}

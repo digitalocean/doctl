@@ -30,8 +30,9 @@ func imageList() cli.Command {
 		Name:  "list",
 		Usage: "list images",
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
-			list, err := images.List(client)
+			list, err := images.List(client, opts)
 			if err != nil {
 				panic(err)
 			}
@@ -51,8 +52,9 @@ func imageListDistributions() cli.Command {
 		Name:  "list-distribution",
 		Usage: "list distribution images",
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
-			list, err := images.ListDistribution(client)
+			list, err := images.ListDistribution(client, opts)
 			if err != nil {
 				panic(err)
 			}
@@ -72,8 +74,9 @@ func imageListApplication() cli.Command {
 		Name:  "list-application",
 		Usage: "list application images",
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
-			list, err := images.ListApplication(client)
+			list, err := images.ListApplication(client, opts)
 			if err != nil {
 				panic(err)
 			}
@@ -93,8 +96,9 @@ func imageListUser() cli.Command {
 		Name:  "list-user",
 		Usage: "list user images",
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
-			list, err := images.ListUser(client)
+			list, err := images.ListUser(client, opts)
 			if err != nil {
 				panic(err)
 			}

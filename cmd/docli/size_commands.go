@@ -22,9 +22,10 @@ func sizeList() cli.Command {
 		Name:  "list",
 		Usage: "list sizes",
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
 
-			list, err := sizes.List(client)
+			list, err := sizes.List(client, opts)
 			if err != nil {
 				panic(err)
 			}

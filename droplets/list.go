@@ -9,7 +9,7 @@ import (
 )
 
 // List returns a list of all droplets.
-func List(client *godo.Client) ([]godo.Droplet, error) {
+func List(client *godo.Client, opts *docli.Opts) ([]godo.Droplet, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.List(opt)
 		if err != nil {
@@ -24,7 +24,7 @@ func List(client *godo.Client) ([]godo.Droplet, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}

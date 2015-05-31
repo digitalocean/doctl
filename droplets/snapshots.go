@@ -6,7 +6,7 @@ import (
 )
 
 // Snapshots returns a list of snapshot images for a droplet.
-func Snapshots(client *godo.Client, id int) ([]godo.Image, error) {
+func Snapshots(client *godo.Client, opts *docli.Opts, id int) ([]godo.Image, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Snapshots(id, opt)
 		if err != nil {
@@ -21,7 +21,7 @@ func Snapshots(client *godo.Client, id int) ([]godo.Image, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}

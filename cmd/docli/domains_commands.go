@@ -28,9 +28,10 @@ func domainList() cli.Command {
 		Name:  "list",
 		Usage: "list domains",
 		Action: func(c *cli.Context) {
+			opts := loadOpts(c)
 			client := newClient(c)
 
-			list, err := domains.List(client)
+			list, err := domains.List(client, opts)
 			if err != nil {
 				// TODO this needs to be json
 				panic(err)
@@ -198,11 +199,11 @@ func recordList() cli.Command {
 			return nil
 		},
 		Action: func(c *cli.Context) {
-
+			opts := loadOpts(c)
 			client := newClient(c)
 
 			name := c.String("name")
-			recs, err := domainrecs.List(client, name)
+			recs, err := domainrecs.List(client, opts, name)
 			if err != nil {
 				panic(err)
 			}

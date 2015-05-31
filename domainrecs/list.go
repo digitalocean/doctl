@@ -6,7 +6,7 @@ import (
 )
 
 // List records for a domain.
-func List(client *godo.Client, domain string) ([]godo.DomainRecord, error) {
+func List(client *godo.Client, opts *docli.Opts, domain string) ([]godo.DomainRecord, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Domains.Records(domain, opt)
 		if err != nil {
@@ -21,7 +21,7 @@ func List(client *godo.Client, domain string) ([]godo.DomainRecord, error) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f)
+	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
 		return nil, err
 	}
