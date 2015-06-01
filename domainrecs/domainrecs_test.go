@@ -133,3 +133,28 @@ func TestRecordsUpdate(t *testing.T) {
 		Update(c)
 	})
 }
+
+func TestRecordsDelete(t *testing.T) {
+	client := &godo.Client{
+		Domains: &docli.DomainsServiceMock{
+			DeleteRecordFn: func(name string, id int) (*godo.Response, error) {
+				if got, expected := name, "example.com"; got != expected {
+					t.Errorf("CreateFn domain name = %q; expected %q", got, expected)
+				}
+				if got, expected := id, 1; got != expected {
+					t.Errorf("CreateFn id = %d; expected %d", got, expected)
+				}
+				return nil, nil
+			},
+		},
+	}
+
+	cs := &docli.TestClientSource{client}
+	fs := flag.NewFlagSet("flag set", 0)
+	fs.String("domain-name", "example.com", "domain-name")
+	fs.Int("record-id", 1, "record-id")
+
+	docli.WithinTest(cs, fs, func(c *cli.Context) {
+		Delete(c)
+	})
+}

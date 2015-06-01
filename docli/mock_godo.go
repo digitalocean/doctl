@@ -77,3 +77,104 @@ func (s *DomainsServiceMock) EditRecord(name string, id int, req *godo.DomainRec
 func (s *DomainsServiceMock) CreateRecord(name string, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
 	return s.CreateRecordFn(name, req)
 }
+
+type DropletActionsServiceMock struct {
+	ChangeKernelFn            func(id, kernelID int) (*godo.Action, *godo.Response, error)
+	DisableBackupsFn          func(id int) (*godo.Action, *godo.Response, error)
+	EnableIPv6Fn              func(id int) (*godo.Action, *godo.Response, error)
+	EnablePrivateNetworkingFn func(id int) (*godo.Action, *godo.Response, error)
+	GetFn                     func(dropletID, actionID int) (*godo.Action, *godo.Response, error)
+	GetByURIFn                func(rawurl string) (*godo.Action, *godo.Response, error)
+	PasswordResetFn           func(id int) (*godo.Action, *godo.Response, error)
+	PowerCycleFn              func(id int) (*godo.Action, *godo.Response, error)
+	PowerOffFn                func(id int) (*godo.Action, *godo.Response, error)
+	PowerOnFn                 func(id int) (*godo.Action, *godo.Response, error)
+	RebootFn                  func(id int) (*godo.Action, *godo.Response, error)
+	RebuildByImageIDFn        func(id, imageID int) (*godo.Action, *godo.Response, error)
+	RebuildByImageSlugFn      func(id int, slug string) (*godo.Action, *godo.Response, error)
+	RenameFn                  func(id int, name string) (*godo.Action, *godo.Response, error)
+	ResizeFn                  func(id int, sizeSlug string, resizeDisk bool) (*godo.Action, *godo.Response, error)
+	RestoreFn                 func(id, imageID int) (*godo.Action, *godo.Response, error)
+	ShutdownFn                func(id int) (*godo.Action, *godo.Response, error)
+	SnapshotFn                func(id int, name string) (*godo.Action, *godo.Response, error)
+	UpgradeFn                 func(id int) (*godo.Action, *godo.Response, error)
+}
+
+var _ godo.DropletActionsService = &DropletActionsServiceMock{}
+
+func (s *DropletActionsServiceMock) ChangeKernel(id, kernelID int) (*godo.Action, *godo.Response, error) {
+	return s.ChangeKernelFn(id, kernelID)
+}
+
+func (s *DropletActionsServiceMock) DisableBackups(id int) (*godo.Action, *godo.Response, error) {
+	return s.DisableBackupsFn(id)
+
+}
+
+func (s *DropletActionsServiceMock) EnableIPv6(id int) (*godo.Action, *godo.Response, error) {
+	return s.EnableIPv6Fn(id)
+}
+
+func (s *DropletActionsServiceMock) EnablePrivateNetworking(id int) (*godo.Action, *godo.Response, error) {
+	return s.EnablePrivateNetworkingFn(id)
+}
+
+func (s *DropletActionsServiceMock) Get(dropletID, actionID int) (*godo.Action, *godo.Response, error) {
+	return s.GetFn(dropletID, actionID)
+}
+
+func (s *DropletActionsServiceMock) GetByURI(rawurl string) (*godo.Action, *godo.Response, error) {
+	return s.GetByURIFn(rawurl)
+}
+
+func (s *DropletActionsServiceMock) PasswordReset(id int) (*godo.Action, *godo.Response, error) {
+	return s.PasswordResetFn(id)
+}
+
+func (s *DropletActionsServiceMock) PowerCycle(id int) (*godo.Action, *godo.Response, error) {
+	return s.PowerCycleFn(id)
+}
+
+func (s *DropletActionsServiceMock) PowerOff(id int) (*godo.Action, *godo.Response, error) {
+	return s.PowerOffFn(id)
+}
+
+func (s *DropletActionsServiceMock) PowerOn(id int) (*godo.Action, *godo.Response, error) {
+	return s.PowerOnFn(id)
+}
+
+func (s *DropletActionsServiceMock) Reboot(id int) (*godo.Action, *godo.Response, error) {
+	return s.RebootFn(id)
+}
+
+func (s *DropletActionsServiceMock) RebuildByImageID(id, imageID int) (*godo.Action, *godo.Response, error) {
+	return s.RebuildByImageIDFn(id, imageID)
+}
+
+func (s *DropletActionsServiceMock) RebuildByImageSlug(id int, slug string) (*godo.Action, *godo.Response, error) {
+	return s.RebuildByImageSlugFn(id, slug)
+}
+
+func (s *DropletActionsServiceMock) Rename(id int, name string) (*godo.Action, *godo.Response, error) {
+	return s.RenameFn(id, name)
+}
+
+func (s *DropletActionsServiceMock) Resize(id int, sizeSlug string, resizeDisk bool) (*godo.Action, *godo.Response, error) {
+	return s.ResizeFn(id, sizeSlug, resizeDisk)
+}
+
+func (s *DropletActionsServiceMock) Restore(id, imageID int) (*godo.Action, *godo.Response, error) {
+	return s.RestoreFn(id, imageID)
+}
+
+func (s *DropletActionsServiceMock) Shutdown(id int) (*godo.Action, *godo.Response, error) {
+	return s.ShutdownFn(id)
+}
+
+func (s *DropletActionsServiceMock) Snapshot(id int, name string) (*godo.Action, *godo.Response, error) {
+	return s.SnapshotFn(id, name)
+}
+
+func (s *DropletActionsServiceMock) Upgrade(id int) (*godo.Action, *godo.Response, error) {
+	return s.UpgradeFn(id)
+}

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/bryanl/docli/domainrecs"
 	"github.com/bryanl/docli/domains"
 	"github.com/codegangsta/cli"
@@ -216,28 +214,6 @@ func recordDelete() cli.Command {
 				Usage: "record id (required)",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("domain") {
-				return fmt.Errorf("invalid domain")
-			}
-
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid record id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			domain := c.String("domain")
-			id := c.Int("id")
-
-			err := domainrecs.Delete(client, domain, id)
-			if err != nil {
-				panic(err)
-			}
-		},
+		Action: domainrecs.Delete,
 	}
 }
