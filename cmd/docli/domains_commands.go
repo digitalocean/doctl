@@ -87,35 +87,11 @@ func domainGet() cli.Command {
 		Usage: "get domain",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "name",
+				Name:  "domain-name",
 				Usage: "domain name",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("name") {
-				return fmt.Errorf("invalid domain name")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			name := c.String("name")
-
-			domain, err := domains.Retrieve(client, name)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(domain)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: domains.Get,
 	}
 }
 

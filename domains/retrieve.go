@@ -1,13 +1,17 @@
 package domains
 
-import "github.com/digitalocean/godo"
+import (
+	log "github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
+)
 
-// Retrieve retrieves a domain.
-func Retrieve(client *godo.Client, name string) (*godo.Domain, error) {
-	d, _, err := client.Domains.Get(name)
+func Get(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	id := c.String("domain-name")
+	a, _, err := client.Domains.Get(id)
 	if err != nil {
-		return nil, err
+		log.WithField("err", err).Fatal("could not retrieve domain")
 	}
-
-	return d, nil
+	docli.WriteJSON(a, c.App.Writer)
 }

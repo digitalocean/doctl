@@ -1,6 +1,7 @@
 package domains
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/bryanl/docli/docli"
@@ -37,5 +38,26 @@ func TestDomainsList(t *testing.T) {
 		if !domainsDisList {
 			t.Errorf("List() did not run")
 		}
+	})
+}
+
+func TestDomainsGet(t *testing.T) {
+	client := &godo.Client{
+		Domains: &docli.DomainsServiceMock{
+			GetFn: func(name string) (*godo.Domain, *godo.Response, error) {
+				if got, expected := name, testDomain.Name; got != expected {
+					t.Errorf("GetFn() called with %q; expected %q", got, expected)
+				}
+				return &testDomain, nil, nil
+			},
+		},
+	}
+
+	cs := &docli.TestClientSource{client}
+	fs := flag.NewFlagSet("flag set", 0)
+	fs.String("domain-name", testDomain.Name, "domain-id")
+
+	docli.WithinTest(cs, fs, func(c *cli.Context) {
+		Get(c)
 	})
 }
