@@ -136,18 +136,14 @@ func (s *DomainsServiceOp) Create(createRequest *DomainCreateRequest) (*Domain, 
 
 	req, err := s.client.NewRequest("POST", path, createRequest)
 	if err != nil {
-		fmt.Printf("1Something bad happened: %+v", err)
 		return nil, nil, err
 	}
 
 	root := new(domainRoot)
 	resp, err := s.client.Do(req, root)
-	fmt.Printf("%+v\n", resp)
 	if err != nil {
-		fmt.Printf("2Something bad happened: %+v", err)
 		return nil, resp, err
 	}
-	fmt.Printf("%+v\n", root)
 	return root.Domain, resp, err
 }
 
