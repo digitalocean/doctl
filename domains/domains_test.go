@@ -2,6 +2,7 @@ package domains
 
 import (
 	"flag"
+	"reflect"
 	"testing"
 
 	"github.com/bryanl/docli/docli"
@@ -59,5 +60,31 @@ func TestDomainsGet(t *testing.T) {
 
 	docli.WithinTest(cs, fs, func(c *cli.Context) {
 		Get(c)
+	})
+}
+
+func TestDomainsCreate(t *testing.T) {
+	client := &godo.Client{
+		Domains: &docli.DomainsServiceMock{
+			CreateFn: func(req *godo.DomainCreateRequest) (*godo.Domain, *godo.Response, error) {
+				expected := &godo.DomainCreateRequest{
+					Name:      testDomain.Name,
+					IPAddress: "127.0.0.1",
+				}
+				if got := req; !reflect.DeepEqual(got, expected) {
+					t.Errorf("CreateFn() called with %#v; expected %#v", got, expected)
+				}
+				return &testDomain, nil, nil
+			},
+		},
+	}
+
+	cs := &docli.TestClientSource{client}
+	fs := flag.NewFlagSet("flag set", 0)
+	fs.String("domain-name", testDomain.Name, "domain-name")
+	fs.String("ip-address", "127.0.0.1", "ip- address")
+
+	docli.WithinTest(cs, fs, func(c *cli.Context) {
+		Create(c)
 	})
 }

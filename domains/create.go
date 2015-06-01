@@ -1,27 +1,22 @@
 package domains
 
-import "github.com/digitalocean/godo"
+import (
+	log "github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
+	"github.com/digitalocean/godo"
+)
 
-// CreateRequest is a struct that contains items describing a domain.
-type CreateRequest struct {
-	Name      string
-	IPAddress string
-}
-
-// IsValid tests if the CreateRequest is valid. It is valid if the name
-// and ip address contents are not blanks.
-func (cr *CreateRequest) IsValid() bool {
-	return len(cr.Name) > 0 && len(cr.IPAddress) > 0
-}
-
-// Create creates a new domain.
-func Create(client *godo.Client, cr *CreateRequest) (*godo.Domain, error) {
-	dcr := &godo.DomainCreateRequest{
-		Name:      cr.Name,
-		IPAddress: cr.IPAddress,
+func Create(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	req := &godo.DomainCreateRequest{
+		Name:      c.String("domain-name"),
+		IPAddress: c.String("ip-address"),
 	}
 
-	d, _, err := client.Domains.Create(dcr)
-
-	return d, err
+	d, _, err := client.Domains.Create(req)
+	if err != nil {
+		log.WithField("err", err).Fatal("could not create domain")
+	}
+	docli.WriteJSON(d, c.App.Writer)
 }

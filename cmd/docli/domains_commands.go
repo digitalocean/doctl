@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/docli/domainrecs"
 	"github.com/bryanl/docli/domains"
 	"github.com/codegangsta/cli"
@@ -45,39 +44,7 @@ func domainCreate() cli.Command {
 				Usage: "domain ip address",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			cr := &domains.CreateRequest{
-				Name:      c.String("name"),
-				IPAddress: c.String("ip-address"),
-			}
-
-			if !cr.IsValid() {
-				return fmt.Errorf("invalid arguments")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-			cr := &domains.CreateRequest{
-				Name:      c.String("name"),
-				IPAddress: c.String("ip-address"),
-			}
-
-			key, err := domains.Create(client, cr)
-			if err != nil {
-				log.WithField("err", err).Error("unable to create key")
-				return
-			}
-
-			j, err := toJSON(key)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: domains.Create,
 	}
 }
 
