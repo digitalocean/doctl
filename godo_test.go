@@ -430,24 +430,24 @@ func TestAddOptions(t *testing.T) {
 			continue
 		}
 
-		gotUrl, err := url.Parse(got)
+		gotURL, err := url.Parse(got)
 		if err != nil {
 			t.Errorf("%q unable to parse returned URL", c.name)
 			continue
 		}
 
-		expectedUrl, err := url.Parse(c.expected)
+		expectedURL, err := url.Parse(c.expected)
 		if err != nil {
 			t.Errorf("%q unable to parse expected URL", c.name)
 			continue
 		}
 
-		if g, e := gotUrl.Path, expectedUrl.Path; g != e {
-			t.Errorf("%q path = %q; expected %q", g, e)
+		if g, e := gotURL.Path, expectedURL.Path; g != e {
+			t.Errorf("%q path = %q; expected %q", c.name, g, e)
 			continue
 		}
 
-		if g, e := gotUrl.Query(), expectedUrl.Query(); !reflect.DeepEqual(g, e) {
+		if g, e := gotURL.Query(), expectedURL.Query(); !reflect.DeepEqual(g, e) {
 			t.Errorf("%q query = %#v; expected %#v", c.name, g, e)
 			continue
 		}

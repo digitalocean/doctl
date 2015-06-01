@@ -9,8 +9,8 @@ const domainsBasePath = "v2/domains"
 // https://developers.digitalocean.com/documentation/v2#domain-records
 type DomainsService interface {
 	List(*ListOptions) ([]Domain, *Response, error)
-	Get(string) (*DomainRoot, *Response, error)
-	Create(*DomainCreateRequest) (*DomainRoot, *Response, error)
+	Get(string) (*Domain, *Response, error)
+	Create(*DomainCreateRequest) (*Domain, *Response, error)
 	Delete(string) (*Response, error)
 
 	Records(string, *ListOptions) ([]DomainRecord, *Response, error)
@@ -35,8 +35,8 @@ type Domain struct {
 	ZoneFile string `json:"zone_file"`
 }
 
-// DomainRoot represents a response from the Digital Ocean API
-type DomainRoot struct {
+// domainRoot represents a response from the Digital Ocean API
+type domainRoot struct {
 	Domain *Domain `json:"domain"`
 }
 
@@ -52,12 +52,12 @@ type DomainCreateRequest struct {
 }
 
 // DomainRecordRoot is the root of an individual Domain Record response
-type DomainRecordRoot struct {
+type domainRecordRoot struct {
 	DomainRecord *DomainRecord `json:"domain_record"`
 }
 
 // DomainRecordsRoot is the root of a group of Domain Record responses
-type DomainRecordsRoot struct {
+type domainRecordsRoot struct {
 	DomainRecords []DomainRecord `json:"domain_records"`
 	Links         *Links         `json:"links"`
 }
@@ -113,7 +113,7 @@ func (s DomainsServiceOp) List(opt *ListOptions) ([]Domain, *Response, error) {
 }
 
 // Get individual domain
-func (s *DomainsServiceOp) Get(name string) (*DomainRoot, *Response, error) {
+func (s *DomainsServiceOp) Get(name string) (*Domain, *Response, error) {
 	path := fmt.Sprintf("%s/%s", domainsBasePath, name)
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -121,31 +121,34 @@ func (s *DomainsServiceOp) Get(name string) (*DomainRoot, *Response, error) {
 		return nil, nil, err
 	}
 
-	root := new(DomainRoot)
+	root := new(domainRoot)
 	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return root, resp, err
+	return root.Domain, resp, err
 }
 
 // Create a new domain
-func (s *DomainsServiceOp) Create(createRequest *DomainCreateRequest) (*DomainRoot, *Response, error) {
+func (s *DomainsServiceOp) Create(createRequest *DomainCreateRequest) (*Domain, *Response, error) {
 	path := domainsBasePath
 
 	req, err := s.client.NewRequest("POST", path, createRequest)
 	if err != nil {
+		fmt.Printf("1Something bad happened: %+v", err)
 		return nil, nil, err
 	}
 
-	root := new(DomainRoot)
+	root := new(domainRoot)
 	resp, err := s.client.Do(req, root)
+	fmt.Printf("%+v\n", resp)
 	if err != nil {
+		fmt.Printf("2Something bad happened: %+v", err)
 		return nil, resp, err
 	}
-
-	return root, resp, err
+	fmt.Printf("%+v\n", root)
+	return root.Domain, resp, err
 }
 
 // Delete domain
@@ -185,7 +188,7 @@ func (s *DomainsServiceOp) Records(domain string, opt *ListOptions) ([]DomainRec
 		return nil, nil, err
 	}
 
-	root := new(DomainRecordsRoot)
+	root := new(domainRecordsRoot)
 	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
@@ -206,7 +209,7 @@ func (s *DomainsServiceOp) Record(domain string, id int) (*DomainRecord, *Respon
 		return nil, nil, err
 	}
 
-	record := new(DomainRecordRoot)
+	record := new(domainRecordRoot)
 	resp, err := s.client.Do(req, record)
 	if err != nil {
 		return nil, resp, err
@@ -261,7 +264,7 @@ func (s *DomainsServiceOp) CreateRecord(
 		return nil, nil, err
 	}
 
-	d := new(DomainRecordRoot)
+	d := new(domainRecordRoot)
 	resp, err := s.client.Do(req, d)
 	if err != nil {
 		return nil, resp, err

@@ -103,7 +103,7 @@ func (s *DropletActionsServiceOp) Rename(id int, name string) (*Action, *Respons
 	return s.doAction(id, request)
 }
 
-// Snapshot a Droplet
+// Snapshot a Droplet.
 func (s *DropletActionsServiceOp) Snapshot(id int, name string) (*Action, *Response, error) {
 	requestType := "snapshot"
 	request := &ActionRequest{
@@ -113,49 +113,49 @@ func (s *DropletActionsServiceOp) Snapshot(id int, name string) (*Action, *Respo
 	return s.doAction(id, request)
 }
 
-// Disable backups for a droplet
+// DisableBackups disables backups for a droplet.
 func (s *DropletActionsServiceOp) DisableBackups(id int) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "disable_backups"}
 	return s.doAction(id, request)
 }
 
-// Reset password for a droplet
+// PasswordReset resets the password for a droplet.
 func (s *DropletActionsServiceOp) PasswordReset(id int) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "password_reset"}
 	return s.doAction(id, request)
 }
 
-// Rebuild droplet from an image with a given id
+// RebuildByImageID rebuilds a droplet droplet from an image with a given id.
 func (s *DropletActionsServiceOp) RebuildByImageID(id, imageID int) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "rebuild", "image": imageID}
 	return s.doAction(id, request)
 }
 
-// Rebuild a droplet from an image with a given slug
+// RebuildByImageSlug rebuilds a droplet from an image with a given slug.
 func (s *DropletActionsServiceOp) RebuildByImageSlug(id int, slug string) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "rebuild", "image": slug}
 	return s.doAction(id, request)
 }
 
-// Change a droplet kernel
+// ChangeKernel changes the kernel for a droplet.
 func (s *DropletActionsServiceOp) ChangeKernel(id, kernelID int) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "change_kernel", "kernel": kernelID}
 	return s.doAction(id, request)
 }
 
-// Enable IPv6 on a droplet
+// EnableIPv6 enables IPv6 for a droplet.
 func (s *DropletActionsServiceOp) EnableIPv6(id int) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "enable_ipv6"}
 	return s.doAction(id, request)
 }
 
-// Enable private networking on a droplet
+// EnablePrivateNetworking enables private networking for a droplet.
 func (s *DropletActionsServiceOp) EnablePrivateNetworking(id int) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "enable_private_networking"}
 	return s.doAction(id, request)
 }
 
-// Upgrade a droplet
+// Upgrade a droplet.
 func (s *DropletActionsServiceOp) Upgrade(id int) (*Action, *Response, error) {
 	request := &ActionRequest{"type": "upgrade"}
 	return s.doAction(id, request)
