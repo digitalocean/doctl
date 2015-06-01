@@ -393,3 +393,63 @@ func TestDo_completion_callback(t *testing.T) {
 		t.Errorf("expected response to contain %v, Response = %v", expected, completedResp)
 	}
 }
+
+func TestAddOptions(t *testing.T) {
+	cases := []struct {
+		name     string
+		path     string
+		expected string
+		opts     *ListOptions
+		isErr    bool
+	}{
+		{
+			name:     "add options",
+			path:     "/action",
+			expected: "/action?page=1",
+			opts:     &ListOptions{Page: 1},
+			isErr:    false,
+		},
+		{
+			name:     "add options with existing parameters",
+			path:     "/action?scope=all",
+			expected: "/action?page=1&scope=all",
+			opts:     &ListOptions{Page: 1},
+			isErr:    false,
+		},
+	}
+
+	for _, c := range cases {
+		got, err := addOptions(c.path, c.opts)
+		if c.isErr && err == nil {
+			t.Errorf("%q expected error but none was encountered", c.name)
+			continue
+		}
+
+		if !c.isErr && err != nil {
+			t.Errorf("%q unexpected error: %v", c.name, err)
+			continue
+		}
+
+		gotUrl, err := url.Parse(got)
+		if err != nil {
+			t.Errorf("%q unable to parse returned URL", c.name)
+			continue
+		}
+
+		expectedUrl, err := url.Parse(c.expected)
+		if err != nil {
+			t.Errorf("%q unable to parse expected URL", c.name)
+			continue
+		}
+
+		if g, e := gotUrl.Path, expectedUrl.Path; g != e {
+			t.Errorf("%q path = %q; expected %q", g, e)
+			continue
+		}
+
+		if g, e := gotUrl.Query(), expectedUrl.Query(); !reflect.DeepEqual(g, e) {
+			t.Errorf("%q query = %#v; expected %#v", c.name, g, e)
+			continue
+		}
+	}
+}

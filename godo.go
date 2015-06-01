@@ -113,18 +113,24 @@ func addOptions(s string, opt interface{}) (string, error) {
 		return s, nil
 	}
 
-	u, err := url.Parse(s)
+	origURL, err := url.Parse(s)
 	if err != nil {
 		return s, err
 	}
 
-	qv, err := query.Values(opt)
+	origValues := origURL.Query()
+
+	newValues, err := query.Values(opt)
 	if err != nil {
 		return s, err
 	}
 
-	u.RawQuery = qv.Encode()
-	return u.String(), nil
+	for k, v := range newValues {
+		origValues[k] = v
+	}
+
+	origURL.RawQuery = origValues.Encode()
+	return origURL.String(), nil
 }
 
 // NewClient returns a new Digital Ocean API client.
