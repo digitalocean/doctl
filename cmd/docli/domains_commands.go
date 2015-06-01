@@ -138,33 +138,7 @@ func recordCreate() cli.Command {
 				Usage: "record weight (required for SRV records)",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			cr := extractDomainRecordArgs(c)
-			if !cr.IsValid() {
-				return fmt.Errorf("invalid arguments")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			domain := c.String("domain")
-
-			cr := extractDomainRecordArgs(c)
-			r, err := domainrecs.Create(client, domain, cr)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(r)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: domainrecs.Create,
 	}
 }
 
@@ -234,34 +208,6 @@ func recordUpdate() cli.Command {
 				Name:  "weight",
 				Usage: "record weight (required for SRV records)",
 			},
-		},
-		Before: func(c *cli.Context) error {
-			cr := extractDomainRecordArgs(c)
-			if !cr.IsValid() {
-				return fmt.Errorf("invalid arguments")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			domain := c.String("domain")
-			id := c.Int("id")
-
-			cr := extractDomainRecordArgs(c)
-			r, err := domainrecs.Update(client, domain, id, cr)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(r)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
 		},
 	}
 }

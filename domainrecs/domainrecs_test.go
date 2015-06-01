@@ -2,6 +2,7 @@ package domainrecs
 
 import (
 	"flag"
+	"reflect"
 	"testing"
 
 	"github.com/bryanl/docli/docli"
@@ -61,5 +62,37 @@ func TestRecordsGet(t *testing.T) {
 	docli.WithinTest(cs, fs, func(c *cli.Context) {
 		Get(c)
 	})
+}
 
+func TestRecordsCreate(t *testing.T) {
+	client := &godo.Client{
+		Domains: &docli.DomainsServiceMock{
+			CreateRecordFn: func(name string, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
+				expected := &godo.DomainRecordEditRequest{
+					Type: "A",
+					Name: "foo.example.com.",
+					Data: "192.168.1.1",
+				}
+
+				if got, expected := name, "example.com"; got != expected {
+					t.Errorf("CreateFn domain name = %q; expected %q", got, expected)
+				}
+				if got := req; !reflect.DeepEqual(got, expected) {
+					t.Errorf("CreateFn request = %#v; expected %#v", got, expected)
+				}
+				return &testRecord, nil, nil
+			},
+		},
+	}
+
+	cs := &docli.TestClientSource{client}
+	fs := flag.NewFlagSet("flag set", 0)
+	fs.String("domain-name", "example.com", "domain-name")
+	fs.String("record-type", "A", "record-type")
+	fs.String("record-name", "foo.example.com.", "record-name")
+	fs.String("record-data", "192.168.1.1", "record-name")
+
+	docli.WithinTest(cs, fs, func(c *cli.Context) {
+		Create(c)
+	})
 }

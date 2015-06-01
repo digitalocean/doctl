@@ -1,19 +1,29 @@
 package domainrecs
 
-import "github.com/digitalocean/godo"
+import (
+	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
+	"github.com/digitalocean/godo"
+)
 
-// Create a domain record.
-func Create(client *godo.Client, domain string, cr *EditRequest) (*godo.DomainRecord, error) {
+func Create(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	domainName := c.String("domain-name")
+
 	drcr := &godo.DomainRecordEditRequest{
-		Type:     cr.Type,
-		Name:     cr.Name,
-		Data:     cr.Data,
-		Priority: cr.Priority,
-		Port:     cr.Port,
-		Weight:   cr.Weight,
+		Type:     c.String("record-type"),
+		Name:     c.String("record-name"),
+		Data:     c.String("record-data"),
+		Priority: c.Int("record-priority"),
+		Port:     c.Int("record-port"),
+		Weight:   c.Int("record-weight"),
 	}
 
-	r, _, err := client.Domains.CreateRecord(domain, drcr)
+	r, _, err := client.Domains.CreateRecord(domainName, drcr)
+	if err != nil {
+		logrus.WithField("err", err).Fatal("could not create record")
+	}
 
-	return r, err
+	docli.WriteJSON(r, c.App.Writer)
 }
