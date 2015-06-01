@@ -18,13 +18,11 @@ type testCS struct {
 	client *godo.Client
 }
 
-var testAccountRoot = &godo.AccountRoot{
-	Account: &godo.Account{
-		DropletLimit:  10,
-		Email:         "user@example.com",
-		UUID:          "1234",
-		EmailVerified: true,
-	},
+var testAccount = &godo.Account{
+	DropletLimit:  10,
+	Email:         "user@example.com",
+	UUID:          "1234",
+	EmailVerified: true,
 }
 
 func (cs *testCS) NewClient(_ string) *godo.Client {
@@ -46,9 +44,9 @@ func TestAccountAction(t *testing.T) {
 
 	client := &godo.Client{
 		Account: &docli.AccountServiceMock{
-			GetFn: func() (*godo.AccountRoot, *godo.Response, error) {
+			GetFn: func() (*godo.Account, *godo.Response, error) {
 				accountDidGet = true
-				return testAccountRoot, nil, nil
+				return testAccount, nil, nil
 			},
 		},
 	}
@@ -66,8 +64,8 @@ func TestAccountAction(t *testing.T) {
 func TestAccountGet(t *testing.T) {
 	client := &godo.Client{
 		Account: &docli.AccountServiceMock{
-			GetFn: func() (*godo.AccountRoot, *godo.Response, error) {
-				return testAccountRoot, nil, nil
+			GetFn: func() (*godo.Account, *godo.Response, error) {
+				return testAccount, nil, nil
 			},
 		},
 	}
@@ -84,7 +82,7 @@ func TestAccountGet(t *testing.T) {
 		t.Fatalf("AccountGet() can't unmarshal: %v", err)
 	}
 
-	if got, expected := ar, *testAccountRoot.Account; !reflect.DeepEqual(got, expected) {
+	if got, expected := ar, *testAccount; !reflect.DeepEqual(got, expected) {
 		t.Errorf("AccountGet() = %#v; expected %#v", got, expected)
 	}
 }
@@ -92,7 +90,7 @@ func TestAccountGet(t *testing.T) {
 func TestAccountGet_APIError(t *testing.T) {
 	client := &godo.Client{
 		Account: &docli.AccountServiceMock{
-			GetFn: func() (*godo.AccountRoot, *godo.Response, error) {
+			GetFn: func() (*godo.Account, *godo.Response, error) {
 				return nil, nil, fmt.Errorf("an error")
 			},
 		},

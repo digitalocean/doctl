@@ -20,7 +20,7 @@ type CreateRequest struct {
 }
 
 // Create creates a droplet.
-func Create(client *godo.Client, cr *CreateRequest) (*godo.DropletRoot, error) {
+func Create(client *godo.Client, cr *CreateRequest) (*godo.Droplet, error) {
 	image := godo.DropletCreateImage{}
 
 	if i, err := strconv.Atoi(cr.Image); err == nil {

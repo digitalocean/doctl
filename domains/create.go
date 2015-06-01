@@ -15,13 +15,13 @@ func (cr *CreateRequest) IsValid() bool {
 }
 
 // Create creates a new domain.
-func Create(client *godo.Client, cr *CreateRequest) (*godo.DomainRoot, error) {
+func Create(client *godo.Client, cr *CreateRequest) (*godo.Domain, error) {
 	dcr := &godo.DomainCreateRequest{
 		Name:      cr.Name,
 		IPAddress: cr.IPAddress,
 	}
 
-	r, _, err := client.Domains.Create(dcr)
+	d, _, err := client.Domains.Create(dcr)
 
-	return r, err
+	return d, err
 }

@@ -18,10 +18,10 @@ func Action(c *cli.Context) {
 }
 
 func AccountGet(client *godo.Client, w io.Writer) error {
-	root, _, err := client.Account.Get()
+	a, _, err := client.Account.Get()
 	if err != nil {
 		return err
 	}
 
-	return docli.WriteJSON(root.Account, w)
+	return docli.WriteJSON(a, w)
 }

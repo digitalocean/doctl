@@ -118,13 +118,13 @@ func dropletCreate() cli.Command {
 				UserData:          c.String("user-data"),
 			}
 
-			root, err := droplets.Create(client, cr)
+			droplet, err := droplets.Create(client, cr)
 			if err != nil {
 				log.WithField("err", err).Error("unable to create droplet")
 				return
 			}
 
-			fmt.Printf("created droplet %d\n", root.Droplet.ID)
+			fmt.Printf("created droplet %d\n", droplet.ID)
 		},
 	}
 }
