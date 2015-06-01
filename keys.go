@@ -127,7 +127,7 @@ func (s *KeysServiceOp) Create(createRequest *KeyCreateRequest) (*Key, *Response
 	return &root.SSHKey, resp, err
 }
 
-// Update a key name by ID
+// UpdateByID updates a key name by ID.
 func (s *KeysServiceOp) UpdateByID(keyID int, updateRequest *KeyUpdateRequest) (*Key, *Response, error) {
 	path := fmt.Sprintf("%s/%d", keysBasePath, keyID)
 	req, err := s.client.NewRequest("PUT", path, updateRequest)
@@ -144,7 +144,7 @@ func (s *KeysServiceOp) UpdateByID(keyID int, updateRequest *KeyUpdateRequest) (
 	return &root.SSHKey, resp, err
 }
 
-// Update a key name by fingerprint
+// UpdateByFingerprint updates a key name by fingerprint.
 func (s *KeysServiceOp) UpdateByFingerprint(fingerprint string, updateRequest *KeyUpdateRequest) (*Key, *Response, error) {
 	path := fmt.Sprintf("%s/%s", keysBasePath, fingerprint)
 	req, err := s.client.NewRequest("PUT", path, updateRequest)

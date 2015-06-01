@@ -95,12 +95,14 @@ type DropletCreateImage struct {
 	Slug string
 }
 
+// MarshalJSON returns either the slug or id of the image. It returns the id
+// if the slug is empty.
 func (d DropletCreateImage) MarshalJSON() ([]byte, error) {
 	if d.Slug != "" {
 		return json.Marshal(d.Slug)
-	} else {
-		return json.Marshal(d.ID)
 	}
+
+	return json.Marshal(d.ID)
 }
 
 // DropletCreateSSHKey identifies a SSH Key for the create request. It prefers fingerprint over ID.
@@ -109,12 +111,14 @@ type DropletCreateSSHKey struct {
 	Fingerprint string
 }
 
+// MarshalJSON returns either the fingerprint or id of the ssh key. It returns
+// the id if the fingerprint is empty.
 func (d DropletCreateSSHKey) MarshalJSON() ([]byte, error) {
 	if d.Fingerprint != "" {
 		return json.Marshal(d.Fingerprint)
-	} else {
-		return json.Marshal(d.ID)
 	}
+
+	return json.Marshal(d.ID)
 }
 
 // DropletCreateRequest represents a request to create a droplet.
@@ -242,7 +246,7 @@ func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
 	return resp, err
 }
 
-// List droplet available kernels
+// Kernels lists kernels available for a droplet.
 func (s *DropletsServiceOp) Kernels(dropletID int, opt *ListOptions) ([]Kernel, *Response, error) {
 	path := fmt.Sprintf("%s/%d/kernels", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
@@ -264,7 +268,7 @@ func (s *DropletsServiceOp) Kernels(dropletID int, opt *ListOptions) ([]Kernel, 
 	return root.Kernels, resp, err
 }
 
-// List droplet actions
+// Actions lists the actions for a droplet.
 func (s *DropletsServiceOp) Actions(dropletID int, opt *ListOptions) ([]Action, *Response, error) {
 	path := fmt.Sprintf("%s/%d/actions", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
@@ -289,7 +293,7 @@ func (s *DropletsServiceOp) Actions(dropletID int, opt *ListOptions) ([]Action, 
 	return root.Actions, resp, err
 }
 
-// List droplet backups
+// Backups lists the backups for a droplet.
 func (s *DropletsServiceOp) Backups(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
 	path := fmt.Sprintf("%s/%d/backups", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
@@ -314,7 +318,7 @@ func (s *DropletsServiceOp) Backups(dropletID int, opt *ListOptions) ([]Image, *
 	return root.Backups, resp, err
 }
 
-// List droplet snapshots
+// Snapshots lists the snapshots available for a droplet.
 func (s *DropletsServiceOp) Snapshots(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
 	path := fmt.Sprintf("%s/%d/snapshots", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
@@ -339,7 +343,7 @@ func (s *DropletsServiceOp) Snapshots(dropletID int, opt *ListOptions) ([]Image,
 	return root.Snapshots, resp, err
 }
 
-// List droplet neighbors
+// Neighbors lists the neighbors for a droplet.
 func (s *DropletsServiceOp) Neighbors(dropletID int) ([]Droplet, *Response, error) {
 	path := fmt.Sprintf("%s/%d/neighbors", dropletBasePath, dropletID)
 
