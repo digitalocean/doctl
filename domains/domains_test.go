@@ -88,3 +88,24 @@ func TestDomainsCreate(t *testing.T) {
 		Create(c)
 	})
 }
+
+func TestDomainsDelete(t *testing.T) {
+	client := &godo.Client{
+		Domains: &docli.DomainsServiceMock{
+			DeleteFn: func(name string) (*godo.Response, error) {
+				if got, expected := name, testDomain.Name; got != expected {
+					t.Errorf("DeleteFn() received %q; expected %q", got, expected)
+				}
+				return nil, nil
+			},
+		},
+	}
+
+	cs := &docli.TestClientSource{client}
+	fs := flag.NewFlagSet("flag set", 0)
+	fs.String("domain-name", testDomain.Name, "domain-name")
+
+	docli.WithinTest(cs, fs, func(c *cli.Context) {
+		Delete(c)
+	})
+}

@@ -68,29 +68,11 @@ func domainDelete() cli.Command {
 		Usage: "delete domain",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "name",
+				Name:  "domain-name",
 				Usage: "domain name",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			name := c.String("name")
-			if len(name) < 1 {
-				return fmt.Errorf("invalid arguments")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			name := c.String("name")
-
-			err := domains.Delete(client, name)
-			if err != nil {
-				panic(err)
-			}
-		},
+		Action: domains.Delete,
 	}
 }
 

@@ -1,10 +1,16 @@
 package domains
 
-import "github.com/digitalocean/godo"
+import (
+	log "github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
+)
 
-// Delete deletes a domain name.
-func Delete(client *godo.Client, name string) error {
+func Delete(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	name := c.String("domain-name")
 	_, err := client.Domains.Delete(name)
-	return err
-
+	if err != nil {
+		log.WithField("err", err).Fatal("could not delete account")
+	}
 }
