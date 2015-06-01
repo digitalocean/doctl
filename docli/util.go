@@ -84,7 +84,7 @@ func NewClient(c *cli.Context, cs ClientSource) *godo.Client {
 	return cs.NewClient(pat)
 }
 
-func WithinTest(cs ClientSource, fn func(*cli.Context)) {
+func WithinTest(cs ClientSource, fs *flag.FlagSet, fn func(*cli.Context)) {
 	ogSource := DefaultClientSource
 	DefaultClientSource = cs
 
@@ -99,8 +99,11 @@ func WithinTest(cs ClientSource, fn func(*cli.Context)) {
 	globalSet := flag.NewFlagSet("global test", 0)
 	globalSet.String("token", "token", "token")
 
-	set := flag.NewFlagSet("local test", 0)
-	c := cli.NewContext(app, set, globalSet)
+	if fs == nil {
+		fs = flag.NewFlagSet("local test", 0)
+	}
+
+	c := cli.NewContext(app, fs, globalSet)
 
 	fn(c)
 }

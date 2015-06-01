@@ -34,7 +34,7 @@ func TestAccountAction(t *testing.T) {
 
 	cs := &docli.TestClientSource{client}
 
-	docli.WithinTest(cs, func(c *cli.Context) {
+	docli.WithinTest(cs, nil, func(c *cli.Context) {
 		Action(c)
 		if !accountDidGet {
 			t.Errorf("Action() did not run")

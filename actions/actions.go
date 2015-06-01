@@ -1,7 +1,6 @@
 package actions
 
 import (
-	"fmt"
 	"io"
 
 	log "github.com/Sirupsen/logrus"
@@ -13,14 +12,23 @@ import (
 func Action(c *cli.Context) {
 	client := docli.NewClient(c, docli.DefaultClientSource)
 	opts := docli.LoadOpts(c)
-	fmt.Printf("opts; %#v\n", opts)
-	err := ActionsList(client, opts, c.App.Writer)
+	err := actionsList(client, opts, c.App.Writer)
 	if err != nil {
 		log.WithField("err", err).Fatal("could not list actions")
 	}
 }
 
-func ActionsList(client *godo.Client, opts *docli.Opts, w io.Writer) error {
+func Get(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	id := c.Int("action-id")
+	a, _, err := client.Actions.Get(id)
+	if err != nil {
+		log.WithField("err", err).Fatal("could not retrieve action")
+	}
+	docli.WriteJSON(a, c.App.Writer)
+}
+
+func actionsList(client *godo.Client, opts *docli.Opts, w io.Writer) error {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
 		if err != nil {
