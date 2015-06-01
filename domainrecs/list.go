@@ -1,14 +1,20 @@
 package domainrecs
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
 // List records for a domain.
-func List(client *godo.Client, opts *docli.Opts, domain string) ([]godo.DomainRecord, error) {
+func List(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	opts := docli.LoadOpts(c)
+	name := c.String("domain-name")
+
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Domains.Records(domain, opt)
+		list, resp, err := client.Domains.Records(name, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -23,7 +29,7 @@ func List(client *godo.Client, opts *docli.Opts, domain string) ([]godo.DomainRe
 
 	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
-		return nil, err
+		log.WithField("err", err).Fatal("could not list domain")
 	}
 
 	list := make([]godo.DomainRecord, len(si))
@@ -31,5 +37,5 @@ func List(client *godo.Client, opts *docli.Opts, domain string) ([]godo.DomainRe
 		list[i] = si[i].(godo.DomainRecord)
 	}
 
-	return list, nil
+	docli.WriteJSON(list, c.App.Writer)
 }

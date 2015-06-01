@@ -100,31 +100,7 @@ func recordList() cli.Command {
 				Usage: "domain name",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			name := c.String("name")
-			if len(name) < 1 {
-				return fmt.Errorf("invalid arguments")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-
-			name := c.String("name")
-			recs, err := domainrecs.List(client, opts, name)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(recs)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: domainrecs.List,
 	}
 }
 
@@ -209,44 +185,15 @@ func recordGet() cli.Command {
 		Usage: "get domain record",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "domain",
+				Name:  "domain-name",
 				Usage: "domain name (required)",
 			},
 			cli.IntFlag{
-				Name:  "id",
+				Name:  "record-id",
 				Usage: "domain id (required)",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("domain") {
-				return fmt.Errorf("invalid domain")
-			}
-
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid record id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			domain := c.String("domain")
-			id := c.Int("id")
-
-			r, err := domainrecs.Retrieve(client, domain, id)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(r)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: domainrecs.Get,
 	}
 }
 

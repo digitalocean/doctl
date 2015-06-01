@@ -1,13 +1,21 @@
 package domainrecs
 
-import "github.com/digitalocean/godo"
+import (
+	log "github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
+)
 
 // Retrieve a domain record.
-func Retrieve(client *godo.Client, domain string, id int) (*godo.DomainRecord, error) {
-	r, _, err := client.Domains.Record(domain, id)
+func Get(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	domainName := c.String("domain-name")
+	recordID := c.Int("record-id")
+
+	r, _, err := client.Domains.Record(domainName, recordID)
 	if err != nil {
-		return nil, err
+		log.WithField("err", err).Fatal("could not display record")
 	}
 
-	return r, err
+	docli.WriteJSON(r, c.App.Writer)
 }

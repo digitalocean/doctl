@@ -27,7 +27,7 @@ func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 			list = append(list, i)
 		}
 
-		if resp.Links.Pages == nil {
+		if resp == nil || resp.Links.Pages == nil {
 			break
 		}
 
