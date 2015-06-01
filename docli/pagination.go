@@ -80,7 +80,7 @@ func PaginageResp2(f interface{}, opts *Opts) (interface{}, error) {
 
 		items := reflect.ValueOf(values[0])
 
-		for i := 0; i < items.Len(); i++ {
+		for i := 0; i < items.tLen(); i++ {
 			list = reflect.Append(list, items.Index(i))
 		}
 
