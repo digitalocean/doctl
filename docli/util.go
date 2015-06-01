@@ -1,8 +1,10 @@
 package docli
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"flag"
 	"io"
 
 	"github.com/codegangsta/cli"
@@ -16,10 +18,24 @@ type TokenSource struct {
 	AccessToken string
 }
 
+type TestClientSource struct {
+	Client *godo.Client
+}
+
+func (cs *TestClientSource) NewClient(_ string) *godo.Client {
+	return cs.Client
+}
+
 func (t *TokenSource) Token() (*oauth2.Token, error) {
 	return &oauth2.Token{
 		AccessToken: t.AccessToken,
 	}, nil
+}
+
+func LoadOpts(c *cli.Context) *Opts {
+	return &Opts{
+		Debug: c.GlobalBool("debug"),
+	}
 }
 
 func WriteJSON(item interface{}, w io.Writer) error {
@@ -68,7 +84,7 @@ func NewClient(c *cli.Context, cs ClientSource) *godo.Client {
 	return cs.NewClient(pat)
 }
 
-func WithinTest(cs ClientSource, fn func()) {
+func WithinTest(cs ClientSource, fn func(*cli.Context)) {
 	ogSource := DefaultClientSource
 	DefaultClientSource = cs
 
@@ -76,5 +92,15 @@ func WithinTest(cs ClientSource, fn func()) {
 		DefaultClientSource = ogSource
 	}()
 
-	fn()
+	var b bytes.Buffer
+	app := cli.NewApp()
+	app.Writer = bufio.NewWriter(&b)
+
+	globalSet := flag.NewFlagSet("global test", 0)
+	globalSet.String("token", "token", "token")
+
+	set := flag.NewFlagSet("local test", 0)
+	c := cli.NewContext(app, set, globalSet)
+
+	fn(c)
 }

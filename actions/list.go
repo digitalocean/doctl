@@ -1,12 +1,26 @@
 package actions
 
 import (
+	"fmt"
+	"io"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-// List lists all actions.
-func List(client *godo.Client, opts *docli.Opts) ([]godo.Action, error) {
+func Action(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	opts := docli.LoadOpts(c)
+	fmt.Printf("opts; %#v\n", opts)
+	err := ActionsList(client, opts, c.App.Writer)
+	if err != nil {
+		log.WithField("err", err).Fatal("could not list actions")
+	}
+}
+
+func ActionsList(client *godo.Client, opts *docli.Opts, w io.Writer) error {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
 		if err != nil {
@@ -23,7 +37,7 @@ func List(client *godo.Client, opts *docli.Opts) ([]godo.Action, error) {
 
 	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	list := make([]godo.Action, len(si))
@@ -31,5 +45,5 @@ func List(client *godo.Client, opts *docli.Opts) ([]godo.Action, error) {
 		list[i] = si[i].(godo.Action)
 	}
 
-	return list, nil
+	return docli.WriteJSON(list, w)
 }

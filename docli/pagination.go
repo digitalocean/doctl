@@ -1,6 +1,7 @@
 package docli
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 
@@ -13,10 +14,12 @@ type Generator func(*godo.ListOptions) ([]interface{}, *godo.Response, error)
 
 // PaginateResp paginates a Response.
 func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
-	opt := &godo.ListOptions{}
+	opt := &godo.ListOptions{Page: 1, PerPage: 200}
 	list := []interface{}{}
 
 	for {
+		log.WithField("page", opt.Page).Info("currentpage")
+		fmt.Printf("opts: %#v\n", opt)
 		items, resp, err := gen(opt)
 		if err != nil {
 			return nil, err
@@ -36,7 +39,7 @@ func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 				log.WithFields(log.Fields{
 					"page.current": opt.Page,
 					"page.per":     opt.PerPage,
-				}).Debug("retrieving page")
+				}).Info("retrieving page")
 			}
 			pageStr := u.Query().Get("page")
 			page, err := strconv.Atoi(pageStr)

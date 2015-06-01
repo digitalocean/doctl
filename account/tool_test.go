@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"reflect"
 	"testing"
@@ -14,10 +13,6 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-type testCS struct {
-	client *godo.Client
-}
-
 var testAccount = &godo.Account{
 	DropletLimit:  10,
 	Email:         "user@example.com",
@@ -25,21 +20,7 @@ var testAccount = &godo.Account{
 	EmailVerified: true,
 }
 
-func (cs *testCS) NewClient(_ string) *godo.Client {
-	return cs.client
-}
-
 func TestAccountAction(t *testing.T) {
-	var b bytes.Buffer
-	app := cli.NewApp()
-	app.Writer = bufio.NewWriter(&b)
-
-	globalSet := flag.NewFlagSet("global test", 0)
-	globalSet.String("token", "token", "token")
-
-	set := flag.NewFlagSet("local test", 0)
-	c := cli.NewContext(app, set, globalSet)
-
 	accountDidGet := false
 
 	client := &godo.Client{
@@ -51,9 +32,9 @@ func TestAccountAction(t *testing.T) {
 		},
 	}
 
-	cs := &testCS{client}
+	cs := &docli.TestClientSource{client}
 
-	docli.WithinTest(cs, func() {
+	docli.WithinTest(cs, func(c *cli.Context) {
 		Action(c)
 		if !accountDidGet {
 			t.Errorf("Action() did not run")
