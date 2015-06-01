@@ -3,6 +3,7 @@ package docli
 import (
 	"fmt"
 	"net/url"
+	"reflect"
 	"strconv"
 
 	log "github.com/Sirupsen/logrus"
@@ -16,23 +17,12 @@ type Generator func(*godo.ListOptions) ([]interface{}, *godo.Response, error)
 func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 	opt := &godo.ListOptions{}
 	list := []interface{}{}
-	fmt.Printf("opts: %#v\n", opts)
 
 	for {
-		log.WithFields(log.Fields{
-			"page":     opt.Page,
-			"per_page": opt.PerPage,
-		}).Warn("the opts")
-
 		items, resp, err := gen(opt)
 		if err != nil {
 			return nil, err
 		}
-
-		log.WithFields(log.Fields{
-			"pages": fmt.Sprintf("%#v", resp.Links.Pages),
-			"resp":  fmt.Sprintf("%#v", resp.Links),
-		}).Warn("current page")
 
 		for _, i := range items {
 			list = append(list, i)
@@ -44,10 +34,12 @@ func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 				return nil, err
 			}
 
-			log.WithFields(log.Fields{
-				"next_url": u.String(),
-			}).Warn("current page")
-
+			if opts.Debug {
+				log.WithFields(log.Fields{
+					"page.current": opt.Page,
+					"page.per":     opt.PerPage,
+				}).Debug("retrieving page")
+			}
 			pageStr := u.Query().Get("page")
 			page, err := strconv.Atoi(pageStr)
 			if err != nil {
@@ -59,19 +51,65 @@ func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 		}
 
 		break
-
-		//if resp.Links == nil || resp.Links.IsLastPage() {
-		//break
-		//}
-
-		//page, err := resp.Links.CurrentPage()
-		//if err != nil {
-		//return nil, err
-		//}
-
-		//opt.Page = page + 1
 	}
 
 	return list, nil
 
+}
+
+func PaginageResp2(f interface{}, opts *Opts) (interface{}, error) {
+	opt := &godo.ListOptions{}
+	vopt := reflect.ValueOf(opt)
+
+	vf := reflect.ValueOf(f)
+	fmt.Printf("vf: %#v\n", vf.Type().Out(0).Kind())
+
+	vtype := vf.Type().Out(0)
+
+	list := reflect.MakeSlice(reflect.SliceOf(vtype), 0, 1000)
+
+	for {
+		values := vf.Call([]reflect.Value{vopt})
+
+		err := reflect.ValueOf(values[2]).Interface()
+
+		switch e := err.(type) {
+		case error:
+			return nil, e
+		}
+
+		items := reflect.ValueOf(values[0])
+
+		for i := 0; i < items.Len(); i++ {
+			list = reflect.Append(list, items.Index(i))
+		}
+
+		resp := reflect.ValueOf(values[1]).Interface().(*godo.Response)
+
+		if uStr := resp.Links.Pages.Next; len(uStr) > 0 {
+			u, err := url.Parse(uStr)
+			if err != nil {
+				return nil, err
+			}
+
+			if opts.Debug {
+				log.WithFields(log.Fields{
+					"page.current": opt.Page,
+					"page.per":     opt.PerPage,
+				}).Debug("retrieving page")
+			}
+			pageStr := u.Query().Get("page")
+			page, err := strconv.Atoi(pageStr)
+			if err != nil {
+				return nil, err
+			}
+
+			opt.Page = page
+			continue
+		}
+
+		break
+	}
+
+	return list.Interface(), fmt.Errorf("testing")
 }
