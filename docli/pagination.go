@@ -1,7 +1,6 @@
 package docli
 
 import (
-	"fmt"
 	"net/url"
 	"strconv"
 
@@ -19,7 +18,6 @@ func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 
 	for {
 		log.WithField("page", opt.Page).Info("currentpage")
-		fmt.Printf("opts: %#v\n", opt)
 		items, resp, err := gen(opt)
 		if err != nil {
 			return nil, err
@@ -27,6 +25,10 @@ func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 
 		for _, i := range items {
 			list = append(list, i)
+		}
+
+		if resp.Links.Pages == nil {
+			break
 		}
 
 		if uStr := resp.Links.Pages.Next; len(uStr) > 0 {

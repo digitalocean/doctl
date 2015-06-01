@@ -25,24 +25,9 @@ func domainCommands() cli.Command {
 
 func domainList() cli.Command {
 	return cli.Command{
-		Name:  "list",
-		Usage: "list domains",
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-
-			list, err := domains.List(client, opts)
-			if err != nil {
-				// TODO this needs to be json
-				panic(err)
-			}
-
-			j, err := toJSON(list)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(j)
-		},
+		Name:   "list",
+		Usage:  "list domains",
+		Action: domains.List,
 	}
 }
 

@@ -1,12 +1,17 @@
 package domains
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
 // List lists all domains.
-func List(client *godo.Client, opts *docli.Opts) ([]godo.Domain, error) {
+func List(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	opts := docli.LoadOpts(c)
+
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Domains.List(opt)
 		if err != nil {
@@ -23,7 +28,7 @@ func List(client *godo.Client, opts *docli.Opts) ([]godo.Domain, error) {
 
 	si, err := docli.PaginateResp(f, opts)
 	if err != nil {
-		return nil, err
+		log.WithField("err", err).Fatal("could not list domains")
 	}
 
 	list := make([]godo.Domain, len(si))
@@ -31,5 +36,5 @@ func List(client *godo.Client, opts *docli.Opts) ([]godo.Domain, error) {
 		list[i] = si[i].(godo.Domain)
 	}
 
-	return list, nil
+	docli.WriteJSON(list, c.App.Writer)
 }
