@@ -71,7 +71,7 @@ func (s *DomainsServiceMock) DeleteRecord(name string, id int) (*godo.Response, 
 }
 
 func (s *DomainsServiceMock) EditRecord(name string, id int, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
-	return s.EditRecord(name, id, req)
+	return s.EditRecordFn(name, id, req)
 }
 
 func (s *DomainsServiceMock) CreateRecord(name string, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {

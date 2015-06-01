@@ -1,43 +1,30 @@
 package domainrecs
 
 import (
-	"fmt"
-
+	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli/docli"
+	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-// EditRequest contains domain record items which can be updated.
-type EditRequest struct {
-	Type     string
-	Name     string
-	Data     string
-	Priority int
-	Port     int
-	Weight   int
-}
+func Update(c *cli.Context) {
+	client := docli.NewClient(c, docli.DefaultClientSource)
+	domainName := c.String("domain-name")
+	recordID := c.Int("record-id")
 
-// IsValid returns if an edit request is valid or not.
-func (ur *EditRequest) IsValid() bool {
-	return true
-}
-
-// Update updates a domain record.
-func Update(client *godo.Client, domain string, id int, ur *EditRequest) (*godo.DomainRecord, error) {
-	drur := &godo.DomainRecordEditRequest{
-		Type:     ur.Type,
-		Name:     ur.Name,
-		Data:     ur.Data,
-		Priority: ur.Priority,
-		Port:     ur.Port,
-		Weight:   ur.Weight,
+	drcr := &godo.DomainRecordEditRequest{
+		Type:     c.String("record-type"),
+		Name:     c.String("record-name"),
+		Data:     c.String("record-data"),
+		Priority: c.Int("record-priority"),
+		Port:     c.Int("record-port"),
+		Weight:   c.Int("record-weight"),
 	}
 
-	rec, _, err := client.Domains.EditRecord(domain, id, drur)
+	r, _, err := client.Domains.EditRecord(domainName, recordID, drcr)
 	if err != nil {
-		return nil, err
+		logrus.WithField("err", err).Fatal("could not update record")
 	}
 
-	fmt.Printf("rec: %#v\n", rec)
-
-	return rec, err
+	docli.WriteJSON(r, c.App.Writer)
 }

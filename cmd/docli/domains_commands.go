@@ -142,17 +142,6 @@ func recordCreate() cli.Command {
 	}
 }
 
-func extractDomainRecordArgs(c *cli.Context) *domainrecs.EditRequest {
-	return &domainrecs.EditRequest{
-		Type:     c.String("type"),
-		Name:     c.String("name"),
-		Data:     c.String("data"),
-		Priority: c.Int("priority"),
-		Port:     c.Int("port"),
-		Weight:   c.Int("weight"),
-	}
-}
-
 func recordGet() cli.Command {
 	return cli.Command{
 		Name:  "get",
@@ -209,6 +198,7 @@ func recordUpdate() cli.Command {
 				Usage: "record weight (required for SRV records)",
 			},
 		},
+		Action: domainrecs.Update,
 	}
 }
 
