@@ -178,3 +178,53 @@ func (s *DropletActionsServiceMock) Snapshot(id int, name string) (*godo.Action,
 func (s *DropletActionsServiceMock) Upgrade(id int) (*godo.Action, *godo.Response, error) {
 	return s.UpgradeFn(id)
 }
+
+type DropletsServiceMock struct {
+	ActionsFn   func(dropletID int, opt *godo.ListOptions) ([]godo.Action, *godo.Response, error)
+	BackupsFn   func(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
+	CreateFn    func(createRequest *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error)
+	DeleteFn    func(dropletID int) (*godo.Response, error)
+	GetFn       func(dropletID int) (*godo.Droplet, *godo.Response, error)
+	KernelsFn   func(dropletID int, opt *godo.ListOptions) ([]godo.Kernel, *godo.Response, error)
+	ListFn      func(opt *godo.ListOptions) ([]godo.Droplet, *godo.Response, error)
+	NeighborsFn func(dropletID int) ([]godo.Droplet, *godo.Response, error)
+	SnapshotsFn func(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
+}
+
+var _ godo.DropletsService = &DropletsServiceMock{}
+
+func (s *DropletsServiceMock) Actions(dropletID int, opt *godo.ListOptions) ([]godo.Action, *godo.Response, error) {
+	return s.ActionsFn(dropletID, opt)
+}
+
+func (s *DropletsServiceMock) Backups(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
+	return s.BackupsFn(dropletID, opt)
+}
+
+func (s *DropletsServiceMock) Create(createRequest *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error) {
+	return s.CreateFn(createRequest)
+}
+
+func (s *DropletsServiceMock) Delete(dropletID int) (*godo.Response, error) {
+	return s.DeleteFn(dropletID)
+}
+
+func (s *DropletsServiceMock) Get(dropletID int) (*godo.Droplet, *godo.Response, error) {
+	return s.GetFn(dropletID)
+}
+
+func (s *DropletsServiceMock) Kernels(dropletID int, opt *godo.ListOptions) ([]godo.Kernel, *godo.Response, error) {
+	return s.KernelsFn(dropletID, opt)
+}
+
+func (s *DropletsServiceMock) List(opt *godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
+	return s.ListFn(opt)
+}
+
+func (s *DropletsServiceMock) Neighbors(dropletID int) ([]godo.Droplet, *godo.Response, error) {
+	return s.NeighborsFn(dropletID)
+}
+
+func (s *DropletsServiceMock) Snapshots(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
+	return s.SnapshotsFn(dropletID, opt)
+}

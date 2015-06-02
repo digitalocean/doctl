@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/docli/droplets"
 	"github.com/codegangsta/cli"
 )
@@ -36,27 +35,7 @@ func dropletList() cli.Command {
 				Usage: "return list of droplets as JSON array",
 			},
 		},
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-
-			list, err := droplets.List(client, opts)
-			if err != nil {
-				panic(err)
-			}
-			if c.Bool("json") {
-				j, err := toJSON(list)
-				if err != nil {
-					panic(err)
-				}
-				fmt.Println(j)
-			} else {
-				for _, d := range list {
-					fmt.Printf("%s\n", droplets.ToText(&d))
-				}
-			}
-
-		},
+		Action: droplets.List,
 	}
 }
 
@@ -104,28 +83,7 @@ func dropletCreate() cli.Command {
 				Usage: "droplet name",
 			},
 		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-			cr := &droplets.CreateRequest{
-				Name:              c.String("name"),
-				Region:            c.String("region"),
-				Size:              c.String("size"),
-				Image:             c.String("image"),
-				SSHKeys:           c.StringSlice("ssh-keys"),
-				Backups:           c.Bool("backups"),
-				IPv6:              c.Bool("ipv6"),
-				PrivateNetworking: c.Bool("private-networking"),
-				UserData:          c.String("user-data"),
-			}
-
-			droplet, err := droplets.Create(client, cr)
-			if err != nil {
-				log.WithField("err", err).Error("unable to create droplet")
-				return
-			}
-
-			fmt.Printf("created droplet %d\n", droplet.ID)
-		},
+		Action: droplets.Create,
 	}
 }
 
@@ -139,23 +97,7 @@ func dropletDelete() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			id := c.Int("id")
-
-			err := droplets.Delete(client, id)
-			if err != nil {
-				panic(err)
-			}
-		},
+		Action: droplets.Delete,
 	}
 }
 
@@ -169,30 +111,7 @@ func dropletGet() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			id := c.Int("id")
-
-			droplet, err := droplets.Get(client, id)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(droplet)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: droplets.Get,
 	}
 }
 
@@ -206,31 +125,7 @@ func dropletKernels() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-
-			id := c.Int("id")
-
-			list, err := droplets.Kernels(client, opts, id)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(list)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: droplets.Kernels,
 	}
 }
 
@@ -244,31 +139,7 @@ func dropletSnapshots() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-
-			id := c.Int("id")
-
-			list, err := droplets.Snapshots(client, opts, id)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(list)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: droplets.Snapshots,
 	}
 }
 
@@ -289,24 +160,7 @@ func dropletBackups() cli.Command {
 
 			return nil
 		},
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-
-			id := c.Int("id")
-
-			list, err := droplets.Backups(client, opts, id)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(list)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: droplets.Backups,
 	}
 }
 
@@ -320,31 +174,7 @@ func dropletActions() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-
-			id := c.Int("id")
-
-			list, err := droplets.Actions(client, opts, id)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(list)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: droplets.Actions,
 	}
 }
 
@@ -358,29 +188,6 @@ func dropletNeighbors() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			id := c.Int("id")
-
-			list, err := droplets.Neighbors(client, id)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(list)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: droplets.Neighbors,
 	}
 }
