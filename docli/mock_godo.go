@@ -273,3 +273,18 @@ func (s *ImagesServiceMock) Update(id int, req *godo.ImageUpdateRequest) (*godo.
 func (s *ImagesServiceMock) Delete(id int) (*godo.Response, error) {
 	return s.DeleteFn(id)
 }
+
+type ImageActionsServiceMock struct {
+	GetFn      func(imageID, actionID int) (*godo.Action, *godo.Response, error)
+	TransferFn func(imageID int, transferRequest *godo.ActionRequest) (*godo.Action, *godo.Response, error)
+}
+
+var _ godo.ImageActionsService = &ImageActionsServiceMock{}
+
+func (s *ImageActionsServiceMock) Get(imageID, actionID int) (*godo.Action, *godo.Response, error) {
+	return s.GetFn(imageID, actionID)
+}
+
+func (s *ImageActionsServiceMock) Transfer(imageID int, transferRequest *godo.ActionRequest) (*godo.Action, *godo.Response, error) {
+	return s.TransferFn(imageID, transferRequest)
+}

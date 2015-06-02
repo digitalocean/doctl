@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/bryanl/docli/imagesactions"
 	"github.com/codegangsta/cli"
 )
@@ -32,35 +30,7 @@ func imageActionGet() cli.Command {
 				Usage: "action id",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("image-id") {
-				return fmt.Errorf("image id required")
-			}
-
-			if !c.IsSet("action-id") {
-				return fmt.Errorf("action id required")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			imageID := c.Int("image-id")
-			actionID := c.Int("action-id")
-
-			action, err := imageactions.Get(client, imageID, actionID)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(action)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: imageactions.Get,
 	}
 }
 
@@ -68,5 +38,16 @@ func imageActionTransfer() cli.Command {
 	return cli.Command{
 		Name:  "transfer",
 		Usage: "tranfser image (not implemented)",
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "image-id",
+				Usage: "image id",
+			},
+			cli.StringFlag{
+				Name:  "region",
+				Usage: "region",
+			},
+		},
+		Action: imageactions.Transfer,
 	}
 }
