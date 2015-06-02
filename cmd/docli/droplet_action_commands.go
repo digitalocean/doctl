@@ -1,11 +1,8 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/bryanl/docli/dropletactions"
 	"github.com/codegangsta/cli"
-	"github.com/digitalocean/godo"
 )
 
 func dropletActionCommands() cli.Command {
@@ -97,36 +94,7 @@ func dropletRestore() cli.Command {
 				Usage: "image slug or id (required)",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			if !c.IsSet("image") {
-				return fmt.Errorf("invalid image")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			id := c.Int("id")
-			image := c.Int("image")
-
-			a, err := dropletactions.Restore(client, id, image)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(a)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: dropletactions.Restore,
 	}
 }
 
@@ -148,37 +116,7 @@ func dropletResize() cli.Command {
 				Usage: "increase disk size",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			if !c.IsSet("size") {
-				return fmt.Errorf("invalid size slug")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			id := c.Int("id")
-			size := c.String("size")
-			disk := c.Bool("disk")
-
-			a, err := dropletactions.Resize(client, id, size, disk)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(a)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: dropletactions.Resize,
 	}
 }
 
@@ -196,36 +134,7 @@ func dropletRebuild() cli.Command {
 				Usage: "image slug or image id (required)",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			if !c.IsSet("image") {
-				return fmt.Errorf("invalid image")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			id := c.Int("id")
-			image := c.String("image")
-
-			a, err := dropletactions.Rebuild(client, id, image)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(a)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: dropletactions.Rebuild,
 	}
 }
 
@@ -243,35 +152,7 @@ func dropletRename() cli.Command {
 				Usage: "new name for droplet (required)",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			if !c.IsSet("name") {
-				return fmt.Errorf("invalid name")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			id := c.Int("id")
-			name := c.String("name")
-
-			a, err := dropletactions.Rename(client, id, name)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(a)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: dropletactions.Rename,
 	}
 }
 
@@ -289,35 +170,7 @@ func dropletChangeKernel() cli.Command {
 				Usage: "new kernel for droplet (required)",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			if !c.IsSet("kernel") {
-				return fmt.Errorf("invalid kernel")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			id := c.Int("id")
-			kernel := c.Int("kernel")
-
-			a, err := dropletactions.ChangeKernel(client, id, kernel)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(a)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: dropletactions.ChangeKernel,
 	}
 }
 
@@ -335,35 +188,11 @@ func dropletSnapshot() cli.Command {
 				Usage: "name for snapshot",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			id := c.Int("id")
-			name := c.String("name")
-
-			a, err := dropletactions.Snapshot(client, id, name)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(a)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: dropletactions.Snapshot,
 	}
 }
 
-type noArgDropletFn func(client *godo.Client, id int) (*godo.Action, error)
+type noArgDropletFn func(c *cli.Context)
 
 func noArgDropletCommand(name, usage string, fn noArgDropletFn) cli.Command {
 	return cli.Command{
@@ -375,30 +204,7 @@ func noArgDropletCommand(name, usage string, fn noArgDropletFn) cli.Command {
 				Usage: "droplet id (required)",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			id := c.Int("id")
-
-			a, err := fn(client, id)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(a)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: fn,
 	}
 }
 
@@ -416,35 +222,6 @@ func dropletActionGet() cli.Command {
 				Usage: "action id",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			if !c.IsSet("action-id") {
-				return fmt.Errorf("invalid action id")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			id := c.Int("id")
-			actionID := c.Int("action-id")
-
-			a, err := dropletactions.Get(client, id, actionID)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(a)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: dropletactions.Get,
 	}
 }
