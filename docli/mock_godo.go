@@ -228,3 +228,48 @@ func (s *DropletsServiceMock) Neighbors(dropletID int) ([]godo.Droplet, *godo.Re
 func (s *DropletsServiceMock) Snapshots(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
 	return s.SnapshotsFn(dropletID, opt)
 }
+
+type ImagesServiceMock struct {
+	ListFn             func(*godo.ListOptions) ([]godo.Image, *godo.Response, error)
+	ListDistributionFn func(opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
+	ListApplicationFn  func(opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
+	ListUserFn         func(opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
+	GetByIDFn          func(int) (*godo.Image, *godo.Response, error)
+	GetBySlugFn        func(string) (*godo.Image, *godo.Response, error)
+	UpdateFn           func(int, *godo.ImageUpdateRequest) (*godo.Image, *godo.Response, error)
+	DeleteFn           func(int) (*godo.Response, error)
+}
+
+var _ godo.ImagesService = &ImagesServiceMock{}
+
+func (s *ImagesServiceMock) List(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
+	return s.ListFn(opts)
+}
+
+func (s *ImagesServiceMock) ListDistribution(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
+	return s.ListDistributionFn(opts)
+}
+
+func (s *ImagesServiceMock) ListApplication(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
+	return s.ListApplicationFn(opts)
+}
+
+func (s *ImagesServiceMock) ListUser(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
+	return s.ListUserFn(opts)
+}
+
+func (s *ImagesServiceMock) GetByID(id int) (*godo.Image, *godo.Response, error) {
+	return s.GetByIDFn(id)
+}
+
+func (s *ImagesServiceMock) GetBySlug(slug string) (*godo.Image, *godo.Response, error) {
+	return s.GetBySlugFn(slug)
+}
+
+func (s *ImagesServiceMock) Update(id int, req *godo.ImageUpdateRequest) (*godo.Image, *godo.Response, error) {
+	return s.UpdateFn(id, req)
+}
+
+func (s *ImagesServiceMock) Delete(id int) (*godo.Response, error) {
+	return s.DeleteFn(id)
+}
