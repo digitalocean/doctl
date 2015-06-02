@@ -29,7 +29,6 @@ type DropletActionsService interface {
 	EnableIPv6(int) (*Action, *Response, error)
 	EnablePrivateNetworking(int) (*Action, *Response, error)
 	Upgrade(int) (*Action, *Response, error)
-	doAction(int, *ActionRequest) (*Action, *Response, error)
 	Get(int, int) (*Action, *Response, error)
 	GetByURI(string) (*Action, *Response, error)
 }
