@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/codegangsta/cli"
-	"github.com/digitalocean/godo"
-	"github.com/digitalocean/godo/util"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo/util"
 
-	"golang.org/x/oauth2"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var DropletCommand = cli.Command{
@@ -194,7 +194,7 @@ func dropletCreate(ctx *cli.Context) {
 		UserData:          userData,
 	}
 
-	dropletRoot, resp, err := client.Droplets.Create(createRequest)
+	droplet, resp, err := client.Droplets.Create(createRequest)
 	if err != nil {
 		fmt.Printf("Unable to create Droplet: %s\n", err)
 		os.Exit(1)
@@ -203,7 +203,7 @@ func dropletCreate(ctx *cli.Context) {
 	if ctx.Bool("wait-for-active") {
 		util.WaitForActive(client, resp.Links.Actions[0].HREF)
 	}
-	WriteOutput(dropletRoot.Droplet)
+	WriteOutput(droplet)
 }
 
 func dropletList(ctx *cli.Context) {
@@ -305,7 +305,7 @@ func dropletDestroy(ctx *cli.Context) {
 		}
 	}
 
-	dropletRoot, _, err := client.Droplets.Get(id)
+	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
 		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
@@ -317,7 +317,7 @@ func dropletDestroy(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Droplet %s destroyed.\n", dropletRoot.Droplet.Name)
+	fmt.Printf("Droplet %s destroyed.\n", droplet.Name)
 }
 
 //
@@ -347,13 +347,13 @@ func dropletActionReboot(ctx *cli.Context) {
 		}
 	}
 
-	dropletRoot, _, err := client.Droplets.Get(id)
+	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
 		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	action, _, err := client.DropletActions.Reboot(dropletRoot.Droplet.ID)
+	action, _, err := client.DropletActions.Reboot(droplet.ID)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -385,13 +385,13 @@ func dropletActionPowercycle(ctx *cli.Context) {
 		}
 	}
 
-	dropletRoot, _, err := client.Droplets.Get(id)
+	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
 		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	action, _, err := client.DropletActions.PowerCycle(dropletRoot.Droplet.ID)
+	action, _, err := client.DropletActions.PowerCycle(droplet.ID)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -423,13 +423,13 @@ func dropletActionShutdown(ctx *cli.Context) {
 		}
 	}
 
-	dropletRoot, _, err := client.Droplets.Get(id)
+	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
 		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	action, _, err := client.DropletActions.Shutdown(dropletRoot.Droplet.ID)
+	action, _, err := client.DropletActions.Shutdown(droplet.ID)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -461,13 +461,13 @@ func dropletActionPoweroff(ctx *cli.Context) {
 		}
 	}
 
-	dropletRoot, _, err := client.Droplets.Get(id)
+	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
 		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	action, _, err := client.DropletActions.PowerOff(dropletRoot.Droplet.ID)
+	action, _, err := client.DropletActions.PowerOff(droplet.ID)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -499,13 +499,13 @@ func dropletActionPoweron(ctx *cli.Context) {
 		}
 	}
 
-	dropletRoot, _, err := client.Droplets.Get(id)
+	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
 		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	action, _, err := client.DropletActions.PowerOn(dropletRoot.Droplet.ID)
+	action, _, err := client.DropletActions.PowerOn(droplet.ID)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -537,13 +537,13 @@ func dropletActionPasswordReset(ctx *cli.Context) {
 		}
 	}
 
-	dropletRoot, _, err := client.Droplets.Get(id)
+	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
 		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	action, _, err := client.DropletActions.PasswordReset(dropletRoot.Droplet.ID)
+	action, _, err := client.DropletActions.PasswordReset(droplet.ID)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -578,13 +578,13 @@ func dropletActionResize(ctx *cli.Context) {
 		}
 	}
 
-	dropletRoot, _, err := client.Droplets.Get(id)
+	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
 		fmt.Printf("Unable to find Droplet: %s\n", err)
 		os.Exit(1)
 	}
 
-	action, _, err := client.DropletActions.Resize(dropletRoot.Droplet.ID, size, disk)
+	action, _, err := client.DropletActions.Resize(droplet.ID, size, disk)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

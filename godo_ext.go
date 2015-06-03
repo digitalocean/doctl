@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/digitalocean/godo"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
 )
 
 func FindDropletByName(c *godo.Client, name string) (*godo.Droplet, error) {

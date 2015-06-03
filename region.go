@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/codegangsta/cli"
-	"github.com/digitalocean/godo"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
 
-	"golang.org/x/oauth2"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var RegionCommand = cli.Command{
