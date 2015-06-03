@@ -1,12 +1,8 @@
 package main
 
 import (
-	"fmt"
-
-	log "github.com/Sirupsen/logrus"
 	"github.com/bryanl/docli/sshkeys"
 	"github.com/codegangsta/cli"
-	"github.com/digitalocean/godo"
 )
 
 func sshKeyCommands() cli.Command {
@@ -25,24 +21,9 @@ func sshKeyCommands() cli.Command {
 
 func sshKeyList() cli.Command {
 	return cli.Command{
-		Name:  "list",
-		Usage: "list ssh keys",
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-
-			list, err := sshkeys.List(client, opts)
-			if err != nil {
-				// TODO this needs to be json
-				panic(err)
-			}
-
-			j, err := toJSON(list)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(j)
-		},
+		Name:   "list",
+		Usage:  "list ssh keys",
+		Action: sshkeys.List,
 	}
 }
 
@@ -60,32 +41,7 @@ func sshKeyCreate() cli.Command {
 				Usage: "ssh public key",
 			},
 		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-			cr := &sshkeys.CreateRequest{
-				Name:      c.String("name"),
-				PublicKey: c.String("public-key"),
-			}
-
-			if !cr.IsValid() {
-				log.Error("invalid parameters")
-				return
-			}
-
-			key, err := sshkeys.Create(client, cr)
-			if err != nil {
-				log.WithField("err", err).Error("unable to create key")
-				return
-			}
-
-			j, err := toJSON(key)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: sshkeys.Create,
 	}
 }
 
@@ -94,49 +50,12 @@ func sshKeyGet() cli.Command {
 		Name:  "get",
 		Usage: "get ssh key",
 		Flags: []cli.Flag{
-			cli.IntFlag{
-				Name:  "id",
-				Usage: "ssh key id",
-			},
 			cli.StringFlag{
-				Name:  "fingerprint",
-				Usage: "ssh key fingerprint",
+				Name:  "key",
+				Usage: "ssh key id or fingerprint",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			fingerprint := c.String("fingerprint")
-
-			return sshkeys.IsValidGetArgs(id, fingerprint)
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			id := c.Int("id")
-			fingerprint := c.String("fingerprint")
-
-			var key *godo.Key
-			var err error
-
-			switch {
-			case id != 0:
-				key, err = sshkeys.RetrieveByID(client, id)
-			default:
-				key, err = sshkeys.RetrieveByFingerprint(client, fingerprint)
-			}
-
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(key)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: sshkeys.Get,
 	}
 }
 
@@ -158,55 +77,7 @@ func sshKeyUpdate() cli.Command {
 				Usage: "ssh key name",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			fingerprint := c.String("fingerprint")
-
-			err := sshkeys.IsValidGetArgs(id, fingerprint)
-			if err != nil {
-				return err
-			}
-
-			name := c.String("name")
-			if l := len(name); l < 1 {
-				return fmt.Errorf("update requires name")
-			}
-
-			return nil
-		},
-		Action: func(c *cli.Context) {
-
-			client := newClient(c)
-
-			id := c.Int("id")
-			fingerprint := c.String("fingerprint")
-			name := c.String("name")
-
-			var key *godo.Key
-			var err error
-
-			ur := &sshkeys.UpdateRequest{
-				Name: name,
-			}
-
-			switch {
-			case id != 0:
-				key, err = sshkeys.UpdateByID(client, id, ur)
-			default:
-				key, err = sshkeys.UpdateByFingerprint(client, fingerprint, ur)
-			}
-
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(key)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Action: sshkeys.Update,
 	}
 }
 
@@ -216,37 +87,10 @@ func sshKeyDelete() cli.Command {
 		Usage: "delete ssh key",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "id",
-				Usage: "ssh key id",
-			},
-			cli.StringFlag{
-				Name:  "fingerprint",
-				Usage: "ssh key fingerprint",
+				Name:  "key",
+				Usage: "ssh key id or fingerprint",
 			},
 		},
-		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			fingerprint := c.String("fingerprint")
-
-			return sshkeys.IsValidGetArgs(id, fingerprint)
-		},
-		Action: func(c *cli.Context) {
-			client := newClient(c)
-
-			id := c.Int("id")
-			fingerprint := c.String("fingerprint")
-
-			var err error
-			switch {
-			case id != 0:
-				err = sshkeys.DeleteByID(client, id)
-			default:
-				err = sshkeys.DeleteByFingerprint(client, fingerprint)
-			}
-
-			if err != nil {
-				panic(err)
-			}
-		},
+		Action: sshkeys.Delete,
 	}
 }

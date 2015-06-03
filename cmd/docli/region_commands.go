@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/bryanl/docli/regions"
 	"github.com/codegangsta/cli"
 )
@@ -19,22 +17,8 @@ func regionCommands() cli.Command {
 
 func regionList() cli.Command {
 	return cli.Command{
-		Name:  "list",
-		Usage: "list regions",
-		Action: func(c *cli.Context) {
-			opts := loadOpts(c)
-			client := newClient(c)
-			list, err := regions.List(client, opts)
-			if err != nil {
-				panic(err)
-			}
-
-			j, err := toJSON(list)
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Println(j)
-		},
+		Name:   "list",
+		Usage:  "list regions",
+		Action: regions.List,
 	}
 }

@@ -288,3 +288,68 @@ func (s *ImageActionsServiceMock) Get(imageID, actionID int) (*godo.Action, *god
 func (s *ImageActionsServiceMock) Transfer(imageID int, transferRequest *godo.ActionRequest) (*godo.Action, *godo.Response, error) {
 	return s.TransferFn(imageID, transferRequest)
 }
+
+type RegionsServiceMock struct {
+	ListFn func(opts *godo.ListOptions) ([]godo.Region, *godo.Response, error)
+}
+
+var _ godo.RegionsService = &RegionsServiceMock{}
+
+func (s *RegionsServiceMock) List(opts *godo.ListOptions) ([]godo.Region, *godo.Response, error) {
+	return s.ListFn(opts)
+}
+
+type SizesServiceMock struct {
+	ListFn func(opts *godo.ListOptions) ([]godo.Size, *godo.Response, error)
+}
+
+var _ godo.SizesService = &SizesServiceMock{}
+
+func (s *SizesServiceMock) List(opts *godo.ListOptions) ([]godo.Size, *godo.Response, error) {
+	return s.ListFn(opts)
+}
+
+type KeysServiceMock struct {
+	ListFn                func(*godo.ListOptions) ([]godo.Key, *godo.Response, error)
+	GetByIDFn             func(int) (*godo.Key, *godo.Response, error)
+	GetByFingerprintFn    func(string) (*godo.Key, *godo.Response, error)
+	CreateFn              func(*godo.KeyCreateRequest) (*godo.Key, *godo.Response, error)
+	UpdateByIDFn          func(int, *godo.KeyUpdateRequest) (*godo.Key, *godo.Response, error)
+	UpdateByFingerprintFn func(string, *godo.KeyUpdateRequest) (*godo.Key, *godo.Response, error)
+	DeleteByIDFn          func(int) (*godo.Response, error)
+	DeleteByFingerprintFn func(string) (*godo.Response, error)
+}
+
+var _ godo.KeysService = &KeysServiceMock{}
+
+func (s *KeysServiceMock) List(opts *godo.ListOptions) ([]godo.Key, *godo.Response, error) {
+	return s.ListFn(opts)
+}
+
+func (s *KeysServiceMock) GetByID(id int) (*godo.Key, *godo.Response, error) {
+	return s.GetByIDFn(id)
+}
+
+func (s *KeysServiceMock) GetByFingerprint(fingerprint string) (*godo.Key, *godo.Response, error) {
+	return s.GetByFingerprintFn(fingerprint)
+}
+
+func (s *KeysServiceMock) Create(req *godo.KeyCreateRequest) (*godo.Key, *godo.Response, error) {
+	return s.CreateFn(req)
+}
+
+func (s *KeysServiceMock) UpdateByID(id int, req *godo.KeyUpdateRequest) (*godo.Key, *godo.Response, error) {
+	return s.UpdateByIDFn(id, req)
+}
+
+func (s *KeysServiceMock) UpdateByFingerprint(fingerprint string, req *godo.KeyUpdateRequest) (*godo.Key, *godo.Response, error) {
+	return s.UpdateByFingerprintFn(fingerprint, req)
+}
+
+func (s *KeysServiceMock) DeleteByID(id int) (*godo.Response, error) {
+	return s.DeleteByIDFn(id)
+}
+
+func (s *KeysServiceMock) DeleteByFingerprint(fingerprint string) (*godo.Response, error) {
+	return s.DeleteByFingerprintFn(fingerprint)
+}
