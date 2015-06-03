@@ -20,7 +20,6 @@ type DropletsService interface {
 	Backups(int, *ListOptions) ([]Image, *Response, error)
 	Actions(int, *ListOptions) ([]Action, *Response, error)
 	Neighbors(int) ([]Droplet, *Response, error)
-	dropletActionStatus(string) (string, error)
 }
 
 // DropletsServiceOp handles communication with the droplet related methods of the
