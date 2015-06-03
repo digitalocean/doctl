@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/codegangsta/cli"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 
-	"golang.org/x/oauth2"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 const AppVersion = "0.0.16"

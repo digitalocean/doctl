@@ -2,12 +2,11 @@
 language: go
 
 go:
-  - 1.3.2
+  - 1.4.2
   - tip
 
 install:
   - export PATH=$PATH:$HOME/gopath/bin
-  - go get -v -u github.com/tools/godep
 
 script:
   - make test

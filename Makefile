@@ -20,13 +20,13 @@ UPLOAD_CMD = $(GHRELEASE) upload -u $(USER) -r $(EXECUTABLE) -t $(LAST_TAG) -n $
 all: test $(COMPRESSED_EXECUTABLE_TARGETS)
 
 # binaries
-bin/freebsd/amd64/$(EXECUTABLE): update_internal_version .deps
+bin/freebsd/amd64/$(EXECUTABLE): update_internal_version
 	GOARCH=amd64 GOOS=freebsd go build -o "$@"
-bin/darwin/amd64/$(EXECUTABLE): update_internal_version .deps
+bin/darwin/amd64/$(EXECUTABLE): update_internal_version
 	GOARCH=amd64 GOOS=darwin go build -o "$@"
-bin/linux/amd64/$(EXECUTABLE): update_internal_version .deps
+bin/linux/amd64/$(EXECUTABLE): update_internal_version
 	GOARCH=amd64 GOOS=linux go build -o "$@"
-bin/windows/amd64/$(EXECUTABLE).exe: update_internal_version .deps
+bin/windows/amd64/$(EXECUTABLE).exe: update_internal_version
 	GOARCH=amd64 GOOS=windows go build -o "$@"
 
 %.tar.bz2: %
@@ -43,17 +43,13 @@ release: test $(COMPRESSED_EXECUTABLE_TARGETS) $(GOPATH)/bin/github-release rele
 releaselog-$(LAST_TAG).txt:
 	git shortlog $(PREV_VERSION)..$(LAST_TAG) > releaselog-$(LAST_TAG).txt
 
-.deps:
-	$(GOPATH)/bin/godep restore
-	touch .deps
-
 update_internal_version: main.go
 	sed -i.bak 's/const AppVersion = ".*"/const AppVersion = "$(LAST_TAG)"/' main.go && rm main.go.bak
 
-build: .deps
+build:
 	go build -o "$@"
 
-install: .deps
+install:
 	go install
 
 $(GOPATH)/bin/godep:
@@ -63,10 +59,9 @@ $(GOPATH)/bin/github-release:
 	go get github.com/aktau/github-release
 
 clean:
-	rm .deps
 	rm -rf bin/
 
-test: .deps
+test:
 	go test -v .
 
 .PHONY: clean release install test update_internal_version

@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/codegangsta/cli"
-	"github.com/digitalocean/godo"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
 
-	"golang.org/x/oauth2"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var DomainCommand = cli.Command{
@@ -163,13 +163,13 @@ func domainCreate(ctx *cli.Context) {
 		Name:      ctx.Args().First(),
 		IPAddress: PublicIPForDroplet(droplet),
 	}
-	domainRoot, _, err := client.Domains.Create(createRequest)
+	domain, _, err := client.Domains.Create(createRequest)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		os.Exit(1)
 	}
 
-	WriteOutput(domainRoot.Domain)
+	WriteOutput(domain)
 }
 
 func domainDestroy(ctx *cli.Context) {
