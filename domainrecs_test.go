@@ -1,11 +1,10 @@
-package domainrecs
+package docli
 
 import (
 	"flag"
 	"reflect"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
@@ -19,7 +18,7 @@ func TestRecordsList(t *testing.T) {
 	recordsDidList := false
 
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			RecordsFn: func(name string, opts *godo.ListOptions) ([]godo.DomainRecord, *godo.Response, error) {
 				recordsDidList = true
 				return testRecordList, nil, nil
@@ -27,12 +26,12 @@ func TestRecordsList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		List(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		RecordList(c)
 		if !recordsDidList {
 			t.Errorf("List() did not run")
 		}
@@ -41,7 +40,7 @@ func TestRecordsList(t *testing.T) {
 
 func TestRecordsGet(t *testing.T) {
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			RecordFn: func(name string, id int) (*godo.DomainRecord, *godo.Response, error) {
 				if got, expected := name, "example.com"; got != expected {
 					t.Errorf("RecordFn domain = %q; expected %q", got, expected)
@@ -54,19 +53,19 @@ func TestRecordsGet(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.Int("record-id", testRecord.ID, "record-id")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Get(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		RecordGet(c)
 	})
 }
 
 func TestRecordsCreate(t *testing.T) {
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			CreateRecordFn: func(name string, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
 				expected := &godo.DomainRecordEditRequest{
 					Type: "A",
@@ -85,21 +84,21 @@ func TestRecordsCreate(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.String("record-type", "A", "record-type")
 	fs.String("record-name", "foo.example.com.", "record-name")
 	fs.String("record-data", "192.168.1.1", "record-name")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Create(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		RecordCreate(c)
 	})
 }
 
 func TestRecordsUpdate(t *testing.T) {
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			EditRecordFn: func(name string, id int, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
 				expected := &godo.DomainRecordEditRequest{
 					Type: "A",
@@ -121,7 +120,7 @@ func TestRecordsUpdate(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.Int("record-id", 1, "record-id")
@@ -129,14 +128,14 @@ func TestRecordsUpdate(t *testing.T) {
 	fs.String("record-name", "foo.example.com.", "record-name")
 	fs.String("record-data", "192.168.1.1", "record-name")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Update(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		RecordUpdate(c)
 	})
 }
 
 func TestRecordsDelete(t *testing.T) {
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			DeleteRecordFn: func(name string, id int) (*godo.Response, error) {
 				if got, expected := name, "example.com"; got != expected {
 					t.Errorf("CreateFn domain name = %q; expected %q", got, expected)
@@ -149,12 +148,12 @@ func TestRecordsDelete(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.Int("record-id", 1, "record-id")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Delete(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		RecordDelete(c)
 	})
 }

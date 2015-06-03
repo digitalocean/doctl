@@ -1,10 +1,9 @@
-package images
+package docli
 
 import (
 	"flag"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +18,7 @@ func TestImagesList(t *testing.T) {
 	didRun := false
 
 	client := &godo.Client{
-		Images: &docli.ImagesServiceMock{
+		Images: &ImagesServiceMock{
 			ListFn: func(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
 				didRun = true
 
@@ -33,11 +32,11 @@ func TestImagesList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		List(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesList(c)
 		assert.True(t, didRun)
 	})
 }
@@ -46,7 +45,7 @@ func TestImagesListDistribution(t *testing.T) {
 	didRun := false
 
 	client := &godo.Client{
-		Images: &docli.ImagesServiceMock{
+		Images: &ImagesServiceMock{
 			ListDistributionFn: func(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
 				didRun = true
 
@@ -60,11 +59,11 @@ func TestImagesListDistribution(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		ListDistribution(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesListDistribution(c)
 		assert.True(t, didRun)
 	})
 }
@@ -73,7 +72,7 @@ func TestImagesListApplication(t *testing.T) {
 	didRun := false
 
 	client := &godo.Client{
-		Images: &docli.ImagesServiceMock{
+		Images: &ImagesServiceMock{
 			ListApplicationFn: func(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
 				didRun = true
 
@@ -87,11 +86,11 @@ func TestImagesListApplication(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		ListApplication(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesListApplication(c)
 		assert.True(t, didRun)
 	})
 }
@@ -100,7 +99,7 @@ func TestImagesListUser(t *testing.T) {
 	didRun := false
 
 	client := &godo.Client{
-		Images: &docli.ImagesServiceMock{
+		Images: &ImagesServiceMock{
 			ListUserFn: func(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
 				didRun = true
 
@@ -114,18 +113,18 @@ func TestImagesListUser(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		ListUser(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesListUser(c)
 		assert.True(t, didRun)
 	})
 }
 
 func TestImagesGetByID(t *testing.T) {
 	client := &godo.Client{
-		Images: &docli.ImagesServiceMock{
+		Images: &ImagesServiceMock{
 			GetByIDFn: func(id int) (*godo.Image, *godo.Response, error) {
 				assert.Equal(t, id, testImage.ID, "image id not equal")
 				return &testImage, nil, nil
@@ -137,18 +136,18 @@ func TestImagesGetByID(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argImage, testImage.ID, argImage)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Get(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesGet(c)
 	})
 }
 
 func TestImagesGetBySlug(t *testing.T) {
 	client := &godo.Client{
-		Images: &docli.ImagesServiceMock{
+		Images: &ImagesServiceMock{
 			GetByIDFn: func(id int) (*godo.Image, *godo.Response, error) {
 				t.Error("should not try to load id")
 				return nil, nil, nil
@@ -160,18 +159,18 @@ func TestImagesGetBySlug(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argImage, testImage.Slug, argImage)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Get(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesGet(c)
 	})
 }
 
 func TestImagesUpdate(t *testing.T) {
 	client := &godo.Client{
-		Images: &docli.ImagesServiceMock{
+		Images: &ImagesServiceMock{
 			UpdateFn: func(id int, req *godo.ImageUpdateRequest) (*godo.Image, *godo.Response, error) {
 				expected := &godo.ImageUpdateRequest{Name: "new-name"}
 				assert.Equal(t, req, expected)
@@ -182,19 +181,19 @@ func TestImagesUpdate(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argImageID, testImage.ID, argImageID)
 	fs.String(argImageName, "new-name", argImageName)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Update(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesUpdate(c)
 	})
 }
 
 func TestImagesDelete(t *testing.T) {
 	client := &godo.Client{
-		Images: &docli.ImagesServiceMock{
+		Images: &ImagesServiceMock{
 			DeleteFn: func(id int) (*godo.Response, error) {
 				assert.Equal(t, id, testImage.ID)
 				return nil, nil
@@ -202,11 +201,11 @@ func TestImagesDelete(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argImageID, testImage.ID, argImageID)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Delete(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesDelete(c)
 	})
 }

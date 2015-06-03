@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli/regions"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -19,6 +19,6 @@ func regionList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list regions",
-		Action: regions.List,
+		Action: docli.RegionList,
 	}
 }

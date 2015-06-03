@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli/imagesactions"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -30,7 +30,7 @@ func imageActionGet() cli.Command {
 				Usage: "action id",
 			},
 		},
-		Action: imageactions.Get,
+		Action: docli.ImageActionsGet,
 	}
 }
 
@@ -48,6 +48,6 @@ func imageActionTransfer() cli.Command {
 				Usage: "region",
 			},
 		},
-		Action: imageactions.Transfer,
+		Action: docli.ImageActionsTransfer,
 	}
 }

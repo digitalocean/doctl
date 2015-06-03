@@ -1,23 +1,16 @@
-package sshkeys
+package docli
 
 import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-const (
-	argKey          = "key"
-	argKeyName      = "key-name"
-	argKeyPublicKey = "public-key"
-)
-
-func List(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
-	opts := docli.LoadOpts(c)
+func KeyList(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
+	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Keys.List(opt)
@@ -33,7 +26,7 @@ func List(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list keys")
 	}
@@ -43,14 +36,14 @@ func List(c *cli.Context) {
 		list[i] = si[i].(godo.Key)
 	}
 
-	err = docli.WriteJSON(list, c.App.Writer)
+	err = WriteJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
-func Get(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func KeyGet(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	rawKey := c.String(argKey)
 
 	var err error
@@ -65,15 +58,15 @@ func Get(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not retrieve key")
 	}
 
-	err = docli.WriteJSON(key, c.App.Writer)
+	err = WriteJSON(key, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Create uploads a SSH key.
-func Create(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func KeyCreate(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 
 	kcr := &godo.KeyCreateRequest{
 		Name:      c.String(argKeyName),
@@ -85,14 +78,14 @@ func Create(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not create key")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
-func Delete(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func KeyDelete(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	rawKey := c.String(argKey)
 
 	var err error
@@ -107,8 +100,8 @@ func Delete(c *cli.Context) {
 	}
 }
 
-func Update(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func KeyUpdate(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	rawKey := c.String(argKey)
 
 	req := &godo.KeyUpdateRequest{
@@ -127,7 +120,7 @@ func Update(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not update key")
 	}
 
-	err = docli.WriteJSON(key, c.App.Writer)
+	err = WriteJSON(key, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}

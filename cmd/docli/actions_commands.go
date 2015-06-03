@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli/actions"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -20,7 +20,7 @@ func actionList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list actions",
-		Action: actions.Action,
+		Action: docli.ActionList,
 	}
 }
 
@@ -34,6 +34,6 @@ func actionGet() cli.Command {
 				Usage: "Action id",
 			},
 		},
-		Action: actions.Get,
+		Action: docli.ActionGet,
 	}
 }

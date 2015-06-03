@@ -1,10 +1,9 @@
-package regions
+package docli
 
 import (
 	"flag"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +18,7 @@ func TestRegionsList(t *testing.T) {
 	didList := false
 
 	client := &godo.Client{
-		Regions: &docli.RegionsServiceMock{
+		Regions: &RegionsServiceMock{
 			ListFn: func(opt *godo.ListOptions) ([]godo.Region, *godo.Response, error) {
 				didList = true
 
@@ -33,11 +32,11 @@ func TestRegionsList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		List(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		RegionList(c)
 		assert.True(t, didList)
 	})
 }

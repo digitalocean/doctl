@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli/sizes"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -19,6 +19,6 @@ func sizeList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list sizes",
-		Action: sizes.List,
+		Action: docli.SizeList,
 	}
 }

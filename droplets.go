@@ -1,32 +1,18 @@
-package droplets
+package docli
 
 import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-const (
-	argBackups           = "enable-backups"
-	argDropletID         = "droplet-id"
-	argDropletName       = "dropletj-name"
-	argImage             = "image"
-	argIPv6              = "enable-ipv6"
-	argPrivateNetworking = "enable-private-networking"
-	argRegionSlug        = "region"
-	argSizeSlug          = "size"
-	argSSHKeys           = "ssh-keys"
-	argUserData          = "user-data"
-)
-
 // Actions returns a list of actions for a droplet.
-func Actions(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActions(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
-	opts := docli.LoadOpts(c)
+	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Actions(id, opt)
@@ -42,7 +28,7 @@ func Actions(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list actions for droplet")
 	}
@@ -52,17 +38,17 @@ func Actions(c *cli.Context) {
 		list[i] = si[i].(godo.Action)
 	}
 
-	err = docli.WriteJSON(list, c.App.Writer)
+	err = WriteJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Backups returns a list of backup images for a droplet.
-func Backups(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletBackups(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
-	opts := docli.LoadOpts(c)
+	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Backups(id, opt)
@@ -78,7 +64,7 @@ func Backups(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list backups for droplet")
 	}
@@ -88,15 +74,15 @@ func Backups(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = docli.WriteJSON(list, c.App.Writer)
+	err = WriteJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Create creates a droplet.
-func Create(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletCreate(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 
 	sshKeys := []godo.DropletCreateSSHKey{}
 	for _, rawKey := range c.StringSlice(argSSHKeys) {
@@ -131,15 +117,15 @@ func Create(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not create droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Delete destroy a droplet by id.
-func Delete(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletDelete(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	_, err := client.Droplets.Delete(id)
@@ -149,8 +135,8 @@ func Delete(c *cli.Context) {
 }
 
 // Get returns a droplet.
-func Get(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletGet(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	droplet, _, err := client.Droplets.Get(id)
@@ -158,17 +144,17 @@ func Get(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not get droplet")
 	}
 
-	err = docli.WriteJSON(droplet, c.App.Writer)
+	err = WriteJSON(droplet, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Kernels returns a list of available kernels for a droplet.
-func Kernels(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletKernels(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
-	opts := docli.LoadOpts(c)
+	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Kernels(id, opt)
@@ -184,7 +170,7 @@ func Kernels(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list kernels for droplet")
 	}
@@ -194,16 +180,16 @@ func Kernels(c *cli.Context) {
 		list[i] = si[i].(godo.Kernel)
 	}
 
-	err = docli.WriteJSON(list, c.App.Writer)
+	err = WriteJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // List returns a list of droplets.
-func List(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
-	opts := docli.LoadOpts(c)
+func DropletList(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
+	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.List(opt)
@@ -219,7 +205,7 @@ func List(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list droplets")
 	}
@@ -229,15 +215,15 @@ func List(c *cli.Context) {
 		list[i] = si[i].(godo.Droplet)
 	}
 
-	err = docli.WriteJSON(list, c.App.Writer)
+	err = WriteJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Neighbors returns a list of droplet neighbors.
-func Neighbors(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletNeighbors(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	list, _, err := client.Droplets.Neighbors(id)
@@ -245,17 +231,17 @@ func Neighbors(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not list neighbors for droplet")
 	}
 
-	err = docli.WriteJSON(list, c.App.Writer)
+	err = WriteJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Snapshots returns a list of available kernels for a droplet.
-func Snapshots(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletSnapshots(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
-	opts := docli.LoadOpts(c)
+	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Snapshots(id, opt)
@@ -271,7 +257,7 @@ func Snapshots(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list snapshots for droplet")
 	}
@@ -281,7 +267,7 @@ func Snapshots(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = docli.WriteJSON(list, c.App.Writer)
+	err = WriteJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}

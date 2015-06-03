@@ -1,4 +1,4 @@
-package account
+package docli
 
 import (
 	"bufio"
@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
@@ -24,7 +23,7 @@ func TestAccountAction(t *testing.T) {
 	accountDidGet := false
 
 	client := &godo.Client{
-		Account: &docli.AccountServiceMock{
+		Account: &AccountServiceMock{
 			GetFn: func() (*godo.Account, *godo.Response, error) {
 				accountDidGet = true
 				return testAccount, nil, nil
@@ -32,10 +31,10 @@ func TestAccountAction(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 
-	docli.WithinTest(cs, nil, func(c *cli.Context) {
-		Action(c)
+	WithinTest(cs, nil, func(c *cli.Context) {
+		AccountGet(c)
 		if !accountDidGet {
 			t.Errorf("Action() did not run")
 		}
@@ -44,7 +43,7 @@ func TestAccountAction(t *testing.T) {
 
 func TestAccountGet(t *testing.T) {
 	client := &godo.Client{
-		Account: &docli.AccountServiceMock{
+		Account: &AccountServiceMock{
 			GetFn: func() (*godo.Account, *godo.Response, error) {
 				return testAccount, nil, nil
 			},
@@ -54,7 +53,7 @@ func TestAccountGet(t *testing.T) {
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
 
-	AccountGet(client, w)
+	accountGet(client, w)
 	w.Flush()
 
 	var ar godo.Account
@@ -70,7 +69,7 @@ func TestAccountGet(t *testing.T) {
 
 func TestAccountGet_APIError(t *testing.T) {
 	client := &godo.Client{
-		Account: &docli.AccountServiceMock{
+		Account: &AccountServiceMock{
 			GetFn: func() (*godo.Account, *godo.Response, error) {
 				return nil, nil, fmt.Errorf("an error")
 			},
@@ -80,7 +79,7 @@ func TestAccountGet_APIError(t *testing.T) {
 	var b bytes.Buffer
 	w := bufio.NewWriter(&b)
 
-	err := AccountGet(client, w)
+	err := accountGet(client, w)
 	w.Flush()
 
 	if err == nil {

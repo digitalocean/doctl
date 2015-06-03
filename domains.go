@@ -1,14 +1,13 @@
-package domains
+package docli
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-func Create(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DomainCreate(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	req := &godo.DomainCreateRequest{
 		Name:      c.String("domain-name"),
 		IPAddress: c.String("ip-address"),
@@ -18,11 +17,11 @@ func Create(c *cli.Context) {
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not create domain")
 	}
-	docli.WriteJSON(d, c.App.Writer)
+	WriteJSON(d, c.App.Writer)
 }
 
-func Delete(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DomainDelete(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	name := c.String("domain-name")
 	_, err := client.Domains.Delete(name)
 	if err != nil {
@@ -31,9 +30,9 @@ func Delete(c *cli.Context) {
 }
 
 // List lists all domains.
-func List(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
-	opts := docli.LoadOpts(c)
+func DomainList(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
+	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Domains.List(opt)
@@ -49,7 +48,7 @@ func List(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list domains")
 	}
@@ -59,15 +58,15 @@ func List(c *cli.Context) {
 		list[i] = si[i].(godo.Domain)
 	}
 
-	docli.WriteJSON(list, c.App.Writer)
+	WriteJSON(list, c.App.Writer)
 }
 
-func Get(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DomainGet(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.String("domain-name")
 	a, _, err := client.Domains.Get(id)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not retrieve domain")
 	}
-	docli.WriteJSON(a, c.App.Writer)
+	WriteJSON(a, c.App.Writer)
 }

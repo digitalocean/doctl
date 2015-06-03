@@ -1,27 +1,26 @@
-package account
+package docli
 
 import (
 	"io"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-func Action(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
-	err := AccountGet(client, c.App.Writer)
+func AccountGet(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
+	err := accountGet(client, c.App.Writer)
 	if err != nil {
 		log.WithField("err", err).Fatal("could not display account")
 	}
 }
 
-func AccountGet(client *godo.Client, w io.Writer) error {
+func accountGet(client *godo.Client, w io.Writer) error {
 	a, _, err := client.Account.Get()
 	if err != nil {
 		return err
 	}
 
-	return docli.WriteJSON(a, w)
+	return WriteJSON(a, w)
 }

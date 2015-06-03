@@ -1,10 +1,9 @@
-package sizes
+package docli
 
 import (
 	"flag"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +18,7 @@ func TestSizesList(t *testing.T) {
 	didList := false
 
 	client := &godo.Client{
-		Sizes: &docli.SizesServiceMock{
+		Sizes: &SizesServiceMock{
 			ListFn: func(opt *godo.ListOptions) ([]godo.Size, *godo.Response, error) {
 				didList = true
 
@@ -33,11 +32,11 @@ func TestSizesList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		List(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		SizeList(c)
 		assert.True(t, didList)
 	})
 }

@@ -1,29 +1,24 @@
-package droplets
+package docli
 
 import (
 	"flag"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testAction      = godo.Action{ID: 1}
-	testActionList  = []godo.Action{testAction}
 	testDroplet     = godo.Droplet{ID: 1}
 	testDropletList = []godo.Droplet{testDroplet}
 	testKernel      = godo.Kernel{ID: 1}
 	testKernelList  = []godo.Kernel{testKernel}
-	testImage       = godo.Image{ID: 1}
-	testImageList   = []godo.Image{testImage}
 )
 
 func TestDropletActionList(t *testing.T) {
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			ActionsFn: func(id int, opts *godo.ListOptions) ([]godo.Action, *godo.Response, error) {
 				if got, expected := id, 1; got != expected {
 					t.Errorf("ActionsFn() id = %d; expected %d", got, expected)
@@ -39,18 +34,18 @@ func TestDropletActionList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argDropletID, 1, argDropletID)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Actions(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletActions(c)
 	})
 }
 
 func TestDropletBackupList(t *testing.T) {
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			BackupsFn: func(id int, opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
 				if got, expected := id, 1; got != expected {
 					t.Errorf("BackupsFn() id = %d; expected %d", got, expected)
@@ -66,18 +61,18 @@ func TestDropletBackupList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argDropletID, 1, argDropletID)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Backups(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletBackups(c)
 	})
 }
 
 func TestDropletCreate(t *testing.T) {
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			CreateFn: func(cr *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error) {
 				expected := &godo.DropletCreateRequest{
 					Name:    "droplet",
@@ -94,21 +89,21 @@ func TestDropletCreate(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argDropletName, "droplet", argDropletName)
 	fs.String(argRegionSlug, "dev0", argRegionSlug)
 	fs.String(argSizeSlug, "1gb", argSizeSlug)
 	fs.String(argImage, "image", argImage)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Create(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletCreate(c)
 	})
 }
 
 func TestDropletDelete(t *testing.T) {
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			DeleteFn: func(id int) (*godo.Response, error) {
 				assert.Equal(t, id, testDroplet.ID, "droplet ids did not match")
 				return nil, nil
@@ -116,18 +111,18 @@ func TestDropletDelete(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argDropletID, testDroplet.ID, argDropletID)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Delete(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletDelete(c)
 	})
 }
 
 func TestDropletGet(t *testing.T) {
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			GetFn: func(id int) (*godo.Droplet, *godo.Response, error) {
 				assert.Equal(t, id, testDroplet.ID, "droplet ids did not match")
 				return &testDroplet, nil, nil
@@ -135,18 +130,18 @@ func TestDropletGet(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argDropletID, testDroplet.ID, argDropletID)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Get(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletGet(c)
 	})
 }
 
 func TestDropletKernelList(t *testing.T) {
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			KernelsFn: func(id int, opts *godo.ListOptions) ([]godo.Kernel, *godo.Response, error) {
 				if got, expected := id, 1; got != expected {
 					t.Errorf("KernelsFn() id = %d; expected %d", got, expected)
@@ -162,19 +157,19 @@ func TestDropletKernelList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argDropletID, 1, argDropletID)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Kernels(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletKernels(c)
 	})
 }
 
 func TestDropletNeighbors(t *testing.T) {
 	didRun := false
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			NeighborsFn: func(id int) ([]godo.Droplet, *godo.Response, error) {
 				didRun = true
 				assert.Equal(t, id, 1)
@@ -189,19 +184,19 @@ func TestDropletNeighbors(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argDropletID, 1, argDropletID)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Neighbors(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletNeighbors(c)
 		assert.True(t, didRun)
 	})
 }
 
 func TestDropletSnapshotList(t *testing.T) {
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			SnapshotsFn: func(id int, opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
 				assert.Equal(t, id, 1)
 
@@ -215,19 +210,19 @@ func TestDropletSnapshotList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argDropletID, 1, argDropletID)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Snapshots(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletSnapshots(c)
 	})
 }
 
 func TestDropletsList(t *testing.T) {
 	didRun := false
 	client := &godo.Client{
-		Droplets: &docli.DropletsServiceMock{
+		Droplets: &DropletsServiceMock{
 			ListFn: func(opts *godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
 				didRun = true
 				resp := &godo.Response{
@@ -240,10 +235,10 @@ func TestDropletsList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 
-	docli.WithinTest(cs, nil, func(c *cli.Context) {
-		List(c)
+	WithinTest(cs, nil, func(c *cli.Context) {
+		DropletList(c)
 		assert.True(t, didRun)
 	})
 }

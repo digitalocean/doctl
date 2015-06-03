@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli/sshkeys"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -23,7 +23,7 @@ func sshKeyList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list ssh keys",
-		Action: sshkeys.List,
+		Action: docli.KeyList,
 	}
 }
 
@@ -41,7 +41,7 @@ func sshKeyCreate() cli.Command {
 				Usage: "ssh public key",
 			},
 		},
-		Action: sshkeys.Create,
+		Action: docli.KeyCreate,
 	}
 }
 
@@ -55,7 +55,7 @@ func sshKeyGet() cli.Command {
 				Usage: "ssh key id or fingerprint",
 			},
 		},
-		Action: sshkeys.Get,
+		Action: docli.KeyGet,
 	}
 }
 
@@ -77,7 +77,7 @@ func sshKeyUpdate() cli.Command {
 				Usage: "ssh key name",
 			},
 		},
-		Action: sshkeys.Update,
+		Action: docli.KeyUpdate,
 	}
 }
 
@@ -91,6 +91,6 @@ func sshKeyDelete() cli.Command {
 				Usage: "ssh key id or fingerprint",
 			},
 		},
-		Action: sshkeys.Delete,
+		Action: docli.KeyDelete,
 	}
 }

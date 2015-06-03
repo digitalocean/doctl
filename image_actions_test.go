@@ -1,22 +1,17 @@
-package imageactions
+package docli
 
 import (
 	"flag"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	testAction = godo.Action{ID: 1}
-)
-
 func TestImageActionsGet(t *testing.T) {
 	client := &godo.Client{
-		ImageActions: &docli.ImageActionsServiceMock{
+		ImageActions: &ImageActionsServiceMock{
 			GetFn: func(imageID, actionID int) (*godo.Action, *godo.Response, error) {
 				assert.Equal(t, imageID, 1)
 				assert.Equal(t, actionID, 2)
@@ -25,19 +20,19 @@ func TestImageActionsGet(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argImageID, 1, "image-id")
 	fs.Int(argActionID, 2, "action-id")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Get(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImageActionsGet(c)
 	})
 }
 
 func TestImageActionsTransfer(t *testing.T) {
 	client := &godo.Client{
-		ImageActions: &docli.ImageActionsServiceMock{
+		ImageActions: &ImageActionsServiceMock{
 			TransferFn: func(imageID int, req *godo.ActionRequest) (*godo.Action, *godo.Response, error) {
 				assert.Equal(t, imageID, 1)
 
@@ -49,12 +44,12 @@ func TestImageActionsTransfer(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(argImageID, 1, "image-id")
 	fs.String(argRegionSlug, "dev0", "region")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Transfer(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImageActionsTransfer(c)
 	})
 }

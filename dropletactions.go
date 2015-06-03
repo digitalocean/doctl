@@ -1,30 +1,17 @@
-package dropletactions
+package docli
 
 import (
 	"fmt"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-const (
-	argDropletID    = "droplet-id"
-	argKernelID     = "kernel-id"
-	argActionID     = "action-id"
-	argImage        = "image"
-	argImageID      = "image-id"
-	argImageSlug    = "image-slug"
-	argDropletName  = "droplet-name"
-	argResizeDisk   = "resize-disk"
-	argSnapshotName = "snapshot-name"
-)
-
 // Get returns a droplet action by id.
-func Get(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionGet(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	dropletID := c.Int(argDropletID)
 	actionID := c.Int(argActionID)
 
@@ -33,15 +20,15 @@ func Get(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not disable backups for droplet")
 	}
 
-	err = docli.WriteJSON(a, c.App.Writer)
+	err = WriteJSON(a, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // DisableBackups disables backups for a droplet.
-func DisableBackups(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionDisableBackups(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.DisableBackups(id)
@@ -49,15 +36,15 @@ func DisableBackups(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not disable backups for droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Reboot reboots a droplet.
-func Reboot(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionReboot(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.Reboot(id)
@@ -65,30 +52,30 @@ func Reboot(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not reboot droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // PowerCycle power cycles a droplet.
-func PowerCycle(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionPowerCycle(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 	r, _, err := client.DropletActions.PowerCycle(id)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not power cycle droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Shutdown shuts a droplet down.
-func Shutdown(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionShutdown(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.Shutdown(id)
@@ -96,15 +83,15 @@ func Shutdown(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not shutdown droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // PowerOff turns droplet power off.
-func PowerOff(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionPowerOff(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.PowerOff(id)
@@ -112,15 +99,15 @@ func PowerOff(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not power off droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // PowerOn turns droplet power on.
-func PowerOn(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionPowerOn(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.PowerOn(id)
@@ -128,15 +115,15 @@ func PowerOn(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not power on droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // PasswordReset resets the droplet root password.
-func PasswordReset(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionPasswordReset(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.PasswordReset(id)
@@ -144,15 +131,15 @@ func PasswordReset(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not reset password for droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // EnableIPv6 enables IPv6 for a droplet.
-func EnableIPv6(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionEnableIPv6(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.EnableIPv6(id)
@@ -160,15 +147,15 @@ func EnableIPv6(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not enable IPv6 for droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // EnablePrivateNetworking enables private networking for a droplet.
-func EnablePrivateNetworking(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionEnablePrivateNetworking(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.EnablePrivateNetworking(id)
@@ -176,15 +163,15 @@ func EnablePrivateNetworking(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not enable private networking for droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Upgrade upgrades a droplet.
-func Upgrade(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionUpgrade(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 
 	r, _, err := client.DropletActions.Upgrade(id)
@@ -192,15 +179,15 @@ func Upgrade(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not upgrade droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Restore restores a droplet using an image id.
-func Restore(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionRestore(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 	image := c.Int(argImageID)
 
@@ -209,15 +196,15 @@ func Restore(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not restore droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Resize resizesx a droplet giving a size slug and optionally expands the disk.
-func Resize(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionResize(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 	size := c.String(argImageSlug)
 	disk := c.Bool(argResizeDisk)
@@ -227,15 +214,15 @@ func Resize(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not resize droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Rebuild rebuilds a droplet using an image id or slug.
-func Rebuild(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionRebuild(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 	image := c.String(argImage)
 
@@ -251,15 +238,15 @@ func Rebuild(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not rebuild droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Rename renames a droplet.
-func Rename(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionRename(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 	name := c.String(argDropletName)
 
@@ -268,15 +255,15 @@ func Rename(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not rename droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // ChangeKernel changes the kernel for a droplet.
-func ChangeKernel(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionChangeKernel(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 	kernel := c.Int(argKernelID)
 
@@ -285,15 +272,15 @@ func ChangeKernel(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not change droplet kernel")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Snapshot creates a snapshot for a droplet.
-func Snapshot(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func DropletActionSnapshot(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argDropletID)
 	name := c.String(argSnapshotName)
 
@@ -302,7 +289,7 @@ func Snapshot(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could create snapshot for droplet")
 	}
 
-	err = docli.WriteJSON(r, c.App.Writer)
+	err = WriteJSON(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}

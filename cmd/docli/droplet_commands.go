@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/bryanl/docli/droplets"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -35,7 +35,7 @@ func dropletList() cli.Command {
 				Usage: "return list of droplets as JSON array",
 			},
 		},
-		Action: droplets.List,
+		Action: docli.DropletList,
 	}
 }
 
@@ -83,7 +83,7 @@ func dropletCreate() cli.Command {
 				Usage: "droplet name",
 			},
 		},
-		Action: droplets.Create,
+		Action: docli.DropletCreate,
 	}
 }
 
@@ -97,7 +97,7 @@ func dropletDelete() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Action: droplets.Delete,
+		Action: docli.DropletDelete,
 	}
 }
 
@@ -111,7 +111,7 @@ func dropletGet() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Action: droplets.Get,
+		Action: docli.DropletGet,
 	}
 }
 
@@ -125,7 +125,7 @@ func dropletKernels() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Action: droplets.Kernels,
+		Action: docli.DropletKernels,
 	}
 }
 
@@ -139,7 +139,7 @@ func dropletSnapshots() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Action: droplets.Snapshots,
+		Action: docli.DropletSnapshots,
 	}
 }
 
@@ -160,7 +160,7 @@ func dropletBackups() cli.Command {
 
 			return nil
 		},
-		Action: droplets.Backups,
+		Action: docli.DropletBackups,
 	}
 }
 
@@ -174,7 +174,7 @@ func dropletActions() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Action: droplets.Actions,
+		Action: docli.DropletActions,
 	}
 }
 
@@ -188,6 +188,6 @@ func dropletNeighbors() cli.Command {
 				Usage: "droplet id",
 			},
 		},
-		Action: droplets.Neighbors,
+		Action: docli.DropletNeighbors,
 	}
 }

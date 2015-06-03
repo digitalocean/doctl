@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
-
-	"github.com/bryanl/docli/images"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -28,7 +26,7 @@ func imageList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list images",
-		Action: images.List,
+		Action: docli.ImagesList,
 	}
 }
 
@@ -36,7 +34,7 @@ func imageListDistributions() cli.Command {
 	return cli.Command{
 		Name:   "list-distribution",
 		Usage:  "list distribution images",
-		Action: images.ListDistribution,
+		Action: docli.ImagesListDistribution,
 	}
 }
 
@@ -44,7 +42,7 @@ func imageListApplication() cli.Command {
 	return cli.Command{
 		Name:   "list-application",
 		Usage:  "list application images",
-		Action: images.ListApplication,
+		Action: docli.ImagesListApplication,
 	}
 }
 
@@ -52,7 +50,7 @@ func imageListUser() cli.Command {
 	return cli.Command{
 		Name:   "list-user",
 		Usage:  "list user images",
-		Action: images.ListUser,
+		Action: docli.ImagesListUser,
 	}
 }
 
@@ -66,7 +64,7 @@ func imageGet() cli.Command {
 				Usage: "image id or slug",
 			},
 		},
-		Action: images.Get,
+		Action: docli.ImagesGet,
 	}
 }
 
@@ -79,23 +77,6 @@ func imageActions() cli.Command {
 				Name:  "id",
 				Usage: "image id",
 			},
-		},
-		Before: func(c *cli.Context) error {
-			id := c.Int("id")
-			slug := c.String("slug")
-
-			if id > 0 && len(slug) > 0 {
-				return fmt.Errorf("id and slug are mutually exclusive")
-			}
-
-			if id < 1 && len(slug) < 1 {
-				return fmt.Errorf("either id or slug are required")
-			}
-
-			return fmt.Errorf("not yet implemented in godo")
-
-		},
-		Action: func(c *cli.Context) {
 		},
 	}
 }
@@ -114,7 +95,7 @@ func imageUpdate() cli.Command {
 				Usage: "image name (required)",
 			},
 		},
-		Action: images.Update,
+		Action: docli.ImagesUpdate,
 	}
 }
 
@@ -128,6 +109,6 @@ func imageDelete() cli.Command {
 				Usage: "image id (required)",
 			},
 		},
-		Action: images.Delete,
+		Action: docli.ImagesDelete,
 	}
 }

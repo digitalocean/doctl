@@ -1,8 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli/domainrecs"
-	"github.com/bryanl/docli/domains"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -24,7 +23,7 @@ func domainList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list domains",
-		Action: domains.List,
+		Action: docli.DomainList,
 	}
 }
 
@@ -42,7 +41,7 @@ func domainCreate() cli.Command {
 				Usage: "domain ip address",
 			},
 		},
-		Action: domains.Create,
+		Action: docli.DomainCreate,
 	}
 }
 
@@ -56,7 +55,7 @@ func domainGet() cli.Command {
 				Usage: "domain name",
 			},
 		},
-		Action: domains.Get,
+		Action: docli.DomainGet,
 	}
 }
 
@@ -70,7 +69,7 @@ func domainDelete() cli.Command {
 				Usage: "domain name",
 			},
 		},
-		Action: domains.Delete,
+		Action: docli.DomainDelete,
 	}
 }
 
@@ -98,7 +97,7 @@ func recordList() cli.Command {
 				Usage: "domain name",
 			},
 		},
-		Action: domainrecs.List,
+		Action: docli.RecordList,
 	}
 }
 
@@ -136,7 +135,7 @@ func recordCreate() cli.Command {
 				Usage: "record weight (required for SRV records)",
 			},
 		},
-		Action: domainrecs.Create,
+		Action: docli.RecordCreate,
 	}
 }
 
@@ -154,7 +153,7 @@ func recordGet() cli.Command {
 				Usage: "domain id (required)",
 			},
 		},
-		Action: domainrecs.Get,
+		Action: docli.RecordGet,
 	}
 }
 
@@ -196,7 +195,7 @@ func recordUpdate() cli.Command {
 				Usage: "record weight (required for SRV records)",
 			},
 		},
-		Action: domainrecs.Update,
+		Action: docli.RecordUpdate,
 	}
 }
 
@@ -214,6 +213,6 @@ func recordDelete() cli.Command {
 				Usage: "record id (required)",
 			},
 		},
-		Action: domainrecs.Delete,
+		Action: docli.RecordDelete,
 	}
 }

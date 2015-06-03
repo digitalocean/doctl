@@ -1,10 +1,9 @@
-package sshkeys
+package docli
 
 import (
 	"flag"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +18,7 @@ func TestKeysList(t *testing.T) {
 	didList := false
 
 	client := &godo.Client{
-		Keys: &docli.KeysServiceMock{
+		Keys: &KeysServiceMock{
 			ListFn: func(opts *godo.ListOptions) ([]godo.Key, *godo.Response, error) {
 				didList = true
 
@@ -34,17 +33,17 @@ func TestKeysList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		List(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		KeyList(c)
 	})
 }
 
 func TestKeysGetByID(t *testing.T) {
 	client := &godo.Client{
-		Keys: &docli.KeysServiceMock{
+		Keys: &KeysServiceMock{
 			GetByIDFn: func(id int) (*godo.Key, *godo.Response, error) {
 				assert.Equal(t, id, testKey.ID)
 				return &testKey, nil, nil
@@ -56,18 +55,18 @@ func TestKeysGetByID(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argKey, "1", argKey)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Get(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		KeyGet(c)
 	})
 }
 
 func TestKeysGetByFingerprint(t *testing.T) {
 	client := &godo.Client{
-		Keys: &docli.KeysServiceMock{
+		Keys: &KeysServiceMock{
 			GetByFingerprintFn: func(fingerprint string) (*godo.Key, *godo.Response, error) {
 				assert.Equal(t, fingerprint, testKey.Fingerprint)
 				return &testKey, nil, nil
@@ -79,18 +78,18 @@ func TestKeysGetByFingerprint(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argKey, testKey.Fingerprint, argKey)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Get(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		KeyGet(c)
 	})
 }
 
 func TestKeysCreate(t *testing.T) {
 	client := &godo.Client{
-		Keys: &docli.KeysServiceMock{
+		Keys: &KeysServiceMock{
 			CreateFn: func(req *godo.KeyCreateRequest) (*godo.Key, *godo.Response, error) {
 				expected := &godo.KeyCreateRequest{
 					Name:      "the key",
@@ -102,19 +101,19 @@ func TestKeysCreate(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argKeyName, "the key", argKeyName)
 	fs.String(argKeyPublicKey, "fingerprint", argKeyPublicKey)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Create(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		KeyCreate(c)
 	})
 }
 
 func TestKeysDeleteByID(t *testing.T) {
 	client := &godo.Client{
-		Keys: &docli.KeysServiceMock{
+		Keys: &KeysServiceMock{
 			DeleteByIDFn: func(id int) (*godo.Response, error) {
 				assert.Equal(t, id, 1)
 				return nil, nil
@@ -126,18 +125,18 @@ func TestKeysDeleteByID(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argKey, "1", argKey)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Delete(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		KeyDelete(c)
 	})
 }
 
 func TestKeysDeleteByFingerprint(t *testing.T) {
 	client := &godo.Client{
-		Keys: &docli.KeysServiceMock{
+		Keys: &KeysServiceMock{
 			DeleteByFingerprintFn: func(fingerprint string) (*godo.Response, error) {
 				assert.Equal(t, fingerprint, "fingerprint")
 				return nil, nil
@@ -149,18 +148,18 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argKey, "fingerprint", argKey)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Delete(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		KeyDelete(c)
 	})
 }
 
 func TestKeysUpdateByID(t *testing.T) {
 	client := &godo.Client{
-		Keys: &docli.KeysServiceMock{
+		Keys: &KeysServiceMock{
 			UpdateByIDFn: func(id int, req *godo.KeyUpdateRequest) (*godo.Key, *godo.Response, error) {
 				expected := &godo.KeyUpdateRequest{
 					Name: "the key",
@@ -176,19 +175,19 @@ func TestKeysUpdateByID(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argKey, "1", argKey)
 	fs.String(argKeyName, "the key", argKeyName)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Update(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		KeyUpdate(c)
 	})
 }
 
 func TestKeysUpdateByFingerprint(t *testing.T) {
 	client := &godo.Client{
-		Keys: &docli.KeysServiceMock{
+		Keys: &KeysServiceMock{
 			UpdateByFingerprintFn: func(fingerprint string, req *godo.KeyUpdateRequest) (*godo.Key, *godo.Response, error) {
 				expected := &godo.KeyUpdateRequest{
 					Name: "the key",
@@ -204,12 +203,12 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(argKey, "fingerprint", argKey)
 	fs.String(argKeyName, "the key", argKeyName)
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Update(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		KeyUpdate(c)
 	})
 }

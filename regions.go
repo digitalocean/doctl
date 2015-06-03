@@ -1,16 +1,15 @@
-package regions
+package docli
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
 // List all regions.
-func List(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
-	opts := docli.LoadOpts(c)
+func RegionList(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
+	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Regions.List(opt)
@@ -26,7 +25,7 @@ func List(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list regions")
 	}
@@ -36,7 +35,7 @@ func List(c *cli.Context) {
 		list[i] = si[i].(godo.Region)
 	}
 
-	err = docli.WriteJSON(list, c.App.Writer)
+	err = WriteJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}

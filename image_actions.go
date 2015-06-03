@@ -1,21 +1,14 @@
-package imageactions
+package docli
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-const (
-	argImageID    = "image-id"
-	argActionID   = "action-id"
-	argRegionSlug = "region"
-)
-
 // Get retrieves an action for an image.
-func Get(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func ImageActionsGet(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	imageID := c.Int(argImageID)
 	actionID := c.Int(argActionID)
 
@@ -24,15 +17,15 @@ func Get(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not get action for image")
 	}
 
-	err = docli.WriteJSON(action, c.App.Writer)
+	err = WriteJSON(action, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
 }
 
 // Tranfer an image.
-func Transfer(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func ImageActionsTransfer(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	id := c.Int(argImageID)
 	req := &godo.ActionRequest{
 		"region": c.String(argRegionSlug),
@@ -43,7 +36,7 @@ func Transfer(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not transfer image")
 	}
 
-	err = docli.WriteJSON(action, c.App.Writer)
+	err = WriteJSON(action, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}

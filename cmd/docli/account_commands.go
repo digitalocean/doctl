@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli/account"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
 
@@ -19,6 +19,6 @@ func accountGet() cli.Command {
 	return cli.Command{
 		Name:   "get",
 		Usage:  "get account",
-		Action: account.Action,
+		Action: docli.AccountGet,
 	}
 }

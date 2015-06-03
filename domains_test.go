@@ -1,11 +1,10 @@
-package domains
+package docli
 
 import (
 	"flag"
 	"reflect"
 	"testing"
 
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
@@ -21,7 +20,7 @@ func TestDomainsList(t *testing.T) {
 	domainsDisList := false
 
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			ListFn: func(opts *godo.ListOptions) ([]godo.Domain, *godo.Response, error) {
 				domainsDisList = true
 				resp := &godo.Response{
@@ -32,10 +31,10 @@ func TestDomainsList(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 
-	docli.WithinTest(cs, nil, func(c *cli.Context) {
-		List(c)
+	WithinTest(cs, nil, func(c *cli.Context) {
+		DomainList(c)
 		if !domainsDisList {
 			t.Errorf("List() did not run")
 		}
@@ -44,7 +43,7 @@ func TestDomainsList(t *testing.T) {
 
 func TestDomainsGet(t *testing.T) {
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			GetFn: func(name string) (*godo.Domain, *godo.Response, error) {
 				if got, expected := name, testDomain.Name; got != expected {
 					t.Errorf("GetFn() called with %q; expected %q", got, expected)
@@ -54,18 +53,18 @@ func TestDomainsGet(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", testDomain.Name, "domain-id")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Get(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DomainGet(c)
 	})
 }
 
 func TestDomainsCreate(t *testing.T) {
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			CreateFn: func(req *godo.DomainCreateRequest) (*godo.Domain, *godo.Response, error) {
 				expected := &godo.DomainCreateRequest{
 					Name:      testDomain.Name,
@@ -79,19 +78,19 @@ func TestDomainsCreate(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", testDomain.Name, "domain-name")
 	fs.String("ip-address", "127.0.0.1", "ip- address")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Create(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DomainCreate(c)
 	})
 }
 
 func TestDomainsDelete(t *testing.T) {
 	client := &godo.Client{
-		Domains: &docli.DomainsServiceMock{
+		Domains: &DomainsServiceMock{
 			DeleteFn: func(name string) (*godo.Response, error) {
 				if got, expected := name, testDomain.Name; got != expected {
 					t.Errorf("DeleteFn() received %q; expected %q", got, expected)
@@ -101,11 +100,11 @@ func TestDomainsDelete(t *testing.T) {
 		},
 	}
 
-	cs := &docli.TestClientSource{client}
+	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", testDomain.Name, "domain-name")
 
-	docli.WithinTest(cs, fs, func(c *cli.Context) {
-		Delete(c)
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DomainDelete(c)
 	})
 }

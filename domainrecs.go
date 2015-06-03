@@ -1,14 +1,13 @@
-package domainrecs
+package docli
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
 
-func Create(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func RecordCreate(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	domainName := c.String("domain-name")
 
 	drcr := &godo.DomainRecordEditRequest{
@@ -25,11 +24,11 @@ func Create(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not create record")
 	}
 
-	docli.WriteJSON(r, c.App.Writer)
+	WriteJSON(r, c.App.Writer)
 }
 
-func Delete(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func RecordDelete(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	domainName := c.String("domain-name")
 	recordID := c.Int("record-id")
 
@@ -40,9 +39,9 @@ func Delete(c *cli.Context) {
 }
 
 // List records for a domain.
-func List(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
-	opts := docli.LoadOpts(c)
+func RecordList(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
+	opts := LoadOpts(c)
 	name := c.String("domain-name")
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -59,7 +58,7 @@ func List(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := docli.PaginateResp(f, opts)
+	si, err := PaginateResp(f, opts)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list domain")
 	}
@@ -69,12 +68,12 @@ func List(c *cli.Context) {
 		list[i] = si[i].(godo.DomainRecord)
 	}
 
-	docli.WriteJSON(list, c.App.Writer)
+	WriteJSON(list, c.App.Writer)
 }
 
 // Retrieve a domain record.
-func Get(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func RecordGet(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	domainName := c.String("domain-name")
 	recordID := c.Int("record-id")
 
@@ -83,11 +82,11 @@ func Get(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not display record")
 	}
 
-	docli.WriteJSON(r, c.App.Writer)
+	WriteJSON(r, c.App.Writer)
 }
 
-func Update(c *cli.Context) {
-	client := docli.NewClient(c, docli.DefaultClientSource)
+func RecordUpdate(c *cli.Context) {
+	client := NewClient(c, DefaultClientSource)
 	domainName := c.String("domain-name")
 	recordID := c.Int("record-id")
 
@@ -105,5 +104,5 @@ func Update(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not update record")
 	}
 
-	docli.WriteJSON(r, c.App.Writer)
+	WriteJSON(r, c.App.Writer)
 }
