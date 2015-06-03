@@ -1,6 +1,8 @@
 # DOCLI
 
-https://travis-ci.org/bryanl/docli.svg?branch=master
+
+![Travis Build Status](https://travis-ci.org/bryanl/docli.svg?branch=master)
+
 
 DigitalOcean CLI client
 
