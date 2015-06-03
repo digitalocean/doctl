@@ -4,7 +4,7 @@ import (
 	"io"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli/docli"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )

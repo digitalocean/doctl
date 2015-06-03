@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli/docli"
+	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"golang.org/x/oauth2"
@@ -22,8 +22,8 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 }
 
 func init() {
-	log.SetOutput(os.Stderr)
-	log.SetLevel(log.WarnLevel)
+	logrus.SetOutput(os.Stderr)
+	logrus.SetLevel(logrus.WarnLevel)
 }
 
 func main() {

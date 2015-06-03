@@ -4,7 +4,7 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/bryanl/docli/docli"
+	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
