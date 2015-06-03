@@ -99,11 +99,13 @@ func WithinTest(cs ClientSource, fs *flag.FlagSet, fn func(*cli.Context)) {
 	globalSet := flag.NewFlagSet("global test", 0)
 	globalSet.String("token", "token", "token")
 
+	globalCtx := cli.NewContext(app, globalSet, nil)
+
 	if fs == nil {
 		fs = flag.NewFlagSet("local test", 0)
 	}
 
-	c := cli.NewContext(app, fs, globalSet)
+	c := cli.NewContext(app, fs, globalCtx)
 
 	fn(c)
 }
