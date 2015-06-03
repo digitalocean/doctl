@@ -22,11 +22,11 @@ func imageActionGet() cli.Command {
 		Usage: "get image action",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "image-id",
+				Name:  docli.ArgImageID,
 				Usage: "image id",
 			},
 			cli.IntFlag{
-				Name:  "action-id",
+				Name:  docli.ArgActionID,
 				Usage: "action id",
 			},
 		},
@@ -40,11 +40,11 @@ func imageActionTransfer() cli.Command {
 		Usage: "tranfser image (not implemented)",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "image-id",
+				Name:  docli.ArgImageID,
 				Usage: "image id",
 			},
 			cli.StringFlag{
-				Name:  "region",
+				Name:  docli.ArgRegionSlug,
 				Usage: "region",
 			},
 		},

@@ -9,8 +9,8 @@ import (
 // Get retrieves an action for an image.
 func ImageActionsGet(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	imageID := c.Int(argImageID)
-	actionID := c.Int(argActionID)
+	imageID := c.Int(ArgImageID)
+	actionID := c.Int(ArgActionID)
 
 	action, _, err := client.ImageActions.Get(imageID, actionID)
 	if err != nil {
@@ -26,9 +26,9 @@ func ImageActionsGet(c *cli.Context) {
 // Tranfer an image.
 func ImageActionsTransfer(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argImageID)
+	id := c.Int(ArgImageID)
 	req := &godo.ActionRequest{
-		"region": c.String(argRegionSlug),
+		"region": c.String(ArgRegionSlug),
 	}
 
 	action, _, err := client.ImageActions.Transfer(id, req)

@@ -11,7 +11,7 @@ import (
 // Actions returns a list of actions for a droplet.
 func DropletActions(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -47,7 +47,7 @@ func DropletActions(c *cli.Context) {
 // Backups returns a list of backup images for a droplet.
 func DropletBackups(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -85,7 +85,7 @@ func DropletCreate(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
 
 	sshKeys := []godo.DropletCreateSSHKey{}
-	for _, rawKey := range c.StringSlice(argSSHKeys) {
+	for _, rawKey := range c.StringSlice(ArgSSHKeys) {
 		if i, err := strconv.Atoi(rawKey); err == nil {
 			sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: i})
 			continue
@@ -95,17 +95,17 @@ func DropletCreate(c *cli.Context) {
 	}
 
 	dcr := &godo.DropletCreateRequest{
-		Name:              c.String(argDropletName),
-		Region:            c.String(argRegionSlug),
-		Size:              c.String(argSizeSlug),
-		Backups:           c.Bool(argBackups),
-		IPv6:              c.Bool(argIPv6),
-		PrivateNetworking: c.Bool(argPrivateNetworking),
+		Name:              c.String(ArgDropletName),
+		Region:            c.String(ArgRegionSlug),
+		Size:              c.String(ArgSizeSlug),
+		Backups:           c.Bool(ArgBackups),
+		IPv6:              c.Bool(ArgIPv6),
+		PrivateNetworking: c.Bool(ArgPrivateNetworking),
 		SSHKeys:           sshKeys,
-		UserData:          c.String(argUserData),
+		UserData:          c.String(ArgUserData),
 	}
 
-	imageStr := c.String(argImage)
+	imageStr := c.String(ArgImage)
 	if i, err := strconv.Atoi(imageStr); err == nil {
 		dcr.Image = godo.DropletCreateImage{ID: i}
 	} else {
@@ -126,7 +126,7 @@ func DropletCreate(c *cli.Context) {
 // Delete destroy a droplet by id.
 func DropletDelete(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	_, err := client.Droplets.Delete(id)
 	if err != nil {
@@ -137,7 +137,7 @@ func DropletDelete(c *cli.Context) {
 // Get returns a droplet.
 func DropletGet(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
@@ -153,7 +153,7 @@ func DropletGet(c *cli.Context) {
 // Kernels returns a list of available kernels for a droplet.
 func DropletKernels(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -224,7 +224,7 @@ func DropletList(c *cli.Context) {
 // Neighbors returns a list of droplet neighbors.
 func DropletNeighbors(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	list, _, err := client.Droplets.Neighbors(id)
 	if err != nil {
@@ -240,7 +240,7 @@ func DropletNeighbors(c *cli.Context) {
 // Snapshots returns a list of available kernels for a droplet.
 func DropletSnapshots(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {

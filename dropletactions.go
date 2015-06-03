@@ -12,8 +12,8 @@ import (
 // Get returns a droplet action by id.
 func DropletActionGet(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	dropletID := c.Int(argDropletID)
-	actionID := c.Int(argActionID)
+	dropletID := c.Int(ArgDropletID)
+	actionID := c.Int(ArgActionID)
 
 	a, _, err := client.DropletActions.Get(dropletID, actionID)
 	if err != nil {
@@ -29,7 +29,7 @@ func DropletActionGet(c *cli.Context) {
 // DisableBackups disables backups for a droplet.
 func DropletActionDisableBackups(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.DisableBackups(id)
 	if err != nil {
@@ -45,7 +45,7 @@ func DropletActionDisableBackups(c *cli.Context) {
 // Reboot reboots a droplet.
 func DropletActionReboot(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.Reboot(id)
 	if err != nil {
@@ -61,7 +61,7 @@ func DropletActionReboot(c *cli.Context) {
 // PowerCycle power cycles a droplet.
 func DropletActionPowerCycle(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 	r, _, err := client.DropletActions.PowerCycle(id)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not power cycle droplet")
@@ -76,7 +76,7 @@ func DropletActionPowerCycle(c *cli.Context) {
 // Shutdown shuts a droplet down.
 func DropletActionShutdown(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.Shutdown(id)
 	if err != nil {
@@ -92,7 +92,7 @@ func DropletActionShutdown(c *cli.Context) {
 // PowerOff turns droplet power off.
 func DropletActionPowerOff(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.PowerOff(id)
 	if err != nil {
@@ -108,7 +108,7 @@ func DropletActionPowerOff(c *cli.Context) {
 // PowerOn turns droplet power on.
 func DropletActionPowerOn(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.PowerOn(id)
 	if err != nil {
@@ -124,7 +124,7 @@ func DropletActionPowerOn(c *cli.Context) {
 // PasswordReset resets the droplet root password.
 func DropletActionPasswordReset(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.PasswordReset(id)
 	if err != nil {
@@ -140,7 +140,7 @@ func DropletActionPasswordReset(c *cli.Context) {
 // EnableIPv6 enables IPv6 for a droplet.
 func DropletActionEnableIPv6(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.EnableIPv6(id)
 	if err != nil {
@@ -156,7 +156,7 @@ func DropletActionEnableIPv6(c *cli.Context) {
 // EnablePrivateNetworking enables private networking for a droplet.
 func DropletActionEnablePrivateNetworking(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.EnablePrivateNetworking(id)
 	if err != nil {
@@ -172,7 +172,7 @@ func DropletActionEnablePrivateNetworking(c *cli.Context) {
 // Upgrade upgrades a droplet.
 func DropletActionUpgrade(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
+	id := c.Int(ArgDropletID)
 
 	r, _, err := client.DropletActions.Upgrade(id)
 	if err != nil {
@@ -188,8 +188,8 @@ func DropletActionUpgrade(c *cli.Context) {
 // Restore restores a droplet using an image id.
 func DropletActionRestore(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
-	image := c.Int(argImageID)
+	id := c.Int(ArgDropletID)
+	image := c.Int(ArgImageID)
 
 	r, _, err := client.DropletActions.Restore(id, image)
 	if err != nil {
@@ -205,9 +205,9 @@ func DropletActionRestore(c *cli.Context) {
 // Resize resizesx a droplet giving a size slug and optionally expands the disk.
 func DropletActionResize(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
-	size := c.String(argImageSlug)
-	disk := c.Bool(argResizeDisk)
+	id := c.Int(ArgDropletID)
+	size := c.String(ArgImageSlug)
+	disk := c.Bool(ArgResizeDisk)
 
 	r, _, err := client.DropletActions.Resize(id, size, disk)
 	if err != nil {
@@ -223,8 +223,8 @@ func DropletActionResize(c *cli.Context) {
 // Rebuild rebuilds a droplet using an image id or slug.
 func DropletActionRebuild(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
-	image := c.String(argImage)
+	id := c.Int(ArgDropletID)
+	image := c.String(ArgImage)
 
 	var r *godo.Action
 	var err error
@@ -247,8 +247,8 @@ func DropletActionRebuild(c *cli.Context) {
 // Rename renames a droplet.
 func DropletActionRename(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
-	name := c.String(argDropletName)
+	id := c.Int(ArgDropletID)
+	name := c.String(ArgDropletName)
 
 	r, _, err := client.DropletActions.Rename(id, name)
 	if err != nil {
@@ -264,8 +264,8 @@ func DropletActionRename(c *cli.Context) {
 // ChangeKernel changes the kernel for a droplet.
 func DropletActionChangeKernel(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
-	kernel := c.Int(argKernelID)
+	id := c.Int(ArgDropletID)
+	kernel := c.Int(ArgKernelID)
 
 	r, _, err := client.DropletActions.ChangeKernel(id, kernel)
 	if err != nil {
@@ -281,8 +281,8 @@ func DropletActionChangeKernel(c *cli.Context) {
 // Snapshot creates a snapshot for a droplet.
 func DropletActionSnapshot(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argDropletID)
-	name := c.String(argSnapshotName)
+	id := c.Int(ArgDropletID)
+	name := c.String(ArgSnapshotName)
 
 	r, _, err := client.DropletActions.Snapshot(id, name)
 	if err != nil {

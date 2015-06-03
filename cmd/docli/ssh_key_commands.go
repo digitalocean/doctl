@@ -33,11 +33,11 @@ func sshKeyCreate() cli.Command {
 		Usage: "create ssh key",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "name",
+				Name:  docli.ArgKeyName,
 				Usage: "ssh key name",
 			},
 			cli.StringFlag{
-				Name:  "public-key",
+				Name:  docli.ArgKeyPublicKey,
 				Usage: "ssh public key",
 			},
 		},
@@ -51,7 +51,7 @@ func sshKeyGet() cli.Command {
 		Usage: "get ssh key",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "key",
+				Name:  docli.ArgKey,
 				Usage: "ssh key id or fingerprint",
 			},
 		},
@@ -65,15 +65,11 @@ func sshKeyUpdate() cli.Command {
 		Usage: "update ssh key",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgKey,
 				Usage: "ssh key id",
 			},
 			cli.StringFlag{
-				Name:  "fingerprint",
-				Usage: "ssh key fingerprint",
-			},
-			cli.StringFlag{
-				Name:  "name",
+				Name:  docli.ArgKeyName,
 				Usage: "ssh key name",
 			},
 		},
@@ -87,7 +83,7 @@ func sshKeyDelete() cli.Command {
 		Usage: "delete ssh key",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "key",
+				Name:  docli.ArgKey,
 				Usage: "ssh key id or fingerprint",
 			},
 		},

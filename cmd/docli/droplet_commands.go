@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
 )
@@ -46,40 +44,40 @@ func dropletCreate() cli.Command {
 		Flags: []cli.Flag{
 
 			cli.StringFlag{
-				Name:  "name",
+				Name:  docli.ArgDropletName,
 				Usage: "droplet name",
 			},
 			cli.StringFlag{
-				Name:  "region",
+				Name:  docli.ArgRegionSlug,
 				Usage: "droplet region",
 			},
 			cli.StringFlag{
-				Name:  "size",
+				Name:  docli.ArgSizeSlug,
 				Usage: "droplet size",
 			},
 			cli.StringFlag{
-				Name:  "image",
+				Name:  docli.ArgImage,
 				Usage: "droplet image",
 			},
 			cli.StringSliceFlag{
-				Name:  "ssh-keys",
+				Name:  docli.ArgSSHKeys,
 				Value: &cli.StringSlice{},
 				Usage: "droplet public SSH keys",
 			},
 			cli.BoolFlag{
-				Name:  "backups",
+				Name:  docli.ArgBackups,
 				Usage: "enable droplet backups",
 			},
 			cli.BoolFlag{
-				Name:  "ipv6",
+				Name:  docli.ArgIPv6,
 				Usage: "enable droplet IPv6",
 			},
 			cli.BoolFlag{
-				Name:  "private-networking",
+				Name:  docli.ArgPrivateNetworking,
 				Usage: "enable droplet private networking",
 			},
 			cli.StringFlag{
-				Name:  "user-data",
+				Name:  docli.ArgUserData,
 				Usage: "droplet name",
 			},
 		},
@@ -93,7 +91,7 @@ func dropletDelete() cli.Command {
 		Usage: "delete droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
 		},
@@ -107,7 +105,7 @@ func dropletGet() cli.Command {
 		Usage: "get droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
 		},
@@ -121,7 +119,7 @@ func dropletKernels() cli.Command {
 		Usage: "get kernels for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
 		},
@@ -135,7 +133,7 @@ func dropletSnapshots() cli.Command {
 		Usage: "get snapshots for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
 		},
@@ -149,16 +147,9 @@ func dropletBackups() cli.Command {
 		Usage: "get backups for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
-		},
-		Before: func(c *cli.Context) error {
-			if !c.IsSet("id") {
-				return fmt.Errorf("invalid droplet id")
-			}
-
-			return nil
 		},
 		Action: docli.DropletBackups,
 	}
@@ -170,7 +161,7 @@ func dropletActions() cli.Command {
 		Usage: "get actions for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
 		},
@@ -184,7 +175,7 @@ func dropletNeighbors() cli.Command {
 		Usage: "get neighbors for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
 		},

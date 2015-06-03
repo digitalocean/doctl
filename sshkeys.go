@@ -44,7 +44,7 @@ func KeyList(c *cli.Context) {
 
 func KeyGet(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	rawKey := c.String(argKey)
+	rawKey := c.String(ArgKey)
 
 	var err error
 	var key *godo.Key
@@ -69,8 +69,8 @@ func KeyCreate(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
 
 	kcr := &godo.KeyCreateRequest{
-		Name:      c.String(argKeyName),
-		PublicKey: c.String(argKeyPublicKey),
+		Name:      c.String(ArgKeyName),
+		PublicKey: c.String(ArgKeyPublicKey),
 	}
 
 	r, _, err := client.Keys.Create(kcr)
@@ -86,7 +86,7 @@ func KeyCreate(c *cli.Context) {
 
 func KeyDelete(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	rawKey := c.String(argKey)
+	rawKey := c.String(ArgKey)
 
 	var err error
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
@@ -102,10 +102,10 @@ func KeyDelete(c *cli.Context) {
 
 func KeyUpdate(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	rawKey := c.String(argKey)
+	rawKey := c.String(ArgKey)
 
 	req := &godo.KeyUpdateRequest{
-		Name: c.String(argKeyName),
+		Name: c.String(ArgKeyName),
 	}
 
 	var err error

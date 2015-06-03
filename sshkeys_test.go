@@ -57,7 +57,7 @@ func TestKeysGetByID(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argKey, "1", argKey)
+	fs.String(ArgKey, "1", ArgKey)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		KeyGet(c)
@@ -80,7 +80,7 @@ func TestKeysGetByFingerprint(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argKey, testKey.Fingerprint, argKey)
+	fs.String(ArgKey, testKey.Fingerprint, ArgKey)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		KeyGet(c)
@@ -103,8 +103,8 @@ func TestKeysCreate(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argKeyName, "the key", argKeyName)
-	fs.String(argKeyPublicKey, "fingerprint", argKeyPublicKey)
+	fs.String(ArgKeyName, "the key", ArgKeyName)
+	fs.String(ArgKeyPublicKey, "fingerprint", ArgKeyPublicKey)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		KeyCreate(c)
@@ -127,7 +127,7 @@ func TestKeysDeleteByID(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argKey, "1", argKey)
+	fs.String(ArgKey, "1", ArgKey)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		KeyDelete(c)
@@ -150,7 +150,7 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argKey, "fingerprint", argKey)
+	fs.String(ArgKey, "fingerprint", ArgKey)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		KeyDelete(c)
@@ -177,8 +177,8 @@ func TestKeysUpdateByID(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argKey, "1", argKey)
-	fs.String(argKeyName, "the key", argKeyName)
+	fs.String(ArgKey, "1", ArgKey)
+	fs.String(ArgKeyName, "the key", ArgKeyName)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		KeyUpdate(c)
@@ -205,8 +205,8 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argKey, "fingerprint", argKey)
-	fs.String(argKeyName, "the key", argKeyName)
+	fs.String(ArgKey, "fingerprint", ArgKey)
+	fs.String(ArgKeyName, "the key", ArgKeyName)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		KeyUpdate(c)

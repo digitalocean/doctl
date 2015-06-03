@@ -30,7 +30,7 @@ func actionGet() cli.Command {
 		Usage: "get action by id",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "action-id",
+				Name:  docli.ArgActionID,
 				Usage: "Action id",
 			},
 		},

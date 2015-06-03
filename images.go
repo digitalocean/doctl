@@ -151,7 +151,7 @@ func ImagesListUser(c *cli.Context) {
 // Get retrieves an image by id or slug.
 func ImagesGet(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	rawID := c.String(argImage)
+	rawID := c.String(ArgImage)
 
 	var err error
 	var image *godo.Image
@@ -172,10 +172,10 @@ func ImagesGet(c *cli.Context) {
 // Update updates an image.
 func ImagesUpdate(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argImageID)
+	id := c.Int(ArgImageID)
 
 	req := &godo.ImageUpdateRequest{
-		Name: c.String(argImageName),
+		Name: c.String(ArgImageName),
 	}
 
 	image, _, err := client.Images.Update(id, req)
@@ -191,7 +191,7 @@ func ImagesUpdate(c *cli.Context) {
 
 func ImagesDelete(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
-	id := c.Int(argImageID)
+	id := c.Int(ArgImageID)
 
 	_, err := client.Images.Delete(id)
 	if err != nil {

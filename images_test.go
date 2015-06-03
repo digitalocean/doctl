@@ -138,7 +138,7 @@ func TestImagesGetByID(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argImage, testImage.ID, argImage)
+	fs.Int(ArgImage, testImage.ID, ArgImage)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		ImagesGet(c)
@@ -161,7 +161,7 @@ func TestImagesGetBySlug(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argImage, testImage.Slug, argImage)
+	fs.String(ArgImage, testImage.Slug, ArgImage)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		ImagesGet(c)
@@ -183,8 +183,8 @@ func TestImagesUpdate(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argImageID, testImage.ID, argImageID)
-	fs.String(argImageName, "new-name", argImageName)
+	fs.Int(ArgImageID, testImage.ID, ArgImageID)
+	fs.String(ArgImageName, "new-name", ArgImageName)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		ImagesUpdate(c)
@@ -203,7 +203,7 @@ func TestImagesDelete(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argImageID, testImage.ID, argImageID)
+	fs.Int(ArgImageID, testImage.ID, ArgImageID)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		ImagesDelete(c)

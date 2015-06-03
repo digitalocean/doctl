@@ -60,7 +60,7 @@ func imageGet() cli.Command {
 		Usage: "get image by id",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  "image",
+				Name:  docli.ArgImage,
 				Usage: "image id or slug",
 			},
 		},
@@ -74,7 +74,7 @@ func imageActions() cli.Command {
 		Usage: "image actions",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgImageID,
 				Usage: "image id",
 			},
 		},
@@ -87,11 +87,11 @@ func imageUpdate() cli.Command {
 		Usage: "update image (not implemented)",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "image-id",
+				Name:  docli.ArgImageID,
 				Usage: "image id (required)",
 			},
 			cli.IntFlag{
-				Name:  "image-name",
+				Name:  docli.ArgImageName,
 				Usage: "image name (required)",
 			},
 		},
@@ -105,7 +105,7 @@ func imageDelete() cli.Command {
 		Usage: "delete image",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  "id",
+				Name:  docli.ArgImageID,
 				Usage: "image id (required)",
 			},
 		},

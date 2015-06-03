@@ -36,7 +36,7 @@ func TestDropletActionList(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argDropletID, 1, argDropletID)
+	fs.Int(ArgDropletID, 1, ArgDropletID)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletActions(c)
@@ -63,7 +63,7 @@ func TestDropletBackupList(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argDropletID, 1, argDropletID)
+	fs.Int(ArgDropletID, 1, ArgDropletID)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletBackups(c)
@@ -91,10 +91,10 @@ func TestDropletCreate(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.String(argDropletName, "droplet", argDropletName)
-	fs.String(argRegionSlug, "dev0", argRegionSlug)
-	fs.String(argSizeSlug, "1gb", argSizeSlug)
-	fs.String(argImage, "image", argImage)
+	fs.String(ArgDropletName, "droplet", ArgDropletName)
+	fs.String(ArgRegionSlug, "dev0", ArgRegionSlug)
+	fs.String(ArgSizeSlug, "1gb", ArgSizeSlug)
+	fs.String(ArgImage, "image", ArgImage)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletCreate(c)
@@ -113,7 +113,7 @@ func TestDropletDelete(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argDropletID, testDroplet.ID, argDropletID)
+	fs.Int(ArgDropletID, testDroplet.ID, ArgDropletID)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletDelete(c)
@@ -132,7 +132,7 @@ func TestDropletGet(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argDropletID, testDroplet.ID, argDropletID)
+	fs.Int(ArgDropletID, testDroplet.ID, ArgDropletID)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletGet(c)
@@ -159,7 +159,7 @@ func TestDropletKernelList(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argDropletID, 1, argDropletID)
+	fs.Int(ArgDropletID, 1, ArgDropletID)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletKernels(c)
@@ -186,7 +186,7 @@ func TestDropletNeighbors(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argDropletID, 1, argDropletID)
+	fs.Int(ArgDropletID, 1, ArgDropletID)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletNeighbors(c)
@@ -212,7 +212,7 @@ func TestDropletSnapshotList(t *testing.T) {
 
 	cs := &TestClientSource{client}
 	fs := flag.NewFlagSet("flag set", 0)
-	fs.Int(argDropletID, 1, argDropletID)
+	fs.Int(ArgDropletID, 1, ArgDropletID)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletSnapshots(c)
