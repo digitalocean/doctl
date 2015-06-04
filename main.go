@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 
@@ -23,6 +24,11 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 		AccessToken: t.AccessToken,
 	}
 	return token, nil
+}
+
+func init() {
+	log.SetFlags(0)
+	log.SetPrefix("doctl> ")
 }
 
 func main() {
@@ -51,7 +57,7 @@ func buildApp() *cli.App {
 		}
 
 		if APIKey == "" && !ctx.Bool("help") && !ctx.Bool("version") {
-			return errors.New("must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument")
+			return errors.New("must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument.")
 		}
 
 		switch ctx.String("format") {
@@ -60,7 +66,7 @@ func buildApp() *cli.App {
 		case "yaml":
 			OutputFormat = ctx.String("format")
 		default:
-			return fmt.Errorf("invalid output format: %s, available output options: json, yaml", ctx.String("format"))
+			return fmt.Errorf("invalid output format: %q, available output options: json, yaml.", ctx.String("format"))
 		}
 
 		return nil

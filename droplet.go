@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 
@@ -22,7 +23,7 @@ var DropletCommand = cli.Command{
 		{
 			Name:    "create",
 			Aliases: []string{"c"},
-			Usage:   "Create droplet.",
+			Usage:   "Create a Droplet.",
 			Action:  dropletCreate,
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "domain, d", Value: "", Usage: "Domain name to append to the hostname. (e.g. server01.example.com)"},
@@ -42,7 +43,7 @@ var DropletCommand = cli.Command{
 		{
 			Name:    "list",
 			Aliases: []string{"l"},
-			Usage:   "List droplets.",
+			Usage:   "List Droplets.",
 			Action:  dropletList,
 			Flags:   []cli.Flag{},
 		},
@@ -55,7 +56,7 @@ var DropletCommand = cli.Command{
 		{
 			Name:    "destroy",
 			Aliases: []string{"d"},
-			Usage:   "[--id | <name>] Destroy droplet.",
+			Usage:   "[--id | <name>] Destroy a Droplet.",
 			Action:  dropletDestroy,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
@@ -64,7 +65,7 @@ var DropletCommand = cli.Command{
 		// Droplet Actions
 		{
 			Name:   "reboot",
-			Usage:  "[--id | <name>] Reboot droplet.",
+			Usage:  "[--id | <name>] Reboot a Droplet.",
 			Action: dropletActionReboot,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
@@ -72,7 +73,7 @@ var DropletCommand = cli.Command{
 		},
 		{
 			Name:   "power_cycle",
-			Usage:  "[--id | <name>] Powercycle droplet.",
+			Usage:  "[--id | <name>] Powercycle a Droplet.",
 			Action: dropletActionPowercycle,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
@@ -80,7 +81,7 @@ var DropletCommand = cli.Command{
 		},
 		{
 			Name:   "shutdown",
-			Usage:  "[--id | <name>] Shutdown droplet.",
+			Usage:  "[--id | <name>] Shutdown a Droplet.",
 			Action: dropletActionShutdown,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
@@ -89,7 +90,7 @@ var DropletCommand = cli.Command{
 		{
 			Name:    "poweroff",
 			Aliases: []string{"off"},
-			Usage:   "[--id | <name>] Power off droplet.",
+			Usage:   "[--id | <name>] Power off a Droplet.",
 			Action:  dropletActionPoweroff,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
@@ -98,7 +99,7 @@ var DropletCommand = cli.Command{
 		{
 			Name:    "poweron",
 			Aliases: []string{"on"},
-			Usage:   "[--id | <name>] Power on droplet.",
+			Usage:   "[--id | <name>] Power on a Droplet.",
 			Action:  dropletActionPoweron,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
@@ -106,7 +107,7 @@ var DropletCommand = cli.Command{
 		},
 		{
 			Name:   "password_reset",
-			Usage:  "[--id | <name>] Reset password for droplet.",
+			Usage:  "[--id | <name>] Reset password for a Droplet.",
 			Action: dropletActionPasswordReset,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
@@ -114,7 +115,7 @@ var DropletCommand = cli.Command{
 		},
 		{
 			Name:   "resize",
-			Usage:  "[--id | <name>] Resize droplet.",
+			Usage:  "[--id | <name>] Resize a Droplet.",
 			Action: dropletActionResize,
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "size", Value: "512mb", Usage: "Size slug."},
@@ -127,8 +128,7 @@ var DropletCommand = cli.Command{
 
 func dropletCreate(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide name for Droplet.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide name for Droplet.")
 	}
 
 	tokenSource := &TokenSource{
@@ -156,7 +156,7 @@ func dropletCreate(ctx *cli.Context) {
 			if sshKey != nil && err == nil {
 				sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: sshKey.ID})
 			} else {
-				fmt.Printf("Warning: Could not find key: %s.\n", keyName)
+				log.Fatalf("Warning: Could not find key: %q.", keyName)
 			}
 		}
 	}
@@ -166,14 +166,12 @@ func dropletCreate(ctx *cli.Context) {
 	if userDataPath != "" {
 		file, err := os.Open(userDataPath)
 		if err != nil {
-			fmt.Printf("Error opening user data file: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Error opening user data file: %s.", err)
 		}
 
 		userDataFile, err := ioutil.ReadAll(file)
 		if err != nil {
-			fmt.Printf("Error reading user data file: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Error reading user data file: %s.", err)
 		}
 		userData = string(userDataFile)
 	} else {
@@ -196,8 +194,7 @@ func dropletCreate(ctx *cli.Context) {
 
 	droplet, resp, err := client.Droplets.Create(createRequest)
 	if err != nil {
-		fmt.Printf("Unable to create Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to create Droplet: %s.", err)
 	}
 
 	if ctx.Bool("wait-for-active") {
@@ -224,8 +221,7 @@ func dropletList(ctx *cli.Context) {
 	for { // TODO make all optional
 		dropletPage, resp, err := client.Droplets.List(opt)
 		if err != nil {
-			fmt.Printf("Unable to list Droplets: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Unable to list Droplets: %s.", err)
 		}
 
 		// append the current page's droplets to our list
@@ -240,8 +236,7 @@ func dropletList(ctx *cli.Context) {
 
 		page, err := resp.Links.CurrentPage()
 		if err != nil {
-			fmt.Printf("Unable to get pagination: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Unable to get pagination: %s.", err)
 		}
 
 		// set the page we want for the next request
@@ -261,8 +256,7 @@ func dropletList(ctx *cli.Context) {
 
 func dropletFind(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		fmt.Printf("Error: Must provide one name for a Droplet search.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide one name for a Droplet search.")
 	}
 
 	name := ctx.Args().First()
@@ -275,8 +269,7 @@ func dropletFind(ctx *cli.Context) {
 
 	droplet, err := FindDropletByName(client, name)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(64)
+		log.Fatal(err)
 	}
 
 	WriteOutput(droplet)
@@ -284,8 +277,7 @@ func dropletFind(ctx *cli.Context) {
 
 func dropletDestroy(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide ID or name for Droplet to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID or name for Droplet to destroy.")
 	}
 
 	tokenSource := &TokenSource{
@@ -298,8 +290,7 @@ func dropletDestroy(ctx *cli.Context) {
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = droplet.ID
 		}
@@ -307,17 +298,15 @@ func dropletDestroy(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		fmt.Printf("Unable to find Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to find Droplet: %s.", err)
 	}
 
 	_, err = client.Droplets.Delete(id)
 	if err != nil {
-		fmt.Printf("Unable to destroy Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to destroy Droplet: %s.", err)
 	}
 
-	fmt.Printf("Droplet %s destroyed.\n", droplet.Name)
+	log.Fatalf("Droplet %s destroyed.", droplet.Name)
 }
 
 //
@@ -326,8 +315,7 @@ func dropletDestroy(ctx *cli.Context) {
 
 func dropletActionReboot(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide ID or name for Droplet.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID or name for Droplet to reboot.")
 	}
 
 	tokenSource := &TokenSource{
@@ -340,8 +328,7 @@ func dropletActionReboot(ctx *cli.Context) {
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = droplet.ID
 		}
@@ -349,14 +336,12 @@ func dropletActionReboot(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		fmt.Printf("Unable to find Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to find Droplet: %s.", err)
 	}
 
 	action, _, err := client.DropletActions.Reboot(droplet.ID)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(action)
@@ -364,8 +349,7 @@ func dropletActionReboot(ctx *cli.Context) {
 
 func dropletActionPowercycle(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide ID or name for Droplet to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID or name for Droplet to power cycle.")
 	}
 
 	tokenSource := &TokenSource{
@@ -378,8 +362,7 @@ func dropletActionPowercycle(ctx *cli.Context) {
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = droplet.ID
 		}
@@ -387,14 +370,12 @@ func dropletActionPowercycle(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		fmt.Printf("Unable to find Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to find Droplet: %s.", err)
 	}
 
 	action, _, err := client.DropletActions.PowerCycle(droplet.ID)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(action)
@@ -402,8 +383,7 @@ func dropletActionPowercycle(ctx *cli.Context) {
 
 func dropletActionShutdown(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide ID or name for Droplet to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID or name for Droplet to issue shutdown.")
 	}
 
 	tokenSource := &TokenSource{
@@ -416,8 +396,7 @@ func dropletActionShutdown(ctx *cli.Context) {
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = droplet.ID
 		}
@@ -425,14 +404,12 @@ func dropletActionShutdown(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		fmt.Printf("Unable to find Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to find Droplet: %s.", err)
 	}
 
 	action, _, err := client.DropletActions.Shutdown(droplet.ID)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(action)
@@ -440,8 +417,7 @@ func dropletActionShutdown(ctx *cli.Context) {
 
 func dropletActionPoweroff(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide ID or name for Droplet to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID or name for Droplet to power off.")
 	}
 
 	tokenSource := &TokenSource{
@@ -454,8 +430,7 @@ func dropletActionPoweroff(ctx *cli.Context) {
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = droplet.ID
 		}
@@ -463,14 +438,12 @@ func dropletActionPoweroff(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		fmt.Printf("Unable to find Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to find Droplet: %s.", err)
 	}
 
 	action, _, err := client.DropletActions.PowerOff(droplet.ID)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(action)
@@ -478,8 +451,7 @@ func dropletActionPoweroff(ctx *cli.Context) {
 
 func dropletActionPoweron(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide ID or name for Droplet to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID or name for Droplet to power on.")
 	}
 
 	tokenSource := &TokenSource{
@@ -492,8 +464,7 @@ func dropletActionPoweron(ctx *cli.Context) {
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = droplet.ID
 		}
@@ -501,14 +472,12 @@ func dropletActionPoweron(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		fmt.Printf("Unable to find Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to find Droplet: %s.", err)
 	}
 
 	action, _, err := client.DropletActions.PowerOn(droplet.ID)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(action)
@@ -516,8 +485,7 @@ func dropletActionPoweron(ctx *cli.Context) {
 
 func dropletActionPasswordReset(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide ID or name for Droplet to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID or name for Droplet to reset.")
 	}
 
 	tokenSource := &TokenSource{
@@ -530,8 +498,7 @@ func dropletActionPasswordReset(ctx *cli.Context) {
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = droplet.ID
 		}
@@ -539,14 +506,12 @@ func dropletActionPasswordReset(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		fmt.Printf("Unable to find Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to find Droplet: %s.", err)
 	}
 
 	action, _, err := client.DropletActions.PasswordReset(droplet.ID)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(action)
@@ -554,8 +519,7 @@ func dropletActionPasswordReset(ctx *cli.Context) {
 
 func dropletActionResize(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide ID or name for Droplet to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
 	}
 
 	size := ctx.String("size")
@@ -571,8 +535,7 @@ func dropletActionResize(ctx *cli.Context) {
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = droplet.ID
 		}
@@ -580,14 +543,12 @@ func dropletActionResize(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		fmt.Printf("Unable to find Droplet: %s\n", err)
-		os.Exit(1)
+		log.Fatal("Unable to find Droplet: %s.", err)
 	}
 
 	action, _, err := client.DropletActions.Resize(droplet.ID, size, disk)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(action)

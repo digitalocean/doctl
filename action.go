@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"strconv"
 
@@ -38,8 +38,7 @@ var ActionCommand = cli.Command{
 
 func actionShow(ctx *cli.Context) {
 	if len(ctx.Args()) == 0 || len(ctx.Args()) > 1 {
-		fmt.Printf("Error: Must provide exactly one id of an Action to show.\n")
-		os.Exit(64)
+		log.Fatal("Error: Must provide exactly one id of an Action to show.")
 	}
 
 	id, _ := strconv.ParseInt(ctx.Args().First(), 10, 0)
@@ -53,8 +52,7 @@ func actionShow(ctx *cli.Context) {
 	action, _, err := client.Actions.Get(int(id))
 
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(action)
@@ -79,8 +77,7 @@ func actionList(ctx *cli.Context) {
 	actionList, _, err := client.Actions.List(opt)
 
 	if err != nil {
-		fmt.Printf("Unable to list Actions: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to list Actions: %s", err)
 	}
 
 	cliOut := NewCLIOutput()

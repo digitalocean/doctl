@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
@@ -42,7 +42,7 @@ var SSHCommand = cli.Command{
 			Action:  sshDestroy,
 			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for SSH Key. (e.g. 1234567)"},
-				cli.StringFlag{Name: "id", Usage: "Fingerprint for SSH Key. (e.g. aa:bb:cc)"},
+				cli.StringFlag{Name: "fingerprint", Usage: "Fingerprint for SSH Key. (e.g. aa:bb:cc)"},
 			},
 		},
 	},
@@ -50,8 +50,7 @@ var SSHCommand = cli.Command{
 
 func sshCreate(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fmt.Printf("Must provide name and public key file.\n")
-		os.Exit(1)
+		log.Fatal("Must provide name and public key file.")
 	}
 
 	tokenSource := &TokenSource{
@@ -62,14 +61,12 @@ func sshCreate(ctx *cli.Context) {
 
 	file, err := os.Open(ctx.Args()[1])
 	if err != nil {
-		fmt.Printf("Error opening key file: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Error opening key file: %s.", err)
 	}
 
 	keyData, err := ioutil.ReadAll(file)
 	if err != nil {
-		fmt.Printf("Error reading key file: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Error reading key file: %s.", err)
 	}
 
 	createRequest := &godo.KeyCreateRequest{
@@ -78,8 +75,7 @@ func sshCreate(ctx *cli.Context) {
 	}
 	key, _, err := client.Keys.Create(createRequest)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(key)
@@ -103,8 +99,7 @@ func sshList(ctx *cli.Context) {
 	for {
 		keyPage, resp, err := client.Keys.List(opt)
 		if err != nil {
-			fmt.Printf("Unable to list SSH Keys: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Unable to list SSH Keys: %s.", err)
 		}
 
 		// append the current page's droplets to our list
@@ -119,8 +114,7 @@ func sshList(ctx *cli.Context) {
 
 		page, err := resp.Links.CurrentPage()
 		if err != nil {
-			fmt.Printf("Unable to get pagination: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Unable to get pagination: %s.", err)
 		}
 
 		// set the page we want for the next request
@@ -137,8 +131,7 @@ func sshList(ctx *cli.Context) {
 
 func sshFind(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide name for Key.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide name for Key.")
 	}
 
 	name := ctx.Args().First()
@@ -151,8 +144,7 @@ func sshFind(ctx *cli.Context) {
 
 	key, err := FindKeyByName(client, name)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(64)
+		log.Fatal(err)
 	}
 
 	WriteOutput(key)
@@ -160,8 +152,7 @@ func sshFind(ctx *cli.Context) {
 
 func sshDestroy(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && ctx.String("fingerprint") == "" && len(ctx.Args()) < 1 {
-		fmt.Printf("Error: Must provide ID, fingerprint or name for SSH Key to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide ID, fingerprint or name for SSH Key to destroy.")
 	}
 
 	tokenSource := &TokenSource{
@@ -176,24 +167,21 @@ func sshDestroy(ctx *cli.Context) {
 	if id == 0 && fingerprint == "" {
 		key, err := FindKeyByName(client, ctx.Args().First())
 		if err != nil {
-			fmt.Printf("%s\n", err)
-			os.Exit(64)
+			log.Fatal(err)
 		} else {
 			id = key.ID
 		}
 	} else if id != 0 {
 		key, _, err := client.Keys.GetByID(id)
 		if err != nil {
-			fmt.Printf("Unable to find SSH Key: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Unable to find SSH Key: %d.", id)
 		} else {
 			id = key.ID
 		}
 	} else {
 		key, _, err := client.Keys.GetByFingerprint(fingerprint)
 		if err != nil {
-			fmt.Printf("Unable to find SSH Key: %s\n", err)
-			os.Exit(1)
+			log.Fatalf("Unable to find SSH Key: %q.", fingerprint)
 		} else {
 			id = key.ID
 		}
@@ -201,9 +189,8 @@ func sshDestroy(ctx *cli.Context) {
 
 	_, err := client.Keys.DeleteByID(id)
 	if err != nil {
-		fmt.Printf("Unable to destroy SSH Key: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to destroy SSH Key: %s.", err)
 	}
 
-	fmt.Printf("Key %s destroyed.\n", key.Name)
+	log.Printf("Key %d, %q destroyed.", key.ID, key.Name)
 }

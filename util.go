@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -28,18 +29,16 @@ func WriteOutput(data interface{}) {
 	case "json":
 		output, err = json.Marshal(data)
 		if err != nil {
-			fmt.Printf("JSON Encoding Error: %s", err)
-			os.Exit(1)
+			log.Fatalf("JSON Encoding Error: %s", err)
 		}
 
 	case "yaml":
 		output, err = yaml.Marshal(data)
 		if err != nil {
-			fmt.Printf("YAML Encoding Error: %s", err)
-			os.Exit(1)
+			log.Fatalf("YAML Encoding Error: %s", err)
 		}
 	}
-	fmt.Printf("%s", string(output))
+	fmt.Println(string(output))
 }
 
 func (c *CLIOutput) Header(a ...string) {

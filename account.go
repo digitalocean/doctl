@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"log"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
@@ -33,39 +32,9 @@ func accountShow(ctx *cli.Context) {
 	client := godo.NewClient(oauthClient)
 
 	account, _, err := client.Account.Get()
-
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
-	fmt.Printf(
-		"  _______________________________________\n" +
-			"/   Hi there! I'm Sammy.                 \\\n" +
-			"\\                                        /\n" +
-			" ---------------------------------------\n" +
-			"                                          \\\n" +
-			"                                           \\       \n" +
-			"                 `.                        |      \n" +
-			"                 `:::                      |      \n" +
-			"         :        .:::.                    |       \n" +
-			"         :,        :::::                   |       \n" +
-			"         ,:        ::::::                  |       \n" +
-			"         .:,       ;:::::.                 /       \n" +
-			"          ::       ;:::::::::::::::::::,` /        \n" +
-			"          ::: :,.,::::::::::::::::::::::::        \n" +
-			"          ;::::::::::::::::::: `:`::::::::        \n" +
-			"         `::::::::::::::::;::.`;'#`::::::.        \n" +
-			"         ::,,:::::::::::;;;::``.;' :::::;         \n" +
-			"         :   ,:::::::::::;;::. ,::`:::::          \n" +
-			"               :::::::::::::::    ::::;           \n" +
-			"                ;::::::::::,.:::;:.```            \n" +
-			"                 ::::::::::..,.```````            \n" +
-			"                 `:::::::::,..```````             \n" +
-			"                  :::::::,``,....``               \n" +
-			"                  `::::````` :,...`               \n" +
-			"                `:::::,`````` `.,..`              \n" +
-			"              :,::::::````````  ,,.`              \n" +
-			"                ...`  `````````````               \n" +
-			"                        `````````                 \n")
+
 	WriteOutput(account)
 }

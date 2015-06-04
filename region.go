@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
@@ -42,8 +42,7 @@ func regionList(ctx *cli.Context) {
 	}
 	regionList, _, err := client.Regions.List(opt)
 	if err != nil {
-		fmt.Printf("Unable to list Regions: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to list Regions: %s.", err)
 	}
 
 	cliOut := NewCLIOutput()

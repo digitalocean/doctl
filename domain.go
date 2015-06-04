@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -90,8 +90,7 @@ var DomainCommand = cli.Command{
 
 func domainShow(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide name for Domain.\n")
-		os.Exit(64)
+		log.Fatal("Error: Must provide name for Domain.")
 	}
 
 	name := ctx.Args().First()
@@ -104,8 +103,7 @@ func domainShow(ctx *cli.Context) {
 
 	domain, _, err := client.Domains.Get(name)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(domain)
@@ -129,8 +127,7 @@ func domainList(ctx *cli.Context) {
 	}
 	domainList, _, err := client.Domains.List(opt)
 	if err != nil {
-		fmt.Printf("Unable to list Domains: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to list Domains: %s.", err)
 	}
 
 	cliOut := NewCLIOutput()
@@ -143,8 +140,7 @@ func domainList(ctx *cli.Context) {
 
 func domainCreate(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fmt.Printf("Must provide domain name and droplet name.\n")
-		os.Exit(1)
+		log.Fatal("Must provide domain name and Droplet name.")
 	}
 
 	tokenSource := &TokenSource{
@@ -155,8 +151,7 @@ func domainCreate(ctx *cli.Context) {
 
 	droplet, err := FindDropletByName(client, ctx.Args()[1])
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(64)
+		log.Fatal(err)
 	}
 
 	createRequest := &godo.DomainCreateRequest{
@@ -165,8 +160,7 @@ func domainCreate(ctx *cli.Context) {
 	}
 	domain, _, err := client.Domains.Create(createRequest)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(domain)
@@ -174,8 +168,7 @@ func domainCreate(ctx *cli.Context) {
 
 func domainDestroy(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide a name for the domain to destroy.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide a name for the domain to destroy.")
 	}
 
 	name := ctx.Args().First()
@@ -188,11 +181,10 @@ func domainDestroy(ctx *cli.Context) {
 
 	_, err := client.Domains.Delete(name)
 	if err != nil {
-		fmt.Printf("Unable to destroy domain: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to destroy domain: %s.", err)
 	}
 
-	fmt.Printf("Domain %s destroyed.\n", name)
+	log.Printf("Domain %s destroyed", name)
 }
 
 //
@@ -201,8 +193,7 @@ func domainDestroy(ctx *cli.Context) {
 
 func domainRecordList(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
-		fmt.Printf("Error: Must provide a domain name for which to list records.\n")
-		os.Exit(64)
+		log.Fatal("Error: Must provide a domain name for which to list records.")
 	}
 
 	tokenSource := &TokenSource{
@@ -219,8 +210,7 @@ func domainRecordList(ctx *cli.Context) {
 	}
 	domainDecords, _, err := client.Domains.Records(domainName, opt)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(domainDecords)
@@ -228,8 +218,7 @@ func domainRecordList(ctx *cli.Context) {
 
 func domainRecordShow(ctx *cli.Context) {
 	if len(ctx.Args()) == 2 {
-		fmt.Printf("Error: Must provide domain name and domain record id.\n")
-		os.Exit(64)
+		log.Fatal("Error: Must provide domain name and domain record id.")
 	}
 
 	tokenSource := &TokenSource{
@@ -241,14 +230,12 @@ func domainRecordShow(ctx *cli.Context) {
 	domainName := ctx.Args().First()
 	recordID, err := strconv.Atoi(ctx.Args()[1])
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	domainDecord, _, err := client.Domains.Record(domainName, recordID)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(domainDecord)
@@ -257,7 +244,7 @@ func domainRecordShow(ctx *cli.Context) {
 func domainRecordCreate(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		cli.ShowAppHelp(ctx)
-		fmt.Printf("Must specify a domain name to add a record to.\n")
+		log.Print("Must specify a domain name to add a record to.")
 		os.Exit(1)
 	}
 
@@ -285,8 +272,7 @@ func domainRecordCreate(ctx *cli.Context) {
 
 	domainRecord, _, err := client.Domains.CreateRecord(domainName, createRequest)
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	WriteOutput(domainRecord)
@@ -294,15 +280,13 @@ func domainRecordCreate(ctx *cli.Context) {
 
 func domainRecordDestroy(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
-		fmt.Printf("Error: Must provide domain name and domain record id.\n")
-		os.Exit(1)
+		log.Fatal("Error: Must provide domain name and domain record id.")
 	}
 
 	domainName := ctx.Args().First()
 	recordID, err := strconv.Atoi(ctx.Args()[1])
 	if err != nil {
-		fmt.Printf("%s\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	tokenSource := &TokenSource{
@@ -313,9 +297,8 @@ func domainRecordDestroy(ctx *cli.Context) {
 
 	_, err = client.Domains.DeleteRecord(domainName, recordID)
 	if err != nil {
-		fmt.Printf("Unable to destroy domain record: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to destroy domain record: %s.", err)
 	}
 
-	fmt.Printf("Domain record %d destroyed.\n", recordID)
+	log.Printf("Domain record %d destroyed", recordID)
 }
