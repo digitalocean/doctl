@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 
@@ -11,7 +12,10 @@ import (
 
 const AppVersion = "0.0.16"
 
+var defaultConfigPath string
+
 var APIKey string
+var ConfigPath string
 var OutputFormat string
 
 type TokenSource struct {
@@ -23,6 +27,10 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 		AccessToken: t.AccessToken,
 	}
 	return token, nil
+}
+
+func init() {
+	defaultConfigPath = filepath.Join(getHomeDir(), "/.docfg")
 }
 
 func main() {
@@ -39,10 +47,21 @@ func main() {
 		},
 		cli.StringFlag{Name: "format,f", Value: "yaml", Usage: "Format for output."},
 		cli.BoolFlag{Name: "debug,d", Usage: "Turn on debug output."},
+		cli.StringFlag{Name: "config, c", Value: defaultConfigPath, Usage: "Path to configuration file"},
 	}
 	app.Before = func(ctx *cli.Context) error {
+		config, err := getConfig(ctx.String("config"))
+		if err != nil {
+			fmt.Printf("Unable to load config file: %s\n", err)
+			os.Exit(1)
+		}
+
 		if ctx.String("api-key") != "" {
 			APIKey = ctx.String("api-key")
+		}
+
+		if APIKey == "" {
+			APIKey = config.APIKey
 		}
 
 		if APIKey == "" && ctx.BoolT("help") != false {
