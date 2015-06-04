@@ -1,8 +1,8 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"os"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 
@@ -26,6 +26,11 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 }
 
 func main() {
+	app := buildApp()
+	app.RunAndExitOnError()
+}
+
+func buildApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = "doctl"
 	app.Version = AppVersion
@@ -45,10 +50,8 @@ func main() {
 			APIKey = ctx.String("api-key")
 		}
 
-		if APIKey == "" && ctx.BoolT("help") != false {
-			cli.ShowAppHelp(ctx)
-			fmt.Println("Must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument.")
-			os.Exit(1)
+		if APIKey == "" && !ctx.Bool("help") && !ctx.Bool("version") {
+			return errors.New("must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument")
 		}
 
 		switch ctx.String("format") {
@@ -57,8 +60,7 @@ func main() {
 		case "yaml":
 			OutputFormat = ctx.String("format")
 		default:
-			fmt.Printf("Invalid output format: %s. Available output options: json, yaml.\n", ctx.String("format"))
-			os.Exit(64)
+			return fmt.Errorf("invalid output format: %s, available output options: json, yaml", ctx.String("format"))
 		}
 
 		return nil
@@ -73,5 +75,5 @@ func main() {
 		SSHCommand,
 	}
 
-	app.Run(os.Args)
+	return app
 }
