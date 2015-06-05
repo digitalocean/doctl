@@ -23,7 +23,7 @@ func TestAppWithoutApiKey(t *testing.T) {
 	}{
 		{
 			args:    []string{"doctl"},
-			wantErr: errors.New("must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument"),
+			wantErr: errors.New("must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument."),
 		},
 		{
 			args:    []string{"doctl", "--version"},
@@ -54,8 +54,8 @@ func TestGlobalFormatFlag(t *testing.T) {
 	args := []string{"doctl", "-k", "key", "-f", "invalid"}
 	err := app.Run(args)
 
-	expected := "invalid output format: invalid, available output options: json, yaml"
+	expected := `invalid output format: "invalid", available output options: json, yaml.`
 	if err.Error() != expected {
-		t.Errorf("app.Run(%v) = %#v, want %#v", err.Error(), expected)
+		t.Errorf("app.Run(%v) = %#v, want %#v", err, err.Error(), expected)
 	}
 }

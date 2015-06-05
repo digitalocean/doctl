@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
@@ -17,7 +17,7 @@ var SizeCommand = cli.Command{
 	Subcommands: []cli.Command{
 		{
 			Name:    "list",
-			Aliases: []string{"s"},
+			Aliases: []string{"l"},
 			Usage:   "List all sizes.",
 			Action:  sizeList,
 		},
@@ -42,15 +42,14 @@ func sizeList(ctx *cli.Context) {
 	}
 	sizeList, _, err := client.Sizes.List(opt)
 	if err != nil {
-		fmt.Printf("Unable to list Sizes: %s\n", err)
-		os.Exit(1)
+		log.Fatalf("Unable to list Sizes: %s.", err)
 	}
 
 	cliOut := NewCLIOutput()
 	defer cliOut.Flush()
 	cliOut.Header("Slug", "Memory", "VCPUs", "Disk", "Transfer", "Price Monthly", "Price Hourly")
 	for _, size := range sizeList {
-		cliOut.Writeln("%s\t%dMB\t%d\t%dGB\t%d\t$%.0f\t$%.5f\n",
+		cliOut.Writeln("%s\t%dMB\t%d\t%dGB\t%.0fTB\t$%.0f\t$%.5f\n",
 			size.Slug, size.Memory, size.Vcpus, size.Disk, size.Transfer, size.PriceMonthly, size.PriceHourly)
 	}
 }

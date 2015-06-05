@@ -23,8 +23,7 @@ func FindDropletByName(c *godo.Client, name string) (*godo.Droplet, error) {
 
 		// if we are at the last page, break out the for loop
 		if resp.Links == nil || resp.Links.IsLastPage() {
-			fmt.Printf("Unable to find the Droplet: %s\n", name)
-			return nil, fmt.Errorf("%s Not Found.", name)
+			return nil, fmt.Errorf("%q not found.", name)
 		}
 
 		page, err := resp.Links.CurrentPage()
@@ -45,7 +44,7 @@ func FindKeyByName(c *godo.Client, name string) (*godo.Key, error) {
 			return nil, err
 		}
 
-		// append the current page's droplets to our list
+		// append the current page's keys to our list
 		for _, k := range keyPage {
 			if k.Name == name {
 				return &k, nil
@@ -54,8 +53,7 @@ func FindKeyByName(c *godo.Client, name string) (*godo.Key, error) {
 
 		// if we are at the last page, break out the for loop
 		if resp.Links == nil || resp.Links.IsLastPage() {
-			fmt.Printf("Unable to find the SSH Key: %s\n", name)
-			return nil, fmt.Errorf("%s Not Found.", name)
+			return nil, fmt.Errorf("%q not found.", name)
 		}
 
 		page, err := resp.Links.CurrentPage()
