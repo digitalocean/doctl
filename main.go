@@ -3,9 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
+	"net/url"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
+	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
@@ -14,6 +17,9 @@ const AppVersion = "0.0.16"
 
 var APIKey string
 var OutputFormat string
+var client *godo.Client
+var BaseURL *url.URL
+var Writer io.Writer
 
 type TokenSource struct {
 	AccessToken string
@@ -57,7 +63,16 @@ func buildApp() *cli.App {
 		}
 
 		if APIKey == "" && !ctx.Bool("help") && !ctx.Bool("version") {
-			return errors.New("must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument.")
+			return errors.New("Must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument.")
+		} else {
+			tokenSource := &TokenSource{
+				AccessToken: APIKey,
+			}
+			oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+			client = godo.NewClient(oauthClient)
+			if BaseURL != nil {
+				client.BaseURL = BaseURL
+			}
 		}
 
 		switch ctx.String("format") {
@@ -76,6 +91,7 @@ func buildApp() *cli.App {
 		ActionCommand,
 		DomainCommand,
 		DropletCommand,
+		ImageCommand,
 		RegionCommand,
 		SizeCommand,
 		SSHCommand,

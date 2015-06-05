@@ -6,8 +6,6 @@ import (
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
-
-	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var RegionCommand = cli.Command{
@@ -29,12 +27,6 @@ func regionList(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 		os.Exit(1)
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	opt := &godo.ListOptions{
 		Page:    1,

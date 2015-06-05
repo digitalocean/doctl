@@ -16,8 +16,11 @@ type CLIOutput struct {
 }
 
 func NewCLIOutput() *CLIOutput {
+	if Writer == nil {
+		Writer = os.Stdout
+	}
 	return &CLIOutput{
-		w: tabwriter.NewWriter(os.Stdout, 0, 8, 2, '\t', 0),
+		w: tabwriter.NewWriter(Writer, 0, 8, 2, '\t', 0),
 	}
 }
 
@@ -38,7 +41,7 @@ func WriteOutput(data interface{}) {
 			log.Fatalf("YAML Encoding Error: %s", err)
 		}
 	}
-	fmt.Println(string(output))
+	fmt.Fprintln(Writer, string(output))
 }
 
 func (c *CLIOutput) Header(a ...string) {
