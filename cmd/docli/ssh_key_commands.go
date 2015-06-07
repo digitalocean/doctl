@@ -7,7 +7,7 @@ import (
 
 func sshKeyCommands() cli.Command {
 	return cli.Command{
-		Name:  "ssh-key",
+		Name:  "key",
 		Usage: "ssh key commands",
 		Subcommands: []cli.Command{
 			sshKeyList(),
