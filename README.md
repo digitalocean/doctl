@@ -2,6 +2,7 @@
 
 
 ![Travis Build Status](https://travis-ci.org/bryanl/docli.svg?branch=master)
+[![Coverage Status](https://coveralls.io/repos/bryanl/docli/badge.svg?branch=master)](https://coveralls.io/r/bryanl/docli?branch=master)
 
 
 DigitalOcean CLI client
