@@ -8,6 +8,7 @@ before_install:
 install:
   - "go get -d -v -t ./..."
   - "go build -v ./..."
+  - "find $HOME/gopath/src/github.com/bryanl/docli"
 script:
   - $HOME/gopath/bin/goveralls -service=travis-ci
 deploy:
