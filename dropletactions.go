@@ -1,7 +1,6 @@
 package docli
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -229,7 +228,6 @@ func DropletActionRebuild(c *cli.Context) {
 	var r *godo.Action
 	var err error
 	if i, aerr := strconv.Atoi(image); aerr == nil {
-		fmt.Println("rebuilding by id")
 		r, _, err = client.DropletActions.RebuildByImageID(id, i)
 	} else {
 		r, _, err = client.DropletActions.RebuildByImageSlug(id, image)
