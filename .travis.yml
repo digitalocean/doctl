@@ -19,7 +19,7 @@ OXYEWONWZL+ufBfbTQPb4Ewk9oM965WR0G9Gbhbaks7sEELj35zxTD1pEOAiIw22Lk5fX0Md74CCa+LP
 PyQelz7cTmp3AKa4sU78UtSio5qUuYPHF3nPVJDhtg1tK/tQplF9iCP0DrQlah8LGMfGGVvyC/JBm98euegXtld0/k5HWS0r2tta+TFLh6jwvd7bBMkDdH
 Ml9yZvAz1k4z8Phy8YfUxXDk/NJ0FqLkk9j+6vemJAbBzNVLvwcYRaxogruG4QqEtxiYMtDdMMSEOEXpRB9DLNaItsj+uoam334KsDr30tDye4z6MKMqlT
 wBtbwzJ/fk8NzpxDA06P3fSGP2AMLurdky+dVgohnOM/IC3yKMUV+SYvf8PezETk4GaJMND13xRfjh1Yjil3MPxnIIZz5NuxVNUwvzIg="
-  file: "cmd/docli/docli"
+  file: "$HOME/gopath/src/github.com/bryanl/docli/cmd/docli/docli"
   skip_cleanup: true
   on:
     repo: bryanl/docli
