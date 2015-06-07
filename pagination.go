@@ -17,7 +17,6 @@ func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 	list := []interface{}{}
 
 	for {
-		log.WithField("page", opt.Page).Info("currentpage")
 		items, resp, err := gen(opt)
 		if err != nil {
 			return nil, err
