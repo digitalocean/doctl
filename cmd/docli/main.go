@@ -1,13 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
 	"github.com/codegangsta/cli"
-	"github.com/digitalocean/godo"
 	"golang.org/x/oauth2"
 )
 
@@ -56,7 +53,7 @@ func tokenFlag() cli.Flag {
 	return cli.StringFlag{
 		Name:   "token",
 		Usage:  "DigitalOcean API V2 Token",
-		EnvVar: "DO_TOKEN",
+		EnvVar: "DIGITAL_OCEAN_TOKEN",
 	}
 }
 
@@ -64,30 +61,5 @@ func debugFlag() cli.Flag {
 	return cli.BoolFlag{
 		Name:  "debug",
 		Usage: "Debug",
-	}
-}
-
-func toJSON(item interface{}) (string, error) {
-	b, err := json.MarshalIndent(item, "", "  ")
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
-}
-
-func newClient(c *cli.Context) *godo.Client {
-	pat := c.GlobalString("token")
-	tokenSource := &tokenSource{
-		AccessToken: pat,
-	}
-
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	return godo.NewClient(oauthClient)
-}
-
-func loadOpts(c *cli.Context) *docli.Opts {
-	return &docli.Opts{
-		Debug: c.GlobalBool("debug"),
 	}
 }
