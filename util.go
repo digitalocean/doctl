@@ -7,6 +7,7 @@ import (
 	"flag"
 	"io"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"golang.org/x/oauth2"
@@ -99,4 +100,13 @@ func WithinTest(cs ClientSource, fs *flag.FlagSet, fn func(*cli.Context)) {
 	c := cli.NewContext(app, fs, globalCtx)
 
 	fn(c)
+}
+
+func ErrWithUsage(c *cli.Context, msg string) {
+	logrus.Error(msg)
+	cli.ShowCommandHelp(c, c.Command.Name)
+}
+
+func bailFatal(err error, msg string) {
+	logrus.WithField("err", err).Fatal(msg)
 }

@@ -1,6 +1,7 @@
 package docli
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -139,14 +140,18 @@ func DropletGet(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
 	id := c.Int(ArgDropletID)
 
+	if id < 1 {
+		Bail(fmt.Errorf("missing droplet id"), "could not get droplet")
+	}
+
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not get droplet")
+		Bail(err, "could not get droplet")
 	}
 
 	err = WriteJSON(droplet, c.App.Writer)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		Bail(err, "could not write JSON")
 	}
 }
 

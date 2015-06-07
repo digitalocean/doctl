@@ -168,6 +168,28 @@ func TestImagesGetBySlug(t *testing.T) {
 	})
 }
 
+func TestImagesNoID(t *testing.T) {
+	client := &godo.Client{
+		Images: &ImagesServiceMock{
+			GetByIDFn: func(id int) (*godo.Image, *godo.Response, error) {
+				t.Error("should not try to load id")
+				return nil, nil, nil
+			},
+			GetBySlugFn: func(slug string) (*godo.Image, *godo.Response, error) {
+				t.Error("should not try to load slug")
+				return &testImage, nil, nil
+			},
+		},
+	}
+
+	cs := &TestClientSource{client}
+	fs := flag.NewFlagSet("flag set", 0)
+
+	WithinTest(cs, fs, func(c *cli.Context) {
+		ImagesGet(c)
+	})
+}
+
 func TestImagesUpdate(t *testing.T) {
 	client := &godo.Client{
 		Images: &ImagesServiceMock{

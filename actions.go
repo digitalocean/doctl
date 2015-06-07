@@ -1,6 +1,7 @@
 package docli
 
 import (
+	"fmt"
 	"io"
 
 	log "github.com/Sirupsen/logrus"
@@ -20,6 +21,11 @@ func ActionList(c *cli.Context) {
 func ActionGet(c *cli.Context) {
 	client := NewClient(c, DefaultClientSource)
 	id := c.Int("action-id")
+
+	if id < 1 {
+		Bail(fmt.Errorf("missing action id"), "could not retrieve action")
+	}
+
 	a, _, err := client.Actions.Get(id)
 	if err != nil {
 		log.WithField("err", err).Fatal("could not retrieve action")

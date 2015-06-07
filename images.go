@@ -1,6 +1,7 @@
 package docli
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -157,15 +158,21 @@ func ImagesGet(c *cli.Context) {
 	var image *godo.Image
 	if id, cerr := strconv.Atoi(rawID); cerr == nil {
 		image, _, err = client.Images.GetByID(id)
+	} else {
+		if len(rawID) > 0 {
+			image, _, err = client.Images.GetBySlug(rawID)
+		} else {
+			err = fmt.Errorf("image identifier is required")
+		}
 	}
 
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not get image")
+		Bail(err, "could not retrieve image")
 	}
 
 	err = WriteJSON(image, c.App.Writer)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		Bail(err, "coult not write JSON")
 	}
 }
 
@@ -180,12 +187,12 @@ func ImagesUpdate(c *cli.Context) {
 
 	image, _, err := client.Images.Update(id, req)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not update image")
+		Bail(err, "could not update image")
 	}
 
 	err = WriteJSON(image, c.App.Writer)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		Bail(err, "could not write JSON")
 	}
 }
 

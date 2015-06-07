@@ -1,6 +1,7 @@
 package docli
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -51,7 +52,11 @@ func KeyGet(c *cli.Context) {
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
 		key, _, err = client.Keys.GetByID(i)
 	} else {
-		key, _, err = client.Keys.GetByFingerprint(rawKey)
+		if len(rawKey) > 0 {
+			key, _, err = client.Keys.GetByFingerprint(rawKey)
+		} else {
+			err = fmt.Errorf("missing key id or fingerprint")
+		}
 	}
 
 	if err != nil {
