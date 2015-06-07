@@ -51,15 +51,6 @@ func WriteJSON(item interface{}, w io.Writer) error {
 
 }
 
-func ToJSON(item interface{}) (string, error) {
-	b, err := json.MarshalIndent(item, "", "  ")
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
-}
-
 type ClientSource interface {
 	NewClient(token string) *godo.Client
 }
