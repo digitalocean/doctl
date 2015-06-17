@@ -251,10 +251,11 @@ func TestImage_String(t *testing.T) {
 		Public:       true,
 		Regions:      []string{"one", "two"},
 		MinDiskSize:  20,
+		Created:      "2013-11-27T09:24:55Z",
 	}
 
 	stringified := image.String()
-	expected := `godo.Image{ID:1, Name:"Image", Type:"snapshot", Distribution:"Ubuntu", Slug:"image", Public:true, Regions:["one" "two"], MinDiskSize:20}`
+	expected := `godo.Image{ID:1, Name:"Image", Type:"snapshot", Distribution:"Ubuntu", Slug:"image", Public:true, Regions:["one" "two"], MinDiskSize:20, Created:"2013-11-27T09:24:55Z"}`
 	if expected != stringified {
 		t.Errorf("Image.String returned %+v, expected %+v", stringified, expected)
 	}
