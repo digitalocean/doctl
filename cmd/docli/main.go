@@ -21,7 +21,7 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 
 func init() {
 	logrus.SetOutput(os.Stderr)
-	logrus.SetLevel(logrus.WarnLevel)
+	logrus.SetLevel(logrus.InfoLevel)
 
 	docli.Bail = func(err error, msg string) {
 		logrus.WithField("err", err).Fatal(msg)
@@ -46,9 +46,10 @@ func main() {
 		dropletActionCommands(),
 		imageActionCommands(),
 		imageCommands(),
+		sshKeyCommands(),
 		regionCommands(),
 		sizeCommands(),
-		sshKeyCommands(),
+		sshCommands(),
 	}
 
 	app.RunAndExitOnError()

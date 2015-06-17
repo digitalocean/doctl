@@ -9,7 +9,7 @@ import (
 )
 
 func AccountGet(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	err := accountGet(client, c.App.Writer)
 	if err != nil {
 		log.WithField("err", err).Fatal("could not display account")

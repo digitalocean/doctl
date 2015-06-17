@@ -1,7 +1,6 @@
 package docli
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -11,7 +10,7 @@ import (
 
 // Actions returns a list of actions for a droplet.
 func DropletActions(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
 	opts := LoadOpts(c)
 
@@ -47,7 +46,7 @@ func DropletActions(c *cli.Context) {
 
 // Backups returns a list of backup images for a droplet.
 func DropletBackups(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
 	opts := LoadOpts(c)
 
@@ -83,7 +82,7 @@ func DropletBackups(c *cli.Context) {
 
 // Create creates a droplet.
 func DropletCreate(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 
 	sshKeys := []godo.DropletCreateSSHKey{}
 	for _, rawKey := range c.StringSlice(ArgSSHKeys) {
@@ -126,7 +125,7 @@ func DropletCreate(c *cli.Context) {
 
 // Delete destroy a droplet by id.
 func DropletDelete(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
 
 	_, err := client.Droplets.Delete(id)
@@ -137,14 +136,10 @@ func DropletDelete(c *cli.Context) {
 
 // Get returns a droplet.
 func DropletGet(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
 
-	if id < 1 {
-		Bail(fmt.Errorf("missing droplet id"), "could not get droplet")
-	}
-
-	droplet, _, err := client.Droplets.Get(id)
+	droplet, err := getDropletByID(client, id)
 	if err != nil {
 		Bail(err, "could not get droplet")
 	}
@@ -157,7 +152,7 @@ func DropletGet(c *cli.Context) {
 
 // Kernels returns a list of available kernels for a droplet.
 func DropletKernels(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
 	opts := LoadOpts(c)
 
@@ -193,7 +188,7 @@ func DropletKernels(c *cli.Context) {
 
 // List returns a list of droplets.
 func DropletList(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -228,7 +223,7 @@ func DropletList(c *cli.Context) {
 
 // Neighbors returns a list of droplet neighbors.
 func DropletNeighbors(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
 
 	list, _, err := client.Droplets.Neighbors(id)
@@ -244,7 +239,7 @@ func DropletNeighbors(c *cli.Context) {
 
 // Snapshots returns a list of available kernels for a droplet.
 func DropletSnapshots(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
 	opts := LoadOpts(c)
 

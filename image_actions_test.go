@@ -20,7 +20,7 @@ func TestImageActionsGet(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgImageID, 1, "image-id")
 	fs.Int(ArgActionID, 2, "action-id")
@@ -44,7 +44,7 @@ func TestImageActionsTransfer(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgImageID, 1, "image-id")
 	fs.String(ArgRegionSlug, "dev0", "region")

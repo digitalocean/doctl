@@ -10,7 +10,7 @@ import (
 )
 
 func KeyList(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -44,7 +44,7 @@ func KeyList(c *cli.Context) {
 }
 
 func KeyGet(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	rawKey := c.String(ArgKey)
 
 	var err error
@@ -71,7 +71,7 @@ func KeyGet(c *cli.Context) {
 
 // Create uploads a SSH key.
 func KeyCreate(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 
 	kcr := &godo.KeyCreateRequest{
 		Name:      c.String(ArgKeyName),
@@ -90,7 +90,7 @@ func KeyCreate(c *cli.Context) {
 }
 
 func KeyDelete(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	rawKey := c.String(ArgKey)
 
 	var err error
@@ -106,7 +106,7 @@ func KeyDelete(c *cli.Context) {
 }
 
 func KeyUpdate(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	rawKey := c.String(ArgKey)
 
 	req := &godo.KeyUpdateRequest{

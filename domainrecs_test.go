@@ -26,7 +26,7 @@ func TestRecordsList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 
@@ -53,7 +53,7 @@ func TestRecordsGet(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.Int("record-id", testRecord.ID, "record-id")
@@ -84,7 +84,7 @@ func TestRecordsCreate(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.String("record-type", "A", "record-type")
@@ -120,7 +120,7 @@ func TestRecordsUpdate(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.Int("record-id", 1, "record-id")
@@ -148,7 +148,7 @@ func TestRecordsDelete(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.Int("record-id", 1, "record-id")

@@ -32,7 +32,7 @@ func TestActionList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 
 	WithinTest(cs, nil, func(c *cli.Context) {
 		ActionList(c)
@@ -54,7 +54,7 @@ func TestActionGet(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int("action-id", testAction.ID, "action-id")
 

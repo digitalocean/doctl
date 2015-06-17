@@ -31,7 +31,7 @@ func TestAccountAction(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 
 	WithinTest(cs, nil, func(c *cli.Context) {
 		AccountGet(c)

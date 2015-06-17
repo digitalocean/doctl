@@ -9,13 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	testDroplet     = godo.Droplet{ID: 1}
-	testDropletList = []godo.Droplet{testDroplet}
-	testKernel      = godo.Kernel{ID: 1}
-	testKernelList  = []godo.Kernel{testKernel}
-)
-
 func TestDropletActionList(t *testing.T) {
 	client := &godo.Client{
 		Droplets: &DropletsServiceMock{
@@ -34,7 +27,7 @@ func TestDropletActionList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -61,7 +54,7 @@ func TestDropletBackupList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -89,7 +82,7 @@ func TestDropletCreate(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgDropletName, "droplet", ArgDropletName)
 	fs.String(ArgRegionSlug, "dev0", ArgRegionSlug)
@@ -111,7 +104,7 @@ func TestDropletDelete(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, testDroplet.ID, ArgDropletID)
 
@@ -130,7 +123,7 @@ func TestDropletGet(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, testDroplet.ID, ArgDropletID)
 
@@ -157,7 +150,7 @@ func TestDropletKernelList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -184,7 +177,7 @@ func TestDropletNeighbors(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -210,7 +203,7 @@ func TestDropletSnapshotList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -235,7 +228,7 @@ func TestDropletsList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 
 	WithinTest(cs, nil, func(c *cli.Context) {
 		DropletList(c)
