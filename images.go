@@ -36,6 +36,7 @@ type Image struct {
 	Public       bool     `json:"public,omitempty"`
 	Regions      []string `json:"regions,omitempty"`
 	MinDiskSize  int      `json:"min_disk_size,omitempty"`
+	Created      string   `json:"created_at,omitempty"`
 }
 
 // ImageUpdateRequest represents a request to update an image.
