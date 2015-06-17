@@ -29,6 +29,8 @@ func imageActionGet() cli.Command {
 				Name:  docli.ArgActionID,
 				Usage: "action id",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.ImageActionsGet,
 	}
@@ -47,6 +49,8 @@ func imageActionTransfer() cli.Command {
 				Name:  docli.ArgRegionSlug,
 				Usage: "region",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.ImageActionsTransfer,
 	}

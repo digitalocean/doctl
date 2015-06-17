@@ -38,9 +38,9 @@ func ImagesList(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
@@ -73,7 +73,7 @@ func ImagesListDistribution(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = writeJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
@@ -108,7 +108,7 @@ func ImagesListApplication(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = writeJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
@@ -143,7 +143,7 @@ func ImagesListUser(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = writeJSON(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write JSON")
 	}
@@ -170,7 +170,7 @@ func ImagesGet(c *cli.Context) {
 		Bail(err, "could not retrieve image")
 	}
 
-	err = WriteJSON(image, c.App.Writer)
+	err = writeJSON(image, c.App.Writer)
 	if err != nil {
 		Bail(err, "coult not write JSON")
 	}
@@ -190,7 +190,7 @@ func ImagesUpdate(c *cli.Context) {
 		Bail(err, "could not update image")
 	}
 
-	err = WriteJSON(image, c.App.Writer)
+	err = writeJSON(image, c.App.Writer)
 	if err != nil {
 		Bail(err, "could not write JSON")
 	}

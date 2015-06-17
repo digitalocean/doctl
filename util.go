@@ -3,10 +3,8 @@ package docli
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 
@@ -63,19 +61,6 @@ func LoadOpts(c *cli.Context) *Opts {
 	return &Opts{
 		Debug: c.GlobalBool("debug"),
 	}
-}
-
-func WriteJSON(item interface{}, w io.Writer) error {
-	b, err := json.Marshal(item)
-	if err != nil {
-		return err
-	}
-
-	var out bytes.Buffer
-	json.Indent(&out, b, "", "  ")
-	_, err = out.WriteTo(w)
-	return err
-
 }
 
 // Config holds configuration values for commands. It currently contains a godo Client
@@ -157,4 +142,15 @@ func ErrWithUsage(c *cli.Context, msg string) {
 
 func bailFatal(err error, msg string) {
 	logrus.WithField("err", err).Fatal(msg)
+}
+
+func extractDropletPublicIP(droplet *godo.Droplet) string {
+	for _, in := range droplet.Networks.V4 {
+		if in.Type == "public" {
+			return in.IPAddress
+		}
+	}
+
+	return ""
+
 }

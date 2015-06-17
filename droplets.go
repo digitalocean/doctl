@@ -38,9 +38,9 @@ func DropletActions(c *cli.Context) {
 		list[i] = si[i].(godo.Action)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
@@ -74,9 +74,9 @@ func DropletBackups(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
@@ -117,9 +117,9 @@ func DropletCreate(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not create droplet")
 	}
 
-	err = WriteJSON(r, c.App.Writer)
+	err = displayOutput(c, r)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
@@ -144,9 +144,9 @@ func DropletGet(c *cli.Context) {
 		Bail(err, "could not get droplet")
 	}
 
-	err = WriteJSON(droplet, c.App.Writer)
+	err = displayOutput(c, droplet)
 	if err != nil {
-		Bail(err, "could not write JSON")
+		Bail(err, "could not write output")
 	}
 }
 
@@ -180,9 +180,9 @@ func DropletKernels(c *cli.Context) {
 		list[i] = si[i].(godo.Kernel)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
@@ -215,9 +215,9 @@ func DropletList(c *cli.Context) {
 		list[i] = si[i].(godo.Droplet)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
@@ -231,9 +231,9 @@ func DropletNeighbors(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not list neighbors for droplet")
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
@@ -267,8 +267,8 @@ func DropletSnapshots(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }

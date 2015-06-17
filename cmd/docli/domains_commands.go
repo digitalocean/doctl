@@ -54,6 +54,8 @@ func domainGet() cli.Command {
 				Name:  docli.ArgDomainName,
 				Usage: "domain name",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DomainGet,
 	}

@@ -2,9 +2,8 @@ package docli
 
 import (
 	"fmt"
-	"io"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 )
@@ -12,9 +11,9 @@ import (
 func ActionList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
-	err := actionsList(client, opts, c.App.Writer)
+	err := actionsList(client, opts, c)
 	if err != nil {
-		log.WithField("err", err).Fatal("could not list actions")
+		logrus.WithField("err", err).Fatal("could not list actions")
 	}
 }
 
@@ -28,12 +27,16 @@ func ActionGet(c *cli.Context) {
 
 	a, _, err := client.Actions.Get(id)
 	if err != nil {
-		log.WithField("err", err).Fatal("could not retrieve action")
+		logrus.WithField("err", err).Fatal("could not retrieve action")
 	}
-	WriteJSON(a, c.App.Writer)
+
+	err = displayOutput(c, a)
+	if err != nil {
+		logrus.WithField("err", err).Fatal("could not write output")
+	}
 }
 
-func actionsList(client *godo.Client, opts *Opts, w io.Writer) error {
+func actionsList(client *godo.Client, opts *Opts, c *cli.Context) error {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
 		if err != nil {
@@ -58,5 +61,5 @@ func actionsList(client *godo.Client, opts *Opts, w io.Writer) error {
 		list[i] = si[i].(godo.Action)
 	}
 
-	return WriteJSON(list, w)
+	return displayOutput(c, list)
 }

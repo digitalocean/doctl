@@ -2,8 +2,8 @@ package docli
 
 const (
 	ArgActionID          = "action-id"
-	ArgDropletID         = "droplet-id"
 	ArgDomainName        = "domain-name"
+	ArgDropletID         = "droplet-id"
 	ArgKernelID          = "kernel-id"
 	ArgImage             = "image"
 	ArgImageID           = "image-id"
@@ -30,4 +30,9 @@ const (
 	ArgKey               = "key"
 	ArgKeyName           = "key-name"
 	ArgKeyPublicKey      = "public-key"
+	ArgSSHUser           = "ssh-user"
+
+	// Arguments for outputs
+	ArgDisplayJSON = "json"
+	ArgDisplayText = "text"
 )

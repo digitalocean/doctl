@@ -9,6 +9,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+// KeyList lists keys.
 func KeyList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
@@ -37,12 +38,13 @@ func KeyList(c *cli.Context) {
 		list[i] = si[i].(godo.Key)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
+// KeyGet retrieves a key.
 func KeyGet(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	rawKey := c.String(ArgKey)
@@ -63,13 +65,14 @@ func KeyGet(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not retrieve key")
 	}
 
-	err = WriteJSON(key, c.App.Writer)
+	err = displayOutput(c, key)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
+
 }
 
-// Create uploads a SSH key.
+// KeyCreate uploads a SSH key.
 func KeyCreate(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 
@@ -83,12 +86,14 @@ func KeyCreate(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not create key")
 	}
 
-	err = WriteJSON(r, c.App.Writer)
+	err = displayOutput(c, r)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
+
 }
 
+// KeyDelete deletes a key.
 func KeyDelete(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	rawKey := c.String(ArgKey)
@@ -105,6 +110,7 @@ func KeyDelete(c *cli.Context) {
 	}
 }
 
+// KeyUpdate updates a key.
 func KeyUpdate(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	rawKey := c.String(ArgKey)
@@ -125,8 +131,8 @@ func KeyUpdate(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not update key")
 	}
 
-	err = WriteJSON(key, c.App.Writer)
+	err = displayOutput(c, key)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }

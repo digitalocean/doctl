@@ -18,6 +18,10 @@ func sshCommands() cli.Command {
 				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
+			cli.StringFlag{
+				Name:  docli.ArgSSHUser,
+				Usage: "ssh user",
+			},
 		},
 		Action: docli.SSH,
 	}

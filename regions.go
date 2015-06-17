@@ -35,9 +35,9 @@ func RegionList(c *cli.Context) {
 		list[i] = si[i].(godo.Region)
 	}
 
-	err = WriteJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 
 }

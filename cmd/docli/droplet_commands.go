@@ -28,10 +28,8 @@ func dropletList() cli.Command {
 		Name:  "list",
 		Usage: "list droplets",
 		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "json",
-				Usage: "return list of droplets as JSON array",
-			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DropletList,
 	}
@@ -80,6 +78,8 @@ func dropletCreate() cli.Command {
 				Name:  docli.ArgUserData,
 				Usage: "droplet name",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DropletCreate,
 	}
@@ -108,6 +108,8 @@ func dropletGet() cli.Command {
 				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DropletGet,
 	}
@@ -122,6 +124,8 @@ func dropletKernels() cli.Command {
 				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DropletKernels,
 	}
@@ -136,6 +140,8 @@ func dropletSnapshots() cli.Command {
 				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DropletSnapshots,
 	}
@@ -150,6 +156,8 @@ func dropletBackups() cli.Command {
 				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DropletBackups,
 	}
@@ -164,6 +172,8 @@ func dropletActions() cli.Command {
 				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DropletActions,
 	}
@@ -178,6 +188,8 @@ func dropletNeighbors() cli.Command {
 				Name:  docli.ArgDropletID,
 				Usage: "droplet id",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.DropletNeighbors,
 	}
