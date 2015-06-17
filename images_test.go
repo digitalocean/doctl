@@ -32,7 +32,7 @@ func TestImagesList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
@@ -59,7 +59,7 @@ func TestImagesListDistribution(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
@@ -86,7 +86,7 @@ func TestImagesListApplication(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
@@ -113,7 +113,7 @@ func TestImagesListUser(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
@@ -136,7 +136,7 @@ func TestImagesGetByID(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgImage, testImage.ID, ArgImage)
 
@@ -159,7 +159,7 @@ func TestImagesGetBySlug(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgImage, testImage.Slug, ArgImage)
 
@@ -182,7 +182,7 @@ func TestImagesNoID(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
@@ -203,7 +203,7 @@ func TestImagesUpdate(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgImageID, testImage.ID, ArgImageID)
 	fs.String(ArgImageName, "new-name", ArgImageName)
@@ -223,7 +223,7 @@ func TestImagesDelete(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgImageID, testImage.ID, ArgImageID)
 

@@ -7,7 +7,7 @@ import (
 )
 
 func DomainCreate(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	req := &godo.DomainCreateRequest{
 		Name:      c.String("domain-name"),
 		IPAddress: c.String("ip-address"),
@@ -21,7 +21,7 @@ func DomainCreate(c *cli.Context) {
 }
 
 func DomainDelete(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	name := c.String("domain-name")
 	_, err := client.Domains.Delete(name)
 	if err != nil {
@@ -31,7 +31,7 @@ func DomainDelete(c *cli.Context) {
 
 // List lists all domains.
 func DomainList(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -62,7 +62,7 @@ func DomainList(c *cli.Context) {
 }
 
 func DomainGet(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.String("domain-name")
 	a, _, err := client.Domains.Get(id)
 	if err != nil {

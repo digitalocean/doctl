@@ -1,0 +1,70 @@
+package docli
+
+import (
+	"fmt"
+
+	"github.com/codegangsta/cli"
+	"github.com/digitalocean/godo"
+)
+
+const (
+	sshNoAddress = "could not find droplet address"
+)
+
+var (
+	errSSHInvalidOptions = fmt.Errorf("neither id or name were supplied")
+)
+
+// SSH finds a droplet to ssh to given input parameters (name or id).
+func SSH(c *cli.Context) {
+	client := NewClient(c, DefaultConfig)
+	id := c.Int(ArgDropletID)
+	name := c.String(ArgDropletName)
+
+	var droplet *godo.Droplet
+	var err error
+
+	switch {
+	case id > 0 && len(name) < 1:
+		droplet, err = getDropletByID(client, id)
+		if err != nil {
+			Bail(err, sshNoAddress)
+			return
+		}
+	case len(name) > 0 && id < 1:
+		var droplets []godo.Droplet
+		droplets, err = listDroplets(client, LoadOpts(c))
+		for _, d := range droplets {
+			if d.Name == name {
+				droplet = &d
+				break
+			}
+		}
+
+		if droplet == nil {
+			Bail(fmt.Errorf("could not find droplet by name"), sshNoAddress)
+			return
+		}
+
+	default:
+		Bail(errSSHInvalidOptions, sshNoAddress)
+		return
+	}
+
+	var publicInt godo.NetworkV4
+	for _, in := range droplet.Networks.V4 {
+		if in.Type == "public" {
+			publicInt = in
+			break
+		}
+	}
+
+	if len(publicInt.Type) < 1 {
+		Bail(fmt.Errorf("no public interface for droplet"), sshNoAddress)
+	}
+
+	err = DefaultConfig.SSH("root", publicInt.IPAddress)
+	if err != nil {
+		Bail(err, "unable to ssh to host")
+	}
+}

@@ -23,7 +23,7 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.Int(ArgKernelID, 2, "kernel-id")
@@ -45,7 +45,7 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -66,7 +66,7 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -87,7 +87,7 @@ func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -110,7 +110,7 @@ func TestDropletActionsGet(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.Int(ArgActionID, 2, ArgActionID)
@@ -132,7 +132,7 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -153,7 +153,7 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -173,7 +173,7 @@ func TestDropletActionsPowerOff(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -193,7 +193,7 @@ func TestDropletActionsPowerOn(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -213,7 +213,7 @@ func TestDropletActionsReboot(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -237,7 +237,7 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgImage, "2", ArgImageID)
@@ -262,7 +262,7 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgImage, "slug", "slug")
@@ -286,7 +286,7 @@ func TestDropletActionsRename(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgDropletName, "name", "name")
@@ -313,7 +313,7 @@ func TestDropletActionsResize(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgImageSlug, "slug", "image-slug")
@@ -339,7 +339,7 @@ func TestDropletActionsRestore(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.Int(ArgImageID, 2, ArgImageID)
@@ -360,7 +360,7 @@ func TestDropletActionsShutdown(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
@@ -383,7 +383,7 @@ func TestDropletActionsSnapshot(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgSnapshotName, "name", "name")
@@ -404,7 +404,7 @@ func TestDropletActionsUpgrade(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 

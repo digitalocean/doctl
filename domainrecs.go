@@ -7,7 +7,7 @@ import (
 )
 
 func RecordCreate(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	domainName := c.String("domain-name")
 
 	drcr := &godo.DomainRecordEditRequest{
@@ -28,7 +28,7 @@ func RecordCreate(c *cli.Context) {
 }
 
 func RecordDelete(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	domainName := c.String("domain-name")
 	recordID := c.Int("record-id")
 
@@ -40,7 +40,7 @@ func RecordDelete(c *cli.Context) {
 
 // List records for a domain.
 func RecordList(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 	name := c.String("domain-name")
 
@@ -73,7 +73,7 @@ func RecordList(c *cli.Context) {
 
 // Retrieve a domain record.
 func RecordGet(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	domainName := c.String("domain-name")
 	recordID := c.Int("record-id")
 
@@ -86,7 +86,7 @@ func RecordGet(c *cli.Context) {
 }
 
 func RecordUpdate(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	domainName := c.String("domain-name")
 	recordID := c.Int("record-id")
 

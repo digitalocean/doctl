@@ -11,7 +11,7 @@ import (
 
 // List images.
 func ImagesList(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -46,7 +46,7 @@ func ImagesList(c *cli.Context) {
 
 // ListDistribution lists distributions that are available.
 func ImagesListDistribution(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -81,7 +81,7 @@ func ImagesListDistribution(c *cli.Context) {
 
 // ListApplication lists application iamges.
 func ImagesListApplication(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -116,7 +116,7 @@ func ImagesListApplication(c *cli.Context) {
 
 // ListUser lists user images.
 func ImagesListUser(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -151,7 +151,7 @@ func ImagesListUser(c *cli.Context) {
 
 // Get retrieves an image by id or slug.
 func ImagesGet(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	rawID := c.String(ArgImage)
 
 	var err error
@@ -178,7 +178,7 @@ func ImagesGet(c *cli.Context) {
 
 // Update updates an image.
 func ImagesUpdate(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgImageID)
 
 	req := &godo.ImageUpdateRequest{
@@ -197,7 +197,7 @@ func ImagesUpdate(c *cli.Context) {
 }
 
 func ImagesDelete(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgImageID)
 
 	_, err := client.Images.Delete(id)

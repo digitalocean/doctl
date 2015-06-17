@@ -33,11 +33,12 @@ func TestKeysList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		KeyList(c)
+		assert.True(t, didList)
 	})
 }
 
@@ -55,7 +56,7 @@ func TestKeysGetByID(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, "1", ArgKey)
 
@@ -78,7 +79,7 @@ func TestKeysGetByFingerprint(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, testKey.Fingerprint, ArgKey)
 
@@ -101,7 +102,7 @@ func TestKeysCreate(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKeyName, "the key", ArgKeyName)
 	fs.String(ArgKeyPublicKey, "fingerprint", ArgKeyPublicKey)
@@ -125,7 +126,7 @@ func TestKeysDeleteByID(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, "1", ArgKey)
 
@@ -148,7 +149,7 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, "fingerprint", ArgKey)
 
@@ -175,7 +176,7 @@ func TestKeysUpdateByID(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, "1", ArgKey)
 	fs.String(ArgKeyName, "the key", ArgKeyName)
@@ -203,7 +204,7 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, "fingerprint", ArgKey)
 	fs.String(ArgKeyName, "the key", ArgKeyName)

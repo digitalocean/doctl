@@ -10,7 +10,7 @@ import (
 )
 
 func ActionList(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
 	err := actionsList(client, opts, c.App.Writer)
 	if err != nil {
@@ -19,7 +19,7 @@ func ActionList(c *cli.Context) {
 }
 
 func ActionGet(c *cli.Context) {
-	client := NewClient(c, DefaultClientSource)
+	client := NewClient(c, DefaultConfig)
 	id := c.Int("action-id")
 
 	if id < 1 {

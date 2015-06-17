@@ -31,7 +31,7 @@ func TestDomainsList(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 
 	WithinTest(cs, nil, func(c *cli.Context) {
 		DomainList(c)
@@ -53,7 +53,7 @@ func TestDomainsGet(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", testDomain.Name, "domain-id")
 
@@ -78,7 +78,7 @@ func TestDomainsCreate(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", testDomain.Name, "domain-name")
 	fs.String("ip-address", "127.0.0.1", "ip- address")
@@ -100,7 +100,7 @@ func TestDomainsDelete(t *testing.T) {
 		},
 	}
 
-	cs := &TestClientSource{client}
+	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", testDomain.Name, "domain-name")
 

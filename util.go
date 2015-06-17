@@ -5,7 +5,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
+	"os"
+	"os/exec"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -13,18 +16,41 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var DefaultClientSource ClientSource = &LiveClientSource{}
+// DefaultConfig is the current configuration for the commands.
+var DefaultConfig Config = &LiveConfig{}
 
 type TokenSource struct {
 	AccessToken string
 }
 
-type TestClientSource struct {
+// TestConfig is an implemenation of Config that can be inspected during tests.
+type TestConfig struct {
 	Client *godo.Client
+	SSHFn  func(user, host string) error
 }
 
-func (cs *TestClientSource) NewClient(_ string) *godo.Client {
+// NewTestConfig creates a TestConfig.
+func NewTestConfig(client *godo.Client) *TestConfig {
+	return &TestConfig{
+		Client: client,
+		SSHFn: func(u, h string) error {
+			logrus.WithFields(logrus.Fields{
+				"user": u,
+				"host": h,
+			}).Info("ssh")
+			return nil
+		},
+	}
+}
+
+// NewClient returns the specified godo.Client.
+func (cs *TestConfig) NewClient(_ string) *godo.Client {
 	return cs.Client
+}
+
+// SSH allows the developer to inspect the status of the ssh connection during tests.
+func (cs *TestConfig) SSH(user, host string) error {
+	return cs.SSHFn(user, host)
 }
 
 func (t *TokenSource) Token() (*oauth2.Token, error) {
@@ -52,13 +78,18 @@ func WriteJSON(item interface{}, w io.Writer) error {
 
 }
 
-type ClientSource interface {
+// Config holds configuration values for commands. It currently contains a godo Client
+// and a method for running SSH.
+type Config interface {
 	NewClient(token string) *godo.Client
+	SSH(user, host string) error
 }
 
-type LiveClientSource struct{}
+// LiveConfig
+type LiveConfig struct{}
 
-func (cs *LiveClientSource) NewClient(token string) *godo.Client {
+// NewClient creates creates a godo.Client givent a token.
+func (cs *LiveConfig) NewClient(token string) *godo.Client {
 	tokenSource := &TokenSource{
 		AccessToken: token,
 	}
@@ -67,21 +98,38 @@ func (cs *LiveClientSource) NewClient(token string) *godo.Client {
 	return godo.NewClient(oauthClient)
 }
 
-func NewClient(c *cli.Context, cs ClientSource) *godo.Client {
+// SSH runs the ssh binary given a user and a host. It preserves stdin, stdout, and stderr.
+func (cs *LiveConfig) SSH(user, host string) error {
+	logrus.WithFields(logrus.Fields{
+		"user": user,
+		"host": host,
+	}).Info("ssh")
+
+	sshHost := fmt.Sprintf("%s@%s", user, host)
+	cmd := exec.Command("ssh", sshHost)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+// NewClient creates a Client.
+func NewClient(c *cli.Context, cs Config) *godo.Client {
 	if cs == nil {
-		cs = &LiveClientSource{}
+		cs = &LiveConfig{}
 	}
 
 	pat := c.GlobalString("token")
 	return cs.NewClient(pat)
 }
 
-func WithinTest(cs ClientSource, fs *flag.FlagSet, fn func(*cli.Context)) {
-	ogSource := DefaultClientSource
-	DefaultClientSource = cs
+func WithinTest(cs Config, fs *flag.FlagSet, fn func(*cli.Context)) {
+	ogSource := DefaultConfig
+	DefaultConfig = cs
 
 	defer func() {
-		DefaultClientSource = ogSource
+		DefaultConfig = ogSource
 	}()
 
 	var b bytes.Buffer
