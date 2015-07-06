@@ -17,8 +17,12 @@ func sizeCommands() cli.Command {
 
 func sizeList() cli.Command {
 	return cli.Command{
-		Name:   "list",
-		Usage:  "list sizes",
+		Name:  "list",
+		Usage: "list sizes",
+		Flags: []cli.Flag{
+			jsonFlag(),
+			textFlag(),
+		},
 		Action: docli.SizeList,
 	}
 }

@@ -69,3 +69,17 @@ func debugFlag() cli.Flag {
 		Usage: "Debug",
 	}
 }
+
+func jsonFlag() cli.Flag {
+	return cli.BoolFlag{
+		Name:  docli.ArgDisplayJSON,
+		Usage: "display JSON output",
+	}
+}
+
+func textFlag() cli.Flag {
+	return cli.BoolFlag{
+		Name:  docli.ArgDisplayText,
+		Usage: "display text output",
+	}
+}

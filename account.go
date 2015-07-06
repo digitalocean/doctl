@@ -22,5 +22,5 @@ func accountGet(client *godo.Client, w io.Writer) error {
 		return err
 	}
 
-	return WriteJSON(a, w)
+	return writeJSON(a, w)
 }

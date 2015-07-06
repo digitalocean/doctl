@@ -20,6 +20,11 @@ func SSH(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
 	name := c.String(ArgDropletName)
+	user := c.String(ArgSSHUser)
+
+	if len(user) < 1 {
+		user = "root"
+	}
 
 	var droplet *godo.Droplet
 	var err error
@@ -51,19 +56,13 @@ func SSH(c *cli.Context) {
 		return
 	}
 
-	var publicInt godo.NetworkV4
-	for _, in := range droplet.Networks.V4 {
-		if in.Type == "public" {
-			publicInt = in
-			break
-		}
-	}
+	publicIP := extractDropletPublicIP(droplet)
 
-	if len(publicInt.Type) < 1 {
+	if len(publicIP) < 1 {
 		Bail(fmt.Errorf("no public interface for droplet"), sshNoAddress)
 	}
 
-	err = DefaultConfig.SSH("root", publicInt.IPAddress)
+	err = DefaultConfig.SSH(user, publicIP)
 	if err != nil {
 		Bail(err, "unable to ssh to host")
 	}

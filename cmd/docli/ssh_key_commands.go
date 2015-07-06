@@ -21,8 +21,12 @@ func sshKeyCommands() cli.Command {
 
 func sshKeyList() cli.Command {
 	return cli.Command{
-		Name:   "list",
-		Usage:  "list ssh keys",
+		Name:  "list",
+		Usage: "list ssh keys",
+		Flags: []cli.Flag{
+			jsonFlag(),
+			textFlag(),
+		},
 		Action: docli.KeyList,
 	}
 }
@@ -40,6 +44,8 @@ func sshKeyCreate() cli.Command {
 				Name:  docli.ArgKeyPublicKey,
 				Usage: "ssh public key",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.KeyCreate,
 	}
@@ -54,6 +60,8 @@ func sshKeyGet() cli.Command {
 				Name:  docli.ArgKey,
 				Usage: "ssh key id or fingerprint",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.KeyGet,
 	}
@@ -72,6 +80,8 @@ func sshKeyUpdate() cli.Command {
 				Name:  docli.ArgKeyName,
 				Usage: "ssh key name",
 			},
+			jsonFlag(),
+			textFlag(),
 		},
 		Action: docli.KeyUpdate,
 	}
