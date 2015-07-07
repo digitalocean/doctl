@@ -34,7 +34,7 @@ func TestActionList(t *testing.T) {
 
 	cs := NewTestConfig(client)
 
-	WithinTest(cs, nil, func(c *cli.Context) {
+	withinTest(cs, nil, func(c *cli.Context) {
 		ActionList(c)
 		if !actionDidList {
 			t.Errorf("Action() did not run")
@@ -58,7 +58,7 @@ func TestActionGet(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int("action-id", testAction.ID, "action-id")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ActionGet(c)
 	})
 }

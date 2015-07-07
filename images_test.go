@@ -35,7 +35,7 @@ func TestImagesList(t *testing.T) {
 	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesList(c)
 		assert.True(t, didRun)
 	})
@@ -62,7 +62,7 @@ func TestImagesListDistribution(t *testing.T) {
 	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesListDistribution(c)
 		assert.True(t, didRun)
 	})
@@ -89,7 +89,7 @@ func TestImagesListApplication(t *testing.T) {
 	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesListApplication(c)
 		assert.True(t, didRun)
 	})
@@ -116,7 +116,7 @@ func TestImagesListUser(t *testing.T) {
 	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesListUser(c)
 		assert.True(t, didRun)
 	})
@@ -140,7 +140,7 @@ func TestImagesGetByID(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgImage, testImage.ID, ArgImage)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesGet(c)
 	})
 }
@@ -163,7 +163,7 @@ func TestImagesGetBySlug(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgImage, testImage.Slug, ArgImage)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesGet(c)
 	})
 }
@@ -185,7 +185,7 @@ func TestImagesNoID(t *testing.T) {
 	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesGet(c)
 	})
 }
@@ -208,7 +208,7 @@ func TestImagesUpdate(t *testing.T) {
 	fs.Int(ArgImageID, testImage.ID, ArgImageID)
 	fs.String(ArgImageName, "new-name", ArgImageName)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesUpdate(c)
 	})
 }
@@ -227,7 +227,7 @@ func TestImagesDelete(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgImageID, testImage.ID, ArgImageID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImagesDelete(c)
 	})
 }

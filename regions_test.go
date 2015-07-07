@@ -35,7 +35,7 @@ func TestRegionsList(t *testing.T) {
 	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		RegionList(c)
 		assert.True(t, didList)
 	})

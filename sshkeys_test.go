@@ -36,7 +36,7 @@ func TestKeysList(t *testing.T) {
 	cs := NewTestConfig(client)
 	fs := flag.NewFlagSet("flag set", 0)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		KeyList(c)
 		assert.True(t, didList)
 	})
@@ -60,7 +60,7 @@ func TestKeysGetByID(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, "1", ArgKey)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		KeyGet(c)
 	})
 }
@@ -83,7 +83,7 @@ func TestKeysGetByFingerprint(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, testKey.Fingerprint, ArgKey)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		KeyGet(c)
 	})
 }
@@ -107,7 +107,7 @@ func TestKeysCreate(t *testing.T) {
 	fs.String(ArgKeyName, "the key", ArgKeyName)
 	fs.String(ArgKeyPublicKey, "fingerprint", ArgKeyPublicKey)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		KeyCreate(c)
 	})
 }
@@ -130,7 +130,7 @@ func TestKeysDeleteByID(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, "1", ArgKey)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		KeyDelete(c)
 	})
 }
@@ -153,7 +153,7 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgKey, "fingerprint", ArgKey)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		KeyDelete(c)
 	})
 }
@@ -181,7 +181,7 @@ func TestKeysUpdateByID(t *testing.T) {
 	fs.String(ArgKey, "1", ArgKey)
 	fs.String(ArgKeyName, "the key", ArgKeyName)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		KeyUpdate(c)
 	})
 }
@@ -209,7 +209,7 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 	fs.String(ArgKey, "fingerprint", ArgKey)
 	fs.String(ArgKeyName, "the key", ArgKeyName)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		KeyUpdate(c)
 	})
 }

@@ -33,7 +33,7 @@ func TestDomainsList(t *testing.T) {
 
 	cs := NewTestConfig(client)
 
-	WithinTest(cs, nil, func(c *cli.Context) {
+	withinTest(cs, nil, func(c *cli.Context) {
 		DomainList(c)
 		if !domainsDisList {
 			t.Errorf("List() did not run")
@@ -57,7 +57,7 @@ func TestDomainsGet(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", testDomain.Name, "domain-id")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DomainGet(c)
 	})
 }
@@ -83,7 +83,7 @@ func TestDomainsCreate(t *testing.T) {
 	fs.String("domain-name", testDomain.Name, "domain-name")
 	fs.String("ip-address", "127.0.0.1", "ip- address")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DomainCreate(c)
 	})
 }
@@ -104,7 +104,7 @@ func TestDomainsDelete(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", testDomain.Name, "domain-name")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DomainDelete(c)
 	})
 }

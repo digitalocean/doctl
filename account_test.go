@@ -33,7 +33,7 @@ func TestAccountAction(t *testing.T) {
 
 	cs := NewTestConfig(client)
 
-	WithinTest(cs, nil, func(c *cli.Context) {
+	withinTest(cs, nil, func(c *cli.Context) {
 		AccountGet(c)
 		if !accountDidGet {
 			t.Errorf("Action() did not run")

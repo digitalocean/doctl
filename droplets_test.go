@@ -31,7 +31,7 @@ func TestDropletActionList(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActions(c)
 	})
 }
@@ -58,7 +58,7 @@ func TestDropletBackupList(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletBackups(c)
 	})
 }
@@ -89,7 +89,7 @@ func TestDropletCreate(t *testing.T) {
 	fs.String(ArgSizeSlug, "1gb", ArgSizeSlug)
 	fs.String(ArgImage, "image", ArgImage)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletCreate(c)
 	})
 }
@@ -108,7 +108,7 @@ func TestDropletDelete(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, testDroplet.ID, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletDelete(c)
 	})
 }
@@ -127,7 +127,7 @@ func TestDropletGet(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, testDroplet.ID, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletGet(c)
 	})
 }
@@ -154,7 +154,7 @@ func TestDropletKernelList(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletKernels(c)
 	})
 }
@@ -181,7 +181,7 @@ func TestDropletNeighbors(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletNeighbors(c)
 		assert.True(t, didRun)
 	})
@@ -207,7 +207,7 @@ func TestDropletSnapshotList(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletSnapshots(c)
 	})
 }
@@ -230,7 +230,7 @@ func TestDropletsList(t *testing.T) {
 
 	cs := NewTestConfig(client)
 
-	WithinTest(cs, nil, func(c *cli.Context) {
+	withinTest(cs, nil, func(c *cli.Context) {
 		DropletList(c)
 		assert.True(t, didRun)
 	})

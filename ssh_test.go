@@ -51,7 +51,7 @@ func TestSSH_ID(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, testDroplet.ID, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		SSH(c)
 		assert.True(t, didFetchDroplet)
 		assert.True(t, ms.didRun)
@@ -79,7 +79,7 @@ func TestSSH_InvalidID(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, testDroplet.ID, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		SSH(c)
 		assert.True(t, didFetchDroplet)
 		assert.False(t, ms.didRun)
@@ -105,7 +105,7 @@ func TestSSH_Name(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgDropletName, testDroplet.Name, ArgDropletName)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		SSH(c)
 		assert.True(t, didFetchDroplet)
 		assert.True(t, ms.didRun)
@@ -133,7 +133,7 @@ func TestSSH_InvalidName(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String(ArgDropletName, "nope", ArgDropletName)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		SSH(c)
 		assert.True(t, didFetchDroplet)
 		assert.False(t, ms.didRun)
@@ -150,7 +150,7 @@ func TestSSH_InvalidOpts(t *testing.T) {
 
 	fs := flag.NewFlagSet("flag set", 0)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		SSH(c)
 		assert.False(t, ms.didRun)
 	})

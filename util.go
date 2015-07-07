@@ -109,7 +109,7 @@ func NewClient(c *cli.Context, cs Config) *godo.Client {
 	return cs.NewClient(pat)
 }
 
-func WithinTest(cs Config, fs *flag.FlagSet, fn func(*cli.Context)) {
+func withinTest(cs Config, fs *flag.FlagSet, fn func(*cli.Context)) {
 	ogSource := DefaultConfig
 	DefaultConfig = cs
 

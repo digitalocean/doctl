@@ -30,7 +30,7 @@ func TestRecordsList(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.String("domain-name", "example.com", "domain-name")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		RecordList(c)
 		if !recordsDidList {
 			t.Errorf("List() did not run")
@@ -58,7 +58,7 @@ func TestRecordsGet(t *testing.T) {
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.Int("record-id", testRecord.ID, "record-id")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		RecordGet(c)
 	})
 }
@@ -91,7 +91,7 @@ func TestRecordsCreate(t *testing.T) {
 	fs.String("record-name", "foo.example.com.", "record-name")
 	fs.String("record-data", "192.168.1.1", "record-name")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		RecordCreate(c)
 	})
 }
@@ -128,7 +128,7 @@ func TestRecordsUpdate(t *testing.T) {
 	fs.String("record-name", "foo.example.com.", "record-name")
 	fs.String("record-data", "192.168.1.1", "record-name")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		RecordUpdate(c)
 	})
 }
@@ -153,7 +153,7 @@ func TestRecordsDelete(t *testing.T) {
 	fs.String("domain-name", "example.com", "domain-name")
 	fs.Int("record-id", 1, "record-id")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		RecordDelete(c)
 	})
 }

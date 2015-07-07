@@ -28,7 +28,7 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.Int(ArgKernelID, 2, "kernel-id")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionChangeKernel(c)
 	})
 
@@ -49,7 +49,7 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionDisableBackups(c)
 	})
 
@@ -70,7 +70,7 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionEnableIPv6(c)
 	})
 
@@ -91,7 +91,7 @@ func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionEnablePrivateNetworking(c)
 	})
 }
@@ -115,7 +115,7 @@ func TestDropletActionsGet(t *testing.T) {
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.Int(ArgActionID, 2, ArgActionID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionGet(c)
 	})
 }
@@ -136,7 +136,7 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionPasswordReset(c)
 	})
 }
@@ -157,7 +157,7 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionPowerCycle(c)
 	})
 }
@@ -177,7 +177,7 @@ func TestDropletActionsPowerOff(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionPowerOff(c)
 	})
 }
@@ -197,7 +197,7 @@ func TestDropletActionsPowerOn(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionPowerOn(c)
 	})
 }
@@ -217,7 +217,7 @@ func TestDropletActionsReboot(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionReboot(c)
 	})
 }
@@ -242,7 +242,7 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgImage, "2", ArgImageID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionRebuild(c)
 	})
 }
@@ -267,7 +267,7 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgImage, "slug", "slug")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionRebuild(c)
 	})
 }
@@ -291,7 +291,7 @@ func TestDropletActionsRename(t *testing.T) {
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgDropletName, "name", "name")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionRename(c)
 	})
 }
@@ -319,7 +319,7 @@ func TestDropletActionsResize(t *testing.T) {
 	fs.String(ArgImageSlug, "slug", "image-slug")
 	fs.Bool(ArgResizeDisk, true, "resize-disk")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionResize(c)
 	})
 }
@@ -344,7 +344,7 @@ func TestDropletActionsRestore(t *testing.T) {
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.Int(ArgImageID, 2, ArgImageID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionRestore(c)
 	})
 }
@@ -364,7 +364,7 @@ func TestDropletActionsShutdown(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionShutdown(c)
 	})
 }
@@ -388,7 +388,7 @@ func TestDropletActionsSnapshot(t *testing.T) {
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 	fs.String(ArgSnapshotName, "name", "name")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionSnapshot(c)
 	})
 }
@@ -408,7 +408,7 @@ func TestDropletActionsUpgrade(t *testing.T) {
 	fs := flag.NewFlagSet("flag set", 0)
 	fs.Int(ArgDropletID, 1, ArgDropletID)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletActionUpgrade(c)
 	})
 }

@@ -25,7 +25,7 @@ func TestImageActionsGet(t *testing.T) {
 	fs.Int(ArgImageID, 1, "image-id")
 	fs.Int(ArgActionID, 2, "action-id")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImageActionsGet(c)
 	})
 }
@@ -49,7 +49,7 @@ func TestImageActionsTransfer(t *testing.T) {
 	fs.Int(ArgImageID, 1, "image-id")
 	fs.String(ArgRegionSlug, "dev0", "region")
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		ImageActionsTransfer(c)
 	})
 }
