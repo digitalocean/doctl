@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -11,18 +11,18 @@ func sshCommands() cli.Command {
 		Usage: "SSH to droplet. Provide name or id",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDropletName,
+				Name:  doit.ArgDropletName,
 				Usage: "droplet name",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgDropletID,
+				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgSSHUser,
+				Name:  doit.ArgSSHUser,
 				Usage: "ssh user",
 			},
 		},
-		Action: docli.SSH,
+		Action: doit.SSH,
 	}
 }

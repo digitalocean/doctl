@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -27,7 +27,7 @@ func sshKeyList() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.KeyList,
+		Action: doit.KeyList,
 	}
 }
 
@@ -37,17 +37,17 @@ func sshKeyCreate() cli.Command {
 		Usage: "create ssh key",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgKeyName,
+				Name:  doit.ArgKeyName,
 				Usage: "ssh key name",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgKeyPublicKey,
+				Name:  doit.ArgKeyPublicKey,
 				Usage: "ssh public key",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.KeyCreate,
+		Action: doit.KeyCreate,
 	}
 }
 
@@ -57,13 +57,13 @@ func sshKeyGet() cli.Command {
 		Usage: "get ssh key",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgKey,
+				Name:  doit.ArgKey,
 				Usage: "ssh key id or fingerprint",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.KeyGet,
+		Action: doit.KeyGet,
 	}
 }
 
@@ -73,17 +73,17 @@ func sshKeyUpdate() cli.Command {
 		Usage: "update ssh key",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgKey,
+				Name:  doit.ArgKey,
 				Usage: "ssh key id",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgKeyName,
+				Name:  doit.ArgKeyName,
 				Usage: "ssh key name",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.KeyUpdate,
+		Action: doit.KeyUpdate,
 	}
 }
 
@@ -93,10 +93,10 @@ func sshKeyDelete() cli.Command {
 		Usage: "delete ssh key",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgKey,
+				Name:  doit.ArgKey,
 				Usage: "ssh key id or fingerprint",
 			},
 		},
-		Action: docli.KeyDelete,
+		Action: doit.KeyDelete,
 	}
 }

@@ -1,4 +1,4 @@
-package docli
+package doit
 
 import (
 	"github.com/Sirupsen/logrus"

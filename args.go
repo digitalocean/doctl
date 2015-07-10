@@ -1,4 +1,4 @@
-package docli
+package doit
 
 const (
 	ArgActionID          = "action-id"

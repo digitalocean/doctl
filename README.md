@@ -1,7 +1,7 @@
 # DOCLI
 
 
-![Travis Build Status](https://travis-ci.org/bryanl/docli.svg?branch=master)
+![Travis Build Status](https://travis-ci.org/bryanl/doit.svg?branch=master)
 [![Coverage Status](https://coveralls.io/repos/bryanl/docli/badge.svg?branch=master)](https://coveralls.io/r/bryanl/docli?branch=master)
 
 
@@ -32,4 +32,4 @@ GLOBAL OPTIONS:
    --debug              Debug
    --help, -h           show help
    --version, -v        print the version
-```    
+```
