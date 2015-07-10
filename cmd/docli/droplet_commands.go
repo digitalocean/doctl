@@ -75,8 +75,12 @@ func dropletCreate() cli.Command {
 				Usage: "enable droplet private networking",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgUserData,
-				Usage: "droplet name",
+				Name:  doit.ArgUserData,
+				Usage: "droplet user data",
+			},
+			cli.StringFlag{
+				Name:  doit.ArgUserDataFile,
+				Usage: "reads droplet user data from a file",
 			},
 			jsonFlag(),
 			textFlag(),
