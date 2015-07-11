@@ -46,9 +46,9 @@ it raises the chances we can quickly merge or address your contributions.
 ## Setting up Go to work on docli
 
 If you have never worked with Go before, you will have to complete the
-following steps in order to be able to compile and test docli.
+following steps in order to be able to compile and test doit.
 
-1. Install Go. Make sure the Go version is at least Go 1.4. 
+1. Install Go. Make sure the Go version is at least Go 1.4.
    Go 1.4. On a Mac, you can `brew install go` to install Go 1.4.
 
 1. Set and export the `GOPATH` environment variable and update your `PATH`.

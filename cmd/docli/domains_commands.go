@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -23,7 +23,7 @@ func domainList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list domains",
-		Action: docli.DomainList,
+		Action: doit.DomainList,
 	}
 }
 
@@ -33,15 +33,15 @@ func domainCreate() cli.Command {
 		Usage: "create domain",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDomainName,
+				Name:  doit.ArgDomainName,
 				Usage: "domain name",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgIPAddress,
+				Name:  doit.ArgIPAddress,
 				Usage: "domain ip address",
 			},
 		},
-		Action: docli.DomainCreate,
+		Action: doit.DomainCreate,
 	}
 }
 
@@ -51,13 +51,13 @@ func domainGet() cli.Command {
 		Usage: "get domain",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDomainName,
+				Name:  doit.ArgDomainName,
 				Usage: "domain name",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DomainGet,
+		Action: doit.DomainGet,
 	}
 }
 
@@ -67,11 +67,11 @@ func domainDelete() cli.Command {
 		Usage: "delete domain",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDomainName,
+				Name:  doit.ArgDomainName,
 				Usage: "domain name",
 			},
 		},
-		Action: docli.DomainDelete,
+		Action: doit.DomainDelete,
 	}
 }
 
@@ -95,11 +95,11 @@ func recordList() cli.Command {
 		Usage: "list records",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDomainName,
+				Name:  doit.ArgDomainName,
 				Usage: "domain name",
 			},
 		},
-		Action: docli.RecordList,
+		Action: doit.RecordList,
 	}
 }
 
@@ -109,35 +109,35 @@ func recordCreate() cli.Command {
 		Usage: "create record",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDomainName,
+				Name:  doit.ArgDomainName,
 				Usage: "record domain (required)",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgRecordType,
+				Name:  doit.ArgRecordType,
 				Usage: "record type (required)",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgRecordName,
+				Name:  doit.ArgRecordName,
 				Usage: "record name (required for A, AAAA, CNAME, TXT, SRV records)",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgRecordData,
+				Name:  doit.ArgRecordData,
 				Usage: "record data (required for A, AAAA, CNAME, MX, TXT, SRV, NS records)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordPriority,
+				Name:  doit.ArgRecordPriority,
 				Usage: "record priority (required for MX, SRV records)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordPort,
+				Name:  doit.ArgRecordPort,
 				Usage: "record port (required for SRV records)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordWeight,
+				Name:  doit.ArgRecordWeight,
 				Usage: "record weight (required for SRV records)",
 			},
 		},
-		Action: docli.RecordCreate,
+		Action: doit.RecordCreate,
 	}
 }
 
@@ -147,15 +147,15 @@ func recordGet() cli.Command {
 		Usage: "get domain record",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDomainName,
+				Name:  doit.ArgDomainName,
 				Usage: "domain name (required)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordID,
+				Name:  doit.ArgRecordID,
 				Usage: "domain id (required)",
 			},
 		},
-		Action: docli.RecordGet,
+		Action: doit.RecordGet,
 	}
 }
 
@@ -165,39 +165,39 @@ func recordUpdate() cli.Command {
 		Usage: "update domain record",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDomainName,
+				Name:  doit.ArgDomainName,
 				Usage: "record domain (required)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordID,
+				Name:  doit.ArgRecordID,
 				Usage: "record id (required)",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgRecordType,
+				Name:  doit.ArgRecordType,
 				Usage: "record type (required)",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgRecordName,
+				Name:  doit.ArgRecordName,
 				Usage: "record name (required for A, AAAA, CNAME, TXT, SRV records)",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgRecordData,
+				Name:  doit.ArgRecordData,
 				Usage: "record data (required for A, AAAA, CNAME, MX, TXT, SRV, NS records)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordPriority,
+				Name:  doit.ArgRecordPriority,
 				Usage: "record priority (required for MX, SRV records)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordPort,
+				Name:  doit.ArgRecordPort,
 				Usage: "record port (required for SRV records)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordWeight,
+				Name:  doit.ArgRecordWeight,
 				Usage: "record weight (required for SRV records)",
 			},
 		},
-		Action: docli.RecordUpdate,
+		Action: doit.RecordUpdate,
 	}
 }
 
@@ -207,14 +207,14 @@ func recordDelete() cli.Command {
 		Usage: "delete domain record",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgDomainName,
+				Name:  doit.ArgDomainName,
 				Usage: "domain (required)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgRecordID,
+				Name:  doit.ArgRecordID,
 				Usage: "record id (required)",
 			},
 		},
-		Action: docli.RecordDelete,
+		Action: doit.RecordDelete,
 	}
 }

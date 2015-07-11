@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -24,7 +24,7 @@ func actionList() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.ActionList,
+		Action: doit.ActionList,
 	}
 }
 
@@ -34,12 +34,12 @@ func actionGet() cli.Command {
 		Usage: "get action by id",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgActionID,
+				Name:  doit.ArgActionID,
 				Usage: "Action id",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.ActionGet,
+		Action: doit.ActionGet,
 	}
 }

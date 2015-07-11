@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 	"golang.org/x/oauth2"
 )
@@ -23,7 +23,7 @@ func init() {
 	logrus.SetOutput(os.Stderr)
 	logrus.SetLevel(logrus.InfoLevel)
 
-	docli.Bail = func(err error, msg string) {
+	doit.Bail = func(err error, msg string) {
 		logrus.WithField("err", err).Fatal(msg)
 	}
 }
@@ -72,14 +72,14 @@ func debugFlag() cli.Flag {
 
 func jsonFlag() cli.Flag {
 	return cli.BoolFlag{
-		Name:  docli.ArgDisplayJSON,
+		Name:  doit.ArgDisplayJSON,
 		Usage: "display JSON output",
 	}
 }
 
 func textFlag() cli.Flag {
 	return cli.BoolFlag{
-		Name:  docli.ArgDisplayText,
+		Name:  doit.ArgDisplayText,
 		Usage: "display text output",
 	}
 }

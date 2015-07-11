@@ -7,7 +7,7 @@ before_install:
   - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
 install:
   - "go get -d -v -t ./..."
-  - "go build github.com/bryanl/docli/cmd/docli"
+  - "go build github.com/bryanl/doit/cmd/docli"
 script:
   - $HOME/gopath/bin/goveralls -service=travis-ci
 deploy:
@@ -22,6 +22,6 @@ wBtbwzJ/fk8NzpxDA06P3fSGP2AMLurdky+dVgohnOM/IC3yKMUV+SYvf8PezETk4GaJMND13xRfjh1Y
   file: "docli"
   skip_cleanup: true
   on:
-    repo: bryanl/docli
+    repo: bryanl/doit
     tags: true
     all_branches: true

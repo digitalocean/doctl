@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -26,7 +26,7 @@ func imageList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list images",
-		Action: docli.ImagesList,
+		Action: doit.ImagesList,
 	}
 }
 
@@ -34,7 +34,7 @@ func imageListDistributions() cli.Command {
 	return cli.Command{
 		Name:   "list-distribution",
 		Usage:  "list distribution images",
-		Action: docli.ImagesListDistribution,
+		Action: doit.ImagesListDistribution,
 	}
 }
 
@@ -42,7 +42,7 @@ func imageListApplication() cli.Command {
 	return cli.Command{
 		Name:   "list-application",
 		Usage:  "list application images",
-		Action: docli.ImagesListApplication,
+		Action: doit.ImagesListApplication,
 	}
 }
 
@@ -50,7 +50,7 @@ func imageListUser() cli.Command {
 	return cli.Command{
 		Name:   "list-user",
 		Usage:  "list user images",
-		Action: docli.ImagesListUser,
+		Action: doit.ImagesListUser,
 	}
 }
 
@@ -60,11 +60,11 @@ func imageGet() cli.Command {
 		Usage: "get image by id",
 		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name:  docli.ArgImage,
+				Name:  doit.ArgImage,
 				Usage: "image id or slug",
 			},
 		},
-		Action: docli.ImagesGet,
+		Action: doit.ImagesGet,
 	}
 }
 
@@ -74,7 +74,7 @@ func imageActions() cli.Command {
 		Usage: "image actions",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgImageID,
+				Name:  doit.ArgImageID,
 				Usage: "image id",
 			},
 		},
@@ -87,15 +87,15 @@ func imageUpdate() cli.Command {
 		Usage: "update image (not implemented)",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgImageID,
+				Name:  doit.ArgImageID,
 				Usage: "image id (required)",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgImageName,
+				Name:  doit.ArgImageName,
 				Usage: "image name (required)",
 			},
 		},
-		Action: docli.ImagesUpdate,
+		Action: doit.ImagesUpdate,
 	}
 }
 
@@ -105,10 +105,10 @@ func imageDelete() cli.Command {
 		Usage: "delete image",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgImageID,
+				Name:  doit.ArgImageID,
 				Usage: "image id (required)",
 			},
 		},
-		Action: docli.ImagesDelete,
+		Action: doit.ImagesDelete,
 	}
 }
