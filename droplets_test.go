@@ -2,6 +2,7 @@ package doit
 
 import (
 	"flag"
+	"io/ioutil"
 	"testing"
 
 	"github.com/codegangsta/cli"
@@ -68,11 +69,12 @@ func TestDropletCreate(t *testing.T) {
 		Droplets: &DropletsServiceMock{
 			CreateFn: func(cr *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error) {
 				expected := &godo.DropletCreateRequest{
-					Name:    "droplet",
-					Image:   godo.DropletCreateImage{Slug: "image"},
-					Region:  "dev0",
-					Size:    "1gb",
-					SSHKeys: []godo.DropletCreateSSHKey{},
+					Name:     "droplet",
+					Image:    godo.DropletCreateImage{Slug: "image"},
+					Region:   "dev0",
+					Size:     "1gb",
+					UserData: "#cloud-config",
+					SSHKeys:  []godo.DropletCreateSSHKey{},
 				}
 
 				assert.Equal(t, cr, expected, "create requests did not match")
@@ -88,6 +90,45 @@ func TestDropletCreate(t *testing.T) {
 	fs.String(ArgRegionSlug, "dev0", ArgRegionSlug)
 	fs.String(ArgSizeSlug, "1gb", ArgSizeSlug)
 	fs.String(ArgImage, "image", ArgImage)
+	fs.String(ArgUserData, "#cloud-config", ArgUserData)
+
+	WithinTest(cs, fs, func(c *cli.Context) {
+		DropletCreate(c)
+	})
+}
+
+func TestDropletCreateUserDataFile(t *testing.T) {
+	userData, err := ioutil.ReadFile("testdata/cloud-config.yml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client := &godo.Client{
+		Droplets: &DropletsServiceMock{
+			CreateFn: func(cr *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error) {
+				expected := &godo.DropletCreateRequest{
+					Name:     "droplet",
+					Image:    godo.DropletCreateImage{Slug: "image"},
+					Region:   "dev0",
+					Size:     "1gb",
+					UserData: string(userData),
+					SSHKeys:  []godo.DropletCreateSSHKey{},
+				}
+
+				assert.Equal(t, cr, expected, "create requests did not match")
+
+				return &testDroplet, nil, nil
+			},
+		},
+	}
+
+	cs := NewTestConfig(client)
+	fs := flag.NewFlagSet("flag set", 0)
+	fs.String(ArgDropletName, "droplet", ArgDropletName)
+	fs.String(ArgRegionSlug, "dev0", ArgRegionSlug)
+	fs.String(ArgSizeSlug, "1gb", ArgSizeSlug)
+	fs.String(ArgImage, "image", ArgImage)
+	fs.String(ArgUserDataFile, "testdata/cloud-config.yml", ArgUserDataFile)
 
 	WithinTest(cs, fs, func(c *cli.Context) {
 		DropletCreate(c)
