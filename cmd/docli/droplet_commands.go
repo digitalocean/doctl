@@ -76,7 +76,11 @@ func dropletCreate() cli.Command {
 			},
 			cli.StringFlag{
 				Name:  doit.ArgUserData,
-				Usage: "droplet name",
+				Usage: "droplet user data",
+			},
+			cli.StringFlag{
+				Name:  doit.ArgUserDataFile,
+				Usage: "reads droplet user data from a file",
 			},
 			jsonFlag(),
 			textFlag(),

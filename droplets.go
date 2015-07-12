@@ -1,6 +1,7 @@
 package doit
 
 import (
+	"io/ioutil"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -94,6 +95,15 @@ func DropletCreate(c *cli.Context) {
 		sshKeys = append(sshKeys, godo.DropletCreateSSHKey{Fingerprint: rawKey})
 	}
 
+	userData := c.String(ArgUserData)
+	if userData == "" && c.String(ArgUserDataFile) != "" {
+		data, err := ioutil.ReadFile(c.String(ArgUserDataFile))
+		if err != nil {
+			logrus.WithField("err", err).Fatal("could not read user-data file")
+		}
+		userData = string(data)
+	}
+
 	dcr := &godo.DropletCreateRequest{
 		Name:              c.String(ArgDropletName),
 		Region:            c.String(ArgRegionSlug),
@@ -102,7 +112,7 @@ func DropletCreate(c *cli.Context) {
 		IPv6:              c.Bool(ArgIPv6),
 		PrivateNetworking: c.Bool(ArgPrivateNetworking),
 		SSHKeys:           sshKeys,
-		UserData:          c.String(ArgUserData),
+		UserData:          userData,
 	}
 
 	imageStr := c.String(ArgImage)
