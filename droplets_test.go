@@ -92,7 +92,7 @@ func TestDropletCreate(t *testing.T) {
 	fs.String(ArgImage, "image", ArgImage)
 	fs.String(ArgUserData, "#cloud-config", ArgUserData)
 
-	WithinTest(cs, fs, func(c *cli.Context) {
+	withinTest(cs, fs, func(c *cli.Context) {
 		DropletCreate(c)
 	})
 }
