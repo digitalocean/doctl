@@ -9,7 +9,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// List images.
+// ImagesList images.
 func ImagesList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
@@ -44,7 +44,7 @@ func ImagesList(c *cli.Context) {
 	}
 }
 
-// ListDistribution lists distributions that are available.
+// ImagesListDistribution lists distributions that are available.
 func ImagesListDistribution(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
@@ -73,13 +73,13 @@ func ImagesListDistribution(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = writeJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
-// ListApplication lists application iamges.
+// ImagesListApplication lists application iamges.
 func ImagesListApplication(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
@@ -108,13 +108,13 @@ func ImagesListApplication(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = writeJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
-// ListUser lists user images.
+// ImagesListUser lists user images.
 func ImagesListUser(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	opts := LoadOpts(c)
@@ -143,13 +143,13 @@ func ImagesListUser(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = writeJSON(list, c.App.Writer)
+	err = displayOutput(c, list)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
-// Get retrieves an image by id or slug.
+// ImagesGet retrieves an image by id or slug.
 func ImagesGet(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	rawID := c.String(ArgImage)
@@ -170,13 +170,13 @@ func ImagesGet(c *cli.Context) {
 		Bail(err, "could not retrieve image")
 	}
 
-	err = writeJSON(image, c.App.Writer)
+	err = displayOutput(c, image)
 	if err != nil {
-		Bail(err, "coult not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
-// Update updates an image.
+// ImagesUpdate updates an image.
 func ImagesUpdate(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgImageID)
@@ -190,12 +190,13 @@ func ImagesUpdate(c *cli.Context) {
 		Bail(err, "could not update image")
 	}
 
-	err = writeJSON(image, c.App.Writer)
+	err = displayOutput(c, image)
 	if err != nil {
-		Bail(err, "could not write JSON")
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
 
+// ImagesDelete deletes an image.
 func ImagesDelete(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgImageID)
