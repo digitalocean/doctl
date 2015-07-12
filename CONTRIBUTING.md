@@ -1,4 +1,4 @@
-# Contributing to docli
+# Contributing to doit
 
 **First:** if you're unsure or afraid of _anything_, just ask
 or submit the issue or pull request anyways. You won't be yelled at for
@@ -22,14 +22,14 @@ it raises the chances we can quickly merge or address your contributions.
   of the *entire* generated crash log for us to look at. Double check
   no sensitive items were in the log.
 
-* Respond as promptly as possible to any questions made by the _docli_
+* Respond as promptly as possible to any questions made by the _doit_
   team to your issue. Stale issues will be closed.
 
 ### Issue Lifecycle
 
 1. The issue is reported.
 
-2. The issue is verified and categorized by a _docli_ collaborator.
+2. The issue is verified and categorized by a _doit_ collaborator.
    Categorization is done via tags. For example, bugs are marked as "bugs".
 
 3. Unless it is critical, the issue is left for a period of time (sometimes
@@ -43,12 +43,12 @@ it raises the chances we can quickly merge or address your contributions.
    the issue tracker clean. The issue is still indexed and available for
    future viewers, or can be re-opened if necessary.
 
-## Setting up Go to work on docli
+## Setting up Go to work on doit
 
 If you have never worked with Go before, you will have to complete the
-following steps in order to be able to compile and test docli.
+following steps in order to be able to compile and test doit.
 
-1. Install Go. Make sure the Go version is at least Go 1.4. 
+1. Install Go. Make sure the Go version is at least Go 1.4.
    Go 1.4. On a Mac, you can `brew install go` to install Go 1.4.
 
 1. Set and export the `GOPATH` environment variable and update your `PATH`.
@@ -59,7 +59,7 @@ following steps in order to be able to compile and test docli.
     export PATH=$PATH:$GOPATH/bin
     ```
 
-1. Make your changes to the docli source, being sure to run the basic
+1. Make your changes to the doit source, being sure to run the basic
    tests.
 
 1. If everything works well and the tests pass, run `go fmt` on your code

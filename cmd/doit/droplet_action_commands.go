@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -30,52 +30,52 @@ func dropletActionCommands() cli.Command {
 }
 
 func dropletDisableBackups() cli.Command {
-	fn := docli.DropletActionDisableBackups
+	fn := doit.DropletActionDisableBackups
 	return noArgDropletCommand("disable-backups", "disables backups for droplet", fn)
 }
 
 func dropletReboot() cli.Command {
-	fn := docli.DropletActionReboot
+	fn := doit.DropletActionReboot
 	return noArgDropletCommand("reboot", "reboot droplet", fn)
 }
 
 func dropletPowerCycle() cli.Command {
-	fn := docli.DropletActionPowerCycle
+	fn := doit.DropletActionPowerCycle
 	return noArgDropletCommand("power-cycle", "power cyle droplet", fn)
 }
 
 func dropletShutdown() cli.Command {
-	fn := docli.DropletActionShutdown
+	fn := doit.DropletActionShutdown
 	return noArgDropletCommand("shutdown", "shutdown droplet", fn)
 }
 
 func dropletPowerOff() cli.Command {
-	fn := docli.DropletActionPowerOff
+	fn := doit.DropletActionPowerOff
 	return noArgDropletCommand("power-off", "power off droplet", fn)
 }
 
 func dropletPowerOn() cli.Command {
-	fn := docli.DropletActionPowerOn
+	fn := doit.DropletActionPowerOn
 	return noArgDropletCommand("power-on", "power on droplet", fn)
 }
 
 func dropletPasswordReset() cli.Command {
-	fn := docli.DropletActionPasswordReset
+	fn := doit.DropletActionPasswordReset
 	return noArgDropletCommand("password-reset", "reset password for droplet", fn)
 }
 
 func dropletEnableIPv6() cli.Command {
-	fn := docli.DropletActionEnableIPv6
+	fn := doit.DropletActionEnableIPv6
 	return noArgDropletCommand("power-on", "enable ipv6 for droplet", fn)
 }
 
 func dropletEnablePrivateNetworking() cli.Command {
-	fn := docli.DropletActionPasswordReset
+	fn := doit.DropletActionPasswordReset
 	return noArgDropletCommand("private-networking", "enable private networking for droplet", fn)
 }
 
 func dropletUpgrade() cli.Command {
-	fn := docli.DropletActionUpgrade
+	fn := doit.DropletActionUpgrade
 	return noArgDropletCommand("upgrade", "upgrade droplet", fn)
 }
 
@@ -96,7 +96,7 @@ func dropletRestore() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletActionRestore,
+		Action: doit.DropletActionRestore,
 	}
 }
 
@@ -120,7 +120,7 @@ func dropletResize() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletActionResize,
+		Action: doit.DropletActionResize,
 	}
 }
 
@@ -140,7 +140,7 @@ func dropletRebuild() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletActionRebuild,
+		Action: doit.DropletActionRebuild,
 	}
 }
 
@@ -160,7 +160,7 @@ func dropletRename() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletActionRename,
+		Action: doit.DropletActionRename,
 	}
 }
 
@@ -180,7 +180,7 @@ func dropletChangeKernel() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletActionChangeKernel,
+		Action: doit.DropletActionChangeKernel,
 	}
 }
 
@@ -200,7 +200,7 @@ func dropletSnapshot() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletActionSnapshot,
+		Action: doit.DropletActionSnapshot,
 	}
 }
 
@@ -238,6 +238,6 @@ func dropletActionGet() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletActionGet,
+		Action: doit.DropletActionGet,
 	}
 }

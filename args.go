@@ -1,4 +1,4 @@
-package docli
+package doit
 
 const (
 	ArgActionID          = "action-id"
@@ -26,6 +26,7 @@ const (
 	ArgSizeSlug          = "size"
 	ArgSSHKeys           = "ssh-keys"
 	ArgUserData          = "user-data"
+	ArgUserDataFile      = "user-data-file"
 	ArgImageName         = "image-name"
 	ArgKey               = "key"
 	ArgKeyName           = "key-name"

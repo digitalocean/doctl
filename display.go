@@ -1,4 +1,4 @@
-package docli
+package doit
 
 import (
 	"bytes"
@@ -116,7 +116,7 @@ func outputImages(list []godo.Image, out io.Writer) {
 
 		regionList := strings.Join(i.Regions, ",")
 
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%d\n",
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%t\t%s\t%d\n",
 			i.ID, i.Name, i.Type, i.Distribution, i.Slug, publicStatus, regionList, i.MinDiskSize)
 
 	}

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -23,6 +23,6 @@ func regionList() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.RegionList,
+		Action: doit.RegionList,
 	}
 }

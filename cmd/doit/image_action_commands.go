@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -22,17 +22,17 @@ func imageActionGet() cli.Command {
 		Usage: "get image action",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgImageID,
+				Name:  doit.ArgImageID,
 				Usage: "image id",
 			},
 			cli.IntFlag{
-				Name:  docli.ArgActionID,
+				Name:  doit.ArgActionID,
 				Usage: "action id",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.ImageActionsGet,
+		Action: doit.ImageActionsGet,
 	}
 }
 
@@ -42,16 +42,16 @@ func imageActionTransfer() cli.Command {
 		Usage: "tranfser image (not implemented)",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgImageID,
+				Name:  doit.ArgImageID,
 				Usage: "image id",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgRegionSlug,
+				Name:  doit.ArgRegionSlug,
 				Usage: "region",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.ImageActionsTransfer,
+		Action: doit.ImageActionsTransfer,
 	}
 }

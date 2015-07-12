@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bryanl/docli"
+	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 )
 
@@ -31,7 +31,7 @@ func dropletList() cli.Command {
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletList,
+		Action: doit.DropletList,
 	}
 }
 
@@ -42,46 +42,50 @@ func dropletCreate() cli.Command {
 		Flags: []cli.Flag{
 
 			cli.StringFlag{
-				Name:  docli.ArgDropletName,
+				Name:  doit.ArgDropletName,
 				Usage: "droplet name",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgRegionSlug,
+				Name:  doit.ArgRegionSlug,
 				Usage: "droplet region",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgSizeSlug,
+				Name:  doit.ArgSizeSlug,
 				Usage: "droplet size",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgImage,
+				Name:  doit.ArgImage,
 				Usage: "droplet image",
 			},
 			cli.StringSliceFlag{
-				Name:  docli.ArgSSHKeys,
+				Name:  doit.ArgSSHKeys,
 				Value: &cli.StringSlice{},
 				Usage: "droplet public SSH keys",
 			},
 			cli.BoolFlag{
-				Name:  docli.ArgBackups,
+				Name:  doit.ArgBackups,
 				Usage: "enable droplet backups",
 			},
 			cli.BoolFlag{
-				Name:  docli.ArgIPv6,
+				Name:  doit.ArgIPv6,
 				Usage: "enable droplet IPv6",
 			},
 			cli.BoolFlag{
-				Name:  docli.ArgPrivateNetworking,
+				Name:  doit.ArgPrivateNetworking,
 				Usage: "enable droplet private networking",
 			},
 			cli.StringFlag{
-				Name:  docli.ArgUserData,
-				Usage: "droplet name",
+				Name:  doit.ArgUserData,
+				Usage: "droplet user data",
+			},
+			cli.StringFlag{
+				Name:  doit.ArgUserDataFile,
+				Usage: "reads droplet user data from a file",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletCreate,
+		Action: doit.DropletCreate,
 	}
 }
 
@@ -91,11 +95,11 @@ func dropletDelete() cli.Command {
 		Usage: "delete droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgDropletID,
+				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
 		},
-		Action: docli.DropletDelete,
+		Action: doit.DropletDelete,
 	}
 }
 
@@ -105,13 +109,13 @@ func dropletGet() cli.Command {
 		Usage: "get droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgDropletID,
+				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletGet,
+		Action: doit.DropletGet,
 	}
 }
 
@@ -121,13 +125,13 @@ func dropletKernels() cli.Command {
 		Usage: "get kernels for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgDropletID,
+				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletKernels,
+		Action: doit.DropletKernels,
 	}
 }
 
@@ -137,13 +141,13 @@ func dropletSnapshots() cli.Command {
 		Usage: "get snapshots for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgDropletID,
+				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletSnapshots,
+		Action: doit.DropletSnapshots,
 	}
 }
 
@@ -153,13 +157,13 @@ func dropletBackups() cli.Command {
 		Usage: "get backups for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgDropletID,
+				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletBackups,
+		Action: doit.DropletBackups,
 	}
 }
 
@@ -169,13 +173,13 @@ func dropletActions() cli.Command {
 		Usage: "get actions for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgDropletID,
+				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletActions,
+		Action: doit.DropletActions,
 	}
 }
 
@@ -185,12 +189,12 @@ func dropletNeighbors() cli.Command {
 		Usage: "get neighbors for droplet",
 		Flags: []cli.Flag{
 			cli.IntFlag{
-				Name:  docli.ArgDropletID,
+				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
 			jsonFlag(),
 			textFlag(),
 		},
-		Action: docli.DropletNeighbors,
+		Action: doit.DropletNeighbors,
 	}
 }
