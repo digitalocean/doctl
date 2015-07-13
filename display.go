@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/codegangsta/cli"
@@ -114,7 +113,7 @@ func outputImages(list []godo.Image, out io.Writer) {
 	w := new(tabwriter.Writer)
 	w.Init(out, 0, 8, 1, '\t', 0)
 
-	fmt.Fprintln(w, "ID\tName\tType\tDistribution\tSlug\tPublic\tRegions\tMin Disk")
+	fmt.Fprintln(w, "ID\tName\tType\tDistribution\tSlug\tPublic\tMin Disk")
 
 	for _, i := range list {
 		publicStatus := false
@@ -122,10 +121,8 @@ func outputImages(list []godo.Image, out io.Writer) {
 			publicStatus = true
 		}
 
-		regionList := strings.Join(i.Regions, ",")
-
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%t\t%s\t%d\n",
-			i.ID, i.Name, i.Type, i.Distribution, i.Slug, publicStatus, regionList, i.MinDiskSize)
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%t\t%d\n",
+			i.ID, i.Name, i.Type, i.Distribution, i.Slug, publicStatus, i.MinDiskSize)
 
 	}
 	fmt.Fprintln(w)
