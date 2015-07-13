@@ -34,6 +34,5 @@ const (
 	ArgSSHUser           = "ssh-user"
 
 	// Arguments for outputs
-	ArgDisplayJSON = "json"
-	ArgDisplayText = "text"
+	ArgOutput = "output"
 )

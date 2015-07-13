@@ -1,12 +1,26 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
+	"os/user"
+	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
 	"github.com/codegangsta/cli"
 	"golang.org/x/oauth2"
+)
+
+const (
+	configFile = ".doitcfg"
+)
+
+var (
+	argMap = doit.ConfigArgMap{
+		"token":  "token",
+		"output": "output",
+	}
 )
 
 type tokenSource struct {
@@ -36,6 +50,7 @@ func main() {
 	app.Flags = []cli.Flag{
 		tokenFlag(),
 		debugFlag(),
+		outputFlag(),
 	}
 
 	app.Commands = []cli.Command{
@@ -50,6 +65,16 @@ func main() {
 		regionCommands(),
 		sizeCommands(),
 		sshCommands(),
+	}
+
+	fp, _ := configFilePath()
+	if _, err := os.Stat(fp); err == nil {
+		if guts, err := ioutil.ReadFile(fp); err == nil {
+			cf := doit.NewConfigFile(argMap, guts)
+			if newArgs, err := cf.Args(); err == nil {
+				os.Args = doit.InsertArgs(os.Args, newArgs)
+			}
+		}
 	}
 
 	app.RunAndExitOnError()
@@ -70,16 +95,19 @@ func debugFlag() cli.Flag {
 	}
 }
 
-func jsonFlag() cli.Flag {
-	return cli.BoolFlag{
-		Name:  doit.ArgDisplayJSON,
-		Usage: "display JSON output",
+func outputFlag() cli.Flag {
+	return cli.StringFlag{
+		Name:  doit.ArgOutput,
+		Usage: "output format (json or text)",
 	}
 }
 
-func textFlag() cli.Flag {
-	return cli.BoolFlag{
-		Name:  doit.ArgDisplayText,
-		Usage: "display text output",
+func configFilePath() (string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
 	}
+
+	dir := filepath.Join(usr.HomeDir, configFile)
+	return dir, nil
 }

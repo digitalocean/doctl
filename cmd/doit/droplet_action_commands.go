@@ -93,8 +93,6 @@ func dropletRestore() cli.Command {
 				Name:  "image",
 				Usage: "image slug or id (required)",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletActionRestore,
 	}
@@ -117,8 +115,6 @@ func dropletResize() cli.Command {
 				Name:  "disk",
 				Usage: "increase disk size",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletActionResize,
 	}
@@ -137,8 +133,6 @@ func dropletRebuild() cli.Command {
 				Name:  "image",
 				Usage: "image slug or image id (required)",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletActionRebuild,
 	}
@@ -157,8 +151,6 @@ func dropletRename() cli.Command {
 				Name:  "name",
 				Usage: "new name for droplet (required)",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletActionRename,
 	}
@@ -177,8 +169,6 @@ func dropletChangeKernel() cli.Command {
 				Name:  "kernel",
 				Usage: "new kernel for droplet (required)",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletActionChangeKernel,
 	}
@@ -197,8 +187,6 @@ func dropletSnapshot() cli.Command {
 				Name:  "name",
 				Usage: "name for snapshot",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletActionSnapshot,
 	}
@@ -215,8 +203,6 @@ func noArgDropletCommand(name, usage string, fn noArgDropletFn) cli.Command {
 				Name:  "id",
 				Usage: "droplet id (required)",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: fn,
 	}
@@ -235,8 +221,6 @@ func dropletActionGet() cli.Command {
 				Name:  "action-id",
 				Usage: "action id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletActionGet,
 	}

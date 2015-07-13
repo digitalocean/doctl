@@ -168,6 +168,7 @@ func ImagesGet(c *cli.Context) {
 
 	if err != nil {
 		Bail(err, "could not retrieve image")
+		return
 	}
 
 	err = displayOutput(c, image)
@@ -188,6 +189,7 @@ func ImagesUpdate(c *cli.Context) {
 	image, _, err := client.Images.Update(id, req)
 	if err != nil {
 		Bail(err, "could not update image")
+		return
 	}
 
 	err = displayOutput(c, image)

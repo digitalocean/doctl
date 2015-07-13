@@ -18,12 +18,8 @@ func actionCommands() cli.Command {
 
 func actionList() cli.Command {
 	return cli.Command{
-		Name:  "list",
-		Usage: "list actions",
-		Flags: []cli.Flag{
-			jsonFlag(),
-			textFlag(),
-		},
+		Name:   "list",
+		Usage:  "list actions",
 		Action: doit.ActionList,
 	}
 }
@@ -37,8 +33,6 @@ func actionGet() cli.Command {
 				Name:  doit.ArgActionID,
 				Usage: "Action id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.ActionGet,
 	}

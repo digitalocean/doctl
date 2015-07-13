@@ -17,12 +17,8 @@ func regionCommands() cli.Command {
 
 func regionList() cli.Command {
 	return cli.Command{
-		Name:  "list",
-		Usage: "list regions",
-		Flags: []cli.Flag{
-			jsonFlag(),
-			textFlag(),
-		},
+		Name:   "list",
+		Usage:  "list regions",
 		Action: doit.RegionList,
 	}
 }

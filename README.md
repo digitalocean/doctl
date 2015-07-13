@@ -1,6 +1,5 @@
 # DOIT
 
-
 ![Travis Build Status](https://travis-ci.org/bryanl/doit.svg?branch=master)
 [![Coverage Status]
 (https://coveralls.io/repos/bryanl/doit/badge.svg?branch=master)]
@@ -37,3 +36,19 @@ GLOBAL OPTIONS:
    --version, -v   print the version
 
 ```
+## Configuration
+
+By default, `doit` will load a configuration file from `$HOME/.doitcfg` if found.
+
+### Configuration OPTIONS
+
+* `token` - The DigitalOcean token. You can generate a token in the [Apps & API](https://cloud.digitalocean.com/settings/applications) Of the DigitalOcean control panel.
+* `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doit` will default to `text`.
+
+Example:
+
+```yaml
+{
+  token: MY_TOKEN
+  output: text
+}

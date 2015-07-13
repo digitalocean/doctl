@@ -29,8 +29,6 @@ func imageActionGet() cli.Command {
 				Name:  doit.ArgActionID,
 				Usage: "action id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.ImageActionsGet,
 	}
@@ -49,8 +47,6 @@ func imageActionTransfer() cli.Command {
 				Name:  doit.ArgRegionSlug,
 				Usage: "region",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.ImageActionsTransfer,
 	}
