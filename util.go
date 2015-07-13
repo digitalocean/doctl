@@ -21,22 +21,35 @@ type TokenSource struct {
 	AccessToken string
 }
 
+type Runner interface {
+	Run() error
+}
+
 // TestConfig is an implemenation of Config that can be inspected during tests.
 type TestConfig struct {
 	Client *godo.Client
-	SSHFn  func(user, host string) error
+	SSHFn  func(user, host string, options []string) Runner
+}
+
+type mockRunner struct {
+	err error
+}
+
+func (tr *mockRunner) Run() error {
+	return tr.err
 }
 
 // NewTestConfig creates a TestConfig.
 func NewTestConfig(client *godo.Client) *TestConfig {
 	return &TestConfig{
 		Client: client,
-		SSHFn: func(u, h string) error {
+		SSHFn: func(u, h string, o []string) Runner {
 			logrus.WithFields(logrus.Fields{
-				"user": u,
-				"host": h,
+				"user":    u,
+				"host":    h,
+				"options": o,
 			}).Info("ssh")
-			return nil
+			return &mockRunner{}
 		},
 	}
 }
@@ -47,8 +60,8 @@ func (cs *TestConfig) NewClient(_ string) *godo.Client {
 }
 
 // SSH allows the developer to inspect the status of the ssh connection during tests.
-func (cs *TestConfig) SSH(user, host string) error {
-	return cs.SSHFn(user, host)
+func (cs *TestConfig) SSH(user, host string, options []string) Runner {
+	return cs.SSHFn(user, host, options)
 }
 
 func (t *TokenSource) Token() (*oauth2.Token, error) {
@@ -67,7 +80,7 @@ func LoadOpts(c *cli.Context) *Opts {
 // and a method for running SSH.
 type Config interface {
 	NewClient(token string) *godo.Client
-	SSH(user, host string) error
+	SSH(user, host string, options []string) Runner
 }
 
 // LiveConfig
@@ -84,19 +97,25 @@ func (cs *LiveConfig) NewClient(token string) *godo.Client {
 }
 
 // SSH runs the ssh binary given a user and a host. It preserves stdin, stdout, and stderr.
-func (cs *LiveConfig) SSH(user, host string) error {
+func (cs *LiveConfig) SSH(user, host string, options []string) Runner {
 	logrus.WithFields(logrus.Fields{
 		"user": user,
 		"host": host,
 	}).Info("ssh")
 
 	sshHost := fmt.Sprintf("%s@%s", user, host)
-	cmd := exec.Command("ssh", sshHost)
+
+	args := []string{sshHost}
+	for _, o := range options {
+		args = append(args, "-o", o)
+	}
+
+	cmd := exec.Command("ssh", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return cmd.Run()
+	return cmd
 }
 
 // NewClient creates a Client.

@@ -21,6 +21,7 @@ func SSH(c *cli.Context) {
 	id := c.Int(ArgDropletID)
 	name := c.String(ArgDropletName)
 	user := c.String(ArgSSHUser)
+	options := c.StringSlice(ArgSSHOption)
 
 	if len(user) < 1 {
 		user = "root"
@@ -62,7 +63,8 @@ func SSH(c *cli.Context) {
 		Bail(fmt.Errorf("no public interface for droplet"), sshNoAddress)
 	}
 
-	err = DefaultConfig.SSH(user, publicIP)
+	runner := DefaultConfig.SSH(user, publicIP, options)
+	err = runner.Run()
 	if err != nil {
 		Bail(err, "unable to ssh to host")
 	}
