@@ -2,6 +2,7 @@ package doit
 
 import (
 	"flag"
+	"fmt"
 	"testing"
 
 	"github.com/codegangsta/cli"
@@ -10,7 +11,11 @@ import (
 )
 
 var (
-	testImage     = godo.Image{ID: 1, Slug: "slug"}
+	testImage = godo.Image{
+		ID:      1,
+		Slug:    "slug",
+		Regions: []string{"test0"},
+	}
 	testImageList = []godo.Image{testImage}
 )
 
@@ -173,11 +178,11 @@ func TestImagesNoID(t *testing.T) {
 		Images: &ImagesServiceMock{
 			GetByIDFn: func(id int) (*godo.Image, *godo.Response, error) {
 				t.Error("should not try to load id")
-				return nil, nil, nil
+				return nil, nil, fmt.Errorf("not here")
 			},
 			GetBySlugFn: func(slug string) (*godo.Image, *godo.Response, error) {
 				t.Error("should not try to load slug")
-				return &testImage, nil, nil
+				return nil, nil, fmt.Errorf("not here")
 			},
 		},
 	}

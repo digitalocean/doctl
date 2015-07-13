@@ -54,8 +54,6 @@ func domainGet() cli.Command {
 				Name:  doit.ArgDomainName,
 				Usage: "domain name",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DomainGet,
 	}

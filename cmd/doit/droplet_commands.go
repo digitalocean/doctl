@@ -25,12 +25,8 @@ func dropletCommands() cli.Command {
 
 func dropletList() cli.Command {
 	return cli.Command{
-		Name:  "list",
-		Usage: "list droplets",
-		Flags: []cli.Flag{
-			jsonFlag(),
-			textFlag(),
-		},
+		Name:   "list",
+		Usage:  "list droplets",
 		Action: doit.DropletList,
 	}
 }
@@ -82,8 +78,6 @@ func dropletCreate() cli.Command {
 				Name:  doit.ArgUserDataFile,
 				Usage: "reads droplet user data from a file",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletCreate,
 	}
@@ -112,8 +106,6 @@ func dropletGet() cli.Command {
 				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletGet,
 	}
@@ -128,8 +120,6 @@ func dropletKernels() cli.Command {
 				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletKernels,
 	}
@@ -144,8 +134,6 @@ func dropletSnapshots() cli.Command {
 				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletSnapshots,
 	}
@@ -160,8 +148,6 @@ func dropletBackups() cli.Command {
 				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletBackups,
 	}
@@ -176,8 +162,6 @@ func dropletActions() cli.Command {
 				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletActions,
 	}
@@ -192,8 +176,6 @@ func dropletNeighbors() cli.Command {
 				Name:  doit.ArgDropletID,
 				Usage: "droplet id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.DropletNeighbors,
 	}

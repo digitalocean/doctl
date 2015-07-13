@@ -24,48 +24,36 @@ func imageCommands() cli.Command {
 
 func imageList() cli.Command {
 	return cli.Command{
-		Name:  "list",
-		Usage: "list images",
-		Flags: []cli.Flag{
-			jsonFlag(),
-			textFlag(),
-		},
+		Name:   "list",
+		Usage:  "list images",
+		Flags:  []cli.Flag{},
 		Action: doit.ImagesList,
 	}
 }
 
 func imageListDistributions() cli.Command {
 	return cli.Command{
-		Name:  "list-distribution",
-		Usage: "list distribution images",
-		Flags: []cli.Flag{
-			jsonFlag(),
-			textFlag(),
-		},
+		Name:   "list-distribution",
+		Usage:  "list distribution images",
+		Flags:  []cli.Flag{},
 		Action: doit.ImagesListDistribution,
 	}
 }
 
 func imageListApplication() cli.Command {
 	return cli.Command{
-		Name:  "list-application",
-		Usage: "list application images",
-		Flags: []cli.Flag{
-			jsonFlag(),
-			textFlag(),
-		},
+		Name:   "list-application",
+		Usage:  "list application images",
+		Flags:  []cli.Flag{},
 		Action: doit.ImagesListApplication,
 	}
 }
 
 func imageListUser() cli.Command {
 	return cli.Command{
-		Name:  "list-user",
-		Usage: "list user images",
-		Flags: []cli.Flag{
-			jsonFlag(),
-			textFlag(),
-		},
+		Name:   "list-user",
+		Usage:  "list user images",
+		Flags:  []cli.Flag{},
 		Action: doit.ImagesListUser,
 	}
 }
@@ -79,8 +67,6 @@ func imageGet() cli.Command {
 				Name:  doit.ArgImage,
 				Usage: "image id or slug",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.ImagesGet,
 	}
@@ -95,8 +81,6 @@ func imageActions() cli.Command {
 				Name:  doit.ArgImageID,
 				Usage: "image id",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 	}
 }
@@ -114,8 +98,6 @@ func imageUpdate() cli.Command {
 				Name:  doit.ArgImageName,
 				Usage: "image name (required)",
 			},
-			jsonFlag(),
-			textFlag(),
 		},
 		Action: doit.ImagesUpdate,
 	}

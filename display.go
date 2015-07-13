@@ -13,11 +13,19 @@ import (
 )
 
 func displayOutput(c *cli.Context, item interface{}) error {
-	if c.Bool(ArgDisplayText) {
-		return writeText(item, c.App.Writer)
+	output := c.GlobalString(ArgOutput)
+	if len(output) < 1 {
+		output = "text"
 	}
 
-	return writeJSON(item, c.App.Writer)
+	switch output {
+	case "json":
+		return writeJSON(item, c.App.Writer)
+	case "text":
+		return writeText(item, c.App.Writer)
+	default:
+		return fmt.Errorf("unknown output type")
+	}
 }
 
 func writeJSON(item interface{}, w io.Writer) error {
