@@ -22,6 +22,10 @@ func sshCommands() cli.Command {
 				Name:  doit.ArgSSHUser,
 				Usage: "ssh user",
 			},
+			cli.StringSliceFlag{
+				Name:  doit.ArgSSHOption,
+				Usage: "ssh options",
+			},
 		},
 		Action: doit.SSH,
 	}

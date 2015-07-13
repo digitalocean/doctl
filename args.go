@@ -25,6 +25,7 @@ const (
 	ArgRegionSlug        = "region"
 	ArgSizeSlug          = "size"
 	ArgSSHKeys           = "ssh-keys"
+	ArgSSHOption         = "o"
 	ArgUserData          = "user-data"
 	ArgUserDataFile      = "user-data-file"
 	ArgImageName         = "image-name"

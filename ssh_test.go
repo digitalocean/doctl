@@ -17,17 +17,19 @@ type sshMock struct {
 	isError bool
 }
 
-func (s *sshMock) cmd() func(u, h string) error {
-	return func(u, h string) error {
+func (s *sshMock) cmd() func(u, h string, o []string) Runner {
+	return func(u, h string, o []string) Runner {
 		s.didRun = true
 		s.user = u
 		s.host = h
 
+		r := &mockRunner{}
+
 		if s.isError {
-			return fmt.Errorf("ssh forced failure")
+			r.err = fmt.Errorf("ssh forced failure")
 		}
 
-		return nil
+		return r
 	}
 }
 
