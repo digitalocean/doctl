@@ -12,6 +12,7 @@ func sshKeyCommands() cli.Command {
 		Subcommands: []cli.Command{
 			sshKeyList(),
 			sshKeyCreate(),
+			sshKeyImport(),
 			sshKeyGet(),
 			sshKeyUpdate(),
 			sshKeyDelete(),
@@ -42,6 +43,24 @@ func sshKeyCreate() cli.Command {
 			},
 		},
 		Action: doit.KeyCreate,
+	}
+}
+
+func sshKeyImport() cli.Command {
+	return cli.Command{
+		Name:  "import",
+		Usage: "import ssh key",
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  doit.ArgKeyPublicKeyFile,
+				Usage: "ssh key file",
+			},
+			cli.StringFlag{
+				Name:  doit.ArgKeyName,
+				Usage: "ssh key name (optional)",
+			},
+		},
+		Action: doit.KeyImport,
 	}
 }
 

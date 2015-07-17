@@ -32,6 +32,7 @@ const (
 	ArgKey               = "key"
 	ArgKeyName           = "key-name"
 	ArgKeyPublicKey      = "public-key"
+	ArgKeyPublicKeyFile  = "public-key-file"
 	ArgSSHUser           = "ssh-user"
 
 	// Arguments for outputs
