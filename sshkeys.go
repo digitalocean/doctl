@@ -2,7 +2,10 @@ package doit
 
 import (
 	"fmt"
+	"io/ioutil"
 	"strconv"
+
+	"golang.org/x/crypto/ssh"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -79,6 +82,43 @@ func KeyCreate(c *cli.Context) {
 	kcr := &godo.KeyCreateRequest{
 		Name:      c.String(ArgKeyName),
 		PublicKey: c.String(ArgKeyPublicKey),
+	}
+
+	r, _, err := client.Keys.Create(kcr)
+	if err != nil {
+		logrus.WithField("err", err).Fatal("could not create key")
+	}
+
+	err = displayOutput(c, r)
+	if err != nil {
+		logrus.WithField("err", err).Fatal("could not write output")
+	}
+}
+
+// KeyImport imports a key from a file
+func KeyImport(c *cli.Context) {
+	client := NewClient(c, DefaultConfig)
+
+	keyPath := c.String(ArgKeyPublicKeyFile)
+	keyName := c.String(ArgKeyName)
+
+	keyFile, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		Bail(err, "could not read the public key")
+	}
+
+	_, comment, _, _, err := ssh.ParseAuthorizedKey(keyFile)
+	if err != nil {
+		Bail(err, "could ot parse public key")
+	}
+
+	if len(keyName) < 1 {
+		keyName = comment
+	}
+
+	kcr := &godo.KeyCreateRequest{
+		Name:      keyName,
+		PublicKey: string(keyFile),
 	}
 
 	r, _, err := client.Keys.Create(kcr)
