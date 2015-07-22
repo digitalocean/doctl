@@ -22,11 +22,20 @@ func imageCommands() cli.Command {
 	}
 }
 
+func imageFlags() []cli.Flag {
+	return []cli.Flag{
+		cli.BoolFlag{
+			Name:  doit.ArgImagePublic,
+			Usage: "only public images",
+		},
+	}
+}
+
 func imageList() cli.Command {
 	return cli.Command{
 		Name:   "list",
 		Usage:  "list images",
-		Flags:  []cli.Flag{},
+		Flags:  imageFlags(),
 		Action: doit.ImagesList,
 	}
 }
@@ -35,7 +44,7 @@ func imageListDistributions() cli.Command {
 	return cli.Command{
 		Name:   "list-distribution",
 		Usage:  "list distribution images",
-		Flags:  []cli.Flag{},
+		Flags:  imageFlags(),
 		Action: doit.ImagesListDistribution,
 	}
 }
@@ -44,7 +53,7 @@ func imageListApplication() cli.Command {
 	return cli.Command{
 		Name:   "list-application",
 		Usage:  "list application images",
-		Flags:  []cli.Flag{},
+		Flags:  imageFlags(),
 		Action: doit.ImagesListApplication,
 	}
 }
@@ -53,7 +62,7 @@ func imageListUser() cli.Command {
 	return cli.Command{
 		Name:   "list-user",
 		Usage:  "list user images",
-		Flags:  []cli.Flag{},
+		Flags:  imageFlags(),
 		Action: doit.ImagesListUser,
 	}
 }

@@ -7,6 +7,7 @@ const (
 	ArgKernelID          = "kernel-id"
 	ArgImage             = "image"
 	ArgImageID           = "image-id"
+	ArgImagePublic       = "public"
 	ArgImageSlug         = "image-slug"
 	ArgIPAddress         = "ip-address"
 	ArgDropletName       = "droplet-name"

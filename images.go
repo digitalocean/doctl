@@ -12,141 +12,25 @@ import (
 // ImagesList images.
 func ImagesList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
-
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Images.List(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := PaginateResp(f, opts)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("could not list images")
-	}
-
-	list := make([]godo.Image, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Image)
-	}
-
-	err = displayOutput(c, list)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write output")
-	}
+	listImages(client.Images.List, c)
 }
 
 // ImagesListDistribution lists distributions that are available.
 func ImagesListDistribution(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
-
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Images.ListDistribution(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := PaginateResp(f, opts)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("could not list distributions")
-	}
-
-	list := make([]godo.Image, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Image)
-	}
-
-	err = displayOutput(c, list)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write output")
-	}
+	listImages(client.Images.ListDistribution, c)
 }
 
 // ImagesListApplication lists application iamges.
 func ImagesListApplication(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
-
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Images.ListApplication(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := PaginateResp(f, opts)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("could not list application images")
-	}
-
-	list := make([]godo.Image, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Image)
-	}
-
-	err = displayOutput(c, list)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write output")
-	}
+	listImages(client.Images.ListApplication, c)
 }
 
 // ImagesListUser lists user images.
 func ImagesListUser(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
-
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Images.ListUser(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := PaginateResp(f, opts)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("could not list user images")
-	}
-
-	list := make([]godo.Image, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Image)
-	}
-
-	err = displayOutput(c, list)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("could not write output")
-	}
+	listImages(client.Images.ListUser, c)
 }
 
 // ImagesGet retrieves an image by id or slug.
@@ -206,5 +90,43 @@ func ImagesDelete(c *cli.Context) {
 	_, err := client.Images.Delete(id)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not delete image")
+	}
+}
+
+type listFn func(*godo.ListOptions) ([]godo.Image, *godo.Response, error)
+
+func listImages(lFn listFn, c *cli.Context) {
+	public := c.Bool(ArgImagePublic)
+
+	fn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := lFn(opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := []interface{}{}
+		for _, i := range list {
+			if (public && i.Public) || !public {
+				si = append(si, i)
+			}
+		}
+
+		return si, resp, err
+	}
+
+	opts := LoadOpts(c)
+	si, err := PaginateResp(fn, opts)
+	if err != nil {
+		logrus.WithField("err", err).Fatal("could not list images")
+	}
+
+	list := make([]godo.Image, len(si))
+	for i := range si {
+		list[i] = si[i].(godo.Image)
+	}
+
+	err = displayOutput(c, list)
+	if err != nil {
+		logrus.WithField("err", err).Fatal("could not write output")
 	}
 }
