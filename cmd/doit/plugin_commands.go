@@ -7,18 +7,8 @@ import (
 
 func pluginCommands() cli.Command {
 	return cli.Command{
-		Name:  "plugin",
-		Usage: "plugin commands",
-		Subcommands: []cli.Command{
-			pluginList(),
-		},
-	}
-}
-
-func pluginList() cli.Command {
-	return cli.Command{
-		Name:   "list",
-		Usage:  "list plugins",
-		Action: doit.PluginList,
+		Name:   "plugin",
+		Usage:  "plugin commands",
+		Action: doit.Plugin,
 	}
 }
