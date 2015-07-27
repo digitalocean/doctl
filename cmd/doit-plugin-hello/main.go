@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
+	"os"
 
 	"golang.org/x/net/context"
 
@@ -15,6 +17,10 @@ const (
 	serverPort = ":0"
 )
 
+var (
+	summary = flag.Bool("summary", false, "show summary")
+)
+
 type server struct{}
 
 // SayHello implements helloworld.GreeterServer
@@ -23,6 +29,13 @@ func (s server) Execute(ctx context.Context, in *protos.PluginRequest) (*protos.
 }
 
 func main() {
+	flag.Parse()
+
+	if *summary {
+		fmt.Println("sample plugin")
+		os.Exit(0)
+	}
+
 	l, err := net.Listen("tcp", serverPort)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("unable to open port")
