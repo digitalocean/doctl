@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package protos;
+
+service Plugin {
+  rpc Execute (PluginRequest) returns (PluginReply) {}
+  }
+
+message PluginRequest {
+  enum OptionType {
+    STRING = 0;
+    BOOL = 1;
+    INT  = 2;
+  }
+
+  message Option {
+    string name = 1;
+    string value = 2;
+    OptionType type = 3;
+  }
+
+  repeated Option option = 1;
+}
+
+message PluginReply {
+
+  enum OutputType {
+    JSON = 0;
+    TEXT = 1;
+  }
+
+  string output = 1;
+}
