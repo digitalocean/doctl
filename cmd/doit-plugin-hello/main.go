@@ -13,8 +13,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	serverPort = ":0"
+var (
+	serverPort = flag.String("port", ":0", "RPC port")
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 
 type server struct{}
 
-// SayHello implements helloworld.GreeterServer
+// Execute
 func (s server) Execute(ctx context.Context, in *protos.PluginRequest) (*protos.PluginReply, error) {
 	return &protos.PluginReply{Output: fmt.Sprintf("hello: %+v", in)}, nil
 }
@@ -36,7 +36,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	l, err := net.Listen("tcp", serverPort)
+	l, err := net.Listen("tcp", *serverPort)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("unable to open port")
 	}
