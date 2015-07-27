@@ -61,6 +61,7 @@ func main() {
 		dropletActionCommands(),
 		imageActionCommands(),
 		imageCommands(),
+		pluginCommands(),
 		sshKeyCommands(),
 		regionCommands(),
 		sizeCommands(),
