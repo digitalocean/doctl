@@ -2,16 +2,6 @@
 // source: plugin.proto
 // DO NOT EDIT!
 
-/*
-Package protos is a generated protocol buffer package.
-
-It is generated from these files:
-	plugin.proto
-
-It has these top-level messages:
-	PluginRequest
-	PluginReply
-*/
 package protos
 
 import proto "github.com/golang/protobuf/proto"

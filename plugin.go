@@ -80,7 +80,7 @@ func (p *plugin) Exec() error {
 	var buffer bytes.Buffer
 	for {
 		var b []byte
-		n, err := stdout.Read(b)
+		_, err := stdout.Read(b)
 		if err != nil {
 			logrus.WithField("err", err).Fatal("couldn't read input")
 		}

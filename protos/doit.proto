@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+// Generate Go:
+// protoc --go_out=plugins=grpc:. *.proto
+
+package protos;
+
+service Doit {
+  rpc Register (RegisterRequest) returns (RegisterReply) {}
+}
+
+message RegisterRequest {
+  string name = 1;
+}
+
+message RegisterReply {
+  string address = 1;
+}
