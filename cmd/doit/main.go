@@ -35,7 +35,7 @@ func (t *tokenSource) Token() (*oauth2.Token, error) {
 
 func init() {
 	logrus.SetOutput(os.Stderr)
-	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(logrus.InfoLevel)
 
 	doit.Bail = func(err error, msg string) {
 		logrus.WithField("err", err).Fatal(msg)

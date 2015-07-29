@@ -9,9 +9,12 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/protos"
 	"google.golang.org/grpc"
+)
+
+const (
+	pluginName = "hello"
 )
 
 var (
@@ -44,14 +47,20 @@ func main() {
 
 	fmt.Printf("%s", l.Addr().String())
 
+	conn, err := grpc.Dial(*serverPort)
+	if err != nil {
+		logrus.WithField("err", err).Fatal("couldn't not dial")
+	}
+
+	defer conn.Close()
+	c := protos.NewDoitClient(conn)
+
 	req := &protos.RegisterRequest{
 		Name:    pluginName,
 		Address: l.Addr().String(),
 	}
 
-	d := &doit.ProtobufDoitRPC{}
-
-	reply, err = d.Register(context.Background(), req)
+	reply, err := c.Register(context.Background(), req)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("unable to register server location")
 	}

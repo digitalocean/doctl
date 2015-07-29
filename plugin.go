@@ -10,7 +10,11 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/doit/protos"
 	"github.com/codegangsta/cli"
 )
 
@@ -27,6 +31,10 @@ type plugin struct {
 	name string
 	path string
 	bin  string
+
+	pluginCmd *exec.Cmd
+
+	ready chan bool
 }
 
 func loadPlugins() []plugin {
@@ -52,9 +60,10 @@ func loadPlugins() []plugin {
 func newPlugin(bin, path string) *plugin {
 	name := strings.TrimPrefix(bin, "doit-plugin-")
 	return &plugin{
-		bin:  bin,
-		name: name,
-		path: path,
+		bin:   bin,
+		name:  name,
+		path:  path,
+		ready: make(chan bool, 1),
 	}
 }
 
@@ -71,7 +80,13 @@ func (p *plugin) Exec(port string) error {
 		"options": fmt.Sprintf("%#v", cmd.Args),
 	}).Debug("starting plugin")
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+
+	p.pluginCmd = cmd
+	return cmd.Start()
+}
+
+func (p *plugin) Kill() error {
+	return p.pluginCmd.Process.Kill()
 }
 
 // Plugin lists all available plugins.
@@ -114,6 +129,7 @@ func execPlugin(name string, args []string) {
 	logrus.Debug("starting server")
 
 	<-server.ready
+	logrus.Debug("server ready")
 
 	var pl plugin
 	for _, p := range loadPlugins() {
@@ -127,11 +143,48 @@ func execPlugin(name string, args []string) {
 	}
 
 	// exec plugin and get standard output
-	err := pl.Exec(server.addr)
+	go pl.Exec(server.addr)
+
+	logrus.Debug("waiting for server to be ready")
+	<-server.ready
+
+	logrus.Debugf("ready to go? %#v", server)
+
+	conn, err := grpc.Dial(server.remote)
 	if err != nil {
-		logrus.WithField("err", err).Fatalf("could not execute plugin")
+		logrus.WithField("err", err).Fatal("could not connect to server")
 	}
 
-	server.Stop()
+	defer conn.Close()
 
+	c := protos.NewPluginClient(conn)
+
+	o := []*protos.PluginRequest_Option{}
+	for _, a := range argSlicer(args) {
+		o1 := &protos.PluginRequest_Option{
+			Name:  a[0],
+			Value: a[1],
+		}
+		o = append(o, o1)
+	}
+
+	r, err := c.Execute(context.Background(), &protos.PluginRequest{Option: o})
+	if err != nil {
+		logrus.WithField("err", err).Fatal("could not execute")
+	}
+	fmt.Println(r.Output)
+
+	pl.Kill()
+
+	server.Stop()
+}
+
+func argSlicer(args []string) [][]string {
+	var c [][]string
+
+	for _, a := range args {
+		c = append(c, strings.Split(a, "="))
+	}
+
+	return c
 }
