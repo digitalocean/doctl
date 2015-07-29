@@ -4,12 +4,19 @@
 
 package protos
 
-import proto "code.google.com/p/goprotobuf/proto"
-import math "math"
+import proto "github.com/golang/protobuf/proto"
+
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
+
+// Reference imports to suppress errors if they are not otherwise used.
+var _ context.Context
+var _ grpc.ClientConn
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
-var _ = math.Inf
 
 type PluginRequest_OptionType int32
 
@@ -30,21 +37,8 @@ var PluginRequest_OptionType_value = map[string]int32{
 	"INT":    2,
 }
 
-func (x PluginRequest_OptionType) Enum() *PluginRequest_OptionType {
-	p := new(PluginRequest_OptionType)
-	*p = x
-	return p
-}
 func (x PluginRequest_OptionType) String() string {
 	return proto.EnumName(PluginRequest_OptionType_name, int32(x))
-}
-func (x *PluginRequest_OptionType) UnmarshalJSON(data []byte) error {
-	value, err := proto.UnmarshalJSONEnum(PluginRequest_OptionType_value, data, "PluginRequest_OptionType")
-	if err != nil {
-		return err
-	}
-	*x = PluginRequest_OptionType(value)
-	return nil
 }
 
 type PluginReply_OutputType int32
@@ -63,26 +57,12 @@ var PluginReply_OutputType_value = map[string]int32{
 	"TEXT": 1,
 }
 
-func (x PluginReply_OutputType) Enum() *PluginReply_OutputType {
-	p := new(PluginReply_OutputType)
-	*p = x
-	return p
-}
 func (x PluginReply_OutputType) String() string {
 	return proto.EnumName(PluginReply_OutputType_name, int32(x))
 }
-func (x *PluginReply_OutputType) UnmarshalJSON(data []byte) error {
-	value, err := proto.UnmarshalJSONEnum(PluginReply_OutputType_value, data, "PluginReply_OutputType")
-	if err != nil {
-		return err
-	}
-	*x = PluginReply_OutputType(value)
-	return nil
-}
 
 type PluginRequest struct {
-	Option           []*PluginRequest_Option `protobuf:"bytes,1,rep,name=option" json:"option,omitempty"`
-	XXX_unrecognized []byte                  `json:"-"`
+	Option []*PluginRequest_Option `protobuf:"bytes,1,rep,name=option" json:"option,omitempty"`
 }
 
 func (m *PluginRequest) Reset()         { *m = PluginRequest{} }
@@ -97,54 +77,81 @@ func (m *PluginRequest) GetOption() []*PluginRequest_Option {
 }
 
 type PluginRequest_Option struct {
-	Name             *string                   `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-	Value            *string                   `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
-	Type             *PluginRequest_OptionType `protobuf:"varint,3,opt,name=type,enum=protos.PluginRequest_OptionType" json:"type,omitempty"`
-	XXX_unrecognized []byte                    `json:"-"`
+	Name  string                   `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Value string                   `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
+	Type  PluginRequest_OptionType `protobuf:"varint,3,opt,name=type,enum=protos.PluginRequest_OptionType" json:"type,omitempty"`
 }
 
 func (m *PluginRequest_Option) Reset()         { *m = PluginRequest_Option{} }
 func (m *PluginRequest_Option) String() string { return proto.CompactTextString(m) }
 func (*PluginRequest_Option) ProtoMessage()    {}
 
-func (m *PluginRequest_Option) GetName() string {
-	if m != nil && m.Name != nil {
-		return *m.Name
-	}
-	return ""
-}
-
-func (m *PluginRequest_Option) GetValue() string {
-	if m != nil && m.Value != nil {
-		return *m.Value
-	}
-	return ""
-}
-
-func (m *PluginRequest_Option) GetType() PluginRequest_OptionType {
-	if m != nil && m.Type != nil {
-		return *m.Type
-	}
-	return PluginRequest_STRING
-}
-
 type PluginReply struct {
-	Output           *string `protobuf:"bytes,1,opt,name=output" json:"output,omitempty"`
-	XXX_unrecognized []byte  `json:"-"`
+	Output string `protobuf:"bytes,1,opt,name=output" json:"output,omitempty"`
 }
 
 func (m *PluginReply) Reset()         { *m = PluginReply{} }
 func (m *PluginReply) String() string { return proto.CompactTextString(m) }
 func (*PluginReply) ProtoMessage()    {}
 
-func (m *PluginReply) GetOutput() string {
-	if m != nil && m.Output != nil {
-		return *m.Output
-	}
-	return ""
-}
-
 func init() {
 	proto.RegisterEnum("protos.PluginRequest_OptionType", PluginRequest_OptionType_name, PluginRequest_OptionType_value)
 	proto.RegisterEnum("protos.PluginReply_OutputType", PluginReply_OutputType_name, PluginReply_OutputType_value)
+}
+
+// Client API for Plugin service
+
+type PluginClient interface {
+	Execute(ctx context.Context, in *PluginRequest, opts ...grpc.CallOption) (*PluginReply, error)
+}
+
+type pluginClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewPluginClient(cc *grpc.ClientConn) PluginClient {
+	return &pluginClient{cc}
+}
+
+func (c *pluginClient) Execute(ctx context.Context, in *PluginRequest, opts ...grpc.CallOption) (*PluginReply, error) {
+	out := new(PluginReply)
+	err := grpc.Invoke(ctx, "/protos.Plugin/Execute", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for Plugin service
+
+type PluginServer interface {
+	Execute(context.Context, *PluginRequest) (*PluginReply, error)
+}
+
+func RegisterPluginServer(s *grpc.Server, srv PluginServer) {
+	s.RegisterService(&_Plugin_serviceDesc, srv)
+}
+
+func _Plugin_Execute_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
+	in := new(PluginRequest)
+	if err := codec.Unmarshal(buf, in); err != nil {
+		return nil, err
+	}
+	out, err := srv.(PluginServer).Execute(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+var _Plugin_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "protos.Plugin",
+	HandlerType: (*PluginServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Execute",
+			Handler:    _Plugin_Execute_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{},
 }
