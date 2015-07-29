@@ -1,7 +1,6 @@
 package doit
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -65,34 +64,14 @@ func (p *plugin) Summary() (string, error) {
 	return string(out), err
 }
 
-func (p *plugin) Exec() error {
+func (p *plugin) Exec(port string) error {
 	path := filepath.Join(p.path, p.bin)
-	cmd := exec.Command(path)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-
-	if err := cmd.Start(); err != nil {
-		logrus.WithField("err", err).Fatal("could not start plugin")
-	}
-
-	var buffer bytes.Buffer
-	for {
-		var b []byte
-		_, err := stdout.Read(b)
-		if err != nil {
-			logrus.WithField("err", err).Fatal("couldn't read input")
-		}
-
-		buffer.Write(b)
-	}
-
-	if err := cmd.Wait(); err != nil {
-		logrus.WithField("err", err).Fatal("something went wrong")
-	}
-
-	return nil
+	cmd := exec.Command(path, "-port", port)
+	logrus.WithFields(logrus.Fields{
+		"options": fmt.Sprintf("%#v", cmd.Args),
+	}).Debug("starting plugin")
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // Plugin lists all available plugins.
@@ -125,7 +104,16 @@ func pluginPaths() []string {
 }
 
 func execPlugin(name string, args []string) {
-	fmt.Printf("name: %s, args: %#v\n", name, args)
+	logrus.Debug("execPlugin")
+	logrus.WithFields(logrus.Fields{
+		"name": name,
+		"args": fmt.Sprintf("%#v", args)}).Debug("execing plugin with options")
+
+	server := NewServer()
+	go server.Serve()
+	logrus.Debug("starting server")
+
+	<-server.ready
 
 	var pl plugin
 	for _, p := range loadPlugins() {
@@ -139,9 +127,11 @@ func execPlugin(name string, args []string) {
 	}
 
 	// exec plugin and get standard output
-	err := pl.Exec()
+	err := pl.Exec(server.addr)
 	if err != nil {
 		logrus.WithField("err", err).Fatalf("could not execute plugin")
 	}
+
+	server.Stop()
 
 }

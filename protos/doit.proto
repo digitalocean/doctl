@@ -11,8 +11,9 @@ service Doit {
 
 message RegisterRequest {
   string name = 1;
+  string address = 2;
 }
 
 message RegisterReply {
-  string address = 1;
+  bool success = 1;
 }

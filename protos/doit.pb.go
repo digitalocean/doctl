@@ -7,7 +7,6 @@ Package protos is a generated protocol buffer package.
 
 It is generated from these files:
 	doit.proto
-	plugin.proto
 
 It has these top-level messages:
 	RegisterRequest
@@ -15,89 +14,52 @@ It has these top-level messages:
 */
 package protos
 
-import proto "github.com/golang/protobuf/proto"
-
-import (
-	context "golang.org/x/net/context"
-	grpc "google.golang.org/grpc"
-)
-
-// Reference imports to suppress errors if they are not otherwise used.
-var _ context.Context
-var _ grpc.ClientConn
+import proto "code.google.com/p/goprotobuf/proto"
+import math "math"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
+var _ = math.Inf
 
 type RegisterRequest struct {
-	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Name             *string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Address          *string `protobuf:"bytes,2,opt,name=address" json:"address,omitempty"`
+	XXX_unrecognized []byte  `json:"-"`
 }
 
 func (m *RegisterRequest) Reset()         { *m = RegisterRequest{} }
 func (m *RegisterRequest) String() string { return proto.CompactTextString(m) }
 func (*RegisterRequest) ProtoMessage()    {}
 
+func (m *RegisterRequest) GetName() string {
+	if m != nil && m.Name != nil {
+		return *m.Name
+	}
+	return ""
+}
+
+func (m *RegisterRequest) GetAddress() string {
+	if m != nil && m.Address != nil {
+		return *m.Address
+	}
+	return ""
+}
+
 type RegisterReply struct {
-	Address string `protobuf:"bytes,1,opt,name=address" json:"address,omitempty"`
+	Success          *bool  `protobuf:"varint,1,opt,name=success" json:"success,omitempty"`
+	XXX_unrecognized []byte `json:"-"`
 }
 
 func (m *RegisterReply) Reset()         { *m = RegisterReply{} }
 func (m *RegisterReply) String() string { return proto.CompactTextString(m) }
 func (*RegisterReply) ProtoMessage()    {}
 
-// Client API for Doit service
-
-type DoitClient interface {
-	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterReply, error)
-}
-
-type doitClient struct {
-	cc *grpc.ClientConn
-}
-
-func NewDoitClient(cc *grpc.ClientConn) DoitClient {
-	return &doitClient{cc}
-}
-
-func (c *doitClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterReply, error) {
-	out := new(RegisterReply)
-	err := grpc.Invoke(ctx, "/protos.Doit/Register", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
+func (m *RegisterReply) GetSuccess() bool {
+	if m != nil && m.Success != nil {
+		return *m.Success
 	}
-	return out, nil
+	return false
 }
 
-// Server API for Doit service
-
-type DoitServer interface {
-	Register(context.Context, *RegisterRequest) (*RegisterReply, error)
-}
-
-func RegisterDoitServer(s *grpc.Server, srv DoitServer) {
-	s.RegisterService(&_Doit_serviceDesc, srv)
-}
-
-func _Doit_Register_Handler(srv interface{}, ctx context.Context, codec grpc.Codec, buf []byte) (interface{}, error) {
-	in := new(RegisterRequest)
-	if err := codec.Unmarshal(buf, in); err != nil {
-		return nil, err
-	}
-	out, err := srv.(DoitServer).Register(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-var _Doit_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "protos.Doit",
-	HandlerType: (*DoitServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Register",
-			Handler:    _Doit_Register_Handler,
-		},
-	},
-	Streams: []grpc.StreamDesc{},
+func init() {
 }

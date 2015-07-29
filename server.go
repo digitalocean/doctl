@@ -10,33 +10,54 @@ import (
 	"golang.org/x/net/context"
 )
 
-// ServerRPC handles RPC For doit.
-type ServerRPC struct {
-	Addr string
-}
+// ProtobufDoitRPC handles RPC For doit.
+type ProtobufDoitRPC struct{}
 
-// NewServerRPC creates a ServerRPC.
-func NewServerRPC(addr string) *ServerRPC {
-	return &ServerRPC{
-		Addr: addr,
-	}
+// NewProtobufDoitRPC creates a ServerRPC.
+func NewProtobufDoitRPC() *ProtobufDoitRPC {
+	return &ProtobufDoitRPC{}
 }
 
 // Register implements Register from the doit protobuf interface.
-func (s ServerRPC) Register(ctx context.Context, in *protos.RegisterRequest) (*protos.RegisterReply, error) {
-	return &protos.RegisterReply{Address: s.Addr}, nil
+func (s ProtobufDoitRPC) Register(ctx context.Context, in *protos.RegisterRequest) (*protos.RegisterReply, error) {
+	return &protos.RegisterReply{}, nil
+}
+
+// Server is our how doit serves.
+type Server struct {
+	addr   string
+	server *grpc.Server
+	ready  chan bool
+}
+
+func NewServer() *Server {
+	return &Server{
+		ready: make(chan bool, 1),
+	}
 }
 
 // Serve serves stuff.
-func Serve() {
+func (server *Server) Serve() {
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		logrus.WithField("err", err).Fatal("unable to open server port")
 	}
 
-	server := NewServerRPC(l.Addr().String())
+	server.addr = l.Addr().String()
+	server.ready <- true
 
-	s := grpc.NewServer()
-	protos.RegisterDoitServer(s, server)
-	s.Serve(l)
+	doitrpc := NewProtobufDoitRPC()
+
+	server.server = grpc.NewServer()
+	protos.RegisterDoitServer(server.server, doitrpc)
+	logrus.Warn("before")
+	server.server.Serve(l)
+	logrus.Warn("after")
+}
+
+// Stop stops serving.
+func (server *Server) Stop() {
+	if server.server != nil {
+		server.server.Stop()
+	}
 }
