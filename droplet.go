@@ -168,6 +168,14 @@ var DropletCommand = cli.Command{
 			},
 		},
 		{
+			Name:   "kernels",
+			Usage:  "[--id | <name>] List all available kernels for a Droplet.",
+			Action: dropletActionKernels,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+			},
+		},
+		{
 			Name:   "enable_ipv6",
 			Usage:  "[--id | <name>] Enable IPv6 networking on a Droplet.",
 			Action: dropletActionEnableIPv6,
@@ -807,6 +815,70 @@ func dropletActionChangeKernel(ctx *cli.Context) {
 	}
 
 	WriteOutput(action)
+}
+
+func dropletActionKernels(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to list available kernels.")
+	}
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	opt := &godo.ListOptions{}
+	kernelList := []godo.Kernel{}
+
+	for { // TODO make all optional
+		kernelsPage, resp, err := client.Droplets.Kernels(droplet.ID, opt)
+		if err != nil {
+			log.Fatalf("Unable to list Droplet kernels: %s.", err)
+		}
+
+		// append the current page's droplets to our list
+		for _, k := range kernelsPage {
+			kernelList = append(kernelList, k)
+		}
+
+		// if we are at the last page, break out the for loop
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			log.Fatalf("Unable to get pagination: %s.", err)
+		}
+
+		// set the page we want for the next request
+		opt.Page = page + 1
+	}
+
+	cliOut := NewCLIOutput()
+	defer cliOut.Flush()
+	cliOut.Header("ID", "Name", "Version")
+	for _, kernel := range kernelList {
+		cliOut.Writeln("%d\t%s\t%s\n",
+			kernel.ID, kernel.Name, kernel.Version)
+	}
+
 }
 
 func dropletActionEnableIPv6(ctx *cli.Context) {
