@@ -23,8 +23,11 @@ const (
 )
 
 var (
-	pluginPattern = fmt.Sprintf("^%s[A-Za-z0-9\\-]+$", pluginPrefix)
-	pluginNameRE  = regexp.MustCompile(pluginPattern)
+	pluginPattern      = fmt.Sprintf("^%s[A-Za-z0-9\\-]+$", pluginPrefix)
+	pluginNameRE       = regexp.MustCompile(pluginPattern)
+	defaultPluginPaths = []string{
+		filepath.Join(os.Getenv("GOPATH"), "bin"),
+	}
 )
 
 type plugin struct {
@@ -113,9 +116,7 @@ func Plugin(c *cli.Context) {
 }
 
 func pluginPaths() []string {
-	return []string{
-		filepath.Join(os.Getenv("GOPATH"), "bin"),
-	}
+	return defaultPluginPaths
 }
 
 func execPlugin(name string, args []string) {
