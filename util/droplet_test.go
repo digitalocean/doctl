@@ -9,11 +9,11 @@ import (
 func ExampleWaitForActive() {
 	// build client
 	pat := "mytoken"
-	t := &oauth2.Transport{
-		Token: &oauth2.Token{AccessToken: pat},
-	}
+	token := &oauth2.Token{AccessToken: pat}
+	t := oauth2.StaticTokenSource(token)
 
-	client := godo.NewClient(t.Client())
+	oauthClient := oauth2.NewClient(oauth2.NoContext, t)
+	client := godo.NewClient(oauthClient)
 
 	// create your droplet and retrieve the create action uri
 	uri := "https://api.digitalocean.com/v2/actions/xxxxxxxx"
