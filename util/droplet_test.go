@@ -1,7 +1,7 @@
 package util
 
 import (
-	"code.google.com/p/goauth2/oauth"
+	"golang.org/x/oauth2"
 
 	"github.com/digitalocean/godo"
 )
@@ -9,8 +9,8 @@ import (
 func ExampleWaitForActive() {
 	// build client
 	pat := "mytoken"
-	t := &oauth.Transport{
-		Token: &oauth.Token{AccessToken: pat},
+	t := &oauth2.Transport{
+		Token: &oauth2.Token{AccessToken: pat},
 	}
 
 	client := godo.NewClient(t.Client())
