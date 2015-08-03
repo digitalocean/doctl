@@ -17,9 +17,11 @@ const (
 )
 
 var (
-	argMap = doit.ConfigArgMap{
-		"token":  "token",
-		"output": "output",
+	argDir = doit.ConfigArgDir{
+		"": {
+			"token":  "token",
+			"output": "output",
+		},
 	}
 )
 
@@ -71,8 +73,8 @@ func main() {
 	fp, _ := configFilePath()
 	if _, err := os.Stat(fp); err == nil {
 		if guts, err := ioutil.ReadFile(fp); err == nil {
-			cf := doit.NewConfigFile(argMap, guts)
-			if newArgs, err := cf.Args(); err == nil {
+			cf := doit.NewConfigFile(argDir, guts)
+			if newArgs, err := cf.Args(""); err == nil {
 				os.Args = doit.GlobalArgs(os.Args, newArgs)
 			}
 		}

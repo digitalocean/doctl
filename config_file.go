@@ -6,21 +6,28 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// ConfigArgMap is map that maps config values to arguments.
 type ConfigArgMap map[string]string
 
+// ConfigArgDir is a map of ConfigArgMaps.
+type ConfigArgDir map[string]ConfigArgMap
+
+// ConfigFile represents a configuration file's contents and its ConfigArgMap.
 type ConfigFile struct {
 	contents []byte
-	argMap   ConfigArgMap
+	argDir   ConfigArgDir
 }
 
-func NewConfigFile(argMap ConfigArgMap, c []byte) *ConfigFile {
+// NewConfigFile creates a ConfigFile.
+func NewConfigFile(argDir ConfigArgDir, c []byte) *ConfigFile {
 	return &ConfigFile{
-		argMap:   argMap,
+		argDir:   argDir,
 		contents: c,
 	}
 }
 
-func (cf *ConfigFile) Args() ([]string, error) {
+// Args generates arguments from a ConfigFile.
+func (cf *ConfigFile) Args(entry string) ([]string, error) {
 	a := []string{}
 	c := map[string]interface{}{}
 
@@ -29,13 +36,14 @@ func (cf *ConfigFile) Args() ([]string, error) {
 		return nil, err
 	}
 
+	argMap := cf.argDir[entry]
 	mk := []string{}
-	for k := range cf.argMap {
+	for k := range argMap {
 		mk = append(mk, k)
 	}
 
 	sort.Strings(mk)
-	am := cf.argMap
+	am := argMap
 	for _, k := range mk {
 		v2 := c[k]
 		arg := "--" + am[k]
@@ -58,6 +66,7 @@ func (cf *ConfigFile) Args() ([]string, error) {
 	return a, nil
 }
 
+// GlobalArgs creates a new set of arguments by inserting global arguments.
 func GlobalArgs(osArgs, newArgs []string) []string {
 	return append(osArgs[:1], append(newArgs, osArgs[1:]...)...)
 }

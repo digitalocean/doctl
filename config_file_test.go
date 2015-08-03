@@ -6,10 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerateArgs(t *testing.T) {
-	argMap := ConfigArgMap{
-		"t1": "test1",
-		"t2": "test2",
+func TestGenerateGlobalArgs(t *testing.T) {
+	argDir := ConfigArgDir{
+		"": {
+			"t1": "test1",
+			"t2": "test2",
+		},
 	}
 
 	cfg := `
@@ -21,13 +23,13 @@ t2: ex2`
 		"--test2", "ex2",
 	}
 
-	cf := NewConfigFile(argMap, []byte(cfg))
-	got, err := cf.Args()
+	cf := NewConfigFile(argDir, []byte(cfg))
+	got, err := cf.Args("")
 	assert.NoError(t, err)
 	assert.Equal(t, expected, got)
 }
 
-func TestInsertArgs(t *testing.T) {
+func TestPrependGlobalArgs(t *testing.T) {
 	newArgs := []string{
 		"--foo", "bar",
 	}
@@ -36,7 +38,7 @@ func TestInsertArgs(t *testing.T) {
 		"myapp", "action",
 	}
 
-	got := InsertArgs(osargs, newArgs)
+	got := GlobalArgs(osargs, newArgs)
 	expected := []string{
 		"myapp", "--foo", "bar", "action",
 	}
