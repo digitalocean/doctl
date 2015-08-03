@@ -58,6 +58,6 @@ func (cf *ConfigFile) Args() ([]string, error) {
 	return a, nil
 }
 
-func InsertArgs(osArgs, newArgs []string) []string {
+func GlobalArgs(osArgs, newArgs []string) []string {
 	return append(osArgs[:1], append(newArgs, osArgs[1:]...)...)
 }

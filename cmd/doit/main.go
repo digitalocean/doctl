@@ -73,7 +73,7 @@ func main() {
 		if guts, err := ioutil.ReadFile(fp); err == nil {
 			cf := doit.NewConfigFile(argMap, guts)
 			if newArgs, err := cf.Args(); err == nil {
-				os.Args = doit.InsertArgs(os.Args, newArgs)
+				os.Args = doit.GlobalArgs(os.Args, newArgs)
 			}
 		}
 	}
