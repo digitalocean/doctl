@@ -4,6 +4,7 @@ const (
 	ArgActionID          = "action-id"
 	ArgDomainName        = "domain-name"
 	ArgDropletID         = "droplet-id"
+	ArgDropletWait       = "wait"
 	ArgKernelID          = "kernel-id"
 	ArgImage             = "image"
 	ArgImageID           = "image-id"
