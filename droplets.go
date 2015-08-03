@@ -7,6 +7,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
+	"github.com/digitalocean/godo/util"
 )
 
 // Actions returns a list of actions for a droplet.
@@ -104,6 +105,8 @@ func DropletCreate(c *cli.Context) {
 		userData = string(data)
 	}
 
+	wait := c.Bool(ArgDropletWait)
+
 	dcr := &godo.DropletCreateRequest{
 		Name:              c.String(ArgDropletName),
 		Region:            c.String(ArgRegionSlug),
@@ -122,9 +125,31 @@ func DropletCreate(c *cli.Context) {
 		dcr.Image = godo.DropletCreateImage{Slug: imageStr}
 	}
 
-	r, _, err := client.Droplets.Create(dcr)
+	r, resp, err := client.Droplets.Create(dcr)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not create droplet")
+	}
+
+	var action *godo.LinkAction
+
+	if wait {
+		for _, a := range resp.Links.Actions {
+			if a.Rel == "create" {
+				action = &a
+			}
+		}
+	}
+
+	if action != nil {
+		err = util.WaitForActive(client, action.HREF)
+		if err != nil {
+			logrus.WithField("err", err).Fatal("error waiting for droplet to become active")
+		}
+
+		r, err = getDropletByID(client, r.ID)
+		if err != nil {
+			Bail(err, "could not get droplet")
+		}
 	}
 
 	err = displayOutput(c, r)

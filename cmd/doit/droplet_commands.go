@@ -78,6 +78,10 @@ func dropletCreate() cli.Command {
 				Name:  doit.ArgUserDataFile,
 				Usage: "reads droplet user data from a file",
 			},
+			cli.BoolFlag{
+				Name:  doit.ArgDropletWait,
+				Usage: "wait for droplet to become active",
+			},
 		},
 		Action: doit.DropletCreate,
 	}
