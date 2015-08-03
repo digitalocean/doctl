@@ -28,12 +28,15 @@ var (
 	defaultPluginPaths = []string{
 		filepath.Join(os.Getenv("GOPATH"), "bin"),
 	}
+	pluginFactory = func(path string) Command {
+		return NewLiveCommand(path)
+	}
+	pluginLoader = func() []plugin { return loadPlugins() }
 )
 
 type plugin struct {
-	name string
-	path string
-	bin  string
+	name    string
+	command Command
 
 	pluginCmd *exec.Cmd
 
@@ -62,34 +65,25 @@ func loadPlugins() []plugin {
 
 func newPlugin(bin, path string) *plugin {
 	name := strings.TrimPrefix(bin, "doit-plugin-")
+	cmd := pluginFactory(filepath.Join(path, bin))
 	return &plugin{
-		bin:   bin,
-		name:  name,
-		path:  path,
-		ready: make(chan bool, 1),
+		name:    name,
+		command: cmd,
+		ready:   make(chan bool, 1),
 	}
 }
 
 func (p *plugin) Summary() (string, error) {
-	path := filepath.Join(p.path, p.bin)
-	out, err := exec.Command(path, "-summary").Output()
+	out, err := p.command.Run("-summary")
 	return string(out), err
 }
 
 func (p *plugin) Exec(port string) error {
-	path := filepath.Join(p.path, p.bin)
-	cmd := exec.Command(path, "-port", port)
-	logrus.WithFields(logrus.Fields{
-		"options": fmt.Sprintf("%#v", cmd.Args),
-	}).Debug("starting plugin")
-	cmd.Stderr = os.Stderr
-
-	p.pluginCmd = cmd
-	return cmd.Start()
+	return p.command.Start("-port", port)
 }
 
 func (p *plugin) Kill() error {
-	return p.pluginCmd.Process.Kill()
+	return p.command.Stop()
 }
 
 // Plugin lists all available plugins.
@@ -99,7 +93,7 @@ func Plugin(c *cli.Context) {
 		return
 	}
 
-	plugins := loadPlugins()
+	plugins := pluginLoader()
 
 	w := new(tabwriter.Writer)
 	w.Init(c.App.Writer, 0, 8, 1, '\t', 0)
@@ -133,7 +127,8 @@ func execPlugin(name string, args []string) {
 	logrus.Debug("server ready")
 
 	var pl plugin
-	for _, p := range loadPlugins() {
+	for _, p := range pluginLoader() {
+		fmt.Printf("found plugin: %#v\n", p)
 		if p.name == name {
 			pl = p
 		}

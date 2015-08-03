@@ -47,3 +47,34 @@ func Test_loadPlugins(t *testing.T) {
 	plugins := loadPlugins()
 	assert.Equal(t, 1, len(plugins))
 }
+
+func TestPluginSummary(t *testing.T) {
+	ogPluginFactory := pluginFactory
+	defer func() {
+		pluginFactory = ogPluginFactory
+	}()
+	pluginFactory = func(path string) Command {
+		return NewMockCommand(path)
+	}
+
+	p := newPlugin("/bin", "test-plugin")
+	_, err := p.Summary()
+	assert.NoError(t, err)
+}
+
+func TestPluginStart(t *testing.T) {
+	ogPluginFactory := pluginFactory
+	defer func() {
+		pluginFactory = ogPluginFactory
+	}()
+	pluginFactory = func(path string) Command {
+		return NewMockCommand(path)
+	}
+
+	p := newPlugin("/bin", "doit-plugin-test")
+	err := p.Exec("55")
+	assert.NoError(t, err)
+
+	err = p.Kill()
+	assert.NoError(t, err)
+}
