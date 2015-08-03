@@ -128,7 +128,6 @@ func execPlugin(name string, args []string) {
 
 	var pl plugin
 	for _, p := range pluginLoader() {
-		fmt.Printf("found plugin: %#v\n", p)
 		if p.name == name {
 			pl = p
 		}
