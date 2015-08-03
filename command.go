@@ -58,6 +58,15 @@ var _ Command = &MockCommand{}
 func NewMockCommand(path string) *MockCommand {
 	return &MockCommand{
 		path: path,
+		runFn: func() error {
+			return nil
+		},
+		startFn: func() error {
+			return nil
+		},
+		stopFn: func() error {
+			return nil
+		},
 	}
 }
 
