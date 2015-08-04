@@ -1,7 +1,9 @@
 package doit
 
 import (
+	"fmt"
 	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -11,6 +13,8 @@ type ConfigArgMap map[string]string
 
 // ConfigArgDir is a map of ConfigArgMaps.
 type ConfigArgDir map[string]ConfigArgMap
+
+type yamlMap map[interface{}]interface{}
 
 // ConfigFile represents a configuration file's contents and its ConfigArgMap.
 type ConfigFile struct {
@@ -29,23 +33,31 @@ func NewConfigFile(argDir ConfigArgDir, c []byte) *ConfigFile {
 // Args generates arguments from a ConfigFile.
 func (cf *ConfigFile) Args(entry string) ([]string, error) {
 	a := []string{}
-	c := map[string]interface{}{}
+	c := yamlMap{}
 
 	err := yaml.Unmarshal(cf.contents, &c)
 	if err != nil {
 		return nil, err
 	}
 
-	argMap := cf.argDir[entry]
+	p := entry
+	if len(p) > 0 {
+		p = fmt.Sprintf("commands/%s", p)
+	}
+	m, err := mapPath(c, p)
+	if err != nil {
+		return nil, err
+	}
+
+	am := cf.argDir[entry]
 	mk := []string{}
-	for k := range argMap {
+	for k := range am {
 		mk = append(mk, k)
 	}
 
 	sort.Strings(mk)
-	am := argMap
 	for _, k := range mk {
-		v2 := c[k]
+		v2 := m.(yamlMap)[k]
 		arg := "--" + am[k]
 
 		var val string
@@ -69,4 +81,33 @@ func (cf *ConfigFile) Args(entry string) ([]string, error) {
 // GlobalArgs creates a new set of arguments by inserting global arguments.
 func GlobalArgs(osArgs, newArgs []string) []string {
 	return append(osArgs[:1], append(newArgs, osArgs[1:]...)...)
+}
+
+// CommandArgs creates a new set of arguments by appending command arguments.
+func CommandArgs(osArgs, newArgs []string) []string {
+	return append(osArgs, newArgs...)
+}
+
+func mapPath(top yamlMap, path string) (interface{}, error) {
+	if len(path) == 0 {
+		return top, nil
+	}
+
+	keys := strings.Split(path, "/")
+	for _, key := range keys {
+		switch top[key].(type) {
+		case nil:
+			return nil, fmt.Errorf("invalid path: %s", path)
+		default:
+			return top[key], nil
+		case yamlMap:
+			t, ok := top[key]
+			if !ok {
+				return nil, fmt.Errorf("invalid path: %s", path)
+			}
+			top = t.(yamlMap)
+		}
+	}
+
+	return top, nil
 }
