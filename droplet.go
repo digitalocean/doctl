@@ -10,8 +10,6 @@ import (
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo/util"
-
-	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var DropletCommand = cli.Command{
@@ -131,12 +129,6 @@ func dropletCreate(ctx *cli.Context) {
 		log.Fatal("Error: Must provide name for Droplet.")
 	}
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	// Add domain to end if available.
 	dropletName := ctx.Args().First()
 	if ctx.String("add-region") != "" {
@@ -209,12 +201,6 @@ func dropletList(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	opt := &godo.ListOptions{}
 	dropletList := []godo.Droplet{}
 
@@ -261,12 +247,6 @@ func dropletFind(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	droplet, err := FindDropletByName(client, name)
 	if err != nil {
 		log.Fatal(err)
@@ -279,12 +259,6 @@ func dropletDestroy(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
 		log.Fatal("Error: Must provide ID or name for Droplet to destroy.")
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	id := ctx.Int("id")
 	if id == 0 {
@@ -318,12 +292,6 @@ func dropletActionReboot(ctx *cli.Context) {
 		log.Fatal("Error: Must provide ID or name for Droplet to reboot.")
 	}
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	id := ctx.Int("id")
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
@@ -351,12 +319,6 @@ func dropletActionPowercycle(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
 		log.Fatal("Error: Must provide ID or name for Droplet to power cycle.")
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	id := ctx.Int("id")
 	if id == 0 {
@@ -386,12 +348,6 @@ func dropletActionShutdown(ctx *cli.Context) {
 		log.Fatal("Error: Must provide ID or name for Droplet to issue shutdown.")
 	}
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	id := ctx.Int("id")
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
@@ -419,12 +375,6 @@ func dropletActionPoweroff(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
 		log.Fatal("Error: Must provide ID or name for Droplet to power off.")
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	id := ctx.Int("id")
 	if id == 0 {
@@ -454,12 +404,6 @@ func dropletActionPoweron(ctx *cli.Context) {
 		log.Fatal("Error: Must provide ID or name for Droplet to power on.")
 	}
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	id := ctx.Int("id")
 	if id == 0 {
 		droplet, err := FindDropletByName(client, ctx.Args()[0])
@@ -487,12 +431,6 @@ func dropletActionPasswordReset(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
 		log.Fatal("Error: Must provide ID or name for Droplet to reset.")
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	id := ctx.Int("id")
 	if id == 0 {
@@ -524,12 +462,6 @@ func dropletActionResize(ctx *cli.Context) {
 
 	size := ctx.String("size")
 	disk := ctx.Bool("disk")
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	id := ctx.Int("id")
 	if id == 0 {

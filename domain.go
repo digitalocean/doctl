@@ -8,8 +8,6 @@ import (
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
-
-	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var DomainCommand = cli.Command{
@@ -95,12 +93,6 @@ func domainShow(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	domain, _, err := client.Domains.Get(name)
 	if err != nil {
 		log.Fatal(err)
@@ -114,12 +106,6 @@ func domainList(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 		os.Exit(1)
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	opt := &godo.ListOptions{
 		Page:    ctx.Int("page"),
@@ -142,12 +128,6 @@ func domainCreate(ctx *cli.Context) {
 	if len(ctx.Args()) != 2 {
 		log.Fatal("Must provide domain name and Droplet name.")
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	droplet, err := FindDropletByName(client, ctx.Args()[1])
 	if err != nil {
@@ -173,12 +153,6 @@ func domainDestroy(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	_, err := client.Domains.Delete(name)
 	if err != nil {
 		log.Fatalf("Unable to destroy domain: %s.", err)
@@ -195,12 +169,6 @@ func domainRecordList(ctx *cli.Context) {
 	if len(ctx.Args()) != 1 {
 		log.Fatal("Error: Must provide a domain name for which to list records.")
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	domainName := ctx.Args().First()
 
@@ -220,12 +188,6 @@ func domainRecordShow(ctx *cli.Context) {
 	if len(ctx.Args()) == 2 {
 		log.Fatal("Error: Must provide domain name and domain record id.")
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	domainName := ctx.Args().First()
 	recordID, err := strconv.Atoi(ctx.Args()[1])
@@ -249,12 +211,6 @@ func domainRecordCreate(ctx *cli.Context) {
 	}
 
 	domainName := ctx.Args().First()
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	createRequest := &godo.DomainRecordEditRequest{
 		Type: strings.ToUpper(ctx.String("type")),
@@ -288,12 +244,6 @@ func domainRecordDestroy(ctx *cli.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	_, err = client.Domains.DeleteRecord(domainName, recordID)
 	if err != nil {

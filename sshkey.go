@@ -7,8 +7,6 @@ import (
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
-
-	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var SSHCommand = cli.Command{
@@ -53,12 +51,6 @@ func sshCreate(ctx *cli.Context) {
 		log.Fatal("Must provide name and public key file.")
 	}
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	file, err := os.Open(ctx.Args()[1])
 	if err != nil {
 		log.Fatalf("Error opening key file: %s.", err)
@@ -86,12 +78,6 @@ func sshList(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 		os.Exit(1)
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	opt := &godo.ListOptions{}
 	keyList := []godo.Key{}
@@ -136,12 +122,6 @@ func sshFind(ctx *cli.Context) {
 
 	name := ctx.Args().First()
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	key, err := FindKeyByName(client, name)
 	if err != nil {
 		log.Fatal(err)
@@ -154,12 +134,6 @@ func sshDestroy(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && ctx.String("fingerprint") == "" && len(ctx.Args()) < 1 {
 		log.Fatal("Error: Must provide ID, fingerprint or name for SSH Key to destroy.")
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	id := ctx.Int("id")
 	fingerprint := ctx.String("fingerprint")

@@ -36,6 +36,36 @@ func FindDropletByName(c *godo.Client, name string) (*godo.Droplet, error) {
 	}
 }
 
+func FindImageByName(c *godo.Client, name string) (*godo.Image, error) {
+	opt := &godo.ListOptions{}
+	for {
+		imagePage, resp, err := c.Images.List(opt)
+		if err != nil {
+			return nil, err
+		}
+
+		// append the current page's images to our list
+		for _, i := range imagePage {
+			if i.Name == name {
+				return &i, nil
+			}
+		}
+
+		// if we are at the last page, break out the for loop
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			return nil, fmt.Errorf("%s Not Found.", name)
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			return nil, err
+		}
+
+		// set the page we want for the next request
+		opt.Page = page + 1
+	}
+}
+
 func FindKeyByName(c *godo.Client, name string) (*godo.Key, error) {
 	opt := &godo.ListOptions{}
 	for {

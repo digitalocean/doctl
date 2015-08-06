@@ -7,8 +7,6 @@ import (
 
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/codegangsta/cli"
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/github.com/digitalocean/godo"
-
-	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var ActionCommand = cli.Command{
@@ -43,12 +41,6 @@ func actionShow(ctx *cli.Context) {
 
 	id, _ := strconv.ParseInt(ctx.Args().First(), 10, 0)
 
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
-
 	action, _, err := client.Actions.Get(int(id))
 
 	if err != nil {
@@ -63,12 +55,6 @@ func actionList(ctx *cli.Context) {
 		cli.ShowAppHelp(ctx)
 		os.Exit(1)
 	}
-
-	tokenSource := &TokenSource{
-		AccessToken: APIKey,
-	}
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	client := godo.NewClient(oauthClient)
 
 	opt := &godo.ListOptions{
 		Page:    ctx.Int("page"),
