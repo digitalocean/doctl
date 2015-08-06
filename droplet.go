@@ -543,7 +543,7 @@ func dropletActionResize(ctx *cli.Context) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	if err != nil {
-		log.Fatal("Unable to find Droplet: %s.", err)
+		log.Fatalf("Unable to find Droplet: %s.", err)
 	}
 
 	action, _, err := client.DropletActions.Resize(droplet.ID, size, disk)
