@@ -56,7 +56,7 @@ func buildApp() *cli.App {
 			APIKey = ctx.String("api-key")
 		}
 
-		if APIKey == "" && !ctx.Bool("help") && !ctx.Bool("version") {
+		if APIKey == "" && !ctx.Bool("help") && !ctx.Bool("version") && !(ctx.NumFlags() == 0) {
 			return errors.New("must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument.")
 		}
 
