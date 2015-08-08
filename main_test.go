@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"io/ioutil"
 	"testing"
 )
@@ -23,7 +22,7 @@ func TestAppWithoutApiKey(t *testing.T) {
 	}{
 		{
 			args:    []string{"doctl"},
-			wantErr: errors.New("must provide API Key via DIGITALOCEAN_API_KEY environment variable or via CLI argument."),
+			wantErr: nil,
 		},
 		{
 			args:    []string{"doctl", "--version"},
