@@ -604,7 +604,7 @@ func dropletActionPoweron(ctx *cli.Context) {
 
 func dropletActionRestore(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
+		log.Fatal("Error: Must provide ID or name for Droplet to restore.")
 	}
 
 	imageID := ctx.Int("image")
@@ -711,7 +711,7 @@ func dropletActionResize(ctx *cli.Context) {
 
 func dropletActionRename(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
+		log.Fatal("Error: Must provide ID or name for Droplet to rename.")
 	}
 
 	name := ctx.String("name")
@@ -747,7 +747,7 @@ func dropletActionRename(ctx *cli.Context) {
 
 func dropletActionRebuild(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
+		log.Fatal("Error: Must provide ID or name for Droplet to rebuild.")
 	}
 
 	imageID := ctx.Int("image")
@@ -783,7 +783,7 @@ func dropletActionRebuild(ctx *cli.Context) {
 
 func dropletActionChangeKernel(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
+		log.Fatal("Error: Must provide ID or name for Droplet to change kernel.")
 	}
 
 	kernelID := ctx.Int("kernel")
@@ -883,7 +883,7 @@ func dropletActionKernels(ctx *cli.Context) {
 
 func dropletActionEnableIPv6(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
+		log.Fatal("Error: Must provide ID or name for Droplet to enable IPv6.")
 	}
 
 	tokenSource := &TokenSource{
@@ -917,7 +917,7 @@ func dropletActionEnableIPv6(ctx *cli.Context) {
 
 func dropletActionEnablePrivateNetworking(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
+		log.Fatal("Error: Must provide ID or name for Droplet to enable private networking.")
 	}
 
 	tokenSource := &TokenSource{
@@ -951,7 +951,7 @@ func dropletActionEnablePrivateNetworking(ctx *cli.Context) {
 
 func dropletActionSnapshot(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
+		log.Fatal("Error: Must provide ID or name for Droplet to snapshot.")
 	}
 
 	name := ctx.String("name")
@@ -987,7 +987,7 @@ func dropletActionSnapshot(ctx *cli.Context) {
 
 func dropletActionUpgrade(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
-		log.Fatal("Error: Must provide ID or name for Droplet to resize.")
+		log.Fatal("Error: Must provide ID or name for Droplet to upgrade.")
 	}
 
 	tokenSource := &TokenSource{
