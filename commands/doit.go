@@ -38,15 +38,21 @@ func LoadConfig() error {
 // Root creates the root command for doit.
 func Root() *cobra.Command {
 	rootCmd := &cobra.Command{Use: "doit"}
-
-	rootCmd.PersistentFlags().String("token", "", "DigitalOcean API V2 Token")
-	viper.SetEnvPrefix("DIGITALOCEAN")
-	viper.BindEnv("token", "ACCESS_TOKEN")
-	viper.BindPFlag("token", rootCmd.Flags().Lookup("token"))
+	initFlags(rootCmd)
 
 	rootCmd.AddCommand(Account())
 
 	return rootCmd
+}
+
+func initFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().String("token", "", "DigitalOcean API V2 Token")
+	viper.SetEnvPrefix("DIGITALOCEAN")
+	viper.BindEnv("token", "ACCESS_TOKEN")
+	viper.BindPFlag("token", cmd.Flags().Lookup("token"))
+
+	cmd.PersistentFlags().String("output", "text", "output format [text|json]")
+	viper.BindPFlag("output", cmd.Flags().Lookup("output"))
 }
 
 func configFilePath() (string, error) {
