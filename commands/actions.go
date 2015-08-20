@@ -1,10 +1,9 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
+	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -22,7 +21,33 @@ func Actions() *cobra.Command {
 		Short: "action list",
 		Long:  "list actions",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("listing actions")
+			client := doit.GetClient()
+			f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+				list, resp, err := client.Actions.List(opt)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				si := make([]interface{}, len(list))
+				for i := range list {
+					si[i] = list[i]
+				}
+
+				return si, resp, err
+			}
+
+			si, err := doit.PaginateResp(f)
+			if err != nil {
+				logrus.WithField("err", err).Error("unable to paginate response")
+				return
+			}
+
+			list := make([]godo.Action, len(si))
+			for i := range si {
+				list[i] = si[i].(godo.Action)
+			}
+
+			doit.DisplayOutput(list)
 		},
 	}
 

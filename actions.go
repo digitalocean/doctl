@@ -10,7 +10,7 @@ import (
 
 func ActionList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	err := actionsList(client, c)
+	err := actionsList(client)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list actions")
 	}
@@ -35,7 +35,7 @@ func ActionGet(c *cli.Context) {
 	}
 }
 
-func actionsList(client *godo.Client, c *cli.Context) error {
+func actionsList(client *godo.Client) error {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
 		if err != nil {
