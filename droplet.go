@@ -139,7 +139,7 @@ func dropletCreate(ctx *cli.Context) {
 
 	// Add domain to end if available.
 	dropletName := ctx.Args().First()
-	if ctx.String("add-region") != "" {
+	if ctx.Bool("add-region") {
 		dropletName = fmt.Sprintf("%s.%s", dropletName, ctx.String("region"))
 	}
 	if ctx.String("domain") != "" {
