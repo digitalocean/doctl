@@ -6,13 +6,14 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/viper"
 )
 
 // Generator is a function that generates the list to be paginated.
 type Generator func(*godo.ListOptions) ([]interface{}, *godo.Response, error)
 
 // PaginateResp paginates a Response.
-func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
+func PaginateResp(gen Generator) ([]interface{}, error) {
 	opt := &godo.ListOptions{Page: 1, PerPage: 200}
 	list := []interface{}{}
 
@@ -36,7 +37,7 @@ func PaginateResp(gen Generator, opts *Opts) ([]interface{}, error) {
 				return nil, err
 			}
 
-			if opts.Debug {
+			if viper.GetBool("debug") {
 				log.WithFields(log.Fields{
 					"page.current": opt.Page,
 					"page.per":     opt.PerPage,

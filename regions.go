@@ -9,7 +9,6 @@ import (
 // List all regions.
 func RegionList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Regions.List(opt)
@@ -25,7 +24,7 @@ func RegionList(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list regions")
 	}

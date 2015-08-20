@@ -15,6 +15,10 @@ import (
 
 func NewDisplayOutput(item interface{}) error {
 	output := viper.GetString("output")
+	if output == "" {
+		output = "text"
+	}
+
 	switch output {
 	case "json":
 		return WriteJSON(item, os.Stdout)

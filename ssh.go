@@ -39,7 +39,7 @@ func SSH(c *cli.Context) {
 		}
 	case len(name) > 0 && id < 1:
 		var droplets []godo.Droplet
-		droplets, err = listDroplets(client, LoadOpts(c))
+		droplets, err = listDroplets(client)
 		for _, d := range droplets {
 			if d.Name == name {
 				droplet = &d

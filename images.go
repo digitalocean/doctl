@@ -114,8 +114,7 @@ func listImages(lFn listFn, c *cli.Context) {
 		return si, resp, err
 	}
 
-	opts := LoadOpts(c)
-	si, err := PaginateResp(fn, opts)
+	si, err := PaginateResp(fn)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list images")
 	}

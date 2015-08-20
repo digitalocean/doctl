@@ -9,7 +9,6 @@ import (
 // List all sizes.
 func SizeList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Sizes.List(opt)
@@ -25,7 +24,7 @@ func SizeList(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list sizes")
 	}

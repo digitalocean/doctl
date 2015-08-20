@@ -14,7 +14,6 @@ import (
 func DropletActions(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
-	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Actions(id, opt)
@@ -30,7 +29,7 @@ func DropletActions(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list actions for droplet")
 	}
@@ -50,7 +49,6 @@ func DropletActions(c *cli.Context) {
 func DropletBackups(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
-	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Backups(id, opt)
@@ -66,7 +64,7 @@ func DropletBackups(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list backups for droplet")
 	}
@@ -189,7 +187,6 @@ func DropletGet(c *cli.Context) {
 func DropletKernels(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
-	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Kernels(id, opt)
@@ -205,7 +202,7 @@ func DropletKernels(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list kernels for droplet")
 	}
@@ -224,7 +221,6 @@ func DropletKernels(c *cli.Context) {
 // List returns a list of droplets.
 func DropletList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.List(opt)
@@ -240,7 +236,7 @@ func DropletList(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list droplets")
 	}
@@ -276,7 +272,6 @@ func DropletNeighbors(c *cli.Context) {
 func DropletSnapshots(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
 	id := c.Int(ArgDropletID)
-	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Snapshots(id, opt)
@@ -292,7 +287,7 @@ func DropletSnapshots(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list snapshots for droplet")
 	}

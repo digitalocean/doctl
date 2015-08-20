@@ -70,12 +70,6 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 	}, nil
 }
 
-func LoadOpts(c *cli.Context) *Opts {
-	return &Opts{
-		Debug: c.GlobalBool("debug"),
-	}
-}
-
 // Config holds configuration values for commands. It currently contains a godo Client
 // and a method for running SSH.
 type Config interface {

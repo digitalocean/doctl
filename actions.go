@@ -10,8 +10,7 @@ import (
 
 func ActionList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
-	err := actionsList(client, opts, c)
+	err := actionsList(client, c)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list actions")
 	}
@@ -36,7 +35,7 @@ func ActionGet(c *cli.Context) {
 	}
 }
 
-func actionsList(client *godo.Client, opts *Opts, c *cli.Context) error {
+func actionsList(client *godo.Client, c *cli.Context) error {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
 		if err != nil {
@@ -51,7 +50,7 @@ func actionsList(client *godo.Client, opts *Opts, c *cli.Context) error {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return err
 	}
@@ -61,5 +60,5 @@ func actionsList(client *godo.Client, opts *Opts, c *cli.Context) error {
 		list[i] = si[i].(godo.Action)
 	}
 
-	return DisplayOutput(c, list)
+	return NewDisplayOutput(list)
 }

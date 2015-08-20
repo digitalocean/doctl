@@ -32,7 +32,6 @@ func DomainDelete(c *cli.Context) {
 // List lists all domains.
 func DomainList(c *cli.Context) {
 	client := NewClient(c, DefaultConfig)
-	opts := LoadOpts(c)
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Domains.List(opt)
@@ -48,7 +47,7 @@ func DomainList(c *cli.Context) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not list domains")
 	}

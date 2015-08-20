@@ -15,7 +15,7 @@ func getDropletByID(client *godo.Client, id int) (*godo.Droplet, error) {
 	return droplet, err
 }
 
-func listDroplets(client *godo.Client, opts *Opts) ([]godo.Droplet, error) {
+func listDroplets(client *godo.Client) ([]godo.Droplet, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.List(opt)
 		if err != nil {
@@ -30,7 +30,7 @@ func listDroplets(client *godo.Client, opts *Opts) ([]godo.Droplet, error) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f, opts)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
