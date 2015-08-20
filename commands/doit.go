@@ -14,8 +14,19 @@ const (
 	configFile = ".doitcfg"
 )
 
+var (
+	DoitCmd = &cobra.Command{
+		Use: "doit",
+	}
+
+	Token, Output string
+)
+
 func init() {
 	viper.SetConfigType("yaml")
+
+	DoitCmd.PersistentFlags().StringVarP(&Token, "token", "t", "", "DigtialOcean API V2 Token")
+	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output formt [text|json]")
 }
 
 // LoadConfig loads out configuration.
@@ -35,24 +46,41 @@ func LoadConfig() error {
 	return nil
 }
 
-// Root creates the root command for doit.
-func Root() *cobra.Command {
-	rootCmd := &cobra.Command{Use: "doit"}
-	initFlags(rootCmd)
-
-	rootCmd.AddCommand(Account())
-
-	return rootCmd
+func Execute() {
+	InitializeConfig()
+	AddCommands()
+	DoitCmd.Execute()
 }
 
-func initFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().String("token", "", "DigitalOcean API V2 Token")
+func AddCommands() {
+	DoitCmd.AddCommand(Account())
+	DoitCmd.AddCommand(Actions())
+}
+
+func initFlags() {
 	viper.SetEnvPrefix("DIGITALOCEAN")
 	viper.BindEnv("token", "ACCESS_TOKEN")
-	viper.BindPFlag("token", cmd.Flags().Lookup("token"))
+	viper.BindPFlag("token", DoitCmd.PersistentFlags().Lookup("token"))
+	viper.BindPFlag("output", DoitCmd.PersistentFlags().Lookup("output"))
+}
 
-	cmd.PersistentFlags().String("output", "text", "output format [text|json]")
-	viper.BindPFlag("output", cmd.Flags().Lookup("output"))
+func loadDefaultSettings() {
+	viper.SetDefault("output", "text")
+}
+
+// InitializeConfig initializes the doit configuration.
+func InitializeConfig() {
+	loadDefaultSettings()
+	LoadConfig()
+	initFlags()
+
+	if DoitCmd.PersistentFlags().Lookup("token").Changed {
+		viper.Set("token", Token)
+	}
+
+	if DoitCmd.PersistentFlags().Lookup("output").Changed {
+		viper.Set("output", Output)
+	}
 }
 
 func configFilePath() (string, error) {

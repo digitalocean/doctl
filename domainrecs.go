@@ -24,7 +24,7 @@ func RecordCreate(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not create record")
 	}
 
-	writeJSON(r, c.App.Writer)
+	WriteJSON(r, c.App.Writer)
 }
 
 func RecordDelete(c *cli.Context) {
@@ -68,7 +68,7 @@ func RecordList(c *cli.Context) {
 		list[i] = si[i].(godo.DomainRecord)
 	}
 
-	writeJSON(list, c.App.Writer)
+	WriteJSON(list, c.App.Writer)
 }
 
 // Retrieve a domain record.
@@ -82,7 +82,7 @@ func RecordGet(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not display record")
 	}
 
-	writeJSON(r, c.App.Writer)
+	WriteJSON(r, c.App.Writer)
 }
 
 func RecordUpdate(c *cli.Context) {
@@ -104,5 +104,5 @@ func RecordUpdate(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not update record")
 	}
 
-	writeJSON(r, c.App.Writer)
+	WriteJSON(r, c.App.Writer)
 }

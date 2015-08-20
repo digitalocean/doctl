@@ -18,10 +18,5 @@ func init() {
 }
 
 func main() {
-	err := commands.LoadConfig()
-	if err != nil {
-		logrus.WithField("err", err).Fatal("unable to load config")
-	}
-
-	commands.Root().Execute()
+	commands.Execute()
 }

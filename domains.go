@@ -17,7 +17,7 @@ func DomainCreate(c *cli.Context) {
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not create domain")
 	}
-	writeJSON(d, c.App.Writer)
+	WriteJSON(d, c.App.Writer)
 }
 
 func DomainDelete(c *cli.Context) {
@@ -58,7 +58,7 @@ func DomainList(c *cli.Context) {
 		list[i] = si[i].(godo.Domain)
 	}
 
-	writeJSON(list, c.App.Writer)
+	WriteJSON(list, c.App.Writer)
 }
 
 func DomainGet(c *cli.Context) {
@@ -69,7 +69,7 @@ func DomainGet(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not retrieve domain")
 	}
 
-	err = displayOutput(c, d)
+	err = DisplayOutput(c, d)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}

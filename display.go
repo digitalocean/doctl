@@ -5,13 +5,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"text/tabwriter"
 
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/viper"
 )
 
-func displayOutput(c *cli.Context, item interface{}) error {
+func NewDisplayOutput(item interface{}) error {
+	output := viper.GetString("output")
+	switch output {
+	case "json":
+		return WriteJSON(item, os.Stdout)
+	case "text":
+		return WriteText(item, os.Stdout)
+	default:
+		return fmt.Errorf("unknown output type")
+	}
+}
+
+func DisplayOutput(c *cli.Context, item interface{}) error {
 	output := c.GlobalString(ArgOutput)
 	if len(output) < 1 {
 		output = "text"
@@ -19,15 +33,15 @@ func displayOutput(c *cli.Context, item interface{}) error {
 
 	switch output {
 	case "json":
-		return writeJSON(item, c.App.Writer)
+		return WriteJSON(item, c.App.Writer)
 	case "text":
-		return writeText(item, c.App.Writer)
+		return WriteText(item, c.App.Writer)
 	default:
 		return fmt.Errorf("unknown output type")
 	}
 }
 
-func writeJSON(item interface{}, w io.Writer) error {
+func WriteJSON(item interface{}, w io.Writer) error {
 	b, err := json.Marshal(item)
 	if err != nil {
 		return err
@@ -39,7 +53,7 @@ func writeJSON(item interface{}, w io.Writer) error {
 	return err
 }
 
-func writeText(item interface{}, w io.Writer) error {
+func WriteText(item interface{}, w io.Writer) error {
 	switch item.(type) {
 	case *godo.Action:
 		i := item.(*godo.Action)

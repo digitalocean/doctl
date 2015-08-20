@@ -7,7 +7,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
-	"github.com/spf13/viper"
 )
 
 func AccountGet(c *cli.Context) {
@@ -19,8 +18,7 @@ func AccountGet(c *cli.Context) {
 }
 
 func NewAccountGet() {
-	token := viper.GetString("token")
-	client := DefaultConfig.NewClient(token)
+	client := GetClient()
 	_ = accountGet(client, os.Stdout)
 }
 
@@ -30,5 +28,5 @@ func accountGet(client *godo.Client, w io.Writer) error {
 		return err
 	}
 
-	return writeJSON(a, w)
+	return WriteJSON(a, w)
 }

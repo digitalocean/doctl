@@ -55,7 +55,7 @@ func ImagesGet(c *cli.Context) {
 		return
 	}
 
-	err = displayOutput(c, image)
+	err = DisplayOutput(c, image)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -76,7 +76,7 @@ func ImagesUpdate(c *cli.Context) {
 		return
 	}
 
-	err = displayOutput(c, image)
+	err = DisplayOutput(c, image)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -125,7 +125,7 @@ func listImages(lFn listFn, c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = displayOutput(c, list)
+	err = DisplayOutput(c, list)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
