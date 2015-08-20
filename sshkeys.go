@@ -40,7 +40,7 @@ func KeyList(c *cli.Context) {
 		list[i] = si[i].(godo.Key)
 	}
 
-	err = DisplayOutput(c, list)
+	err = DisplayOutput(list)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -67,7 +67,7 @@ func KeyGet(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not retrieve key")
 	}
 
-	err = DisplayOutput(c, key)
+	err = DisplayOutput(key)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -88,7 +88,7 @@ func KeyCreate(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not create key")
 	}
 
-	err = DisplayOutput(c, r)
+	err = DisplayOutput(r)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -125,7 +125,7 @@ func KeyImport(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not create key")
 	}
 
-	err = DisplayOutput(c, r)
+	err = DisplayOutput(r)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -170,7 +170,7 @@ func KeyUpdate(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not update key")
 	}
 
-	err = DisplayOutput(c, key)
+	err = DisplayOutput(key)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}

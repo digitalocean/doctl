@@ -8,12 +8,11 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/codegangsta/cli"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 )
 
-func NewDisplayOutput(item interface{}) error {
+func DisplayOutput(item interface{}) error {
 	output := viper.GetString("output")
 	if output == "" {
 		output = "text"
@@ -24,22 +23,6 @@ func NewDisplayOutput(item interface{}) error {
 		return WriteJSON(item, os.Stdout)
 	case "text":
 		return WriteText(item, os.Stdout)
-	default:
-		return fmt.Errorf("unknown output type")
-	}
-}
-
-func DisplayOutput(c *cli.Context, item interface{}) error {
-	output := c.GlobalString(ArgOutput)
-	if len(output) < 1 {
-		output = "text"
-	}
-
-	switch output {
-	case "json":
-		return WriteJSON(item, c.App.Writer)
-	case "text":
-		return WriteText(item, c.App.Writer)
 	default:
 		return fmt.Errorf("unknown output type")
 	}

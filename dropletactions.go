@@ -18,7 +18,7 @@ func performAction(c *cli.Context, fn actionFn) {
 		logrus.WithField("err", err).Fatal("could not disable backups for droplet")
 	}
 
-	err = DisplayOutput(c, a)
+	err = DisplayOutput(a)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}

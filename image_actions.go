@@ -17,7 +17,7 @@ func ImageActionsGet(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not get action for image")
 	}
 
-	err = DisplayOutput(c, action)
+	err = DisplayOutput(action)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -36,7 +36,7 @@ func ImageActionsTransfer(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not transfer image")
 	}
 
-	err = DisplayOutput(c, action)
+	err = DisplayOutput(action)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}

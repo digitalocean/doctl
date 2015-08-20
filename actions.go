@@ -29,7 +29,7 @@ func ActionGet(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not retrieve action")
 	}
 
-	err = DisplayOutput(c, a)
+	err = DisplayOutput(a)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -60,5 +60,5 @@ func actionsList(client *godo.Client, c *cli.Context) error {
 		list[i] = si[i].(godo.Action)
 	}
 
-	return NewDisplayOutput(list)
+	return DisplayOutput(list)
 }

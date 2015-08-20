@@ -42,7 +42,7 @@ func Actions() *cobra.Command {
 				logrus.WithField("err", err).Fatal("unable to retrieve action")
 			}
 
-			err = doit.NewDisplayOutput(a)
+			err = doit.DisplayOutput(a)
 			if err != nil {
 				logrus.WithField("err", err).Fatal("unable to display action")
 			}
