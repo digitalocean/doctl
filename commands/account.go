@@ -41,5 +41,5 @@ func RunAccountGet(out io.Writer) error {
 		logrus.WithField("err", err).Error("unable to retrieve account")
 	}
 
-	return doit.WriteJSON(a, out)
+	return doit.DisplayOutput(a, out)
 }

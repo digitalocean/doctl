@@ -8,26 +8,27 @@ import (
 	"text/tabwriter"
 
 	"github.com/digitalocean/godo"
-	"github.com/spf13/viper"
 )
 
+// DisplayOutput displays an object or group of objects to a user. It
+// checks to see what the output type should be.
 func DisplayOutput(item interface{}, out io.Writer) error {
-	output := viper.GetString("output")
+	output := VConfig.GetString("output")
 	if output == "" {
 		output = "text"
 	}
 
 	switch output {
 	case "json":
-		return WriteJSON(item, out)
+		return writeJSON(item, out)
 	case "text":
-		return WriteText(item, out)
+		return writeText(item, out)
 	default:
 		return fmt.Errorf("unknown output type")
 	}
 }
 
-func WriteJSON(item interface{}, w io.Writer) error {
+func writeJSON(item interface{}, w io.Writer) error {
 	b, err := json.Marshal(item)
 	if err != nil {
 		return err
@@ -39,7 +40,7 @@ func WriteJSON(item interface{}, w io.Writer) error {
 	return err
 }
 
-func WriteText(item interface{}, w io.Writer) error {
+func writeText(item interface{}, w io.Writer) error {
 	switch item.(type) {
 	case *godo.Action:
 		i := item.(*godo.Action)
@@ -48,6 +49,8 @@ func WriteText(item interface{}, w io.Writer) error {
 		outputActions(item.([]godo.Action), w)
 	case *godo.Domain:
 		outputZone(item.(*godo.Domain), w)
+	case []godo.Domain:
+		outputDomains(item.([]godo.Domain), w)
 	case *godo.Droplet:
 		d := item.(*godo.Droplet)
 		outputDroplets([]godo.Droplet{*d}, w)
@@ -185,4 +188,18 @@ func outputSSHKeys(list []godo.Key, out io.Writer) {
 
 func outputZone(domain *godo.Domain, out io.Writer) {
 	fmt.Fprintln(out, domain.ZoneFile)
+}
+
+func outputDomains(list []godo.Domain, out io.Writer) {
+	w := new(tabwriter.Writer)
+	w.Init(out, 0, 8, 1, '\t', 0)
+
+	fmt.Fprintln(w, "Name")
+
+	for _, d := range list {
+		fmt.Fprintf(w, "%s\n", d.Name)
+	}
+
+	fmt.Fprintln(w)
+	w.Flush()
 }

@@ -38,3 +38,26 @@ func TestDomainsCreate(t *testing.T) {
 		RunDomainCreate(ioutil.Discard)
 	})
 }
+
+func TestDomainsList(t *testing.T) {
+	domainsDisList := false
+
+	client := &godo.Client{
+		Domains: &doit.DomainsServiceMock{
+			ListFn: func(opts *godo.ListOptions) ([]godo.Domain, *godo.Response, error) {
+				domainsDisList = true
+				resp := &godo.Response{
+					Links: &godo.Links{},
+				}
+				return testDomainList, resp, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		RunDomainList(ioutil.Discard)
+		if !domainsDisList {
+			t.Errorf("List() did not run")
+		}
+	})
+}

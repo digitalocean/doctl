@@ -20,8 +20,10 @@ func Domain() *cobra.Command {
 	cmdDomainCreate := NewCmdDomainCreate(os.Stdout)
 	addStringFlag(cmdDomainCreate, doit.ArgDomainName, "", "Domain name")
 	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP Address")
-
 	cmd.AddCommand(cmdDomainCreate)
+
+	cmdDomainList := NewCmdDomainList(os.Stdout)
+	cmd.AddCommand(cmdDomainList)
 
 	return cmd
 }
@@ -50,5 +52,49 @@ func RunDomainCreate(out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	return doit.WriteJSON(d, out)
+
+	return doit.DisplayOutput(d, out)
+}
+
+// NewCmdDomainList creates a a domain list command.
+func NewCmdDomainList(out io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "list domains",
+		Long:  "list all domains",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(RunDomainList(out))
+		},
+	}
+}
+
+// RunDomainList runs domain create.
+func RunDomainList(out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := client.Domains.List(opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := doit.PaginateResp(f)
+	if err != nil {
+		return err
+	}
+
+	list := make([]godo.Domain, len(si))
+	for i := range si {
+		list[i] = si[i].(godo.Domain)
+	}
+
+	return doit.DisplayOutput(list, out)
 }
