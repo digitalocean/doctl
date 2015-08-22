@@ -30,6 +30,10 @@ func Domain() *cobra.Command {
 	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name")
 	cmd.AddCommand(cmdDomainGet)
 
+	cmdDomainDelete := NewCmdDomainDelete(os.Stdout)
+	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name")
+	cmd.AddCommand(cmdDomainDelete)
+
 	return cmd
 }
 
@@ -131,4 +135,29 @@ func RunDomainGet(out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(d, out)
+}
+
+// NewCmdDomainDelete creates a command to delete a domain.
+func NewCmdDomainDelete(out io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete",
+		Short: "delete domain",
+		Long:  "delete a domain an all associated records",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(RunDomainDelete(out))
+		},
+	}
+}
+
+// RunDomainDelete deletes a domain by name.
+func RunDomainDelete(out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+	name := doit.VConfig.GetString(doit.ArgDomainName)
+
+	if len(name) < 1 {
+		return errors.New("invalid domain name")
+	}
+
+	_, err := client.Domains.Delete(name)
+	return err
 }

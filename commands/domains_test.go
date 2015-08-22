@@ -92,3 +92,31 @@ func TestDomainsGet_DomainRequred(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestDomainsDelete(t *testing.T) {
+	client := &godo.Client{
+		Domains: &doit.DomainsServiceMock{
+			DeleteFn: func(name string) (*godo.Response, error) {
+				if got, expected := name, testDomain.Name; got != expected {
+					t.Errorf("DeleteFn() received %q; expected %q", got, expected)
+				}
+				return nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		c.Set(doit.ArgDomainName, testDomain.Name)
+		err := RunDomainDelete(ioutil.Discard)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDomainsGet_RequiredArguments(t *testing.T) {
+	client := &godo.Client{}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		err := RunDomainDelete(ioutil.Discard)
+		assert.Error(t, err)
+	})
+}
