@@ -18,7 +18,7 @@ func AccountGet(c *cli.Context) {
 }
 
 func NewAccountGet() {
-	client := GetClient()
+	client := VConfig.GetGodoClient()
 	_ = accountGet(client, os.Stdout)
 }
 

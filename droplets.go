@@ -39,7 +39,7 @@ func DropletActions(c *cli.Context) {
 		list[i] = si[i].(godo.Action)
 	}
 
-	err = DisplayOutput(list)
+	err = DisplayOutput(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -74,7 +74,7 @@ func DropletBackups(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = DisplayOutput(list)
+	err = DisplayOutput(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -150,7 +150,7 @@ func DropletCreate(c *cli.Context) {
 		}
 	}
 
-	err = DisplayOutput(r)
+	err = DisplayOutput(r, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -177,7 +177,7 @@ func DropletGet(c *cli.Context) {
 		Bail(err, "could not get droplet")
 	}
 
-	err = DisplayOutput(droplet)
+	err = DisplayOutput(droplet, c.App.Writer)
 	if err != nil {
 		Bail(err, "could not write output")
 	}
@@ -212,7 +212,7 @@ func DropletKernels(c *cli.Context) {
 		list[i] = si[i].(godo.Kernel)
 	}
 
-	err = DisplayOutput(list)
+	err = DisplayOutput(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -246,7 +246,7 @@ func DropletList(c *cli.Context) {
 		list[i] = si[i].(godo.Droplet)
 	}
 
-	err = DisplayOutput(list)
+	err = DisplayOutput(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -262,7 +262,7 @@ func DropletNeighbors(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not list neighbors for droplet")
 	}
 
-	err = DisplayOutput(list)
+	err = DisplayOutput(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -297,7 +297,7 @@ func DropletSnapshots(c *cli.Context) {
 		list[i] = si[i].(godo.Image)
 	}
 
-	err = DisplayOutput(list)
+	err = DisplayOutput(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}

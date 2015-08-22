@@ -2,6 +2,7 @@ package doit
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -29,7 +30,7 @@ func ActionGet(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not retrieve action")
 	}
 
-	err = DisplayOutput(a)
+	err = DisplayOutput(a, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}
@@ -60,5 +61,5 @@ func actionsList(client *godo.Client) error {
 		list[i] = si[i].(godo.Action)
 	}
 
-	return DisplayOutput(list)
+	return DisplayOutput(list, os.Stdout)
 }

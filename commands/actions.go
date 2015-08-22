@@ -1,7 +1,10 @@
 package commands
 
 import (
-	"github.com/Sirupsen/logrus"
+	"errors"
+	"io"
+	"os"
+
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -16,68 +19,83 @@ func Actions() *cobra.Command {
 		Long:  "action is used to access action commands",
 	}
 
-	cmdActionList := &cobra.Command{
+	cmdActionGet := NewCmdActionGet(os.Stdout)
+	cmdActionGet.Flags().Int(doit.ArgActionID, 0, "Action ID")
+	viper.BindPFlag(doit.ArgActionID, cmdActionGet.Flags().Lookup(doit.ArgActionID))
+	cmdActions.AddCommand(cmdActionGet)
+
+	cmdActionList := NewCmdActionList(os.Stdout)
+	cmdActions.AddCommand(cmdActionList)
+
+	return cmdActions
+}
+
+// NewCmdActionList creates an action list command.
+func NewCmdActionList(out io.Writer) *cobra.Command {
+	return &cobra.Command{
 		Use:   "list",
 		Short: "action list",
 		Long:  "list actions",
 		Run: func(cmd *cobra.Command, args []string) {
-			client := doit.GetClient()
-			f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-				list, resp, err := client.Actions.List(opt)
-				if err != nil {
-					return nil, nil, err
-				}
-
-				si := make([]interface{}, len(list))
-				for i := range list {
-					si[i] = list[i]
-				}
-
-				return si, resp, err
-			}
-
-			si, err := doit.PaginateResp(f)
-			if err != nil {
-				logrus.WithField("err", err).Error("unable to paginate response")
-				return
-			}
-
-			list := make([]godo.Action, len(si))
-			for i := range si {
-				list[i] = si[i].(godo.Action)
-			}
-
-			doit.DisplayOutput(list)
+			checkErr(RunActionList(out))
 		},
 	}
+}
 
-	cmdActionGet := &cobra.Command{
+// RunActionList run action list.
+func RunActionList(out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := client.Actions.List(opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := doit.PaginateResp(f)
+	if err != nil {
+		return err
+	}
+
+	list := make([]godo.Action, len(si))
+	for i := range si {
+		list[i] = si[i].(godo.Action)
+	}
+
+	return doit.DisplayOutput(list, out)
+}
+
+// NewCmdActionGet creates an action get command.
+func NewCmdActionGet(out io.Writer) *cobra.Command {
+	return &cobra.Command{
 		Use:   "get",
 		Short: "action get",
 		Long:  "get action",
 		Run: func(cmd *cobra.Command, args []string) {
-			client := doit.GetClient()
-			id := viper.GetInt(doit.ArgActionID)
-			if id < 1 {
-				logrus.Fatal("invalid action id")
-			}
-
-			a, _, err := client.Actions.Get(id)
-			if err != nil {
-				logrus.WithField("err", err).Fatal("unable to retrieve action")
-			}
-
-			err = doit.DisplayOutput(a)
-			if err != nil {
-				logrus.WithField("err", err).Fatal("unable to display action")
-			}
+			checkErr(RunActionGet(out))
 		},
 	}
+}
 
-	cmdActionGet.Flags().Int(doit.ArgActionID, 0, "Action ID")
-	viper.BindPFlag(doit.ArgActionID, cmdActionGet.Flags().Lookup(doit.ArgActionID))
+// RunActionGet runs action get.
+func RunActionGet(out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+	id := doit.VConfig.GetInt(doit.ArgActionID)
+	if id < 1 {
+		return errors.New("invalid action id")
+	}
 
-	cmdActions.AddCommand(cmdActionList, cmdActionGet)
+	a, _, err := client.Actions.Get(id)
+	if err != nil {
+		return err
+	}
 
-	return cmdActions
+	return doit.DisplayOutput(a, out)
 }

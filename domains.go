@@ -68,7 +68,7 @@ func DomainGet(c *cli.Context) {
 		logrus.WithField("err", err).Fatal("could not retrieve domain")
 	}
 
-	err = DisplayOutput(d)
+	err = DisplayOutput(d, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}

@@ -34,7 +34,7 @@ func SizeList(c *cli.Context) {
 		list[i] = si[i].(godo.Size)
 	}
 
-	err = DisplayOutput(list)
+	err = DisplayOutput(list, c.App.Writer)
 	if err != nil {
 		logrus.WithField("err", err).Fatal("could not write output")
 	}

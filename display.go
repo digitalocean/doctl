@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"text/tabwriter"
 
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 )
 
-func DisplayOutput(item interface{}) error {
+func DisplayOutput(item interface{}, out io.Writer) error {
 	output := viper.GetString("output")
 	if output == "" {
 		output = "text"
@@ -20,9 +19,9 @@ func DisplayOutput(item interface{}) error {
 
 	switch output {
 	case "json":
-		return WriteJSON(item, os.Stdout)
+		return WriteJSON(item, out)
 	case "text":
-		return WriteText(item, os.Stdout)
+		return WriteText(item, out)
 	default:
 		return fmt.Errorf("unknown output type")
 	}
