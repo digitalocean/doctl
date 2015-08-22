@@ -51,6 +51,8 @@ func writeText(item interface{}, w io.Writer) error {
 		outputZone(item.(*godo.Domain), w)
 	case []godo.Domain:
 		outputDomains(item.([]godo.Domain), w)
+	case []godo.DomainRecord:
+		outputRecords(item.([]godo.DomainRecord), w)
 	case *godo.Droplet:
 		d := item.(*godo.Droplet)
 		outputDroplets([]godo.Droplet{*d}, w)
@@ -198,6 +200,21 @@ func outputDomains(list []godo.Domain, out io.Writer) {
 
 	for _, d := range list {
 		fmt.Fprintf(w, "%s\n", d.Name)
+	}
+
+	fmt.Fprintln(w)
+	w.Flush()
+}
+
+func outputRecords(list []godo.DomainRecord, out io.Writer) {
+	w := new(tabwriter.Writer)
+	w.Init(out, 0, 8, 1, '\t', 0)
+
+	fmt.Fprintln(w, "ID\tType\tName\tData\tPriority\tPort\tWeight")
+
+	for _, d := range list {
+		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%d\t%d\t%d\n", d.ID, d.Type, d.Name, d.Data,
+			d.Priority, d.Port, d.Weight)
 	}
 
 	fmt.Fprintln(w)

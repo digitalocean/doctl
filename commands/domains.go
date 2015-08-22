@@ -34,6 +34,17 @@ func Domain() *cobra.Command {
 	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name")
 	cmd.AddCommand(cmdDomainDelete)
 
+	recordCmd := &cobra.Command{
+		Use:   "records",
+		Short: "domain record commands",
+		Long:  "commands for interacting with an individual domain",
+	}
+	cmd.AddCommand(recordCmd)
+
+	cmdRecordList := NewCmdRecordList(os.Stdout)
+	addStringFlag(cmdRecordList, doit.ArgDomainName, "", "Domain name")
+	recordCmd.AddCommand(cmdRecordList)
+
 	return cmd
 }
 
@@ -160,4 +171,52 @@ func RunDomainDelete(out io.Writer) error {
 
 	_, err := client.Domains.Delete(name)
 	return err
+}
+
+// NewCmdRecordList creates a domain record listing command.
+func NewCmdRecordList(out io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "list records",
+		Long:  "list all records in a domain",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(RunRecordList(out))
+		},
+	}
+}
+
+// RunRecordList list records for a domain.
+func RunRecordList(out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+	name := doit.VConfig.GetString(doit.ArgDomainName)
+
+	if len(name) < 1 {
+		return errors.New("invalid domain name")
+	}
+
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := client.Domains.Records(name, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := doit.PaginateResp(f)
+	if err != nil {
+		return err
+	}
+
+	list := make([]godo.DomainRecord, len(si))
+	for i := range si {
+		list[i] = si[i].(godo.DomainRecord)
+	}
+
+	return doit.DisplayOutput(list, out)
 }

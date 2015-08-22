@@ -15,6 +15,8 @@ var (
 	testDomainList = []godo.Domain{
 		testDomain,
 	}
+	testRecord     = godo.DomainRecord{ID: 1}
+	testRecordList = []godo.DomainRecord{testRecord}
 )
 
 func TestDomainsCreate(t *testing.T) {
@@ -117,6 +119,36 @@ func TestDomainsGet_RequiredArguments(t *testing.T) {
 
 	withTestClient(client, func(c doit.ViperConfig) {
 		err := RunDomainDelete(ioutil.Discard)
+		assert.Error(t, err)
+	})
+}
+
+func TestRecordsList(t *testing.T) {
+	recordsDidList := false
+
+	client := &godo.Client{
+		Domains: &doit.DomainsServiceMock{
+			RecordsFn: func(name string, opts *godo.ListOptions) ([]godo.DomainRecord, *godo.Response, error) {
+				recordsDidList = true
+				return testRecordList, nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		c.Set(doit.ArgDomainName, "example.com")
+
+		err := RunRecordList(ioutil.Discard)
+		assert.NoError(t, err)
+		assert.True(t, recordsDidList)
+	})
+}
+
+func TestRecordList_RequiredArguments(t *testing.T) {
+	client := &godo.Client{}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		err := RunRecordList(ioutil.Discard)
 		assert.Error(t, err)
 	})
 }
