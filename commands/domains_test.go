@@ -7,6 +7,7 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -35,7 +36,8 @@ func TestDomainsCreate(t *testing.T) {
 	withTestClient(client, func(c doit.ViperConfig) {
 		c.Set(doit.ArgDomainName, testDomain.Name)
 		c.Set(doit.ArgIPAddress, "127.0.0.1")
-		RunDomainCreate(ioutil.Discard)
+		err := RunDomainCreate(ioutil.Discard)
+		assert.NoError(t, err)
 	})
 }
 
@@ -55,9 +57,38 @@ func TestDomainsList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		RunDomainList(ioutil.Discard)
+		err := RunDomainList(ioutil.Discard)
+		assert.NoError(t, err)
 		if !domainsDisList {
 			t.Errorf("List() did not run")
 		}
+	})
+}
+
+func TestDomainsGet(t *testing.T) {
+	client := &godo.Client{
+		Domains: &doit.DomainsServiceMock{
+			GetFn: func(name string) (*godo.Domain, *godo.Response, error) {
+				if got, expected := name, testDomain.Name; got != expected {
+					t.Errorf("GetFn() called with %q; expected %q", got, expected)
+				}
+				return &testDomain, nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		c.Set(doit.ArgDomainName, testDomain.Name)
+		err := RunDomainGet(ioutil.Discard)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDomainsGet_DomainRequred(t *testing.T) {
+	client := &godo.Client{}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		err := RunDomainGet(ioutil.Discard)
+		assert.Error(t, err)
 	})
 }

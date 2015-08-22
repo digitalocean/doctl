@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"io"
 	"os"
 
@@ -19,11 +20,15 @@ func Domain() *cobra.Command {
 
 	cmdDomainCreate := NewCmdDomainCreate(os.Stdout)
 	addStringFlag(cmdDomainCreate, doit.ArgDomainName, "", "Domain name")
-	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP Address")
+	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address")
 	cmd.AddCommand(cmdDomainCreate)
 
 	cmdDomainList := NewCmdDomainList(os.Stdout)
 	cmd.AddCommand(cmdDomainList)
+
+	cmdDomainGet := NewCmdDomainGet(os.Stdout)
+	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name")
+	cmd.AddCommand(cmdDomainGet)
 
 	return cmd
 }
@@ -97,4 +102,33 @@ func RunDomainList(out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(list, out)
+}
+
+// NewCmdDomainGet creates a command to retrieve a domain.
+func NewCmdDomainGet(out io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   "get",
+		Short: "get domain",
+		Long:  "retrieve an individual domain",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(RunDomainGet(out))
+		},
+	}
+}
+
+// RunDomainGet retrieves a domain by name.
+func RunDomainGet(out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+	id := doit.VConfig.GetString(doit.ArgDomainName)
+
+	if len(id) < 1 {
+		return errors.New("invalid domain name")
+	}
+
+	d, _, err := client.Domains.Get(id)
+	if err != nil {
+		return err
+	}
+
+	return doit.DisplayOutput(d, out)
 }
