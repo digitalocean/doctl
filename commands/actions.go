@@ -8,7 +8,6 @@ import (
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // Actions creates the action commands heirarchy.
@@ -20,8 +19,7 @@ func Actions() *cobra.Command {
 	}
 
 	cmdActionGet := NewCmdActionGet(os.Stdout)
-	cmdActionGet.Flags().Int(doit.ArgActionID, 0, "Action ID")
-	viper.BindPFlag(doit.ArgActionID, cmdActionGet.Flags().Lookup(doit.ArgActionID))
+	addIntFlag(cmdActionGet, doit.ArgActionID, 0, "Action ID")
 	cmdActions.AddCommand(cmdActionGet)
 
 	cmdActionList := NewCmdActionList(os.Stdout)

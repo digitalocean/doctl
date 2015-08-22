@@ -5,7 +5,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-type testFn func()
+type testFn func(c doit.ViperConfig)
 
 func withTestClient(client *godo.Client, tFn testFn) {
 	ogConfig := doit.VConfig
@@ -15,5 +15,5 @@ func withTestClient(client *godo.Client, tFn testFn) {
 
 	doit.VConfig = doit.NewTestViperConfig(client)
 
-	tFn()
+	tFn(doit.VConfig)
 }

@@ -32,7 +32,7 @@ func TestActionList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func() {
+	withTestClient(client, func(c doit.ViperConfig) {
 		cmd := NewCmdActionList(ioutil.Discard)
 		cmd.Run(cmd, []string{})
 
@@ -54,8 +54,8 @@ func TestActionGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func() {
-		doit.VConfig.Set("action-id", testAction.ID)
+	withTestClient(client, func(c doit.ViperConfig) {
+		c.Set("action-id", testAction.ID)
 
 		cmd := NewCmdActionGet(ioutil.Discard)
 		cmd.Run(cmd, []string{})

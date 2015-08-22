@@ -15,11 +15,16 @@ const (
 )
 
 var (
+	// DoitCmd is the base command.
 	DoitCmd = &cobra.Command{
 		Use: "doit",
 	}
 
-	Token, Output string
+	// Token holds the global authorization token.
+	Token string
+
+	// Output holds the global output format.
+	Output string
 )
 
 func init() {
@@ -46,15 +51,18 @@ func LoadConfig() error {
 	return nil
 }
 
+// Execute executes the base command.
 func Execute() {
-	InitializeConfig()
-	AddCommands()
+	initializeConfig()
+	addCommands()
 	DoitCmd.Execute()
 }
 
-func AddCommands() {
+// AddCommands adds sub commands to the base command.
+func addCommands() {
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Actions())
+	DoitCmd.AddCommand(Domain())
 }
 
 func initFlags() {
@@ -69,7 +77,7 @@ func loadDefaultSettings() {
 }
 
 // InitializeConfig initializes the doit configuration.
-func InitializeConfig() {
+func initializeConfig() {
 	loadDefaultSettings()
 	LoadConfig()
 	initFlags()
@@ -91,4 +99,14 @@ func configFilePath() (string, error) {
 
 	dir := filepath.Join(usr.HomeDir, configFile)
 	return dir, nil
+}
+
+func addStringFlag(cmd *cobra.Command, name, def, desc string) {
+	cmd.Flags().String(name, def, desc)
+	viper.BindPFlag(name, cmd.Flags().Lookup(name))
+}
+
+func addIntFlag(cmd *cobra.Command, name string, def int, desc string) {
+	cmd.Flags().Int(name, def, desc)
+	viper.BindPFlag(name, cmd.Flags().Lookup(name))
 }
