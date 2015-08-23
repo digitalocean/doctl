@@ -201,3 +201,27 @@ func TestRecordCreate_RequiredArguments(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestRecordsDelete(t *testing.T) {
+	client := &godo.Client{
+		Domains: &doit.DomainsServiceMock{
+			DeleteRecordFn: func(name string, id int) (*godo.Response, error) {
+				if got, expected := name, "example.com"; got != expected {
+					t.Errorf("CreateFn domain name = %q; expected %q", got, expected)
+				}
+				if got, expected := id, 1; got != expected {
+					t.Errorf("CreateFn id = %d; expected %d", got, expected)
+				}
+				return nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		ns := "test"
+		c.Set(ns, doit.ArgDomainName, "example.com")
+		c.Set(ns, doit.ArgRecordID, 1)
+		err := RunRecordDelete(ns, ioutil.Discard)
+		assert.NoError(t, err)
+	})
+}

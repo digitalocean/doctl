@@ -55,6 +55,11 @@ func Domain() *cobra.Command {
 	addIntFlag(cmdRecordCreate, doit.ArgRecordPort, 0, "Record port")
 	addIntFlag(cmdRecordCreate, doit.ArgRecordWeight, 0, "Record weight")
 
+	cmdRecordDelete := NewCmdRecordDelete(os.Stdout)
+	cmdRecord.AddCommand(cmdRecordDelete)
+	addStringFlag(cmdRecordDelete, doit.ArgDomainName, "", "Domain name")
+	addIntFlag(cmdRecordDelete, doit.ArgRecordID, 0, "Record ID")
+
 	return cmd
 }
 
@@ -267,4 +272,26 @@ func RunRecordCreate(ns string, out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(r, out)
+}
+
+// NewCmdRecordDelete creates a record create command.
+func NewCmdRecordDelete(out io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete",
+		Short: "delete record",
+		Long:  "delete record for a domain by record id",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(RunRecordDelete(cmdNS(cmd), out), cmd)
+		},
+	}
+}
+
+// RunRecordDelete deletes a domain record.
+func RunRecordDelete(ns string, out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+	domainName := doit.VConfig.GetString(ns, doit.ArgDomainName)
+	recordID := doit.VConfig.GetInt(ns, doit.ArgRecordID)
+
+	_, err := client.Domains.DeleteRecord(domainName, recordID)
+	return err
 }
