@@ -1,6 +1,8 @@
 package doit
 
 import (
+	"fmt"
+
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
@@ -13,9 +15,9 @@ var (
 
 type ViperConfig interface {
 	GetGodoClient() *godo.Client
-	Set(key string, val interface{})
-	GetString(key string) string
-	GetInt(key string) int
+	Set(ns, key string, val interface{})
+	GetString(ns, key string) string
+	GetInt(ns, key string) int
 }
 
 type LiveViperConfig struct {
@@ -30,16 +32,27 @@ func (c *LiveViperConfig) GetGodoClient() *godo.Client {
 	return godo.NewClient(oauthClient)
 }
 
-func (c *LiveViperConfig) Set(key string, val interface{}) {
-	viper.Set(key, val)
+func (c *LiveViperConfig) Set(ns, key string, val interface{}) {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	viper.Set(nskey, val)
 }
 
-func (c *LiveViperConfig) GetString(key string) string {
-	return viper.GetString(key)
+func (c *LiveViperConfig) GetString(ns, key string) string {
+	if ns == NSRoot {
+		return viper.GetString(key)
+	}
+
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	return viper.GetString(nskey)
 }
 
-func (c *LiveViperConfig) GetInt(key string) int {
-	return viper.GetInt(key)
+func (c *LiveViperConfig) GetInt(ns, key string) int {
+	if ns == NSRoot {
+		return viper.GetInt(key)
+	}
+
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	return viper.GetInt(nskey)
 }
 
 type TestViperConfig struct {
@@ -60,14 +73,17 @@ func (c *TestViperConfig) GetGodoClient() *godo.Client {
 	return c.Client
 }
 
-func (c *TestViperConfig) Set(key string, val interface{}) {
-	c.v.Set(key, val)
+func (c *TestViperConfig) Set(ns, key string, val interface{}) {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	c.v.Set(nskey, val)
 }
 
-func (c *TestViperConfig) GetString(key string) string {
-	return c.v.GetString(key)
+func (c *TestViperConfig) GetString(ns, key string) string {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	return c.v.GetString(nskey)
 }
 
-func (c *TestViperConfig) GetInt(key string) int {
-	return c.v.GetInt(key)
+func (c *TestViperConfig) GetInt(ns, key string) int {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	return c.v.GetInt(nskey)
 }

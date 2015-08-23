@@ -6,6 +6,7 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -55,9 +56,9 @@ func TestActionGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		c.Set("action-id", testAction.ID)
+		c.Set("test", "action-id", testAction.ID)
 
-		cmd := NewCmdActionGet(ioutil.Discard)
-		cmd.Run(cmd, []string{})
+		err := RunActionGet("test", ioutil.Discard)
+		assert.NoError(t, err)
 	})
 }

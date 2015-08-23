@@ -35,7 +35,7 @@ func NewCmdActionList(out io.Writer) *cobra.Command {
 		Short: "action list",
 		Long:  "list actions",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunActionList(out))
+			checkErr(RunActionList(out), cmd)
 		},
 	}
 }
@@ -77,15 +77,15 @@ func NewCmdActionGet(out io.Writer) *cobra.Command {
 		Short: "action get",
 		Long:  "get action",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunActionGet(out))
+			checkErr(RunActionGet(cmdNS(cmd), out), cmd)
 		},
 	}
 }
 
 // RunActionGet runs action get.
-func RunActionGet(out io.Writer) error {
+func RunActionGet(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
-	id := doit.VConfig.GetInt(doit.ArgActionID)
+	id := doit.VConfig.GetInt(ns, doit.ArgActionID)
 	if id < 1 {
 		return errors.New("invalid action id")
 	}

@@ -36,9 +36,11 @@ func TestDomainsCreate(t *testing.T) {
 	}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		c.Set(doit.ArgDomainName, testDomain.Name)
-		c.Set(doit.ArgIPAddress, "127.0.0.1")
-		err := RunDomainCreate(ioutil.Discard)
+		ns := "test"
+		c.Set(ns, doit.ArgDomainName, testDomain.Name)
+		c.Set(ns, doit.ArgDomainName, testDomain.Name)
+		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
+		err := RunDomainCreate(ns, ioutil.Discard)
 		assert.NoError(t, err)
 	})
 }
@@ -59,7 +61,8 @@ func TestDomainsList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		err := RunDomainList(ioutil.Discard)
+		ns := "test"
+		err := RunDomainList(ns, ioutil.Discard)
 		assert.NoError(t, err)
 		if !domainsDisList {
 			t.Errorf("List() did not run")
@@ -80,8 +83,9 @@ func TestDomainsGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		c.Set(doit.ArgDomainName, testDomain.Name)
-		err := RunDomainGet(ioutil.Discard)
+		ns := "test"
+		c.Set(ns, doit.ArgDomainName, testDomain.Name)
+		err := RunDomainGet(ns, ioutil.Discard)
 		assert.NoError(t, err)
 	})
 }
@@ -90,7 +94,8 @@ func TestDomainsGet_DomainRequred(t *testing.T) {
 	client := &godo.Client{}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		err := RunDomainGet(ioutil.Discard)
+		ns := "test"
+		err := RunDomainGet(ns, ioutil.Discard)
 		assert.Error(t, err)
 	})
 }
@@ -108,8 +113,9 @@ func TestDomainsDelete(t *testing.T) {
 	}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		c.Set(doit.ArgDomainName, testDomain.Name)
-		err := RunDomainDelete(ioutil.Discard)
+		ns := "test"
+		c.Set(ns, doit.ArgDomainName, testDomain.Name)
+		err := RunDomainDelete(ns, ioutil.Discard)
 		assert.NoError(t, err)
 	})
 }
@@ -118,7 +124,8 @@ func TestDomainsGet_RequiredArguments(t *testing.T) {
 	client := &godo.Client{}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		err := RunDomainDelete(ioutil.Discard)
+		ns := "test"
+		err := RunDomainDelete(ns, ioutil.Discard)
 		assert.Error(t, err)
 	})
 }
@@ -136,9 +143,10 @@ func TestRecordsList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		c.Set(doit.ArgDomainName, "example.com")
+		ns := "test"
+		c.Set(ns, doit.ArgDomainName, "example.com")
 
-		err := RunRecordList(ioutil.Discard)
+		err := RunRecordList(ns, ioutil.Discard)
 		assert.NoError(t, err)
 		assert.True(t, recordsDidList)
 	})
@@ -148,7 +156,48 @@ func TestRecordList_RequiredArguments(t *testing.T) {
 	client := &godo.Client{}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		err := RunRecordList(ioutil.Discard)
+		ns := "test"
+		err := RunRecordList(ns, ioutil.Discard)
+		assert.Error(t, err)
+	})
+}
+
+func TestRecordsCreate(t *testing.T) {
+	client := &godo.Client{
+		Domains: &doit.DomainsServiceMock{
+			CreateRecordFn: func(name string, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
+				expected := &godo.DomainRecordEditRequest{
+					Type: "A",
+					Name: "foo.example.com.",
+					Data: "192.168.1.1",
+				}
+
+				assert.Equal(t, "example.com", name)
+				assert.Equal(t, expected, req)
+
+				return &testRecord, nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		ns := "test"
+		c.Set(ns, doit.ArgDomainName, "example.com")
+		c.Set(ns, doit.ArgRecordType, "A")
+		c.Set(ns, doit.ArgRecordName, "foo.example.com.")
+		c.Set(ns, doit.ArgRecordData, "192.168.1.1")
+
+		err := RunRecordCreate(ns, ioutil.Discard)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRecordCreate_RequiredArguments(t *testing.T) {
+	client := &godo.Client{}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		ns := "test"
+		err := RunRecordCreate(ns, ioutil.Discard)
 		assert.Error(t, err)
 	})
 }

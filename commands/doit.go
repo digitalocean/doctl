@@ -6,6 +6,7 @@ import (
 	"os/user"
 	"path/filepath"
 
+	"github.com/bryanl/doit"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -101,12 +102,35 @@ func configFilePath() (string, error) {
 	return dir, nil
 }
 
-func addStringFlag(cmd *cobra.Command, name, def, desc string) {
-	cmd.Flags().String(name, def, desc)
-	viper.BindPFlag(name, cmd.Flags().Lookup(name))
+func addStringFlag(cmd *cobra.Command, name, dflt, desc string) {
+	parentName := doit.NSRoot
+	if cmd.Parent() != nil {
+		parentName = cmd.Parent().Name()
+	}
+
+	flagName := fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
+
+	cmd.Flags().String(name, dflt, desc)
+	viper.BindPFlag(flagName, cmd.Flags().Lookup(name))
 }
 
 func addIntFlag(cmd *cobra.Command, name string, def int, desc string) {
+	parentName := doit.NSRoot
+	if cmd.Parent() != nil {
+		parentName = cmd.Parent().Name()
+	}
+
+	flagName := fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
+
 	cmd.Flags().Int(name, def, desc)
-	viper.BindPFlag(name, cmd.Flags().Lookup(name))
+	viper.BindPFlag(flagName, cmd.Flags().Lookup(name))
+}
+
+func cmdNS(cmd *cobra.Command) string {
+	parentName := doit.NSRoot
+	if cmd.Parent() != nil {
+		parentName = cmd.Parent().Name()
+	}
+
+	return fmt.Sprintf("%s-%s", parentName, cmd.Name())
 }

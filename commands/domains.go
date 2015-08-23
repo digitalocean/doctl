@@ -19,31 +19,41 @@ func Domain() *cobra.Command {
 	}
 
 	cmdDomainCreate := NewCmdDomainCreate(os.Stdout)
+	cmd.AddCommand(cmdDomainCreate)
 	addStringFlag(cmdDomainCreate, doit.ArgDomainName, "", "Domain name")
 	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address")
-	cmd.AddCommand(cmdDomainCreate)
 
 	cmdDomainList := NewCmdDomainList(os.Stdout)
 	cmd.AddCommand(cmdDomainList)
 
 	cmdDomainGet := NewCmdDomainGet(os.Stdout)
-	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name")
 	cmd.AddCommand(cmdDomainGet)
+	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name")
 
 	cmdDomainDelete := NewCmdDomainDelete(os.Stdout)
-	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name")
 	cmd.AddCommand(cmdDomainDelete)
+	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name")
 
-	recordCmd := &cobra.Command{
+	cmdRecord := &cobra.Command{
 		Use:   "records",
 		Short: "domain record commands",
 		Long:  "commands for interacting with an individual domain",
 	}
-	cmd.AddCommand(recordCmd)
+	cmd.AddCommand(cmdRecord)
 
 	cmdRecordList := NewCmdRecordList(os.Stdout)
+	cmdRecord.AddCommand(cmdRecordList)
 	addStringFlag(cmdRecordList, doit.ArgDomainName, "", "Domain name")
-	recordCmd.AddCommand(cmdRecordList)
+
+	cmdRecordCreate := NewCmdRecordCreate(os.Stdout)
+	cmdRecord.AddCommand(cmdRecordCreate)
+	addStringFlag(cmdRecordCreate, doit.ArgDomainName, "", "Domain name")
+	addStringFlag(cmdRecordCreate, doit.ArgRecordType, "", "Record type")
+	addStringFlag(cmdRecordCreate, doit.ArgRecordName, "", "Record name")
+	addStringFlag(cmdRecordCreate, doit.ArgRecordData, "", "Record data")
+	addIntFlag(cmdRecordCreate, doit.ArgRecordPriority, 0, "Record priority")
+	addIntFlag(cmdRecordCreate, doit.ArgRecordPort, 0, "Record port")
+	addIntFlag(cmdRecordCreate, doit.ArgRecordWeight, 0, "Record weight")
 
 	return cmd
 }
@@ -55,17 +65,17 @@ func NewCmdDomainCreate(out io.Writer) *cobra.Command {
 		Short: "create domain",
 		Long:  "create a domain",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDomainCreate(out))
+			checkErr(RunDomainCreate(cmdNS(cmd), out), cmd)
 		},
 	}
 }
 
 // RunDomainCreate runs domain create.
-func RunDomainCreate(out io.Writer) error {
+func RunDomainCreate(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
 	req := &godo.DomainCreateRequest{
-		Name:      doit.VConfig.GetString("domain-name"),
-		IPAddress: doit.VConfig.GetString("ip-address"),
+		Name:      doit.VConfig.GetString(ns, "domain-name"),
+		IPAddress: doit.VConfig.GetString(ns, "ip-address"),
 	}
 
 	d, _, err := client.Domains.Create(req)
@@ -83,13 +93,13 @@ func NewCmdDomainList(out io.Writer) *cobra.Command {
 		Short: "list domains",
 		Long:  "list all domains",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDomainList(out))
+			checkErr(RunDomainList(cmdNS(cmd), out), cmd)
 		},
 	}
 }
 
 // RunDomainList runs domain create.
-func RunDomainList(out io.Writer) error {
+func RunDomainList(cmdName string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -126,15 +136,15 @@ func NewCmdDomainGet(out io.Writer) *cobra.Command {
 		Short: "get domain",
 		Long:  "retrieve an individual domain",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDomainGet(out))
+			checkErr(RunDomainGet(cmdNS(cmd), out), cmd)
 		},
 	}
 }
 
 // RunDomainGet retrieves a domain by name.
-func RunDomainGet(out io.Writer) error {
+func RunDomainGet(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
-	id := doit.VConfig.GetString(doit.ArgDomainName)
+	id := doit.VConfig.GetString(ns, doit.ArgDomainName)
 
 	if len(id) < 1 {
 		return errors.New("invalid domain name")
@@ -155,15 +165,15 @@ func NewCmdDomainDelete(out io.Writer) *cobra.Command {
 		Short: "delete domain",
 		Long:  "delete a domain an all associated records",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDomainDelete(out))
+			checkErr(RunDomainDelete(cmdNS(cmd), out), cmd)
 		},
 	}
 }
 
 // RunDomainDelete deletes a domain by name.
-func RunDomainDelete(out io.Writer) error {
+func RunDomainDelete(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
-	name := doit.VConfig.GetString(doit.ArgDomainName)
+	name := doit.VConfig.GetString(ns, doit.ArgDomainName)
 
 	if len(name) < 1 {
 		return errors.New("invalid domain name")
@@ -180,18 +190,18 @@ func NewCmdRecordList(out io.Writer) *cobra.Command {
 		Short: "list records",
 		Long:  "list all records in a domain",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunRecordList(out))
+			checkErr(RunRecordList(cmdNS(cmd), out), cmd)
 		},
 	}
 }
 
 // RunRecordList list records for a domain.
-func RunRecordList(out io.Writer) error {
+func RunRecordList(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
-	name := doit.VConfig.GetString(doit.ArgDomainName)
+	name := doit.VConfig.GetString(ns, doit.ArgDomainName)
 
 	if len(name) < 1 {
-		return errors.New("invalid domain name")
+		return errors.New("domain name is missing")
 	}
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -219,4 +229,42 @@ func RunRecordList(out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(list, out)
+}
+
+// NewCmdRecordCreate creates a record create command.
+func NewCmdRecordCreate(out io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   "create",
+		Short: "create record",
+		Long:  "create record for a domain",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(RunRecordCreate(cmdNS(cmd), out), cmd)
+		},
+	}
+}
+
+// RunRecordCreate creates a domain record.
+func RunRecordCreate(ns string, out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+	name := doit.VConfig.GetString(ns, doit.ArgDomainName)
+
+	drcr := &godo.DomainRecordEditRequest{
+		Type:     doit.VConfig.GetString(ns, doit.ArgRecordType),
+		Name:     doit.VConfig.GetString(ns, doit.ArgRecordName),
+		Data:     doit.VConfig.GetString(ns, doit.ArgRecordData),
+		Priority: doit.VConfig.GetInt(ns, doit.ArgRecordPriority),
+		Port:     doit.VConfig.GetInt(ns, doit.ArgRecordPort),
+		Weight:   doit.VConfig.GetInt(ns, doit.ArgRecordWeight),
+	}
+
+	if len(drcr.Type) == 0 {
+		return errors.New("record request is missing type")
+	}
+
+	r, _, err := client.Domains.CreateRecord(name, drcr)
+	if err != nil {
+		return err
+	}
+
+	return doit.DisplayOutput(r, out)
 }

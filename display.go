@@ -10,10 +10,15 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+const (
+	// NSRoot is a configuration key that signifies this value is at the root.
+	NSRoot = "root"
+)
+
 // DisplayOutput displays an object or group of objects to a user. It
 // checks to see what the output type should be.
 func DisplayOutput(item interface{}, out io.Writer) error {
-	output := VConfig.GetString("output")
+	output := VConfig.GetString(NSRoot, "output")
 	if output == "" {
 		output = "text"
 	}
@@ -51,6 +56,9 @@ func writeText(item interface{}, w io.Writer) error {
 		outputZone(item.(*godo.Domain), w)
 	case []godo.Domain:
 		outputDomains(item.([]godo.Domain), w)
+	case *godo.DomainRecord:
+		i := item.(*godo.DomainRecord)
+		outputRecords([]godo.DomainRecord{*i}, w)
 	case []godo.DomainRecord:
 		outputRecords(item.([]godo.DomainRecord), w)
 	case *godo.Droplet:
