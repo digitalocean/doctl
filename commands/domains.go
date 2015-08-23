@@ -60,6 +60,17 @@ func Domain() *cobra.Command {
 	addStringFlag(cmdRecordDelete, doit.ArgDomainName, "", "Domain name")
 	addIntFlag(cmdRecordDelete, doit.ArgRecordID, 0, "Record ID")
 
+	cmdRecordUpdate := NewCmdRecordUpdate(os.Stdout)
+	cmdRecord.AddCommand(cmdRecordUpdate)
+	addStringFlag(cmdRecordUpdate, doit.ArgDomainName, "", "Domain name")
+	addIntFlag(cmdRecordUpdate, doit.ArgRecordID, 0, "Record ID")
+	addStringFlag(cmdRecordUpdate, doit.ArgRecordType, "", "Record type")
+	addStringFlag(cmdRecordUpdate, doit.ArgRecordName, "", "Record name")
+	addStringFlag(cmdRecordUpdate, doit.ArgRecordData, "", "Record data")
+	addIntFlag(cmdRecordUpdate, doit.ArgRecordPriority, 0, "Record priority")
+	addIntFlag(cmdRecordUpdate, doit.ArgRecordPort, 0, "Record port")
+	addIntFlag(cmdRecordUpdate, doit.ArgRecordWeight, 0, "Record weight")
+
 	return cmd
 }
 
@@ -294,4 +305,39 @@ func RunRecordDelete(ns string, out io.Writer) error {
 
 	_, err := client.Domains.DeleteRecord(domainName, recordID)
 	return err
+}
+
+// NewCmdRecordUpdate creates a command which updates a domain record.
+func NewCmdRecordUpdate(out io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   "update",
+		Short: "update record",
+		Long:  "update record for a domain by record id",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(RunRecordUpdate(cmdNS(cmd), out), cmd)
+		},
+	}
+}
+
+// RunRecordUpdate updates a domain record.
+func RunRecordUpdate(ns string, out io.Writer) error {
+	client := doit.VConfig.GetGodoClient()
+	domainName := doit.VConfig.GetString(ns, doit.ArgDomainName)
+	recordID := doit.VConfig.GetInt(ns, doit.ArgRecordID)
+
+	drcr := &godo.DomainRecordEditRequest{
+		Type:     doit.VConfig.GetString(ns, doit.ArgRecordType),
+		Name:     doit.VConfig.GetString(ns, doit.ArgRecordName),
+		Data:     doit.VConfig.GetString(ns, doit.ArgRecordData),
+		Priority: doit.VConfig.GetInt(ns, doit.ArgRecordPriority),
+		Port:     doit.VConfig.GetInt(ns, doit.ArgRecordPort),
+		Weight:   doit.VConfig.GetInt(ns, doit.ArgRecordWeight),
+	}
+
+	r, _, err := client.Domains.EditRecord(domainName, recordID, drcr)
+	if err != nil {
+		return err
+	}
+
+	return doit.DisplayOutput(r, out)
 }

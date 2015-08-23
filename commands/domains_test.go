@@ -225,3 +225,35 @@ func TestRecordsDelete(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestRecordsUpdate(t *testing.T) {
+	client := &godo.Client{
+		Domains: &doit.DomainsServiceMock{
+			EditRecordFn: func(name string, id int, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
+				expected := &godo.DomainRecordEditRequest{
+					Type: "A",
+					Name: "foo.example.com.",
+					Data: "192.168.1.1",
+				}
+
+				assert.Equal(t, "example.com", name)
+				assert.Equal(t, 1, id)
+				assert.Equal(t, expected, req)
+
+				return &testRecord, nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c doit.ViperConfig) {
+		ns := "test"
+		c.Set(ns, doit.ArgDomainName, "example.com")
+		c.Set(ns, doit.ArgRecordID, 1)
+		c.Set(ns, doit.ArgRecordType, "A")
+		c.Set(ns, doit.ArgRecordName, "foo.example.com.")
+		c.Set(ns, doit.ArgRecordData, "192.168.1.1")
+
+		err := RunRecordUpdate(ns, ioutil.Discard)
+		assert.NoError(t, err)
+	})
+}
