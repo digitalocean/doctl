@@ -64,6 +64,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Actions())
 	DoitCmd.AddCommand(Domain())
+	DoitCmd.AddCommand(DropletAction())
 }
 
 func initFlags() {
@@ -123,6 +124,18 @@ func addIntFlag(cmd *cobra.Command, name string, def int, desc string) {
 	flagName := fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
 
 	cmd.Flags().Int(name, def, desc)
+	viper.BindPFlag(flagName, cmd.Flags().Lookup(name))
+}
+
+func addBoolFlag(cmd *cobra.Command, name string, def bool, desc string) {
+	parentName := doit.NSRoot
+	if cmd.Parent() != nil {
+		parentName = cmd.Parent().Name()
+	}
+
+	flagName := fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
+
+	cmd.Flags().Bool(name, def, desc)
 	viper.BindPFlag(flagName, cmd.Flags().Lookup(name))
 }
 
