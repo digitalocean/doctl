@@ -70,6 +70,7 @@ func addCommands() {
 	DoitCmd.AddCommand(DropletAction())
 	DoitCmd.AddCommand(Droplet())
 	DoitCmd.AddCommand(Images())
+	DoitCmd.AddCommand(Region())
 }
 
 func initFlags() {
