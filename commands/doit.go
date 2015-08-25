@@ -71,6 +71,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Droplet())
 	DoitCmd.AddCommand(Images())
 	DoitCmd.AddCommand(Region())
+	DoitCmd.AddCommand(Size())
 }
 
 func initFlags() {
