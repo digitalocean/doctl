@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -66,6 +67,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Domain())
 	DoitCmd.AddCommand(DropletAction())
 	DoitCmd.AddCommand(Droplet())
+	DoitCmd.AddCommand(Images())
 }
 
 func initFlags() {
@@ -159,4 +161,17 @@ func cmdNS(cmd *cobra.Command) string {
 	}
 
 	return fmt.Sprintf("%s-%s", parentName, cmd.Name())
+}
+
+type cmdRunner func(ns string, out io.Writer) error
+
+func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer) *cobra.Command {
+	return &cobra.Command{
+		Use:   cliText,
+		Short: desc,
+		Long:  desc,
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(cr(cmdNS(cmd), out), cmd)
+		},
+	}
 }
