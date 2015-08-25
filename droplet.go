@@ -64,6 +64,14 @@ var DropletCommand = cli.Command{
 		},
 		// Droplet Actions
 		{
+			Name:   "disable_backups",
+			Usage:  "[--id | <name>] Disable backups on a Droplet.",
+			Action: dropletActionDisableBackups,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+			},
+		},
+		{
 			Name:   "reboot",
 			Usage:  "[--id | <name>] Reboot a Droplet.",
 			Action: dropletActionReboot,
@@ -106,6 +114,15 @@ var DropletCommand = cli.Command{
 			},
 		},
 		{
+			Name:   "restore",
+			Usage:  "[--id | <name>] Restore a Droplet.",
+			Action: dropletActionRestore,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+				cli.StringFlag{Name: "image", Usage: "An image ID the Droplet will use as a base."},
+			},
+		},
+		{
 			Name:   "password_reset",
 			Usage:  "[--id | <name>] Reset password for a Droplet.",
 			Action: dropletActionPasswordReset,
@@ -120,6 +137,74 @@ var DropletCommand = cli.Command{
 			Flags: []cli.Flag{
 				cli.StringFlag{Name: "size", Value: "512mb", Usage: "Size slug."},
 				cli.BoolFlag{Name: "disk", Usage: "Whether to increase disk size"},
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+			},
+		},
+		{
+			Name:   "rebuild",
+			Usage:  "[--id | <name>] Rename a Droplet.",
+			Action: dropletActionRebuild,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+				cli.StringFlag{Name: "image", Usage: "An image ID the Droplet will use as a base."},
+			},
+		},
+		{
+			Name:   "rename",
+			Usage:  "[--id | <name>] Rename a Droplet.",
+			Action: dropletActionRename,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+				cli.StringFlag{Name: "name", Usage: "The new name for the Droplet."},
+			},
+		},
+		{
+			Name:   "change_kernel",
+			Usage:  "[--id | <name>] Change the kernel of a Droplet.",
+			Action: dropletActionChangeKernel,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+				cli.IntFlag{Name: "kernel", Usage: "A unique number used to identify and reference a specific kernel."},
+			},
+		},
+		{
+			Name:   "kernels",
+			Usage:  "[--id | <name>] List all available kernels for a Droplet.",
+			Action: dropletActionKernels,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+			},
+		},
+		{
+			Name:   "enable_ipv6",
+			Usage:  "[--id | <name>] Enable IPv6 networking on a Droplet.",
+			Action: dropletActionEnableIPv6,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+			},
+		},
+		{
+			Name:   "enable_private_networking",
+			Usage:  "[--id | <name>] Enable private networking on a Droplet.",
+			Action: dropletActionEnablePrivateNetworking,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+			},
+		},
+		{
+			Name:   "snapshot",
+			Usage:  "[--id | <name>] Snapshot a Droplet.",
+			Action: dropletActionUpgrade,
+			Flags: []cli.Flag{
+				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
+				cli.StringFlag{Name: "name", Usage: "The snapshot display name"},
+			},
+		},
+		{
+			Name:   "upgrade",
+			Usage:  "[--id | <name>] Upgrade a Droplet.",
+			Action: dropletActionUpgrade,
+			Flags: []cli.Flag{
 				cli.IntFlag{Name: "id", Usage: "ID for Droplet. (e.g. 1234567)"},
 			},
 		},
@@ -313,6 +398,40 @@ func dropletDestroy(ctx *cli.Context) {
 // Droplet actions
 //
 
+func dropletActionDisableBackups(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to reboot.")
+	}
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatalf("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.DisableBackups(droplet.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
 func dropletActionReboot(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
 		log.Fatal("Error: Must provide ID or name for Droplet to reboot.")
@@ -483,6 +602,42 @@ func dropletActionPoweron(ctx *cli.Context) {
 	WriteOutput(action)
 }
 
+func dropletActionRestore(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to restore.")
+	}
+
+	imageID := ctx.Int("image")
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.Restore(droplet.ID, imageID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
 func dropletActionPasswordReset(ctx *cli.Context) {
 	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
 		log.Fatal("Error: Must provide ID or name for Droplet to reset.")
@@ -547,6 +702,316 @@ func dropletActionResize(ctx *cli.Context) {
 	}
 
 	action, _, err := client.DropletActions.Resize(droplet.ID, size, disk)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
+func dropletActionRename(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to rename.")
+	}
+
+	name := ctx.String("name")
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.Rename(droplet.ID, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
+func dropletActionRebuild(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to rebuild.")
+	}
+
+	imageID := ctx.Int("image")
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.RebuildByImageID(droplet.ID, imageID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
+func dropletActionChangeKernel(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to change kernel.")
+	}
+
+	kernelID := ctx.Int("kernel")
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.ChangeKernel(droplet.ID, kernelID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
+func dropletActionKernels(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to list available kernels.")
+	}
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	opt := &godo.ListOptions{}
+	kernelList := []godo.Kernel{}
+
+	for { // TODO make all optional
+		kernelsPage, resp, err := client.Droplets.Kernels(droplet.ID, opt)
+		if err != nil {
+			log.Fatalf("Unable to list Droplet kernels: %s.", err)
+		}
+
+		// append the current page's droplets to our list
+		for _, k := range kernelsPage {
+			kernelList = append(kernelList, k)
+		}
+
+		// if we are at the last page, break out the for loop
+		if resp.Links == nil || resp.Links.IsLastPage() {
+			break
+		}
+
+		page, err := resp.Links.CurrentPage()
+		if err != nil {
+			log.Fatalf("Unable to get pagination: %s.", err)
+		}
+
+		// set the page we want for the next request
+		opt.Page = page + 1
+	}
+
+	cliOut := NewCLIOutput()
+	defer cliOut.Flush()
+	cliOut.Header("ID", "Name", "Version")
+	for _, kernel := range kernelList {
+		cliOut.Writeln("%d\t%s\t%s\n",
+			kernel.ID, kernel.Name, kernel.Version)
+	}
+
+}
+
+func dropletActionEnableIPv6(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to enable IPv6.")
+	}
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.EnableIPv6(droplet.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
+func dropletActionEnablePrivateNetworking(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to enable private networking.")
+	}
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.EnablePrivateNetworking(droplet.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
+func dropletActionSnapshot(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to snapshot.")
+	}
+
+	name := ctx.String("name")
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.Snapshot(droplet.ID, name)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	WriteOutput(action)
+}
+
+func dropletActionUpgrade(ctx *cli.Context) {
+	if ctx.Int("id") == 0 && len(ctx.Args()) != 1 {
+		log.Fatal("Error: Must provide ID or name for Droplet to upgrade.")
+	}
+
+	tokenSource := &TokenSource{
+		AccessToken: APIKey,
+	}
+	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	client := godo.NewClient(oauthClient)
+
+	id := ctx.Int("id")
+	if id == 0 {
+		droplet, err := FindDropletByName(client, ctx.Args()[0])
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			id = droplet.ID
+		}
+	}
+
+	droplet, _, err := client.Droplets.Get(id)
+	if err != nil {
+		log.Fatal("Unable to find Droplet: %s.", err)
+	}
+
+	action, _, err := client.DropletActions.Upgrade(droplet.ID)
 	if err != nil {
 		log.Fatal(err)
 	}
