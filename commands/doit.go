@@ -27,6 +27,8 @@ var (
 
 	// Output holds the global output format.
 	Output string
+
+	writer = os.Stdout
 )
 
 func init() {

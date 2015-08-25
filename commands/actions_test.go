@@ -34,8 +34,9 @@ func TestActionList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c doit.ViperConfig) {
-		cmd := NewCmdActionList(ioutil.Discard)
-		cmd.Run(cmd, []string{})
+		ns := "test"
+		err := RunCmdActionList(ns, ioutil.Discard)
+		assert.NoError(t, err)
 
 		if !actionDidList {
 			t.Errorf("Action() did not run")
@@ -58,7 +59,7 @@ func TestActionGet(t *testing.T) {
 	withTestClient(client, func(c doit.ViperConfig) {
 		c.Set("test", "action-id", testAction.ID)
 
-		err := RunActionGet("test", ioutil.Discard)
+		err := RunCmdActionGet("test", ioutil.Discard)
 		assert.NoError(t, err)
 	})
 }

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"os"
 	"strconv"
 
 	"github.com/bryanl/doit"
@@ -21,15 +20,18 @@ func Droplet() *cobra.Command {
 		Long:  "droplet is used to access droplet commands",
 	}
 
-	cmdDropletActions := NewCmdDropletActions(os.Stdout)
+	cmdDropletActions := cmdBuilder(RunDropletActions,
+		"actions", "droplet actions", writer)
 	cmd.AddCommand(cmdDropletActions)
 	addIntFlag(cmdDropletActions, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletBackups := NewCmdDropletBackups(os.Stdout)
+	cmdDropletBackups := cmdBuilder(RunDropletBackups,
+		"backups", "droplet backups", writer)
 	cmd.AddCommand(cmdDropletBackups)
 	addIntFlag(cmdDropletBackups, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletCreate := NewCmdDropletCreate(os.Stdout)
+	cmdDropletCreate := cmdBuilder(RunDropletCreate,
+		"create", "create droplet", writer)
 	cmd.AddCommand(cmdDropletCreate)
 	addStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
 	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
@@ -42,26 +44,32 @@ func Droplet() *cobra.Command {
 	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
 	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image")
 
-	cmdDropletDelete := NewCmdDropletDelete(os.Stdout)
+	cmdDropletDelete := cmdBuilder(RunDropletDelete,
+		"delete", "delete droplet", writer)
 	cmd.AddCommand(cmdDropletDelete)
 	addIntFlag(cmdDropletDelete, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletGet := NewCmdDropletGet(os.Stdout)
+	cmdDropletGet := cmdBuilder(RunDropletGet,
+		"get", "get droplet", writer)
 	cmd.AddCommand(cmdDropletGet)
 	addIntFlag(cmdDropletGet, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletKernels := NewCmdDropletKernels(os.Stdout)
+	cmdDropletKernels := cmdBuilder(RunDropletKernels,
+		"kernels", "droplet kernels", writer)
 	cmd.AddCommand(cmdDropletKernels)
 	addIntFlag(cmdDropletKernels, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletList := NewCmdDropletList(os.Stdout)
+	cmdDropletList := cmdBuilder(RunDropletList,
+		"list", "list droplets", writer)
 	cmd.AddCommand(cmdDropletList)
 
-	cmdDropletNeighbors := NewCmdDropletNeighbors(os.Stdout)
+	cmdDropletNeighbors := cmdBuilder(RunDropletNeighbors,
+		"neighbors", "droplet neighbors", writer)
 	cmd.AddCommand(cmdDropletNeighbors)
 	addIntFlag(cmdDropletNeighbors, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletSnapshots := NewCmdDropletSnapshots(os.Stdout)
+	cmdDropletSnapshots := cmdBuilder(RunDropletSnapshots,
+		"snapshots", "snapshots", writer)
 	cmd.AddCommand(cmdDropletSnapshots)
 	addIntFlag(cmdDropletSnapshots, doit.ArgDropletID, 0, "Droplet ID")
 
@@ -112,18 +120,6 @@ func RunDropletActions(ns string, out io.Writer) error {
 	return doit.DisplayOutput(list, out)
 }
 
-// NewCmdDropletBackups creates a droplet backups command.
-func NewCmdDropletBackups(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "backups",
-		Short: "get droplet backups",
-		Long:  "get droplet backups",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletBackups(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
 // RunDropletBackups returns a list of backup images for a droplet.
 func RunDropletBackups(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
@@ -154,18 +150,6 @@ func RunDropletBackups(ns string, out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(list, out)
-}
-
-// NewCmdDropletCreate creates a droplet create command.
-func NewCmdDropletCreate(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "create",
-		Short: "create droplet",
-		Long:  "create droplet",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletCreate(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // RunDropletCreate creates a droplet.
@@ -241,18 +225,6 @@ func RunDropletCreate(ns string, out io.Writer) error {
 	return doit.DisplayOutput(r, out)
 }
 
-// NewCmdDropletDelete creates a droplet delete command.
-func NewCmdDropletDelete(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "delete",
-		Short: "delete droplet",
-		Long:  "delete droplet",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletDelete(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
 // RunDropletDelete destroy a droplet by id.
 func RunDropletDelete(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
@@ -260,18 +232,6 @@ func RunDropletDelete(ns string, out io.Writer) error {
 
 	_, err := client.Droplets.Delete(id)
 	return err
-}
-
-// NewCmdDropletGet creates a droplet get command.
-func NewCmdDropletGet(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "get",
-		Short: "get droplet",
-		Long:  "get droplet",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletGet(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // RunDropletGet returns a droplet.
@@ -285,18 +245,6 @@ func RunDropletGet(ns string, out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(droplet, out)
-}
-
-// NewCmdDropletKernels creates a droplet kernels command.
-func NewCmdDropletKernels(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "kernels",
-		Short: "droplet kernels",
-		Long:  "droplet kernels",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletKernels(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
@@ -331,18 +279,6 @@ func RunDropletKernels(ns string, out io.Writer) error {
 	return doit.DisplayOutput(list, out)
 }
 
-// NewCmdDropletList creates a droplet list command.
-func NewCmdDropletList(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "list droplet",
-		Long:  "list droplet",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletList(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
 // RunDropletList returns a list of droplets.
 func RunDropletList(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
@@ -374,18 +310,6 @@ func RunDropletList(ns string, out io.Writer) error {
 	return doit.DisplayOutput(list, out)
 }
 
-// NewCmdDropletNeighbors creates a droplet neighbors command.
-func NewCmdDropletNeighbors(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "neighbors",
-		Short: "droplet neighbors",
-		Long:  "droplet neighbors",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletNeighbors(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
 // RunDropletNeighbors returns a list of droplet neighbors.
 func RunDropletNeighbors(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
@@ -397,18 +321,6 @@ func RunDropletNeighbors(ns string, out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(list, out)
-}
-
-// NewCmdDropletSnapshots creates a droplet snapshots command.
-func NewCmdDropletSnapshots(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "snapshots",
-		Short: "droplet snapshots",
-		Long:  "droplet snapshots",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletSnapshots(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // RunDropletSnapshots returns a list of available kernels for a droplet.

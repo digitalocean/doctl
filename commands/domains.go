@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"io"
-	"os"
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
@@ -18,19 +17,19 @@ func Domain() *cobra.Command {
 		Long:  "domain is used to access domain commands",
 	}
 
-	cmdDomainCreate := NewCmdDomainCreate(os.Stdout)
+	cmdDomainCreate := cmdBuilder(RunDomainCreate, "create", "create domain", writer)
 	cmd.AddCommand(cmdDomainCreate)
 	addStringFlag(cmdDomainCreate, doit.ArgDomainName, "", "Domain name")
 	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address")
 
-	cmdDomainList := NewCmdDomainList(os.Stdout)
+	cmdDomainList := cmdBuilder(RunDomainList, "list", "list comains", writer)
 	cmd.AddCommand(cmdDomainList)
 
-	cmdDomainGet := NewCmdDomainGet(os.Stdout)
+	cmdDomainGet := cmdBuilder(RunDomainGet, "get", "get domain", writer)
 	cmd.AddCommand(cmdDomainGet)
 	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name")
 
-	cmdDomainDelete := NewCmdDomainDelete(os.Stdout)
+	cmdDomainDelete := cmdBuilder(RunDomainDelete, "delete", "delete droplet", writer)
 	cmd.AddCommand(cmdDomainDelete)
 	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name")
 
@@ -41,11 +40,11 @@ func Domain() *cobra.Command {
 	}
 	cmd.AddCommand(cmdRecord)
 
-	cmdRecordList := NewCmdRecordList(os.Stdout)
+	cmdRecordList := cmdBuilder(RunRecordList, "list", "list records", writer)
 	cmdRecord.AddCommand(cmdRecordList)
 	addStringFlag(cmdRecordList, doit.ArgDomainName, "", "Domain name")
 
-	cmdRecordCreate := NewCmdRecordCreate(os.Stdout)
+	cmdRecordCreate := cmdBuilder(RunRecordCreate, "create", "create record", writer)
 	cmdRecord.AddCommand(cmdRecordCreate)
 	addStringFlag(cmdRecordCreate, doit.ArgDomainName, "", "Domain name")
 	addStringFlag(cmdRecordCreate, doit.ArgRecordType, "", "Record type")
@@ -55,12 +54,12 @@ func Domain() *cobra.Command {
 	addIntFlag(cmdRecordCreate, doit.ArgRecordPort, 0, "Record port")
 	addIntFlag(cmdRecordCreate, doit.ArgRecordWeight, 0, "Record weight")
 
-	cmdRecordDelete := NewCmdRecordDelete(os.Stdout)
+	cmdRecordDelete := cmdBuilder(RunRecordDelete, "delete", "delete record", writer)
 	cmdRecord.AddCommand(cmdRecordDelete)
 	addStringFlag(cmdRecordDelete, doit.ArgDomainName, "", "Domain name")
 	addIntFlag(cmdRecordDelete, doit.ArgRecordID, 0, "Record ID")
 
-	cmdRecordUpdate := NewCmdRecordUpdate(os.Stdout)
+	cmdRecordUpdate := cmdBuilder(RunRecordUpdate, "update", "update record", writer)
 	cmdRecord.AddCommand(cmdRecordUpdate)
 	addStringFlag(cmdRecordUpdate, doit.ArgDomainName, "", "Domain name")
 	addIntFlag(cmdRecordUpdate, doit.ArgRecordID, 0, "Record ID")
@@ -72,18 +71,6 @@ func Domain() *cobra.Command {
 	addIntFlag(cmdRecordUpdate, doit.ArgRecordWeight, 0, "Record weight")
 
 	return cmd
-}
-
-// NewCmdDomainCreate creates a domain create command.
-func NewCmdDomainCreate(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "create",
-		Short: "create domain",
-		Long:  "create a domain",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDomainCreate(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // RunDomainCreate runs domain create.
@@ -100,18 +87,6 @@ func RunDomainCreate(ns string, out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(d, out)
-}
-
-// NewCmdDomainList creates a a domain list command.
-func NewCmdDomainList(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "list domains",
-		Long:  "list all domains",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDomainList(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // RunDomainList runs domain create.
@@ -145,18 +120,6 @@ func RunDomainList(cmdName string, out io.Writer) error {
 	return doit.DisplayOutput(list, out)
 }
 
-// NewCmdDomainGet creates a command to retrieve a domain.
-func NewCmdDomainGet(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "get",
-		Short: "get domain",
-		Long:  "retrieve an individual domain",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDomainGet(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
 // RunDomainGet retrieves a domain by name.
 func RunDomainGet(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
@@ -174,18 +137,6 @@ func RunDomainGet(ns string, out io.Writer) error {
 	return doit.DisplayOutput(d, out)
 }
 
-// NewCmdDomainDelete creates a command to delete a domain.
-func NewCmdDomainDelete(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "delete",
-		Short: "delete domain",
-		Long:  "delete a domain an all associated records",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDomainDelete(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
 // RunDomainDelete deletes a domain by name.
 func RunDomainDelete(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
@@ -197,18 +148,6 @@ func RunDomainDelete(ns string, out io.Writer) error {
 
 	_, err := client.Domains.Delete(name)
 	return err
-}
-
-// NewCmdRecordList creates a domain record listing command.
-func NewCmdRecordList(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "list records",
-		Long:  "list all records in a domain",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunRecordList(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // RunRecordList list records for a domain.
@@ -247,18 +186,6 @@ func RunRecordList(ns string, out io.Writer) error {
 	return doit.DisplayOutput(list, out)
 }
 
-// NewCmdRecordCreate creates a record create command.
-func NewCmdRecordCreate(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "create",
-		Short: "create record",
-		Long:  "create record for a domain",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunRecordCreate(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
 // RunRecordCreate creates a domain record.
 func RunRecordCreate(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
@@ -285,18 +212,6 @@ func RunRecordCreate(ns string, out io.Writer) error {
 	return doit.DisplayOutput(r, out)
 }
 
-// NewCmdRecordDelete creates a record create command.
-func NewCmdRecordDelete(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "delete",
-		Short: "delete record",
-		Long:  "delete record for a domain by record id",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunRecordDelete(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
 // RunRecordDelete deletes a domain record.
 func RunRecordDelete(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
@@ -305,18 +220,6 @@ func RunRecordDelete(ns string, out io.Writer) error {
 
 	_, err := client.Domains.DeleteRecord(domainName, recordID)
 	return err
-}
-
-// NewCmdRecordUpdate creates a command which updates a domain record.
-func NewCmdRecordUpdate(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "update",
-		Short: "update record",
-		Long:  "update record for a domain by record id",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunRecordUpdate(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // RunRecordUpdate updates a domain record.

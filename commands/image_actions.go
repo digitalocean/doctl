@@ -2,7 +2,6 @@ package commands
 
 import (
 	"io"
-	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
@@ -18,29 +17,19 @@ func ImageAction() *cobra.Command {
 		Long:  "image-action commands",
 	}
 
-	cmdImageActionsGet := NewCmdImageActionsGet(os.Stdout)
+	cmdImageActionsGet := cmdBuilder(RunImageActionsGet,
+		"get", "get image action", writer)
 	cmd.AddCommand(cmdImageActionsGet)
 	addIntFlag(cmdImageActionsGet, doit.ArgImageID, 0, "image id")
 	addIntFlag(cmdImageActionsGet, doit.ArgActionID, 0, "action id")
 
-	cmdImageActionsTransfer := NewCmdImageActionsTransfer(os.Stdout)
+	cmdImageActionsTransfer := cmdBuilder(RunImageActionsTransfer,
+		"transfer", "transfer imagr", writer)
 	cmd.AddCommand(cmdImageActionsTransfer)
 	addIntFlag(cmdImageActionsTransfer, doit.ArgImageID, 0, "image id")
 	addStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region")
 
 	return cmd
-}
-
-// NewCmdDropletActions creates a droplet action get command.
-func NewCmdImageActionsGet(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "get",
-		Short: "get image action",
-		Long:  "get image action",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunImageActionsGet(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // Get retrieves an action for an image.
@@ -55,18 +44,6 @@ func RunImageActionsGet(ns string, out io.Writer) error {
 	}
 
 	return doit.DisplayOutput(action, out)
-}
-
-// NewCmdDropletActions creates a droplet action get command.
-func NewCmdImageActionsTransfer(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "transfer",
-		Short: "transfer image",
-		Long:  "transfer image",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunImageActionsTransfer(cmdNS(cmd), out), cmd)
-		},
-	}
 }
 
 // Tranfer an image.

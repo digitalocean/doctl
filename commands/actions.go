@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"io"
-	"os"
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
@@ -18,30 +17,18 @@ func Actions() *cobra.Command {
 		Long:  "action is used to access action commands",
 	}
 
-	cmdActionGet := NewCmdActionGet(os.Stdout)
-	addIntFlag(cmdActionGet, doit.ArgActionID, 0, "Action ID")
+	cmdActionGet := cmdBuilder(RunCmdActionGet, "get", "get action", writer)
 	cmdActions.AddCommand(cmdActionGet)
+	addIntFlag(cmdActionGet, doit.ArgActionID, 0, "Action ID")
 
-	cmdActionList := NewCmdActionList(os.Stdout)
+	cmdActionList := cmdBuilder(RunCmdActionList, "list", "list actions", writer)
 	cmdActions.AddCommand(cmdActionList)
 
 	return cmdActions
 }
 
-// NewCmdActionList creates an action list command.
-func NewCmdActionList(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "list",
-		Short: "action list",
-		Long:  "list actions",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunActionList(out), cmd)
-		},
-	}
-}
-
-// RunActionList run action list.
-func RunActionList(out io.Writer) error {
+// RunCmdActionList run action list.
+func RunCmdActionList(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
@@ -70,20 +57,8 @@ func RunActionList(out io.Writer) error {
 	return doit.DisplayOutput(list, out)
 }
 
-// NewCmdActionGet creates an action get command.
-func NewCmdActionGet(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "get",
-		Short: "action get",
-		Long:  "get action",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunActionGet(cmdNS(cmd), out), cmd)
-		},
-	}
-}
-
-// RunActionGet runs action get.
-func RunActionGet(ns string, out io.Writer) error {
+// RunCmdActionGet runs action get.
+func RunCmdActionGet(ns string, out io.Writer) error {
 	client := doit.VConfig.GetGodoClient()
 	id := doit.VConfig.GetInt(ns, doit.ArgActionID)
 	if id < 1 {
