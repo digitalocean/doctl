@@ -19,6 +19,7 @@ type ViperConfig interface {
 	GetString(ns, key string) string
 	GetBool(ns, key string) bool
 	GetInt(ns, key string) int
+	GetStringSlice(ns, key string) []string
 }
 
 type LiveViperConfig struct {
@@ -65,6 +66,15 @@ func (c *LiveViperConfig) GetInt(ns, key string) int {
 	return viper.GetInt(nskey)
 }
 
+func (c *LiveViperConfig) GetStringSlice(ns, key string) []string {
+	if ns == NSRoot {
+		return viper.GetStringSlice(key)
+	}
+
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	return viper.GetStringSlice(nskey)
+}
+
 type TestViperConfig struct {
 	Client *godo.Client
 	v      *viper.Viper
@@ -96,6 +106,11 @@ func (c *TestViperConfig) GetString(ns, key string) string {
 func (c *TestViperConfig) GetInt(ns, key string) int {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	return c.v.GetInt(nskey)
+}
+
+func (c *TestViperConfig) GetStringSlice(ns, key string) []string {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	return c.v.GetStringSlice(nskey)
 }
 
 func (c *TestViperConfig) GetBool(ns, key string) bool {

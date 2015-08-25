@@ -28,7 +28,7 @@ func DropletAction() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "droplet-action",
 		Short: "droplet action commands",
-		Long:  "droplet-action us used to access droplet action commands",
+		Long:  "droplet-action is used to access droplet action commands",
 	}
 
 	cmdDropletActionGet := NewCmdDropletActionGet(os.Stdout)
