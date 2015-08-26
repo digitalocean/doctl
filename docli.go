@@ -2,7 +2,10 @@ package doit
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
@@ -15,6 +18,7 @@ var (
 
 type ViperConfig interface {
 	GetGodoClient() *godo.Client
+	SSH(user, host string, options []string) Runner
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) string
 	GetBool(ns, key string) bool
@@ -32,6 +36,27 @@ func (c *LiveViperConfig) GetGodoClient() *godo.Client {
 	tokenSource := &TokenSource{AccessToken: token}
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
 	return godo.NewClient(oauthClient)
+}
+
+func (c *LiveViperConfig) SSH(user, host string, options []string) Runner {
+	logrus.WithFields(logrus.Fields{
+		"user": user,
+		"host": host,
+	}).Info("ssh")
+
+	sshHost := fmt.Sprintf("%s@%s", user, host)
+
+	args := []string{sshHost}
+	for _, o := range options {
+		args = append(args, "-o", o)
+	}
+
+	cmd := exec.Command("ssh", args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd
 }
 
 func (c *LiveViperConfig) Set(ns, key string, val interface{}) {
@@ -73,47 +98,4 @@ func (c *LiveViperConfig) GetStringSlice(ns, key string) []string {
 
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	return viper.GetStringSlice(nskey)
-}
-
-type TestViperConfig struct {
-	Client *godo.Client
-	v      *viper.Viper
-}
-
-func NewTestViperConfig(client *godo.Client) *TestViperConfig {
-	return &TestViperConfig{
-		Client: client,
-		v:      viper.New(),
-	}
-}
-
-var _ ViperConfig = &TestViperConfig{}
-
-func (c *TestViperConfig) GetGodoClient() *godo.Client {
-	return c.Client
-}
-
-func (c *TestViperConfig) Set(ns, key string, val interface{}) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	c.v.Set(nskey, val)
-}
-
-func (c *TestViperConfig) GetString(ns, key string) string {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetString(nskey)
-}
-
-func (c *TestViperConfig) GetInt(ns, key string) int {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetInt(nskey)
-}
-
-func (c *TestViperConfig) GetStringSlice(ns, key string) []string {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetStringSlice(nskey)
-}
-
-func (c *TestViperConfig) GetBool(ns, key string) bool {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetBool(nskey)
 }

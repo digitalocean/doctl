@@ -12,7 +12,7 @@ import (
 
 const (
 	// NSRoot is a configuration key that signifies this value is at the root.
-	NSRoot = "root"
+	NSRoot = "doit"
 )
 
 // DisplayOutput displays an object or group of objects to a user. It

@@ -32,7 +32,7 @@ func TestRegionsList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		RunRegionList(ns, ioutil.Discard)
 		assert.True(t, didList)

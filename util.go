@@ -31,12 +31,12 @@ type TestConfig struct {
 	SSHFn  func(user, host string, options []string) Runner
 }
 
-type mockRunner struct {
-	err error
+type MockRunner struct {
+	Err error
 }
 
-func (tr *mockRunner) Run() error {
-	return tr.err
+func (tr *MockRunner) Run() error {
+	return tr.Err
 }
 
 // NewTestConfig creates a TestConfig.
@@ -49,7 +49,7 @@ func NewTestConfig(client *godo.Client) *TestConfig {
 				"host":    h,
 				"options": o,
 			}).Info("ssh")
-			return &mockRunner{}
+			return &MockRunner{}
 		},
 	}
 }

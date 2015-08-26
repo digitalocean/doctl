@@ -23,10 +23,10 @@ func (s *sshMock) cmd() func(u, h string, o []string) Runner {
 		s.user = u
 		s.host = h
 
-		r := &mockRunner{}
+		r := &MockRunner{}
 
 		if s.isError {
-			r.err = fmt.Errorf("ssh forced failure")
+			r.Err = fmt.Errorf("ssh forced failure")
 		}
 
 		return r

@@ -20,7 +20,7 @@ func TestImageActionsGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgImageID, 1)
 		c.Set(ns, doit.ArgActionID, 2)
@@ -44,7 +44,7 @@ func TestImageActionsTransfer(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgImageID, 1)
 		c.Set(ns, doit.ArgRegionSlug, "dev0")

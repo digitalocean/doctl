@@ -9,7 +9,7 @@ import (
 
 func TestMockRunner(t *testing.T) {
 	e := fmt.Errorf("an error")
-	mr := mockRunner{e}
+	mr := MockRunner{e}
 
 	assert.Equal(t, e, mr.Run())
 }

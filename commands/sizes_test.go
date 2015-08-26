@@ -32,7 +32,7 @@ func TestSizesList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		RunSizeList(ns, ioutil.Discard)
 		assert.True(t, didList)

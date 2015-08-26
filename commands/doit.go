@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/bryanl/doit"
+	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -73,6 +74,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Region())
 	DoitCmd.AddCommand(Size())
 	DoitCmd.AddCommand(SSHKeys())
+	DoitCmd.AddCommand(SSH())
 }
 
 func initFlags() {
@@ -112,51 +114,36 @@ func configFilePath() (string, error) {
 }
 
 func addStringFlag(cmd *cobra.Command, name, dflt, desc string) {
-	parentName := doit.NSRoot
-	if cmd.Parent() != nil {
-		parentName = cmd.Parent().Name()
-	}
-
-	flagName := fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
-
+	fn := flagName(cmd, name)
 	cmd.Flags().String(name, dflt, desc)
-	viper.BindPFlag(flagName, cmd.Flags().Lookup(name))
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 }
 
 func addIntFlag(cmd *cobra.Command, name string, def int, desc string) {
-	parentName := doit.NSRoot
-	if cmd.Parent() != nil {
-		parentName = cmd.Parent().Name()
-	}
-
-	flagName := fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
-
+	fn := flagName(cmd, name)
 	cmd.Flags().Int(name, def, desc)
-	viper.BindPFlag(flagName, cmd.Flags().Lookup(name))
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 }
 
 func addBoolFlag(cmd *cobra.Command, name string, def bool, desc string) {
-	parentName := doit.NSRoot
-	if cmd.Parent() != nil {
-		parentName = cmd.Parent().Name()
-	}
-
-	flagName := fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
-
+	fn := flagName(cmd, name)
 	cmd.Flags().Bool(name, def, desc)
-	viper.BindPFlag(flagName, cmd.Flags().Lookup(name))
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 }
 
 func addStringSliceFlag(cmd *cobra.Command, name string, def []string, desc string) {
+	fn := flagName(cmd, name)
+	cmd.Flags().StringSlice(name, def, desc)
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+}
+
+func flagName(cmd *cobra.Command, name string) string {
 	parentName := doit.NSRoot
 	if cmd.Parent() != nil {
 		parentName = cmd.Parent().Name()
 	}
 
-	flagName := fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
-
-	cmd.Flags().StringSlice(name, def, desc)
-	viper.BindPFlag(flagName, cmd.Flags().Lookup(name))
+	return fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
 }
 
 func cmdNS(cmd *cobra.Command) string {
@@ -179,4 +166,43 @@ func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer) *cobra.Comman
 			checkErr(cr(cmdNS(cmd), out), cmd)
 		},
 	}
+}
+
+func listDroplets(client *godo.Client) ([]godo.Droplet, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := client.Droplets.List(opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := doit.PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]godo.Droplet, len(si))
+	for i := range si {
+		list[i] = si[i].(godo.Droplet)
+	}
+
+	return list, nil
+}
+
+func extractDropletPublicIP(droplet *godo.Droplet) string {
+	for _, in := range droplet.Networks.V4 {
+		if in.Type == "public" {
+			return in.IPAddress
+		}
+	}
+
+	return ""
+
 }

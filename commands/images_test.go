@@ -28,7 +28,7 @@ func TestImagesList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		RunImagesList(ns, ioutil.Discard)
 	})
@@ -52,7 +52,7 @@ func TestImagesListDistribution(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		RunImagesListDistribution(ns, ioutil.Discard)
 		assert.True(t, didRun)
@@ -77,7 +77,7 @@ func TestImagesListApplication(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		RunImagesListApplication(ns, ioutil.Discard)
 		assert.True(t, didRun)
@@ -102,7 +102,7 @@ func TestImagesListUser(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		RunImagesListUser(ns, ioutil.Discard)
 		assert.True(t, didRun)
@@ -123,7 +123,7 @@ func TestImagesGetByID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgImage, testImage.ID)
 
@@ -145,7 +145,7 @@ func TestImagesGetBySlug(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgImage, testImage.Slug)
 
@@ -167,7 +167,7 @@ func TestImagesNoID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		RunImagesGet(ns, ioutil.Discard)
 	})
@@ -186,7 +186,7 @@ func TestImagesUpdate(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgImageID, testImage.ID)
 		c.Set(ns, doit.ArgImageName, "new-name")
@@ -205,7 +205,7 @@ func TestImagesDelete(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgImageID, testImage.ID)
 

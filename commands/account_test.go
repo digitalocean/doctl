@@ -27,7 +27,7 @@ func TestAccountGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		cmd := NewCmdAccountGet(ioutil.Discard)
 		cmd.Run(cmd, []string{})
 

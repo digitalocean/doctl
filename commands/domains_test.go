@@ -35,7 +35,7 @@ func TestDomainsCreate(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, testDomain.Name)
 		c.Set(ns, doit.ArgDomainName, testDomain.Name)
@@ -60,7 +60,7 @@ func TestDomainsList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		err := RunDomainList(ns, ioutil.Discard)
 		assert.NoError(t, err)
@@ -82,7 +82,7 @@ func TestDomainsGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, testDomain.Name)
 		err := RunDomainGet(ns, ioutil.Discard)
@@ -93,7 +93,7 @@ func TestDomainsGet(t *testing.T) {
 func TestDomainsGet_DomainRequred(t *testing.T) {
 	client := &godo.Client{}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		err := RunDomainGet(ns, ioutil.Discard)
 		assert.Error(t, err)
@@ -112,7 +112,7 @@ func TestDomainsDelete(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, testDomain.Name)
 		err := RunDomainDelete(ns, ioutil.Discard)
@@ -123,7 +123,7 @@ func TestDomainsDelete(t *testing.T) {
 func TestDomainsGet_RequiredArguments(t *testing.T) {
 	client := &godo.Client{}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		err := RunDomainDelete(ns, ioutil.Discard)
 		assert.Error(t, err)
@@ -142,7 +142,7 @@ func TestRecordsList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, "example.com")
 
@@ -155,7 +155,7 @@ func TestRecordsList(t *testing.T) {
 func TestRecordList_RequiredArguments(t *testing.T) {
 	client := &godo.Client{}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		err := RunRecordList(ns, ioutil.Discard)
 		assert.Error(t, err)
@@ -180,7 +180,7 @@ func TestRecordsCreate(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, "example.com")
 		c.Set(ns, doit.ArgRecordType, "A")
@@ -195,7 +195,7 @@ func TestRecordsCreate(t *testing.T) {
 func TestRecordCreate_RequiredArguments(t *testing.T) {
 	client := &godo.Client{}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		err := RunRecordCreate(ns, ioutil.Discard)
 		assert.Error(t, err)
@@ -217,7 +217,7 @@ func TestRecordsDelete(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, "example.com")
 		c.Set(ns, doit.ArgRecordID, 1)
@@ -245,7 +245,7 @@ func TestRecordsUpdate(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, "example.com")
 		c.Set(ns, doit.ArgRecordID, 1)

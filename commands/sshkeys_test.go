@@ -35,7 +35,7 @@ func TestKeysList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		RunKeyList(ns, ioutil.Discard)
 		assert.True(t, didList)
@@ -56,7 +56,7 @@ func TestKeysGetByID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, "1")
 
@@ -78,7 +78,7 @@ func TestKeysGetByFingerprint(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, testKey.Fingerprint)
 
@@ -100,7 +100,7 @@ func TestKeysCreate(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKeyName, "the key")
 		c.Set(ns, doit.ArgKeyPublicKey, "fingerprint")
@@ -123,7 +123,7 @@ func TestKeysDeleteByID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, "1")
 
@@ -145,7 +145,7 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, "fingerprint")
 
@@ -172,7 +172,7 @@ func TestKeysUpdateByID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, "1")
 		c.Set(ns, doit.ArgKeyName, "the key")
@@ -200,7 +200,7 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, "fingerprint")
 		c.Set(ns, doit.ArgKeyName, "the key")
@@ -230,7 +230,7 @@ func TestSSHPublicKeyImport(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKeyPublicKey, "fingerprint")
 		c.Set(ns, doit.ArgKeyPublicKeyFile, path)
@@ -260,7 +260,7 @@ func TestSSHPublicKeyImportWithName(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgKeyName, "custom")
 		c.Set(ns, doit.ArgKeyPublicKeyFile, path)

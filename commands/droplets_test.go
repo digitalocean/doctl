@@ -34,7 +34,7 @@ func TestDropletActionList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		err := RunDropletActions(ns, ioutil.Discard)
@@ -58,7 +58,7 @@ func TestDropletBackupList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		err := RunDropletBackups(ns, ioutil.Discard)
@@ -86,7 +86,7 @@ func TestDropletCreate(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletName, "droplet")
 		c.Set(ns, doit.ArgRegionSlug, "dev0")
@@ -124,7 +124,7 @@ func TestDropletCreateUserDataFile(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 
 		c.Set(ns, doit.ArgDropletName, "droplet")
@@ -148,7 +148,7 @@ func TestDropletDelete(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
@@ -167,7 +167,7 @@ func TestDropletGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
@@ -194,7 +194,7 @@ func TestDropletKernelList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
@@ -221,7 +221,7 @@ func TestDropletNeighbors(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
@@ -247,7 +247,7 @@ func TestDropletSnapshotList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
@@ -272,7 +272,7 @@ func TestDropletsList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c doit.ViperConfig) {
+	withTestClient(client, func(c *TestViperConfig) {
 		ns := "test"
 		err := RunDropletList(ns, ioutil.Discard)
 		assert.NoError(t, err)
