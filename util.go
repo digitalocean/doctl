@@ -153,10 +153,6 @@ func ErrWithUsage(c *cli.Context, msg string) {
 	cli.ShowCommandHelp(c, c.Command.Name)
 }
 
-func bailFatal(err error, msg string) {
-	logrus.WithField("err", err).Fatal(msg)
-}
-
 func extractDropletPublicIP(droplet *godo.Droplet) string {
 	for _, in := range droplet.Networks.V4 {
 		if in.Type == "public" {
