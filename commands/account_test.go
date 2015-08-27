@@ -6,6 +6,7 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
+	"github.com/stretchr/testify/assert"
 )
 
 var testAccount = &godo.Account{
@@ -28,8 +29,10 @@ func TestAccountGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		cmd := NewCmdAccountGet(ioutil.Discard)
-		cmd.Run(cmd, []string{})
+		ns := "test"
+
+		err := RunAccountGet(ns, ioutil.Discard)
+		assert.NoError(t, err)
 
 		if !accountDidGet {
 			t.Errorf("could not retrieve account")

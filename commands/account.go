@@ -2,9 +2,7 @@ package commands
 
 import (
 	"io"
-	"os"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
 	"github.com/spf13/cobra"
 )
@@ -17,28 +15,19 @@ func Account() *cobra.Command {
 		Long:  "account is used to access account commands",
 	}
 
-	cmdAccount.AddCommand(NewCmdAccountGet(os.Stdout))
+	cmdAccountGet := cmdBuilder(RunAccountGet, "get", "get account", writer)
+	cmdAccount.AddCommand(cmdAccountGet)
+
 	return cmdAccount
 }
 
-// NewCmdAccountGet creates an Account get command.
-func NewCmdAccountGet(out io.Writer) *cobra.Command {
-	return &cobra.Command{
-		Use:   "get",
-		Short: "account info",
-		Long:  "get account details",
-		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunAccountGet(out))
-		},
-	}
-}
-
 // RunAccountGet runs account get.
-func RunAccountGet(out io.Writer) error {
+func RunAccountGet(ns string, out io.Writer) error {
 	client := doit.DoitConfig.GetGodoClient()
+
 	a, _, err := client.Account.Get()
 	if err != nil {
-		logrus.WithField("err", err).Error("unable to retrieve account")
+		return err
 	}
 
 	return doit.DisplayOutput(a, out)

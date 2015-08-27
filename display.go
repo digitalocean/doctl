@@ -47,6 +47,8 @@ func writeJSON(item interface{}, w io.Writer) error {
 
 func writeText(item interface{}, w io.Writer) error {
 	switch item.(type) {
+	case *godo.Account:
+		writeJSON(item, w)
 	case *godo.Action:
 		i := item.(*godo.Action)
 		outputActions([]godo.Action{*i}, w)
