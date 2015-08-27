@@ -1,7 +1,8 @@
-package doit
+package commands
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -10,12 +11,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/protos"
+	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-
-	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/doit/protos"
-	"github.com/codegangsta/cli"
 )
 
 const (
@@ -28,15 +29,15 @@ var (
 	defaultPluginPaths = []string{
 		filepath.Join(os.Getenv("GOPATH"), "bin"),
 	}
-	pluginFactory = func(path string) Command {
-		return NewLiveCommand(path)
+	pluginFactory = func(path string) doit.Command {
+		return doit.NewLiveCommand(path)
 	}
 	pluginLoader = func() []plugin { return loadPlugins() }
 )
 
 type plugin struct {
 	name    string
-	command Command
+	command doit.Command
 
 	pluginCmd *exec.Cmd
 
@@ -86,17 +87,30 @@ func (p *plugin) Kill() error {
 	return p.command.Stop()
 }
 
+func Plugin() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "plugin",
+		Short: "plugin commands",
+		Long:  "plugin commands",
+		Run: func(cmd *cobra.Command, args []string) {
+			checkErr(RunPlugin(args, writer))
+		},
+	}
+
+	return cmd
+}
+
 // Plugin lists all available plugins.
-func Plugin(c *cli.Context) {
-	if c.Args().Present() {
-		execPlugin(c.Args().First(), c.Args().Tail())
-		return
+func RunPlugin(args []string, out io.Writer) error {
+	if len(args) > 1 {
+		execPlugin(args[0], args[1:])
+		return nil
 	}
 
 	plugins := pluginLoader()
 
 	w := new(tabwriter.Writer)
-	w.Init(c.App.Writer, 0, 8, 1, '\t', 0)
+	w.Init(out, 0, 8, 1, '\t', 0)
 
 	fmt.Fprintln(w, "Plugin\tSummary")
 	for _, p := range plugins {
@@ -107,6 +121,8 @@ func Plugin(c *cli.Context) {
 	}
 
 	w.Flush()
+
+	return nil
 }
 
 func pluginPaths() []string {
@@ -119,7 +135,7 @@ func execPlugin(name string, args []string) {
 		"name": name,
 		"args": fmt.Sprintf("%#v", args)}).Debug("execing plugin with options")
 
-	server := NewServer()
+	server := doit.NewServer()
 	go server.Serve()
 	logrus.Debug("starting server")
 

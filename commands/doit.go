@@ -72,6 +72,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Droplet())
 	DoitCmd.AddCommand(Images())
 	DoitCmd.AddCommand(Region())
+	DoitCmd.AddCommand(Plugin())
 	DoitCmd.AddCommand(Size())
 	DoitCmd.AddCommand(SSHKeys())
 	DoitCmd.AddCommand(SSH())
