@@ -30,14 +30,7 @@ var (
 	testDropletList = []godo.Droplet{testDroplet}
 	testKernel      = godo.Kernel{ID: 1}
 	testKernelList  = []godo.Kernel{testKernel}
-
-	lastBailOut bailOut
 )
-
-type bailOut struct {
-	err error
-	msg string
-}
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
