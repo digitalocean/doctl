@@ -47,7 +47,7 @@ func TestSSH_ID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 
@@ -75,7 +75,7 @@ func TestSSH_InvalidID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 
@@ -99,7 +99,7 @@ func TestSSH_Name(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 

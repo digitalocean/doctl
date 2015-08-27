@@ -24,7 +24,7 @@ func Region() *cobra.Command {
 
 // RunRegionList all regions.
 func RunRegionList(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
+	client := doit.DoitConfig.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Regions.List(opt)

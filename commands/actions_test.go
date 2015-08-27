@@ -33,7 +33,7 @@ func TestActionList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		err := RunCmdActionList(ns, ioutil.Discard)
 		assert.NoError(t, err)
@@ -56,7 +56,7 @@ func TestActionGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		c.Set("test", "action-id", testAction.ID)
 
 		err := RunCmdActionGet("test", ioutil.Discard)

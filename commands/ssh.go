@@ -31,11 +31,11 @@ func SSH() *cobra.Command {
 
 // RunSSH finds a droplet to ssh to given input parameters (name or id).
 func RunSSH(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	id := doit.VConfig.GetInt(ns, doit.ArgDropletID)
-	name := doit.VConfig.GetString(ns, doit.ArgDropletName)
-	user := doit.VConfig.GetString(ns, doit.ArgSSHUser)
-	options := doit.VConfig.GetStringSlice(ns, doit.ArgSSHOption)
+	client := doit.DoitConfig.GetGodoClient()
+	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+	name := doit.DoitConfig.GetString(ns, doit.ArgDropletName)
+	user := doit.DoitConfig.GetString(ns, doit.ArgSSHUser)
+	options := doit.DoitConfig.GetStringSlice(ns, doit.ArgSSHOption)
 
 	options = removeEmptyOptions(options)
 
@@ -76,7 +76,7 @@ func RunSSH(ns string, out io.Writer) error {
 		return errors.New(sshNoAddress)
 	}
 
-	runner := doit.VConfig.SSH(user, publicIP, options)
+	runner := doit.DoitConfig.SSH(user, publicIP, options)
 	return runner.Run()
 }
 

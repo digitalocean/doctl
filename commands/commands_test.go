@@ -34,28 +34,28 @@ var (
 	testKernelList  = []godo.Kernel{testKernel}
 )
 
-type testFn func(c *TestViperConfig)
+type testFn func(c *TestConfig)
 
 func withTestClient(client *godo.Client, tFn testFn) {
-	ogConfig := doit.VConfig
+	ogConfig := doit.DoitConfig
 	defer func() {
-		doit.VConfig = ogConfig
+		doit.DoitConfig = ogConfig
 	}()
 
-	cfg := NewTestViperConfig(client)
-	doit.VConfig = cfg
+	cfg := NewTestConfig(client)
+	doit.DoitConfig = cfg
 
 	tFn(cfg)
 }
 
-type TestViperConfig struct {
+type TestConfig struct {
 	Client *godo.Client
 	SSHFn  func(user, host string, options []string) doit.Runner
 	v      *viper.Viper
 }
 
-func NewTestViperConfig(client *godo.Client) *TestViperConfig {
-	return &TestViperConfig{
+func NewTestConfig(client *godo.Client) *TestConfig {
+	return &TestConfig{
 		Client: client,
 		SSHFn: func(u, h string, o []string) doit.Runner {
 			logrus.WithFields(logrus.Fields{
@@ -69,37 +69,37 @@ func NewTestViperConfig(client *godo.Client) *TestViperConfig {
 	}
 }
 
-var _ doit.ViperConfig = &TestViperConfig{}
+var _ doit.Config = &TestConfig{}
 
-func (c *TestViperConfig) GetGodoClient() *godo.Client {
+func (c *TestConfig) GetGodoClient() *godo.Client {
 	return c.Client
 }
 
-func (c *TestViperConfig) SSH(user, host string, options []string) doit.Runner {
+func (c *TestConfig) SSH(user, host string, options []string) doit.Runner {
 	return c.SSHFn(user, host, options)
 }
 
-func (c *TestViperConfig) Set(ns, key string, val interface{}) {
+func (c *TestConfig) Set(ns, key string, val interface{}) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	c.v.Set(nskey, val)
 }
 
-func (c *TestViperConfig) GetString(ns, key string) string {
+func (c *TestConfig) GetString(ns, key string) string {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	return c.v.GetString(nskey)
 }
 
-func (c *TestViperConfig) GetInt(ns, key string) int {
+func (c *TestConfig) GetInt(ns, key string) int {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	return c.v.GetInt(nskey)
 }
 
-func (c *TestViperConfig) GetStringSlice(ns, key string) []string {
+func (c *TestConfig) GetStringSlice(ns, key string) []string {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	return c.v.GetStringSlice(nskey)
 }
 
-func (c *TestViperConfig) GetBool(ns, key string) bool {
+func (c *TestConfig) GetBool(ns, key string) bool {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	return c.v.GetBool(nskey)
 }

@@ -34,9 +34,9 @@ func ImageAction() *cobra.Command {
 
 // Get retrieves an action for an image.
 func RunImageActionsGet(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	imageID := doit.VConfig.GetInt(ns, doit.ArgImageID)
-	actionID := doit.VConfig.GetInt(ns, doit.ArgActionID)
+	client := doit.DoitConfig.GetGodoClient()
+	imageID := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
+	actionID := doit.DoitConfig.GetInt(ns, doit.ArgActionID)
 
 	action, _, err := client.ImageActions.Get(imageID, actionID)
 	if err != nil {
@@ -48,10 +48,10 @@ func RunImageActionsGet(ns string, out io.Writer) error {
 
 // Tranfer an image.
 func RunImageActionsTransfer(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	id := doit.VConfig.GetInt(ns, doit.ArgImageID)
+	client := doit.DoitConfig.GetGodoClient()
+	id := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
 	req := &godo.ActionRequest{
-		"region": doit.VConfig.GetString(ns, doit.ArgRegionSlug),
+		"region": doit.DoitConfig.GetString(ns, doit.ArgRegionSlug),
 	}
 
 	action, _, err := client.ImageActions.Transfer(id, req)

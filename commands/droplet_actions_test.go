@@ -23,7 +23,7 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgKernelID, 2)
@@ -43,7 +43,7 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -63,7 +63,7 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -83,7 +83,7 @@ func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -105,7 +105,7 @@ func TestDropletActionsGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgActionID, 2)
@@ -126,7 +126,7 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -146,7 +146,7 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -166,7 +166,7 @@ func TestDropletActionsPowerOff(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -185,7 +185,7 @@ func TestDropletActionsPowerOn(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -205,7 +205,7 @@ func TestDropletActionsReboot(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -228,7 +228,7 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgImage, "2")
@@ -252,7 +252,7 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgImage, "slug")
@@ -276,7 +276,7 @@ func TestDropletActionsRename(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgDropletName, "name")
@@ -303,7 +303,7 @@ func TestDropletActionsResize(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgImageSlug, "slug")
@@ -328,7 +328,7 @@ func TestDropletActionsRestore(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgImageID, 2)
@@ -349,7 +349,7 @@ func TestDropletActionsShutdown(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
@@ -372,7 +372,7 @@ func TestDropletActionsSnapshot(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgSnapshotName, "name")
@@ -393,7 +393,7 @@ func TestDropletActionsUpgrade(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestViperConfig) {
+	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 

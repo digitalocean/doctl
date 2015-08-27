@@ -58,32 +58,32 @@ func Images() *cobra.Command {
 
 // RunImagesList images.
 func RunImagesList(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
+	client := doit.DoitConfig.GetGodoClient()
 	return listImages(ns, out, client.Images.List)
 }
 
 // RunImagesListDistribution lists distributions that are available.
 func RunImagesListDistribution(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
+	client := doit.DoitConfig.GetGodoClient()
 	return listImages(ns, out, client.Images.ListDistribution)
 }
 
 // RunImagesListApplication lists application iamges.
 func RunImagesListApplication(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
+	client := doit.DoitConfig.GetGodoClient()
 	return listImages(ns, out, client.Images.ListApplication)
 }
 
 // RunImagesListUser lists user images.
 func RunImagesListUser(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
+	client := doit.DoitConfig.GetGodoClient()
 	return listImages(ns, out, client.Images.ListUser)
 }
 
 // RunImagesGet retrieves an image by id or slug.
 func RunImagesGet(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	rawID := doit.VConfig.GetString(ns, doit.ArgImage)
+	client := doit.DoitConfig.GetGodoClient()
+	rawID := doit.DoitConfig.GetString(ns, doit.ArgImage)
 
 	var err error
 	var image *godo.Image
@@ -106,11 +106,11 @@ func RunImagesGet(ns string, out io.Writer) error {
 
 // RunImagesUpdate updates an image.
 func RunImagesUpdate(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	id := doit.VConfig.GetInt(ns, doit.ArgImageID)
+	client := doit.DoitConfig.GetGodoClient()
+	id := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
 
 	req := &godo.ImageUpdateRequest{
-		Name: doit.VConfig.GetString(ns, doit.ArgImageName),
+		Name: doit.DoitConfig.GetString(ns, doit.ArgImageName),
 	}
 
 	image, _, err := client.Images.Update(id, req)
@@ -123,8 +123,8 @@ func RunImagesUpdate(ns string, out io.Writer) error {
 
 // RunImagesDelete deletes an image.
 func RunImagesDelete(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	id := doit.VConfig.GetInt(ns, doit.ArgImageID)
+	client := doit.DoitConfig.GetGodoClient()
+	id := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
 
 	_, err := client.Images.Delete(id)
 	return err
@@ -133,7 +133,7 @@ func RunImagesDelete(ns string, out io.Writer) error {
 type listFn func(*godo.ListOptions) ([]godo.Image, *godo.Response, error)
 
 func listImages(ns string, out io.Writer, lFn listFn) error {
-	public := doit.VConfig.GetBool(ns, doit.ArgImagePublic)
+	public := doit.DoitConfig.GetBool(ns, doit.ArgImagePublic)
 
 	fn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := lFn(opt)

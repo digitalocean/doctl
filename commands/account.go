@@ -35,7 +35,7 @@ func NewCmdAccountGet(out io.Writer) *cobra.Command {
 
 // RunAccountGet runs account get.
 func RunAccountGet(out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
+	client := doit.DoitConfig.GetGodoClient()
 	a, _, err := client.Account.Get()
 	if err != nil {
 		logrus.WithField("err", err).Error("unable to retrieve account")

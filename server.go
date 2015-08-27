@@ -38,6 +38,7 @@ type Server struct {
 	Registered chan bool
 }
 
+// NewServer creates an instance of Server.
 func NewServer() *Server {
 	return &Server{
 		Ready:      make(chan bool, 1),

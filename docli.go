@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	Bail    func(err error, msg string)
-	VConfig ViperConfig = &LiveViperConfig{}
+	// DoitConfig holds the app's current configuration.
+	DoitConfig Config = &LiveConfig{}
 )
 
-type ViperConfig interface {
+// Config is an interface that represent doit's config.
+type Config interface {
 	GetGodoClient() *godo.Client
 	SSH(user, host string, options []string) Runner
 	Set(ns, key string, val interface{})
@@ -26,19 +27,21 @@ type ViperConfig interface {
 	GetStringSlice(ns, key string) []string
 }
 
-type LiveViperConfig struct {
-}
+// LiveConfig is an implementation of Config for live values.
+type LiveConfig struct{}
 
-var _ ViperConfig = &LiveViperConfig{}
+var _ Config = &LiveConfig{}
 
-func (c *LiveViperConfig) GetGodoClient() *godo.Client {
+// GetGodoClient returns a GodoClient.
+func (c *LiveConfig) GetGodoClient() *godo.Client {
 	token := viper.GetString("token")
 	tokenSource := &TokenSource{AccessToken: token}
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
 	return godo.NewClient(oauthClient)
 }
 
-func (c *LiveViperConfig) SSH(user, host string, options []string) Runner {
+// SSH creates a ssh connection to a host.
+func (c *LiveConfig) SSH(user, host string, options []string) Runner {
 	logrus.WithFields(logrus.Fields{
 		"user": user,
 		"host": host,
@@ -59,12 +62,14 @@ func (c *LiveViperConfig) SSH(user, host string, options []string) Runner {
 	return cmd
 }
 
-func (c *LiveViperConfig) Set(ns, key string, val interface{}) {
+// Set sets a config key.
+func (c *LiveConfig) Set(ns, key string, val interface{}) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	viper.Set(nskey, val)
 }
 
-func (c *LiveViperConfig) GetString(ns, key string) string {
+// GetString returns a config value as a string.
+func (c *LiveConfig) GetString(ns, key string) string {
 	if ns == NSRoot {
 		return viper.GetString(key)
 	}
@@ -73,7 +78,8 @@ func (c *LiveViperConfig) GetString(ns, key string) string {
 	return viper.GetString(nskey)
 }
 
-func (c *LiveViperConfig) GetBool(ns, key string) bool {
+// GetBool returns a config value as a bool.
+func (c *LiveConfig) GetBool(ns, key string) bool {
 	if ns == NSRoot {
 		return viper.GetBool(key)
 	}
@@ -82,7 +88,8 @@ func (c *LiveViperConfig) GetBool(ns, key string) bool {
 	return viper.GetBool(nskey)
 }
 
-func (c *LiveViperConfig) GetInt(ns, key string) int {
+// GetInt returns a config value as an int.
+func (c *LiveConfig) GetInt(ns, key string) int {
 	if ns == NSRoot {
 		return viper.GetInt(key)
 	}
@@ -91,7 +98,8 @@ func (c *LiveViperConfig) GetInt(ns, key string) int {
 	return viper.GetInt(nskey)
 }
 
-func (c *LiveViperConfig) GetStringSlice(ns, key string) []string {
+// GetStringSlice returns a config value as a string slice.
+func (c *LiveConfig) GetStringSlice(ns, key string) []string {
 	if ns == NSRoot {
 		return viper.GetStringSlice(key)
 	}

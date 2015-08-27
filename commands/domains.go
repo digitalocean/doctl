@@ -75,10 +75,10 @@ func Domain() *cobra.Command {
 
 // RunDomainCreate runs domain create.
 func RunDomainCreate(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
+	client := doit.DoitConfig.GetGodoClient()
 	req := &godo.DomainCreateRequest{
-		Name:      doit.VConfig.GetString(ns, "domain-name"),
-		IPAddress: doit.VConfig.GetString(ns, "ip-address"),
+		Name:      doit.DoitConfig.GetString(ns, "domain-name"),
+		IPAddress: doit.DoitConfig.GetString(ns, "ip-address"),
 	}
 
 	d, _, err := client.Domains.Create(req)
@@ -91,7 +91,7 @@ func RunDomainCreate(ns string, out io.Writer) error {
 
 // RunDomainList runs domain create.
 func RunDomainList(cmdName string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
+	client := doit.DoitConfig.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Domains.List(opt)
@@ -122,8 +122,8 @@ func RunDomainList(cmdName string, out io.Writer) error {
 
 // RunDomainGet retrieves a domain by name.
 func RunDomainGet(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	id := doit.VConfig.GetString(ns, doit.ArgDomainName)
+	client := doit.DoitConfig.GetGodoClient()
+	id := doit.DoitConfig.GetString(ns, doit.ArgDomainName)
 
 	if len(id) < 1 {
 		return errors.New("invalid domain name")
@@ -139,8 +139,8 @@ func RunDomainGet(ns string, out io.Writer) error {
 
 // RunDomainDelete deletes a domain by name.
 func RunDomainDelete(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	name := doit.VConfig.GetString(ns, doit.ArgDomainName)
+	client := doit.DoitConfig.GetGodoClient()
+	name := doit.DoitConfig.GetString(ns, doit.ArgDomainName)
 
 	if len(name) < 1 {
 		return errors.New("invalid domain name")
@@ -152,8 +152,8 @@ func RunDomainDelete(ns string, out io.Writer) error {
 
 // RunRecordList list records for a domain.
 func RunRecordList(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	name := doit.VConfig.GetString(ns, doit.ArgDomainName)
+	client := doit.DoitConfig.GetGodoClient()
+	name := doit.DoitConfig.GetString(ns, doit.ArgDomainName)
 
 	if len(name) < 1 {
 		return errors.New("domain name is missing")
@@ -188,16 +188,16 @@ func RunRecordList(ns string, out io.Writer) error {
 
 // RunRecordCreate creates a domain record.
 func RunRecordCreate(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	name := doit.VConfig.GetString(ns, doit.ArgDomainName)
+	client := doit.DoitConfig.GetGodoClient()
+	name := doit.DoitConfig.GetString(ns, doit.ArgDomainName)
 
 	drcr := &godo.DomainRecordEditRequest{
-		Type:     doit.VConfig.GetString(ns, doit.ArgRecordType),
-		Name:     doit.VConfig.GetString(ns, doit.ArgRecordName),
-		Data:     doit.VConfig.GetString(ns, doit.ArgRecordData),
-		Priority: doit.VConfig.GetInt(ns, doit.ArgRecordPriority),
-		Port:     doit.VConfig.GetInt(ns, doit.ArgRecordPort),
-		Weight:   doit.VConfig.GetInt(ns, doit.ArgRecordWeight),
+		Type:     doit.DoitConfig.GetString(ns, doit.ArgRecordType),
+		Name:     doit.DoitConfig.GetString(ns, doit.ArgRecordName),
+		Data:     doit.DoitConfig.GetString(ns, doit.ArgRecordData),
+		Priority: doit.DoitConfig.GetInt(ns, doit.ArgRecordPriority),
+		Port:     doit.DoitConfig.GetInt(ns, doit.ArgRecordPort),
+		Weight:   doit.DoitConfig.GetInt(ns, doit.ArgRecordWeight),
 	}
 
 	if len(drcr.Type) == 0 {
@@ -214,9 +214,9 @@ func RunRecordCreate(ns string, out io.Writer) error {
 
 // RunRecordDelete deletes a domain record.
 func RunRecordDelete(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	domainName := doit.VConfig.GetString(ns, doit.ArgDomainName)
-	recordID := doit.VConfig.GetInt(ns, doit.ArgRecordID)
+	client := doit.DoitConfig.GetGodoClient()
+	domainName := doit.DoitConfig.GetString(ns, doit.ArgDomainName)
+	recordID := doit.DoitConfig.GetInt(ns, doit.ArgRecordID)
 
 	_, err := client.Domains.DeleteRecord(domainName, recordID)
 	return err
@@ -224,17 +224,17 @@ func RunRecordDelete(ns string, out io.Writer) error {
 
 // RunRecordUpdate updates a domain record.
 func RunRecordUpdate(ns string, out io.Writer) error {
-	client := doit.VConfig.GetGodoClient()
-	domainName := doit.VConfig.GetString(ns, doit.ArgDomainName)
-	recordID := doit.VConfig.GetInt(ns, doit.ArgRecordID)
+	client := doit.DoitConfig.GetGodoClient()
+	domainName := doit.DoitConfig.GetString(ns, doit.ArgDomainName)
+	recordID := doit.DoitConfig.GetInt(ns, doit.ArgRecordID)
 
 	drcr := &godo.DomainRecordEditRequest{
-		Type:     doit.VConfig.GetString(ns, doit.ArgRecordType),
-		Name:     doit.VConfig.GetString(ns, doit.ArgRecordName),
-		Data:     doit.VConfig.GetString(ns, doit.ArgRecordData),
-		Priority: doit.VConfig.GetInt(ns, doit.ArgRecordPriority),
-		Port:     doit.VConfig.GetInt(ns, doit.ArgRecordPort),
-		Weight:   doit.VConfig.GetInt(ns, doit.ArgRecordWeight),
+		Type:     doit.DoitConfig.GetString(ns, doit.ArgRecordType),
+		Name:     doit.DoitConfig.GetString(ns, doit.ArgRecordName),
+		Data:     doit.DoitConfig.GetString(ns, doit.ArgRecordData),
+		Priority: doit.DoitConfig.GetInt(ns, doit.ArgRecordPriority),
+		Port:     doit.DoitConfig.GetInt(ns, doit.ArgRecordPort),
+		Weight:   doit.DoitConfig.GetInt(ns, doit.ArgRecordWeight),
 	}
 
 	r, _, err := client.Domains.EditRecord(domainName, recordID, drcr)
