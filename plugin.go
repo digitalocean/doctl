@@ -13,6 +13,7 @@ import (
 // Plugin is a a plugin.
 type Plugin interface {
 	Name() string
+	Description() string
 }
 
 // PluginClient manages the client connection back to the doit rpc server.

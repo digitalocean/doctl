@@ -24,12 +24,13 @@ func (p *helloPlugin) Name() string {
 	return pluginName
 }
 
-var (
-	serverPort = flag.String("port", ":0", "RPC port")
-)
+func (p *helloPlugin) Description() string {
+	return "a sample plugin"
+}
 
 var (
-	summary = flag.Bool("summary", false, "show summary")
+	serverPort = flag.String("port", ":0", "RPC port")
+	summary    = flag.Bool("summary", false, "show summary")
 )
 
 type server struct{}
@@ -42,12 +43,13 @@ func (s server) Execute(ctx context.Context, in *protos.PluginRequest) (*protos.
 func main() {
 	flag.Parse()
 
+	p := &helloPlugin{}
+
 	if *summary {
-		fmt.Println("sample plugin")
+		fmt.Println(p.Description())
 		os.Exit(0)
 	}
 
-	p := &helloPlugin{}
 	c, err := doit.NewPluginClient(p, *serverPort, &server{})
 	if err != nil {
 		log.Fatalf("error initializing plugin: %v", err)
