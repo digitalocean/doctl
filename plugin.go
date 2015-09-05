@@ -29,7 +29,7 @@ func NewPluginClient(p Plugin, sp string, server protos.PluginServer) (*PluginCl
 		return nil, err
 	}
 
-	conn, err := grpc.Dial(sp)
+	conn, err := grpc.Dial(sp, grpc.WithBlock())
 	if err != nil {
 		return nil, err
 	}
