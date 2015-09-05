@@ -87,6 +87,7 @@ func (p *plugin) Kill() error {
 	return p.command.Stop()
 }
 
+// Plugin generates a plugin command.
 func Plugin() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "plugin",
@@ -100,7 +101,7 @@ func Plugin() *cobra.Command {
 	return cmd
 }
 
-// Plugin lists all available plugins.
+// RunPlugin lists all available plugins.
 func RunPlugin(args []string, out io.Writer) error {
 	if len(args) > 1 {
 		execPlugin(args[0], args[1:])
@@ -171,12 +172,14 @@ func execPlugin(name string, args []string) {
 	c := protos.NewPluginClient(conn)
 
 	o := []*protos.PluginRequest_Option{}
-	for _, a := range argSlicer(args) {
-		o1 := &protos.PluginRequest_Option{
-			Name:  a[0],
-			Value: a[1],
+	if as := argSlicer(args); len(as) > 1 {
+		for _, a := range as {
+			o1 := &protos.PluginRequest_Option{
+				Name:  a[0],
+				Value: a[1],
+			}
+			o = append(o, o1)
 		}
-		o = append(o, o1)
 	}
 
 	r, err := c.Execute(context.Background(), &protos.PluginRequest{Option: o})
