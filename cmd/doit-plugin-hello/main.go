@@ -3,19 +3,26 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net"
+	"log"
 	"os"
 
 	"golang.org/x/net/context"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/protos"
-	"google.golang.org/grpc"
 )
 
 const (
 	pluginName = "hello"
 )
+
+type helloPlugin struct{}
+
+var _ doit.Plugin = &helloPlugin{}
+
+func (p *helloPlugin) Name() string {
+	return pluginName
+}
 
 var (
 	serverPort = flag.String("port", ":0", "RPC port")
@@ -40,36 +47,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	l, err := net.Listen("tcp", "localhost:0")
+	p := &helloPlugin{}
+	c, err := doit.NewPluginClient(p, *serverPort, &server{})
 	if err != nil {
-		logrus.WithField("err", err).Fatal("unable to open port")
+		log.Fatalf("error initializing plugin: %v", err)
 	}
 
-	fmt.Printf("%s", l.Addr().String())
-
-	conn, err := grpc.Dial(*serverPort)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("couldn't not dial")
-	}
-
-	defer conn.Close()
-	c := protos.NewDoitClient(conn)
-
-	req := &protos.RegisterRequest{
-		Name:    pluginName,
-		Address: l.Addr().String(),
-	}
-
-	reply, err := c.Register(context.Background(), req)
-	if err != nil {
-		logrus.WithField("err", err).Fatal("unable to register server location")
-	}
-
-	if !reply.Success {
-		logrus.Fatal("unable to successfully register plugin")
-	}
-
-	s := grpc.NewServer()
-	protos.RegisterPluginServer(s, &server{})
-	s.Serve(l)
+	defer c.Close()
+	c.Serve()
 }
