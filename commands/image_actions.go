@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Droplet creates the droplet command.
+// ImageAction creates the image action commmand.
 func ImageAction() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "image-action",
@@ -32,7 +32,7 @@ func ImageAction() *cobra.Command {
 	return cmd
 }
 
-// Get retrieves an action for an image.
+// RunImageActionsGet retrieves an action for an image.
 func RunImageActionsGet(ns string, out io.Writer) error {
 	client := doit.DoitConfig.GetGodoClient()
 	imageID := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
@@ -46,7 +46,7 @@ func RunImageActionsGet(ns string, out io.Writer) error {
 	return doit.DisplayOutput(action, out)
 }
 
-// Tranfer an image.
+// RunImageActionsTransfer an image.
 func RunImageActionsTransfer(ns string, out io.Writer) error {
 	client := doit.DoitConfig.GetGodoClient()
 	id := doit.DoitConfig.GetInt(ns, doit.ArgImageID)

@@ -45,6 +45,8 @@ func (c *LiveCommand) Stop() error {
 	return c.cmd.Process.Kill()
 }
 
+// MockCommand is a mock command implementation. It allows you simulate running
+// an external command.
 type MockCommand struct {
 	path    string
 	running bool
@@ -55,6 +57,7 @@ type MockCommand struct {
 
 var _ Command = &MockCommand{}
 
+// NewMockCommand createsd a MockCommand.
 func NewMockCommand(path string) *MockCommand {
 	return &MockCommand{
 		path: path,
@@ -70,15 +73,18 @@ func NewMockCommand(path string) *MockCommand {
 	}
 }
 
+// Run simulates the running of a command.
 func (c *MockCommand) Run(args ...string) ([]byte, error) {
 	return nil, c.runFn()
 }
 
+// Start simulates starting a command.
 func (c *MockCommand) Start(args ...string) error {
 	c.running = true
 	return c.startFn()
 }
 
+// Stop simulates stoping a command.
 func (c *MockCommand) Stop() error {
 	c.running = false
 	return c.stopFn()
