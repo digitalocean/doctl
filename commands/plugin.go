@@ -171,14 +171,18 @@ func execPlugin(name string, args []string) {
 
 	c := protos.NewPluginClient(conn)
 
+	// TODO since this doesn't work well, change it out with
+	// something that allows normal args to work. e.g. --foo 1 --bar
 	o := []*protos.PluginRequest_Option{}
 	if as := argSlicer(args); len(as) > 1 {
 		for _, a := range as {
-			o1 := &protos.PluginRequest_Option{
-				Name:  a[0],
-				Value: a[1],
+			if len(a) == 2 {
+				o1 := &protos.PluginRequest_Option{
+					Name:  a[0],
+					Value: a[1],
+				}
+				o = append(o, o1)
 			}
-			o = append(o, o1)
 		}
 	}
 
