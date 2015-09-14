@@ -11,10 +11,10 @@ import (
 	"github.com/digitalocean/doctl/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
-var SSHCommand = cli.Command{
+var KeysCommand = cli.Command{
 	Name:    "sshkey",
 	Usage:   "SSH Key commands.",
-	Aliases: []string{"ssh", "keys"},
+	Aliases: []string{"keys"},
 	Action:  sshList,
 	Subcommands: []cli.Command{
 		{
