@@ -78,6 +78,7 @@ func buildApp() *cli.App {
 		DropletCommand,
 		RegionCommand,
 		SizeCommand,
+		KeysCommand,
 		SSHCommand,
 	}
 
