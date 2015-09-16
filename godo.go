@@ -43,16 +43,18 @@ type Client struct {
 	Rate Rate
 
 	// Services used for communicating with the API
-	Account        AccountService
-	Actions        ActionsService
-	Domains        DomainsService
-	Droplets       DropletsService
-	DropletActions DropletActionsService
-	Images         ImagesService
-	ImageActions   ImageActionsService
-	Keys           KeysService
-	Regions        RegionsService
-	Sizes          SizesService
+	Account           AccountService
+	Actions           ActionsService
+	Domains           DomainsService
+	Droplets          DropletsService
+	DropletActions    DropletActionsService
+	Images            ImagesService
+	ImageActions      ImageActionsService
+	Keys              KeysService
+	Regions           RegionsService
+	Sizes             SizesService
+	FloatingIPs       FloatingIPsService
+	FloatingIPActions FloatingIPActionsService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -152,6 +154,8 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Keys = &KeysServiceOp{client: c}
 	c.Regions = &RegionsServiceOp{client: c}
 	c.Sizes = &SizesServiceOp{client: c}
+	c.FloatingIPs = &FloatingIPsServiceOp{client: c}
+	c.FloatingIPActions = &FloatingIPActionsServiceOp{client: c}
 
 	return c
 }
