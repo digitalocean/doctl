@@ -39,10 +39,6 @@ func RunSSH(ns string, out io.Writer) error {
 
 	options = removeEmptyOptions(options)
 
-	if len(user) < 1 {
-		user = "root"
-	}
-
 	var droplet *godo.Droplet
 	var err error
 
@@ -70,14 +66,18 @@ func RunSSH(ns string, out io.Writer) error {
 		return errSSHInvalidOptions
 	}
 
+	// CoreOS has no root user
+	if droplet.Image.Distribution == "CoreOS" {
+		user = "core"
+	}
+
 	publicIP := extractDropletPublicIP(droplet)
 
 	if len(publicIP) < 1 {
 		return errors.New(sshNoAddress)
 	}
 
-	runner := doit.DoitConfig.SSH(user, publicIP, options)
-	return runner.Run()
+	return doit.DoitConfig.SSH(user, publicIP, options)
 }
 
 func removeEmptyOptions(in []string) []string {
