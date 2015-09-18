@@ -71,7 +71,7 @@ type ListOptions struct {
 	PerPage int `url:"per_page,omitempty"`
 }
 
-// Response is a Digital Ocean response. This wraps the standard http.Response returned from DigitalOcean.
+// Response is a DigitalOcean response. This wraps the standard http.Response returned from DigitalOcean.
 type Response struct {
 	*http.Response
 
@@ -133,7 +133,7 @@ func addOptions(s string, opt interface{}) (string, error) {
 	return origURL.String(), nil
 }
 
-// NewClient returns a new Digital Ocean API client.
+// NewClient returns a new DigitalOcean API client.
 func NewClient(httpClient *http.Client) *Client {
 	if httpClient == nil {
 		httpClient = http.DefaultClient

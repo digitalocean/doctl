@@ -8,7 +8,7 @@ import (
 const dropletBasePath = "v2/droplets"
 
 // DropletsService is an interface for interfacing with the droplet
-// endpoints of the Digital Ocean API
+// endpoints of the DigitalOcean API
 // See: https://developers.digitalocean.com/documentation/v2#droplets
 type DropletsService interface {
 	List(*ListOptions) ([]Droplet, *Response, error)
