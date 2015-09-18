@@ -4,7 +4,7 @@ import "fmt"
 
 const domainsBasePath = "v2/domains"
 
-// DomainsService is an interface for managing DNS with the Digital Ocean API.
+// DomainsService is an interface for managing DNS with the DigitalOcean API.
 // See: https://developers.digitalocean.com/documentation/v2#domains and
 // https://developers.digitalocean.com/documentation/v2#domain-records
 type DomainsService interface {
@@ -28,14 +28,14 @@ type DomainsServiceOp struct {
 
 var _ DomainsService = &DomainsServiceOp{}
 
-// Domain represents a Digital Ocean domain
+// Domain represents a DigitalOcean domain
 type Domain struct {
 	Name     string `json:"name"`
 	TTL      int    `json:"ttl"`
 	ZoneFile string `json:"zone_file"`
 }
 
-// domainRoot represents a response from the Digital Ocean API
+// domainRoot represents a response from the DigitalOcean API
 type domainRoot struct {
 	Domain *Domain `json:"domain"`
 }

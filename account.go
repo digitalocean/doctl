@@ -1,7 +1,7 @@
 package godo
 
 // AccountService is an interface for interfacing with the Account
-// endpoints of the Digital Ocean API
+// endpoints of the DigitalOcean API
 // See: https://developers.digitalocean.com/documentation/v2/#account
 type AccountService interface {
 	Get() (*Account, *Response, error)

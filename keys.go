@@ -5,7 +5,7 @@ import "fmt"
 const keysBasePath = "v2/account/keys"
 
 // KeysService is an interface for interfacing with the keys
-// endpoints of the Digital Ocean API
+// endpoints of the DigitalOcean API
 // See: https://developers.digitalocean.com/documentation/v2#keys
 type KeysService interface {
 	List(*ListOptions) ([]Key, *Response, error)

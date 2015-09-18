@@ -3,7 +3,7 @@ package godo
 import "fmt"
 
 // ImageActionsService is an interface for interfacing with the image actions
-// endpoints of the Digital Ocean API
+// endpoints of the DigitalOcean API
 // See: https://developers.digitalocean.com/documentation/v2#image-actions
 type ImageActionsService interface {
 	Get(int, int) (*Action, *Response, error)
