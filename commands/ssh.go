@@ -24,7 +24,7 @@ func SSH() *cobra.Command {
 	addIntFlag(cmdSSH, doit.ArgDropletID, 0, "droplet id")
 	addStringFlag(cmdSSH, doit.ArgDropletName, "", "droplet name")
 	addStringFlag(cmdSSH, doit.ArgSSHUser, "root", "ssh user")
-	addStringSliceFlag(cmdSSH, doit.ArgSSHOption, nil, "ssh flag")
+	addStringFlag(cmdSSH, doit.ArgsSSHKeyPath, "", "path to private ssh key")
 
 	return cmdSSH
 }
@@ -35,9 +35,7 @@ func RunSSH(ns string, out io.Writer) error {
 	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
 	name := doit.DoitConfig.GetString(ns, doit.ArgDropletName)
 	user := doit.DoitConfig.GetString(ns, doit.ArgSSHUser)
-	options := doit.DoitConfig.GetStringSlice(ns, doit.ArgSSHOption)
-
-	options = removeEmptyOptions(options)
+	keyPath := doit.DoitConfig.GetString(ns, doit.ArgsSSHKeyPath)
 
 	var droplet *godo.Droplet
 	var err error
@@ -77,7 +75,7 @@ func RunSSH(ns string, out io.Writer) error {
 		return errors.New(sshNoAddress)
 	}
 
-	return doit.DoitConfig.SSH(user, publicIP, options)
+	return doit.DoitConfig.SSH(user, publicIP, keyPath)
 }
 
 func removeEmptyOptions(in []string) []string {

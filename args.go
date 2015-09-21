@@ -53,8 +53,8 @@ const (
 	ArgSizeSlug = "size"
 	// ArgSSHKeys is a ssh key argument.
 	ArgSSHKeys = "ssh-keys"
-	// ArgSSHOption is a ssh option argument.
-	ArgSSHOption = "sshopt"
+	// ArgsSSHKeyPath is a ssh argument.
+	ArgsSSHKeyPath = "ssh-key-path"
 	// ArgUserData is a user data argument.
 	ArgUserData = "user-data"
 	// ArgUserDataFile is a user data file location argument.

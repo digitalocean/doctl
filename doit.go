@@ -25,7 +25,7 @@ var (
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient() *godo.Client
-	SSH(user, host string, options []string) error
+	SSH(user, host, keyPath string) error
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) string
 	GetBool(ns, key string) bool
@@ -120,7 +120,7 @@ func sshConnect(user string, host string, method ssh.AuthMethod) (err error) {
 }
 
 // SSH creates a ssh connection to a host.
-func (c *LiveConfig) SSH(user, host string, options []string) (err error) {
+func (c *LiveConfig) SSH(user, host, keyPath string) (err error) {
 	logrus.WithFields(logrus.Fields{
 		"user": user,
 		"host": host,
@@ -133,7 +133,10 @@ func (c *LiveConfig) SSH(user, host string, options []string) (err error) {
 	if err != nil {
 		logrus.Fatal(err.Error())
 	}
-	keyPath := filepath.Join(usr.HomeDir, ".ssh", "id_rsa") // TODO (thebyrd) look for argument
+	if keyPath == "" {
+		keyPath = filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
+	}
+
 	key, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		return err
