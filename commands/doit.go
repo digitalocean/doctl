@@ -35,7 +35,7 @@ var (
 func init() {
 	viper.SetConfigType("yaml")
 
-	DoitCmd.PersistentFlags().StringVarP(&Token, "token", "t", "", "DigtialOcean API V2 Token")
+	DoitCmd.PersistentFlags().StringVarP(&Token, "access-token", "t", "", "DigtialOcean API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output formt [text|json]")
 }
 
@@ -80,8 +80,8 @@ func addCommands() {
 
 func initFlags() {
 	viper.SetEnvPrefix("DIGITALOCEAN")
-	viper.BindEnv("token", "ACCESS_TOKEN")
-	viper.BindPFlag("token", DoitCmd.PersistentFlags().Lookup("token"))
+	viper.BindEnv("access-token", "DIGITALOCEAN_ACCESS_TOKEN")
+	viper.BindPFlag("access-token", DoitCmd.PersistentFlags().Lookup("access-token"))
 	viper.BindPFlag("output", DoitCmd.PersistentFlags().Lookup("output"))
 }
 
@@ -95,8 +95,8 @@ func initializeConfig() {
 	LoadConfig()
 	initFlags()
 
-	if DoitCmd.PersistentFlags().Lookup("token").Changed {
-		viper.Set("token", Token)
+	if DoitCmd.PersistentFlags().Lookup("access-token").Changed {
+		viper.Set("access-token", Token)
 	}
 
 	if DoitCmd.PersistentFlags().Lookup("output").Changed {

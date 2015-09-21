@@ -30,7 +30,7 @@ COMMANDS:
    help, h		Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
-   --token 		DigitalOcean API V2 Token [$DIGITAL_OCEAN_TOKEN]
+   --access-token 		DigitalOcean API V2 Access Token [$DIGITALOCEAN_ACCESS_TOKEN]
    --debug		Debug
    --output 		output format (json or text)
    --help, -h		show help
@@ -43,18 +43,18 @@ By default, `doit` will load a configuration file from `$HOME/.doitcfg` if found
 
 ### Configuration OPTIONS
 
-* `token` - The DigitalOcean token. You can generate a token in the [Apps & API](https://cloud.digitalocean.com/settings/applications) Of the DigitalOcean control panel.
+* `access-token` - The DigitalOcean access token. You can generate a token in the [Apps & API](https://cloud.digitalocean.com/settings/applications) Of the DigitalOcean control panel.
 * `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doit` will default to `text`.
 
 Example:
 
 ```yaml
 {
-  token: MY_TOKEN
+  access-token: MY_TOKEN
   output: text
 }
 ```
 
 ## Plugins
 
-`doit` functionality can be enhanced using plugins. 
+`doit` functionality can be enhanced using plugins.
