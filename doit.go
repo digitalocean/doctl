@@ -34,7 +34,7 @@ var _ Config = &LiveConfig{}
 
 // GetGodoClient returns a GodoClient.
 func (c *LiveConfig) GetGodoClient() *godo.Client {
-	token := viper.GetString("token")
+	token := viper.GetString("access-token")
 	tokenSource := &TokenSource{AccessToken: token}
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
 	return godo.NewClient(oauthClient)
