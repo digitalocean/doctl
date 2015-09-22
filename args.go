@@ -55,6 +55,8 @@ const (
 	ArgSSHKeys = "ssh-keys"
 	// ArgsSSHKeyPath is a ssh argument.
 	ArgsSSHKeyPath = "ssh-key-path"
+	// ArgsSSHPort is a ssh argument.
+	ArgsSSHPort = "ssh-port"
 	// ArgUserData is a user data argument.
 	ArgUserData = "user-data"
 	// ArgUserDataFile is a user data file location argument.

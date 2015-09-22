@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os/user"
+	"path/filepath"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -20,11 +23,18 @@ var (
 
 // SSH creates the ssh commands heirarchy
 func SSH() *cobra.Command {
+	usr, err := user.Current()
+	if err != nil {
+		logrus.Fatal(err.Error())
+	}
+	path := filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
+
 	cmdSSH := cmdBuilder(RunSSH, "ssh", "ssh to droplet", writer)
 	addIntFlag(cmdSSH, doit.ArgDropletID, 0, "droplet id")
 	addStringFlag(cmdSSH, doit.ArgDropletName, "", "droplet name")
 	addStringFlag(cmdSSH, doit.ArgSSHUser, "root", "ssh user")
-	addStringFlag(cmdSSH, doit.ArgsSSHKeyPath, "", "path to private ssh key")
+	addStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
+	addIntFlag(cmdSSH, doit.ArgsSSHPort, 22, "port sshd is running on")
 
 	return cmdSSH
 }
@@ -36,6 +46,7 @@ func RunSSH(ns string, out io.Writer) error {
 	name := doit.DoitConfig.GetString(ns, doit.ArgDropletName)
 	user := doit.DoitConfig.GetString(ns, doit.ArgSSHUser)
 	keyPath := doit.DoitConfig.GetString(ns, doit.ArgsSSHKeyPath)
+	port := doit.DoitConfig.GetInt(ns, doit.ArgsSSHPort)
 
 	var droplet *godo.Droplet
 	var err error
@@ -75,7 +86,7 @@ func RunSSH(ns string, out io.Writer) error {
 		return errors.New(sshNoAddress)
 	}
 
-	return doit.DoitConfig.SSH(user, publicIP, keyPath)
+	return doit.DoitConfig.SSH(user, publicIP, keyPath, port)
 }
 
 func removeEmptyOptions(in []string) []string {

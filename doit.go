@@ -5,8 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	osUser "os/user"
-	"path/filepath"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
@@ -25,7 +23,7 @@ var (
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient() *godo.Client
-	SSH(user, host, keyPath string) error
+	SSH(user, host, keyPath string, port int) error
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) string
 	GetBool(ns, key string) bool
@@ -120,23 +118,15 @@ func sshConnect(user string, host string, method ssh.AuthMethod) (err error) {
 }
 
 // SSH creates a ssh connection to a host.
-func (c *LiveConfig) SSH(user, host, keyPath string) (err error) {
+func (c *LiveConfig) SSH(user, host, keyPath string, port int) (err error) {
 	logrus.WithFields(logrus.Fields{
 		"user": user,
 		"host": host,
 	}).Info("ssh")
 
-	sshHost := fmt.Sprintf("%s:%d", host, 22) // TODO (thebyrd) parse port from cli args
+	sshHost := fmt.Sprintf("%s:%d", host, port)
 
 	// Key Auth
-	usr, err := osUser.Current()
-	if err != nil {
-		logrus.Fatal(err.Error())
-	}
-	if keyPath == "" {
-		keyPath = filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
-	}
-
 	key, err := ioutil.ReadFile(keyPath)
 	if err != nil {
 		return err
