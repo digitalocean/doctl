@@ -87,16 +87,32 @@ func (s *ImagesServiceOp) ListUser(opt *ListOptions) ([]Image, *Response, error)
 
 // GetByID retrieves an image by id.
 func (s *ImagesServiceOp) GetByID(imageID int) (*Image, *Response, error) {
+	if imageID < 1 {
+		return nil, nil, NewArgError("imageID", "cannot be less than 1")
+	}
+
 	return s.get(interface{}(imageID))
 }
 
 // GetBySlug retrieves an image by slug.
 func (s *ImagesServiceOp) GetBySlug(slug string) (*Image, *Response, error) {
+	if len(slug) < 1 {
+		return nil, nil, NewArgError("slug", "cannot be blank")
+	}
+
 	return s.get(interface{}(slug))
 }
 
 // Update an image name.
 func (s *ImagesServiceOp) Update(imageID int, updateRequest *ImageUpdateRequest) (*Image, *Response, error) {
+	if imageID < 1 {
+		return nil, nil, NewArgError("imageID", "cannot be less than 1")
+	}
+
+	if updateRequest == nil {
+		return nil, nil, NewArgError("updateRequest", "cannot be nil")
+	}
+
 	path := fmt.Sprintf("%s/%d", imageBasePath, imageID)
 	req, err := s.client.NewRequest("PUT", path, updateRequest)
 	if err != nil {
@@ -114,6 +130,10 @@ func (s *ImagesServiceOp) Update(imageID int, updateRequest *ImageUpdateRequest)
 
 // Delete an image.
 func (s *ImagesServiceOp) Delete(imageID int) (*Response, error) {
+	if imageID < 1 {
+		return nil, NewArgError("imageID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d", imageBasePath, imageID)
 
 	req, err := s.client.NewRequest("DELETE", path, nil)

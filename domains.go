@@ -87,7 +87,7 @@ func (d Domain) String() string {
 	return Stringify(d)
 }
 
-// List all domains
+// List all domains.
 func (s DomainsServiceOp) List(opt *ListOptions) ([]Domain, *Response, error) {
 	path := domainsBasePath
 	path, err := addOptions(path, opt)
@@ -112,8 +112,12 @@ func (s DomainsServiceOp) List(opt *ListOptions) ([]Domain, *Response, error) {
 	return root.Domains, resp, err
 }
 
-// Get individual domain
+// Get individual domain. It requires a non-empty domain name.
 func (s *DomainsServiceOp) Get(name string) (*Domain, *Response, error) {
+	if len(name) < 1 {
+		return nil, nil, NewArgError("name", "cannot be an empty string")
+	}
+
 	path := fmt.Sprintf("%s/%s", domainsBasePath, name)
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -132,6 +136,10 @@ func (s *DomainsServiceOp) Get(name string) (*Domain, *Response, error) {
 
 // Create a new domain
 func (s *DomainsServiceOp) Create(createRequest *DomainCreateRequest) (*Domain, *Response, error) {
+	if createRequest == nil {
+		return nil, nil, NewArgError("createRequest", "cannot be nil")
+	}
+
 	path := domainsBasePath
 
 	req, err := s.client.NewRequest("POST", path, createRequest)
@@ -149,6 +157,10 @@ func (s *DomainsServiceOp) Create(createRequest *DomainCreateRequest) (*Domain, 
 
 // Delete domain
 func (s *DomainsServiceOp) Delete(name string) (*Response, error) {
+	if len(name) < 1 {
+		return nil, NewArgError("name", "cannot be an empty string")
+	}
+
 	path := fmt.Sprintf("%s/%s", domainsBasePath, name)
 
 	req, err := s.client.NewRequest("DELETE", path, nil)
@@ -173,6 +185,10 @@ func (d DomainRecordEditRequest) String() string {
 
 // Records returns a slice of DomainRecords for a domain
 func (s *DomainsServiceOp) Records(domain string, opt *ListOptions) ([]DomainRecord, *Response, error) {
+	if len(domain) < 1 {
+		return nil, nil, NewArgError("domain", "cannot be an empty string")
+	}
+
 	path := fmt.Sprintf("%s/%s/records", domainsBasePath, domain)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -198,6 +214,14 @@ func (s *DomainsServiceOp) Records(domain string, opt *ListOptions) ([]DomainRec
 
 // Record returns the record id from a domain
 func (s *DomainsServiceOp) Record(domain string, id int) (*DomainRecord, *Response, error) {
+	if len(domain) < 1 {
+		return nil, nil, NewArgError("domain", "cannot be an empty string")
+	}
+
+	if id < 1 {
+		return nil, nil, NewArgError("id", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%s/records/%d", domainsBasePath, domain, id)
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -216,6 +240,14 @@ func (s *DomainsServiceOp) Record(domain string, id int) (*DomainRecord, *Respon
 
 // DeleteRecord deletes a record from a domain identified by id
 func (s *DomainsServiceOp) DeleteRecord(domain string, id int) (*Response, error) {
+	if len(domain) < 1 {
+		return nil, NewArgError("domain", "cannot be an empty string")
+	}
+
+	if id < 1 {
+		return nil, NewArgError("id", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%s/records/%d", domainsBasePath, domain, id)
 
 	req, err := s.client.NewRequest("DELETE", path, nil)
@@ -232,7 +264,20 @@ func (s *DomainsServiceOp) DeleteRecord(domain string, id int) (*Response, error
 func (s *DomainsServiceOp) EditRecord(
 	domain string,
 	id int,
-	editRequest *DomainRecordEditRequest) (*DomainRecord, *Response, error) {
+	editRequest *DomainRecordEditRequest,
+) (*DomainRecord, *Response, error) {
+	if len(domain) < 1 {
+		return nil, nil, NewArgError("domain", "cannot be an empty string")
+	}
+
+	if id < 1 {
+		return nil, nil, NewArgError("id", "cannot be less than 1")
+	}
+
+	if editRequest == nil {
+		return nil, nil, NewArgError("editRequest", "cannot be nil")
+	}
+
 	path := fmt.Sprintf("%s/%s/records/%d", domainsBasePath, domain, id)
 
 	req, err := s.client.NewRequest("PUT", path, editRequest)
@@ -253,6 +298,14 @@ func (s *DomainsServiceOp) EditRecord(
 func (s *DomainsServiceOp) CreateRecord(
 	domain string,
 	createRequest *DomainRecordEditRequest) (*DomainRecord, *Response, error) {
+	if len(domain) < 1 {
+		return nil, nil, NewArgError("domain", "cannot be empty string")
+	}
+
+	if createRequest == nil {
+		return nil, nil, NewArgError("createRequest", "cannot be nil")
+	}
+
 	path := fmt.Sprintf("%s/%s/records", domainsBasePath, domain)
 	req, err := s.client.NewRequest("POST", path, createRequest)
 
