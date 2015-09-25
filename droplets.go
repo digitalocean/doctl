@@ -194,6 +194,10 @@ func (s *DropletsServiceOp) List(opt *ListOptions) ([]Droplet, *Response, error)
 
 // Get individual droplet
 func (s *DropletsServiceOp) Get(dropletID int) (*Droplet, *Response, error) {
+	if dropletID < 1 {
+		return nil, nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d", dropletBasePath, dropletID)
 
 	req, err := s.client.NewRequest("GET", path, nil)
@@ -212,6 +216,10 @@ func (s *DropletsServiceOp) Get(dropletID int) (*Droplet, *Response, error) {
 
 // Create droplet
 func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*Droplet, *Response, error) {
+	if createRequest == nil {
+		return nil, nil, NewArgError("createRequest", "cannot be nil")
+	}
+
 	path := dropletBasePath
 
 	req, err := s.client.NewRequest("POST", path, createRequest)
@@ -233,6 +241,10 @@ func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*Drople
 
 // Delete droplet
 func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
+	if dropletID < 1 {
+		return nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d", dropletBasePath, dropletID)
 
 	req, err := s.client.NewRequest("DELETE", path, nil)
@@ -247,6 +259,10 @@ func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
 
 // Kernels lists kernels available for a droplet.
 func (s *DropletsServiceOp) Kernels(dropletID int, opt *ListOptions) ([]Kernel, *Response, error) {
+	if dropletID < 1 {
+		return nil, nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d/kernels", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -269,6 +285,10 @@ func (s *DropletsServiceOp) Kernels(dropletID int, opt *ListOptions) ([]Kernel, 
 
 // Actions lists the actions for a droplet.
 func (s *DropletsServiceOp) Actions(dropletID int, opt *ListOptions) ([]Action, *Response, error) {
+	if dropletID < 1 {
+		return nil, nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d/actions", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -294,6 +314,10 @@ func (s *DropletsServiceOp) Actions(dropletID int, opt *ListOptions) ([]Action, 
 
 // Backups lists the backups for a droplet.
 func (s *DropletsServiceOp) Backups(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
+	if dropletID < 1 {
+		return nil, nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d/backups", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -319,6 +343,10 @@ func (s *DropletsServiceOp) Backups(dropletID int, opt *ListOptions) ([]Image, *
 
 // Snapshots lists the snapshots available for a droplet.
 func (s *DropletsServiceOp) Snapshots(dropletID int, opt *ListOptions) ([]Image, *Response, error) {
+	if dropletID < 1 {
+		return nil, nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d/snapshots", dropletBasePath, dropletID)
 	path, err := addOptions(path, opt)
 	if err != nil {
@@ -344,6 +372,10 @@ func (s *DropletsServiceOp) Snapshots(dropletID int, opt *ListOptions) ([]Image,
 
 // Neighbors lists the neighbors for a droplet.
 func (s *DropletsServiceOp) Neighbors(dropletID int) ([]Droplet, *Response, error) {
+	if dropletID < 1 {
+		return nil, nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d/neighbors", dropletBasePath, dropletID)
 
 	req, err := s.client.NewRequest("GET", path, nil)

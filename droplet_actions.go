@@ -161,6 +161,14 @@ func (s *DropletActionsServiceOp) Upgrade(id int) (*Action, *Response, error) {
 }
 
 func (s *DropletActionsServiceOp) doAction(id int, request *ActionRequest) (*Action, *Response, error) {
+	if id < 1 {
+		return nil, nil, NewArgError("id", "cannot be less than 1")
+	}
+
+	if request == nil {
+		return nil, nil, NewArgError("request", "request can't be nil")
+	}
+
 	path := dropletActionPath(id)
 
 	req, err := s.client.NewRequest("POST", path, request)
@@ -179,6 +187,14 @@ func (s *DropletActionsServiceOp) doAction(id int, request *ActionRequest) (*Act
 
 // Get an action for a particular droplet by id.
 func (s *DropletActionsServiceOp) Get(dropletID, actionID int) (*Action, *Response, error) {
+	if dropletID < 1 {
+		return nil, nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
+	if actionID < 1 {
+		return nil, nil, NewArgError("actionID", "cannot be less than 1")
+	}
+
 	path := fmt.Sprintf("%s/%d", dropletActionPath(dropletID), actionID)
 	return s.get(path)
 }
