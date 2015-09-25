@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
@@ -76,7 +77,7 @@ func RunSSH(ns string, out io.Writer) error {
 	}
 
 	// CoreOS has no root user
-	if droplet.Image.Distribution == "CoreOS" {
+	if strings.Contains(strings.ToLower(droplet.Image.Slug), "coreos") {
 		user = "core"
 	}
 
