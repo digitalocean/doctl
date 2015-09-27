@@ -32,6 +32,12 @@ var (
 	testDropletList = []godo.Droplet{testDroplet}
 	testKernel      = godo.Kernel{ID: 1}
 	testKernelList  = []godo.Kernel{testKernel}
+	testFloatingIP  = godo.FloatingIP{
+		Droplet: &testDroplet,
+		Region:  testDroplet.Region,
+		IP:      "127.0.0.1",
+	}
+	testFloatingIPList = []godo.FloatingIP{testFloatingIP}
 )
 
 type testFn func(c *TestConfig)

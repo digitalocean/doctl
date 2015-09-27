@@ -70,6 +70,8 @@ func addCommands() {
 	DoitCmd.AddCommand(Domain())
 	DoitCmd.AddCommand(DropletAction())
 	DoitCmd.AddCommand(Droplet())
+	DoitCmd.AddCommand(FloatingIP())
+	DoitCmd.AddCommand(FloatingIPAction())
 	DoitCmd.AddCommand(Images())
 	DoitCmd.AddCommand(Region())
 	DoitCmd.AddCommand(Size())
