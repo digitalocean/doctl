@@ -23,7 +23,7 @@ var (
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient() *godo.Client
-	SSH(user, host, keyPath string, port int) error
+	SSH(user, host, keyPath string, port int) Runner
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) string
 	GetBool(ns, key string) bool
@@ -100,7 +100,7 @@ func sshConnect(user string, host string, method ssh.AuthMethod) error {
 	}
 
 	err = session.Wait()
-	if serr, ok := err.(*ssh.ExitError); ok && waitMsg.Msg() == "" {
+	if _, ok := err.(*ssh.ExitError); ok {
 		return nil
 	}
 	if err == io.EOF {
@@ -109,17 +109,25 @@ func sshConnect(user string, host string, method ssh.AuthMethod) error {
 	return err
 }
 
-// SSH creates a ssh connection to a host.
-func (c *LiveConfig) SSH(user, host, keyPath string, port int) (err error) {
+type sshRunner struct {
+	user    string
+	host    string
+	keyPath string
+	port    int
+}
+
+var _ Runner = &sshRunner{}
+
+func (r *sshRunner) Run() error {
 	logrus.WithFields(logrus.Fields{
-		"user": user,
-		"host": host,
+		"user": r.user,
+		"host": r.host,
 	}).Info("ssh")
 
-	sshHost := fmt.Sprintf("%s:%d", host, port)
+	sshHost := fmt.Sprintf("%s:%d", r.host, r.port)
 
 	// Key Auth
-	key, err := ioutil.ReadFile(keyPath)
+	key, err := ioutil.ReadFile(r.keyPath)
 	if err != nil {
 		return err
 	}
@@ -127,7 +135,7 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int) (err error) {
 	if err != nil {
 		return err
 	}
-	if err := sshConnect(user, sshHost, ssh.PublicKeys(privateKey)); err != nil {
+	if err := sshConnect(r.user, sshHost, ssh.PublicKeys(privateKey)); err != nil {
 		// Password Auth if Key Auth Fails
 		fd := os.Stdin.Fd()
 		state, err := terminal.MakeRaw(int(fd))
@@ -140,11 +148,23 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int) (err error) {
 		if err != nil {
 			return err
 		}
-		if err := sshConnect(user, sshHost, ssh.Password(string(password))); err != nil {
+		if err := sshConnect(r.user, sshHost, ssh.Password(string(password))); err != nil {
 			return err
 		}
 	}
 	return err
+
+}
+
+// SSH creates a ssh connection to a host.
+func (c *LiveConfig) SSH(user, host, keyPath string, port int) Runner {
+	return &sshRunner{
+		user:    user,
+		host:    host,
+		keyPath: keyPath,
+		port:    port,
+	}
+
 }
 
 // Set sets a config key.

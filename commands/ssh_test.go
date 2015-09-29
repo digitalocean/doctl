@@ -18,8 +18,8 @@ type sshMock struct {
 	isError bool
 }
 
-func (s *sshMock) cmd() func(u, h string, o []string) doit.Runner {
-	return func(u, h string, o []string) doit.Runner {
+func (s *sshMock) cmd() func(u, h, kp string, p int) doit.Runner {
+	return func(u, h, kp string, p int) doit.Runner {
 		s.didRun = true
 		s.user = u
 		s.host = h
