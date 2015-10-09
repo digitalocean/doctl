@@ -172,7 +172,7 @@ COMMANDS:
 
 ## Licensing
 
-doctl is licensed under the Apache License, Version 2.0. See LICENSE.txt for full license text.
+doctl is licensed under the Apache License, Version 2.0. See [LICENSE.txt](https://github.com/digitalocean/doctl/blob/master/LICENSE.txt) for full license text.
 
 ## Author
 
