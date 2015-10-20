@@ -46,48 +46,50 @@ func writeJSON(item interface{}, w io.Writer) error {
 }
 
 func writeText(item interface{}, w io.Writer) error {
-	switch item.(type) {
+	switch i := item.(type) {
 	case *godo.Account:
 		writeJSON(item, w)
 	case *godo.Action:
-		i := item.(*godo.Action)
 		outputActions([]godo.Action{*i}, w)
 	case []godo.Action:
-		outputActions(item.([]godo.Action), w)
+		outputActions(i, w)
 	case *godo.Domain:
 		outputZone(item.(*godo.Domain), w)
 	case []godo.Domain:
-		outputDomains(item.([]godo.Domain), w)
+		outputDomains(i, w)
 	case *godo.DomainRecord:
-		i := item.(*godo.DomainRecord)
 		outputRecords([]godo.DomainRecord{*i}, w)
 	case []godo.DomainRecord:
-		outputRecords(item.([]godo.DomainRecord), w)
+		outputRecords(i, w)
 	case *godo.Droplet:
-		d := item.(*godo.Droplet)
-		outputDroplets([]godo.Droplet{*d}, w)
+		outputDroplets([]godo.Droplet{*i}, w)
 	case []godo.Droplet:
-		outputDroplets(item.([]godo.Droplet), w)
+		outputDroplets(i, w)
 	case *godo.Image:
-		i := item.(*godo.Image)
 		outputImages([]godo.Image{*i}, w)
 	case []godo.Image:
-		outputImages(item.([]godo.Image), w)
+		outputImages(i, w)
 	case *godo.Kernel:
-		i := item.(*godo.Kernel)
 		outputKernels([]godo.Kernel{*i}, w)
 	case []godo.Kernel:
-		outputKernels(item.([]godo.Kernel), w)
+		outputKernels(i, w)
 	case *godo.Key:
-		i := item.(*godo.Key)
 		outputSSHKeys([]godo.Key{*i}, w)
 	case []godo.Key:
-		outputSSHKeys(item.([]godo.Key), w)
+		outputSSHKeys(i, w)
 
 	case []godo.Region:
-		outputRegions(item.([]godo.Region), w)
+		outputRegions(i, w)
 	case []godo.Size:
-		outputSizes(item.([]godo.Size), w)
+		outputSizes(i, w)
+
+	case *godo.FloatingIP:
+		outputFloatingIPs([]godo.FloatingIP{*i}, w)
+	case []godo.FloatingIP:
+		outputFloatingIPs(i, w)
+
+	default:
+		panic(fmt.Sprintf("no mapping for %T", item))
 	}
 
 	return nil
@@ -120,6 +122,23 @@ func outputDroplets(list []godo.Droplet, out io.Writer) {
 		fmt.Fprintf(w, "%d\t%s\t%s\t%d\t%d\t%d\t%s\t%s\t%s\n",
 			d.ID, d.Name, ip, d.Memory, d.Vcpus, d.Disk, d.Region.Slug, image, d.Status)
 	}
+	fmt.Fprintln(w)
+	w.Flush()
+}
+
+func outputFloatingIPs(list []godo.FloatingIP, out io.Writer) {
+	w := new(tabwriter.Writer)
+	w.Init(out, 0, 4*4, 1, '\t', 0)
+
+	fmt.Fprintln(w, "IP\tRegion\tDroplet")
+	for _, ip := range list {
+		var droplet string
+		if ip.Droplet != nil {
+			droplet = fmt.Sprintf("%d", ip.Droplet.ID)
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\n", ip.IP, ip.Region.Slug, droplet)
+	}
+
 	fmt.Fprintln(w)
 	w.Flush()
 }

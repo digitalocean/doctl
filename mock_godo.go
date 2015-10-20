@@ -273,6 +273,60 @@ func (s *DropletsServiceMock) Snapshots(dropletID int, opt *godo.ListOptions) ([
 	return s.SnapshotsFn(dropletID, opt)
 }
 
+// FloatingIPsServiceMock mocks github.com/digitalocean/godo/FloatingIPsService.
+type FloatingIPsServiceMock struct {
+	ListFn   func(*godo.ListOptions) ([]godo.FloatingIP, *godo.Response, error)
+	GetFn    func(string) (*godo.FloatingIP, *godo.Response, error)
+	CreateFn func(*godo.FloatingIPCreateRequest) (*godo.FloatingIP, *godo.Response, error)
+	DeleteFn func(string) (*godo.Response, error)
+}
+
+var _ godo.FloatingIPsService = &FloatingIPsServiceMock{}
+
+// List is a mocked method.
+func (f *FloatingIPsServiceMock) List(opt *godo.ListOptions) ([]godo.FloatingIP, *godo.Response, error) {
+	return f.ListFn(opt)
+}
+
+// Get is a mocked method.
+func (f *FloatingIPsServiceMock) Get(ip string) (*godo.FloatingIP, *godo.Response, error) {
+	return f.GetFn(ip)
+}
+
+// Create is a mocked method.
+func (f *FloatingIPsServiceMock) Create(createRequest *godo.FloatingIPCreateRequest) (*godo.FloatingIP, *godo.Response, error) {
+	return f.CreateFn(createRequest)
+}
+
+// Delete is a mocked method.
+func (f *FloatingIPsServiceMock) Delete(ip string) (*godo.Response, error) {
+	return f.DeleteFn(ip)
+}
+
+// FloatingIPActionsServiceMock mocks github.com/digitalocean/godo/FloatingIPActionsService.
+type FloatingIPActionsServiceMock struct {
+	AssignFn   func(ip string, dropletID int) (*godo.Action, *godo.Response, error)
+	UnassignFn func(ip string) (*godo.Action, *godo.Response, error)
+	GetFn      func(ip string, actionID int) (*godo.Action, *godo.Response, error)
+}
+
+var _ godo.FloatingIPActionsService = &FloatingIPActionsServiceMock{}
+
+// Assign is a mocked method.
+func (s *FloatingIPActionsServiceMock) Assign(ip string, dropletID int) (*godo.Action, *godo.Response, error) {
+	return s.AssignFn(ip, dropletID)
+}
+
+// Unassign is a mocked method.
+func (s *FloatingIPActionsServiceMock) Unassign(ip string) (*godo.Action, *godo.Response, error) {
+	return s.UnassignFn(ip)
+}
+
+// Get is a mocked method.
+func (s *FloatingIPActionsServiceMock) Get(ip string, actionID int) (*godo.Action, *godo.Response, error) {
+	return s.GetFn(ip, actionID)
+}
+
 // ImagesServiceMock mocks github.com/digitalocean/godo/ImagesService.
 type ImagesServiceMock struct {
 	ListFn             func(*godo.ListOptions) ([]godo.Image, *godo.Response, error)
