@@ -23,7 +23,7 @@ var (
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient() *godo.Client
-	SSH(user, host, keyPath string, port int) error
+	SSH(user, host, keyPath string, port int) Runner
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) string
 	GetBool(ns, key string) bool
@@ -44,7 +44,7 @@ func (c *LiveConfig) GetGodoClient() *godo.Client {
 	return godo.NewClient(oauthClient)
 }
 
-func sshConnect(user string, host string, method ssh.AuthMethod) (err error) {
+func sshConnect(user string, host string, method ssh.AuthMethod) error {
 	sshc := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{method},
@@ -53,46 +53,43 @@ func sshConnect(user string, host string, method ssh.AuthMethod) (err error) {
 	if err != nil {
 		return err
 	}
+	defer conn.Close()
 
 	session, err := conn.NewSession()
 	if err != nil {
 		return err
 	}
+	defer session.Close()
 
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
 	session.Stdin = os.Stdin
 
-	defer session.Close()
+	var (
+		termWidth, termHeight int
+	)
+	fd := os.Stdin.Fd()
+
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return err
+	}
+	defer term.RestoreTerminal(fd, oldState)
+
+	winsize, err := term.GetWinsize(fd)
+	if err != nil {
+		termWidth = 80
+		termHeight = 24
+	} else {
+		termWidth = int(winsize.Width)
+		termHeight = int(winsize.Height)
+	}
 
 	modes := ssh.TerminalModes{
 		ssh.ECHO: 1,
 	}
 
-	var (
-		termWidth, termHeight int
-	)
-	fd := os.Stdin.Fd()
-	if term.IsTerminal(fd) {
-		oldState, err := term.MakeRaw(fd)
-		if err != nil {
-			return err
-		}
-
-		defer term.RestoreTerminal(fd, oldState)
-
-		winsize, err := term.GetWinsize(fd)
-		if err != nil {
-			termWidth = 80
-			termHeight = 24
-		} else {
-			termWidth = int(winsize.Width)
-			termHeight = int(winsize.Height)
-		}
-	}
-
 	if err := session.RequestPty("xterm", termWidth, termHeight, modes); err != nil {
-		session.Close()
 		return err
 	}
 	if err == nil {
@@ -103,31 +100,34 @@ func sshConnect(user string, host string, method ssh.AuthMethod) (err error) {
 	}
 
 	err = session.Wait()
-	if err != nil && err != io.EOF {
-		// Ignore the error if it's an ExitError with an empty message,
-		// this occurs when you do CTRL+c and then run exit cmd which isn't an
-		// actual error.
-		waitMsg, ok := err.(*ssh.ExitError)
-		if ok && waitMsg.Msg() == "" {
-			return nil
-		}
-
-		return err
+	if _, ok := err.(*ssh.ExitError); ok {
+		return nil
+	}
+	if err == io.EOF {
+		return nil
 	}
 	return err
 }
 
-// SSH creates a ssh connection to a host.
-func (c *LiveConfig) SSH(user, host, keyPath string, port int) (err error) {
+type sshRunner struct {
+	user    string
+	host    string
+	keyPath string
+	port    int
+}
+
+var _ Runner = &sshRunner{}
+
+func (r *sshRunner) Run() error {
 	logrus.WithFields(logrus.Fields{
-		"user": user,
-		"host": host,
+		"user": r.user,
+		"host": r.host,
 	}).Info("ssh")
 
-	sshHost := fmt.Sprintf("%s:%d", host, port)
+	sshHost := fmt.Sprintf("%s:%d", r.host, r.port)
 
 	// Key Auth
-	key, err := ioutil.ReadFile(keyPath)
+	key, err := ioutil.ReadFile(r.keyPath)
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int) (err error) {
 	if err != nil {
 		return err
 	}
-	if err := sshConnect(user, sshHost, ssh.PublicKeys(privateKey)); err != nil {
+	if err := sshConnect(r.user, sshHost, ssh.PublicKeys(privateKey)); err != nil {
 		// Password Auth if Key Auth Fails
 		fd := os.Stdin.Fd()
 		state, err := terminal.MakeRaw(int(fd))
@@ -148,11 +148,23 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int) (err error) {
 		if err != nil {
 			return err
 		}
-		if err := sshConnect(user, sshHost, ssh.Password(string(password))); err != nil {
+		if err := sshConnect(r.user, sshHost, ssh.Password(string(password))); err != nil {
 			return err
 		}
 	}
 	return err
+
+}
+
+// SSH creates a ssh connection to a host.
+func (c *LiveConfig) SSH(user, host, keyPath string, port int) Runner {
+	return &sshRunner{
+		user:    user,
+		host:    host,
+		keyPath: keyPath,
+		port:    port,
+	}
+
 }
 
 // Set sets a config key.

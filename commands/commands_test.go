@@ -32,6 +32,12 @@ var (
 	testDropletList = []godo.Droplet{testDroplet}
 	testKernel      = godo.Kernel{ID: 1}
 	testKernelList  = []godo.Kernel{testKernel}
+	testFloatingIP  = godo.FloatingIP{
+		Droplet: &testDroplet,
+		Region:  testDroplet.Region,
+		IP:      "127.0.0.1",
+	}
+	testFloatingIPList = []godo.FloatingIP{testFloatingIP}
 )
 
 type testFn func(c *TestConfig)
@@ -50,18 +56,17 @@ func withTestClient(client *godo.Client, tFn testFn) {
 
 type TestConfig struct {
 	Client *godo.Client
-	SSHFn  func(user, host string, options []string) doit.Runner
+	SSHFn  func(user, host, keyPath string, port int) doit.Runner
 	v      *viper.Viper
 }
 
 func NewTestConfig(client *godo.Client) *TestConfig {
 	return &TestConfig{
 		Client: client,
-		SSHFn: func(u, h string, o []string) doit.Runner {
+		SSHFn: func(u, h, kp string, p int) doit.Runner {
 			logrus.WithFields(logrus.Fields{
-				"user":    u,
-				"host":    h,
-				"options": o,
+				"user": u,
+				"host": h,
 			}).Info("ssh")
 			return &doit.MockRunner{}
 		},
@@ -75,8 +80,8 @@ func (c *TestConfig) GetGodoClient() *godo.Client {
 	return c.Client
 }
 
-func (c *TestConfig) SSH(user, host string, options []string) doit.Runner {
-	return c.SSHFn(user, host, options)
+func (c *TestConfig) SSH(user, host, keyPath string, port int) doit.Runner {
+	return c.SSHFn(user, host, keyPath, port)
 }
 
 func (c *TestConfig) Set(ns, key string, val interface{}) {

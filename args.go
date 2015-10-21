@@ -51,10 +51,10 @@ const (
 	ArgRegionSlug = "region"
 	// ArgSizeSlug is a size slug argument.
 	ArgSizeSlug = "size"
-	// ArgSSHKeys is a ssh key argument.
-	ArgSSHKeys = "ssh-keys"
 	// ArgsSSHKeyPath is a ssh argument.
 	ArgsSSHKeyPath = "ssh-key-path"
+	// ArgSSHKeys is a ssh key argument.
+	ArgSSHKeys = "ssh-keys"
 	// ArgsSSHPort is a ssh argument.
 	ArgsSSHPort = "ssh-port"
 	// ArgUserData is a user data argument.

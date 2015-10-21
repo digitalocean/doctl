@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"strconv"
+	"strings"
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
@@ -39,6 +40,7 @@ func Droplet() *cobra.Command {
 	addBoolFlag(cmdDropletCreate, doit.ArgDropletWait, false, "Wait for droplet to be created")
 	addStringFlag(cmdDropletCreate, doit.ArgDropletName, "", "Droplet name")
 	addStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region")
+	addStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size")
 	addBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet")
 	addBoolFlag(cmdDropletCreate, doit.ArgIPv6, false, "IPv6 support")
 	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
@@ -158,6 +160,8 @@ func RunDropletCreate(ns string, out io.Writer) error {
 
 	sshKeys := []godo.DropletCreateSSHKey{}
 	for _, rawKey := range doit.DoitConfig.GetStringSlice(ns, doit.ArgSSHKeys) {
+		rawKey = strings.TrimPrefix(rawKey, "[")
+		rawKey = strings.TrimSuffix(rawKey, "]")
 		if i, err := strconv.Atoi(rawKey); err == nil {
 			sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: i})
 			continue

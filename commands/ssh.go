@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
@@ -75,18 +76,17 @@ func RunSSH(ns string, out io.Writer) error {
 		return errSSHInvalidOptions
 	}
 
-	// CoreOS has no root user
-	if droplet.Image.Distribution == "CoreOS" {
-		user = "core"
-	}
-
+	user = defaulSSHUser(droplet)
 	publicIP := extractDropletPublicIP(droplet)
 
 	if len(publicIP) < 1 {
 		return errors.New(sshNoAddress)
 	}
 
-	return doit.DoitConfig.SSH(user, publicIP, keyPath, port)
+	runner := doit.DoitConfig.SSH(user, publicIP, keyPath, port)
+	return runner.Run()
+
+	// return doit.DoitConfig.SSH(user, publicIP, keyPath, port)
 }
 
 func removeEmptyOptions(in []string) []string {
@@ -102,4 +102,13 @@ func removeEmptyOptions(in []string) []string {
 	}
 
 	return out
+}
+
+func defaulSSHUser(droplet *godo.Droplet) string {
+	slug := strings.ToLower(droplet.Image.Slug)
+	if strings.Contains(slug, "coreos") {
+		return "core"
+	}
+
+	return "root"
 }
