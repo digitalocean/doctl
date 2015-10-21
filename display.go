@@ -48,7 +48,8 @@ func writeJSON(item interface{}, w io.Writer) error {
 func writeText(item interface{}, w io.Writer) error {
 	switch i := item.(type) {
 	case *godo.Account:
-		writeJSON(item, w)
+		a := item.(*godo.Account)
+		outputAccount(a, w)
 	case *godo.Action:
 		outputActions([]godo.Action{*i}, w)
 	case []godo.Action:
@@ -93,6 +94,17 @@ func writeText(item interface{}, w io.Writer) error {
 	}
 
 	return nil
+}
+
+func outputAccount(account *godo.Account, out io.Writer) {
+	w := new(tabwriter.Writer)
+	w.Init(out, 0, 8, 1, '\t', 0)
+
+	fmt.Fprintln(w, "Email\tDroplet Limit\tEmail Verified\tUUID\t")
+	fmt.Fprintf(w, "")
+	fmt.Fprintf(w, "%s\t%d\t%t\t%s\t\n", account.Email, account.DropletLimit, account.EmailVerified, account.UUID)
+	fmt.Fprintln(w)
+	w.Flush()
 }
 
 func outputActions(list []godo.Action, out io.Writer) {
