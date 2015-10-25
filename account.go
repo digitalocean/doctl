@@ -21,6 +21,8 @@ type Account struct {
 	Email         string `json:"email,omitempty"`
 	UUID          string `json:"uuid,omitempty"`
 	EmailVerified bool   `json:"email_verified,omitempty"`
+	Status        string `json:"status,omitempty"`
+	StatusMessage string `json:"status_message,omitempty"`
 }
 
 type accountRoot struct {

@@ -44,10 +44,12 @@ func TestAccountString(t *testing.T) {
 		Email:         "sammy@digitalocean.com",
 		UUID:          "b6fr89dbf6d9156cace5f3c78dc9851d957381ef",
 		EmailVerified: true,
+		Status:        "active",
+		StatusMessage: "message",
 	}
 
 	stringified := acct.String()
-	expected := `godo.Account{DropletLimit:25, Email:"sammy@digitalocean.com", UUID:"b6fr89dbf6d9156cace5f3c78dc9851d957381ef", EmailVerified:true}`
+	expected := `godo.Account{DropletLimit:25, Email:"sammy@digitalocean.com", UUID:"b6fr89dbf6d9156cace5f3c78dc9851d957381ef", EmailVerified:true, Status:"active", StatusMessage:"message"}`
 	if expected != stringified {
 		t.Errorf("Account.String returned %+v, expected %+v", stringified, expected)
 	}
