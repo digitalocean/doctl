@@ -100,9 +100,9 @@ func outputAccount(account *godo.Account, out io.Writer) {
 	w := new(tabwriter.Writer)
 	w.Init(out, 0, 8, 1, '\t', 0)
 
-	fmt.Fprintln(w, "Email\tDroplet Limit\tEmail Verified\tUUID\t")
+	fmt.Fprintln(w, "Email\tDroplet Limit\tEmail Verified\tUUID\tStatus")
 	fmt.Fprintf(w, "")
-	fmt.Fprintf(w, "%s\t%d\t%t\t%s\t\n", account.Email, account.DropletLimit, account.EmailVerified, account.UUID)
+	fmt.Fprintf(w, "%s\t%d\t%t\t%s\t%s\n", account.Email, account.DropletLimit, account.EmailVerified, account.UUID, account.Status)
 	fmt.Fprintln(w)
 	w.Flush()
 }
