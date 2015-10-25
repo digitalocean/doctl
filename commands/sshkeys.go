@@ -16,33 +16,34 @@ import (
 // SSHKeys creates the ssh key commands heirarchy.
 func SSHKeys() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "sshkey",
-		Short: "sshkey commands",
-		Long:  "sshkey is used to access ssh key commands",
+		Use:     "sshkey",
+		Aliases: []string{"k"},
+		Short:   "sshkey commands",
+		Long:    "sshkey is used to access ssh key commands",
 	}
 
-	cmdSSHKeysList := cmdBuilder(RunKeyList, "list", "list ssh keys", writer)
+	cmdSSHKeysList := cmdBuilder(RunKeyList, "list", "list ssh keys", writer, "ls")
 	cmd.AddCommand(cmdSSHKeysList)
 
-	cmdSSHKeysGet := cmdBuilder(RunKeyGet, "get", "get ssh key", writer)
+	cmdSSHKeysGet := cmdBuilder(RunKeyGet, "get", "get ssh key", writer, "g")
 	cmd.AddCommand(cmdSSHKeysGet)
 	addStringFlag(cmdSSHKeysGet, doit.ArgKey, "", "Key ID or fingerprint")
 
-	cmdSSHKeysCreate := cmdBuilder(RunKeyCreate, "create", "create ssh key", writer)
+	cmdSSHKeysCreate := cmdBuilder(RunKeyCreate, "create", "create ssh key", writer, "c")
 	cmd.AddCommand(cmdSSHKeysCreate)
 	addStringFlag(cmdSSHKeysCreate, doit.ArgKeyName, "", "Key name")
 	addStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents")
 
-	cmdSSHKeysImport := cmdBuilder(RunKeyImport, "import", "import ssh key", writer)
+	cmdSSHKeysImport := cmdBuilder(RunKeyImport, "import", "import ssh key", writer, "i")
 	cmd.AddCommand(cmdSSHKeysImport)
 	addStringFlag(cmdSSHKeysImport, doit.ArgKeyName, "", "Key name")
 	addStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file")
 
-	cmdSSHKeysDelete := cmdBuilder(RunKeyDelete, "delete", "delete ssh key", writer)
+	cmdSSHKeysDelete := cmdBuilder(RunKeyDelete, "delete", "delete ssh key", writer, "d")
 	cmd.AddCommand(cmdSSHKeysDelete)
 	addStringFlag(cmdSSHKeysDelete, doit.ArgKey, "", "Key ID or fingerprint")
 
-	cmdSSHKeysUpdate := cmdBuilder(RunKeyUpdate, "update", "update ssh key", writer)
+	cmdSSHKeysUpdate := cmdBuilder(RunKeyUpdate, "update", "update ssh key", writer, "u")
 	cmd.AddCommand(cmdSSHKeysUpdate)
 	addStringFlag(cmdSSHKeysUpdate, doit.ArgKey, "", "Key ID or fingerprint")
 	addStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name")

@@ -17,19 +17,19 @@ func Domain() *cobra.Command {
 		Long:  "domain is used to access domain commands",
 	}
 
-	cmdDomainCreate := cmdBuilder(RunDomainCreate, "create", "create domain", writer)
+	cmdDomainCreate := cmdBuilder(RunDomainCreate, "create", "create domain", writer, "c")
 	cmd.AddCommand(cmdDomainCreate)
 	addStringFlag(cmdDomainCreate, doit.ArgDomainName, "", "Domain name")
 	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address")
 
-	cmdDomainList := cmdBuilder(RunDomainList, "list", "list comains", writer)
+	cmdDomainList := cmdBuilder(RunDomainList, "list", "list comains", writer, "ls")
 	cmd.AddCommand(cmdDomainList)
 
-	cmdDomainGet := cmdBuilder(RunDomainGet, "get", "get domain", writer)
+	cmdDomainGet := cmdBuilder(RunDomainGet, "get", "get domain", writer, "g")
 	cmd.AddCommand(cmdDomainGet)
 	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name")
 
-	cmdDomainDelete := cmdBuilder(RunDomainDelete, "delete", "delete droplet", writer)
+	cmdDomainDelete := cmdBuilder(RunDomainDelete, "delete", "delete droplet", writer, "g")
 	cmd.AddCommand(cmdDomainDelete)
 	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name")
 
@@ -40,11 +40,11 @@ func Domain() *cobra.Command {
 	}
 	cmd.AddCommand(cmdRecord)
 
-	cmdRecordList := cmdBuilder(RunRecordList, "list", "list records", writer)
+	cmdRecordList := cmdBuilder(RunRecordList, "list", "list records", writer, "ls")
 	cmdRecord.AddCommand(cmdRecordList)
 	addStringFlag(cmdRecordList, doit.ArgDomainName, "", "Domain name")
 
-	cmdRecordCreate := cmdBuilder(RunRecordCreate, "create", "create record", writer)
+	cmdRecordCreate := cmdBuilder(RunRecordCreate, "create", "create record", writer, "c")
 	cmdRecord.AddCommand(cmdRecordCreate)
 	addStringFlag(cmdRecordCreate, doit.ArgDomainName, "", "Domain name")
 	addStringFlag(cmdRecordCreate, doit.ArgRecordType, "", "Record type")
@@ -54,12 +54,12 @@ func Domain() *cobra.Command {
 	addIntFlag(cmdRecordCreate, doit.ArgRecordPort, 0, "Record port")
 	addIntFlag(cmdRecordCreate, doit.ArgRecordWeight, 0, "Record weight")
 
-	cmdRecordDelete := cmdBuilder(RunRecordDelete, "delete", "delete record", writer)
+	cmdRecordDelete := cmdBuilder(RunRecordDelete, "delete", "delete record", writer, "d")
 	cmdRecord.AddCommand(cmdRecordDelete)
 	addStringFlag(cmdRecordDelete, doit.ArgDomainName, "", "Domain name")
 	addIntFlag(cmdRecordDelete, doit.ArgRecordID, 0, "Record ID")
 
-	cmdRecordUpdate := cmdBuilder(RunRecordUpdate, "update", "update record", writer)
+	cmdRecordUpdate := cmdBuilder(RunRecordUpdate, "update", "update record", writer, "u")
 	cmdRecord.AddCommand(cmdRecordUpdate)
 	addStringFlag(cmdRecordUpdate, doit.ArgDomainName, "", "Domain name")
 	addIntFlag(cmdRecordUpdate, doit.ArgRecordID, 0, "Record ID")
