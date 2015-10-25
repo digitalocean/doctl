@@ -17,11 +17,11 @@ func Actions() *cobra.Command {
 		Long:  "action is used to access action commands",
 	}
 
-	cmdActionGet := cmdBuilder(RunCmdActionGet, "get", "get action", writer)
+	cmdActionGet := cmdBuilder(RunCmdActionGet, "get", "get action", writer, "g")
 	cmdActions.AddCommand(cmdActionGet)
 	addIntFlag(cmdActionGet, doit.ArgActionID, 0, "Action ID")
 
-	cmdActionList := cmdBuilder(RunCmdActionList, "list", "list actions", writer)
+	cmdActionList := cmdBuilder(RunCmdActionList, "list", "list actions", writer, "ls")
 	cmdActions.AddCommand(cmdActionList)
 
 	return cmdActions

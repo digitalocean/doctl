@@ -16,23 +16,24 @@ import (
 // Droplet creates the droplet command.
 func Droplet() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "droplet",
-		Short: "droplet commands",
-		Long:  "droplet is used to access droplet commands",
+		Use:     "droplet",
+		Aliases: []string{"d"},
+		Short:   "droplet commands",
+		Long:    "droplet is used to access droplet commands",
 	}
 
 	cmdDropletActions := cmdBuilder(RunDropletActions,
-		"actions", "droplet actions", writer)
+		"actions", "droplet actions", writer, "a")
 	cmd.AddCommand(cmdDropletActions)
 	addIntFlag(cmdDropletActions, doit.ArgDropletID, 0, "Droplet ID")
 
 	cmdDropletBackups := cmdBuilder(RunDropletBackups,
-		"backups", "droplet backups", writer)
+		"backups", "droplet backups", writer, "b")
 	cmd.AddCommand(cmdDropletBackups)
 	addIntFlag(cmdDropletBackups, doit.ArgDropletID, 0, "Droplet ID")
 
 	cmdDropletCreate := cmdBuilder(RunDropletCreate,
-		"create", "create droplet", writer)
+		"create", "create droplet", writer, "c")
 	cmd.AddCommand(cmdDropletCreate)
 	addStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
 	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
@@ -47,31 +48,31 @@ func Droplet() *cobra.Command {
 	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image")
 
 	cmdDropletDelete := cmdBuilder(RunDropletDelete,
-		"delete", "delete droplet", writer)
+		"delete", "delete droplet", writer, "d")
 	cmd.AddCommand(cmdDropletDelete)
 	addIntFlag(cmdDropletDelete, doit.ArgDropletID, 0, "Droplet ID")
 
 	cmdDropletGet := cmdBuilder(RunDropletGet,
-		"get", "get droplet", writer)
+		"get", "get droplet", writer, "g")
 	cmd.AddCommand(cmdDropletGet)
 	addIntFlag(cmdDropletGet, doit.ArgDropletID, 0, "Droplet ID")
 
 	cmdDropletKernels := cmdBuilder(RunDropletKernels,
-		"kernels", "droplet kernels", writer)
+		"kernels", "droplet kernels", writer, "k")
 	cmd.AddCommand(cmdDropletKernels)
 	addIntFlag(cmdDropletKernels, doit.ArgDropletID, 0, "Droplet ID")
 
 	cmdDropletList := cmdBuilder(RunDropletList,
-		"list", "list droplets", writer)
+		"list", "list droplets", writer, "ls")
 	cmd.AddCommand(cmdDropletList)
 
 	cmdDropletNeighbors := cmdBuilder(RunDropletNeighbors,
-		"neighbors", "droplet neighbors", writer)
+		"neighbors", "droplet neighbors", writer, "n")
 	cmd.AddCommand(cmdDropletNeighbors)
 	addIntFlag(cmdDropletNeighbors, doit.ArgDropletID, 0, "Droplet ID")
 
 	cmdDropletSnapshots := cmdBuilder(RunDropletSnapshots,
-		"snapshots", "snapshots", writer)
+		"snapshots", "snapshots", writer, "s")
 	cmd.AddCommand(cmdDropletSnapshots)
 	addIntFlag(cmdDropletSnapshots, doit.ArgDropletID, 0, "Droplet ID")
 

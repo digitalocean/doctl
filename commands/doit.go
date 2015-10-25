@@ -159,11 +159,12 @@ func cmdNS(cmd *cobra.Command) string {
 
 type cmdRunner func(ns string, out io.Writer) error
 
-func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer) *cobra.Command {
+func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer, aliases ...string) *cobra.Command {
 	return &cobra.Command{
-		Use:   cliText,
-		Short: desc,
-		Long:  desc,
+		Use:     cliText,
+		Aliases: aliases,
+		Short:   desc,
+		Long:    desc,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkErr(cr(cmdNS(cmd), out), cmd)
 		},
