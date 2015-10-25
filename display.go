@@ -140,7 +140,7 @@ func outputDroplets(list []godo.Droplet, out io.Writer) {
 
 func outputFloatingIPs(list []godo.FloatingIP, out io.Writer) {
 	w := new(tabwriter.Writer)
-	w.Init(out, 0, 4*4, 1, '\t', 0)
+	w.Init(out, 0, 8, 1, '\t', 0)
 
 	fmt.Fprintln(w, "IP\tRegion\tDroplet")
 	for _, ip := range list {
