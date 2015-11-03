@@ -30,7 +30,7 @@ var DropletCommand = cli.Command{
 				cli.BoolFlag{Name: "add-region", Usage: "Append region to hostname. (e.g. server01.sfo1)"},
 				cli.StringFlag{Name: "user-data, u", Value: "", Usage: "User data for creating server."},
 				cli.StringFlag{Name: "user-data-file, uf", Value: "", Usage: "A path to a file for user data."},
-				cli.StringFlag{Name: "ssh-keys, k", Value: "", Usage: "Comma seperated list of SSH Key names. (e.g. --ssh-keys Work,Home)"},
+				cli.StringFlag{Name: "ssh-keys, k", Value: "", Usage: "Comma separated list of SSH Key names. (e.g. --ssh-keys Work,Home)"},
 				cli.StringFlag{Name: "size, s", Value: "512mb", Usage: "Size of Droplet."},
 				cli.StringFlag{Name: "region, r", Value: "nyc3", Usage: "Region of Droplet."},
 				cli.StringFlag{Name: "image, i", Value: "ubuntu-14-04-x64", Usage: "Image slug of Droplet."}, // TODO handle image id
