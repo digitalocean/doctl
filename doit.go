@@ -89,7 +89,7 @@ func sshConnect(user string, host string, method ssh.AuthMethod) error {
 		ssh.ECHO: 1,
 	}
 
-	if err := session.RequestPty("xterm", termWidth, termHeight, modes); err != nil {
+	if err := session.RequestPty("xterm", termHeight, termWidth, modes); err != nil {
 		return err
 	}
 	if err == nil {
