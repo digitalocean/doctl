@@ -3,10 +3,10 @@ package commands
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
-	"github.com/spf13/viper"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/Sirupsen/logrus"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/viper"
 )
 
 var (

@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"github.com/Sirupsen/logrus"
-	"github.com/spf13/cobra"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/Sirupsen/logrus"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cobra"
 )
 
 func checkErr(err error, cmd ...*cobra.Command) {

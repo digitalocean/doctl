@@ -1,6 +1,6 @@
 package doit
 
-import "github.com/digitalocean/godo"
+import "github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
 
 // AccountServiceMock mocks github.com/digitalocean/AccountService.
 type AccountServiceMock struct {

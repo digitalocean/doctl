@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/stretchr/testify/assert"
 )
 
 func TestMockRunner(t *testing.T) {
