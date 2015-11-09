@@ -6,13 +6,13 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/digitalocean/godo"
-	"github.com/docker/docker/pkg/term"
-	"github.com/spf13/viper"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/oauth2"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/Sirupsen/logrus"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/docker/docker/pkg/term"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/viper"
+	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/crypto/ssh"
+	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/crypto/ssh/terminal"
+	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 var (

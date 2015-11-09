@@ -1,8 +1,8 @@
 package doit
 
 import (
-	"github.com/digitalocean/godo"
-	"golang.org/x/oauth2"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
+	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/oauth2"
 )
 
 // TokenSource holds an oauth token.

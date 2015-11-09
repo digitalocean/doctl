@@ -4,7 +4,7 @@ import (
 	"io"
 
 	"github.com/bryanl/doit"
-	"github.com/spf13/cobra"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cobra"
 )
 
 // Account creates the account commands heirarchy.

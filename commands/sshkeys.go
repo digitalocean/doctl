@@ -6,11 +6,11 @@ import (
 	"io/ioutil"
 	"strconv"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
-	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/Sirupsen/logrus"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/crypto/ssh"
 )
 
 // SSHKeys creates the ssh key commands heirarchy.

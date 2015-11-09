@@ -55,6 +55,7 @@ Example:
 }
 ```
 
-## Plugins
+## Building and dependencies
 
-`doit` functionality can be enhanced using plugins.
+`doit`'s dependencies are managed by [godep](https://github.com/tools/godep). To add new packages, you must
+run `godep save ./...` to update the vendored dependencies. External dependencies have been rewritten using `godep`.

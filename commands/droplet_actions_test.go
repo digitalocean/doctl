@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
 )
 
 func TestDropletActionsChangeKernel(t *testing.T) {
