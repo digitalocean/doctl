@@ -30,7 +30,7 @@ func Images() *cobra.Command {
 	cmd.AddCommand(cmdImagesListDistribution)
 	addBoolFlag(cmdImagesListDistribution, doit.ArgImagePublic, false, "List public images")
 
-	cmdImagesListApplication := cmdBuilder(RunImagesListDistribution,
+	cmdImagesListApplication := cmdBuilder(RunImagesListApplication,
 		"list-application", "list application images", out)
 	cmd.AddCommand(cmdImagesListApplication)
 	addBoolFlag(cmdImagesListApplication, doit.ArgImagePublic, false, "List public images")
