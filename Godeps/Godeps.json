@@ -31,6 +31,11 @@
 			"Rev": "786b29d4db80a6175e72b47a794ee044918ba734"
 		},
 		{
+			"ImportPath": "github.com/fatih/color",
+			"Comment": "v0.1-12-g9aae6aa",
+			"Rev": "9aae6aaa22315390f03959adca2c4d395b02fcef"
+		},
+		{
 			"ImportPath": "github.com/google/go-querystring/query",
 			"Rev": "547ef5ac979778feb2f760cdb5f4eae1a2207b86"
 		},
@@ -53,17 +58,25 @@
 			"Rev": "337395e44efb4affc8bf11971e22acbd4e27a32d"
 		},
 		{
+			"ImportPath": "github.com/mattn/go-colorable",
+			"Rev": "51a7e7a8b1665b25ca173debdc8d52d493348f15"
+		},
+		{
+			"ImportPath": "github.com/mattn/go-isatty",
+			"Rev": "d6aaa2f596ae91a0a58d8e7f2c79670991468e4f"
+		},
+		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
 			"Rev": "281073eb9eb092240d33ef253c404f1cca550309"
 		},
 		{
 			"ImportPath": "github.com/russross/blackfriday",
-			"Comment": "v1.3-34-g18432fc",
-			"Rev": "18432fc942c4ea4846063a269f339ede7630bd71"
+			"Comment": "v1.2-80-g8cec3a8",
+			"Rev": "8cec3a854e68dba10faabbe31c089abf4a3e57a6"
 		},
 		{
 			"ImportPath": "github.com/shurcooL/sanitized_anchor_name",
-			"Rev": "10ef21a441db47d8b13ebcc5fd2310f636973c77"
+			"Rev": "244f5ac324cb97e1987ef901a0081a77bfd8e845"
 		},
 		{
 			"ImportPath": "github.com/spf13/cast",
@@ -71,7 +84,7 @@
 		},
 		{
 			"ImportPath": "github.com/spf13/cobra",
-			"Rev": "1e1d5137bf425b617046d7c938a7c33f14acf539"
+			"Rev": "53d96508f5c9311f5dade714e1de7bd6a9d2af4a"
 		},
 		{
 			"ImportPath": "github.com/spf13/jwalterweatherman",

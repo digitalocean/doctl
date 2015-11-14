@@ -39,13 +39,13 @@ func Droplet() *cobra.Command {
 	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
 	addStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file")
 	addBoolFlag(cmdDropletCreate, doit.ArgDropletWait, false, "Wait for droplet to be created")
-	addStringFlag(cmdDropletCreate, doit.ArgDropletName, "", "Droplet name")
-	addStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region")
-	addStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size")
+	addStringFlag(cmdDropletCreate, doit.ArgDropletName, "", "Droplet name (required)")
+	addStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region (required)")
+	addStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size (required)")
 	addBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet")
 	addBoolFlag(cmdDropletCreate, doit.ArgIPv6, false, "IPv6 support")
 	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
-	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image")
+	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image (required)")
 
 	cmdDropletDelete := cmdBuilder(RunDropletDelete,
 		"delete", "delete droplet", writer, "d")
@@ -159,6 +159,11 @@ func RunDropletBackups(ns string, out io.Writer) error {
 func RunDropletCreate(ns string, out io.Writer) error {
 	client := doit.DoitConfig.GetGodoClient()
 
+	name := doit.DoitConfig.GetString(ns, doit.ArgDropletName)
+	if name == "" {
+		return NewMissingArgsErr(ns)
+	}
+
 	sshKeys := []godo.DropletCreateSSHKey{}
 	for _, rawKey := range doit.DoitConfig.GetStringSlice(ns, doit.ArgSSHKeys) {
 		rawKey = strings.TrimPrefix(rawKey, "[")
@@ -183,7 +188,7 @@ func RunDropletCreate(ns string, out io.Writer) error {
 	wait := doit.DoitConfig.GetBool(ns, doit.ArgDropletWait)
 
 	dcr := &godo.DropletCreateRequest{
-		Name:              doit.DoitConfig.GetString(ns, doit.ArgDropletName),
+		Name:              name,
 		Region:            doit.DoitConfig.GetString(ns, doit.ArgRegionSlug),
 		Size:              doit.DoitConfig.GetString(ns, doit.ArgSizeSlug),
 		Backups:           doit.DoitConfig.GetBool(ns, doit.ArgBackups),
@@ -243,6 +248,10 @@ func RunDropletDelete(ns string, out io.Writer) error {
 func RunDropletGet(ns string, out io.Writer) error {
 	client := doit.DoitConfig.GetGodoClient()
 	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+
+	if id < 1 {
+		return NewMissingArgsErr(ns)
+	}
 
 	droplet, err := getDropletByID(client, id)
 	if err != nil {

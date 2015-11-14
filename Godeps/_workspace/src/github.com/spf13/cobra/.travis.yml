@@ -2,8 +2,8 @@ language: go
 go:
   - 1.3.3
   - 1.4.2
-  - 1.5.2
+  - 1.5.1
   - tip
 script:
-  - go test -v ./...
+  - go test ./...
   - go build
