@@ -159,16 +159,35 @@ func cmdNS(cmd *cobra.Command) string {
 
 type cmdRunner func(ns string, config doit.Config, out io.Writer) error
 
-func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer, aliases ...string) *cobra.Command {
-	return &cobra.Command{
-		Use:     cliText,
-		Aliases: aliases,
-		Short:   desc,
-		Long:    desc,
+type cmdOption func(*cobra.Command)
+
+func aliasOpt(aliases ...string) cmdOption {
+	return func(c *cobra.Command) {
+		if c.Aliases == nil {
+			c.Aliases = []string{}
+		}
+
+		for _, a := range aliases {
+			c.Aliases = append(c.Aliases, a)
+		}
+	}
+}
+
+func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *cobra.Command {
+	c := &cobra.Command{
+		Use:   cliText,
+		Short: desc,
+		Long:  desc,
 		Run: func(cmd *cobra.Command, args []string) {
 			checkErr(cr(cmdNS(cmd), doit.DoitConfig, out), cmd)
 		},
 	}
+
+	for _, co := range options {
+		co(c)
+	}
+
+	return c
 }
 
 func listDroplets(client *godo.Client) ([]godo.Droplet, error) {

@@ -18,20 +18,20 @@ func FloatingIP() *cobra.Command {
 		Aliases: []string{"fip"},
 	}
 
-	cmdFloatingIPCreate := cmdBuilder(RunFloatingIPCreate, "create", "create a floating IP", writer, "c")
+	cmdFloatingIPCreate := cmdBuilder(RunFloatingIPCreate, "create", "create a floating IP", writer, aliasOpt("c"))
 	cmd.AddCommand(cmdFloatingIPCreate)
 	addStringFlag(cmdFloatingIPCreate, doit.ArgRegionSlug, "", "Region where to create the floating IP.")
 	addIntFlag(cmdFloatingIPCreate, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to. (Optional)")
 
-	cmdFloatingIPGet := cmdBuilder(RunFloatingIPGet, "get", "get the details of a floating IP", writer, "g")
+	cmdFloatingIPGet := cmdBuilder(RunFloatingIPGet, "get", "get the details of a floating IP", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdFloatingIPGet)
 	addStringFlag(cmdFloatingIPGet, doit.ArgIPAddress, "", "IP address of the floating IP")
 
-	cmdFloatingIPDelete := cmdBuilder(RunFloatingIPDelete, "delete", "delete a floating IP address", writer, "d")
+	cmdFloatingIPDelete := cmdBuilder(RunFloatingIPDelete, "delete", "delete a floating IP address", writer, aliasOpt("d"))
 	cmd.AddCommand(cmdFloatingIPDelete)
 	addStringFlag(cmdFloatingIPDelete, doit.ArgIPAddress, "", "IP address of the floating IP")
 
-	cmdFloatingIPList := cmdBuilder(RunFloatingIPList, "list", "list all floating IP addresses", writer, "ls")
+	cmdFloatingIPList := cmdBuilder(RunFloatingIPList, "list", "list all floating IP addresses", writer, aliasOpt("ls"))
 	cmd.AddCommand(cmdFloatingIPList)
 
 	return cmd

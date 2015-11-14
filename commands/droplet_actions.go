@@ -31,7 +31,7 @@ func DropletAction() *cobra.Command {
 		Long:    "droplet-action is used to access droplet action commands",
 	}
 
-	cmdDropletActionGet := cmdBuilder(RunDropletActionGet, "get", "get droplet action", writer, "g")
+	cmdDropletActionGet := cmdBuilder(RunDropletActionGet, "get", "get droplet action", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdDropletActionGet)
 	addIntFlag(cmdDropletActionGet, doit.ArgDropletID, 0, "Droplet ID")
 	addIntFlag(cmdDropletActionGet, doit.ArgActionID, 0, "Action ID")

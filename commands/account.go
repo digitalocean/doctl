@@ -15,7 +15,7 @@ func Account() *cobra.Command {
 		Long:  "account is used to access account commands",
 	}
 
-	cmdAccountGet := cmdBuilder(RunAccountGet, "get", "get account", writer, "g")
+	cmdAccountGet := cmdBuilder(RunAccountGet, "get", "get account", writer, aliasOpt("g"))
 	cmdAccount.AddCommand(cmdAccountGet)
 
 	return cmdAccount
