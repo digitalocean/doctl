@@ -60,6 +60,8 @@ type TestConfig struct {
 	v      *viper.Viper
 }
 
+var _ doit.Config = &TestConfig{}
+
 func NewTestConfig(client *godo.Client) *TestConfig {
 	return &TestConfig{
 		Client: client,
@@ -89,22 +91,22 @@ func (c *TestConfig) Set(ns, key string, val interface{}) {
 	c.v.Set(nskey, val)
 }
 
-func (c *TestConfig) GetString(ns, key string) string {
+func (c *TestConfig) GetString(ns, key string) (string, error) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetString(nskey)
+	return c.v.GetString(nskey), nil
 }
 
-func (c *TestConfig) GetInt(ns, key string) int {
+func (c *TestConfig) GetInt(ns, key string) (int, error) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetInt(nskey)
+	return c.v.GetInt(nskey), nil
 }
 
-func (c *TestConfig) GetStringSlice(ns, key string) []string {
+func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetStringSlice(nskey)
+	return c.v.GetStringSlice(nskey), nil
 }
 
-func (c *TestConfig) GetBool(ns, key string) bool {
+func (c *TestConfig) GetBool(ns, key string) (bool, error) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetBool(nskey)
+	return c.v.GetBool(nskey), nil
 }

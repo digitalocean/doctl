@@ -18,7 +18,11 @@ const (
 // DisplayOutput displays an object or group of objects to a user. It
 // checks to see what the output type should be.
 func DisplayOutput(item interface{}, out io.Writer) error {
-	output := DoitConfig.GetString(NSRoot, "output")
+	output, err := DoitConfig.GetString(NSRoot, "output")
+	if err != nil {
+		return nil
+	}
+
 	if output == "" {
 		output = "text"
 	}

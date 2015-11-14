@@ -11,8 +11,8 @@ import (
 
 type actionFn func(client *godo.Client) (*godo.Action, error)
 
-func performAction(out io.Writer, fn actionFn) error {
-	client := doit.DoitConfig.GetGodoClient()
+func performAction(out io.Writer, config doit.Config, fn actionFn) error {
+	client := config.GetGodoClient()
 
 	a, err := fn(client)
 	if err != nil {
@@ -127,173 +127,232 @@ func DropletAction() *cobra.Command {
 }
 
 // RunDropletActionGet returns a droplet action by id.
-func RunDropletActionGet(ns string, out io.Writer) error {
+func RunDropletActionGet(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		dropletID := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
-		actionID := doit.DoitConfig.GetInt(ns, doit.ArgActionID)
+		dropletID, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
+
+		actionID, err := config.GetInt(ns, doit.ArgActionID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.Get(dropletID, actionID)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionDisableBackups disables backups for a droplet.
-func RunDropletActionDisableBackups(ns string, out io.Writer) error {
+func RunDropletActionDisableBackups(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.DisableBackups(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionReboot reboots a droplet.
-func RunDropletActionReboot(ns string, out io.Writer) error {
+func RunDropletActionReboot(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.Reboot(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionPowerCycle power cycles a droplet.
-func RunDropletActionPowerCycle(ns string, out io.Writer) error {
+func RunDropletActionPowerCycle(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
+
 		a, _, err := client.DropletActions.PowerCycle(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionShutdown shuts a droplet down.
-func RunDropletActionShutdown(ns string, out io.Writer) error {
+func RunDropletActionShutdown(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
 
 		a, _, err := client.DropletActions.Shutdown(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionPowerOff turns droplet power off.
-func RunDropletActionPowerOff(ns string, out io.Writer) error {
+func RunDropletActionPowerOff(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.PowerOff(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionPowerOn turns droplet power on.
-func RunDropletActionPowerOn(ns string, out io.Writer) error {
+func RunDropletActionPowerOn(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.PowerOn(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionPasswordReset resets the droplet root password.
-func RunDropletActionPasswordReset(ns string, out io.Writer) error {
+func RunDropletActionPasswordReset(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.PasswordReset(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionEnableIPv6 enables IPv6 for a droplet.
-func RunDropletActionEnableIPv6(ns string, out io.Writer) error {
+func RunDropletActionEnableIPv6(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.EnableIPv6(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionEnablePrivateNetworking enables private networking for a droplet.
-func RunDropletActionEnablePrivateNetworking(ns string, out io.Writer) error {
+func RunDropletActionEnablePrivateNetworking(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.EnablePrivateNetworking(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionUpgrade upgrades a droplet.
-func RunDropletActionUpgrade(ns string, out io.Writer) error {
+func RunDropletActionUpgrade(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.Upgrade(id)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionRestore restores a droplet using an image id.
-func RunDropletActionRestore(ns string, out io.Writer) error {
+func RunDropletActionRestore(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
-		image := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
+
+		image, err := config.GetInt(ns, doit.ArgImageID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.Restore(id, image)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionResize resizesx a droplet giving a size slug and
 // optionally expands the disk.
-func RunDropletActionResize(ns string, out io.Writer) error {
+func RunDropletActionResize(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
-		size := doit.DoitConfig.GetString(ns, doit.ArgImageSlug)
-		disk := doit.DoitConfig.GetBool(ns, doit.ArgResizeDisk)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
+
+		size, err := config.GetString(ns, doit.ArgImageSlug)
+		if err != nil {
+			return nil, err
+		}
+
+		disk, err := config.GetBool(ns, doit.ArgResizeDisk)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.Resize(id, size, disk)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionRebuild rebuilds a droplet using an image id or slug.
-func RunDropletActionRebuild(ns string, out io.Writer) error {
+func RunDropletActionRebuild(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
-		image := doit.DoitConfig.GetString(ns, doit.ArgImage)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
+
+		image, err := config.GetString(ns, doit.ArgImage)
+		if err != nil {
+			return nil, err
+		}
 
 		var a *godo.Action
-		var err error
 		if i, aerr := strconv.Atoi(image); aerr == nil {
 			a, _, err = client.DropletActions.RebuildByImageID(id, i)
 		} else {
@@ -302,44 +361,65 @@ func RunDropletActionRebuild(ns string, out io.Writer) error {
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionRename renames a droplet.
-func RunDropletActionRename(ns string, out io.Writer) error {
+func RunDropletActionRename(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
-		name := doit.DoitConfig.GetString(ns, doit.ArgDropletName)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
+
+		name, err := config.GetString(ns, doit.ArgDropletName)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.Rename(id, name)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionChangeKernel changes the kernel for a droplet.
-func RunDropletActionChangeKernel(ns string, out io.Writer) error {
+func RunDropletActionChangeKernel(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
-		kernel := doit.DoitConfig.GetInt(ns, doit.ArgKernelID)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
+
+		kernel, err := config.GetInt(ns, doit.ArgKernelID)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.ChangeKernel(id, kernel)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }
 
 // RunDropletActionSnapshot creates a snapshot for a droplet.
-func RunDropletActionSnapshot(ns string, out io.Writer) error {
+func RunDropletActionSnapshot(ns string, config doit.Config, out io.Writer) error {
 	fn := func(client *godo.Client) (*godo.Action, error) {
-		id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
-		name := doit.DoitConfig.GetString(ns, doit.ArgSnapshotName)
+		id, err := config.GetInt(ns, doit.ArgDropletID)
+		if err != nil {
+			return nil, err
+		}
+
+		name, err := config.GetString(ns, doit.ArgSnapshotName)
+		if err != nil {
+			return nil, err
+		}
 
 		a, _, err := client.DropletActions.Snapshot(id, name)
 		return a, err
 	}
 
-	return performAction(out, fn)
+	return performAction(out, config, fn)
 }

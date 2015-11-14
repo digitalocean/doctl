@@ -52,8 +52,8 @@ func SSHKeys() *cobra.Command {
 }
 
 // RunKeyList lists keys.
-func RunKeyList(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
+func RunKeyList(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Keys.List(opt)
@@ -83,11 +83,13 @@ func RunKeyList(ns string, out io.Writer) error {
 }
 
 // RunKeyGet retrieves a key.
-func RunKeyGet(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	rawKey := doit.DoitConfig.GetString(ns, doit.ArgKey)
+func RunKeyGet(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	rawKey, err := config.GetString(ns, doit.ArgKey)
+	if err != nil {
+		return err
+	}
 
-	var err error
 	var key *godo.Key
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
 		key, _, err = client.Keys.GetByID(i)
@@ -107,12 +109,22 @@ func RunKeyGet(ns string, out io.Writer) error {
 }
 
 // RunKeyCreate uploads a SSH key.
-func RunKeyCreate(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
+func RunKeyCreate(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+
+	name, err := config.GetString(ns, doit.ArgKeyName)
+	if err != nil {
+		return err
+	}
+
+	publicKey, err := config.GetString(ns, doit.ArgKeyPublicKey)
+	if err != nil {
+		return err
+	}
 
 	kcr := &godo.KeyCreateRequest{
-		Name:      doit.DoitConfig.GetString(ns, doit.ArgKeyName),
-		PublicKey: doit.DoitConfig.GetString(ns, doit.ArgKeyPublicKey),
+		Name:      name,
+		PublicKey: publicKey,
 	}
 
 	r, _, err := client.Keys.Create(kcr)
@@ -124,11 +136,18 @@ func RunKeyCreate(ns string, out io.Writer) error {
 }
 
 // RunKeyImport imports a key from a file
-func RunKeyImport(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
+func RunKeyImport(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
 
-	keyPath := doit.DoitConfig.GetString(ns, doit.ArgKeyPublicKeyFile)
-	keyName := doit.DoitConfig.GetString(ns, doit.ArgKeyName)
+	keyPath, err := config.GetString(ns, doit.ArgKeyPublicKeyFile)
+	if err != nil {
+		return err
+	}
+
+	keyName, err := config.GetString(ns, doit.ArgKeyName)
+	if err != nil {
+		return err
+	}
 
 	keyFile, err := ioutil.ReadFile(keyPath)
 	if err != nil {
@@ -158,11 +177,13 @@ func RunKeyImport(ns string, out io.Writer) error {
 }
 
 // RunKeyDelete deletes a key.
-func RunKeyDelete(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	rawKey := doit.DoitConfig.GetString(ns, doit.ArgKey)
+func RunKeyDelete(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	rawKey, err := config.GetString(ns, doit.ArgKey)
+	if err != nil {
+		return err
+	}
 
-	var err error
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
 		_, err = client.Keys.DeleteByID(i)
 	} else {
@@ -173,15 +194,22 @@ func RunKeyDelete(ns string, out io.Writer) error {
 }
 
 // RunKeyUpdate updates a key.
-func RunKeyUpdate(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	rawKey := doit.DoitConfig.GetString(ns, doit.ArgKey)
-
-	req := &godo.KeyUpdateRequest{
-		Name: doit.DoitConfig.GetString(ns, doit.ArgKeyName),
+func RunKeyUpdate(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	rawKey, err := config.GetString(ns, doit.ArgKey)
+	if err != nil {
+		return err
 	}
 
-	var err error
+	name, err := config.GetString(ns, doit.ArgKeyName)
+	if err != nil {
+		return err
+	}
+
+	req := &godo.KeyUpdateRequest{
+		Name: name,
+	}
+
 	var key *godo.Key
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
 		key, _, err = client.Keys.UpdateByID(i, req)

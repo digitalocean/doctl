@@ -86,15 +86,18 @@ func NewCmdDropletActions(out io.Writer) *cobra.Command {
 		Short: "get droplet actions",
 		Long:  "get droplet actions",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletActions(cmdNS(cmd), out), cmd)
+			checkErr(RunDropletActions(cmdNS(cmd), doit.DoitConfig, out), cmd)
 		},
 	}
 }
 
 // RunDropletActions returns a list of actions for a droplet.
-func RunDropletActions(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+func RunDropletActions(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Actions(id, opt)
@@ -124,9 +127,12 @@ func RunDropletActions(ns string, out io.Writer) error {
 }
 
 // RunDropletBackups returns a list of backup images for a droplet.
-func RunDropletBackups(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+func RunDropletBackups(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Backups(id, opt)
@@ -156,16 +162,46 @@ func RunDropletBackups(ns string, out io.Writer) error {
 }
 
 // RunDropletCreate creates a droplet.
-func RunDropletCreate(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
+func RunDropletCreate(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
 
-	name := doit.DoitConfig.GetString(ns, doit.ArgDropletName)
+	name, err := config.GetString(ns, doit.ArgDropletName)
 	if name == "" {
 		return NewMissingArgsErr(ns)
 	}
 
+	region, err := config.GetString(ns, doit.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
+
+	size, err := config.GetString(ns, doit.ArgSizeSlug)
+	if err != nil {
+		return err
+	}
+
+	backups, err := config.GetBool(ns, doit.ArgBackups)
+	if err != nil {
+		return err
+	}
+
+	ipv6, err := config.GetBool(ns, doit.ArgIPv6)
+	if err != nil {
+		return err
+	}
+
+	privateNetworking, err := config.GetBool(ns, doit.ArgPrivateNetworking)
+	if err != nil {
+		return err
+	}
+
 	sshKeys := []godo.DropletCreateSSHKey{}
-	for _, rawKey := range doit.DoitConfig.GetStringSlice(ns, doit.ArgSSHKeys) {
+	keys, err := config.GetStringSlice(ns, doit.ArgSSHKeys)
+	if err != nil {
+		return err
+	}
+
+	for _, rawKey := range keys {
 		rawKey = strings.TrimPrefix(rawKey, "[")
 		rawKey = strings.TrimSuffix(rawKey, "]")
 		if i, err := strconv.Atoi(rawKey); err == nil {
@@ -176,29 +212,41 @@ func RunDropletCreate(ns string, out io.Writer) error {
 		sshKeys = append(sshKeys, godo.DropletCreateSSHKey{Fingerprint: rawKey})
 	}
 
-	userData := doit.DoitConfig.GetString(ns, doit.ArgUserData)
-	if userData == "" && doit.DoitConfig.GetString(ns, doit.ArgUserDataFile) != "" {
-		data, err := ioutil.ReadFile(doit.DoitConfig.GetString(ns, doit.ArgUserDataFile))
+	userData, err := config.GetString(ns, doit.ArgUserData)
+	if err != nil {
+		return err
+	}
+
+	filename, err := config.GetString(ns, doit.ArgUserDataFile)
+	if err != nil {
+		return err
+	}
+
+	if userData == "" && filename != "" {
+		data, err := ioutil.ReadFile(filename)
 		if err != nil {
 			return err
 		}
 		userData = string(data)
 	}
 
-	wait := doit.DoitConfig.GetBool(ns, doit.ArgDropletWait)
+	wait, err := config.GetBool(ns, doit.ArgDropletWait)
+	if err != nil {
+		return err
+	}
 
 	dcr := &godo.DropletCreateRequest{
 		Name:              name,
-		Region:            doit.DoitConfig.GetString(ns, doit.ArgRegionSlug),
-		Size:              doit.DoitConfig.GetString(ns, doit.ArgSizeSlug),
-		Backups:           doit.DoitConfig.GetBool(ns, doit.ArgBackups),
-		IPv6:              doit.DoitConfig.GetBool(ns, doit.ArgIPv6),
-		PrivateNetworking: doit.DoitConfig.GetBool(ns, doit.ArgPrivateNetworking),
+		Region:            region,
+		Size:              size,
+		Backups:           backups,
+		IPv6:              ipv6,
+		PrivateNetworking: privateNetworking,
 		SSHKeys:           sshKeys,
 		UserData:          userData,
 	}
 
-	imageStr := doit.DoitConfig.GetString(ns, doit.ArgImage)
+	imageStr, err := config.GetString(ns, doit.ArgImage)
 	if i, err := strconv.Atoi(imageStr); err == nil {
 		dcr.Image = godo.DropletCreateImage{ID: i}
 	} else {
@@ -236,18 +284,24 @@ func RunDropletCreate(ns string, out io.Writer) error {
 }
 
 // RunDropletDelete destroy a droplet by id.
-func RunDropletDelete(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+func RunDropletDelete(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
 
-	_, err := client.Droplets.Delete(id)
+	_, err = client.Droplets.Delete(id)
 	return err
 }
 
 // RunDropletGet returns a droplet.
-func RunDropletGet(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+func RunDropletGet(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
 
 	if id < 1 {
 		return NewMissingArgsErr(ns)
@@ -262,9 +316,12 @@ func RunDropletGet(ns string, out io.Writer) error {
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
-func RunDropletKernels(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+func RunDropletKernels(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Kernels(id, opt)
@@ -294,8 +351,8 @@ func RunDropletKernels(ns string, out io.Writer) error {
 }
 
 // RunDropletList returns a list of droplets.
-func RunDropletList(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
+func RunDropletList(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.List(opt)
@@ -325,9 +382,12 @@ func RunDropletList(ns string, out io.Writer) error {
 }
 
 // RunDropletNeighbors returns a list of droplet neighbors.
-func RunDropletNeighbors(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+func RunDropletNeighbors(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
 
 	list, _, err := client.Droplets.Neighbors(id)
 	if err != nil {
@@ -338,9 +398,12 @@ func RunDropletNeighbors(ns string, out io.Writer) error {
 }
 
 // RunDropletSnapshots returns a list of available kernels for a droplet.
-func RunDropletSnapshots(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+func RunDropletSnapshots(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.Snapshots(id, opt)

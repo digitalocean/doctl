@@ -33,10 +33,17 @@ func ImageAction() *cobra.Command {
 }
 
 // RunImageActionsGet retrieves an action for an image.
-func RunImageActionsGet(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	imageID := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
-	actionID := doit.DoitConfig.GetInt(ns, doit.ArgActionID)
+func RunImageActionsGet(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	imageID, err := config.GetInt(ns, doit.ArgImageID)
+	if err != nil {
+		return err
+	}
+
+	actionID, err := config.GetInt(ns, doit.ArgActionID)
+	if err != nil {
+		return err
+	}
 
 	action, _, err := client.ImageActions.Get(imageID, actionID)
 	if err != nil {
@@ -47,11 +54,20 @@ func RunImageActionsGet(ns string, out io.Writer) error {
 }
 
 // RunImageActionsTransfer an image.
-func RunImageActionsTransfer(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
+func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgImageID)
+	if err != nil {
+		return err
+	}
+
+	region, err := config.GetString(ns, doit.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
+
 	req := &godo.ActionRequest{
-		"region": doit.DoitConfig.GetString(ns, doit.ArgRegionSlug),
+		"region": region,
 	}
 
 	action, _, err := client.ImageActions.Transfer(id, req)

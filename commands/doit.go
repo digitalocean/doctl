@@ -157,7 +157,7 @@ func cmdNS(cmd *cobra.Command) string {
 	return fmt.Sprintf("%s-%s", parentName, cmd.Name())
 }
 
-type cmdRunner func(ns string, out io.Writer) error
+type cmdRunner func(ns string, config doit.Config, out io.Writer) error
 
 func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer, aliases ...string) *cobra.Command {
 	return &cobra.Command{
@@ -166,7 +166,7 @@ func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer, aliases ...st
 		Short:   desc,
 		Long:    desc,
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(cr(cmdNS(cmd), out), cmd)
+			checkErr(cr(cmdNS(cmd), doit.DoitConfig, out), cmd)
 		},
 	}
 }

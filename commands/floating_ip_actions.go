@@ -37,10 +37,17 @@ func FloatingIPAction() *cobra.Command {
 }
 
 // RunFloatingIPActionsGet retrieves an action for a floating IP.
-func RunFloatingIPActionsGet(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	ip := doit.DoitConfig.GetString(ns, doit.ArgIPAddress)
-	actionID := doit.DoitConfig.GetInt(ns, doit.ArgActionID)
+func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	ip, err := config.GetString(ns, doit.ArgIPAddress)
+	if err != nil {
+		return err
+	}
+
+	actionID, err := config.GetInt(ns, doit.ArgActionID)
+	if err != nil {
+		return err
+	}
 
 	action, _, err := client.FloatingIPActions.Get(ip, actionID)
 	if err != nil {
@@ -51,10 +58,17 @@ func RunFloatingIPActionsGet(ns string, out io.Writer) error {
 }
 
 // RunFloatingIPActionsAssign assigns a floating IP to a droplet.
-func RunFloatingIPActionsAssign(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	ip := doit.DoitConfig.GetString(ns, doit.ArgIPAddress)
-	dropletID := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
+func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	ip, err := config.GetString(ns, doit.ArgIPAddress)
+	if err != nil {
+		return err
+	}
+
+	dropletID, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
 
 	action, _, err := client.FloatingIPActions.Assign(ip, dropletID)
 	if err != nil {
@@ -64,9 +78,12 @@ func RunFloatingIPActionsAssign(ns string, out io.Writer) error {
 }
 
 // RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
-func RunFloatingIPActionsUnassign(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	ip := doit.DoitConfig.GetString(ns, doit.ArgIPAddress)
+func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	ip, err := config.GetString(ns, doit.ArgIPAddress)
+	if err != nil {
+		return err
+	}
 
 	action, _, err := client.FloatingIPActions.Unassign(ip)
 	if err != nil {

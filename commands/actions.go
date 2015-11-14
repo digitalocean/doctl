@@ -28,8 +28,8 @@ func Actions() *cobra.Command {
 }
 
 // RunCmdActionList run action list.
-func RunCmdActionList(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
+func RunCmdActionList(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
 		if err != nil {
@@ -58,9 +58,9 @@ func RunCmdActionList(ns string, out io.Writer) error {
 }
 
 // RunCmdActionGet runs action get.
-func RunCmdActionGet(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgActionID)
+func RunCmdActionGet(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgActionID)
 	if id < 1 {
 		return errors.New("invalid action id")
 	}
