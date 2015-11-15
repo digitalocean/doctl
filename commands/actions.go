@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"io"
 
 	"github.com/bryanl/doit"
@@ -19,7 +18,7 @@ func Actions() *cobra.Command {
 
 	cmdActionGet := cmdBuilder(RunCmdActionGet, "get", "get action", writer, aliasOpt("g"))
 	cmdActions.AddCommand(cmdActionGet)
-	addIntFlag(cmdActionGet, doit.ArgActionID, 0, "Action ID")
+	addIntFlag(cmdActionGet, doit.ArgActionID, 0, "Action ID", requiredOpt())
 
 	cmdActionList := cmdBuilder(RunCmdActionList, "list", "list actions", writer, aliasOpt("ls"))
 	cmdActions.AddCommand(cmdActionList)
@@ -61,8 +60,8 @@ func RunCmdActionList(ns string, config doit.Config, out io.Writer) error {
 func RunCmdActionGet(ns string, config doit.Config, out io.Writer) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgActionID)
-	if id < 1 {
-		return errors.New("invalid action id")
+	if err != nil {
+		return err
 	}
 
 	a, _, err := client.Actions.Get(id)

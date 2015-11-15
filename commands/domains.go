@@ -19,19 +19,19 @@ func Domain() *cobra.Command {
 
 	cmdDomainCreate := cmdBuilder(RunDomainCreate, "create", "create domain", writer, aliasOpt("c"))
 	cmd.AddCommand(cmdDomainCreate)
-	addStringFlag(cmdDomainCreate, doit.ArgDomainName, "", "Domain name")
-	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address")
+	addStringFlag(cmdDomainCreate, doit.ArgDomainName, "", "Domain name", requiredOpt())
+	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address", requiredOpt())
 
 	cmdDomainList := cmdBuilder(RunDomainList, "list", "list comains", writer, aliasOpt("ls"))
 	cmd.AddCommand(cmdDomainList)
 
 	cmdDomainGet := cmdBuilder(RunDomainGet, "get", "get domain", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdDomainGet)
-	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name")
+	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name", requiredOpt())
 
 	cmdDomainDelete := cmdBuilder(RunDomainDelete, "delete", "delete droplet", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdDomainDelete)
-	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name")
+	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name", requiredOpt())
 
 	cmdRecord := &cobra.Command{
 		Use:   "records",

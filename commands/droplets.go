@@ -36,36 +36,36 @@ func Droplet() *cobra.Command {
 	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
 	addStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file")
 	addBoolFlag(cmdDropletCreate, doit.ArgDropletWait, false, "Wait for droplet to be created")
-	addStringFlag(cmdDropletCreate, doit.ArgDropletName, "", "Droplet name (required)")
-	addStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region (required)")
-	addStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size (required)")
+	addStringFlag(cmdDropletCreate, doit.ArgDropletName, "", "Droplet name", requiredOpt())
+	addStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region", requiredOpt())
+	addStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size", requiredOpt())
 	addBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet")
 	addBoolFlag(cmdDropletCreate, doit.ArgIPv6, false, "IPv6 support")
 	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
-	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image (required)")
+	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image", requiredOpt())
 
 	cmdDropletDelete := cmdBuilder(RunDropletDelete, "delete", "delete droplet", writer, aliasOpt("d"))
 	cmd.AddCommand(cmdDropletDelete)
-	addIntFlag(cmdDropletDelete, doit.ArgDropletID, 0, "Droplet ID")
+	addIntFlag(cmdDropletDelete, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	cmdDropletGet := cmdBuilder(RunDropletGet, "get", "get droplet", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdDropletGet)
-	addIntFlag(cmdDropletGet, doit.ArgDropletID, 0, "Droplet ID")
+	addIntFlag(cmdDropletGet, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	cmdDropletKernels := cmdBuilder(RunDropletKernels, "kernels", "droplet kernels", writer, aliasOpt("k"))
 	cmd.AddCommand(cmdDropletKernels)
-	addIntFlag(cmdDropletKernels, doit.ArgDropletID, 0, "Droplet ID")
+	addIntFlag(cmdDropletKernels, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	cmdDropletList := cmdBuilder(RunDropletList, "list", "list droplets", writer, aliasOpt("ls"))
 	cmd.AddCommand(cmdDropletList)
 
 	cmdDropletNeighbors := cmdBuilder(RunDropletNeighbors, "neighbors", "droplet neighbors", writer, aliasOpt("n"))
 	cmd.AddCommand(cmdDropletNeighbors)
-	addIntFlag(cmdDropletNeighbors, doit.ArgDropletID, 0, "Droplet ID")
+	addIntFlag(cmdDropletNeighbors, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	cmdDropletSnapshots := cmdBuilder(RunDropletSnapshots, "snapshots", "snapshots", writer, aliasOpt("s"))
 	cmd.AddCommand(cmdDropletSnapshots)
-	addIntFlag(cmdDropletSnapshots, doit.ArgDropletID, 0, "Droplet ID")
+	addIntFlag(cmdDropletSnapshots, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	return cmd
 }
@@ -157,9 +157,6 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer) error {
 	client := config.GetGodoClient()
 
 	name, err := config.GetString(ns, doit.ArgDropletName)
-	if name == "" {
-		return NewMissingArgsErr(ns)
-	}
 
 	region, err := config.GetString(ns, doit.ArgRegionSlug)
 	if err != nil {
@@ -292,10 +289,6 @@ func RunDropletGet(ns string, config doit.Config, out io.Writer) error {
 	id, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {
 		return err
-	}
-
-	if id < 1 {
-		return NewMissingArgsErr(ns)
 	}
 
 	droplet, err := getDropletByID(client, id)

@@ -179,7 +179,13 @@ func (c *LiveConfig) GetString(ns, key string) (string, error) {
 		return viper.GetString(key), nil
 	}
 
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := fmt.Sprintf("%s.%s", ns, key)
+
+	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
+		if viper.GetString(nskey) == "" {
+			return "", NewMissingArgsErr(nskey)
+		}
+	}
 	return viper.GetString(nskey), nil
 }
 
@@ -190,6 +196,7 @@ func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
 	}
 
 	nskey := fmt.Sprintf("%s-%s", ns, key)
+
 	return viper.GetBool(nskey), nil
 }
 
@@ -200,6 +207,13 @@ func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 	}
 
 	nskey := fmt.Sprintf("%s-%s", ns, key)
+
+	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
+		if viper.GetInt(nskey) < 0 {
+			return 0, NewMissingArgsErr(nskey)
+		}
+	}
+
 	return viper.GetInt(nskey), nil
 }
 
@@ -210,5 +224,12 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	}
 
 	nskey := fmt.Sprintf("%s-%s", ns, key)
+
+	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
+		if viper.GetStringSlice(nskey) == nil {
+			return nil, NewMissingArgsErr(nskey)
+		}
+	}
+
 	return viper.GetStringSlice(nskey), nil
 }

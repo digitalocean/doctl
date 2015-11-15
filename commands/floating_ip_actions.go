@@ -19,19 +19,19 @@ func FloatingIPAction() *cobra.Command {
 	cmdFloatingIPActionsGet := cmdBuilder(RunFloatingIPActionsGet,
 		"get", "get floating-ip action", writer)
 	cmd.AddCommand(cmdFloatingIPActionsGet)
-	addStringFlag(cmdFloatingIPActionsGet, doit.ArgIPAddress, "", "floating IP address")
-	addIntFlag(cmdFloatingIPActionsGet, doit.ArgActionID, 0, "action id")
+	addStringFlag(cmdFloatingIPActionsGet, doit.ArgIPAddress, "", "floating IP address", requiredOpt())
+	addIntFlag(cmdFloatingIPActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
 	cmdFloatingIPActionsAssign := cmdBuilder(RunFloatingIPActionsAssign,
 		"assign", "assign a floating IP to a droplet", writer)
 	cmd.AddCommand(cmdFloatingIPActionsAssign)
-	addStringFlag(cmdFloatingIPActionsAssign, doit.ArgIPAddress, "", "floating IP address")
-	addIntFlag(cmdFloatingIPActionsAssign, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to")
+	addStringFlag(cmdFloatingIPActionsAssign, doit.ArgIPAddress, "", "floating IP address", requiredOpt())
+	addIntFlag(cmdFloatingIPActionsAssign, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to", requiredOpt())
 
 	cmdFloatingIPActionsUnassign := cmdBuilder(RunFloatingIPActionsUnassign,
 		"unassign", "unassign a floating IP to a droplet", writer)
 	cmd.AddCommand(cmdFloatingIPActionsUnassign)
-	addStringFlag(cmdFloatingIPActionsUnassign, doit.ArgIPAddress, "", "floating IP address")
+	addStringFlag(cmdFloatingIPActionsUnassign, doit.ArgIPAddress, "", "floating IP address", requiredOpt())
 
 	return cmd
 }

@@ -1,4 +1,4 @@
-package commands
+package doit
 
 import (
 	"testing"

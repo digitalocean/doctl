@@ -42,16 +42,16 @@ func Images() *cobra.Command {
 
 	cmdImagesGet := cmdBuilder(RunImagesGet, "get", "Get image", out)
 	cmd.AddCommand(cmdImagesGet)
-	addStringFlag(cmdImagesGet, doit.ArgImage, "", "Image id")
+	addStringFlag(cmdImagesGet, doit.ArgImage, "", "Image id", requiredOpt())
 
 	cmdImagesUpdate := cmdBuilder(RunImagesUpdate, "update", "Update image", out)
 	cmd.AddCommand(cmdImagesUpdate)
-	addStringFlag(cmdImagesUpdate, doit.ArgImage, "", "Image id")
-	addStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name")
+	addStringFlag(cmdImagesUpdate, doit.ArgImage, "", "Image id", requiredOpt())
+	addStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
 
 	cmdImagesDelete := cmdBuilder(RunImagesDelete, "delete", "Delete image", out)
 	cmd.AddCommand(cmdImagesDelete)
-	addStringFlag(cmdImagesDelete, doit.ArgImageID, "", "Image id")
+	addStringFlag(cmdImagesDelete, doit.ArgImageID, "", "Image id", requiredOpt())
 
 	return cmd
 }

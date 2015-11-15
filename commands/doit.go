@@ -9,6 +9,7 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
+	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/fatih/color"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cobra"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/viper"
 )
@@ -28,6 +29,8 @@ var (
 
 	// Output holds the global output format.
 	Output string
+
+	requiredColor = color.New(color.Bold, color.FgWhite).SprintfFunc()
 
 	writer = os.Stdout
 )
@@ -115,28 +118,61 @@ func configFilePath() (string, error) {
 	return dir, nil
 }
 
-func addStringFlag(cmd *cobra.Command, name, dflt, desc string) {
+type flagOpt func(c *cobra.Command, name, key string)
+
+func requiredOpt() flagOpt {
+	return func(c *cobra.Command, name, key string) {
+		c.MarkFlagRequired(key)
+		key = requiredKey(key)
+		viper.Set(key, true)
+
+		u := c.Flag(name).Usage
+		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))
+	}
+}
+
+func requiredKey(key string) string {
+	return fmt.Sprintf("%s.required", key)
+}
+
+func addStringFlag(cmd *cobra.Command, name, dflt, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().String(name, dflt, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
 }
 
-func addIntFlag(cmd *cobra.Command, name string, def int, desc string) {
+func addIntFlag(cmd *cobra.Command, name string, def int, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().Int(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
 }
 
-func addBoolFlag(cmd *cobra.Command, name string, def bool, desc string) {
+func addBoolFlag(cmd *cobra.Command, name string, def bool, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().Bool(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
 }
 
-func addStringSliceFlag(cmd *cobra.Command, name string, def []string, desc string) {
+func addStringSliceFlag(cmd *cobra.Command, name string, def []string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().StringSlice(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
 }
 
 func flagName(cmd *cobra.Command, name string) string {
@@ -145,7 +181,7 @@ func flagName(cmd *cobra.Command, name string) string {
 		parentName = cmd.Parent().Name()
 	}
 
-	return fmt.Sprintf("%s-%s-%s", parentName, cmd.Name(), name)
+	return fmt.Sprintf("%s.%s.%s", parentName, cmd.Name(), name)
 }
 
 func cmdNS(cmd *cobra.Command) string {
@@ -154,7 +190,7 @@ func cmdNS(cmd *cobra.Command) string {
 		parentName = cmd.Parent().Name()
 	}
 
-	return fmt.Sprintf("%s-%s", parentName, cmd.Name())
+	return fmt.Sprintf("%s.%s", parentName, cmd.Name())
 }
 
 type cmdRunner func(ns string, config doit.Config, out io.Writer) error
