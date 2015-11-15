@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/docker/docker/pkg/term"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/viper"
@@ -119,12 +118,6 @@ type sshRunner struct {
 var _ Runner = &sshRunner{}
 
 func (r *sshRunner) Run() error {
-	logrus.WithFields(logrus.Fields{
-		"user": r.user,
-		"host": r.host,
-		"port": r.port,
-	}).Info("ssh")
-
 	sshHost := fmt.Sprintf("%s:%d", r.host, r.port)
 
 	// Key Auth

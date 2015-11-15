@@ -111,3 +111,21 @@ func TestSSH_Name(t *testing.T) {
 		assert.Equal(t, testDroplet.Networks.V4[0].IPAddress, ms.host)
 	})
 }
+
+func Test_extractHostInfo(t *testing.T) {
+	cases := []struct {
+		s string
+		e sshHostInfo
+	}{
+		{s: "host", e: sshHostInfo{host: "host"}},
+		{s: "root@host", e: sshHostInfo{user: "root", host: "host"}},
+		{s: "root@host:22", e: sshHostInfo{user: "root", host: "host", port: "22"}},
+		{s: "host:22", e: sshHostInfo{host: "host", port: "22"}},
+		{s: "dokku@simple-task-02efb9c4", e: sshHostInfo{host: "simple-task-02efb9c4", user: "dokku"}},
+	}
+
+	for _, c := range cases {
+		i := extractHostInfo(c.s)
+		assert.Equal(t, c.e, i)
+	}
+}

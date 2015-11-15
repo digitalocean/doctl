@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -21,6 +22,7 @@ const (
 
 var (
 	errSSHInvalidOptions = fmt.Errorf("neither id or name were supplied")
+	sshHostRE            = regexp.MustCompile("^((?P<m1>\\w+)@)?(?P<m2>.*?)(:(?P<m3>\\d+))?$")
 )
 
 // SSH creates the ssh commands heirarchy
@@ -75,15 +77,21 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 		droplet, err = getDropletByID(client, id)
 	} else {
 		// dropletID is a string
-
 		var droplets []godo.Droplet
 		droplets, err := listDroplets(client)
 		if err != nil {
 			return err
 		}
 
+		shi := extractHostInfo(dropletID)
+
+		user = shi.user
+		if i, err := strconv.Atoi(shi.port); shi.port != "" && err != nil {
+			port = i
+		}
+
 		for _, d := range droplets {
-			if d.Name == dropletID {
+			if d.Name == shi.host {
 				droplet = &d
 				break
 			}
@@ -95,7 +103,9 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 
 	}
 
-	user = defaultSSHUser(droplet)
+	if user == "" {
+		user = defaultSSHUser(droplet)
+	}
 	publicIP := extractDropletPublicIP(droplet)
 
 	if len(publicIP) < 1 {
@@ -128,4 +138,24 @@ func defaultSSHUser(droplet *godo.Droplet) string {
 	}
 
 	return "root"
+}
+
+type sshHostInfo struct {
+	user string
+	host string
+	port string
+}
+
+func extractHostInfo(in string) sshHostInfo {
+	m := sshHostRE.FindStringSubmatch(in)
+	r := map[string]string{}
+	for i, n := range sshHostRE.SubexpNames() {
+		r[n] = m[i]
+	}
+
+	return sshHostInfo{
+		user: r["m1"],
+		host: r["m2"],
+		port: r["m3"],
+	}
 }
