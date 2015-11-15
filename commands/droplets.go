@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
@@ -30,13 +31,12 @@ func Droplet() *cobra.Command {
 	cmd.AddCommand(cmdDropletBackups)
 	addIntFlag(cmdDropletBackups, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletCreate := cmdBuilder(RunDropletCreate, "create", "create droplet", writer, aliasOpt("c"))
+	cmdDropletCreate := cmdBuilder(RunDropletCreate, "create NAME", "create droplet", writer, aliasOpt("c"))
 	cmd.AddCommand(cmdDropletCreate)
 	addStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
 	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
 	addStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file")
 	addBoolFlag(cmdDropletCreate, doit.ArgDropletWait, false, "Wait for droplet to be created")
-	addStringFlag(cmdDropletCreate, doit.ArgDropletName, "", "Droplet name", requiredOpt())
 	addStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region", requiredOpt())
 	addStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size", requiredOpt())
 	addBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet")
@@ -156,7 +156,9 @@ func RunDropletBackups(ns string, config doit.Config, out io.Writer, args []stri
 func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
-	name, err := config.GetString(ns, doit.ArgDropletName)
+	if len(args) < 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
 
 	region, err := config.GetString(ns, doit.ArgRegionSlug)
 	if err != nil {
@@ -183,22 +185,12 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []strin
 		return err
 	}
 
-	sshKeys := []godo.DropletCreateSSHKey{}
 	keys, err := config.GetStringSlice(ns, doit.ArgSSHKeys)
 	if err != nil {
 		return err
 	}
 
-	for _, rawKey := range keys {
-		rawKey = strings.TrimPrefix(rawKey, "[")
-		rawKey = strings.TrimSuffix(rawKey, "]")
-		if i, err := strconv.Atoi(rawKey); err == nil {
-			sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: i})
-			continue
-		}
-
-		sshKeys = append(sshKeys, godo.DropletCreateSSHKey{Fingerprint: rawKey})
-	}
+	sshKeys := extractSSHKeys(keys)
 
 	userData, err := config.GetString(ns, doit.ArgUserData)
 	if err != nil {
@@ -210,12 +202,18 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []strin
 		return err
 	}
 
-	if userData == "" && filename != "" {
-		data, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return err
-		}
-		userData = string(data)
+	userData, err = extractUserData(userData, filename)
+	if err != nil {
+		return err
+	}
+
+	var createImage godo.DropletCreateImage
+
+	imageStr, err := config.GetString(ns, doit.ArgImage)
+	if i, err := strconv.Atoi(imageStr); err == nil {
+		createImage = godo.DropletCreateImage{ID: i}
+	} else {
+		createImage = godo.DropletCreateImage{Slug: imageStr}
 	}
 
 	wait, err := config.GetBool(ns, doit.ArgDropletWait)
@@ -223,24 +221,56 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []strin
 		return err
 	}
 
-	dcr := &godo.DropletCreateRequest{
-		Name:              name,
-		Region:            region,
-		Size:              size,
-		Backups:           backups,
-		IPv6:              ipv6,
-		PrivateNetworking: privateNetworking,
-		SSHKeys:           sshKeys,
-		UserData:          userData,
+	var wg sync.WaitGroup
+	for _, name := range args {
+		dcr := &godo.DropletCreateRequest{
+			Name:              name,
+			Region:            region,
+			Size:              size,
+			Image:             createImage,
+			Backups:           backups,
+			IPv6:              ipv6,
+			PrivateNetworking: privateNetworking,
+			SSHKeys:           sshKeys,
+			UserData:          userData,
+		}
+		r, resp, err := client.Droplets.Create(dcr)
+		if err != nil {
+			return err
+		}
+
+		if wait {
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+				var action *godo.LinkAction
+
+				for _, a := range resp.Links.Actions {
+					if a.Rel == "create" {
+						action = &a
+						break
+					}
+				}
+
+				if action != nil {
+					_ = util.WaitForActive(client, action.HREF)
+					r, _ = getDropletByID(client, r.ID)
+				}
+
+				doit.DisplayOutput(r, out)
+			}()
+		} else {
+			doit.DisplayOutput(r, out)
+		}
 	}
 
-	imageStr, err := config.GetString(ns, doit.ArgImage)
-	if i, err := strconv.Atoi(imageStr); err == nil {
-		dcr.Image = godo.DropletCreateImage{ID: i}
-	} else {
-		dcr.Image = godo.DropletCreateImage{Slug: imageStr}
-	}
+	wg.Wait()
 
+	return nil
+}
+
+func createDroplet(client *godo.Client, dcr *godo.DropletCreateRequest, wait bool, out io.Writer) error {
 	r, resp, err := client.Droplets.Create(dcr)
 	if err != nil {
 		return err
@@ -269,6 +299,35 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []strin
 	}
 
 	return doit.DisplayOutput(r, out)
+}
+
+func extractSSHKeys(keys []string) []godo.DropletCreateSSHKey {
+	sshKeys := []godo.DropletCreateSSHKey{}
+
+	for _, rawKey := range keys {
+		rawKey = strings.TrimPrefix(rawKey, "[")
+		rawKey = strings.TrimSuffix(rawKey, "]")
+		if i, err := strconv.Atoi(rawKey); err == nil {
+			sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: i})
+			continue
+		}
+
+		sshKeys = append(sshKeys, godo.DropletCreateSSHKey{Fingerprint: rawKey})
+	}
+
+	return sshKeys
+}
+
+func extractUserData(userData, filename string) (string, error) {
+	if userData == "" && filename != "" {
+		data, err := ioutil.ReadFile(filename)
+		if err != nil {
+			return "", err
+		}
+		userData = string(data)
+	}
+
+	return userData, nil
 }
 
 // RunDropletDelete destroy a droplet by id.
