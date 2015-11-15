@@ -23,7 +23,7 @@ func Size() *cobra.Command {
 }
 
 // RunSizeList all sizes.
-func RunSizeList(ns string, config doit.Config, out io.Writer) error {
+func RunSizeList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {

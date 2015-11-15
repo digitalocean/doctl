@@ -25,7 +25,7 @@ func TestFloatingIPActionsGet(t *testing.T) {
 		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
 		c.Set(ns, doit.ArgActionID, 2)
 
-		RunFloatingIPActionsGet(ns, c, ioutil.Discard)
+		RunFloatingIPActionsGet(ns, c, ioutil.Discard, []string{})
 	})
 
 }
@@ -48,7 +48,7 @@ func TestFloatingIPActionsAssign(t *testing.T) {
 		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
 		c.Set(ns, doit.ArgDropletID, 2)
 
-		RunFloatingIPActionsAssign(ns, c, ioutil.Discard)
+		RunFloatingIPActionsAssign(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -68,6 +68,6 @@ func TestFloatingIPActionsUnassign(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
 
-		RunFloatingIPActionsUnassign(ns, c, ioutil.Discard)
+		RunFloatingIPActionsUnassign(ns, c, ioutil.Discard, []string{})
 	})
 }

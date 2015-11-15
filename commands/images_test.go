@@ -30,7 +30,7 @@ func TestImagesList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunImagesList(ns, c, ioutil.Discard)
+		RunImagesList(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -54,7 +54,7 @@ func TestImagesListDistribution(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunImagesListDistribution(ns, c, ioutil.Discard)
+		RunImagesListDistribution(ns, c, ioutil.Discard, []string{})
 		assert.True(t, didRun)
 	})
 }
@@ -79,7 +79,7 @@ func TestImagesListApplication(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunImagesListApplication(ns, c, ioutil.Discard)
+		RunImagesListApplication(ns, c, ioutil.Discard, []string{})
 		assert.True(t, didRun)
 	})
 }
@@ -104,7 +104,7 @@ func TestImagesListUser(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunImagesListUser(ns, c, ioutil.Discard)
+		RunImagesListUser(ns, c, ioutil.Discard, []string{})
 		assert.True(t, didRun)
 	})
 }
@@ -127,7 +127,7 @@ func TestImagesGetByID(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgImage, testImage.ID)
 
-		RunImagesGet(ns, c, ioutil.Discard)
+		RunImagesGet(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -149,7 +149,7 @@ func TestImagesGetBySlug(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgImage, testImage.Slug)
 
-		RunImagesGet(ns, c, ioutil.Discard)
+		RunImagesGet(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -169,7 +169,7 @@ func TestImagesNoID(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunImagesGet(ns, c, ioutil.Discard)
+		RunImagesGet(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -191,7 +191,7 @@ func TestImagesUpdate(t *testing.T) {
 		c.Set(ns, doit.ArgImageID, testImage.ID)
 		c.Set(ns, doit.ArgImageName, "new-name")
 
-		RunImagesUpdate(ns, c, ioutil.Discard)
+		RunImagesUpdate(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -209,7 +209,7 @@ func TestImagesDelete(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgImageID, testImage.ID)
 
-		RunImagesDelete(ns, c, ioutil.Discard)
+		RunImagesDelete(ns, c, ioutil.Discard, []string{})
 	})
 
 }

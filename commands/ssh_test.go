@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -52,9 +53,7 @@ func TestSSH_ID(t *testing.T) {
 		c.SSHFn = ms.cmd()
 
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
-
-		err := RunSSH(ns, c, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard, []string{strconv.Itoa(testDroplet.ID)})
 		assert.NoError(t, err)
 		assert.True(t, didFetchDroplet)
 		assert.True(t, ms.didRun)
@@ -82,7 +81,7 @@ func TestSSH_InvalidID(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunSSH(ns, c, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard, []string{})
 		assert.Error(t, err)
 	})
 }
@@ -104,12 +103,29 @@ func TestSSH_Name(t *testing.T) {
 		c.SSHFn = ms.cmd()
 
 		ns := "test"
-		c.Set(ns, doit.ArgDropletName, testDroplet.Name)
 
-		err := RunSSH(ns, c, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard, []string{testDroplet.Name})
 		assert.NoError(t, err)
 
 		assert.Equal(t, "root", ms.user)
 		assert.Equal(t, testDroplet.Networks.V4[0].IPAddress, ms.host)
 	})
+}
+
+func Test_extractHostInfo(t *testing.T) {
+	cases := []struct {
+		s string
+		e sshHostInfo
+	}{
+		{s: "host", e: sshHostInfo{host: "host"}},
+		{s: "root@host", e: sshHostInfo{user: "root", host: "host"}},
+		{s: "root@host:22", e: sshHostInfo{user: "root", host: "host", port: "22"}},
+		{s: "host:22", e: sshHostInfo{host: "host", port: "22"}},
+		{s: "dokku@simple-task-02efb9c4", e: sshHostInfo{host: "simple-task-02efb9c4", user: "dokku"}},
+	}
+
+	for _, c := range cases {
+		i := extractHostInfo(c.s)
+		assert.Equal(t, c.e, i)
+	}
 }

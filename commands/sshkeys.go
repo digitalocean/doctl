@@ -52,7 +52,7 @@ func SSHKeys() *cobra.Command {
 }
 
 // RunKeyList lists keys.
-func RunKeyList(ns string, config doit.Config, out io.Writer) error {
+func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -83,7 +83,7 @@ func RunKeyList(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunKeyGet retrieves a key.
-func RunKeyGet(ns string, config doit.Config, out io.Writer) error {
+func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	rawKey, err := config.GetString(ns, doit.ArgKey)
 	if err != nil {
@@ -109,7 +109,7 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunKeyCreate uploads a SSH key.
-func RunKeyCreate(ns string, config doit.Config, out io.Writer) error {
+func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	name, err := config.GetString(ns, doit.ArgKeyName)
@@ -136,7 +136,7 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunKeyImport imports a key from a file
-func RunKeyImport(ns string, config doit.Config, out io.Writer) error {
+func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	keyPath, err := config.GetString(ns, doit.ArgKeyPublicKeyFile)
@@ -177,7 +177,7 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunKeyDelete deletes a key.
-func RunKeyDelete(ns string, config doit.Config, out io.Writer) error {
+func RunKeyDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	rawKey, err := config.GetString(ns, doit.ArgKey)
 	if err != nil {
@@ -194,7 +194,7 @@ func RunKeyDelete(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunKeyUpdate updates a key.
-func RunKeyUpdate(ns string, config doit.Config, out io.Writer) error {
+func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	rawKey, err := config.GetString(ns, doit.ArgKey)
 	if err != nil {

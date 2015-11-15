@@ -77,13 +77,13 @@ func NewCmdDropletActions(out io.Writer) *cobra.Command {
 		Short: "get droplet actions",
 		Long:  "get droplet actions",
 		Run: func(cmd *cobra.Command, args []string) {
-			checkErr(RunDropletActions(cmdNS(cmd), doit.DoitConfig, out), cmd)
+			checkErr(RunDropletActions(cmdNS(cmd), doit.DoitConfig, out, args), cmd)
 		},
 	}
 }
 
 // RunDropletActions returns a list of actions for a droplet.
-func RunDropletActions(ns string, config doit.Config, out io.Writer) error {
+func RunDropletActions(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {
@@ -118,7 +118,7 @@ func RunDropletActions(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDropletBackups returns a list of backup images for a droplet.
-func RunDropletBackups(ns string, config doit.Config, out io.Writer) error {
+func RunDropletBackups(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {
@@ -153,7 +153,7 @@ func RunDropletBackups(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDropletCreate creates a droplet.
-func RunDropletCreate(ns string, config doit.Config, out io.Writer) error {
+func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	name, err := config.GetString(ns, doit.ArgDropletName)
@@ -272,7 +272,7 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDropletDelete destroy a droplet by id.
-func RunDropletDelete(ns string, config doit.Config, out io.Writer) error {
+func RunDropletDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {
@@ -284,7 +284,7 @@ func RunDropletDelete(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDropletGet returns a droplet.
-func RunDropletGet(ns string, config doit.Config, out io.Writer) error {
+func RunDropletGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {
@@ -300,7 +300,7 @@ func RunDropletGet(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
-func RunDropletKernels(ns string, config doit.Config, out io.Writer) error {
+func RunDropletKernels(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {
@@ -335,7 +335,7 @@ func RunDropletKernels(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDropletList returns a list of droplets.
-func RunDropletList(ns string, config doit.Config, out io.Writer) error {
+func RunDropletList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -366,7 +366,7 @@ func RunDropletList(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDropletNeighbors returns a list of droplet neighbors.
-func RunDropletNeighbors(ns string, config doit.Config, out io.Writer) error {
+func RunDropletNeighbors(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {
@@ -382,7 +382,7 @@ func RunDropletNeighbors(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDropletSnapshots returns a list of available kernels for a droplet.
-func RunDropletSnapshots(ns string, config doit.Config, out io.Writer) error {
+func RunDropletSnapshots(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {

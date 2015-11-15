@@ -34,7 +34,7 @@ func TestRegionsList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunRegionList(ns, c, ioutil.Discard)
+		RunRegionList(ns, c, ioutil.Discard, []string{})
 		assert.True(t, didList)
 	})
 }

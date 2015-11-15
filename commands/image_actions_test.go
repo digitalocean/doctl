@@ -25,7 +25,7 @@ func TestImageActionsGet(t *testing.T) {
 		c.Set(ns, doit.ArgImageID, 1)
 		c.Set(ns, doit.ArgActionID, 2)
 
-		RunImageActionsGet(ns, c, ioutil.Discard)
+		RunImageActionsGet(ns, c, ioutil.Discard, []string{})
 	})
 
 }
@@ -49,6 +49,6 @@ func TestImageActionsTransfer(t *testing.T) {
 		c.Set(ns, doit.ArgImageID, 1)
 		c.Set(ns, doit.ArgRegionSlug, "dev0")
 
-		RunImageActionsTransfer(ns, c, ioutil.Discard)
+		RunImageActionsTransfer(ns, c, ioutil.Discard, []string{})
 	})
 }

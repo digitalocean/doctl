@@ -33,7 +33,7 @@ func ImageAction() *cobra.Command {
 }
 
 // RunImageActionsGet retrieves an action for an image.
-func RunImageActionsGet(ns string, config doit.Config, out io.Writer) error {
+func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	imageID, err := config.GetInt(ns, doit.ArgImageID)
 	if err != nil {
@@ -54,7 +54,7 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunImageActionsTransfer an image.
-func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer) error {
+func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgImageID)
 	if err != nil {

@@ -40,7 +40,7 @@ func TestDomainsCreate(t *testing.T) {
 		c.Set(ns, doit.ArgDomainName, testDomain.Name)
 		c.Set(ns, doit.ArgDomainName, testDomain.Name)
 		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
-		err := RunDomainCreate(ns, c, ioutil.Discard)
+		err := RunDomainCreate(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 	})
 }
@@ -62,7 +62,7 @@ func TestDomainsList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		err := RunDomainList(ns, c, ioutil.Discard)
+		err := RunDomainList(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 		if !domainsDisList {
 			t.Errorf("List() did not run")
@@ -85,7 +85,7 @@ func TestDomainsGet(t *testing.T) {
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, testDomain.Name)
-		err := RunDomainGet(ns, c, ioutil.Discard)
+		err := RunDomainGet(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 	})
 }
@@ -95,7 +95,7 @@ func TestDomainsGet_DomainRequred(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		err := RunDomainGet(ns, c, ioutil.Discard)
+		err := RunDomainGet(ns, c, ioutil.Discard, []string{})
 		assert.Error(t, err)
 	})
 }
@@ -115,7 +115,7 @@ func TestDomainsDelete(t *testing.T) {
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, testDomain.Name)
-		err := RunDomainDelete(ns, c, ioutil.Discard)
+		err := RunDomainDelete(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 	})
 }
@@ -125,7 +125,7 @@ func TestDomainsGet_RequiredArguments(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		err := RunDomainDelete(ns, c, ioutil.Discard)
+		err := RunDomainDelete(ns, c, ioutil.Discard, []string{})
 		assert.Error(t, err)
 	})
 }
@@ -146,7 +146,7 @@ func TestRecordsList(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, "example.com")
 
-		err := RunRecordList(ns, c, ioutil.Discard)
+		err := RunRecordList(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 		assert.True(t, recordsDidList)
 	})
@@ -157,7 +157,7 @@ func TestRecordList_RequiredArguments(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		err := RunRecordList(ns, c, ioutil.Discard)
+		err := RunRecordList(ns, c, ioutil.Discard, []string{})
 		assert.Error(t, err)
 	})
 }
@@ -187,7 +187,7 @@ func TestRecordsCreate(t *testing.T) {
 		c.Set(ns, doit.ArgRecordName, "foo.example.com.")
 		c.Set(ns, doit.ArgRecordData, "192.168.1.1")
 
-		err := RunRecordCreate(ns, c, ioutil.Discard)
+		err := RunRecordCreate(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 	})
 }
@@ -197,7 +197,7 @@ func TestRecordCreate_RequiredArguments(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		err := RunRecordCreate(ns, c, ioutil.Discard)
+		err := RunRecordCreate(ns, c, ioutil.Discard, []string{})
 		assert.Error(t, err)
 	})
 }
@@ -221,7 +221,7 @@ func TestRecordsDelete(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDomainName, "example.com")
 		c.Set(ns, doit.ArgRecordID, 1)
-		err := RunRecordDelete(ns, c, ioutil.Discard)
+		err := RunRecordDelete(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 	})
 }
@@ -253,7 +253,7 @@ func TestRecordsUpdate(t *testing.T) {
 		c.Set(ns, doit.ArgRecordName, "foo.example.com.")
 		c.Set(ns, doit.ArgRecordData, "192.168.1.1")
 
-		err := RunRecordUpdate(ns, c, ioutil.Discard)
+		err := RunRecordUpdate(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 	})
 }

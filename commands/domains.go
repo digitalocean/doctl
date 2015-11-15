@@ -74,7 +74,7 @@ func Domain() *cobra.Command {
 }
 
 // RunDomainCreate runs domain create.
-func RunDomainCreate(ns string, config doit.Config, out io.Writer) error {
+func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	domainName, err := config.GetString(ns, "domain-name")
@@ -101,7 +101,7 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDomainList runs domain create.
-func RunDomainList(ns string, config doit.Config, out io.Writer) error {
+func RunDomainList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
@@ -132,7 +132,7 @@ func RunDomainList(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDomainGet retrieves a domain by name.
-func RunDomainGet(ns string, config doit.Config, out io.Writer) error {
+func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetString(ns, doit.ArgDomainName)
 	if err != nil {
@@ -152,7 +152,7 @@ func RunDomainGet(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunDomainDelete deletes a domain by name.
-func RunDomainDelete(ns string, config doit.Config, out io.Writer) error {
+func RunDomainDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	name, err := config.GetString(ns, doit.ArgDomainName)
 	if err != nil {
@@ -168,7 +168,7 @@ func RunDomainDelete(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunRecordList list records for a domain.
-func RunRecordList(ns string, config doit.Config, out io.Writer) error {
+func RunRecordList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	name, err := config.GetString(ns, doit.ArgDomainName)
 	if err != nil {
@@ -207,7 +207,7 @@ func RunRecordList(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunRecordCreate creates a domain record.
-func RunRecordCreate(ns string, config doit.Config, out io.Writer) error {
+func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	name, err := config.GetString(ns, doit.ArgDomainName)
 	if err != nil {
@@ -266,7 +266,7 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunRecordDelete deletes a domain record.
-func RunRecordDelete(ns string, config doit.Config, out io.Writer) error {
+func RunRecordDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	domainName, err := config.GetString(ns, doit.ArgDomainName)
 	if err != nil {
@@ -283,7 +283,7 @@ func RunRecordDelete(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunRecordUpdate updates a domain record.
-func RunRecordUpdate(ns string, config doit.Config, out io.Writer) error {
+func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	domainName, err := config.GetString(ns, doit.ArgDomainName)
 	if err != nil {
