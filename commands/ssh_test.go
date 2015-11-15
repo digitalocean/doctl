@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -52,9 +53,7 @@ func TestSSH_ID(t *testing.T) {
 		c.SSHFn = ms.cmd()
 
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
-
-		err := RunSSH(ns, c, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard, []string{strconv.Itoa(testDroplet.ID)})
 		assert.NoError(t, err)
 		assert.True(t, didFetchDroplet)
 		assert.True(t, ms.didRun)
@@ -82,7 +81,7 @@ func TestSSH_InvalidID(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunSSH(ns, c, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard, []string{})
 		assert.Error(t, err)
 	})
 }
@@ -104,9 +103,8 @@ func TestSSH_Name(t *testing.T) {
 		c.SSHFn = ms.cmd()
 
 		ns := "test"
-		c.Set(ns, doit.ArgDropletName, testDroplet.Name)
 
-		err := RunSSH(ns, c, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard, []string{testDroplet.Name})
 		assert.NoError(t, err)
 
 		assert.Equal(t, "root", ms.user)

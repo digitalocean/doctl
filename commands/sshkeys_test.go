@@ -37,7 +37,7 @@ func TestKeysList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunKeyList(ns, c, ioutil.Discard)
+		RunKeyList(ns, c, ioutil.Discard, []string{})
 		assert.True(t, didList)
 	})
 }
@@ -60,7 +60,7 @@ func TestKeysGetByID(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, "1")
 
-		RunKeyGet(ns, c, ioutil.Discard)
+		RunKeyGet(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -82,7 +82,7 @@ func TestKeysGetByFingerprint(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, testKey.Fingerprint)
 
-		RunKeyGet(ns, c, ioutil.Discard)
+		RunKeyGet(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -105,7 +105,7 @@ func TestKeysCreate(t *testing.T) {
 		c.Set(ns, doit.ArgKeyName, "the key")
 		c.Set(ns, doit.ArgKeyPublicKey, "fingerprint")
 
-		RunKeyCreate(ns, c, ioutil.Discard)
+		RunKeyCreate(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -127,7 +127,7 @@ func TestKeysDeleteByID(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, "1")
 
-		RunKeyDelete(ns, c, ioutil.Discard)
+		RunKeyDelete(ns, c, ioutil.Discard, []string{})
 	})
 }
 
@@ -149,7 +149,7 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgKey, "fingerprint")
 
-		RunKeyDelete(ns, c, ioutil.Discard)
+		RunKeyDelete(ns, c, ioutil.Discard, []string{})
 	})
 
 }
@@ -177,7 +177,7 @@ func TestKeysUpdateByID(t *testing.T) {
 		c.Set(ns, doit.ArgKey, "1")
 		c.Set(ns, doit.ArgKeyName, "the key")
 
-		RunKeyUpdate(ns, c, ioutil.Discard)
+		RunKeyUpdate(ns, c, ioutil.Discard, []string{})
 	})
 
 }
@@ -205,7 +205,7 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 		c.Set(ns, doit.ArgKey, "fingerprint")
 		c.Set(ns, doit.ArgKeyName, "the key")
 
-		RunKeyUpdate(ns, c, ioutil.Discard)
+		RunKeyUpdate(ns, c, ioutil.Discard, []string{})
 	})
 
 }
@@ -235,7 +235,7 @@ func TestSSHPublicKeyImport(t *testing.T) {
 		c.Set(ns, doit.ArgKeyPublicKey, "fingerprint")
 		c.Set(ns, doit.ArgKeyPublicKeyFile, path)
 
-		RunKeyImport(ns, c, ioutil.Discard)
+		RunKeyImport(ns, c, ioutil.Discard, []string{})
 	})
 
 }
@@ -265,6 +265,6 @@ func TestSSHPublicKeyImportWithName(t *testing.T) {
 		c.Set(ns, doit.ArgKeyName, "custom")
 		c.Set(ns, doit.ArgKeyPublicKeyFile, path)
 
-		RunKeyImport(ns, c, ioutil.Discard)
+		RunKeyImport(ns, c, ioutil.Discard, []string{})
 	})
 }

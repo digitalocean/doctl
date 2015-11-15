@@ -27,7 +27,7 @@ func Actions() *cobra.Command {
 }
 
 // RunCmdActionList run action list.
-func RunCmdActionList(ns string, config doit.Config, out io.Writer) error {
+func RunCmdActionList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Actions.List(opt)
@@ -57,7 +57,7 @@ func RunCmdActionList(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunCmdActionGet runs action get.
-func RunCmdActionGet(ns string, config doit.Config, out io.Writer) error {
+func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	id, err := config.GetInt(ns, doit.ArgActionID)
 	if err != nil {

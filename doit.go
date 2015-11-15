@@ -122,6 +122,7 @@ func (r *sshRunner) Run() error {
 	logrus.WithFields(logrus.Fields{
 		"user": r.user,
 		"host": r.host,
+		"port": r.port,
 	}).Info("ssh")
 
 	sshHost := fmt.Sprintf("%s:%d", r.host, r.port)
@@ -135,6 +136,7 @@ func (r *sshRunner) Run() error {
 	if err != nil {
 		return err
 	}
+
 	if err := sshConnect(r.user, sshHost, ssh.PublicKeys(privateKey)); err != nil {
 		// Password Auth if Key Auth Fails
 		fd := os.Stdin.Fd()
@@ -195,7 +197,7 @@ func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
 		return viper.GetBool(key), nil
 	}
 
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	return viper.GetBool(nskey), nil
 }
@@ -206,7 +208,7 @@ func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 		return viper.GetInt(key), nil
 	}
 
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
 		if viper.GetInt(nskey) < 0 {

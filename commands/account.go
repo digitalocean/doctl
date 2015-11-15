@@ -22,7 +22,7 @@ func Account() *cobra.Command {
 }
 
 // RunAccountGet runs account get.
-func RunAccountGet(ns string, config doit.Config, out io.Writer) error {
+func RunAccountGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	a, _, err := client.Account.Get()

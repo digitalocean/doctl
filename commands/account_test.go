@@ -31,7 +31,7 @@ func TestAccountGet(t *testing.T) {
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 
-		err := RunAccountGet(ns, c, ioutil.Discard)
+		err := RunAccountGet(ns, c, ioutil.Discard, []string{})
 		assert.NoError(t, err)
 
 		if !accountDidGet {

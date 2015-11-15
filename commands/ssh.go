@@ -6,6 +6,7 @@ import (
 	"io"
 	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/bryanl/doit"
@@ -31,8 +32,6 @@ func SSH() *cobra.Command {
 	path := filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 
 	cmdSSH := cmdBuilder(RunSSH, "ssh", "ssh to droplet", writer)
-	addIntFlag(cmdSSH, doit.ArgDropletID, 0, "droplet id")
-	addStringFlag(cmdSSH, doit.ArgDropletName, "", "droplet name")
 	addStringFlag(cmdSSH, doit.ArgSSHUser, "root", "ssh user")
 	addStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
 	addIntFlag(cmdSSH, doit.ArgsSSHPort, 22, "port sshd is running on")
@@ -41,16 +40,17 @@ func SSH() *cobra.Command {
 }
 
 // RunSSH finds a droplet to ssh to given input parameters (name or id).
-func RunSSH(ns string, config doit.Config, out io.Writer) error {
+func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgDropletID)
-	if err != nil {
-		return err
+
+	if len(args) == 0 {
+		return doit.NewMissingArgsErr(ns)
 	}
 
-	name, err := config.GetString(ns, doit.ArgDropletName)
-	if err != nil {
-		return err
+	dropletID := args[0]
+
+	if dropletID == "" {
+		return doit.NewMissingArgsErr(ns)
 	}
 
 	user, err := config.GetString(ns, doit.ArgSSHUser)
@@ -70,17 +70,20 @@ func RunSSH(ns string, config doit.Config, out io.Writer) error {
 
 	var droplet *godo.Droplet
 
-	switch {
-	case id > 0 && len(name) < 1:
+	if id, err := strconv.Atoi(dropletID); err == nil {
+		// dropletID is an integer
 		droplet, err = getDropletByID(client, id)
+	} else {
+		// dropletID is a string
+
+		var droplets []godo.Droplet
+		droplets, err := listDroplets(client)
 		if err != nil {
 			return err
 		}
-	case len(name) > 0 && id < 1:
-		var droplets []godo.Droplet
-		droplets, err = listDroplets(client)
+
 		for _, d := range droplets {
-			if d.Name == name {
+			if d.Name == dropletID {
 				droplet = &d
 				break
 			}
@@ -90,11 +93,9 @@ func RunSSH(ns string, config doit.Config, out io.Writer) error {
 			return errors.New("could not find droplet by name")
 		}
 
-	default:
-		return errSSHInvalidOptions
 	}
 
-	user = defaulSSHUser(droplet)
+	user = defaultSSHUser(droplet)
 	publicIP := extractDropletPublicIP(droplet)
 
 	if len(publicIP) < 1 {
@@ -103,8 +104,6 @@ func RunSSH(ns string, config doit.Config, out io.Writer) error {
 
 	runner := config.SSH(user, publicIP, keyPath, port)
 	return runner.Run()
-
-	// return config.SSH(user, publicIP, keyPath, port)
 }
 
 func removeEmptyOptions(in []string) []string {
@@ -122,7 +121,7 @@ func removeEmptyOptions(in []string) []string {
 	return out
 }
 
-func defaulSSHUser(droplet *godo.Droplet) string {
+func defaultSSHUser(droplet *godo.Droplet) string {
 	slug := strings.ToLower(droplet.Image.Slug)
 	if strings.Contains(slug, "coreos") {
 		return "core"

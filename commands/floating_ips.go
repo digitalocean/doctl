@@ -38,7 +38,7 @@ func FloatingIP() *cobra.Command {
 }
 
 // RunFloatingIPCreate runs floating IP create.
-func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer) error {
+func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	region, err := config.GetString(ns, doit.ArgRegionSlug)
@@ -63,7 +63,7 @@ func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunFloatingIPGet retrieves a floating IP's details.
-func RunFloatingIPGet(ns string, config doit.Config, out io.Writer) error {
+func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	ip, err := config.GetString(ns, doit.ArgIPAddress)
 	if err != nil {
@@ -83,7 +83,7 @@ func RunFloatingIPGet(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunFloatingIPDelete runs floating IP delete.
-func RunFloatingIPDelete(ns string, config doit.Config, out io.Writer) error {
+func RunFloatingIPDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	ip, err := config.GetString(ns, doit.ArgIPAddress)
 	if err != nil {
@@ -95,7 +95,7 @@ func RunFloatingIPDelete(ns string, config doit.Config, out io.Writer) error {
 }
 
 // RunFloatingIPList runs floating IP create.
-func RunFloatingIPList(ns string, config doit.Config, out io.Writer) error {
+func RunFloatingIPList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {

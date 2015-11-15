@@ -37,7 +37,7 @@ func FloatingIPAction() *cobra.Command {
 }
 
 // RunFloatingIPActionsGet retrieves an action for a floating IP.
-func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer) error {
+func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	ip, err := config.GetString(ns, doit.ArgIPAddress)
 	if err != nil {
@@ -58,7 +58,7 @@ func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer) error
 }
 
 // RunFloatingIPActionsAssign assigns a floating IP to a droplet.
-func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer) error {
+func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	ip, err := config.GetString(ns, doit.ArgIPAddress)
 	if err != nil {
@@ -78,7 +78,7 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer) er
 }
 
 // RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
-func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer) error {
+func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 	ip, err := config.GetString(ns, doit.ArgIPAddress)
 	if err != nil {
