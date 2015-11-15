@@ -18,31 +18,42 @@ func FloatingIP() *cobra.Command {
 		Aliases: []string{"fip"},
 	}
 
-	cmdFloatingIPCreate := cmdBuilder(RunFloatingIPCreate, "create", "create a floating IP", writer, "c")
+	cmdFloatingIPCreate := cmdBuilder(RunFloatingIPCreate, "create", "create a floating IP", writer, aliasOpt("c"))
 	cmd.AddCommand(cmdFloatingIPCreate)
-	addStringFlag(cmdFloatingIPCreate, doit.ArgRegionSlug, "", "Region where to create the floating IP.")
+	addStringFlag(cmdFloatingIPCreate, doit.ArgRegionSlug, "", "Region where to create the floating IP.", requiredOpt())
 	addIntFlag(cmdFloatingIPCreate, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to. (Optional)")
 
-	cmdFloatingIPGet := cmdBuilder(RunFloatingIPGet, "get", "get the details of a floating IP", writer, "g")
+	cmdFloatingIPGet := cmdBuilder(RunFloatingIPGet, "get", "get the details of a floating IP", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdFloatingIPGet)
-	addStringFlag(cmdFloatingIPGet, doit.ArgIPAddress, "", "IP address of the floating IP")
+	addStringFlag(cmdFloatingIPGet, doit.ArgIPAddress, "", "IP address of the floating IP", requiredOpt())
 
-	cmdFloatingIPDelete := cmdBuilder(RunFloatingIPDelete, "delete", "delete a floating IP address", writer, "d")
+	cmdFloatingIPDelete := cmdBuilder(RunFloatingIPDelete, "delete", "delete a floating IP address", writer, aliasOpt("d"))
 	cmd.AddCommand(cmdFloatingIPDelete)
-	addStringFlag(cmdFloatingIPDelete, doit.ArgIPAddress, "", "IP address of the floating IP")
+	addStringFlag(cmdFloatingIPDelete, doit.ArgIPAddress, "", "IP address of the floating IP", requiredOpt())
 
-	cmdFloatingIPList := cmdBuilder(RunFloatingIPList, "list", "list all floating IP addresses", writer, "ls")
+	cmdFloatingIPList := cmdBuilder(RunFloatingIPList, "list", "list all floating IP addresses", writer, aliasOpt("ls"))
 	cmd.AddCommand(cmdFloatingIPList)
 
 	return cmd
 }
 
 // RunFloatingIPCreate runs floating IP create.
-func RunFloatingIPCreate(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
+func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+
+	region, err := config.GetString(ns, doit.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
+
+	dropletID, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
+
 	req := &godo.FloatingIPCreateRequest{
-		Region:    doit.DoitConfig.GetString(ns, doit.ArgRegionSlug),
-		DropletID: doit.DoitConfig.GetInt(ns, doit.ArgDropletID),
+		Region:    region,
+		DropletID: dropletID,
 	}
 	ip, _, err := client.FloatingIPs.Create(req)
 	if err != nil {
@@ -52,9 +63,12 @@ func RunFloatingIPCreate(ns string, out io.Writer) error {
 }
 
 // RunFloatingIPGet retrieves a floating IP's details.
-func RunFloatingIPGet(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	ip := doit.DoitConfig.GetString(ns, doit.ArgIPAddress)
+func RunFloatingIPGet(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	ip, err := config.GetString(ns, doit.ArgIPAddress)
+	if err != nil {
+		return err
+	}
 
 	if len(ip) < 1 {
 		return errors.New("invalid ip address")
@@ -69,16 +83,20 @@ func RunFloatingIPGet(ns string, out io.Writer) error {
 }
 
 // RunFloatingIPDelete runs floating IP delete.
-func RunFloatingIPDelete(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	ip := doit.DoitConfig.GetString(ns, doit.ArgIPAddress)
-	_, err := client.FloatingIPs.Delete(ip)
+func RunFloatingIPDelete(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	ip, err := config.GetString(ns, doit.ArgIPAddress)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.FloatingIPs.Delete(ip)
 	return err
 }
 
 // RunFloatingIPList runs floating IP create.
-func RunFloatingIPList(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
+func RunFloatingIPList(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
 
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.FloatingIPs.List(opt)

@@ -42,50 +42,52 @@ func Images() *cobra.Command {
 
 	cmdImagesGet := cmdBuilder(RunImagesGet, "get", "Get image", out)
 	cmd.AddCommand(cmdImagesGet)
-	addStringFlag(cmdImagesGet, doit.ArgImage, "", "Image id")
+	addStringFlag(cmdImagesGet, doit.ArgImage, "", "Image id", requiredOpt())
 
 	cmdImagesUpdate := cmdBuilder(RunImagesUpdate, "update", "Update image", out)
 	cmd.AddCommand(cmdImagesUpdate)
-	addStringFlag(cmdImagesUpdate, doit.ArgImage, "", "Image id")
-	addStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name")
+	addStringFlag(cmdImagesUpdate, doit.ArgImage, "", "Image id", requiredOpt())
+	addStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
 
 	cmdImagesDelete := cmdBuilder(RunImagesDelete, "delete", "Delete image", out)
 	cmd.AddCommand(cmdImagesDelete)
-	addStringFlag(cmdImagesDelete, doit.ArgImageID, "", "Image id")
+	addStringFlag(cmdImagesDelete, doit.ArgImageID, "", "Image id", requiredOpt())
 
 	return cmd
 }
 
 // RunImagesList images.
-func RunImagesList(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	return listImages(ns, out, client.Images.List)
+func RunImagesList(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	return listImages(ns, config, out, client.Images.List)
 }
 
 // RunImagesListDistribution lists distributions that are available.
-func RunImagesListDistribution(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	return listImages(ns, out, client.Images.ListDistribution)
+func RunImagesListDistribution(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	return listImages(ns, config, out, client.Images.ListDistribution)
 }
 
 // RunImagesListApplication lists application iamges.
-func RunImagesListApplication(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	return listImages(ns, out, client.Images.ListApplication)
+func RunImagesListApplication(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	return listImages(ns, config, out, client.Images.ListApplication)
 }
 
 // RunImagesListUser lists user images.
-func RunImagesListUser(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	return listImages(ns, out, client.Images.ListUser)
+func RunImagesListUser(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	return listImages(ns, config, out, client.Images.ListUser)
 }
 
 // RunImagesGet retrieves an image by id or slug.
-func RunImagesGet(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	rawID := doit.DoitConfig.GetString(ns, doit.ArgImage)
+func RunImagesGet(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	rawID, err := config.GetString(ns, doit.ArgImage)
+	if err != nil {
+		return err
+	}
 
-	var err error
 	var image *godo.Image
 	if id, cerr := strconv.Atoi(rawID); cerr == nil {
 		image, _, err = client.Images.GetByID(id)
@@ -105,12 +107,17 @@ func RunImagesGet(ns string, out io.Writer) error {
 }
 
 // RunImagesUpdate updates an image.
-func RunImagesUpdate(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
+func RunImagesUpdate(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgImageID)
+	if err != nil {
+		return err
+	}
+
+	name, err := config.GetString(ns, doit.ArgImageName)
 
 	req := &godo.ImageUpdateRequest{
-		Name: doit.DoitConfig.GetString(ns, doit.ArgImageName),
+		Name: name,
 	}
 
 	image, _, err := client.Images.Update(id, req)
@@ -122,18 +129,24 @@ func RunImagesUpdate(ns string, out io.Writer) error {
 }
 
 // RunImagesDelete deletes an image.
-func RunImagesDelete(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgImageID)
+func RunImagesDelete(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgImageID)
+	if err != nil {
+		return err
+	}
 
-	_, err := client.Images.Delete(id)
+	_, err = client.Images.Delete(id)
 	return err
 }
 
 type listFn func(*godo.ListOptions) ([]godo.Image, *godo.Response, error)
 
-func listImages(ns string, out io.Writer, lFn listFn) error {
-	public := doit.DoitConfig.GetBool(ns, doit.ArgImagePublic)
+func listImages(ns string, config doit.Config, out io.Writer, lFn listFn) error {
+	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	if err != nil {
+		return err
+	}
 
 	fn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := lFn(opt)

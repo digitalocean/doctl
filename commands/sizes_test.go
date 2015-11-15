@@ -34,7 +34,7 @@ func TestSizesList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunSizeList(ns, ioutil.Discard)
+		RunSizeList(ns, c, ioutil.Discard)
 		assert.True(t, didList)
 	})
 }

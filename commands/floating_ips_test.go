@@ -29,7 +29,7 @@ func TestFloatingIPsList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		RunFloatingIPList(ns, ioutil.Discard)
+		RunFloatingIPList(ns, c, ioutil.Discard)
 		if !didRun {
 			t.Errorf("List() did not run")
 		}
@@ -50,7 +50,7 @@ func TestFloatingIPsGet(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
 
-		RunFloatingIPGet(ns, ioutil.Discard)
+		RunFloatingIPGet(ns, c, ioutil.Discard)
 	})
 }
 
@@ -70,7 +70,7 @@ func TestFloatingIPsCreate(t *testing.T) {
 		c.Set(ns, doit.ArgRegionSlug, "dev0")
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunFloatingIPCreate(ns, ioutil.Discard)
+		RunFloatingIPCreate(ns, c, ioutil.Discard)
 	})
 }
 
@@ -88,6 +88,6 @@ func TestFloatingIPsDelete(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
 
-		RunFloatingIPDelete(ns, ioutil.Discard)
+		RunFloatingIPDelete(ns, c, ioutil.Discard)
 	})
 }

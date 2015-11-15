@@ -25,10 +25,10 @@ type Config interface {
 	GetGodoClient() *godo.Client
 	SSH(user, host, keyPath string, port int) Runner
 	Set(ns, key string, val interface{})
-	GetString(ns, key string) string
-	GetBool(ns, key string) bool
-	GetInt(ns, key string) int
-	GetStringSlice(ns, key string) []string
+	GetString(ns, key string) (string, error)
+	GetBool(ns, key string) (bool, error)
+	GetInt(ns, key string) (int, error)
+	GetStringSlice(ns, key string) ([]string, error)
 }
 
 // LiveConfig is an implementation of Config for live values.
@@ -174,41 +174,62 @@ func (c *LiveConfig) Set(ns, key string, val interface{}) {
 }
 
 // GetString returns a config value as a string.
-func (c *LiveConfig) GetString(ns, key string) string {
+func (c *LiveConfig) GetString(ns, key string) (string, error) {
 	if ns == NSRoot {
-		return viper.GetString(key)
+		return viper.GetString(key), nil
 	}
 
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return viper.GetString(nskey)
+	nskey := fmt.Sprintf("%s.%s", ns, key)
+
+	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
+		if viper.GetString(nskey) == "" {
+			return "", NewMissingArgsErr(nskey)
+		}
+	}
+	return viper.GetString(nskey), nil
 }
 
 // GetBool returns a config value as a bool.
-func (c *LiveConfig) GetBool(ns, key string) bool {
+func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
 	if ns == NSRoot {
-		return viper.GetBool(key)
+		return viper.GetBool(key), nil
 	}
 
 	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return viper.GetBool(nskey)
+
+	return viper.GetBool(nskey), nil
 }
 
 // GetInt returns a config value as an int.
-func (c *LiveConfig) GetInt(ns, key string) int {
+func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 	if ns == NSRoot {
-		return viper.GetInt(key)
+		return viper.GetInt(key), nil
 	}
 
 	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return viper.GetInt(nskey)
+
+	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
+		if viper.GetInt(nskey) < 0 {
+			return 0, NewMissingArgsErr(nskey)
+		}
+	}
+
+	return viper.GetInt(nskey), nil
 }
 
 // GetStringSlice returns a config value as a string slice.
-func (c *LiveConfig) GetStringSlice(ns, key string) []string {
+func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	if ns == NSRoot {
-		return viper.GetStringSlice(key)
+		return viper.GetStringSlice(key), nil
 	}
 
 	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return viper.GetStringSlice(nskey)
+
+	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
+		if viper.GetStringSlice(nskey) == nil {
+			return nil, NewMissingArgsErr(nskey)
+		}
+	}
+
+	return viper.GetStringSlice(nskey), nil
 }

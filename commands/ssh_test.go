@@ -54,7 +54,7 @@ func TestSSH_ID(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunSSH(ns, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard)
 		assert.NoError(t, err)
 		assert.True(t, didFetchDroplet)
 		assert.True(t, ms.didRun)
@@ -82,7 +82,7 @@ func TestSSH_InvalidID(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunSSH(ns, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard)
 		assert.Error(t, err)
 	})
 }
@@ -106,7 +106,7 @@ func TestSSH_Name(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletName, testDroplet.Name)
 
-		err := RunSSH(ns, ioutil.Discard)
+		err := RunSSH(ns, c, ioutil.Discard)
 		assert.NoError(t, err)
 
 		assert.Equal(t, "root", ms.user)

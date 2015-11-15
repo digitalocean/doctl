@@ -35,7 +35,7 @@ func TestActionList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		err := RunCmdActionList(ns, ioutil.Discard)
+		err := RunCmdActionList(ns, c, ioutil.Discard)
 		assert.NoError(t, err)
 
 		if !actionDidList {
@@ -59,7 +59,7 @@ func TestActionGet(t *testing.T) {
 	withTestClient(client, func(c *TestConfig) {
 		c.Set("test", "action-id", testAction.ID)
 
-		err := RunCmdActionGet("test", ioutil.Discard)
+		err := RunCmdActionGet("test", c, ioutil.Discard)
 		assert.NoError(t, err)
 	})
 }

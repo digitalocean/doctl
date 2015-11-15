@@ -41,16 +41,34 @@ func SSH() *cobra.Command {
 }
 
 // RunSSH finds a droplet to ssh to given input parameters (name or id).
-func RunSSH(ns string, out io.Writer) error {
-	client := doit.DoitConfig.GetGodoClient()
-	id := doit.DoitConfig.GetInt(ns, doit.ArgDropletID)
-	name := doit.DoitConfig.GetString(ns, doit.ArgDropletName)
-	user := doit.DoitConfig.GetString(ns, doit.ArgSSHUser)
-	keyPath := doit.DoitConfig.GetString(ns, doit.ArgsSSHKeyPath)
-	port := doit.DoitConfig.GetInt(ns, doit.ArgsSSHPort)
+func RunSSH(ns string, config doit.Config, out io.Writer) error {
+	client := config.GetGodoClient()
+	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if err != nil {
+		return err
+	}
+
+	name, err := config.GetString(ns, doit.ArgDropletName)
+	if err != nil {
+		return err
+	}
+
+	user, err := config.GetString(ns, doit.ArgSSHUser)
+	if err != nil {
+		return err
+	}
+
+	keyPath, err := config.GetString(ns, doit.ArgsSSHKeyPath)
+	if err != nil {
+		return err
+	}
+
+	port, err := config.GetInt(ns, doit.ArgsSSHPort)
+	if err != nil {
+		return err
+	}
 
 	var droplet *godo.Droplet
-	var err error
 
 	switch {
 	case id > 0 && len(name) < 1:
@@ -83,10 +101,10 @@ func RunSSH(ns string, out io.Writer) error {
 		return errors.New(sshNoAddress)
 	}
 
-	runner := doit.DoitConfig.SSH(user, publicIP, keyPath, port)
+	runner := config.SSH(user, publicIP, keyPath, port)
 	return runner.Run()
 
-	// return doit.DoitConfig.SSH(user, publicIP, keyPath, port)
+	// return config.SSH(user, publicIP, keyPath, port)
 }
 
 func removeEmptyOptions(in []string) []string {

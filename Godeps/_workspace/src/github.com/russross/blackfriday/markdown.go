@@ -20,12 +20,11 @@ package blackfriday
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"unicode/utf8"
 )
 
-const VERSION = "1.4"
+const VERSION = "1.1"
 
 // These are the supported markdown parsing extensions.
 // OR these values together to select multiple extensions.
@@ -51,7 +50,6 @@ const (
 		HTML_USE_XHTML |
 		HTML_USE_SMARTYPANTS |
 		HTML_SMARTYPANTS_FRACTIONS |
-		HTML_SMARTYPANTS_DASHES |
 		HTML_SMARTYPANTS_LATEX_DASHES
 
 	commonExtensions = 0 |
@@ -105,46 +103,42 @@ const (
 // These are the tags that are recognized as HTML block tags.
 // Any of these can be included in markdown text without special escaping.
 var blockTags = map[string]bool{
-	"blockquote": true,
-	"del":        true,
-	"div":        true,
+	"p":          true,
 	"dl":         true,
-	"fieldset":   true,
-	"form":       true,
 	"h1":         true,
 	"h2":         true,
 	"h3":         true,
 	"h4":         true,
 	"h5":         true,
 	"h6":         true,
-	"iframe":     true,
-	"ins":        true,
-	"math":       true,
-	"noscript":   true,
 	"ol":         true,
-	"pre":        true,
-	"p":          true,
-	"script":     true,
-	"style":      true,
-	"table":      true,
 	"ul":         true,
+	"del":        true,
+	"div":        true,
+	"ins":        true,
+	"pre":        true,
+	"form":       true,
+	"math":       true,
+	"table":      true,
+	"iframe":     true,
+	"script":     true,
+	"fieldset":   true,
+	"noscript":   true,
+	"blockquote": true,
 
 	// HTML5
-	"address":    true,
-	"article":    true,
+	"video":      true,
 	"aside":      true,
 	"canvas":     true,
-	"figcaption": true,
 	"figure":     true,
 	"footer":     true,
 	"header":     true,
 	"hgroup":     true,
-	"main":       true,
-	"nav":        true,
 	"output":     true,
-	"progress":   true,
+	"article":    true,
 	"section":    true,
-	"video":      true,
+	"progress":   true,
+	"figcaption": true,
 }
 
 // Renderer is the rendering interface.
@@ -390,6 +384,7 @@ func MarkdownOptions(input []byte, renderer Renderer, opts Options) []byte {
 // - expand tabs
 // - normalize newlines
 // - copy everything else
+// - add missing newlines before fenced code blocks
 func firstPass(p *parser, input []byte) []byte {
 	var out bytes.Buffer
 	tabSize := TAB_SIZE_DEFAULT
@@ -397,6 +392,7 @@ func firstPass(p *parser, input []byte) []byte {
 		tabSize = TAB_SIZE_EIGHT
 	}
 	beg, end := 0, 0
+	lastLineWasBlank := false
 	lastFencedCodeBlockEnd := 0
 	for beg < len(input) { // iterate over lines
 		if end = isReference(p, input[beg:], tabSize); end > 0 {
@@ -408,13 +404,16 @@ func firstPass(p *parser, input []byte) []byte {
 			}
 
 			if p.flags&EXTENSION_FENCED_CODE != 0 {
-				// track fenced code block boundaries to suppress tab expansion
-				// inside them:
+				// when last line was none blank and a fenced code block comes after
 				if beg >= lastFencedCodeBlockEnd {
 					if i := p.fencedCode(&out, input[beg:], false); i > 0 {
+						if !lastLineWasBlank {
+							out.WriteByte('\n') // need to inject additional linebreak
+						}
 						lastFencedCodeBlockEnd = beg + i
 					}
 				}
+				lastLineWasBlank = end == beg
 			}
 
 			// add the line body if present
@@ -456,8 +455,7 @@ func secondPass(p *parser, input []byte) []byte {
 	if p.flags&EXTENSION_FOOTNOTES != 0 && len(p.notes) > 0 {
 		p.r.Footnotes(&output, func() bool {
 			flags := LIST_ITEM_BEGINNING_OF_LIST
-			for i := 0; i < len(p.notes); i += 1 {
-				ref := p.notes[i]
+			for _, ref := range p.notes {
 				var buf bytes.Buffer
 				if ref.hasBlock {
 					flags |= LIST_ITEM_CONTAINS_BLOCK
@@ -518,11 +516,6 @@ type reference struct {
 	noteId   int // 0 if not a footnote ref
 	hasBlock bool
 	text     []byte
-}
-
-func (r *reference) String() string {
-	return fmt.Sprintf("{link: %q, title: %q, text: %q, noteId: %d, hasBlock: %v}",
-		r.link, r.title, r.text, r.noteId, r.hasBlock)
 }
 
 // Check whether or not data starts with a reference link.

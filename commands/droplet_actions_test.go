@@ -28,7 +28,7 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgKernelID, 2)
 
-		RunDropletActionChangeKernel(ns, ioutil.Discard)
+		RunDropletActionChangeKernel(ns, c, ioutil.Discard)
 	})
 }
 func TestDropletActionsDisableBackups(t *testing.T) {
@@ -47,7 +47,7 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionDisableBackups(ns, ioutil.Discard)
+		RunDropletActionDisableBackups(ns, c, ioutil.Discard)
 	})
 
 }
@@ -67,7 +67,7 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionEnableIPv6(ns, ioutil.Discard)
+		RunDropletActionEnableIPv6(ns, c, ioutil.Discard)
 	})
 }
 
@@ -87,7 +87,7 @@ func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionEnablePrivateNetworking(ns, ioutil.Discard)
+		RunDropletActionEnablePrivateNetworking(ns, c, ioutil.Discard)
 	})
 }
 func TestDropletActionsGet(t *testing.T) {
@@ -110,7 +110,7 @@ func TestDropletActionsGet(t *testing.T) {
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgActionID, 2)
 
-		RunDropletActionGet(ns, ioutil.Discard)
+		RunDropletActionGet(ns, c, ioutil.Discard)
 	})
 }
 
@@ -130,7 +130,7 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionPasswordReset(ns, ioutil.Discard)
+		RunDropletActionPasswordReset(ns, c, ioutil.Discard)
 	})
 }
 
@@ -150,7 +150,7 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionPowerCycle(ns, ioutil.Discard)
+		RunDropletActionPowerCycle(ns, c, ioutil.Discard)
 	})
 
 }
@@ -170,7 +170,7 @@ func TestDropletActionsPowerOff(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionPowerOff(ns, ioutil.Discard)
+		RunDropletActionPowerOff(ns, c, ioutil.Discard)
 	})
 }
 func TestDropletActionsPowerOn(t *testing.T) {
@@ -189,7 +189,7 @@ func TestDropletActionsPowerOn(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionPowerOn(ns, ioutil.Discard)
+		RunDropletActionPowerOn(ns, c, ioutil.Discard)
 	})
 
 }
@@ -209,7 +209,7 @@ func TestDropletActionsReboot(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionReboot(ns, ioutil.Discard)
+		RunDropletActionReboot(ns, c, ioutil.Discard)
 	})
 }
 
@@ -233,7 +233,7 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgImage, "2")
 
-		RunDropletActionRebuild(ns, ioutil.Discard)
+		RunDropletActionRebuild(ns, c, ioutil.Discard)
 	})
 }
 
@@ -257,7 +257,7 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgImage, "slug")
 
-		RunDropletActionRebuild(ns, ioutil.Discard)
+		RunDropletActionRebuild(ns, c, ioutil.Discard)
 	})
 
 }
@@ -281,7 +281,7 @@ func TestDropletActionsRename(t *testing.T) {
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgDropletName, "name")
 
-		RunDropletActionRename(ns, ioutil.Discard)
+		RunDropletActionRename(ns, c, ioutil.Discard)
 	})
 }
 
@@ -309,7 +309,7 @@ func TestDropletActionsResize(t *testing.T) {
 		c.Set(ns, doit.ArgImageSlug, "slug")
 		c.Set(ns, doit.ArgResizeDisk, true)
 
-		RunDropletActionResize(ns, ioutil.Discard)
+		RunDropletActionResize(ns, c, ioutil.Discard)
 	})
 }
 
@@ -333,7 +333,7 @@ func TestDropletActionsRestore(t *testing.T) {
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgImageID, 2)
 
-		RunDropletActionRestore(ns, ioutil.Discard)
+		RunDropletActionRestore(ns, c, ioutil.Discard)
 	})
 }
 
@@ -353,7 +353,7 @@ func TestDropletActionsShutdown(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionShutdown(ns, ioutil.Discard)
+		RunDropletActionShutdown(ns, c, ioutil.Discard)
 	})
 }
 
@@ -377,7 +377,7 @@ func TestDropletActionsSnapshot(t *testing.T) {
 		c.Set(ns, doit.ArgDropletID, 1)
 		c.Set(ns, doit.ArgSnapshotName, "name")
 
-		RunDropletActionSnapshot(ns, ioutil.Discard)
+		RunDropletActionSnapshot(ns, c, ioutil.Discard)
 	})
 }
 
@@ -397,6 +397,6 @@ func TestDropletActionsUpgrade(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgDropletID, 1)
 
-		RunDropletActionUpgrade(ns, ioutil.Discard)
+		RunDropletActionUpgrade(ns, c, ioutil.Discard)
 	})
 }
