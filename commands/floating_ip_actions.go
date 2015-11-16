@@ -17,32 +17,31 @@ func FloatingIPAction() *cobra.Command {
 	}
 
 	cmdFloatingIPActionsGet := cmdBuilder(RunFloatingIPActionsGet,
-		"get", "get floating-ip action", writer)
+		"get <floating-ip>", "get floating-ip action", writer)
 	cmd.AddCommand(cmdFloatingIPActionsGet)
-	addStringFlag(cmdFloatingIPActionsGet, doit.ArgIPAddress, "", "floating IP address", requiredOpt())
 	addIntFlag(cmdFloatingIPActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
 	cmdFloatingIPActionsAssign := cmdBuilder(RunFloatingIPActionsAssign,
-		"assign", "assign a floating IP to a droplet", writer)
+		"assign <floating-ip>", "assign a floating IP to a droplet", writer)
 	cmd.AddCommand(cmdFloatingIPActionsAssign)
-	addStringFlag(cmdFloatingIPActionsAssign, doit.ArgIPAddress, "", "floating IP address", requiredOpt())
 	addIntFlag(cmdFloatingIPActionsAssign, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to", requiredOpt())
 
 	cmdFloatingIPActionsUnassign := cmdBuilder(RunFloatingIPActionsUnassign,
-		"unassign", "unassign a floating IP to a droplet", writer)
+		"unassign <floating-ip>", "unassign a floating IP to a droplet", writer)
 	cmd.AddCommand(cmdFloatingIPActionsUnassign)
-	addStringFlag(cmdFloatingIPActionsUnassign, doit.ArgIPAddress, "", "floating IP address", requiredOpt())
 
 	return cmd
 }
 
 // RunFloatingIPActionsGet retrieves an action for a floating IP.
 func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ip, err := config.GetString(ns, doit.ArgIPAddress)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+
+	ip := args[0]
+
+	client := config.GetGodoClient()
 
 	actionID, err := config.GetInt(ns, doit.ArgActionID)
 	if err != nil {
@@ -59,11 +58,13 @@ func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args 
 
 // RunFloatingIPActionsAssign assigns a floating IP to a droplet.
 func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ip, err := config.GetString(ns, doit.ArgIPAddress)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+
+	ip := args[0]
+
+	client := config.GetGodoClient()
 
 	dropletID, err := config.GetInt(ns, doit.ArgDropletID)
 	if err != nil {
@@ -79,11 +80,13 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, ar
 
 // RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
 func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ip, err := config.GetString(ns, doit.ArgIPAddress)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+
+	ip := args[0]
+
+	client := config.GetGodoClient()
 
 	action, _, err := client.FloatingIPActions.Unassign(ip)
 	if err != nil {

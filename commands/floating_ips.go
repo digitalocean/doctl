@@ -23,13 +23,11 @@ func FloatingIP() *cobra.Command {
 	addStringFlag(cmdFloatingIPCreate, doit.ArgRegionSlug, "", "Region where to create the floating IP.", requiredOpt())
 	addIntFlag(cmdFloatingIPCreate, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to. (Optional)")
 
-	cmdFloatingIPGet := cmdBuilder(RunFloatingIPGet, "get", "get the details of a floating IP", writer, aliasOpt("g"))
+	cmdFloatingIPGet := cmdBuilder(RunFloatingIPGet, "get <floating-ip>", "get the details of a floating IP", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdFloatingIPGet)
-	addStringFlag(cmdFloatingIPGet, doit.ArgIPAddress, "", "IP address of the floating IP", requiredOpt())
 
-	cmdFloatingIPDelete := cmdBuilder(RunFloatingIPDelete, "delete", "delete a floating IP address", writer, aliasOpt("d"))
+	cmdFloatingIPDelete := cmdBuilder(RunFloatingIPDelete, "delete <floating-ip>", "delete a floating IP address", writer, aliasOpt("d"))
 	cmd.AddCommand(cmdFloatingIPDelete)
-	addStringFlag(cmdFloatingIPDelete, doit.ArgIPAddress, "", "IP address of the floating IP", requiredOpt())
 
 	cmdFloatingIPList := cmdBuilder(RunFloatingIPList, "list", "list all floating IP addresses", writer, aliasOpt("ls"))
 	cmd.AddCommand(cmdFloatingIPList)
@@ -65,10 +63,12 @@ func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer, args []st
 // RunFloatingIPGet retrieves a floating IP's details.
 func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	ip, err := config.GetString(ns, doit.ArgIPAddress)
-	if err != nil {
-		return err
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+
+	ip := args[0]
 
 	if len(ip) < 1 {
 		return errors.New("invalid ip address")
@@ -85,12 +85,14 @@ func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []strin
 // RunFloatingIPDelete runs floating IP delete.
 func RunFloatingIPDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	ip, err := config.GetString(ns, doit.ArgIPAddress)
-	if err != nil {
-		return err
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
 
-	_, err = client.FloatingIPs.Delete(ip)
+	ip := args[0]
+
+	_, err := client.FloatingIPs.Delete(ip)
 	return err
 }
 

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"strconv"
@@ -31,7 +32,7 @@ func Droplet() *cobra.Command {
 	cmd.AddCommand(cmdDropletBackups)
 	addIntFlag(cmdDropletBackups, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletCreate := cmdBuilder(RunDropletCreate, "create NAME", "create droplet", writer, aliasOpt("c"))
+	cmdDropletCreate := cmdBuilder(RunDropletCreate, "create NAME [NAME ...]", "create droplet", writer, aliasOpt("c"))
 	cmd.AddCommand(cmdDropletCreate)
 	addStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
 	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
@@ -44,13 +45,11 @@ func Droplet() *cobra.Command {
 	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
 	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image", requiredOpt())
 
-	cmdDropletDelete := cmdBuilder(RunDropletDelete, "delete", "delete droplet", writer, aliasOpt("d"))
+	cmdDropletDelete := cmdBuilder(RunDropletDelete, "delete ID [ID ...]", "delete droplet", writer, aliasOpt("d", "del"))
 	cmd.AddCommand(cmdDropletDelete)
-	addIntFlag(cmdDropletDelete, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	cmdDropletGet := cmdBuilder(RunDropletGet, "get", "get droplet", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdDropletGet)
-	addIntFlag(cmdDropletGet, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	cmdDropletKernels := cmdBuilder(RunDropletKernels, "kernels", "droplet kernels", writer, aliasOpt("k"))
 	cmd.AddCommand(cmdDropletKernels)
@@ -333,22 +332,36 @@ func extractUserData(userData, filename string) (string, error) {
 // RunDropletDelete destroy a droplet by id.
 func RunDropletDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgDropletID)
-	if err != nil {
-		return err
+
+	if len(args) < 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
 
-	_, err = client.Droplets.Delete(id)
-	return err
+	for _, idStr := range args {
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			return err
+		}
+
+		_, err = client.Droplets.Delete(id)
+		fmt.Printf("deleted droplet %d\n", id)
+	}
+
+	return nil
 }
 
 // RunDropletGet returns a droplet.
 func RunDropletGet(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgDropletID)
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
+
+	id, err := strconv.Atoi(args[0])
 	if err != nil {
 		return err
 	}
+
+	client := config.GetGodoClient()
 
 	droplet, err := getDropletByID(client, id)
 	if err != nil {

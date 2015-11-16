@@ -2,6 +2,7 @@ package commands
 
 import (
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -168,9 +169,8 @@ func TestDropletDelete(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunDropletDelete(ns, c, ioutil.Discard, []string{})
+		err := RunDropletDelete(ns, c, ioutil.Discard, []string{strconv.Itoa(testDroplet.ID)})
 		assert.NoError(t, err)
 	})
 }
@@ -187,9 +187,8 @@ func TestDropletGet(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunDropletGet(ns, c, ioutil.Discard, []string{})
+		err := RunDropletGet(ns, c, ioutil.Discard, []string{strconv.Itoa(testDroplet.ID)})
 		assert.NoError(t, err)
 	})
 }

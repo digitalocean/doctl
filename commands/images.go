@@ -40,18 +40,15 @@ func Images() *cobra.Command {
 	cmd.AddCommand(cmdImagesListUser)
 	addBoolFlag(cmdImagesListUser, doit.ArgImagePublic, false, "List public images")
 
-	cmdImagesGet := cmdBuilder(RunImagesGet, "get", "Get image", out)
+	cmdImagesGet := cmdBuilder(RunImagesGet, "get <image-id|image-slug>", "Get image", out)
 	cmd.AddCommand(cmdImagesGet)
-	addStringFlag(cmdImagesGet, doit.ArgImage, "", "Image id", requiredOpt())
 
-	cmdImagesUpdate := cmdBuilder(RunImagesUpdate, "update", "Update image", out)
+	cmdImagesUpdate := cmdBuilder(RunImagesUpdate, "update <image-id>", "Update image", out)
 	cmd.AddCommand(cmdImagesUpdate)
-	addStringFlag(cmdImagesUpdate, doit.ArgImage, "", "Image id", requiredOpt())
 	addStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
 
-	cmdImagesDelete := cmdBuilder(RunImagesDelete, "delete", "Delete image", out)
+	cmdImagesDelete := cmdBuilder(RunImagesDelete, "delete <image-id>", "Delete image", out)
 	cmd.AddCommand(cmdImagesDelete)
-	addStringFlag(cmdImagesDelete, doit.ArgImageID, "", "Image id", requiredOpt())
 
 	return cmd
 }
@@ -83,12 +80,16 @@ func RunImagesListUser(ns string, config doit.Config, out io.Writer, args []stri
 // RunImagesGet retrieves an image by id or slug.
 func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	rawID, err := config.GetString(ns, doit.ArgImage)
-	if err != nil {
-		return err
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
 
+	rawID := args[0]
+
 	var image *godo.Image
+	var err error
+
 	if id, cerr := strconv.Atoi(rawID); cerr == nil {
 		image, _, err = client.Images.GetByID(id)
 	} else {
@@ -109,7 +110,12 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 // RunImagesUpdate updates an image.
 func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgImageID)
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
+
+	id, err := strconv.Atoi(args[0])
 	if err != nil {
 		return err
 	}
@@ -131,7 +137,12 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 // RunImagesDelete deletes an image.
 func RunImagesDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgImageID)
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
+
+	id, err := strconv.Atoi(args[0])
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -125,9 +126,8 @@ func TestImagesGetByID(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgImage, testImage.ID)
 
-		RunImagesGet(ns, c, ioutil.Discard, []string{})
+		RunImagesGet(ns, c, ioutil.Discard, []string{strconv.Itoa(testImage.ID)})
 	})
 }
 
@@ -149,7 +149,7 @@ func TestImagesGetBySlug(t *testing.T) {
 		ns := "test"
 		c.Set(ns, doit.ArgImage, testImage.Slug)
 
-		RunImagesGet(ns, c, ioutil.Discard, []string{})
+		RunImagesGet(ns, c, ioutil.Discard, []string{testImage.Slug})
 	})
 }
 
@@ -188,10 +188,9 @@ func TestImagesUpdate(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgImageID, testImage.ID)
 		c.Set(ns, doit.ArgImageName, "new-name")
 
-		RunImagesUpdate(ns, c, ioutil.Discard, []string{})
+		RunImagesUpdate(ns, c, ioutil.Discard, []string{strconv.Itoa(testImage.ID)})
 	})
 }
 
@@ -207,9 +206,8 @@ func TestImagesDelete(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgImageID, testImage.ID)
 
-		RunImagesDelete(ns, c, ioutil.Discard, []string{})
+		RunImagesDelete(ns, c, ioutil.Discard, []string{strconv.Itoa(testImage.ID)})
 	})
 
 }

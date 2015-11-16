@@ -16,7 +16,7 @@ import (
 // SSHKeys creates the ssh key commands heirarchy.
 func SSHKeys() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "sshkey",
+		Use:     "ssh-key",
 		Aliases: []string{"k"},
 		Short:   "sshkey commands",
 		Long:    "sshkey is used to access ssh key commands",
@@ -25,27 +25,22 @@ func SSHKeys() *cobra.Command {
 	cmdSSHKeysList := cmdBuilder(RunKeyList, "list", "list ssh keys", writer, aliasOpt("ls"))
 	cmd.AddCommand(cmdSSHKeysList)
 
-	cmdSSHKeysGet := cmdBuilder(RunKeyGet, "get", "get ssh key", writer, aliasOpt("g"))
+	cmdSSHKeysGet := cmdBuilder(RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdSSHKeysGet)
-	addStringFlag(cmdSSHKeysGet, doit.ArgKey, "", "Key ID or fingerprint", requiredOpt())
 
-	cmdSSHKeysCreate := cmdBuilder(RunKeyCreate, "create", "create ssh key", writer, aliasOpt("c"))
+	cmdSSHKeysCreate := cmdBuilder(RunKeyCreate, "create <key-name>", "create ssh key", writer, aliasOpt("c"))
 	cmd.AddCommand(cmdSSHKeysCreate)
-	addStringFlag(cmdSSHKeysCreate, doit.ArgKeyName, "", "Key name", requiredOpt())
 	addStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents", requiredOpt())
 
-	cmdSSHKeysImport := cmdBuilder(RunKeyImport, "import", "import ssh key", writer, aliasOpt("i"))
+	cmdSSHKeysImport := cmdBuilder(RunKeyImport, "import <key-name>", "import ssh key", writer, aliasOpt("i"))
 	cmd.AddCommand(cmdSSHKeysImport)
-	addStringFlag(cmdSSHKeysImport, doit.ArgKeyName, "", "Key name", requiredOpt())
 	addStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
 
-	cmdSSHKeysDelete := cmdBuilder(RunKeyDelete, "delete", "delete ssh key", writer, aliasOpt("d"))
+	cmdSSHKeysDelete := cmdBuilder(RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", writer, aliasOpt("d"))
 	cmd.AddCommand(cmdSSHKeysDelete)
-	addStringFlag(cmdSSHKeysDelete, doit.ArgKey, "", "Key ID or fingerprint", requiredOpt())
 
-	cmdSSHKeysUpdate := cmdBuilder(RunKeyUpdate, "update", "update ssh key", writer, aliasOpt("u"))
+	cmdSSHKeysUpdate := cmdBuilder(RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", writer, aliasOpt("u"))
 	cmd.AddCommand(cmdSSHKeysUpdate)
-	addStringFlag(cmdSSHKeysUpdate, doit.ArgKey, "", "Key ID or fingerprint", requiredOpt())
 	addStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name", requiredOpt())
 
 	return cmd
@@ -85,12 +80,16 @@ func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) err
 // RunKeyGet retrieves a key.
 func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	rawKey, err := config.GetString(ns, doit.ArgKey)
-	if err != nil {
-		return err
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
 
+	rawKey := args[0]
+
+	var err error
 	var key *godo.Key
+
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
 		key, _, err = client.Keys.GetByID(i)
 	} else {
@@ -112,10 +111,11 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) erro
 func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
-	name, err := config.GetString(ns, doit.ArgKeyName)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+
+	name := args[0]
 
 	publicKey, err := config.GetString(ns, doit.ArgKeyPublicKey)
 	if err != nil {
@@ -139,15 +139,16 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
+
 	keyPath, err := config.GetString(ns, doit.ArgKeyPublicKeyFile)
 	if err != nil {
 		return err
 	}
 
-	keyName, err := config.GetString(ns, doit.ArgKeyName)
-	if err != nil {
-		return err
-	}
+	keyName := args[0]
 
 	keyFile, err := ioutil.ReadFile(keyPath)
 	if err != nil {
@@ -179,10 +180,14 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 // RunKeyDelete deletes a key.
 func RunKeyDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	rawKey, err := config.GetString(ns, doit.ArgKey)
-	if err != nil {
-		return err
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+
+	rawKey := args[0]
+
+	var err error
 
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
 		_, err = client.Keys.DeleteByID(i)
@@ -196,10 +201,12 @@ func RunKeyDelete(ns string, config doit.Config, out io.Writer, args []string) e
 // RunKeyUpdate updates a key.
 func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	rawKey, err := config.GetString(ns, doit.ArgKey)
-	if err != nil {
-		return err
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+
+	rawKey := args[0]
 
 	name, err := config.GetString(ns, doit.ArgKeyName)
 	if err != nil {
