@@ -2,6 +2,7 @@ package commands
 
 import (
 	"io"
+	"strconv"
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
@@ -16,9 +17,8 @@ func Actions() *cobra.Command {
 		Long:  "action is used to access action commands",
 	}
 
-	cmdActionGet := cmdBuilder(RunCmdActionGet, "get", "get action", writer, aliasOpt("g"))
+	cmdActionGet := cmdBuilder(RunCmdActionGet, "get ACTIONID", "get action", writer, aliasOpt("g"))
 	cmdActions.AddCommand(cmdActionGet)
-	addIntFlag(cmdActionGet, doit.ArgActionID, 0, "Action ID", requiredOpt())
 
 	cmdActionList := cmdBuilder(RunCmdActionList, "list", "list actions", writer, aliasOpt("ls"))
 	cmdActions.AddCommand(cmdActionList)
@@ -58,11 +58,16 @@ func RunCmdActionList(ns string, config doit.Config, out io.Writer, args []strin
 
 // RunCmdActionGet runs action get.
 func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgActionID)
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
+
+	id, err := strconv.Atoi(args[0])
 	if err != nil {
 		return err
 	}
+
+	client := config.GetGodoClient()
 
 	a, _, err := client.Actions.Get(id)
 	if err != nil {

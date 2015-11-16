@@ -2,6 +2,7 @@ package commands
 
 import (
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -57,9 +58,7 @@ func TestActionGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		c.Set("test", "action-id", testAction.ID)
-
-		err := RunCmdActionGet("test", c, ioutil.Discard, []string{})
+		err := RunCmdActionGet("test", c, ioutil.Discard, []string{strconv.Itoa(testAction.ID)})
 		assert.NoError(t, err)
 	})
 }

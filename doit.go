@@ -218,7 +218,7 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 		return viper.GetStringSlice(key), nil
 	}
 
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
 		if viper.GetStringSlice(nskey) == nil {

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"io/ioutil"
+	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -17,6 +18,26 @@ var (
 	}
 	testImageList = []godo.Image{testImage}
 )
+
+func TestDropletCommand(t *testing.T) {
+	c := Droplet()
+
+	expectedCmds := []string{"actions", "backups", "create", "delete", "get", "kernels", "list",
+		"neighbors", "snapshots"}
+
+	for _, ec := range expectedCmds {
+		found := false
+		for _, cmd := range c.Commands() {
+			if cmd.Name() == ec {
+				found = true
+			}
+		}
+
+		assert.True(t, found, "could not find %s", ec)
+	}
+
+	c.Commands()[0].Name()
+}
 
 func TestDropletActionList(t *testing.T) {
 	client := &godo.Client{
@@ -88,13 +109,12 @@ func TestDropletCreate(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletName, "droplet")
 		c.Set(ns, doit.ArgRegionSlug, "dev0")
 		c.Set(ns, doit.ArgSizeSlug, "1gb")
 		c.Set(ns, doit.ArgImage, "image")
 		c.Set(ns, doit.ArgUserData, "#cloud-config")
 
-		err := RunDropletCreate(ns, c, ioutil.Discard, []string{})
+		err := RunDropletCreate(ns, c, ioutil.Discard, []string{"droplet"})
 		assert.NoError(t, err)
 	})
 }
@@ -127,13 +147,12 @@ func TestDropletCreateUserDataFile(t *testing.T) {
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
 
-		c.Set(ns, doit.ArgDropletName, "droplet")
 		c.Set(ns, doit.ArgRegionSlug, "dev0")
 		c.Set(ns, doit.ArgSizeSlug, "1gb")
 		c.Set(ns, doit.ArgImage, "image")
 		c.Set(ns, doit.ArgUserDataFile, "../testdata/cloud-config.yml")
 
-		err := RunDropletCreate(ns, c, ioutil.Discard, []string{})
+		err := RunDropletCreate(ns, c, ioutil.Discard, []string{"droplet"})
 		assert.NoError(t, err)
 	})
 }
@@ -150,9 +169,8 @@ func TestDropletDelete(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunDropletDelete(ns, c, ioutil.Discard, []string{})
+		err := RunDropletDelete(ns, c, ioutil.Discard, []string{strconv.Itoa(testDroplet.ID)})
 		assert.NoError(t, err)
 	})
 }
@@ -169,9 +187,8 @@ func TestDropletGet(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunDropletGet(ns, c, ioutil.Discard, []string{})
+		err := RunDropletGet(ns, c, ioutil.Discard, []string{strconv.Itoa(testDroplet.ID)})
 		assert.NoError(t, err)
 	})
 }

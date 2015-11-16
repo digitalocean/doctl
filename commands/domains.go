@@ -19,7 +19,6 @@ func Domain() *cobra.Command {
 
 	cmdDomainCreate := cmdBuilder(RunDomainCreate, "create", "create domain", writer, aliasOpt("c"))
 	cmd.AddCommand(cmdDomainCreate)
-	addStringFlag(cmdDomainCreate, doit.ArgDomainName, "", "Domain name", requiredOpt())
 	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address", requiredOpt())
 
 	cmdDomainList := cmdBuilder(RunDomainList, "list", "list comains", writer, aliasOpt("ls"))
@@ -27,11 +26,9 @@ func Domain() *cobra.Command {
 
 	cmdDomainGet := cmdBuilder(RunDomainGet, "get", "get domain", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdDomainGet)
-	addStringFlag(cmdDomainGet, doit.ArgDomainName, "", "Domain name", requiredOpt())
 
 	cmdDomainDelete := cmdBuilder(RunDomainDelete, "delete", "delete droplet", writer, aliasOpt("g"))
 	cmd.AddCommand(cmdDomainDelete)
-	addStringFlag(cmdDomainDelete, doit.ArgDomainName, "", "Domain name", requiredOpt())
 
 	cmdRecord := &cobra.Command{
 		Use:   "records",
@@ -46,7 +43,6 @@ func Domain() *cobra.Command {
 
 	cmdRecordCreate := cmdBuilder(RunRecordCreate, "create", "create record", writer, aliasOpt("c"))
 	cmdRecord.AddCommand(cmdRecordCreate)
-	addStringFlag(cmdRecordCreate, doit.ArgDomainName, "", "Domain name")
 	addStringFlag(cmdRecordCreate, doit.ArgRecordType, "", "Record type")
 	addStringFlag(cmdRecordCreate, doit.ArgRecordName, "", "Record name")
 	addStringFlag(cmdRecordCreate, doit.ArgRecordData, "", "Record data")
@@ -56,12 +52,10 @@ func Domain() *cobra.Command {
 
 	cmdRecordDelete := cmdBuilder(RunRecordDelete, "delete", "delete record", writer, aliasOpt("d"))
 	cmdRecord.AddCommand(cmdRecordDelete)
-	addStringFlag(cmdRecordDelete, doit.ArgDomainName, "", "Domain name")
 	addIntFlag(cmdRecordDelete, doit.ArgRecordID, 0, "Record ID")
 
 	cmdRecordUpdate := cmdBuilder(RunRecordUpdate, "update", "update record", writer, aliasOpt("u"))
 	cmdRecord.AddCommand(cmdRecordUpdate)
-	addStringFlag(cmdRecordUpdate, doit.ArgDomainName, "", "Domain name")
 	addIntFlag(cmdRecordUpdate, doit.ArgRecordID, 0, "Record ID")
 	addStringFlag(cmdRecordUpdate, doit.ArgRecordType, "", "Record type")
 	addStringFlag(cmdRecordUpdate, doit.ArgRecordName, "", "Record name")
@@ -75,12 +69,12 @@ func Domain() *cobra.Command {
 
 // RunDomainCreate runs domain create.
 func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-
-	domainName, err := config.GetString(ns, "domain-name")
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+	domainName := args[0]
+
+	client := config.GetGodoClient()
 
 	ipAddress, err := config.GetString(ns, "ip-address")
 	if err != nil {
@@ -133,11 +127,12 @@ func RunDomainList(ns string, config doit.Config, out io.Writer, args []string) 
 
 // RunDomainGet retrieves a domain by name.
 func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	id, err := config.GetString(ns, doit.ArgDomainName)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+	id := args[0]
+
+	client := config.GetGodoClient()
 
 	if len(id) < 1 {
 		return errors.New("invalid domain name")
@@ -153,27 +148,29 @@ func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) e
 
 // RunDomainDelete deletes a domain by name.
 func RunDomainDelete(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	name, err := config.GetString(ns, doit.ArgDomainName)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+	name := args[0]
+
+	client := config.GetGodoClient()
 
 	if len(name) < 1 {
 		return errors.New("invalid domain name")
 	}
 
-	_, err = client.Domains.Delete(name)
+	_, err := client.Domains.Delete(name)
 	return err
 }
 
 // RunRecordList list records for a domain.
 func RunRecordList(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	name, err := config.GetString(ns, doit.ArgDomainName)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+	name := args[0]
+
+	client := config.GetGodoClient()
 
 	if len(name) < 1 {
 		return errors.New("domain name is missing")
@@ -208,11 +205,12 @@ func RunRecordList(ns string, config doit.Config, out io.Writer, args []string) 
 
 // RunRecordCreate creates a domain record.
 func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	name, err := config.GetString(ns, doit.ArgDomainName)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+	name := args[0]
+
+	client := config.GetGodoClient()
 
 	rType, err := config.GetString(ns, doit.ArgRecordType)
 	if err != nil {
@@ -267,11 +265,12 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 
 // RunRecordDelete deletes a domain record.
 func RunRecordDelete(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	domainName, err := config.GetString(ns, doit.ArgDomainName)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+	domainName := args[0]
+
+	client := config.GetGodoClient()
 
 	recordID, err := config.GetInt(ns, doit.ArgRecordID)
 	if err != nil {
@@ -284,11 +283,12 @@ func RunRecordDelete(ns string, config doit.Config, out io.Writer, args []string
 
 // RunRecordUpdate updates a domain record.
 func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	domainName, err := config.GetString(ns, doit.ArgDomainName)
-	if err != nil {
-		return err
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
 	}
+	domainName := args[0]
+
+	client := config.GetGodoClient()
 
 	recordID, err := config.GetInt(ns, doit.ArgRecordID)
 	if err != nil {

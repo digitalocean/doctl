@@ -2,6 +2,7 @@ package commands
 
 import (
 	"io"
+	"strconv"
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/Sirupsen/logrus"
@@ -18,15 +19,13 @@ func ImageAction() *cobra.Command {
 	}
 
 	cmdImageActionsGet := cmdBuilder(RunImageActionsGet,
-		"get", "get image action", writer)
+		"get <image-id>", "get image action", writer)
 	cmd.AddCommand(cmdImageActionsGet)
-	addIntFlag(cmdImageActionsGet, doit.ArgImageID, 0, "image id", requiredOpt())
 	addIntFlag(cmdImageActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
 	cmdImageActionsTransfer := cmdBuilder(RunImageActionsTransfer,
-		"transfer", "transfer imagr", writer)
+		"transfer <image-id>", "transfer imagr", writer)
 	cmd.AddCommand(cmdImageActionsTransfer)
-	addIntFlag(cmdImageActionsTransfer, doit.ArgImageID, 0, "image id", requiredOpt())
 	addStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region", requiredOpt())
 
 	return cmd
@@ -35,7 +34,12 @@ func ImageAction() *cobra.Command {
 // RunImageActionsGet retrieves an action for an image.
 func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	imageID, err := config.GetInt(ns, doit.ArgImageID)
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
+
+	imageID, err := strconv.Atoi(args[0])
 	if err != nil {
 		return err
 	}
@@ -56,7 +60,12 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []str
 // RunImageActionsTransfer an image.
 func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgImageID)
+
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
+
+	id, err := strconv.Atoi(args[0])
 	if err != nil {
 		return err
 	}

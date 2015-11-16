@@ -48,9 +48,8 @@ func TestFloatingIPsGet(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
 
-		RunFloatingIPGet(ns, c, ioutil.Discard, []string{})
+		RunFloatingIPGet(ns, c, ioutil.Discard, []string{"127.0.0.1"})
 	})
 }
 
@@ -86,8 +85,7 @@ func TestFloatingIPsDelete(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
 
-		RunFloatingIPDelete(ns, c, ioutil.Discard, []string{})
+		RunFloatingIPDelete(ns, c, ioutil.Discard, []string{"127.0.0.1"})
 	})
 }

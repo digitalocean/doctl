@@ -22,10 +22,9 @@ func TestImageActionsGet(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgImageID, 1)
 		c.Set(ns, doit.ArgActionID, 2)
 
-		RunImageActionsGet(ns, c, ioutil.Discard, []string{})
+		RunImageActionsGet(ns, c, ioutil.Discard, []string{"1"})
 	})
 
 }
@@ -46,9 +45,8 @@ func TestImageActionsTransfer(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgImageID, 1)
 		c.Set(ns, doit.ArgRegionSlug, "dev0")
 
-		RunImageActionsTransfer(ns, c, ioutil.Discard, []string{})
+		RunImageActionsTransfer(ns, c, ioutil.Discard, []string{"1"})
 	})
 }
