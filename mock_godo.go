@@ -97,6 +97,7 @@ func (s *DomainsServiceMock) CreateRecord(name string, req *godo.DomainRecordEdi
 type DropletActionsServiceMock struct {
 	ChangeKernelFn            func(id, kernelID int) (*godo.Action, *godo.Response, error)
 	DisableBackupsFn          func(id int) (*godo.Action, *godo.Response, error)
+	EnableBackupsFn           func(id int) (*godo.Action, *godo.Response, error)
 	EnableIPv6Fn              func(id int) (*godo.Action, *godo.Response, error)
 	EnablePrivateNetworkingFn func(id int) (*godo.Action, *godo.Response, error)
 	GetFn                     func(dropletID, actionID int) (*godo.Action, *godo.Response, error)
@@ -126,6 +127,11 @@ func (s *DropletActionsServiceMock) ChangeKernel(id, kernelID int) (*godo.Action
 // DisableBackups is a mocked method.
 func (s *DropletActionsServiceMock) DisableBackups(id int) (*godo.Action, *godo.Response, error) {
 	return s.DisableBackupsFn(id)
+}
+
+// EnableBackups is a mocked method.
+func (s *DropletActionsServiceMock) EnableBackups(id int) (*godo.Action, *godo.Response, error) {
+	return s.EnableBackupsFn(id)
 }
 
 // EnableIPv6 is a mocked method.
@@ -308,6 +314,7 @@ type FloatingIPActionsServiceMock struct {
 	AssignFn   func(ip string, dropletID int) (*godo.Action, *godo.Response, error)
 	UnassignFn func(ip string) (*godo.Action, *godo.Response, error)
 	GetFn      func(ip string, actionID int) (*godo.Action, *godo.Response, error)
+	ListFn     func(ip string) ([]godo.Action, *godo.Response, error)
 }
 
 var _ godo.FloatingIPActionsService = &FloatingIPActionsServiceMock{}
@@ -315,6 +322,11 @@ var _ godo.FloatingIPActionsService = &FloatingIPActionsServiceMock{}
 // Assign is a mocked method.
 func (s *FloatingIPActionsServiceMock) Assign(ip string, dropletID int) (*godo.Action, *godo.Response, error) {
 	return s.AssignFn(ip, dropletID)
+}
+
+// List is a mocked method.
+func (s *FloatingIPActionsServiceMock) List(ip string) ([]godo.Action, *godo.Response, error) {
+	return s.ListFn(ip)
 }
 
 // Unassign is a mocked method.
