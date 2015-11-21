@@ -9,7 +9,7 @@ type FloatingIPActionsService interface {
 	Assign(ip string, dropletID int) (*Action, *Response, error)
 	Unassign(ip string) (*Action, *Response, error)
 	Get(ip string, actionID int) (*Action, *Response, error)
-	List(ip string) ([]Action, *Response, error)
+	List(ip string, opt *ListOptions) ([]Action, *Response, error)
 }
 
 // FloatingIPActionsServiceOp handles communication with the floating IPs
@@ -40,8 +40,13 @@ func (s *FloatingIPActionsServiceOp) Get(ip string, actionID int) (*Action, *Res
 }
 
 // List the actions for a particular floating IP.
-func (s *FloatingIPActionsServiceOp) List(ip string) ([]Action, *Response, error) {
+func (s *FloatingIPActionsServiceOp) List(ip string, opt *ListOptions) ([]Action, *Response, error) {
 	path := floatingIPActionPath(ip)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return s.list(path)
 }
 
@@ -87,6 +92,9 @@ func (s *FloatingIPActionsServiceOp) list(path string) ([]Action, *Response, err
 	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
 	}
 
 	return root.Actions, resp, err
