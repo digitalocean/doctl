@@ -97,3 +97,23 @@ func TestFloatingIPsActions_Get(t *testing.T) {
 		t.Errorf("FloatingIPsActions.Get returned %+v, expected %+v", action, expected)
 	}
 }
+
+func TestFloatingIPsActions_List(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/floating_ips/192.168.0.1/actions", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprintf(w, `{"actions":[{"status":"in-progress"}]}`)
+	})
+
+	actions, _, err := client.FloatingIPActions.List("192.168.0.1")
+	if err != nil {
+		t.Errorf("FloatingIPsActions.List returned error: %v", err)
+	}
+
+	expected := []Action{Action{Status: "in-progress"}}
+	if !reflect.DeepEqual(actions, expected) {
+		t.Errorf("FloatingIPsActions.List returned %+v, expected %+v", actions, expected)
+	}
+}

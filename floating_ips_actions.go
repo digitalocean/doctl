@@ -9,6 +9,7 @@ type FloatingIPActionsService interface {
 	Assign(ip string, dropletID int) (*Action, *Response, error)
 	Unassign(ip string) (*Action, *Response, error)
 	Get(ip string, actionID int) (*Action, *Response, error)
+	List(ip string) ([]Action, *Response, error)
 }
 
 // FloatingIPActionsServiceOp handles communication with the floating IPs
@@ -36,6 +37,12 @@ func (s *FloatingIPActionsServiceOp) Unassign(ip string) (*Action, *Response, er
 func (s *FloatingIPActionsServiceOp) Get(ip string, actionID int) (*Action, *Response, error) {
 	path := fmt.Sprintf("%s/%d", floatingIPActionPath(ip), actionID)
 	return s.get(path)
+}
+
+// List the actions for a particular floating IP.
+func (s *FloatingIPActionsServiceOp) List(ip string) ([]Action, *Response, error) {
+	path := floatingIPActionPath(ip)
+	return s.list(path)
 }
 
 func (s *FloatingIPActionsServiceOp) doAction(ip string, request *ActionRequest) (*Action, *Response, error) {
@@ -68,6 +75,21 @@ func (s *FloatingIPActionsServiceOp) get(path string) (*Action, *Response, error
 	}
 
 	return &root.Event, resp, err
+}
+
+func (s *FloatingIPActionsServiceOp) list(path string) ([]Action, *Response, error) {
+	req, err := s.client.NewRequest("GET", path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(actionsRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Actions, resp, err
 }
 
 func floatingIPActionPath(ip string) string {
