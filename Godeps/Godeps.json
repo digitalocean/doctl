@@ -22,8 +22,8 @@
 		},
 		{
 			"ImportPath": "github.com/digitalocean/godo",
-			"Comment": "v0.9.0-3-g5ce8a06",
-			"Rev": "5ce8a069857f56cc60b8bb88501d9def7bab1150"
+			"Comment": "v0.9.0-8-g2124bf3",
+			"Rev": "2124bf3eeeb4ac070337bb19ef7b76a745de56f4"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/term",
