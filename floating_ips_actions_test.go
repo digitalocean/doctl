@@ -107,7 +107,7 @@ func TestFloatingIPsActions_List(t *testing.T) {
 		fmt.Fprintf(w, `{"actions":[{"status":"in-progress"}]}`)
 	})
 
-	actions, _, err := client.FloatingIPActions.List("192.168.0.1")
+	actions, _, err := client.FloatingIPActions.List("192.168.0.1", nil)
 	if err != nil {
 		t.Errorf("FloatingIPsActions.List returned error: %v", err)
 	}
@@ -116,4 +116,52 @@ func TestFloatingIPsActions_List(t *testing.T) {
 	if !reflect.DeepEqual(actions, expected) {
 		t.Errorf("FloatingIPsActions.List returned %+v, expected %+v", actions, expected)
 	}
+}
+
+func TestFloatingIPsActions_ListMultiplePages(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/floating_ips/192.168.0.1/actions", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"actions":[{"status":"in-progress"}], "links":{"pages":{"next":"http://example.com/v2/floating_ips/192.168.0.1/actions?page=2"}}}`)
+	})
+
+	_, resp, err := client.FloatingIPActions.List("192.168.0.1", nil)
+	if err != nil {
+		t.Errorf("FloatingIPsActions.List returned error: %v", err)
+	}
+
+	checkCurrentPage(t, resp, 1)
+}
+
+func TestFloatingIPsActions_ListPageByNumber(t *testing.T) {
+	setup()
+	defer teardown()
+
+	jBlob := `
+	{
+		"actions":[{"status":"in-progress"}],
+		"links":{
+			"pages":{
+				"next":"http://example.com/v2/regions/?page=3",
+				"prev":"http://example.com/v2/regions/?page=1",
+				"last":"http://example.com/v2/regions/?page=3",
+				"first":"http://example.com/v2/regions/?page=1"
+			}
+		}
+	}`
+
+	mux.HandleFunc("/v2/floating_ips/192.168.0.1/actions", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, jBlob)
+	})
+
+	opt := &ListOptions{Page: 2}
+	_, resp, err := client.FloatingIPActions.List("192.168.0.1", opt)
+	if err != nil {
+		t.Errorf("FloatingIPsActions.List returned error: %v", err)
+	}
+
+	checkCurrentPage(t, resp, 2)
 }
