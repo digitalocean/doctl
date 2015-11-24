@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/Sirupsen/logrus"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/Sirupsen/logrus"
+	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 )
 
 const (

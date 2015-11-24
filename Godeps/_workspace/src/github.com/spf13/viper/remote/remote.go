@@ -8,7 +8,7 @@ package remote
 
 import (
 	"bytes"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/viper"
+	"github.com/spf13/viper"
 	crypt "github.com/xordataexchange/crypt/config"
 	"io"
 	"os"

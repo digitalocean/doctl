@@ -6,37 +6,38 @@
 (https://coveralls.io/r/bryanl/doit?branch=master)
 
 ```
-NAME:
-   doit - DigitalOcean Interactive Tool
+Usage:
+  doit [command]
 
-USAGE:
-   doit [global options] command [command options] [arguments...]
+Available Commands:
+  account            account commands
+  action             action commands
+  auth               auth commands
+  domain             domain commands
+  droplet-action     droplet action commands
+  droplet            droplet commands
+  floating-ip        floating IP commands
+  floating-ip-action floating IP action commands
+  image              image commands
+  region             region commands
+  size               size commands
+  ssh-key            sshkey commands
+  ssh                ssh to droplet
 
-VERSION:
-   0.4.0
+Flags:
+  -t, --access-token="": DigtialOcean API V2 Access Token
+  -h, --help[=false]: help for doit
+  -o, --output="text": output formt [text|json]
 
-COMMANDS:
-   account		account commands
-   action		action commands
-   domain		domain commands
-   droplet		droplet commands
-   droplet-action	droplet action commands
-   image-action		image action commands
-   image		image commands
-   key			ssh key commands
-   region		region commands
-   size			size commands
-   ssh			SSH to droplet. Provide name or id
-   help, h		Shows a list of commands or help for one command
-
-GLOBAL OPTIONS:
-   --access-token 		DigitalOcean API V2 Access Token [$DIGITALOCEAN_ACCESS_TOKEN]
-   --debug		Debug
-   --output 		output format (json or text)
-   --help, -h		show help
-   --version, -v	print the version
+Use "doit [command] --help" for more information about a command.
 
 ```
+
+## Initialization
+
+
+
+
 ## Configuration
 
 By default, `doit` will load a configuration file from `$HOME/.doitcfg` if found.
@@ -57,5 +58,5 @@ Example:
 
 ## Building and dependencies
 
-`doit`'s dependencies are managed by [godep](https://github.com/tools/godep). To add new packages, you must
+`doit`'s dependencies are managed by [godep](https:/.com/tools/godep). To add new packages, you must
 run `godep save ./...` to update the vendored dependencies. External dependencies have been rewritten using `godep`.

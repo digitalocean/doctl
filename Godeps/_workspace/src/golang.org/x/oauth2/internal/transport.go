@@ -8,7 +8,7 @@ package internal
 import (
 	"net/http"
 
-	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/net/context"
+	"golang.org/x/net/context"
 )
 
 // HTTPClient is the context key to use with golang.org/x/net/context's

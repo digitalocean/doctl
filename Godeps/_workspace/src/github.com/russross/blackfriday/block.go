@@ -16,7 +16,7 @@ package blackfriday
 import (
 	"bytes"
 
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/shurcooL/sanitized_anchor_name"
+	"github.com/shurcooL/sanitized_anchor_name"
 )
 
 // Parse block-level data.
@@ -399,23 +399,7 @@ func (p *parser) html(out *bytes.Buffer, data []byte, doRender bool) int {
 
 // HTML comment, lax form
 func (p *parser) htmlComment(out *bytes.Buffer, data []byte, doRender bool) int {
-	if data[0] != '<' || data[1] != '!' || data[2] != '-' || data[3] != '-' {
-		return 0
-	}
-
-	i := 5
-
-	// scan for an end-of-comment marker, across lines if necessary
-	for i < len(data) && !(data[i-2] == '-' && data[i-1] == '-' && data[i] == '>') {
-		i++
-	}
-	i++
-
-	// no end-of-comment marker
-	if i >= len(data) {
-		return 0
-	}
-
+	i := p.inlineHtmlComment(out, data)
 	// needs to end with a blank line
 	if j := p.isEmpty(data[i:]); j > 0 {
 		size := i + j
@@ -429,7 +413,6 @@ func (p *parser) htmlComment(out *bytes.Buffer, data []byte, doRender bool) int 
 		}
 		return size
 	}
-
 	return 0
 }
 
@@ -908,13 +891,35 @@ func (p *parser) quotePrefix(data []byte) int {
 	return 0
 }
 
+// blockquote ends with at least one blank line
+// followed by something without a blockquote prefix
+func (p *parser) terminateBlockquote(data []byte, beg, end int) bool {
+	if p.isEmpty(data[beg:]) <= 0 {
+		return false
+	}
+	if end >= len(data) {
+		return true
+	}
+	return p.quotePrefix(data[end:]) == 0 && p.isEmpty(data[end:]) == 0
+}
+
 // parse a blockquote fragment
 func (p *parser) quote(out *bytes.Buffer, data []byte) int {
 	var raw bytes.Buffer
 	beg, end := 0, 0
 	for beg < len(data) {
 		end = beg
+		// Step over whole lines, collecting them. While doing that, check for
+		// fenced code and if one's found, incorporate it altogether,
+		// irregardless of any contents inside it
 		for data[end] != '\n' {
+			if p.flags&EXTENSION_FENCED_CODE != 0 {
+				if i := p.fencedCode(out, data[end:], false); i > 0 {
+					// -1 to compensate for the extra end++ after the loop:
+					end += i - 1
+					break
+				}
+			}
 			end++
 		}
 		end++
@@ -922,11 +927,7 @@ func (p *parser) quote(out *bytes.Buffer, data []byte) int {
 		if pre := p.quotePrefix(data[beg:]); pre > 0 {
 			// skip the prefix
 			beg += pre
-		} else if p.isEmpty(data[beg:]) > 0 &&
-			(end >= len(data) ||
-				(p.quotePrefix(data[end:]) == 0 && p.isEmpty(data[end:]) == 0)) {
-			// blockquote ends with at least one blank line
-			// followed by something without a blockquote prefix
+		} else if p.terminateBlockquote(data, beg, end) {
 			break
 		}
 
@@ -1357,6 +1358,14 @@ func (p *parser) paragraph(out *bytes.Buffer, data []byte) int {
 		if p.isPrefixHeader(current) || p.isHRule(current) {
 			p.renderParagraph(out, data[:i])
 			return i
+		}
+
+		// if there's a fenced code block, paragraph is over
+		if p.flags&EXTENSION_FENCED_CODE != 0 {
+			if p.fencedCode(out, current, false) > 0 {
+				p.renderParagraph(out, data[:i])
+				return i
+			}
 		}
 
 		// if there's a definition list item, prev line is a definition term

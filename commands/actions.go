@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 )
 
 // Actions creates the action commands heirarchy.

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/net/context"
-	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/oauth2/internal"
+	"golang.org/x/net/context"
+	"golang.org/x/oauth2/internal"
 )
 
 // expiryDelta determines how earlier a token should be considered

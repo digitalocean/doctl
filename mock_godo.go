@@ -1,6 +1,6 @@
 package doit
 
-import "github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
+import "github.com/digitalocean/godo"
 
 // AccountServiceMock mocks github.com/digitalocean/AccountService.
 type AccountServiceMock struct {
@@ -314,7 +314,7 @@ type FloatingIPActionsServiceMock struct {
 	AssignFn   func(ip string, dropletID int) (*godo.Action, *godo.Response, error)
 	UnassignFn func(ip string) (*godo.Action, *godo.Response, error)
 	GetFn      func(ip string, actionID int) (*godo.Action, *godo.Response, error)
-	ListFn     func(ip string) ([]godo.Action, *godo.Response, error)
+	ListFn     func(ip string, opts *godo.ListOptions) ([]godo.Action, *godo.Response, error)
 }
 
 var _ godo.FloatingIPActionsService = &FloatingIPActionsServiceMock{}
@@ -325,8 +325,8 @@ func (s *FloatingIPActionsServiceMock) Assign(ip string, dropletID int) (*godo.A
 }
 
 // List is a mocked method.
-func (s *FloatingIPActionsServiceMock) List(ip string) ([]godo.Action, *godo.Response, error) {
-	return s.ListFn(ip)
+func (s *FloatingIPActionsServiceMock) List(ip string, opts *godo.ListOptions) ([]godo.Action, *godo.Response, error) {
+	return s.ListFn(ip, opts)
 }
 
 // Unassign is a mocked method.

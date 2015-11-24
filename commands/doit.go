@@ -4,18 +4,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/user"
-	"path/filepath"
 
 	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/digitalocean/godo"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/fatih/color"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cobra"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/viper"
-)
-
-const (
-	configFile = ".doitcfg"
+	"github.com/digitalocean/godo"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -44,19 +38,13 @@ func init() {
 
 // LoadConfig loads out configuration.
 func LoadConfig() error {
-	fp, err := configFilePath()
+	cf := doit.NewConfigFile()
+	r, err := cf.Open()
 	if err != nil {
-		return fmt.Errorf("can't find home directory: %v", err)
-	}
-	if _, err := os.Stat(fp); err == nil {
-		file, err := os.Open(fp)
-		if err != nil {
-			return fmt.Errorf("can't open configuration file %q: %v", fp, err)
-		}
-		viper.ReadConfig(file)
+		return fmt.Errorf("can't open configuration file: %v", err)
 	}
 
-	return nil
+	return viper.ReadConfig(r)
 }
 
 // Execute executes the base command.
@@ -70,6 +58,7 @@ func Execute() {
 func addCommands() {
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Actions())
+	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(Domain())
 	DoitCmd.AddCommand(DropletAction())
 	DoitCmd.AddCommand(Droplet())
@@ -106,16 +95,6 @@ func initializeConfig() {
 	if DoitCmd.PersistentFlags().Lookup("output").Changed {
 		viper.Set("output", Output)
 	}
-}
-
-func configFilePath() (string, error) {
-	usr, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-
-	dir := filepath.Join(usr.HomeDir, configFile)
-	return dir, nil
 }
 
 type flagOpt func(c *cobra.Command, name, key string)
