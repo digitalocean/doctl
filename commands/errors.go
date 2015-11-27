@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/fatih/color"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cobra"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var (

@@ -6,6 +6,11 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "code.google.com/p/go-uuid/uuid",
+			"Comment": "null-15",
+			"Rev": "'35bc42037350f0078e3c974c6ea690f1926603ab'"
+		},
+		{
 			"ImportPath": "github.com/BurntSushi/toml",
 			"Comment": "v0.1.0-21-g056c9bc",
 			"Rev": "056c9bc7be7190eaa7715723883caffa5f8fa3e4"
@@ -16,14 +21,22 @@
 			"Rev": "6f383a9b2998dd6f401704269c3e6e192f6175ad"
 		},
 		{
+			"ImportPath": "github.com/bryanl/doit-server",
+			"Rev": "fdb96236cd8e2b4a3ed79b2145b996550af90ea7"
+		},
+		{
+			"ImportPath": "github.com/bryanl/webbrowser",
+			"Rev": "bbcbcd4a8c93c9dfaa3d974e5404e1d5f4ada91a"
+		},
+		{
 			"ImportPath": "github.com/cpuguy83/go-md2man/md2man",
 			"Comment": "v1.0.4",
 			"Rev": "71acacd42f85e5e82f70a55327789582a5200a90"
 		},
 		{
 			"ImportPath": "github.com/digitalocean/godo",
-			"Comment": "v0.9.0-8-g2124bf3",
-			"Rev": "2124bf3eeeb4ac070337bb19ef7b76a745de56f4"
+			"Comment": "v0.9.0-3-g5ce8a06",
+			"Rev": "5ce8a069857f56cc60b8bb88501d9def7bab1150"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/term",
@@ -32,12 +45,36 @@
 		},
 		{
 			"ImportPath": "github.com/fatih/color",
-			"Comment": "v0.1-12-g9aae6aa",
-			"Rev": "9aae6aaa22315390f03959adca2c4d395b02fcef"
+			"Comment": "v0.1",
+			"Rev": "1b35f289c47d5c73c398cea8e006b7bcb6234a96"
 		},
 		{
 			"ImportPath": "github.com/google/go-querystring/query",
 			"Rev": "547ef5ac979778feb2f760cdb5f4eae1a2207b86"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
+		},
+		{
+			"ImportPath": "github.com/gorilla/pat",
+			"Rev": "e3ceaad21981965be815a74ec833802d74e52947"
+		},
+		{
+			"ImportPath": "github.com/gorilla/securecookie",
+			"Rev": "e95799a481bbcc3d01c2ad5178524cb8bec9f370"
+		},
+		{
+			"ImportPath": "github.com/gorilla/sessions",
+			"Rev": "f7261893ca3ea922c30eabe742c036d2c1de6e0a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/websocket",
+			"Rev": "361d4c0ffd78338ebe0a9e6320cdbe115d7dc026"
 		},
 		{
 			"ImportPath": "github.com/inconshreveable/mousetrap",
@@ -58,12 +95,8 @@
 			"Rev": "337395e44efb4affc8bf11971e22acbd4e27a32d"
 		},
 		{
-			"ImportPath": "github.com/mattn/go-colorable",
-			"Rev": "51a7e7a8b1665b25ca173debdc8d52d493348f15"
-		},
-		{
-			"ImportPath": "github.com/mattn/go-isatty",
-			"Rev": "d6aaa2f596ae91a0a58d8e7f2c79670991468e4f"
+			"ImportPath": "github.com/markbates/goth",
+			"Rev": "31a9cfa9284c350a8564ae74abadfa3eb9a1a825"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
@@ -71,12 +104,16 @@
 		},
 		{
 			"ImportPath": "github.com/russross/blackfriday",
-			"Comment": "v1.2-80-g8cec3a8",
-			"Rev": "8cec3a854e68dba10faabbe31c089abf4a3e57a6"
+			"Comment": "v1.3-34-g18432fc",
+			"Rev": "18432fc942c4ea4846063a269f339ede7630bd71"
+		},
+		{
+			"ImportPath": "github.com/shiena/ansicolor",
+			"Rev": "8368d3b31cf6f2c2464c7a91675342c9a0ac6658"
 		},
 		{
 			"ImportPath": "github.com/shurcooL/sanitized_anchor_name",
-			"Rev": "244f5ac324cb97e1987ef901a0081a77bfd8e845"
+			"Rev": "10ef21a441db47d8b13ebcc5fd2310f636973c77"
 		},
 		{
 			"ImportPath": "github.com/spf13/cast",
@@ -84,7 +121,7 @@
 		},
 		{
 			"ImportPath": "github.com/spf13/cobra",
-			"Rev": "53d96508f5c9311f5dade714e1de7bd6a9d2af4a"
+			"Rev": "1e1d5137bf425b617046d7c938a7c33f14acf539"
 		},
 		{
 			"ImportPath": "github.com/spf13/jwalterweatherman",

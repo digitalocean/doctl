@@ -21,7 +21,6 @@ type DropletActionsService interface {
 	Resize(int, string, bool) (*Action, *Response, error)
 	Rename(int, string) (*Action, *Response, error)
 	Snapshot(int, string) (*Action, *Response, error)
-	EnableBackups(int) (*Action, *Response, error)
 	DisableBackups(int) (*Action, *Response, error)
 	PasswordReset(int) (*Action, *Response, error)
 	RebuildByImageID(int, int) (*Action, *Response, error)
@@ -110,12 +109,6 @@ func (s *DropletActionsServiceOp) Snapshot(id int, name string) (*Action, *Respo
 		"type": requestType,
 		"name": name,
 	}
-	return s.doAction(id, request)
-}
-
-// EnableBackups enables backups for a droplet.
-func (s *DropletActionsServiceOp) EnableBackups(id int) (*Action, *Response, error) {
-	request := &ActionRequest{"type": "enable_backups"}
 	return s.doAction(id, request)
 }
 

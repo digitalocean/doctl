@@ -6,7 +6,7 @@
 package facebook
 
 import (
-	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/oauth2"
+	"golang.org/x/oauth2"
 )
 
 // Endpoint is Facebook's OAuth 2.0 endpoint.

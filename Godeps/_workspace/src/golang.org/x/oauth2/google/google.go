@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/oauth2"
-	"github.com/bryanl/doit/Godeps/_workspace/src/golang.org/x/oauth2/jwt"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/jwt"
 	"google.golang.org/cloud/compute/metadata"
 )
 

@@ -21,11 +21,11 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/BurntSushi/toml"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/magiconair/properties"
-	"github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/cast"
-	jww "github.com/bryanl/doit/Godeps/_workspace/src/github.com/spf13/jwalterweatherman"
-	"github.com/bryanl/doit/Godeps/_workspace/src/gopkg.in/yaml.v2"
+	"github.com/BurntSushi/toml"
+	"github.com/magiconair/properties"
+	"github.com/spf13/cast"
+	jww "github.com/spf13/jwalterweatherman"
+	"gopkg.in/yaml.v2"
 )
 
 // Denotes failing to parse configuration file.
