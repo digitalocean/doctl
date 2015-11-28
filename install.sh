@@ -22,7 +22,7 @@ fi
 echo "Creating ${install_dir}/doit"
 mkdir -p "${install_dir}/doit/bin"
 
-osarch=$(echo `/usr/bin/uname -s`_`/usr/bin/uname -m` | awk '{print tolower($0)}')
+osarch=$(echo `uname -s`_`uname -m` | awk '{print tolower($0)}')
 
 case "$osarch" in
 	darwin_x86_64)
