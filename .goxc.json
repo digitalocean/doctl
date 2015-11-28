@@ -3,6 +3,8 @@
 		"default",
 		"publish-github"
 	],
+	"BuildConstraints": "linux windows darwin,!386 !arm",
+	"MainDirsExclude": "Godeps",
 	"PackageVersion": "0.5.2",
 	"TaskSettings": {
 		"publish-github": {
@@ -10,5 +12,6 @@
 			"repository": "bryanl/doit"
 		}
 	},
-	"ConfigVersion": "0.9"
+	"ConfigVersion": "0.9",
+  "OutPath": "{{.Dest}}{{.PS}}{{.AppName}}{{.PS}}{{.Version}}{{.PS}}{{.AppName}}_{{.Version}}_{{.Os}}_{{.Arch}}{{.Ext}}"
 }
