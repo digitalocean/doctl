@@ -11,18 +11,3 @@ install:
   - "godep restore"
 script:
   - $HOME/gopath/bin/goveralls -service=travis-ci
-deploy:
-  provider: releases
-  api_key:
-    secure: "KUDXlE8mel8UxqupVRZIiaZ5YGWpNvc2jnLZZXAeXR6jHYKs61m1jXX5u809cUJMqmCLsozlMbAji3GwtJao+P/ob1W5bErrwH6xg8eUtv+
-dkaK14Ed7famwoSjmHOVmyQnu55g1Gn49K5fqFJfLJwnbWhEomr0ctasagya6UbJBVvrL3Wr51zgeqg5lK6rhzQBbVKNGwpkzMex10ZHdq3TIS5bOc7PxZ
-OXYEWONWZL+ufBfbTQPb4Ewk9oM965WR0G9Gbhbaks7sEELj35zxTD1pEOAiIw22Lk5fX0Md74CCa+LPLFUn2nFTOdmERUiL0s5xmsZ+F0cP+hcAiPIfki
-PyQelz7cTmp3AKa4sU78UtSio5qUuYPHF3nPVJDhtg1tK/tQplF9iCP0DrQlah8LGMfGGVvyC/JBm98euegXtld0/k5HWS0r2tta+TFLh6jwvd7bBMkDdH
-Ml9yZvAz1k4z8Phy8YfUxXDk/NJ0FqLkk9j+6vemJAbBzNVLvwcYRaxogruG4QqEtxiYMtDdMMSEOEXpRB9DLNaItsj+uoam334KsDr30tDye4z6MKMqlT
-wBtbwzJ/fk8NzpxDA06P3fSGP2AMLurdky+dVgohnOM/IC3yKMUV+SYvf8PezETk4GaJMND13xRfjh1Yjil3MPxnIIZz5NuxVNUwvzIg="
-  file: "doit"
-  skip_cleanup: true
-  on:
-    repo: bryanl/doit
-    tags: true
-    all_branches: true
