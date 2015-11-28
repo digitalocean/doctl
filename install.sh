@@ -50,7 +50,7 @@ case $(uname -s) in
 		unzip -q "${bin_name}.${ext}"
 		;;
 	Linux)
-		tar xfz "${$bin_name}.${ext}"
+		tar xzf "${bin_name}.${ext}"
 		;;
 esac
 
