@@ -9,19 +9,54 @@ function cleanup {
 }
 trap "cleanup" EXIT
 
-current_version="0.5.0"
+current_version="0.6.0"
 
-# get directory for installation: ${HOME}/digitalocean and set it doit_home
+echo -e "Installing doit ${current_version}...\n"
 echo "Doit installation directory (this will create a doit subdirectory) (${HOME}): "
 read install_dir
 
-echo "Creating ${install_dir}/doit\n"
+if [[ -z "$install_dir" ]]; then
+	install_dir=$HOME
+fi
 
-bin_name=$(echo "doit_"`/usr/bin/uname -s`_`/usr/bin/uname -m` | awk '{print tolower($0)}' | sed 's/x86_64/amd64/')
-curl -o $tmpdir/doit -# -L "https://github.com/bryanl/releases/download/v${current_version}/${bin_name}"
-
+echo "Creating ${install_dir}/doit"
 mkdir -p "${install_dir}/doit/bin"
-mv $tmpdir/doit "${install_dir}/doit/bin/doit"
 
-echo "Install complete!\n\n"
+osarch=$(echo `/usr/bin/uname -s`_`/usr/bin/uname -m` | awk '{print tolower($0)}')
+
+case "$osarch" in
+	darwin_x86_64)
+		bin_name="doit_${current_version}_darwin_amd64"
+		ext="zip"
+		;;
+	linux_386)
+		bin_name="doit_${current_version}_linux_386"
+		ext="tar.gz"
+		;;
+	linux_x86_64)
+		bin_name="doit_${current_version}_linux_amd64"
+		ext="tar.gz"
+		;;
+	*)
+		echo "Unsupported arch $(uname -s) $(uname -m)"
+		exit 1
+esac
+
+cd $tmpdir
+curl -# -L -O "https://github.com/bryanl/doit/releases/download/v${current_version}/${bin_name}.${ext}"
+
+case $(uname -s) in
+	Darwin)
+		unzip -q "${bin_name}.${ext}"
+		;;
+	Linux)
+		tar xfz "${$bin_name}.${ext}"
+		;;
+esac
+
+cp "${bin_name}/${bin_name}" "${install_dir}/doit/bin/doit"
+chmod u+x "${install_dir}/doit/bin/doit"
+
+echo -e "\nInstall complete!\n"
+echo -e "doit has been installed to ${install_dir}/doit/bin/doit"
 
