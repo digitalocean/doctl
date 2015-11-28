@@ -1,17 +1,17 @@
 {
+	"ArtifactsDest": "builds",
+	"OutPath": "{{.Dest}}{{.PS}}{{.AppName}}{{.PS}}{{.Version}}{{.PS}}{{.AppName}}_{{.Version}}_{{.Os}}_{{.Arch}}{{.Ext}}",
 	"Tasks": [
-		"default",
-		"publish-github"
+		"default"
 	],
-	"BuildConstraints": "linux windows darwin,!386 !arm",
+	"BuildConstraints": "linux,amd64 linux,386 windows,amd64 windows,386 darwin,amd64",
 	"MainDirsExclude": "Godeps",
-	"PackageVersion": "0.5.2",
+	"PackageVersion": "0.6.0",
 	"TaskSettings": {
 		"publish-github": {
 			"owner": "bryanl",
 			"repository": "bryanl/doit"
 		}
 	},
-	"ConfigVersion": "0.9",
-  "OutPath": "{{.Dest}}{{.PS}}{{.AppName}}{{.PS}}{{.Version}}{{.PS}}{{.AppName}}_{{.Version}}_{{.Os}}_{{.Arch}}{{.Ext}}"
+	"ConfigVersion": "0.9"
 }
