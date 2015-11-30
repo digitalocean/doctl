@@ -44,8 +44,12 @@ func writeJSON(item interface{}, w io.Writer) error {
 	}
 
 	var out bytes.Buffer
-	json.Indent(&out, b, "", "  ")
+	err = json.Indent(&out, b, "", "  ")
+	if err != nil {
+		return err
+	}
 	_, err = out.WriteTo(w)
+
 	return err
 }
 
@@ -108,7 +112,7 @@ func outputAccount(account *godo.Account, out io.Writer) {
 	fmt.Fprintf(w, "")
 	fmt.Fprintf(w, "%s\t%d\t%t\t%s\t%s\n", account.Email, account.DropletLimit, account.EmailVerified, account.UUID, account.Status)
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputActions(list []godo.Action, out io.Writer) {
@@ -123,7 +127,7 @@ func outputActions(list []godo.Action, out io.Writer) {
 			a.ID, a.Status, a.Type, a.StartedAt, a.CompletedAt, a.ResourceID, a.ResourceType, a.RegionSlug)
 	}
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputDroplets(list []godo.Droplet, out io.Writer) {
@@ -139,7 +143,7 @@ func outputDroplets(list []godo.Droplet, out io.Writer) {
 			d.ID, d.Name, ip, d.Memory, d.Vcpus, d.Disk, d.Region.Slug, image, d.Status)
 	}
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputFloatingIPs(list []godo.FloatingIP, out io.Writer) {
@@ -156,7 +160,7 @@ func outputFloatingIPs(list []godo.FloatingIP, out io.Writer) {
 	}
 
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputImages(list []godo.Image, out io.Writer) {
@@ -176,7 +180,7 @@ func outputImages(list []godo.Image, out io.Writer) {
 
 	}
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputKernels(list []godo.Kernel, out io.Writer) {
@@ -189,7 +193,7 @@ func outputKernels(list []godo.Kernel, out io.Writer) {
 		fmt.Fprintf(w, "%d\t%s\t%s\n", k.ID, k.Name, k.Version)
 	}
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputRegions(list []godo.Region, out io.Writer) {
@@ -202,7 +206,7 @@ func outputRegions(list []godo.Region, out io.Writer) {
 		fmt.Fprintf(w, "%s\t%s\t%t\n", r.Slug, r.Name, r.Available)
 	}
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputSizes(list []godo.Size, out io.Writer) {
@@ -216,7 +220,7 @@ func outputSizes(list []godo.Size, out io.Writer) {
 			s.Slug, s.Memory, s.Vcpus, s.Disk, s.PriceMonthly, s.PriceHourly)
 	}
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputSSHKeys(list []godo.Key, out io.Writer) {
@@ -230,7 +234,7 @@ func outputSSHKeys(list []godo.Key, out io.Writer) {
 			s.ID, s.Name, s.Fingerprint)
 	}
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputZone(domain *godo.Domain, out io.Writer) {
@@ -248,7 +252,7 @@ func outputDomains(list []godo.Domain, out io.Writer) {
 	}
 
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
 
 func outputRecords(list []godo.DomainRecord, out io.Writer) {
@@ -263,5 +267,5 @@ func outputRecords(list []godo.DomainRecord, out io.Writer) {
 	}
 
 	fmt.Fprintln(w)
-	w.Flush()
+	_ = w.Flush()
 }
