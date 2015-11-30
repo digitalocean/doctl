@@ -26,16 +26,13 @@ osarch=$(echo `uname -s`_`uname -m` | awk '{print tolower($0)}')
 
 case "$osarch" in
 	darwin_x86_64)
-		bin_name="doit_${current_version}_darwin_amd64"
-		ext="zip"
+		bin_name="doit-${current_version}-darwin-10.6-amd64"
 		;;
 	linux_386)
-		bin_name="doit_${current_version}_linux_386"
-		ext="tar.gz"
+		bin_name="doit-${current_version}-linux-386"
 		;;
 	linux_x86_64)
-		bin_name="doit_${current_version}_linux_amd64"
-		ext="tar.gz"
+		bin_name="doit-${current_version}-linux-amd64"
 		;;
 	*)
 		echo "Unsupported arch $(uname -s) $(uname -m)"
@@ -43,18 +40,9 @@ case "$osarch" in
 esac
 
 cd $tmpdir
-curl -# -L -O "https://github.com/bryanl/doit/releases/download/v${current_version}/${bin_name}.${ext}"
+curl -# -L -O "https://github.com/bryanl/doit/releases/download/v${current_version}/${bin_name}"
 
-case $(uname -s) in
-	Darwin)
-		unzip -q "${bin_name}.${ext}"
-		;;
-	Linux)
-		tar xzf "${bin_name}.${ext}"
-		;;
-esac
-
-cp "${bin_name}/${bin_name}" "${install_dir}/doit/bin/doit"
+cp $tmpdir/$bin_name $install_dir/doit/bin/doit
 chmod u+x "${install_dir}/doit/bin/doit"
 
 echo -e "\nInstall complete!\n"
