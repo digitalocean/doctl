@@ -50,7 +50,7 @@ case $(uname -s) in
 		shasum="sha256sum"
 		;;
 	Darwin)
-		shasum="shasum -p -a 256"
+		shasum="shasum -a 256"
 		;;
 esac
 
