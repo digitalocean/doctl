@@ -50,12 +50,12 @@ case $(uname -s) in
 		shasum="sha256sum"
 		;;
 	Darwin)
-		shasum="shasum -a 256"
+		shasum="shasum -p -a 256"
 		;;
 esac
 
 echo -n "Validating checksums..."
-$shasum -p -c ${bin_name}.sha256 | grep OK 2>&1 > /dev/null
+$shasum -c ${bin_name}.sha256 | grep OK 2>&1 > /dev/null
 if [ $? -ne 0 ]; then
 	echo "${bin_name} has invalid checksum"
 	exit 1
