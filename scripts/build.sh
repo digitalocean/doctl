@@ -9,18 +9,25 @@ if [[ -z "$ver" ]]; then
 	exit 1
 fi
 
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 OUTPUT_DIR="${DIR}/../builds/${ver}"
 
-mkdir -p $OUTPUT_DIR
+if [[ -z $SKIPBUILD ]]; then
+	mkdir -p $OUTPUT_DIR
 
-xgo \
-	--dest $OUTPUT_DIR \
-	--targets='windows/*,darwin/*,linux/*' \
-	-out doit-0.6.0 github.com/bryanl/doit/cmd/doit
+	xgo \
+		--dest $OUTPUT_DIR \
+		--targets='windows/*,darwin/*,linux/*' \
+		-out doit-0.6.0 github.com/bryanl/doit/cmd/doit
+fi
 
-for f in $(find ${OUTPUT_DIR} -maxdepth 1 -perm -111 -type f); do
-	echo "generating sha256 checksum for $f"
-	openssl dgst -sha256 < $f > ${f}.sha256
+# FIXME mac only for now
+cd $OUTPUT_DIR
+echo $CWD
+for f in $(find . -maxdepth 1 -perm -111 -type f); do
+	fn=$(basename $f)
+	echo "generating sha256 checksum for $fn"
+	shasum -a 256 ${fn} > ${f}.sha256
 done
 
