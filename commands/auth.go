@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,6 +9,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
+	"runtime"
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/bryanl/doit"
@@ -15,10 +18,6 @@ import (
 	"github.com/bryanl/webbrowser"
 	"github.com/gorilla/websocket"
 	"github.com/spf13/cobra"
-)
-
-var (
-	doitServerURL = "http://doit-server.apps.pifft.com"
 )
 
 // UnknownSchemeError signifies an unknown HTTP scheme.
@@ -48,25 +47,20 @@ func Auth() *cobra.Command {
 
 // RunAuthLogin runs auth login. It communicates with doit-server to perform auth.
 func RunAuthLogin(ns string, config doit.Config, out io.Writer, args []string) error {
-	ac, err := retrieveAuthCredentials(doitServerURL)
+	dsa := newDoitServerAuth()
+
+	ac, err := dsa.retrieveAuthCredentials()
 	if err != nil {
 		return err
 	}
 
-	u, err := createAuthURL(doitServerURL, ac)
-	if err != nil {
-		return err
-	}
-
-	webbrowser.Open(u, webbrowser.NewTab, true)
-
-	tr, err := monitorAuth(doitServerURL, ac)
+	token, err := dsa.initAuth(ac)
 	if err != nil {
 		return err
 	}
 
 	cf := doit.NewConfigFile()
-	err = cf.Set("access-token", tr.AccessToken)
+	err = cf.Set("access-token", token)
 	if err != nil {
 		return err
 	}
@@ -76,8 +70,68 @@ func RunAuthLogin(ns string, config doit.Config, out io.Writer, args []string) e
 	return nil
 }
 
-func retrieveAuthCredentials(serverURL string) (*doitserver.AuthCredentials, error) {
-	u, err := url.Parse(serverURL)
+type doitServerAuth struct {
+	url         string
+	browserOpen func(u string) error
+	isCLI       func() bool
+	monitorAuth func(u string, ac *doitserver.AuthCredentials) (*doitserver.TokenResponse, error)
+}
+
+func newDoitServerAuth() *doitServerAuth {
+	return &doitServerAuth{
+		url: "http://doit-server.apps.pifft.com",
+		browserOpen: func(u string) error {
+			return webbrowser.Open(u, webbrowser.NewTab, true)
+		},
+		isCLI: func() bool {
+			return (runtime.GOOS == "linux" && os.Getenv("DISPLAY") == "") || os.Getenv("CLIAUTH") != ""
+		},
+		monitorAuth: monitorAuthWS,
+	}
+}
+
+func (dsa *doitServerAuth) initAuth(ac *doitserver.AuthCredentials) (string, error) {
+	if dsa.isCLI() {
+		return dsa.initAuthCLI(ac)
+	}
+
+	return dsa.initAuthBrowser(ac)
+}
+
+func (dsa *doitServerAuth) initAuthCLI(ac *doitserver.AuthCredentials) (string, error) {
+	u, err := dsa.createAuthURL(ac, keyPair{k: "cliauth", v: "1"})
+	if err != nil {
+		return "", err
+	}
+
+	fmt.Printf("Visit the following URL in your browser: %s\n", u)
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter token: ")
+	return reader.ReadString('\n')
+}
+
+func (dsa *doitServerAuth) initAuthBrowser(ac *doitserver.AuthCredentials) (string, error) {
+	u, err := dsa.createAuthURL(ac)
+	if err != nil {
+		return "", err
+	}
+
+	err = dsa.browserOpen(u)
+	if err != nil {
+		return "", err
+	}
+
+	tr, err := dsa.monitorAuth(dsa.url, ac)
+	if err != nil {
+		return "", err
+	}
+
+	return tr.AccessToken, nil
+}
+
+func (dsa *doitServerAuth) retrieveAuthCredentials() (*doitserver.AuthCredentials, error) {
+	u, err := url.Parse(dsa.url)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +168,12 @@ func retrieveAuthCredentials(serverURL string) (*doitserver.AuthCredentials, err
 	return &m, nil
 }
 
-func createAuthURL(serverURL string, ac *doitserver.AuthCredentials) (string, error) {
-	authURL, err := url.Parse(serverURL)
+type keyPair struct {
+	k, v string
+}
+
+func (dsa *doitServerAuth) createAuthURL(ac *doitserver.AuthCredentials, kps ...keyPair) (string, error) {
+	authURL, err := url.Parse(dsa.url)
 	if err != nil {
 		return "", err
 	}
@@ -125,13 +183,18 @@ func createAuthURL(serverURL string, ac *doitserver.AuthCredentials) (string, er
 	q := authURL.Query()
 	q.Set("id", ac.ID)
 	q.Set("cs", ac.CS)
+
+	for _, kp := range kps {
+		q.Set(kp.k, kp.v)
+	}
+
 	authURL.RawQuery = q.Encode()
 
 	return authURL.String(), nil
 
 }
 
-func monitorAuth(serverURL string, ac *doitserver.AuthCredentials) (*doitserver.TokenResponse, error) {
+func monitorAuthWS(serverURL string, ac *doitserver.AuthCredentials) (*doitserver.TokenResponse, error) {
 	u, err := url.Parse(serverURL)
 	if err != nil {
 		return nil, err
@@ -166,5 +229,4 @@ func monitorAuth(serverURL string, ac *doitserver.AuthCredentials) (*doitserver.
 	}
 
 	return &tr, nil
-
 }

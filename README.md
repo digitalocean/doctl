@@ -35,6 +35,7 @@ Use "doit [command] --help" for more information about a command.
 
 ## Initialization
 
+To automatically retrieve your access token from DigitalOcean, run `doit auth login`. This process will authenticate you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser (because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doit` will provide you with a link for offline authentication.
 
 
 
@@ -44,7 +45,7 @@ By default, `doit` will load a configuration file from `$HOME/.doitcfg` if found
 
 ### Configuration OPTIONS
 
-* `access-token` - The DigitalOcean access token. You can generate a token in the [Apps & API](https://cloud.digitalocean.com/settings/applications) Of the DigitalOcean control panel.
+* `access-token` - The DigitalOcean access token. You can generate a token in the [Apps & API](https://cloud.digitalocean.com/settings/applications) Of the DigitalOcean control panel or use `doit auth login`.
 * `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doit` will default to `text`.
 
 Example:
@@ -60,3 +61,7 @@ Example:
 
 `doit`'s dependencies are managed by [godep](https:/.com/tools/godep). To add new packages, you must
 run `godep save ./...` to update the vendored dependencies. External dependencies have been rewritten using `godep`.
+
+## Releasing
+
+To build `doit` for all it's platforms, run `script/build.sh <version>`. To upload `doit` to Github, run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doit` repository will be required.
