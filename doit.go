@@ -52,13 +52,17 @@ func sshConnect(user string, host string, method ssh.AuthMethod) error {
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	session, err := conn.NewSession()
 	if err != nil {
 		return err
 	}
-	defer session.Close()
+	defer func() {
+		_ = session.Close()
+	}()
 
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
@@ -73,7 +77,9 @@ func sshConnect(user string, host string, method ssh.AuthMethod) error {
 	if err != nil {
 		return err
 	}
-	defer term.RestoreTerminal(fd, oldState)
+	defer func() {
+		_ = term.RestoreTerminal(fd, oldState)
+	}()
 
 	winsize, err := term.GetWinsize(fd)
 	if err != nil {
@@ -137,7 +143,9 @@ func (r *sshRunner) Run() error {
 		if err != nil {
 			return err
 		}
-		defer terminal.Restore(int(fd), state)
+		defer func() {
+			_ = terminal.Restore(int(fd), state)
+		}()
 		t := terminal.NewTerminal(os.Stdout, ">")
 		password, err := t.ReadPassword("Password: ")
 		if err != nil {

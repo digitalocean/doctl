@@ -27,9 +27,7 @@ var (
 			Name: "test 0",
 		},
 	}
-	testDropletList = []godo.Droplet{testDroplet}
-	testKernel      = godo.Kernel{ID: 1}
-	testKernelList  = []godo.Kernel{testKernel}
+	testKernel = godo.Kernel{ID: 1}
 )
 
 func TestMain(m *testing.M) {
