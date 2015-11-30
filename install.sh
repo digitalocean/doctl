@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eo pipefail
+set -o pipefail
 
 tmpdir=`mktemp -d`
 
@@ -39,8 +39,30 @@ case "$osarch" in
 		exit 1
 esac
 
+echo "Retrieving binaries"
 cd $tmpdir
 curl -# -L -O "https://github.com/bryanl/doit/releases/download/v${current_version}/${bin_name}"
+echo "Retrieving checksums"
+curl -# -L -O "https://github.com/bryanl/doit/releases/download/v${current_version}/${bin_name}.sha256"
+
+case $(uname -s) in
+	Linux)
+		shasum="sha256sum"
+		;;
+	Darwin)
+		shasum="shasum -a 256"
+		;;
+esac
+
+echo -n "Validating checksums..."
+$shasum -p -c ${bin_name}.sha256 | grep OK 2>&1 > /dev/null
+if [ $? -ne 0 ]; then
+	echo "${bin_name} has invalid checksum"
+	exit 1
+fi
+echo "Checksums have been validated"
+
+echo "Installing binaries"
 
 cp $tmpdir/$bin_name $install_dir/doit/bin/doit
 chmod u+x "${install_dir}/doit/bin/doit"
