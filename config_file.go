@@ -15,18 +15,26 @@ const (
 	configFile = ".doitcfg"
 )
 
+// ConfigFile is a doit config file.
 type ConfigFile struct{}
 
+// NewConfigFile creates an instance of ConfigFile.
 func NewConfigFile() *ConfigFile {
 	return &ConfigFile{}
 }
 
+// Set sets a ConfigFile key to a value. The value should be something
+// that serializes to a valid YAML value.
 func (cf *ConfigFile) Set(key string, val interface{}) error {
 	c, err := cf.Open()
 	if err != nil {
 		switch err.(type) {
 		case *os.PathError:
-			cf.createConfigFile()
+			err := cf.createConfigFile()
+			if err != nil {
+				return err
+			}
+
 			c, _ = cf.Open()
 		default:
 			return err
@@ -57,10 +65,14 @@ func (cf *ConfigFile) Set(key string, val interface{}) error {
 	}
 
 	out, err := yaml.Marshal(m)
+	if err != nil {
+		return err
+	}
 
 	return ioutil.WriteFile(path, out, 0600)
 }
 
+// Open opens a ConfigFile.
 func (cf *ConfigFile) Open() (io.Reader, error) {
 	fp, err := cf.configFilePath()
 	if err != nil {
