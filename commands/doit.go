@@ -69,6 +69,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Size())
 	DoitCmd.AddCommand(SSHKeys())
 	DoitCmd.AddCommand(SSH())
+	DoitCmd.AddCommand(Version())
 }
 
 func initFlags() {
