@@ -48,6 +48,7 @@ type Droplet struct {
 	Networks    *Networks `json:"networks,omitempty"`
 	ActionIDs   []int     `json:"action_ids,omitempty"`
 	Created     string    `json:"created_at,omitempty"`
+	Kernel      *Kernel   `json:"kernel, omitempty"`
 }
 
 // Kernel object
