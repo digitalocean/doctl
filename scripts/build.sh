@@ -19,8 +19,8 @@ if [[ -z $SKIPBUILD ]]; then
   xgo \
     --dest $OUTPUT_DIR \
     --targets='windows/*,darwin/*,linux/*' \
-    -ldflags "-X commands.verson=${ver}" \
-    -out doit-0.6.0 github.com/bryanl/doit/cmd/doit
+    -ldflags "-X github.com/bryanl/doit/commands.version=${ver}" \
+    -out doit-${ver} github.com/bryanl/doit/cmd/doit
 
 fi
 
