@@ -16,6 +16,12 @@ var testAccount = &godo.Account{
 	EmailVerified: true,
 }
 
+func TestAccountCommand(t *testing.T) {
+	acctCmd := Account()
+	assert.NotNil(t, acctCmd)
+	assertCommandNames(t, acctCmd, "get")
+}
+
 func TestAccountGet(t *testing.T) {
 	accountDidGet := false
 

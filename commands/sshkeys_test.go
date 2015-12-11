@@ -16,6 +16,12 @@ var (
 	testKeyList = []godo.Key{testKey}
 )
 
+func TestSSHKeysCommand(t *testing.T) {
+	cmd := SSHKeys()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "create", "delete", "get", "import", "list", "update")
+}
+
 func TestKeysList(t *testing.T) {
 	didList := false
 

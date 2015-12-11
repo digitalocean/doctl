@@ -11,6 +11,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestImageCommand(t *testing.T) {
+	cmd := Images()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "delete", "get", "list", "list-application", "list-distribution", "list-user", "update")
+}
+
 func TestImagesList(t *testing.T) {
 	didRun := false
 

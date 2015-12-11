@@ -19,6 +19,12 @@ type sshMock struct {
 	isError bool
 }
 
+func TestSSHComand(t *testing.T) {
+	cmd := SSH()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd)
+}
+
 func (s *sshMock) cmd() func(u, h, kp string, p int) doit.Runner {
 	return func(u, h, kp string, p int) doit.Runner {
 		s.didRun = true

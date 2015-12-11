@@ -14,6 +14,12 @@ var (
 	testRegionList = []godo.Region{testRegion}
 )
 
+func TestRegionCommand(t *testing.T) {
+	cmd := Region()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "list")
+}
+
 func TestRegionsList(t *testing.T) {
 	didList := false
 

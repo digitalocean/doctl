@@ -2,11 +2,15 @@ package commands
 
 import (
 	"fmt"
+	"sort"
+	"testing"
 
-	"github.com/bryanl/doit"
 	"github.com/Sirupsen/logrus"
+	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -39,6 +43,18 @@ var (
 	}
 	testFloatingIPList = []godo.FloatingIP{testFloatingIP}
 )
+
+func assertCommandNames(t *testing.T, cmd *cobra.Command, expected ...string) {
+	var names []string
+
+	for _, c := range cmd.Commands() {
+		names = append(names, c.Name())
+	}
+
+	sort.Strings(expected)
+	sort.Strings(names)
+	assert.Equal(t, expected, names)
+}
 
 type testFn func(c *TestConfig)
 

@@ -6,7 +6,14 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestDropletActionCommand(t *testing.T) {
+	cmd := DropletAction()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "change-kernel", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "power-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot", "upgrade")
+}
 
 func TestDropletActionsChangeKernel(t *testing.T) {
 	client := &godo.Client{

@@ -17,6 +17,12 @@ var (
 	}
 )
 
+func TestActionsCommand(t *testing.T) {
+	cmd := Actions()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "get", "list")
+}
+
 func TestActionList(t *testing.T) {
 	actionDidList := false
 
