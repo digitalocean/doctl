@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"strconv"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -129,9 +128,8 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 
 	r, _, err := client.Keys.Create(kcr)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not create key")
+		checkErr(fmt.Errorf("could not create key: %v", err))
 	}
-
 	return doit.DisplayOutput(r, out)
 }
 

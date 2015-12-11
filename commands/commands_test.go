@@ -5,7 +5,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -82,10 +81,6 @@ func NewTestConfig(client *godo.Client) *TestConfig {
 	return &TestConfig{
 		Client: client,
 		SSHFn: func(u, h, kp string, p int) doit.Runner {
-			logrus.WithFields(logrus.Fields{
-				"user": u,
-				"host": h,
-			}).Info("ssh")
 			return &doit.MockRunner{}
 		},
 		v: viper.New(),

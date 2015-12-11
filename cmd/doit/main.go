@@ -1,17 +1,12 @@
 package main
 
 import (
-	"os"
+	"log"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bryanl/doit/commands"
 )
 
-func init() {
-	logrus.SetOutput(os.Stderr)
-	logrus.SetLevel(logrus.InfoLevel)
-}
-
 func main() {
+	log.SetPrefix("doit: ")
 	commands.Execute()
 }

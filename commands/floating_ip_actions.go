@@ -1,10 +1,10 @@
 package commands
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/bryanl/doit"
-	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -73,7 +73,7 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, ar
 
 	action, _, err := client.FloatingIPActions.Assign(ip, dropletID)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not assign IP to droplet")
+		checkErr(fmt.Errorf("could not assign IP to droplet: %v", err))
 	}
 	return doit.DisplayOutput(action, out)
 }
@@ -90,7 +90,7 @@ func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer, 
 
 	action, _, err := client.FloatingIPActions.Unassign(ip)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not unsassign IP to droplet")
+		checkErr(fmt.Errorf("could not unassign IP to droplet: %v", err))
 	}
 	return doit.DisplayOutput(action, out)
 }
