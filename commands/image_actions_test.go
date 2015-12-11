@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestImageActionCommand(t *testing.T) {
+	cmd := ImageAction()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "get", "transfer")
+}
+
 func TestImageActionsGet(t *testing.T) {
 	client := &godo.Client{
 		ImageActions: &doit.ImageActionsServiceMock{

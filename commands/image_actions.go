@@ -1,11 +1,11 @@
 package commands
 
 import (
+	"fmt"
 	"io"
 	"strconv"
 
 	"github.com/bryanl/doit"
-	"github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -81,7 +81,7 @@ func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args 
 
 	action, _, err := client.ImageActions.Transfer(id, req)
 	if err != nil {
-		logrus.WithField("err", err).Fatal("could not transfer image")
+		checkErr(fmt.Errorf("could not transfer image: %v", err))
 	}
 
 	return doit.DisplayOutput(action, out)

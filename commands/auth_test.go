@@ -11,7 +11,14 @@ import (
 
 	"github.com/bryanl/doit-server"
 	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestAuthCommand(t *testing.T) {
+	cmd := Auth()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "login")
+}
 
 func TestAuth_retrieveCredentials(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

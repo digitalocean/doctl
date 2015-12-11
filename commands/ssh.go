@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/bryanl/doit"
-	"github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -28,9 +27,8 @@ var (
 // SSH creates the ssh commands heirarchy
 func SSH() *cobra.Command {
 	usr, err := user.Current()
-	if err != nil {
-		logrus.Fatal(err.Error())
-	}
+	checkErr(err)
+
 	path := filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 
 	cmdSSH := cmdBuilder(RunSSH, "ssh", "ssh to droplet", writer)

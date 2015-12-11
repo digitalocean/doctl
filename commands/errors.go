@@ -10,6 +10,11 @@ import (
 
 var (
 	colorErr = color.New(color.FgRed).SprintFunc()("Error")
+
+	// errAction specifies what should happen when an error occurs
+	errAction = func() {
+		os.Exit(1)
+	}
 )
 
 func checkErr(err error, cmd ...*cobra.Command) {
@@ -22,5 +27,6 @@ func checkErr(err error, cmd ...*cobra.Command) {
 	}
 
 	fmt.Fprintf(color.Output, "\n%s: %v\n", colorErr, err)
-	os.Exit(1)
+
+	errAction()
 }

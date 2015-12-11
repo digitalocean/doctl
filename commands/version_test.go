@@ -1,12 +1,15 @@
 package commands
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestVersionCommand(t *testing.T) {
-	c := Version()
-	if c == nil {
-		t.Error("expected Version() to return a command")
-	}
+	cmd := Version()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd)
 }
 
 func TestVersion(t *testing.T) {

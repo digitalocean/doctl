@@ -19,6 +19,12 @@ var (
 	testRecordList = []godo.DomainRecord{testRecord}
 )
 
+func TestDomainsCommand(t *testing.T) {
+	cmd := Domain()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "create", "list", "get", "delete", "records")
+}
+
 func TestDomainsCreate(t *testing.T) {
 	client := &godo.Client{
 		Domains: &doit.DomainsServiceMock{

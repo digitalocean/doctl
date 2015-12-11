@@ -20,23 +20,9 @@ var (
 )
 
 func TestDropletCommand(t *testing.T) {
-	c := Droplet()
-
-	expectedCmds := []string{"actions", "backups", "create", "delete", "get", "kernels", "list",
-		"neighbors", "snapshots"}
-
-	for _, ec := range expectedCmds {
-		found := false
-		for _, cmd := range c.Commands() {
-			if cmd.Name() == ec {
-				found = true
-			}
-		}
-
-		assert.True(t, found, "could not find %s", ec)
-	}
-
-	c.Commands()[0].Name()
+	cmd := Droplet()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "actions", "backups", "create", "delete", "get", "kernels", "list", "neighbors", "snapshots")
 }
 
 func TestDropletActionList(t *testing.T) {

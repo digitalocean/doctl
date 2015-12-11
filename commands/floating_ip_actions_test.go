@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFloatingIPActionCommand(t *testing.T) {
+	cmd := FloatingIPAction()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "assign", "get", "unassign")
+}
+
 func TestFloatingIPActionsGet(t *testing.T) {
 	client := &godo.Client{
 		FloatingIPActions: &doit.FloatingIPActionsServiceMock{

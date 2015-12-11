@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFloatingIPCommands(t *testing.T) {
+	cmd := FloatingIP()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "create", "delete", "get", "list")
+}
+
 func TestFloatingIPsList(t *testing.T) {
 	didRun := false
 

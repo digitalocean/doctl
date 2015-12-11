@@ -1,10 +1,10 @@
 package doit
 
 import (
+	"log"
 	"net/url"
 	"strconv"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 )
@@ -38,10 +38,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 			}
 
 			if viper.GetBool("debug") {
-				log.WithFields(log.Fields{
-					"page.current": opt.Page,
-					"page.per":     opt.PerPage,
-				}).Info("retrieving page")
+				log.Printf("page.current=%v page.per=%v", opt.Page, opt.PerPage)
 			}
 			pageStr := u.Query().Get("page")
 			page, err := strconv.Atoi(pageStr)

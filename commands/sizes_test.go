@@ -14,6 +14,12 @@ var (
 	testSizeList = []godo.Size{testSize}
 )
 
+func TestSizeCommand(t *testing.T) {
+	cmd := Size()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "list")
+}
+
 func TestSizesList(t *testing.T) {
 	didList := false
 
