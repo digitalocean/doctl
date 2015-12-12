@@ -16,11 +16,6 @@
 			"Rev": "056c9bc7be7190eaa7715723883caffa5f8fa3e4"
 		},
 		{
-			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.8.7-37-g6f383a9",
-			"Rev": "6f383a9b2998dd6f401704269c3e6e192f6175ad"
-		},
-		{
 			"ImportPath": "github.com/bryanl/doit-server",
 			"Rev": "fdb96236cd8e2b4a3ed79b2145b996550af90ea7"
 		},
@@ -40,8 +35,8 @@
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/term",
-			"Comment": "v1.7.1",
-			"Rev": "786b29d4db80a6175e72b47a794ee044918ba734"
+			"Comment": "v1.4.1-8103-gdd25d2c",
+			"Rev": "dd25d2c3db0c96cd74bbec786203a708079c20f5"
 		},
 		{
 			"ImportPath": "github.com/fatih/color",
