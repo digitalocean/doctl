@@ -87,14 +87,14 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 
 	rawID := args[0]
 
-	var image *godo.Image
+	var i *godo.Image
 	var err error
 
 	if id, cerr := strconv.Atoi(rawID); cerr == nil {
-		image, _, err = client.Images.GetByID(id)
+		i, _, err = client.Images.GetByID(id)
 	} else {
 		if len(rawID) > 0 {
-			image, _, err = client.Images.GetBySlug(rawID)
+			i, _, err = client.Images.GetBySlug(rawID)
 		} else {
 			err = fmt.Errorf("image identifier is required")
 		}
@@ -104,7 +104,7 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	return doit.DisplayOutput(image, out)
+	return displayOutput(&image{images: images{*i}}, out)
 }
 
 // RunImagesUpdate updates an image.
@@ -126,12 +126,12 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 		Name: name,
 	}
 
-	image, _, err := client.Images.Update(id, req)
+	i, _, err := client.Images.Update(id, req)
 	if err != nil {
 		return err
 	}
 
-	return doit.DisplayOutput(image, out)
+	return displayOutput(&image{images: images{*i}}, out)
 }
 
 // RunImagesDelete deletes an image.
@@ -185,5 +185,5 @@ func listImages(ns string, config doit.Config, out io.Writer, lFn listFn) error 
 		list[i] = si[i].(godo.Image)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&image{images: list}, out)
 }

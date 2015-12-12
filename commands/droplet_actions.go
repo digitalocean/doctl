@@ -19,7 +19,7 @@ func performAction(out io.Writer, config doit.Config, fn actionFn) error {
 		return err
 	}
 
-	return doit.DisplayOutput(a, out)
+	return displayOutput(&action{actions{*a}}, out)
 }
 
 // DropletAction creates the droplet-action command.

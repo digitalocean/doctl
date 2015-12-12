@@ -48,12 +48,12 @@ func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args 
 		return err
 	}
 
-	action, _, err := client.FloatingIPActions.Get(ip, actionID)
+	a, _, err := client.FloatingIPActions.Get(ip, actionID)
 	if err != nil {
 		return err
 	}
 
-	return doit.DisplayOutput(action, out)
+	return displayOutput(&action{actions: actions{*a}}, out)
 }
 
 // RunFloatingIPActionsAssign assigns a floating IP to a droplet.
@@ -71,11 +71,11 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, ar
 		return err
 	}
 
-	action, _, err := client.FloatingIPActions.Assign(ip, dropletID)
+	a, _, err := client.FloatingIPActions.Assign(ip, dropletID)
 	if err != nil {
 		checkErr(fmt.Errorf("could not assign IP to droplet: %v", err))
 	}
-	return doit.DisplayOutput(action, out)
+	return displayOutput(&action{actions: actions{*a}}, out)
 }
 
 // RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
@@ -88,9 +88,9 @@ func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer, 
 
 	client := config.GetGodoClient()
 
-	action, _, err := client.FloatingIPActions.Unassign(ip)
+	a, _, err := client.FloatingIPActions.Unassign(ip)
 	if err != nil {
 		checkErr(fmt.Errorf("could not unassign IP to droplet: %v", err))
 	}
-	return doit.DisplayOutput(action, out)
+	return displayOutput(&action{actions: actions{*a}}, out)
 }

@@ -50,5 +50,5 @@ func RunRegionList(ns string, config doit.Config, out io.Writer, args []string) 
 		list[i] = si[i].(godo.Region)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&region{regions: list}, out)
 }

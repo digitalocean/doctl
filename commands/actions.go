@@ -53,7 +53,7 @@ func RunCmdActionList(ns string, config doit.Config, out io.Writer, args []strin
 		list[i] = si[i].(godo.Action)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&action{actions: list}, out)
 }
 
 // RunCmdActionGet runs action get.
@@ -74,5 +74,5 @@ func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return doit.DisplayOutput(a, out)
+	return displayOutput(&action{actions: actions{*a}}, out)
 }

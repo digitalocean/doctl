@@ -50,5 +50,5 @@ func RunSizeList(ns string, config doit.Config, out io.Writer, args []string) er
 		list[i] = si[i].(godo.Size)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&size{sizes: list}, out)
 }

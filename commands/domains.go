@@ -91,7 +91,7 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return doit.DisplayOutput(d, out)
+	return displayOutput(&domain{domains: domains{*d}}, out)
 }
 
 // RunDomainList runs domain create.
@@ -122,7 +122,7 @@ func RunDomainList(ns string, config doit.Config, out io.Writer, args []string) 
 		list[i] = si[i].(godo.Domain)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&domain{domains: list}, out)
 }
 
 // RunDomainGet retrieves a domain by name.
@@ -143,7 +143,7 @@ func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	return doit.DisplayOutput(d, out)
+	return displayOutput(&domain{domains: domains{*d}}, out)
 }
 
 // RunDomainDelete deletes a domain by name.
@@ -200,7 +200,7 @@ func RunRecordList(ns string, config doit.Config, out io.Writer, args []string) 
 		list[i] = si[i].(godo.DomainRecord)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&domainRecord{domainRecords: list}, out)
 }
 
 // RunRecordCreate creates a domain record.
@@ -260,7 +260,7 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return doit.DisplayOutput(r, out)
+	return displayOutput(&domainRecord{domainRecords{*r}}, out)
 }
 
 // RunRecordDelete deletes a domain record.
@@ -339,5 +339,5 @@ func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return doit.DisplayOutput(r, out)
+	return displayOutput(&domainRecord{domainRecords{*r}}, out)
 }

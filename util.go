@@ -1,9 +1,6 @@
 package doit
 
-import (
-	"github.com/digitalocean/godo"
-	"golang.org/x/oauth2"
-)
+import "golang.org/x/oauth2"
 
 // TokenSource holds an oauth token.
 type TokenSource struct {
@@ -32,15 +29,4 @@ func (t *TokenSource) Token() (*oauth2.Token, error) {
 	return &oauth2.Token{
 		AccessToken: t.AccessToken,
 	}, nil
-}
-
-// extractDropletPublicIP extracts the public IP from a godo.Droplet.
-func extractDropletPublicIP(droplet *godo.Droplet) string {
-	for _, in := range droplet.Networks.V4 {
-		if in.Type == "public" {
-			return in.IPAddress
-		}
-	}
-
-	return ""
 }

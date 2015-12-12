@@ -73,7 +73,7 @@ func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) err
 		list[i] = si[i].(godo.Key)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&key{keys: list}, out)
 }
 
 // RunKeyGet retrieves a key.
@@ -87,13 +87,13 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) erro
 	rawKey := args[0]
 
 	var err error
-	var key *godo.Key
+	var k *godo.Key
 
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
-		key, _, err = client.Keys.GetByID(i)
+		k, _, err = client.Keys.GetByID(i)
 	} else {
 		if len(rawKey) > 0 {
-			key, _, err = client.Keys.GetByFingerprint(rawKey)
+			k, _, err = client.Keys.GetByFingerprint(rawKey)
 		} else {
 			err = fmt.Errorf("missing key id or fingerprint")
 		}
@@ -103,7 +103,7 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) erro
 		return err
 	}
 
-	return doit.DisplayOutput(key, out)
+	return displayOutput(&key{keys: keys{*k}}, out)
 }
 
 // RunKeyCreate uploads a SSH key.
@@ -130,7 +130,7 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 	if err != nil {
 		checkErr(fmt.Errorf("could not create key: %v", err))
 	}
-	return doit.DisplayOutput(r, out)
+	return displayOutput(&key{keys: keys{*r}}, out)
 }
 
 // RunKeyImport imports a key from a file
@@ -172,7 +172,7 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	return doit.DisplayOutput(r, out)
+	return displayOutput(&key{keys: keys{*r}}, out)
 }
 
 // RunKeyDelete deletes a key.
@@ -215,16 +215,16 @@ func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) e
 		Name: name,
 	}
 
-	var key *godo.Key
+	var k *godo.Key
 	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
-		key, _, err = client.Keys.UpdateByID(i, req)
+		k, _, err = client.Keys.UpdateByID(i, req)
 	} else {
-		key, _, err = client.Keys.UpdateByFingerprint(rawKey, req)
+		k, _, err = client.Keys.UpdateByFingerprint(rawKey, req)
 	}
 
 	if err != nil {
 		return err
 	}
 
-	return doit.DisplayOutput(key, out)
+	return displayOutput(&key{keys: keys{*k}}, out)
 }

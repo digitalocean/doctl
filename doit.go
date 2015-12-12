@@ -14,6 +14,11 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	// NSRoot is a configuration key that signifies this value is at the root.
+	NSRoot = "doit"
+)
+
 var (
 	// DoitConfig holds the app's current configuration.
 	DoitConfig Config = &LiveConfig{}

@@ -113,7 +113,7 @@ func RunDropletActions(ns string, config doit.Config, out io.Writer, args []stri
 		list[i] = si[i].(godo.Action)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&action{actions: list}, out)
 }
 
 // RunDropletBackups returns a list of backup images for a droplet.
@@ -148,7 +148,7 @@ func RunDropletBackups(ns string, config doit.Config, out io.Writer, args []stri
 		list[i] = si[i].(godo.Image)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&image{images: list}, out)
 }
 
 // RunDropletCreate creates a droplet.
@@ -257,10 +257,10 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []strin
 					r, _ = getDropletByID(client, r.ID)
 				}
 
-				doit.DisplayOutput(r, out)
+				displayOutput(&droplet{droplets{*r}}, out)
 			}()
 		} else {
-			doit.DisplayOutput(r, out)
+			displayOutput(&droplet{droplets{*r}}, out)
 		}
 	}
 
@@ -297,7 +297,7 @@ func createDroplet(client *godo.Client, dcr *godo.DropletCreateRequest, wait boo
 		}
 	}
 
-	return doit.DisplayOutput(r, out)
+	return displayOutput(&droplet{droplets{*r}}, out)
 }
 
 func extractSSHKeys(keys []string) []godo.DropletCreateSSHKey {
@@ -363,12 +363,12 @@ func RunDropletGet(ns string, config doit.Config, out io.Writer, args []string) 
 
 	client := config.GetGodoClient()
 
-	droplet, err := getDropletByID(client, id)
+	d, err := getDropletByID(client, id)
 	if err != nil {
 		return err
 	}
 
-	return doit.DisplayOutput(droplet, out)
+	return displayOutput(&droplet{droplets{*d}}, out)
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
@@ -403,7 +403,7 @@ func RunDropletKernels(ns string, config doit.Config, out io.Writer, args []stri
 		list[i] = si[i].(godo.Kernel)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&kernel{kernels: list}, out)
 }
 
 // RunDropletList returns a list of droplets.
@@ -434,7 +434,7 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 		list[i] = si[i].(godo.Droplet)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&droplet{droplets: list}, out)
 }
 
 // RunDropletNeighbors returns a list of droplet neighbors.
@@ -450,7 +450,7 @@ func RunDropletNeighbors(ns string, config doit.Config, out io.Writer, args []st
 		return err
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&droplet{droplets: list}, out)
 }
 
 // RunDropletSnapshots returns a list of available kernels for a droplet.
@@ -485,7 +485,7 @@ func RunDropletSnapshots(ns string, config doit.Config, out io.Writer, args []st
 		list[i] = si[i].(godo.Image)
 	}
 
-	return doit.DisplayOutput(list, out)
+	return displayOutput(&image{images: list}, out)
 }
 
 func getDropletByID(client *godo.Client, id int) (*godo.Droplet, error) {

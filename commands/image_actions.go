@@ -49,12 +49,12 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []str
 		return err
 	}
 
-	action, _, err := client.ImageActions.Get(imageID, actionID)
+	a, _, err := client.ImageActions.Get(imageID, actionID)
 	if err != nil {
 		return err
 	}
 
-	return doit.DisplayOutput(action, out)
+	return displayOutput(&action{actions: actions{*a}}, out)
 }
 
 // RunImageActionsTransfer an image.
@@ -79,10 +79,10 @@ func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args 
 		"region": region,
 	}
 
-	action, _, err := client.ImageActions.Transfer(id, req)
+	a, _, err := client.ImageActions.Transfer(id, req)
 	if err != nil {
 		checkErr(fmt.Errorf("could not transfer image: %v", err))
 	}
 
-	return doit.DisplayOutput(action, out)
+	return displayOutput(&action{actions: actions{*a}}, out)
 }
