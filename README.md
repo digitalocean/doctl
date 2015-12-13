@@ -38,7 +38,6 @@ Use "doit [command] --help" for more information about a command.
 To automatically retrieve your access token from DigitalOcean, run `doit auth login`. This process will authenticate you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser (because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doit` will provide you with a link for offline authentication.
 
 
-
 ## Configuration
 
 By default, `doit` will load a configuration file from `$HOME/.doitcfg` if found.
@@ -59,8 +58,7 @@ Example:
 
 ## Building and dependencies
 
-`doit`'s dependencies are managed by [godep](https:/.com/tools/godep). To add new packages, you must
-run `godep save ./...` to update the vendored dependencies. External dependencies have been rewritten using `godep`.
+`doit`'s dependencies are managed by [glide](https:/github.com/Mastermind/glide). To develop locally, an installation of glide is required. Once glide is installed, add new dependencies with `glide install <dep>`.
 
 ## Releasing
 
