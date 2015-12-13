@@ -1,5 +1,5 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-13T10:46:08.645554092-05:00
+updated: 2015-12-13T16:31:28.717387319-05:00
 imports:
 - name: github.com/armon/consul-api
   version: dcfedd50ed5334f96adee43fc88518a4f095e15c
@@ -15,7 +15,6 @@ imports:
   version: 71acacd42f85e5e82f70a55327789582a5200a90
 - name: github.com/davecgh/go-spew
   version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
-  repo: https://github.com/davecgh/go-spew
 - name: github.com/digitalocean/godo
   version: ddf63a4cb0a993f761978611b715de79ecd947f8
 - name: github.com/fatih/color
@@ -62,7 +61,6 @@ imports:
   version: 08f4af202e479e3caee4c7d4119066d76fd2e83e
 - name: github.com/pmezard/go-difflib
   version: e8554b8641db39598be7f6342874b958f12ae1d4
-  repo: https://github.com/pmezard/go-difflib
 - name: github.com/russross/blackfriday
   version: d18b67ae0afd61dae240896eae1785f00709aa31
 - name: github.com/satori/go.uuid

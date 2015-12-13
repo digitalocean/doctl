@@ -3,5 +3,6 @@ go:
   - '1.5.2'
 env:
   - GO15VENDOREXPERIMENT=1
+sudo: false
 install: true
-script: go test ./cmd/... ./commands/... ./pkg/... .
+script: scripts/ci.sh
