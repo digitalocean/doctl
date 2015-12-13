@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"regexp"
 	"testing"
 
 	"github.com/fatih/color"
@@ -27,8 +28,6 @@ func Test_checkErr(t *testing.T) {
 	err := w.Flush()
 	assert.NoError(t, err)
 
-	// test for those color codes
-	expected := "\n\x1b[31mError\x1b[0m: an error\n"
-
-	assert.Equal(t, expected, b.String())
+	re := regexp.MustCompile(`an error`)
+	assert.True(t, re.Match(b.Bytes()))
 }

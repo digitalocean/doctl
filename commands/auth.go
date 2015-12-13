@@ -12,13 +12,17 @@ import (
 	"os"
 	"runtime"
 
-	"code.google.com/p/go-uuid/uuid"
+	"golang.org/x/crypto/ssh/terminal"
+
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit-server"
 	"github.com/bryanl/webbrowser"
 	"github.com/gorilla/websocket"
+	"github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
 )
+
+var UnknownTerminalErr = errors.New("unknown terminal")
 
 // UnknownSchemeError signifies an unknown HTTP scheme.
 type UnknownSchemeError struct {
@@ -99,6 +103,10 @@ func (dsa *doitServerAuth) initAuth(ac *doitserver.AuthCredentials) (string, err
 }
 
 func (dsa *doitServerAuth) initAuthCLI(ac *doitserver.AuthCredentials) (string, error) {
+	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
+		return "", UnknownTerminalErr
+	}
+
 	u, err := dsa.createAuthURL(ac, keyPair{k: "cliauth", v: "1"})
 	if err != nil {
 		return "", err
@@ -138,7 +146,7 @@ func (dsa *doitServerAuth) retrieveAuthCredentials() (*doitserver.AuthCredential
 
 	u.Path = "/token"
 	v := u.Query()
-	v.Set("id", uuid.New())
+	v.Set("id", uuid.NewV4().String())
 	u.RawQuery = v.Encode()
 
 	r, err := http.Get(u.String())
