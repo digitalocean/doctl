@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/bryanl/doit/pkg/term"
 	"github.com/digitalocean/godo"
-	"github.com/docker/docker/pkg/term"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"

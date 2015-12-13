@@ -1,13 +1,11 @@
 language: go
 go:
-  - '1.5.1'
+  - '1.5.2'
+env:
+  - GO15VENDOREXPERIMENT=1
 before_install:
-  - go get github.com/tools/godep
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
   - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
-install:
-  - "godep go build github.com/bryanl/doit/cmd/doit"
-  - "godep restore"
 script:
   - $HOME/gopath/bin/goveralls -service=travis-ci
