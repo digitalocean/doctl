@@ -13,6 +13,7 @@ type version struct {
 }
 
 var (
+	// DoitVersion is doit's version.
 	DoitVersion = version{
 		Major: 0,
 		Minor: 6,
@@ -21,9 +22,11 @@ var (
 		Label: "dev",
 	}
 
+	// Build is doit's build tag.
 	Build string
 )
 
+// Version creates a version command.
 func Version() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",

@@ -235,13 +235,25 @@ func listDroplets(client *godo.Client) ([]godo.Droplet, error) {
 	return list, nil
 }
 
-func extractDropletPublicIP(droplet *godo.Droplet) string {
+type dropletIPTable map[ifaceType]string
+
+type ifaceType string
+
+const (
+	ifacePublic  ifaceType = "public"
+	ifacePrivate ifaceType = "private"
+)
+
+func extractDropletIPs(droplet *godo.Droplet) dropletIPTable {
+	t := dropletIPTable{}
 	for _, in := range droplet.Networks.V4 {
-		if in.Type == "public" {
-			return in.IPAddress
+		switch in.Type {
+		case "public":
+			t[ifacePublic] = in.IPAddress
+		case "private":
+			t[ifacePrivate] = in.IPAddress
 		}
 	}
 
-	return ""
-
+	return t
 }

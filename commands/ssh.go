@@ -93,10 +93,14 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 				droplet = &d
 				break
 			}
+			if strconv.Itoa(d.ID) == shi.host {
+				droplet = &d
+				break
+			}
 		}
 
 		if droplet == nil {
-			return errors.New("could not find droplet by name")
+			return errors.New("could not find droplet")
 		}
 
 	}
@@ -104,29 +108,15 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 	if user == "" {
 		user = defaultSSHUser(droplet)
 	}
-	publicIP := extractDropletPublicIP(droplet)
 
-	if len(publicIP) < 1 {
+	ips := extractDropletIPs(droplet)
+
+	if ips["public"] == "" {
 		return errors.New(sshNoAddress)
 	}
 
-	runner := config.SSH(user, publicIP, keyPath, port)
+	runner := config.SSH(user, ips["public"], keyPath, port)
 	return runner.Run()
-}
-
-func removeEmptyOptions(in []string) []string {
-	var out []string
-	if len(in) == 1 && in[0] == "[]" {
-		return out
-	}
-
-	for _, s := range in {
-		if len(s) > 0 {
-			out = append(out, s)
-		}
-	}
-
-	return out
 }
 
 func defaultSSHUser(droplet *godo.Droplet) string {

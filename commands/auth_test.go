@@ -153,9 +153,9 @@ func TestAuth_initAuth(t *testing.T) {
 	}
 
 	token, err := dsa.initAuth(ac)
-	if err != nil && err != UnknownTerminalErr {
+	if err != nil && err != ErrUnknownTerminal {
 		t.Fatalf("initAuth() unexpected error: %v", err)
-	} else if err == UnknownTerminalErr {
+	} else if err == ErrUnknownTerminal {
 		return
 	}
 
