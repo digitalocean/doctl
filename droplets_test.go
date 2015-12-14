@@ -164,6 +164,62 @@ func TestDroplets_Create(t *testing.T) {
 	}
 }
 
+func TestDroplets_CreateMultiple(t *testing.T) {
+	setup()
+	defer teardown()
+
+	createRequest := &DropletMultiCreateRequest{
+		Names:  []string{"name1", "name2"},
+		Region: "region",
+		Size:   "size",
+		Image: DropletCreateImage{
+			ID: 1,
+		},
+	}
+
+	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
+		expected := map[string]interface{}{
+			"names":              []interface {}{"name1", "name2"},
+			"region":             "region",
+			"size":               "size",
+			"image":              float64(1),
+			"ssh_keys":           nil,
+			"backups":            false,
+			"ipv6":               false,
+			"private_networking": false,
+		}
+
+		var v map[string]interface{}
+		err := json.NewDecoder(r.Body).Decode(&v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		if !reflect.DeepEqual(v, expected) {
+			t.Errorf("Request body = %#v, expected %#v", v, expected)
+		}
+
+		fmt.Fprintf(w, `{"droplets":[{"id":1},{"id":2}], "links":{"actions": [{"id": 1, "href": "http://example.com", "rel": "multiple_create"}]}}`)
+	})
+
+	droplets, resp, err := client.Droplets.CreateMultiple(createRequest)
+	if err != nil {
+		t.Errorf("Droplets.CreateMultiple returned error: %v", err)
+	}
+
+	if id := droplets[0].ID; id != 1 {
+		t.Errorf("expected id '%d', received '%d'", 1, id)
+	}
+
+	if id := droplets[1].ID; id != 2 {
+		t.Errorf("expected id '%d', received '%d'", 1, id)
+	}
+
+	if a := resp.Links.Actions[0]; a.ID != 1 {
+		t.Errorf("expected action id '%d', received '%d'", 1, a.ID)
+	}
+}
+
 func TestDroplets_Destroy(t *testing.T) {
 	setup()
 	defer teardown()

@@ -14,6 +14,7 @@ type DropletsService interface {
 	List(*ListOptions) ([]Droplet, *Response, error)
 	Get(int) (*Droplet, *Response, error)
 	Create(*DropletCreateRequest) (*Droplet, *Response, error)
+	CreateMultiple(*DropletMultiCreateRequest) ([]Droplet, *Response, error)
 	Delete(int) (*Response, error)
 	Kernels(int, *ListOptions) ([]Kernel, *Response, error)
 	Snapshots(int, *ListOptions) ([]Image, *Response, error)
@@ -134,7 +135,24 @@ type DropletCreateRequest struct {
 	UserData          string                `json:"user_data,omitempty"`
 }
 
+
+type DropletMultiCreateRequest struct {
+	Names             []string              `json:"names"`
+	Region            string                `json:"region"`
+	Size              string                `json:"size"`
+	Image             DropletCreateImage    `json:"image"`
+	SSHKeys           []DropletCreateSSHKey `json:"ssh_keys"`
+	Backups           bool                  `json:"backups"`
+	IPv6              bool                  `json:"ipv6"`
+	PrivateNetworking bool                  `json:"private_networking"`
+	UserData          string                `json:"user_data,omitempty"`
+}
+
 func (d DropletCreateRequest) String() string {
+	return Stringify(d)
+}
+
+func (d DropletMultiCreateRequest) String() string {
 	return Stringify(d)
 }
 
@@ -238,6 +256,31 @@ func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*Drople
 	}
 
 	return root.Droplet, resp, err
+}
+
+// Create multiple droplet
+func (s *DropletsServiceOp) CreateMultiple(createRequest *DropletMultiCreateRequest) ([]Droplet, *Response, error) {
+	if createRequest == nil {
+		return nil, nil, NewArgError("createRequest", "cannot be nil")
+	}
+
+	path := dropletBasePath
+
+	req, err := s.client.NewRequest("POST", path, createRequest)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	root := new(dropletsRoot)
+	resp, err := s.client.Do(req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	if l := root.Links; l != nil {
+		resp.Links = l
+	}
+
+	return root.Droplets, resp, err
 }
 
 // Delete droplet
