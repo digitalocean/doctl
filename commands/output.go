@@ -135,10 +135,10 @@ func (d *droplet) String(out io.Writer) error {
 	fmt.Fprintln(w, "ID\tName\tPublic IPv4\tMemory\tVCPUs\tDisk\tRegion\tImage\tStatus")
 
 	for _, d := range d.droplets {
-		ip := extractDropletPublicIP(&d)
+		ips := extractDropletIPs(&d)
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
 		fmt.Fprintf(w, "%d\t%s\t%s\t%d\t%d\t%d\t%s\t%s\t%s\n",
-			d.ID, d.Name, ip, d.Memory, d.Vcpus, d.Disk, d.Region.Slug, image, d.Status)
+			d.ID, d.Name, ips[ifacePublic], d.Memory, d.Vcpus, d.Disk, d.Region.Slug, image, d.Status)
 	}
 	fmt.Fprintln(w)
 	return w.Flush()

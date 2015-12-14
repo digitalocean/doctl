@@ -118,6 +118,74 @@ func TestSSH_Name(t *testing.T) {
 	})
 }
 
+func TestSSH_UserAtIP(t *testing.T) {
+	didFetchDroplet := false
+
+	client := &godo.Client{
+		Droplets: &doit.DropletsServiceMock{
+			ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
+				didFetchDroplet = true
+				return testDropletList, nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c *TestConfig) {
+		ms := &sshMock{}
+		c.SSHFn = ms.cmd()
+
+		ns := "test"
+
+		userHost := fmt.Sprintf("root@%d", testDroplet.ID)
+		err := RunSSH(ns, c, ioutil.Discard, []string{userHost})
+		assert.NoError(t, err)
+
+		assert.Equal(t, "root", ms.user)
+		assert.Equal(t, testDroplet.Networks.V4[0].IPAddress, ms.host)
+	})
+}
+
+func TestSSH_UnknownDroplet(t *testing.T) {
+	client := &godo.Client{
+		Droplets: &doit.DropletsServiceMock{
+			ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
+				return testDropletList, nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c *TestConfig) {
+		ms := &sshMock{}
+		c.SSHFn = ms.cmd()
+
+		ns := "test"
+
+		err := RunSSH(ns, c, ioutil.Discard, []string{"missing"})
+		assert.EqualError(t, err, "could not find droplet")
+	})
+}
+
+func TestSSH_DropletWithNoPublic(t *testing.T) {
+	client := &godo.Client{
+		Droplets: &doit.DropletsServiceMock{
+			ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
+				return testPrivateDropletList, nil, nil
+			},
+		},
+	}
+
+	withTestClient(client, func(c *TestConfig) {
+		ms := &sshMock{}
+		c.SSHFn = ms.cmd()
+
+		ns := "test"
+
+		err := RunSSH(ns, c, ioutil.Discard, []string{testPrivateDroplet.Name})
+		assert.EqualError(t, err, "could not find droplet address")
+	})
+
+}
+
 func Test_extractHostInfo(t *testing.T) {
 	cases := []struct {
 		s string
