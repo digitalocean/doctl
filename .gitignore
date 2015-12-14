@@ -3,3 +3,4 @@ cmd/doit/doit
 .DS_Store
 builds
 doit
+vendor

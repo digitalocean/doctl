@@ -1,5 +1,5 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-13T16:31:28.717387319-05:00
+updated: 2015-12-14T01:01:50.534893293-05:00
 imports:
 - name: github.com/armon/consul-api
   version: dcfedd50ed5334f96adee43fc88518a4f095e15c
@@ -55,10 +55,12 @@ imports:
   version: 3dac7b4f76f6e17fb39b768b89e3783d16e237fe
 - name: github.com/mattn/go-isatty
   version: 56b76bdf51f7708750eac80fa38b952bb9f32639
+- name: github.com/mitchellh/ioprogress
+  version: 8163955264568045f462ae7e2d6d07b2001fc997
 - name: github.com/mitchellh/mapstructure
   version: 281073eb9eb092240d33ef253c404f1cca550309
 - name: github.com/mrjones/oauth
-  version: 08f4af202e479e3caee4c7d4119066d76fd2e83e
+  version: fdd43ab9ffd4adbedbecf59a0ec6a7e0d3ef3970
 - name: github.com/pmezard/go-difflib
   version: e8554b8641db39598be7f6342874b958f12ae1d4
 - name: github.com/russross/blackfriday
@@ -67,6 +69,8 @@ imports:
   version: d41af8bb6a7704f00bc3b7cba9355ae6a5a80048
 - name: github.com/shurcooL/sanitized_anchor_name
   version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
+- name: github.com/spf13/afero
+  version: 9d44c3003b295701ee0989a37d51d15271f7a6a1
 - name: github.com/spf13/cast
   version: ee815aaf958c707ad07547cd62150d973710f747
 - name: github.com/spf13/cobra
@@ -98,9 +102,9 @@ imports:
 - name: golang.org/x/text
   version: 87ad79f47ac96edbf2568691d123d113fd7ac535
 - name: google.golang.org/api
-  version: 80b32e23dd3e75da09373e0566232a3fe91ec43e
+  version: fb9a762b1ba5eb828d4c3ea6b53755f290ca27ad
 - name: google.golang.org/appengine
-  version: 7bed6a18ea6f00deda4ea0b2797f715c7c555a6c
+  version: ea2803184885858bb094b58ddeac06b3675b9994
 - name: google.golang.org/cloud
   version: ec5efcc6a7862ae410e34d8de21fdec12e367732
 - name: google.golang.org/grpc
