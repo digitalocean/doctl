@@ -1,6 +1,7 @@
 package doit
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,7 +23,42 @@ const (
 var (
 	// DoitConfig holds the app's current configuration.
 	DoitConfig Config = &LiveConfig{}
+
+	// DoitVersion is doit's version.
+	DoitVersion = Version{
+		Major: 0,
+		Minor: 7,
+		Patch: 0,
+		Name:  "Maroon Marion",
+		Label: "dev",
+	}
+
+	// Build is doit's build tag.
+	Build string
 )
+
+type Version struct {
+	Major, Minor, Patch int
+	Name, Build, Label  string
+}
+
+func (v Version) String() string {
+	var buffer bytes.Buffer
+
+	buffer.WriteString(fmt.Sprintf("doit version %d.%d.%d", v.Major, v.Minor, v.Patch))
+
+	if v.Label != "" {
+		buffer.WriteString("-" + v.Label)
+	}
+
+	buffer.WriteString(fmt.Sprintf(" %q", v.Name))
+
+	if v.Build != "" {
+		buffer.WriteString(fmt.Sprintf("\nGit commit hash: %s", v.Build))
+	}
+
+	return buffer.String()
+}
 
 // Config is an interface that represent doit's config.
 type Config interface {
