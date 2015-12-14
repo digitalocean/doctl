@@ -26,3 +26,5 @@ import:
 - package: github.com/stretchr/testify
   subpackages:
   - /assert
+- package: github.com/spf13/afero
+- package: github.com/mitchellh/ioprogress
