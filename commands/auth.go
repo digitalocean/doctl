@@ -22,7 +22,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var UnknownTerminalErr = errors.New("unknown terminal")
+// ErrUnknownTerminal signies an unknown terminal. It is returned when doit
+// can't ascertain the current terminal type with requesting an auth token.
+var ErrUnknownTerminal = errors.New("unknown terminal")
 
 // UnknownSchemeError signifies an unknown HTTP scheme.
 type UnknownSchemeError struct {
@@ -104,7 +106,7 @@ func (dsa *doitServerAuth) initAuth(ac *doitserver.AuthCredentials) (string, err
 
 func (dsa *doitServerAuth) initAuthCLI(ac *doitserver.AuthCredentials) (string, error) {
 	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
-		return "", UnknownTerminalErr
+		return "", ErrUnknownTerminal
 	}
 
 	u, err := dsa.createAuthURL(ac, keyPair{k: "cliauth", v: "1"})
