@@ -221,15 +221,16 @@ func (s *DropletActionsServiceMock) Upgrade(id int) (*godo.Action, *godo.Respons
 
 // DropletsServiceMock mocks github.com/digitalocean/godo/DropletsService.
 type DropletsServiceMock struct {
-	ActionsFn   func(dropletID int, opt *godo.ListOptions) ([]godo.Action, *godo.Response, error)
-	BackupsFn   func(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
-	CreateFn    func(createRequest *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error)
-	DeleteFn    func(dropletID int) (*godo.Response, error)
-	GetFn       func(dropletID int) (*godo.Droplet, *godo.Response, error)
-	KernelsFn   func(dropletID int, opt *godo.ListOptions) ([]godo.Kernel, *godo.Response, error)
-	ListFn      func(opt *godo.ListOptions) ([]godo.Droplet, *godo.Response, error)
-	NeighborsFn func(dropletID int) ([]godo.Droplet, *godo.Response, error)
-	SnapshotsFn func(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
+	ActionsFn        func(dropletID int, opt *godo.ListOptions) ([]godo.Action, *godo.Response, error)
+	BackupsFn        func(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
+	CreateFn         func(createRequest *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error)
+	CreateMultipleFn func(createRequest *godo.DropletMultiCreateRequest) ([]godo.Droplet, *godo.Response, error)
+	DeleteFn         func(dropletID int) (*godo.Response, error)
+	GetFn            func(dropletID int) (*godo.Droplet, *godo.Response, error)
+	KernelsFn        func(dropletID int, opt *godo.ListOptions) ([]godo.Kernel, *godo.Response, error)
+	ListFn           func(opt *godo.ListOptions) ([]godo.Droplet, *godo.Response, error)
+	NeighborsFn      func(dropletID int) ([]godo.Droplet, *godo.Response, error)
+	SnapshotsFn      func(dropletID int, opt *godo.ListOptions) ([]godo.Image, *godo.Response, error)
 }
 
 var _ godo.DropletsService = &DropletsServiceMock{}
@@ -247,6 +248,11 @@ func (s *DropletsServiceMock) Backups(dropletID int, opt *godo.ListOptions) ([]g
 // Create is a mocked method.
 func (s *DropletsServiceMock) Create(createRequest *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error) {
 	return s.CreateFn(createRequest)
+}
+
+// CreateMultiple is a mocked method.
+func (s *DropletsServiceMock) CreateMultiple(cr *godo.DropletMultiCreateRequest) ([]godo.Droplet, *godo.Response, error) {
+	return s.CreateMultipleFn(cr)
 }
 
 // Delete is a mocked method.

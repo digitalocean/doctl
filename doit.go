@@ -44,12 +44,17 @@ type Version struct {
 
 func (v Version) String() string {
 	var buffer bytes.Buffer
-
-	buffer.WriteString(fmt.Sprintf("doit version %d.%d.%d", v.Major, v.Minor, v.Patch))
-
+	buffer.WriteString(fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch))
 	if v.Label != "" {
 		buffer.WriteString("-" + v.Label)
 	}
+
+	return buffer.String()
+}
+
+func (v Version) Complete() string {
+	var buffer bytes.Buffer
+	buffer.WriteString(fmt.Sprintf("doit version %s", v.String()))
 
 	buffer.WriteString(fmt.Sprintf(" %q", v.Name))
 
