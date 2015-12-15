@@ -1,74 +1,30 @@
 hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
-updated: 2015-12-14T01:01:50.534893293-05:00
+updated: 2015-12-15T09:41:10.272411313-05:00
 imports:
-- name: github.com/armon/consul-api
-  version: dcfedd50ed5334f96adee43fc88518a4f095e15c
 - name: github.com/bryanl/doit-server
   version: 6fb91d751dc13dc5122708d487ce3367e785fedd
 - name: github.com/bryanl/webbrowser
   version: bbcbcd4a8c93c9dfaa3d974e5404e1d5f4ada91a
 - name: github.com/BurntSushi/toml
   version: 056c9bc7be7190eaa7715723883caffa5f8fa3e4
-- name: github.com/coreos/go-etcd
-  version: 003851be7bb0694fe3cc457a49529a19388ee7cf
-- name: github.com/cpuguy83/go-md2man
-  version: 71acacd42f85e5e82f70a55327789582a5200a90
-- name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
 - name: github.com/digitalocean/godo
-  version: ddf63a4cb0a993f761978611b715de79ecd947f8
+  version: 2688c11a02dc3deac65645c82c3c812f95e417bf
 - name: github.com/fatih/color
   version: 9aae6aaa22315390f03959adca2c4d395b02fcef
-- name: github.com/golang/glog
-  version: fca8c8854093a154ff1eb580aae10276ad6b1b5f
-- name: github.com/golang/protobuf
-  version: 68415e7123da32b07eab49c96d2c4d6158360e9b
 - name: github.com/google/go-querystring
   version: 2a60fc2ba6c19de80291203597d752e9ba58e4c0
-- name: github.com/gorilla/context
-  version: 14f550f51af52180c2eefed15e5fd18d63c0a64a
-- name: github.com/gorilla/mux
-  version: e444e69cbd2e2e3e0749a2f3c717cec491552bbf
-- name: github.com/gorilla/pat
-  version: e3ceaad21981965be815a74ec833802d74e52947
-- name: github.com/gorilla/securecookie
-  version: e95799a481bbcc3d01c2ad5178524cb8bec9f370
-- name: github.com/gorilla/sessions
-  version: f7261893ca3ea922c30eabe742c036d2c1de6e0a
-- name: github.com/gorilla/websocket
-  version: 361d4c0ffd78338ebe0a9e6320cdbe115d7dc026
-- name: github.com/inconshreveable/mousetrap
-  version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
-- name: github.com/kelseyhightower/envconfig
-  version: 12c18e8343f6eb5fc3a9d5c8dc353e42e6bb40b9
 - name: github.com/kr/pretty
   version: e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb
-- name: github.com/kr/pty
-  version: f7ee69f31298ecbe5d2b349c711e2547a617d398
 - name: github.com/kr/text
   version: bb797dc4fb8320488f47bf11de07a733d7233e1f
 - name: github.com/magiconair/properties
   version: 84ea5e93a95c5e0115f3a4f3e141448584f48f37
-- name: github.com/markbates/goth
-  version: 31a9cfa9284c350a8564ae74abadfa3eb9a1a825
-- name: github.com/mattn/go-colorable
-  version: 3dac7b4f76f6e17fb39b768b89e3783d16e237fe
-- name: github.com/mattn/go-isatty
-  version: 56b76bdf51f7708750eac80fa38b952bb9f32639
 - name: github.com/mitchellh/ioprogress
   version: 8163955264568045f462ae7e2d6d07b2001fc997
 - name: github.com/mitchellh/mapstructure
   version: 281073eb9eb092240d33ef253c404f1cca550309
-- name: github.com/mrjones/oauth
-  version: fdd43ab9ffd4adbedbecf59a0ec6a7e0d3ef3970
-- name: github.com/pmezard/go-difflib
-  version: e8554b8641db39598be7f6342874b958f12ae1d4
-- name: github.com/russross/blackfriday
-  version: d18b67ae0afd61dae240896eae1785f00709aa31
 - name: github.com/satori/go.uuid
   version: d41af8bb6a7704f00bc3b7cba9355ae6a5a80048
-- name: github.com/shurcooL/sanitized_anchor_name
-  version: 10ef21a441db47d8b13ebcc5fd2310f636973c77
 - name: github.com/spf13/afero
   version: 9d44c3003b295701ee0989a37d51d15271f7a6a1
 - name: github.com/spf13/cast
@@ -81,36 +37,18 @@ imports:
   version: 08b1a584251b5b62f458943640fc8ebd4d50aaa5
 - name: github.com/spf13/viper
   version: 90b31f671fffe7d5076beaa832a778ea9ba007f3
-- name: github.com/stretchr/objx
-  version: 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 - name: github.com/stretchr/testify
   version: e3a8ff8ce36581f87a15341206f205b1da467059
   subpackages:
   - /assert
 - name: github.com/tent/http-link-go
   version: ac974c61c2f990f4115b119354b5e0b47550e888
-- name: github.com/ugorji/go
-  version: cd43bdd6be4b5675a0d1e75c4af55ee1dc0d9c5e
-- name: github.com/xordataexchange/crypt
-  version: 749e360c8f236773f28fc6d3ddfce4a470795227
 - name: golang.org/x/crypto
   version: 7b85b097bf7527677d54d3220065e966a0e3b613
 - name: golang.org/x/net
   version: 47990a1ba55743e6ef1affd3a14e5bac8553615d
 - name: golang.org/x/oauth2
   version: ef4eca6b097fad7cec79afcc278d213a6de1c960
-- name: golang.org/x/text
-  version: 87ad79f47ac96edbf2568691d123d113fd7ac535
-- name: google.golang.org/api
-  version: fb9a762b1ba5eb828d4c3ea6b53755f290ca27ad
-- name: google.golang.org/appengine
-  version: ea2803184885858bb094b58ddeac06b3675b9994
-- name: google.golang.org/cloud
-  version: ec5efcc6a7862ae410e34d8de21fdec12e367732
-- name: google.golang.org/grpc
-  version: 3463c93e2ba1a80e3372fbf41aaeabe63615ca84
-- name: gopkg.in/fsnotify.v1
-  version: 2cdd39bd6129c6a49c74fb07fb9d77ba1271c572
 - name: gopkg.in/yaml.v2
   version: f7716cbe52baa25d2e9b0d0da546fcf909fc16b4
 devImports: []

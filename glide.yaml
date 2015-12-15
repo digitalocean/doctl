@@ -15,6 +15,7 @@ import:
 - package: github.com/spf13/viper
 - package: github.com/spf13/cast
 - package: github.com/digitalocean/godo
+  version: 2688c11a02dc3deac65645c82c3c812f95e417bf
 - package: github.com/magiconair/properties
 - package: github.com/BurntSushi/toml
 - package: gopkg.in/yaml.v2

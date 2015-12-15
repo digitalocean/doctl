@@ -18,8 +18,8 @@ if [[ -z $SKIPBUILD ]]; then
 
   xgo \
     --dest $OUTPUT_DIR \
-    --targets='windows/*,darwin/*,linux/*' \
-    -ldflags "-X github.com/bryanl/doit/commands.Build=$(git rev-parse HEAD)" \
+    --targets='windows/*,darwin/amd64,linux/amd64,linux/386' \
+    -ldflags "-X github.com/bryanl/doit.Build=$(git rev-parse HEAD)" \
     -out doit-${ver} github.com/bryanl/doit/cmd/doit
 
 fi

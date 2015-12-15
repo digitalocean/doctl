@@ -68,11 +68,11 @@ func Validate(f, cs io.Reader) error {
 	return nil
 }
 
-func URL(ver, filename string) string {
+func URL(filename string) string {
 	u := url.URL{
-		Scheme: "http",
-		Host:   "github.com",
-		Path:   fmt.Sprintf("/bryanl/doit/releases/download/v%s/%s", ver, filename),
+		Scheme: "https",
+		Host:   "bintray.com",
+		Path:   fmt.Sprintf("/artifact/download/bryanliles/doit/%s", filename),
 	}
 
 	return u.String()
