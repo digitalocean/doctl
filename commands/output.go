@@ -161,7 +161,6 @@ func (fi *floatingIP) String(out io.Writer) error {
 
 	fmt.Fprintln(w, "IP\tRegion\tDroplet ID\tDroplet Name")
 	for _, ip := range fi.floatingIPs {
-		fmt.Printf("droplet %#v\n", ip.Droplet)
 		var dropletID, dropletName string
 		if ip.Droplet != nil {
 			dropletID = fmt.Sprintf("%d", ip.Droplet.ID)
