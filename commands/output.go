@@ -159,13 +159,15 @@ func (fi *floatingIP) JSON(out io.Writer) error {
 func (fi *floatingIP) String(out io.Writer) error {
 	w := newTabWriter(out)
 
-	fmt.Fprintln(w, "IP\tRegion\tDroplet")
+	fmt.Fprintln(w, "IP\tRegion\tDroplet ID\tDroplet Name")
 	for _, ip := range fi.floatingIPs {
-		var droplet string
+		fmt.Printf("droplet %#v\n", ip.Droplet)
+		var dropletID, dropletName string
 		if ip.Droplet != nil {
-			droplet = fmt.Sprintf("%d", ip.Droplet.ID)
+			dropletID = fmt.Sprintf("%d", ip.Droplet.ID)
+			dropletName = ip.Droplet.Name
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n", ip.IP, ip.Region.Slug, droplet)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ip.IP, ip.Region.Slug, dropletID, dropletName)
 	}
 
 	fmt.Fprintln(w)
