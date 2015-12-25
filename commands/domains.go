@@ -2,7 +2,9 @@ package commands
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
@@ -50,9 +52,8 @@ func Domain() *cobra.Command {
 	addIntFlag(cmdRecordCreate, doit.ArgRecordPort, 0, "Record port")
 	addIntFlag(cmdRecordCreate, doit.ArgRecordWeight, 0, "Record weight")
 
-	cmdRecordDelete := cmdBuilder(RunRecordDelete, "delete", "delete record", writer, aliasOpt("d"))
+	cmdRecordDelete := cmdBuilder(RunRecordDelete, "delete <domain> <record id...>", "delete record", writer, aliasOpt("d"))
 	cmdRecord.AddCommand(cmdRecordDelete)
-	addIntFlag(cmdRecordDelete, doit.ArgRecordID, 0, "Record ID")
 
 	cmdRecordUpdate := cmdBuilder(RunRecordUpdate, "update", "update record", writer, aliasOpt("u"))
 	cmdRecord.AddCommand(cmdRecordUpdate)
@@ -265,20 +266,30 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 
 // RunRecordDelete deletes a domain record.
 func RunRecordDelete(ns string, config doit.Config, out io.Writer, args []string) error {
-	if len(args) != 1 {
+	if len(args) < 2 {
 		return doit.NewMissingArgsErr(ns)
 	}
-	domainName := args[0]
+
+	domainName, ids := args[0], args[1:]
+	if len(ids) < 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
 
 	client := config.GetGodoClient()
 
-	recordID, err := config.GetInt(ns, doit.ArgRecordID)
-	if err != nil {
-		return err
+	for _, i := range ids {
+		id, err := strconv.Atoi(i)
+		if err != nil {
+			return fmt.Errorf("invalid record id %q", i)
+		}
+
+		_, err = client.Domains.DeleteRecord(domainName, id)
+		if err != nil {
+			return err
+		}
 	}
 
-	_, err = client.Domains.DeleteRecord(domainName, recordID)
-	return err
+	return nil
 }
 
 // RunRecordUpdate updates a domain record.

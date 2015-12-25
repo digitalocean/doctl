@@ -219,8 +219,7 @@ func TestRecordsDelete(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgRecordID, 1)
-		err := RunRecordDelete(ns, c, ioutil.Discard, []string{"example.com"})
+		err := RunRecordDelete(ns, c, ioutil.Discard, []string{"example.com", "1"})
 		assert.NoError(t, err)
 	})
 }
