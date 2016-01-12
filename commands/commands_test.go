@@ -33,6 +33,26 @@ var (
 		},
 	}
 
+	anotherTestDroplet = godo.Droplet{
+		ID: 3,
+		Image: &godo.Image{
+			ID:           1,
+			Name:         "an-image",
+			Distribution: "DOOS",
+		},
+		Name: "another-droplet",
+		Networks: &godo.Networks{
+			V4: []godo.NetworkV4{
+				{IPAddress: "8.8.8.9", Type: "public"},
+				{IPAddress: "172.16.1.4", Type: "private"},
+			},
+		},
+		Region: &godo.Region{
+			Slug: "test0",
+			Name: "test 0",
+		},
+	}
+
 	testPrivateDroplet = godo.Droplet{
 		ID: 1,
 		Image: &godo.Image{
@@ -52,7 +72,7 @@ var (
 		},
 	}
 
-	testDropletList        = []godo.Droplet{testDroplet}
+	testDropletList        = []godo.Droplet{testDroplet, anotherTestDroplet}
 	testPrivateDropletList = []godo.Droplet{testPrivateDroplet}
 	testKernel             = godo.Kernel{ID: 1}
 	testKernelList         = []godo.Kernel{testKernel}

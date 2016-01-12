@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -55,7 +56,7 @@ func Droplet() *cobra.Command {
 	cmd.AddCommand(cmdDropletKernels)
 	addIntFlag(cmdDropletKernels, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
-	cmdDropletList := cmdBuilder(RunDropletList, "list", "list droplets", writer, aliasOpt("ls"))
+	cmdDropletList := cmdBuilder(RunDropletList, "list [REGEX]", "list droplets", writer, aliasOpt("ls"))
 	cmd.AddCommand(cmdDropletList)
 
 	cmdDropletNeighbors := cmdBuilder(RunDropletNeighbors, "neighbors", "droplet neighbors", writer, aliasOpt("n"))
@@ -424,14 +425,39 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 		return si, resp, err
 	}
 
+	matches := []*regexp.Regexp{}
+	for _, reStr := range args {
+		re, err := regexp.Compile(reStr)
+		if err != nil {
+			return fmt.Errorf("unknown regex %q", reStr)
+		}
+
+		matches = append(matches, re)
+	}
+
 	si, err := doit.PaginateResp(f)
 	if err != nil {
 		return err
 	}
 
-	list := make([]godo.Droplet, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Droplet)
+	list := []godo.Droplet{}
+	for _, d := range si {
+		droplet := d.(godo.Droplet)
+
+		var skip = true
+		if len(matches) == 0 {
+			skip = false
+		} else {
+			for _, m := range matches {
+				if m.MatchString(droplet.Name) {
+					skip = false
+				}
+			}
+		}
+
+		if !skip {
+			list = append(list, d.(godo.Droplet))
+		}
 	}
 
 	return displayOutput(&droplet{droplets: list}, out)
