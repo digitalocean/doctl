@@ -29,3 +29,9 @@ import:
   - /assert
 - package: github.com/spf13/afero
 - package: github.com/mitchellh/ioprogress
+- package: github.com/cpuguy83/go-md2man
+  subpackages:
+  - /md2man
+- package: github.com/markbates/goth
+  subpackages:
+  - /gothic
