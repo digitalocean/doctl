@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,20 +11,15 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/install"
 	"github.com/fatih/color"
 )
 
 var (
-	ver  = flag.String("ver", doit.DoitVersion.String(), "version to install")
-	bold = color.New(color.Bold, color.FgWhite).SprintfFunc()
+	ver = "0.6.0"
 )
 
 func main() {
-	flag.Parse()
-
-	fmt.Printf("\nInstall doit %s\n\n", bold(*ver))
 
 	var err error
 	defer func() {
@@ -33,6 +27,8 @@ func main() {
 			log.Fatalf("error encountered: %v", err)
 		}
 	}()
+
+	bold := color.New(color.Bold, color.FgWhite).SprintfFunc()
 
 	// get install directory
 	home, err := homeDir()
@@ -54,9 +50,8 @@ func main() {
 	}
 
 	// create install directory
-	doitDir := filepath.Join(installDir, "doit")
-	fmt.Printf("creating %s directory...\n\n", doitDir)
-	err = os.MkdirAll(filepath.Join(doitDir, "bin"), 0755)
+	fmt.Printf("creating %s/doit directory...\n\n", installDir)
+	err = os.MkdirAll(filepath.Join(installDir, "bin"), 0755)
 	if err != nil {
 		return
 	}
@@ -74,7 +69,7 @@ func main() {
 	}()
 
 	// retrieve doit binary
-	filename := archiveName(*ver)
+	filename := archiveName(ver)
 
 	fmt.Println("retrieving doit...")
 	doitPath := filepath.Join(tmpDir, filename)
@@ -119,7 +114,7 @@ func main() {
 	fmt.Println("checksum was valid\n")
 
 	// place binary in install directory
-	doitInstallPath := filepath.Join(doitDir, "bin", "doit")
+	doitInstallPath := filepath.Join(installDir, "bin", "doit")
 	fmt.Println("placing doit in install path...")
 	err = os.Rename(doitPath, doitInstallPath)
 	if err != nil {
