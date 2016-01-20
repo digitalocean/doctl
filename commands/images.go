@@ -104,7 +104,14 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	return displayOutput(&image{images: images{*i}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &image{images: images{*i}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunImagesUpdate updates an image.
@@ -131,7 +138,14 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return displayOutput(&image{images: images{*i}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &image{images: images{*i}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunImagesDelete deletes an image.
@@ -184,6 +198,11 @@ func listImages(ns string, config doit.Config, out io.Writer, lFn listFn) error 
 	for i := range si {
 		list[i] = si[i].(godo.Image)
 	}
-
-	return displayOutput(&image{images: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &image{images: list},
+		out:    out,
+	}
+	return displayOutput(dc)
 }

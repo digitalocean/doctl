@@ -53,7 +53,14 @@ func RunCmdActionList(ns string, config doit.Config, out io.Writer, args []strin
 		list[i] = si[i].(godo.Action)
 	}
 
-	return displayOutput(&action{actions: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &action{actions: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunCmdActionGet runs action get.
@@ -74,5 +81,12 @@ func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return displayOutput(&action{actions: actions{*a}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &action{actions: actions{*a}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }

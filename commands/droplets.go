@@ -58,6 +58,8 @@ func Droplet() *cobra.Command {
 
 	cmdDropletList := cmdBuilder(RunDropletList, "list [REGEX]", "list droplets", writer, aliasOpt("ls"))
 	cmd.AddCommand(cmdDropletList)
+	addStringFlag(cmdDropletList, doit.ArgFormat, "", "Format")
+	addBoolFlag(cmdDropletList, doit.ArgNoHeader, false, "hide headers")
 
 	cmdDropletNeighbors := cmdBuilder(RunDropletNeighbors, "neighbors", "droplet neighbors", writer, aliasOpt("n"))
 	cmd.AddCommand(cmdDropletNeighbors)
@@ -114,7 +116,14 @@ func RunDropletActions(ns string, config doit.Config, out io.Writer, args []stri
 		list[i] = si[i].(godo.Action)
 	}
 
-	return displayOutput(&action{actions: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &action{actions: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDropletBackups returns a list of backup images for a droplet.
@@ -149,7 +158,14 @@ func RunDropletBackups(ns string, config doit.Config, out io.Writer, args []stri
 		list[i] = si[i].(godo.Image)
 	}
 
-	return displayOutput(&image{images: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &image{images: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDropletCreate creates a droplet.
@@ -258,47 +274,30 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []strin
 					r, _ = getDropletByID(client, r.ID)
 				}
 
-				displayOutput(&droplet{droplets{*r}}, out)
+				dc := &outputConfig{
+					ns:     ns,
+					config: config,
+					item:   &droplet{droplets{*r}},
+					out:    out,
+				}
+
+				displayOutput(dc)
 			}()
 		} else {
-			displayOutput(&droplet{droplets{*r}}, out)
+			dc := &outputConfig{
+				ns:     ns,
+				config: config,
+				item:   &droplet{droplets{*r}},
+				out:    out,
+			}
+
+			displayOutput(dc)
 		}
 	}
 
 	wg.Wait()
 
 	return nil
-}
-
-func createDroplet(client *godo.Client, dcr *godo.DropletCreateRequest, wait bool, out io.Writer) error {
-	r, resp, err := client.Droplets.Create(dcr)
-	if err != nil {
-		return err
-	}
-
-	var action *godo.LinkAction
-
-	if wait {
-		for _, a := range resp.Links.Actions {
-			if a.Rel == "create" {
-				action = &a
-			}
-		}
-	}
-
-	if action != nil {
-		err = util.WaitForActive(client, action.HREF)
-		if err != nil {
-			return err
-		}
-
-		r, err = getDropletByID(client, r.ID)
-		if err != nil {
-			return err
-		}
-	}
-
-	return displayOutput(&droplet{droplets{*r}}, out)
 }
 
 func extractSSHKeys(keys []string) []godo.DropletCreateSSHKey {
@@ -369,7 +368,14 @@ func RunDropletGet(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	return displayOutput(&droplet{droplets{*d}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &droplet{droplets{*d}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
@@ -404,7 +410,14 @@ func RunDropletKernels(ns string, config doit.Config, out io.Writer, args []stri
 		list[i] = si[i].(godo.Kernel)
 	}
 
-	return displayOutput(&kernel{kernels: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &kernel{kernels: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDropletList returns a list of droplets.
@@ -460,7 +473,14 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 		}
 	}
 
-	return displayOutput(&droplet{droplets: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &droplet{droplets: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDropletNeighbors returns a list of droplet neighbors.
@@ -476,7 +496,14 @@ func RunDropletNeighbors(ns string, config doit.Config, out io.Writer, args []st
 		return err
 	}
 
-	return displayOutput(&droplet{droplets: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &droplet{droplets: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDropletSnapshots returns a list of available kernels for a droplet.
@@ -511,7 +538,14 @@ func RunDropletSnapshots(ns string, config doit.Config, out io.Writer, args []st
 		list[i] = si[i].(godo.Image)
 	}
 
-	return displayOutput(&image{images: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &image{images: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 func getDropletByID(client *godo.Client, id int) (*godo.Droplet, error) {

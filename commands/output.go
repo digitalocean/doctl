@@ -8,11 +8,23 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+var (
+	hc = &headerControl{}
+)
+
 func newTabWriter(out io.Writer) *tabwriter.Writer {
 	w := new(tabwriter.Writer)
 	w.Init(out, 0, 8, 1, '\t', 0)
 
 	return w
+}
+
+type headerControl struct {
+	hideHeader bool
+}
+
+func (hc *headerControl) HideHeader(hide bool) {
+	hc.hideHeader = hide
 }
 
 type account struct {

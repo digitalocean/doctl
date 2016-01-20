@@ -73,6 +73,10 @@ const (
 	ArgKeyPublicKeyFile = "public-key-file"
 	// ArgSSHUser is a SSH user argument.
 	ArgSSHUser = "ssh-user"
+	// ArgFormat is columns to include in output argment.
+	ArgFormat = "format"
+	// ArgNoHeader hides the output header.
+	ArgNoHeader = "no-header"
 
 	// ArgOutput is an output type argument.
 	ArgOutput = "output"

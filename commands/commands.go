@@ -17,9 +17,17 @@ type displayer interface {
 	JSON(io.Writer) error
 }
 
+type outputConfig struct {
+	ns     string
+	config doit.Config
+	item   displayer
+	out    io.Writer
+}
+
 // displayOutput displays an object or group of objects to a user. It
 // checks to see what the output type should be.
-func displayOutput(item displayer, out io.Writer) error {
+//func displayOutput(item displayer, out io.Writer, includeCols []string) error {
+func displayOutput(config *outputConfig) error {
 	output, err := doit.DoitConfig.GetString(doit.NSRoot, "output")
 	if err != nil {
 		return nil
@@ -31,9 +39,14 @@ func displayOutput(item displayer, out io.Writer) error {
 
 	switch output {
 	case "json":
-		return item.JSON(out)
+		return config.item.JSON(config.out)
 	case "text":
-		return displayText(item, out)
+		cols, err := handleColumns(config.ns, config.config)
+		if err != nil {
+			return err
+		}
+
+		return displayText(config.item, config.out, cols)
 	default:
 		return fmt.Errorf("unknown output type")
 	}
@@ -55,16 +68,26 @@ func writeJSON(item interface{}, w io.Writer) error {
 	return err
 }
 
-func displayText(item displayer, out io.Writer) error {
+func hasCol(colMap map[string]string, col string) bool {
+	_, ok := colMap[col]
+	return ok
+}
+
+func displayText(item displayer, out io.Writer, includeCols []string) error {
 	w := newTabWriter(out)
 
 	cols := item.Cols()
-	headers := make([]string, len(cols))
-	for i, k := range cols {
-		headers[i] = item.ColMap()[k]
+	if len(includeCols) > 0 && includeCols[0] != "" {
+		cols = includeCols
 	}
 
-	fmt.Fprintln(w, strings.Join(headers, "\t"))
+	if !hc.hideHeader {
+		headers := []string{}
+		for _, k := range cols {
+			headers = append(headers, item.ColMap()[k])
+		}
+		fmt.Fprintln(w, strings.Join(headers, "\t"))
+	}
 
 	for _, r := range item.KV() {
 		values := []interface{}{}

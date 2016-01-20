@@ -53,7 +53,14 @@ func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args 
 		return err
 	}
 
-	return displayOutput(&action{actions: actions{*a}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &action{actions: actions{*a}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunFloatingIPActionsAssign assigns a floating IP to a droplet.
@@ -75,7 +82,15 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, ar
 	if err != nil {
 		checkErr(fmt.Errorf("could not assign IP to droplet: %v", err))
 	}
-	return displayOutput(&action{actions: actions{*a}}, out)
+
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &action{actions: actions{*a}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
@@ -92,5 +107,12 @@ func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer, 
 	if err != nil {
 		checkErr(fmt.Errorf("could not unassign IP to droplet: %v", err))
 	}
-	return displayOutput(&action{actions: actions{*a}}, out)
+
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &action{actions: actions{*a}},
+		out:    out,
+	}
+	return displayOutput(dc)
 }

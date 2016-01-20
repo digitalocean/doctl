@@ -92,7 +92,14 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return displayOutput(&domain{domains: domains{*d}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &domain{domains: domains{*d}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDomainList runs domain create.
@@ -123,7 +130,14 @@ func RunDomainList(ns string, config doit.Config, out io.Writer, args []string) 
 		list[i] = si[i].(godo.Domain)
 	}
 
-	return displayOutput(&domain{domains: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &domain{domains: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDomainGet retrieves a domain by name.
@@ -144,7 +158,14 @@ func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	return displayOutput(&domain{domains: domains{*d}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &domain{domains: domains{*d}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunDomainDelete deletes a domain by name.
@@ -201,7 +222,14 @@ func RunRecordList(ns string, config doit.Config, out io.Writer, args []string) 
 		list[i] = si[i].(godo.DomainRecord)
 	}
 
-	return displayOutput(&domainRecord{domainRecords: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &domainRecord{domainRecords: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunRecordCreate creates a domain record.
@@ -261,7 +289,14 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return displayOutput(&domainRecord{domainRecords{*r}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &domainRecord{domainRecords{*r}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunRecordDelete deletes a domain record.
@@ -350,5 +385,12 @@ func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	return displayOutput(&domainRecord{domainRecords{*r}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &domainRecord{domainRecords{*r}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }

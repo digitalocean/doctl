@@ -73,7 +73,14 @@ func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) err
 		list[i] = si[i].(godo.Key)
 	}
 
-	return displayOutput(&key{keys: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &key{keys: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunKeyGet retrieves a key.
@@ -103,7 +110,14 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) erro
 		return err
 	}
 
-	return displayOutput(&key{keys: keys{*k}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &key{keys: keys{*k}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunKeyCreate uploads a SSH key.
@@ -130,7 +144,15 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 	if err != nil {
 		checkErr(fmt.Errorf("could not create key: %v", err))
 	}
-	return displayOutput(&key{keys: keys{*r}}, out)
+
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &key{keys: keys{*r}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunKeyImport imports a key from a file
@@ -172,7 +194,14 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	return displayOutput(&key{keys: keys{*r}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &key{keys: keys{*r}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunKeyDelete deletes a key.
@@ -226,5 +255,12 @@ func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	return displayOutput(&key{keys: keys{*k}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &key{keys: keys{*k}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }

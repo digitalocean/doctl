@@ -1,5 +1,5 @@
 hash: f4792c538d36f95db24ffb76d8efd77f554bc9f7536ad0ae4ae8991cde15df26
-updated: 2016-01-14T15:23:15.638810772-05:00
+updated: 2016-01-19T22:40:36.675286619-05:00
 imports:
 - name: github.com/armon/consul-api
   version: dcfedd50ed5334f96adee43fc88518a4f095e15c

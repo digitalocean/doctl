@@ -11,7 +11,7 @@ import (
 
 type actionFn func(client *godo.Client) (*godo.Action, error)
 
-func performAction(out io.Writer, config doit.Config, fn actionFn) error {
+func performAction(out io.Writer, ns string, config doit.Config, fn actionFn) error {
 	client := config.GetGodoClient()
 
 	a, err := fn(client)
@@ -19,7 +19,14 @@ func performAction(out io.Writer, config doit.Config, fn actionFn) error {
 		return err
 	}
 
-	return displayOutput(&action{actions{*a}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &action{actions{*a}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // DropletAction creates the droplet-action command.
@@ -129,7 +136,7 @@ func RunDropletActionGet(ns string, config doit.Config, out io.Writer, args []st
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionDisableBackups disables backups for a droplet.
@@ -147,7 +154,7 @@ func RunDropletActionDisableBackups(ns string, config doit.Config, out io.Writer
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionReboot reboots a droplet.
@@ -165,7 +172,7 @@ func RunDropletActionReboot(ns string, config doit.Config, out io.Writer, args [
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionPowerCycle power cycles a droplet.
@@ -184,7 +191,7 @@ func RunDropletActionPowerCycle(ns string, config doit.Config, out io.Writer, ar
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionShutdown shuts a droplet down.
@@ -199,7 +206,7 @@ func RunDropletActionShutdown(ns string, config doit.Config, out io.Writer, args
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionPowerOff turns droplet power off.
@@ -218,7 +225,7 @@ func RunDropletActionPowerOff(ns string, config doit.Config, out io.Writer, args
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionPowerOn turns droplet power on.
@@ -237,7 +244,7 @@ func RunDropletActionPowerOn(ns string, config doit.Config, out io.Writer, args 
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionPasswordReset resets the droplet root password.
@@ -256,7 +263,7 @@ func RunDropletActionPasswordReset(ns string, config doit.Config, out io.Writer,
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionEnableIPv6 enables IPv6 for a droplet.
@@ -275,7 +282,7 @@ func RunDropletActionEnableIPv6(ns string, config doit.Config, out io.Writer, ar
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionEnablePrivateNetworking enables private networking for a droplet.
@@ -294,7 +301,7 @@ func RunDropletActionEnablePrivateNetworking(ns string, config doit.Config, out 
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionUpgrade upgrades a droplet.
@@ -313,7 +320,7 @@ func RunDropletActionUpgrade(ns string, config doit.Config, out io.Writer, args 
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionRestore restores a droplet using an image id.
@@ -337,7 +344,7 @@ func RunDropletActionRestore(ns string, config doit.Config, out io.Writer, args 
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionResize resizesx a droplet giving a size slug and
@@ -367,7 +374,7 @@ func RunDropletActionResize(ns string, config doit.Config, out io.Writer, args [
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionRebuild rebuilds a droplet using an image id or slug.
@@ -396,7 +403,7 @@ func RunDropletActionRebuild(ns string, config doit.Config, out io.Writer, args 
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionRename renames a droplet.
@@ -420,7 +427,7 @@ func RunDropletActionRename(ns string, config doit.Config, out io.Writer, args [
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionChangeKernel changes the kernel for a droplet.
@@ -444,7 +451,7 @@ func RunDropletActionChangeKernel(ns string, config doit.Config, out io.Writer, 
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }
 
 // RunDropletActionSnapshot creates a snapshot for a droplet.
@@ -468,5 +475,5 @@ func RunDropletActionSnapshot(ns string, config doit.Config, out io.Writer, args
 		return a, err
 	}
 
-	return performAction(out, config, fn)
+	return performAction(out, ns, config, fn)
 }

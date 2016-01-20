@@ -57,7 +57,14 @@ func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer, args []st
 	if err != nil {
 		return err
 	}
-	return displayOutput(&floatingIP{floatingIPs: floatingIPs{*ip}}, out)
+
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &floatingIP{floatingIPs: floatingIPs{*ip}},
+		out:    out,
+	}
+	return displayOutput(dc)
 }
 
 // RunFloatingIPGet retrieves a floating IP's details.
@@ -79,7 +86,14 @@ func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []strin
 		return err
 	}
 
-	return displayOutput(&floatingIP{floatingIPs: floatingIPs{*d}}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &floatingIP{floatingIPs: floatingIPs{*d}},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
 
 // RunFloatingIPDelete runs floating IP delete.
@@ -124,5 +138,12 @@ func RunFloatingIPList(ns string, config doit.Config, out io.Writer, args []stri
 		list[i] = si[i].(godo.FloatingIP)
 	}
 
-	return displayOutput(&floatingIP{floatingIPs: list}, out)
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   &floatingIP{floatingIPs: list},
+		out:    out,
+	}
+
+	return displayOutput(dc)
 }
