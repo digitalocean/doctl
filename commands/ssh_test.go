@@ -69,12 +69,10 @@ func TestSSH_ID(t *testing.T) {
 }
 
 func TestSSH_InvalidID(t *testing.T) {
-	didFetchDroplet := false
 
 	client := &godo.Client{
 		Droplets: &doit.DropletsServiceMock{
 			GetFn: func(id int) (*godo.Droplet, *godo.Response, error) {
-				didFetchDroplet = true
 				return nil, nil, fmt.Errorf("not here")
 			},
 		},
@@ -112,6 +110,7 @@ func TestSSH_Name(t *testing.T) {
 
 		err := RunSSH(ns, c, ioutil.Discard, []string{testDroplet.Name})
 		assert.NoError(t, err)
+		assert.True(t, didFetchDroplet)
 
 		assert.Equal(t, "root", ms.user)
 		assert.Equal(t, testDroplet.Networks.V4[0].IPAddress, ms.host)
@@ -139,6 +138,7 @@ func TestSSH_UserAtIP(t *testing.T) {
 		userHost := fmt.Sprintf("root@%d", testDroplet.ID)
 		err := RunSSH(ns, c, ioutil.Discard, []string{userHost})
 		assert.NoError(t, err)
+		assert.True(t, didFetchDroplet)
 
 		assert.Equal(t, "root", ms.user)
 		assert.Equal(t, testDroplet.Networks.V4[0].IPAddress, ms.host)
