@@ -25,16 +25,29 @@ func (a *account) JSON(out io.Writer) error {
 	return writeJSON(a.Account, out)
 }
 
-func (a *account) String(out io.Writer) error {
-	account := a.Account
+func (a *account) Cols() []string {
+	return []string{
+		"Email", "DropletLimit", "EmailVerified", "UUID", "Status",
+	}
+}
 
-	w := newTabWriter(out)
+func (a *account) ColMap() map[string]string {
+	return map[string]string{
+		"Email": "Email", "DropletLimit": "Droplet Limit", "EmailVerified": "Email Verified",
+		"UUID": "UUID", "Status": "Status",
+	}
+}
 
-	fmt.Fprintln(w, "Email\tDroplet Limit\tEmail Verified\tUUID\tStatus")
-	fmt.Fprintf(w, "")
-	fmt.Fprintf(w, "%s\t%d\t%t\t%s\t%s\n", account.Email, account.DropletLimit, account.EmailVerified, account.UUID, account.Status)
-	fmt.Fprintln(w)
-	return w.Flush()
+func (a *account) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+	x := map[string]interface{}{
+		"Email": a.Email, "DropletLimit": a.DropletLimit,
+		"EmailVerified": a.EmailVerified, "UUID": a.UUID,
+		"Status": a.Status,
+	}
+	out = append(out, x)
+
+	return out
 }
 
 type actions []godo.Action
@@ -49,18 +62,34 @@ func (a *action) JSON(out io.Writer) error {
 	return writeJSON(a.actions, out)
 }
 
-func (a *action) String(out io.Writer) error {
-	w := newTabWriter(out)
-
-	fmt.Fprintln(w, "ID\tStatus\tType\tStarted At\tCompleted At\tResource ID\tResource Type\tRegion")
-
-	for _, a := range a.actions {
-		fmt.Fprintf(w, "")
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%d\t%s\t%s\n",
-			a.ID, a.Status, a.Type, a.StartedAt, a.CompletedAt, a.ResourceID, a.ResourceType, a.RegionSlug)
+func (a *action) Cols() []string {
+	return []string{
+		"ID", "Status", "Type", "StartedAt", "CompletedAt", "ResourceID", "ResourceType", "Region",
 	}
-	fmt.Fprintln(w)
-	return w.Flush()
+}
+
+func (a *action) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Status": "Status", "Type": "Type", "StartedAt": "Started At",
+		"CompletedAt": "Completed At", "ResourceID": "Resource ID",
+		"ResourceType": "Resource Type", "Region": "Region",
+	}
+}
+
+func (a *action) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, x := range a.actions {
+		o := map[string]interface{}{
+			"ID": x.ID, "Status": x.Status, "Type": x.Type,
+			"StartedAt": x.StartedAt, "CompletedAt": x.CompletedAt,
+			"ResourceID": x.ResourceID, "ResourceType": x.ResourceType,
+			"Region": x.Region,
+		}
+		out = append(out, o)
+	}
+
+	return out
 }
 
 type domains []godo.Domain
@@ -75,22 +104,27 @@ func (d *domain) JSON(out io.Writer) error {
 	return writeJSON(d.domains, out)
 }
 
-func (d *domain) String(out io.Writer) error {
-	w := newTabWriter(out)
+func (d *domain) Cols() []string {
+	return []string{"Domain", "TTL"}
+}
 
-	if len(d.domains) == 1 {
-		fmt.Fprintln(out, d.domains[0].ZoneFile)
-		return nil
+func (d *domain) ColMap() map[string]string {
+	return map[string]string{
+		"Domain": "Domain", "TTL": "TTL",
+	}
+}
+
+func (d *domain) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, do := range d.domains {
+		o := map[string]interface{}{
+			"Domain": do.Name, "TTL": do.TTL,
+		}
+		out = append(out, o)
 	}
 
-	fmt.Fprintln(w, "Name")
-
-	for _, d := range d.domains {
-		fmt.Fprintf(w, "%s\n", d.Name)
-	}
-
-	fmt.Fprintln(w)
-	return w.Flush()
+	return out
 }
 
 type domainRecords []godo.DomainRecord
@@ -103,18 +137,32 @@ func (dr *domainRecord) JSON(out io.Writer) error {
 	return writeJSON(dr.domainRecords, out)
 }
 
-func (dr *domainRecord) String(out io.Writer) error {
-	w := newTabWriter(out)
+func (dr *domainRecord) Cols() []string {
+	return []string{
+		"ID", "Type", "Name", "Data", "Priority", "Port", "Weight",
+	}
+}
 
-	fmt.Fprintln(w, "ID\tType\tName\tData\tPriority\tPort\tWeight")
+func (dr *domainRecord) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Type": "Type", "Name": "Name", "Data": "Data",
+		"Priority": "Priority", "Port": "Port", "Weight": "Weight",
+	}
+}
+
+func (dr *domainRecord) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
 
 	for _, d := range dr.domainRecords {
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%d\t%d\t%d\n", d.ID, d.Type, d.Name, d.Data,
-			d.Priority, d.Port, d.Weight)
+		o := map[string]interface{}{
+			"ID": d.ID, "Type": d.Type, "Name": d.Name,
+			"Data": d.Data, "Priority": d.Priority,
+			"Port": d.Port, "Weight": d.Weight,
+		}
+		out = append(out, o)
 	}
 
-	fmt.Fprintln(w)
-	return w.Flush()
+	return out
 }
 
 type droplets []godo.Droplet
@@ -129,19 +177,34 @@ func (d *droplet) JSON(out io.Writer) error {
 	return writeJSON(d.droplets, out)
 }
 
-func (d *droplet) String(out io.Writer) error {
-	w := newTabWriter(out)
+func (d *droplet) Cols() []string {
+	return []string{
+		"ID", "Name", "PublicIPv4", "Memory", "VCPUs", "Disk", "Region", "Image", "Status",
+	}
+}
 
-	fmt.Fprintln(w, "ID\tName\tPublic IPv4\tMemory\tVCPUs\tDisk\tRegion\tImage\tStatus")
+func (d *droplet) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Name": "Name", "PublicIPv4": "Public IPv4",
+		"Memory": "Memory", "VCPUs": "VCPUs", "Disk": "Disk",
+		"Region": "Region", "Image": "Image", "Status": "Status",
+	}
+}
 
+func (d *droplet) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
 	for _, d := range d.droplets {
 		ips := extractDropletIPs(&d)
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
-		fmt.Fprintf(w, "%d\t%s\t%s\t%d\t%d\t%d\t%s\t%s\t%s\n",
-			d.ID, d.Name, ips[ifacePublic], d.Memory, d.Vcpus, d.Disk, d.Region.Slug, image, d.Status)
+		m := map[string]interface{}{
+			"ID": d.ID, "Name": d.Name, "PublicIPv4": ips[ifacePublic],
+			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
+			"Region": d.Region.Slug, "Image": image, "Status": d.Status,
+		}
+		out = append(out, m)
 	}
-	fmt.Fprintln(w)
-	return w.Flush()
+
+	return out
 }
 
 type floatingIPs []godo.FloatingIP
@@ -156,21 +219,37 @@ func (fi *floatingIP) JSON(out io.Writer) error {
 	return writeJSON(fi.floatingIPs, out)
 }
 
-func (fi *floatingIP) String(out io.Writer) error {
-	w := newTabWriter(out)
+func (fi *floatingIP) Cols() []string {
+	return []string{
+		"IP", "Region", "DropletID", "DropletName",
+	}
+}
 
-	fmt.Fprintln(w, "IP\tRegion\tDroplet ID\tDroplet Name")
-	for _, ip := range fi.floatingIPs {
+func (fi *floatingIP) ColMap() map[string]string {
+	return map[string]string{
+		"IP": "IP", "Region": "Region", "DropletID": "Droplet ID", "DropletName": "Droplet Name",
+	}
+}
+
+func (fi *floatingIP) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, f := range fi.floatingIPs {
 		var dropletID, dropletName string
-		if ip.Droplet != nil {
-			dropletID = fmt.Sprintf("%d", ip.Droplet.ID)
-			dropletName = ip.Droplet.Name
+		if f.Droplet != nil {
+			dropletID = fmt.Sprintf("%d", f.Droplet.ID)
+			dropletName = f.Droplet.Name
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ip.IP, ip.Region.Slug, dropletID, dropletName)
+
+		o := map[string]interface{}{
+			"IP": f.IP, "Region": f.Region.Slug,
+			"DropletID": dropletID, "DropletName": dropletName,
+		}
+
+		out = append(out, o)
 	}
 
-	fmt.Fprintln(w)
-	return w.Flush()
+	return out
 }
 
 type images []godo.Image
@@ -185,10 +264,21 @@ func (gi *image) JSON(out io.Writer) error {
 	return writeJSON(gi.images, out)
 }
 
-func (gi *image) String(out io.Writer) error {
-	w := newTabWriter(out)
+func (gi *image) Cols() []string {
+	return []string{
+		"ID", "Name", "Type", "Distribution", "Slug", "Public", "MinDisk",
+	}
+}
 
-	fmt.Fprintln(w, "ID\tName\tType\tDistribution\tSlug\tPublic\tMin Disk")
+func (gi *image) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Name": "Name", "Type": "Type", "Distribution": "Distribution",
+		"Slug": "Slug", "Public": "Public", "MinDisk": "Min Disk",
+	}
+}
+
+func (gi *image) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
 
 	for _, i := range gi.images {
 		publicStatus := false
@@ -196,12 +286,15 @@ func (gi *image) String(out io.Writer) error {
 			publicStatus = true
 		}
 
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%t\t%d\n",
-			i.ID, i.Name, i.Type, i.Distribution, i.Slug, publicStatus, i.MinDiskSize)
+		o := map[string]interface{}{
+			"ID": i.ID, "Name": i.Name, "Type": i.Type, "Distribution": i.Distribution,
+			"Slug": i.Slug, "Public": publicStatus, "MinDisk": i.MinDiskSize,
+		}
 
+		out = append(out, o)
 	}
-	fmt.Fprintln(w)
-	return w.Flush()
+
+	return out
 }
 
 type kernels []godo.Kernel
@@ -216,16 +309,30 @@ func (ke *kernel) JSON(out io.Writer) error {
 	return writeJSON(ke.kernels, out)
 }
 
-func (ke *kernel) String(out io.Writer) error {
-	w := newTabWriter(out)
+func (ke *kernel) Cols() []string {
+	return []string{
+		"ID", "Name", "Version",
+	}
+}
 
-	fmt.Fprintln(w, "ID\tName\tVersion")
+func (ke *kernel) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Name": "Name", "Version": "Version",
+	}
+}
+
+func (ke *kernel) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
 
 	for _, k := range ke.kernels {
-		fmt.Fprintf(w, "%d\t%s\t%s\n", k.ID, k.Name, k.Version)
+		o := map[string]interface{}{
+			"ID": k.ID, "Name": k.Name, "Version": k.Version,
+		}
+
+		out = append(out, o)
 	}
-	fmt.Fprintln(w)
-	return w.Flush()
+
+	return out
 }
 
 type keys []godo.Key
@@ -240,17 +347,30 @@ func (ke *key) JSON(out io.Writer) error {
 	return writeJSON(ke.keys, out)
 }
 
-func (ke *key) String(out io.Writer) error {
-	w := newTabWriter(out)
-
-	fmt.Fprintln(w, "ID\tName\tFingerprint")
-
-	for _, s := range ke.keys {
-		fmt.Fprintf(w, "%d\t%s\t%s\n",
-			s.ID, s.Name, s.Fingerprint)
+func (ke *key) Cols() []string {
+	return []string{
+		"ID", "Name", "FingerPrint",
 	}
-	fmt.Fprintln(w)
-	return w.Flush()
+}
+
+func (ke *key) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Name": "Name", "FingerPrint": "FingerPrint",
+	}
+}
+
+func (ke *key) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, k := range ke.keys {
+		o := map[string]interface{}{
+			"ID": k.ID, "Name": k.Name, "FingerPrint": k.Fingerprint,
+		}
+
+		out = append(out, o)
+	}
+
+	return out
 }
 
 type regions []godo.Region
@@ -265,16 +385,30 @@ func (re *region) JSON(out io.Writer) error {
 	return writeJSON(re.regions, out)
 }
 
-func (re *region) String(out io.Writer) error {
-	w := newTabWriter(out)
+func (re *region) Cols() []string {
+	return []string{
+		"Slug", "Name", "Available",
+	}
+}
 
-	fmt.Fprintln(w, "Slug\tName\tAvailable")
+func (re *region) ColMap() map[string]string {
+	return map[string]string{
+		"Slug": "Slug", "Name": "Name", "Available": "Available",
+	}
+}
+
+func (re *region) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
 
 	for _, r := range re.regions {
-		fmt.Fprintf(w, "%s\t%s\t%t\n", r.Slug, r.Name, r.Available)
+		o := map[string]interface{}{
+			"Slug": r.Slug, "Name": r.Name, "Available": r.Available,
+		}
+
+		out = append(out, o)
 	}
-	fmt.Fprintln(w)
-	return w.Flush()
+
+	return out
 }
 
 type sizes []godo.Size
@@ -289,15 +423,32 @@ func (si *size) JSON(out io.Writer) error {
 	return writeJSON(si.sizes, out)
 }
 
-func (si *size) String(out io.Writer) error {
-	w := newTabWriter(out)
+func (si *size) Cols() []string {
+	return []string{
+		"Slug", "Memory", "VCPUs", "Disk", "PriceMonthly", "PriceHourly",
+	}
+}
 
-	fmt.Fprintln(w, "Slug\tMemory\tVcpus\tDisk\tPrice Monthly\tPrice Hourly")
+func (si *size) ColMap() map[string]string {
+	return map[string]string{
+		"Slug": "Slug", "Memory": "Memory", "VCPUs": "VCPUs",
+		"Disk": "Disk", "PriceMonthly": "Price Monthly",
+		"PriceHourly": "Price Hourly",
+	}
+}
+
+func (si *size) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
 
 	for _, s := range si.sizes {
-		fmt.Fprintf(w, "%s\t%d\t%d\t%d\t%0.2f\t%f\n",
-			s.Slug, s.Memory, s.Vcpus, s.Disk, s.PriceMonthly, s.PriceHourly)
+		o := map[string]interface{}{
+			"Slug": s.Slug, "Memory": s.Memory, "VCPUs": s.Vcpus,
+			"Disk": s.Disk, "PriceMonthly": fmt.Sprintf("%0.2f", s.PriceMonthly),
+			"PriceHourly": s.PriceHourly,
+		}
+
+		out = append(out, o)
 	}
-	fmt.Fprintln(w)
-	return w.Flush()
+
+	return out
 }
