@@ -11,19 +11,17 @@ import (
 
 // Actions creates the action commands heirarchy.
 func Actions() *cobra.Command {
-	cmdActions := &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "action",
 		Short: "action commands",
 		Long:  "action is used to access action commands",
 	}
 
-	cmdActionGet := cmdBuilder(RunCmdActionGet, "get ACTIONID", "get action", writer, aliasOpt("g"))
-	cmdActions.AddCommand(cmdActionGet)
+	cmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", writer, aliasOpt("g"))
 
-	cmdActionList := cmdBuilder(RunCmdActionList, "list", "list actions", writer, aliasOpt("ls"))
-	cmdActions.AddCommand(cmdActionList)
+	cmdBuilder(cmd, RunCmdActionList, "list", "list actions", writer, aliasOpt("ls"))
 
-	return cmdActions
+	return cmd
 }
 
 // RunCmdActionList run action list.

@@ -189,7 +189,7 @@ func aliasOpt(aliases ...string) cmdOption {
 	}
 }
 
-func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *cobra.Command {
+func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *cobra.Command {
 	c := &cobra.Command{
 		Use:   cliText,
 		Short: desc,
@@ -200,9 +200,16 @@ func cmdBuilder(cr cmdRunner, cliText, desc string, out io.Writer, options ...cm
 		},
 	}
 
+	if parent != nil {
+		parent.AddCommand(c)
+	}
+
 	for _, co := range options {
 		co(c)
 	}
+
+	addStringFlag(c, doit.ArgFormat, "", "Format")
+	addBoolFlag(c, doit.ArgNoHeader, false, "hide headers")
 
 	return c
 }

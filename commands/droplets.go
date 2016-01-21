@@ -25,16 +25,14 @@ func Droplet() *cobra.Command {
 		Long:    "droplet is used to access droplet commands",
 	}
 
-	cmdDropletActions := cmdBuilder(RunDropletActions, "actions", "droplet actions", writer, aliasOpt("a"))
-	cmd.AddCommand(cmdDropletActions)
+	cmdDropletActions := cmdBuilder(cmd, RunDropletActions, "actions", "droplet actions", writer, aliasOpt("a"))
 	addIntFlag(cmdDropletActions, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletBackups := cmdBuilder(RunDropletBackups, "backups", "droplet backups", writer, aliasOpt("b"))
-	cmd.AddCommand(cmdDropletBackups)
+	cmdDropletBackups := cmdBuilder(cmd, RunDropletBackups, "backups", "droplet backups", writer, aliasOpt("b"))
 	addIntFlag(cmdDropletBackups, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletCreate := cmdBuilder(RunDropletCreate, "create NAME [NAME ...]", "create droplet", writer, aliasOpt("c"))
-	cmd.AddCommand(cmdDropletCreate)
+	cmdDropletCreate := cmdBuilder(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", writer,
+		aliasOpt("c"))
 	addStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
 	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
 	addStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file")
@@ -46,27 +44,19 @@ func Droplet() *cobra.Command {
 	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
 	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image", requiredOpt())
 
-	cmdDropletDelete := cmdBuilder(RunDropletDelete, "delete ID [ID ...]", "delete droplet", writer, aliasOpt("d", "del"))
-	cmd.AddCommand(cmdDropletDelete)
+	cmdBuilder(cmd, RunDropletDelete, "delete ID [ID ...]", "delete droplet", writer, aliasOpt("d", "del"))
 
-	cmdDropletGet := cmdBuilder(RunDropletGet, "get", "get droplet", writer, aliasOpt("g"))
-	cmd.AddCommand(cmdDropletGet)
+	cmdBuilder(cmd, RunDropletGet, "get", "get droplet", writer, aliasOpt("g"))
 
-	cmdDropletKernels := cmdBuilder(RunDropletKernels, "kernels", "droplet kernels", writer, aliasOpt("k"))
-	cmd.AddCommand(cmdDropletKernels)
+	cmdDropletKernels := cmdBuilder(cmd, RunDropletKernels, "kernels", "droplet kernels", writer, aliasOpt("k"))
 	addIntFlag(cmdDropletKernels, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
-	cmdDropletList := cmdBuilder(RunDropletList, "list [REGEX]", "list droplets", writer, aliasOpt("ls"))
-	cmd.AddCommand(cmdDropletList)
-	addStringFlag(cmdDropletList, doit.ArgFormat, "", "Format")
-	addBoolFlag(cmdDropletList, doit.ArgNoHeader, false, "hide headers")
+	cmdBuilder(cmd, RunDropletList, "list [REGEX]", "list droplets", writer, aliasOpt("ls"))
 
-	cmdDropletNeighbors := cmdBuilder(RunDropletNeighbors, "neighbors", "droplet neighbors", writer, aliasOpt("n"))
-	cmd.AddCommand(cmdDropletNeighbors)
+	cmdDropletNeighbors := cmdBuilder(cmd, RunDropletNeighbors, "neighbors", "droplet neighbors", writer, aliasOpt("n"))
 	addIntFlag(cmdDropletNeighbors, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
-	cmdDropletSnapshots := cmdBuilder(RunDropletSnapshots, "snapshots", "snapshots", writer, aliasOpt("s"))
-	cmd.AddCommand(cmdDropletSnapshots)
+	cmdDropletSnapshots := cmdBuilder(cmd, RunDropletSnapshots, "snapshots", "snapshots", writer, aliasOpt("s"))
 	addIntFlag(cmdDropletSnapshots, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	return cmd

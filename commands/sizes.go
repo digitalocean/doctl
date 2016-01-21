@@ -16,8 +16,7 @@ func Size() *cobra.Command {
 		Long:  "size is used to access size commands",
 	}
 
-	cmdSizeList := cmdBuilder(RunSizeList, "list", "list sizes", writer)
-	cmd.AddCommand(cmdSizeList)
+	cmdBuilder(cmd, RunSizeList, "list", "list sizes", writer)
 
 	return cmd
 }

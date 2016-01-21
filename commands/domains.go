@@ -19,18 +19,14 @@ func Domain() *cobra.Command {
 		Long:  "domain is used to access domain commands",
 	}
 
-	cmdDomainCreate := cmdBuilder(RunDomainCreate, "create <domain>", "create domain", writer, aliasOpt("c"))
-	cmd.AddCommand(cmdDomainCreate)
+	cmdDomainCreate := cmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", writer, aliasOpt("c"))
 	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address", requiredOpt())
 
-	cmdDomainList := cmdBuilder(RunDomainList, "list", "list comains", writer, aliasOpt("ls"))
-	cmd.AddCommand(cmdDomainList)
+	cmdBuilder(cmd, RunDomainList, "list", "list comains", writer, aliasOpt("ls"))
 
-	cmdDomainGet := cmdBuilder(RunDomainGet, "get <domain>", "get domain", writer, aliasOpt("g"))
-	cmd.AddCommand(cmdDomainGet)
+	cmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", writer, aliasOpt("g"))
 
-	cmdDomainDelete := cmdBuilder(RunDomainDelete, "delete <domain>", "delete droplet", writer, aliasOpt("g"))
-	cmd.AddCommand(cmdDomainDelete)
+	cmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete droplet", writer, aliasOpt("g"))
 
 	cmdRecord := &cobra.Command{
 		Use:   "records",
@@ -39,12 +35,10 @@ func Domain() *cobra.Command {
 	}
 	cmd.AddCommand(cmdRecord)
 
-	cmdRecordList := cmdBuilder(RunRecordList, "list <domain>", "list records", writer, aliasOpt("ls"))
-	cmdRecord.AddCommand(cmdRecordList)
+	cmdRecordList := cmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", writer, aliasOpt("ls"))
 	addStringFlag(cmdRecordList, doit.ArgDomainName, "", "Domain name")
 
-	cmdRecordCreate := cmdBuilder(RunRecordCreate, "create <domain>", "create record", writer, aliasOpt("c"))
-	cmdRecord.AddCommand(cmdRecordCreate)
+	cmdRecordCreate := cmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "create record", writer, aliasOpt("c"))
 	addStringFlag(cmdRecordCreate, doit.ArgRecordType, "", "Record type")
 	addStringFlag(cmdRecordCreate, doit.ArgRecordName, "", "Record name")
 	addStringFlag(cmdRecordCreate, doit.ArgRecordData, "", "Record data")
@@ -52,11 +46,9 @@ func Domain() *cobra.Command {
 	addIntFlag(cmdRecordCreate, doit.ArgRecordPort, 0, "Record port")
 	addIntFlag(cmdRecordCreate, doit.ArgRecordWeight, 0, "Record weight")
 
-	cmdRecordDelete := cmdBuilder(RunRecordDelete, "delete <domain> <record id...>", "delete record", writer, aliasOpt("d"))
-	cmdRecord.AddCommand(cmdRecordDelete)
+	cmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", writer, aliasOpt("d"))
 
-	cmdRecordUpdate := cmdBuilder(RunRecordUpdate, "update <domain>", "update record", writer, aliasOpt("u"))
-	cmdRecord.AddCommand(cmdRecordUpdate)
+	cmdRecordUpdate := cmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "update record", writer, aliasOpt("u"))
 	addIntFlag(cmdRecordUpdate, doit.ArgRecordID, 0, "Record ID")
 	addStringFlag(cmdRecordUpdate, doit.ArgRecordType, "", "Record type")
 	addStringFlag(cmdRecordUpdate, doit.ArgRecordName, "", "Record name")

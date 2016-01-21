@@ -21,25 +21,19 @@ func SSHKeys() *cobra.Command {
 		Long:    "sshkey is used to access ssh key commands",
 	}
 
-	cmdSSHKeysList := cmdBuilder(RunKeyList, "list", "list ssh keys", writer, aliasOpt("ls"))
-	cmd.AddCommand(cmdSSHKeysList)
+	cmdBuilder(cmd, RunKeyList, "list", "list ssh keys", writer, aliasOpt("ls"))
 
-	cmdSSHKeysGet := cmdBuilder(RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", writer, aliasOpt("g"))
-	cmd.AddCommand(cmdSSHKeysGet)
+	cmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", writer, aliasOpt("g"))
 
-	cmdSSHKeysCreate := cmdBuilder(RunKeyCreate, "create <key-name>", "create ssh key", writer, aliasOpt("c"))
-	cmd.AddCommand(cmdSSHKeysCreate)
+	cmdSSHKeysCreate := cmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", writer, aliasOpt("c"))
 	addStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents", requiredOpt())
 
-	cmdSSHKeysImport := cmdBuilder(RunKeyImport, "import <key-name>", "import ssh key", writer, aliasOpt("i"))
-	cmd.AddCommand(cmdSSHKeysImport)
+	cmdSSHKeysImport := cmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", writer, aliasOpt("i"))
 	addStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
 
-	cmdSSHKeysDelete := cmdBuilder(RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", writer, aliasOpt("d"))
-	cmd.AddCommand(cmdSSHKeysDelete)
+	cmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", writer, aliasOpt("d"))
 
-	cmdSSHKeysUpdate := cmdBuilder(RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", writer, aliasOpt("u"))
-	cmd.AddCommand(cmdSSHKeysUpdate)
+	cmdSSHKeysUpdate := cmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", writer, aliasOpt("u"))
 	addStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name", requiredOpt())
 
 	return cmd

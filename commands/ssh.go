@@ -31,7 +31,7 @@ func SSH() *cobra.Command {
 
 	path := filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 
-	cmdSSH := cmdBuilder(RunSSH, "ssh", "ssh to droplet", writer)
+	cmdSSH := cmdBuilder(nil, RunSSH, "ssh", "ssh to droplet", writer)
 	addStringFlag(cmdSSH, doit.ArgSSHUser, "root", "ssh user")
 	addStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
 	addIntFlag(cmdSSH, doit.ArgsSSHPort, 22, "port sshd is running on")

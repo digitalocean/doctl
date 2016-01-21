@@ -16,19 +16,16 @@ func FloatingIPAction() *cobra.Command {
 		Long:  "floating IP action commands",
 	}
 
-	cmdFloatingIPActionsGet := cmdBuilder(RunFloatingIPActionsGet,
+	cmdFloatingIPActionsGet := cmdBuilder(cmd, RunFloatingIPActionsGet,
 		"get <floating-ip>", "get floating-ip action", writer)
-	cmd.AddCommand(cmdFloatingIPActionsGet)
 	addIntFlag(cmdFloatingIPActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
-	cmdFloatingIPActionsAssign := cmdBuilder(RunFloatingIPActionsAssign,
+	cmdFloatingIPActionsAssign := cmdBuilder(cmd, RunFloatingIPActionsAssign,
 		"assign <floating-ip>", "assign a floating IP to a droplet", writer)
-	cmd.AddCommand(cmdFloatingIPActionsAssign)
 	addIntFlag(cmdFloatingIPActionsAssign, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to", requiredOpt())
 
-	cmdFloatingIPActionsUnassign := cmdBuilder(RunFloatingIPActionsUnassign,
+	cmdBuilder(cmd, RunFloatingIPActionsUnassign,
 		"unassign <floating-ip>", "unassign a floating IP to a droplet", writer)
-	cmd.AddCommand(cmdFloatingIPActionsUnassign)
 
 	return cmd
 }
