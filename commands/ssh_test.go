@@ -83,7 +83,6 @@ func TestSSH_InvalidID(t *testing.T) {
 		c.SSHFn = ms.cmd()
 
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
 		err := RunSSH(ns, c, ioutil.Discard, []string{})
 		assert.Error(t, err)

@@ -25,13 +25,11 @@ func Droplet() *cobra.Command {
 		Long:    "droplet is used to access droplet commands",
 	}
 
-	cmdDropletActions := cmdBuilder(cmd, RunDropletActions, "actions", "droplet actions", writer,
+	cmdBuilder(cmd, RunDropletActions, "actions <droplet id>", "droplet actions", writer,
 		aliasOpt("a"), displayerType(&action{}))
-	addIntFlag(cmdDropletActions, doit.ArgDropletID, 0, "Droplet ID")
 
-	cmdDropletBackups := cmdBuilder(cmd, RunDropletBackups, "backups", "droplet backups", writer,
+	cmdBuilder(cmd, RunDropletBackups, "backups <droplet id>", "droplet backups", writer,
 		aliasOpt("b"), displayerType(&image{}))
-	addIntFlag(cmdDropletBackups, doit.ArgDropletID, 0, "Droplet ID")
 
 	cmdDropletCreate := cmdBuilder(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", writer,
 		aliasOpt("c"), displayerType(&droplet{}))
@@ -51,20 +49,17 @@ func Droplet() *cobra.Command {
 	cmdBuilder(cmd, RunDropletGet, "get", "get droplet", writer,
 		aliasOpt("g"), displayerType(&droplet{}))
 
-	cmdDropletKernels := cmdBuilder(cmd, RunDropletKernels, "kernels", "droplet kernels", writer,
+	cmdBuilder(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", writer,
 		aliasOpt("k"), displayerType(&kernel{}))
-	addIntFlag(cmdDropletKernels, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	cmdBuilder(cmd, RunDropletList, "list [REGEX]", "list droplets", writer,
 		aliasOpt("ls"), displayerType(&droplet{}))
 
-	cmdDropletNeighbors := cmdBuilder(cmd, RunDropletNeighbors, "neighbors", "droplet neighbors", writer,
+	cmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", writer,
 		aliasOpt("n"), displayerType(&droplet{}))
-	addIntFlag(cmdDropletNeighbors, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
-	cmdDropletSnapshots := cmdBuilder(cmd, RunDropletSnapshots, "snapshots", "snapshots", writer,
+	cmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet id>", "snapshots", writer,
 		aliasOpt("s"), displayerType(&image{}))
-	addIntFlag(cmdDropletSnapshots, doit.ArgDropletID, 0, "Droplet ID", requiredOpt())
 
 	return cmd
 }
@@ -84,7 +79,7 @@ func NewCmdDropletActions(out io.Writer) *cobra.Command {
 // RunDropletActions returns a list of actions for a droplet.
 func RunDropletActions(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgDropletID)
+	id, err := getDropletIDArg(ns, args)
 	if err != nil {
 		return err
 	}
@@ -126,7 +121,7 @@ func RunDropletActions(ns string, config doit.Config, out io.Writer, args []stri
 // RunDropletBackups returns a list of backup images for a droplet.
 func RunDropletBackups(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgDropletID)
+	id, err := getDropletIDArg(ns, args)
 	if err != nil {
 		return err
 	}
@@ -349,11 +344,7 @@ func RunDropletDelete(ns string, config doit.Config, out io.Writer, args []strin
 
 // RunDropletGet returns a droplet.
 func RunDropletGet(ns string, config doit.Config, out io.Writer, args []string) error {
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
-	}
-
-	id, err := strconv.Atoi(args[0])
+	id, err := getDropletIDArg(ns, args)
 	if err != nil {
 		return err
 	}
@@ -378,7 +369,7 @@ func RunDropletGet(ns string, config doit.Config, out io.Writer, args []string) 
 // RunDropletKernels returns a list of available kernels for a droplet.
 func RunDropletKernels(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgDropletID)
+	id, err := getDropletIDArg(ns, args)
 	if err != nil {
 		return err
 	}
@@ -483,7 +474,7 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 // RunDropletNeighbors returns a list of droplet neighbors.
 func RunDropletNeighbors(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgDropletID)
+	id, err := getDropletIDArg(ns, args)
 	if err != nil {
 		return err
 	}
@@ -506,7 +497,7 @@ func RunDropletNeighbors(ns string, config doit.Config, out io.Writer, args []st
 // RunDropletSnapshots returns a list of available kernels for a droplet.
 func RunDropletSnapshots(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	id, err := config.GetInt(ns, doit.ArgDropletID)
+	id, err := getDropletIDArg(ns, args)
 	if err != nil {
 		return err
 	}
@@ -552,4 +543,12 @@ func getDropletByID(client *godo.Client, id int) (*godo.Droplet, error) {
 
 	droplet, _, err := client.Droplets.Get(id)
 	return droplet, err
+}
+
+func getDropletIDArg(ns string, args []string) (int, error) {
+	if len(args) != 1 {
+		return 0, doit.NewMissingArgsErr(ns)
+	}
+
+	return strconv.Atoi(args[0])
 }

@@ -43,8 +43,7 @@ func TestDropletActionList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, 1)
-		err := RunDropletActions(ns, c, ioutil.Discard, []string{})
+		err := RunDropletActions(ns, c, ioutil.Discard, []string{"1"})
 		assert.NoError(t, err)
 	})
 }
@@ -67,8 +66,7 @@ func TestDropletBackupList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, 1)
-		err := RunDropletBackups(ns, c, ioutil.Discard, []string{})
+		err := RunDropletBackups(ns, c, ioutil.Discard, []string{"1"})
 		assert.NoError(t, err)
 	})
 }
@@ -199,9 +197,8 @@ func TestDropletKernelList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunDropletKernels(ns, c, ioutil.Discard, []string{})
+		err := RunDropletKernels(ns, c, ioutil.Discard, []string{"1"})
 		assert.NoError(t, err)
 	})
 }
@@ -226,9 +223,8 @@ func TestDropletNeighbors(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunDropletNeighbors(ns, c, ioutil.Discard, []string{})
+		err := RunDropletNeighbors(ns, c, ioutil.Discard, []string{"1"})
 		assert.NoError(t, err)
 		assert.True(t, didRun)
 	})
@@ -252,9 +248,8 @@ func TestDropletSnapshotList(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgDropletID, testDroplet.ID)
 
-		err := RunDropletSnapshots(ns, c, ioutil.Discard, []string{})
+		err := RunDropletSnapshots(ns, c, ioutil.Discard, []string{"1"})
 		assert.NoError(t, err)
 	})
 }

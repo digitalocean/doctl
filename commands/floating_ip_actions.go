@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/bryanl/doit"
 	"github.com/spf13/cobra"
@@ -17,13 +18,11 @@ func FloatingIPAction() *cobra.Command {
 		Aliases: []string{"fipa"},
 	}
 
-	cmdFloatingIPActionsGet := cmdBuilder(cmd, RunFloatingIPActionsGet,
-		"get <floating-ip>", "get floating-ip action", writer, displayerType(&action{}))
-	addIntFlag(cmdFloatingIPActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
+	cmdBuilder(cmd, RunFloatingIPActionsGet,
+		"get <floating-ip> <action-id>", "get floating-ip action", writer, displayerType(&action{}))
 
-	cmdFloatingIPActionsAssign := cmdBuilder(cmd, RunFloatingIPActionsAssign,
-		"assign <floating-ip>", "assign a floating IP to a droplet", writer, displayerType(&action{}))
-	addIntFlag(cmdFloatingIPActionsAssign, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to", requiredOpt())
+	cmdBuilder(cmd, RunFloatingIPActionsAssign,
+		"assign <floating-ip> <droplet-id>", "assign a floating IP to a droplet", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunFloatingIPActionsUnassign,
 		"unassign <floating-ip>", "unassign a floating IP to a droplet", writer, displayerType(&action{}))
@@ -41,7 +40,7 @@ func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args 
 
 	client := config.GetGodoClient()
 
-	actionID, err := config.GetInt(ns, doit.ArgActionID)
+	actionID, err := strconv.Atoi(args[1])
 	if err != nil {
 		return err
 	}
@@ -71,7 +70,7 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, ar
 
 	client := config.GetGodoClient()
 
-	dropletID, err := config.GetInt(ns, doit.ArgDropletID)
+	dropletID, err := strconv.Atoi(args[1])
 	if err != nil {
 		return err
 	}
