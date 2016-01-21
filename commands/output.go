@@ -96,7 +96,7 @@ func (a *action) KV() []map[string]interface{} {
 			"ID": x.ID, "Status": x.Status, "Type": x.Type,
 			"StartedAt": x.StartedAt, "CompletedAt": x.CompletedAt,
 			"ResourceID": x.ResourceID, "ResourceType": x.ResourceType,
-			"Region": x.Region,
+			"Region": x.Region.Slug,
 		}
 		out = append(out, o)
 	}

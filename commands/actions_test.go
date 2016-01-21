@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	testAction     = godo.Action{ID: 1}
+	testAction     = godo.Action{ID: 1, Region: &godo.Region{Slug: "dev0"}}
 	testActionList = []godo.Action{
 		testAction,
 	}
