@@ -84,7 +84,12 @@ func displayText(item displayer, out io.Writer, includeCols []string) error {
 	if !hc.hideHeader {
 		headers := []string{}
 		for _, k := range cols {
-			headers = append(headers, item.ColMap()[k])
+			col := item.ColMap()[k]
+			if col == "" {
+				return fmt.Errorf("unknown column %q", k)
+			}
+
+			headers = append(headers, col)
 		}
 		fmt.Fprintln(w, strings.Join(headers, "\t"))
 	}
