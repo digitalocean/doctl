@@ -9,6 +9,7 @@ import (
 
 	"github.com/bryanl/doit/pkg/term"
 	"github.com/digitalocean/godo"
+	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
@@ -36,6 +37,10 @@ var (
 	// Build is doit's build tag.
 	Build string
 )
+
+func init() {
+	jww.SetStdoutThreshold(jww.LevelError)
+}
 
 type Version struct {
 	Major, Minor, Patch int

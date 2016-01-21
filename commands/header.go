@@ -11,7 +11,13 @@ func handleColumns(ns string, config doit.Config) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	cols := strings.Split(colStr, ",")
+
+	var cols []string
+	for _, c := range strings.Split(strings.Join(strings.Fields(colStr), ""), ",") {
+		if c != "" {
+			cols = append(cols, c)
+		}
+	}
 
 	hh, err := config.GetBool(ns, doit.ArgNoHeader)
 	if err != nil {
