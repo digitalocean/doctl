@@ -28,8 +28,9 @@ func FloatingIP() *cobra.Command {
 
 	cmdBuilder(cmd, RunFloatingIPDelete, "delete <floating-ip>", "delete a floating IP address", writer, aliasOpt("d"))
 
-	cmdBuilder(cmd, RunFloatingIPList, "list", "list all floating IP addresses", writer,
+	cmdFloatingIPList := cmdBuilder(cmd, RunFloatingIPList, "list", "list all floating IP addresses", writer,
 		aliasOpt("ls"), displayerType(&floatingIP{}))
+	addStringFlag(cmdFloatingIPList, doit.ArgRegionSlug, "", "Floating IP region")
 
 	return cmd
 }
@@ -113,6 +114,11 @@ func RunFloatingIPDelete(ns string, config doit.Config, out io.Writer, args []st
 func RunFloatingIPList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
+	region, err := config.GetString(ns, doit.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
+
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.FloatingIPs.List(opt)
 		if err != nil {
@@ -132,9 +138,17 @@ func RunFloatingIPList(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	list := make([]godo.FloatingIP, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.FloatingIP)
+	list := []godo.FloatingIP{}
+	for _, x := range si {
+		fip := x.(godo.FloatingIP)
+		var skip bool
+		if region != "" && region != fip.Region.Slug {
+			skip = true
+		}
+
+		if !skip {
+			list = append(list, fip)
+		}
 	}
 
 	dc := &outputConfig{
