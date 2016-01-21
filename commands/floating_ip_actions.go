@@ -11,21 +11,22 @@ import (
 // FloatingIPAction creates the floating IP action commmand.
 func FloatingIPAction() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "floating-ip-action",
-		Short: "floating IP action commands",
-		Long:  "floating IP action commands",
+		Use:     "floating-ip-action",
+		Short:   "floating IP action commands",
+		Long:    "floating IP action commands",
+		Aliases: []string{"fipa"},
 	}
 
 	cmdFloatingIPActionsGet := cmdBuilder(cmd, RunFloatingIPActionsGet,
-		"get <floating-ip>", "get floating-ip action", writer)
+		"get <floating-ip>", "get floating-ip action", writer, displayerType(&action{}))
 	addIntFlag(cmdFloatingIPActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
 	cmdFloatingIPActionsAssign := cmdBuilder(cmd, RunFloatingIPActionsAssign,
-		"assign <floating-ip>", "assign a floating IP to a droplet", writer)
+		"assign <floating-ip>", "assign a floating IP to a droplet", writer, displayerType(&action{}))
 	addIntFlag(cmdFloatingIPActionsAssign, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to", requiredOpt())
 
 	cmdBuilder(cmd, RunFloatingIPActionsUnassign,
-		"unassign <floating-ip>", "unassign a floating IP to a droplet", writer)
+		"unassign <floating-ip>", "unassign a floating IP to a droplet", writer, displayerType(&action{}))
 
 	return cmd
 }

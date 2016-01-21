@@ -21,24 +21,24 @@ func Images() *cobra.Command {
 
 	out := os.Stdout
 
-	cmdImagesList := cmdBuilder(cmd, RunImagesList, "list", "list images", out)
+	cmdImagesList := cmdBuilder(cmd, RunImagesList, "list", "list images", out, displayerType(&image{}))
 	addBoolFlag(cmdImagesList, doit.ArgImagePublic, false, "List public images")
 
 	cmdImagesListDistribution := cmdBuilder(cmd, RunImagesListDistribution,
-		"list-distribution", "list distribution images", out)
+		"list-distribution", "list distribution images", out, displayerType(&image{}))
 	addBoolFlag(cmdImagesListDistribution, doit.ArgImagePublic, false, "List public images")
 
 	cmdImagesListApplication := cmdBuilder(cmd, RunImagesListApplication,
-		"list-application", "list application images", out)
+		"list-application", "list application images", out, displayerType(&image{}))
 	addBoolFlag(cmdImagesListApplication, doit.ArgImagePublic, false, "List public images")
 
 	cmdImagesListUser := cmdBuilder(cmd, RunImagesListDistribution,
-		"list-user", "list user images", out)
+		"list-user", "list user images", out, displayerType(&image{}))
 	addBoolFlag(cmdImagesListUser, doit.ArgImagePublic, false, "List public images")
 
-	cmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", out)
+	cmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", out, displayerType(&image{}))
 
-	cmdImagesUpdate := cmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", out)
+	cmdImagesUpdate := cmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", out, displayerType(&image{}))
 	addStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
 
 	cmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", out)

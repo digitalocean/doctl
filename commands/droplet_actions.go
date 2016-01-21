@@ -38,54 +38,55 @@ func DropletAction() *cobra.Command {
 		Long:    "droplet-action is used to access droplet action commands",
 	}
 
-	cmdDropletActionGet := cmdBuilder(cmd, RunDropletActionGet, "get", "get droplet action", writer, aliasOpt("g"))
+	cmdDropletActionGet := cmdBuilder(cmd, RunDropletActionGet, "get", "get droplet action", writer,
+		aliasOpt("g"), displayerType(&action{}))
 	addIntFlag(cmdDropletActionGet, doit.ArgActionID, 0, "Action ID", requiredOpt())
 
 	cmdBuilder(cmd, RunDropletActionDisableBackups,
-		"disable-backups <droplet-id>", "disable backups", writer)
+		"disable-backups <droplet-id>", "disable backups", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionReboot,
-		"reboot <droplet-id>", "reboot droplet", writer)
+		"reboot <droplet-id>", "reboot droplet", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionPowerCycle,
-		"power-cycle <droplet-id>", "power cycle droplet", writer)
+		"power-cycle <droplet-id>", "power cycle droplet", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionShutdown,
-		"shutdown <droplet-id>", "shutdown droplet", writer)
+		"shutdown <droplet-id>", "shutdown droplet", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionPowerOff,
-		"power-off <droplet-id>", "power off droplet", writer)
+		"power-off <droplet-id>", "power off droplet", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionPowerOn,
-		"power-on <droplet-id>", "power on droplet", writer)
+		"power-on <droplet-id>", "power on droplet", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionPasswordReset,
-		"power-reset <droplet-id>", "power reset droplet", writer)
+		"power-reset <droplet-id>", "power reset droplet", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionEnableIPv6,
-		"enable-ipv6 <droplet-id>", "enable ipv6", writer)
+		"enable-ipv6 <droplet-id>", "enable ipv6", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionEnablePrivateNetworking,
-		"enable-private-networking <droplet-id>", "enable private networking", writer)
+		"enable-private-networking <droplet-id>", "enable private networking", writer, displayerType(&action{}))
 
 	cmdBuilder(cmd, RunDropletActionUpgrade,
-		"upgrade <droplet-id>", "upgrade droplet", writer)
+		"upgrade <droplet-id>", "upgrade droplet", writer, displayerType(&action{}))
 
 	cmdDropletActionRestore := cmdBuilder(cmd, RunDropletActionRestore,
-		"restore <droplet-id>", "restore backup", writer)
+		"restore <droplet-id>", "restore backup", writer, displayerType(&action{}))
 	addIntFlag(cmdDropletActionRestore, doit.ArgImageID, 0, "Image ID", requiredOpt())
 
 	cmdDropletActionResize := cmdBuilder(cmd, RunDropletActionResize,
-		"resize <droplet-id>", "resize droplet", writer)
+		"resize <droplet-id>", "resize droplet", writer, displayerType(&action{}))
 	addIntFlag(cmdDropletActionResize, doit.ArgImageID, 0, "Image ID", requiredOpt())
 	addBoolFlag(cmdDropletActionResize, doit.ArgResizeDisk, false, "Resize disk")
 
 	cmdDropletActionRebuild := cmdBuilder(cmd, RunDropletActionRebuild,
-		"rebuild <droplet-id>", "rebuild droplet", writer)
+		"rebuild <droplet-id>", "rebuild droplet", writer, displayerType(&action{}))
 	addIntFlag(cmdDropletActionRebuild, doit.ArgImageID, 0, "Image ID", requiredOpt())
 
 	cmdDropletActionRename := cmdBuilder(cmd, RunDropletActionRename,
-		"rename <droplet-id>", "rename droplet", writer)
+		"rename <droplet-id>", "rename droplet", writer, displayerType(&action{}))
 	addStringFlag(cmdDropletActionRename, doit.ArgDropletName, "", "Droplet name", requiredOpt())
 
 	cmdDropletActionChangeKernel := cmdBuilder(cmd, RunDropletActionChangeKernel,
@@ -93,7 +94,7 @@ func DropletAction() *cobra.Command {
 	addIntFlag(cmdDropletActionChangeKernel, doit.ArgKernelID, 0, "Kernel ID", requiredOpt())
 
 	cmdDropletActionSnapshot := cmdBuilder(cmd, RunDropletActionSnapshot,
-		"snapshot <droplet-id>", "snapshot droplet", writer)
+		"snapshot <droplet-id>", "snapshot droplet", writer, displayerType(&action{}))
 	addIntFlag(cmdDropletActionSnapshot, doit.ArgSnapshotName, 0, "Snapshot name", requiredOpt())
 
 	return cmd

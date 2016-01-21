@@ -36,7 +36,7 @@ func SSH() *cobra.Command {
 	addStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
 	addIntFlag(cmdSSH, doit.ArgsSSHPort, 22, "port sshd is running on")
 
-	return cmdSSH
+	return cmdSSH.Command
 }
 
 // RunSSH finds a droplet to ssh to given input parameters (name or id).

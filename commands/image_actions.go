@@ -19,11 +19,11 @@ func ImageAction() *cobra.Command {
 	}
 
 	cmdImageActionsGet := cmdBuilder(cmd, RunImageActionsGet,
-		"get <image-id>", "get image action", writer)
+		"get <image-id>", "get image action", writer, displayerType(&action{}))
 	addIntFlag(cmdImageActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
 	cmdImageActionsTransfer := cmdBuilder(cmd, RunImageActionsTransfer,
-		"transfer <image-id>", "transfer imagr", writer)
+		"transfer <image-id>", "transfer imagr", writer, displayerType(&action{}))
 	addStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region", requiredOpt())
 
 	return cmd

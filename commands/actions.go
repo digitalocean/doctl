@@ -17,9 +17,11 @@ func Actions() *cobra.Command {
 		Long:  "action is used to access action commands",
 	}
 
-	cmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", writer, aliasOpt("g"))
+	cmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", writer,
+		aliasOpt("g"), displayerType(&action{}))
 
-	cmdBuilder(cmd, RunCmdActionList, "list", "list actions", writer, aliasOpt("ls"))
+	cmdBuilder(cmd, RunCmdActionList, "list", "list actions", writer,
+		aliasOpt("ls"), displayerType(&action{}))
 
 	return cmd
 }

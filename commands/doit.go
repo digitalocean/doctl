@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
@@ -98,10 +99,10 @@ func initializeConfig() {
 	}
 }
 
-type flagOpt func(c *cobra.Command, name, key string)
+type flagOpt func(c *command, name, key string)
 
 func requiredOpt() flagOpt {
-	return func(c *cobra.Command, name, key string) {
+	return func(c *command, name, key string) {
 		c.MarkFlagRequired(key)
 		key = requiredKey(key)
 		viper.Set(key, true)
@@ -115,7 +116,7 @@ func requiredKey(key string) string {
 	return fmt.Sprintf("%s.required", key)
 }
 
-func addStringFlag(cmd *cobra.Command, name, dflt, desc string, opts ...flagOpt) {
+func addStringFlag(cmd *command, name, dflt, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().String(name, dflt, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
@@ -125,7 +126,7 @@ func addStringFlag(cmd *cobra.Command, name, dflt, desc string, opts ...flagOpt)
 	}
 }
 
-func addIntFlag(cmd *cobra.Command, name string, def int, desc string, opts ...flagOpt) {
+func addIntFlag(cmd *command, name string, def int, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().Int(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
@@ -135,7 +136,7 @@ func addIntFlag(cmd *cobra.Command, name string, def int, desc string, opts ...f
 	}
 }
 
-func addBoolFlag(cmd *cobra.Command, name string, def bool, desc string, opts ...flagOpt) {
+func addBoolFlag(cmd *command, name string, def bool, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().Bool(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
@@ -145,7 +146,7 @@ func addBoolFlag(cmd *cobra.Command, name string, def bool, desc string, opts ..
 	}
 }
 
-func addStringSliceFlag(cmd *cobra.Command, name string, def []string, desc string, opts ...flagOpt) {
+func addStringSliceFlag(cmd *command, name string, def []string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().StringSlice(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
@@ -155,7 +156,7 @@ func addStringSliceFlag(cmd *cobra.Command, name string, def []string, desc stri
 	}
 }
 
-func flagName(cmd *cobra.Command, name string) string {
+func flagName(cmd *command, name string) string {
 	parentName := doit.NSRoot
 	if cmd.Parent() != nil {
 		parentName = cmd.Parent().Name()
@@ -175,10 +176,16 @@ func cmdNS(cmd *cobra.Command) string {
 
 type cmdRunner func(ns string, config doit.Config, out io.Writer, args []string) error
 
-type cmdOption func(*cobra.Command)
+type cmdOption func(*command)
+
+type command struct {
+	*cobra.Command
+
+	fmtCols []string
+}
 
 func aliasOpt(aliases ...string) cmdOption {
-	return func(c *cobra.Command) {
+	return func(c *command) {
 		if c.Aliases == nil {
 			c.Aliases = []string{}
 		}
@@ -189,8 +196,14 @@ func aliasOpt(aliases ...string) cmdOption {
 	}
 }
 
-func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *cobra.Command {
-	c := &cobra.Command{
+func displayerType(d displayer) cmdOption {
+	return func(c *command) {
+		c.fmtCols = d.Cols()
+	}
+}
+
+func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *command {
+	cc := &cobra.Command{
 		Use:   cliText,
 		Short: desc,
 		Long:  desc,
@@ -201,15 +214,21 @@ func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out i
 	}
 
 	if parent != nil {
-		parent.AddCommand(c)
+		parent.AddCommand(cc)
 	}
+
+	c := &command{Command: cc}
 
 	for _, co := range options {
 		co(c)
 	}
 
-	addStringFlag(c, doit.ArgFormat, "", "Format")
-	addBoolFlag(c, doit.ArgNoHeader, false, "hide headers")
+	if cols := c.fmtCols; cols != nil {
+		formatHelp := fmt.Sprintf("Columns for output in a comma seperated list. Possible values: %s",
+			strings.Join(cols, ","))
+		addStringFlag(c, doit.ArgFormat, "", formatHelp)
+		addBoolFlag(c, doit.ArgNoHeader, false, "hide headers")
+	}
 
 	return c
 }
