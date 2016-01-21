@@ -35,3 +35,4 @@ import:
 - package: github.com/markbates/goth
   subpackages:
   - /gothic
+- package: github.com/gobwas/glob

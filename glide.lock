@@ -1,5 +1,5 @@
-hash: f4792c538d36f95db24ffb76d8efd77f554bc9f7536ad0ae4ae8991cde15df26
-updated: 2016-01-19T22:40:36.675286619-05:00
+hash: d640ce81c351a683852c0fd87da11375551f8e5c5f15b9e7c1fb3796b2fc781c
+updated: 2016-01-21T10:57:51.507472709-05:00
 imports:
 - name: github.com/armon/consul-api
   version: dcfedd50ed5334f96adee43fc88518a4f095e15c
@@ -21,6 +21,8 @@ imports:
   version: 2688c11a02dc3deac65645c82c3c812f95e417bf
 - name: github.com/fatih/color
   version: 9aae6aaa22315390f03959adca2c4d395b02fcef
+- name: github.com/gobwas/glob
+  version: 548585bcb5951f873874c6338edef649f4100fde
 - name: github.com/golang/glog
   version: fca8c8854093a154ff1eb580aae10276ad6b1b5f
 - name: github.com/golang/protobuf

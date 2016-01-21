@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
 	"github.com/digitalocean/godo/util"
+	"github.com/gobwas/glob"
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +52,7 @@ func Droplet() *cobra.Command {
 	cmdBuilder(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", writer,
 		aliasOpt("k"), displayerType(&kernel{}))
 
-	cmdBuilder(cmd, RunDropletList, "list [REGEX]", "list droplets", writer,
+	cmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", writer,
 		aliasOpt("ls"), displayerType(&droplet{}))
 
 	cmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", writer,
@@ -426,14 +426,14 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 		return si, resp, err
 	}
 
-	matches := []*regexp.Regexp{}
-	for _, reStr := range args {
-		re, err := regexp.Compile(reStr)
+	matches := []glob.Glob{}
+	for _, globStr := range args {
+		g, err := glob.Compile(globStr)
 		if err != nil {
-			return fmt.Errorf("unknown regex %q", reStr)
+			return fmt.Errorf("unknown glob %q", globStr)
 		}
 
-		matches = append(matches, re)
+		matches = append(matches, g)
 	}
 
 	si, err := doit.PaginateResp(f)
@@ -450,7 +450,7 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 			skip = false
 		} else {
 			for _, m := range matches {
-				if m.MatchString(droplet.Name) {
+				if m.Match(droplet.Name) {
 					skip = false
 				}
 			}
