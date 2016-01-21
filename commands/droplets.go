@@ -52,8 +52,9 @@ func Droplet() *cobra.Command {
 	cmdBuilder(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", writer,
 		aliasOpt("k"), displayerType(&kernel{}))
 
-	cmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", writer,
+	cmdRunDropletList := cmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", writer,
 		aliasOpt("ls"), displayerType(&droplet{}))
+	addStringFlag(cmdRunDropletList, doit.ArgRegionSlug, "", "Droplet region")
 
 	cmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", writer,
 		aliasOpt("n"), displayerType(&droplet{}))
@@ -412,6 +413,11 @@ func RunDropletKernels(ns string, config doit.Config, out io.Writer, args []stri
 func RunDropletList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
 
+	region, err := config.GetString(ns, doit.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
+
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := client.Droplets.List(opt)
 		if err != nil {
@@ -453,6 +459,12 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 				if m.Match(droplet.Name) {
 					skip = false
 				}
+			}
+		}
+
+		if !skip && region != "" {
+			if region != droplet.Region.Slug {
+				skip = true
 			}
 		}
 
