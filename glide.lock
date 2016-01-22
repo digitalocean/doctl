@@ -1,5 +1,5 @@
-hash: d640ce81c351a683852c0fd87da11375551f8e5c5f15b9e7c1fb3796b2fc781c
-updated: 2016-01-21T10:57:51.507472709-05:00
+hash: 3608c85e713905f5a78e24d0476129b2f820ae47b6106807323661ac96b478dc
+updated: 2016-01-21T16:47:57.69747728-05:00
 imports:
 - name: github.com/armon/consul-api
   version: dcfedd50ed5334f96adee43fc88518a4f095e15c
@@ -67,6 +67,8 @@ imports:
   version: 281073eb9eb092240d33ef253c404f1cca550309
 - name: github.com/mrjones/oauth
   version: fdd43ab9ffd4adbedbecf59a0ec6a7e0d3ef3970
+- name: github.com/natefinch/pie
+  version: 6059396cf8c679e5b6a7c82378e4623ca62f91ff
 - name: github.com/pmezard/go-difflib
   version: e8554b8641db39598be7f6342874b958f12ae1d4
 - name: github.com/russross/blackfriday

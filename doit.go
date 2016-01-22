@@ -42,6 +42,7 @@ func init() {
 	jww.SetStdoutThreshold(jww.LevelError)
 }
 
+// Version is the version info for doit.
 type Version struct {
 	Major, Minor, Patch int
 	Name, Build, Label  string
@@ -57,6 +58,7 @@ func (v Version) String() string {
 	return buffer.String()
 }
 
+// Complete is the complete version for doit.
 func (v Version) Complete() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(fmt.Sprintf("doit version %s", v.String()))

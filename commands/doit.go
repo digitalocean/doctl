@@ -3,10 +3,13 @@ package commands
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/plugin"
 	"github.com/digitalocean/godo"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -71,6 +74,56 @@ func addCommands() {
 	DoitCmd.AddCommand(SSHKeys())
 	DoitCmd.AddCommand(SSH())
 	DoitCmd.AddCommand(Version())
+
+	cmds, err := findPluginsInPath()
+	if err != nil {
+		log.Fatalf("unable to search plugins: %s", err)
+	}
+
+	for _, c := range cmds {
+		DoitCmd.AddCommand(c)
+	}
+}
+
+func findPluginsInPath() ([]*cobra.Command, error) {
+	envPath := os.Getenv("PATH")
+	paths := strings.Split(envPath, string(os.PathListSeparator))
+
+	cmds := []*cobra.Command{}
+
+	for _, p := range paths {
+		matches, err := filepath.Glob(filepath.Join(p, "doit-provider-*"))
+		if err != nil {
+			return nil, err
+		}
+
+		for _, pluginPath := range matches {
+			name := pluginName(pluginPath)
+			cmd := &cobra.Command{
+				Use:   name,
+				Short: fmt.Sprintf("plugin: %s", name),
+				Run: func(c *cobra.Command, args []string) {
+					method, args := args[0], args[1:]
+					host, err := plugin.NewHost(pluginPath)
+					checkErr(err)
+
+					results, err := host.Call(c.Use+"."+strings.Title(method), args)
+					checkErr(err)
+
+					fmt.Println(results)
+				},
+			}
+
+			cmds = append(cmds, cmd)
+		}
+	}
+
+	return cmds, nil
+}
+
+func pluginName(p string) string {
+	base := filepath.Base(p)
+	return strings.TrimPrefix(base, "doit-provider-")
 }
 
 func initFlags() {
