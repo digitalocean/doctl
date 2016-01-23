@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +39,7 @@ func FloatingIP() *cobra.Command {
 // RunFloatingIPCreate runs floating IP create.
 func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	fis := do.NewFloatingIPsService(client)
 
 	region, err := config.GetString(ns, doit.ArgRegionSlug)
 	if err != nil {
@@ -53,7 +55,8 @@ func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer, args []st
 		Region:    region,
 		DropletID: dropletID,
 	}
-	ip, _, err := client.FloatingIPs.Create(req)
+
+	ip, err := fis.Create(req)
 	if err != nil {
 		return err
 	}
@@ -61,7 +64,7 @@ func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer, args []st
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &floatingIP{floatingIPs: floatingIPs{*ip}},
+		item:   &floatingIP{floatingIPs: floatingIPs{*ip.FloatingIP}},
 		out:    out,
 	}
 	return displayOutput(dc)
@@ -70,6 +73,7 @@ func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer, args []st
 // RunFloatingIPGet retrieves a floating IP's details.
 func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	fis := do.NewFloatingIPsService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -81,7 +85,7 @@ func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []strin
 		return errors.New("invalid ip address")
 	}
 
-	d, _, err := client.FloatingIPs.Get(ip)
+	fip, err := fis.Get(ip)
 	if err != nil {
 		return err
 	}
@@ -89,7 +93,7 @@ func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []strin
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &floatingIP{floatingIPs: floatingIPs{*d}},
+		item:   &floatingIP{floatingIPs: floatingIPs{*fip.FloatingIP}},
 		out:    out,
 	}
 
@@ -99,6 +103,7 @@ func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []strin
 // RunFloatingIPDelete runs floating IP delete.
 func RunFloatingIPDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ds := do.NewFloatingIPsService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -106,55 +111,40 @@ func RunFloatingIPDelete(ns string, config doit.Config, out io.Writer, args []st
 
 	ip := args[0]
 
-	_, err := client.FloatingIPs.Delete(ip)
-	return err
+	return ds.Delete(ip)
 }
 
 // RunFloatingIPList runs floating IP create.
 func RunFloatingIPList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	fis := do.NewFloatingIPsService(client)
 
 	region, err := config.GetString(ns, doit.ArgRegionSlug)
 	if err != nil {
 		return err
 	}
 
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.FloatingIPs.List(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(f)
+	si, err := fis.List()
 	if err != nil {
 		return err
 	}
 
-	list := []godo.FloatingIP{}
-	for _, x := range si {
-		fip := x.(godo.FloatingIP)
+	fips := &floatingIP{floatingIPs: []godo.FloatingIP{}}
+	for _, fip := range si {
 		var skip bool
 		if region != "" && region != fip.Region.Slug {
 			skip = true
 		}
 
 		if !skip {
-			list = append(list, fip)
+			fips.floatingIPs = append(fips.floatingIPs, *fip.FloatingIP)
 		}
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &floatingIP{floatingIPs: list},
+		item:   fips,
 		out:    out,
 	}
 
