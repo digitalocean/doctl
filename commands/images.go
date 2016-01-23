@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -49,30 +50,123 @@ func Images() *cobra.Command {
 // RunImagesList images.
 func RunImagesList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	return listImages(ns, config, out, client.Images.List)
+	is := do.NewImagesService(client)
+
+	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	if err != nil {
+		return err
+	}
+
+	list, err := is.List(public)
+	if err != nil {
+		return err
+	}
+
+	item := &image{images: []godo.Image{}}
+	for _, i := range list {
+		item.images = append(item.images, *i.Image)
+	}
+
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   item,
+		out:    out,
+	}
+	return displayOutput(dc)
 }
 
 // RunImagesListDistribution lists distributions that are available.
 func RunImagesListDistribution(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	return listImages(ns, config, out, client.Images.ListDistribution)
+	is := do.NewImagesService(client)
+
+	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	if err != nil {
+		return err
+	}
+
+	list, err := is.ListDistribution(public)
+	if err != nil {
+		return err
+	}
+
+	item := &image{images: []godo.Image{}}
+	for _, i := range list {
+		item.images = append(item.images, *i.Image)
+	}
+
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   item,
+		out:    out,
+	}
+	return displayOutput(dc)
 }
 
 // RunImagesListApplication lists application iamges.
 func RunImagesListApplication(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	return listImages(ns, config, out, client.Images.ListApplication)
+	is := do.NewImagesService(client)
+
+	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	if err != nil {
+		return err
+	}
+
+	list, err := is.ListApplication(public)
+	if err != nil {
+		return err
+	}
+
+	item := &image{images: []godo.Image{}}
+	for _, i := range list {
+		item.images = append(item.images, *i.Image)
+	}
+
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   item,
+		out:    out,
+	}
+	return displayOutput(dc)
 }
 
 // RunImagesListUser lists user images.
 func RunImagesListUser(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	return listImages(ns, config, out, client.Images.ListUser)
+	is := do.NewImagesService(client)
+
+	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	if err != nil {
+		return err
+	}
+
+	list, err := is.ListUser(public)
+	if err != nil {
+		return err
+	}
+
+	item := &image{images: []godo.Image{}}
+	for _, i := range list {
+		item.images = append(item.images, *i.Image)
+	}
+
+	dc := &outputConfig{
+		ns:     ns,
+		config: config,
+		item:   item,
+		out:    out,
+	}
+	return displayOutput(dc)
 }
 
 // RunImagesGet retrieves an image by id or slug.
 func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	is := do.NewImagesService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -80,14 +174,14 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 
 	rawID := args[0]
 
-	var i *godo.Image
+	var i *do.Image
 	var err error
 
 	if id, cerr := strconv.Atoi(rawID); cerr == nil {
-		i, _, err = client.Images.GetByID(id)
+		i, err = is.GetByID(id)
 	} else {
 		if len(rawID) > 0 {
-			i, _, err = client.Images.GetBySlug(rawID)
+			i, err = is.GetBySlug(rawID)
 		} else {
 			err = fmt.Errorf("image identifier is required")
 		}
@@ -100,7 +194,7 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &image{images: images{*i}},
+		item:   &image{images: images{*i.Image}},
 		out:    out,
 	}
 
@@ -110,6 +204,7 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 // RunImagesUpdate updates an image.
 func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	is := do.NewImagesService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -126,7 +221,7 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 		Name: name,
 	}
 
-	i, _, err := client.Images.Update(id, req)
+	i, err := is.Update(id, req)
 	if err != nil {
 		return err
 	}
@@ -134,7 +229,7 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &image{images: images{*i}},
+		item:   &image{images: images{*i.Image}},
 		out:    out,
 	}
 
@@ -144,6 +239,7 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 // RunImagesDelete deletes an image.
 func RunImagesDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	is := do.NewImagesService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -154,48 +250,5 @@ func RunImagesDelete(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	_, err = client.Images.Delete(id)
-	return err
-}
-
-type listFn func(*godo.ListOptions) ([]godo.Image, *godo.Response, error)
-
-func listImages(ns string, config doit.Config, out io.Writer, lFn listFn) error {
-	public, err := config.GetBool(ns, doit.ArgImagePublic)
-	if err != nil {
-		return err
-	}
-
-	fn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := lFn(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := []interface{}{}
-		for _, i := range list {
-			if (public && i.Public) || !public {
-				si = append(si, i)
-			}
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(fn)
-	if err != nil {
-		return err
-	}
-
-	list := make([]godo.Image, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Image)
-	}
-	dc := &outputConfig{
-		ns:     ns,
-		config: config,
-		item:   &image{images: list},
-		out:    out,
-	}
-	return displayOutput(dc)
+	return is.Delete(id)
 }
