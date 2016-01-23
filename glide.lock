@@ -1,5 +1,5 @@
-hash: 3608c85e713905f5a78e24d0476129b2f820ae47b6106807323661ac96b478dc
-updated: 2016-01-21T16:47:57.69747728-05:00
+hash: 71119cdd6b4d03f55a64ea206f47587325630953933d4f7a21ee3cee17c6686b
+updated: 2016-01-22T19:11:42.245945-05:00
 imports:
 - name: github.com/armon/consul-api
   version: dcfedd50ed5334f96adee43fc88518a4f095e15c
@@ -22,7 +22,7 @@ imports:
 - name: github.com/fatih/color
   version: 9aae6aaa22315390f03959adca2c4d395b02fcef
 - name: github.com/gobwas/glob
-  version: 548585bcb5951f873874c6338edef649f4100fde
+  version: 51a65fcc7de76cec18112da81e56759e00a89b8e
 - name: github.com/golang/glog
   version: fca8c8854093a154ff1eb580aae10276ad6b1b5f
 - name: github.com/golang/protobuf
@@ -99,6 +99,10 @@ imports:
   version: ac974c61c2f990f4115b119354b5e0b47550e888
 - name: github.com/ugorji/go
   version: cd43bdd6be4b5675a0d1e75c4af55ee1dc0d9c5e
+- name: github.com/vektra/errors
+  version: c64d83aba85aa4392895aadeefabbd24e89f3580
+- name: github.com/vektra/mockery
+  version: 47a058062601e235731714f89d7ec95c1ec47a5e
 - name: github.com/xordataexchange/crypt
   version: 749e360c8f236773f28fc6d3ddfce4a470795227
 - name: golang.org/x/crypto
@@ -109,6 +113,8 @@ imports:
   version: ef4eca6b097fad7cec79afcc278d213a6de1c960
 - name: golang.org/x/text
   version: 87ad79f47ac96edbf2568691d123d113fd7ac535
+- name: golang.org/x/tools
+  version: f3a63969dd29f8cfa913fdaea22f30c1ed537cb3
 - name: google.golang.org/api
   version: fb9a762b1ba5eb828d4c3ea6b53755f290ca27ad
 - name: google.golang.org/appengine

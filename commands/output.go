@@ -5,6 +5,7 @@ import (
 	"io"
 	"text/tabwriter"
 
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 )
 
@@ -28,7 +29,7 @@ func (hc *headerControl) HideHeader(hide bool) {
 }
 
 type account struct {
-	*godo.Account
+	*do.Account
 }
 
 var _ displayer = &account{}

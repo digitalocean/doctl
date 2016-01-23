@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/spf13/cobra"
 )
 
@@ -24,8 +25,8 @@ func Account() *cobra.Command {
 // RunAccountGet runs account get.
 func RunAccountGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-
-	a, _, err := client.Account.Get()
+	accountSvc := do.NewAccountService(client)
+	a, err := accountSvc.Get()
 	if err != nil {
 		return err
 	}
