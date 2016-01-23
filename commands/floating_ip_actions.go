@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/spf13/cobra"
 )
 
@@ -39,13 +40,14 @@ func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args 
 	ip := args[0]
 
 	client := config.GetGodoClient()
+	fia := do.NewFloatingIPActionsService(client)
 
 	actionID, err := strconv.Atoi(args[1])
 	if err != nil {
 		return err
 	}
 
-	a, _, err := client.FloatingIPActions.Get(ip, actionID)
+	a, err := fia.Get(ip, actionID)
 	if err != nil {
 		return err
 	}
@@ -53,7 +55,7 @@ func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a}},
+		item:   &action{actions: actions{*a.Action}},
 		out:    out,
 	}
 
@@ -69,13 +71,14 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, ar
 	ip := args[0]
 
 	client := config.GetGodoClient()
+	fia := do.NewFloatingIPActionsService(client)
 
 	dropletID, err := strconv.Atoi(args[1])
 	if err != nil {
 		return err
 	}
 
-	a, _, err := client.FloatingIPActions.Assign(ip, dropletID)
+	a, err := fia.Assign(ip, dropletID)
 	if err != nil {
 		checkErr(fmt.Errorf("could not assign IP to droplet: %v", err))
 	}
@@ -83,7 +86,7 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, ar
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a}},
+		item:   &action{actions: actions{*a.Action}},
 		out:    out,
 	}
 
@@ -99,8 +102,9 @@ func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer, 
 	ip := args[0]
 
 	client := config.GetGodoClient()
+	fia := do.NewFloatingIPActionsService(client)
 
-	a, _, err := client.FloatingIPActions.Unassign(ip)
+	a, err := fia.Unassign(ip)
 	if err != nil {
 		checkErr(fmt.Errorf("could not unassign IP to droplet: %v", err))
 	}
@@ -108,7 +112,7 @@ func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer, 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a}},
+		item:   &action{actions: actions{*a.Action}},
 		out:    out,
 	}
 	return displayOutput(dc)
