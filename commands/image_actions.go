@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +33,7 @@ func ImageAction() *cobra.Command {
 // RunImageActionsGet retrieves an action for an image.
 func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ias := do.NewImageActionsService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -47,7 +49,7 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []str
 		return err
 	}
 
-	a, _, err := client.ImageActions.Get(imageID, actionID)
+	a, err := ias.Get(imageID, actionID)
 	if err != nil {
 		return err
 	}
@@ -55,7 +57,7 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []str
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a}},
+		item:   &action{actions: actions{*a.Action}},
 		out:    out,
 	}
 
@@ -65,6 +67,7 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []str
 // RunImageActionsTransfer an image.
 func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ias := do.NewImageActionsService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -84,7 +87,7 @@ func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args 
 		"region": region,
 	}
 
-	a, _, err := client.ImageActions.Transfer(id, req)
+	a, err := ias.Transfer(id, req)
 	if err != nil {
 		checkErr(fmt.Errorf("could not transfer image: %v", err))
 	}
@@ -92,7 +95,7 @@ func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a}},
+		item:   &action{actions: actions{*a.Action}},
 		out:    out,
 	}
 
