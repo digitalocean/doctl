@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -70,9 +71,16 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 
 	var droplet *godo.Droplet
 
+	ds := do.NewDropletsService(client)
 	if id, err := strconv.Atoi(dropletID); err == nil {
 		// dropletID is an integer
-		droplet, err = getDropletByID(client, id)
+
+		doDroplet, err := ds.Get(id)
+		if err != nil {
+			return err
+		}
+
+		droplet = doDroplet.Droplet
 	} else {
 		// dropletID is a string
 		var droplets []godo.Droplet
