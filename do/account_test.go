@@ -3,7 +3,7 @@ package do
 import (
 	"testing"
 
-	"github.com/bryanl/doit/godomock"
+	"github.com/bryanl/godomock"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )

@@ -1,10 +1,12 @@
-hash: 71119cdd6b4d03f55a64ea206f47587325630953933d4f7a21ee3cee17c6686b
-updated: 2016-01-22T19:11:42.245945-05:00
+hash: ce697866dd3b81fe93f4daa3b65e88cf52c2c3fd11e086a4fc05d9c189295dc5
+updated: 2016-01-22T20:25:20.133934326-05:00
 imports:
 - name: github.com/armon/consul-api
   version: dcfedd50ed5334f96adee43fc88518a4f095e15c
 - name: github.com/bryanl/doit-server
   version: 6fb91d751dc13dc5122708d487ce3367e785fedd
+- name: github.com/bryanl/godomock
+  version: c2897683e9505efc69e285e2d4dc09f470a284d6
 - name: github.com/bryanl/webbrowser
   version: bbcbcd4a8c93c9dfaa3d974e5404e1d5f4ada91a
 - name: github.com/BurntSushi/toml

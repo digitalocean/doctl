@@ -38,3 +38,4 @@ import:
 - package: github.com/gobwas/glob
 - package: github.com/natefinch/pie
 - package: github.com/vektra/mockery
+- package: github.com/bryanl/godomock
