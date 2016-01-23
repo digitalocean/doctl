@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -74,6 +75,7 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string
 	domainName := args[0]
 
 	client := config.GetGodoClient()
+	ds := do.NewDomainsService(client)
 
 	ipAddress, err := config.GetString(ns, "ip-address")
 	if err != nil {
@@ -85,7 +87,7 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string
 		IPAddress: ipAddress,
 	}
 
-	d, _, err := client.Domains.Create(req)
+	d, err := ds.Create(req)
 	if err != nil {
 		return err
 	}
@@ -93,7 +95,7 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domain{domains: domains{*d}},
+		item:   &domain{domains: domains{*d.Domain}},
 		out:    out,
 	}
 
@@ -103,35 +105,22 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string
 // RunDomainList runs domain create.
 func RunDomainList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ds := do.NewDomainsService(client)
 
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Domains.List(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(f)
+	domains, err := ds.List()
 	if err != nil {
 		return err
 	}
 
-	list := make([]godo.Domain, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Domain)
+	od := &domain{domains: []godo.Domain{}}
+	for _, d := range domains {
+		od.domains = append(od.domains, *d.Domain)
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domain{domains: list},
+		item:   od,
 		out:    out,
 	}
 
@@ -146,12 +135,13 @@ func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) e
 	id := args[0]
 
 	client := config.GetGodoClient()
+	ds := do.NewDomainsService(client)
 
 	if len(id) < 1 {
 		return errors.New("invalid domain name")
 	}
 
-	d, _, err := client.Domains.Get(id)
+	d, err := ds.Get(id)
 	if err != nil {
 		return err
 	}
@@ -159,7 +149,7 @@ func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domain{domains: domains{*d}},
+		item:   &domain{domains: domains{*d.Domain}},
 		out:    out,
 	}
 
@@ -174,12 +164,13 @@ func RunDomainDelete(ns string, config doit.Config, out io.Writer, args []string
 	name := args[0]
 
 	client := config.GetGodoClient()
+	ds := do.NewDomainsService(client)
 
 	if len(name) < 1 {
 		return errors.New("invalid domain name")
 	}
 
-	_, err := client.Domains.Delete(name)
+	err := ds.Delete(name)
 	return err
 }
 
@@ -191,39 +182,26 @@ func RunRecordList(ns string, config doit.Config, out io.Writer, args []string) 
 	name := args[0]
 
 	client := config.GetGodoClient()
+	ds := do.NewDomainsService(client)
 
 	if len(name) < 1 {
 		return errors.New("domain name is missing")
 	}
 
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Domains.Records(name, opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(f)
+	list, err := ds.Records(name)
 	if err != nil {
 		return err
 	}
 
-	list := make([]godo.DomainRecord, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.DomainRecord)
+	dr := &domainRecord{domainRecords: []godo.DomainRecord{}}
+	for _, gdr := range list {
+		dr.domainRecords = append(dr.domainRecords, *gdr.DomainRecord)
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domainRecord{domainRecords: list},
+		item:   dr,
 		out:    out,
 	}
 
@@ -238,6 +216,7 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 	name := args[0]
 
 	client := config.GetGodoClient()
+	ds := do.NewDomainsService(client)
 
 	rType, err := config.GetString(ns, doit.ArgRecordType)
 	if err != nil {
@@ -282,7 +261,7 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 		return errors.New("record request is missing type")
 	}
 
-	r, _, err := client.Domains.CreateRecord(name, drcr)
+	r, err := ds.CreateRecord(name, drcr)
 	if err != nil {
 		return err
 	}
@@ -290,7 +269,7 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domainRecord{domainRecords{*r}},
+		item:   &domainRecord{domainRecords{*r.DomainRecord}},
 		out:    out,
 	}
 
@@ -309,6 +288,7 @@ func RunRecordDelete(ns string, config doit.Config, out io.Writer, args []string
 	}
 
 	client := config.GetGodoClient()
+	ds := do.NewDomainsService(client)
 
 	for _, i := range ids {
 		id, err := strconv.Atoi(i)
@@ -316,7 +296,7 @@ func RunRecordDelete(ns string, config doit.Config, out io.Writer, args []string
 			return fmt.Errorf("invalid record id %q", i)
 		}
 
-		_, err = client.Domains.DeleteRecord(domainName, id)
+		err = ds.DeleteRecord(domainName, id)
 		if err != nil {
 			return err
 		}
@@ -333,6 +313,7 @@ func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string
 	domainName := args[0]
 
 	client := config.GetGodoClient()
+	ds := do.NewDomainsService(client)
 
 	recordID, err := config.GetInt(ns, doit.ArgRecordID)
 	if err != nil {
@@ -378,7 +359,7 @@ func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string
 		Weight:   rWeight,
 	}
 
-	r, _, err := client.Domains.EditRecord(domainName, recordID, drcr)
+	r, err := ds.EditRecord(domainName, recordID, drcr)
 	if err != nil {
 		return err
 	}
@@ -386,7 +367,7 @@ func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domainRecord{domainRecords{*r}},
+		item:   &domainRecord{domainRecords{*r.DomainRecord}},
 		out:    out,
 	}
 
