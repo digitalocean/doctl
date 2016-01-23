@@ -5,7 +5,7 @@ import (
 	"strconv"
 
 	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
+	"github.com/bryanl/doit/do"
 	"github.com/spf13/cobra"
 )
 
@@ -29,34 +29,23 @@ func Actions() *cobra.Command {
 // RunCmdActionList run action list.
 func RunCmdActionList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Actions.List(opt)
-		if err != nil {
-			return nil, nil, err
-		}
+	as := do.NewActionsService(client)
 
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(f)
+	newActions, err := as.List()
 	if err != nil {
 		return err
 	}
 
-	list := make([]godo.Action, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Action)
+	// FIXME remove once all actions are fixed
+	oldActions := actions{}
+	for _, a := range newActions {
+		oldActions = append(oldActions, *a.Action)
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: list},
+		item:   &action{actions: oldActions},
 		out:    out,
 	}
 
@@ -75,8 +64,8 @@ func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string
 	}
 
 	client := config.GetGodoClient()
-
-	a, _, err := client.Actions.Get(id)
+	as := do.NewActionsService(client)
+	a, err := as.Get(id)
 	if err != nil {
 		return err
 	}
@@ -84,7 +73,7 @@ func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a}},
+		item:   &action{actions: actions{*a.Action}},
 		out:    out,
 	}
 
