@@ -43,7 +43,8 @@ func Droplet() *cobra.Command {
 	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
 	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image", requiredOpt())
 
-	cmdBuilder(cmd, RunDropletDelete, "delete ID [ID ...]", "delete droplet", writer, aliasOpt("d", "del"))
+	cmdBuilder(cmd, RunDropletDelete, "delete ID [ID ...]", "delete droplet", writer,
+		aliasOpt("d", "del", "rm"))
 
 	cmdBuilder(cmd, RunDropletGet, "get", "get droplet", writer,
 		aliasOpt("g"), displayerType(&droplet{}))
