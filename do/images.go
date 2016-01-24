@@ -1,9 +1,6 @@
 package do
 
-import (
-	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
-)
+import "github.com/digitalocean/godo"
 
 // Image is a werapper for godo.Image
 type Image struct {
@@ -105,7 +102,7 @@ func (is *imagesService) listImages(lFn listFn, public bool) (Images, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(fn)
+	si, err := PaginateResp(fn)
 	if err != nil {
 		return nil, err
 	}

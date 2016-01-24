@@ -1,14 +1,41 @@
 package do
 
 import (
-	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
 	"github.com/digitalocean/godo/util"
+)
+
+// DropletIPTable is a table of interface IPS.
+type DropletIPTable map[InterfaceType]string
+
+// InterfaceType is a an interface type.
+type InterfaceType string
+
+const (
+	// InterfacePublic is a public interface.
+	InterfacePublic InterfaceType = "public"
+	// InterfacePrivate is a private interface.
+	InterfacePrivate InterfaceType = "private"
 )
 
 // Droplet is a wrapper for godo.Droplet
 type Droplet struct {
 	*godo.Droplet
+}
+
+// IPs returns a map of interface.s
+func (d *Droplet) IPs() DropletIPTable {
+	t := DropletIPTable{}
+	for _, in := range d.Networks.V4 {
+		switch in.Type {
+		case "public":
+			t[InterfacePublic] = in.IPAddress
+		case "private":
+			t[InterfacePrivate] = in.IPAddress
+		}
+	}
+
+	return t
 }
 
 // Droplets is a slice of Droplet.
@@ -64,7 +91,7 @@ func (ds *dropletsService) List() (Droplets, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +176,7 @@ func (ds *dropletsService) Kernels(id int) (Kernels, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +205,7 @@ func (ds *dropletsService) Snapshots(id int) (Images, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +234,7 @@ func (ds *dropletsService) Backups(id int) (Images, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +263,7 @@ func (ds *dropletsService) Actions(id int) (Actions, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}

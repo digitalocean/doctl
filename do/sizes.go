@@ -1,9 +1,6 @@
 package do
 
-import (
-	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
-)
+import "github.com/digitalocean/godo"
 
 // Size wraps godo Size.
 type Size struct {
@@ -46,7 +43,7 @@ func (rs *sizesService) List() (Sizes, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}

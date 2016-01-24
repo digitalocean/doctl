@@ -1,4 +1,4 @@
-package doit
+package do
 
 import "testing"
 

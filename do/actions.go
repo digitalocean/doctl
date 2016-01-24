@@ -1,9 +1,6 @@
 package do
 
-import (
-	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
-)
+import "github.com/digitalocean/godo"
 
 //Action is a wrapper for godo.Action
 type Action struct {
@@ -47,7 +44,7 @@ func (as *actionsService) List() (Actions, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}

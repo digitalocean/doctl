@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/bryanl/doit"
 	"github.com/digitalocean/godo"
 )
 
@@ -53,7 +52,7 @@ func (ks *keysService) List() (SSHKeys, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}

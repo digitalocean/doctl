@@ -1,9 +1,6 @@
 package do
 
-import (
-	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
-)
+import "github.com/digitalocean/godo"
 
 // Domain wraps a godo Domain.
 type Domain struct {
@@ -63,7 +60,7 @@ func (ds *domainsService) List() (Domains, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +112,7 @@ func (ds *domainsService) Records(name string) (DomainRecords, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}

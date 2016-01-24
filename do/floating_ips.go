@@ -1,9 +1,6 @@
 package do
 
-import (
-	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
-)
+import "github.com/digitalocean/godo"
 
 // FloatingIP wraps a godo FloatingIP.
 type FloatingIP struct {
@@ -49,7 +46,7 @@ func (fis *floatingIPsService) List() (FloatingIPs, error) {
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}

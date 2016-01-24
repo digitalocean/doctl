@@ -1,9 +1,6 @@
 package do
 
-import (
-	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
-)
+import "github.com/digitalocean/godo"
 
 // FloatingIPActionsService is an interface for interacting with
 // DigitalOcean's floating ip action api.
@@ -69,7 +66,7 @@ func (fia *floatingIPActionsService) List(ip string, opt *godo.ListOptions) ([]A
 		return si, resp, err
 	}
 
-	si, err := doit.PaginateResp(f)
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}

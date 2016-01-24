@@ -9,9 +9,7 @@ import (
 	"strings"
 
 	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/do"
 	"github.com/bryanl/doit/plugin"
-	"github.com/digitalocean/godo"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -285,55 +283,4 @@ func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out i
 	}
 
 	return c
-}
-
-func listDroplets(client *godo.Client) ([]godo.Droplet, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Droplets.List(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(f)
-	if err != nil {
-		return nil, err
-	}
-
-	list := make([]godo.Droplet, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Droplet)
-	}
-
-	return list, nil
-}
-
-type dropletIPTable map[ifaceType]string
-
-type ifaceType string
-
-const (
-	ifacePublic  ifaceType = "public"
-	ifacePrivate ifaceType = "private"
-)
-
-func extractDropletIPs(droplet *do.Droplet) dropletIPTable {
-	t := dropletIPTable{}
-	for _, in := range droplet.Networks.V4 {
-		switch in.Type {
-		case "public":
-			t[ifacePublic] = in.IPAddress
-		case "private":
-			t[ifacePrivate] = in.IPAddress
-		}
-	}
-
-	return t
 }
