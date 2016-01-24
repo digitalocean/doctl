@@ -1,12 +1,11 @@
 package commands
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
-	"strconv"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh"
@@ -47,35 +46,22 @@ func SSHKeys() *cobra.Command {
 // RunKeyList lists keys.
 func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ks := do.NewKeysService(client)
 
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Keys.List(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(f)
+	list, err := ks.List()
 	if err != nil {
 		return err
 	}
 
-	list := make([]godo.Key, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Key)
+	item := &key{keys: []godo.Key{}}
+	for _, k := range list {
+		item.keys = append(item.keys, *k.Key)
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: list},
+		item:   item,
 		out:    out,
 	}
 
@@ -85,25 +71,14 @@ func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) err
 // RunKeyGet retrieves a key.
 func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ks := do.NewKeysService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
 	}
 
 	rawKey := args[0]
-
-	var err error
-	var k *godo.Key
-
-	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
-		k, _, err = client.Keys.GetByID(i)
-	} else {
-		if len(rawKey) > 0 {
-			k, _, err = client.Keys.GetByFingerprint(rawKey)
-		} else {
-			err = fmt.Errorf("missing key id or fingerprint")
-		}
-	}
+	k, err := ks.Get(rawKey)
 
 	if err != nil {
 		return err
@@ -112,7 +87,7 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) erro
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: keys{*k}},
+		item:   &key{keys: keys{*k.Key}},
 		out:    out,
 	}
 
@@ -122,6 +97,7 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) erro
 // RunKeyCreate uploads a SSH key.
 func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ks := do.NewKeysService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -139,15 +115,15 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 		PublicKey: publicKey,
 	}
 
-	r, _, err := client.Keys.Create(kcr)
+	r, err := ks.Create(kcr)
 	if err != nil {
-		checkErr(fmt.Errorf("could not create key: %v", err))
+		return err
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: keys{*r}},
+		item:   &key{keys: keys{*r.Key}},
 		out:    out,
 	}
 
@@ -157,6 +133,7 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 // RunKeyImport imports a key from a file
 func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ks := do.NewKeysService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -188,7 +165,7 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 		PublicKey: string(keyFile),
 	}
 
-	r, _, err := client.Keys.Create(kcr)
+	r, err := ks.Create(kcr)
 	if err != nil {
 		return err
 	}
@@ -196,7 +173,7 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: keys{*r}},
+		item:   &key{keys: keys{*r.Key}},
 		out:    out,
 	}
 
@@ -206,27 +183,20 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 // RunKeyDelete deletes a key.
 func RunKeyDelete(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ks := do.NewKeysService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
 	}
 
 	rawKey := args[0]
-
-	var err error
-
-	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
-		_, err = client.Keys.DeleteByID(i)
-	} else {
-		_, err = client.Keys.DeleteByFingerprint(rawKey)
-	}
-
-	return err
+	return ks.Delete(rawKey)
 }
 
 // RunKeyUpdate updates a key.
 func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ks := do.NewKeysService(client)
 
 	if len(args) != 1 {
 		return doit.NewMissingArgsErr(ns)
@@ -243,13 +213,7 @@ func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) e
 		Name: name,
 	}
 
-	var k *godo.Key
-	if i, aerr := strconv.Atoi(rawKey); aerr == nil {
-		k, _, err = client.Keys.UpdateByID(i, req)
-	} else {
-		k, _, err = client.Keys.UpdateByFingerprint(rawKey, req)
-	}
-
+	k, err := ks.Update(rawKey, req)
 	if err != nil {
 		return err
 	}
@@ -257,7 +221,7 @@ func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: keys{*k}},
+		item:   &key{keys: keys{*k.Key}},
 		out:    out,
 	}
 
