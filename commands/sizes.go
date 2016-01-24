@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -24,37 +25,23 @@ func Size() *cobra.Command {
 // RunSizeList all sizes.
 func RunSizeList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	rs := do.NewSizesService(client)
 
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Sizes.List(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(f)
+	si, err := rs.List()
 	if err != nil {
 		return err
 	}
 
-	list := make([]godo.Size, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Size)
+	item := &size{sizes: []godo.Size{}}
+	for _, r := range si {
+		item.sizes = append(item.sizes, *r.Size)
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &size{sizes: list},
+		item:   item,
 		out:    out,
 	}
-
 	return displayOutput(dc)
 }
