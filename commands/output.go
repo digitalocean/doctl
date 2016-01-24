@@ -31,7 +31,7 @@ type account struct {
 	*do.Account
 }
 
-var _ displayer = &account{}
+var _ displayable = &account{}
 
 func (a *account) JSON(out io.Writer) error {
 	return writeJSON(a.Account, out)
@@ -66,7 +66,7 @@ type action struct {
 	actions do.Actions
 }
 
-var _ displayer = &action{}
+var _ displayable = &action{}
 
 func (a *action) JSON(out io.Writer) error {
 	return writeJSON(a.actions, out)
@@ -106,7 +106,7 @@ type domain struct {
 	domains do.Domains
 }
 
-var _ displayer = &domain{}
+var _ displayable = &domain{}
 
 func (d *domain) JSON(out io.Writer) error {
 	return writeJSON(d.domains, out)
@@ -175,7 +175,7 @@ type droplet struct {
 	droplets do.Droplets
 }
 
-var _ displayer = &droplet{}
+var _ displayable = &droplet{}
 
 func (d *droplet) JSON(out io.Writer) error {
 	return writeJSON(d.droplets, out)
@@ -215,7 +215,7 @@ type floatingIP struct {
 	floatingIPs do.FloatingIPs
 }
 
-var _ displayer = &floatingIP{}
+var _ displayable = &floatingIP{}
 
 func (fi *floatingIP) JSON(out io.Writer) error {
 	return writeJSON(fi.floatingIPs, out)
@@ -258,7 +258,7 @@ type image struct {
 	images do.Images
 }
 
-var _ displayer = &image{}
+var _ displayable = &image{}
 
 func (gi *image) JSON(out io.Writer) error {
 	return writeJSON(gi.images, out)
@@ -301,7 +301,7 @@ type kernel struct {
 	kernels do.Kernels
 }
 
-var _ displayer = &kernel{}
+var _ displayable = &kernel{}
 
 func (ke *kernel) JSON(out io.Writer) error {
 	return writeJSON(ke.kernels, out)
@@ -337,7 +337,7 @@ type key struct {
 	keys do.SSHKeys
 }
 
-var _ displayer = &key{}
+var _ displayable = &key{}
 
 func (ke *key) JSON(out io.Writer) error {
 	return writeJSON(ke.keys, out)
@@ -373,7 +373,7 @@ type region struct {
 	regions do.Regions
 }
 
-var _ displayer = &region{}
+var _ displayable = &region{}
 
 func (re *region) JSON(out io.Writer) error {
 	return writeJSON(re.regions, out)
@@ -409,7 +409,7 @@ type size struct {
 	sizes do.Sizes
 }
 
-var _ displayer = &size{}
+var _ displayable = &size{}
 
 func (si *size) JSON(out io.Writer) error {
 	return writeJSON(si.sizes, out)

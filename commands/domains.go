@@ -92,14 +92,14 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &domain{domains: do.Domains{*d}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDomainList runs domain create.
@@ -114,14 +114,14 @@ func RunDomainList(ns string, config doit.Config, out io.Writer, args []string) 
 
 	item := &domain{domains: domains}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   item,
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDomainGet retrieves a domain by name.
@@ -143,14 +143,14 @@ func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &domain{domains: do.Domains{*d}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDomainDelete deletes a domain by name.
@@ -192,14 +192,14 @@ func RunRecordList(ns string, config doit.Config, out io.Writer, args []string) 
 
 	items := &domainRecord{domainRecords: list}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   items,
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunRecordCreate creates a domain record.
@@ -260,14 +260,14 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &domainRecord{domainRecords: do.DomainRecords{*r}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunRecordDelete deletes a domain record.
@@ -358,12 +358,12 @@ func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &domainRecord{domainRecords: do.DomainRecords{*r}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }

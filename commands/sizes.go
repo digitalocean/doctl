@@ -31,11 +31,11 @@ func RunSizeList(ns string, config doit.Config, out io.Writer, args []string) er
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &size{sizes: list},
 		out:    out,
 	}
-	return displayOutput(dc)
+	return dc.Display()
 }

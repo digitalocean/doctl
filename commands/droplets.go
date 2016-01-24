@@ -88,14 +88,14 @@ func RunDropletActions(ns string, config doit.Config, out io.Writer, args []stri
 
 	list, err := ds.Actions(id)
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &action{actions: list},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDropletBackups returns a list of backup images for a droplet.
@@ -113,14 +113,14 @@ func RunDropletBackups(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &image{images: list},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDropletCreate creates a droplet.
@@ -218,14 +218,14 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []strin
 				return
 			}
 
-			dc := &outputConfig{
+			dc := &displayer{
 				ns:     ns,
 				config: config,
 				item:   &droplet{droplets: do.Droplets{*d}},
 				out:    out,
 			}
 
-			displayOutput(dc)
+			dc.Display()
 		}()
 	}
 
@@ -311,14 +311,14 @@ func RunDropletGet(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &droplet{droplets: do.Droplets{*d}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
@@ -335,14 +335,14 @@ func RunDropletKernels(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &kernel{kernels: list},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDropletList returns a list of droplets.
@@ -395,14 +395,14 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 		}
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &droplet{droplets: matchedList},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDropletNeighbors returns a list of droplet neighbors.
@@ -420,14 +420,14 @@ func RunDropletNeighbors(ns string, config doit.Config, out io.Writer, args []st
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &droplet{droplets: list},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunDropletSnapshots returns a list of available kernels for a droplet.
@@ -444,14 +444,14 @@ func RunDropletSnapshots(ns string, config doit.Config, out io.Writer, args []st
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &image{images: list},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 func getDropletIDArg(ns string, args []string) (int, error) {

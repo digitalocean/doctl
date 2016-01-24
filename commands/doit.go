@@ -248,7 +248,7 @@ func aliasOpt(aliases ...string) cmdOption {
 	}
 }
 
-func displayerType(d displayer) cmdOption {
+func displayerType(d displayable) cmdOption {
 	return func(c *command) {
 		c.fmtCols = d.Cols()
 	}

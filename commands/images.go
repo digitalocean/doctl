@@ -62,13 +62,13 @@ func RunImagesList(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &image{images: list},
 		out:    out,
 	}
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunImagesListDistribution lists distributions that are available.
@@ -86,13 +86,13 @@ func RunImagesListDistribution(ns string, config doit.Config, out io.Writer, arg
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &image{images: list},
 		out:    out,
 	}
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunImagesListApplication lists application iamges.
@@ -110,13 +110,13 @@ func RunImagesListApplication(ns string, config doit.Config, out io.Writer, args
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &image{images: list},
 		out:    out,
 	}
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunImagesListUser lists user images.
@@ -134,13 +134,13 @@ func RunImagesListUser(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &image{images: list},
 		out:    out,
 	}
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunImagesGet retrieves an image by id or slug.
@@ -171,14 +171,14 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &image{images: do.Images{*i}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunImagesUpdate updates an image.
@@ -206,14 +206,14 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &image{images: do.Images{*i}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunImagesDelete deletes an image.

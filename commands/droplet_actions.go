@@ -20,14 +20,14 @@ func performAction(out io.Writer, ns string, config doit.Config, fn actionFn) er
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // DropletAction creates the droplet-action command.

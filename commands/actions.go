@@ -37,14 +37,14 @@ func RunCmdActionList(ns string, config doit.Config, out io.Writer, args []strin
 	}
 
 	item := &action{actions: newActions}
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   item,
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunCmdActionGet runs action get.
@@ -65,12 +65,12 @@ func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }

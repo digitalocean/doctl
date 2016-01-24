@@ -10,24 +10,21 @@ import (
 	"github.com/bryanl/doit"
 )
 
-type displayer interface {
+type displayable interface {
 	Cols() []string
 	ColMap() map[string]string
 	KV() []map[string]interface{}
 	JSON(io.Writer) error
 }
 
-type outputConfig struct {
+type displayer struct {
 	ns     string
 	config doit.Config
-	item   displayer
+	item   displayable
 	out    io.Writer
 }
 
-// displayOutput displays an object or group of objects to a user. It
-// checks to see what the output type should be.
-//func displayOutput(item displayer, out io.Writer, includeCols []string) error {
-func displayOutput(config *outputConfig) error {
+func (d *displayer) Display() error {
 	output, err := doit.DoitConfig.GetString(doit.NSRoot, "output")
 	if err != nil {
 		return nil
@@ -39,14 +36,14 @@ func displayOutput(config *outputConfig) error {
 
 	switch output {
 	case "json":
-		return config.item.JSON(config.out)
+		return d.item.JSON(d.out)
 	case "text":
-		cols, err := handleColumns(config.ns, config.config)
+		cols, err := handleColumns(d.ns, d.config)
 		if err != nil {
 			return err
 		}
 
-		return displayText(config.item, config.out, cols)
+		return displayText(d.item, d.out, cols)
 	default:
 		return fmt.Errorf("unknown output type")
 	}
@@ -73,7 +70,7 @@ func hasCol(colMap map[string]string, col string) bool {
 	return ok
 }
 
-func displayText(item displayer, out io.Writer, includeCols []string) error {
+func displayText(item displayable, out io.Writer, includeCols []string) error {
 	w := newTabWriter(out)
 
 	cols := item.Cols()

@@ -53,14 +53,14 @@ func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) err
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &key{keys: list},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunKeyGet retrieves a key.
@@ -79,14 +79,14 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) erro
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &key{keys: do.SSHKeys{*k}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunKeyCreate uploads a SSH key.
@@ -115,14 +115,14 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &key{keys: do.SSHKeys{*r}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunKeyImport imports a key from a file
@@ -165,14 +165,14 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &key{keys: do.SSHKeys{*r}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunKeyDelete deletes a key.
@@ -213,12 +213,12 @@ func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &key{keys: do.SSHKeys{*k}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }

@@ -31,11 +31,11 @@ func RunRegionList(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &region{regions: list},
 		out:    out,
 	}
-	return displayOutput(dc)
+	return dc.Display()
 }

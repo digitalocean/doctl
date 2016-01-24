@@ -31,12 +31,12 @@ func RunAccountGet(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &account{Account: a},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }

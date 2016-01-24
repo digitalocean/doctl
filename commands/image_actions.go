@@ -54,14 +54,14 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []str
 		return err
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
 
 // RunImageActionsTransfer an image.
@@ -92,12 +92,12 @@ func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args 
 		checkErr(fmt.Errorf("could not transfer image: %v", err))
 	}
 
-	dc := &outputConfig{
+	dc := &displayer{
 		ns:     ns,
 		config: config,
 		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 
-	return displayOutput(dc)
+	return dc.Display()
 }
