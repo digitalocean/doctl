@@ -27,7 +27,7 @@ func NewHost(pluginPath string) (*Host, error) {
 }
 
 // Call a method on the plugin.
-func (h *Host) Call(method string, args []string) (string, error) {
+func (h *Host) Call(method string, args ...string) (string, error) {
 	opts := &CallOptions{
 		AccessToken: viper.GetString("access-token"),
 		Args:        args,
