@@ -86,12 +86,7 @@ func RunDropletActions(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	si, err := ds.Actions(id)
-
-	list := make([]godo.Action, len(si))
-	for i := range si {
-		list[i] = *si[i].Action
-	}
+	list, err := ds.Actions(id)
 
 	dc := &outputConfig{
 		ns:     ns,
@@ -113,14 +108,9 @@ func RunDropletBackups(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	si, err := ds.Backups(id)
+	list, err := ds.Backups(id)
 	if err != nil {
 		return err
-	}
-
-	list := make([]godo.Image, len(si))
-	for i := range si {
-		list[i] = *si[i].Image
 	}
 
 	dc := &outputConfig{
@@ -231,7 +221,7 @@ func RunDropletCreate(ns string, config doit.Config, out io.Writer, args []strin
 			dc := &outputConfig{
 				ns:     ns,
 				config: config,
-				item:   &droplet{droplets{*d.Droplet}},
+				item:   &droplet{droplets: do.Droplets{*d}},
 				out:    out,
 			}
 
@@ -324,7 +314,7 @@ func RunDropletGet(ns string, config doit.Config, out io.Writer, args []string) 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &droplet{droplets{*d.Droplet}},
+		item:   &droplet{droplets: do.Droplets{*d}},
 		out:    out,
 	}
 
@@ -345,15 +335,10 @@ func RunDropletKernels(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	godoKernels := &kernel{kernels: kernels{}}
-	for _, k := range list {
-		godoKernels.kernels = append(godoKernels.kernels, *k.Kernel)
-	}
-
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   godoKernels,
+		item:   &kernel{kernels: list},
 		out:    out,
 	}
 
@@ -380,8 +365,9 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 		matches = append(matches, g)
 	}
 
+	var matchedList do.Droplets
+
 	list, err := ds.List()
-	var godoDroplets []godo.Droplet
 	if err != nil {
 		return err
 	}
@@ -405,14 +391,14 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 		}
 
 		if !skip {
-			godoDroplets = append(godoDroplets, *droplet.Droplet)
+			matchedList = append(matchedList, droplet)
 		}
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &droplet{droplets: godoDroplets},
+		item:   &droplet{droplets: matchedList},
 		out:    out,
 	}
 
@@ -422,12 +408,14 @@ func RunDropletList(ns string, config doit.Config, out io.Writer, args []string)
 // RunDropletNeighbors returns a list of droplet neighbors.
 func RunDropletNeighbors(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	ds := do.NewDropletsService(client)
+
 	id, err := getDropletIDArg(ns, args)
 	if err != nil {
 		return err
 	}
 
-	list, _, err := client.Droplets.Neighbors(id)
+	list, err := ds.Neighbors(id)
 	if err != nil {
 		return err
 	}
@@ -451,14 +439,9 @@ func RunDropletSnapshots(ns string, config doit.Config, out io.Writer, args []st
 		return err
 	}
 
-	si, err := ds.Snapshots(id)
+	list, err := ds.Snapshots(id)
 	if err != nil {
 		return err
-	}
-
-	list := make([]godo.Image, len(si))
-	for i := range si {
-		list[i] = *si[i].Image
 	}
 
 	dc := &outputConfig{

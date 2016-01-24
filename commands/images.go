@@ -62,15 +62,10 @@ func RunImagesList(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	item := &image{images: []godo.Image{}}
-	for _, i := range list {
-		item.images = append(item.images, *i.Image)
-	}
-
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   item,
+		item:   &image{images: list},
 		out:    out,
 	}
 	return displayOutput(dc)
@@ -91,15 +86,10 @@ func RunImagesListDistribution(ns string, config doit.Config, out io.Writer, arg
 		return err
 	}
 
-	item := &image{images: []godo.Image{}}
-	for _, i := range list {
-		item.images = append(item.images, *i.Image)
-	}
-
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   item,
+		item:   &image{images: list},
 		out:    out,
 	}
 	return displayOutput(dc)
@@ -120,15 +110,10 @@ func RunImagesListApplication(ns string, config doit.Config, out io.Writer, args
 		return err
 	}
 
-	item := &image{images: []godo.Image{}}
-	for _, i := range list {
-		item.images = append(item.images, *i.Image)
-	}
-
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   item,
+		item:   &image{images: list},
 		out:    out,
 	}
 	return displayOutput(dc)
@@ -149,15 +134,10 @@ func RunImagesListUser(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	item := &image{images: []godo.Image{}}
-	for _, i := range list {
-		item.images = append(item.images, *i.Image)
-	}
-
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   item,
+		item:   &image{images: list},
 		out:    out,
 	}
 	return displayOutput(dc)
@@ -194,7 +174,7 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &image{images: images{*i.Image}},
+		item:   &image{images: do.Images{*i}},
 		out:    out,
 	}
 
@@ -229,7 +209,7 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &image{images: images{*i.Image}},
+		item:   &image{images: do.Images{*i}},
 		out:    out,
 	}
 

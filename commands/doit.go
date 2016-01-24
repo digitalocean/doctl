@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/bryanl/doit/plugin"
 	"github.com/digitalocean/godo"
 	"github.com/fatih/color"
@@ -323,7 +324,7 @@ const (
 	ifacePrivate ifaceType = "private"
 )
 
-func extractDropletIPs(droplet *godo.Droplet) dropletIPTable {
+func extractDropletIPs(droplet *do.Droplet) dropletIPTable {
 	t := dropletIPTable{}
 	for _, in := range droplet.Networks.V4 {
 		switch in.Type {

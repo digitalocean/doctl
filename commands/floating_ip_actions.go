@@ -55,7 +55,7 @@ func RunFloatingIPActionsGet(ns string, config doit.Config, out io.Writer, args 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a.Action}},
+		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 
@@ -86,7 +86,7 @@ func RunFloatingIPActionsAssign(ns string, config doit.Config, out io.Writer, ar
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a.Action}},
+		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 
@@ -112,7 +112,7 @@ func RunFloatingIPActionsUnassign(ns string, config doit.Config, out io.Writer, 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a.Action}},
+		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 	return displayOutput(dc)

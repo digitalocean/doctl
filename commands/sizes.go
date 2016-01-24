@@ -5,7 +5,6 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
-	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
 
@@ -27,20 +26,15 @@ func RunSizeList(ns string, config doit.Config, out io.Writer, args []string) er
 	client := config.GetGodoClient()
 	rs := do.NewSizesService(client)
 
-	si, err := rs.List()
+	list, err := rs.List()
 	if err != nil {
 		return err
-	}
-
-	item := &size{sizes: []godo.Size{}}
-	for _, r := range si {
-		item.sizes = append(item.sizes, *r.Size)
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   item,
+		item:   &size{sizes: list},
 		out:    out,
 	}
 	return displayOutput(dc)

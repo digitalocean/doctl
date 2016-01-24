@@ -23,7 +23,7 @@ func performAction(out io.Writer, ns string, config doit.Config, fn actionFn) er
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions{*a.Action}},
+		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 

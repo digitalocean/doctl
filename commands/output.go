@@ -6,7 +6,6 @@ import (
 	"text/tabwriter"
 
 	"github.com/bryanl/doit/do"
-	"github.com/digitalocean/godo"
 )
 
 var (
@@ -63,10 +62,8 @@ func (a *account) KV() []map[string]interface{} {
 	return out
 }
 
-type actions []godo.Action
-
 type action struct {
-	actions
+	actions do.Actions
 }
 
 var _ displayer = &action{}
@@ -105,10 +102,8 @@ func (a *action) KV() []map[string]interface{} {
 	return out
 }
 
-type domains []godo.Domain
-
 type domain struct {
-	domains
+	domains do.Domains
 }
 
 var _ displayer = &domain{}
@@ -140,10 +135,8 @@ func (d *domain) KV() []map[string]interface{} {
 	return out
 }
 
-type domainRecords []godo.DomainRecord
-
 type domainRecord struct {
-	domainRecords
+	domainRecords do.DomainRecords
 }
 
 func (dr *domainRecord) JSON(out io.Writer) error {
@@ -178,10 +171,8 @@ func (dr *domainRecord) KV() []map[string]interface{} {
 	return out
 }
 
-type droplets []godo.Droplet
-
 type droplet struct {
-	droplets
+	droplets do.Droplets
 }
 
 var _ displayer = &droplet{}
@@ -220,10 +211,8 @@ func (d *droplet) KV() []map[string]interface{} {
 	return out
 }
 
-type floatingIPs []godo.FloatingIP
-
 type floatingIP struct {
-	floatingIPs
+	floatingIPs do.FloatingIPs
 }
 
 var _ displayer = &floatingIP{}
@@ -265,10 +254,8 @@ func (fi *floatingIP) KV() []map[string]interface{} {
 	return out
 }
 
-type images []godo.Image
-
 type image struct {
-	images
+	images do.Images
 }
 
 var _ displayer = &image{}
@@ -310,10 +297,8 @@ func (gi *image) KV() []map[string]interface{} {
 	return out
 }
 
-type kernels []godo.Kernel
-
 type kernel struct {
-	kernels
+	kernels do.Kernels
 }
 
 var _ displayer = &kernel{}
@@ -348,10 +333,8 @@ func (ke *kernel) KV() []map[string]interface{} {
 	return out
 }
 
-type keys []godo.Key
-
 type key struct {
-	keys
+	keys do.SSHKeys
 }
 
 var _ displayer = &key{}
@@ -386,10 +369,8 @@ func (ke *key) KV() []map[string]interface{} {
 	return out
 }
 
-type regions []godo.Region
-
 type region struct {
-	regions
+	regions do.Regions
 }
 
 var _ displayer = &region{}
@@ -424,10 +405,8 @@ func (re *region) KV() []map[string]interface{} {
 	return out
 }
 
-type sizes []godo.Size
-
 type size struct {
-	sizes
+	sizes do.Sizes
 }
 
 var _ displayer = &size{}

@@ -12,7 +12,6 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
-	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
 
@@ -69,7 +68,7 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 		return err
 	}
 
-	var droplet *godo.Droplet
+	var droplet *do.Droplet
 
 	ds := do.NewDropletsService(client)
 	if id, err := strconv.Atoi(dropletID); err == nil {
@@ -80,11 +79,10 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 			return err
 		}
 
-		droplet = doDroplet.Droplet
+		droplet = doDroplet
 	} else {
 		// dropletID is a string
-		var droplets []godo.Droplet
-		droplets, err := listDroplets(client)
+		droplets, err := ds.List()
 		if err != nil {
 			return err
 		}
@@ -127,7 +125,7 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 	return runner.Run()
 }
 
-func defaultSSHUser(droplet *godo.Droplet) string {
+func defaultSSHUser(droplet *do.Droplet) string {
 	slug := strings.ToLower(droplet.Image.Slug)
 	if strings.Contains(slug, "coreos") {
 		return "core"

@@ -53,15 +53,10 @@ func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) err
 		return err
 	}
 
-	item := &key{keys: []godo.Key{}}
-	for _, k := range list {
-		item.keys = append(item.keys, *k.Key)
-	}
-
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   item,
+		item:   &key{keys: list},
 		out:    out,
 	}
 
@@ -87,7 +82,7 @@ func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) erro
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: keys{*k.Key}},
+		item:   &key{keys: do.SSHKeys{*k}},
 		out:    out,
 	}
 
@@ -123,7 +118,7 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: keys{*r.Key}},
+		item:   &key{keys: do.SSHKeys{*r}},
 		out:    out,
 	}
 
@@ -173,7 +168,7 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: keys{*r.Key}},
+		item:   &key{keys: do.SSHKeys{*r}},
 		out:    out,
 	}
 
@@ -221,7 +216,7 @@ func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &key{keys: keys{*k.Key}},
+		item:   &key{keys: do.SSHKeys{*k}},
 		out:    out,
 	}
 

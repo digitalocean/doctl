@@ -57,7 +57,7 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []str
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a.Action}},
+		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 
@@ -95,7 +95,7 @@ func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a.Action}},
+		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 

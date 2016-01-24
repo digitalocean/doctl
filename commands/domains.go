@@ -95,7 +95,7 @@ func RunDomainCreate(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domain{domains: domains{*d.Domain}},
+		item:   &domain{domains: do.Domains{*d}},
 		out:    out,
 	}
 
@@ -112,15 +112,12 @@ func RunDomainList(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	od := &domain{domains: []godo.Domain{}}
-	for _, d := range domains {
-		od.domains = append(od.domains, *d.Domain)
-	}
+	item := &domain{domains: domains}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   od,
+		item:   item,
 		out:    out,
 	}
 
@@ -149,7 +146,7 @@ func RunDomainGet(ns string, config doit.Config, out io.Writer, args []string) e
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domain{domains: domains{*d.Domain}},
+		item:   &domain{domains: do.Domains{*d}},
 		out:    out,
 	}
 
@@ -193,15 +190,12 @@ func RunRecordList(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	dr := &domainRecord{domainRecords: []godo.DomainRecord{}}
-	for _, gdr := range list {
-		dr.domainRecords = append(dr.domainRecords, *gdr.DomainRecord)
-	}
+	items := &domainRecord{domainRecords: list}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   dr,
+		item:   items,
 		out:    out,
 	}
 
@@ -269,7 +263,7 @@ func RunRecordCreate(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domainRecord{domainRecords{*r.DomainRecord}},
+		item:   &domainRecord{domainRecords: do.DomainRecords{*r}},
 		out:    out,
 	}
 
@@ -367,7 +361,7 @@ func RunRecordUpdate(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &domainRecord{domainRecords{*r.DomainRecord}},
+		item:   &domainRecord{domainRecords: do.DomainRecords{*r}},
 		out:    out,
 	}
 

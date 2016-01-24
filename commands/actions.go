@@ -36,16 +36,11 @@ func RunCmdActionList(ns string, config doit.Config, out io.Writer, args []strin
 		return err
 	}
 
-	// FIXME remove once all actions are fixed
-	oldActions := actions{}
-	for _, a := range newActions {
-		oldActions = append(oldActions, *a.Action)
-	}
-
+	item := &action{actions: newActions}
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: oldActions},
+		item:   item,
 		out:    out,
 	}
 
@@ -73,7 +68,7 @@ func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &action{actions: actions{*a.Action}},
+		item:   &action{actions: do.Actions{*a}},
 		out:    out,
 	}
 

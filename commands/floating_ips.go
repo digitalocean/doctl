@@ -64,7 +64,7 @@ func RunFloatingIPCreate(ns string, config doit.Config, out io.Writer, args []st
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &floatingIP{floatingIPs: floatingIPs{*ip.FloatingIP}},
+		item:   &floatingIP{floatingIPs: do.FloatingIPs{*ip}},
 		out:    out,
 	}
 	return displayOutput(dc)
@@ -93,7 +93,7 @@ func RunFloatingIPGet(ns string, config doit.Config, out io.Writer, args []strin
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &floatingIP{floatingIPs: floatingIPs{*fip.FloatingIP}},
+		item:   &floatingIP{floatingIPs: do.FloatingIPs{*fip}},
 		out:    out,
 	}
 
@@ -124,20 +124,20 @@ func RunFloatingIPList(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	si, err := fis.List()
+	list, err := fis.List()
 	if err != nil {
 		return err
 	}
 
-	fips := &floatingIP{floatingIPs: []godo.FloatingIP{}}
-	for _, fip := range si {
+	fips := &floatingIP{floatingIPs: do.FloatingIPs{}}
+	for _, fip := range list {
 		var skip bool
 		if region != "" && region != fip.Region.Slug {
 			skip = true
 		}
 
 		if !skip {
-			fips.floatingIPs = append(fips.floatingIPs, *fip.FloatingIP)
+			fips.floatingIPs = append(fips.floatingIPs, fip)
 		}
 	}
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
-	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
 
@@ -27,20 +26,15 @@ func RunRegionList(ns string, config doit.Config, out io.Writer, args []string) 
 	client := config.GetGodoClient()
 	rs := do.NewRegionsService(client)
 
-	si, err := rs.List()
+	list, err := rs.List()
 	if err != nil {
 		return err
-	}
-
-	item := &region{regions: []godo.Region{}}
-	for _, r := range si {
-		item.regions = append(item.regions, *r.Region)
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   item,
+		item:   &region{regions: list},
 		out:    out,
 	}
 	return displayOutput(dc)
