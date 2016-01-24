@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
@@ -24,35 +25,22 @@ func Region() *cobra.Command {
 // RunRegionList all regions.
 func RunRegionList(ns string, config doit.Config, out io.Writer, args []string) error {
 	client := config.GetGodoClient()
+	rs := do.NewRegionsService(client)
 
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := client.Regions.List(opt)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		si := make([]interface{}, len(list))
-		for i := range list {
-			si[i] = list[i]
-		}
-
-		return si, resp, err
-	}
-
-	si, err := doit.PaginateResp(f)
+	si, err := rs.List()
 	if err != nil {
 		return err
 	}
 
-	list := make([]godo.Region, len(si))
-	for i := range si {
-		list[i] = si[i].(godo.Region)
+	item := &region{regions: []godo.Region{}}
+	for _, r := range si {
+		item.regions = append(item.regions, *r.Region)
 	}
 
 	dc := &outputConfig{
 		ns:     ns,
 		config: config,
-		item:   &region{regions: list},
+		item:   item,
 		out:    out,
 	}
 	return displayOutput(dc)
