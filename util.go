@@ -1,15 +1,13 @@
 package doit
 
-import "golang.org/x/oauth2"
+import (
+	"github.com/bryanl/doit/pkg/runner"
+	"golang.org/x/oauth2"
+)
 
 // TokenSource holds an oauth token.
 type TokenSource struct {
 	AccessToken string
-}
-
-// Runner is an interface that Runs things.
-type Runner interface {
-	Run() error
 }
 
 // MockRunner is an implemenation of Runner for mocking.
@@ -17,7 +15,7 @@ type MockRunner struct {
 	Err error
 }
 
-var _ Runner = &MockRunner{}
+var _ runner.Runner = &MockRunner{}
 
 // Run mock runs things.
 func (tr *MockRunner) Run() error {

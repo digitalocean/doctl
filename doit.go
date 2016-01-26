@@ -3,16 +3,12 @@ package doit
 import (
 	"bytes"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
 
-	"github.com/bryanl/doit/pkg/term"
+	"github.com/bryanl/doit/pkg/runner"
+	"github.com/bryanl/doit/pkg/ssh"
 	"github.com/digitalocean/godo"
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 )
 
@@ -75,7 +71,7 @@ func (v Version) Complete() string {
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient() *godo.Client
-	SSH(user, host, keyPath string, port int) Runner
+	SSH(user, host, keyPath string, port int) runner.Runner
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) (string, error)
 	GetBool(ns, key string) (bool, error)
@@ -96,129 +92,13 @@ func (c *LiveConfig) GetGodoClient() *godo.Client {
 	return godo.NewClient(oauthClient)
 }
 
-func sshConnect(user string, host string, method ssh.AuthMethod) error {
-	sshc := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{method},
-	}
-	conn, err := ssh.Dial("tcp", host, sshc)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	session, err := conn.NewSession()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = session.Close()
-	}()
-
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
-
-	var (
-		termWidth, termHeight int
-	)
-	fd := os.Stdin.Fd()
-
-	oldState, err := term.MakeRaw(fd)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = term.RestoreTerminal(fd, oldState)
-	}()
-
-	winsize, err := term.GetWinsize(fd)
-	if err != nil {
-		termWidth = 80
-		termHeight = 24
-	} else {
-		termWidth = int(winsize.Width)
-		termHeight = int(winsize.Height)
-	}
-
-	modes := ssh.TerminalModes{
-		ssh.ECHO: 1,
-	}
-
-	if err := session.RequestPty("xterm", termHeight, termWidth, modes); err != nil {
-		return err
-	}
-	if err == nil {
-		err = session.Shell()
-	}
-	if err != nil {
-		return err
-	}
-
-	err = session.Wait()
-	if _, ok := err.(*ssh.ExitError); ok {
-		return nil
-	}
-	if err == io.EOF {
-		return nil
-	}
-	return err
-}
-
-type sshRunner struct {
-	user    string
-	host    string
-	keyPath string
-	port    int
-}
-
-var _ Runner = &sshRunner{}
-
-func (r *sshRunner) Run() error {
-	sshHost := fmt.Sprintf("%s:%d", r.host, r.port)
-
-	// Key Auth
-	key, err := ioutil.ReadFile(r.keyPath)
-	if err != nil {
-		return err
-	}
-	privateKey, err := ssh.ParsePrivateKey(key)
-	if err != nil {
-		return err
-	}
-
-	if err := sshConnect(r.user, sshHost, ssh.PublicKeys(privateKey)); err != nil {
-		// Password Auth if Key Auth Fails
-		fd := os.Stdin.Fd()
-		state, err := terminal.MakeRaw(int(fd))
-		if err != nil {
-			return err
-		}
-		defer func() {
-			_ = terminal.Restore(int(fd), state)
-		}()
-		t := terminal.NewTerminal(os.Stdout, ">")
-		password, err := t.ReadPassword("Password: ")
-		if err != nil {
-			return err
-		}
-		if err := sshConnect(r.user, sshHost, ssh.Password(string(password))); err != nil {
-			return err
-		}
-	}
-	return err
-
-}
-
 // SSH creates a ssh connection to a host.
-func (c *LiveConfig) SSH(user, host, keyPath string, port int) Runner {
-	return &sshRunner{
-		user:    user,
-		host:    host,
-		keyPath: keyPath,
-		port:    port,
+func (c *LiveConfig) SSH(user, host, keyPath string, port int) runner.Runner {
+	return &ssh.Runner{
+		User:    user,
+		Host:    host,
+		KeyPath: keyPath,
+		Port:    port,
 	}
 
 }
