@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/pkg/runner"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -112,7 +113,7 @@ func withTestClient(client *godo.Client, tFn testFn) {
 
 type TestConfig struct {
 	Client *godo.Client
-	SSHFn  func(user, host, keyPath string, port int) doit.Runner
+	SSHFn  func(user, host, keyPath string, port int) runner.Runner
 	v      *viper.Viper
 }
 
@@ -121,7 +122,7 @@ var _ doit.Config = &TestConfig{}
 func NewTestConfig(client *godo.Client) *TestConfig {
 	return &TestConfig{
 		Client: client,
-		SSHFn: func(u, h, kp string, p int) doit.Runner {
+		SSHFn: func(u, h, kp string, p int) runner.Runner {
 			return &doit.MockRunner{}
 		},
 		v: viper.New(),
@@ -134,7 +135,7 @@ func (c *TestConfig) GetGodoClient() *godo.Client {
 	return c.Client
 }
 
-func (c *TestConfig) SSH(user, host, keyPath string, port int) doit.Runner {
+func (c *TestConfig) SSH(user, host, keyPath string, port int) runner.Runner {
 	return c.SSHFn(user, host, keyPath, port)
 }
 

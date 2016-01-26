@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/pkg/runner"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,8 +26,8 @@ func TestSSHComand(t *testing.T) {
 	assertCommandNames(t, cmd)
 }
 
-func (s *sshMock) cmd() func(u, h, kp string, p int) doit.Runner {
-	return func(u, h, kp string, p int) doit.Runner {
+func (s *sshMock) cmd() func(u, h, kp string, p int) runner.Runner {
+	return func(u, h, kp string, p int) runner.Runner {
 		s.didRun = true
 		s.user = u
 		s.host = h
