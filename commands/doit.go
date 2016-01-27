@@ -51,11 +51,12 @@ func LoadConfig() error {
 	return viper.ReadConfig(r)
 }
 
-// Execute executes the base command.
-func Execute() {
+// Init initializes the root command.
+func Init() *cobra.Command {
 	initializeConfig()
 	addCommands()
-	DoitCmd.Execute()
+
+	return DoitCmd
 }
 
 // AddCommands adds sub commands to the base command.

@@ -24,6 +24,7 @@ import:
 - package: github.com/bryanl/webbrowser
 - package: github.com/fatih/color
 - package: github.com/spf13/cobra
+  version: 8e91712f174ced10270cf66615e0a9127e7c4de5
 - package: github.com/stretchr/testify
   subpackages:
   - /assert
