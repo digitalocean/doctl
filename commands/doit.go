@@ -19,7 +19,8 @@ import (
 var (
 	// DoitCmd is the base command.
 	DoitCmd = &cobra.Command{
-		Use: "doit",
+		Use:   "doit",
+		Short: "doit is a command line interface for the DigitalOcean API.",
 	}
 
 	// Token holds the global authorization token.
