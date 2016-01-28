@@ -159,6 +159,30 @@ func TestDropletDelete(t *testing.T) {
 	})
 }
 
+func TestDropletDeleteByName(t *testing.T) {
+	client := &godo.Client{
+		Droplets: &doit.DropletsServiceMock{
+			ListFn: func(opts *godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
+				resp := &godo.Response{
+					Links: &godo.Links{
+						Pages: &godo.Pages{},
+					},
+				}
+				return testDropletList, resp, nil
+			},
+			DeleteFn: func(id int) (*godo.Response, error) {
+				assert.Equal(t, id, testDroplet.ID, "droplet ids did not match")
+				return nil, nil
+			},
+		},
+	}
+	withTestClient(client, func(c *TestConfig) {
+		ns := "test"
+		err := RunDropletDelete(ns, c, ioutil.Discard, []string{testDroplet.Name})
+		assert.NoError(t, err)
+	})
+}
+
 func TestDropletGet(t *testing.T) {
 	client := &godo.Client{
 		Droplets: &doit.DropletsServiceMock{

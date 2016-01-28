@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -43,7 +44,7 @@ func Droplet() *cobra.Command {
 	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
 	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image", requiredOpt())
 
-	cmdBuilder(cmd, RunDropletDelete, "delete ID [ID ...]", "delete droplet", writer,
+	cmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", writer,
 		aliasOpt("d", "del", "rm"))
 
 	cmdBuilder(cmd, RunDropletGet, "get", "get droplet", writer,
@@ -280,10 +281,33 @@ func RunDropletDelete(ns string, config doit.Config, out io.Writer, args []strin
 		return doit.NewMissingArgsErr(ns)
 	}
 
+	listedDroplets := false
+	list := do.Droplets{}
+
 	for _, idStr := range args {
 		id, err := strconv.Atoi(idStr)
 		if err != nil {
-			return err
+			if !listedDroplets {
+				list, err = ds.List()
+				if err != nil {
+					return errors.New("unable to build list of droplets")
+				}
+				listedDroplets = true
+			}
+
+			var matchedDroplet *do.Droplet
+			for _, d := range list {
+				if d.Name == idStr {
+					matchedDroplet = &d
+					break
+				}
+			}
+
+			if matchedDroplet == nil {
+				return fmt.Errorf("unable to find droplet with name %q", idStr)
+			}
+
+			id = matchedDroplet.ID
 		}
 
 		err = ds.Delete(id)
