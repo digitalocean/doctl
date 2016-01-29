@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"fmt"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 	"os"
@@ -35,7 +36,11 @@ func (h *Host) Call(method string, args ...string) (string, error) {
 
 	var result string
 	err := h.client.Call(method, opts, &result)
-	return result, err
+	if err != nil {
+		return "", fmt.Errorf("unable to run plugin action %s", method)
+	}
+
+	return "", nil
 }
 
 // CallOptions are options to a plugin call. This is exported so go based plugins

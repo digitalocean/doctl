@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -106,7 +105,7 @@ func findPluginsInPath() ([]*cobra.Command, error) {
 				Short: fmt.Sprintf("plugin: %s", name),
 				Run: func(c *cobra.Command, args []string) {
 					if len(args) == 0 {
-						checkErr(errors.New("no command"))
+						args = append(args, "default")
 					}
 
 					host, err := plugin.NewHost(pluginPath)
@@ -123,7 +122,7 @@ func findPluginsInPath() ([]*cobra.Command, error) {
 
 					checkErr(err)
 
-					fmt.Println(results)
+					fmt.Fprintln(writer, results)
 				},
 			}
 
