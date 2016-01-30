@@ -23,21 +23,6 @@ type Droplet struct {
 	*godo.Droplet
 }
 
-// IPs returns a map of interface.s
-func (d *Droplet) IPs() DropletIPTable {
-	t := DropletIPTable{}
-	for _, in := range d.Networks.V4 {
-		switch in.Type {
-		case "public":
-			t[InterfacePublic] = in.IPAddress
-		case "private":
-			t[InterfacePrivate] = in.IPAddress
-		}
-	}
-
-	return t
-}
-
 // Droplets is a slice of Droplet.
 type Droplets []Droplet
 

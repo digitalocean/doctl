@@ -198,10 +198,9 @@ func (d *droplet) ColMap() map[string]string {
 func (d *droplet) KV() []map[string]interface{} {
 	out := []map[string]interface{}{}
 	for _, d := range d.droplets {
-		ips := d.IPs()
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
 		m := map[string]interface{}{
-			"ID": d.ID, "Name": d.Name, "PublicIPv4": ips[do.InterfacePublic],
+			"ID": d.ID, "Name": d.Name, "PublicIPv4": d.PublicIPv4,
 			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
 			"Region": d.Region.Slug, "Image": image, "Status": d.Status,
 		}

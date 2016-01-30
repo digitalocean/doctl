@@ -115,13 +115,16 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 		user = defaultSSHUser(droplet)
 	}
 
-	ips := droplet.IPs()
-
-	if ips[do.InterfacePublic] == "" {
-		return errors.New(sshNoAddress)
+	ip, err := droplet.PublicIPv4()
+	if err != nil {
+		return err
 	}
 
-	runner := config.SSH(user, ips[do.InterfacePublic], keyPath, port)
+	if ip == "" {
+		return errors.New("could not find droplet address")
+	}
+
+	runner := config.SSH(user, ip, keyPath, port)
 	return runner.Run()
 }
 
