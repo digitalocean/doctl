@@ -2,10 +2,13 @@ package godo
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
 const dropletBasePath = "v2/droplets"
+
+var errNoNetworks = errors.New("no networks have been defined")
 
 // DropletsService is an interface for interfacing with the droplet
 // endpoints of the DigitalOcean API
@@ -50,6 +53,51 @@ type Droplet struct {
 	ActionIDs   []int     `json:"action_ids,omitempty"`
 	Created     string    `json:"created_at,omitempty"`
 	Kernel      *Kernel   `json:"kernel, omitempty"`
+}
+
+// PublicIPv4 returns the public IPv4 address for the Droplet.
+func (d *Droplet) PublicIPv4() (string, error) {
+	if d.Networks == nil {
+		return "", errNoNetworks
+	}
+
+	for _, v4 := range d.Networks.V4 {
+		if v4.Type == "public" {
+			return v4.IPAddress, nil
+		}
+	}
+
+	return "", nil
+}
+
+// PrivateIPv4 returns the private IPv4 address for the Droplet.
+func (d *Droplet) PrivateIPv4() (string, error) {
+	if d.Networks == nil {
+		return "", errNoNetworks
+	}
+
+	for _, v4 := range d.Networks.V4 {
+		if v4.Type == "private" {
+			return v4.IPAddress, nil
+		}
+	}
+
+	return "", nil
+}
+
+// PublicIPv6 returns the private IPv6 address for the Droplet.
+func (d *Droplet) PublicIPv6() (string, error) {
+	if d.Networks == nil {
+		return "", errNoNetworks
+	}
+
+	for _, v4 := range d.Networks.V6 {
+		if v4.Type == "public" {
+			return v4.IPAddress, nil
+		}
+	}
+
+	return "", nil
 }
 
 // Kernel object
@@ -135,7 +183,7 @@ type DropletCreateRequest struct {
 	UserData          string                `json:"user_data,omitempty"`
 }
 
-
+// DropletMultiCreateRequest is a request to create multiple droplets.
 type DropletMultiCreateRequest struct {
 	Names             []string              `json:"names"`
 	Region            string                `json:"region"`
@@ -258,7 +306,7 @@ func (s *DropletsServiceOp) Create(createRequest *DropletCreateRequest) (*Drople
 	return root.Droplet, resp, err
 }
 
-// Create multiple droplet
+// CreateMultiple creates multiple droplets.
 func (s *DropletsServiceOp) CreateMultiple(createRequest *DropletMultiCreateRequest) ([]Droplet, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, NewArgError("createRequest", "cannot be nil")

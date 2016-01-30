@@ -179,7 +179,7 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
 		expected := map[string]interface{}{
-			"names":              []interface {}{"name1", "name2"},
+			"names":              []interface{}{"name1", "name2"},
 			"region":             "region",
 			"size":               "size",
 			"image":              float64(1),
@@ -424,5 +424,48 @@ func TestDroplet_String(t *testing.T) {
 	expected := `godo.Droplet{ID:1, Name:"droplet", Memory:123, Vcpus:456, Disk:789, Region:godo.Region{Slug:"region", Name:"Region", Sizes:["1" "2"], Available:true}, Image:godo.Image{ID:1, Name:"Image", Type:"snapshot", Distribution:"Ubuntu", Slug:"image", Public:true, Regions:["one" "two"], MinDiskSize:20, Created:"2013-11-27T09:24:55Z"}, Size:godo.Size{Slug:"size", Memory:0, Vcpus:0, Disk:0, PriceMonthly:123, PriceHourly:456, Regions:["1" "2"], Available:false, Transfer:0}, SizeSlug:"1gb", BackupIDs:[1], SnapshotIDs:[1], Locked:false, Status:"active", Networks:godo.Networks{V4:[godo.NetworkV4{IPAddress:"192.168.1.2", Netmask:"255.255.255.0", Gateway:"192.168.1.1", Type:""}]}, ActionIDs:[1], Created:""}`
 	if expected != stringified {
 		t.Errorf("Droplet.String returned %+v, expected %+v", stringified, expected)
+	}
+}
+
+func TestDroplets_IPMethods(t *testing.T) {
+	var d Droplet
+
+	ipv6 := "1000:1000:1000:1000:0000:0000:004D:B001"
+
+	d.Networks = &Networks{
+		V4: []NetworkV4{
+			{IPAddress: "192.168.0.1", Type: "public"},
+			{IPAddress: "10.0.0.1", Type: "private"},
+		},
+		V6: []NetworkV6{
+			{IPAddress: ipv6, Type: "public"},
+		},
+	}
+
+	ip, err := d.PublicIPv4()
+	if err != nil {
+		t.Errorf("unknown error")
+	}
+
+	if got, expected := ip, "192.168.0.1"; got != expected {
+		t.Errorf("Droplet.PublicIPv4 returned %s; expected %s", got, expected)
+	}
+
+	ip, err = d.PrivateIPv4()
+	if err != nil {
+		t.Errorf("unknown error")
+	}
+
+	if got, expected := ip, "10.0.0.1"; got != expected {
+		t.Errorf("Droplet.PrivateIPv4 returned %s; expected %s", got, expected)
+	}
+
+	ip, err = d.PublicIPv6()
+	if err != nil {
+		t.Errorf("unknown error")
+	}
+
+	if got, expected := ip, ipv6; got != expected {
+		t.Errorf("Droplet.PublicIPv6 returned %s; expected %s", got, expected)
 	}
 }
