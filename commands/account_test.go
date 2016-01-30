@@ -19,7 +19,7 @@ var testAccount = &godo.Account{
 func TestAccountCommand(t *testing.T) {
 	acctCmd := Account()
 	assert.NotNil(t, acctCmd)
-	assertCommandNames(t, acctCmd, "get")
+	assertCommandNames(t, acctCmd, "get", "ratelimit")
 }
 
 func TestAccountGet(t *testing.T) {

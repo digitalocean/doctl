@@ -1,5 +1,5 @@
 hash: fcc1d686a6612c9e4b6fa6432f42f87d0c8587ee9e1ecc6699d4acace9219876
-updated: 2016-01-30T10:53:53.256279-05:00
+updated: 2016-01-30T12:38:12.643870322-05:00
 imports:
 - name: github.com/armon/consul-api
   version: dcfedd50ed5334f96adee43fc88518a4f095e15c
@@ -22,14 +22,13 @@ imports:
   subpackages:
   - spew
 - name: github.com/digitalocean/godo
-  version: 0293606a28f87fbe772c539620672f3d0ac707a2
+  version: 6ca5b770f203b82a0fca68d0941736458efa8a4f
 - name: github.com/fatih/color
   version: 9aae6aaa22315390f03959adca2c4d395b02fcef
 - name: github.com/gobwas/glob
   version: 51a65fcc7de76cec18112da81e56759e00a89b8e
 - name: github.com/golang/glog
   version: 23def4e6c14b4da8ac2ed8007337bc5eb5007998
-  repo: https://github.com/golang/glog
 - name: github.com/golang/protobuf
   version: 45bba206dd5270d96bac4942dcfe515726613249
 - name: github.com/google/go-querystring
@@ -52,12 +51,10 @@ imports:
   version: 12c18e8343f6eb5fc3a9d5c8dc353e42e6bb40b9
 - name: github.com/kr/fs
   version: 2788f0dbd16903de03cb8186e5c7d97b69ad387b
-  repo: https://github.com/kr/fs
 - name: github.com/kr/pretty
   version: e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb
 - name: github.com/kr/pty
   version: f7ee69f31298ecbe5d2b349c711e2547a617d398
-  repo: https://github.com/kr/pty
 - name: github.com/kr/text
   version: bb797dc4fb8320488f47bf11de07a733d7233e1f
 - name: github.com/magiconair/properties
@@ -80,7 +77,6 @@ imports:
   version: 6059396cf8c679e5b6a7c82378e4623ca62f91ff
 - name: github.com/pkg/sftp
   version: e84cc8c755ca39b7b64f510fe1fffc1b51f210a5
-  repo: https://github.com/pkg/sftp
 - name: github.com/pmezard/go-difflib
   version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
   subpackages:
@@ -131,18 +127,14 @@ imports:
   version: b47dfd93e5c47f9311ab20047c690df78d460f75
 - name: google.golang.org/api
   version: f6ba98773d96b877b246f3a9266493dfc11e276b
-  repo: https://google.golang.org/api
 - name: google.golang.org/appengine
   version: 6bde959377a90acb53366051d7d587bfd7171354
-  repo: https://google.golang.org/appengine
 - name: google.golang.org/cloud
   version: fb10e8da373d97f6ba5e648299a10b3b91f14cd5
-  repo: https://google.golang.org/cloud
 - name: google.golang.org/grpc
   version: 93591e7568831bcd7a06b96462022d4c57b487e1
 - name: gopkg.in/fsnotify.v1
   version: 8611c35ab31c1c28aa903d33cf8b6e44a399b09e
-  repo: https://gopkg.in/fsnotify.v1
 - name: gopkg.in/yaml.v2
   version: f7716cbe52baa25d2e9b0d0da546fcf909fc16b4
 devImports: []

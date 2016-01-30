@@ -27,6 +27,38 @@ func (hc *headerControl) HideHeader(hide bool) {
 	hc.hideHeader = hide
 }
 
+type rateLimit struct {
+	*do.RateLimit
+}
+
+var _ displayable = &rateLimit{}
+
+func (rl *rateLimit) JSON(out io.Writer) error {
+	return writeJSON(rl.Rate, out)
+}
+
+func (rl *rateLimit) Cols() []string {
+	return []string{
+		"Limit", "Remaining", "Reset",
+	}
+}
+
+func (rl *rateLimit) ColMap() map[string]string {
+	return map[string]string{
+		"Limit": "Limit", "Remaining": "Remaining", "Reset": "Reset",
+	}
+}
+
+func (rl *rateLimit) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+	x := map[string]interface{}{
+		"Limit": rl.Limit, "Remaining": rl.Remaining, "Reset": rl.Reset,
+	}
+	out = append(out, x)
+
+	return out
+}
+
 type account struct {
 	*do.Account
 }
