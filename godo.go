@@ -22,9 +22,9 @@ const (
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
 
-	headerRateLimit     = "X-RateLimit-Limit"
-	headerRateRemaining = "X-RateLimit-Remaining"
-	headerRateReset     = "X-RateLimit-Reset"
+	headerRateLimit     = "RateLimit-Limit"
+	headerRateRemaining = "RateLimit-Remaining"
+	headerRateReset     = "RateLimit-Reset"
 )
 
 // Client manages communication with DigitalOcean V2 API.
