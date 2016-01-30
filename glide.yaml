@@ -6,16 +6,17 @@ import:
 - package: github.com/spf13/jwalterweatherman
 - package: golang.org/x/crypto
 - package: golang.org/x/net
-  version: 47990a1ba55743e6ef1affd3a14e5bac8553615d
 - package: golang.org/x/oauth2
-  version: ef4eca6b097fad7cec79afcc278d213a6de1c960
+  ignore: 
+    - google.golang.org/api
+    - google.golang.org/appengine
+    - google.golang.org/cloud
 - package: github.com/mitchellh/mapstructure
 - package: github.com/tent/http-link-go
 - package: github.com/spf13/pflag
 - package: github.com/spf13/viper
 - package: github.com/spf13/cast
 - package: github.com/digitalocean/godo
-  version: 2688c11a02dc3deac65645c82c3c812f95e417bf
 - package: github.com/magiconair/properties
 - package: github.com/BurntSushi/toml
 - package: gopkg.in/yaml.v2
@@ -24,7 +25,6 @@ import:
 - package: github.com/bryanl/webbrowser
 - package: github.com/fatih/color
 - package: github.com/spf13/cobra
-  version: 8e91712f174ced10270cf66615e0a9127e7c4de5
 - package: github.com/stretchr/testify
   subpackages:
   - /assert

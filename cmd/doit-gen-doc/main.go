@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/bryanl/doit/commands"
-	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
 )
 
 func main() {
@@ -12,5 +12,5 @@ func main() {
 	cmd := commands.Init()
 	cmd.DisableAutoGenTag = false
 
-	cobra.GenMarkdownTree(cmd, "./")
+	doc.GenMarkdownTree(cmd, "./")
 }
