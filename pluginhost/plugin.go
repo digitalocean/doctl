@@ -1,7 +1,8 @@
-package plugin
+package pluginhost
 
 import (
 	"fmt"
+	"log"
 	"net/rpc"
 	"net/rpc/jsonrpc"
 	"os"
@@ -37,10 +38,17 @@ func (h *Host) Call(method string, args ...string) (string, error) {
 	var result string
 	err := h.client.Call(method, opts, &result)
 	if err != nil {
+		debug(err.Error())
 		return "", fmt.Errorf("unable to run plugin action %s", method)
 	}
 
-	return "", nil
+	return result, nil
+}
+
+func debug(msg string) {
+	//if viper.GetBool("verbose") {
+	log.Println(msg)
+	//}
 }
 
 // CallOptions are options to a plugin call. This is exported so go based plugins

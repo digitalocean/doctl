@@ -3,13 +3,10 @@ package commands
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/plugin"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,6 +25,9 @@ var (
 	// Output holds the global output format.
 	Output string
 
+	// Verbose toggles verbose output.
+	Verbose bool
+
 	requiredColor = color.New(color.Bold, color.FgWhite).SprintfFunc()
 
 	writer = os.Stdout
@@ -38,6 +38,7 @@ func init() {
 
 	DoitCmd.PersistentFlags().StringVarP(&Token, "access-token", "t", "", "DigitalOcean API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output formt [text|json]")
+	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 }
 
 // LoadConfig loads out configuration.
@@ -70,72 +71,12 @@ func addCommands() {
 	DoitCmd.AddCommand(FloatingIP())
 	DoitCmd.AddCommand(FloatingIPAction())
 	DoitCmd.AddCommand(Images())
+	DoitCmd.AddCommand(Plugin())
 	DoitCmd.AddCommand(Region())
 	DoitCmd.AddCommand(Size())
 	DoitCmd.AddCommand(SSHKeys())
 	DoitCmd.AddCommand(SSH())
 	DoitCmd.AddCommand(Version())
-
-	cmds, err := findPluginsInPath()
-	if err != nil {
-		log.Fatalf("unable to search plugins: %s", err)
-	}
-
-	for _, c := range cmds {
-		DoitCmd.AddCommand(c)
-	}
-}
-
-func findPluginsInPath() ([]*cobra.Command, error) {
-	envPath := os.Getenv("PATH")
-	paths := strings.Split(envPath, string(os.PathListSeparator))
-
-	cmds := []*cobra.Command{}
-
-	for _, p := range paths {
-		matches, err := filepath.Glob(filepath.Join(p, "doit-provider-*"))
-		if err != nil {
-			return nil, err
-		}
-
-		for _, pluginPath := range matches {
-			name := pluginName(pluginPath)
-			cmd := &cobra.Command{
-				Use:   name,
-				Short: fmt.Sprintf("plugin: %s", name),
-				Run: func(c *cobra.Command, args []string) {
-					if len(args) == 0 {
-						args = append(args, "default")
-					}
-
-					host, err := plugin.NewHost(pluginPath)
-					checkErr(err)
-
-					var results string
-					if len(args) > 1 {
-						method, args := args[0], args[1:]
-						results, err = host.Call(c.Use+"."+strings.Title(method), args...)
-					} else {
-						method := args[0]
-						results, err = host.Call(c.Use + "." + strings.Title(method))
-					}
-
-					checkErr(err)
-
-					fmt.Fprintln(writer, results)
-				},
-			}
-
-			cmds = append(cmds, cmd)
-		}
-	}
-
-	return cmds, nil
-}
-
-func pluginName(p string) string {
-	base := filepath.Base(p)
-	return strings.TrimPrefix(base, "doit-provider-")
 }
 
 func initFlags() {

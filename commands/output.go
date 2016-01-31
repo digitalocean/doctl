@@ -475,3 +475,39 @@ func (si *size) KV() []map[string]interface{} {
 
 	return out
 }
+
+type plugin struct {
+	plugins []plugDesc
+}
+
+var _ displayable = &plugin{}
+
+func (p *plugin) JSON(out io.Writer) error {
+	return writeJSON(p.plugins, out)
+}
+
+func (p *plugin) Cols() []string {
+	return []string{
+		"Name",
+	}
+}
+
+func (p *plugin) ColMap() map[string]string {
+	return map[string]string{
+		"Name": "Name",
+	}
+}
+
+func (p *plugin) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, plug := range p.plugins {
+		o := map[string]interface{}{
+			"Name": plug.name,
+		}
+
+		out = append(out, o)
+	}
+
+	return out
+}
