@@ -59,7 +59,7 @@ Example:
 
 ## Building and dependencies
 
-`doit`'s dependencies are managed by [glide](https:/github.com/Mastermind/glide). To develop locally, an installation of glide is required. Once glide is installed, add new dependencies with `glide install <dep>`. `glide` is using Go 1.5's vendor support so set `GOGO15VENDOREXPERIMENT=1` in your environment.
+`doit`'s dependencies are managed by [gvt](https://github.com/FiloSottile/gvt). To add dependencies, use `gvt fetch`.
 
 ## Releasing
 
