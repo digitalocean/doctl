@@ -503,7 +503,7 @@ func (p *plugin) KV() []map[string]interface{} {
 
 	for _, plug := range p.plugins {
 		o := map[string]interface{}{
-			"Name": plug.name,
+			"Name": plug.Name,
 		}
 
 		out = append(out, o)

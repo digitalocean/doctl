@@ -42,7 +42,7 @@ func RunPluginRun(ns string, config doit.Config, out io.Writer, args []string) e
 
 	var selectedPlugin *plugDesc
 	for i, p := range plugs {
-		if p.name == args[0] {
+		if p.Name == args[0] {
 			selectedPlugin = &plugs[i]
 		}
 	}
@@ -56,7 +56,7 @@ func RunPluginRun(ns string, config doit.Config, out io.Writer, args []string) e
 		pluginArgs = args[1:]
 	}
 
-	host, err := pluginhost.NewHost(selectedPlugin.path)
+	host, err := pluginhost.NewHost(selectedPlugin.Path)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func RunPluginRun(ns string, config doit.Config, out io.Writer, args []string) e
 		methodArgs = pluginArgs[1:]
 	}
 
-	results, err := host.Call(selectedPlugin.name+"."+strings.Title(method), methodArgs...)
+	results, err := host.Call(selectedPlugin.Name+"."+strings.Title(method), methodArgs...)
 	if err != nil {
 		return err
 	}
@@ -105,8 +105,8 @@ func RunPluginList(ns string, config doit.Config, out io.Writer, args []string) 
 }
 
 type plugDesc struct {
-	path string
-	name string
+	Path string `json:"path"`
+	Name string `json:"name"`
 }
 
 func searchPlugins() ([]plugDesc, error) {
@@ -123,7 +123,7 @@ func searchPlugins() ([]plugDesc, error) {
 
 		for _, pluginPath := range matches {
 			name := pluginName(pluginPath)
-			plugs = append(plugs, plugDesc{path: pluginPath, name: name})
+			plugs = append(plugs, plugDesc{Path: pluginPath, Name: name})
 		}
 	}
 
