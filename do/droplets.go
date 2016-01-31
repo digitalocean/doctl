@@ -1,8 +1,6 @@
 package do
 
 import (
-	"log"
-
 	"github.com/digitalocean/godo"
 	"github.com/digitalocean/godo/util"
 )
@@ -69,8 +67,6 @@ func (ds *dropletsService) List() (Droplets, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-
-		log.Printf("resp = %#v", resp)
 
 		si := make([]interface{}, len(list))
 		for i := range list {
