@@ -33,16 +33,26 @@ func Droplet() *cobra.Command {
 
 	cmdDropletCreate := cmdBuilder(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", writer,
 		aliasOpt("c"), displayerType(&droplet{}))
-	addStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
-	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
-	addStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file")
-	addBoolFlag(cmdDropletCreate, doit.ArgDropletWait, false, "Wait for droplet to be created")
-	addStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region", requiredOpt())
-	addStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size", requiredOpt())
-	addBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet")
-	addBoolFlag(cmdDropletCreate, doit.ArgIPv6, false, "IPv6 support")
-	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
-	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image", requiredOpt())
+	addStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints",
+		shortFlag("k"))
+	addStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data",
+		shortFlag("u"))
+	addStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file",
+		shortFlag("f"))
+	addBoolFlag(cmdDropletCreate, doit.ArgDropletWait, false, "Wait for droplet to be created",
+		shortFlag("w"))
+	addStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region",
+		requiredOpt(), shortFlag("r"))
+	addStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size",
+		requiredOpt(), shortFlag("s"))
+	addBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet",
+		shortFlag("b"))
+	addBoolFlag(cmdDropletCreate, doit.ArgIPv6, false, "IPv6 support",
+		shortFlag("6"))
+	addBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking",
+		shortFlag("p"))
+	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image",
+		requiredOpt(), shortFlag("i"))
 
 	cmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", writer,
 		aliasOpt("d", "del", "rm"))

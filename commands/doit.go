@@ -118,6 +118,12 @@ func requiredOpt() flagOpt {
 	}
 }
 
+func shortFlag(f string) flagOpt {
+	return func(c *command, name, key string) {
+		c.Flag(name).Shorthand = f
+	}
+}
+
 func requiredKey(key string) string {
 	return fmt.Sprintf("%s.required", key)
 }
