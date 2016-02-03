@@ -3,6 +3,7 @@ package commands
 import (
 	"io"
 	"strconv"
+	"time"
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
@@ -22,6 +23,11 @@ func Actions() *cobra.Command {
 
 	cmdBuilder(cmd, RunCmdActionList, "list", "list actions", writer,
 		aliasOpt("ls"), displayerType(&action{}))
+
+	cmdActionWait := cmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", writer,
+		aliasOpt("w"), displayerType(&action{}))
+	addIntFlag(cmdActionWait, doit.ArgPollTime, 5, "Re-poll time in seconds",
+		shortFlag("p"))
 
 	return cmd
 }
@@ -63,6 +69,50 @@ func RunCmdActionGet(ns string, config doit.Config, out io.Writer, args []string
 	a, err := as.Get(id)
 	if err != nil {
 		return err
+	}
+
+	dc := &displayer{
+		ns:     ns,
+		config: config,
+		item:   &action{actions: do.Actions{*a}},
+		out:    out,
+	}
+
+	return dc.Display()
+}
+
+// RunCmdActionWait waits for an action to complete or error.
+func RunCmdActionWait(ns string, config doit.Config, out io.Writer, args []string) error {
+	if len(args) != 1 {
+		return doit.NewMissingArgsErr(ns)
+	}
+
+	id, err := strconv.Atoi(args[0])
+	if err != nil {
+		return err
+	}
+
+	pollTime, err := config.GetInt(ns, doit.ArgPollTime)
+	if err != nil {
+		return err
+	}
+
+	client := config.GetGodoClient()
+	as := do.NewActionsService(client)
+
+	var a *do.Action
+
+	for {
+		a, err = as.Get(id)
+		if err != nil {
+			return err
+		}
+
+		if a.Status != "in-progress" {
+			break
+		}
+
+		time.Sleep(time.Duration(pollTime) * time.Second)
 	}
 
 	dc := &displayer{

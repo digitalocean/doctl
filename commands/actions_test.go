@@ -20,7 +20,7 @@ var (
 func TestActionsCommand(t *testing.T) {
 	cmd := Actions()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "get", "list")
+	assertCommandNames(t, cmd, "get", "list", "wait")
 }
 
 func TestActionList(t *testing.T) {
