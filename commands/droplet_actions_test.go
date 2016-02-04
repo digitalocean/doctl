@@ -286,8 +286,8 @@ func TestDropletActionsResize(t *testing.T) {
 				if got, expected := id, 1; got != expected {
 					t.Errorf("ResizeFn() id = %d; expected %d", got, expected)
 				}
-				if got, expected := slug, "slug"; got != expected {
-					t.Errorf("ResizeFn() name = %q; expected %q", got, expected)
+				if got, expected := slug, "1gb"; got != expected {
+					t.Errorf("ResizeFn() size = %q; expected %q", got, expected)
 				}
 				if got, expected := resize, true; got != expected {
 					t.Errorf("ResizeFn() resize = %t; expected %t", got, expected)
@@ -299,7 +299,7 @@ func TestDropletActionsResize(t *testing.T) {
 
 	withTestClient(client, func(c *TestConfig) {
 		ns := "test"
-		c.Set(ns, doit.ArgImageSlug, "slug")
+		c.Set(ns, doit.ArgSizeSlug, "1gb")
 		c.Set(ns, doit.ArgResizeDisk, true)
 
 		RunDropletActionResize(ns, c, ioutil.Discard, []string{"1"})

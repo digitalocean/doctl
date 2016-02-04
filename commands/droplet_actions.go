@@ -79,8 +79,8 @@ func DropletAction() *cobra.Command {
 
 	cmdDropletActionResize := cmdBuilder(cmd, RunDropletActionResize,
 		"resize <droplet-id>", "resize droplet", writer, displayerType(&action{}))
-	addIntFlag(cmdDropletActionResize, doit.ArgImageID, 0, "Image ID", requiredOpt())
 	addBoolFlag(cmdDropletActionResize, doit.ArgResizeDisk, false, "Resize disk")
+	addStringFlag(cmdDropletActionResize, doit.ArgSizeSlug, "", "New size")
 
 	cmdDropletActionRebuild := cmdBuilder(cmd, RunDropletActionRebuild,
 		"rebuild <droplet-id>", "rebuild droplet", writer, displayerType(&action{}))
@@ -345,7 +345,7 @@ func RunDropletActionResize(ns string, config doit.Config, out io.Writer, args [
 			return nil, err
 		}
 
-		size, err := config.GetString(ns, doit.ArgImageSlug)
+		size, err := config.GetString(ns, doit.ArgSizeSlug)
 		if err != nil {
 			return nil, err
 		}
