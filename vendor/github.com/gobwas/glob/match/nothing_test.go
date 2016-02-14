@@ -34,7 +34,7 @@ func TestNothingIndex(t *testing.T) {
 }
 
 func BenchmarkIndexNothing(b *testing.B) {
-	m := Max{10}
+	m := Nothing{}
 	for i := 0; i < b.N; i++ {
 		m.Index(bench_pattern)
 	}

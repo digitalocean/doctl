@@ -51,6 +51,11 @@ func (r *Router) Put(pat string, h http.HandlerFunc) *mux.Route {
 	return r.Add("PUT", pat, h)
 }
 
+// Patch registers a pattern with a handler for PATCH requests.
+func (r *Router) Patch(pat string, h http.HandlerFunc) *mux.Route {
+	return r.Add("PATCH", pat, h)
+}
+
 // ServeHTTP dispatches the handler registered in the matched route.
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// Clean path to canonical form and redirect.

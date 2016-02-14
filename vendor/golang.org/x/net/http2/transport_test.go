@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -100,8 +101,7 @@ func TestTransport(t *testing.T) {
 		t.Errorf("Body = %q; want %q", slurp, body)
 	}
 }
-
-func TestTransportReusesConns(t *testing.T) {
+func onSameConn(t *testing.T, modReq func(*http.Request)) bool {
 	st := newServerTester(t, func(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, r.RemoteAddr)
 	}, optOnlyServer)
@@ -113,6 +113,7 @@ func TestTransportReusesConns(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		modReq(req)
 		res, err := tr.RoundTrip(req)
 		if err != nil {
 			t.Fatal(err)
@@ -130,8 +131,24 @@ func TestTransportReusesConns(t *testing.T) {
 	}
 	first := get()
 	second := get()
-	if first != second {
-		t.Errorf("first and second responses were on different connections: %q vs %q", first, second)
+	return first == second
+}
+
+func TestTransportReusesConns(t *testing.T) {
+	if !onSameConn(t, func(*http.Request) {}) {
+		t.Errorf("first and second responses were on different connections")
+	}
+}
+
+func TestTransportReusesConn_RequestClose(t *testing.T) {
+	if onSameConn(t, func(r *http.Request) { r.Close = true }) {
+		t.Errorf("first and second responses were not on different connections")
+	}
+}
+
+func TestTransportReusesConn_ConnClose(t *testing.T) {
+	if onSameConn(t, func(r *http.Request) { r.Header.Set("Connection", "close") }) {
+		t.Errorf("first and second responses were not on different connections")
 	}
 }
 
@@ -370,7 +387,7 @@ func TestTransportBody(t *testing.T) {
 		defer res.Body.Close()
 		ri := <-gotc
 		if ri.err != nil {
-			t.Errorf("%#d: read error: %v", i, ri.err)
+			t.Errorf("#%d: read error: %v", i, ri.err)
 			continue
 		}
 		if got := string(ri.slurp); got != tt.body {
@@ -1548,4 +1565,115 @@ func TestTransportDisableCompression(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer res.Body.Close()
+}
+
+// RFC 7540 section 8.1.2.2
+func TestTransportRejectsConnHeaders(t *testing.T) {
+	st := newServerTester(t, func(w http.ResponseWriter, r *http.Request) {
+		var got []string
+		for k := range r.Header {
+			got = append(got, k)
+		}
+		sort.Strings(got)
+		w.Header().Set("Got-Header", strings.Join(got, ","))
+	}, optOnlyServer)
+	defer st.Close()
+
+	tr := &Transport{TLSClientConfig: tlsConfigInsecure}
+	defer tr.CloseIdleConnections()
+
+	tests := []struct {
+		key   string
+		value []string
+		want  string
+	}{
+		{
+			key:   "Upgrade",
+			value: []string{"anything"},
+			want:  "ERROR: http2: invalid Upgrade request header",
+		},
+		{
+			key:   "Connection",
+			value: []string{"foo"},
+			want:  "ERROR: http2: invalid Connection request header",
+		},
+		{
+			key:   "Connection",
+			value: []string{"close"},
+			want:  "Accept-Encoding,User-Agent",
+		},
+		{
+			key:   "Connection",
+			value: []string{"close", "something-else"},
+			want:  "ERROR: http2: invalid Connection request header",
+		},
+		{
+			key:   "Connection",
+			value: []string{"keep-alive"},
+			want:  "Accept-Encoding,User-Agent",
+		},
+		{
+			key:   "Proxy-Connection", // just deleted and ignored
+			value: []string{"keep-alive"},
+			want:  "Accept-Encoding,User-Agent",
+		},
+		{
+			key:   "Transfer-Encoding",
+			value: []string{""},
+			want:  "Accept-Encoding,User-Agent",
+		},
+		{
+			key:   "Transfer-Encoding",
+			value: []string{"foo"},
+			want:  "ERROR: http2: invalid Transfer-Encoding request header",
+		},
+		{
+			key:   "Transfer-Encoding",
+			value: []string{"chunked"},
+			want:  "Accept-Encoding,User-Agent",
+		},
+		{
+			key:   "Transfer-Encoding",
+			value: []string{"chunked", "other"},
+			want:  "ERROR: http2: invalid Transfer-Encoding request header",
+		},
+		{
+			key:   "Content-Length",
+			value: []string{"123"},
+			want:  "Accept-Encoding,User-Agent",
+		},
+	}
+
+	for _, tt := range tests {
+		req, _ := http.NewRequest("GET", st.ts.URL, nil)
+		req.Header[tt.key] = tt.value
+		res, err := tr.RoundTrip(req)
+		var got string
+		if err != nil {
+			got = fmt.Sprintf("ERROR: %v", err)
+		} else {
+			got = res.Header.Get("Got-Header")
+			res.Body.Close()
+		}
+		if got != tt.want {
+			t.Errorf("For key %q, value %q, got = %q; want %q", tt.key, tt.value, got, tt.want)
+		}
+	}
+}
+
+// Tests that gzipReader doesn't crash on a second Read call following
+// the first Read call's gzip.NewReader returning an error.
+func TestGzipReader_DoubleReadCrash(t *testing.T) {
+	gz := &gzipReader{
+		body: ioutil.NopCloser(strings.NewReader("0123456789")),
+	}
+	var buf [1]byte
+	n, err1 := gz.Read(buf[:])
+	if n != 0 || !strings.Contains(fmt.Sprint(err1), "invalid header") {
+		t.Fatalf("Read = %v, %v; want 0, invalid header", n, err1)
+	}
+	n, err2 := gz.Read(buf[:])
+	if n != 0 || err2 != err1 {
+		t.Fatalf("second Read = %v, %v; want 0, %v", n, err2, err1)
+	}
 }

@@ -1,5 +1,5 @@
 syntax = "proto2";
-option go_package = "channel";
+option go_package = "capability";
 
 package appengine;
 

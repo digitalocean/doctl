@@ -120,7 +120,7 @@ type headerFrame interface {
 // reserved by gRPC protocol. Any other headers are classified as the
 // user-specified metadata.
 func isReservedHeader(hdr string) bool {
-	if hdr[0] == ':' {
+	if hdr != "" && hdr[0] == ':' {
 		return true
 	}
 	switch hdr {
@@ -143,7 +143,7 @@ func newHPACKDecoder() *hpackDecoder {
 		switch f.Name {
 		case "content-type":
 			if !strings.Contains(f.Value, "application/grpc") {
-				d.err = StreamErrorf(codes.FailedPrecondition, "transport: received the unexpected header")
+				d.err = StreamErrorf(codes.FailedPrecondition, "transport: received the unexpected content-type %q", f.Value)
 				return
 			}
 		case "grpc-encoding":

@@ -27,7 +27,6 @@ import (
 	"net/http"
 	"time"
 
-	"google.golang.org/api/googleapi"
 	raw "google.golang.org/api/pubsub/v1"
 	"google.golang.org/cloud"
 	"google.golang.org/cloud/internal"
@@ -73,7 +72,7 @@ type Message struct {
 // It must be constructed via NewClient.
 type Client struct {
 	projectID string
-	s         *raw.Service
+	s         service
 }
 
 // NewClient create a new PubSub client.
@@ -88,12 +87,9 @@ func NewClient(ctx context.Context, projectID string, opts ...cloud.ClientOption
 	if err != nil {
 		return nil, fmt.Errorf("dialing: %v", err)
 	}
-	s, err := raw.New(httpClient)
-	if err != nil {
-		return nil, err
-	}
 
-	s.BasePath = endpoint
+	s, err := newPubSubService(httpClient, endpoint)
+
 	c := &Client{
 		projectID: projectID,
 		s:         s,
@@ -102,46 +98,8 @@ func NewClient(ctx context.Context, projectID string, opts ...cloud.ClientOption
 	return c, nil
 }
 
-// TODO(jbd): Add subscription and topic listing.
-
-// CreateSub creates a Pub/Sub subscription on the backend.
-// A subscription should subscribe to an existing topic.
-//
-// The messages that haven't acknowledged will be pushed back to the
-// subscription again when the default acknowledgement deadline is
-// reached. You can override the default deadline by providing a
-// non-zero deadline. Deadline must not be specified to
-// precision greater than one second.
-//
-// As new messages are being queued on the subscription, you
-// may recieve push notifications regarding to the new arrivals.
-// To receive notifications of new messages in the queue,
-// specify an endpoint callback URL.
-// If endpoint is an empty string the backend will not notify the
-// client of new messages.
-//
-// If the subscription already exists an error will be returned.
-func CreateSub(ctx context.Context, name string, topic string, deadline time.Duration, endpoint string) error {
-	sub := &raw.Subscription{
-		Topic: fullTopicName(internal.ProjID(ctx), topic),
-	}
-	if int64(deadline) > 0 {
-		if !isSec(deadline) {
-			return errors.New("pubsub: deadline must not be specified to precision greater than one second")
-		}
-		sub.AckDeadlineSeconds = int64(deadline / time.Second)
-	}
-	if endpoint != "" {
-		sub.PushConfig = &raw.PushConfig{PushEndpoint: endpoint}
-	}
-	_, err := rawService(ctx).Projects.Subscriptions.Create(fullSubName(internal.ProjID(ctx), name), sub).Do()
-	return err
-}
-
-// DeleteSub deletes the subscription.
-func DeleteSub(ctx context.Context, name string) error {
-	_, err := rawService(ctx).Projects.Subscriptions.Delete(fullSubName(internal.ProjID(ctx), name)).Do()
-	return err
+func (c *Client) fullyQualifiedProjectName() string {
+	return fmt.Sprintf("projects/%s", c.projectID)
 }
 
 // ModifyAckDeadline modifies the acknowledgement deadline
@@ -168,18 +126,6 @@ func ModifyPushEndpoint(ctx context.Context, sub, endpoint string) error {
 		},
 	}).Do()
 	return err
-}
-
-// SubExists returns true if subscription exists.
-func SubExists(ctx context.Context, name string) (bool, error) {
-	_, err := rawService(ctx).Projects.Subscriptions.Get(fullSubName(internal.ProjID(ctx), name)).Do()
-	if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusNotFound {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
 }
 
 // Ack acknowledges one or more Pub/Sub messages on the
@@ -246,31 +192,6 @@ func pull(ctx context.Context, sub string, n int, retImmediately bool) ([]*Messa
 	return msgs, nil
 }
 
-// CreateTopic creates a new topic with the specified name on the backend.
-// It will return an error if topic already exists.
-func CreateTopic(ctx context.Context, name string) error {
-	_, err := rawService(ctx).Projects.Topics.Create(fullTopicName(internal.ProjID(ctx), name), &raw.Topic{}).Do()
-	return err
-}
-
-// DeleteTopic deletes the specified topic.
-func DeleteTopic(ctx context.Context, name string) error {
-	_, err := rawService(ctx).Projects.Topics.Delete(fullTopicName(internal.ProjID(ctx), name)).Do()
-	return err
-}
-
-// TopicExists returns true if a topic exists with the specified name.
-func TopicExists(ctx context.Context, name string) (bool, error) {
-	_, err := rawService(ctx).Projects.Topics.Get(fullTopicName(internal.ProjID(ctx), name)).Do()
-	if e, ok := err.(*googleapi.Error); ok && e.Code == http.StatusNotFound {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	return true, nil
-}
-
 // Publish publish messages to the topic's subscribers. It returns
 // message IDs upon success.
 func Publish(ctx context.Context, topic string, msgs ...*Message) ([]string, error) {
@@ -306,6 +227,7 @@ func fullSubName(proj, name string) string {
 // fullTopicName returns the fully qualified name for a topic.
 // E.g. /topics/project-id/topic-name.
 func fullTopicName(proj, name string) string {
+	// TODO(mcgreevy): remove this in favour of Topic.fullyQualifiedName.
 	return fmt.Sprintf("projects/%s/topics/%s", proj, name)
 }
 

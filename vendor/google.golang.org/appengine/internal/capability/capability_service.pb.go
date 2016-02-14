@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package channel is a generated protocol buffer package.
+Package capability is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/capability/capability_service.proto
@@ -12,7 +12,7 @@ It has these top-level messages:
 	IsEnabledRequest
 	IsEnabledResponse
 */
-package channel
+package capability
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"

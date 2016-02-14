@@ -2,9 +2,6 @@ runtime: go
 api_version: go1
 vm: true
 
-manual_scaling:
-  instances: 1
-
 handlers:
 - url: /favicon.ico
   static_files: favicon.ico

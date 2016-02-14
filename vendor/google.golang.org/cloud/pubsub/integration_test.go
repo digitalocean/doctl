@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/cloud"
 	"google.golang.org/cloud/internal/testutil"
 )
 
@@ -26,24 +27,36 @@ func TestAll(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Integration tests skipped in short mode")
 	}
+	// TODO(djd): Replace this ctx with context.Background() when the new API is complete.
 	ctx := testutil.Context(ScopePubSub, ScopeCloudPlatform)
 	if ctx == nil {
 		t.Skip("Integration tests skipped. See CONTRIBUTING.md for details")
 	}
+	ts := testutil.TokenSource(ctx, ScopePubSub, ScopeCloudPlatform)
+	if ts == nil {
+		t.Skip("Integration tests skipped. See CONTRIBUTING.md for details")
+	}
 
 	now := time.Now()
-	topic := fmt.Sprintf("topic-%d", now.Unix())
-	subscription := fmt.Sprintf("subscription-%d", now.Unix())
+	topicName := fmt.Sprintf("topic-%d", now.Unix())
+	subName := fmt.Sprintf("subscription-%d", now.Unix())
 
-	if err := CreateTopic(ctx, topic); err != nil {
+	client, err := NewClient(ctx, testutil.ProjID(), cloud.WithTokenSource(ts))
+	if err != nil {
+		t.Fatalf("Creating client error: %v", err)
+	}
+
+	var topic *TopicHandle
+	if topic, err = client.NewTopic(ctx, topicName); err != nil {
 		t.Errorf("CreateTopic error: %v", err)
 	}
 
-	if err := CreateSub(ctx, subscription, topic, time.Duration(0), ""); err != nil {
+	var sub *SubscriptionHandle
+	if sub, err = topic.Subscribe(ctx, subName, 0, nil); err != nil {
 		t.Errorf("CreateSub error: %v", err)
 	}
 
-	exists, err := TopicExists(ctx, topic)
+	exists, err := topic.Exists(ctx)
 	if err != nil {
 		t.Fatalf("TopicExists error: %v", err)
 	}
@@ -51,12 +64,12 @@ func TestAll(t *testing.T) {
 		t.Errorf("topic %s should exist, but it doesn't", topic)
 	}
 
-	exists, err = SubExists(ctx, subscription)
+	exists, err = sub.Exists(ctx)
 	if err != nil {
 		t.Fatalf("SubExists error: %v", err)
 	}
 	if !exists {
-		t.Errorf("subscription %s should exist, but it doesn't", subscription)
+		t.Errorf("subscription %s should exist, but it doesn't", subName)
 	}
 
 	max := 10
@@ -73,7 +86,7 @@ func TestAll(t *testing.T) {
 		expectedMsgs[text] = false
 	}
 
-	ids, err := Publish(ctx, topic, msgs...)
+	ids, err := Publish(ctx, topicName, msgs...)
 	if err != nil {
 		t.Fatalf("Publish (1) error: %v", err)
 	}
@@ -87,7 +100,7 @@ func TestAll(t *testing.T) {
 		expectedIDs[id] = false
 	}
 
-	received, err := PullWait(ctx, subscription, max)
+	received, err := PullWait(ctx, subName, max)
 	if err != nil {
 		t.Fatalf("PullWait error: %v", err)
 	}
@@ -121,12 +134,12 @@ func TestAll(t *testing.T) {
 	msg := &Message{
 		Data: []byte(data),
 	}
-	_, err = Publish(ctx, topic, msg)
+	_, err = Publish(ctx, topicName, msg)
 	if err != nil {
 		t.Fatalf("Publish (2) error: %v", err)
 	}
 
-	received, err = PullWait(ctx, subscription, 1)
+	received, err = PullWait(ctx, subName, 1)
 	if err != nil {
 		t.Fatalf("PullWait error: %v", err)
 	}
@@ -137,12 +150,12 @@ func TestAll(t *testing.T) {
 		t.Errorf("unexpexted message received; %s, want %s", string(received[0].Data), data)
 	}
 
-	err = DeleteSub(ctx, subscription)
+	err = sub.Delete(ctx)
 	if err != nil {
 		t.Errorf("DeleteSub error: %v", err)
 	}
 
-	err = DeleteTopic(ctx, topic)
+	err = topic.Delete(ctx)
 	if err != nil {
 		t.Errorf("DeleteTopic error: %v", err)
 	}

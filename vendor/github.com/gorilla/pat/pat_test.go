@@ -25,6 +25,8 @@ func testMatch(t *testing.T, meth, pat, path string, ok bool, vars map[string]st
 		r.Post(pat, myHandler)
 	case "PUT":
 		r.Put(pat, myHandler)
+	case "PATCH":
+		r.Patch(pat, myHandler)
 	}
 	req, _ := http.NewRequest(meth, "http://localhost"+path, nil)
 	m := mux.RouteMatch{}
@@ -52,4 +54,5 @@ func TestPatMatch(t *testing.T) {
 	testMatch(t, "PUT", "/foo/{name}/baz", "/foo/bar/baz/ding", true, map[string]string{":name": "bar"})
 	testMatch(t, "GET", "/foo/x{name}", "/foo/xbar", true, map[string]string{":name": "bar"})
 	testMatch(t, "GET", "/foo/x{name}", "/foo/xbar/baz", true, map[string]string{":name": "bar"})
+	testMatch(t, "PATCH", "/foo/x{name}", "/foo/xbar/baz", true, map[string]string{":name": "bar"})
 }

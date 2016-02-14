@@ -46,9 +46,15 @@ var (
 const (
 	usage = `Available arguments are:
     create_topic <name>
+    topic_exists <name>
     delete_topic <name>
+    list_topic_subscriptions <name>
+    list_topics
     create_subscription <name> <linked_topic>
+    show_subscription <name>
+    subscription_exists <name>
     delete_subscription <name>
+    list_subscriptions
     publish <topic> <message>
     pull_messages <subscription> <numworkers>
     publish_messages <topic> <numworkers>
@@ -104,54 +110,120 @@ func newClient(jsonFile string) (*http.Client, error) {
 	return nil, errors.New("Could not create an authenticated client.")
 }
 
-func listTopics(ctx context.Context, argv []string) {
-	panic("listTopics not implemented yet")
-}
-
-func createTopic(ctx context.Context, argv []string) {
+func createTopic(client *pubsub.Client, argv []string) {
 	checkArgs(argv, 2)
 	topic := argv[1]
-	err := pubsub.CreateTopic(ctx, topic)
+	_, err := client.NewTopic(context.Background(), topic)
 	if err != nil {
-		log.Fatalf("CreateTopic failed, %v", err)
+		log.Fatalf("Creating topic failed: %v", err)
 	}
 	fmt.Printf("Topic %s was created.\n", topic)
 }
 
-func deleteTopic(ctx context.Context, argv []string) {
+func listTopics(client *pubsub.Client, argv []string) {
+	checkArgs(argv, 1)
+	topics, err := client.Topics(context.Background())
+	if err != nil {
+		log.Fatalf("Listing topics failed: %v", err)
+	}
+	for _, t := range topics {
+		fmt.Println(t.Name())
+	}
+}
+
+func listTopicSubscriptions(client *pubsub.Client, argv []string) {
 	checkArgs(argv, 2)
 	topic := argv[1]
-	err := pubsub.DeleteTopic(ctx, topic)
+	subs, err := client.Topic(topic).Subscriptions(context.Background())
 	if err != nil {
-		log.Fatalf("DeleteTopic failed, %v", err)
+		log.Fatalf("Listing subscriptions failed: %v", err)
+	}
+	for _, s := range subs {
+		fmt.Println(s.Name())
+	}
+}
+
+func checkTopicExists(client *pubsub.Client, argv []string) {
+	checkArgs(argv, 1)
+	topic := argv[1]
+	exists, err := client.Topic(topic).Exists(context.Background())
+	if err != nil {
+		log.Fatalf("Checking topic exists failed: %v", err)
+	}
+	fmt.Println(exists)
+}
+
+func deleteTopic(client *pubsub.Client, argv []string) {
+	checkArgs(argv, 2)
+	topic := argv[1]
+	err := client.Topic(topic).Delete(context.Background())
+	if err != nil {
+		log.Fatalf("Deleting topic failed: %v", err)
 	}
 	fmt.Printf("Topic %s was deleted.\n", topic)
 }
 
-func listSubscriptions(ctx context.Context, argv []string) {
-	panic("listSubscriptions not implemented yet")
-}
-
-func createSubscription(ctx context.Context, argv []string) {
+func createSubscription(client *pubsub.Client, argv []string) {
 	checkArgs(argv, 3)
 	sub := argv[1]
 	topic := argv[2]
-	err := pubsub.CreateSub(ctx, sub, topic, 60*time.Second, "")
+	_, err := client.Topic(topic).Subscribe(context.Background(), sub, 0, nil)
 	if err != nil {
-		log.Fatalf("CreateSub failed, %v", err)
+		log.Fatalf("Creating Subscription failed: %v", err)
 	}
 	fmt.Printf("Subscription %s was created.\n", sub)
 }
 
-func deleteSubscription(ctx context.Context, argv []string) {
+func showSubscription(client *pubsub.Client, argv []string) {
 	checkArgs(argv, 2)
 	sub := argv[1]
-	err := pubsub.DeleteSub(ctx, sub)
+	conf, err := client.Subscription(sub).Config(context.Background())
 	if err != nil {
-		log.Fatalf("DeleteSub failed, %v", err)
+		log.Fatalf("Getting Subscription failed: %v", err)
+	}
+	fmt.Printf("%+v\n", conf)
+	exists, err := conf.Topic.Exists(context.Background())
+	if err != nil {
+		log.Fatalf("Checking whether topic exists: %v", err)
+	}
+	if !exists {
+		fmt.Println("The topic for this subscription has been deleted.\n")
+	}
+}
+
+func checkSubscriptionExists(client *pubsub.Client, argv []string) {
+	checkArgs(argv, 1)
+	sub := argv[1]
+	exists, err := client.Subscription(sub).Exists(context.Background())
+	if err != nil {
+		log.Fatalf("Checking subscription exists failed: %v", err)
+	}
+	fmt.Println(exists)
+}
+
+func deleteSubscription(client *pubsub.Client, argv []string) {
+	checkArgs(argv, 2)
+	sub := argv[1]
+	err := client.Subscription(sub).Delete(context.Background())
+	if err != nil {
+		log.Fatalf("Deleting Subscription failed: %v", err)
 	}
 	fmt.Printf("Subscription %s was deleted.\n", sub)
 }
+
+func listSubscriptions(client *pubsub.Client, argv []string) {
+	checkArgs(argv, 1)
+	subs, err := client.Subscriptions(context.Background())
+	if err != nil {
+		log.Fatalf("Listing subscriptions failed: %v", err)
+	}
+	for _, s := range subs {
+		fmt.Println(s.Name())
+	}
+}
+
+// NOTE: the following operations (which take a Context rather than a Client)
+// use the old API which is being progressively deprecated.
 
 func publish(ctx context.Context, argv []string) {
 	checkArgs(argv, 3)
@@ -283,13 +355,9 @@ func publishMessages(ctx context.Context, argv []string) {
 	}
 }
 
-// This example demonstrates calling the Cloud Pub/Sub API. As of 22
-// Oct 2014, the Cloud Pub/Sub API is only available if you're
-// whitelisted. If you're interested in using it, please apply for the
-// Limited Preview program at the following form:
-// http://goo.gl/Wql9HL
+// This example demonstrates calling the Cloud Pub/Sub API.
 //
-// Also, before running this example, be sure to enable Cloud Pub/Sub
+// Before running this example, be sure to enable Cloud Pub/Sub
 // service on your project in Developer Console at:
 // https://console.developers.google.com/
 //
@@ -328,27 +396,42 @@ func main() {
 	flag.Parse()
 	argv := flag.Args()
 	checkArgs(argv, 1)
-	client, err := newClient(*jsonFile)
-	if err != nil {
-		log.Fatalf("clientAndId failed, %v", err)
-	}
 	if *projID == "" {
 		usageAndExit("Please specify Project ID.")
 	}
-	ctx := cloud.NewContext(*projID, client)
-	m := map[string]func(ctx context.Context, argv []string){
-		"create_topic":        createTopic,
-		"delete_topic":        deleteTopic,
-		"create_subscription": createSubscription,
-		"delete_subscription": deleteSubscription,
-		"publish":             publish,
-		"pull_messages":       pullMessages,
-		"publish_messages":    publishMessages,
+	oldStyle := map[string]func(ctx context.Context, argv []string){
+		"publish":          publish,
+		"pull_messages":    pullMessages,
+		"publish_messages": publishMessages,
+	}
+
+	newStyle := map[string]func(client *pubsub.Client, argv []string){
+		"create_topic":             createTopic,
+		"delete_topic":             deleteTopic,
+		"list_topics":              listTopics,
+		"list_topic_subscriptions": listTopicSubscriptions,
+		"topic_exists":             checkTopicExists,
+		"create_subscription":      createSubscription,
+		"show_subscription":        showSubscription,
+		"delete_subscription":      deleteSubscription,
+		"subscription_exists":      checkSubscriptionExists,
+		"list_subscriptions":       listSubscriptions,
 	}
 	subcommand := argv[0]
-	f, ok := m[subcommand]
-	if !ok {
+	if f, ok := oldStyle[subcommand]; ok {
+		httpClient, err := newClient(*jsonFile)
+		if err != nil {
+			log.Fatalf("clientAndId failed, %v", err)
+		}
+		ctx := cloud.NewContext(*projID, httpClient)
+		f(ctx, argv)
+	} else if f, ok := newStyle[subcommand]; ok {
+		client, err := pubsub.NewClient(context.Background(), *projID)
+		if err != nil {
+			log.Fatalf("creating pubsub client: %v", err)
+		}
+		f(client, argv)
+	} else {
 		usageAndExit(fmt.Sprintf("Function not found for %s", subcommand))
 	}
-	f(ctx, argv)
 }

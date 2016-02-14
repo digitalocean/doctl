@@ -33,8 +33,6 @@ these packages.
 The `app.yaml` file (and YAML files for modules) should have these new lines added:
 ```
 vm: true
-manual_scaling:
-  instances: 1
 ```
 See https://cloud.google.com/appengine/docs/go/modules/#Go_Instance_scaling_and_class for details.
 

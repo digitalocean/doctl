@@ -19,6 +19,7 @@ func TestType(t *testing.T) {
 	}{
 		{token.STRING, `foo = "foo"`},
 		{token.NUMBER, `foo = 123`},
+		{token.NUMBER, `foo = -29`},
 		{token.FLOAT, `foo = 123.12`},
 		{token.FLOAT, `foo = -123.12`},
 		{token.BOOL, `foo = true`},
@@ -155,6 +156,7 @@ func TestObjectType(t *testing.T) {
 		item, err := p.objectItem()
 		if err != nil {
 			t.Error(err)
+			continue
 		}
 
 		// we know that the ObjectKey name is foo for all cases, what matters
@@ -162,6 +164,7 @@ func TestObjectType(t *testing.T) {
 		obj, ok := item.Val.(*ast.ObjectType)
 		if !ok {
 			t.Errorf("node should be of type LiteralType, got: %T", item.Val)
+			continue
 		}
 
 		// check if the total length of items are correct
@@ -294,6 +297,10 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"missing_braces.hcl",
+			true,
+		},
+		{
+			"unterminated_object.hcl",
 			true,
 		},
 	}

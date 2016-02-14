@@ -3,9 +3,6 @@ runtime: go
 vm: true
 api_version: go1
 
-manual_scaling:
-  instances: 1
-
 handlers:
 # Favicon.  Without this, the browser hits this once per page view.
 - url: /favicon.ico

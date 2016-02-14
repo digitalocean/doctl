@@ -2647,7 +2647,13 @@ func testServerWritesTrailers(t *testing.T, withFlush bool) {
 		}
 		w.Header().Set("Server-Trailer-A", "valuea")
 		w.Header().Set("Server-Trailer-C", "valuec") // skipping B
+		// After a flush, random keys like Server-Surprise shouldn't show up:
 		w.Header().Set("Server-Surpise", "surprise! this isn't predeclared!")
+		// But we do permit promoting keys to trailers after a
+		// flush if they start with the magic
+		// otherwise-invalid "Trailer:" prefix:
+		w.Header().Set("Trailer:Post-Header-Trailer", "hi1")
+		w.Header().Set("Trailer:post-header-trailer2", "hi2")
 		w.Header().Set("Transfer-Encoding", "should not be included; Forbidden by RFC 2616 14.40")
 		w.Header().Set("Content-Length", "should not be included; Forbidden by RFC 2616 14.40")
 		w.Header().Set("Trailer", "should not be included; Forbidden by RFC 2616 14.40")
@@ -2689,10 +2695,43 @@ func testServerWritesTrailers(t *testing.T, withFlush bool) {
 			t.Fatalf("trailers HEADERS lacked END_HEADERS")
 		}
 		wanth = [][2]string{
+			{"post-header-trailer", "hi1"},
+			{"post-header-trailer2", "hi2"},
 			{"server-trailer-a", "valuea"},
 			{"server-trailer-c", "valuec"},
 		}
 		goth = st.decodeHeader(tf.HeaderBlockFragment())
+		if !reflect.DeepEqual(goth, wanth) {
+			t.Errorf("Header mismatch.\n got: %v\nwant: %v", goth, wanth)
+		}
+	})
+}
+
+// validate transmitted header field names & values
+// golang.org/issue/14048
+func TestServerDoesntWriteInvalidHeaders(t *testing.T) {
+	testServerResponse(t, func(w http.ResponseWriter, r *http.Request) error {
+		w.Header().Add("OK1", "x")
+		w.Header().Add("Bad:Colon", "x") // colon (non-token byte) in key
+		w.Header().Add("Bad1\x00", "x")  // null in key
+		w.Header().Add("Bad2", "x\x00y") // null in value
+		return nil
+	}, func(st *serverTester) {
+		getSlash(st)
+		hf := st.wantHeaders()
+		if !hf.StreamEnded() {
+			t.Error("response HEADERS lacked END_STREAM")
+		}
+		if !hf.HeadersEnded() {
+			t.Fatal("response HEADERS didn't have END_HEADERS")
+		}
+		goth := st.decodeHeader(hf.HeaderBlockFragment())
+		wanth := [][2]string{
+			{":status", "200"},
+			{"ok1", "x"},
+			{"content-type", "text/plain; charset=utf-8"},
+			{"content-length", "0"},
+		}
 		if !reflect.DeepEqual(goth, wanth) {
 			t.Errorf("Header mismatch.\n got: %v\nwant: %v", goth, wanth)
 		}
@@ -2769,12 +2808,16 @@ func TestIssue53(t *testing.T) {
 		"\r\n\r\n\x00\x00\x00\x01\ainfinfin\ad"
 	s := &http.Server{
 		ErrorLog: log.New(io.MultiWriter(stderrv(), twriter{t: t}), "", log.LstdFlags),
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Write([]byte("hello"))
+		}),
 	}
-	s2 := &Server{MaxReadFrameSize: 1 << 16, PermitProhibitedCipherSuites: true}
+	s2 := &Server{
+		MaxReadFrameSize:             1 << 16,
+		PermitProhibitedCipherSuites: true,
+	}
 	c := &issue53Conn{[]byte(data), false, false}
-	s2.handleConn(s, c, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Write([]byte("hello"))
-	}))
+	s2.ServeConn(c, &ServeConnOpts{BaseConfig: s})
 	if !c.closed {
 		t.Fatal("connection is not closed")
 	}
@@ -2937,4 +2980,103 @@ func TestServerNoDuplicateContentType(t *testing.T) {
 	if !reflect.DeepEqual(headers, want) {
 		t.Errorf("Headers mismatch.\n got: %q\nwant: %q\n", headers, want)
 	}
+}
+
+type connStateConn struct {
+	net.Conn
+	cs tls.ConnectionState
+}
+
+func (c connStateConn) ConnectionState() tls.ConnectionState { return c.cs }
+
+// golang.org/issue/12737 -- handle any net.Conn, not just
+// *tls.Conn.
+func TestServerHandleCustomConn(t *testing.T) {
+	var s Server
+	c1, c2 := net.Pipe()
+	clientDone := make(chan struct{})
+	handlerDone := make(chan struct{})
+	var req *http.Request
+	go func() {
+		defer close(clientDone)
+		defer c2.Close()
+		fr := NewFramer(c2, c2)
+		io.WriteString(c2, ClientPreface)
+		fr.WriteSettings()
+		fr.WriteSettingsAck()
+		f, err := fr.ReadFrame()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if sf, ok := f.(*SettingsFrame); !ok || sf.IsAck() {
+			t.Errorf("Got %v; want non-ACK SettingsFrame", summarizeFrame(f))
+			return
+		}
+		f, err = fr.ReadFrame()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if sf, ok := f.(*SettingsFrame); !ok || !sf.IsAck() {
+			t.Errorf("Got %v; want ACK SettingsFrame", summarizeFrame(f))
+			return
+		}
+		var henc hpackEncoder
+		fr.WriteHeaders(HeadersFrameParam{
+			StreamID:      1,
+			BlockFragment: henc.encodeHeaderRaw(t, ":method", "GET", ":path", "/", ":scheme", "https", ":authority", "foo.com"),
+			EndStream:     true,
+			EndHeaders:    true,
+		})
+		go io.Copy(ioutil.Discard, c2)
+		<-handlerDone
+	}()
+	const testString = "my custom ConnectionState"
+	fakeConnState := tls.ConnectionState{
+		ServerName: testString,
+		Version:    tls.VersionTLS12,
+	}
+	go s.ServeConn(connStateConn{c1, fakeConnState}, &ServeConnOpts{
+		BaseConfig: &http.Server{
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				defer close(handlerDone)
+				req = r
+			}),
+		}})
+	select {
+	case <-clientDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for handler")
+	}
+	if req.TLS == nil {
+		t.Fatalf("Request.TLS is nil. Got: %#v", req)
+	}
+	if req.TLS.ServerName != testString {
+		t.Fatalf("Request.TLS = %+v; want ServerName of %q", req.TLS, testString)
+	}
+}
+
+type hpackEncoder struct {
+	enc *hpack.Encoder
+	buf bytes.Buffer
+}
+
+func (he *hpackEncoder) encodeHeaderRaw(t *testing.T, headers ...string) []byte {
+	if len(headers)%2 == 1 {
+		panic("odd number of kv args")
+	}
+	he.buf.Reset()
+	if he.enc == nil {
+		he.enc = hpack.NewEncoder(&he.buf)
+	}
+	for len(headers) > 0 {
+		k, v := headers[0], headers[1]
+		err := he.enc.WriteField(hpack.HeaderField{Name: k, Value: v})
+		if err != nil {
+			t.Fatalf("HPACK encoding error for %q/%q: %v", k, v, err)
+		}
+		headers = headers[2:]
+	}
+	return he.buf.Bytes()
 }
