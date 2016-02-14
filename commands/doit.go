@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -188,6 +189,9 @@ func cmdNS(cmd *cobra.Command) string {
 
 type cmdRunner func(ns string, config doit.Config, out io.Writer, args []string) error
 
+// cmdRunner2 runs a command and passes in a cmdConfig.
+type cmdRunner2 func(*cmdConfig) error
+
 type cmdOption func(*command)
 
 type command struct {
@@ -212,6 +216,66 @@ func displayerType(d displayable) cmdOption {
 	return func(c *command) {
 		c.fmtCols = d.Cols()
 	}
+}
+
+type cmdConfig struct {
+	ns         string
+	doitConfig doit.Config
+	out        io.Writer
+	args       []string
+}
+
+func (c *cmdConfig) display(d displayable) error {
+	dc := &displayer{
+		ns:     c.ns,
+		config: c.doitConfig,
+		item:   d,
+		out:    c.out,
+	}
+
+	return dc.Display()
+}
+
+func (c *cmdConfig) accountService() do.AccountService {
+	return do.NewAccountService(c.doitConfig.GetGodoClient())
+}
+
+func cmdBuilder2(parent *cobra.Command, cr cmdRunner2, cliText, desc string, out io.Writer, options ...cmdOption) *command {
+	cc := &cobra.Command{
+		Use:   cliText,
+		Short: desc,
+		Long:  desc,
+		Run: func(cmd *cobra.Command, args []string) {
+			c := &cmdConfig{
+				ns:         cmdNS(cmd),
+				doitConfig: doit.DoitConfig,
+				out:        out,
+				args:       args,
+			}
+
+			err := cr(c)
+			checkErr(err, cmd)
+		},
+	}
+
+	if parent != nil {
+		parent.AddCommand(cc)
+	}
+
+	c := &command{Command: cc}
+
+	for _, co := range options {
+		co(c)
+	}
+
+	if cols := c.fmtCols; cols != nil {
+		formatHelp := fmt.Sprintf("Columns for output in a comma seperated list. Possible values: %s",
+			strings.Join(cols, ","))
+		addStringFlag(c, doit.ArgFormat, "", formatHelp)
+		addBoolFlag(c, doit.ArgNoHeader, false, "hide headers")
+	}
+
+	return c
 }
 
 func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *command {

@@ -35,9 +35,13 @@ func TestAccountGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		err := RunAccountGet(ns, c, ioutil.Discard, []string{})
+		err := RunAccountGet(config)
 		assert.NoError(t, err)
 
 		if !accountDidGet {
