@@ -42,9 +42,15 @@ func TestDomainsCreate(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgIPAddress, "127.0.0.1")
-		err := RunDomainCreate(ns, c, ioutil.Discard, []string{testDomain.Name})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		config.args = append(config.args, testDomain.Name)
+		c.Set(config.ns, doit.ArgIPAddress, "127.0.0.1")
+		err := RunDomainCreate(config)
 		assert.NoError(t, err)
 	})
 }
@@ -65,8 +71,13 @@ func TestDomainsList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunDomainList(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		err := RunDomainList(config)
 		assert.NoError(t, err)
 		if !domainsDisList {
 			t.Errorf("List() did not run")
@@ -87,8 +98,14 @@ func TestDomainsGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunDomainGet(ns, c, ioutil.Discard, []string{testDomain.Name})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		config.args = append(config.args, testDomain.Name)
+		err := RunDomainGet(config)
 		assert.NoError(t, err)
 	})
 }
@@ -97,8 +114,13 @@ func TestDomainsGet_DomainRequred(t *testing.T) {
 	client := &godo.Client{}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunDomainGet(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		err := RunDomainGet(config)
 		assert.Error(t, err)
 	})
 }
@@ -116,8 +138,15 @@ func TestDomainsDelete(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunDomainDelete(ns, c, ioutil.Discard, []string{testDomain.Name})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		config.args = append(config.args, testDomain.Name)
+
+		err := RunDomainDelete(config)
 		assert.NoError(t, err)
 	})
 }
@@ -126,8 +155,13 @@ func TestDomainsGet_RequiredArguments(t *testing.T) {
 	client := &godo.Client{}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunDomainDelete(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		err := RunDomainDelete(config)
 		assert.Error(t, err)
 	})
 }
@@ -145,9 +179,15 @@ func TestRecordsList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		err := RunRecordList(ns, c, ioutil.Discard, []string{"example.com"})
+		config.args = append(config.args, "example.com")
+
+		err := RunRecordList(config)
 		assert.NoError(t, err)
 		assert.True(t, recordsDidList)
 	})
@@ -157,8 +197,13 @@ func TestRecordList_RequiredArguments(t *testing.T) {
 	client := &godo.Client{}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunRecordList(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		err := RunRecordList(config)
 		assert.Error(t, err)
 	})
 }
@@ -182,12 +227,19 @@ func TestRecordsCreate(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgRecordType, "A")
-		c.Set(ns, doit.ArgRecordName, "foo.example.com.")
-		c.Set(ns, doit.ArgRecordData, "192.168.1.1")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		err := RunRecordCreate(ns, c, ioutil.Discard, []string{"example.com"})
+		c.Set(config.ns, doit.ArgRecordType, "A")
+		c.Set(config.ns, doit.ArgRecordName, "foo.example.com.")
+		c.Set(config.ns, doit.ArgRecordData, "192.168.1.1")
+
+		config.args = append(config.args, "example.com")
+
+		err := RunRecordCreate(config)
 		assert.NoError(t, err)
 	})
 }
@@ -196,8 +248,13 @@ func TestRecordCreate_RequiredArguments(t *testing.T) {
 	client := &godo.Client{}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunRecordCreate(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		err := RunRecordCreate(config)
 		assert.Error(t, err)
 	})
 }
@@ -218,8 +275,15 @@ func TestRecordsDelete(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunRecordDelete(ns, c, ioutil.Discard, []string{"example.com", "1"})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		config.args = append(config.args, "example.com", "1")
+
+		err := RunRecordDelete(config)
 		assert.NoError(t, err)
 	})
 }
@@ -244,13 +308,20 @@ func TestRecordsUpdate(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgRecordID, 1)
-		c.Set(ns, doit.ArgRecordType, "A")
-		c.Set(ns, doit.ArgRecordName, "foo.example.com.")
-		c.Set(ns, doit.ArgRecordData, "192.168.1.1")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		err := RunRecordUpdate(ns, c, ioutil.Discard, []string{"example.com"})
+		c.Set(config.ns, doit.ArgRecordID, 1)
+		c.Set(config.ns, doit.ArgRecordType, "A")
+		c.Set(config.ns, doit.ArgRecordName, "foo.example.com.")
+		c.Set(config.ns, doit.ArgRecordData, "192.168.1.1")
+
+		config.args = append(config.args, "example.com")
+
+		err := RunRecordUpdate(config)
 		assert.NoError(t, err)
 	})
 }

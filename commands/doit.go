@@ -244,6 +244,10 @@ func (c *cmdConfig) actionsService() do.ActionsService {
 	return do.NewActionsService(c.doitConfig.GetGodoClient())
 }
 
+func (c *cmdConfig) domainsService() do.DomainsService {
+	return do.NewDomainsService(c.doitConfig.GetGodoClient())
+}
+
 func cmdBuilder2(parent *cobra.Command, cr cmdRunner2, cliText, desc string, out io.Writer, options ...cmdOption) *command {
 	cc := &cobra.Command{
 		Use:   cliText,
