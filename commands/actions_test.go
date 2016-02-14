@@ -2,7 +2,6 @@ package commands
 
 import (
 	"io/ioutil"
-	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -41,8 +40,13 @@ func TestActionList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		err := RunCmdActionList(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		err := RunCmdActionList(config)
 		assert.NoError(t, err)
 
 		if !actionDidList {
@@ -64,7 +68,15 @@ func TestActionGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		err := RunCmdActionGet("test", c, ioutil.Discard, []string{strconv.Itoa(testAction.ID)})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		config.args = append(config.args, "1")
+
+		err := RunCmdActionGet(config)
 		assert.NoError(t, err)
 	})
 }
