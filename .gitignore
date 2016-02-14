@@ -3,3 +3,5 @@ cmd/doit/doit
 .DS_Store
 builds
 doit
+.vscode
+project.json
