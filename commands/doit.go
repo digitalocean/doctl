@@ -260,6 +260,10 @@ func (c *cmdConfig) floatingIPActionsService() do.FloatingIPActionsService {
 	return do.NewFloatingIPActionsService(c.doitConfig.GetGodoClient())
 }
 
+func (c *cmdConfig) floatingIPsService() do.FloatingIPsService {
+	return do.NewFloatingIPsService(c.doitConfig.GetGodoClient())
+}
+
 func cmdBuilder2(parent *cobra.Command, cr cmdRunner2, cliText, desc string, out io.Writer, options ...cmdOption) *command {
 	cc := &cobra.Command{
 		Use:   cliText,

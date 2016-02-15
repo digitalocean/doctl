@@ -34,8 +34,13 @@ func TestFloatingIPsList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunFloatingIPList(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunFloatingIPList(config)
 		if !didRun {
 			t.Errorf("List() did not run")
 		}
@@ -53,9 +58,15 @@ func TestFloatingIPsGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunFloatingIPGet(ns, c, ioutil.Discard, []string{"127.0.0.1"})
+		config.args = append(config.args, "127.0.0.1")
+
+		RunFloatingIPGet(config)
 	})
 }
 
@@ -71,11 +82,16 @@ func TestFloatingIPsCreate(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgRegionSlug, "dev0")
-		c.Set(ns, doit.ArgDropletID, 1)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunFloatingIPCreate(ns, c, ioutil.Discard, []string{})
+		c.Set(config.ns, doit.ArgRegionSlug, "dev0")
+		c.Set(config.ns, doit.ArgDropletID, 1)
+
+		RunFloatingIPCreate(config)
 	})
 }
 
@@ -90,8 +106,14 @@ func TestFloatingIPsDelete(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunFloatingIPDelete(ns, c, ioutil.Discard, []string{"127.0.0.1"})
+		config.args = append(config.args, "127.0.0.1")
+
+		RunFloatingIPDelete(config)
 	})
 }
