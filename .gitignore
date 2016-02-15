@@ -5,3 +5,4 @@ builds
 doit
 .vscode
 project.json
+.cover
