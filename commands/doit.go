@@ -187,10 +187,8 @@ func cmdNS(cmd *cobra.Command) string {
 	return fmt.Sprintf("%s.%s", parentName, cmd.Name())
 }
 
-type cmdRunner func(ns string, config doit.Config, out io.Writer, args []string) error
-
-// cmdRunner2 runs a command and passes in a cmdConfig.
-type cmdRunner2 func(*cmdConfig) error
+// cmdRunner runs a command and passes in a cmdConfig.
+type cmdRunner func(*cmdConfig) error
 
 type cmdOption func(*command)
 
@@ -284,7 +282,7 @@ func (c *cmdConfig) keysService() do.KeysService {
 	return do.NewKeysService(c.doitConfig.GetGodoClient())
 }
 
-func cmdBuilder2(parent *cobra.Command, cr cmdRunner2, cliText, desc string, out io.Writer, options ...cmdOption) *command {
+func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *command {
 	cc := &cobra.Command{
 		Use:   cliText,
 		Short: desc,
@@ -298,37 +296,6 @@ func cmdBuilder2(parent *cobra.Command, cr cmdRunner2, cliText, desc string, out
 			}
 
 			err := cr(c)
-			checkErr(err, cmd)
-		},
-	}
-
-	if parent != nil {
-		parent.AddCommand(cc)
-	}
-
-	c := &command{Command: cc}
-
-	for _, co := range options {
-		co(c)
-	}
-
-	if cols := c.fmtCols; cols != nil {
-		formatHelp := fmt.Sprintf("Columns for output in a comma seperated list. Possible values: %s",
-			strings.Join(cols, ","))
-		addStringFlag(c, doit.ArgFormat, "", formatHelp)
-		addBoolFlag(c, doit.ArgNoHeader, false, "hide headers")
-	}
-
-	return c
-}
-
-func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *command {
-	cc := &cobra.Command{
-		Use:   cliText,
-		Short: desc,
-		Long:  desc,
-		Run: func(cmd *cobra.Command, args []string) {
-			err := cr(cmdNS(cmd), doit.DoitConfig, out, args)
 			checkErr(err, cmd)
 		},
 	}

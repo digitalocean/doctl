@@ -10,10 +10,10 @@ func Account() *cobra.Command {
 		Long:  "account is used to access account commands",
 	}
 
-	cmdBuilder2(cmd, RunAccountGet, "get", "get account", writer,
+	cmdBuilder(cmd, RunAccountGet, "get", "get account", writer,
 		aliasOpt("g"), displayerType(&account{}))
 
-	cmdBuilder2(cmd, RunAccountRateLimit, "ratelimit", "get API rate limits", writer,
+	cmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "get API rate limits", writer,
 		aliasOpt("rl"), displayerType(&rateLimit{}))
 
 	return cmd

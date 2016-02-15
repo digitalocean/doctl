@@ -10,7 +10,7 @@ func Region() *cobra.Command {
 		Long:  "region is used to access region commands",
 	}
 
-	cmdBuilder2(cmd, RunRegionList, "list", "list regions", writer, displayerType(&region{}))
+	cmdBuilder(cmd, RunRegionList, "list", "list regions", writer, displayerType(&region{}))
 
 	return cmd
 }

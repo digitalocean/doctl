@@ -24,13 +24,13 @@ func Droplet() *cobra.Command {
 		Long:    "droplet is used to access droplet commands",
 	}
 
-	cmdBuilder2(cmd, RunDropletActions, "actions <droplet id>", "droplet actions", writer,
+	cmdBuilder(cmd, RunDropletActions, "actions <droplet id>", "droplet actions", writer,
 		aliasOpt("a"), displayerType(&action{}))
 
-	cmdBuilder2(cmd, RunDropletBackups, "backups <droplet id>", "droplet backups", writer,
+	cmdBuilder(cmd, RunDropletBackups, "backups <droplet id>", "droplet backups", writer,
 		aliasOpt("b"), displayerType(&image{}))
 
-	cmdDropletCreate := cmdBuilder2(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", writer,
+	cmdDropletCreate := cmdBuilder(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", writer,
 		aliasOpt("c"), displayerType(&droplet{}))
 	addStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints",
 		shortFlag("k"))
@@ -53,23 +53,23 @@ func Droplet() *cobra.Command {
 	addStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image",
 		requiredOpt(), shortFlag("i"))
 
-	cmdBuilder2(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", writer,
+	cmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", writer,
 		aliasOpt("d", "del", "rm"))
 
-	cmdBuilder2(cmd, RunDropletGet, "get", "get droplet", writer,
+	cmdBuilder(cmd, RunDropletGet, "get", "get droplet", writer,
 		aliasOpt("g"), displayerType(&droplet{}))
 
-	cmdBuilder2(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", writer,
+	cmdBuilder(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", writer,
 		aliasOpt("k"), displayerType(&kernel{}))
 
-	cmdRunDropletList := cmdBuilder2(cmd, RunDropletList, "list [GLOB]", "list droplets", writer,
+	cmdRunDropletList := cmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", writer,
 		aliasOpt("ls"), displayerType(&droplet{}))
 	addStringFlag(cmdRunDropletList, doit.ArgRegionSlug, "", "Droplet region")
 
-	cmdBuilder2(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", writer,
+	cmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", writer,
 		aliasOpt("n"), displayerType(&droplet{}))
 
-	cmdBuilder2(cmd, RunDropletSnapshots, "snapshots <droplet id>", "snapshots", writer,
+	cmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet id>", "snapshots", writer,
 		aliasOpt("s"), displayerType(&image{}))
 
 	return cmd

@@ -17,13 +17,13 @@ func Actions() *cobra.Command {
 		Long:  "action is used to access action commands",
 	}
 
-	cmdBuilder2(cmd, RunCmdActionGet, "get ACTIONID", "get action", writer,
+	cmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", writer,
 		aliasOpt("g"), displayerType(&action{}))
 
-	cmdBuilder2(cmd, RunCmdActionList, "list", "list actions", writer,
+	cmdBuilder(cmd, RunCmdActionList, "list", "list actions", writer,
 		aliasOpt("ls"), displayerType(&action{}))
 
-	cmdActionWait := cmdBuilder2(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", writer,
+	cmdActionWait := cmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", writer,
 		aliasOpt("w"), displayerType(&action{}))
 	addIntFlag(cmdActionWait, doit.ArgPollTime, 5, "Re-poll time in seconds",
 		shortFlag("p"))

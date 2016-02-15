@@ -59,8 +59,15 @@ func TestSSH_ID(t *testing.T) {
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 
-		ns := "test"
-		err := RunSSH(ns, c, ioutil.Discard, []string{strconv.Itoa(testDroplet.ID)})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
+
+		err := RunSSH(config)
 		assert.NoError(t, err)
 		assert.True(t, didFetchDroplet)
 		assert.True(t, ms.didRun)
@@ -83,9 +90,13 @@ func TestSSH_InvalidID(t *testing.T) {
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		err := RunSSH(ns, c, ioutil.Discard, []string{})
+		err := RunSSH(config)
 		assert.Error(t, err)
 	})
 }
@@ -106,9 +117,15 @@ func TestSSH_Name(t *testing.T) {
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		err := RunSSH(ns, c, ioutil.Discard, []string{testDroplet.Name})
+		config.args = append(config.args, testDroplet.Name)
+
+		err := RunSSH(config)
 		assert.NoError(t, err)
 		assert.True(t, didFetchDroplet)
 
@@ -130,13 +147,20 @@ func TestSSH_UserAtIP(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
+		userHost := fmt.Sprintf("root@%d", testDroplet.ID)
+
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		userHost := fmt.Sprintf("root@%d", testDroplet.ID)
-		err := RunSSH(ns, c, ioutil.Discard, []string{userHost})
+		config.args = append(config.args, userHost)
+
+		err := RunSSH(config)
 		assert.NoError(t, err)
 		assert.True(t, didFetchDroplet)
 
@@ -158,9 +182,15 @@ func TestSSH_UnknownDroplet(t *testing.T) {
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		err := RunSSH(ns, c, ioutil.Discard, []string{"missing"})
+		config.args = append(config.args, "missing")
+
+		err := RunSSH(config)
 		assert.EqualError(t, err, "could not find droplet")
 	})
 }
@@ -178,9 +208,15 @@ func TestSSH_DropletWithNoPublic(t *testing.T) {
 		ms := &sshMock{}
 		c.SSHFn = ms.cmd()
 
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		err := RunSSH(ns, c, ioutil.Discard, []string{testPrivateDroplet.Name})
+		config.args = append(config.args, testPrivateDroplet.Name)
+
+		err := RunSSH(config)
 		assert.EqualError(t, err, "could not find droplet address")
 	})
 

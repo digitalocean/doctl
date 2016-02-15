@@ -2,12 +2,10 @@ package commands
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/pluginhost"
 	"github.com/spf13/cobra"
 )
@@ -30,8 +28,8 @@ func Plugin() *cobra.Command {
 }
 
 // RunPluginRun is a command for running a plugin.
-func RunPluginRun(ns string, config doit.Config, out io.Writer, args []string) error {
-	if len(args) == 0 {
+func RunPluginRun(c *cmdConfig) error {
+	if len(c.args) == 0 {
 		return fmt.Errorf("missing plugin name")
 	}
 
@@ -42,18 +40,18 @@ func RunPluginRun(ns string, config doit.Config, out io.Writer, args []string) e
 
 	var selectedPlugin *plugDesc
 	for i, p := range plugs {
-		if p.Name == args[0] {
+		if p.Name == c.args[0] {
 			selectedPlugin = &plugs[i]
 		}
 	}
 
 	if selectedPlugin == nil {
-		return fmt.Errorf("unknown plugin %q", args[0])
+		return fmt.Errorf("unknown plugin %q", c.args[0])
 	}
 
 	var pluginArgs []string
-	if len(args) > 1 {
-		pluginArgs = args[1:]
+	if len(c.args) > 1 {
+		pluginArgs = c.args[1:]
 	}
 
 	host, err := pluginhost.NewHost(selectedPlugin.Path)
@@ -83,25 +81,19 @@ func RunPluginRun(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	fmt.Fprintln(out, results)
+	fmt.Fprintln(c.out, results)
 	return nil
 }
 
 // RunPluginList is a command for listing available plugins.
-func RunPluginList(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunPluginList(c *cmdConfig) error {
 	plugs, err := searchPlugins()
 	if err != nil {
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &plugin{plugins: plugs},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &plugin{plugins: plugs}
+	return c.display(item)
 }
 
 type plugDesc struct {

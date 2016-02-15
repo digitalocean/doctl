@@ -19,17 +19,17 @@ func Domain() *cobra.Command {
 		Long:  "domain is used to access domain commands",
 	}
 
-	cmdDomainCreate := cmdBuilder2(cmd, RunDomainCreate, "create <domain>", "create domain", writer,
+	cmdDomainCreate := cmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", writer,
 		aliasOpt("c"), displayerType(&domain{}))
 	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address", requiredOpt())
 
-	cmdBuilder2(cmd, RunDomainList, "list", "list comains", writer,
+	cmdBuilder(cmd, RunDomainList, "list", "list comains", writer,
 		aliasOpt("ls"), displayerType(&domain{}))
 
-	cmdBuilder2(cmd, RunDomainGet, "get <domain>", "get domain", writer,
+	cmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", writer,
 		aliasOpt("g"), displayerType(&domain{}))
 
-	cmdBuilder2(cmd, RunDomainDelete, "delete <domain>", "delete droplet", writer, aliasOpt("g"))
+	cmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete droplet", writer, aliasOpt("g"))
 
 	cmdRecord := &cobra.Command{
 		Use:   "records",
@@ -38,11 +38,11 @@ func Domain() *cobra.Command {
 	}
 	cmd.AddCommand(cmdRecord)
 
-	cmdRecordList := cmdBuilder2(cmdRecord, RunRecordList, "list <domain>", "list records", writer,
+	cmdRecordList := cmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", writer,
 		aliasOpt("ls"), displayerType(&domainRecord{}))
 	addStringFlag(cmdRecordList, doit.ArgDomainName, "", "Domain name")
 
-	cmdRecordCreate := cmdBuilder2(cmdRecord, RunRecordCreate, "create <domain>", "create record", writer,
+	cmdRecordCreate := cmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "create record", writer,
 		aliasOpt("c"), displayerType(&domainRecord{}))
 	addStringFlag(cmdRecordCreate, doit.ArgRecordType, "", "Record type")
 	addStringFlag(cmdRecordCreate, doit.ArgRecordName, "", "Record name")
@@ -51,9 +51,9 @@ func Domain() *cobra.Command {
 	addIntFlag(cmdRecordCreate, doit.ArgRecordPort, 0, "Record port")
 	addIntFlag(cmdRecordCreate, doit.ArgRecordWeight, 0, "Record weight")
 
-	cmdBuilder2(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", writer, aliasOpt("d"))
+	cmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", writer, aliasOpt("d"))
 
-	cmdRecordUpdate := cmdBuilder2(cmdRecord, RunRecordUpdate, "update <domain>", "update record", writer,
+	cmdRecordUpdate := cmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "update record", writer,
 		aliasOpt("u"), displayerType(&domainRecord{}))
 	addIntFlag(cmdRecordUpdate, doit.ArgRecordID, 0, "Record ID")
 	addStringFlag(cmdRecordUpdate, doit.ArgRecordType, "", "Record type")

@@ -19,23 +19,23 @@ func SSHKeys() *cobra.Command {
 		Long:    "sshkey is used to access ssh key commands",
 	}
 
-	cmdBuilder2(cmd, RunKeyList, "list", "list ssh keys", writer,
+	cmdBuilder(cmd, RunKeyList, "list", "list ssh keys", writer,
 		aliasOpt("ls"), displayerType(&key{}))
 
-	cmdBuilder2(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", writer,
+	cmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", writer,
 		aliasOpt("g"), displayerType(&key{}))
 
-	cmdSSHKeysCreate := cmdBuilder2(cmd, RunKeyCreate, "create <key-name>", "create ssh key", writer,
+	cmdSSHKeysCreate := cmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", writer,
 		aliasOpt("c"), displayerType(&key{}))
 	addStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents", requiredOpt())
 
-	cmdSSHKeysImport := cmdBuilder2(cmd, RunKeyImport, "import <key-name>", "import ssh key", writer,
+	cmdSSHKeysImport := cmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", writer,
 		aliasOpt("i"), displayerType(&key{}))
 	addStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
 
-	cmdBuilder2(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", writer, aliasOpt("d"))
+	cmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", writer, aliasOpt("d"))
 
-	cmdSSHKeysUpdate := cmdBuilder2(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", writer,
+	cmdSSHKeysUpdate := cmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", writer,
 		aliasOpt("u"), displayerType(&key{}))
 	addStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name", requiredOpt())
 

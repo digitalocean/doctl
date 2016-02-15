@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -51,7 +50,7 @@ func Auth() *cobra.Command {
 }
 
 // RunAuthLogin runs auth login. It communicates with doit-server to perform auth.
-func RunAuthLogin(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunAuthLogin(c *cmdConfig) error {
 	dsa := newDoitServerAuth()
 
 	ac, err := dsa.retrieveAuthCredentials()

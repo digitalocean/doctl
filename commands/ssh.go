@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -40,37 +39,35 @@ func SSH() *cobra.Command {
 }
 
 // RunSSH finds a droplet to ssh to given input parameters (name or id).
-func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-
-	if len(args) == 0 {
-		return doit.NewMissingArgsErr(ns)
+func RunSSH(c *cmdConfig) error {
+	if len(c.args) == 0 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	dropletID := args[0]
+	dropletID := c.args[0]
 
 	if dropletID == "" {
-		return doit.NewMissingArgsErr(ns)
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	user, err := config.GetString(ns, doit.ArgSSHUser)
+	user, err := c.doitConfig.GetString(c.ns, doit.ArgSSHUser)
 	if err != nil {
 		return err
 	}
 
-	keyPath, err := config.GetString(ns, doit.ArgsSSHKeyPath)
+	keyPath, err := c.doitConfig.GetString(c.ns, doit.ArgsSSHKeyPath)
 	if err != nil {
 		return err
 	}
 
-	port, err := config.GetInt(ns, doit.ArgsSSHPort)
+	port, err := c.doitConfig.GetInt(c.ns, doit.ArgsSSHPort)
 	if err != nil {
 		return err
 	}
 
 	var droplet *do.Droplet
 
-	ds := do.NewDropletsService(client)
+	ds := c.dropletsService()
 	if id, err := strconv.Atoi(dropletID); err == nil {
 		// dropletID is an integer
 
@@ -124,7 +121,7 @@ func RunSSH(ns string, config doit.Config, out io.Writer, args []string) error {
 		return errors.New("could not find droplet address")
 	}
 
-	runner := config.SSH(user, ip, keyPath, port)
+	runner := c.doitConfig.SSH(user, ip, keyPath, port)
 	return runner.Run()
 }
 
