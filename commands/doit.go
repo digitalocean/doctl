@@ -252,6 +252,10 @@ func (c *cmdConfig) dropletActionsService() do.DropletActionsService {
 	return do.NewDropletActionsService(c.doitConfig.GetGodoClient())
 }
 
+func (c *cmdConfig) dropletsService() do.DropletsService {
+	return do.NewDropletsService(c.doitConfig.GetGodoClient())
+}
+
 func cmdBuilder2(parent *cobra.Command, cr cmdRunner2, cliText, desc string, out io.Writer, options ...cmdOption) *command {
 	cc := &cobra.Command{
 		Use:   cliText,
