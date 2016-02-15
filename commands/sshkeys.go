@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io"
 	"io/ioutil"
 
 	"github.com/bryanl/doit"
@@ -20,23 +19,23 @@ func SSHKeys() *cobra.Command {
 		Long:    "sshkey is used to access ssh key commands",
 	}
 
-	cmdBuilder(cmd, RunKeyList, "list", "list ssh keys", writer,
+	cmdBuilder2(cmd, RunKeyList, "list", "list ssh keys", writer,
 		aliasOpt("ls"), displayerType(&key{}))
 
-	cmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", writer,
+	cmdBuilder2(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", writer,
 		aliasOpt("g"), displayerType(&key{}))
 
-	cmdSSHKeysCreate := cmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", writer,
+	cmdSSHKeysCreate := cmdBuilder2(cmd, RunKeyCreate, "create <key-name>", "create ssh key", writer,
 		aliasOpt("c"), displayerType(&key{}))
 	addStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents", requiredOpt())
 
-	cmdSSHKeysImport := cmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", writer,
+	cmdSSHKeysImport := cmdBuilder2(cmd, RunKeyImport, "import <key-name>", "import ssh key", writer,
 		aliasOpt("i"), displayerType(&key{}))
 	addStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
 
-	cmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", writer, aliasOpt("d"))
+	cmdBuilder2(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", writer, aliasOpt("d"))
 
-	cmdSSHKeysUpdate := cmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", writer,
+	cmdSSHKeysUpdate := cmdBuilder2(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", writer,
 		aliasOpt("u"), displayerType(&key{}))
 	addStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name", requiredOpt())
 
@@ -44,63 +43,48 @@ func SSHKeys() *cobra.Command {
 }
 
 // RunKeyList lists keys.
-func RunKeyList(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ks := do.NewKeysService(client)
+func RunKeyList(c *cmdConfig) error {
+	ks := c.keysService()
 
 	list, err := ks.List()
 	if err != nil {
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &key{keys: list},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &key{keys: list}
+	return c.display(item)
 }
 
 // RunKeyGet retrieves a key.
-func RunKeyGet(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ks := do.NewKeysService(client)
+func RunKeyGet(c *cmdConfig) error {
+	ks := c.keysService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	rawKey := args[0]
+	rawKey := c.args[0]
 	k, err := ks.Get(rawKey)
 
 	if err != nil {
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &key{keys: do.SSHKeys{*k}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &key{keys: do.SSHKeys{*k}}
+	return c.display(item)
 }
 
 // RunKeyCreate uploads a SSH key.
-func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ks := do.NewKeysService(client)
+func RunKeyCreate(c *cmdConfig) error {
+	ks := c.keysService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	name := args[0]
+	name := c.args[0]
 
-	publicKey, err := config.GetString(ns, doit.ArgKeyPublicKey)
+	publicKey, err := c.doitConfig.GetString(c.ns, doit.ArgKeyPublicKey)
 	if err != nil {
 		return err
 	}
@@ -115,31 +99,24 @@ func RunKeyCreate(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &key{keys: do.SSHKeys{*r}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &key{keys: do.SSHKeys{*r}}
+	return c.display(item)
 }
 
 // RunKeyImport imports a key from a file
-func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ks := do.NewKeysService(client)
+func RunKeyImport(c *cmdConfig) error {
+	ks := c.keysService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	keyPath, err := config.GetString(ns, doit.ArgKeyPublicKeyFile)
+	keyPath, err := c.doitConfig.GetString(c.ns, doit.ArgKeyPublicKeyFile)
 	if err != nil {
 		return err
 	}
 
-	keyName := args[0]
+	keyName := c.args[0]
 
 	keyFile, err := ioutil.ReadFile(keyPath)
 	if err != nil {
@@ -165,41 +142,33 @@ func RunKeyImport(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &key{keys: do.SSHKeys{*r}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &key{keys: do.SSHKeys{*r}}
+	return c.display(item)
 }
 
 // RunKeyDelete deletes a key.
-func RunKeyDelete(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ks := do.NewKeysService(client)
+func RunKeyDelete(c *cmdConfig) error {
+	ks := c.keysService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	rawKey := args[0]
+	rawKey := c.args[0]
 	return ks.Delete(rawKey)
 }
 
 // RunKeyUpdate updates a key.
-func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ks := do.NewKeysService(client)
+func RunKeyUpdate(c *cmdConfig) error {
+	ks := c.keysService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	rawKey := args[0]
+	rawKey := c.args[0]
 
-	name, err := config.GetString(ns, doit.ArgKeyName)
+	name, err := c.doitConfig.GetString(c.ns, doit.ArgKeyName)
 	if err != nil {
 		return err
 	}
@@ -213,12 +182,6 @@ func RunKeyUpdate(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &key{keys: do.SSHKeys{*k}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &key{keys: do.SSHKeys{*k}}
+	return c.display(item)
 }

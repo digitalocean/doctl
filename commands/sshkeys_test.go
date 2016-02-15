@@ -42,8 +42,13 @@ func TestKeysList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunKeyList(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunKeyList(config)
 		assert.True(t, didList)
 	})
 }
@@ -63,9 +68,15 @@ func TestKeysGetByID(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyGet(ns, c, ioutil.Discard, []string{"1"})
+		config.args = append(config.args, "1")
+
+		RunKeyGet(config)
 	})
 }
 
@@ -84,9 +95,15 @@ func TestKeysGetByFingerprint(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyGet(ns, c, ioutil.Discard, []string{testKey.Fingerprint})
+		config.args = append(config.args, testKey.Fingerprint)
+
+		RunKeyGet(config)
 	})
 }
 
@@ -105,10 +122,17 @@ func TestKeysCreate(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgKeyPublicKey, "fingerprint")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyCreate(ns, c, ioutil.Discard, []string{"the key"})
+		config.args = append(config.args, "the key")
+
+		c.Set(config.ns, doit.ArgKeyPublicKey, "fingerprint")
+
+		RunKeyCreate(config)
 	})
 }
 
@@ -127,9 +151,15 @@ func TestKeysDeleteByID(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyDelete(ns, c, ioutil.Discard, []string{"1"})
+		config.args = append(config.args, "1")
+
+		RunKeyDelete(config)
 	})
 }
 
@@ -148,9 +178,15 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyDelete(ns, c, ioutil.Discard, []string{"fingerprint"})
+		config.args = append(config.args, "fingerprint")
+
+		RunKeyDelete(config)
 	})
 
 }
@@ -174,10 +210,17 @@ func TestKeysUpdateByID(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgKeyName, "the key")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyUpdate(ns, c, ioutil.Discard, []string{"1"})
+		config.args = append(config.args, "1")
+
+		c.Set(config.ns, doit.ArgKeyName, "the key")
+
+		RunKeyUpdate(config)
 	})
 
 }
@@ -201,10 +244,17 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgKeyName, "the key")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyUpdate(ns, c, ioutil.Discard, []string{"fingerprint"})
+		config.args = append(config.args, "fingerprint")
+
+		c.Set(config.ns, doit.ArgKeyName, "the key")
+
+		RunKeyUpdate(config)
 	})
 
 }
@@ -230,10 +280,17 @@ func TestSSHPublicKeyImport(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgKeyPublicKeyFile, path)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyImport(ns, c, ioutil.Discard, []string{"testkey"})
+		config.args = append(config.args, "testkey")
+
+		c.Set(config.ns, doit.ArgKeyPublicKeyFile, path)
+
+		RunKeyImport(config)
 	})
 
 }
@@ -259,9 +316,16 @@ func TestSSHPublicKeyImportWithName(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgKeyPublicKeyFile, path)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunKeyImport(ns, c, ioutil.Discard, []string{"custom"})
+		config.args = append(config.args, "custom")
+
+		c.Set(config.ns, doit.ArgKeyPublicKeyFile, path)
+
+		RunKeyImport(config)
 	})
 }
