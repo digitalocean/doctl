@@ -31,10 +31,16 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgKernelID, 2)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunDropletActionChangeKernel(ns, c, ioutil.Discard, []string{"1"})
+		c.Set(config.ns, doit.ArgKernelID, 2)
+		config.args = append(config.args, "1")
+
+		RunDropletActionChangeKernel(config)
 	})
 }
 func TestDropletActionsDisableBackups(t *testing.T) {
@@ -50,9 +56,14 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionDisableBackups(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionDisableBackups(config)
 	})
 
 }
@@ -69,9 +80,14 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionEnableIPv6(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionEnableIPv6(config)
 	})
 }
 
@@ -88,9 +104,14 @@ func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionEnablePrivateNetworking(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionEnablePrivateNetworking(config)
 	})
 }
 func TestDropletActionsGet(t *testing.T) {
@@ -109,10 +130,16 @@ func TestDropletActionsGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgActionID, 2)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionGet(ns, c, ioutil.Discard, []string{"1"})
+		c.Set(config.ns, doit.ArgActionID, 2)
+
+		RunDropletActionGet(config)
 	})
 }
 
@@ -129,9 +156,14 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionPasswordReset(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionPasswordReset(config)
 	})
 }
 
@@ -148,9 +180,14 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionPowerCycle(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionPowerCycle(config)
 	})
 
 }
@@ -167,9 +204,14 @@ func TestDropletActionsPowerOff(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionPowerOff(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionPowerOff(config)
 	})
 }
 func TestDropletActionsPowerOn(t *testing.T) {
@@ -185,9 +227,14 @@ func TestDropletActionsPowerOn(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionPowerOn(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionPowerOn(config)
 	})
 
 }
@@ -204,9 +251,14 @@ func TestDropletActionsReboot(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionReboot(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionReboot(config)
 	})
 }
 
@@ -226,10 +278,16 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgImage, "2")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionRebuild(ns, c, ioutil.Discard, []string{"1"})
+		c.Set(config.ns, doit.ArgImage, "2")
+
+		RunDropletActionRebuild(config)
 	})
 }
 
@@ -249,10 +307,16 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgImage, "slug")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionRebuild(ns, c, ioutil.Discard, []string{"1"})
+		c.Set(config.ns, doit.ArgImage, "slug")
+
+		RunDropletActionRebuild(config)
 	})
 
 }
@@ -272,10 +336,16 @@ func TestDropletActionsRename(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgDropletName, "name")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionRename(ns, c, ioutil.Discard, []string{"1"})
+		c.Set(config.ns, doit.ArgDropletName, "name")
+
+		RunDropletActionRename(config)
 	})
 }
 
@@ -298,11 +368,17 @@ func TestDropletActionsResize(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgSizeSlug, "1gb")
-		c.Set(ns, doit.ArgResizeDisk, true)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionResize(ns, c, ioutil.Discard, []string{"1"})
+		c.Set(config.ns, doit.ArgSizeSlug, "1gb")
+		c.Set(config.ns, doit.ArgResizeDisk, true)
+
+		RunDropletActionResize(config)
 	})
 }
 
@@ -322,10 +398,16 @@ func TestDropletActionsRestore(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgImageID, 2)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionRestore(ns, c, ioutil.Discard, []string{"1"})
+		c.Set(config.ns, doit.ArgImageID, 2)
+
+		RunDropletActionRestore(config)
 	})
 }
 
@@ -342,9 +424,14 @@ func TestDropletActionsShutdown(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionShutdown(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionShutdown(config)
 	})
 }
 
@@ -364,10 +451,16 @@ func TestDropletActionsSnapshot(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgSnapshotName, "name")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionSnapshot(ns, c, ioutil.Discard, []string{"1"})
+		c.Set(config.ns, doit.ArgSnapshotName, "name")
+
+		RunDropletActionSnapshot(config)
 	})
 }
 
@@ -384,8 +477,13 @@ func TestDropletActionsUpgrade(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+		config.args = append(config.args, "1")
 
-		RunDropletActionUpgrade(ns, c, ioutil.Discard, []string{"1"})
+		RunDropletActionUpgrade(config)
 	})
 }

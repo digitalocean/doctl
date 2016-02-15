@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io"
 	"strconv"
 
 	"github.com/bryanl/doit"
@@ -11,23 +10,16 @@ import (
 
 type actionFn func(das do.DropletActionsService) (*do.Action, error)
 
-func performAction(out io.Writer, ns string, config doit.Config, fn actionFn) error {
-	client := config.GetGodoClient()
-	das := do.NewDropletActionsService(client)
+func performAction(c *cmdConfig, fn actionFn) error {
+	das := c.dropletActionsService()
 
 	a, err := fn(das)
 	if err != nil {
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &action{actions: do.Actions{*a}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &action{actions: do.Actions{*a}}
+	return c.display(item)
 }
 
 // DropletAction creates the droplet-action command.
@@ -39,62 +31,62 @@ func DropletAction() *cobra.Command {
 		Long:    "droplet-action is used to access droplet action commands",
 	}
 
-	cmdDropletActionGet := cmdBuilder(cmd, RunDropletActionGet, "get", "get droplet action", writer,
+	cmdDropletActionGet := cmdBuilder2(cmd, RunDropletActionGet, "get", "get droplet action", writer,
 		aliasOpt("g"), displayerType(&action{}))
 	addIntFlag(cmdDropletActionGet, doit.ArgActionID, 0, "Action ID", requiredOpt())
 
-	cmdBuilder(cmd, RunDropletActionDisableBackups,
+	cmdBuilder2(cmd, RunDropletActionDisableBackups,
 		"disable-backups <droplet-id>", "disable backups", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionReboot,
+	cmdBuilder2(cmd, RunDropletActionReboot,
 		"reboot <droplet-id>", "reboot droplet", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionPowerCycle,
+	cmdBuilder2(cmd, RunDropletActionPowerCycle,
 		"power-cycle <droplet-id>", "power cycle droplet", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionShutdown,
+	cmdBuilder2(cmd, RunDropletActionShutdown,
 		"shutdown <droplet-id>", "shutdown droplet", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionPowerOff,
+	cmdBuilder2(cmd, RunDropletActionPowerOff,
 		"power-off <droplet-id>", "power off droplet", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionPowerOn,
+	cmdBuilder2(cmd, RunDropletActionPowerOn,
 		"power-on <droplet-id>", "power on droplet", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionPasswordReset,
+	cmdBuilder2(cmd, RunDropletActionPasswordReset,
 		"power-reset <droplet-id>", "power reset droplet", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionEnableIPv6,
+	cmdBuilder2(cmd, RunDropletActionEnableIPv6,
 		"enable-ipv6 <droplet-id>", "enable ipv6", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionEnablePrivateNetworking,
+	cmdBuilder2(cmd, RunDropletActionEnablePrivateNetworking,
 		"enable-private-networking <droplet-id>", "enable private networking", writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunDropletActionUpgrade,
+	cmdBuilder2(cmd, RunDropletActionUpgrade,
 		"upgrade <droplet-id>", "upgrade droplet", writer, displayerType(&action{}))
 
-	cmdDropletActionRestore := cmdBuilder(cmd, RunDropletActionRestore,
+	cmdDropletActionRestore := cmdBuilder2(cmd, RunDropletActionRestore,
 		"restore <droplet-id>", "restore backup", writer, displayerType(&action{}))
 	addIntFlag(cmdDropletActionRestore, doit.ArgImageID, 0, "Image ID", requiredOpt())
 
-	cmdDropletActionResize := cmdBuilder(cmd, RunDropletActionResize,
+	cmdDropletActionResize := cmdBuilder2(cmd, RunDropletActionResize,
 		"resize <droplet-id>", "resize droplet", writer, displayerType(&action{}))
 	addBoolFlag(cmdDropletActionResize, doit.ArgResizeDisk, false, "Resize disk")
 	addStringFlag(cmdDropletActionResize, doit.ArgSizeSlug, "", "New size")
 
-	cmdDropletActionRebuild := cmdBuilder(cmd, RunDropletActionRebuild,
+	cmdDropletActionRebuild := cmdBuilder2(cmd, RunDropletActionRebuild,
 		"rebuild <droplet-id>", "rebuild droplet", writer, displayerType(&action{}))
 	addIntFlag(cmdDropletActionRebuild, doit.ArgImageID, 0, "Image ID", requiredOpt())
 
-	cmdDropletActionRename := cmdBuilder(cmd, RunDropletActionRename,
+	cmdDropletActionRename := cmdBuilder2(cmd, RunDropletActionRename,
 		"rename <droplet-id>", "rename droplet", writer, displayerType(&action{}))
 	addStringFlag(cmdDropletActionRename, doit.ArgDropletName, "", "Droplet name", requiredOpt())
 
-	cmdDropletActionChangeKernel := cmdBuilder(cmd, RunDropletActionChangeKernel,
+	cmdDropletActionChangeKernel := cmdBuilder2(cmd, RunDropletActionChangeKernel,
 		"change-kernel <droplet-id>", "change kernel", writer)
 	addIntFlag(cmdDropletActionChangeKernel, doit.ArgKernelID, 0, "Kernel ID", requiredOpt())
 
-	cmdDropletActionSnapshot := cmdBuilder(cmd, RunDropletActionSnapshot,
+	cmdDropletActionSnapshot := cmdBuilder2(cmd, RunDropletActionSnapshot,
 		"snapshot <droplet-id>", "snapshot droplet", writer, displayerType(&action{}))
 	addIntFlag(cmdDropletActionSnapshot, doit.ArgSnapshotName, 0, "Snapshot name", requiredOpt())
 
@@ -102,17 +94,17 @@ func DropletAction() *cobra.Command {
 }
 
 // RunDropletActionGet returns a droplet action by id.
-func RunDropletActionGet(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionGet(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		dropletID, err := strconv.Atoi(args[0])
+		dropletID, err := strconv.Atoi(c.args[0])
 		if err != nil {
 			return nil, err
 		}
 
-		actionID, err := config.GetInt(ns, doit.ArgActionID)
+		actionID, err := c.doitConfig.GetInt(c.ns, doit.ArgActionID)
 		if err != nil {
 			return nil, err
 		}
@@ -121,16 +113,16 @@ func RunDropletActionGet(ns string, config doit.Config, out io.Writer, args []st
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionDisableBackups disables backups for a droplet.
-func RunDropletActionDisableBackups(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionDisableBackups(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 		if err != nil {
 			return nil, err
 		}
@@ -139,16 +131,16 @@ func RunDropletActionDisableBackups(ns string, config doit.Config, out io.Writer
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionReboot reboots a droplet.
-func RunDropletActionReboot(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionReboot(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 		if err != nil {
 			return nil, err
 		}
@@ -157,16 +149,16 @@ func RunDropletActionReboot(ns string, config doit.Config, out io.Writer, args [
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionPowerCycle power cycles a droplet.
-func RunDropletActionPowerCycle(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionPowerCycle(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
@@ -176,31 +168,31 @@ func RunDropletActionPowerCycle(ns string, config doit.Config, out io.Writer, ar
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionShutdown shuts a droplet down.
-func RunDropletActionShutdown(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionShutdown(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		a, err := das.Shutdown(id)
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionPowerOff turns droplet power off.
-func RunDropletActionPowerOff(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionPowerOff(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
@@ -210,16 +202,16 @@ func RunDropletActionPowerOff(ns string, config doit.Config, out io.Writer, args
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionPowerOn turns droplet power on.
-func RunDropletActionPowerOn(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionPowerOn(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
@@ -229,16 +221,16 @@ func RunDropletActionPowerOn(ns string, config doit.Config, out io.Writer, args 
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionPasswordReset resets the droplet root password.
-func RunDropletActionPasswordReset(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionPasswordReset(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
@@ -248,16 +240,16 @@ func RunDropletActionPasswordReset(ns string, config doit.Config, out io.Writer,
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionEnableIPv6 enables IPv6 for a droplet.
-func RunDropletActionEnableIPv6(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionEnableIPv6(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
@@ -267,16 +259,16 @@ func RunDropletActionEnableIPv6(ns string, config doit.Config, out io.Writer, ar
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionEnablePrivateNetworking enables private networking for a droplet.
-func RunDropletActionEnablePrivateNetworking(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionEnablePrivateNetworking(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
@@ -286,16 +278,16 @@ func RunDropletActionEnablePrivateNetworking(ns string, config doit.Config, out 
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionUpgrade upgrades a droplet.
-func RunDropletActionUpgrade(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionUpgrade(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
@@ -305,22 +297,22 @@ func RunDropletActionUpgrade(ns string, config doit.Config, out io.Writer, args 
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionRestore restores a droplet using an image id.
-func RunDropletActionRestore(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionRestore(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
 		}
 
-		image, err := config.GetInt(ns, doit.ArgImageID)
+		image, err := c.doitConfig.GetInt(c.ns, doit.ArgImageID)
 		if err != nil {
 			return nil, err
 		}
@@ -329,28 +321,28 @@ func RunDropletActionRestore(ns string, config doit.Config, out io.Writer, args 
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionResize resizesx a droplet giving a size slug and
 // optionally expands the disk.
-func RunDropletActionResize(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionResize(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
 		}
 
-		size, err := config.GetString(ns, doit.ArgSizeSlug)
+		size, err := c.doitConfig.GetString(c.ns, doit.ArgSizeSlug)
 		if err != nil {
 			return nil, err
 		}
 
-		disk, err := config.GetBool(ns, doit.ArgResizeDisk)
+		disk, err := c.doitConfig.GetBool(c.ns, doit.ArgResizeDisk)
 		if err != nil {
 			return nil, err
 		}
@@ -359,22 +351,22 @@ func RunDropletActionResize(ns string, config doit.Config, out io.Writer, args [
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionRebuild rebuilds a droplet using an image id or slug.
-func RunDropletActionRebuild(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionRebuild(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
 		}
 
-		image, err := config.GetString(ns, doit.ArgImage)
+		image, err := c.doitConfig.GetString(c.ns, doit.ArgImage)
 		if err != nil {
 			return nil, err
 		}
@@ -388,22 +380,22 @@ func RunDropletActionRebuild(ns string, config doit.Config, out io.Writer, args 
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionRename renames a droplet.
-func RunDropletActionRename(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionRename(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
 		}
 
-		name, err := config.GetString(ns, doit.ArgDropletName)
+		name, err := c.doitConfig.GetString(c.ns, doit.ArgDropletName)
 		if err != nil {
 			return nil, err
 		}
@@ -412,22 +404,22 @@ func RunDropletActionRename(ns string, config doit.Config, out io.Writer, args [
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionChangeKernel changes the kernel for a droplet.
-func RunDropletActionChangeKernel(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionChangeKernel(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
 		}
 
-		kernel, err := config.GetInt(ns, doit.ArgKernelID)
+		kernel, err := c.doitConfig.GetInt(c.ns, doit.ArgKernelID)
 		if err != nil {
 			return nil, err
 		}
@@ -436,22 +428,22 @@ func RunDropletActionChangeKernel(ns string, config doit.Config, out io.Writer, 
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
 
 // RunDropletActionSnapshot creates a snapshot for a droplet.
-func RunDropletActionSnapshot(ns string, config doit.Config, out io.Writer, args []string) error {
+func RunDropletActionSnapshot(c *cmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(args) != 1 {
-			return nil, doit.NewMissingArgsErr(ns)
+		if len(c.args) != 1 {
+			return nil, doit.NewMissingArgsErr(c.ns)
 		}
-		id, err := strconv.Atoi(args[0])
+		id, err := strconv.Atoi(c.args[0])
 
 		if err != nil {
 			return nil, err
 		}
 
-		name, err := config.GetString(ns, doit.ArgSnapshotName)
+		name, err := c.doitConfig.GetString(c.ns, doit.ArgSnapshotName)
 		if err != nil {
 			return nil, err
 		}
@@ -460,5 +452,5 @@ func RunDropletActionSnapshot(ns string, config doit.Config, out io.Writer, args
 		return a, err
 	}
 
-	return performAction(out, ns, config, fn)
+	return performAction(c, fn)
 }
