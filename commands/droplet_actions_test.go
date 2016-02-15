@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -30,14 +29,8 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		c.Set(config.ns, doit.ArgKernelID, 2)
+	withTestClient(client, func(config *cmdConfig) {
+		config.doitConfig.Set(config.ns, doit.ArgKernelID, 2)
 		config.args = append(config.args, "1")
 
 		RunDropletActionChangeKernel(config)
@@ -55,12 +48,7 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionDisableBackups(config)
@@ -79,12 +67,7 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionEnableIPv6(config)
@@ -103,12 +86,7 @@ func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionEnablePrivateNetworking(config)
@@ -129,15 +107,10 @@ func TestDropletActionsGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgActionID, 2)
+		config.doitConfig.Set(config.ns, doit.ArgActionID, 2)
 
 		RunDropletActionGet(config)
 	})
@@ -155,12 +128,7 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionPasswordReset(config)
@@ -179,12 +147,7 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionPowerCycle(config)
@@ -203,12 +166,7 @@ func TestDropletActionsPowerOff(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionPowerOff(config)
@@ -226,12 +184,7 @@ func TestDropletActionsPowerOn(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionPowerOn(config)
@@ -250,12 +203,7 @@ func TestDropletActionsReboot(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionReboot(config)
@@ -277,15 +225,10 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgImage, "2")
+		config.doitConfig.Set(config.ns, doit.ArgImage, "2")
 
 		RunDropletActionRebuild(config)
 	})
@@ -306,15 +249,10 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgImage, "slug")
+		config.doitConfig.Set(config.ns, doit.ArgImage, "slug")
 
 		RunDropletActionRebuild(config)
 	})
@@ -335,15 +273,10 @@ func TestDropletActionsRename(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgDropletName, "name")
+		config.doitConfig.Set(config.ns, doit.ArgDropletName, "name")
 
 		RunDropletActionRename(config)
 	})
@@ -367,16 +300,11 @@ func TestDropletActionsResize(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgSizeSlug, "1gb")
-		c.Set(config.ns, doit.ArgResizeDisk, true)
+		config.doitConfig.Set(config.ns, doit.ArgSizeSlug, "1gb")
+		config.doitConfig.Set(config.ns, doit.ArgResizeDisk, true)
 
 		RunDropletActionResize(config)
 	})
@@ -397,15 +325,10 @@ func TestDropletActionsRestore(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgImageID, 2)
+		config.doitConfig.Set(config.ns, doit.ArgImageID, 2)
 
 		RunDropletActionRestore(config)
 	})
@@ -423,12 +346,7 @@ func TestDropletActionsShutdown(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionShutdown(config)
@@ -450,15 +368,10 @@ func TestDropletActionsSnapshot(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgSnapshotName, "name")
+		config.doitConfig.Set(config.ns, doit.ArgSnapshotName, "name")
 
 		RunDropletActionSnapshot(config)
 	})
@@ -476,12 +389,7 @@ func TestDropletActionsUpgrade(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		RunDropletActionUpgrade(config)

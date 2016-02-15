@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -34,13 +33,7 @@ func TestAccountGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		err := RunAccountGet(config)
 		assert.NoError(t, err)
 

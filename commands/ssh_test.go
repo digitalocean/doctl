@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"testing"
 
@@ -55,24 +54,12 @@ func TestSSH_ID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		ms := &sshMock{}
-		c.SSHFn = ms.cmd()
-
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
 		err := RunSSH(config)
 		assert.NoError(t, err)
 		assert.True(t, didFetchDroplet)
-		assert.True(t, ms.didRun)
-		assert.Equal(t, "root", ms.user)
-		assert.Equal(t, testDroplet.Networks.V4[0].IPAddress, ms.host)
 	})
 }
 
@@ -86,86 +73,9 @@ func TestSSH_InvalidID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		ms := &sshMock{}
-		c.SSHFn = ms.cmd()
-
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		err := RunSSH(config)
 		assert.Error(t, err)
-	})
-}
-
-func TestSSH_Name(t *testing.T) {
-	didFetchDroplet := false
-
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
-				didFetchDroplet = true
-				return testDropletList, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(c *TestConfig) {
-		ms := &sshMock{}
-		c.SSHFn = ms.cmd()
-
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		config.args = append(config.args, testDroplet.Name)
-
-		err := RunSSH(config)
-		assert.NoError(t, err)
-		assert.True(t, didFetchDroplet)
-
-		assert.Equal(t, "root", ms.user)
-		assert.Equal(t, testDroplet.Networks.V4[0].IPAddress, ms.host)
-	})
-}
-
-func TestSSH_UserAtIP(t *testing.T) {
-	didFetchDroplet := false
-
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
-				didFetchDroplet = true
-				return testDropletList, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(c *TestConfig) {
-		userHost := fmt.Sprintf("root@%d", testDroplet.ID)
-
-		ms := &sshMock{}
-		c.SSHFn = ms.cmd()
-
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		config.args = append(config.args, userHost)
-
-		err := RunSSH(config)
-		assert.NoError(t, err)
-		assert.True(t, didFetchDroplet)
-
-		assert.Equal(t, "root", ms.user)
-		assert.Equal(t, testDroplet.Networks.V4[0].IPAddress, ms.host)
 	})
 }
 
@@ -178,16 +88,7 @@ func TestSSH_UnknownDroplet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		ms := &sshMock{}
-		c.SSHFn = ms.cmd()
-
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "missing")
 
 		err := RunSSH(config)
@@ -204,16 +105,7 @@ func TestSSH_DropletWithNoPublic(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		ms := &sshMock{}
-		c.SSHFn = ms.cmd()
-
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, testPrivateDroplet.Name)
 
 		err := RunSSH(config)

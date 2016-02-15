@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -26,16 +25,10 @@ func TestImageActionsGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgActionID, 2)
+		config.doitConfig.Set(config.ns, doit.ArgActionID, 2)
 
 		RunImageActionsGet(config)
 	})
@@ -56,16 +49,10 @@ func TestImageActionsTransfer(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
-		c.Set(config.ns, doit.ArgRegionSlug, "dev0")
+		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")
 
 		RunImageActionsTransfer(config)
 	})

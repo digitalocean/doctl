@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -26,13 +25,7 @@ func TestFloatingIPActionsGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "127.0.0.1", "2")
 
 		RunFloatingIPActionsGet(config)
@@ -53,13 +46,7 @@ func TestFloatingIPActionsAssign(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "127.0.0.1", "2")
 
 		RunFloatingIPActionsAssign(config)
@@ -78,13 +65,7 @@ func TestFloatingIPActionsUnassign(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "127.0.0.1")
 
 		RunFloatingIPActionsUnassign(config)

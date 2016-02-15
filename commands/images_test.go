@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"testing"
 
@@ -35,15 +34,10 @@ func TestImagesList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		RunImagesList(config)
+	withTestClient(client, func(config *cmdConfig) {
+		err := RunImagesList(config)
 		assert.True(t, didRun)
+		assert.NoError(t, err)
 	})
 }
 
@@ -65,15 +59,10 @@ func TestImagesListDistribution(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		RunImagesListDistribution(config)
+	withTestClient(client, func(config *cmdConfig) {
+		err := RunImagesListDistribution(config)
 		assert.True(t, didRun)
+		assert.NoError(t, err)
 	})
 }
 
@@ -95,15 +84,10 @@ func TestImagesListApplication(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		RunImagesListApplication(config)
+	withTestClient(client, func(config *cmdConfig) {
+		err := RunImagesListApplication(config)
 		assert.True(t, didRun)
+		assert.NoError(t, err)
 	})
 }
 
@@ -125,15 +109,10 @@ func TestImagesListUser(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		RunImagesListUser(config)
+	withTestClient(client, func(config *cmdConfig) {
+		err := RunImagesListUser(config)
 		assert.True(t, didRun)
+		assert.NoError(t, err)
 	})
 }
 
@@ -151,14 +130,10 @@ func TestImagesGetByID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		RunImagesGet(config)
+	withTestClient(client, func(config *cmdConfig) {
+		config.args = append(config.args, strconv.Itoa(testImage.ID))
+		err := RunImagesGet(config)
+		assert.NoError(t, err)
 	})
 }
 
@@ -176,16 +151,10 @@ func TestImagesGetBySlug(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		c.Set(config.ns, doit.ArgImage, testImage.Slug)
-
-		RunImagesGet(config)
+	withTestClient(client, func(config *cmdConfig) {
+		config.args = append(config.args, testImage.Slug)
+		err := RunImagesGet(config)
+		assert.NoError(t, err)
 	})
 }
 
@@ -203,14 +172,9 @@ func TestImagesNoID(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		RunImagesGet(config)
+	withTestClient(client, func(config *cmdConfig) {
+		err := RunImagesGet(config)
+		assert.Error(t, err)
 	})
 }
 
@@ -227,18 +191,11 @@ func TestImagesUpdate(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, strconv.Itoa(testImage.ID))
-
-		c.Set(config.ns, doit.ArgImageName, "new-name")
-
-		RunImagesUpdate(config)
+		config.doitConfig.Set(config.ns, doit.ArgImageName, "new-name")
+		err := RunImagesUpdate(config)
+		assert.NoError(t, err)
 	})
 }
 
@@ -252,16 +209,11 @@ func TestImagesDelete(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, strconv.Itoa(testImage.ID))
 
-		RunImagesDelete(config)
+		err := RunImagesDelete(config)
+		assert.NoError(t, err)
 	})
 
 }

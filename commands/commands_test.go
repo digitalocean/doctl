@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"io/ioutil"
 	"sort"
 	"testing"
 
@@ -97,7 +98,13 @@ func assertCommandNames(t *testing.T, cmd *cobra.Command, expected ...string) {
 	assert.Equal(t, expected, names)
 }
 
-type testFn func(c *TestConfig)
+type testFn func(c *cmdConfig)
+
+type testCmdConfig struct {
+	*cmdConfig
+
+	doitConfig *TestConfig
+}
 
 func withTestClient(client *godo.Client, tFn testFn) {
 	ogConfig := doit.DoitConfig
@@ -108,7 +115,13 @@ func withTestClient(client *godo.Client, tFn testFn) {
 	cfg := NewTestConfig(client)
 	doit.DoitConfig = cfg
 
-	tFn(cfg)
+	config := &cmdConfig{
+		ns:         "test",
+		doitConfig: cfg,
+		out:        ioutil.Discard,
+	}
+
+	tFn(config)
 }
 
 type TestConfig struct {

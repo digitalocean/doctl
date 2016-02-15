@@ -41,12 +41,7 @@ func TestDropletActionList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletActions(config)
@@ -70,12 +65,7 @@ func TestDropletBackupList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletBackups(config)
@@ -103,18 +93,13 @@ func TestDropletCreate(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "droplet")
 
-		c.Set(config.ns, doit.ArgRegionSlug, "dev0")
-		c.Set(config.ns, doit.ArgSizeSlug, "1gb")
-		c.Set(config.ns, doit.ArgImage, "image")
-		c.Set(config.ns, doit.ArgUserData, "#cloud-config")
+		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")
+		config.doitConfig.Set(config.ns, doit.ArgSizeSlug, "1gb")
+		config.doitConfig.Set(config.ns, doit.ArgImage, "image")
+		config.doitConfig.Set(config.ns, doit.ArgUserData, "#cloud-config")
 
 		err := RunDropletCreate(config)
 		assert.NoError(t, err)
@@ -146,18 +131,13 @@ func TestDropletCreateUserDataFile(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "droplet")
 
-		c.Set(config.ns, doit.ArgRegionSlug, "dev0")
-		c.Set(config.ns, doit.ArgSizeSlug, "1gb")
-		c.Set(config.ns, doit.ArgImage, "image")
-		c.Set(config.ns, doit.ArgUserDataFile, "../testdata/cloud-config.yml")
+		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")
+		config.doitConfig.Set(config.ns, doit.ArgSizeSlug, "1gb")
+		config.doitConfig.Set(config.ns, doit.ArgImage, "image")
+		config.doitConfig.Set(config.ns, doit.ArgUserDataFile, "../testdata/cloud-config.yml")
 
 		err := RunDropletCreate(config)
 		assert.NoError(t, err)
@@ -174,12 +154,7 @@ func TestDropletDelete(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
 		err := RunDropletDelete(config)
@@ -204,13 +179,7 @@ func TestDropletDeleteByName(t *testing.T) {
 			},
 		},
 	}
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, testDroplet.Name)
 
 		err := RunDropletDelete(config)
@@ -228,13 +197,7 @@ func TestDropletGet(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
 		err := RunDropletGet(config)
@@ -260,13 +223,7 @@ func TestDropletKernelList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletKernels(config)
@@ -292,13 +249,7 @@ func TestDropletNeighbors(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletNeighbors(config)
@@ -323,13 +274,7 @@ func TestDropletSnapshotList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletSnapshots(config)
@@ -353,13 +298,7 @@ func TestDropletsList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
+	withTestClient(client, func(config *cmdConfig) {
 		err := RunDropletList(config)
 		assert.NoError(t, err)
 		assert.True(t, didRun)

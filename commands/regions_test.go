@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io/ioutil"
 	"testing"
 
 	"github.com/bryanl/doit"
@@ -38,14 +37,9 @@ func TestRegionsList(t *testing.T) {
 		},
 	}
 
-	withTestClient(client, func(c *TestConfig) {
-		config := &cmdConfig{
-			ns:         "test",
-			doitConfig: c,
-			out:        ioutil.Discard,
-		}
-
-		RunRegionList(config)
+	withTestClient(client, func(config *cmdConfig) {
+		err := RunRegionList(config)
 		assert.True(t, didList)
+		assert.NoError(t, err)
 	})
 }
