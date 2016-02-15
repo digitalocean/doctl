@@ -27,8 +27,15 @@ func TestFloatingIPActionsGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunFloatingIPActionsGet(ns, c, ioutil.Discard, []string{"127.0.0.1", "2"})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		config.args = append(config.args, "127.0.0.1", "2")
+
+		RunFloatingIPActionsGet(config)
 	})
 
 }
@@ -47,8 +54,15 @@ func TestFloatingIPActionsAssign(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunFloatingIPActionsAssign(ns, c, ioutil.Discard, []string{"127.0.0.1", "2"})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		config.args = append(config.args, "127.0.0.1", "2")
+
+		RunFloatingIPActionsAssign(config)
 	})
 }
 
@@ -65,8 +79,14 @@ func TestFloatingIPActionsUnassign(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunFloatingIPActionsUnassign(ns, c, ioutil.Discard, []string{"127.0.0.1"})
+		config.args = append(config.args, "127.0.0.1")
+
+		RunFloatingIPActionsUnassign(config)
 	})
 }
