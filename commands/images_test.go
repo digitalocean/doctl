@@ -36,8 +36,13 @@ func TestImagesList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunImagesList(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunImagesList(config)
 		assert.True(t, didRun)
 	})
 }
@@ -61,8 +66,13 @@ func TestImagesListDistribution(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunImagesListDistribution(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunImagesListDistribution(config)
 		assert.True(t, didRun)
 	})
 }
@@ -86,8 +96,13 @@ func TestImagesListApplication(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunImagesListApplication(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunImagesListApplication(config)
 		assert.True(t, didRun)
 	})
 }
@@ -111,8 +126,13 @@ func TestImagesListUser(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunImagesListUser(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunImagesListUser(config)
 		assert.True(t, didRun)
 	})
 }
@@ -132,9 +152,13 @@ func TestImagesGetByID(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunImagesGet(ns, c, ioutil.Discard, []string{strconv.Itoa(testImage.ID)})
+		RunImagesGet(config)
 	})
 }
 
@@ -153,10 +177,15 @@ func TestImagesGetBySlug(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgImage, testImage.Slug)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunImagesGet(ns, c, ioutil.Discard, []string{testImage.Slug})
+		c.Set(config.ns, doit.ArgImage, testImage.Slug)
+
+		RunImagesGet(config)
 	})
 }
 
@@ -175,8 +204,13 @@ func TestImagesNoID(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunImagesGet(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunImagesGet(config)
 	})
 }
 
@@ -194,10 +228,17 @@ func TestImagesUpdate(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgImageName, "new-name")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunImagesUpdate(ns, c, ioutil.Discard, []string{strconv.Itoa(testImage.ID)})
+		config.args = append(config.args, strconv.Itoa(testImage.ID))
+
+		c.Set(config.ns, doit.ArgImageName, "new-name")
+
+		RunImagesUpdate(config)
 	})
 }
 
@@ -212,9 +253,15 @@ func TestImagesDelete(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunImagesDelete(ns, c, ioutil.Discard, []string{strconv.Itoa(testImage.ID)})
+		config.args = append(config.args, strconv.Itoa(testImage.ID))
+
+		RunImagesDelete(config)
 	})
 
 }

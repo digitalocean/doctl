@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strconv"
 
@@ -22,37 +21,36 @@ func Images() *cobra.Command {
 
 	out := os.Stdout
 
-	cmdImagesList := cmdBuilder(cmd, RunImagesList, "list", "list images", out, displayerType(&image{}))
+	cmdImagesList := cmdBuilder2(cmd, RunImagesList, "list", "list images", out, displayerType(&image{}))
 	addBoolFlag(cmdImagesList, doit.ArgImagePublic, false, "List public images")
 
-	cmdImagesListDistribution := cmdBuilder(cmd, RunImagesListDistribution,
+	cmdImagesListDistribution := cmdBuilder2(cmd, RunImagesListDistribution,
 		"list-distribution", "list distribution images", out, displayerType(&image{}))
 	addBoolFlag(cmdImagesListDistribution, doit.ArgImagePublic, false, "List public images")
 
-	cmdImagesListApplication := cmdBuilder(cmd, RunImagesListApplication,
+	cmdImagesListApplication := cmdBuilder2(cmd, RunImagesListApplication,
 		"list-application", "list application images", out, displayerType(&image{}))
 	addBoolFlag(cmdImagesListApplication, doit.ArgImagePublic, false, "List public images")
 
-	cmdImagesListUser := cmdBuilder(cmd, RunImagesListDistribution,
+	cmdImagesListUser := cmdBuilder2(cmd, RunImagesListDistribution,
 		"list-user", "list user images", out, displayerType(&image{}))
 	addBoolFlag(cmdImagesListUser, doit.ArgImagePublic, false, "List public images")
 
-	cmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", out, displayerType(&image{}))
+	cmdBuilder2(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", out, displayerType(&image{}))
 
-	cmdImagesUpdate := cmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", out, displayerType(&image{}))
+	cmdImagesUpdate := cmdBuilder2(cmd, RunImagesUpdate, "update <image-id>", "Update image", out, displayerType(&image{}))
 	addStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
 
-	cmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", out)
+	cmdBuilder2(cmd, RunImagesDelete, "delete <image-id>", "Delete image", out)
 
 	return cmd
 }
 
 // RunImagesList images.
-func RunImagesList(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	is := do.NewImagesService(client)
+func RunImagesList(c *cmdConfig) error {
+	is := c.imagesService()
 
-	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -62,21 +60,15 @@ func RunImagesList(ns string, config doit.Config, out io.Writer, args []string) 
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &image{images: list},
-		out:    out,
-	}
-	return dc.Display()
+	item := &image{images: list}
+	return c.display(item)
 }
 
 // RunImagesListDistribution lists distributions that are available.
-func RunImagesListDistribution(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	is := do.NewImagesService(client)
+func RunImagesListDistribution(c *cmdConfig) error {
+	is := c.imagesService()
 
-	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -86,21 +78,16 @@ func RunImagesListDistribution(ns string, config doit.Config, out io.Writer, arg
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &image{images: list},
-		out:    out,
-	}
-	return dc.Display()
+	item := &image{images: list}
+	return c.display(item)
+
 }
 
 // RunImagesListApplication lists application iamges.
-func RunImagesListApplication(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	is := do.NewImagesService(client)
+func RunImagesListApplication(c *cmdConfig) error {
+	is := c.imagesService()
 
-	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -110,21 +97,15 @@ func RunImagesListApplication(ns string, config doit.Config, out io.Writer, args
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &image{images: list},
-		out:    out,
-	}
-	return dc.Display()
+	item := &image{images: list}
+	return c.display(item)
 }
 
 // RunImagesListUser lists user images.
-func RunImagesListUser(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	is := do.NewImagesService(client)
+func RunImagesListUser(c *cmdConfig) error {
+	is := c.imagesService()
 
-	public, err := config.GetBool(ns, doit.ArgImagePublic)
+	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -134,25 +115,19 @@ func RunImagesListUser(ns string, config doit.Config, out io.Writer, args []stri
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &image{images: list},
-		out:    out,
-	}
-	return dc.Display()
+	item := &image{images: list}
+	return c.display(item)
 }
 
 // RunImagesGet retrieves an image by id or slug.
-func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	is := do.NewImagesService(client)
+func RunImagesGet(c *cmdConfig) error {
+	is := c.imagesService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	rawID := args[0]
+	rawID := c.args[0]
 
 	var i *do.Image
 	var err error
@@ -171,31 +146,24 @@ func RunImagesGet(ns string, config doit.Config, out io.Writer, args []string) e
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &image{images: do.Images{*i}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &image{images: do.Images{*i}}
+	return c.display(item)
 }
 
 // RunImagesUpdate updates an image.
-func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	is := do.NewImagesService(client)
+func RunImagesUpdate(c *cmdConfig) error {
+	is := c.imagesService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	id, err := strconv.Atoi(args[0])
+	id, err := strconv.Atoi(c.args[0])
 	if err != nil {
 		return err
 	}
 
-	name, err := config.GetString(ns, doit.ArgImageName)
+	name, err := c.doitConfig.GetString(c.ns, doit.ArgImageName)
 
 	req := &godo.ImageUpdateRequest{
 		Name: name,
@@ -206,26 +174,19 @@ func RunImagesUpdate(ns string, config doit.Config, out io.Writer, args []string
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &image{images: do.Images{*i}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &image{images: do.Images{*i}}
+	return c.display(item)
 }
 
 // RunImagesDelete deletes an image.
-func RunImagesDelete(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	is := do.NewImagesService(client)
+func RunImagesDelete(c *cmdConfig) error {
+	is := c.imagesService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	id, err := strconv.Atoi(args[0])
+	id, err := strconv.Atoi(c.args[0])
 	if err != nil {
 		return err
 	}
