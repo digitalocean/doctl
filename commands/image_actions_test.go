@@ -27,10 +27,17 @@ func TestImageActionsGet(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgActionID, 2)
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunImageActionsGet(ns, c, ioutil.Discard, []string{"1"})
+		config.args = append(config.args, "1")
+
+		c.Set(config.ns, doit.ArgActionID, 2)
+
+		RunImageActionsGet(config)
 	})
 
 }
@@ -50,9 +57,16 @@ func TestImageActionsTransfer(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		c.Set(ns, doit.ArgRegionSlug, "dev0")
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
 
-		RunImageActionsTransfer(ns, c, ioutil.Discard, []string{"1"})
+		config.args = append(config.args, "1")
+
+		c.Set(config.ns, doit.ArgRegionSlug, "dev0")
+
+		RunImageActionsTransfer(config)
 	})
 }

@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"io"
 	"strconv"
 
 	"github.com/bryanl/doit"
@@ -19,11 +18,11 @@ func ImageAction() *cobra.Command {
 		Long:  "image-action commands",
 	}
 
-	cmdImageActionsGet := cmdBuilder(cmd, RunImageActionsGet,
+	cmdImageActionsGet := cmdBuilder2(cmd, RunImageActionsGet,
 		"get <image-id>", "get image action", writer, displayerType(&action{}))
 	addIntFlag(cmdImageActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
-	cmdImageActionsTransfer := cmdBuilder(cmd, RunImageActionsTransfer,
+	cmdImageActionsTransfer := cmdBuilder2(cmd, RunImageActionsTransfer,
 		"transfer <image-id>", "transfer imagr", writer, displayerType(&action{}))
 	addStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region", requiredOpt())
 
@@ -31,20 +30,19 @@ func ImageAction() *cobra.Command {
 }
 
 // RunImageActionsGet retrieves an action for an image.
-func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ias := do.NewImageActionsService(client)
+func RunImageActionsGet(c *cmdConfig) error {
+	ias := c.imageActionsService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	imageID, err := strconv.Atoi(args[0])
+	imageID, err := strconv.Atoi(c.args[0])
 	if err != nil {
 		return err
 	}
 
-	actionID, err := config.GetInt(ns, doit.ArgActionID)
+	actionID, err := c.doitConfig.GetInt(c.ns, doit.ArgActionID)
 	if err != nil {
 		return err
 	}
@@ -54,31 +52,24 @@ func RunImageActionsGet(ns string, config doit.Config, out io.Writer, args []str
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &action{actions: do.Actions{*a}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &action{actions: do.Actions{*a}}
+	return c.display(item)
 }
 
 // RunImageActionsTransfer an image.
-func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	ias := do.NewImageActionsService(client)
+func RunImageActionsTransfer(c *cmdConfig) error {
+	ias := c.imageActionsService()
 
-	if len(args) != 1 {
-		return doit.NewMissingArgsErr(ns)
+	if len(c.args) != 1 {
+		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	id, err := strconv.Atoi(args[0])
+	id, err := strconv.Atoi(c.args[0])
 	if err != nil {
 		return err
 	}
 
-	region, err := config.GetString(ns, doit.ArgRegionSlug)
+	region, err := c.doitConfig.GetString(c.ns, doit.ArgRegionSlug)
 	if err != nil {
 		return err
 	}
@@ -92,12 +83,6 @@ func RunImageActionsTransfer(ns string, config doit.Config, out io.Writer, args 
 		checkErr(fmt.Errorf("could not transfer image: %v", err))
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &action{actions: do.Actions{*a}},
-		out:    out,
-	}
-
-	return dc.Display()
+	item := &action{actions: do.Actions{*a}}
+	return c.display(item)
 }
