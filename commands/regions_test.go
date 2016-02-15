@@ -39,8 +39,13 @@ func TestRegionsList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunRegionList(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunRegionList(config)
 		assert.True(t, didList)
 	})
 }

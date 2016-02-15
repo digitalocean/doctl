@@ -1,12 +1,6 @@
 package commands
 
-import (
-	"io"
-
-	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/do"
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 // Region creates the region commands heirarchy.
 func Region() *cobra.Command {
@@ -16,26 +10,20 @@ func Region() *cobra.Command {
 		Long:  "region is used to access region commands",
 	}
 
-	cmdBuilder(cmd, RunRegionList, "list", "list regions", writer, displayerType(&region{}))
+	cmdBuilder2(cmd, RunRegionList, "list", "list regions", writer, displayerType(&region{}))
 
 	return cmd
 }
 
 // RunRegionList all regions.
-func RunRegionList(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	rs := do.NewRegionsService(client)
+func RunRegionList(c *cmdConfig) error {
+	rs := c.regionsService()
 
 	list, err := rs.List()
 	if err != nil {
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &region{regions: list},
-		out:    out,
-	}
-	return dc.Display()
+	image := &region{regions: list}
+	return c.display(image)
 }

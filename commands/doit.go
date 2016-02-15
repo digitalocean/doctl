@@ -272,6 +272,10 @@ func (c *cmdConfig) imagesService() do.ImagesService {
 	return do.NewImagesService(c.doitConfig.GetGodoClient())
 }
 
+func (c *cmdConfig) regionsService() do.RegionsService {
+	return do.NewRegionsService(c.doitConfig.GetGodoClient())
+}
+
 func cmdBuilder2(parent *cobra.Command, cr cmdRunner2, cliText, desc string, out io.Writer, options ...cmdOption) *command {
 	cc := &cobra.Command{
 		Use:   cliText,
