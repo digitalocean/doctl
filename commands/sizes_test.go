@@ -39,8 +39,13 @@ func TestSizesList(t *testing.T) {
 	}
 
 	withTestClient(client, func(c *TestConfig) {
-		ns := "test"
-		RunSizeList(ns, c, ioutil.Discard, []string{})
+		config := &cmdConfig{
+			ns:         "test",
+			doitConfig: c,
+			out:        ioutil.Discard,
+		}
+
+		RunSizeList(config)
 		assert.True(t, didList)
 	})
 }

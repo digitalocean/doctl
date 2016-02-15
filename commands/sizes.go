@@ -1,12 +1,6 @@
 package commands
 
-import (
-	"io"
-
-	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/do"
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 // Size creates the size commands heirarchy.
 func Size() *cobra.Command {
@@ -16,26 +10,20 @@ func Size() *cobra.Command {
 		Long:  "size is used to access size commands",
 	}
 
-	cmdBuilder(cmd, RunSizeList, "list", "list sizes", writer, displayerType(&size{}))
+	cmdBuilder2(cmd, RunSizeList, "list", "list sizes", writer, displayerType(&size{}))
 
 	return cmd
 }
 
 // RunSizeList all sizes.
-func RunSizeList(ns string, config doit.Config, out io.Writer, args []string) error {
-	client := config.GetGodoClient()
-	rs := do.NewSizesService(client)
+func RunSizeList(c *cmdConfig) error {
+	rs := c.sizesService()
 
 	list, err := rs.List()
 	if err != nil {
 		return err
 	}
 
-	dc := &displayer{
-		ns:     ns,
-		config: config,
-		item:   &size{sizes: list},
-		out:    out,
-	}
-	return dc.Display()
+	item := &size{sizes: list}
+	return c.display(item)
 }
