@@ -63,7 +63,11 @@ func RunAuthLogin(c *cmdConfig) error {
 		return err
 	}
 
-	cf := doit.NewConfigFile()
+	cf, err := doit.NewConfigFile()
+	if err != nil {
+		return err
+	}
+
 	err = cf.Set("access-token", token)
 	if err != nil {
 		return err

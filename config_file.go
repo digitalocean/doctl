@@ -1,7 +1,6 @@
 package doit
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -16,11 +15,22 @@ const (
 )
 
 // ConfigFile is a doit config file.
-type ConfigFile struct{}
+type ConfigFile struct {
+	location string
+}
 
 // NewConfigFile creates an instance of ConfigFile.
-func NewConfigFile() *ConfigFile {
-	return &ConfigFile{}
+func NewConfigFile() (*ConfigFile, error) {
+	usr, err := user.Current()
+	if err != nil {
+		return nil, err
+	}
+
+	location := filepath.Join(usr.HomeDir, configFile)
+
+	return &ConfigFile{
+		location: location,
+	}, nil
 }
 
 // Set sets a ConfigFile key to a value. The value should be something
@@ -59,49 +69,26 @@ func (cf *ConfigFile) Set(key string, val interface{}) error {
 
 	m[key] = val
 
-	path, err := cf.configFilePath()
-	if err != nil {
-		return err
-	}
-
 	out, err := yaml.Marshal(m)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(path, out, 0600)
+	return ioutil.WriteFile(cf.location, out, 0600)
 }
 
 // Open opens a ConfigFile.
 func (cf *ConfigFile) Open() (io.Reader, error) {
-	fp, err := cf.configFilePath()
-	if err != nil {
-		return nil, fmt.Errorf("can't find home directory: %v", err)
-	}
-	_, err = os.Stat(fp)
+	_, err := os.Stat(cf.location)
 	if err != nil {
 		return nil, err
 	}
 
-	return os.Open(fp)
-}
-
-func (cf *ConfigFile) configFilePath() (string, error) {
-	usr, err := user.Current()
-	if err != nil {
-		return "", err
-	}
-
-	dir := filepath.Join(usr.HomeDir, configFile)
-	return dir, nil
+	return os.Open(cf.location)
 }
 
 func (cf *ConfigFile) createConfigFile() error {
-	p, err := cf.configFilePath()
-	if err != nil {
-		return err
-	}
-	f, err := os.Create(p)
+	f, err := os.Create(cf.location)
 	if err != nil {
 		return err
 	}

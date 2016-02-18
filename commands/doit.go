@@ -44,7 +44,11 @@ func init() {
 
 // LoadConfig loads out configuration.
 func LoadConfig() error {
-	cf := doit.NewConfigFile()
+	cf, err := doit.NewConfigFile()
+	if err != nil {
+		return err
+	}
+
 	r, err := cf.Open()
 	if err != nil {
 		return fmt.Errorf("can't open configuration file: %v", err)
@@ -190,30 +194,10 @@ func cmdNS(cmd *cobra.Command) string {
 // cmdRunner runs a command and passes in a cmdConfig.
 type cmdRunner func(*cmdConfig) error
 
-type cmdOption func(*command)
-
 type command struct {
 	*cobra.Command
 
 	fmtCols []string
-}
-
-func aliasOpt(aliases ...string) cmdOption {
-	return func(c *command) {
-		if c.Aliases == nil {
-			c.Aliases = []string{}
-		}
-
-		for _, a := range aliases {
-			c.Aliases = append(c.Aliases, a)
-		}
-	}
-}
-
-func displayerType(d displayable) cmdOption {
-	return func(c *command) {
-		c.fmtCols = d.Cols()
-	}
 }
 
 type cmdConfig struct {
