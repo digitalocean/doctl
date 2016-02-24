@@ -9,6 +9,7 @@ type ImagesService struct {
 	mock.Mock
 }
 
+// List provides a mock function with given fields: public
 func (_m *ImagesService) List(public bool) (do.Images, error) {
 	ret := _m.Called(public)
 
@@ -28,6 +29,8 @@ func (_m *ImagesService) List(public bool) (do.Images, error) {
 
 	return r0, r1
 }
+
+// ListDistribution provides a mock function with given fields: public
 func (_m *ImagesService) ListDistribution(public bool) (do.Images, error) {
 	ret := _m.Called(public)
 
@@ -47,6 +50,8 @@ func (_m *ImagesService) ListDistribution(public bool) (do.Images, error) {
 
 	return r0, r1
 }
+
+// ListApplication provides a mock function with given fields: public
 func (_m *ImagesService) ListApplication(public bool) (do.Images, error) {
 	ret := _m.Called(public)
 
@@ -66,6 +71,8 @@ func (_m *ImagesService) ListApplication(public bool) (do.Images, error) {
 
 	return r0, r1
 }
+
+// ListUser provides a mock function with given fields: public
 func (_m *ImagesService) ListUser(public bool) (do.Images, error) {
 	ret := _m.Called(public)
 
@@ -85,6 +92,8 @@ func (_m *ImagesService) ListUser(public bool) (do.Images, error) {
 
 	return r0, r1
 }
+
+// GetByID provides a mock function with given fields: id
 func (_m *ImagesService) GetByID(id int) (*do.Image, error) {
 	ret := _m.Called(id)
 
@@ -106,6 +115,8 @@ func (_m *ImagesService) GetByID(id int) (*do.Image, error) {
 
 	return r0, r1
 }
+
+// GetBySlug provides a mock function with given fields: slug
 func (_m *ImagesService) GetBySlug(slug string) (*do.Image, error) {
 	ret := _m.Called(slug)
 
@@ -127,6 +138,8 @@ func (_m *ImagesService) GetBySlug(slug string) (*do.Image, error) {
 
 	return r0, r1
 }
+
+// Update provides a mock function with given fields: id, iur
 func (_m *ImagesService) Update(id int, iur *godo.ImageUpdateRequest) (*do.Image, error) {
 	ret := _m.Called(id, iur)
 
@@ -148,6 +161,8 @@ func (_m *ImagesService) Update(id int, iur *godo.ImageUpdateRequest) (*do.Image
 
 	return r0, r1
 }
+
+// Delete provides a mock function with given fields: id
 func (_m *ImagesService) Delete(id int) error {
 	ret := _m.Called(id)
 

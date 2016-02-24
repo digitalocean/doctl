@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/bryanl/doit/pkg/runner"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -15,75 +17,83 @@ import (
 )
 
 var (
-	testDroplet = godo.Droplet{
-		ID: 1,
-		Image: &godo.Image{
-			ID:           1,
-			Name:         "an-image",
-			Distribution: "DOOS",
-		},
-		Name: "a-droplet",
-		Networks: &godo.Networks{
-			V4: []godo.NetworkV4{
-				{IPAddress: "8.8.8.8", Type: "public"},
-				{IPAddress: "172.16.1.2", Type: "private"},
+	testDroplet = do.Droplet{
+		Droplet: &godo.Droplet{
+			ID: 1,
+			Image: &godo.Image{
+				ID:           1,
+				Name:         "an-image",
+				Distribution: "DOOS",
 			},
-		},
-		Region: &godo.Region{
-			Slug: "test0",
-			Name: "test 0",
+			Name: "a-droplet",
+			Networks: &godo.Networks{
+				V4: []godo.NetworkV4{
+					{IPAddress: "8.8.8.8", Type: "public"},
+					{IPAddress: "172.16.1.2", Type: "private"},
+				},
+			},
+			Region: &godo.Region{
+				Slug: "test0",
+				Name: "test 0",
+			},
 		},
 	}
 
-	anotherTestDroplet = godo.Droplet{
-		ID: 3,
-		Image: &godo.Image{
-			ID:           1,
-			Name:         "an-image",
-			Distribution: "DOOS",
-		},
-		Name: "another-droplet",
-		Networks: &godo.Networks{
-			V4: []godo.NetworkV4{
-				{IPAddress: "8.8.8.9", Type: "public"},
-				{IPAddress: "172.16.1.4", Type: "private"},
+	anotherTestDroplet = do.Droplet{
+		Droplet: &godo.Droplet{
+			ID: 3,
+			Image: &godo.Image{
+				ID:           1,
+				Name:         "an-image",
+				Distribution: "DOOS",
 			},
-		},
-		Region: &godo.Region{
-			Slug: "test0",
-			Name: "test 0",
+			Name: "another-droplet",
+			Networks: &godo.Networks{
+				V4: []godo.NetworkV4{
+					{IPAddress: "8.8.8.9", Type: "public"},
+					{IPAddress: "172.16.1.4", Type: "private"},
+				},
+			},
+			Region: &godo.Region{
+				Slug: "test0",
+				Name: "test 0",
+			},
 		},
 	}
 
-	testPrivateDroplet = godo.Droplet{
-		ID: 1,
-		Image: &godo.Image{
-			ID:           1,
-			Name:         "an-image",
-			Distribution: "DOOS",
-		},
-		Name: "a-droplet",
-		Networks: &godo.Networks{
-			V4: []godo.NetworkV4{
-				{IPAddress: "172.16.1.2", Type: "private"},
+	testPrivateDroplet = do.Droplet{
+		Droplet: &godo.Droplet{
+			ID: 1,
+			Image: &godo.Image{
+				ID:           1,
+				Name:         "an-image",
+				Distribution: "DOOS",
 			},
-		},
-		Region: &godo.Region{
-			Slug: "test0",
-			Name: "test 0",
+			Name: "a-droplet",
+			Networks: &godo.Networks{
+				V4: []godo.NetworkV4{
+					{IPAddress: "172.16.1.2", Type: "private"},
+				},
+			},
+			Region: &godo.Region{
+				Slug: "test0",
+				Name: "test 0",
+			},
 		},
 	}
 
-	testDropletList        = []godo.Droplet{testDroplet, anotherTestDroplet}
-	testPrivateDropletList = []godo.Droplet{testPrivateDroplet}
-	testKernel             = godo.Kernel{ID: 1}
-	testKernelList         = []godo.Kernel{testKernel}
-	testFloatingIP         = godo.FloatingIP{
-		Droplet: &testDroplet,
-		Region:  testDroplet.Region,
-		IP:      "127.0.0.1",
+	testDropletList        = do.Droplets{testDroplet, anotherTestDroplet}
+	testPrivateDropletList = do.Droplets{testPrivateDroplet}
+	testKernel             = do.Kernel{Kernel: &godo.Kernel{ID: 1}}
+	testKernelList         = do.Kernels{testKernel}
+	testFloatingIP         = do.FloatingIP{
+		FloatingIP: &godo.FloatingIP{
+			Droplet: testDroplet.Droplet,
+			Region:  testDroplet.Region,
+			IP:      "127.0.0.1",
+		},
 	}
-	testFloatingIPList = []godo.FloatingIP{testFloatingIP}
+	testFloatingIPList = do.FloatingIPs{testFloatingIP}
 )
 
 func assertCommandNames(t *testing.T, cmd *cobra.Command, expected ...string) {
@@ -106,35 +116,46 @@ type testCmdConfig struct {
 	doitConfig *TestConfig
 }
 
-func withTestClient(client *godo.Client, tFn testFn) {
+func withTestClient(tFn testFn) {
 	ogConfig := doit.DoitConfig
 	defer func() {
 		doit.DoitConfig = ogConfig
 	}()
 
-	cfg := NewTestConfig(client)
+	cfg := NewTestConfig()
 	doit.DoitConfig = cfg
 
 	config := &cmdConfig{
 		ns:         "test",
 		doitConfig: cfg,
 		out:        ioutil.Discard,
+
+		ks:   &domocks.KeysService{},
+		ss:   &domocks.SizesService{},
+		rs:   &domocks.RegionsService{},
+		is:   &domocks.ImagesService{},
+		ias:  &domocks.ImageActionsService{},
+		fis:  &domocks.FloatingIPsService{},
+		fias: &domocks.FloatingIPActionsService{},
+		ds:   &domocks.DropletsService{},
+		das:  &domocks.DropletActionsService{},
+		dos:  &domocks.DomainsService{},
+		acts: &domocks.ActionsService{},
+		as:   &domocks.AccountService{},
 	}
 
 	tFn(config)
 }
 
 type TestConfig struct {
-	Client *godo.Client
-	SSHFn  func(user, host, keyPath string, port int) runner.Runner
-	v      *viper.Viper
+	SSHFn func(user, host, keyPath string, port int) runner.Runner
+	v     *viper.Viper
 }
 
 var _ doit.Config = &TestConfig{}
 
-func NewTestConfig(client *godo.Client) *TestConfig {
+func NewTestConfig() *TestConfig {
 	return &TestConfig{
-		Client: client,
 		SSHFn: func(u, h, kp string, p int) runner.Runner {
 			return &doit.MockRunner{}
 		},
@@ -145,7 +166,7 @@ func NewTestConfig(client *godo.Client) *TestConfig {
 var _ doit.Config = &TestConfig{}
 
 func (c *TestConfig) GetGodoClient() *godo.Client {
-	return c.Client
+	return &godo.Client{}
 }
 
 func (c *TestConfig) SSH(user, host, keyPath string, port int) runner.Runner {

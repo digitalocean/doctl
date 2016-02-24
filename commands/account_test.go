@@ -3,16 +3,19 @@ package commands
 import (
 	"testing"
 
-	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
 
-var testAccount = &godo.Account{
-	DropletLimit:  10,
-	Email:         "user@example.com",
-	UUID:          "1234",
-	EmailVerified: true,
+var testAccount = &do.Account{
+	Account: &godo.Account{
+		DropletLimit:  10,
+		Email:         "user@example.com",
+		UUID:          "1234",
+		EmailVerified: true,
+	},
 }
 
 func TestAccountCommand(t *testing.T) {
@@ -22,23 +25,13 @@ func TestAccountCommand(t *testing.T) {
 }
 
 func TestAccountGet(t *testing.T) {
-	accountDidGet := false
+	withTestClient(func(config *cmdConfig) {
+		as := &domocks.AccountService{}
+		as.On("Get").Return(testAccount, nil)
 
-	client := &godo.Client{
-		Account: &doit.AccountServiceMock{
-			GetFn: func() (*godo.Account, *godo.Response, error) {
-				accountDidGet = true
-				return testAccount, nil, nil
-			},
-		},
-	}
+		config.as = as
 
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunAccountGet(config)
 		assert.NoError(t, err)
-
-		if !accountDidGet {
-			t.Errorf("could not retrieve account")
-		}
 	})
 }

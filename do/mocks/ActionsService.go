@@ -7,6 +7,7 @@ type ActionsService struct {
 	mock.Mock
 }
 
+// List provides a mock function with given fields:
 func (_m *ActionsService) List() (do.Actions, error) {
 	ret := _m.Called()
 
@@ -26,6 +27,8 @@ func (_m *ActionsService) List() (do.Actions, error) {
 
 	return r0, r1
 }
+
+// Get provides a mock function with given fields: _a0
 func (_m *ActionsService) Get(_a0 int) (*do.Action, error) {
 	ret := _m.Called(_a0)
 

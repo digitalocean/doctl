@@ -7,6 +7,7 @@ type RegionsService struct {
 	mock.Mock
 }
 
+// List provides a mock function with given fields:
 func (_m *RegionsService) List() (do.Regions, error) {
 	ret := _m.Called()
 

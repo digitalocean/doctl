@@ -9,6 +9,7 @@ type FloatingIPActionsService struct {
 	mock.Mock
 }
 
+// Assign provides a mock function with given fields: ip, dropletID
 func (_m *FloatingIPActionsService) Assign(ip string, dropletID int) (*do.Action, error) {
 	ret := _m.Called(ip, dropletID)
 
@@ -30,6 +31,8 @@ func (_m *FloatingIPActionsService) Assign(ip string, dropletID int) (*do.Action
 
 	return r0, r1
 }
+
+// Unassign provides a mock function with given fields: ip
 func (_m *FloatingIPActionsService) Unassign(ip string) (*do.Action, error) {
 	ret := _m.Called(ip)
 
@@ -51,6 +54,8 @@ func (_m *FloatingIPActionsService) Unassign(ip string) (*do.Action, error) {
 
 	return r0, r1
 }
+
+// Get provides a mock function with given fields: ip, actionID
 func (_m *FloatingIPActionsService) Get(ip string, actionID int) (*do.Action, error) {
 	ret := _m.Called(ip, actionID)
 
@@ -72,6 +77,8 @@ func (_m *FloatingIPActionsService) Get(ip string, actionID int) (*do.Action, er
 
 	return r0, r1
 }
+
+// List provides a mock function with given fields: ip, opt
 func (_m *FloatingIPActionsService) List(ip string, opt *godo.ListOptions) ([]do.Action, error) {
 	ret := _m.Called(ip, opt)
 

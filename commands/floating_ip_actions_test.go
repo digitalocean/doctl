@@ -3,8 +3,7 @@ package commands
 import (
 	"testing"
 
-	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,17 +14,12 @@ func TestFloatingIPActionCommand(t *testing.T) {
 }
 
 func TestFloatingIPActionsGet(t *testing.T) {
-	client := &godo.Client{
-		FloatingIPActions: &doit.FloatingIPActionsServiceMock{
-			GetFn: func(ip string, actionID int) (*godo.Action, *godo.Response, error) {
-				assert.Equal(t, "127.0.0.1", ip)
-				assert.Equal(t, 2, actionID)
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		fias := &domocks.FloatingIPActionsService{}
+		config.fias = fias
 
-	withTestClient(client, func(config *cmdConfig) {
+		fias.On("Get", "127.0.0.1", 2).Return(&testAction, nil)
+
 		config.args = append(config.args, "127.0.0.1", "2")
 
 		RunFloatingIPActionsGet(config)
@@ -34,19 +28,12 @@ func TestFloatingIPActionsGet(t *testing.T) {
 }
 
 func TestFloatingIPActionsAssign(t *testing.T) {
-	client := &godo.Client{
-		FloatingIPActions: &doit.FloatingIPActionsServiceMock{
-			AssignFn: func(ip string, dropletID int) (*godo.Action, *godo.Response, error) {
+	withTestClient(func(config *cmdConfig) {
+		fias := &domocks.FloatingIPActionsService{}
+		config.fias = fias
 
-				assert.Equal(t, ip, "127.0.0.1")
-				assert.Equal(t, dropletID, 2)
+		fias.On("Assign", "127.0.0.1", 2).Return(&testAction, nil)
 
-				return &testAction, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "127.0.0.1", "2")
 
 		RunFloatingIPActionsAssign(config)
@@ -54,18 +41,12 @@ func TestFloatingIPActionsAssign(t *testing.T) {
 }
 
 func TestFloatingIPActionsUnassign(t *testing.T) {
-	client := &godo.Client{
-		FloatingIPActions: &doit.FloatingIPActionsServiceMock{
-			UnassignFn: func(ip string) (*godo.Action, *godo.Response, error) {
+	withTestClient(func(config *cmdConfig) {
+		fias := &domocks.FloatingIPActionsService{}
+		config.fias = fias
 
-				assert.Equal(t, ip, "127.0.0.1")
+		fias.On("Unassign", "127.0.0.1").Return(&testAction, nil)
 
-				return &testAction, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "127.0.0.1")
 
 		RunFloatingIPActionsUnassign(config)

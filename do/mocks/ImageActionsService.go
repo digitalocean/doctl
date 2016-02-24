@@ -9,6 +9,7 @@ type ImageActionsService struct {
 	mock.Mock
 }
 
+// Get provides a mock function with given fields: _a0, _a1
 func (_m *ImageActionsService) Get(_a0 int, _a1 int) (*do.Action, error) {
 	ret := _m.Called(_a0, _a1)
 
@@ -30,6 +31,8 @@ func (_m *ImageActionsService) Get(_a0 int, _a1 int) (*do.Action, error) {
 
 	return r0, r1
 }
+
+// Transfer provides a mock function with given fields: _a0, _a1
 func (_m *ImageActionsService) Transfer(_a0 int, _a1 *godo.ActionRequest) (*do.Action, error) {
 	ret := _m.Called(_a0, _a1)
 

@@ -9,6 +9,7 @@ type KeysService struct {
 	mock.Mock
 }
 
+// List provides a mock function with given fields:
 func (_m *KeysService) List() (do.SSHKeys, error) {
 	ret := _m.Called()
 
@@ -28,6 +29,8 @@ func (_m *KeysService) List() (do.SSHKeys, error) {
 
 	return r0, r1
 }
+
+// Get provides a mock function with given fields: id
 func (_m *KeysService) Get(id string) (*do.SSHKey, error) {
 	ret := _m.Called(id)
 
@@ -49,6 +52,8 @@ func (_m *KeysService) Get(id string) (*do.SSHKey, error) {
 
 	return r0, r1
 }
+
+// Create provides a mock function with given fields: kcr
 func (_m *KeysService) Create(kcr *godo.KeyCreateRequest) (*do.SSHKey, error) {
 	ret := _m.Called(kcr)
 
@@ -70,6 +75,8 @@ func (_m *KeysService) Create(kcr *godo.KeyCreateRequest) (*do.SSHKey, error) {
 
 	return r0, r1
 }
+
+// Update provides a mock function with given fields: id, kur
 func (_m *KeysService) Update(id string, kur *godo.KeyUpdateRequest) (*do.SSHKey, error) {
 	ret := _m.Called(id, kur)
 
@@ -91,6 +98,8 @@ func (_m *KeysService) Update(id string, kur *godo.KeyUpdateRequest) (*do.SSHKey
 
 	return r0, r1
 }
+
+// Delete provides a mock function with given fields: id
 func (_m *KeysService) Delete(id string) error {
 	ret := _m.Called(id)
 

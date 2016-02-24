@@ -1,21 +1,22 @@
 package commands
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
+	"github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testDomain     = godo.Domain{Name: "example.com"}
-	testDomainList = []godo.Domain{
+	testDomain     = do.Domain{Domain: &godo.Domain{Name: "example.com"}}
+	testDomainList = do.Domains{
 		testDomain,
 	}
-	testRecord     = godo.DomainRecord{ID: 1}
-	testRecordList = []godo.DomainRecord{testRecord}
+	testRecord     = do.DomainRecord{DomainRecord: &godo.DomainRecord{ID: 1}}
+	testRecordList = do.DomainRecords{testRecord}
 )
 
 func TestDomainsCommand(t *testing.T) {
@@ -25,22 +26,13 @@ func TestDomainsCommand(t *testing.T) {
 }
 
 func TestDomainsCreate(t *testing.T) {
-	client := &godo.Client{
-		Domains: &doit.DomainsServiceMock{
-			CreateFn: func(req *godo.DomainCreateRequest) (*godo.Domain, *godo.Response, error) {
-				expected := &godo.DomainCreateRequest{
-					Name:      testDomain.Name,
-					IPAddress: "127.0.0.1",
-				}
-				if got := req; !reflect.DeepEqual(got, expected) {
-					t.Errorf("CreateFn() called with %#v; expected %#v", got, expected)
-				}
-				return &testDomain, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		dos := &mocks.DomainsService{}
+		config.dos = dos
 
-	withTestClient(client, func(config *cmdConfig) {
+		dcr := &godo.DomainCreateRequest{Name: "example.com", IPAddress: "127.0.0.1"}
+		dos.On("Create", dcr).Return(&testDomain, nil)
+
 		config.args = append(config.args, testDomain.Name)
 		config.doitConfig.Set(config.ns, doit.ArgIPAddress, "127.0.0.1")
 		err := RunDomainCreate(config)
@@ -49,70 +41,44 @@ func TestDomainsCreate(t *testing.T) {
 }
 
 func TestDomainsList(t *testing.T) {
-	domainsDisList := false
+	withTestClient(func(config *cmdConfig) {
+		dos := &mocks.DomainsService{}
+		config.dos = dos
 
-	client := &godo.Client{
-		Domains: &doit.DomainsServiceMock{
-			ListFn: func(opts *godo.ListOptions) ([]godo.Domain, *godo.Response, error) {
-				domainsDisList = true
-				resp := &godo.Response{
-					Links: &godo.Links{},
-				}
-				return testDomainList, resp, nil
-			},
-		},
-	}
+		dos.On("List").Return(testDomainList, nil)
 
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunDomainList(config)
 		assert.NoError(t, err)
-		if !domainsDisList {
-			t.Errorf("List() did not run")
-		}
 	})
 }
 
 func TestDomainsGet(t *testing.T) {
-	client := &godo.Client{
-		Domains: &doit.DomainsServiceMock{
-			GetFn: func(name string) (*godo.Domain, *godo.Response, error) {
-				if got, expected := name, testDomain.Name; got != expected {
-					t.Errorf("GetFn() called with %q; expected %q", got, expected)
-				}
-				return &testDomain, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		dos := &mocks.DomainsService{}
+		config.dos = dos
 
-	withTestClient(client, func(config *cmdConfig) {
+		dos.On("Get", "example.com").Return(&testDomain, nil)
+
 		config.args = append(config.args, testDomain.Name)
 		err := RunDomainGet(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestDomainsGet_DomainRequred(t *testing.T) {
-	client := &godo.Client{}
-
-	withTestClient(client, func(config *cmdConfig) {
+func TestDomainsGet_DomainRequired(t *testing.T) {
+	withTestClient(func(config *cmdConfig) {
 		err := RunDomainGet(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestDomainsDelete(t *testing.T) {
-	client := &godo.Client{
-		Domains: &doit.DomainsServiceMock{
-			DeleteFn: func(name string) (*godo.Response, error) {
-				if got, expected := name, testDomain.Name; got != expected {
-					t.Errorf("DeleteFn() received %q; expected %q", got, expected)
-				}
-				return nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		dos := &mocks.DomainsService{}
+		config.dos = dos
 
-	withTestClient(client, func(config *cmdConfig) {
+		dos.On("Delete", "example.com").Return(nil)
+
 		config.args = append(config.args, testDomain.Name)
 
 		err := RunDomainDelete(config)
@@ -121,63 +87,41 @@ func TestDomainsDelete(t *testing.T) {
 }
 
 func TestDomainsGet_RequiredArguments(t *testing.T) {
-	client := &godo.Client{}
-
-	withTestClient(client, func(config *cmdConfig) {
+	withTestClient(func(config *cmdConfig) {
 		err := RunDomainDelete(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestRecordsList(t *testing.T) {
-	recordsDidList := false
+	withTestClient(func(config *cmdConfig) {
+		dos := &mocks.DomainsService{}
+		config.dos = dos
 
-	client := &godo.Client{
-		Domains: &doit.DomainsServiceMock{
-			RecordsFn: func(name string, opts *godo.ListOptions) ([]godo.DomainRecord, *godo.Response, error) {
-				recordsDidList = true
-				return testRecordList, nil, nil
-			},
-		},
-	}
+		dos.On("Records", "example.com").Return(testRecordList, nil)
 
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "example.com")
 
 		err := RunRecordList(config)
 		assert.NoError(t, err)
-		assert.True(t, recordsDidList)
 	})
 }
 
 func TestRecordList_RequiredArguments(t *testing.T) {
-	client := &godo.Client{}
-
-	withTestClient(client, func(config *cmdConfig) {
+	withTestClient(func(config *cmdConfig) {
 		err := RunRecordList(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestRecordsCreate(t *testing.T) {
-	client := &godo.Client{
-		Domains: &doit.DomainsServiceMock{
-			CreateRecordFn: func(name string, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
-				expected := &godo.DomainRecordEditRequest{
-					Type: "A",
-					Name: "foo.example.com.",
-					Data: "192.168.1.1",
-				}
+	withTestClient(func(config *cmdConfig) {
+		dos := &mocks.DomainsService{}
+		config.dos = dos
 
-				assert.Equal(t, "example.com", name)
-				assert.Equal(t, expected, req)
+		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, Weight: 0}
+		dos.On("CreateRecord", "example.com", dcer).Return(&testRecord, nil)
 
-				return &testRecord, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		config.doitConfig.Set(config.ns, doit.ArgRecordType, "A")
 		config.doitConfig.Set(config.ns, doit.ArgRecordName, "foo.example.com.")
 		config.doitConfig.Set(config.ns, doit.ArgRecordData, "192.168.1.1")
@@ -190,30 +134,19 @@ func TestRecordsCreate(t *testing.T) {
 }
 
 func TestRecordCreate_RequiredArguments(t *testing.T) {
-	client := &godo.Client{}
-
-	withTestClient(client, func(config *cmdConfig) {
+	withTestClient(func(config *cmdConfig) {
 		err := RunRecordCreate(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestRecordsDelete(t *testing.T) {
-	client := &godo.Client{
-		Domains: &doit.DomainsServiceMock{
-			DeleteRecordFn: func(name string, id int) (*godo.Response, error) {
-				if got, expected := name, "example.com"; got != expected {
-					t.Errorf("CreateFn domain name = %q; expected %q", got, expected)
-				}
-				if got, expected := id, 1; got != expected {
-					t.Errorf("CreateFn id = %d; expected %d", got, expected)
-				}
-				return nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		dos := &mocks.DomainsService{}
+		config.dos = dos
 
-	withTestClient(client, func(config *cmdConfig) {
+		dos.On("DeleteRecord", "example.com", 1).Return(nil)
+
 		config.args = append(config.args, "example.com", "1")
 
 		err := RunRecordDelete(config)
@@ -222,25 +155,13 @@ func TestRecordsDelete(t *testing.T) {
 }
 
 func TestRecordsUpdate(t *testing.T) {
-	client := &godo.Client{
-		Domains: &doit.DomainsServiceMock{
-			EditRecordFn: func(name string, id int, req *godo.DomainRecordEditRequest) (*godo.DomainRecord, *godo.Response, error) {
-				expected := &godo.DomainRecordEditRequest{
-					Type: "A",
-					Name: "foo.example.com.",
-					Data: "192.168.1.1",
-				}
+	withTestClient(func(config *cmdConfig) {
+		dos := &mocks.DomainsService{}
+		config.dos = dos
 
-				assert.Equal(t, "example.com", name)
-				assert.Equal(t, 1, id)
-				assert.Equal(t, expected, req)
+		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, Weight: 0}
+		dos.On("EditRecord", "example.com", 1, dcer).Return(&testRecord, nil)
 
-				return &testRecord, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		config.doitConfig.Set(config.ns, doit.ArgRecordID, 1)
 		config.doitConfig.Set(config.ns, doit.ArgRecordType, "A")
 		config.doitConfig.Set(config.ns, doit.ArgRecordName, "foo.example.com.")

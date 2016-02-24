@@ -3,14 +3,15 @@ package commands
 import (
 	"testing"
 
-	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testSize     = godo.Size{Slug: "small"}
-	testSizeList = []godo.Size{testSize}
+	testSize     = do.Size{Size: &godo.Size{Slug: "small"}}
+	testSizeList = do.Sizes{testSize}
 )
 
 func TestSizeCommand(t *testing.T) {
@@ -20,26 +21,13 @@ func TestSizeCommand(t *testing.T) {
 }
 
 func TestSizesList(t *testing.T) {
-	didList := false
+	withTestClient(func(config *cmdConfig) {
+		ss := &domocks.SizesService{}
+		config.ss = ss
 
-	client := &godo.Client{
-		Sizes: &doit.SizesServiceMock{
-			ListFn: func(opt *godo.ListOptions) ([]godo.Size, *godo.Response, error) {
-				didList = true
+		ss.On("List").Return(testSizeList, nil)
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testSizeList, resp, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunSizeList(config)
-		assert.True(t, didList)
 		assert.NoError(t, err)
 	})
 }

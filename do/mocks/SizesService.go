@@ -7,6 +7,7 @@ type SizesService struct {
 	mock.Mock
 }
 
+// List provides a mock function with given fields:
 func (_m *SizesService) List() (do.Sizes, error) {
 	ret := _m.Called()
 

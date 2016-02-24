@@ -1,22 +1,23 @@
 package commands
 
 import (
-	"io/ioutil"
 	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testImage = godo.Image{
+	testImage = do.Image{Image: &godo.Image{
 		ID:      1,
 		Slug:    "slug",
 		Regions: []string{"test0"},
-	}
-	testImageList = []godo.Image{testImage}
+	}}
+	testImageList = do.Images{testImage}
 )
 
 func TestDropletCommand(t *testing.T) {
@@ -26,22 +27,12 @@ func TestDropletCommand(t *testing.T) {
 }
 
 func TestDropletActionList(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			ActionsFn: func(id int, opts *godo.ListOptions) ([]godo.Action, *godo.Response, error) {
-				assert.Equal(t, 1, id)
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testActionList, resp, nil
-			},
-		},
-	}
+		ds.On("Actions", 1).Return(testActionList, nil)
 
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletActions(config)
@@ -50,22 +41,12 @@ func TestDropletActionList(t *testing.T) {
 }
 
 func TestDropletBackupList(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			BackupsFn: func(id int, opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
-				assert.Equal(t, 1, id)
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testImageList, resp, nil
-			},
-		},
-	}
+		ds.On("Backups", 1).Return(testImageList, nil)
 
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletBackups(config)
@@ -74,26 +55,13 @@ func TestDropletBackupList(t *testing.T) {
 }
 
 func TestDropletCreate(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			CreateFn: func(cr *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error) {
-				expected := &godo.DropletCreateRequest{
-					Name:     "droplet",
-					Image:    godo.DropletCreateImage{Slug: "image"},
-					Region:   "dev0",
-					Size:     "1gb",
-					UserData: "#cloud-config",
-					SSHKeys:  []godo.DropletCreateSSHKey{},
-				}
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-				assert.Equal(t, cr, expected, "create requests did not match")
+		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config"}
+		ds.On("Create", dcr, false).Return(&testDroplet, nil)
 
-				return &testDroplet, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "droplet")
 
 		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")
@@ -107,31 +75,13 @@ func TestDropletCreate(t *testing.T) {
 }
 
 func TestDropletCreateUserDataFile(t *testing.T) {
-	userData, err := ioutil.ReadFile("../testdata/cloud-config.yml")
-	if err != nil {
-		t.Fatal(err)
-	}
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			CreateFn: func(cr *godo.DropletCreateRequest) (*godo.Droplet, *godo.Response, error) {
-				expected := &godo.DropletCreateRequest{
-					Name:     "droplet",
-					Image:    godo.DropletCreateImage{Slug: "image"},
-					Region:   "dev0",
-					Size:     "1gb",
-					UserData: string(userData),
-					SSHKeys:  []godo.DropletCreateSSHKey{},
-				}
+		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config\n\ncoreos:\n  etcd2:\n    # generate a new token for each unique cluster from https://discovery.etcd.io/new?size=5\n    # specify the initial size of your cluster with ?size=X\n    discovery: https://discovery.etcd.io/<token>\n    # multi-region and multi-cloud deployments need to use $public_ipv4\n    advertise-client-urls: http://$private_ipv4:2379,http://$private_ipv4:4001\n    initial-advertise-peer-urls: http://$private_ipv4:2380\n    # listen on both the official ports and the legacy ports\n    # legacy ports can be omitted if your application doesn't depend on them\n    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001\n    listen-peer-urls: http://$private_ipv4:2380\n  units:\n    - name: etcd2.service\n      command: start\n    - name: fleet.service\n      command: start\n"}
+		ds.On("Create", dcr, false).Return(&testDroplet, nil)
 
-				assert.Equal(t, cr, expected, "create requests did not match")
-
-				return &testDroplet, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "droplet")
 
 		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")
@@ -145,16 +95,12 @@ func TestDropletCreateUserDataFile(t *testing.T) {
 }
 
 func TestDropletDelete(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			DeleteFn: func(id int) (*godo.Response, error) {
-				assert.Equal(t, id, testDroplet.ID, "droplet ids did not match")
-				return nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-	withTestClient(client, func(config *cmdConfig) {
+		ds.On("Delete", 1).Return(nil)
+
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
 		err := RunDropletDelete(config)
@@ -163,23 +109,13 @@ func TestDropletDelete(t *testing.T) {
 }
 
 func TestDropletDeleteByName(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			ListFn: func(opts *godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testDropletList, resp, nil
-			},
-			DeleteFn: func(id int) (*godo.Response, error) {
-				assert.Equal(t, id, testDroplet.ID, "droplet ids did not match")
-				return nil, nil
-			},
-		},
-	}
-	withTestClient(client, func(config *cmdConfig) {
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
+
+		ds.On("List").Return(testDropletList, nil)
+		ds.On("Delete", 1).Return(nil)
+
 		config.args = append(config.args, testDroplet.Name)
 
 		err := RunDropletDelete(config)
@@ -188,16 +124,12 @@ func TestDropletDeleteByName(t *testing.T) {
 }
 
 func TestDropletGet(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			GetFn: func(id int) (*godo.Droplet, *godo.Response, error) {
-				assert.Equal(t, id, testDroplet.ID, "droplet ids did not match")
-				return &testDroplet, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-	withTestClient(client, func(config *cmdConfig) {
+		ds.On("Get", testDroplet.ID).Return(&testDroplet, nil)
+
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
 		err := RunDropletGet(config)
@@ -206,24 +138,12 @@ func TestDropletGet(t *testing.T) {
 }
 
 func TestDropletKernelList(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			KernelsFn: func(id int, opts *godo.ListOptions) ([]godo.Kernel, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("KernelsFn() id = %d; expected %d", got, expected)
-				}
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testKernelList, resp, nil
-			},
-		},
-	}
+		ds.On("Kernels", testDroplet.ID).Return(testKernelList, nil)
 
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletKernels(config)
@@ -232,49 +152,26 @@ func TestDropletKernelList(t *testing.T) {
 }
 
 func TestDropletNeighbors(t *testing.T) {
-	didRun := false
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			NeighborsFn: func(id int) ([]godo.Droplet, *godo.Response, error) {
-				didRun = true
-				assert.Equal(t, id, 1)
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testDropletList, resp, nil
-			},
-		},
-	}
+		ds.On("Neighbors", testDroplet.ID).Return(testDropletList, nil)
 
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletNeighbors(config)
 		assert.NoError(t, err)
-		assert.True(t, didRun)
 	})
 }
 
 func TestDropletSnapshotList(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			SnapshotsFn: func(id int, opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
-				assert.Equal(t, id, 1)
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testImageList, resp, nil
-			},
-		},
-	}
+		ds.On("Snapshots", testDroplet.ID).Return(testImageList, nil)
 
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		err := RunDropletSnapshots(config)
@@ -283,24 +180,13 @@ func TestDropletSnapshotList(t *testing.T) {
 }
 
 func TestDropletsList(t *testing.T) {
-	didRun := false
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			ListFn: func(opts *godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
-				didRun = true
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testDropletList, resp, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		ds := &domocks.DropletsService{}
+		config.ds = ds
 
-	withTestClient(client, func(config *cmdConfig) {
+		ds.On("List").Return(testDropletList, nil)
+
 		err := RunDropletList(config)
 		assert.NoError(t, err)
-		assert.True(t, didRun)
 	})
 }

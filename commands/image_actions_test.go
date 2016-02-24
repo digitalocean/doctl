@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,17 +16,12 @@ func TestImageActionCommand(t *testing.T) {
 }
 
 func TestImageActionsGet(t *testing.T) {
-	client := &godo.Client{
-		ImageActions: &doit.ImageActionsServiceMock{
-			GetFn: func(imageID, actionID int) (*godo.Action, *godo.Response, error) {
-				assert.Equal(t, imageID, 1)
-				assert.Equal(t, actionID, 2)
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		ias := &domocks.ImageActionsService{}
+		config.ias = ias
 
-	withTestClient(client, func(config *cmdConfig) {
+		ias.On("Get", 1, 2).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgActionID, 2)
@@ -36,20 +32,13 @@ func TestImageActionsGet(t *testing.T) {
 }
 
 func TestImageActionsTransfer(t *testing.T) {
-	client := &godo.Client{
-		ImageActions: &doit.ImageActionsServiceMock{
-			TransferFn: func(imageID int, req *godo.ActionRequest) (*godo.Action, *godo.Response, error) {
-				assert.Equal(t, imageID, 1)
+	withTestClient(func(config *cmdConfig) {
+		ias := &domocks.ImageActionsService{}
+		config.ias = ias
 
-				region := (*req)["region"]
-				assert.Equal(t, region, "dev0")
+		ar := &godo.ActionRequest{"region": "dev0"}
+		ias.On("Transfer", 1, ar).Return(&testAction, nil)
 
-				return &testAction, nil, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")

@@ -1,11 +1,11 @@
 package commands
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,120 +17,60 @@ func TestImageCommand(t *testing.T) {
 }
 
 func TestImagesList(t *testing.T) {
-	didRun := false
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			ListFn: func(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
-				didRun = true
+		is.On("List", false).Return(testImageList, nil)
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testImageList, resp, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunImagesList(config)
-		assert.True(t, didRun)
 		assert.NoError(t, err)
 	})
 }
 
 func TestImagesListDistribution(t *testing.T) {
-	didRun := false
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			ListDistributionFn: func(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
-				didRun = true
+		is.On("ListDistribution", false).Return(testImageList, nil)
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testImageList, resp, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunImagesListDistribution(config)
-		assert.True(t, didRun)
 		assert.NoError(t, err)
 	})
 }
 
 func TestImagesListApplication(t *testing.T) {
-	didRun := false
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			ListApplicationFn: func(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
-				didRun = true
+		is.On("ListApplication", false).Return(testImageList, nil)
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testImageList, resp, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunImagesListApplication(config)
-		assert.True(t, didRun)
 		assert.NoError(t, err)
 	})
 }
 
 func TestImagesListUser(t *testing.T) {
-	didRun := false
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			ListUserFn: func(opts *godo.ListOptions) ([]godo.Image, *godo.Response, error) {
-				didRun = true
+		is.On("ListUser", false).Return(testImageList, nil)
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testImageList, resp, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunImagesListUser(config)
-		assert.True(t, didRun)
 		assert.NoError(t, err)
 	})
 }
 
 func TestImagesGetByID(t *testing.T) {
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			GetByIDFn: func(id int) (*godo.Image, *godo.Response, error) {
-				assert.Equal(t, id, testImage.ID, "image id not equal")
-				return &testImage, nil, nil
-			},
-			GetBySlugFn: func(slug string) (*godo.Image, *godo.Response, error) {
-				t.Error("should not try to load slug")
-				return nil, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-	withTestClient(client, func(config *cmdConfig) {
+		is.On("GetByID", testImage.ID).Return(&testImage, nil)
+
 		config.args = append(config.args, strconv.Itoa(testImage.ID))
 		err := RunImagesGet(config)
 		assert.NoError(t, err)
@@ -138,20 +78,12 @@ func TestImagesGetByID(t *testing.T) {
 }
 
 func TestImagesGetBySlug(t *testing.T) {
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			GetByIDFn: func(id int) (*godo.Image, *godo.Response, error) {
-				t.Error("should not try to load id")
-				return nil, nil, nil
-			},
-			GetBySlugFn: func(slug string) (*godo.Image, *godo.Response, error) {
-				assert.Equal(t, slug, testImage.Slug, "image id not equal")
-				return &testImage, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-	withTestClient(client, func(config *cmdConfig) {
+		is.On("GetBySlug", testImage.Slug).Return(&testImage, nil)
+
 		config.args = append(config.args, testImage.Slug)
 		err := RunImagesGet(config)
 		assert.NoError(t, err)
@@ -159,39 +91,23 @@ func TestImagesGetBySlug(t *testing.T) {
 }
 
 func TestImagesNoID(t *testing.T) {
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			GetByIDFn: func(id int) (*godo.Image, *godo.Response, error) {
-				t.Error("should not try to load id")
-				return nil, nil, fmt.Errorf("not here")
-			},
-			GetBySlugFn: func(slug string) (*godo.Image, *godo.Response, error) {
-				t.Error("should not try to load slug")
-				return nil, nil, fmt.Errorf("not here")
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunImagesGet(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestImagesUpdate(t *testing.T) {
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			UpdateFn: func(id int, req *godo.ImageUpdateRequest) (*godo.Image, *godo.Response, error) {
-				expected := &godo.ImageUpdateRequest{Name: "new-name"}
-				assert.Equal(t, req, expected)
-				assert.Equal(t, id, testImage.ID)
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-				return &testImage, nil, nil
-			},
-		},
-	}
+		iur := &godo.ImageUpdateRequest{Name: "new-name"}
+		is.On("Update", testImage.ID, iur).Return(&testImage, nil)
 
-	withTestClient(client, func(config *cmdConfig) {
 		config.args = append(config.args, strconv.Itoa(testImage.ID))
 		config.doitConfig.Set(config.ns, doit.ArgImageName, "new-name")
 		err := RunImagesUpdate(config)
@@ -200,16 +116,12 @@ func TestImagesUpdate(t *testing.T) {
 }
 
 func TestImagesDelete(t *testing.T) {
-	client := &godo.Client{
-		Images: &doit.ImagesServiceMock{
-			DeleteFn: func(id int) (*godo.Response, error) {
-				assert.Equal(t, id, testImage.ID)
-				return nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		is := &domocks.ImagesService{}
+		config.is = is
 
-	withTestClient(client, func(config *cmdConfig) {
+		is.On("Delete", testImage.ID).Return(nil)
+
 		config.args = append(config.args, strconv.Itoa(testImage.ID))
 
 		err := RunImagesDelete(config)

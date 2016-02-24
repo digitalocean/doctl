@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit"
-	"github.com/digitalocean/godo"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,21 +15,12 @@ func TestDropletActionCommand(t *testing.T) {
 }
 
 func TestDropletActionsChangeKernel(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			ChangeKernelFn: func(id, kernelID int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("ChangeKernelFn() id = %d; expected %d", got, expected)
-				}
-				if got, expected := kernelID, 2; got != expected {
-					t.Errorf("ChangeKernelFn() kernelID = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("ChangeKernel", 1, 2).Return(&testAction, nil)
+
 		config.doitConfig.Set(config.ns, doit.ArgKernelID, 2)
 		config.args = append(config.args, "1")
 
@@ -37,18 +28,12 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 	})
 }
 func TestDropletActionsDisableBackups(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			DisableBackupsFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("DisableBackupsFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("DisableBackups", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionDisableBackups(config)
@@ -56,18 +41,12 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 
 }
 func TestDropletActionsEnableIPv6(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			EnableIPv6Fn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("EnableIPv6Fn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("EnableIPv6", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionEnableIPv6(config)
@@ -75,39 +54,24 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 }
 
 func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			EnablePrivateNetworkingFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("EnablePrivateNetworkingFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("EnablePrivateNetworking", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionEnablePrivateNetworking(config)
 	})
 }
 func TestDropletActionsGet(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			GetFn: func(dropletID, actionID int) (*godo.Action, *godo.Response, error) {
-				if got, expected := dropletID, 1; got != expected {
-					t.Errorf("GetFn() droplet id = %d; expected %d", got, expected)
-				}
-				if got, expected := actionID, 2; got != expected {
-					t.Errorf("GetFn() action id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("Get", 1, 2).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgActionID, 2)
@@ -117,18 +81,12 @@ func TestDropletActionsGet(t *testing.T) {
 }
 
 func TestDropletActionsPasswordReset(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			PasswordResetFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("PasswordResetFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("PasswordReset", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionPasswordReset(config)
@@ -136,18 +94,12 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 }
 
 func TestDropletActionsPowerCycle(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			PowerCycleFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("PowerCycleFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("PowerCycle", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionPowerCycle(config)
@@ -155,36 +107,24 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 
 }
 func TestDropletActionsPowerOff(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			PowerOffFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("PowerOffFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("PowerOff", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionPowerOff(config)
 	})
 }
 func TestDropletActionsPowerOn(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			PowerOnFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("PowerOnFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("PowerOn", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionPowerOn(config)
@@ -192,18 +132,12 @@ func TestDropletActionsPowerOn(t *testing.T) {
 
 }
 func TestDropletActionsReboot(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			RebootFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("RebootFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("Reboot", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionReboot(config)
@@ -211,21 +145,12 @@ func TestDropletActionsReboot(t *testing.T) {
 }
 
 func TestDropletActionsRebuildByImageID(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			RebuildByImageIDFn: func(id, imageID int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("RebuildByImageIDFn() id = %d; expected %d", got, expected)
-				}
-				if got, expected := imageID, 2; got != expected {
-					t.Errorf("RebuildByImageIDFn() image id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("RebuildByImageID", 1, 2).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgImage, "2")
@@ -235,21 +160,12 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 }
 
 func TestDropletActionsRebuildByImageSlug(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			RebuildByImageSlugFn: func(id int, slug string) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("RebuildByImageSlugFn() id = %d; expected %d", got, expected)
-				}
-				if got, expected := slug, "slug"; got != expected {
-					t.Errorf("RebuildByImageSlugFn() slug = %q; expected %q", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("RebuildByImageSlug", 1, "slug").Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgImage, "slug")
@@ -259,21 +175,12 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 
 }
 func TestDropletActionsRename(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			RenameFn: func(id int, name string) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("RenameFn() id = %d; expected %d", got, expected)
-				}
-				if got, expected := name, "name"; got != expected {
-					t.Errorf("RenameFn() name = %q; expected %q", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("Rename", 1, "name").Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgDropletName, "name")
@@ -283,24 +190,12 @@ func TestDropletActionsRename(t *testing.T) {
 }
 
 func TestDropletActionsResize(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			ResizeFn: func(id int, slug string, resize bool) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("ResizeFn() id = %d; expected %d", got, expected)
-				}
-				if got, expected := slug, "1gb"; got != expected {
-					t.Errorf("ResizeFn() size = %q; expected %q", got, expected)
-				}
-				if got, expected := resize, true; got != expected {
-					t.Errorf("ResizeFn() resize = %t; expected %t", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("Resize", 1, "1gb", true).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgSizeSlug, "1gb")
@@ -311,21 +206,12 @@ func TestDropletActionsResize(t *testing.T) {
 }
 
 func TestDropletActionsRestore(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			RestoreFn: func(id, imageID int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("RestoreFn() id = %d; expected %d", got, expected)
-				}
-				if got, expected := imageID, 2; got != expected {
-					t.Errorf("RestoreFn() imageID = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("Restore", 1, 2).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgImageID, 2)
@@ -335,18 +221,12 @@ func TestDropletActionsRestore(t *testing.T) {
 }
 
 func TestDropletActionsShutdown(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			ShutdownFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("ShutdownFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("Shutdown", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionShutdown(config)
@@ -354,21 +234,12 @@ func TestDropletActionsShutdown(t *testing.T) {
 }
 
 func TestDropletActionsSnapshot(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			SnapshotFn: func(id int, name string) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("ShutdownFn() id = %d; expected %d", got, expected)
-				}
-				if got, expected := name, "name"; got != expected {
-					t.Errorf("ShutdownFn() name = %q; expected %q", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("Snapshot", 1, "name").Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		config.doitConfig.Set(config.ns, doit.ArgSnapshotName, "name")
@@ -378,18 +249,12 @@ func TestDropletActionsSnapshot(t *testing.T) {
 }
 
 func TestDropletActionsUpgrade(t *testing.T) {
-	client := &godo.Client{
-		DropletActions: &doit.DropletActionsServiceMock{
-			UpgradeFn: func(id int) (*godo.Action, *godo.Response, error) {
-				if got, expected := id, 1; got != expected {
-					t.Errorf("RenameFn() id = %d; expected %d", got, expected)
-				}
-				return &testAction, nil, nil
-			},
-		},
-	}
+	withTestClient(func(config *cmdConfig) {
+		das := &domocks.DropletActionsService{}
+		config.das = das
 
-	withTestClient(client, func(config *cmdConfig) {
+		das.On("Upgrade", 1).Return(&testAction, nil)
+
 		config.args = append(config.args, "1")
 
 		RunDropletActionUpgrade(config)

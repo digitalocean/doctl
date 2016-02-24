@@ -2,13 +2,11 @@ package commands
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"testing"
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/pkg/runner"
-	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,17 +42,17 @@ func (s *sshMock) cmd() func(u, h, kp string, p int) runner.Runner {
 func TestSSH_ID(t *testing.T) {
 	didFetchDroplet := false
 
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			GetFn: func(id int) (*godo.Droplet, *godo.Response, error) {
-				assert.Equal(t, id, testDroplet.ID, "droplet ids did not match")
-				didFetchDroplet = true
-				return &testDroplet, nil, nil
-			},
-		},
-	}
+	// client := &godo.Client{
+	// 	Droplets: &doit.DropletsServiceMock{
+	// 		GetFn: func(id int) (*godo.Droplet, *godo.Response, error) {
+	// 			assert.Equal(t, id, testDroplet.ID, "droplet ids did not match")
+	// 			didFetchDroplet = true
+	// 			return &testDroplet, nil, nil
+	// 		},
+	// 	},
+	// }
 
-	withTestClient(client, func(config *cmdConfig) {
+	withTestClient(func(config *cmdConfig) {
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
 		err := RunSSH(config)
@@ -65,30 +63,30 @@ func TestSSH_ID(t *testing.T) {
 
 func TestSSH_InvalidID(t *testing.T) {
 
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			GetFn: func(id int) (*godo.Droplet, *godo.Response, error) {
-				return nil, nil, fmt.Errorf("not here")
-			},
-		},
-	}
+	// client := &godo.Client{
+	// 	Droplets: &doit.DropletsServiceMock{
+	// 		GetFn: func(id int) (*godo.Droplet, *godo.Response, error) {
+	// 			return nil, nil, fmt.Errorf("not here")
+	// 		},
+	// 	},
+	// }
 
-	withTestClient(client, func(config *cmdConfig) {
+	withTestClient(func(config *cmdConfig) {
 		err := RunSSH(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestSSH_UnknownDroplet(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
-				return testDropletList, nil, nil
-			},
-		},
-	}
+	// client := &godo.Client{
+	// 	Droplets: &doit.DropletsServiceMock{
+	// 		ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
+	// 			return testDropletList, nil, nil
+	// 		},
+	// 	},
+	// }
 
-	withTestClient(client, func(config *cmdConfig) {
+	withTestClient(func(config *cmdConfig) {
 		config.args = append(config.args, "missing")
 
 		err := RunSSH(config)
@@ -97,15 +95,15 @@ func TestSSH_UnknownDroplet(t *testing.T) {
 }
 
 func TestSSH_DropletWithNoPublic(t *testing.T) {
-	client := &godo.Client{
-		Droplets: &doit.DropletsServiceMock{
-			ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
-				return testPrivateDropletList, nil, nil
-			},
-		},
-	}
+	// client := &godo.Client{
+	// 	Droplets: &doit.DropletsServiceMock{
+	// 		ListFn: func(*godo.ListOptions) ([]godo.Droplet, *godo.Response, error) {
+	// 			return testPrivateDropletList, nil, nil
+	// 		},
+	// 	},
+	// }
 
-	withTestClient(client, func(config *cmdConfig) {
+	withTestClient(func(config *cmdConfig) {
 		config.args = append(config.args, testPrivateDroplet.Name)
 
 		err := RunSSH(config)

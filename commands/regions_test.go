@@ -3,14 +3,15 @@ package commands
 import (
 	"testing"
 
-	"github.com/bryanl/doit"
+	"github.com/bryanl/doit/do"
+	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testRegion     = godo.Region{Slug: "dev0"}
-	testRegionList = []godo.Region{testRegion}
+	testRegion     = do.Region{Region: &godo.Region{Slug: "dev0"}}
+	testRegionList = do.Regions{testRegion}
 )
 
 func TestRegionCommand(t *testing.T) {
@@ -20,26 +21,13 @@ func TestRegionCommand(t *testing.T) {
 }
 
 func TestRegionsList(t *testing.T) {
-	didList := false
+	withTestClient(func(config *cmdConfig) {
+		rs := &domocks.RegionsService{}
+		config.rs = rs
 
-	client := &godo.Client{
-		Regions: &doit.RegionsServiceMock{
-			ListFn: func(opt *godo.ListOptions) ([]godo.Region, *godo.Response, error) {
-				didList = true
+		rs.On("List").Return(testRegionList, nil)
 
-				resp := &godo.Response{
-					Links: &godo.Links{
-						Pages: &godo.Pages{},
-					},
-				}
-				return testRegionList, resp, nil
-			},
-		},
-	}
-
-	withTestClient(client, func(config *cmdConfig) {
 		err := RunRegionList(config)
-		assert.True(t, didList)
 		assert.NoError(t, err)
 	})
 }
