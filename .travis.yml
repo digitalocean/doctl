@@ -1,6 +1,6 @@
 language: go
 go:
-  - '1.6.0'
+  - tip
 sudo: false
 install: true
 script: scripts/ci.sh
