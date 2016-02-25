@@ -1,8 +1,6 @@
 language: go
 go:
-  - '1.5.3'
-env:
-  - GO15VENDOREXPERIMENT=1
+  - '1.6.0'
 sudo: false
 install: true
 script: scripts/ci.sh
