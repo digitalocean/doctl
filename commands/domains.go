@@ -23,7 +23,7 @@ func Domain() *cobra.Command {
 		aliasOpt("c"), displayerType(&domain{}))
 	addStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address", requiredOpt())
 
-	cmdBuilder(cmd, RunDomainList, "list", "list comains", writer,
+	cmdBuilder(cmd, RunDomainList, "list", "list domains", writer,
 		aliasOpt("ls"), displayerType(&domain{}))
 
 	cmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", writer,
