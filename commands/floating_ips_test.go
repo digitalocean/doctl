@@ -39,18 +39,62 @@ func TestFloatingIPsGet(t *testing.T) {
 	})
 }
 
-func TestFloatingIPsCreate(t *testing.T) {
+func TestFloatingIPsCreate_Droplet(t *testing.T) {
 	withTestClient(func(config *cmdConfig) {
 		fis := &domocks.FloatingIPsService{}
 		config.fis = fis
 
-		ficr := &godo.FloatingIPCreateRequest{Region: "dev0", DropletID: 1}
+		ficr := &godo.FloatingIPCreateRequest{DropletID: 1}
+		fis.On("Create", ficr).Return(&testFloatingIP, nil)
+
+		config.doitConfig.Set(config.ns, doit.ArgDropletID, 1)
+
+		err := RunFloatingIPCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestFloatingIPsCreate_Region(t *testing.T) {
+	withTestClient(func(config *cmdConfig) {
+		fis := &domocks.FloatingIPsService{}
+		config.fis = fis
+
+		ficr := &godo.FloatingIPCreateRequest{Region: "dev0"}
 		fis.On("Create", ficr).Return(&testFloatingIP, nil)
 
 		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")
-		config.doitConfig.Set(config.ns, doit.ArgDropletID, 1)
 
-		RunFloatingIPCreate(config)
+		err := RunFloatingIPCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestFloatingIPsCreate_fail_with_no_args(t *testing.T) {
+	withTestClient(func(config *cmdConfig) {
+		fis := &domocks.FloatingIPsService{}
+		config.fis = fis
+
+		ficr := &godo.FloatingIPCreateRequest{Region: "dev0"}
+		fis.On("Create", ficr).Return(&testFloatingIP, nil)
+
+		err := RunFloatingIPCreate(config)
+		assert.Error(t, err)
+	})
+}
+
+func TestFloatingIPsCreate_fail_with_both_args(t *testing.T) {
+	withTestClient(func(config *cmdConfig) {
+		fis := &domocks.FloatingIPsService{}
+		config.fis = fis
+
+		ficr := &godo.FloatingIPCreateRequest{Region: "dev0"}
+		fis.On("Create", ficr).Return(&testFloatingIP, nil)
+
+		config.doitConfig.Set(config.ns, doit.ArgDropletID, 1)
+		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")
+
+		err := RunFloatingIPCreate(config)
+		assert.Error(t, err)
 	})
 }
 
