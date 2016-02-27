@@ -227,6 +227,19 @@ func newCmdConfig(ns string, dc doit.Config, out io.Writer, args []string) *cmdC
 		doitConfig: dc,
 		out:        out,
 		args:       args,
+
+		ks:   do.NewKeysService(dc.GetGodoClient()),
+		ss:   do.NewSizesService(dc.GetGodoClient()),
+		rs:   do.NewRegionsService(dc.GetGodoClient()),
+		is:   do.NewImagesService(dc.GetGodoClient()),
+		ias:  do.NewImageActionsService(dc.GetGodoClient()),
+		fis:  do.NewFloatingIPsService(dc.GetGodoClient()),
+		fias: do.NewFloatingIPActionsService(dc.GetGodoClient()),
+		ds:   do.NewDropletsService(dc.GetGodoClient()),
+		das:  do.NewDropletActionsService(dc.GetGodoClient()),
+		dos:  do.NewDomainsService(dc.GetGodoClient()),
+		acts: do.NewActionsService(dc.GetGodoClient()),
+		as:   do.NewAccountService(dc.GetGodoClient()),
 	}
 }
 
