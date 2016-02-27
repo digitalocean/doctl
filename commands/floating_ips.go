@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
@@ -20,8 +21,12 @@ func FloatingIP() *cobra.Command {
 
 	cmdFloatingIPCreate := cmdBuilder(cmd, RunFloatingIPCreate, "create", "create a floating IP", writer,
 		aliasOpt("c"), displayerType(&floatingIP{}))
-	addStringFlag(cmdFloatingIPCreate, doit.ArgRegionSlug, "", "Region where to create the floating IP.", requiredOpt())
-	addIntFlag(cmdFloatingIPCreate, doit.ArgDropletID, 0, "ID of the droplet to assign the IP to. (Optional)")
+	addStringFlag(cmdFloatingIPCreate, doit.ArgRegionSlug, "",
+		fmt.Sprintf("Region where to create the floating IP. (mutually exclusive with %s)",
+			doit.ArgDropletID))
+	addIntFlag(cmdFloatingIPCreate, doit.ArgDropletID, 0,
+		fmt.Sprintf("ID of the droplet to assign the IP to. (mutually exclusive with %s)",
+			doit.ArgRegionSlug))
 
 	cmdBuilder(cmd, RunFloatingIPGet, "get <floating-ip>", "get the details of a floating IP", writer,
 		aliasOpt("g"), displayerType(&floatingIP{}))
@@ -39,14 +44,16 @@ func FloatingIP() *cobra.Command {
 func RunFloatingIPCreate(c *cmdConfig) error {
 	fis := c.floatingIPsService()
 
-	region, err := c.doitConfig.GetString(c.ns, doit.ArgRegionSlug)
-	if err != nil {
-		return err
+	// ignore errors since we don't know which one is valid
+	region, _ := c.doitConfig.GetString(c.ns, doit.ArgRegionSlug)
+	dropletID, _ := c.doitConfig.GetInt(c.ns, doit.ArgDropletID)
+
+	if region == "" && dropletID == 0 {
+		return doit.NewMissingArgsErr("region and droplet id can't both be blank")
 	}
 
-	dropletID, err := c.doitConfig.GetInt(c.ns, doit.ArgDropletID)
-	if err != nil {
-		return err
+	if region != "" && dropletID != 0 {
+		return fmt.Errorf("specify region or droplet id when creating a floating ip")
 	}
 
 	req := &godo.FloatingIPCreateRequest{
@@ -56,6 +63,7 @@ func RunFloatingIPCreate(c *cmdConfig) error {
 
 	ip, err := fis.Create(req)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
