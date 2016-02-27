@@ -180,7 +180,7 @@ func RunDropletCreate(c *cmdConfig) error {
 	ds := c.dropletsService()
 
 	var wg sync.WaitGroup
-	errs := make(chan error)
+	errs := make(chan error, len(c.args))
 	for _, name := range c.args {
 		dcr := &godo.DropletCreateRequest{
 			Name:              name,
