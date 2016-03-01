@@ -50,7 +50,6 @@ type Droplet struct {
 	Locked      bool      `json:"locked,bool,omitempty"`
 	Status      string    `json:"status,omitempty"`
 	Networks    *Networks `json:"networks,omitempty"`
-	ActionIDs   []int     `json:"action_ids,omitempty"`
 	Created     string    `json:"created_at,omitempty"`
 	Kernel      *Kernel   `json:"kernel, omitempty"`
 }
