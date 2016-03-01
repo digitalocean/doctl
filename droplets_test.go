@@ -413,7 +413,6 @@ func TestDroplet_String(t *testing.T) {
 		Size:        size,
 		BackupIDs:   []int{1},
 		SnapshotIDs: []int{1},
-		ActionIDs:   []int{1},
 		Locked:      false,
 		Status:      "active",
 		Networks:    networks,
@@ -421,7 +420,7 @@ func TestDroplet_String(t *testing.T) {
 	}
 
 	stringified := droplet.String()
-	expected := `godo.Droplet{ID:1, Name:"droplet", Memory:123, Vcpus:456, Disk:789, Region:godo.Region{Slug:"region", Name:"Region", Sizes:["1" "2"], Available:true}, Image:godo.Image{ID:1, Name:"Image", Type:"snapshot", Distribution:"Ubuntu", Slug:"image", Public:true, Regions:["one" "two"], MinDiskSize:20, Created:"2013-11-27T09:24:55Z"}, Size:godo.Size{Slug:"size", Memory:0, Vcpus:0, Disk:0, PriceMonthly:123, PriceHourly:456, Regions:["1" "2"], Available:false, Transfer:0}, SizeSlug:"1gb", BackupIDs:[1], SnapshotIDs:[1], Locked:false, Status:"active", Networks:godo.Networks{V4:[godo.NetworkV4{IPAddress:"192.168.1.2", Netmask:"255.255.255.0", Gateway:"192.168.1.1", Type:""}]}, ActionIDs:[1], Created:""}`
+	expected := `godo.Droplet{ID:1, Name:"droplet", Memory:123, Vcpus:456, Disk:789, Region:godo.Region{Slug:"region", Name:"Region", Sizes:["1" "2"], Available:true}, Image:godo.Image{ID:1, Name:"Image", Type:"snapshot", Distribution:"Ubuntu", Slug:"image", Public:true, Regions:["one" "two"], MinDiskSize:20, Created:"2013-11-27T09:24:55Z"}, Size:godo.Size{Slug:"size", Memory:0, Vcpus:0, Disk:0, PriceMonthly:123, PriceHourly:456, Regions:["1" "2"], Available:false, Transfer:0}, SizeSlug:"1gb", BackupIDs:[1], SnapshotIDs:[1], Locked:false, Status:"active", Networks:godo.Networks{V4:[godo.NetworkV4{IPAddress:"192.168.1.2", Netmask:"255.255.255.0", Gateway:"192.168.1.1", Type:""}]}, Created:""}`
 	if expected != stringified {
 		t.Errorf("Droplet.String returned %+v, expected %+v", stringified, expected)
 	}
