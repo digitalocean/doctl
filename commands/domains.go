@@ -73,7 +73,7 @@ func RunDomainCreate(c *cmdConfig) error {
 	}
 	domainName := c.args[0]
 
-	ds := c.domainsService()
+	ds := c.domains()
 
 	ipAddress, err := c.doitConfig.GetString(c.ns, "ip-address")
 	if err != nil {
@@ -96,7 +96,7 @@ func RunDomainCreate(c *cmdConfig) error {
 // RunDomainList runs domain create.
 func RunDomainList(c *cmdConfig) error {
 
-	ds := c.domainsService()
+	ds := c.domains()
 
 	domains, err := ds.List()
 	if err != nil {
@@ -114,7 +114,7 @@ func RunDomainGet(c *cmdConfig) error {
 	}
 	id := c.args[0]
 
-	ds := c.domainsService()
+	ds := c.domains()
 
 	if len(id) < 1 {
 		return errors.New("invalid domain name")
@@ -136,7 +136,7 @@ func RunDomainDelete(c *cmdConfig) error {
 	}
 	name := c.args[0]
 
-	ds := c.domainsService()
+	ds := c.domains()
 
 	if len(name) < 1 {
 		return errors.New("invalid domain name")
@@ -153,7 +153,7 @@ func RunRecordList(c *cmdConfig) error {
 	}
 	name := c.args[0]
 
-	ds := c.domainsService()
+	ds := c.domains()
 
 	if len(name) < 1 {
 		return errors.New("domain name is missing")
@@ -176,7 +176,7 @@ func RunRecordCreate(c *cmdConfig) error {
 	}
 	name := c.args[0]
 
-	ds := c.domainsService()
+	ds := c.domains()
 
 	rType, err := c.doitConfig.GetString(c.ns, doit.ArgRecordType)
 	if err != nil {
@@ -242,7 +242,7 @@ func RunRecordDelete(c *cmdConfig) error {
 		return doit.NewMissingArgsErr(c.ns)
 	}
 
-	ds := c.domainsService()
+	ds := c.domains()
 
 	for _, i := range ids {
 		id, err := strconv.Atoi(i)
@@ -266,7 +266,7 @@ func RunRecordUpdate(c *cmdConfig) error {
 	}
 	domainName := c.args[0]
 
-	ds := c.domainsService()
+	ds := c.domains()
 
 	recordID, err := c.doitConfig.GetInt(c.ns, doit.ArgRecordID)
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,11 +24,8 @@ func TestSSHKeysCommand(t *testing.T) {
 }
 
 func TestKeysList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
-		ks.On("List").Return(testKeyList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.keys.On("List").Return(testKeyList, nil)
 
 		err := RunKeyList(config)
 		assert.NoError(t, err)
@@ -37,11 +33,8 @@ func TestKeysList(t *testing.T) {
 }
 
 func TestKeysGetByID(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
-		ks.On("Get", "1").Return(&testKey, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.keys.On("Get", "1").Return(&testKey, nil)
 
 		config.args = append(config.args, "1")
 
@@ -51,11 +44,8 @@ func TestKeysGetByID(t *testing.T) {
 }
 
 func TestKeysGetByFingerprint(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
-		ks.On("Get", testKey.Fingerprint).Return(&testKey, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.keys.On("Get", testKey.Fingerprint).Return(&testKey, nil)
 
 		config.args = append(config.args, testKey.Fingerprint)
 
@@ -65,12 +55,9 @@ func TestKeysGetByFingerprint(t *testing.T) {
 }
 
 func TestKeysCreate(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		kcr := &godo.KeyCreateRequest{Name: "the key", PublicKey: "fingerprint"}
-		ks.On("Create", kcr).Return(&testKey, nil)
+		tm.keys.On("Create", kcr).Return(&testKey, nil)
 
 		config.args = append(config.args, "the key")
 
@@ -82,11 +69,8 @@ func TestKeysCreate(t *testing.T) {
 }
 
 func TestKeysDeleteByID(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
-		ks.On("Delete", "1").Return(nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.keys.On("Delete", "1").Return(nil)
 
 		config.args = append(config.args, "1")
 
@@ -96,11 +80,8 @@ func TestKeysDeleteByID(t *testing.T) {
 }
 
 func TestKeysDeleteByFingerprint(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
-		ks.On("Delete", "fingerprint").Return(nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.keys.On("Delete", "fingerprint").Return(nil)
 
 		config.args = append(config.args, "fingerprint")
 
@@ -111,12 +92,9 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 }
 
 func TestKeysUpdateByID(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		kur := &godo.KeyUpdateRequest{Name: "the key"}
-		ks.On("Update", "1", kur).Return(&testKey, nil)
+		tm.keys.On("Update", "1", kur).Return(&testKey, nil)
 
 		config.args = append(config.args, "1")
 
@@ -129,12 +107,9 @@ func TestKeysUpdateByID(t *testing.T) {
 }
 
 func TestKeysUpdateByFingerprint(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		kur := &godo.KeyUpdateRequest{Name: "the key"}
-		ks.On("Update", "fingerprint", kur).Return(&testKey, nil)
+		tm.keys.On("Update", "fingerprint", kur).Return(&testKey, nil)
 
 		config.args = append(config.args, "fingerprint")
 
@@ -153,12 +128,9 @@ func TestSSHPublicKeyImportWithName(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.Remove(path)
 
-	withTestClient(func(config *cmdConfig) {
-		ks := &domocks.KeysService{}
-		config.ks = ks
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		kcr := &godo.KeyCreateRequest{Name: "custom", PublicKey: pubkey}
-		ks.On("Create", kcr).Return(&testKey, nil)
+		tm.keys.On("Create", kcr).Return(&testKey, nil)
 
 		config.args = append(config.args, "custom")
 

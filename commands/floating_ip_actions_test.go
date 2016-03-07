@@ -3,7 +3,6 @@ package commands
 import (
 	"testing"
 
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,41 +13,35 @@ func TestFloatingIPActionCommand(t *testing.T) {
 }
 
 func TestFloatingIPActionsGet(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		fias := &domocks.FloatingIPActionsService{}
-		config.fias = fias
-
-		fias.On("Get", "127.0.0.1", 2).Return(&testAction, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.floatingIPActions.On("Get", "127.0.0.1", 2).Return(&testAction, nil)
 
 		config.args = append(config.args, "127.0.0.1", "2")
 
-		RunFloatingIPActionsGet(config)
+		err := RunFloatingIPActionsGet(config)
+		assert.NoError(t, err)
 	})
 
 }
 
 func TestFloatingIPActionsAssign(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		fias := &domocks.FloatingIPActionsService{}
-		config.fias = fias
-
-		fias.On("Assign", "127.0.0.1", 2).Return(&testAction, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.floatingIPActions.On("Assign", "127.0.0.1", 2).Return(&testAction, nil)
 
 		config.args = append(config.args, "127.0.0.1", "2")
 
-		RunFloatingIPActionsAssign(config)
+		err := RunFloatingIPActionsAssign(config)
+		assert.NoError(t, err)
 	})
 }
 
 func TestFloatingIPActionsUnassign(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		fias := &domocks.FloatingIPActionsService{}
-		config.fias = fias
-
-		fias.On("Unassign", "127.0.0.1").Return(&testAction, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.floatingIPActions.On("Unassign", "127.0.0.1").Return(&testAction, nil)
 
 		config.args = append(config.args, "127.0.0.1")
 
-		RunFloatingIPActionsUnassign(config)
+		err := RunFloatingIPActionsUnassign(config)
+		assert.NoError(t, err)
 	})
 }

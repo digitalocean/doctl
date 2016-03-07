@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit/do"
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,11 +20,8 @@ func TestSizeCommand(t *testing.T) {
 }
 
 func TestSizesList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ss := &domocks.SizesService{}
-		config.ss = ss
-
-		ss.On("List").Return(testSizeList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.sizes.On("List").Return(testSizeList, nil)
 
 		err := RunSizeList(config)
 		assert.NoError(t, err)

@@ -33,7 +33,7 @@ func Actions() *cobra.Command {
 
 // RunCmdActionList run action list.
 func RunCmdActionList(c *cmdConfig) error {
-	as := c.actionsService()
+	as := c.actions()
 
 	newActions, err := as.List()
 	if err != nil {
@@ -55,7 +55,7 @@ func RunCmdActionGet(c *cmdConfig) error {
 		return err
 	}
 
-	as := c.actionsService()
+	as := c.actions()
 	a, err := as.Get(id)
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func RunCmdActionWait(c *cmdConfig) error {
 		return err
 	}
 
-	as := c.actionsService()
+	as := c.actions()
 
 	var a *do.Action
 

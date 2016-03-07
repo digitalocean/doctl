@@ -207,18 +207,18 @@ type cmdConfig struct {
 	args       []string
 
 	// services
-	ks   do.KeysService
-	ss   do.SizesService
-	rs   do.RegionsService
-	is   do.ImagesService
-	ias  do.ImageActionsService
-	fis  do.FloatingIPsService
-	fias do.FloatingIPActionsService
-	ds   do.DropletsService
-	das  do.DropletActionsService
-	dos  do.DomainsService
-	acts do.ActionsService
-	as   do.AccountService
+	keys              func() do.KeysService
+	sizes             func() do.SizesService
+	regions           func() do.RegionsService
+	images            func() do.ImagesService
+	imageActions      func() do.ImageActionsService
+	floatingIPs       func() do.FloatingIPsService
+	floatingIPActions func() do.FloatingIPActionsService
+	droplets          func() do.DropletsService
+	dropletActions    func() do.DropletActionsService
+	domains           func() do.DomainsService
+	actions           func() do.ActionsService
+	account           func() do.AccountService
 }
 
 func newCmdConfig(ns string, dc doit.Config, out io.Writer, args []string) *cmdConfig {
@@ -228,18 +228,18 @@ func newCmdConfig(ns string, dc doit.Config, out io.Writer, args []string) *cmdC
 		out:        out,
 		args:       args,
 
-		ks:   do.NewKeysService(dc.GetGodoClient()),
-		ss:   do.NewSizesService(dc.GetGodoClient()),
-		rs:   do.NewRegionsService(dc.GetGodoClient()),
-		is:   do.NewImagesService(dc.GetGodoClient()),
-		ias:  do.NewImageActionsService(dc.GetGodoClient()),
-		fis:  do.NewFloatingIPsService(dc.GetGodoClient()),
-		fias: do.NewFloatingIPActionsService(dc.GetGodoClient()),
-		ds:   do.NewDropletsService(dc.GetGodoClient()),
-		das:  do.NewDropletActionsService(dc.GetGodoClient()),
-		dos:  do.NewDomainsService(dc.GetGodoClient()),
-		acts: do.NewActionsService(dc.GetGodoClient()),
-		as:   do.NewAccountService(dc.GetGodoClient()),
+		keys:              func() do.KeysService { return do.NewKeysService(dc.GetGodoClient()) },
+		sizes:             func() do.SizesService { return do.NewSizesService(dc.GetGodoClient()) },
+		regions:           func() do.RegionsService { return do.NewRegionsService(dc.GetGodoClient()) },
+		images:            func() do.ImagesService { return do.NewImagesService(dc.GetGodoClient()) },
+		imageActions:      func() do.ImageActionsService { return do.NewImageActionsService(dc.GetGodoClient()) },
+		floatingIPs:       func() do.FloatingIPsService { return do.NewFloatingIPsService(dc.GetGodoClient()) },
+		floatingIPActions: func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(dc.GetGodoClient()) },
+		droplets:          func() do.DropletsService { return do.NewDropletsService(dc.GetGodoClient()) },
+		dropletActions:    func() do.DropletActionsService { return do.NewDropletActionsService(dc.GetGodoClient()) },
+		domains:           func() do.DomainsService { return do.NewDomainsService(dc.GetGodoClient()) },
+		actions:           func() do.ActionsService { return do.NewActionsService(dc.GetGodoClient()) },
+		account:           func() do.AccountService { return do.NewAccountService(dc.GetGodoClient()) },
 	}
 }
 
@@ -252,54 +252,6 @@ func (c *cmdConfig) display(d displayable) error {
 	}
 
 	return dc.Display()
-}
-
-func (c *cmdConfig) accountService() do.AccountService {
-	return c.as
-}
-
-func (c *cmdConfig) actionsService() do.ActionsService {
-	return c.acts
-}
-
-func (c *cmdConfig) domainsService() do.DomainsService {
-	return c.dos
-}
-
-func (c *cmdConfig) dropletActionsService() do.DropletActionsService {
-	return c.das
-}
-
-func (c *cmdConfig) dropletsService() do.DropletsService {
-	return c.ds
-}
-
-func (c *cmdConfig) floatingIPActionsService() do.FloatingIPActionsService {
-	return c.fias
-}
-
-func (c *cmdConfig) floatingIPsService() do.FloatingIPsService {
-	return c.fis
-}
-
-func (c *cmdConfig) imageActionsService() do.ImageActionsService {
-	return c.ias
-}
-
-func (c *cmdConfig) imagesService() do.ImagesService {
-	return c.is
-}
-
-func (c *cmdConfig) regionsService() do.RegionsService {
-	return c.rs
-}
-
-func (c *cmdConfig) sizesService() do.SizesService {
-	return c.ss
-}
-
-func (c *cmdConfig) keysService() do.KeysService {
-	return c.ks
 }
 
 func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *command {

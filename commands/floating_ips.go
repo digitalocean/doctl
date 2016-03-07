@@ -42,7 +42,7 @@ func FloatingIP() *cobra.Command {
 
 // RunFloatingIPCreate runs floating IP create.
 func RunFloatingIPCreate(c *cmdConfig) error {
-	fis := c.floatingIPsService()
+	fis := c.floatingIPs()
 
 	// ignore errors since we don't know which one is valid
 	region, _ := c.doitConfig.GetString(c.ns, doit.ArgRegionSlug)
@@ -73,7 +73,7 @@ func RunFloatingIPCreate(c *cmdConfig) error {
 
 // RunFloatingIPGet retrieves a floating IP's details.
 func RunFloatingIPGet(c *cmdConfig) error {
-	fis := c.floatingIPsService()
+	fis := c.floatingIPs()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -96,7 +96,7 @@ func RunFloatingIPGet(c *cmdConfig) error {
 
 // RunFloatingIPDelete runs floating IP delete.
 func RunFloatingIPDelete(c *cmdConfig) error {
-	fis := c.floatingIPsService()
+	fis := c.floatingIPs()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -109,7 +109,7 @@ func RunFloatingIPDelete(c *cmdConfig) error {
 
 // RunFloatingIPList runs floating IP create.
 func RunFloatingIPList(c *cmdConfig) error {
-	fis := c.floatingIPsService()
+	fis := c.floatingIPs()
 
 	region, err := c.doitConfig.GetString(c.ns, doit.ArgRegionSlug)
 	if err != nil {

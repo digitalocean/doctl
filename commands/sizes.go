@@ -17,9 +17,9 @@ func Size() *cobra.Command {
 
 // RunSizeList all sizes.
 func RunSizeList(c *cmdConfig) error {
-	rs := c.sizesService()
+	sizes := c.sizes()
 
-	list, err := rs.List()
+	list, err := sizes.List()
 	if err != nil {
 		return err
 	}

@@ -11,7 +11,7 @@ import (
 type actionFn func(das do.DropletActionsService) (*do.Action, error)
 
 func performAction(c *cmdConfig, fn actionFn) error {
-	das := c.dropletActionsService()
+	das := c.dropletActions()
 
 	a, err := fn(das)
 	if err != nil {

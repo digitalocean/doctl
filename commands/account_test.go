@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit/do"
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -25,11 +24,8 @@ func TestAccountCommand(t *testing.T) {
 }
 
 func TestAccountGet(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		as := &domocks.AccountService{}
-		as.On("Get").Return(testAccount, nil)
-
-		config.as = as
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.account.On("Get").Return(testAccount, nil)
 
 		err := RunAccountGet(config)
 		assert.NoError(t, err)

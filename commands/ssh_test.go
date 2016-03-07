@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit"
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/bryanl/doit/pkg/runner"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,11 +40,8 @@ func (s *sshMock) cmd() func(u, h, kp string, p int) runner.Runner {
 }
 
 func TestSSH_ID(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Get", testDroplet.ID).Return(&testDroplet, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("Get", testDroplet.ID).Return(&testDroplet, nil)
 
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
@@ -55,23 +51,15 @@ func TestSSH_ID(t *testing.T) {
 }
 
 func TestSSH_InvalidID(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Get", testDroplet.ID).Return(nil, errors.New("not here"))
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		err := RunSSH(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestSSH_UnknownDroplet(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("List").Return(testDropletList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("List").Return(testDropletList, nil)
 
 		config.args = append(config.args, "missing")
 
@@ -81,11 +69,8 @@ func TestSSH_UnknownDroplet(t *testing.T) {
 }
 
 func TestSSH_DropletWithNoPublic(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("List").Return(testPrivateDropletList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("List").Return(testPrivateDropletList, nil)
 
 		config.args = append(config.args, testPrivateDroplet.Name)
 

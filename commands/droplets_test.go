@@ -6,7 +6,6 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -27,11 +26,8 @@ func TestDropletCommand(t *testing.T) {
 }
 
 func TestDropletActionList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Actions", 1).Return(testActionList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("Actions", 1).Return(testActionList, nil)
 
 		config.args = append(config.args, "1")
 
@@ -41,11 +37,8 @@ func TestDropletActionList(t *testing.T) {
 }
 
 func TestDropletBackupList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Backups", 1).Return(testImageList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("Backups", 1).Return(testImageList, nil)
 
 		config.args = append(config.args, "1")
 
@@ -55,12 +48,9 @@ func TestDropletBackupList(t *testing.T) {
 }
 
 func TestDropletCreate(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config"}
-		ds.On("Create", dcr, false).Return(&testDroplet, nil)
+		tm.droplets.On("Create", dcr, false).Return(&testDroplet, nil)
 
 		config.args = append(config.args, "droplet")
 
@@ -75,12 +65,9 @@ func TestDropletCreate(t *testing.T) {
 }
 
 func TestDropletCreateUserDataFile(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config\n\ncoreos:\n  etcd2:\n    # generate a new token for each unique cluster from https://discovery.etcd.io/new?size=5\n    # specify the initial size of your cluster with ?size=X\n    discovery: https://discovery.etcd.io/<token>\n    # multi-region and multi-cloud deployments need to use $public_ipv4\n    advertise-client-urls: http://$private_ipv4:2379,http://$private_ipv4:4001\n    initial-advertise-peer-urls: http://$private_ipv4:2380\n    # listen on both the official ports and the legacy ports\n    # legacy ports can be omitted if your application doesn't depend on them\n    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001\n    listen-peer-urls: http://$private_ipv4:2380\n  units:\n    - name: etcd2.service\n      command: start\n    - name: fleet.service\n      command: start\n"}
-		ds.On("Create", dcr, false).Return(&testDroplet, nil)
+		tm.droplets.On("Create", dcr, false).Return(&testDroplet, nil)
 
 		config.args = append(config.args, "droplet")
 
@@ -95,11 +82,8 @@ func TestDropletCreateUserDataFile(t *testing.T) {
 }
 
 func TestDropletDelete(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Delete", 1).Return(nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("Delete", 1).Return(nil)
 
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
@@ -109,12 +93,9 @@ func TestDropletDelete(t *testing.T) {
 }
 
 func TestDropletDeleteByName(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("List").Return(testDropletList, nil)
-		ds.On("Delete", 1).Return(nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.droplets.On("Delete", 1).Return(nil)
 
 		config.args = append(config.args, testDroplet.Name)
 
@@ -124,11 +105,8 @@ func TestDropletDeleteByName(t *testing.T) {
 }
 
 func TestDropletGet(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Get", testDroplet.ID).Return(&testDroplet, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("Get", testDroplet.ID).Return(&testDroplet, nil)
 
 		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
 
@@ -138,11 +116,8 @@ func TestDropletGet(t *testing.T) {
 }
 
 func TestDropletKernelList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Kernels", testDroplet.ID).Return(testKernelList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("Kernels", testDroplet.ID).Return(testKernelList, nil)
 
 		config.args = append(config.args, "1")
 
@@ -152,11 +127,8 @@ func TestDropletKernelList(t *testing.T) {
 }
 
 func TestDropletNeighbors(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Neighbors", testDroplet.ID).Return(testDropletList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("Neighbors", testDroplet.ID).Return(testDropletList, nil)
 
 		config.args = append(config.args, "1")
 
@@ -166,11 +138,8 @@ func TestDropletNeighbors(t *testing.T) {
 }
 
 func TestDropletSnapshotList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("Snapshots", testDroplet.ID).Return(testImageList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("Snapshots", testDroplet.ID).Return(testImageList, nil)
 
 		config.args = append(config.args, "1")
 
@@ -180,11 +149,8 @@ func TestDropletSnapshotList(t *testing.T) {
 }
 
 func TestDropletsList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		ds := &domocks.DropletsService{}
-		config.ds = ds
-
-		ds.On("List").Return(testDropletList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.droplets.On("List").Return(testDropletList, nil)
 
 		err := RunDropletList(config)
 		assert.NoError(t, err)

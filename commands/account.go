@@ -21,7 +21,7 @@ func Account() *cobra.Command {
 
 // RunAccountGet runs account get.
 func RunAccountGet(c *cmdConfig) error {
-	a, err := c.accountService().Get()
+	a, err := c.account().Get()
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func RunAccountGet(c *cmdConfig) error {
 
 // RunAccountRateLimit retrieves API rate limits for the account.
 func RunAccountRateLimit(c *cmdConfig) error {
-	rl, err := c.accountService().RateLimit()
+	rl, err := c.account().RateLimit()
 	if err != nil {
 		return err
 	}

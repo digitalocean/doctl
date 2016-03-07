@@ -31,7 +31,7 @@ func ImageAction() *cobra.Command {
 
 // RunImageActionsGet retrieves an action for an image.
 func RunImageActionsGet(c *cmdConfig) error {
-	ias := c.imageActionsService()
+	ias := c.imageActions()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -58,7 +58,7 @@ func RunImageActionsGet(c *cmdConfig) error {
 
 // RunImageActionsTransfer an image.
 func RunImageActionsTransfer(c *cmdConfig) error {
-	ias := c.imageActionsService()
+	ias := c.imageActions()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)

@@ -108,7 +108,7 @@ func assertCommandNames(t *testing.T, cmd *cobra.Command, expected ...string) {
 	assert.Equal(t, expected, names)
 }
 
-type testFn func(c *cmdConfig)
+type testFn func(c *cmdConfig, tm *tcMocks)
 
 type testCmdConfig struct {
 	*cmdConfig
@@ -116,7 +116,22 @@ type testCmdConfig struct {
 	doitConfig *TestConfig
 }
 
-func withTestClient(tFn testFn) {
+type tcMocks struct {
+	keys              domocks.KeysService
+	sizes             domocks.SizesService
+	regions           domocks.RegionsService
+	images            domocks.ImagesService
+	imageActions      domocks.ImageActionsService
+	floatingIPs       domocks.FloatingIPsService
+	floatingIPActions domocks.FloatingIPActionsService
+	droplets          domocks.DropletsService
+	dropletActions    domocks.DropletActionsService
+	domains           domocks.DomainsService
+	actions           domocks.ActionsService
+	account           domocks.AccountService
+}
+
+func withTestClient(t *testing.T, tFn testFn) {
 	ogConfig := doit.DoitConfig
 	defer func() {
 		doit.DoitConfig = ogConfig
@@ -125,26 +140,41 @@ func withTestClient(tFn testFn) {
 	cfg := NewTestConfig()
 	doit.DoitConfig = cfg
 
+	tm := &tcMocks{}
+
 	config := &cmdConfig{
 		ns:         "test",
 		doitConfig: cfg,
 		out:        ioutil.Discard,
 
-		ks:   &domocks.KeysService{},
-		ss:   &domocks.SizesService{},
-		rs:   &domocks.RegionsService{},
-		is:   &domocks.ImagesService{},
-		ias:  &domocks.ImageActionsService{},
-		fis:  &domocks.FloatingIPsService{},
-		fias: &domocks.FloatingIPActionsService{},
-		ds:   &domocks.DropletsService{},
-		das:  &domocks.DropletActionsService{},
-		dos:  &domocks.DomainsService{},
-		acts: &domocks.ActionsService{},
-		as:   &domocks.AccountService{},
+		keys:              func() do.KeysService { return &tm.keys },
+		sizes:             func() do.SizesService { return &tm.sizes },
+		regions:           func() do.RegionsService { return &tm.regions },
+		images:            func() do.ImagesService { return &tm.images },
+		imageActions:      func() do.ImageActionsService { return &tm.imageActions },
+		floatingIPs:       func() do.FloatingIPsService { return &tm.floatingIPs },
+		floatingIPActions: func() do.FloatingIPActionsService { return &tm.floatingIPActions },
+		droplets:          func() do.DropletsService { return &tm.droplets },
+		dropletActions:    func() do.DropletActionsService { return &tm.dropletActions },
+		domains:           func() do.DomainsService { return &tm.domains },
+		actions:           func() do.ActionsService { return &tm.actions },
+		account:           func() do.AccountService { return &tm.account },
 	}
 
-	tFn(config)
+	tFn(config, tm)
+
+	assert.True(t, tm.account.AssertExpectations(t))
+	assert.True(t, tm.actions.AssertExpectations(t))
+	assert.True(t, tm.domains.AssertExpectations(t))
+	assert.True(t, tm.dropletActions.AssertExpectations(t))
+	assert.True(t, tm.droplets.AssertExpectations(t))
+	assert.True(t, tm.floatingIPActions.AssertExpectations(t))
+	assert.True(t, tm.floatingIPs.AssertExpectations(t))
+	assert.True(t, tm.imageActions.AssertExpectations(t))
+	assert.True(t, tm.images.AssertExpectations(t))
+	assert.True(t, tm.regions.AssertExpectations(t))
+	assert.True(t, tm.sizes.AssertExpectations(t))
+	assert.True(t, tm.keys.AssertExpectations(t))
 }
 
 type TestConfig struct {

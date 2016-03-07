@@ -67,7 +67,7 @@ func RunSSH(c *cmdConfig) error {
 
 	var droplet *do.Droplet
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 	if id, err := strconv.Atoi(dropletID); err == nil {
 		// dropletID is an integer
 

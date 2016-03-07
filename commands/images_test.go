@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit"
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,11 +16,8 @@ func TestImageCommand(t *testing.T) {
 }
 
 func TestImagesList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
-		is.On("List", false).Return(testImageList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.images.On("List", false).Return(testImageList, nil)
 
 		err := RunImagesList(config)
 		assert.NoError(t, err)
@@ -29,11 +25,8 @@ func TestImagesList(t *testing.T) {
 }
 
 func TestImagesListDistribution(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
-		is.On("ListDistribution", false).Return(testImageList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.images.On("ListDistribution", false).Return(testImageList, nil)
 
 		err := RunImagesListDistribution(config)
 		assert.NoError(t, err)
@@ -41,11 +34,8 @@ func TestImagesListDistribution(t *testing.T) {
 }
 
 func TestImagesListApplication(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
-		is.On("ListApplication", false).Return(testImageList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.images.On("ListApplication", false).Return(testImageList, nil)
 
 		err := RunImagesListApplication(config)
 		assert.NoError(t, err)
@@ -53,11 +43,8 @@ func TestImagesListApplication(t *testing.T) {
 }
 
 func TestImagesListUser(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
-		is.On("ListUser", false).Return(testImageList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.images.On("ListUser", false).Return(testImageList, nil)
 
 		err := RunImagesListUser(config)
 		assert.NoError(t, err)
@@ -65,11 +52,8 @@ func TestImagesListUser(t *testing.T) {
 }
 
 func TestImagesGetByID(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
-		is.On("GetByID", testImage.ID).Return(&testImage, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.images.On("GetByID", testImage.ID).Return(&testImage, nil)
 
 		config.args = append(config.args, strconv.Itoa(testImage.ID))
 		err := RunImagesGet(config)
@@ -78,11 +62,8 @@ func TestImagesGetByID(t *testing.T) {
 }
 
 func TestImagesGetBySlug(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
-		is.On("GetBySlug", testImage.Slug).Return(&testImage, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.images.On("GetBySlug", testImage.Slug).Return(&testImage, nil)
 
 		config.args = append(config.args, testImage.Slug)
 		err := RunImagesGet(config)
@@ -91,22 +72,16 @@ func TestImagesGetBySlug(t *testing.T) {
 }
 
 func TestImagesNoID(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		err := RunImagesGet(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestImagesUpdate(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
 		iur := &godo.ImageUpdateRequest{Name: "new-name"}
-		is.On("Update", testImage.ID, iur).Return(&testImage, nil)
+		tm.images.On("Update", testImage.ID, iur).Return(&testImage, nil)
 
 		config.args = append(config.args, strconv.Itoa(testImage.ID))
 		config.doitConfig.Set(config.ns, doit.ArgImageName, "new-name")
@@ -116,11 +91,8 @@ func TestImagesUpdate(t *testing.T) {
 }
 
 func TestImagesDelete(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		is := &domocks.ImagesService{}
-		config.is = is
-
-		is.On("Delete", testImage.ID).Return(nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.images.On("Delete", testImage.ID).Return(nil)
 
 		config.args = append(config.args, strconv.Itoa(testImage.ID))
 

@@ -44,7 +44,7 @@ func SSHKeys() *cobra.Command {
 
 // RunKeyList lists keys.
 func RunKeyList(c *cmdConfig) error {
-	ks := c.keysService()
+	ks := c.keys()
 
 	list, err := ks.List()
 	if err != nil {
@@ -57,7 +57,7 @@ func RunKeyList(c *cmdConfig) error {
 
 // RunKeyGet retrieves a key.
 func RunKeyGet(c *cmdConfig) error {
-	ks := c.keysService()
+	ks := c.keys()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -76,7 +76,7 @@ func RunKeyGet(c *cmdConfig) error {
 
 // RunKeyCreate uploads a SSH key.
 func RunKeyCreate(c *cmdConfig) error {
-	ks := c.keysService()
+	ks := c.keys()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -105,7 +105,7 @@ func RunKeyCreate(c *cmdConfig) error {
 
 // RunKeyImport imports a key from a file
 func RunKeyImport(c *cmdConfig) error {
-	ks := c.keysService()
+	ks := c.keys()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -148,7 +148,7 @@ func RunKeyImport(c *cmdConfig) error {
 
 // RunKeyDelete deletes a key.
 func RunKeyDelete(c *cmdConfig) error {
-	ks := c.keysService()
+	ks := c.keys()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -160,7 +160,7 @@ func RunKeyDelete(c *cmdConfig) error {
 
 // RunKeyUpdate updates a key.
 func RunKeyUpdate(c *cmdConfig) error {
-	ks := c.keysService()
+	ks := c.keys()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)

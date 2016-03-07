@@ -32,13 +32,13 @@ func FloatingIPAction() *cobra.Command {
 
 // RunFloatingIPActionsGet retrieves an action for a floating IP.
 func RunFloatingIPActionsGet(c *cmdConfig) error {
-	if len(c.args) != 1 {
+	if len(c.args) != 2 {
 		return doit.NewMissingArgsErr(c.ns)
 	}
 
 	ip := c.args[0]
 
-	fia := c.floatingIPActionsService()
+	fia := c.floatingIPActions()
 
 	actionID, err := strconv.Atoi(c.args[1])
 	if err != nil {
@@ -56,13 +56,13 @@ func RunFloatingIPActionsGet(c *cmdConfig) error {
 
 // RunFloatingIPActionsAssign assigns a floating IP to a droplet.
 func RunFloatingIPActionsAssign(c *cmdConfig) error {
-	if len(c.args) != 1 {
+	if len(c.args) != 2 {
 		return doit.NewMissingArgsErr(c.ns)
 	}
 
 	ip := c.args[0]
 
-	fia := c.floatingIPActionsService()
+	fia := c.floatingIPActions()
 
 	dropletID, err := strconv.Atoi(c.args[1])
 	if err != nil {
@@ -86,7 +86,7 @@ func RunFloatingIPActionsUnassign(c *cmdConfig) error {
 
 	ip := c.args[0]
 
-	fia := c.floatingIPActionsService()
+	fia := c.floatingIPActions()
 
 	a, err := fia.Unassign(ip)
 	if err != nil {

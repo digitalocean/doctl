@@ -17,7 +17,7 @@ func Region() *cobra.Command {
 
 // RunRegionList all regions.
 func RunRegionList(c *cmdConfig) error {
-	rs := c.regionsService()
+	rs := c.regions()
 
 	list, err := rs.List()
 	if err != nil {

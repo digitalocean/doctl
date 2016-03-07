@@ -48,7 +48,7 @@ func Images() *cobra.Command {
 
 // RunImagesList images.
 func RunImagesList(c *cmdConfig) error {
-	is := c.imagesService()
+	is := c.images()
 
 	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
 	if err != nil {
@@ -66,7 +66,7 @@ func RunImagesList(c *cmdConfig) error {
 
 // RunImagesListDistribution lists distributions that are available.
 func RunImagesListDistribution(c *cmdConfig) error {
-	is := c.imagesService()
+	is := c.images()
 
 	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
 	if err != nil {
@@ -85,7 +85,7 @@ func RunImagesListDistribution(c *cmdConfig) error {
 
 // RunImagesListApplication lists application iamges.
 func RunImagesListApplication(c *cmdConfig) error {
-	is := c.imagesService()
+	is := c.images()
 
 	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
 	if err != nil {
@@ -103,7 +103,7 @@ func RunImagesListApplication(c *cmdConfig) error {
 
 // RunImagesListUser lists user images.
 func RunImagesListUser(c *cmdConfig) error {
-	is := c.imagesService()
+	is := c.images()
 
 	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
 	if err != nil {
@@ -121,7 +121,7 @@ func RunImagesListUser(c *cmdConfig) error {
 
 // RunImagesGet retrieves an image by id or slug.
 func RunImagesGet(c *cmdConfig) error {
-	is := c.imagesService()
+	is := c.images()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -152,7 +152,7 @@ func RunImagesGet(c *cmdConfig) error {
 
 // RunImagesUpdate updates an image.
 func RunImagesUpdate(c *cmdConfig) error {
-	is := c.imagesService()
+	is := c.images()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -180,7 +180,7 @@ func RunImagesUpdate(c *cmdConfig) error {
 
 // RunImagesDelete deletes an image.
 func RunImagesDelete(c *cmdConfig) error {
-	is := c.imagesService()
+	is := c.images()
 
 	if len(c.args) != 1 {
 		return doit.NewMissingArgsErr(c.ns)

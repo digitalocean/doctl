@@ -78,7 +78,7 @@ func Droplet() *cobra.Command {
 // RunDropletActions returns a list of actions for a droplet.
 func RunDropletActions(c *cmdConfig) error {
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 
 	id, err := getDropletIDArg(c.ns, c.args)
 	if err != nil {
@@ -93,7 +93,7 @@ func RunDropletActions(c *cmdConfig) error {
 // RunDropletBackups returns a list of backup images for a droplet.
 func RunDropletBackups(c *cmdConfig) error {
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 
 	id, err := getDropletIDArg(c.ns, c.args)
 	if err != nil {
@@ -177,7 +177,7 @@ func RunDropletCreate(c *cmdConfig) error {
 		return err
 	}
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 
 	var wg sync.WaitGroup
 	errs := make(chan error, len(c.args))
@@ -252,7 +252,7 @@ func extractUserData(userData, filename string) (string, error) {
 // RunDropletDelete destroy a droplet by id.
 func RunDropletDelete(c *cmdConfig) error {
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 
 	if len(c.args) < 1 {
 		return doit.NewMissingArgsErr(c.ns)
@@ -305,7 +305,7 @@ func RunDropletGet(c *cmdConfig) error {
 		return err
 	}
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 
 	d, err := ds.Get(id)
 	if err != nil {
@@ -319,7 +319,7 @@ func RunDropletGet(c *cmdConfig) error {
 // RunDropletKernels returns a list of available kernels for a droplet.
 func RunDropletKernels(c *cmdConfig) error {
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 	id, err := getDropletIDArg(c.ns, c.args)
 	if err != nil {
 		return err
@@ -337,7 +337,7 @@ func RunDropletKernels(c *cmdConfig) error {
 // RunDropletList returns a list of droplets.
 func RunDropletList(c *cmdConfig) error {
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 
 	region, err := c.doitConfig.GetString(c.ns, doit.ArgRegionSlug)
 	if err != nil {
@@ -391,7 +391,7 @@ func RunDropletList(c *cmdConfig) error {
 // RunDropletNeighbors returns a list of droplet neighbors.
 func RunDropletNeighbors(c *cmdConfig) error {
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 
 	id, err := getDropletIDArg(c.ns, c.args)
 	if err != nil {
@@ -410,7 +410,7 @@ func RunDropletNeighbors(c *cmdConfig) error {
 // RunDropletSnapshots returns a list of available kernels for a droplet.
 func RunDropletSnapshots(c *cmdConfig) error {
 
-	ds := c.dropletsService()
+	ds := c.droplets()
 	id, err := getDropletIDArg(c.ns, c.args)
 	if err != nil {
 		return err

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit/do"
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,10 +22,8 @@ func TestActionsCommand(t *testing.T) {
 }
 
 func TestActionList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		as := &domocks.ActionsService{}
-		config.acts = as
-		as.On("List").Return(testActionList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.actions.On("List").Return(testActionList, nil)
 
 		err := RunCmdActionList(config)
 		assert.NoError(t, err)
@@ -34,10 +31,8 @@ func TestActionList(t *testing.T) {
 }
 
 func TestActionGet(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		as := &domocks.ActionsService{}
-		config.acts = as
-		as.On("Get", 1).Return(&testAction, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.actions.On("Get", 1).Return(&testAction, nil)
 
 		config.args = append(config.args, "1")
 

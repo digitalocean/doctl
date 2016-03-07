@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/bryanl/doit/do"
-	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,11 +20,8 @@ func TestRegionCommand(t *testing.T) {
 }
 
 func TestRegionsList(t *testing.T) {
-	withTestClient(func(config *cmdConfig) {
-		rs := &domocks.RegionsService{}
-		config.rs = rs
-
-		rs.On("List").Return(testRegionList, nil)
+	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+		tm.regions.On("List").Return(testRegionList, nil)
 
 		err := RunRegionList(config)
 		assert.NoError(t, err)
