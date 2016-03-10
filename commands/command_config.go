@@ -1,11 +1,11 @@
 package commands
 
 // cmdOption allow configuration of a command.
-type cmdOption func(*command)
+type cmdOption func(*Command)
 
 // aliasOpt adds aliases for a command.
 func aliasOpt(aliases ...string) cmdOption {
-	return func(c *command) {
+	return func(c *Command) {
 		if c.Aliases == nil {
 			c.Aliases = []string{}
 		}
@@ -17,15 +17,15 @@ func aliasOpt(aliases ...string) cmdOption {
 }
 
 // displayerType sets the columns for display for a command.
-func displayerType(d displayable) cmdOption {
-	return func(c *command) {
+func displayerType(d Displayable) cmdOption {
+	return func(c *Command) {
 		c.fmtCols = d.Cols()
 	}
 }
 
 // hiddenCmd make a command hidden.
 func hiddenCmd() cmdOption {
-	return func(c *command) {
+	return func(c *Command) {
 		c.Hidden = true
 	}
 }

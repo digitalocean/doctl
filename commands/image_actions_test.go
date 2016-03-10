@@ -15,12 +15,12 @@ func TestImageActionCommand(t *testing.T) {
 }
 
 func TestImageActionsGet(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.imageActions.On("Get", 1, 2).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgActionID, 2)
+		config.Doit.Set(config.NS, doit.ArgActionID, 2)
 
 		err := RunImageActionsGet(config)
 		assert.NoError(t, err)
@@ -29,13 +29,13 @@ func TestImageActionsGet(t *testing.T) {
 }
 
 func TestImageActionsTransfer(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		ar := &godo.ActionRequest{"region": "dev0"}
 		tm.imageActions.On("Transfer", 1, ar).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgRegionSlug, "dev0")
+		config.Doit.Set(config.NS, doit.ArgRegionSlug, "dev0")
 
 		err := RunImageActionsTransfer(config)
 		assert.NoError(t, err)

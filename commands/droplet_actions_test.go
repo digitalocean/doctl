@@ -14,21 +14,21 @@ func TestDropletActionCommand(t *testing.T) {
 }
 
 func TestDropletActionsChangeKernel(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("ChangeKernel", 1, 2).Return(&testAction, nil)
 
-		config.doitConfig.Set(config.ns, doit.ArgKernelID, 2)
-		config.args = append(config.args, "1")
+		config.Doit.Set(config.NS, doit.ArgKernelID, 2)
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionChangeKernel(config)
 		assert.NoError(t, err)
 	})
 }
 func TestDropletActionsDisableBackups(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("DisableBackups", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionDisableBackups(config)
 		assert.NoError(t, err)
@@ -36,10 +36,10 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 
 }
 func TestDropletActionsEnableIPv6(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("EnableIPv6", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionEnableIPv6(config)
 		assert.NoError(t, err)
@@ -47,22 +47,22 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 }
 
 func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("EnablePrivateNetworking", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionEnablePrivateNetworking(config)
 		assert.NoError(t, err)
 	})
 }
 func TestDropletActionsGet(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("Get", 1, 2).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgActionID, 2)
+		config.Doit.Set(config.NS, doit.ArgActionID, 2)
 
 		err := RunDropletActionGet(config)
 		assert.NoError(t, err)
@@ -70,10 +70,10 @@ func TestDropletActionsGet(t *testing.T) {
 }
 
 func TestDropletActionsPasswordReset(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("PasswordReset", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionPasswordReset(config)
 		assert.NoError(t, err)
@@ -81,10 +81,10 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 }
 
 func TestDropletActionsPowerCycle(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("PowerCycle", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionPowerCycle(config)
 		assert.NoError(t, err)
@@ -92,20 +92,20 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 
 }
 func TestDropletActionsPowerOff(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("PowerOff", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionPowerOff(config)
 		assert.NoError(t, err)
 	})
 }
 func TestDropletActionsPowerOn(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("PowerOn", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionPowerOn(config)
 		assert.NoError(t, err)
@@ -113,10 +113,10 @@ func TestDropletActionsPowerOn(t *testing.T) {
 
 }
 func TestDropletActionsReboot(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("Reboot", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionReboot(config)
 		assert.NoError(t, err)
@@ -124,12 +124,12 @@ func TestDropletActionsReboot(t *testing.T) {
 }
 
 func TestDropletActionsRebuildByImageID(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("RebuildByImageID", 1, 2).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgImage, "2")
+		config.Doit.Set(config.NS, doit.ArgImage, "2")
 
 		err := RunDropletActionRebuild(config)
 		assert.NoError(t, err)
@@ -137,12 +137,12 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 }
 
 func TestDropletActionsRebuildByImageSlug(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("RebuildByImageSlug", 1, "slug").Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgImage, "slug")
+		config.Doit.Set(config.NS, doit.ArgImage, "slug")
 
 		err := RunDropletActionRebuild(config)
 		assert.NoError(t, err)
@@ -150,12 +150,12 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 
 }
 func TestDropletActionsRename(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("Rename", 1, "name").Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgDropletName, "name")
+		config.Doit.Set(config.NS, doit.ArgDropletName, "name")
 
 		err := RunDropletActionRename(config)
 		assert.NoError(t, err)
@@ -163,13 +163,13 @@ func TestDropletActionsRename(t *testing.T) {
 }
 
 func TestDropletActionsResize(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("Resize", 1, "1gb", true).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgSizeSlug, "1gb")
-		config.doitConfig.Set(config.ns, doit.ArgResizeDisk, true)
+		config.Doit.Set(config.NS, doit.ArgSizeSlug, "1gb")
+		config.Doit.Set(config.NS, doit.ArgResizeDisk, true)
 
 		err := RunDropletActionResize(config)
 		assert.NoError(t, err)
@@ -177,12 +177,12 @@ func TestDropletActionsResize(t *testing.T) {
 }
 
 func TestDropletActionsRestore(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("Restore", 1, 2).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgImageID, 2)
+		config.Doit.Set(config.NS, doit.ArgImageID, 2)
 
 		err := RunDropletActionRestore(config)
 		assert.NoError(t, err)
@@ -190,10 +190,10 @@ func TestDropletActionsRestore(t *testing.T) {
 }
 
 func TestDropletActionsShutdown(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("Shutdown", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionShutdown(config)
 		assert.NoError(t, err)
@@ -201,12 +201,12 @@ func TestDropletActionsShutdown(t *testing.T) {
 }
 
 func TestDropletActionsSnapshot(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("Snapshot", 1, "name").Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgSnapshotName, "name")
+		config.Doit.Set(config.NS, doit.ArgSnapshotName, "name")
 
 		err := RunDropletActionSnapshot(config)
 		assert.NoError(t, err)
@@ -214,10 +214,10 @@ func TestDropletActionsSnapshot(t *testing.T) {
 }
 
 func TestDropletActionsUpgrade(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("Upgrade", 1).Return(&testAction, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionUpgrade(config)
 		assert.NoError(t, err)

@@ -13,26 +13,25 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	// DoitCmd is the base command.
-	DoitCmd = &cobra.Command{
-		Use:   "doit",
-		Short: "doit is a command line interface for the DigitalOcean API.",
-	}
+// DoitCmd is the base command.
+var DoitCmd = &cobra.Command{
+	Use:   "doit",
+	Short: "doit is a command line interface for the DigitalOcean API.",
+}
 
-	// Token holds the global authorization token.
-	Token string
+// Token holds the global authorization token.
+var Token string
 
-	// Output holds the global output format.
-	Output string
+// Output holds the global output format.
+var Output string
 
-	// Verbose toggles verbose output.
-	Verbose bool
+// Verbose toggles verbose output.
+var Verbose bool
 
-	requiredColor = color.New(color.Bold, color.FgWhite).SprintfFunc()
+var requiredColor = color.New(color.Bold, color.FgWhite).SprintfFunc()
 
-	writer = os.Stdout
-)
+// Writer is where output should be written to.
+var Writer = os.Stdout
 
 func init() {
 	viper.SetConfigType("yaml")
@@ -68,20 +67,32 @@ func Init() *cobra.Command {
 // AddCommands adds sub commands to the base command.
 func addCommands() {
 	DoitCmd.AddCommand(Account())
-	DoitCmd.AddCommand(Actions())
-	DoitCmd.AddCommand(Auth())
-	DoitCmd.AddCommand(Domain())
-	DoitCmd.AddCommand(DropletAction())
-	DoitCmd.AddCommand(Droplet())
-	DoitCmd.AddCommand(FloatingIP())
-	DoitCmd.AddCommand(FloatingIPAction())
-	DoitCmd.AddCommand(Images())
-	DoitCmd.AddCommand(Plugin())
-	DoitCmd.AddCommand(Region())
-	DoitCmd.AddCommand(Size())
-	DoitCmd.AddCommand(SSHKeys())
-	DoitCmd.AddCommand(SSH())
+	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Version())
+}
+
+func computeCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "compute",
+		Short: "compute commands",
+		Long:  "compute commands are for controlling and managing infrastructure",
+	}
+
+	cmd.AddCommand(Actions())
+	cmd.AddCommand(Auth())
+	cmd.AddCommand(DropletAction())
+	cmd.AddCommand(Droplet())
+	cmd.AddCommand(Domain())
+	cmd.AddCommand(FloatingIP())
+	cmd.AddCommand(FloatingIPAction())
+	cmd.AddCommand(Images())
+	cmd.AddCommand(Plugin())
+	cmd.AddCommand(Region())
+	cmd.AddCommand(Size())
+	cmd.AddCommand(SSHKeys())
+	cmd.AddCommand(SSH())
+
+	return cmd
 }
 
 func initFlags() {
@@ -110,10 +121,10 @@ func initializeConfig() {
 	}
 }
 
-type flagOpt func(c *command, name, key string)
+type flagOpt func(c *Command, name, key string)
 
 func requiredOpt() flagOpt {
-	return func(c *command, name, key string) {
+	return func(c *Command, name, key string) {
 		c.MarkFlagRequired(key)
 		key = requiredKey(key)
 		viper.Set(key, true)
@@ -124,7 +135,7 @@ func requiredOpt() flagOpt {
 }
 
 func shortFlag(f string) flagOpt {
-	return func(c *command, name, key string) {
+	return func(c *Command, name, key string) {
 		c.Flag(name).Shorthand = f
 	}
 }
@@ -133,7 +144,8 @@ func requiredKey(key string) string {
 	return fmt.Sprintf("%s.required", key)
 }
 
-func addStringFlag(cmd *command, name, dflt, desc string, opts ...flagOpt) {
+// AddStringFlag adds a string flag to a command.
+func AddStringFlag(cmd *Command, name, dflt, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().String(name, dflt, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
@@ -143,7 +155,8 @@ func addStringFlag(cmd *command, name, dflt, desc string, opts ...flagOpt) {
 	}
 }
 
-func addIntFlag(cmd *command, name string, def int, desc string, opts ...flagOpt) {
+// AddIntFlag adds an integr flag to a command.
+func AddIntFlag(cmd *Command, name string, def int, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().Int(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
@@ -153,7 +166,8 @@ func addIntFlag(cmd *command, name string, def int, desc string, opts ...flagOpt
 	}
 }
 
-func addBoolFlag(cmd *command, name string, def bool, desc string, opts ...flagOpt) {
+// AddBoolFlag adds a boolean flag to a command.
+func AddBoolFlag(cmd *Command, name string, def bool, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().Bool(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
@@ -163,7 +177,8 @@ func addBoolFlag(cmd *command, name string, def bool, desc string, opts ...flagO
 	}
 }
 
-func addStringSliceFlag(cmd *command, name string, def []string, desc string, opts ...flagOpt) {
+// AddStringSliceFlag adds a string slice flag to a command.
+func AddStringSliceFlag(cmd *Command, name string, def []string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().StringSlice(name, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
@@ -173,7 +188,7 @@ func addStringSliceFlag(cmd *command, name string, def []string, desc string, op
 	}
 }
 
-func flagName(cmd *command, name string) string {
+func flagName(cmd *Command, name string) string {
 	parentName := doit.NSRoot
 	if cmd.Parent() != nil {
 		parentName = cmd.Parent().Name()
@@ -191,76 +206,81 @@ func cmdNS(cmd *cobra.Command) string {
 	return fmt.Sprintf("%s.%s", parentName, cmd.Name())
 }
 
-// cmdRunner runs a command and passes in a cmdConfig.
-type cmdRunner func(*cmdConfig) error
+// CmdRunner runs a command and passes in a cmdConfig.
+type CmdRunner func(*CmdConfig) error
 
-type command struct {
+// Command is a task that can be run.
+type Command struct {
 	*cobra.Command
 
 	fmtCols []string
 }
 
-type cmdConfig struct {
-	ns         string
-	doitConfig doit.Config
-	out        io.Writer
-	args       []string
+// CmdConfig is a command configuration.
+type CmdConfig struct {
+	NS   string
+	Doit doit.Config
+	Out  io.Writer
+	Args []string
 
 	// services
-	keys              func() do.KeysService
-	sizes             func() do.SizesService
-	regions           func() do.RegionsService
-	images            func() do.ImagesService
-	imageActions      func() do.ImageActionsService
-	floatingIPs       func() do.FloatingIPsService
-	floatingIPActions func() do.FloatingIPActionsService
-	droplets          func() do.DropletsService
-	dropletActions    func() do.DropletActionsService
-	domains           func() do.DomainsService
-	actions           func() do.ActionsService
-	account           func() do.AccountService
+	Keys              func() do.KeysService
+	Sizes             func() do.SizesService
+	Regions           func() do.RegionsService
+	Images            func() do.ImagesService
+	ImageActions      func() do.ImageActionsService
+	FloatingIPs       func() do.FloatingIPsService
+	FloatingIPActions func() do.FloatingIPActionsService
+	Droplets          func() do.DropletsService
+	DropletActions    func() do.DropletActionsService
+	Domains           func() do.DomainsService
+	Actions           func() do.ActionsService
+	Account           func() do.AccountService
 }
 
-func newCmdConfig(ns string, dc doit.Config, out io.Writer, args []string) *cmdConfig {
-	return &cmdConfig{
-		ns:         ns,
-		doitConfig: dc,
-		out:        out,
-		args:       args,
+// NewCmdConfig creates an instance of a CmdConfig.
+func NewCmdConfig(ns string, dc doit.Config, out io.Writer, args []string) *CmdConfig {
+	return &CmdConfig{
+		NS:   ns,
+		Doit: dc,
+		Out:  out,
+		Args: args,
 
-		keys:              func() do.KeysService { return do.NewKeysService(dc.GetGodoClient()) },
-		sizes:             func() do.SizesService { return do.NewSizesService(dc.GetGodoClient()) },
-		regions:           func() do.RegionsService { return do.NewRegionsService(dc.GetGodoClient()) },
-		images:            func() do.ImagesService { return do.NewImagesService(dc.GetGodoClient()) },
-		imageActions:      func() do.ImageActionsService { return do.NewImageActionsService(dc.GetGodoClient()) },
-		floatingIPs:       func() do.FloatingIPsService { return do.NewFloatingIPsService(dc.GetGodoClient()) },
-		floatingIPActions: func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(dc.GetGodoClient()) },
-		droplets:          func() do.DropletsService { return do.NewDropletsService(dc.GetGodoClient()) },
-		dropletActions:    func() do.DropletActionsService { return do.NewDropletActionsService(dc.GetGodoClient()) },
-		domains:           func() do.DomainsService { return do.NewDomainsService(dc.GetGodoClient()) },
-		actions:           func() do.ActionsService { return do.NewActionsService(dc.GetGodoClient()) },
-		account:           func() do.AccountService { return do.NewAccountService(dc.GetGodoClient()) },
+		Keys:              func() do.KeysService { return do.NewKeysService(dc.GetGodoClient()) },
+		Sizes:             func() do.SizesService { return do.NewSizesService(dc.GetGodoClient()) },
+		Regions:           func() do.RegionsService { return do.NewRegionsService(dc.GetGodoClient()) },
+		Images:            func() do.ImagesService { return do.NewImagesService(dc.GetGodoClient()) },
+		ImageActions:      func() do.ImageActionsService { return do.NewImageActionsService(dc.GetGodoClient()) },
+		FloatingIPs:       func() do.FloatingIPsService { return do.NewFloatingIPsService(dc.GetGodoClient()) },
+		FloatingIPActions: func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(dc.GetGodoClient()) },
+		Droplets:          func() do.DropletsService { return do.NewDropletsService(dc.GetGodoClient()) },
+		DropletActions:    func() do.DropletActionsService { return do.NewDropletActionsService(dc.GetGodoClient()) },
+		Domains:           func() do.DomainsService { return do.NewDomainsService(dc.GetGodoClient()) },
+		Actions:           func() do.ActionsService { return do.NewActionsService(dc.GetGodoClient()) },
+		Account:           func() do.AccountService { return do.NewAccountService(dc.GetGodoClient()) },
 	}
 }
 
-func (c *cmdConfig) display(d displayable) error {
+// Display displayes the output from a command.
+func (c *CmdConfig) Display(d Displayable) error {
 	dc := &displayer{
-		ns:     c.ns,
-		config: c.doitConfig,
+		ns:     c.NS,
+		config: c.Doit,
 		item:   d,
-		out:    c.out,
+		out:    c.Out,
 	}
 
 	return dc.Display()
 }
 
-func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *command {
+// CmdBuilder builds a new command.
+func CmdBuilder(parent *cobra.Command, cr CmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *Command {
 	cc := &cobra.Command{
 		Use:   cliText,
 		Short: desc,
 		Long:  desc,
 		Run: func(cmd *cobra.Command, args []string) {
-			c := newCmdConfig(
+			c := NewCmdConfig(
 				cmdNS(cmd),
 				doit.DoitConfig,
 				out,
@@ -276,7 +296,7 @@ func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out i
 		parent.AddCommand(cc)
 	}
 
-	c := &command{Command: cc}
+	c := &Command{Command: cc}
 
 	for _, co := range options {
 		co(c)
@@ -285,8 +305,8 @@ func cmdBuilder(parent *cobra.Command, cr cmdRunner, cliText, desc string, out i
 	if cols := c.fmtCols; cols != nil {
 		formatHelp := fmt.Sprintf("Columns for output in a comma seperated list. Possible values: %s",
 			strings.Join(cols, ","))
-		addStringFlag(c, doit.ArgFormat, "", formatHelp)
-		addBoolFlag(c, doit.ArgNoHeader, false, "hide headers")
+		AddStringFlag(c, doit.ArgFormat, "", formatHelp)
+		AddBoolFlag(c, doit.ArgNoHeader, false, "hide headers")
 	}
 
 	return c

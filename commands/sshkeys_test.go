@@ -24,7 +24,7 @@ func TestSSHKeysCommand(t *testing.T) {
 }
 
 func TestKeysList(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.keys.On("List").Return(testKeyList, nil)
 
 		err := RunKeyList(config)
@@ -33,10 +33,10 @@ func TestKeysList(t *testing.T) {
 }
 
 func TestKeysGetByID(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.keys.On("Get", "1").Return(&testKey, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunKeyGet(config)
 		assert.NoError(t, err)
@@ -44,10 +44,10 @@ func TestKeysGetByID(t *testing.T) {
 }
 
 func TestKeysGetByFingerprint(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.keys.On("Get", testKey.Fingerprint).Return(&testKey, nil)
 
-		config.args = append(config.args, testKey.Fingerprint)
+		config.Args = append(config.Args, testKey.Fingerprint)
 
 		err := RunKeyGet(config)
 		assert.NoError(t, err)
@@ -55,13 +55,13 @@ func TestKeysGetByFingerprint(t *testing.T) {
 }
 
 func TestKeysCreate(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kcr := &godo.KeyCreateRequest{Name: "the key", PublicKey: "fingerprint"}
 		tm.keys.On("Create", kcr).Return(&testKey, nil)
 
-		config.args = append(config.args, "the key")
+		config.Args = append(config.Args, "the key")
 
-		config.doitConfig.Set(config.ns, doit.ArgKeyPublicKey, "fingerprint")
+		config.Doit.Set(config.NS, doit.ArgKeyPublicKey, "fingerprint")
 
 		err := RunKeyCreate(config)
 		assert.NoError(t, err)
@@ -69,10 +69,10 @@ func TestKeysCreate(t *testing.T) {
 }
 
 func TestKeysDeleteByID(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.keys.On("Delete", "1").Return(nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
 		err := RunKeyDelete(config)
 		assert.NoError(t, err)
@@ -80,10 +80,10 @@ func TestKeysDeleteByID(t *testing.T) {
 }
 
 func TestKeysDeleteByFingerprint(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.keys.On("Delete", "fingerprint").Return(nil)
 
-		config.args = append(config.args, "fingerprint")
+		config.Args = append(config.Args, "fingerprint")
 
 		err := RunKeyDelete(config)
 		assert.NoError(t, err)
@@ -92,13 +92,13 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 }
 
 func TestKeysUpdateByID(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kur := &godo.KeyUpdateRequest{Name: "the key"}
 		tm.keys.On("Update", "1", kur).Return(&testKey, nil)
 
-		config.args = append(config.args, "1")
+		config.Args = append(config.Args, "1")
 
-		config.doitConfig.Set(config.ns, doit.ArgKeyName, "the key")
+		config.Doit.Set(config.NS, doit.ArgKeyName, "the key")
 
 		err := RunKeyUpdate(config)
 		assert.NoError(t, err)
@@ -107,13 +107,13 @@ func TestKeysUpdateByID(t *testing.T) {
 }
 
 func TestKeysUpdateByFingerprint(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kur := &godo.KeyUpdateRequest{Name: "the key"}
 		tm.keys.On("Update", "fingerprint", kur).Return(&testKey, nil)
 
-		config.args = append(config.args, "fingerprint")
+		config.Args = append(config.Args, "fingerprint")
 
-		config.doitConfig.Set(config.ns, doit.ArgKeyName, "the key")
+		config.Doit.Set(config.NS, doit.ArgKeyName, "the key")
 
 		err := RunKeyUpdate(config)
 		assert.NoError(t, err)
@@ -128,13 +128,13 @@ func TestSSHPublicKeyImportWithName(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.Remove(path)
 
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kcr := &godo.KeyCreateRequest{Name: "custom", PublicKey: pubkey}
 		tm.keys.On("Create", kcr).Return(&testKey, nil)
 
-		config.args = append(config.args, "custom")
+		config.Args = append(config.Args, "custom")
 
-		config.doitConfig.Set(config.ns, doit.ArgKeyPublicKeyFile, path)
+		config.Doit.Set(config.NS, doit.ArgKeyPublicKeyFile, path)
 
 		err := RunKeyImport(config)
 		assert.NoError(t, err)

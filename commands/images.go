@@ -21,36 +21,36 @@ func Images() *cobra.Command {
 
 	out := os.Stdout
 
-	cmdImagesList := cmdBuilder(cmd, RunImagesList, "list", "list images", out, displayerType(&image{}))
-	addBoolFlag(cmdImagesList, doit.ArgImagePublic, false, "List public images")
+	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", out, displayerType(&image{}))
+	AddBoolFlag(cmdImagesList, doit.ArgImagePublic, false, "List public images")
 
-	cmdImagesListDistribution := cmdBuilder(cmd, RunImagesListDistribution,
+	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-distribution", "list distribution images", out, displayerType(&image{}))
-	addBoolFlag(cmdImagesListDistribution, doit.ArgImagePublic, false, "List public images")
+	AddBoolFlag(cmdImagesListDistribution, doit.ArgImagePublic, false, "List public images")
 
-	cmdImagesListApplication := cmdBuilder(cmd, RunImagesListApplication,
+	cmdImagesListApplication := CmdBuilder(cmd, RunImagesListApplication,
 		"list-application", "list application images", out, displayerType(&image{}))
-	addBoolFlag(cmdImagesListApplication, doit.ArgImagePublic, false, "List public images")
+	AddBoolFlag(cmdImagesListApplication, doit.ArgImagePublic, false, "List public images")
 
-	cmdImagesListUser := cmdBuilder(cmd, RunImagesListDistribution,
+	cmdImagesListUser := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-user", "list user images", out, displayerType(&image{}))
-	addBoolFlag(cmdImagesListUser, doit.ArgImagePublic, false, "List public images")
+	AddBoolFlag(cmdImagesListUser, doit.ArgImagePublic, false, "List public images")
 
-	cmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", out, displayerType(&image{}))
+	CmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", out, displayerType(&image{}))
 
-	cmdImagesUpdate := cmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", out, displayerType(&image{}))
-	addStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
+	cmdImagesUpdate := CmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", out, displayerType(&image{}))
+	AddStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
 
-	cmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", out)
+	CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", out)
 
 	return cmd
 }
 
 // RunImagesList images.
-func RunImagesList(c *cmdConfig) error {
-	is := c.images()
+func RunImagesList(c *CmdConfig) error {
+	is := c.Images()
 
-	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
+	public, err := c.Doit.GetBool(c.NS, doit.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -61,14 +61,14 @@ func RunImagesList(c *cmdConfig) error {
 	}
 
 	item := &image{images: list}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunImagesListDistribution lists distributions that are available.
-func RunImagesListDistribution(c *cmdConfig) error {
-	is := c.images()
+func RunImagesListDistribution(c *CmdConfig) error {
+	is := c.Images()
 
-	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
+	public, err := c.Doit.GetBool(c.NS, doit.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -79,15 +79,15 @@ func RunImagesListDistribution(c *cmdConfig) error {
 	}
 
 	item := &image{images: list}
-	return c.display(item)
+	return c.Display(item)
 
 }
 
 // RunImagesListApplication lists application iamges.
-func RunImagesListApplication(c *cmdConfig) error {
-	is := c.images()
+func RunImagesListApplication(c *CmdConfig) error {
+	is := c.Images()
 
-	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
+	public, err := c.Doit.GetBool(c.NS, doit.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -98,14 +98,14 @@ func RunImagesListApplication(c *cmdConfig) error {
 	}
 
 	item := &image{images: list}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunImagesListUser lists user images.
-func RunImagesListUser(c *cmdConfig) error {
-	is := c.images()
+func RunImagesListUser(c *CmdConfig) error {
+	is := c.Images()
 
-	public, err := c.doitConfig.GetBool(c.ns, doit.ArgImagePublic)
+	public, err := c.Doit.GetBool(c.NS, doit.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -116,18 +116,18 @@ func RunImagesListUser(c *cmdConfig) error {
 	}
 
 	item := &image{images: list}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunImagesGet retrieves an image by id or slug.
-func RunImagesGet(c *cmdConfig) error {
-	is := c.images()
+func RunImagesGet(c *CmdConfig) error {
+	is := c.Images()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	rawID := c.args[0]
+	rawID := c.Args[0]
 
 	var i *do.Image
 	var err error
@@ -147,23 +147,23 @@ func RunImagesGet(c *cmdConfig) error {
 	}
 
 	item := &image{images: do.Images{*i}}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunImagesUpdate updates an image.
-func RunImagesUpdate(c *cmdConfig) error {
-	is := c.images()
+func RunImagesUpdate(c *CmdConfig) error {
+	is := c.Images()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	id, err := strconv.Atoi(c.args[0])
+	id, err := strconv.Atoi(c.Args[0])
 	if err != nil {
 		return err
 	}
 
-	name, err := c.doitConfig.GetString(c.ns, doit.ArgImageName)
+	name, err := c.Doit.GetString(c.NS, doit.ArgImageName)
 
 	req := &godo.ImageUpdateRequest{
 		Name: name,
@@ -175,18 +175,18 @@ func RunImagesUpdate(c *cmdConfig) error {
 	}
 
 	item := &image{images: do.Images{*i}}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunImagesDelete deletes an image.
-func RunImagesDelete(c *cmdConfig) error {
-	is := c.images()
+func RunImagesDelete(c *CmdConfig) error {
+	is := c.Images()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	id, err := strconv.Atoi(c.args[0])
+	id, err := strconv.Atoi(c.Args[0])
 	if err != nil {
 		return err
 	}

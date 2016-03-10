@@ -10,7 +10,8 @@ import (
 	"github.com/bryanl/doit"
 )
 
-type displayable interface {
+// Displayable is a displable entity. These are used for printing results.
+type Displayable interface {
 	Cols() []string
 	ColMap() map[string]string
 	KV() []map[string]interface{}
@@ -20,7 +21,7 @@ type displayable interface {
 type displayer struct {
 	ns     string
 	config doit.Config
-	item   displayable
+	item   Displayable
 	out    io.Writer
 }
 
@@ -70,7 +71,7 @@ func hasCol(colMap map[string]string, col string) bool {
 	return ok
 }
 
-func displayText(item displayable, out io.Writer, includeCols []string) error {
+func displayText(item Displayable, out io.Writer, includeCols []string) error {
 	w := newTabWriter(out)
 
 	cols := item.Cols()

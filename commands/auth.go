@@ -44,13 +44,13 @@ func Auth() *cobra.Command {
 		Long:  "auth is used to access auth commands",
 	}
 
-	cmdBuilder(cmd, RunAuthLogin, "login", "login to DigitalOcean account", writer)
+	CmdBuilder(cmd, RunAuthLogin, "login", "login to DigitalOcean account", Writer)
 
 	return cmd
 }
 
 // RunAuthLogin runs auth login. It communicates with doit-server to perform auth.
-func RunAuthLogin(c *cmdConfig) error {
+func RunAuthLogin(c *CmdConfig) error {
 	dsa := newDoitServerAuth()
 
 	ac, err := dsa.retrieveAuthCredentials()

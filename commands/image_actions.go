@@ -18,31 +18,31 @@ func ImageAction() *cobra.Command {
 		Long:  "image-action commands",
 	}
 
-	cmdImageActionsGet := cmdBuilder(cmd, RunImageActionsGet,
-		"get <image-id>", "get image action", writer, displayerType(&action{}))
-	addIntFlag(cmdImageActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
+	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,
+		"get <image-id>", "get image action", Writer, displayerType(&action{}))
+	AddIntFlag(cmdImageActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
-	cmdImageActionsTransfer := cmdBuilder(cmd, RunImageActionsTransfer,
-		"transfer <image-id>", "transfer imagr", writer, displayerType(&action{}))
-	addStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region", requiredOpt())
+	cmdImageActionsTransfer := CmdBuilder(cmd, RunImageActionsTransfer,
+		"transfer <image-id>", "transfer imagr", Writer, displayerType(&action{}))
+	AddStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region", requiredOpt())
 
 	return cmd
 }
 
 // RunImageActionsGet retrieves an action for an image.
-func RunImageActionsGet(c *cmdConfig) error {
-	ias := c.imageActions()
+func RunImageActionsGet(c *CmdConfig) error {
+	ias := c.ImageActions()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	imageID, err := strconv.Atoi(c.args[0])
+	imageID, err := strconv.Atoi(c.Args[0])
 	if err != nil {
 		return err
 	}
 
-	actionID, err := c.doitConfig.GetInt(c.ns, doit.ArgActionID)
+	actionID, err := c.Doit.GetInt(c.NS, doit.ArgActionID)
 	if err != nil {
 		return err
 	}
@@ -53,23 +53,23 @@ func RunImageActionsGet(c *cmdConfig) error {
 	}
 
 	item := &action{actions: do.Actions{*a}}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunImageActionsTransfer an image.
-func RunImageActionsTransfer(c *cmdConfig) error {
-	ias := c.imageActions()
+func RunImageActionsTransfer(c *CmdConfig) error {
+	ias := c.ImageActions()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	id, err := strconv.Atoi(c.args[0])
+	id, err := strconv.Atoi(c.Args[0])
 	if err != nil {
 		return err
 	}
 
-	region, err := c.doitConfig.GetString(c.ns, doit.ArgRegionSlug)
+	region, err := c.Doit.GetString(c.NS, doit.ArgRegionSlug)
 	if err != nil {
 		return err
 	}
@@ -84,5 +84,5 @@ func RunImageActionsTransfer(c *cmdConfig) error {
 	}
 
 	item := &action{actions: do.Actions{*a}}
-	return c.display(item)
+	return c.Display(item)
 }

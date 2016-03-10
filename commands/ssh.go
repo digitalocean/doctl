@@ -30,44 +30,44 @@ func SSH() *cobra.Command {
 
 	path := filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 
-	cmdSSH := cmdBuilder(nil, RunSSH, "ssh <droplet-id | host>", "ssh to droplet", writer)
-	addStringFlag(cmdSSH, doit.ArgSSHUser, "root", "ssh user")
-	addStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
-	addIntFlag(cmdSSH, doit.ArgsSSHPort, 22, "port sshd is running on")
+	cmdSSH := CmdBuilder(nil, RunSSH, "ssh <droplet-id | host>", "ssh to droplet", Writer)
+	AddStringFlag(cmdSSH, doit.ArgSSHUser, "root", "ssh user")
+	AddStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
+	AddIntFlag(cmdSSH, doit.ArgsSSHPort, 22, "port sshd is running on")
 
 	return cmdSSH.Command
 }
 
 // RunSSH finds a droplet to ssh to given input parameters (name or id).
-func RunSSH(c *cmdConfig) error {
-	if len(c.args) == 0 {
-		return doit.NewMissingArgsErr(c.ns)
+func RunSSH(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	dropletID := c.args[0]
+	dropletID := c.Args[0]
 
 	if dropletID == "" {
-		return doit.NewMissingArgsErr(c.ns)
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	user, err := c.doitConfig.GetString(c.ns, doit.ArgSSHUser)
+	user, err := c.Doit.GetString(c.NS, doit.ArgSSHUser)
 	if err != nil {
 		return err
 	}
 
-	keyPath, err := c.doitConfig.GetString(c.ns, doit.ArgsSSHKeyPath)
+	keyPath, err := c.Doit.GetString(c.NS, doit.ArgsSSHKeyPath)
 	if err != nil {
 		return err
 	}
 
-	port, err := c.doitConfig.GetInt(c.ns, doit.ArgsSSHPort)
+	port, err := c.Doit.GetInt(c.NS, doit.ArgsSSHPort)
 	if err != nil {
 		return err
 	}
 
 	var droplet *do.Droplet
 
-	ds := c.droplets()
+	ds := c.Droplets()
 	if id, err := strconv.Atoi(dropletID); err == nil {
 		// dropletID is an integer
 
@@ -121,7 +121,7 @@ func RunSSH(c *cmdConfig) error {
 		return errors.New("could not find droplet address")
 	}
 
-	runner := c.doitConfig.SSH(user, ip, keyPath, port)
+	runner := c.Doit.SSH(user, ip, keyPath, port)
 	return runner.Run()
 }
 

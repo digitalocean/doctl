@@ -19,32 +19,32 @@ func SSHKeys() *cobra.Command {
 		Long:    "sshkey is used to access ssh key commands",
 	}
 
-	cmdBuilder(cmd, RunKeyList, "list", "list ssh keys", writer,
+	CmdBuilder(cmd, RunKeyList, "list", "list ssh keys", Writer,
 		aliasOpt("ls"), displayerType(&key{}))
 
-	cmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", writer,
+	CmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", Writer,
 		aliasOpt("g"), displayerType(&key{}))
 
-	cmdSSHKeysCreate := cmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", writer,
+	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", Writer,
 		aliasOpt("c"), displayerType(&key{}))
-	addStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents", requiredOpt())
+	AddStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents", requiredOpt())
 
-	cmdSSHKeysImport := cmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", writer,
+	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", Writer,
 		aliasOpt("i"), displayerType(&key{}))
-	addStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
+	AddStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
 
-	cmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", writer, aliasOpt("d"))
+	CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer, aliasOpt("d"))
 
-	cmdSSHKeysUpdate := cmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", writer,
+	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
 		aliasOpt("u"), displayerType(&key{}))
-	addStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name", requiredOpt())
+	AddStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name", requiredOpt())
 
 	return cmd
 }
 
 // RunKeyList lists keys.
-func RunKeyList(c *cmdConfig) error {
-	ks := c.keys()
+func RunKeyList(c *CmdConfig) error {
+	ks := c.Keys()
 
 	list, err := ks.List()
 	if err != nil {
@@ -52,18 +52,18 @@ func RunKeyList(c *cmdConfig) error {
 	}
 
 	item := &key{keys: list}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunKeyGet retrieves a key.
-func RunKeyGet(c *cmdConfig) error {
-	ks := c.keys()
+func RunKeyGet(c *CmdConfig) error {
+	ks := c.Keys()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	rawKey := c.args[0]
+	rawKey := c.Args[0]
 	k, err := ks.Get(rawKey)
 
 	if err != nil {
@@ -71,20 +71,20 @@ func RunKeyGet(c *cmdConfig) error {
 	}
 
 	item := &key{keys: do.SSHKeys{*k}}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunKeyCreate uploads a SSH key.
-func RunKeyCreate(c *cmdConfig) error {
-	ks := c.keys()
+func RunKeyCreate(c *CmdConfig) error {
+	ks := c.Keys()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	name := c.args[0]
+	name := c.Args[0]
 
-	publicKey, err := c.doitConfig.GetString(c.ns, doit.ArgKeyPublicKey)
+	publicKey, err := c.Doit.GetString(c.NS, doit.ArgKeyPublicKey)
 	if err != nil {
 		return err
 	}
@@ -100,23 +100,23 @@ func RunKeyCreate(c *cmdConfig) error {
 	}
 
 	item := &key{keys: do.SSHKeys{*r}}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunKeyImport imports a key from a file
-func RunKeyImport(c *cmdConfig) error {
-	ks := c.keys()
+func RunKeyImport(c *CmdConfig) error {
+	ks := c.Keys()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	keyPath, err := c.doitConfig.GetString(c.ns, doit.ArgKeyPublicKeyFile)
+	keyPath, err := c.Doit.GetString(c.NS, doit.ArgKeyPublicKeyFile)
 	if err != nil {
 		return err
 	}
 
-	keyName := c.args[0]
+	keyName := c.Args[0]
 
 	keyFile, err := ioutil.ReadFile(keyPath)
 	if err != nil {
@@ -143,32 +143,32 @@ func RunKeyImport(c *cmdConfig) error {
 	}
 
 	item := &key{keys: do.SSHKeys{*r}}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunKeyDelete deletes a key.
-func RunKeyDelete(c *cmdConfig) error {
-	ks := c.keys()
+func RunKeyDelete(c *CmdConfig) error {
+	ks := c.Keys()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	rawKey := c.args[0]
+	rawKey := c.Args[0]
 	return ks.Delete(rawKey)
 }
 
 // RunKeyUpdate updates a key.
-func RunKeyUpdate(c *cmdConfig) error {
-	ks := c.keys()
+func RunKeyUpdate(c *CmdConfig) error {
+	ks := c.Keys()
 
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	rawKey := c.args[0]
+	rawKey := c.Args[0]
 
-	name, err := c.doitConfig.GetString(c.ns, doit.ArgKeyName)
+	name, err := c.Doit.GetString(c.NS, doit.ArgKeyName)
 	if err != nil {
 		return err
 	}
@@ -183,5 +183,5 @@ func RunKeyUpdate(c *cmdConfig) error {
 	}
 
 	item := &key{keys: do.SSHKeys{*k}}
-	return c.display(item)
+	return c.Display(item)
 }

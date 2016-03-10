@@ -10,14 +10,14 @@ func Size() *cobra.Command {
 		Long:  "size is used to access size commands",
 	}
 
-	cmdBuilder(cmd, RunSizeList, "list", "list sizes", writer, displayerType(&size{}))
+	CmdBuilder(cmd, RunSizeList, "list", "list sizes", Writer, displayerType(&size{}))
 
 	return cmd
 }
 
 // RunSizeList all sizes.
-func RunSizeList(c *cmdConfig) error {
-	sizes := c.sizes()
+func RunSizeList(c *CmdConfig) error {
+	sizes := c.Sizes()
 
 	list, err := sizes.List()
 	if err != nil {
@@ -25,5 +25,5 @@ func RunSizeList(c *cmdConfig) error {
 	}
 
 	item := &size{sizes: list}
-	return c.display(item)
+	return c.Display(item)
 }

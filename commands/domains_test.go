@@ -25,19 +25,19 @@ func TestDomainsCommand(t *testing.T) {
 }
 
 func TestDomainsCreate(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dcr := &godo.DomainCreateRequest{Name: "example.com", IPAddress: "127.0.0.1"}
 		tm.domains.On("Create", dcr).Return(&testDomain, nil)
 
-		config.args = append(config.args, testDomain.Name)
-		config.doitConfig.Set(config.ns, doit.ArgIPAddress, "127.0.0.1")
+		config.Args = append(config.Args, testDomain.Name)
+		config.Doit.Set(config.NS, doit.ArgIPAddress, "127.0.0.1")
 		err := RunDomainCreate(config)
 		assert.NoError(t, err)
 	})
 }
 
 func TestDomainsList(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.domains.On("List").Return(testDomainList, nil)
 
 		err := RunDomainList(config)
@@ -46,27 +46,27 @@ func TestDomainsList(t *testing.T) {
 }
 
 func TestDomainsGet(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.domains.On("Get", "example.com").Return(&testDomain, nil)
 
-		config.args = append(config.args, testDomain.Name)
+		config.Args = append(config.Args, testDomain.Name)
 		err := RunDomainGet(config)
 		assert.NoError(t, err)
 	})
 }
 
 func TestDomainsGet_DomainRequired(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDomainGet(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestDomainsDelete(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.domains.On("Delete", "example.com").Return(nil)
 
-		config.args = append(config.args, testDomain.Name)
+		config.Args = append(config.Args, testDomain.Name)
 
 		err := RunDomainDelete(config)
 		assert.NoError(t, err)
@@ -74,17 +74,17 @@ func TestDomainsDelete(t *testing.T) {
 }
 
 func TestDomainsGet_RequiredArguments(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDomainDelete(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestRecordsList(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.domains.On("Records", "example.com").Return(testRecordList, nil)
 
-		config.args = append(config.args, "example.com")
+		config.Args = append(config.Args, "example.com")
 
 		err := RunRecordList(config)
 		assert.NoError(t, err)
@@ -92,22 +92,22 @@ func TestRecordsList(t *testing.T) {
 }
 
 func TestRecordList_RequiredArguments(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunRecordList(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestRecordsCreate(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, Weight: 0}
 		tm.domains.On("CreateRecord", "example.com", dcer).Return(&testRecord, nil)
 
-		config.doitConfig.Set(config.ns, doit.ArgRecordType, "A")
-		config.doitConfig.Set(config.ns, doit.ArgRecordName, "foo.example.com.")
-		config.doitConfig.Set(config.ns, doit.ArgRecordData, "192.168.1.1")
+		config.Doit.Set(config.NS, doit.ArgRecordType, "A")
+		config.Doit.Set(config.NS, doit.ArgRecordName, "foo.example.com.")
+		config.Doit.Set(config.NS, doit.ArgRecordData, "192.168.1.1")
 
-		config.args = append(config.args, "example.com")
+		config.Args = append(config.Args, "example.com")
 
 		err := RunRecordCreate(config)
 		assert.NoError(t, err)
@@ -115,17 +115,17 @@ func TestRecordsCreate(t *testing.T) {
 }
 
 func TestRecordCreate_RequiredArguments(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunRecordCreate(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestRecordsDelete(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.domains.On("DeleteRecord", "example.com", 1).Return(nil)
 
-		config.args = append(config.args, "example.com", "1")
+		config.Args = append(config.Args, "example.com", "1")
 
 		err := RunRecordDelete(config)
 		assert.NoError(t, err)
@@ -133,16 +133,16 @@ func TestRecordsDelete(t *testing.T) {
 }
 
 func TestRecordsUpdate(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, Weight: 0}
 		tm.domains.On("EditRecord", "example.com", 1, dcer).Return(&testRecord, nil)
 
-		config.doitConfig.Set(config.ns, doit.ArgRecordID, 1)
-		config.doitConfig.Set(config.ns, doit.ArgRecordType, "A")
-		config.doitConfig.Set(config.ns, doit.ArgRecordName, "foo.example.com.")
-		config.doitConfig.Set(config.ns, doit.ArgRecordData, "192.168.1.1")
+		config.Doit.Set(config.NS, doit.ArgRecordID, 1)
+		config.Doit.Set(config.NS, doit.ArgRecordType, "A")
+		config.Doit.Set(config.NS, doit.ArgRecordName, "foo.example.com.")
+		config.Doit.Set(config.NS, doit.ArgRecordData, "192.168.1.1")
 
-		config.args = append(config.args, "example.com")
+		config.Args = append(config.Args, "example.com")
 
 		err := RunRecordUpdate(config)
 		assert.NoError(t, err)

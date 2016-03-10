@@ -19,17 +19,17 @@ func Plugin() *cobra.Command {
 		Aliases: []string{"p"},
 	}
 
-	cmdBuilder(cmd, RunPluginList, "list", "list plugins", writer,
+	CmdBuilder(cmd, RunPluginList, "list", "list plugins", Writer,
 		aliasOpt("ls"))
 
-	cmdBuilder(cmd, RunPluginRun, "run", "run plugin", writer)
+	CmdBuilder(cmd, RunPluginRun, "run", "run plugin", Writer)
 
 	return cmd
 }
 
 // RunPluginRun is a command for running a plugin.
-func RunPluginRun(c *cmdConfig) error {
-	if len(c.args) == 0 {
+func RunPluginRun(c *CmdConfig) error {
+	if len(c.Args) == 0 {
 		return fmt.Errorf("missing plugin name")
 	}
 
@@ -40,18 +40,18 @@ func RunPluginRun(c *cmdConfig) error {
 
 	var selectedPlugin *plugDesc
 	for i, p := range plugs {
-		if p.Name == c.args[0] {
+		if p.Name == c.Args[0] {
 			selectedPlugin = &plugs[i]
 		}
 	}
 
 	if selectedPlugin == nil {
-		return fmt.Errorf("unknown plugin %q", c.args[0])
+		return fmt.Errorf("unknown plugin %q", c.Args[0])
 	}
 
 	var pluginArgs []string
-	if len(c.args) > 1 {
-		pluginArgs = c.args[1:]
+	if len(c.Args) > 1 {
+		pluginArgs = c.Args[1:]
 	}
 
 	host, err := pluginhost.NewHost(selectedPlugin.Path)
@@ -81,19 +81,19 @@ func RunPluginRun(c *cmdConfig) error {
 		return err
 	}
 
-	fmt.Fprintln(c.out, results)
+	fmt.Fprintln(c.Out, results)
 	return nil
 }
 
 // RunPluginList is a command for listing available plugins.
-func RunPluginList(c *cmdConfig) error {
+func RunPluginList(c *CmdConfig) error {
 	plugs, err := searchPlugins()
 	if err != nil {
 		return err
 	}
 
 	item := &plugin{plugins: plugs}
-	return c.display(item)
+	return c.Display(item)
 }
 
 type plugDesc struct {

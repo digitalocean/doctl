@@ -40,10 +40,10 @@ func (s *sshMock) cmd() func(u, h, kp string, p int) runner.Runner {
 }
 
 func TestSSH_ID(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.droplets.On("Get", testDroplet.ID).Return(&testDroplet, nil)
 
-		config.args = append(config.args, strconv.Itoa(testDroplet.ID))
+		config.Args = append(config.Args, strconv.Itoa(testDroplet.ID))
 
 		err := RunSSH(config)
 		assert.NoError(t, err)
@@ -51,17 +51,17 @@ func TestSSH_ID(t *testing.T) {
 }
 
 func TestSSH_InvalidID(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunSSH(config)
 		assert.Error(t, err)
 	})
 }
 
 func TestSSH_UnknownDroplet(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.droplets.On("List").Return(testDropletList, nil)
 
-		config.args = append(config.args, "missing")
+		config.Args = append(config.Args, "missing")
 
 		err := RunSSH(config)
 		assert.EqualError(t, err, "could not find droplet")
@@ -69,10 +69,10 @@ func TestSSH_UnknownDroplet(t *testing.T) {
 }
 
 func TestSSH_DropletWithNoPublic(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.droplets.On("List").Return(testPrivateDropletList, nil)
 
-		config.args = append(config.args, testPrivateDroplet.Name)
+		config.Args = append(config.Args, testPrivateDroplet.Name)
 
 		err := RunSSH(config)
 		assert.EqualError(t, err, "could not find droplet address")

@@ -108,10 +108,10 @@ func assertCommandNames(t *testing.T, cmd *cobra.Command, expected ...string) {
 	assert.Equal(t, expected, names)
 }
 
-type testFn func(c *cmdConfig, tm *tcMocks)
+type testFn func(c *CmdConfig, tm *tcMocks)
 
 type testCmdConfig struct {
-	*cmdConfig
+	*CmdConfig
 
 	doitConfig *TestConfig
 }
@@ -142,23 +142,23 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 	tm := &tcMocks{}
 
-	config := &cmdConfig{
-		ns:         "test",
-		doitConfig: cfg,
-		out:        ioutil.Discard,
+	config := &CmdConfig{
+		NS:   "test",
+		Doit: cfg,
+		Out:  ioutil.Discard,
 
-		keys:              func() do.KeysService { return &tm.keys },
-		sizes:             func() do.SizesService { return &tm.sizes },
-		regions:           func() do.RegionsService { return &tm.regions },
-		images:            func() do.ImagesService { return &tm.images },
-		imageActions:      func() do.ImageActionsService { return &tm.imageActions },
-		floatingIPs:       func() do.FloatingIPsService { return &tm.floatingIPs },
-		floatingIPActions: func() do.FloatingIPActionsService { return &tm.floatingIPActions },
-		droplets:          func() do.DropletsService { return &tm.droplets },
-		dropletActions:    func() do.DropletActionsService { return &tm.dropletActions },
-		domains:           func() do.DomainsService { return &tm.domains },
-		actions:           func() do.ActionsService { return &tm.actions },
-		account:           func() do.AccountService { return &tm.account },
+		Keys:              func() do.KeysService { return &tm.keys },
+		Sizes:             func() do.SizesService { return &tm.sizes },
+		Regions:           func() do.RegionsService { return &tm.regions },
+		Images:            func() do.ImagesService { return &tm.images },
+		ImageActions:      func() do.ImageActionsService { return &tm.imageActions },
+		FloatingIPs:       func() do.FloatingIPsService { return &tm.floatingIPs },
+		FloatingIPActions: func() do.FloatingIPActionsService { return &tm.floatingIPActions },
+		Droplets:          func() do.DropletsService { return &tm.droplets },
+		DropletActions:    func() do.DropletActionsService { return &tm.dropletActions },
+		Domains:           func() do.DomainsService { return &tm.domains },
+		Actions:           func() do.ActionsService { return &tm.actions },
+		Account:           func() do.AccountService { return &tm.account },
 	}
 
 	tFn(config, tm)

@@ -18,29 +18,29 @@ func FloatingIPAction() *cobra.Command {
 		Aliases: []string{"fipa"},
 	}
 
-	cmdBuilder(cmd, RunFloatingIPActionsGet,
-		"get <floating-ip> <action-id>", "get floating-ip action", writer, displayerType(&action{}))
+	CmdBuilder(cmd, RunFloatingIPActionsGet,
+		"get <floating-ip> <action-id>", "get floating-ip action", Writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunFloatingIPActionsAssign,
-		"assign <floating-ip> <droplet-id>", "assign a floating IP to a droplet", writer, displayerType(&action{}))
+	CmdBuilder(cmd, RunFloatingIPActionsAssign,
+		"assign <floating-ip> <droplet-id>", "assign a floating IP to a droplet", Writer, displayerType(&action{}))
 
-	cmdBuilder(cmd, RunFloatingIPActionsUnassign,
-		"unassign <floating-ip>", "unassign a floating IP to a droplet", writer, displayerType(&action{}))
+	CmdBuilder(cmd, RunFloatingIPActionsUnassign,
+		"unassign <floating-ip>", "unassign a floating IP to a droplet", Writer, displayerType(&action{}))
 
 	return cmd
 }
 
 // RunFloatingIPActionsGet retrieves an action for a floating IP.
-func RunFloatingIPActionsGet(c *cmdConfig) error {
-	if len(c.args) != 2 {
-		return doit.NewMissingArgsErr(c.ns)
+func RunFloatingIPActionsGet(c *CmdConfig) error {
+	if len(c.Args) != 2 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	ip := c.args[0]
+	ip := c.Args[0]
 
-	fia := c.floatingIPActions()
+	fia := c.FloatingIPActions()
 
-	actionID, err := strconv.Atoi(c.args[1])
+	actionID, err := strconv.Atoi(c.Args[1])
 	if err != nil {
 		return err
 	}
@@ -51,20 +51,20 @@ func RunFloatingIPActionsGet(c *cmdConfig) error {
 	}
 
 	item := &action{actions: do.Actions{*a}}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunFloatingIPActionsAssign assigns a floating IP to a droplet.
-func RunFloatingIPActionsAssign(c *cmdConfig) error {
-	if len(c.args) != 2 {
-		return doit.NewMissingArgsErr(c.ns)
+func RunFloatingIPActionsAssign(c *CmdConfig) error {
+	if len(c.Args) != 2 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	ip := c.args[0]
+	ip := c.Args[0]
 
-	fia := c.floatingIPActions()
+	fia := c.FloatingIPActions()
 
-	dropletID, err := strconv.Atoi(c.args[1])
+	dropletID, err := strconv.Atoi(c.Args[1])
 	if err != nil {
 		return err
 	}
@@ -75,18 +75,18 @@ func RunFloatingIPActionsAssign(c *cmdConfig) error {
 	}
 
 	item := &action{actions: do.Actions{*a}}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
-func RunFloatingIPActionsUnassign(c *cmdConfig) error {
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+func RunFloatingIPActionsUnassign(c *CmdConfig) error {
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	ip := c.args[0]
+	ip := c.Args[0]
 
-	fia := c.floatingIPActions()
+	fia := c.FloatingIPActions()
 
 	a, err := fia.Unassign(ip)
 	if err != nil {
@@ -94,5 +94,5 @@ func RunFloatingIPActionsUnassign(c *cmdConfig) error {
 	}
 
 	item := &action{actions: do.Actions{*a}}
-	return c.display(item)
+	return c.Display(item)
 }

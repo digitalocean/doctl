@@ -17,23 +17,23 @@ func Actions() *cobra.Command {
 		Long:  "action is used to access action commands",
 	}
 
-	cmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", writer,
+	CmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", Writer,
 		aliasOpt("g"), displayerType(&action{}))
 
-	cmdBuilder(cmd, RunCmdActionList, "list", "list actions", writer,
+	CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
 		aliasOpt("ls"), displayerType(&action{}))
 
-	cmdActionWait := cmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", writer,
+	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", Writer,
 		aliasOpt("w"), displayerType(&action{}))
-	addIntFlag(cmdActionWait, doit.ArgPollTime, 5, "Re-poll time in seconds",
+	AddIntFlag(cmdActionWait, doit.ArgPollTime, 5, "Re-poll time in seconds",
 		shortFlag("p"))
 
 	return cmd
 }
 
 // RunCmdActionList run action list.
-func RunCmdActionList(c *cmdConfig) error {
-	as := c.actions()
+func RunCmdActionList(c *CmdConfig) error {
+	as := c.Actions()
 
 	newActions, err := as.List()
 	if err != nil {
@@ -41,46 +41,46 @@ func RunCmdActionList(c *cmdConfig) error {
 	}
 
 	item := &action{actions: newActions}
-	return c.display(item)
+	return c.Display(item)
 }
 
 // RunCmdActionGet runs action get.
-func RunCmdActionGet(c *cmdConfig) error {
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+func RunCmdActionGet(c *CmdConfig) error {
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	id, err := strconv.Atoi(c.args[0])
+	id, err := strconv.Atoi(c.Args[0])
 	if err != nil {
 		return err
 	}
 
-	as := c.actions()
+	as := c.Actions()
 	a, err := as.Get(id)
 	if err != nil {
 		return err
 	}
 
-	return c.display(&action{actions: do.Actions{*a}})
+	return c.Display(&action{actions: do.Actions{*a}})
 }
 
 // RunCmdActionWait waits for an action to complete or error.
-func RunCmdActionWait(c *cmdConfig) error {
-	if len(c.args) != 1 {
-		return doit.NewMissingArgsErr(c.ns)
+func RunCmdActionWait(c *CmdConfig) error {
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	id, err := strconv.Atoi(c.args[0])
+	id, err := strconv.Atoi(c.Args[0])
 	if err != nil {
 		return err
 	}
 
-	pollTime, err := c.doitConfig.GetInt(c.ns, doit.ArgPollTime)
+	pollTime, err := c.Doit.GetInt(c.NS, doit.ArgPollTime)
 	if err != nil {
 		return err
 	}
 
-	as := c.actions()
+	as := c.Actions()
 
 	var a *do.Action
 
@@ -97,5 +97,5 @@ func RunCmdActionWait(c *cmdConfig) error {
 		time.Sleep(time.Duration(pollTime) * time.Second)
 	}
 
-	return c.display(&action{actions: do.Actions{*a}})
+	return c.Display(&action{actions: do.Actions{*a}})
 }

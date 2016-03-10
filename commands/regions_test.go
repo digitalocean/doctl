@@ -20,7 +20,7 @@ func TestRegionCommand(t *testing.T) {
 }
 
 func TestRegionsList(t *testing.T) {
-	withTestClient(t, func(config *cmdConfig, tm *tcMocks) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.regions.On("List").Return(testRegionList, nil)
 
 		err := RunRegionList(config)

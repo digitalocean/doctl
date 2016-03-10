@@ -31,7 +31,7 @@ type rateLimit struct {
 	*do.RateLimit
 }
 
-var _ displayable = &rateLimit{}
+var _ Displayable = &rateLimit{}
 
 func (rl *rateLimit) JSON(out io.Writer) error {
 	return writeJSON(rl.Rate, out)
@@ -63,7 +63,7 @@ type account struct {
 	*do.Account
 }
 
-var _ displayable = &account{}
+var _ Displayable = &account{}
 
 func (a *account) JSON(out io.Writer) error {
 	return writeJSON(a.Account, out)
@@ -98,7 +98,7 @@ type action struct {
 	actions do.Actions
 }
 
-var _ displayable = &action{}
+var _ Displayable = &action{}
 
 func (a *action) JSON(out io.Writer) error {
 	return writeJSON(a.actions, out)
@@ -138,7 +138,7 @@ type domain struct {
 	domains do.Domains
 }
 
-var _ displayable = &domain{}
+var _ Displayable = &domain{}
 
 func (d *domain) JSON(out io.Writer) error {
 	return writeJSON(d.domains, out)
@@ -207,7 +207,7 @@ type droplet struct {
 	droplets do.Droplets
 }
 
-var _ displayable = &droplet{}
+var _ Displayable = &droplet{}
 
 func (d *droplet) JSON(out io.Writer) error {
 	return writeJSON(d.droplets, out)
@@ -247,7 +247,7 @@ type floatingIP struct {
 	floatingIPs do.FloatingIPs
 }
 
-var _ displayable = &floatingIP{}
+var _ Displayable = &floatingIP{}
 
 func (fi *floatingIP) JSON(out io.Writer) error {
 	return writeJSON(fi.floatingIPs, out)
@@ -290,7 +290,7 @@ type image struct {
 	images do.Images
 }
 
-var _ displayable = &image{}
+var _ Displayable = &image{}
 
 func (gi *image) JSON(out io.Writer) error {
 	return writeJSON(gi.images, out)
@@ -333,7 +333,7 @@ type kernel struct {
 	kernels do.Kernels
 }
 
-var _ displayable = &kernel{}
+var _ Displayable = &kernel{}
 
 func (ke *kernel) JSON(out io.Writer) error {
 	return writeJSON(ke.kernels, out)
@@ -369,7 +369,7 @@ type key struct {
 	keys do.SSHKeys
 }
 
-var _ displayable = &key{}
+var _ Displayable = &key{}
 
 func (ke *key) JSON(out io.Writer) error {
 	return writeJSON(ke.keys, out)
@@ -405,7 +405,7 @@ type region struct {
 	regions do.Regions
 }
 
-var _ displayable = &region{}
+var _ Displayable = &region{}
 
 func (re *region) JSON(out io.Writer) error {
 	return writeJSON(re.regions, out)
@@ -441,7 +441,7 @@ type size struct {
 	sizes do.Sizes
 }
 
-var _ displayable = &size{}
+var _ Displayable = &size{}
 
 func (si *size) JSON(out io.Writer) error {
 	return writeJSON(si.sizes, out)
@@ -481,7 +481,7 @@ type plugin struct {
 	plugins []plugDesc
 }
 
-var _ displayable = &plugin{}
+var _ Displayable = &plugin{}
 
 func (p *plugin) JSON(out io.Writer) error {
 	return writeJSON(p.plugins, out)
