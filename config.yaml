@@ -1,0 +1,10 @@
+---
+contentdir: "content"
+layoutdir: "layouts"
+publishdir: "public"
+indexes:
+  category: "categories"
+baseurl: "http://spencerlyon2.github.io/hugo_gh_blog"
+title: "Hugo Blog Template for GitHub Pages"
+canonifyurls: true
+...
