@@ -6,3 +6,5 @@ doit
 .vscode
 project.json
 .cover
+dist
+public
