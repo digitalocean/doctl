@@ -88,7 +88,7 @@ func DropletAction() *cobra.Command {
 
 	cmdDropletActionSnapshot := CmdBuilder(cmd, RunDropletActionSnapshot,
 		"snapshot <droplet-id>", "snapshot droplet", Writer, displayerType(&action{}))
-	AddIntFlag(cmdDropletActionSnapshot, doit.ArgSnapshotName, 0, "Snapshot name", requiredOpt())
+	AddStringFlag(cmdDropletActionSnapshot, doit.ArgSnapshotName, "", "Snapshot name", requiredOpt())
 
 	return cmd
 }
