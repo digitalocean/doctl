@@ -226,12 +226,21 @@ func extractSSHKeys(keys []string) []godo.DropletCreateSSHKey {
 	for _, rawKey := range keys {
 		rawKey = strings.TrimPrefix(rawKey, "[")
 		rawKey = strings.TrimSuffix(rawKey, "]")
-		if i, err := strconv.Atoi(rawKey); err == nil {
-			sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: i})
-			continue
-		}
 
-		sshKeys = append(sshKeys, godo.DropletCreateSSHKey{Fingerprint: rawKey})
+		keys := strings.Split(rawKey, ",")
+
+		for _, k := range keys {
+			if i, err := strconv.Atoi(k); err == nil {
+				if i > 0 {
+					sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: i})
+				}
+				continue
+			}
+
+			if k != "" {
+				sshKeys = append(sshKeys, godo.DropletCreateSSHKey{Fingerprint: k})
+			}
+		}
 	}
 
 	return sshKeys

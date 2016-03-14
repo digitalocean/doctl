@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"strconv"
 	"testing"
 
@@ -155,4 +156,33 @@ func TestDropletsList(t *testing.T) {
 		err := RunDropletList(config)
 		assert.NoError(t, err)
 	})
+}
+
+func Test_extractSSHKey(t *testing.T) {
+	cases := []struct {
+		in       string
+		expected []godo.DropletCreateSSHKey
+	}{
+		{
+			in:       "1",
+			expected: []godo.DropletCreateSSHKey{{ID: 1}},
+		},
+		{
+			in:       "fingerprint",
+			expected: []godo.DropletCreateSSHKey{{Fingerprint: "fingerprint"}},
+		},
+		{
+			in:       "1,2",
+			expected: []godo.DropletCreateSSHKey{{ID: 1}, {ID: 2}},
+		},
+		{
+			in:       "1,fingerprint",
+			expected: []godo.DropletCreateSSHKey{{ID: 1}, {Fingerprint: "fingerprint"}},
+		},
+	}
+
+	for _, c := range cases {
+		got := extractSSHKeys([]string{fmt.Sprintf("[%s]", c.in)})
+		assert.Equal(t, c.expected, got)
+	}
 }
