@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	configFile = ".doitcfg"
+	configFile = ".doctlcfg"
 )
 
 // ConfigFile is a doit config file.

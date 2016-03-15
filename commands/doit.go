@@ -15,8 +15,8 @@ import (
 
 // DoitCmd is the base command.
 var DoitCmd = &cobra.Command{
-	Use:   "doit",
-	Short: "doit is a command line interface for the DigitalOcean API.",
+	Use:   "doctl",
+	Short: "doctl is a command line interface for the DigitalOcean API.",
 }
 
 // Token holds the global authorization token.
@@ -67,6 +67,7 @@ func Init() *cobra.Command {
 // AddCommands adds sub commands to the base command.
 func addCommands() {
 	DoitCmd.AddCommand(Account())
+	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Version())
 }
@@ -79,7 +80,6 @@ func computeCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(Actions())
-	cmd.AddCommand(Auth())
 	cmd.AddCommand(DropletAction())
 	cmd.AddCommand(Droplet())
 	cmd.AddCommand(Domain())

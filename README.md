@@ -1,48 +1,48 @@
-# DOIT
+# doctl
 
-![Travis Build Status](https://travis-ci.org/bryanl/doit.svg?branch=master)
+![Travis Build Status](https://travis-ci.org/bryanl/doctl.svg?branch=master)
 
 ```
+doctl is a command line interface for the DigitalOcean API.
+
 Usage:
-  doit [command]
+  doctl [command]
 
 Available Commands:
-  account            account commands
-  action             action commands
-  auth               auth commands
-  domain             domain commands
-  droplet-action     droplet action commands
-  droplet            droplet commands
-  floating-ip        floating IP commands
-  floating-ip-action floating IP action commands
-  image              image commands
-  region             region commands
-  size               size commands
-  ssh-key            sshkey commands
-  ssh                ssh to droplet
+  account     account commands
+  auth        auth commands
+  compute     compute commands
+  version     show the current version
 
 Flags:
-  -t, --access-token="": DigtialOcean API V2 Access Token
-  -h, --help[=false]: help for doit
-  -o, --output="text": output formt [text|json]
+  -t, --access-token string   DigitalOcean API V2 Access Token
+  -h, --help                  help for doctl
+  -o, --output string         output formt [text|json] (default "text")
+  -v, --verbose               verbose output
 
-Use "doit [command] --help" for more information about a command.
+Use "doctl [command] --help" for more information about a command.
 
 ```
 
 ## Initialization
 
-To automatically retrieve your access token from DigitalOcean, run `doit auth login`. This process will authenticate you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser (because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doit` will provide you with a link for offline authentication.
+To automatically retrieve your access token from DigitalOcean, run `doctl auth login`. This process will authenticate 
+you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser 
+(because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doctl` 
+will give you a link for offline authentication.
 
 
 ## Configuration
 
-By default, `doit` will load a configuration file from `$HOME/.doitcfg` if found.
+By default, `doctl` will load a configuration file from `$HOME/.doctlcfg` if found.
 
 ### Configuration OPTIONS
 
-* `access-token` - The DigitalOcean access token. You can generate a token in the [Apps & API](https://cloud.digitalocean.com/settings/applications) Of the DigitalOcean control panel or use `doit auth login`.
-* `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doit` will default to `text`.
+* `access-token` - The DigitalOcean access token. You can generate a token in the 
+[Apps & API](https://cloud.digitalocean.com/settings/applications) section of the DigitalOcean control panel or use 
+`doctl auth login`.
+* `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doctl` will default
+ to `text`.
 
 Example:
 
@@ -53,14 +53,12 @@ Example:
 }
 ```
 
-### Plugins
-
-`doit` supports plugins with a JSON RPC mechanism. Pluins are executables in `$PATH` named `doit-provider-<plugin-name>`. 
-
 ## Building and dependencies
 
-`doit`'s dependencies are managed by [gvt](https://github.com/FiloSottile/gvt). To add dependencies, use `gvt fetch`.
+`doctl`'s dependencies are managed by [gvt](https://github.com/FiloSottile/gvt). To add dependencies, use `gvt fetch`.
 
 ## Releasing
 
-To build `doit` for all it's platforms, run `script/build.sh <version>`. To upload `doit` to Github, run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doit` repository will be required.
+To build `doctl` for all it's platforms, run `script/build.sh <version>`. To upload `doctl` to Github, 
+run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doctl` 
+repository is required.
