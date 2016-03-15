@@ -86,6 +86,7 @@ func computeCmd() *cobra.Command {
 	cmd.AddCommand(FloatingIP())
 	cmd.AddCommand(FloatingIPAction())
 	cmd.AddCommand(Images())
+	cmd.AddCommand(ImageAction())
 	cmd.AddCommand(Plugin())
 	cmd.AddCommand(Region())
 	cmd.AddCommand(Size())

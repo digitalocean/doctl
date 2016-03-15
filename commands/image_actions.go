@@ -23,8 +23,10 @@ func ImageAction() *cobra.Command {
 	AddIntFlag(cmdImageActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
 
 	cmdImageActionsTransfer := CmdBuilder(cmd, RunImageActionsTransfer,
-		"transfer <image-id>", "transfer imagr", Writer, displayerType(&action{}))
+		"transfer <image-id>", "transfer image", Writer, displayerType(&action{}))
 	AddStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region", requiredOpt())
+	AddBoolFlag(cmdImageActionsTransfer, doit.ArgCommandWait, false, "Wait for action to complete",
+		shortFlag("w"))
 
 	return cmd
 }
@@ -81,6 +83,19 @@ func RunImageActionsTransfer(c *CmdConfig) error {
 	a, err := ias.Transfer(id, req)
 	if err != nil {
 		checkErr(fmt.Errorf("could not transfer image: %v", err))
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doit.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		a, err = actionWait(c, a.ID, 5)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	item := &action{actions: do.Actions{*a}}

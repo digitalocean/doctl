@@ -80,14 +80,24 @@ func RunCmdActionWait(c *CmdConfig) error {
 		return err
 	}
 
+	a, err := actionWait(c, id, pollTime)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(&action{actions: do.Actions{*a}})
+}
+
+func actionWait(c *CmdConfig, actionID, pollTime int) (*do.Action, error) {
 	as := c.Actions()
 
 	var a *do.Action
+	var err error
 
 	for {
-		a, err = as.Get(id)
+		a, err = as.Get(actionID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if a.Status != "in-progress" {
@@ -97,5 +107,5 @@ func RunCmdActionWait(c *CmdConfig) error {
 		time.Sleep(time.Duration(pollTime) * time.Second)
 	}
 
-	return c.Display(&action{actions: do.Actions{*a}})
+	return a, nil
 }

@@ -2,7 +2,6 @@ package commands
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
@@ -25,20 +24,11 @@ func performAction(c *CmdConfig, fn actionFn) error {
 	}
 
 	if wait {
-		as := c.Actions()
-
-		for {
-			a, err = as.Get(a.ID)
-			if err != nil {
-				return err
-			}
-
-			if a.Status != "in-progress" {
-				break
-			}
-
-			time.Sleep(5 * time.Second)
+		a, err = actionWait(c, a.ID, 5)
+		if err != nil {
+			return err
 		}
+
 	}
 
 	item := &action{actions: do.Actions{*a}}
