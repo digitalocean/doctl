@@ -8,7 +8,7 @@ const (
 	// ArgDropletID is a droplet id argument.
 	ArgDropletID = "droplet-id"
 	// ArgDropletWait is a wait for a droplet to be created argument.
-	ArgDropletWait = "wait"
+	ArgCommandWait = "wait"
 	// ArgKernelID is a ekrnel id argument.
 	ArgKernelID = "kernel-id"
 	// ArgImage is an image argument.

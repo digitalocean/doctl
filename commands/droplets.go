@@ -38,7 +38,7 @@ func Droplet() *cobra.Command {
 		shortFlag("u"))
 	AddStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file",
 		shortFlag("f"))
-	AddBoolFlag(cmdDropletCreate, doit.ArgDropletWait, false, "Wait for droplet to be created",
+	AddBoolFlag(cmdDropletCreate, doit.ArgCommandWait, false, "Wait for droplet to be created",
 		shortFlag("w"))
 	AddStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region",
 		requiredOpt(), shortFlag("r"))
@@ -172,7 +172,7 @@ func RunDropletCreate(c *CmdConfig) error {
 		createImage = godo.DropletCreateImage{Slug: imageStr}
 	}
 
-	wait, err := c.Doit.GetBool(c.NS, doit.ArgDropletWait)
+	wait, err := c.Doit.GetBool(c.NS, doit.ArgCommandWait)
 	if err != nil {
 		return err
 	}
