@@ -1,6 +1,6 @@
 # doctl
 
-![Travis Build Status](https://travis-ci.org/bryanl/doctl.svg?branch=master)
+![Travis Build Status](https://travis-ci.org/bryanl/doit.svg?branch=master)
 
 ```
 doctl is a command line interface for the DigitalOcean API.
