@@ -41,6 +41,7 @@ func main() {
 		now := time.Now().Format(time.RFC3339)
 		name := filepath.Base(filename)
 		base := strings.TrimSuffix(name, path.Ext(name))
+		log.Printf("base: %s\n", filename)
 		url := "/commands/" + strings.ToLower(base) + "/"
 		return fmt.Sprintf(fmTemplate, now, strings.Replace(base, "_", " ", -1), base, url)
 	}

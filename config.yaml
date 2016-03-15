@@ -1,8 +1,8 @@
 ---
 contentdir: "content"
 layoutdir: "layouts"
-publishdir: "public"
-theme: "hyde"
+publishdir: "dist"
+theme: "buoy"
 indexes:
   category: "categories"
 baseurl: "http://bryanl.github.io/doit/"
