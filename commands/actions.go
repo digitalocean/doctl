@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"sort"
 	"strconv"
 	"time"
 
@@ -20,8 +21,14 @@ func Actions() *cobra.Command {
 	CmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", Writer,
 		aliasOpt("g"), displayerType(&action{}))
 
-	CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
+	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
 		aliasOpt("ls"), displayerType(&action{}))
+	AddStringFlag(cmdActionList, doit.ArgActionResourceType, "", "Action resource type")
+	AddStringFlag(cmdActionList, doit.ArgActionRegion, "", "Action region")
+	AddStringFlag(cmdActionList, doit.ArgActionAfter, "", "Action completed after in RFC3339 format")
+	AddStringFlag(cmdActionList, doit.ArgActionBefore, "", "Action completed before in RFC3339 format")
+	AddStringFlag(cmdActionList, doit.ArgActionStatus, "", "Action status")
+	AddStringFlag(cmdActionList, doit.ArgActionType, "", "Action type")
 
 	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", Writer,
 		aliasOpt("w"), displayerType(&action{}))
@@ -33,15 +40,121 @@ func Actions() *cobra.Command {
 
 // RunCmdActionList run action list.
 func RunCmdActionList(c *CmdConfig) error {
-	as := c.Actions()
-
-	newActions, err := as.List()
+	actions, err := c.Actions().List()
 	if err != nil {
 		return err
 	}
 
-	item := &action{actions: newActions}
+	actions, err = filterActionList(c, actions)
+	if err != nil {
+		return err
+	}
+
+	sort.Sort(actionsByCompletedAt(actions))
+
+	item := &action{actions: actions}
 	return c.Display(item)
+}
+
+type actionsByCompletedAt do.Actions
+
+func (a actionsByCompletedAt) Len() int {
+	return len(a)
+}
+func (a actionsByCompletedAt) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a actionsByCompletedAt) Less(i, j int) bool {
+	return a[i].CompletedAt.Before(a[j].CompletedAt.Time)
+}
+
+func filterActionList(c *CmdConfig, in do.Actions) (do.Actions, error) {
+	resourceType, err := c.Doit.GetString(c.NS, doit.ArgActionResourceType)
+	if err != nil {
+		return nil, err
+	}
+
+	region, err := c.Doit.GetString(c.NS, doit.ArgActionRegion)
+	if err != nil {
+		return nil, err
+	}
+
+	status, err := c.Doit.GetString(c.NS, doit.ArgActionStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	actionType, err := c.Doit.GetString(c.NS, doit.ArgActionType)
+	if err != nil {
+		return nil, err
+	}
+
+	var before, after time.Time
+	beforeStr, err := c.Doit.GetString(c.NS, doit.ArgActionBefore)
+	if err != nil {
+		return nil, err
+	}
+
+	if beforeStr != "" {
+		if before, err = time.Parse(time.RFC3339, beforeStr); err != nil {
+			return nil, err
+		}
+	}
+
+	afterStr, err := c.Doit.GetString(c.NS, doit.ArgActionAfter)
+	if err != nil {
+		return nil, err
+	}
+	if afterStr != "" {
+		if after, err = time.Parse(time.RFC3339, afterStr); err != nil {
+			return nil, err
+		}
+	}
+
+	out := do.Actions{}
+
+	for _, a := range in {
+		match := true
+
+		if resourceType != "" && a.ResourceType != resourceType {
+			match = false
+		}
+
+		if match && region != "" && a.RegionSlug != region {
+			match = false
+		}
+
+		if match && status != "" && a.Status != status {
+			match = false
+		}
+
+		if match && actionType != "" && a.Type != actionType {
+			match = false
+		}
+
+		if a.CompletedAt == nil {
+			match = false
+		}
+
+		if match && !isZeroTime(before) && a.CompletedAt != nil && a.CompletedAt.After(before) {
+			match = false
+		}
+
+		if match && !isZeroTime(after) && a.CompletedAt != nil && a.CompletedAt.Before(after) {
+			match = false
+		}
+
+		if match {
+			out = append(out, a)
+		}
+	}
+
+	return out, nil
+}
+
+func isZeroTime(t time.Time) bool {
+	z := time.Time{}
+	return z.Equal(t)
 }
 
 // RunCmdActionGet runs action get.

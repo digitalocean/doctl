@@ -122,11 +122,15 @@ func (a *action) KV() []map[string]interface{} {
 	out := []map[string]interface{}{}
 
 	for _, x := range a.actions {
+		region := ""
+		if x.Region != nil {
+			region = x.Region.Slug
+		}
 		o := map[string]interface{}{
 			"ID": x.ID, "Status": x.Status, "Type": x.Type,
 			"StartedAt": x.StartedAt, "CompletedAt": x.CompletedAt,
 			"ResourceID": x.ResourceID, "ResourceType": x.ResourceType,
-			"Region": x.Region.Slug,
+			"Region": region,
 		}
 		out = append(out, o)
 	}

@@ -3,12 +3,24 @@ package doit
 const (
 	// ArgActionID is an action id argument.
 	ArgActionID = "action-id"
+	// ArgActionAfter is an action after argument.
+	ArgActionAfter = "after"
+	// ArgActionBefore is an action before argument.
+	ArgActionBefore = "before"
+	// ArgActionResourceType is an action resource type argument.
+	ArgActionResourceType = "resource-type"
+	// ArgActionRegion is an action region argument.
+	ArgActionRegion = "region"
+	// ArgActionStatus is an action status argument.
+	ArgActionStatus = "status"
+	// ArgActionType is an action type argument.
+	ArgActionType = "action-type"
+	// ArgCommandWait is a wait for a droplet to be created argument.
+	ArgCommandWait = "wait"
 	// ArgDomainName is a domain name argument.
 	ArgDomainName = "domain-name"
 	// ArgDropletID is a droplet id argument.
 	ArgDropletID = "droplet-id"
-	// ArgDropletWait is a wait for a droplet to be created argument.
-	ArgCommandWait = "wait"
 	// ArgKernelID is a ekrnel id argument.
 	ArgKernelID = "kernel-id"
 	// ArgImage is an image argument.
