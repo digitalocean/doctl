@@ -195,7 +195,7 @@ func NewTestConfig() *TestConfig {
 
 var _ doit.Config = &TestConfig{}
 
-func (c *TestConfig) GetGodoClient() *godo.Client {
+func (c *TestConfig) GetGodoClient(trace bool) *godo.Client {
 	return &godo.Client{}
 }
 

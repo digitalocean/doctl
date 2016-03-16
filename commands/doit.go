@@ -33,12 +33,16 @@ var requiredColor = color.New(color.Bold, color.FgWhite).SprintfFunc()
 // Writer is where output should be written to.
 var Writer = os.Stdout
 
+// Trace toggles http tracing output.
+var Trace bool
+
 func init() {
 	viper.SetConfigType("yaml")
 
 	DoitCmd.PersistentFlags().StringVarP(&Token, "access-token", "t", "", "DigitalOcean API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output formt [text|json]")
 	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "verbose output")
 }
 
 // LoadConfig loads out configuration.
@@ -241,24 +245,26 @@ type CmdConfig struct {
 
 // NewCmdConfig creates an instance of a CmdConfig.
 func NewCmdConfig(ns string, dc doit.Config, out io.Writer, args []string) *CmdConfig {
+	godoClient := dc.GetGodoClient(Trace)
+
 	return &CmdConfig{
 		NS:   ns,
 		Doit: dc,
 		Out:  out,
 		Args: args,
 
-		Keys:              func() do.KeysService { return do.NewKeysService(dc.GetGodoClient()) },
-		Sizes:             func() do.SizesService { return do.NewSizesService(dc.GetGodoClient()) },
-		Regions:           func() do.RegionsService { return do.NewRegionsService(dc.GetGodoClient()) },
-		Images:            func() do.ImagesService { return do.NewImagesService(dc.GetGodoClient()) },
-		ImageActions:      func() do.ImageActionsService { return do.NewImageActionsService(dc.GetGodoClient()) },
-		FloatingIPs:       func() do.FloatingIPsService { return do.NewFloatingIPsService(dc.GetGodoClient()) },
-		FloatingIPActions: func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(dc.GetGodoClient()) },
-		Droplets:          func() do.DropletsService { return do.NewDropletsService(dc.GetGodoClient()) },
-		DropletActions:    func() do.DropletActionsService { return do.NewDropletActionsService(dc.GetGodoClient()) },
-		Domains:           func() do.DomainsService { return do.NewDomainsService(dc.GetGodoClient()) },
-		Actions:           func() do.ActionsService { return do.NewActionsService(dc.GetGodoClient()) },
-		Account:           func() do.AccountService { return do.NewAccountService(dc.GetGodoClient()) },
+		Keys:              func() do.KeysService { return do.NewKeysService(godoClient) },
+		Sizes:             func() do.SizesService { return do.NewSizesService(godoClient) },
+		Regions:           func() do.RegionsService { return do.NewRegionsService(godoClient) },
+		Images:            func() do.ImagesService { return do.NewImagesService(godoClient) },
+		ImageActions:      func() do.ImageActionsService { return do.NewImageActionsService(godoClient) },
+		FloatingIPs:       func() do.FloatingIPsService { return do.NewFloatingIPsService(godoClient) },
+		FloatingIPActions: func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(godoClient) },
+		Droplets:          func() do.DropletsService { return do.NewDropletsService(godoClient) },
+		DropletActions:    func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) },
+		Domains:           func() do.DomainsService { return do.NewDomainsService(godoClient) },
+		Actions:           func() do.ActionsService { return do.NewActionsService(godoClient) },
+		Account:           func() do.AccountService { return do.NewAccountService(godoClient) },
 	}
 }
 

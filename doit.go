@@ -3,6 +3,8 @@ package doit
 import (
 	"bytes"
 	"fmt"
+	"log"
+	"strconv"
 
 	"github.com/bryanl/doit/pkg/runner"
 	"github.com/bryanl/doit/pkg/ssh"
@@ -32,6 +34,9 @@ var (
 
 	// Build is doit's build tag.
 	Build string
+
+	// TraceHTTP traces http connections.
+	TraceHTTP bool
 )
 
 func init() {
@@ -70,7 +75,7 @@ func (v Version) Complete() string {
 
 // Config is an interface that represent doit's config.
 type Config interface {
-	GetGodoClient() *godo.Client
+	GetGodoClient(trace bool) *godo.Client
 	SSH(user, host, keyPath string, port int) runner.Runner
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) (string, error)
@@ -80,16 +85,41 @@ type Config interface {
 }
 
 // LiveConfig is an implementation of Config for live values.
-type LiveConfig struct{}
+type LiveConfig struct {
+	godoClient *godo.Client
+}
 
 var _ Config = &LiveConfig{}
 
 // GetGodoClient returns a GodoClient.
-func (c *LiveConfig) GetGodoClient() *godo.Client {
+func (c *LiveConfig) GetGodoClient(trace bool) *godo.Client {
+	if c.godoClient != nil {
+		return c.godoClient
+	}
+
 	token := viper.GetString("access-token")
 	tokenSource := &TokenSource{AccessToken: token}
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
-	return godo.NewClient(oauthClient)
+
+	if trace {
+		r := newRecorder(oauthClient.Transport)
+
+		go func() {
+			for {
+				select {
+				case msg := <-r.req:
+					log.Println("->", strconv.Quote(msg))
+				case msg := <-r.resp:
+					log.Println("<-", strconv.Quote(msg))
+				}
+			}
+		}()
+
+		oauthClient.Transport = r
+	}
+
+	c.godoClient = godo.NewClient(oauthClient)
+	return c.godoClient
 }
 
 // SSH creates a ssh connection to a host.

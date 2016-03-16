@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	log.SetPrefix("doit: ")
+	log.SetPrefix("doctl: ")
 	cmd := commands.Init()
 	cmd.Execute()
 }
