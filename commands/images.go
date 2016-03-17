@@ -2,7 +2,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/bryanl/doit"
@@ -19,29 +18,34 @@ func Images() *cobra.Command {
 		Long:  "image commands",
 	}
 
-	out := os.Stdout
-
-	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", out, displayerType(&image{}))
+	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", Writer,
+		displayerType(&image{}), docCategories("image"))
 	AddBoolFlag(cmdImagesList, doit.ArgImagePublic, false, "List public images")
 
 	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
-		"list-distribution", "list distribution images", out, displayerType(&image{}))
+		"list-distribution", "list distribution images", Writer,
+		displayerType(&image{}), docCategories("image"))
 	AddBoolFlag(cmdImagesListDistribution, doit.ArgImagePublic, false, "List public images")
 
 	cmdImagesListApplication := CmdBuilder(cmd, RunImagesListApplication,
-		"list-application", "list application images", out, displayerType(&image{}))
+		"list-application", "list application images", Writer,
+		displayerType(&image{}), docCategories("image"))
 	AddBoolFlag(cmdImagesListApplication, doit.ArgImagePublic, false, "List public images")
 
 	cmdImagesListUser := CmdBuilder(cmd, RunImagesListDistribution,
-		"list-user", "list user images", out, displayerType(&image{}))
+		"list-user", "list user images", Writer,
+		displayerType(&image{}), docCategories("image"))
 	AddBoolFlag(cmdImagesListUser, doit.ArgImagePublic, false, "List public images")
 
-	CmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", out, displayerType(&image{}))
+	CmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", Writer,
+		displayerType(&image{}), docCategories("image"))
 
-	cmdImagesUpdate := CmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", out, displayerType(&image{}))
+	cmdImagesUpdate := CmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", Writer,
+		displayerType(&image{}), docCategories("image"))
 	AddStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
 
-	CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", out)
+	CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer,
+		docCategories("image"))
 
 	return cmd
 }

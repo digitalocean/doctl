@@ -10,7 +10,8 @@ func Size() *cobra.Command {
 		Long:  "size is used to access size commands",
 	}
 
-	CmdBuilder(cmd, RunSizeList, "list", "list sizes", Writer, displayerType(&size{}))
+	CmdBuilder(cmd, RunSizeList, "list", "list sizes", Writer, displayerType(&size{}),
+		docCategories("compute"))
 
 	return cmd
 }

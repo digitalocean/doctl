@@ -29,3 +29,10 @@ func hiddenCmd() cmdOption {
 		c.Hidden = true
 	}
 }
+
+// docCategories adds documentation categories to a command.
+func docCategories(categories ...string) cmdOption {
+	return func(c *Command) {
+		c.DocCategories = categories
+	}
+}

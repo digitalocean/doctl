@@ -11,10 +11,10 @@ func Account() *cobra.Command {
 	}
 
 	CmdBuilder(cmd, RunAccountGet, "get", "get account", Writer,
-		aliasOpt("g"), displayerType(&account{}))
+		aliasOpt("g"), displayerType(&account{}), docCategories("account"))
 
 	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "get API rate limits", Writer,
-		aliasOpt("rl"), displayerType(&rateLimit{}))
+		aliasOpt("rl"), displayerType(&rateLimit{}), docCategories("account"))
 
 	return cmd
 }

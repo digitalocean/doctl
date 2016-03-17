@@ -20,7 +20,7 @@ func FloatingIP() *cobra.Command {
 	}
 
 	cmdFloatingIPCreate := CmdBuilder(cmd, RunFloatingIPCreate, "create", "create a floating IP", Writer,
-		aliasOpt("c"), displayerType(&floatingIP{}))
+		aliasOpt("c"), displayerType(&floatingIP{}), docCategories("floatingip"))
 	AddStringFlag(cmdFloatingIPCreate, doit.ArgRegionSlug, "",
 		fmt.Sprintf("Region where to create the floating IP. (mutually exclusive with %s)",
 			doit.ArgDropletID))
@@ -29,12 +29,12 @@ func FloatingIP() *cobra.Command {
 			doit.ArgRegionSlug))
 
 	CmdBuilder(cmd, RunFloatingIPGet, "get <floating-ip>", "get the details of a floating IP", Writer,
-		aliasOpt("g"), displayerType(&floatingIP{}))
+		aliasOpt("g"), displayerType(&floatingIP{}), docCategories("floatingip"))
 
 	CmdBuilder(cmd, RunFloatingIPDelete, "delete <floating-ip>", "delete a floating IP address", Writer, aliasOpt("d"))
 
 	cmdFloatingIPList := CmdBuilder(cmd, RunFloatingIPList, "list", "list all floating IP addresses", Writer,
-		aliasOpt("ls"), displayerType(&floatingIP{}))
+		aliasOpt("ls"), displayerType(&floatingIP{}), docCategories("floatingip"))
 	AddStringFlag(cmdFloatingIPList, doit.ArgRegionSlug, "", "Floating IP region")
 
 	return cmd

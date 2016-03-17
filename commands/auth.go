@@ -44,7 +44,7 @@ func Auth() *cobra.Command {
 		Long:  "auth is used to access auth commands",
 	}
 
-	CmdBuilder(cmd, RunAuthLogin, "login", "login to DigitalOcean account", Writer)
+	CmdBuilder(cmd, RunAuthLogin, "login", "login to DigitalOcean account", Writer, docCategories("account"))
 
 	return cmd
 }

@@ -19,10 +19,10 @@ func Actions() *cobra.Command {
 	}
 
 	CmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", Writer,
-		aliasOpt("g"), displayerType(&action{}))
+		aliasOpt("g"), displayerType(&action{}), docCategories("action"))
 
 	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
-		aliasOpt("ls"), displayerType(&action{}))
+		aliasOpt("ls"), displayerType(&action{}), docCategories("action"))
 	AddStringFlag(cmdActionList, doit.ArgActionResourceType, "", "Action resource type")
 	AddStringFlag(cmdActionList, doit.ArgActionRegion, "", "Action region")
 	AddStringFlag(cmdActionList, doit.ArgActionAfter, "", "Action completed after in RFC3339 format")
@@ -31,7 +31,7 @@ func Actions() *cobra.Command {
 	AddStringFlag(cmdActionList, doit.ArgActionType, "", "Action type")
 
 	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", Writer,
-		aliasOpt("w"), displayerType(&action{}))
+		aliasOpt("w"), displayerType(&action{}), docCategories("action"))
 	AddIntFlag(cmdActionWait, doit.ArgPollTime, 5, "Re-poll time in seconds",
 		shortFlag("p"))
 

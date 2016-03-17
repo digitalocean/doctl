@@ -25,13 +25,13 @@ func Droplet() *cobra.Command {
 	}
 
 	CmdBuilder(cmd, RunDropletActions, "actions <droplet id>", "droplet actions", Writer,
-		aliasOpt("a"), displayerType(&action{}))
+		aliasOpt("a"), displayerType(&action{}), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunDropletBackups, "backups <droplet id>", "droplet backups", Writer,
-		aliasOpt("b"), displayerType(&image{}))
+		aliasOpt("b"), displayerType(&image{}), docCategories("droplet"))
 
 	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", Writer,
-		aliasOpt("c"), displayerType(&droplet{}))
+		aliasOpt("c"), displayerType(&droplet{}), docCategories("droplet"))
 	AddStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints",
 		shortFlag("k"))
 	AddStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data",
@@ -54,23 +54,23 @@ func Droplet() *cobra.Command {
 		requiredOpt(), shortFlag("i"))
 
 	CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
-		aliasOpt("d", "del", "rm"))
+		aliasOpt("d", "del", "rm"), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
-		aliasOpt("g"), displayerType(&droplet{}))
+		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", Writer,
-		aliasOpt("k"), displayerType(&kernel{}))
+		aliasOpt("k"), displayerType(&kernel{}), docCategories("droplet"))
 
 	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", Writer,
-		aliasOpt("ls"), displayerType(&droplet{}))
+		aliasOpt("ls"), displayerType(&droplet{}), docCategories("droplet"))
 	AddStringFlag(cmdRunDropletList, doit.ArgRegionSlug, "", "Droplet region")
 
 	CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", Writer,
-		aliasOpt("n"), displayerType(&droplet{}))
+		aliasOpt("n"), displayerType(&droplet{}), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet id>", "snapshots", Writer,
-		aliasOpt("s"), displayerType(&image{}))
+		aliasOpt("s"), displayerType(&image{}), docCategories("droplet"))
 
 	return cmd
 }

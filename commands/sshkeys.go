@@ -20,23 +20,24 @@ func SSHKeys() *cobra.Command {
 	}
 
 	CmdBuilder(cmd, RunKeyList, "list", "list ssh keys", Writer,
-		aliasOpt("ls"), displayerType(&key{}))
+		aliasOpt("ls"), displayerType(&key{}), docCategories("sshkeys"))
 
 	CmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", Writer,
-		aliasOpt("g"), displayerType(&key{}))
+		aliasOpt("g"), displayerType(&key{}), docCategories("sshkeys"))
 
 	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", Writer,
-		aliasOpt("c"), displayerType(&key{}))
+		aliasOpt("c"), displayerType(&key{}), docCategories("sshkeys"))
 	AddStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents", requiredOpt())
 
 	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", Writer,
-		aliasOpt("i"), displayerType(&key{}))
+		aliasOpt("i"), displayerType(&key{}), docCategories("sshkeys"))
 	AddStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
 
-	CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer, aliasOpt("d"))
+	CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
+		aliasOpt("d"), docCategories("sshkeys"))
 
 	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
-		aliasOpt("u"), displayerType(&key{}))
+		aliasOpt("u"), displayerType(&key{}), docCategories("sshkeys"))
 	AddStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name", requiredOpt())
 
 	return cmd

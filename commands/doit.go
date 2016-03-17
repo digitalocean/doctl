@@ -214,13 +214,6 @@ func cmdNS(cmd *cobra.Command) string {
 // CmdRunner runs a command and passes in a cmdConfig.
 type CmdRunner func(*CmdConfig) error
 
-// Command is a task that can be run.
-type Command struct {
-	*cobra.Command
-
-	fmtCols []string
-}
-
 // CmdConfig is a command configuration.
 type CmdConfig struct {
 	NS   string
