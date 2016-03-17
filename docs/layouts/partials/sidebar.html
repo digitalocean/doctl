@@ -2,7 +2,7 @@
   <h3>doctl</h3>
   
   <ul>
-    {{ range $key, $value := .Paginator.Pages }}
+    {{ range .Data.Pages }}
       {{ .Render "li" }}
     {{ end }}
   </ul>
