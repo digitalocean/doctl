@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	listEmptyJson string =`
+	listEmptyJson string = `
 	{
 		"tags": [
 		],
@@ -19,7 +19,7 @@ var (
 	}
 	`
 
-	listJson string =`
+	listJson string = `
 	{
 		"tags": [
 		{
@@ -55,7 +55,7 @@ var (
 	}
 	`
 
-	createJson string =`
+	createJson string = `
 	{
 		"tag": {
 			"name": "testing-1",
@@ -69,7 +69,7 @@ var (
 	}
 	`
 
-	getJson string =`
+	getJson string = `
 	{
 		"tag": {
 			"name": "testing-1",
@@ -179,7 +179,7 @@ func TestTags_List(t *testing.T) {
 	}
 
 	expected := []Tag{{Name: "testing-1", Resources: &TaggedResources{Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}}},
-	                  {Name: "testing-2", Resources: &TaggedResources{Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}}}}
+		{Name: "testing-2", Resources: &TaggedResources{Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}}}}
 	if !reflect.DeepEqual(tags, expected) {
 		t.Errorf("Tags.List returned %+v, expected %+v", tags, expected)
 	}

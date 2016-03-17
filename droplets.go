@@ -267,7 +267,7 @@ func (s *DropletsServiceOp) List(opt *ListOptions) ([]Droplet, *Response, error)
 
 // List all droplets by tag
 func (s *DropletsServiceOp) ListByTag(tag string, opt *ListOptions) ([]Droplet, *Response, error) {
-	path := fmt.Sprintf("%s?tag=%s", dropletBasePath, tag)
+	path := fmt.Sprintf("%s?tag_name=%s", dropletBasePath, tag)
 	path, err := addOptions(path, opt)
 	if err != nil {
 		return nil, nil, err
@@ -275,6 +275,7 @@ func (s *DropletsServiceOp) ListByTag(tag string, opt *ListOptions) ([]Droplet, 
 
 	return s.list(path)
 }
+
 // Get individual droplet
 func (s *DropletsServiceOp) Get(dropletID int) (*Droplet, *Response, error) {
 	if dropletID < 1 {
@@ -376,7 +377,7 @@ func (s *DropletsServiceOp) DeleteByTag(tag string) (*Response, error) {
 		return nil, NewArgError("tag", "cannot be empty")
 	}
 
-	path := fmt.Sprintf("%s?tag=%s", dropletBasePath, tag)
+	path := fmt.Sprintf("%s?tag_name=%s", dropletBasePath, tag)
 
 	return s.delete(path)
 }

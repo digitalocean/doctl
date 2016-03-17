@@ -33,7 +33,7 @@ func TestDroplets_ListDropletsByTag(t *testing.T) {
 	defer teardown()
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("tag") != "testing-1" {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
 			t.Errorf("Droplets.ListByTag did not request with a tag parameter")
 		}
 
@@ -263,7 +263,7 @@ func TestDroplets_DestroyByTag(t *testing.T) {
 	defer teardown()
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("tag") != "testing-1" {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
 			t.Errorf("Droplets.DeleteByTag did not request with a tag parameter")
 		}
 
