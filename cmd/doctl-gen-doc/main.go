@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -15,14 +16,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
-
-const fmTemplate = `---
-date: %s
-title: "%s"
-slug: %s
-url: %s
----
-`
 
 var (
 	outputDir = flag.String("outputDir", "", "output directory")
@@ -70,8 +63,19 @@ func filePrepender(section string) func(string) string {
 
 		}
 
-		// title := strings.Replace()
-		return fmt.Sprintf(fmTemplate, now, strings.Replace(title, "_", " ", -1), base, url)
+		fm := frontMatter{
+			"date":  now,
+			"title": strings.Replace(title, "_", " ", -1),
+			"slug":  base,
+			"url":   url,
+		}
+
+		b, err := json.MarshalIndent(fm, "", "  ")
+		if err != nil {
+			log.Fatalf("unable to generate front matter: %v", err)
+		}
+
+		return string(b) + "\n\n"
 	}
 }
 
@@ -125,3 +129,5 @@ func childByName(cmd *cobra.Command, name string) *cobra.Command {
 	}
 	return nil
 }
+
+type frontMatter map[string]interface{}
