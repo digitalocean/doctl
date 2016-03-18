@@ -36,12 +36,14 @@ func performAction(c *CmdConfig, fn actionFn) error {
 }
 
 // DropletAction creates the droplet-action command.
-func DropletAction() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "droplet-action",
-		Aliases: []string{"da"},
-		Short:   "droplet action commands",
-		Long:    "droplet-action is used to access droplet action commands",
+func DropletAction() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "droplet-action",
+			Aliases: []string{"da"},
+			Short:   "droplet action commands",
+			Long:    "droplet-action is used to access droplet action commands",
+		},
 	}
 
 	cmdDropletActionGet := CmdBuilder(cmd, RunDropletActionGet, "get", "get droplet action", Writer,

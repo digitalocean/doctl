@@ -11,12 +11,14 @@ import (
 )
 
 // SSHKeys creates the ssh key commands heirarchy.
-func SSHKeys() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "ssh-key",
-		Aliases: []string{"k"},
-		Short:   "sshkey commands",
-		Long:    "sshkey is used to access ssh key commands",
+func SSHKeys() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "ssh-key",
+			Aliases: []string{"k"},
+			Short:   "sshkey commands",
+			Long:    "sshkey is used to access ssh key commands",
+		},
 	}
 
 	CmdBuilder(cmd, RunKeyList, "list", "list ssh keys", Writer,

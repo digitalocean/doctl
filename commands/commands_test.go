@@ -11,7 +11,6 @@ import (
 	domocks "github.com/bryanl/doit/do/mocks"
 	"github.com/bryanl/doit/pkg/runner"
 	"github.com/digitalocean/godo"
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -96,7 +95,7 @@ var (
 	testFloatingIPList = do.FloatingIPs{testFloatingIP}
 )
 
-func assertCommandNames(t *testing.T, cmd *cobra.Command, expected ...string) {
+func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
 	var names []string
 
 	for _, c := range cmd.Commands() {

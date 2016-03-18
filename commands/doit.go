@@ -14,9 +14,11 @@ import (
 )
 
 // DoitCmd is the base command.
-var DoitCmd = &cobra.Command{
-	Use:   "doctl",
-	Short: "doctl is a command line interface for the DigitalOcean API.",
+var DoitCmd = &Command{
+	Command: &cobra.Command{
+		Use:   "doctl",
+		Short: "doctl is a command line interface for the DigitalOcean API.",
+	},
 }
 
 // Token holds the global authorization token.
@@ -61,7 +63,7 @@ func LoadConfig() error {
 }
 
 // Init initializes the root command.
-func Init() *cobra.Command {
+func Init() *Command {
 	initializeConfig()
 	addCommands()
 
@@ -76,11 +78,13 @@ func addCommands() {
 	DoitCmd.AddCommand(Version())
 }
 
-func computeCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "compute",
-		Short: "compute commands",
-		Long:  "compute commands are for controlling and managing infrastructure",
+func computeCmd() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "compute",
+			Short: "compute commands",
+			Long:  "compute commands are for controlling and managing infrastructure",
+		},
 	}
 
 	cmd.AddCommand(Actions())
@@ -274,7 +278,7 @@ func (c *CmdConfig) Display(d Displayable) error {
 }
 
 // CmdBuilder builds a new command.
-func CmdBuilder(parent *cobra.Command, cr CmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *Command {
+func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *Command {
 	cc := &cobra.Command{
 		Use:   cliText,
 		Short: desc,
@@ -292,11 +296,11 @@ func CmdBuilder(parent *cobra.Command, cr CmdRunner, cliText, desc string, out i
 		},
 	}
 
-	if parent != nil {
-		parent.AddCommand(cc)
-	}
-
 	c := &Command{Command: cc}
+
+	if parent != nil {
+		parent.AddCommand(c)
+	}
 
 	for _, co := range options {
 		co(c)

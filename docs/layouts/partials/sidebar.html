@@ -2,8 +2,8 @@
   <h3>doctl</h3>
   
   <ul>
-    {{ range .Data.Pages }}
-      {{ .Render "li" }}
+    {{ range $section, $taxonomy := .Site.Sections }}
+      <li><a href="">{{ $section }}</a></li>
     {{ end }}
   </ul>
 </nav>

@@ -13,13 +13,15 @@ type version struct {
 }
 
 // Version creates a version command.
-func Version() *cobra.Command {
-	return &cobra.Command{
-		Use:   "version",
-		Short: "show the current version",
-		Run: func(cmd *cobra.Command, args []string) {
-			doit.DoitVersion.Build = doit.Build
-			fmt.Println(doit.DoitVersion)
+func Version() *Command {
+	return &Command{
+		Command: &cobra.Command{
+			Use:   "version",
+			Short: "show the current version",
+			Run: func(cmd *cobra.Command, args []string) {
+				doit.DoitVersion.Build = doit.Build
+				fmt.Println(doit.DoitVersion)
+			},
 		},
 	}
 }

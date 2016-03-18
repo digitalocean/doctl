@@ -37,11 +37,13 @@ func (use *UnknownSchemeError) Error() string {
 }
 
 // Auth creates auth commands for doit.
-func Auth() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "auth",
-		Short: "auth commands",
-		Long:  "auth is used to access auth commands",
+func Auth() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "auth",
+			Short: "auth commands",
+			Long:  "auth is used to access auth commands",
+		},
 	}
 
 	CmdBuilder(cmd, RunAuthLogin, "login", "login to DigitalOcean account", Writer, docCategories("account"))

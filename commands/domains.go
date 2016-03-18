@@ -12,11 +12,13 @@ import (
 )
 
 // Domain creates the domain commands heirarchy.
-func Domain() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "domain",
-		Short: "domain commands",
-		Long:  "domain is used to access domain commands",
+func Domain() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "domain",
+			Short: "domain commands",
+			Long:  "domain is used to access domain commands",
+		},
 	}
 
 	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,
@@ -31,10 +33,12 @@ func Domain() *cobra.Command {
 
 	CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete droplet", Writer, aliasOpt("g"))
 
-	cmdRecord := &cobra.Command{
-		Use:   "records",
-		Short: "domain record commands",
-		Long:  "commands for interacting with an individual domain",
+	cmdRecord := &Command{
+		Command: &cobra.Command{
+			Use:   "records",
+			Short: "domain record commands",
+			Long:  "commands for interacting with an individual domain",
+		},
 	}
 	cmd.AddCommand(cmdRecord)
 

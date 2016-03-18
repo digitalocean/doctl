@@ -11,11 +11,13 @@ import (
 )
 
 // ImageAction creates the image action commmand.
-func ImageAction() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "image-action",
-		Short: "image-action commands",
-		Long:  "image-action commands",
+func ImageAction() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "image-action",
+			Short: "image-action commands",
+			Long:  "image-action commands",
+		},
 	}
 
 	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,

@@ -3,11 +3,14 @@ package commands
 import "github.com/spf13/cobra"
 
 // Account creates the account commands heirarchy.
-func Account() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "account",
-		Short: "account commands",
-		Long:  "account is used to access account commands",
+func Account() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "account",
+			Short: "account commands",
+			Long:  "account is used to access account commands",
+		},
+		DocCategories: []string{"account"},
 	}
 
 	CmdBuilder(cmd, RunAccountGet, "get", "get account", Writer,

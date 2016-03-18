@@ -16,12 +16,14 @@ import (
 )
 
 // Droplet creates the droplet command.
-func Droplet() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "droplet",
-		Aliases: []string{"d"},
-		Short:   "droplet commands",
-		Long:    "droplet is used to access droplet commands",
+func Droplet() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "droplet",
+			Aliases: []string{"d"},
+			Short:   "droplet commands",
+			Long:    "droplet is used to access droplet commands",
+		},
 	}
 
 	CmdBuilder(cmd, RunDropletActions, "actions <droplet id>", "droplet actions", Writer,

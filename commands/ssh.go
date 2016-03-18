@@ -11,7 +11,6 @@ import (
 
 	"github.com/bryanl/doit"
 	"github.com/bryanl/doit/do"
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -24,7 +23,7 @@ var (
 )
 
 // SSH creates the ssh commands heirarchy
-func SSH() *cobra.Command {
+func SSH() *Command {
 	usr, err := user.Current()
 	checkErr(err)
 
@@ -36,7 +35,7 @@ func SSH() *cobra.Command {
 	AddStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
 	AddIntFlag(cmdSSH, doit.ArgsSSHPort, 22, "port sshd is running on")
 
-	return cmdSSH.Command
+	return cmdSSH
 }
 
 // RunSSH finds a droplet to ssh to given input parameters (name or id).

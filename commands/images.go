@@ -11,11 +11,13 @@ import (
 )
 
 // Images creates an image command.
-func Images() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "image",
-		Short: "image commands",
-		Long:  "image commands",
+func Images() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "image",
+			Short: "image commands",
+			Long:  "image commands",
+		},
 	}
 
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", Writer,

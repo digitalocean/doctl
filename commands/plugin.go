@@ -11,12 +11,14 @@ import (
 )
 
 // Plugin creates the plugin commands heirarchy.
-func Plugin() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "plugin",
-		Short:   "plugin commands",
-		Long:    "plugin is used to access plugin commands",
-		Aliases: []string{"p"},
+func Plugin() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "plugin",
+			Short:   "plugin commands",
+			Long:    "plugin is used to access plugin commands",
+			Aliases: []string{"p"},
+		},
 	}
 
 	CmdBuilder(cmd, RunPluginList, "list", "list plugins", Writer,

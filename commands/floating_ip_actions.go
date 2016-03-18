@@ -10,12 +10,14 @@ import (
 )
 
 // FloatingIPAction creates the floating IP action commmand.
-func FloatingIPAction() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "floating-ip-action",
-		Short:   "floating IP action commands",
-		Long:    "floating IP action commands",
-		Aliases: []string{"fipa"},
+func FloatingIPAction() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "floating-ip-action",
+			Short:   "floating IP action commands",
+			Long:    "floating IP action commands",
+			Aliases: []string{"fipa"},
+		},
 	}
 
 	CmdBuilder(cmd, RunFloatingIPActionsGet,

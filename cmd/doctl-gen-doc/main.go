@@ -26,57 +26,45 @@ func main() {
 
 	log.SetPrefix("doit: ")
 	cmd := commands.Init()
-	cmd.DisableAutoGenTag = false
+	cmd.DisableAutoGenTag = true
 
 	if _, err := os.Stat(*outputDir); os.IsNotExist(err) {
 		log.Fatalf("output directory %q does not exist", *outputDir)
 	}
 
-	mainPath := filepath.Join(*outputDir, "command-main")
-	genTree(cmd, mainPath, filePrepender("main"), linkHandler, "compute")
-
-	computeCmd := childByName(cmd, "compute")
-	if computeCmd == nil {
-		log.Fatalf("could not find compute command")
+	err := genTree(cmd, *outputDir, filePrepender, linkHandler)
+	if err != nil {
+		log.Fatalf("generate documentation tree: %v", err)
 	}
-
-	computePath := filepath.Join(*outputDir, "command-compute")
-	if err := os.MkdirAll(computePath, 0755); err != nil {
-		log.Fatalf("could not create %s: %v", computePath, err)
-	}
-
-	genTree(computeCmd, computePath, filePrepender("compute"), linkHandler)
 }
 
-func filePrepender(section string) func(string) string {
-	return func(filename string) string {
-		now := time.Now().Format(time.RFC3339)
-		name := filepath.Base(filename)
-		base := strings.TrimSuffix(name, path.Ext(name))
-		log.Printf("base: %s\n", base)
-		url := fmt.Sprintf("/commands/%s/%s/", section, strings.ToLower(base))
+func filePrepender(section, filename string) string {
+	now := time.Now().Format(time.RFC3339)
+	name := filepath.Base(filename)
+	base := strings.TrimSuffix(name, path.Ext(name))
+	log.Printf("base: %s\n", base)
+	url := fmt.Sprintf("/commands/%s/%s/", section, strings.ToLower(base))
 
-		var title string
-		if strings.HasPrefix(base, "doctl_compute") {
-			title = strings.TrimPrefix(base, "doctl_compute")
-		} else {
+	var title string
+	if strings.HasPrefix(base, "doctl_compute") {
+		title = strings.TrimPrefix(base, "doctl_compute")
+	} else {
 
-		}
-
-		fm := frontMatter{
-			"date":  now,
-			"title": strings.Replace(title, "_", " ", -1),
-			"slug":  base,
-			"url":   url,
-		}
-
-		b, err := json.MarshalIndent(fm, "", "  ")
-		if err != nil {
-			log.Fatalf("unable to generate front matter: %v", err)
-		}
-
-		return string(b) + "\n\n"
 	}
+
+	fm := frontMatter{
+		"date":  now,
+		"title": strings.Replace(title, "_", " ", -1),
+		"slug":  base,
+		"url":   url,
+	}
+
+	b, err := json.MarshalIndent(fm, "", "  ")
+	if err != nil {
+		log.Fatalf("unable to generate front matter: %v", err)
+	}
+
+	return string(b) + "\n\n"
 }
 
 func linkHandler(name string) string {
@@ -84,9 +72,14 @@ func linkHandler(name string) string {
 	return "/commands/" + strings.ToLower(base) + "/"
 }
 
-func genTree(cmd *cobra.Command, dir string, filePrepender, linkHandler func(string) string, skip ...string) error {
-	for _, c := range cmd.Commands() {
-		if !c.IsAvailableCommand() || c.IsHelpCommand() || contains(c.Name(), skip) {
+func genTree(
+	cmd *commands.Command,
+	dir string,
+	filePrepender func(string, string) string,
+	linkHandler func(string) string,
+) error {
+	for _, c := range cmd.ChildCommands() {
+		if !c.IsAvailableCommand() || c.IsHelpCommand() {
 			continue
 		}
 		if err := genTree(c, dir, filePrepender, linkHandler); err != nil {
@@ -94,20 +87,29 @@ func genTree(cmd *cobra.Command, dir string, filePrepender, linkHandler func(str
 		}
 	}
 
-	basename := strings.Replace(cmd.CommandPath(), " ", "_", -1) + ".md"
-	filename := filepath.Join(dir, basename)
-	f, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	for _, cat := range cmd.DocCategories {
+		basename := strings.Replace(cmd.CommandPath(), " ", "_", -1) + ".md"
+		baseDir := filepath.Join(dir, cat)
+		if err := os.MkdirAll(baseDir, 0755); err != nil {
+			return fmt.Errorf("create directory %q: %v", baseDir, err)
+		}
 
-	if _, err := io.WriteString(f, filePrepender(filename)); err != nil {
-		return err
+		filename := filepath.Join(baseDir, basename)
+		f, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		if _, err := io.WriteString(f, filePrepender(cat, filename)); err != nil {
+			return err
+		}
+		if err := doc.GenMarkdownCustom(cmd.Command, f, linkHandler); err != nil {
+			return err
+		}
+
 	}
-	if err := doc.GenMarkdownCustom(cmd, f, linkHandler); err != nil {
-		return err
-	}
+
 	return nil
 }
 

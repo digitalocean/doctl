@@ -8,4 +8,5 @@ indexes:
 baseurl: "http://bryanl.github.io/doit/"
 title: "doit - DigitalOcean Interactive Tool"
 canonifyurls: true
+SectionPagesMenu: "main"
 ...

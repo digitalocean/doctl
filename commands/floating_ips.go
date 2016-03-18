@@ -11,12 +11,14 @@ import (
 )
 
 // FloatingIP creates the command heirarchy for floating ips.
-func FloatingIP() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:     "floating-ip",
-		Short:   "floating IP commands",
-		Long:    "floating-ip is used to access commands on floating IPs",
-		Aliases: []string{"fip"},
+func FloatingIP() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "floating-ip",
+			Short:   "floating IP commands",
+			Long:    "floating-ip is used to access commands on floating IPs",
+			Aliases: []string{"fip"},
+		},
 	}
 
 	cmdFloatingIPCreate := CmdBuilder(cmd, RunFloatingIPCreate, "create", "create a floating IP", Writer,
