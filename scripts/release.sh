@@ -42,11 +42,11 @@ for f in $STAGE_DIR/*; do
     distbin=$distbin.exe
   fi
   
-  bindir=$STAGE_DIR/$distbin
-  cp $f $bindir
+  bin=$STAGE_DIR/$distbin
+  cp $f $bin
   
   if [[ $distfile == *.zip ]]; then
-    zip -j $distfile $bindir
+    zip -j $distfile $bin
   else
     tar cvzhf $distfile -C $STAGE_DIR $distbin
   fi
@@ -55,5 +55,5 @@ for f in $STAGE_DIR/*; do
   shasum -a 256 $(basename $distbin) > ${RELEASE_DIR}/$(basename ${f%".exe"}).sha256
   popd
   
-  rm $bindir
+  rm $bin
 done
