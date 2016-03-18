@@ -13,6 +13,7 @@ type Command struct {
 	fmtCols []string
 
 	childCommands []*Command
+	IsIndex       bool
 }
 
 // AddCommand adds child commands and adds child commands for cobra as well.

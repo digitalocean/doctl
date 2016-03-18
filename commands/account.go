@@ -11,6 +11,7 @@ func Account() *Command {
 			Long:  "account is used to access account commands",
 		},
 		DocCategories: []string{"account"},
+		IsIndex:       true,
 	}
 
 	CmdBuilder(cmd, RunAccountGet, "get", "get account", Writer,

@@ -32,7 +32,7 @@ func main() {
 		log.Fatalf("output directory %q does not exist", *outputDir)
 	}
 
-	err := genTree(cmd, *outputDir, filePrepender, linkHandler)
+	err := genTree(cmd, *outputDir, filePrepender)
 	if err != nil {
 		log.Fatalf("generate documentation tree: %v", err)
 	}
@@ -67,28 +67,35 @@ func filePrepender(section, filename string) string {
 	return string(b) + "\n\n"
 }
 
-func linkHandler(name string) string {
-	base := strings.TrimSuffix(name, path.Ext(name))
-	return "/commands/" + strings.ToLower(base) + "/"
+func linkHandler(section string) func(string) string {
+	return func(name string) string {
+		base := strings.TrimSuffix(name, path.Ext(name))
+		return fmt.Sprintf("/commands/%s/%s/", section, strings.ToLower(base))
+	}
 }
 
 func genTree(
 	cmd *commands.Command,
 	dir string,
 	filePrepender func(string, string) string,
-	linkHandler func(string) string,
 ) error {
 	for _, c := range cmd.ChildCommands() {
 		if !c.IsAvailableCommand() || c.IsHelpCommand() {
 			continue
 		}
-		if err := genTree(c, dir, filePrepender, linkHandler); err != nil {
+		if err := genTree(c, dir, filePrepender); err != nil {
 			return err
 		}
 	}
 
 	for _, cat := range cmd.DocCategories {
-		basename := strings.Replace(cmd.CommandPath(), " ", "_", -1) + ".md"
+		var basename string
+		if cmd.IsIndex {
+			basename = "index.md"
+		} else {
+			basename = strings.Replace(cmd.CommandPath(), " ", "_", -1) + ".md"
+		}
+
 		baseDir := filepath.Join(dir, cat)
 		if err := os.MkdirAll(baseDir, 0755); err != nil {
 			return fmt.Errorf("create directory %q: %v", baseDir, err)
@@ -104,7 +111,7 @@ func genTree(
 		if _, err := io.WriteString(f, filePrepender(cat, filename)); err != nil {
 			return err
 		}
-		if err := doc.GenMarkdownCustom(cmd.Command, f, linkHandler); err != nil {
+		if err := doc.GenMarkdownCustom(cmd.Command, f, linkHandler(cat)); err != nil {
 			return err
 		}
 
