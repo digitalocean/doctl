@@ -18,6 +18,8 @@ func Actions() *Command {
 			Short: "action commands",
 			Long:  "action is used to access action commands",
 		},
+		DocCategories: []string{"action"},
+		IsIndex:       true,
 	}
 
 	CmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", Writer,

@@ -18,6 +18,8 @@ func Images() *Command {
 			Short: "image commands",
 			Long:  "image commands",
 		},
+		DocCategories: []string{"image"},
+		IsIndex:       true,
 	}
 
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", Writer,

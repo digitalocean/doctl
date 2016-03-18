@@ -18,7 +18,8 @@ import (
 )
 
 var (
-	outputDir = flag.String("outputDir", "", "output directory")
+	outputDir  = flag.String("outputDir", "", "output directory")
+	pageLookup = map[string]string{}
 )
 
 func main() {
@@ -45,16 +46,11 @@ func filePrepender(section, filename string) string {
 	log.Printf("base: %s\n", base)
 	url := fmt.Sprintf("/commands/%s/%s/", section, strings.ToLower(base))
 
-	var title string
-	if strings.HasPrefix(base, "doctl_compute") {
-		title = strings.TrimPrefix(base, "doctl_compute")
-	} else {
-
-	}
+	pageLookup[strings.ToLower(base)] = url
 
 	fm := frontMatter{
 		"date":  now,
-		"title": strings.Replace(title, "_", " ", -1),
+		"title": strings.Replace(base, "_", " ", -1),
 		"slug":  base,
 		"url":   url,
 	}
@@ -67,11 +63,13 @@ func filePrepender(section, filename string) string {
 	return string(b) + "\n\n"
 }
 
-func linkHandler(section string) func(string) string {
-	return func(name string) string {
-		base := strings.TrimSuffix(name, path.Ext(name))
-		return fmt.Sprintf("/commands/%s/%s/", section, strings.ToLower(base))
+func linkHandler(name string) string {
+	base := strings.ToLower(strings.TrimSuffix(name, path.Ext(name)))
+	url, ok := pageLookup[base]
+	if !ok {
+		log.Printf("*** no match for %s", base)
 	}
+	return url
 }
 
 func genTree(
@@ -111,7 +109,7 @@ func genTree(
 		if _, err := io.WriteString(f, filePrepender(cat, filename)); err != nil {
 			return err
 		}
-		if err := doc.GenMarkdownCustom(cmd.Command, f, linkHandler(cat)); err != nil {
+		if err := doc.GenMarkdownCustom(cmd.Command, f, linkHandler); err != nil {
 			return err
 		}
 
