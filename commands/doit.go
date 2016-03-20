@@ -85,8 +85,6 @@ func computeCmd() *Command {
 			Short: "compute commands",
 			Long:  "compute commands are for controlling and managing infrastructure",
 		},
-		DocCategories: []string{"compute"},
-		IsIndex:       true,
 	}
 
 	cmd.AddCommand(Actions())
