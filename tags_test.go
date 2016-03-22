@@ -330,7 +330,7 @@ func TestTags_TagResource(t *testing.T) {
 	defer teardown()
 
 	tagResourcesRequest := &TagResourcesRequest{
-		Resources: []Resource{{ID: "1", Type: "droplet"}},
+		Resources: []Resource{{ID: "1", Type: DropletResourceType}},
 	}
 
 	mux.HandleFunc("/v2/tags/testing-1/resources", func(w http.ResponseWriter, r *http.Request) {
@@ -359,7 +359,7 @@ func TestTags_UntagResource(t *testing.T) {
 	defer teardown()
 
 	untagResourcesRequest := &UntagResourcesRequest{
-		Resources: []Resource{{ID: "1", Type: "droplet"}},
+		Resources: []Resource{{ID: "1", Type: DropletResourceType}},
 	}
 
 	mux.HandleFunc("/v2/tags/testing-1/resources", func(w http.ResponseWriter, r *http.Request) {

@@ -26,10 +26,17 @@ type TagsServiceOp struct {
 
 var _ TagsService = &TagsServiceOp{}
 
-// Resource represent a single resource for associating/dissociating with tags
+// ResourceType represents a class of resource, currently only droplet are supported
+type ResourceType string
+
+const (
+	DropletResourceType ResourceType = "droplet"
+)
+
+// Resource represent a single resource for associating/disassociating with tags
 type Resource struct {
-	ID   string `json:"resource_id,omit_empty"`
-	Type string `json:"resource_type,omit_empty"`
+	ID   string       `json:"resource_id,omit_empty"`
+	Type ResourceType `json:"resource_type,omit_empty"`
 }
 
 // TaggedResources represent the set of resources a tag is attached to
