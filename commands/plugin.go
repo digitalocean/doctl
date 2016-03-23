@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bryanl/doit/pluginhost"
+	"github.com/digitalocean/doctl/pluginhost"
 	"github.com/spf13/cobra"
 )
 

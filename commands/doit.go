@@ -19,8 +19,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/do"
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

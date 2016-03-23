@@ -18,8 +18,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/pkg/runner"
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/stretchr/testify/assert"
 )
 

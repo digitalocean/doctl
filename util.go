@@ -14,7 +14,7 @@ limitations under the License.
 package doit
 
 import (
-	"github.com/bryanl/doit/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/runner"
 	"golang.org/x/oauth2"
 )
 

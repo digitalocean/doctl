@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,8 +17,8 @@ import (
 	"flag"
 	"log"
 
-	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/install"
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/install"
 )
 
 var (

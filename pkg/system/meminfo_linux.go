@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bryanl/doit/pkg/units"
+	"github.com/digitalocean/doctlpkg/units"
 )
 
 // ReadMemInfo retrieves memory statistics of the host system and returns a

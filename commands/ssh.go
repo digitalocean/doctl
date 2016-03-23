@@ -22,8 +22,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/do"
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 )
 
 const (

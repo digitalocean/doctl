@@ -18,7 +18,7 @@ import (
 	"io"
 	"text/tabwriter"
 
-	"github.com/bryanl/doit/do"
+	"github.com/digitalocean/doctl/do"
 )
 
 var (

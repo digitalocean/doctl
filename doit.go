@@ -24,8 +24,8 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
-	"github.com/bryanl/doit/pkg/runner"
-	"github.com/bryanl/doit/pkg/ssh"
+	"github.com/digitalocean/doctl/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"

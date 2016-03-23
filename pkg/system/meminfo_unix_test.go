@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bryanl/doit/pkg/units"
+	"github.com/digitalocean/doctlpkg/units"
 )
 
 // TestMemInfo tests parseMemInfo with a static meminfo string

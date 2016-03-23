@@ -20,7 +20,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/bryanl/doit"
+	"github.com/digitalocean/doctl"
 )
 
 // Displayable is a displable entity. These are used for printing results.

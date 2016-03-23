@@ -16,7 +16,7 @@ package commands
 import (
 	"testing"
 
-	"github.com/bryanl/doit"
+	"github.com/digitalocean/doctl"
 	"github.com/stretchr/testify/assert"
 )
 

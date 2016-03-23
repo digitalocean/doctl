@@ -11,8 +11,8 @@ import (
 
 	"github.com/Azure/go-ansiterm/winterm"
 	"github.com/Sirupsen/logrus"
-	"github.com/bryanl/doit/pkg/system"
-	"github.com/bryanl/doit/pkg/term/windows"
+	"github.com/digitalocean/doctlpkg/system"
+	"github.com/digitalocean/doctlpkg/term/windows"
 )
 
 // State holds the console mode for the terminal.

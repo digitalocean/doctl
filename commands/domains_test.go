@@ -16,8 +16,8 @@ package commands
 import (
 	"testing"
 
-	"github.com/bryanl/doit"
-	"github.com/bryanl/doit/do"
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 )

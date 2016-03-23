@@ -14,7 +14,7 @@ limitations under the License.
 
 package mocks
 
-import "github.com/bryanl/doit/do"
+import "github.com/digitalocean/doctl/do"
 import "github.com/stretchr/testify/mock"
 
 type AccountService struct {

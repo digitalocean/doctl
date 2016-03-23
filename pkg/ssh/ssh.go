@@ -18,8 +18,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/bryanl/doit/pkg/runner"
-	"github.com/bryanl/doit/pkg/term"
+	"github.com/digitalocean/doctl/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/term"
 	"golang.org/x/crypto/ssh"
 )
 

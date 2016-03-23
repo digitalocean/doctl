@@ -16,7 +16,7 @@ package commands
 import (
 	"strings"
 
-	"github.com/bryanl/doit"
+	"github.com/digitalocean/doctl"
 )
 
 func handleColumns(ns string, config doit.Config) ([]string, error) {

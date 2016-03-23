@@ -2,4 +2,4 @@
 
 set -eo pipefail
 
-go build -ldflags "-X github.com/bryanl/doit.Build=`git rev-parse --short HEAD`" github.com/bryanl/doit/cmd/doctl
+go build -ldflags "-X github.com/digitalocean/doctlBuild=`git rev-parse --short HEAD`" github.com/digitalocean/doctlcmd/doctl
