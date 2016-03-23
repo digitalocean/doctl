@@ -1,7 +1,0 @@
-.DS_Store
-bin*
-.deps
-doctl
-releaselog*
-.idea*
-doctl.iml
