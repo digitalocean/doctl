@@ -1,0 +1,6 @@
+language: go
+go:
+  - 1.6
+sudo: false
+install: true
+script: scripts/ci.sh
