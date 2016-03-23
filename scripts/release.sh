@@ -2,11 +2,19 @@
 
 set -eo pipefail
 
-ver=$1
+major=$1
+minor=$2
+patch=$3
+label=$4
 
-if [[ -z "$ver" ]]; then
-  echo "usage: $0 <version>"
+if [[ -z "$major" || -z "$minor" || -z "$patch" ]]; then
+  echo "usage: $0 <major> <minor> <patch> [label]"
   exit 1
+fi
+
+ver="${major}.${minor}.${patch}"
+if [[ -n "$label" ]]; then
+  ver="${ver}-${label}"
 fi
 
 RELEASE_PACKAGE=github.com/bryanl/doit/cmd/doctl
@@ -20,10 +28,17 @@ mkdir -p $OUTPUT_DIR/stage $OUTPUT_DIR/release
 rm -f $STAGE_DIR/doctl $STAGE_DIR/doctl.exe
 
 if [[ -z $SKIPBUILD ]]; then
+  echo "building doctl"
+  baseFlag="-X github.com/bryanl/doit"
+  ldflags="${baseFlag}.Build=$(git rev-parse --short HEAD) $baseFlag.Major=${major} $baseFlag.Minor=${minor} $baseFlag.Patch=${patch}"
+  if [[ -n "$label" ]]; then
+    ldflags="${ldflags} $baseFlag.Label=${label}"
+  fi
+
   xgo \
     --dest $OUTPUT_DIR/stage \
     --targets='windows/*,darwin/amd64,linux/amd64,linux/386' \
-    -ldflags "-X github.com/bryanl/doit.Build=$(git rev-parse HEAD)" \
+    -ldflags "$ldflags" \
     -out doit-${ver} $RELEASE_PACKAGE
 fi
 

@@ -25,15 +25,26 @@ var (
 
 	// DoitVersion is doit's version.
 	DoitVersion = Version{
-		Major: 0,
-		Minor: 7,
+		Major: 1,
+		Minor: 0,
 		Patch: 0,
-		Name:  "Maroon Marion",
 		Label: "dev",
 	}
 
 	// Build is doit's build tag.
 	Build string
+
+	// Major is doctl's major version.
+	Major int
+
+	// Minor is doctl's minor version.
+	Minor int
+
+	// Patch is doctl's patch version.
+	Patch int
+
+	// Label is doctl's label.
+	Label string
 
 	// TraceHTTP traces http connections.
 	TraceHTTP bool
@@ -54,6 +65,10 @@ func (v Version) String() string {
 	buffer.WriteString(fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch))
 	if v.Label != "" {
 		buffer.WriteString("-" + v.Label)
+	}
+
+	if v.Build != "" {
+		buffer.WriteString(" " + v.Build)
 	}
 
 	return buffer.String()

@@ -19,7 +19,22 @@ func Version() *Command {
 			Use:   "version",
 			Short: "show the current version",
 			Run: func(cmd *cobra.Command, args []string) {
-				doit.DoitVersion.Build = doit.Build
+				if doit.Build != "" {
+					doit.DoitVersion.Build = doit.Build
+				}
+				if doit.Major != 0 {
+					doit.DoitVersion.Major = doit.Major
+				}
+				if doit.Minor != 0 {
+					doit.DoitVersion.Minor = doit.Minor
+				}
+				if doit.Patch != 0 {
+					doit.DoitVersion.Patch = doit.Patch
+				}
+				if doit.Label != "" {
+					doit.DoitVersion.Label = doit.Label
+				}
+
 				fmt.Println(doit.DoitVersion)
 			},
 		},
