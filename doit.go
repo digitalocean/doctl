@@ -2,10 +2,15 @@ package doit
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
+	"strings"
 
+	"github.com/blang/semver"
 	"github.com/bryanl/doit/pkg/runner"
 	"github.com/bryanl/doit/pkg/ssh"
 	"github.com/digitalocean/godo"
@@ -17,6 +22,9 @@ import (
 const (
 	// NSRoot is a configuration key that signifies this value is at the root.
 	NSRoot = "doit"
+
+	// LatestReleaseURL is the latest release URL endpoint.
+	LatestReleaseURL = "https://api.github.com/repos/bryanl/doit/releases/latest"
 )
 
 var (
@@ -71,17 +79,59 @@ func (v Version) String() string {
 }
 
 // Complete is the complete version for doit.
-func (v Version) Complete() string {
+func (v Version) Complete(lv LatestVersioner) string {
 	var buffer bytes.Buffer
-	buffer.WriteString(fmt.Sprintf("doit version %s", v.String()))
-
-	buffer.WriteString(fmt.Sprintf(" %q", v.Name))
+	buffer.WriteString(fmt.Sprintf("doctl version %s", v.String()))
 
 	if v.Build != "" {
 		buffer.WriteString(fmt.Sprintf("\nGit commit hash: %s", v.Build))
 	}
 
+	if tagName, err := lv.LatestVersion(); err == nil {
+		v0, err1 := semver.Make(tagName)
+		v1, err2 := semver.Make(v.String())
+
+		if err1 == nil && err2 == nil && v0.GT(v1) {
+			buffer.WriteString(fmt.Sprintf("\n%q is a newer release than %q", tagName, v.String()))
+		}
+	}
+
 	return buffer.String()
+}
+
+// LatestVersioner an interface for detecting the latest version.
+type LatestVersioner interface {
+	LatestVersion() (string, error)
+}
+
+// GithubLatestVersioner retrieves the latest version from Github.
+type GithubLatestVersioner struct{}
+
+var _ LatestVersioner = &GithubLatestVersioner{}
+
+// LatestVersion retrieves the latest version from Github or returns
+// an error.
+func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
+	u := LatestReleaseURL
+	res, err := http.Get(u)
+	if err != nil {
+		return "", err
+	}
+
+	defer res.Body.Close()
+
+	var m map[string]interface{}
+	if err = json.NewDecoder(res.Body).Decode(&m); err != nil {
+		return "", err
+	}
+
+	tn, ok := m["tag_name"]
+	if !ok {
+		return "", errors.New("could not find tag name in response")
+	}
+
+	tagName := tn.(string)
+	return strings.TrimPrefix(tagName, "v"), nil
 }
 
 // Config is an interface that represent doit's config.

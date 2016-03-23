@@ -14,6 +14,12 @@
 			"branch": "master"
 		},
 		{
+			"importpath": "github.com/blang/semver",
+			"repository": "https://github.com/blang/semver",
+			"revision": "aea32c919a18e5ef4537bbd283ff29594b1b0165",
+			"branch": "master"
+		},
+		{
 			"importpath": "github.com/bryanl/doit-server",
 			"repository": "https://github.com/bryanl/doit-server",
 			"revision": "6fb91d751dc13dc5122708d487ce3367e785fedd",

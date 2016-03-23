@@ -39,7 +39,7 @@ func Version() *Command {
 					doit.DoitVersion.Label = doit.Label
 				}
 
-				fmt.Println(doit.DoitVersion.Complete())
+				fmt.Println(doit.DoitVersion.Complete(&doit.GithubLatestVersioner{}))
 			},
 		},
 	}
