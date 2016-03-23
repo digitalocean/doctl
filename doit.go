@@ -35,13 +35,13 @@ var (
 	Build string
 
 	// Major is doctl's major version.
-	Major int
+	Major string
 
 	// Minor is doctl's minor version.
-	Minor int
+	Minor string
 
 	// Patch is doctl's patch version.
-	Patch int
+	Patch string
 
 	// Label is doctl's label.
 	Label string

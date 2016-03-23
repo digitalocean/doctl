@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/bryanl/doit"
 	"github.com/spf13/cobra"
@@ -22,14 +23,17 @@ func Version() *Command {
 				if doit.Build != "" {
 					doit.DoitVersion.Build = doit.Build
 				}
-				if doit.Major != 0 {
-					doit.DoitVersion.Major = doit.Major
+				if doit.Major != "" {
+					i, _ := strconv.Atoi(doit.Major)
+					doit.DoitVersion.Major = i
 				}
-				if doit.Minor != 0 {
-					doit.DoitVersion.Minor = doit.Minor
+				if doit.Minor != "" {
+					i, _ := strconv.Atoi(doit.Minor)
+					doit.DoitVersion.Minor = i
 				}
-				if doit.Patch != 0 {
-					doit.DoitVersion.Patch = doit.Patch
+				if doit.Patch != "" {
+					i, _ := strconv.Atoi(doit.Patch)
+					doit.DoitVersion.Patch = i
 				}
 				if doit.Label != "" {
 					doit.DoitVersion.Label = doit.Label
