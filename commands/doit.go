@@ -143,12 +143,6 @@ func requiredOpt() flagOpt {
 	}
 }
 
-func shortFlag(f string) flagOpt {
-	return func(c *Command, name, key string) {
-		c.Flag(name).Shorthand = f
-	}
-}
-
 func requiredKey(key string) string {
 	return fmt.Sprintf("%s.required", key)
 }
@@ -157,11 +151,12 @@ func requiredKey(key string) string {
 func AddStringFlag(cmd *Command, name, dflt, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().String(name, dflt, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
 	}
+
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 }
 
 // AddIntFlag adds an integr flag to a command.

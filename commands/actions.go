@@ -36,8 +36,7 @@ func Actions() *Command {
 
 	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", Writer,
 		aliasOpt("w"), displayerType(&action{}), docCategories("action"))
-	AddIntFlag(cmdActionWait, doit.ArgPollTime, 5, "Re-poll time in seconds",
-		shortFlag("p"))
+	AddIntFlag(cmdActionWait, doit.ArgPollTime, 5, "Re-poll time in seconds")
 
 	return cmd
 }

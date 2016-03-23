@@ -29,8 +29,7 @@ func ImageAction() *Command {
 		"transfer <image-id>", "transfer image", Writer,
 		displayerType(&action{}), docCategories("image"))
 	AddStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region", requiredOpt())
-	AddBoolFlag(cmdImageActionsTransfer, doit.ArgCommandWait, false, "Wait for action to complete",
-		shortFlag("w"))
+	AddBoolFlag(cmdImageActionsTransfer, doit.ArgCommandWait, false, "Wait for action to complete")
 
 	return cmd
 }

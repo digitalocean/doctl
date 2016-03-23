@@ -36,26 +36,19 @@ func Droplet() *Command {
 
 	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", Writer,
 		aliasOpt("c"), displayerType(&droplet{}), docCategories("droplet"))
-	AddStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints",
-		shortFlag("k"))
-	AddStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data",
-		shortFlag("u"))
-	AddStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file",
-		shortFlag("f"))
-	AddBoolFlag(cmdDropletCreate, doit.ArgCommandWait, false, "Wait for droplet to be created",
-		shortFlag("w"))
+	AddStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
+	AddStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
+	AddStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file")
+	AddBoolFlag(cmdDropletCreate, doit.ArgCommandWait, false, "Wait for droplet to be created")
 	AddStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region",
-		requiredOpt(), shortFlag("r"))
+		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size",
-		requiredOpt(), shortFlag("s"))
-	AddBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet",
-		shortFlag("b"))
-	AddBoolFlag(cmdDropletCreate, doit.ArgIPv6, false, "IPv6 support",
-		shortFlag("6"))
-	AddBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking",
-		shortFlag("p"))
+		requiredOpt())
+	AddBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet")
+	AddBoolFlag(cmdDropletCreate, doit.ArgIPv6, false, "IPv6 support")
+	AddBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
 	AddStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image",
-		requiredOpt(), shortFlag("i"))
+		requiredOpt())
 
 	CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
