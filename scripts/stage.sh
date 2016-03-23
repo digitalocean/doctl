@@ -29,7 +29,7 @@ rm -f $STAGE_DIR/doctl $STAGE_DIR/doctl.exe
 
 if [[ -z $SKIPBUILD ]]; then
   echo "building doctl"
-  baseFlag="-X github.com/digitalocean/doctl
+  baseFlag="-X github.com/digitalocean/doctl"
   ldflags="${baseFlag}.Build=$(git rev-parse --short HEAD) $baseFlag.Major=${major} $baseFlag.Minor=${minor} $baseFlag.Patch=${patch}"
   if [[ -n "$label" ]]; then
     ldflags="${ldflags} $baseFlag.Label=${label}"
