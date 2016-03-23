@@ -67,10 +67,6 @@ func (v Version) String() string {
 		buffer.WriteString("-" + v.Label)
 	}
 
-	if v.Build != "" {
-		buffer.WriteString(" " + v.Build)
-	}
-
 	return buffer.String()
 }
 
