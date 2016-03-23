@@ -42,6 +42,44 @@ func TestDropletActions_Shutdown(t *testing.T) {
 	}
 }
 
+func TestDropletActions_ShutdownByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "shutdown",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.ShutdownByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.ShutdownByTag("testing-1")
+	if err != nil {
+		t.Errorf("DropletActions.ShutdownByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.ShutdownByTag returned %+v, expected %+v", action, expected)
+	}
+}
+
 func TestDropletAction_PowerOff(t *testing.T) {
 	setup()
 	defer teardown()
@@ -73,6 +111,44 @@ func TestDropletAction_PowerOff(t *testing.T) {
 	expected := &Action{Status: "in-progress"}
 	if !reflect.DeepEqual(action, expected) {
 		t.Errorf("DropletActions.Poweroff returned %+v, expected %+v", action, expected)
+	}
+}
+
+func TestDropletAction_PowerOffByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "power_off",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.PowerOffByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.PowerOffByTag("testing-1")
+	if err != nil {
+		t.Errorf("DropletActions.PowerOffByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.PoweroffByTag returned %+v, expected %+v", action, expected)
 	}
 }
 
@@ -110,6 +186,43 @@ func TestDropletAction_PowerOn(t *testing.T) {
 	}
 }
 
+func TestDropletAction_PowerOnByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "power_on",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.PowerOnByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.PowerOnByTag("testing-1")
+	if err != nil {
+		t.Errorf("DropletActions.PowerOnByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.PowerOnByTag returned %+v, expected %+v", action, expected)
+	}
+}
 func TestDropletAction_Reboot(t *testing.T) {
 	setup()
 	defer teardown()
@@ -291,6 +404,45 @@ func TestDropletAction_PowerCycle(t *testing.T) {
 	}
 }
 
+func TestDropletAction_PowerCycleByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "power_cycle",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.PowerCycleByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+
+	})
+
+	action, _, err := client.DropletActions.PowerCycleByTag("testing-1")
+	if err != nil {
+		t.Errorf("DropletActions.PowerCycleByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.PowerCycleByTag returned %+v, expected %+v", action, expected)
+	}
+}
+
 func TestDropletAction_Snapshot(t *testing.T) {
 	setup()
 	defer teardown()
@@ -324,6 +476,46 @@ func TestDropletAction_Snapshot(t *testing.T) {
 	expected := &Action{Status: "in-progress"}
 	if !reflect.DeepEqual(action, expected) {
 		t.Errorf("DropletActions.Snapshot returned %+v, expected %+v", action, expected)
+	}
+}
+
+func TestDropletAction_SnapshotByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "snapshot",
+		"name": "Image-Name",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.SnapshotByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.SnapshotByTag("testing-1", "Image-Name")
+	if err != nil {
+		t.Errorf("DropletActions.SnapshotByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.SnapshotByTag returned %+v, expected %+v", action, expected)
 	}
 }
 
@@ -362,6 +554,45 @@ func TestDropletAction_EnableBackups(t *testing.T) {
 	}
 }
 
+func TestDropletAction_EnableBackupsByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "enable_backups",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.EnableBackupByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.EnableBackupsByTag("testing-1")
+	if err != nil {
+		t.Errorf("DropletActions.EnableBackupsByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.EnableBackupsByTag returned %+v, expected %+v", action, expected)
+	}
+}
+
 func TestDropletAction_DisableBackups(t *testing.T) {
 	setup()
 	defer teardown()
@@ -394,6 +625,45 @@ func TestDropletAction_DisableBackups(t *testing.T) {
 	expected := &Action{Status: "in-progress"}
 	if !reflect.DeepEqual(action, expected) {
 		t.Errorf("DropletActions.DisableBackups returned %+v, expected %+v", action, expected)
+	}
+}
+
+func TestDropletAction_DisableBackupsByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "disable_backups",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.DisableBackupsByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.DisableBackupsByTag("testing-1")
+	if err != nil {
+		t.Errorf("DropletActions.DisableBackupsByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.DisableBackupsByTag returned %+v, expected %+v", action, expected)
 	}
 }
 
@@ -575,6 +845,45 @@ func TestDropletAction_EnableIPv6(t *testing.T) {
 	}
 }
 
+func TestDropletAction_EnableIPv6ByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "enable_ipv6",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.EnableIPv6ByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.EnableIPv6ByTag("testing-1")
+	if err != nil {
+		t.Errorf("DropletActions.EnableIPv6ByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.EnableIPv6byTag returned %+v, expected %+v", action, expected)
+	}
+}
+
 func TestDropletAction_EnablePrivateNetworking(t *testing.T) {
 	setup()
 	defer teardown()
@@ -607,6 +916,45 @@ func TestDropletAction_EnablePrivateNetworking(t *testing.T) {
 	expected := &Action{Status: "in-progress"}
 	if !reflect.DeepEqual(action, expected) {
 		t.Errorf("DropletActions.EnablePrivateNetworking returned %+v, expected %+v", action, expected)
+	}
+}
+
+func TestDropletAction_EnablePrivateNetworkingByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	request := &ActionRequest{
+		"type": "enable_private_networking",
+	}
+
+	mux.HandleFunc("/v2/droplets/actions", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("DropletActions.EnablePrivateNetworkingByTag did not request with a tag parameter")
+		}
+
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+
+		if !reflect.DeepEqual(v, request) {
+			t.Errorf("Request body = %+v, expected %+v", v, request)
+		}
+
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.DropletActions.EnablePrivateNetworkingByTag("testing-1")
+	if err != nil {
+		t.Errorf("DropletActions.EnablePrivateNetworkingByTag returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("DropletActions.EnablePrivateNetworkingByTag returned %+v, expected %+v", action, expected)
 	}
 }
 

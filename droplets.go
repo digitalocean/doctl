@@ -15,10 +15,12 @@ var errNoNetworks = errors.New("no networks have been defined")
 // See: https://developers.digitalocean.com/documentation/v2#droplets
 type DropletsService interface {
 	List(*ListOptions) ([]Droplet, *Response, error)
+	ListByTag(string, *ListOptions) ([]Droplet, *Response, error)
 	Get(int) (*Droplet, *Response, error)
 	Create(*DropletCreateRequest) (*Droplet, *Response, error)
 	CreateMultiple(*DropletMultiCreateRequest) ([]Droplet, *Response, error)
 	Delete(int) (*Response, error)
+	DeleteByTag(string) (*Response, error)
 	Kernels(int, *ListOptions) ([]Kernel, *Response, error)
 	Snapshots(int, *ListOptions) ([]Image, *Response, error)
 	Backups(int, *ListOptions) ([]Image, *Response, error)
@@ -233,14 +235,8 @@ func (n NetworkV6) String() string {
 	return Stringify(n)
 }
 
-// List all droplets
-func (s *DropletsServiceOp) List(opt *ListOptions) ([]Droplet, *Response, error) {
-	path := dropletBasePath
-	path, err := addOptions(path, opt)
-	if err != nil {
-		return nil, nil, err
-	}
-
+// Performs a list request given a path
+func (s *DropletsServiceOp) list(path string) ([]Droplet, *Response, error) {
 	req, err := s.client.NewRequest("GET", path, nil)
 	if err != nil {
 		return nil, nil, err
@@ -256,6 +252,28 @@ func (s *DropletsServiceOp) List(opt *ListOptions) ([]Droplet, *Response, error)
 	}
 
 	return root.Droplets, resp, err
+}
+
+// List all droplets
+func (s *DropletsServiceOp) List(opt *ListOptions) ([]Droplet, *Response, error) {
+	path := dropletBasePath
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return s.list(path)
+}
+
+// List all droplets by tag
+func (s *DropletsServiceOp) ListByTag(tag string, opt *ListOptions) ([]Droplet, *Response, error) {
+	path := fmt.Sprintf("%s?tag_name=%s", dropletBasePath, tag)
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return s.list(path)
 }
 
 // Get individual droplet
@@ -330,14 +348,8 @@ func (s *DropletsServiceOp) CreateMultiple(createRequest *DropletMultiCreateRequ
 	return root.Droplets, resp, err
 }
 
-// Delete droplet
-func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
-	if dropletID < 1 {
-		return nil, NewArgError("dropletID", "cannot be less than 1")
-	}
-
-	path := fmt.Sprintf("%s/%d", dropletBasePath, dropletID)
-
+// Performs a delete request given a path
+func (s *DropletsServiceOp) delete(path string) (*Response, error) {
 	req, err := s.client.NewRequest("DELETE", path, nil)
 	if err != nil {
 		return nil, err
@@ -346,6 +358,28 @@ func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
 	resp, err := s.client.Do(req, nil)
 
 	return resp, err
+}
+
+// Delete droplet
+func (s *DropletsServiceOp) Delete(dropletID int) (*Response, error) {
+	if dropletID < 1 {
+		return nil, NewArgError("dropletID", "cannot be less than 1")
+	}
+
+	path := fmt.Sprintf("%s/%d", dropletBasePath, dropletID)
+
+	return s.delete(path)
+}
+
+// Delete droplets by tag
+func (s *DropletsServiceOp) DeleteByTag(tag string) (*Response, error) {
+	if tag == "" {
+		return nil, NewArgError("tag", "cannot be empty")
+	}
+
+	path := fmt.Sprintf("%s?tag_name=%s", dropletBasePath, tag)
+
+	return s.delete(path)
 }
 
 // Kernels lists kernels available for a droplet.
