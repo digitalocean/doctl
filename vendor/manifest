@@ -22,7 +22,7 @@
 		{
 			"importpath": "github.com/bryanl/godomock",
 			"repository": "https://github.com/bryanl/godomock",
-			"revision": "c2897683e9505efc69e285e2d4dc09f470a284d6",
+			"revision": "dd0b0cf1c93c7acaf2e660b9e289d51a665eb249",
 			"branch": "master"
 		},
 		{
@@ -55,7 +55,7 @@
 		{
 			"importpath": "github.com/digitalocean/godo",
 			"repository": "https://github.com/digitalocean/godo",
-			"revision": "719e6da3ef522b1fb3dd692ab507625239598509",
+			"revision": "859ab8f9253710399c0bc0f481a236f8285d5d4f",
 			"branch": "master"
 		},
 		{

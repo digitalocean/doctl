@@ -28,6 +28,30 @@ func TestDroplets_ListDroplets(t *testing.T) {
 	}
 }
 
+func TestDroplets_ListDropletsByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("Droplets.ListByTag did not request with a tag parameter")
+		}
+
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
+	})
+
+	droplets, _, err := client.Droplets.ListByTag("testing-1", nil)
+	if err != nil {
+		t.Errorf("Droplets.ListByTag returned error: %v", err)
+	}
+
+	expected := []Droplet{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(droplets, expected) {
+		t.Errorf("Droplets.ListByTag returned %+v, expected %+v", droplets, expected)
+	}
+}
+
 func TestDroplets_ListDropletsMultiplePages(t *testing.T) {
 	setup()
 	defer teardown()
@@ -229,6 +253,24 @@ func TestDroplets_Destroy(t *testing.T) {
 	})
 
 	_, err := client.Droplets.Delete(12345)
+	if err != nil {
+		t.Errorf("Droplet.Delete returned error: %v", err)
+	}
+}
+
+func TestDroplets_DestroyByTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("tag_name") != "testing-1" {
+			t.Errorf("Droplets.DeleteByTag did not request with a tag parameter")
+		}
+
+		testMethod(t, r, "DELETE")
+	})
+
+	_, err := client.Droplets.DeleteByTag("testing-1")
 	if err != nil {
 		t.Errorf("Droplet.Delete returned error: %v", err)
 	}
