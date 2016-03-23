@@ -1,12 +1,6 @@
----
 language: go
-
 go:
-  - 1.4.2
-  - tip
-
-install:
-  - export PATH=$PATH:$HOME/gopath/bin
-
-script:
-  - make test
+  - 1.6
+sudo: false
+install: true
+script: scripts/ci.sh

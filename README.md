@@ -1,180 +1,64 @@
-# Digital Ocean Control TooL
+# doctl
 
-[![Build Status](https://travis-ci.org/digitalocean/doctl.svg)](https://travis-ci.org/digitalocean/doctl.svg?branch=master)
-
-
-doctl is a tool for controlling your DigitalOcean resources from the command line. You can find your personal access tokens [on the control panel](https://cloud.digitalocean.com/settings/applications) or [generate a new one](https://cloud.digitalocean.com/settings/tokens/new).
-
-## Installation
-
-Download [pre-built binaries](https://github.com/digitalocean/doctl/releases) from this repository, or clone and build yourself:
+![Travis Build Status](https://travis-ci.org/bryanl/doit.svg?branch=master)
 
 ```
-$ git clone
-$ go get
-$ make all # Note that this compiles binaries for several architectures, make sure your go is pre-compiled with support, on homebrew: `brew install go --with-cc-common`
-```
+doctl is a command line interface for the DigitalOcean API.
 
-Or using `go get`:
+Usage:
+  doctl [command]
 
-```
-$ go get github.com/digitalocean/doctl
-```
+Available Commands:
+  account     account commands
+  auth        auth commands
+  compute     compute commands
+  version     show the current version
 
-## Usage
+Flags:
+  -t, --access-token string   DigitalOcean API V2 Access Token
+  -h, --help                  help for doctl
+  -o, --output string         output formt [text|json] (default "text")
+  -v, --verbose               verbose output
 
-More details:
-
-```
-NAME:
-   doctl - Digital Ocean Control TooL.
-
-USAGE:
-   doctl [global options] command [command options] [arguments...]
-
-VERSION:
-   0.0.9
-
-COMMANDS:
-   action   Action commands.
-   domain   Domain commands.
-   droplet, d  Droplet commands. Lists by default.
-   region   Region commands.
-   size     Size commands.
-   sshkey   SSH Key commands.
-   help, h  Shows a list of commands or help for one command
-
-GLOBAL OPTIONS:
-   --api-key, -k  API Key for DO APIv2. [$DIGITALOCEAN_API_KEY, $DIGITAL_OCEAN_API_KEY]
-   --format, -f 'yaml'  Format for output.
-   --help, -h       show help
-   --version, -v    print the version
+Use "doctl [command] --help" for more information about a command.
 
 ```
 
-Don't forget the shortcuts! Try `doctl d l`.
+## Initialization
 
-### Actions
-```
-NAME:
-   doctl action - Action commands.
+To automatically retrieve your access token from DigitalOcean, run `doctl auth login`. This process will authenticate 
+you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser 
+(because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doctl` 
+will give you a link for offline authentication.
 
-USAGE:
-   doctl action [global options] command [command options] [arguments...]
 
-VERSION:
-   0.0.11
+## Configuration
 
-COMMANDS:
-   show     Show an action.
-   list     List all actions.
-   help, h  Shows a list of commands or help for one command
+By default, `doctl` will load a configuration file from `$HOME/.doctlcfg` if found.
 
-```
+### Configuration OPTIONS
 
-### Domains
-```
-NAME:
-   doctl domain - Domain commands.
+* `access-token` - The DigitalOcean access token. You can generate a token in the 
+[Apps & API](https://cloud.digitalocean.com/settings/applications) section of the DigitalOcean control panel or use 
+`doctl auth login`.
+* `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doctl` will default
+ to `text`.
 
-USAGE:
-   doctl domain [global options] command [command options] [arguments...]
+Example:
 
-VERSION:
-   0.0.15
-
-COMMANDS:
-   show, s        <name> Show an domain.
-   list, l        List all domains.
-   create, c         <domain> <Droplet name> Create new domain.
-   destroy, d        <name> Destroy a domain.
-   list-records, records, r   <domain> List domain records for a domain.
-   show-record, record     <domain> <id> Show a domain record.
-   add, create-record      <domain> Create domain record.
-   destroy-record    <domain> <id> Destroy domain record.
-
+```yaml
+{
+  access-token: MY_TOKEN
+  output: text
+}
 ```
 
-### Droplets
-```
-NAME:
-   doctl droplet - Droplet commands. Lists by default.
+## Building and dependencies
 
-USAGE:
-   doctl droplet [global options] command [command options] [arguments...]
+`doctl`'s dependencies are managed by [gvt](https://github.com/FiloSottile/gvt). To add dependencies, use `gvt fetch`.
 
-VERSION:
-   0.0.15
+## Releasing
 
-COMMANDS:
-   create, c   (--domain | --add-region) --user-data --ssh-keys --size "512mb" --region "nyc3" --image "ubuntu-14-04-x64" --backups --ipv6 --private-networking Create Droplet
-   list, l     List droplets.
-   find, f     <Droplet name> Find the first Droplet whose name matches the first argument.
-   destroy, d     [--id | <name>] Destroy droplet.
-   reboot      [--id | <name>] Reboot droplet.
-   power_cycle    [--id | <name>] Powercycle droplet.
-   shutdown    [--id | <name>] Shutdown droplet.
-   poweroff, off  [--id | <name>] Power off droplet.
-   poweron, on    [--id | <name>] Power on droplet.
-   password_reset [--id | <name>] Reset password for droplet.
-   resize      [--id | <name>] Resize droplet.
-```
-
-### Regions
-```
-NAME:
-   doctl region - Region commands.
-
-USAGE:
-   doctl region [global options] command [command options] [arguments...]
-
-VERSION:
-   0.0.11
-
-COMMANDS:
-   list     List All Regions.
-```
-
-### Sizes
-```
-NAME:
-   doctl size - Size commands.
-
-USAGE:
-   doctl size [global options] command [command options] [arguments...]
-
-VERSION:
-   0.0.11
-
-COMMANDS:
-   list     List all sizes.
-```
-
-### SSH Keys
-```
-NAME:
-   doctl sshkey - SSH Key commands.
-
-USAGE:
-   doctl sshkey [global options] command [command options] [arguments...]
-
-VERSION:
-   0.0.11
-
-COMMANDS:
-   create   Create SSH key.
-   list     List all SSH keys.
-   show     Show SSH key.
-   destroy  Destroy SSH key.
-
-```
-
-
-## Licensing
-
-doctl is licensed under the Apache License, Version 2.0. See LICENSE.txt for full license text.
-
-## Author
-
-Phillip Baker <phillip@digitalocean.com>
-Steve Rude <steve@slantview.com>
+To build `doctl` for all it's platforms, run `script/build.sh <version>`. To upload `doctl` to Github, 
+run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doctl` 
+repository is required.

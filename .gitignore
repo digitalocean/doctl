@@ -1,7 +1,12 @@
+cmd/doit/doit
+.goxc.local.json
 .DS_Store
-bin*
-.deps
+builds
+doit
+.vscode
+project.json
+.cover
+dist
+public
+docs/content
 doctl
-releaselog*
-.idea*
-doctl.iml
