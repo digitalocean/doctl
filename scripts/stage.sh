@@ -17,7 +17,7 @@ if [[ -n "$label" ]]; then
   ver="${ver}-${label}"
 fi
 
-RELEASE_PACKAGE=github.com/digitalocean/doctlcmd/doctl
+RELEASE_PACKAGE=github.com/digitalocean/doctl/cmd/doctl
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 OUTPUT_DIR="${DIR}/../builds/${ver}"
 STAGE_DIR=$OUTPUT_DIR/stage

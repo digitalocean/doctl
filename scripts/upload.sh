@@ -16,8 +16,8 @@ for r in $(ls ${OUTPUT_DIR}/doctl-${ver}-*); do
 	name=$(basename $r)
 	echo "uploading $name"
 	github-release upload \
-		--user bryanl \
-		--repo doit \
+		--user digitalocean \
+		--repo doctl \
 		--tag v${ver} \
 		--name $name \
 		--file $r
