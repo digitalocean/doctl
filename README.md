@@ -27,7 +27,9 @@ Use "doctl [command] --help" for more information about a command.
 
 ### Option 1 – Download a Release from GitHub
 
-Visit the [Releases page][doctl-releases] for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  You can download the archive from from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`:
+Visit the [Releases page][doctl-releases] for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive.)
+
+You can download the archive from from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`:
 
 ```
 cd ~
