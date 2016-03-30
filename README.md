@@ -53,6 +53,34 @@ Example:
 }
 ```
 
+## Examples
+
+`doctl` is able to interact will all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client).
+
+* List all Droplets on your account:
+
+    `doctl compute droplet list`
+
+* Create a Droplet:
+
+    `doctl compute droplet create <name> --region <region-slug> --image <image-slug> --size <size-slug>`
+
+* Assign a Floating IP to a Droplet:
+
+    `doctl compute floating-ip-action assign <ip-addr> <droplet-id>`
+
+* Create a new A record for an existing domain:
+
+    `doctl compute domain records create --record-type A --record-name www --record-data <ip-addr> <domain-name>`
+
+`doctl` also simplifies actions without an API endpoint. For instance, it allows you to SSH to your Droplet by name:
+
+    doctl compute ssh <droplet-name>
+
+By default, it assumes you are using the `root` user. If you want to SSH as a specific user, you can do that as well:
+
+    doctl compute ssh <user>@<droplet-name>
+
 ## Building and dependencies
 
 `doctl`'s dependencies are managed by [gvt](https://github.com/FiloSottile/gvt). To add dependencies, use `gvt fetch`.
