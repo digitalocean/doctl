@@ -21,7 +21,48 @@ Flags:
   -v, --verbose               verbose output
 
 Use "doctl [command] --help" for more information about a command.
+```
 
+## Installation
+
+### Option 1 – Download a Release from GitHub
+
+Visit the [Releases page][doctl-releases] for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive.)
+
+You can download the archive from from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`:
+
+```
+cd ~
+wget https://github.com/digitalocean/doctl/releases/download/v1.0.0/doctl-1.0.0-linux-amd64.tar.gz
+```
+
+Or:
+
+```
+cd ~
+curl -OL https://github.com/digitalocean/doctl/releases/download/v1.0.0/doctl-1.0.0-linux-amd64.tar.gz
+```
+
+Extract the binary.  On GNU/Linux or OS X systems, you can use `tar`:
+
+```
+tar xf doctl-1.0.0-linux-amd64.tar.gz
+```
+
+On Windows systems, you should be able to double-click the zip archive to extract the `doctl` executable.
+
+Move the `doctl` binary to somewhere in your path.  For example, on GNU/Linux and OS X systems:
+
+```
+sudo mv ./doctl /usr/local/bin
+```
+
+### Option 2 – Build From Source
+
+Alternatively, if you have a Go environment configured, you can install the development version of `doctl` from the command line like so:
+
+```
+go get github.com/digitalocean/doctl
 ```
 
 ## Initialization
@@ -30,7 +71,6 @@ To automatically retrieve your access token from DigitalOcean, run `doctl auth l
 you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser 
 (because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doctl` 
 will give you a link for offline authentication.
-
 
 ## Configuration
 
@@ -55,7 +95,7 @@ Example:
 
 ## Examples
 
-`doctl` is able to interact will all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client).
+`doctl` is able to interact will all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site][tutorial].
 
 * List all Droplets on your account:
 
@@ -90,3 +130,6 @@ By default, it assumes you are using the `root` user. If you want to SSH as a sp
 To build `doctl` for all it's platforms, run `script/build.sh <version>`. To upload `doctl` to Github, 
 run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doctl` 
 repository is required.
+
+[tutorial]: https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client
+[doctl-releases]: https://github.com/digitalocean/doctl/releases
