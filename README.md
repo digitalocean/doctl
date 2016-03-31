@@ -62,7 +62,7 @@ sudo mv ./doctl /usr/local/bin
 Alternatively, if you have a Go environment configured, you can install the development version of `doctl` from the command line like so:
 
 ```
-go get github.com/digitalocean/doctl
+go get github.com/digitalocean/doctl/cmd/doctl
 ```
 
 ## Initialization
