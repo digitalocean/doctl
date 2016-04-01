@@ -25,7 +25,16 @@ Use "doctl [command] --help" for more information about a command.
 
 ## Installation
 
-### Option 1 – Download a Release from GitHub
+### Option 1 - Use a Package Manager
+
+Currently, you can use [Homebrew](http://brew.sh) to install `doctl` on Mac OS X by using the command below:
+
+```
+brew install doctl
+```
+
+
+### Option 2 – Download a Release from GitHub
 
 Visit the [Releases page][doctl-releases] for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive.)
 
@@ -57,7 +66,7 @@ Move the `doctl` binary to somewhere in your path.  For example, on GNU/Linux an
 sudo mv ./doctl /usr/local/bin
 ```
 
-### Option 2 – Build From Source
+### Option 3 – Build From Source
 
 Alternatively, if you have a Go environment configured, you can install the development version of `doctl` from the command line like so:
 
@@ -67,9 +76,9 @@ go get github.com/digitalocean/doctl/cmd/doctl
 
 ## Initialization
 
-To automatically retrieve your access token from DigitalOcean, run `doctl auth login`. This process will authenticate 
-you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser 
-(because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doctl` 
+To automatically retrieve your access token from DigitalOcean, run `doctl auth login`. This process will authenticate
+you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser
+(because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doctl`
 will give you a link for offline authentication.
 
 ## Configuration
@@ -78,8 +87,8 @@ By default, `doctl` will load a configuration file from `$HOME/.doctlcfg` if fou
 
 ### Configuration OPTIONS
 
-* `access-token` - The DigitalOcean access token. You can generate a token in the 
-[Apps & API](https://cloud.digitalocean.com/settings/applications) section of the DigitalOcean control panel or use 
+* `access-token` - The DigitalOcean access token. You can generate a token in the
+[Apps & API](https://cloud.digitalocean.com/settings/applications) section of the DigitalOcean control panel or use
 `doctl auth login`.
 * `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doctl` will default
  to `text`.
@@ -127,8 +136,8 @@ By default, it assumes you are using the `root` user. If you want to SSH as a sp
 
 ## Releasing
 
-To build `doctl` for all it's platforms, run `script/build.sh <version>`. To upload `doctl` to Github, 
-run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doctl` 
+To build `doctl` for all it's platforms, run `script/build.sh <version>`. To upload `doctl` to Github,
+run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doctl`
 repository is required.
 
 [tutorial]: https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client
