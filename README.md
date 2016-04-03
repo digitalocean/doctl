@@ -96,10 +96,8 @@ By default, `doctl` will load a configuration file from `$HOME/.doctlcfg` if fou
 Example:
 
 ```yaml
-{
-  access-token: MY_TOKEN
-  output: text
-}
+access-token: MY_TOKEN
+output: text
 ```
 
 ## Examples
