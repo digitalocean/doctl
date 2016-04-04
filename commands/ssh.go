@@ -36,13 +36,13 @@ var (
 )
 
 // SSH creates the ssh commands heirarchy
-func SSH() *Command {
+func SSH(parent *Command) *Command {
 	usr, err := user.Current()
 	checkErr(err)
 
 	path := filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 
-	cmdSSH := CmdBuilder(nil, RunSSH, "ssh <droplet-id | host>", "ssh to droplet", Writer,
+	cmdSSH := CmdBuilder(parent, RunSSH, "ssh <droplet-id | host>", "ssh to droplet", Writer,
 		docCategories("droplet"))
 	AddStringFlag(cmdSSH, doit.ArgSSHUser, "root", "ssh user")
 	AddStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
