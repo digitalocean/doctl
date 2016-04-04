@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"strconv"
@@ -268,6 +267,18 @@ func extractUserData(userData, filename string) (string, error) {
 	return userData, nil
 }
 
+func allInt(in []string) ([]int, error) {
+	out := []int{}
+	for _, i := range in {
+		id, err := strconv.Atoi(i)
+		if err != nil {
+			return nil, fmt.Errorf("%s is not an int", i)
+		}
+		out = append(out, id)
+	}
+	return out, nil
+}
+
 // RunDropletDelete destroy a droplet by id.
 func RunDropletDelete(c *CmdConfig) error {
 
@@ -277,35 +288,69 @@ func RunDropletDelete(c *CmdConfig) error {
 		return doit.NewMissingArgsErr(c.NS)
 	}
 
-	listedDroplets := false
-	list := do.Droplets{}
-
-	for _, idStr := range c.Args {
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			if !listedDroplets {
-				list, err = ds.List()
-				if err != nil {
-					return errors.New("unable to build list of droplets")
-				}
-				listedDroplets = true
-			}
-
-			var matchedDroplet *do.Droplet
-			for _, d := range list {
-				if d.Name == idStr {
-					matchedDroplet = &d
-					break
-				}
-			}
-
-			if matchedDroplet == nil {
-				return fmt.Errorf("unable to find droplet with name %q", idStr)
-			}
-
-			id = matchedDroplet.ID
+	// if list is all int, go down list
+	if out, err := allInt(c.Args); err == nil {
+		toDelete := map[int]struct{}{}
+		for _, id := range out {
+			toDelete[id] = struct{}{}
 		}
 
+		for id := range toDelete {
+			if err = ds.Delete(id); err != nil {
+				return fmt.Errorf("unable to delete droplet %d: %v", id, err)
+			}
+			fmt.Printf("deleted droplet %d\n", id)
+		}
+
+		return nil
+	}
+
+	// if list has strings in it, fetch the list
+	list, err := ds.List()
+	if err != nil {
+		return fmt.Errorf("unable to create list of droplets: %v", err)
+	}
+
+	dropletNames := map[string]int{}
+	dropletList := map[string]int{}
+	dropletIDs := map[string][]string{}
+	for _, d := range list {
+		dropletNames[d.Name]++
+		dropletList[d.Name] = d.ID
+		dropletIDs[d.Name] = append(dropletIDs[d.Name], strconv.Itoa(d.ID))
+	}
+
+	toDelete := map[int]bool{}
+	for _, idStr := range c.Args {
+		if dropletNames[idStr] > 1 {
+			return fmt.Errorf("there are %d Droplets with the name %q, please delete by id. [%s]",
+				dropletNames[idStr], idStr, strings.Join(dropletIDs[idStr], ", "))
+		}
+
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			id, ok := dropletList[idStr]
+			if !ok {
+				return fmt.Errorf("droplet with name %q could not be found", idStr)
+			}
+
+			if toDelete[id] {
+				warn(fmt.Sprintf("droplet %q (%d) has already been marked for deletion",
+					idStr, dropletList[idStr]))
+			}
+			toDelete[id] = true
+			continue
+		}
+
+		if toDelete[id] {
+			warn(fmt.Sprintf("droplet %q (%d) has already been marked for deletion",
+				idStr, dropletList[idStr]))
+
+		}
+		toDelete[id] = true
+	}
+
+	for id := range toDelete {
 		err = ds.Delete(id)
 		if err != nil {
 			return fmt.Errorf("unable to delete droplet %d: %v", id, err)
