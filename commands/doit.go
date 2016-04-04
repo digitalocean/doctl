@@ -112,7 +112,10 @@ func computeCmd() *Command {
 	cmd.AddCommand(Region())
 	cmd.AddCommand(Size())
 	cmd.AddCommand(SSHKeys())
-	cmd.AddCommand(SSH())
+
+	// SSH is different since it doesn't have any subcommands. In this case, let's
+	// give it a parent at init time.
+	SSH(cmd)
 
 	return cmd
 }
