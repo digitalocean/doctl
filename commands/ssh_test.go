@@ -20,6 +20,8 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/runner/mocks"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +33,14 @@ type sshMock struct {
 }
 
 func TestSSHComand(t *testing.T) {
-	cmd := SSH()
+	parent := &Command{
+		Command: &cobra.Command{
+			Use:   "compute",
+			Short: "compute commands",
+			Long:  "compute commands are for controlling and managing infrastructure",
+		},
+	}
+	cmd := SSH(parent)
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd)
 }
@@ -90,7 +99,27 @@ func TestSSH_DropletWithNoPublic(t *testing.T) {
 		err := RunSSH(config)
 		assert.EqualError(t, err, "could not find droplet address")
 	})
+}
 
+func TestSSH_CustomPort(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		rm := &mocks.Runner{}
+		rm.On("Run").Return(nil)
+
+		tc := config.Doit.(*TestConfig)
+		tc.SSHFn = func(user, host, keyPath string, port int) runner.Runner {
+			assert.Equal(t, 2222, port)
+			return rm
+		}
+
+		tm.droplets.On("List").Return(testDropletList, nil)
+
+		config.Doit.Set(config.NS, doit.ArgsSSHPort, "2222")
+		config.Args = append(config.Args, testDroplet.Name)
+
+		err := RunSSH(config)
+		assert.NoError(t, err)
+	})
 }
 
 func Test_extractHostInfo(t *testing.T) {
