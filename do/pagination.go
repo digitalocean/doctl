@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +24,10 @@ import (
 
 const maxFetchPages = 10
 
+var perPage = 200
+
+var fetchFn = fetchPage
+
 type paginatedList struct {
 	list []interface{}
 	mu   sync.Mutex
@@ -42,7 +45,7 @@ type Generator func(*godo.ListOptions) ([]interface{}, *godo.Response, error)
 
 // PaginateResp paginates a Response.
 func PaginateResp(gen Generator) ([]interface{}, error) {
-	opt := &godo.ListOptions{Page: 1, PerPage: 200}
+	opt := &godo.ListOptions{Page: 1, PerPage: perPage}
 
 	l := paginatedList{}
 
@@ -53,7 +56,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 		wg.Add(1)
 		go func() {
 			for page := range fetchChan {
-				items, err := fetchPage(gen, page)
+				items, err := fetchFn(gen, page)
 				if err == nil {
 					l.append(items...)
 				}
@@ -77,7 +80,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 	}
 
 	// start with second page
-	for i := 2; i < lp; i++ {
+	for i := 1; i < lp; i++ {
 		fetchChan <- i
 	}
 	close(fetchChan)
