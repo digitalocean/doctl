@@ -122,12 +122,6 @@ func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
 
 type testFn func(c *CmdConfig, tm *tcMocks)
 
-type testCmdConfig struct {
-	*CmdConfig
-
-	doitConfig *TestConfig
-}
-
 type tcMocks struct {
 	keys              domocks.KeysService
 	sizes             domocks.SizesService

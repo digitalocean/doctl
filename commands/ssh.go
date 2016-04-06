@@ -15,7 +15,6 @@ package commands
 
 import (
 	"errors"
-	"fmt"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -26,13 +25,8 @@ import (
 	"github.com/digitalocean/doctl/do"
 )
 
-const (
-	sshNoAddress = "could not find droplet address"
-)
-
 var (
-	errSSHInvalidOptions = fmt.Errorf("neither id or name were supplied")
-	sshHostRE            = regexp.MustCompile("^((?P<m1>\\w+)@)?(?P<m2>.*?)(:(?P<m3>\\d+))?$")
+	sshHostRE = regexp.MustCompile("^((?P<m1>\\w+)@)?(?P<m2>.*?)(:(?P<m3>\\d+))?$")
 )
 
 // SSH creates the ssh commands heirarchy
