@@ -106,6 +106,18 @@ func TestDropletDelete(t *testing.T) {
 	})
 }
 
+func TestDropletDeleteRepeatedID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.On("Delete", 1).Return(nil).Once()
+
+		id := strconv.Itoa(testDroplet.ID)
+		config.Args = append(config.Args, id, id)
+
+		err := RunDropletDelete(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestDropletDeleteByName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.droplets.On("List").Return(testDropletList, nil)
@@ -116,6 +128,33 @@ func TestDropletDeleteByName(t *testing.T) {
 		err := RunDropletDelete(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestDropletDeleteByName_Ambiguous(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		list := do.Droplets{testDroplet, testDroplet}
+		tm.droplets.On("List").Return(list, nil)
+
+		config.Args = append(config.Args, testDroplet.Name)
+
+		err := RunDropletDelete(config)
+		t.Log(err)
+		assert.Error(t, err)
+	})
+}
+
+func TestDropletDelete_MixedNameAndType(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.droplets.On("Delete", 1).Return(nil).Once()
+
+		id := strconv.Itoa(testDroplet.ID)
+		config.Args = append(config.Args, id, testDroplet.Name)
+
+		err := RunDropletDelete(config)
+		assert.NoError(t, err)
+	})
+
 }
 
 func TestDropletGet(t *testing.T) {

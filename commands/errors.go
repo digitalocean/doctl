@@ -24,7 +24,8 @@ import (
 )
 
 var (
-	colorErr = color.New(color.FgRed).SprintFunc()("Error")
+	colorErr  = color.New(color.FgRed).SprintFunc()("Error")
+	colorWarn = color.New(color.FgYellow).SprintFunc()("Warning")
 
 	// errAction specifies what should happen when an error occurs
 	errAction = func() {
@@ -65,4 +66,8 @@ func checkErr(err error, cmd ...*cobra.Command) {
 	}
 
 	errAction()
+}
+
+func warn(msg string) {
+	fmt.Fprintf(color.Output, "%s: %s\n", colorWarn, msg)
 }
