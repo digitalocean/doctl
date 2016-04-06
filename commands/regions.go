@@ -25,8 +25,8 @@ func Region() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunRegionList, "list", "list regions", Writer, displayerType(&region{}),
-		docCategories("compute"))
+	CmdBuilder(cmd, RunRegionList, "list", "list regions", Writer, aliasOpt("ls"),
+		displayerType(&region{}), docCategories("compute"))
 
 	return cmd
 }

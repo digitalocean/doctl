@@ -25,8 +25,8 @@ func Size() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunSizeList, "list", "list sizes", Writer, displayerType(&size{}),
-		docCategories("compute"))
+	CmdBuilder(cmd, RunSizeList, "list", "list sizes", Writer, aliasOpt("ls"),
+		displayerType(&size{}), docCategories("compute"))
 
 	return cmd
 }
