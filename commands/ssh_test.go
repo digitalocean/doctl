@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"errors"
 	"strconv"
 	"testing"
 
@@ -24,13 +23,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
-
-type sshMock struct {
-	user    string
-	host    string
-	didRun  bool
-	isError bool
-}
 
 func TestSSHComand(t *testing.T) {
 	parent := &Command{
@@ -43,22 +35,6 @@ func TestSSHComand(t *testing.T) {
 	cmd := SSH(parent)
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd)
-}
-
-func (s *sshMock) cmd() func(u, h, kp string, p int) runner.Runner {
-	return func(u, h, kp string, p int) runner.Runner {
-		s.didRun = true
-		s.user = u
-		s.host = h
-
-		r := &doit.MockRunner{}
-
-		if s.isError {
-			r.Err = errors.New("ssh forced failure")
-		}
-
-		return r
-	}
 }
 
 func TestSSH_ID(t *testing.T) {

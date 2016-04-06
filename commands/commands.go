@@ -79,11 +79,6 @@ func writeJSON(item interface{}, w io.Writer) error {
 	return err
 }
 
-func hasCol(colMap map[string]string, col string) bool {
-	_, ok := colMap[col]
-	return ok
-}
-
 func displayText(item Displayable, out io.Writer, includeCols []string) error {
 	w := newTabWriter(out)
 

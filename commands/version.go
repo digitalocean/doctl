@@ -21,11 +21,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type version struct {
-	Major, Minor, Patch int
-	Name, Build, Label  string
-}
-
 // Version creates a version command.
 func Version() *Command {
 	return &Command{

@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +22,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-const maxFetchPages = 10
+const maxFetchPages = 5
 
 type paginatedList struct {
 	list []interface{}
@@ -46,7 +45,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 
 	l := paginatedList{}
 
-	fetchChan := make(chan int, 5)
+	fetchChan := make(chan int, maxFetchPages)
 
 	var wg sync.WaitGroup
 	for i := 0; i < 4; i++ {
