@@ -140,7 +140,7 @@ func DropletAction() *Command {
 
 	cmdDropletActionChangeKernel := CmdBuilder(cmd, RunDropletActionChangeKernel,
 		"change-kernel <droplet-id>", "change kernel", Writer,
-		docCategories("droplet"))
+		displayerType(&action{}), docCategories("droplet"))
 	AddIntFlag(cmdDropletActionChangeKernel, doit.ArgKernelID, 0, "Kernel ID", requiredOpt())
 	AddBoolFlag(cmdDropletActionChangeKernel, doit.ArgCommandWait, false, "Wait for action to complete")
 
