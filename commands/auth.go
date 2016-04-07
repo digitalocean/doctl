@@ -26,9 +26,9 @@ import (
 
 	"golang.org/x/crypto/ssh/terminal"
 
-	"github.com/digitalocean/doctl"
 	"github.com/bryanl/doit-server"
 	"github.com/bryanl/webbrowser"
+	"github.com/digitalocean/doctl"
 	"github.com/gorilla/websocket"
 	"github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
