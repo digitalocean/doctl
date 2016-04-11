@@ -34,10 +34,10 @@ import (
 
 const (
 	// NSRoot is a configuration key that signifies this value is at the root.
-	NSRoot = "doit"
+	NSRoot = "doctl"
 
 	// LatestReleaseURL is the latest release URL endpoint.
-	LatestReleaseURL = "https://api.github.com/repos/bryanl/doit/releases/latest"
+	LatestReleaseURL = "https://api.github.com/repos/digitalocean/doctl/releases/latest"
 )
 
 var (
