@@ -146,6 +146,8 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 
 		err := RunDropletActionRebuild(config)
 		assert.NoError(t, err)
+
+		assert.True(t, tm.dropletActions.AssertExpectations(t))
 	})
 }
 
@@ -159,6 +161,8 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 
 		err := RunDropletActionRebuild(config)
 		assert.NoError(t, err)
+
+		assert.True(t, tm.dropletActions.AssertExpectations(t))
 	})
 
 }
