@@ -129,7 +129,7 @@ func DropletAction() *Command {
 	cmdDropletActionRebuild := CmdBuilder(cmd, RunDropletActionRebuild,
 		"rebuild <droplet-id>", "rebuild droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddIntFlag(cmdDropletActionRebuild, doit.ArgImageID, 0, "Image ID", requiredOpt())
+	AddStringFlag(cmdDropletActionRebuild, doit.ArgImage, "", "Image ID or Slug", requiredOpt())
 	AddBoolFlag(cmdDropletActionRebuild, doit.ArgCommandWait, false, "Wait for action to complete")
 
 	cmdDropletActionRename := CmdBuilder(cmd, RunDropletActionRename,
