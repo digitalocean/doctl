@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/digitalocean/doctl/do"
@@ -232,7 +233,7 @@ func (d *droplet) JSON(out io.Writer) error {
 
 func (d *droplet) Cols() []string {
 	return []string{
-		"ID", "Name", "PublicIPv4", "Memory", "VCPUs", "Disk", "Region", "Image", "Status",
+		"ID", "Name", "PublicIPv4", "Memory", "VCPUs", "Disk", "Region", "Image", "Status", "Tags",
 	}
 }
 
@@ -241,18 +242,21 @@ func (d *droplet) ColMap() map[string]string {
 		"ID": "ID", "Name": "Name", "PublicIPv4": "Public IPv4",
 		"Memory": "Memory", "VCPUs": "VCPUs", "Disk": "Disk",
 		"Region": "Region", "Image": "Image", "Status": "Status",
+		"Tags": "Tags",
 	}
 }
 
 func (d *droplet) KV() []map[string]interface{} {
 	out := []map[string]interface{}{}
 	for _, d := range d.droplets {
+		tags := strings.Join(d.Tags, ",")
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
 		ip, _ := d.PublicIPv4()
 		m := map[string]interface{}{
 			"ID": d.ID, "Name": d.Name, "PublicIPv4": ip,
 			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
 			"Region": d.Region.Slug, "Image": image, "Status": d.Status,
+			"Tags": tags,
 		}
 		out = append(out, m)
 	}
@@ -524,6 +528,42 @@ func (p *plugin) KV() []map[string]interface{} {
 			"Name": plug.Name,
 		}
 
+		out = append(out, o)
+	}
+
+	return out
+}
+
+type tag struct {
+	tags do.Tags
+}
+
+var _ Displayable = &action{}
+
+func (t *tag) JSON(out io.Writer) error {
+	return writeJSON(t.tags, out)
+}
+
+func (t *tag) Cols() []string {
+	return []string{"Name", "DropletCount"}
+}
+
+func (t *tag) ColMap() map[string]string {
+	return map[string]string{
+		"Name":         "Name",
+		"DropletCount": "Droplet Count",
+	}
+}
+
+func (t *tag) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, x := range t.tags {
+		dropletCount := x.Resources.Droplets.Count
+		o := map[string]interface{}{
+			"Name":         x.Name,
+			"DropletCount": dropletCount,
+		}
 		out = append(out, o)
 	}
 
