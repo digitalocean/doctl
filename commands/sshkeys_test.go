@@ -74,7 +74,7 @@ func TestKeysCreate(t *testing.T) {
 
 		config.Args = append(config.Args, "the key")
 
-		config.Doit.Set(config.NS, doit.ArgKeyPublicKey, "fingerprint")
+		config.Doit.Set(config.NS, doctl.ArgKeyPublicKey, "fingerprint")
 
 		err := RunKeyCreate(config)
 		assert.NoError(t, err)
@@ -111,7 +111,7 @@ func TestKeysUpdateByID(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
-		config.Doit.Set(config.NS, doit.ArgKeyName, "the key")
+		config.Doit.Set(config.NS, doctl.ArgKeyName, "the key")
 
 		err := RunKeyUpdate(config)
 		assert.NoError(t, err)
@@ -126,7 +126,7 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 
 		config.Args = append(config.Args, "fingerprint")
 
-		config.Doit.Set(config.NS, doit.ArgKeyName, "the key")
+		config.Doit.Set(config.NS, doctl.ArgKeyName, "the key")
 
 		err := RunKeyUpdate(config)
 		assert.NoError(t, err)
@@ -147,7 +147,7 @@ func TestSSHPublicKeyImportWithName(t *testing.T) {
 
 		config.Args = append(config.Args, "custom")
 
-		config.Doit.Set(config.NS, doit.ArgKeyPublicKeyFile, path)
+		config.Doit.Set(config.NS, doctl.ArgKeyPublicKeyFile, path)
 
 		err := RunKeyImport(config)
 		assert.NoError(t, err)

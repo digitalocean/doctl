@@ -38,12 +38,12 @@ func FloatingIP() *Command {
 
 	cmdFloatingIPCreate := CmdBuilder(cmd, RunFloatingIPCreate, "create", "create a floating IP", Writer,
 		aliasOpt("c"), displayerType(&floatingIP{}), docCategories("floatingip"))
-	AddStringFlag(cmdFloatingIPCreate, doit.ArgRegionSlug, "",
+	AddStringFlag(cmdFloatingIPCreate, doctl.ArgRegionSlug, "",
 		fmt.Sprintf("Region where to create the floating IP. (mutually exclusive with %s)",
-			doit.ArgDropletID))
-	AddIntFlag(cmdFloatingIPCreate, doit.ArgDropletID, 0,
+			doctl.ArgDropletID))
+	AddIntFlag(cmdFloatingIPCreate, doctl.ArgDropletID, 0,
 		fmt.Sprintf("ID of the droplet to assign the IP to. (mutually exclusive with %s)",
-			doit.ArgRegionSlug))
+			doctl.ArgRegionSlug))
 
 	CmdBuilder(cmd, RunFloatingIPGet, "get <floating-ip>", "get the details of a floating IP", Writer,
 		aliasOpt("g"), displayerType(&floatingIP{}), docCategories("floatingip"))
@@ -52,7 +52,7 @@ func FloatingIP() *Command {
 
 	cmdFloatingIPList := CmdBuilder(cmd, RunFloatingIPList, "list", "list all floating IP addresses", Writer,
 		aliasOpt("ls"), displayerType(&floatingIP{}), docCategories("floatingip"))
-	AddStringFlag(cmdFloatingIPList, doit.ArgRegionSlug, "", "Floating IP region")
+	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "Floating IP region")
 
 	return cmd
 }
@@ -62,11 +62,11 @@ func RunFloatingIPCreate(c *CmdConfig) error {
 	fis := c.FloatingIPs()
 
 	// ignore errors since we don't know which one is valid
-	region, _ := c.Doit.GetString(c.NS, doit.ArgRegionSlug)
-	dropletID, _ := c.Doit.GetInt(c.NS, doit.ArgDropletID)
+	region, _ := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	dropletID, _ := c.Doit.GetInt(c.NS, doctl.ArgDropletID)
 
 	if region == "" && dropletID == 0 {
-		return doit.NewMissingArgsErr("region and droplet id can't both be blank")
+		return doctl.NewMissingArgsErr("region and droplet id can't both be blank")
 	}
 
 	if region != "" && dropletID != 0 {
@@ -93,7 +93,7 @@ func RunFloatingIPGet(c *CmdConfig) error {
 	fis := c.FloatingIPs()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ip := c.Args[0]
@@ -116,7 +116,7 @@ func RunFloatingIPDelete(c *CmdConfig) error {
 	fis := c.FloatingIPs()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ip := c.Args[0]
@@ -128,7 +128,7 @@ func RunFloatingIPDelete(c *CmdConfig) error {
 func RunFloatingIPList(c *CmdConfig) error {
 	fis := c.FloatingIPs()
 
-	region, err := c.Doit.GetString(c.NS, doit.ArgRegionSlug)
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	if err != nil {
 		return err
 	}

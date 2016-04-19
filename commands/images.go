@@ -37,29 +37,29 @@ func Images() *Command {
 
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", Writer,
 		aliasOpt("ls"), displayerType(&image{}), docCategories("image"))
-	AddBoolFlag(cmdImagesList, doit.ArgImagePublic, false, "List public images")
+	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, false, "List public images")
 
 	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-distribution", "list distribution images", Writer,
 		displayerType(&image{}), docCategories("image"))
-	AddBoolFlag(cmdImagesListDistribution, doit.ArgImagePublic, false, "List public images")
+	AddBoolFlag(cmdImagesListDistribution, doctl.ArgImagePublic, false, "List public images")
 
 	cmdImagesListApplication := CmdBuilder(cmd, RunImagesListApplication,
 		"list-application", "list application images", Writer,
 		displayerType(&image{}), docCategories("image"))
-	AddBoolFlag(cmdImagesListApplication, doit.ArgImagePublic, false, "List public images")
+	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, false, "List public images")
 
 	cmdImagesListUser := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-user", "list user images", Writer,
 		displayerType(&image{}), docCategories("image"))
-	AddBoolFlag(cmdImagesListUser, doit.ArgImagePublic, false, "List public images")
+	AddBoolFlag(cmdImagesListUser, doctl.ArgImagePublic, false, "List public images")
 
 	CmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", Writer,
 		displayerType(&image{}), docCategories("image"))
 
 	cmdImagesUpdate := CmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", Writer,
 		displayerType(&image{}), docCategories("image"))
-	AddStringFlag(cmdImagesUpdate, doit.ArgImageName, "", "Image name", requiredOpt())
+	AddStringFlag(cmdImagesUpdate, doctl.ArgImageName, "", "Image name", requiredOpt())
 
 	CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer,
 		docCategories("image"))
@@ -71,7 +71,7 @@ func Images() *Command {
 func RunImagesList(c *CmdConfig) error {
 	is := c.Images()
 
-	public, err := c.Doit.GetBool(c.NS, doit.ArgImagePublic)
+	public, err := c.Doit.GetBool(c.NS, doctl.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func RunImagesList(c *CmdConfig) error {
 func RunImagesListDistribution(c *CmdConfig) error {
 	is := c.Images()
 
-	public, err := c.Doit.GetBool(c.NS, doit.ArgImagePublic)
+	public, err := c.Doit.GetBool(c.NS, doctl.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func RunImagesListDistribution(c *CmdConfig) error {
 func RunImagesListApplication(c *CmdConfig) error {
 	is := c.Images()
 
-	public, err := c.Doit.GetBool(c.NS, doit.ArgImagePublic)
+	public, err := c.Doit.GetBool(c.NS, doctl.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func RunImagesListApplication(c *CmdConfig) error {
 func RunImagesListUser(c *CmdConfig) error {
 	is := c.Images()
 
-	public, err := c.Doit.GetBool(c.NS, doit.ArgImagePublic)
+	public, err := c.Doit.GetBool(c.NS, doctl.ArgImagePublic)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func RunImagesGet(c *CmdConfig) error {
 	is := c.Images()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	rawID := c.Args[0]
@@ -176,7 +176,7 @@ func RunImagesUpdate(c *CmdConfig) error {
 	is := c.Images()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	id, err := strconv.Atoi(c.Args[0])
@@ -184,7 +184,7 @@ func RunImagesUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	name, err := c.Doit.GetString(c.NS, doit.ArgImageName)
+	name, err := c.Doit.GetString(c.NS, doctl.ArgImageName)
 
 	req := &godo.ImageUpdateRequest{
 		Name: name,
@@ -204,7 +204,7 @@ func RunImagesDelete(c *CmdConfig) error {
 	is := c.Images()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	id, err := strconv.Atoi(c.Args[0])

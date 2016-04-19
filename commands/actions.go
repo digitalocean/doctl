@@ -40,16 +40,16 @@ func Actions() *Command {
 
 	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
 		aliasOpt("ls"), displayerType(&action{}), docCategories("action"))
-	AddStringFlag(cmdActionList, doit.ArgActionResourceType, "", "Action resource type")
-	AddStringFlag(cmdActionList, doit.ArgActionRegion, "", "Action region")
-	AddStringFlag(cmdActionList, doit.ArgActionAfter, "", "Action completed after in RFC3339 format")
-	AddStringFlag(cmdActionList, doit.ArgActionBefore, "", "Action completed before in RFC3339 format")
-	AddStringFlag(cmdActionList, doit.ArgActionStatus, "", "Action status")
-	AddStringFlag(cmdActionList, doit.ArgActionType, "", "Action type")
+	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "Action resource type")
+	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "Action region")
+	AddStringFlag(cmdActionList, doctl.ArgActionAfter, "", "Action completed after in RFC3339 format")
+	AddStringFlag(cmdActionList, doctl.ArgActionBefore, "", "Action completed before in RFC3339 format")
+	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "Action status")
+	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "Action type")
 
 	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", Writer,
 		aliasOpt("w"), displayerType(&action{}), docCategories("action"))
-	AddIntFlag(cmdActionWait, doit.ArgPollTime, 5, "Re-poll time in seconds")
+	AddIntFlag(cmdActionWait, doctl.ArgPollTime, 5, "Re-poll time in seconds")
 
 	return cmd
 }
@@ -85,28 +85,28 @@ func (a actionsByCompletedAt) Less(i, j int) bool {
 }
 
 func filterActionList(c *CmdConfig, in do.Actions) (do.Actions, error) {
-	resourceType, err := c.Doit.GetString(c.NS, doit.ArgActionResourceType)
+	resourceType, err := c.Doit.GetString(c.NS, doctl.ArgActionResourceType)
 	if err != nil {
 		return nil, err
 	}
 
-	region, err := c.Doit.GetString(c.NS, doit.ArgActionRegion)
+	region, err := c.Doit.GetString(c.NS, doctl.ArgActionRegion)
 	if err != nil {
 		return nil, err
 	}
 
-	status, err := c.Doit.GetString(c.NS, doit.ArgActionStatus)
+	status, err := c.Doit.GetString(c.NS, doctl.ArgActionStatus)
 	if err != nil {
 		return nil, err
 	}
 
-	actionType, err := c.Doit.GetString(c.NS, doit.ArgActionType)
+	actionType, err := c.Doit.GetString(c.NS, doctl.ArgActionType)
 	if err != nil {
 		return nil, err
 	}
 
 	var before, after time.Time
-	beforeStr, err := c.Doit.GetString(c.NS, doit.ArgActionBefore)
+	beforeStr, err := c.Doit.GetString(c.NS, doctl.ArgActionBefore)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func filterActionList(c *CmdConfig, in do.Actions) (do.Actions, error) {
 		}
 	}
 
-	afterStr, err := c.Doit.GetString(c.NS, doit.ArgActionAfter)
+	afterStr, err := c.Doit.GetString(c.NS, doctl.ArgActionAfter)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func isZeroTime(t time.Time) bool {
 // RunCmdActionGet runs action get.
 func RunCmdActionGet(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	id, err := strconv.Atoi(c.Args[0])
@@ -196,7 +196,7 @@ func RunCmdActionGet(c *CmdConfig) error {
 // RunCmdActionWait waits for an action to complete or error.
 func RunCmdActionWait(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	id, err := strconv.Atoi(c.Args[0])
@@ -204,7 +204,7 @@ func RunCmdActionWait(c *CmdConfig) error {
 		return err
 	}
 
-	pollTime, err := c.Doit.GetInt(c.NS, doit.ArgPollTime)
+	pollTime, err := c.Doit.GetInt(c.NS, doctl.ArgPollTime)
 	if err != nil {
 		return err
 	}

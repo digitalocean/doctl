@@ -97,7 +97,7 @@ func TestImagesUpdate(t *testing.T) {
 		tm.images.On("Update", testImage.ID, iur).Return(&testImage, nil)
 
 		config.Args = append(config.Args, strconv.Itoa(testImage.ID))
-		config.Doit.Set(config.NS, doit.ArgImageName, "new-name")
+		config.Doit.Set(config.NS, doctl.ArgImageName, "new-name")
 		err := RunImagesUpdate(config)
 		assert.NoError(t, err)
 	})

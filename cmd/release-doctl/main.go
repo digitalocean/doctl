@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	ver    = flag.String("ver", doit.DoitVersion.String(), "doit version")
+	ver    = flag.String("ver", doctl.DoitVersion.String(), "doit version")
 	path   = flag.String("path", "", "upload path")
 	user   = flag.String("user", "", "bintray user")
 	apikey = flag.String("apikey", "", "bintray apikey")

@@ -30,7 +30,7 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.dropletActions.On("ChangeKernel", 1, 2).Return(&testAction, nil)
 
-		config.Doit.Set(config.NS, doit.ArgKernelID, 2)
+		config.Doit.Set(config.NS, doctl.ArgKernelID, 2)
 		config.Args = append(config.Args, "1")
 
 		err := RunDropletActionChangeKernel(config)
@@ -75,7 +75,7 @@ func TestDropletActionsGet(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
-		config.Doit.Set(config.NS, doit.ArgActionID, 2)
+		config.Doit.Set(config.NS, doctl.ArgActionID, 2)
 
 		err := RunDropletActionGet(config)
 		assert.NoError(t, err)
@@ -142,7 +142,7 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
-		config.Doit.Set(config.NS, doit.ArgImage, "2")
+		config.Doit.Set(config.NS, doctl.ArgImage, "2")
 
 		err := RunDropletActionRebuild(config)
 		assert.NoError(t, err)
@@ -157,7 +157,7 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
-		config.Doit.Set(config.NS, doit.ArgImage, "slug")
+		config.Doit.Set(config.NS, doctl.ArgImage, "slug")
 
 		err := RunDropletActionRebuild(config)
 		assert.NoError(t, err)
@@ -172,7 +172,7 @@ func TestDropletActionsRename(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
-		config.Doit.Set(config.NS, doit.ArgDropletName, "name")
+		config.Doit.Set(config.NS, doctl.ArgDropletName, "name")
 
 		err := RunDropletActionRename(config)
 		assert.NoError(t, err)
@@ -185,8 +185,8 @@ func TestDropletActionsResize(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
-		config.Doit.Set(config.NS, doit.ArgSizeSlug, "1gb")
-		config.Doit.Set(config.NS, doit.ArgResizeDisk, true)
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
+		config.Doit.Set(config.NS, doctl.ArgResizeDisk, true)
 
 		err := RunDropletActionResize(config)
 		assert.NoError(t, err)
@@ -199,7 +199,7 @@ func TestDropletActionsRestore(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
-		config.Doit.Set(config.NS, doit.ArgImageID, 2)
+		config.Doit.Set(config.NS, doctl.ArgImageID, 2)
 
 		err := RunDropletActionRestore(config)
 		assert.NoError(t, err)
@@ -223,7 +223,7 @@ func TestDropletActionsSnapshot(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
-		config.Doit.Set(config.NS, doit.ArgSnapshotName, "name")
+		config.Doit.Set(config.NS, doctl.ArgSnapshotName, "name")
 
 		err := RunDropletActionSnapshot(config)
 		assert.NoError(t, err)

@@ -90,7 +90,7 @@ func TestSSH_CustomPort(t *testing.T) {
 
 		tm.droplets.On("List").Return(testDropletList, nil)
 
-		config.Doit.Set(config.NS, doit.ArgsSSHPort, "2222")
+		config.Doit.Set(config.NS, doctl.ArgsSSHPort, "2222")
 		config.Args = append(config.Args, testDroplet.Name)
 
 		err := RunSSH(config)

@@ -142,13 +142,13 @@ type tcMocks struct {
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
-	ogConfig := doit.DoitConfig
+	ogConfig := doctl.DoitConfig
 	defer func() {
-		doit.DoitConfig = ogConfig
+		doctl.DoitConfig = ogConfig
 	}()
 
 	cfg := NewTestConfig()
-	doit.DoitConfig = cfg
+	doctl.DoitConfig = cfg
 
 	tm := &tcMocks{}
 
@@ -194,18 +194,18 @@ type TestConfig struct {
 	v     *viper.Viper
 }
 
-var _ doit.Config = &TestConfig{}
+var _ doctl.Config = &TestConfig{}
 
 func NewTestConfig() *TestConfig {
 	return &TestConfig{
 		SSHFn: func(u, h, kp string, p int) runner.Runner {
-			return &doit.MockRunner{}
+			return &doctl.MockRunner{}
 		},
 		v: viper.New(),
 	}
 }
 
-var _ doit.Config = &TestConfig{}
+var _ doctl.Config = &TestConfig{}
 
 func (c *TestConfig) GetGodoClient(trace bool) *godo.Client {
 	return &godo.Client{}
