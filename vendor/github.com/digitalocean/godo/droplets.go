@@ -53,7 +53,8 @@ type Droplet struct {
 	Status      string    `json:"status,omitempty"`
 	Networks    *Networks `json:"networks,omitempty"`
 	Created     string    `json:"created_at,omitempty"`
-	Kernel      *Kernel   `json:"kernel, omitempty"`
+	Kernel      *Kernel   `json:"kernel,omitempty"`
+	Tags        []string  `json:"tags,ommitempty"`
 }
 
 // PublicIPv4 returns the public IPv4 address for the Droplet.

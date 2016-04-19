@@ -112,6 +112,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(Region())
 	cmd.AddCommand(Size())
 	cmd.AddCommand(SSHKeys())
+	cmd.AddCommand(Tags())
 
 	// SSH is different since it doesn't have any subcommands. In this case, let's
 	// give it a parent at init time.
@@ -249,6 +250,7 @@ type CmdConfig struct {
 	Domains           func() do.DomainsService
 	Actions           func() do.ActionsService
 	Account           func() do.AccountService
+	Tags              func() do.TagsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -273,6 +275,7 @@ func NewCmdConfig(ns string, dc doit.Config, out io.Writer, args []string) *CmdC
 		Domains:           func() do.DomainsService { return do.NewDomainsService(godoClient) },
 		Actions:           func() do.ActionsService { return do.NewActionsService(godoClient) },
 		Account:           func() do.AccountService { return do.NewAccountService(godoClient) },
+		Tags:              func() do.TagsService { return do.NewTagsService(godoClient) },
 	}
 }
 

@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -51,10 +50,12 @@ type Kernels []Kernel
 // DropletsService is an interface for interacting with DigitalOcean's droplet api.
 type DropletsService interface {
 	List() (Droplets, error)
+	ListByTag(string) (Droplets, error)
 	Get(int) (*Droplet, error)
 	Create(*godo.DropletCreateRequest, bool) (*Droplet, error)
 	CreateMultiple(*godo.DropletMultiCreateRequest) (Droplets, error)
 	Delete(int) error
+	DeleteByTag(string) error
 	Kernels(int) (Kernels, error)
 	Snapshots(int) (Images, error)
 	Backups(int) (Images, error)
@@ -78,6 +79,35 @@ func NewDropletsService(client *godo.Client) DropletsService {
 func (ds *dropletsService) List() (Droplets, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := ds.client.Droplets.List(opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(Droplets, len(si))
+	for i := range si {
+		a := si[i].(godo.Droplet)
+		list[i] = Droplet{Droplet: &a}
+	}
+
+	return list, nil
+}
+
+func (ds *dropletsService) ListByTag(tagName string) (Droplets, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := ds.client.Droplets.ListByTag(tagName, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -157,6 +187,11 @@ func (ds *dropletsService) CreateMultiple(dmcr *godo.DropletMultiCreateRequest) 
 
 func (ds *dropletsService) Delete(id int) error {
 	_, err := ds.client.Droplets.Delete(id)
+	return err
+}
+
+func (ds *dropletsService) DeleteByTag(tag string) error {
+	_, err := ds.client.Droplets.DeleteByTag(tag)
 	return err
 }
 

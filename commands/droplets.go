@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"io/ioutil"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -61,6 +62,7 @@ func Droplet() *Command {
 	AddBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
 	AddStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image",
 		requiredOpt())
+	AddStringFlag(cmdDropletCreate, doit.ArgTagName, "", "Tag name")
 
 	CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
@@ -74,12 +76,22 @@ func Droplet() *Command {
 	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", Writer,
 		aliasOpt("ls"), displayerType(&droplet{}), docCategories("droplet"))
 	AddStringFlag(cmdRunDropletList, doit.ArgRegionSlug, "", "Droplet region")
+	AddStringFlag(cmdRunDropletList, doit.ArgTagName, "", "Tag name")
 
 	CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", Writer,
 		aliasOpt("n"), displayerType(&droplet{}), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet id>", "snapshots", Writer,
 		aliasOpt("s"), displayerType(&image{}), docCategories("droplet"))
+
+	cmdRunDropletTag := CmdBuilder(cmd, RunDropletTag, "tag <droplet id or name>", "tag", Writer,
+		docCategories("droplet"))
+	AddStringFlag(cmdRunDropletTag, doit.ArgTagName, "", "Tag name",
+		requiredOpt())
+
+	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet id or name>", "untag", Writer,
+		docCategories("droplet"))
+	AddStringSliceFlag(cmdRunDropletUntag, doit.ArgDropletName, []string{}, "Droplet names")
 
 	return cmd
 }
@@ -155,6 +167,11 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	tagName, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	if err != nil {
+		return err
+	}
+
 	sshKeys := extractSSHKeys(keys)
 
 	userData, err := c.Doit.GetString(c.NS, doit.ArgUserData)
@@ -187,6 +204,7 @@ func RunDropletCreate(c *CmdConfig) error {
 	}
 
 	ds := c.Droplets()
+	ts := c.Tags()
 
 	var wg sync.WaitGroup
 	errs := make(chan error, len(c.Args))
@@ -212,6 +230,20 @@ func RunDropletCreate(c *CmdConfig) error {
 				return
 			}
 
+			if tagName != "" {
+				trr := &godo.TagResourcesRequest{
+					Resources: []godo.Resource{
+						{ID: strconv.Itoa(d.ID), Type: godo.DropletResourceType},
+					},
+				}
+
+				err := ts.TagResources(tagName, trr)
+				if err != nil {
+					errs <- err
+				}
+
+			}
+
 			item := &droplet{droplets: do.Droplets{*d}}
 			c.Display(item)
 		}()
@@ -227,6 +259,70 @@ func RunDropletCreate(c *CmdConfig) error {
 	}
 
 	return nil
+}
+
+// RunDropletTag adds a tag to a droplet.
+func RunDropletTag(c *CmdConfig) error {
+	ds := c.Droplets()
+	ts := c.Tags()
+
+	if len(c.Args) < 1 {
+		return doit.NewMissingArgsErr(c.NS)
+	}
+
+	tag, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	if err != nil {
+		return err
+	}
+
+	fn := func(ids []int) error {
+		trr := &godo.TagResourcesRequest{}
+		for _, id := range ids {
+			r := godo.Resource{
+				ID:   strconv.Itoa(id),
+				Type: godo.DropletResourceType,
+			}
+			trr.Resources = append(trr.Resources, r)
+		}
+
+		return ts.TagResources(tag, trr)
+	}
+
+	return matchDroplets(c.Args, ds, fn)
+}
+
+// RunDropletUntag untags a droplet.
+func RunDropletUntag(c *CmdConfig) error {
+	ds := c.Droplets()
+	ts := c.Tags()
+
+	if len(c.Args) != 1 {
+		return doit.NewMissingArgsErr(c.NS)
+	}
+
+	tagName := c.Args[0]
+
+	dropletIDStrs, err := c.Doit.GetStringSlice(c.NS, doit.ArgDropletName)
+	if err != nil {
+		return err
+	}
+
+	fn := func(ids []int) error {
+		urr := &godo.UntagResourcesRequest{}
+
+		for _, id := range ids {
+			r := godo.Resource{
+				ID:   strconv.Itoa(id),
+				Type: godo.DropletResourceType,
+			}
+
+			urr.Resources = append(urr.Resources, r)
+		}
+
+		return ts.UntagResources(tagName, urr)
+	}
+
+	return matchDroplets(dropletIDStrs, ds, fn)
 }
 
 func extractSSHKeys(keys []string) []godo.DropletCreateSSHKey {
@@ -269,7 +365,15 @@ func extractUserData(userData, filename string) (string, error) {
 
 func allInt(in []string) ([]int, error) {
 	out := []int{}
+	seen := map[string]bool{}
+
 	for _, i := range in {
+		if seen[i] {
+			continue
+		}
+
+		seen[i] = true
+
 		id, err := strconv.Atoi(i)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not an int", i)
@@ -281,22 +385,24 @@ func allInt(in []string) ([]int, error) {
 
 // RunDropletDelete destroy a droplet by id.
 func RunDropletDelete(c *CmdConfig) error {
-
 	ds := c.Droplets()
 
-	if len(c.Args) < 1 {
-		return doit.NewMissingArgsErr(c.NS)
+	tagName, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	if err != nil {
+		return err
 	}
 
-	// if list is all int, go down list
-	if out, err := allInt(c.Args); err == nil {
-		toDelete := map[int]struct{}{}
-		for _, id := range out {
-			toDelete[id] = struct{}{}
-		}
+	if len(c.Args) < 1 && tagName == "" {
+		return doit.NewMissingArgsErr(c.NS)
+	} else if len(c.Args) > 0 && tagName != "" {
+		return fmt.Errorf("please specify droplets identifiers or a tag name")
+	} else if tagName != "" {
+		return ds.DeleteByTag(tagName)
+	}
 
-		for id := range toDelete {
-			if err = ds.Delete(id); err != nil {
+	fn := func(ids []int) error {
+		for _, id := range ids {
+			if err := ds.Delete(id); err != nil {
 				return fmt.Errorf("unable to delete droplet %d: %v", id, err)
 			}
 			fmt.Printf("deleted droplet %d\n", id)
@@ -305,61 +411,50 @@ func RunDropletDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	// if list has strings in it, fetch the list
-	list, err := ds.List()
+	return matchDroplets(c.Args, ds, fn)
+}
+
+type matchDropletsFn func(ids []int) error
+
+func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) error {
+	if extractedIDs, err := allInt(ids); err == nil {
+		return fn(extractedIDs)
+	}
+
+	sum, err := buildDropletSummary(ds)
 	if err != nil {
-		return fmt.Errorf("unable to create list of droplets: %v", err)
+		return err
 	}
 
-	dropletNames := map[string]int{}
-	dropletList := map[string]int{}
-	dropletIDs := map[string][]string{}
-	for _, d := range list {
-		dropletNames[d.Name]++
-		dropletList[d.Name] = d.ID
-		dropletIDs[d.Name] = append(dropletIDs[d.Name], strconv.Itoa(d.ID))
-	}
-
-	toDelete := map[int]bool{}
-	for _, idStr := range c.Args {
-		if dropletNames[idStr] > 1 {
+	matchedMap := map[int]bool{}
+	for _, idStr := range ids {
+		count := sum.count[idStr]
+		if count > 1 {
 			return fmt.Errorf("there are %d Droplets with the name %q, please delete by id. [%s]",
-				dropletNames[idStr], idStr, strings.Join(dropletIDs[idStr], ", "))
+				count, idStr, strings.Join(sum.byName[idStr], ", "))
 		}
 
 		id, err := strconv.Atoi(idStr)
 		if err != nil {
-			id, ok := dropletList[idStr]
+			id, ok := sum.byID[idStr]
 			if !ok {
 				return fmt.Errorf("droplet with name %q could not be found", idStr)
 			}
 
-			if toDelete[id] {
-				warn(fmt.Sprintf("droplet %q (%d) has already been marked for deletion",
-					idStr, dropletList[idStr]))
-			}
-			toDelete[id] = true
+			matchedMap[id] = true
 			continue
 		}
 
-		if toDelete[id] {
-			warn(fmt.Sprintf("droplet %q (%d) has already been marked for deletion",
-				idStr, dropletList[idStr]))
-
-		}
-		toDelete[id] = true
+		matchedMap[id] = true
 	}
 
-	for id := range toDelete {
-		err = ds.Delete(id)
-		if err != nil {
-			return fmt.Errorf("unable to delete droplet %d: %v", id, err)
-		}
-
-		fmt.Printf("deleted droplet %d\n", id)
+	var extractedIDs []int
+	for id := range matchedMap {
+		extractedIDs = append(extractedIDs, id)
 	}
 
-	return nil
+	sort.Ints(extractedIDs)
+	return fn(extractedIDs)
 }
 
 // RunDropletGet returns a droplet.
@@ -408,6 +503,11 @@ func RunDropletList(c *CmdConfig) error {
 		return err
 	}
 
+	tagName, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	if err != nil {
+		return err
+	}
+
 	matches := []glob.Glob{}
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
@@ -420,9 +520,14 @@ func RunDropletList(c *CmdConfig) error {
 
 	var matchedList do.Droplets
 
-	list, err := ds.List()
-	if err != nil {
-		return err
+	var list do.Droplets
+	if tagName == "" {
+		list, err = ds.List()
+		if err != nil {
+			return err
+		}
+	} else {
+		list, err = ds.ListByTag(tagName)
 	}
 
 	for _, droplet := range list {
@@ -495,4 +600,30 @@ func getDropletIDArg(ns string, args []string) (int, error) {
 	}
 
 	return strconv.Atoi(args[0])
+}
+
+type dropletSummary struct {
+	count  map[string]int
+	byID   map[string]int
+	byName map[string][]string
+}
+
+func buildDropletSummary(ds do.DropletsService) (*dropletSummary, error) {
+	list, err := ds.List()
+	if err != nil {
+		return nil, err
+	}
+
+	var sum dropletSummary
+
+	sum.count = map[string]int{}
+	sum.byID = map[string]int{}
+	sum.byName = map[string][]string{}
+	for _, d := range list {
+		sum.count[d.Name]++
+		sum.byID[d.Name] = d.ID
+		sum.byName[d.Name] = append(sum.byName[d.Name], strconv.Itoa(d.ID))
+	}
+
+	return &sum, nil
 }

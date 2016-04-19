@@ -138,6 +138,7 @@ type tcMocks struct {
 	domains           domocks.DomainsService
 	actions           domocks.ActionsService
 	account           domocks.AccountService
+	tags              domocks.TagsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -168,6 +169,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Domains:           func() do.DomainsService { return &tm.domains },
 		Actions:           func() do.ActionsService { return &tm.actions },
 		Account:           func() do.AccountService { return &tm.account },
+		Tags:              func() do.TagsService { return &tm.tags },
 	}
 
 	tFn(config, tm)
@@ -184,6 +186,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.regions.AssertExpectations(t))
 	assert.True(t, tm.sizes.AssertExpectations(t))
 	assert.True(t, tm.keys.AssertExpectations(t))
+	assert.True(t, tm.tags.AssertExpectations(t))
 }
 
 type TestConfig struct {

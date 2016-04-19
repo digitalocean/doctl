@@ -104,6 +104,8 @@ const (
 	ArgNoHeader = "no-header"
 	// ArgPollTime is how long before the next poll argument.
 	ArgPollTime = "poll-timeout"
+	// ArgTagName is a tag name
+	ArgTagName = "tag-name"
 
 	// ArgOutput is an output type argument.
 	ArgOutput = "output"
