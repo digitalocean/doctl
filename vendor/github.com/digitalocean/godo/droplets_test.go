@@ -24,7 +24,7 @@ func TestDroplets_ListDroplets(t *testing.T) {
 
 	expected := []Droplet{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(droplets, expected) {
-		t.Errorf("Droplets.List returned %+v, expected %+v", droplets, expected)
+		t.Errorf("Droplets.List\n got=%#v\nwant=%#v", droplets, expected)
 	}
 }
 
@@ -132,7 +132,7 @@ func TestDroplets_GetDroplet(t *testing.T) {
 
 	expected := &Droplet{ID: 12345}
 	if !reflect.DeepEqual(droplets, expected) {
-		t.Errorf("Droplets.Get returned %+v, expected %+v", droplets, expected)
+		t.Errorf("Droplets.Get\n got=%#v\nwant=%#v", droplets, expected)
 	}
 }
 
@@ -147,6 +147,11 @@ func TestDroplets_Create(t *testing.T) {
 		Image: DropletCreateImage{
 			ID: 1,
 		},
+		Drives: []DropletCreateDrive{
+			{Name: "hello-im-a-drive"},
+			{ID: "hello-im-another-drive"},
+			{Name: "hello-im-still-a-drive", ID: "should be ignored due to Name"},
+		},
 	}
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
@@ -159,6 +164,11 @@ func TestDroplets_Create(t *testing.T) {
 			"backups":            false,
 			"ipv6":               false,
 			"private_networking": false,
+			"drives": []interface{}{
+				map[string]interface{}{"name": "hello-im-a-drive"},
+				map[string]interface{}{"id": "hello-im-another-drive"},
+				map[string]interface{}{"name": "hello-im-still-a-drive"},
+			},
 		}
 
 		var v map[string]interface{}
@@ -168,7 +178,7 @@ func TestDroplets_Create(t *testing.T) {
 		}
 
 		if !reflect.DeepEqual(v, expected) {
-			t.Errorf("Request body = %#v, expected %#v", v, expected)
+			t.Errorf("Request body\n got=%#v\nwant=%#v", v, expected)
 		}
 
 		fmt.Fprintf(w, `{"droplet":{"id":1}, "links":{"actions": [{"id": 1, "href": "http://example.com", "rel": "create"}]}}`)
@@ -293,7 +303,7 @@ func TestDroplets_Kernels(t *testing.T) {
 
 	expected := []Kernel{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(kernels, expected) {
-		t.Errorf("Droplets.Kernels returned %+v, expected %+v", kernels, expected)
+		t.Errorf("Droplets.Kernels\n got=%#v\nwant=%#v", kernels, expected)
 	}
 }
 
@@ -314,7 +324,7 @@ func TestDroplets_Snapshots(t *testing.T) {
 
 	expected := []Image{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(snapshots, expected) {
-		t.Errorf("Droplets.Snapshots returned %+v, expected %+v", snapshots, expected)
+		t.Errorf("Droplets.Snapshots\n got=%#v\nwant=%#v", snapshots, expected)
 	}
 }
 
@@ -335,7 +345,7 @@ func TestDroplets_Backups(t *testing.T) {
 
 	expected := []Image{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(backups, expected) {
-		t.Errorf("Droplets.Backups returned %+v, expected %+v", backups, expected)
+		t.Errorf("Droplets.Backups\n got=%#v\nwant=%#v", backups, expected)
 	}
 }
 
@@ -356,7 +366,7 @@ func TestDroplets_Actions(t *testing.T) {
 
 	expected := []Action{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(actions, expected) {
-		t.Errorf("Droplets.Actions returned %+v, expected %+v", actions, expected)
+		t.Errorf("Droplets.Actions\n got=%#v\nwant=%#v", actions, expected)
 	}
 }
 
@@ -376,7 +386,7 @@ func TestDroplets_Neighbors(t *testing.T) {
 
 	expected := []Droplet{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(neighbors, expected) {
-		t.Errorf("Droplets.Neighbors returned %+v, expected %+v", neighbors, expected)
+		t.Errorf("Droplets.Neighbors\n got=%#v\nwant=%#v", neighbors, expected)
 	}
 }
 
@@ -390,7 +400,7 @@ func TestNetworkV4_String(t *testing.T) {
 	stringified := network.String()
 	expected := `godo.NetworkV4{IPAddress:"192.168.1.2", Netmask:"255.255.255.0", Gateway:"192.168.1.1", Type:""}`
 	if expected != stringified {
-		t.Errorf("NetworkV4.String returned %+v, expected %+v", stringified, expected)
+		t.Errorf("NetworkV4.String\n got=%#v\nwant=%#v", stringified, expected)
 	}
 
 }
@@ -404,7 +414,7 @@ func TestNetworkV6_String(t *testing.T) {
 	stringified := network.String()
 	expected := `godo.NetworkV6{IPAddress:"2604:A880:0800:0010:0000:0000:02DD:4001", Netmask:64, Gateway:"2604:A880:0800:0010:0000:0000:0000:0001", Type:""}`
 	if expected != stringified {
-		t.Errorf("NetworkV6.String returned %+v, expected %+v", stringified, expected)
+		t.Errorf("NetworkV6.String\n got=%#v\nwant=%#v", stringified, expected)
 	}
 }
 

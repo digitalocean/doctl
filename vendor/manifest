@@ -61,8 +61,8 @@
 		{
 			"importpath": "github.com/digitalocean/godo",
 			"repository": "https://github.com/digitalocean/godo",
-			"revision": "d5eb35143cad86edbe7136512921790fada64222",
-			"branch": "master"
+			"revision": "ee84e3120012ead04df6a48f2e4f2fbd4fc58b79",
+			"branch": "beta-storage-blockstore"
 		},
 		{
 			"importpath": "github.com/fatih/color",
