@@ -65,6 +65,14 @@
 			"branch": "beta-storage-blockstore"
 		},
 		{
+			"importpath": "github.com/dustin/go-humanize",
+			"repository": "https://github.com/dustin/go-humanize",
+			"vcs": "git",
+			"revision": "8929fe90cee4b2cb9deb468b51fb34eba64d1bf0",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/fatih/color",
 			"repository": "https://github.com/fatih/color",
 			"revision": "7a5857db0b2752a436d8461d88c42dea0ee191c0",
@@ -223,6 +231,14 @@
 			"branch": "master"
 		},
 		{
+			"importpath": "github.com/pborman/uuid",
+			"repository": "https://github.com/pborman/uuid",
+			"vcs": "git",
+			"revision": "c55201b036063326c5b1b89ccfe45a184973d073",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/pkg/sftp",
 			"repository": "https://github.com/pkg/sftp",
 			"revision": "e84cc8c755ca39b7b64f510fe1fffc1b51f210a5",
@@ -275,6 +291,7 @@
 			"importpath": "github.com/spf13/cobra",
 			"repository": "https://github.com/spf13/cobra",
 			"revision": "4c05eb1145f16d0e6bb4a3e1b6d769f4713cb41f",
+			"revision": "65a708cee0a4424f4e353d031ce440643e312f92",
 			"branch": "master"
 		},
 		{

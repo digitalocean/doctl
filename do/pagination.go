@@ -97,7 +97,7 @@ func fetchPage(gen Generator, page int) ([]interface{}, error) {
 }
 
 func lastPage(resp *godo.Response) (int, error) {
-	if resp.Links.Pages == nil {
+	if resp.Links == nil || resp.Links.Pages == nil {
 		// no other pages
 		return 1, nil
 	}

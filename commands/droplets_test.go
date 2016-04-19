@@ -21,6 +21,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -63,7 +64,22 @@ func TestDropletBackupList(t *testing.T) {
 
 func TestDropletCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config"}
+		driveUUID := uuid.New()
+		dcr := &godo.DropletCreateRequest{
+			Name:    "droplet",
+			Region:  "dev0",
+			Size:    "1gb",
+			Image:   godo.DropletCreateImage{ID: 0, Slug: "image"},
+			SSHKeys: []godo.DropletCreateSSHKey{},
+			Drives: []godo.DropletCreateDrive{
+				{Name: "test-drive"},
+				{ID: driveUUID},
+			},
+			Backups:           false,
+			IPv6:              false,
+			PrivateNetworking: false,
+			UserData:          "#cloud-config",
+		}
 		tm.droplets.On("Create", dcr, false).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
@@ -72,6 +88,7 @@ func TestDropletCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
 		config.Doit.Set(config.NS, doctl.ArgImage, "image")
 		config.Doit.Set(config.NS, doctl.ArgUserData, "#cloud-config")
+		config.Doit.Set(config.NS, doctl.ArgDriveList, fmt.Sprintf("[test-drive, %s]", driveUUID))
 
 		err := RunDropletCreate(config)
 		assert.NoError(t, err)

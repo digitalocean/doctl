@@ -25,6 +25,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/gobwas/glob"
+	"github.com/pborman/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -63,6 +64,8 @@ func Droplet() *Command {
 	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "Droplet image",
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "Tag name")
+
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgDriveList, []string{}, "Drives to attach")
 
 	CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
@@ -179,6 +182,12 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	driveList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDriveList)
+	if err != nil {
+		return err
+	}
+	drives := extractDrives(driveList)
+
 	filename, err := c.Doit.GetString(c.NS, doctl.ArgUserDataFile)
 	if err != nil {
 		return err
@@ -214,6 +223,7 @@ func RunDropletCreate(c *CmdConfig) error {
 			Region:            region,
 			Size:              size,
 			Image:             createImage,
+			Drives:            drives,
 			Backups:           backups,
 			IPv6:              ipv6,
 			PrivateNetworking: privateNetworking,
@@ -361,6 +371,29 @@ func extractUserData(userData, filename string) (string, error) {
 	}
 
 	return userData, nil
+}
+
+func extractDrives(driveList []string) []godo.DropletCreateDrive {
+	var drives []godo.DropletCreateDrive
+	for _, rawDrive := range driveList {
+		rawDrive = strings.TrimPrefix(rawDrive, "[")
+		rawDrive = strings.TrimSuffix(rawDrive, "]")
+
+		list := strings.Split(rawDrive, ",")
+		for _, v := range list {
+			if v == "" {
+				continue
+			}
+			var req godo.DropletCreateDrive
+			if uuid.Parse(v) != nil {
+				req.ID = v
+			} else {
+				req.Name = v
+			}
+			drives = append(drives, req)
+		}
+	}
+	return drives
 }
 
 func allInt(in []string) ([]int, error) {

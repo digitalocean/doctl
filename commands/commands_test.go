@@ -136,6 +136,8 @@ type tcMocks struct {
 	droplets          domocks.DropletsService
 	dropletActions    domocks.DropletActionsService
 	domains           domocks.DomainsService
+	drives            domocks.DrivesService
+	driveActions      domocks.DriveActionsService
 	actions           domocks.ActionsService
 	account           domocks.AccountService
 	tags              domocks.TagsService
@@ -170,6 +172,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Actions:           func() do.ActionsService { return &tm.actions },
 		Account:           func() do.AccountService { return &tm.account },
 		Tags:              func() do.TagsService { return &tm.tags },
+		Drives:            func() do.DrivesService { return &tm.drives },
+		DriveActions:      func() do.DriveActionsService { return &tm.driveActions },
 	}
 
 	tFn(config, tm)
@@ -187,6 +191,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.sizes.AssertExpectations(t))
 	assert.True(t, tm.keys.AssertExpectations(t))
 	assert.True(t, tm.tags.AssertExpectations(t))
+	assert.True(t, tm.drives.AssertExpectations(t))
+	assert.True(t, tm.driveActions.AssertExpectations(t))
 }
 
 type TestConfig struct {
