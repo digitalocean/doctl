@@ -44,18 +44,18 @@ func SSHKeys() *Command {
 
 	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", Writer,
 		aliasOpt("c"), displayerType(&key{}), docCategories("sshkeys"))
-	AddStringFlag(cmdSSHKeysCreate, doit.ArgKeyPublicKey, "", "Key contents", requiredOpt())
+	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "Key contents", requiredOpt())
 
 	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", Writer,
 		aliasOpt("i"), displayerType(&key{}), docCategories("sshkeys"))
-	AddStringFlag(cmdSSHKeysImport, doit.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
+	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
 
 	CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
 		aliasOpt("d"), docCategories("sshkeys"))
 
 	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
 		aliasOpt("u"), displayerType(&key{}), docCategories("sshkeys"))
-	AddStringFlag(cmdSSHKeysUpdate, doit.ArgKeyName, "", "Key name", requiredOpt())
+	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "Key name", requiredOpt())
 
 	return cmd
 }
@@ -78,7 +78,7 @@ func RunKeyGet(c *CmdConfig) error {
 	ks := c.Keys()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	rawKey := c.Args[0]
@@ -97,12 +97,12 @@ func RunKeyCreate(c *CmdConfig) error {
 	ks := c.Keys()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	name := c.Args[0]
 
-	publicKey, err := c.Doit.GetString(c.NS, doit.ArgKeyPublicKey)
+	publicKey, err := c.Doit.GetString(c.NS, doctl.ArgKeyPublicKey)
 	if err != nil {
 		return err
 	}
@@ -126,10 +126,10 @@ func RunKeyImport(c *CmdConfig) error {
 	ks := c.Keys()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	keyPath, err := c.Doit.GetString(c.NS, doit.ArgKeyPublicKeyFile)
+	keyPath, err := c.Doit.GetString(c.NS, doctl.ArgKeyPublicKeyFile)
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func RunKeyDelete(c *CmdConfig) error {
 	ks := c.Keys()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	rawKey := c.Args[0]
@@ -181,12 +181,12 @@ func RunKeyUpdate(c *CmdConfig) error {
 	ks := c.Keys()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	rawKey := c.Args[0]
 
-	name, err := c.Doit.GetString(c.NS, doit.ArgKeyName)
+	name, err := c.Doit.GetString(c.NS, doctl.ArgKeyName)
 	if err != nil {
 		return err
 	}

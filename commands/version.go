@@ -28,26 +28,26 @@ func Version() *Command {
 			Use:   "version",
 			Short: "show the current version",
 			Run: func(cmd *cobra.Command, args []string) {
-				if doit.Build != "" {
-					doit.DoitVersion.Build = doit.Build
+				if doctl.Build != "" {
+					doctl.DoitVersion.Build = doctl.Build
 				}
-				if doit.Major != "" {
-					i, _ := strconv.Atoi(doit.Major)
-					doit.DoitVersion.Major = i
+				if doctl.Major != "" {
+					i, _ := strconv.Atoi(doctl.Major)
+					doctl.DoitVersion.Major = i
 				}
-				if doit.Minor != "" {
-					i, _ := strconv.Atoi(doit.Minor)
-					doit.DoitVersion.Minor = i
+				if doctl.Minor != "" {
+					i, _ := strconv.Atoi(doctl.Minor)
+					doctl.DoitVersion.Minor = i
 				}
-				if doit.Patch != "" {
-					i, _ := strconv.Atoi(doit.Patch)
-					doit.DoitVersion.Patch = i
+				if doctl.Patch != "" {
+					i, _ := strconv.Atoi(doctl.Patch)
+					doctl.DoitVersion.Patch = i
 				}
-				if doit.Label != "" {
-					doit.DoitVersion.Label = doit.Label
+				if doctl.Label != "" {
+					doctl.DoitVersion.Label = doctl.Label
 				}
 
-				fmt.Println(doit.DoitVersion.Complete(&doit.GithubLatestVersioner{}))
+				fmt.Println(doctl.DoitVersion.Complete(&doctl.GithubLatestVersioner{}))
 			},
 		},
 	}

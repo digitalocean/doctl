@@ -43,7 +43,7 @@ func Tags() *Command {
 
 	cmdTagUpdate := CmdBuilder(cmd, RunCmdTagUpdate, "update NAME", "update tag", Writer,
 		docCategories("tag"))
-	AddStringFlag(cmdTagUpdate, doit.ArgTagName, "", "Tag name",
+	AddStringFlag(cmdTagUpdate, doctl.ArgTagName, "", "Tag name",
 		requiredOpt())
 
 	CmdBuilder(cmd, RunCmdTagDelete, "delete NAME", "delete tag", Writer,
@@ -55,7 +55,7 @@ func Tags() *Command {
 // RunCmdTagCreate runs tag create.
 func RunCmdTagCreate(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	name := c.Args[0]
@@ -73,7 +73,7 @@ func RunCmdTagCreate(c *CmdConfig) error {
 // RunCmdTagGet runs tag get.
 func RunCmdTagGet(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	name := c.Args[0]
@@ -100,12 +100,12 @@ func RunCmdTagList(c *CmdConfig) error {
 // RunCmdTagUpdate runs tag update.
 func RunCmdTagUpdate(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	name := c.Args[0]
 
-	newName, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	newName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func RunCmdTagUpdate(c *CmdConfig) error {
 // RunCmdTagDelete runs tag delete.
 func RunCmdTagDelete(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	name := c.Args[0]

@@ -38,9 +38,9 @@ func SSH(parent *Command) *Command {
 
 	cmdSSH := CmdBuilder(parent, RunSSH, "ssh <droplet-id | host>", "ssh to droplet", Writer,
 		docCategories("droplet"))
-	AddStringFlag(cmdSSH, doit.ArgSSHUser, "root", "ssh user")
-	AddStringFlag(cmdSSH, doit.ArgsSSHKeyPath, path, "path to private ssh key")
-	AddIntFlag(cmdSSH, doit.ArgsSSHPort, 22, "port sshd is running on")
+	AddStringFlag(cmdSSH, doctl.ArgSSHUser, "root", "ssh user")
+	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, path, "path to private ssh key")
+	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, 22, "port sshd is running on")
 
 	return cmdSSH
 }
@@ -48,26 +48,26 @@ func SSH(parent *Command) *Command {
 // RunSSH finds a droplet to ssh to given input parameters (name or id).
 func RunSSH(c *CmdConfig) error {
 	if len(c.Args) == 0 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	dropletID := c.Args[0]
 
 	if dropletID == "" {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	user, err := c.Doit.GetString(c.NS, doit.ArgSSHUser)
+	user, err := c.Doit.GetString(c.NS, doctl.ArgSSHUser)
 	if err != nil {
 		return err
 	}
 
-	keyPath, err := c.Doit.GetString(c.NS, doit.ArgsSSHKeyPath)
+	keyPath, err := c.Doit.GetString(c.NS, doctl.ArgsSSHKeyPath)
 	if err != nil {
 		return err
 	}
 
-	port, err := c.Doit.GetInt(c.NS, doit.ArgsSSHPort)
+	port, err := c.Doit.GetInt(c.NS, doctl.ArgsSSHPort)
 	if err != nil {
 		return err
 	}

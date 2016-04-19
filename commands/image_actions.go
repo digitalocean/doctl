@@ -36,13 +36,13 @@ func ImageAction() *Command {
 	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,
 		"get <image-id>", "get image action", Writer,
 		displayerType(&action{}), docCategories("image"))
-	AddIntFlag(cmdImageActionsGet, doit.ArgActionID, 0, "action id", requiredOpt())
+	AddIntFlag(cmdImageActionsGet, doctl.ArgActionID, 0, "action id", requiredOpt())
 
 	cmdImageActionsTransfer := CmdBuilder(cmd, RunImageActionsTransfer,
 		"transfer <image-id>", "transfer image", Writer,
 		displayerType(&action{}), docCategories("image"))
-	AddStringFlag(cmdImageActionsTransfer, doit.ArgRegionSlug, "", "region", requiredOpt())
-	AddBoolFlag(cmdImageActionsTransfer, doit.ArgCommandWait, false, "Wait for action to complete")
+	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "region", requiredOpt())
+	AddBoolFlag(cmdImageActionsTransfer, doctl.ArgCommandWait, false, "Wait for action to complete")
 
 	return cmd
 }
@@ -52,7 +52,7 @@ func RunImageActionsGet(c *CmdConfig) error {
 	ias := c.ImageActions()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	imageID, err := strconv.Atoi(c.Args[0])
@@ -60,7 +60,7 @@ func RunImageActionsGet(c *CmdConfig) error {
 		return err
 	}
 
-	actionID, err := c.Doit.GetInt(c.NS, doit.ArgActionID)
+	actionID, err := c.Doit.GetInt(c.NS, doctl.ArgActionID)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func RunImageActionsTransfer(c *CmdConfig) error {
 	ias := c.ImageActions()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	id, err := strconv.Atoi(c.Args[0])
@@ -87,7 +87,7 @@ func RunImageActionsTransfer(c *CmdConfig) error {
 		return err
 	}
 
-	region, err := c.Doit.GetString(c.NS, doit.ArgRegionSlug)
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func RunImageActionsTransfer(c *CmdConfig) error {
 		checkErr(fmt.Errorf("could not transfer image: %v", err))
 	}
 
-	wait, err := c.Doit.GetBool(c.NS, doit.ArgCommandWait)
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
 	if err != nil {
 		return err
 	}

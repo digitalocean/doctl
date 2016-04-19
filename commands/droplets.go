@@ -49,20 +49,20 @@ func Droplet() *Command {
 
 	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", Writer,
 		aliasOpt("c"), displayerType(&droplet{}), docCategories("droplet"))
-	AddStringSliceFlag(cmdDropletCreate, doit.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
-	AddStringFlag(cmdDropletCreate, doit.ArgUserData, "", "User data")
-	AddStringFlag(cmdDropletCreate, doit.ArgUserDataFile, "", "User data file")
-	AddBoolFlag(cmdDropletCreate, doit.ArgCommandWait, false, "Wait for droplet to be created")
-	AddStringFlag(cmdDropletCreate, doit.ArgRegionSlug, "", "Droplet region",
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, []string{}, "SSH Keys or fingerprints")
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "User data")
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "User data file")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, false, "Wait for droplet to be created")
+	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "Droplet region",
 		requiredOpt())
-	AddStringFlag(cmdDropletCreate, doit.ArgSizeSlug, "", "Droplet size",
+	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "Droplet size",
 		requiredOpt())
-	AddBoolFlag(cmdDropletCreate, doit.ArgBackups, false, "Backup droplet")
-	AddBoolFlag(cmdDropletCreate, doit.ArgIPv6, false, "IPv6 support")
-	AddBoolFlag(cmdDropletCreate, doit.ArgPrivateNetworking, false, "Private networking")
-	AddStringFlag(cmdDropletCreate, doit.ArgImage, "", "Droplet image",
+	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, false, "Backup droplet")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, false, "IPv6 support")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, false, "Private networking")
+	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "Droplet image",
 		requiredOpt())
-	AddStringFlag(cmdDropletCreate, doit.ArgTagName, "", "Tag name")
+	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "Tag name")
 
 	CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
@@ -75,8 +75,8 @@ func Droplet() *Command {
 
 	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", Writer,
 		aliasOpt("ls"), displayerType(&droplet{}), docCategories("droplet"))
-	AddStringFlag(cmdRunDropletList, doit.ArgRegionSlug, "", "Droplet region")
-	AddStringFlag(cmdRunDropletList, doit.ArgTagName, "", "Tag name")
+	AddStringFlag(cmdRunDropletList, doctl.ArgRegionSlug, "", "Droplet region")
+	AddStringFlag(cmdRunDropletList, doctl.ArgTagName, "", "Tag name")
 
 	CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", Writer,
 		aliasOpt("n"), displayerType(&droplet{}), docCategories("droplet"))
@@ -86,12 +86,12 @@ func Droplet() *Command {
 
 	cmdRunDropletTag := CmdBuilder(cmd, RunDropletTag, "tag <droplet id or name>", "tag", Writer,
 		docCategories("droplet"))
-	AddStringFlag(cmdRunDropletTag, doit.ArgTagName, "", "Tag name",
+	AddStringFlag(cmdRunDropletTag, doctl.ArgTagName, "", "Tag name",
 		requiredOpt())
 
 	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet id or name>", "untag", Writer,
 		docCategories("droplet"))
-	AddStringSliceFlag(cmdRunDropletUntag, doit.ArgDropletName, []string{}, "Droplet names")
+	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgDropletName, []string{}, "Droplet names")
 
 	return cmd
 }
@@ -134,52 +134,52 @@ func RunDropletBackups(c *CmdConfig) error {
 func RunDropletCreate(c *CmdConfig) error {
 
 	if len(c.Args) < 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	region, err := c.Doit.GetString(c.NS, doit.ArgRegionSlug)
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	if err != nil {
 		return err
 	}
 
-	size, err := c.Doit.GetString(c.NS, doit.ArgSizeSlug)
+	size, err := c.Doit.GetString(c.NS, doctl.ArgSizeSlug)
 	if err != nil {
 		return err
 	}
 
-	backups, err := c.Doit.GetBool(c.NS, doit.ArgBackups)
+	backups, err := c.Doit.GetBool(c.NS, doctl.ArgBackups)
 	if err != nil {
 		return err
 	}
 
-	ipv6, err := c.Doit.GetBool(c.NS, doit.ArgIPv6)
+	ipv6, err := c.Doit.GetBool(c.NS, doctl.ArgIPv6)
 	if err != nil {
 		return err
 	}
 
-	privateNetworking, err := c.Doit.GetBool(c.NS, doit.ArgPrivateNetworking)
+	privateNetworking, err := c.Doit.GetBool(c.NS, doctl.ArgPrivateNetworking)
 	if err != nil {
 		return err
 	}
 
-	keys, err := c.Doit.GetStringSlice(c.NS, doit.ArgSSHKeys)
+	keys, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSSHKeys)
 	if err != nil {
 		return err
 	}
 
-	tagName, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	tagName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
 	}
 
 	sshKeys := extractSSHKeys(keys)
 
-	userData, err := c.Doit.GetString(c.NS, doit.ArgUserData)
+	userData, err := c.Doit.GetString(c.NS, doctl.ArgUserData)
 	if err != nil {
 		return err
 	}
 
-	filename, err := c.Doit.GetString(c.NS, doit.ArgUserDataFile)
+	filename, err := c.Doit.GetString(c.NS, doctl.ArgUserDataFile)
 	if err != nil {
 		return err
 	}
@@ -191,14 +191,14 @@ func RunDropletCreate(c *CmdConfig) error {
 
 	var createImage godo.DropletCreateImage
 
-	imageStr, err := c.Doit.GetString(c.NS, doit.ArgImage)
+	imageStr, err := c.Doit.GetString(c.NS, doctl.ArgImage)
 	if i, err := strconv.Atoi(imageStr); err == nil {
 		createImage = godo.DropletCreateImage{ID: i}
 	} else {
 		createImage = godo.DropletCreateImage{Slug: imageStr}
 	}
 
-	wait, err := c.Doit.GetBool(c.NS, doit.ArgCommandWait)
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
 	if err != nil {
 		return err
 	}
@@ -267,10 +267,10 @@ func RunDropletTag(c *CmdConfig) error {
 	ts := c.Tags()
 
 	if len(c.Args) < 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	tag, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	tag, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
 	}
@@ -297,12 +297,12 @@ func RunDropletUntag(c *CmdConfig) error {
 	ts := c.Tags()
 
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	tagName := c.Args[0]
 
-	dropletIDStrs, err := c.Doit.GetStringSlice(c.NS, doit.ArgDropletName)
+	dropletIDStrs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDropletName)
 	if err != nil {
 		return err
 	}
@@ -387,13 +387,13 @@ func allInt(in []string) ([]int, error) {
 func RunDropletDelete(c *CmdConfig) error {
 	ds := c.Droplets()
 
-	tagName, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	tagName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
 	}
 
 	if len(c.Args) < 1 && tagName == "" {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	} else if len(c.Args) > 0 && tagName != "" {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
@@ -498,12 +498,12 @@ func RunDropletList(c *CmdConfig) error {
 
 	ds := c.Droplets()
 
-	region, err := c.Doit.GetString(c.NS, doit.ArgRegionSlug)
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	if err != nil {
 		return err
 	}
 
-	tagName, err := c.Doit.GetString(c.NS, doit.ArgTagName)
+	tagName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
 	}
@@ -596,7 +596,7 @@ func RunDropletSnapshots(c *CmdConfig) error {
 
 func getDropletIDArg(ns string, args []string) (int, error) {
 	if len(args) != 1 {
-		return 0, doit.NewMissingArgsErr(ns)
+		return 0, doctl.NewMissingArgsErr(ns)
 	}
 
 	return strconv.Atoi(args[0])

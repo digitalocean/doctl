@@ -38,7 +38,7 @@ func Domain() *Command {
 
 	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,
 		aliasOpt("c"), displayerType(&domain{}), docCategories("domain"))
-	AddStringFlag(cmdDomainCreate, doit.ArgIPAddress, "", "IP address", requiredOpt())
+	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "IP address", requiredOpt())
 
 	CmdBuilder(cmd, RunDomainList, "list", "list domains", Writer,
 		aliasOpt("ls"), displayerType(&domain{}), docCategories("domain"))
@@ -59,29 +59,29 @@ func Domain() *Command {
 
 	cmdRecordList := CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", Writer,
 		aliasOpt("ls"), displayerType(&domainRecord{}), docCategories("domain"))
-	AddStringFlag(cmdRecordList, doit.ArgDomainName, "", "Domain name")
+	AddStringFlag(cmdRecordList, doctl.ArgDomainName, "", "Domain name")
 
 	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "create record", Writer,
 		aliasOpt("c"), displayerType(&domainRecord{}), docCategories("domain"))
-	AddStringFlag(cmdRecordCreate, doit.ArgRecordType, "", "Record type")
-	AddStringFlag(cmdRecordCreate, doit.ArgRecordName, "", "Record name")
-	AddStringFlag(cmdRecordCreate, doit.ArgRecordData, "", "Record data")
-	AddIntFlag(cmdRecordCreate, doit.ArgRecordPriority, 0, "Record priority")
-	AddIntFlag(cmdRecordCreate, doit.ArgRecordPort, 0, "Record port")
-	AddIntFlag(cmdRecordCreate, doit.ArgRecordWeight, 0, "Record weight")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "Record type")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "Record name")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "Record data")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPriority, 0, "Record priority")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPort, 0, "Record port")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, 0, "Record weight")
 
 	CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", Writer,
 		aliasOpt("d"), docCategories("domain"))
 
 	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "update record", Writer,
 		aliasOpt("u"), displayerType(&domainRecord{}), docCategories("domain"))
-	AddIntFlag(cmdRecordUpdate, doit.ArgRecordID, 0, "Record ID")
-	AddStringFlag(cmdRecordUpdate, doit.ArgRecordType, "", "Record type")
-	AddStringFlag(cmdRecordUpdate, doit.ArgRecordName, "", "Record name")
-	AddStringFlag(cmdRecordUpdate, doit.ArgRecordData, "", "Record data")
-	AddIntFlag(cmdRecordUpdate, doit.ArgRecordPriority, 0, "Record priority")
-	AddIntFlag(cmdRecordUpdate, doit.ArgRecordPort, 0, "Record port")
-	AddIntFlag(cmdRecordUpdate, doit.ArgRecordWeight, 0, "Record weight")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, 0, "Record ID")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "Record type")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordName, "", "Record name")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "Record data")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, 0, "Record priority")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, 0, "Record port")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, 0, "Record weight")
 
 	return cmd
 }
@@ -89,7 +89,7 @@ func Domain() *Command {
 // RunDomainCreate runs domain create.
 func RunDomainCreate(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 	domainName := c.Args[0]
 
@@ -130,7 +130,7 @@ func RunDomainList(c *CmdConfig) error {
 // RunDomainGet retrieves a domain by name.
 func RunDomainGet(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 	id := c.Args[0]
 
@@ -152,7 +152,7 @@ func RunDomainGet(c *CmdConfig) error {
 // RunDomainDelete deletes a domain by name.
 func RunDomainDelete(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 	name := c.Args[0]
 
@@ -169,7 +169,7 @@ func RunDomainDelete(c *CmdConfig) error {
 // RunRecordList list records for a domain.
 func RunRecordList(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 	name := c.Args[0]
 
@@ -192,38 +192,38 @@ func RunRecordList(c *CmdConfig) error {
 // RunRecordCreate creates a domain record.
 func RunRecordCreate(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 	name := c.Args[0]
 
 	ds := c.Domains()
 
-	rType, err := c.Doit.GetString(c.NS, doit.ArgRecordType)
+	rType, err := c.Doit.GetString(c.NS, doctl.ArgRecordType)
 	if err != nil {
 		return err
 	}
 
-	rName, err := c.Doit.GetString(c.NS, doit.ArgRecordName)
+	rName, err := c.Doit.GetString(c.NS, doctl.ArgRecordName)
 	if err != nil {
 		return err
 	}
 
-	rData, err := c.Doit.GetString(c.NS, doit.ArgRecordData)
+	rData, err := c.Doit.GetString(c.NS, doctl.ArgRecordData)
 	if err != nil {
 		return err
 	}
 
-	rPriority, err := c.Doit.GetInt(c.NS, doit.ArgRecordPriority)
+	rPriority, err := c.Doit.GetInt(c.NS, doctl.ArgRecordPriority)
 	if err != nil {
 		return err
 	}
 
-	rPort, err := c.Doit.GetInt(c.NS, doit.ArgRecordPort)
+	rPort, err := c.Doit.GetInt(c.NS, doctl.ArgRecordPort)
 	if err != nil {
 		return err
 	}
 
-	rWeight, err := c.Doit.GetInt(c.NS, doit.ArgRecordWeight)
+	rWeight, err := c.Doit.GetInt(c.NS, doctl.ArgRecordWeight)
 	if err != nil {
 		return err
 	}
@@ -254,12 +254,12 @@ func RunRecordCreate(c *CmdConfig) error {
 // RunRecordDelete deletes a domain record.
 func RunRecordDelete(c *CmdConfig) error {
 	if len(c.Args) < 2 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	domainName, ids := c.Args[0], c.Args[1:]
 	if len(ids) < 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ds := c.Domains()
@@ -282,43 +282,43 @@ func RunRecordDelete(c *CmdConfig) error {
 // RunRecordUpdate updates a domain record.
 func RunRecordUpdate(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 	domainName := c.Args[0]
 
 	ds := c.Domains()
 
-	recordID, err := c.Doit.GetInt(c.NS, doit.ArgRecordID)
+	recordID, err := c.Doit.GetInt(c.NS, doctl.ArgRecordID)
 	if err != nil {
 		return err
 	}
 
-	rType, err := c.Doit.GetString(c.NS, doit.ArgRecordType)
+	rType, err := c.Doit.GetString(c.NS, doctl.ArgRecordType)
 	if err != nil {
 		return err
 	}
 
-	rName, err := c.Doit.GetString(c.NS, doit.ArgRecordName)
+	rName, err := c.Doit.GetString(c.NS, doctl.ArgRecordName)
 	if err != nil {
 		return err
 	}
 
-	rData, err := c.Doit.GetString(c.NS, doit.ArgRecordData)
+	rData, err := c.Doit.GetString(c.NS, doctl.ArgRecordData)
 	if err != nil {
 		return err
 	}
 
-	rPriority, err := c.Doit.GetInt(c.NS, doit.ArgRecordPriority)
+	rPriority, err := c.Doit.GetInt(c.NS, doctl.ArgRecordPriority)
 	if err != nil {
 		return err
 	}
 
-	rPort, err := c.Doit.GetInt(c.NS, doit.ArgRecordPort)
+	rPort, err := c.Doit.GetInt(c.NS, doctl.ArgRecordPort)
 	if err != nil {
 		return err
 	}
 
-	rWeight, err := c.Doit.GetInt(c.NS, doit.ArgRecordWeight)
+	rWeight, err := c.Doit.GetInt(c.NS, doctl.ArgRecordWeight)
 	if err != nil {
 		return err
 	}

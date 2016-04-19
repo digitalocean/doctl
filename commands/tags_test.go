@@ -91,7 +91,7 @@ func TestTagUpdate(t *testing.T) {
 		tm.tags.On("Update", "my-tag", tur).Return(nil)
 		config.Args = append(config.Args, "my-tag")
 
-		config.Doit.Set(config.NS, doit.ArgTagName, "new-name")
+		config.Doit.Set(config.NS, doctl.ArgTagName, "new-name")
 
 		err := RunCmdTagUpdate(config)
 		assert.NoError(t, err)

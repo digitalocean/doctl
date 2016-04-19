@@ -88,12 +88,12 @@ func Test_filterActions(t *testing.T) {
 
 	for _, c := range cases {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			config.Doit.Set(config.NS, doit.ArgActionResourceType, c.resourceType)
-			config.Doit.Set(config.NS, doit.ArgActionRegion, c.region)
-			config.Doit.Set(config.NS, doit.ArgActionAfter, c.after)
-			config.Doit.Set(config.NS, doit.ArgActionBefore, c.before)
-			config.Doit.Set(config.NS, doit.ArgActionStatus, c.status)
-			config.Doit.Set(config.NS, doit.ArgActionType, c.actionType)
+			config.Doit.Set(config.NS, doctl.ArgActionResourceType, c.resourceType)
+			config.Doit.Set(config.NS, doctl.ArgActionRegion, c.region)
+			config.Doit.Set(config.NS, doctl.ArgActionAfter, c.after)
+			config.Doit.Set(config.NS, doctl.ArgActionBefore, c.before)
+			config.Doit.Set(config.NS, doctl.ArgActionStatus, c.status)
+			config.Doit.Set(config.NS, doctl.ArgActionType, c.actionType)
 
 			newActions, err := filterActionList(config, actions)
 			assert.NoError(t, err)

@@ -43,7 +43,7 @@ func TestDomainsCreate(t *testing.T) {
 		tm.domains.On("Create", dcr).Return(&testDomain, nil)
 
 		config.Args = append(config.Args, testDomain.Name)
-		config.Doit.Set(config.NS, doit.ArgIPAddress, "127.0.0.1")
+		config.Doit.Set(config.NS, doctl.ArgIPAddress, "127.0.0.1")
 		err := RunDomainCreate(config)
 		assert.NoError(t, err)
 	})
@@ -116,9 +116,9 @@ func TestRecordsCreate(t *testing.T) {
 		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, Weight: 0}
 		tm.domains.On("CreateRecord", "example.com", dcer).Return(&testRecord, nil)
 
-		config.Doit.Set(config.NS, doit.ArgRecordType, "A")
-		config.Doit.Set(config.NS, doit.ArgRecordName, "foo.example.com.")
-		config.Doit.Set(config.NS, doit.ArgRecordData, "192.168.1.1")
+		config.Doit.Set(config.NS, doctl.ArgRecordType, "A")
+		config.Doit.Set(config.NS, doctl.ArgRecordName, "foo.example.com.")
+		config.Doit.Set(config.NS, doctl.ArgRecordData, "192.168.1.1")
 
 		config.Args = append(config.Args, "example.com")
 
@@ -150,10 +150,10 @@ func TestRecordsUpdate(t *testing.T) {
 		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, Weight: 0}
 		tm.domains.On("EditRecord", "example.com", 1, dcer).Return(&testRecord, nil)
 
-		config.Doit.Set(config.NS, doit.ArgRecordID, 1)
-		config.Doit.Set(config.NS, doit.ArgRecordType, "A")
-		config.Doit.Set(config.NS, doit.ArgRecordName, "foo.example.com.")
-		config.Doit.Set(config.NS, doit.ArgRecordData, "192.168.1.1")
+		config.Doit.Set(config.NS, doctl.ArgRecordID, 1)
+		config.Doit.Set(config.NS, doctl.ArgRecordType, "A")
+		config.Doit.Set(config.NS, doctl.ArgRecordName, "foo.example.com.")
+		config.Doit.Set(config.NS, doctl.ArgRecordData, "192.168.1.1")
 
 		config.Args = append(config.Args, "example.com")
 

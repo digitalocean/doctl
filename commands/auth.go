@@ -49,7 +49,7 @@ func (use *UnknownSchemeError) Error() string {
 	return "unknown scheme: " + use.Scheme
 }
 
-// Auth creates auth commands for doit.
+// Auth creates auth commands for doctl.
 func Auth() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -78,7 +78,7 @@ func RunAuthLogin(c *CmdConfig) error {
 		return err
 	}
 
-	cf, err := doit.NewConfigFile()
+	cf, err := doctl.NewConfigFile()
 	if err != nil {
 		return err
 	}

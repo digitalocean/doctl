@@ -62,7 +62,7 @@ func init() {
 
 // LoadConfig loads out configuration.
 func LoadConfig() error {
-	cf, err := doit.NewConfigFile()
+	cf, err := doctl.NewConfigFile()
 	if err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func AddStringSliceFlag(cmd *Command, name string, def []string, desc string, op
 }
 
 func flagName(cmd *Command, name string) string {
-	parentName := doit.NSRoot
+	parentName := doctl.NSRoot
 	if cmd.Parent() != nil {
 		parentName = cmd.Parent().Name()
 	}
@@ -219,7 +219,7 @@ func flagName(cmd *Command, name string) string {
 }
 
 func cmdNS(cmd *cobra.Command) string {
-	parentName := doit.NSRoot
+	parentName := doctl.NSRoot
 	if cmd.Parent() != nil {
 		parentName = cmd.Parent().Name()
 	}
@@ -233,7 +233,7 @@ type CmdRunner func(*CmdConfig) error
 // CmdConfig is a command configuration.
 type CmdConfig struct {
 	NS   string
-	Doit doit.Config
+	Doit doctl.Config
 	Out  io.Writer
 	Args []string
 
@@ -254,7 +254,7 @@ type CmdConfig struct {
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
-func NewCmdConfig(ns string, dc doit.Config, out io.Writer, args []string) *CmdConfig {
+func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) *CmdConfig {
 	godoClient := dc.GetGodoClient(Trace)
 
 	return &CmdConfig{
@@ -300,7 +300,7 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 		Run: func(cmd *cobra.Command, args []string) {
 			c := NewCmdConfig(
 				cmdNS(cmd),
-				doit.DoitConfig,
+				doctl.DoitConfig,
 				out,
 				args,
 			)
@@ -323,8 +323,8 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 	if cols := c.fmtCols; cols != nil {
 		formatHelp := fmt.Sprintf("Columns for output in a comma seperated list. Possible values: %s",
 			strings.Join(cols, ","))
-		AddStringFlag(c, doit.ArgFormat, "", formatHelp)
-		AddBoolFlag(c, doit.ArgNoHeader, false, "hide headers")
+		AddStringFlag(c, doctl.ArgFormat, "", formatHelp)
+		AddBoolFlag(c, doctl.ArgNoHeader, false, "hide headers")
 	}
 
 	return c

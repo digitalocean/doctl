@@ -33,13 +33,13 @@ type Displayable interface {
 
 type displayer struct {
 	ns     string
-	config doit.Config
+	config doctl.Config
 	item   Displayable
 	out    io.Writer
 }
 
 func (d *displayer) Display() error {
-	output, err := doit.DoitConfig.GetString(doit.NSRoot, "output")
+	output, err := doctl.DoitConfig.GetString(doctl.NSRoot, "output")
 	if err != nil {
 		return nil
 	}

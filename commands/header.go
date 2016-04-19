@@ -19,8 +19,8 @@ import (
 	"github.com/digitalocean/doctl"
 )
 
-func handleColumns(ns string, config doit.Config) ([]string, error) {
-	colStr, err := config.GetString(ns, doit.ArgFormat)
+func handleColumns(ns string, config doctl.Config) ([]string, error) {
+	colStr, err := config.GetString(ns, doctl.ArgFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func handleColumns(ns string, config doit.Config) ([]string, error) {
 		}
 	}
 
-	hh, err := config.GetBool(ns, doit.ArgNoHeader)
+	hh, err := config.GetBool(ns, doctl.ArgNoHeader)
 	if err != nil {
 		return nil, err
 	}

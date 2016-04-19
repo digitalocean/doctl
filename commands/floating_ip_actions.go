@@ -51,7 +51,7 @@ func FloatingIPAction() *Command {
 // RunFloatingIPActionsGet retrieves an action for a floating IP.
 func RunFloatingIPActionsGet(c *CmdConfig) error {
 	if len(c.Args) != 2 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ip := c.Args[0]
@@ -75,7 +75,7 @@ func RunFloatingIPActionsGet(c *CmdConfig) error {
 // RunFloatingIPActionsAssign assigns a floating IP to a droplet.
 func RunFloatingIPActionsAssign(c *CmdConfig) error {
 	if len(c.Args) != 2 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ip := c.Args[0]
@@ -99,7 +99,7 @@ func RunFloatingIPActionsAssign(c *CmdConfig) error {
 // RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
 func RunFloatingIPActionsUnassign(c *CmdConfig) error {
 	if len(c.Args) != 1 {
-		return doit.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ip := c.Args[0]
