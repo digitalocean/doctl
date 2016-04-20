@@ -56,7 +56,7 @@ func TestVersion(t *testing.T) {
 		// version with no label and higher released version
 		{
 			v:   Version{Major: 0, Minor: 1, Patch: 2},
-			s:   "doctl version 0.1.2\n\"1.0.0\" is a newer release than \"0.1.2\"",
+			s:   "doctl version 0.1.2\nrelease 1.0.0 is available, check it out! ",
 			ver: `0.1.2`,
 			slr: slr2,
 		},
