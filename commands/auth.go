@@ -28,10 +28,10 @@ import (
 
 	"github.com/bryanl/doit-server"
 	"github.com/bryanl/webbrowser"
-	"github.com/digitalocean/doctl"
 	"github.com/gorilla/websocket"
 	"github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // ErrUnknownTerminal signies an unknown terminal. It is returned when doit
@@ -78,15 +78,7 @@ func RunAuthLogin(c *CmdConfig) error {
 		return err
 	}
 
-	cf, err := doctl.NewConfigFile()
-	if err != nil {
-		return err
-	}
-
-	err = cf.Set("access-token", token)
-	if err != nil {
-		return err
-	}
+	viper.Set("access-token", token)
 
 	fmt.Println("updated access token")
 

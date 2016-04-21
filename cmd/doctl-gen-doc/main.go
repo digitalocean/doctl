@@ -39,7 +39,7 @@ func main() {
 	flag.Parse()
 
 	log.SetPrefix("doit: ")
-	cmd := commands.Init()
+	cmd := commands.DoitCmd
 	cmd.DisableAutoGenTag = true
 
 	if _, err := os.Stat(*outputDir); os.IsNotExist(err) {

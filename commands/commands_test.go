@@ -207,8 +207,8 @@ func NewTestConfig() *TestConfig {
 
 var _ doctl.Config = &TestConfig{}
 
-func (c *TestConfig) GetGodoClient(trace bool) *godo.Client {
-	return &godo.Client{}
+func (c *TestConfig) GetGodoClient(trace bool) (*godo.Client, error) {
+	return &godo.Client{}, nil
 }
 
 func (c *TestConfig) SSH(user, host, keyPath string, port int) runner.Runner {
