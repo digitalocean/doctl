@@ -16,7 +16,9 @@ package commands
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -51,36 +53,59 @@ var Writer = os.Stdout
 // Trace toggles http tracing output.
 var Trace bool
 
-func init() {
-	viper.SetConfigType("yaml")
+// cfgFile is the location of the config file
+var cfgFile string
 
-	DoitCmd.PersistentFlags().StringVarP(&Token, "access-token", "t", "", "DigitalOcean API V2 Access Token")
+var cfgFileName = ".doctlcfg"
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.doctlcfg)")
+	DoitCmd.PersistentFlags().StringVarP(&Token, "access-token", "t", "", "API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output formt [text|json]")
 	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
-	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "verbose output")
-}
+	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", true, "trace api access")
 
-// LoadConfig loads out configuration.
-func LoadConfig() error {
-	cf, err := doctl.NewConfigFile()
-	if err != nil {
-		return err
-	}
+	viper.SetEnvPrefix("DIGITALOCEAN")
+	viper.BindEnv("access-token", "DIGITALOCEAN_ACCESS_TOKEN")
+	viper.BindPFlag("access-token", DoitCmd.PersistentFlags().Lookup("access-token"))
+	viper.BindPFlag("output", DoitCmd.PersistentFlags().Lookup("output"))
+	viper.BindEnv("enable-beta", "DIGITALOCEAN_ENABLE_BETA")
 
-	r, err := cf.Open()
-	if err != nil {
-		return fmt.Errorf("can't open configuration file: %v", err)
-	}
-
-	return viper.ReadConfig(r)
-}
-
-// Init initializes the root command.
-func Init() *Command {
-	initializeConfig()
 	addCommands()
+}
 
-	return DoitCmd
+func initConfig() {
+	if cfgFile == "" {
+		cfgFile = filepath.Join(homeDir(), ".doctlcfg")
+	}
+
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(cfgFile)
+
+	viper.AutomaticEnv()
+
+	if _, err := os.Stat(cfgFile); err == nil {
+		if err := viper.ReadInConfig(); err != nil {
+			log.Fatalln("reading initialization failed:", err)
+		}
+	}
+
+	viper.SetDefault("output", "text")
+
+}
+
+func homeDir() string {
+	return os.Getenv("HOME")
+}
+
+// Execute executes the current command using DoitCmd.
+func Execute() {
+	if err := DoitCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
 }
 
 // AddCommands adds sub commands to the base command.
@@ -119,32 +144,6 @@ func computeCmd() *Command {
 	SSH(cmd)
 
 	return cmd
-}
-
-func initFlags() {
-	viper.SetEnvPrefix("DIGITALOCEAN")
-	viper.BindEnv("access-token", "DIGITALOCEAN_ACCESS_TOKEN")
-	viper.BindPFlag("access-token", DoitCmd.PersistentFlags().Lookup("access-token"))
-	viper.BindPFlag("output", DoitCmd.PersistentFlags().Lookup("output"))
-}
-
-func loadDefaultSettings() {
-	viper.SetDefault("output", "text")
-}
-
-// InitializeConfig initializes the doit configuration.
-func initializeConfig() {
-	loadDefaultSettings()
-	LoadConfig()
-	initFlags()
-
-	if DoitCmd.PersistentFlags().Lookup("access-token").Changed {
-		viper.Set("access-token", Token)
-	}
-
-	if DoitCmd.PersistentFlags().Lookup("output").Changed {
-		viper.Set("output", Output)
-	}
 }
 
 type flagOpt func(c *Command, name, key string)
@@ -254,8 +253,11 @@ type CmdConfig struct {
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
-func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) *CmdConfig {
-	godoClient := dc.GetGodoClient(Trace)
+func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) (*CmdConfig, error) {
+	godoClient, err := dc.GetGodoClient(Trace)
+	if err != nil {
+		return nil, err
+	}
 
 	return &CmdConfig{
 		NS:   ns,
@@ -276,7 +278,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) *Cmd
 		Actions:           func() do.ActionsService { return do.NewActionsService(godoClient) },
 		Account:           func() do.AccountService { return do.NewAccountService(godoClient) },
 		Tags:              func() do.TagsService { return do.NewTagsService(godoClient) },
-	}
+	}, nil
 }
 
 // Display displayes the output from a command.
@@ -298,14 +300,15 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 		Short: desc,
 		Long:  desc,
 		Run: func(cmd *cobra.Command, args []string) {
-			c := NewCmdConfig(
+			c, err := NewCmdConfig(
 				cmdNS(cmd),
 				doctl.DoitConfig,
 				out,
 				args,
 			)
+			checkErr(err, cmd)
 
-			err := cr(c)
+			err = cr(c)
 			checkErr(err, cmd)
 		},
 	}

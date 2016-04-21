@@ -149,7 +149,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 
 // Config is an interface that represent doit's config.
 type Config interface {
-	GetGodoClient(trace bool) *godo.Client
+	GetGodoClient(trace bool) (*godo.Client, error)
 	SSH(user, host, keyPath string, port int) runner.Runner
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) (string, error)
@@ -166,12 +166,16 @@ type LiveConfig struct {
 var _ Config = &LiveConfig{}
 
 // GetGodoClient returns a GodoClient.
-func (c *LiveConfig) GetGodoClient(trace bool) *godo.Client {
+func (c *LiveConfig) GetGodoClient(trace bool) (*godo.Client, error) {
 	if c.godoClient != nil {
-		return c.godoClient
+		return c.godoClient, nil
 	}
 
 	token := viper.GetString("access-token")
+	if token == "" {
+		return nil, fmt.Errorf("access token is required")
+	}
+
 	tokenSource := &TokenSource{AccessToken: token}
 	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
 
@@ -193,7 +197,7 @@ func (c *LiveConfig) GetGodoClient(trace bool) *godo.Client {
 	}
 
 	c.godoClient = godo.NewClient(oauthClient)
-	return c.godoClient
+	return c.godoClient, nil
 }
 
 // SSH creates a ssh connection to a host.

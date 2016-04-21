@@ -21,6 +21,5 @@ import (
 
 func main() {
 	log.SetPrefix("doctl: ")
-	cmd := commands.Init()
-	cmd.Execute()
+	commands.Execute()
 }

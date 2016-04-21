@@ -13,6 +13,8 @@ limitations under the License.
 
 package commands
 
+import "github.com/spf13/viper"
+
 // cmdOption allow configuration of a command.
 type cmdOption func(*Command)
 
@@ -47,5 +49,13 @@ func hiddenCmd() cmdOption {
 func docCategories(categories ...string) cmdOption {
 	return func(c *Command) {
 		c.DocCategories = categories
+	}
+}
+
+// beta tags commands as beta.
+func beta() cmdOption {
+	return func(c *Command) {
+		enableBeta := viper.GetBool("enable-beta")
+		c.Hidden = !enableBeta
 	}
 }
