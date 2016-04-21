@@ -161,6 +161,13 @@ func requiredOpt() flagOpt {
 	}
 }
 
+func betaOpt() flagOpt {
+	return func(c *Command, name, key string) {
+		enableBeta := viper.GetBool("enable-beta")
+		c.Flag(name).Hidden = !enableBeta
+	}
+}
+
 func requiredKey(key string) string {
 	return fmt.Sprintf("%s.required", key)
 }

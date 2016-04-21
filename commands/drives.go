@@ -19,6 +19,7 @@ func Drive() *Command {
 			Long:  "drive is used to access drive commands",
 		},
 	}
+	defer betaCmd()(cmd) // TODO(antoine): remove once out of beta
 
 	CmdBuilder(cmd, RunDriveList, "list", "list drive", Writer,
 		aliasOpt("ls"), displayerType(&drive{}))

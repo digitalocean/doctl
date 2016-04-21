@@ -46,6 +46,7 @@ func DriveAction() *Command {
 			Long:  "drive-action is used to access drive action commands",
 		},
 	}
+	defer betaCmd()(cmd) // TODO(antoine): remove once out of beta
 
 	CmdBuilder(cmd, RunDriveAttach, "attach <drive-id> <droplet-id>", "attach a drive", Writer,
 		aliasOpt("a"))

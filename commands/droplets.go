@@ -65,7 +65,8 @@ func Droplet() *Command {
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "Tag name")
 
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgDriveList, []string{}, "Drives to attach")
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgDriveList, []string{}, "Drives to attach",
+		betaOpt()) // TODO(antoine): remove once out of beta
 
 	CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
