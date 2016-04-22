@@ -163,13 +163,16 @@ func requiredOpt() flagOpt {
 
 func betaOpt() flagOpt {
 	return func(c *Command, name, key string) {
-		enableBeta := viper.GetBool("enable-beta")
-		c.Flag(name).Hidden = !enableBeta
+		c.Flag(name).Hidden = !isBeta()
 	}
 }
 
 func requiredKey(key string) string {
 	return fmt.Sprintf("%s.required", key)
+}
+
+func isBeta() bool {
+	return viper.GetBool("enable-beta")
 }
 
 // AddStringFlag adds a string flag to a command.
