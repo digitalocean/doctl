@@ -2,6 +2,22 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.1.0] - 2016-04-22
+
+### Added
+- #52 Add tagging commands - @bryanl
+- #56 Add support for Drive beta - @aybabtme
+- #58 Add support for beta features - @bryanl
+
+### Changed
+- #53 Remove unused dependencies - @aybabtme
+- #54 Rename root path - @aybabtme
+- #57 Clean up version message - @aybabtme
+- #61 Print drive columns if beta is enabled - @aybabtme
+
+### Fixed
+- #60 Disable tracing by default - @bryanl
+
 ## [1.0.2] - 2016-04-14
 
 ### Added
