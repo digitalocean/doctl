@@ -233,9 +233,13 @@ func (d *droplet) JSON(out io.Writer) error {
 }
 
 func (d *droplet) Cols() []string {
-	return []string{
+	cols := []string{
 		"ID", "Name", "PublicIPv4", "Memory", "VCPUs", "Disk", "Region", "Image", "Status", "Tags",
 	}
+	if isBeta() {
+		cols = append(cols, "Drives")
+	}
+	return cols
 }
 
 func (d *droplet) ColMap() map[string]string {
