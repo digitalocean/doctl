@@ -243,7 +243,7 @@ func (d *droplet) ColMap() map[string]string {
 		"ID": "ID", "Name": "Name", "PublicIPv4": "Public IPv4",
 		"Memory": "Memory", "VCPUs": "VCPUs", "Disk": "Disk",
 		"Region": "Region", "Image": "Image", "Status": "Status",
-		"Tags": "Tags",
+		"Tags": "Tags", "Drives": "Drives",
 	}
 }
 
@@ -253,11 +253,12 @@ func (d *droplet) KV() []map[string]interface{} {
 		tags := strings.Join(d.Tags, ",")
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
 		ip, _ := d.PublicIPv4()
+		drives := strings.Join(d.DriveIDs, ",")
 		m := map[string]interface{}{
 			"ID": d.ID, "Name": d.Name, "PublicIPv4": ip,
 			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
 			"Region": d.Region.Slug, "Image": image, "Status": d.Status,
-			"Tags": tags,
+			"Tags": tags, "Drives": drives,
 		}
 		out = append(out, m)
 	}
