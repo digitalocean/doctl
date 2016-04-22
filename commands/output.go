@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -242,7 +243,7 @@ func (d *droplet) ColMap() map[string]string {
 		"ID": "ID", "Name": "Name", "PublicIPv4": "Public IPv4",
 		"Memory": "Memory", "VCPUs": "VCPUs", "Disk": "Disk",
 		"Region": "Region", "Image": "Image", "Status": "Status",
-		"Tags": "Tags",
+		"Tags": "Tags", "Drives": "Drives",
 	}
 }
 
@@ -252,11 +253,12 @@ func (d *droplet) KV() []map[string]interface{} {
 		tags := strings.Join(d.Tags, ",")
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
 		ip, _ := d.PublicIPv4()
+		drives := strings.Join(d.DriveIDs, ",")
 		m := map[string]interface{}{
 			"ID": d.ID, "Name": d.Name, "PublicIPv4": ip,
 			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
 			"Region": d.Region.Slug, "Image": image, "Status": d.Status,
-			"Tags": tags,
+			"Tags": tags, "Drives": drives,
 		}
 		out = append(out, m)
 	}
@@ -568,4 +570,50 @@ func (t *tag) KV() []map[string]interface{} {
 	}
 
 	return out
+}
+
+type drive struct {
+	drives []do.Drive
+}
+
+var _ Displayable = &drive{}
+
+func (a *drive) JSON(out io.Writer) error {
+	return writeJSON(a.drives, out)
+
+}
+
+func (a *drive) Cols() []string {
+	return []string{
+		"ID", "Name", "Size", "Region", "Droplet IDs",
+	}
+
+}
+
+func (a *drive) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Name": "Name", "Size": "Size", "Region": "Region", "Droplet IDs": "Droplet IDs",
+	}
+
+}
+
+func (a *drive) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+	for _, drive := range a.drives {
+
+		m := map[string]interface{}{
+			"ID":     drive.ID,
+			"Name":   drive.Name,
+			"Size":   strconv.FormatInt(drive.SizeGigaBytes, 10) + " GiB",
+			"Region": drive.Region.Slug,
+		}
+		m["Droplet IDs"] = ""
+		if len(drive.DropletIDs) != 0 {
+			m["Droplet IDs"] = fmt.Sprintf("%v", drive.DropletIDs)
+		}
+		out = append(out, m)
+
+	}
+	return out
+
 }

@@ -52,8 +52,8 @@ func docCategories(categories ...string) cmdOption {
 	}
 }
 
-// beta tags commands as beta.
-func beta() cmdOption {
+// betaCmd tags commands as beta.
+func betaCmd() cmdOption {
 	return func(c *Command) {
 		enableBeta := viper.GetBool("enable-beta")
 		c.Hidden = !enableBeta

@@ -109,4 +109,13 @@ const (
 
 	// ArgOutput is an output type argument.
 	ArgOutput = "output"
+
+	// ArgDriveSize is the size of a drive.
+	ArgDriveSize = "size"
+	// ArgDriveDesc is the description of a drive.
+	ArgDriveDesc = "desc"
+	// ArgDriveRegion is the region of a drive.
+	ArgDriveRegion = "region"
+	// ArgDriveList is the IDs of many drives.
+	ArgDriveList = "drives"
 )

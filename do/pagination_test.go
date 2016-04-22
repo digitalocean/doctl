@@ -72,6 +72,12 @@ func Test_Pagination_lastPage(t *testing.T) {
 			lastPage: 1,
 			isValid:  true,
 		},
+
+		{
+			r:        &godo.Response{Links: nil},
+			lastPage: 1,
+			isValid:  true,
+		},
 	}
 
 	for _, c := range cases {

@@ -138,6 +138,8 @@ func computeCmd() *Command {
 	cmd.AddCommand(Size())
 	cmd.AddCommand(SSHKeys())
 	cmd.AddCommand(Tags())
+	cmd.AddCommand(Drive())
+	cmd.AddCommand(DriveAction())
 
 	// SSH is different since it doesn't have any subcommands. In this case, let's
 	// give it a parent at init time.
@@ -156,6 +158,13 @@ func requiredOpt() flagOpt {
 
 		u := c.Flag(name).Usage
 		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))
+	}
+}
+
+func betaOpt() flagOpt {
+	return func(c *Command, name, key string) {
+		enableBeta := viper.GetBool("enable-beta")
+		c.Flag(name).Hidden = !enableBeta
 	}
 }
 
@@ -250,6 +259,8 @@ type CmdConfig struct {
 	Actions           func() do.ActionsService
 	Account           func() do.AccountService
 	Tags              func() do.TagsService
+	Drives            func() do.DrivesService
+	DriveActions      func() do.DriveActionsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -278,6 +289,8 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) (*Cm
 		Actions:           func() do.ActionsService { return do.NewActionsService(godoClient) },
 		Account:           func() do.AccountService { return do.NewAccountService(godoClient) },
 		Tags:              func() do.TagsService { return do.NewTagsService(godoClient) },
+		Drives:            func() do.DrivesService { return do.NewDrivesService(godoClient) },
+		DriveActions:      func() do.DriveActionsService { return do.NewDriveActionsService(godoClient) },
 	}, nil
 }
 
