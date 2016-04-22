@@ -65,7 +65,7 @@ func init() {
 	DoitCmd.PersistentFlags().StringVarP(&Token, "access-token", "t", "", "API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output formt [text|json]")
 	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
-	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", true, "trace api access")
+	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
 
 	viper.SetEnvPrefix("DIGITALOCEAN")
 	viper.BindEnv("access-token", "DIGITALOCEAN_ACCESS_TOKEN")
