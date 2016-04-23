@@ -162,6 +162,48 @@ func NewClient(httpClient *http.Client) *Client {
 	return c
 }
 
+// ClientOpt are options for New.
+type ClientOpt func(*Client) error
+
+// New returns a new DIgitalOcean API client instance.
+func New(httpClient *http.Client, opts ...ClientOpt) (*Client, error) {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+
+	baseURL, _ := url.Parse(defaultBaseURL)
+
+	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	for _, opt := range opts {
+		if err := opt(c); err != nil {
+			return nil, err
+		}
+	}
+
+	return c, nil
+}
+
+// SetBaseURL is a client option for setting the base URL.
+func SetBaseURL(bu string) ClientOpt {
+	return func(c *Client) error {
+		u, err := url.Parse(bu)
+		if err != nil {
+			return err
+		}
+
+		c.BaseURL = u
+		return nil
+	}
+}
+
+// SetUserAgent is a client option for setting the user agent.
+func SetUserAgent(ua string) ClientOpt {
+	return func(c *Client) error {
+		c.UserAgent = fmt.Sprintf("%s+%s", ua, c.UserAgent)
+		return nil
+	}
+}
+
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
