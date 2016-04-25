@@ -453,3 +453,16 @@ func TestAddOptions(t *testing.T) {
 		}
 	}
 }
+
+func TestCustomUserAgent(t *testing.T) {
+	c, err := New(nil, SetUserAgent("testing"))
+
+	if err != nil {
+		t.Fatalf("New() unexpected error: %v", err)
+	}
+
+	expected := fmt.Sprintf("%s+%s", "testing", userAgent)
+	if got := c.UserAgent; got != expected {
+		t.Errorf("New() UserAgent = %s; expected %s", got, expected)
+	}
+}
