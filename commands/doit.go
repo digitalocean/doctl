@@ -96,10 +96,6 @@ func initConfig() {
 
 }
 
-func homeDir() string {
-	return os.Getenv("HOME")
-}
-
 // Execute executes the current command using DoitCmd.
 func Execute() {
 	if err := DoitCmd.Execute(); err != nil {
