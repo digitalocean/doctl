@@ -8,6 +8,7 @@ All changes to `doctl` will be documented in this file.
 - #52 Add tagging commands - @bryanl
 - #56 Add support for Drive beta - @aybabtme
 - #58 Add support for beta features - @bryanl
+- #63 Add ci build for windows - @bryanl
 
 ### Changed
 - #53 Remove unused dependencies - @aybabtme
