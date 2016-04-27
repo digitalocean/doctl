@@ -5,11 +5,12 @@ import "github.com/stretchr/testify/mock"
 
 import "github.com/digitalocean/godo"
 
+// Generated: please do not edit by hand
+
 type DropletsService struct {
 	mock.Mock
 }
 
-// List provides a mock function with given fields:
 func (_m *DropletsService) List() (do.Droplets, error) {
 	ret := _m.Called()
 
@@ -29,8 +30,6 @@ func (_m *DropletsService) List() (do.Droplets, error) {
 
 	return r0, r1
 }
-
-// ListByTag provides a mock function with given fields: _a0
 func (_m *DropletsService) ListByTag(_a0 string) (do.Droplets, error) {
 	ret := _m.Called(_a0)
 
@@ -50,8 +49,6 @@ func (_m *DropletsService) ListByTag(_a0 string) (do.Droplets, error) {
 
 	return r0, r1
 }
-
-// Get provides a mock function with given fields: _a0
 func (_m *DropletsService) Get(_a0 int) (*do.Droplet, error) {
 	ret := _m.Called(_a0)
 
@@ -73,8 +70,6 @@ func (_m *DropletsService) Get(_a0 int) (*do.Droplet, error) {
 
 	return r0, r1
 }
-
-// Create provides a mock function with given fields: _a0, _a1
 func (_m *DropletsService) Create(_a0 *godo.DropletCreateRequest, _a1 bool) (*do.Droplet, error) {
 	ret := _m.Called(_a0, _a1)
 
@@ -96,8 +91,6 @@ func (_m *DropletsService) Create(_a0 *godo.DropletCreateRequest, _a1 bool) (*do
 
 	return r0, r1
 }
-
-// CreateMultiple provides a mock function with given fields: _a0
 func (_m *DropletsService) CreateMultiple(_a0 *godo.DropletMultiCreateRequest) (do.Droplets, error) {
 	ret := _m.Called(_a0)
 
@@ -117,8 +110,6 @@ func (_m *DropletsService) CreateMultiple(_a0 *godo.DropletMultiCreateRequest) (
 
 	return r0, r1
 }
-
-// Delete provides a mock function with given fields: _a0
 func (_m *DropletsService) Delete(_a0 int) error {
 	ret := _m.Called(_a0)
 
@@ -131,8 +122,6 @@ func (_m *DropletsService) Delete(_a0 int) error {
 
 	return r0
 }
-
-// DeleteByTag provides a mock function with given fields: _a0
 func (_m *DropletsService) DeleteByTag(_a0 string) error {
 	ret := _m.Called(_a0)
 
@@ -145,8 +134,6 @@ func (_m *DropletsService) DeleteByTag(_a0 string) error {
 
 	return r0
 }
-
-// Kernels provides a mock function with given fields: _a0
 func (_m *DropletsService) Kernels(_a0 int) (do.Kernels, error) {
 	ret := _m.Called(_a0)
 
@@ -166,8 +153,6 @@ func (_m *DropletsService) Kernels(_a0 int) (do.Kernels, error) {
 
 	return r0, r1
 }
-
-// Snapshots provides a mock function with given fields: _a0
 func (_m *DropletsService) Snapshots(_a0 int) (do.Images, error) {
 	ret := _m.Called(_a0)
 
@@ -187,8 +172,6 @@ func (_m *DropletsService) Snapshots(_a0 int) (do.Images, error) {
 
 	return r0, r1
 }
-
-// Backups provides a mock function with given fields: _a0
 func (_m *DropletsService) Backups(_a0 int) (do.Images, error) {
 	ret := _m.Called(_a0)
 
@@ -208,8 +191,6 @@ func (_m *DropletsService) Backups(_a0 int) (do.Images, error) {
 
 	return r0, r1
 }
-
-// Actions provides a mock function with given fields: _a0
 func (_m *DropletsService) Actions(_a0 int) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
@@ -229,8 +210,6 @@ func (_m *DropletsService) Actions(_a0 int) (do.Actions, error) {
 
 	return r0, r1
 }
-
-// Neighbors provides a mock function with given fields: _a0
 func (_m *DropletsService) Neighbors(_a0 int) (do.Droplets, error) {
 	ret := _m.Called(_a0)
 

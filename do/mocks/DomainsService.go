@@ -1,17 +1,3 @@
-
-/*
-Copyright 2016 The Doctl Authors All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package mocks
 
 import "github.com/digitalocean/doctl/do"
@@ -19,11 +5,12 @@ import "github.com/stretchr/testify/mock"
 
 import "github.com/digitalocean/godo"
 
+// Generated: please do not edit by hand
+
 type DomainsService struct {
 	mock.Mock
 }
 
-// List provides a mock function with given fields:
 func (_m *DomainsService) List() (do.Domains, error) {
 	ret := _m.Called()
 
@@ -43,8 +30,6 @@ func (_m *DomainsService) List() (do.Domains, error) {
 
 	return r0, r1
 }
-
-// Get provides a mock function with given fields: _a0
 func (_m *DomainsService) Get(_a0 string) (*do.Domain, error) {
 	ret := _m.Called(_a0)
 
@@ -66,8 +51,6 @@ func (_m *DomainsService) Get(_a0 string) (*do.Domain, error) {
 
 	return r0, r1
 }
-
-// Create provides a mock function with given fields: _a0
 func (_m *DomainsService) Create(_a0 *godo.DomainCreateRequest) (*do.Domain, error) {
 	ret := _m.Called(_a0)
 
@@ -89,8 +72,6 @@ func (_m *DomainsService) Create(_a0 *godo.DomainCreateRequest) (*do.Domain, err
 
 	return r0, r1
 }
-
-// Delete provides a mock function with given fields: _a0
 func (_m *DomainsService) Delete(_a0 string) error {
 	ret := _m.Called(_a0)
 
@@ -103,8 +84,6 @@ func (_m *DomainsService) Delete(_a0 string) error {
 
 	return r0
 }
-
-// Records provides a mock function with given fields: _a0
 func (_m *DomainsService) Records(_a0 string) (do.DomainRecords, error) {
 	ret := _m.Called(_a0)
 
@@ -124,8 +103,6 @@ func (_m *DomainsService) Records(_a0 string) (do.DomainRecords, error) {
 
 	return r0, r1
 }
-
-// Record provides a mock function with given fields: _a0, _a1
 func (_m *DomainsService) Record(_a0 string, _a1 int) (*do.DomainRecord, error) {
 	ret := _m.Called(_a0, _a1)
 
@@ -147,8 +124,6 @@ func (_m *DomainsService) Record(_a0 string, _a1 int) (*do.DomainRecord, error) 
 
 	return r0, r1
 }
-
-// DeleteRecord provides a mock function with given fields: _a0, _a1
 func (_m *DomainsService) DeleteRecord(_a0 string, _a1 int) error {
 	ret := _m.Called(_a0, _a1)
 
@@ -161,8 +136,6 @@ func (_m *DomainsService) DeleteRecord(_a0 string, _a1 int) error {
 
 	return r0
 }
-
-// EditRecord provides a mock function with given fields: _a0, _a1, _a2
 func (_m *DomainsService) EditRecord(_a0 string, _a1 int, _a2 *godo.DomainRecordEditRequest) (*do.DomainRecord, error) {
 	ret := _m.Called(_a0, _a1, _a2)
 
@@ -184,8 +157,6 @@ func (_m *DomainsService) EditRecord(_a0 string, _a1 int, _a2 *godo.DomainRecord
 
 	return r0, r1
 }
-
-// CreateRecord provides a mock function with given fields: _a0, _a1
 func (_m *DomainsService) CreateRecord(_a0 string, _a1 *godo.DomainRecordEditRequest) (*do.DomainRecord, error) {
 	ret := _m.Called(_a0, _a1)
 

@@ -1,17 +1,3 @@
-
-/*
-Copyright 2016 The Doctl Authors All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package mocks
 
 import "github.com/digitalocean/doctl/do"
@@ -19,11 +5,12 @@ import "github.com/stretchr/testify/mock"
 
 import "github.com/digitalocean/godo"
 
+// Generated: please do not edit by hand
+
 type FloatingIPActionsService struct {
 	mock.Mock
 }
 
-// Assign provides a mock function with given fields: ip, dropletID
 func (_m *FloatingIPActionsService) Assign(ip string, dropletID int) (*do.Action, error) {
 	ret := _m.Called(ip, dropletID)
 
@@ -45,8 +32,6 @@ func (_m *FloatingIPActionsService) Assign(ip string, dropletID int) (*do.Action
 
 	return r0, r1
 }
-
-// Unassign provides a mock function with given fields: ip
 func (_m *FloatingIPActionsService) Unassign(ip string) (*do.Action, error) {
 	ret := _m.Called(ip)
 
@@ -68,8 +53,6 @@ func (_m *FloatingIPActionsService) Unassign(ip string) (*do.Action, error) {
 
 	return r0, r1
 }
-
-// Get provides a mock function with given fields: ip, actionID
 func (_m *FloatingIPActionsService) Get(ip string, actionID int) (*do.Action, error) {
 	ret := _m.Called(ip, actionID)
 
@@ -91,8 +74,6 @@ func (_m *FloatingIPActionsService) Get(ip string, actionID int) (*do.Action, er
 
 	return r0, r1
 }
-
-// List provides a mock function with given fields: ip, opt
 func (_m *FloatingIPActionsService) List(ip string, opt *godo.ListOptions) ([]do.Action, error) {
 	ret := _m.Called(ip, opt)
 
