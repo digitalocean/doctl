@@ -5,11 +5,12 @@ import "github.com/stretchr/testify/mock"
 
 import "github.com/digitalocean/godo"
 
+// Generated: please do not edit by hand
+
 type TagsService struct {
 	mock.Mock
 }
 
-// List provides a mock function with given fields:
 func (_m *TagsService) List() (do.Tags, error) {
 	ret := _m.Called()
 
@@ -29,8 +30,6 @@ func (_m *TagsService) List() (do.Tags, error) {
 
 	return r0, r1
 }
-
-// Get provides a mock function with given fields: _a0
 func (_m *TagsService) Get(_a0 string) (*do.Tag, error) {
 	ret := _m.Called(_a0)
 
@@ -52,8 +51,6 @@ func (_m *TagsService) Get(_a0 string) (*do.Tag, error) {
 
 	return r0, r1
 }
-
-// Create provides a mock function with given fields: _a0
 func (_m *TagsService) Create(_a0 *godo.TagCreateRequest) (*do.Tag, error) {
 	ret := _m.Called(_a0)
 
@@ -75,8 +72,6 @@ func (_m *TagsService) Create(_a0 *godo.TagCreateRequest) (*do.Tag, error) {
 
 	return r0, r1
 }
-
-// Update provides a mock function with given fields: _a0, _a1
 func (_m *TagsService) Update(_a0 string, _a1 *godo.TagUpdateRequest) error {
 	ret := _m.Called(_a0, _a1)
 
@@ -89,8 +84,6 @@ func (_m *TagsService) Update(_a0 string, _a1 *godo.TagUpdateRequest) error {
 
 	return r0
 }
-
-// Delete provides a mock function with given fields: _a0
 func (_m *TagsService) Delete(_a0 string) error {
 	ret := _m.Called(_a0)
 
@@ -103,8 +96,6 @@ func (_m *TagsService) Delete(_a0 string) error {
 
 	return r0
 }
-
-// TagResources provides a mock function with given fields: _a0, _a1
 func (_m *TagsService) TagResources(_a0 string, _a1 *godo.TagResourcesRequest) error {
 	ret := _m.Called(_a0, _a1)
 
@@ -117,8 +108,6 @@ func (_m *TagsService) TagResources(_a0 string, _a1 *godo.TagResourcesRequest) e
 
 	return r0
 }
-
-// UntagResources provides a mock function with given fields: _a0, _a1
 func (_m *TagsService) UntagResources(_a0 string, _a1 *godo.UntagResourcesRequest) error {
 	ret := _m.Called(_a0, _a1)
 
