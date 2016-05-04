@@ -98,6 +98,27 @@ func TestSSH_CustomPort(t *testing.T) {
 	})
 }
 
+func TestSSH_CustomUser(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		rm := &mocks.Runner{}
+		rm.On("Run").Return(nil)
+
+		tc := config.Doit.(*TestConfig)
+		tc.SSHFn = func(user, host, keyPath string, port int) runner.Runner {
+			assert.Equal(t, "foobar", user)
+			return rm
+		}
+
+		tm.droplets.On("List").Return(testDropletList, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgSSHUser, "foobar")
+		config.Args = append(config.Args, testDroplet.Name)
+
+		err := RunSSH(config)
+		assert.NoError(t, err)
+	})
+}
+
 func Test_extractHostInfo(t *testing.T) {
 	cases := []struct {
 		s string

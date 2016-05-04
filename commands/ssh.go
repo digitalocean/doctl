@@ -93,7 +93,10 @@ func RunSSH(c *CmdConfig) error {
 
 		shi := extractHostInfo(dropletID)
 
-		user = shi.user
+		if (shi.user != "") {
+			user = shi.user
+		}
+
 		if i, err := strconv.Atoi(shi.port); shi.port != "" && err != nil {
 			port = i
 		}
