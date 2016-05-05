@@ -134,7 +134,7 @@ By default, it assumes you are using the `root` user. If you want to SSH as a sp
 
 ## Releasing
 
-To build `doctl` for all it's platforms, run `script/build.sh <version>`. To upload `doctl` to Github,
+To build `doctl` for all its platforms, run `script/build.sh <version>`. To upload `doctl` to Github,
 run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doctl`
 repository is required.
 
