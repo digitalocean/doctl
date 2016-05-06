@@ -18,10 +18,10 @@ import (
 	"io"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/config"
 	"github.com/digitalocean/doctl/do"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -58,6 +58,8 @@ var cfgFile string
 
 var cfgFileName = ".doctlcfg"
 
+var cfg config.Config
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -67,32 +69,20 @@ func init() {
 	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
 
-	viper.SetEnvPrefix("DIGITALOCEAN")
-	viper.BindEnv("access-token", "DIGITALOCEAN_ACCESS_TOKEN")
-	viper.BindPFlag("access-token", DoitCmd.PersistentFlags().Lookup("access-token"))
-	viper.BindPFlag("output", DoitCmd.PersistentFlags().Lookup("output"))
-	viper.BindEnv("enable-beta", "DIGITALOCEAN_ENABLE_BETA")
+	cfg, err := config.Load(cfgFile)
+	if err != nil {
+		log.Fatalf("unable to load configuration: %v", cfg)
+	}
+
+	cfg.BindEnv("access-token", "DIGITALOCEAN_ACCESS_TOKEN")
+	cfg.BindFlag("access-token", DoitCmd.PersistentFlags().Lookup("access-token"))
+	cfg.BindFlag("output", DoitCmd.PersistentFlags().Lookup("output"))
+	cfg.BindEnv("enable-beta", "DIGITALOCEAN_ENABLE_BETA")
 
 	addCommands()
 }
 
 func initConfig() {
-	if cfgFile == "" {
-		cfgFile = filepath.Join(homeDir(), ".doctlcfg")
-	}
-
-	viper.SetConfigType("yaml")
-	viper.SetConfigFile(cfgFile)
-
-	viper.AutomaticEnv()
-
-	if _, err := os.Stat(cfgFile); err == nil {
-		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalln("reading initialization failed:", err)
-		}
-	}
-
-	viper.SetDefault("output", "text")
 
 }
 
@@ -180,14 +170,14 @@ func AddStringFlag(cmd *Command, name, dflt, desc string, opts ...flagOpt) {
 		o(cmd, name, fn)
 	}
 
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	cfg.BindFlag(fn, cmd.Flags().Lookup(name))
 }
 
 // AddIntFlag adds an integr flag to a command.
 func AddIntFlag(cmd *Command, name string, def int, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().Int(name, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	cfg.BindFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
@@ -198,7 +188,7 @@ func AddIntFlag(cmd *Command, name string, def int, desc string, opts ...flagOpt
 func AddBoolFlag(cmd *Command, name string, def bool, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().Bool(name, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	cfg.BindFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
@@ -209,7 +199,7 @@ func AddBoolFlag(cmd *Command, name string, def bool, desc string, opts ...flagO
 func AddStringSliceFlag(cmd *Command, name string, def []string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().StringSlice(name, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	cfg.BindFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
