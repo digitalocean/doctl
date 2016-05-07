@@ -25,46 +25,49 @@ Use "doctl [command] --help" for more information about a command.
 
 ## Installation
 
-### Option 1 - Use a Package Manager
+### Option 1 - Use a Package Manager (preferred method)
 
-Currently, you can use [Homebrew](http://brew.sh) to install `doctl` on Mac OS X by using the command below:
+#### OS X
+
+You can use [Homebrew](http://brew.sh) to install `doctl` on Mac OS X by using the command below:
 
 ```
 brew install doctl
 ```
 
+#### Windows and GNU/Linux
+
+Integrations with package managers for GNU/Linux and Windows are to come.
 
 ### Option 2 – Download a Release from GitHub
 
 Visit the [Releases page][doctl-releases] for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive.)
 
-You can download the archive from from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`:
+#### OS X and GNU/Linux
+
+You can download the archive from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`:
 
 ```
 cd ~
-wget https://github.com/digitalocean/doctl/releases/download/v1.0.0/doctl-1.0.0-linux-amd64.tar.gz
+
+# OS X
+curl -L https://github.com/digitalocean/doctl/releases/download/v1.1.0/doctl-1.1.0-darwin-10.6-amd64.tar.gz | tar xz
+
+# linux (with wget)
+wget -qO- https://github.com/digitalocean/doctl/releases/download/v1.1.0/doctl-1.1.0-linux-amd64.tar.gz  | tar xz
+# linux (with curl)
+curl -L https://github.com/digitalocean/doctl/releases/download/v1.1.0/doctl-1.1.0-linux-amd64.tar.gz  | tar xz
 ```
 
-Or:
-
-```
-cd ~
-curl -OL https://github.com/digitalocean/doctl/releases/download/v1.0.0/doctl-1.0.0-linux-amd64.tar.gz
-```
-
-Extract the binary.  On GNU/Linux or OS X systems, you can use `tar`:
-
-```
-tar xf doctl-1.0.0-linux-amd64.tar.gz
-```
-
-On Windows systems, you should be able to double-click the zip archive to extract the `doctl` executable.
-
-Move the `doctl` binary to somewhere in your path.  For example, on GNU/Linux and OS X systems:
+Move the `doctl` binary to somewhere in your path.  For example:
 
 ```
 sudo mv ./doctl /usr/local/bin
 ```
+
+#### Windows
+
+On Windows systems, you should be able to [download the Windows release][windows-release], and then double-click the zip archive to extract the `doctl.exe` executable.
 
 ### Option 3 – Build From Source
 
@@ -140,3 +143,4 @@ repository is required.
 
 [tutorial]: https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client
 [doctl-releases]: https://github.com/digitalocean/doctl/releases
+[windows-release]: https://github.com/digitalocean/doctl/releases/download/v1.1.0/doctl-1.1.0-windows-4.0-amd64.zip
