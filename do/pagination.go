@@ -52,7 +52,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 	fetchChan := make(chan int, maxFetchPages)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 4; i++ {
+	for i := 0; i < maxFetchPages-1; i++ {
 		wg.Add(1)
 		go func() {
 			for page := range fetchChan {
@@ -80,8 +80,9 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 	}
 
 	// start with second page
-	for i := 1; i < lp; i++ {
-		fetchChan <- i
+	opt.Page++
+	for ; opt.Page <= lp; opt.Page++ {
+		fetchChan <- opt.Page
 	}
 	close(fetchChan)
 
