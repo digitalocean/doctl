@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
+	"github.com/digitalocean/doctl/config"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
@@ -161,6 +162,7 @@ type Config interface {
 // LiveConfig is an implementation of Config for live values.
 type LiveConfig struct {
 	godoClient *godo.Client
+	cfg        config.Config
 }
 
 var _ Config = &LiveConfig{}
@@ -171,7 +173,7 @@ func (c *LiveConfig) GetGodoClient(trace bool) (*godo.Client, error) {
 		return c.godoClient, nil
 	}
 
-	token := viper.GetString("access-token")
+	token := c.cfg.Get("access-token").(string)
 	if token == "" {
 		return nil, fmt.Errorf("access token is required")
 	}
