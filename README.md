@@ -17,7 +17,7 @@ Available Commands:
 Flags:
   -t, --access-token string   DigitalOcean API V2 Access Token
   -h, --help                  help for doctl
-  -o, --output string         output formt [text|json] (default "text")
+  -o, --output string         output format [text|json] (default "text")
   -v, --verbose               verbose output
 
 Use "doctl [command] --help" for more information about a command.
