@@ -2,6 +2,21 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.2.0] - 2016-06-07
+
+### Added
+- #37 Add a script to regenerate test mocks
+
+### Changed
+- #79 Ensure pagination is 1 indexed, and not 0 indexed
+
+### Fixed
+- #68 Respect ssh-user flag
+- #69 Fix type in README
+- #70 Fix type in README
+- #74 Add more specific install instructions to README
+- #80 Fix a typo in usage text
+
 ## [1.1.0] - 2016-04-22
 
 ### Added
