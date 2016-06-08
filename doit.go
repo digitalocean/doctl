@@ -104,6 +104,10 @@ func (v Version) Complete(lv LatestVersioner) string {
 		v0, err1 := semver.Make(tagName)
 		v1, err2 := semver.Make(v.String())
 
+		if len(v0.Build) == 0 {
+			v0, err1 = semver.Make(tagName + "-release")
+		}
+
 		if err1 == nil && err2 == nil && v0.GT(v1) {
 			buffer.WriteString(fmt.Sprintf("\nrelease %s is available, check it out! ", tagName))
 		}
