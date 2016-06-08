@@ -60,6 +60,20 @@ func TestVersion(t *testing.T) {
 			ver: `0.1.2`,
 			slr: slr2,
 		},
+		// version with dev label and released version
+		{
+			v:   Version{Major: 1, Minor: 0, Patch: 0, Label: "dev"},
+			s:   "doctl version 1.0.0-dev\nrelease 1.0.0 is available, check it out! ",
+			ver: `1.0.0-dev`,
+			slr: slr2,
+		},
+		// version with release label and released version available
+		{
+			v:   Version{Major: 1, Minor: 0, Patch: 0, Label: "release"},
+			s:   "doctl version 1.0.0-release",
+			ver: `1.0.0-release`,
+			slr: slr2,
+		},
 	}
 
 	for _, c := range cases {
