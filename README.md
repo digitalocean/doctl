@@ -3,24 +3,28 @@
 ![Travis Build Status](https://travis-ci.org/bryanl/doit.svg?branch=master)
 
 ```
-doctl is a command line interface for the DigitalOcean API.
+NAME:
+   doctl - Digital Ocean Control TooL.
 
-Usage:
-  doctl [command]
+USAGE:
+   doctl [global options] command [command options] [arguments...]
 
-Available Commands:
-  account     account commands
-  auth        auth commands
-  compute     compute commands
-  version     show the current version
+COMMANDS:
+   account, whoami	Account commands.
+   action, a		Action commands.
+   domain, dns		Domain commands.
+   droplet, d		Droplet commands. Lists by default.
+   region		Region commands.
+   size			Size commands.
+   sshkey, ssh, keys	SSH Key commands.
+   help, h		Shows a list of commands or help for one command
 
-Flags:
-  -t, --access-token string   DigitalOcean API V2 Access Token
-  -h, --help                  help for doctl
-  -o, --output string         output format [text|json] (default "text")
-  -v, --verbose               verbose output
-
-Use "doctl [command] --help" for more information about a command.
+GLOBAL OPTIONS:
+   --api-key, -k 	API Key for DO APIv2. [$DIGITALOCEAN_API_KEY, $ DIGITAL_OCEAN_API_KEY]
+   --format, -f "yaml"	Format for output.
+   --debug, -d		Turn on debug output.
+   --help, -h		show help
+   --version, -v	print the version
 ```
 
 ## Installation
