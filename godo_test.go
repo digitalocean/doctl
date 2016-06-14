@@ -67,15 +67,63 @@ func testURLParseError(t *testing.T, err error) {
 	}
 }
 
-func TestNewClient(t *testing.T) {
-	c := NewClient(nil)
-	if c.BaseURL.String() != defaultBaseURL {
-		t.Errorf("NewClient BaseURL = %v, expected %v", c.BaseURL.String(), defaultBaseURL)
+func testClientServices(t *testing.T, c *Client) {
+	services := []string{
+		"Account",
+		"Actions",
+		"Domains",
+		"Droplets",
+		"DropletActions",
+		"Images",
+		"ImageActions",
+		"Keys",
+		"Regions",
+		"Sizes",
+		"FloatingIPs",
+		"FloatingIPActions",
+		"Tags",
 	}
 
+	cp := reflect.ValueOf(c)
+	cv := reflect.Indirect(cp)
+
+	for _, s := range services {
+		if cv.FieldByName(s).IsNil() {
+			t.Errorf("c.%s shouldn't be nil", s)
+		}
+	}
+}
+
+func testClientDefaultBaseURL(t *testing.T, c *Client) {
+	if c.BaseURL == nil || c.BaseURL.String() != defaultBaseURL {
+		t.Errorf("NewClient BaseURL = %v, expected %v", c.BaseURL, defaultBaseURL)
+	}
+}
+
+func testClientDefaultUserAgent(t *testing.T, c *Client) {
 	if c.UserAgent != userAgent {
 		t.Errorf("NewClick UserAgent = %v, expected %v", c.UserAgent, userAgent)
 	}
+}
+
+func testClientDefaults(t *testing.T, c *Client) {
+	testClientDefaultBaseURL(t, c)
+	testClientDefaultUserAgent(t, c)
+	testClientServices(t, c)
+}
+
+func TestNewClient(t *testing.T) {
+	c := NewClient(nil)
+	testClientDefaults(t, c)
+}
+
+func TestNew(t *testing.T) {
+	c, err := New(nil)
+
+	if err != nil {
+		t.Fatalf("New(): %v", err)
+	}
+	testClientDefaults(t, c)
 }
 
 func TestNewRequest(t *testing.T) {
