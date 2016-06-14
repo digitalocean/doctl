@@ -188,6 +188,22 @@ func TestNewRequest_badURL(t *testing.T) {
 	testURLParseError(t, err)
 }
 
+func TestNewRequest_withCustomUserAgent(t *testing.T) {
+	ua := "testing"
+	c, err := New(nil, SetUserAgent(ua))
+
+	if err != nil {
+		t.Fatalf("New() unexpected error: %v", err)
+	}
+
+	req, _ := c.NewRequest("GET", "/foo", nil)
+
+	expected := fmt.Sprintf("%s+%s", ua, userAgent)
+	if got := req.Header.Get("User-Agent"); got != expected {
+		t.Errorf("New() UserAgent = %s; expected %s", got, expected)
+	}
+}
+
 func TestDo(t *testing.T) {
 	setup()
 	defer teardown()
