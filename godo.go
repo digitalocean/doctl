@@ -230,7 +230,7 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 
 	req.Header.Add("Content-Type", mediaType)
 	req.Header.Add("Accept", mediaType)
-	req.Header.Add("User-Agent", userAgent)
+	req.Header.Add("User-Agent", c.UserAgent)
 	return req, nil
 }
 
