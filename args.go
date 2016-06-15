@@ -82,6 +82,8 @@ const (
 	ArgSSHKeys = "ssh-keys"
 	// ArgsSSHPort is a ssh argument.
 	ArgsSSHPort = "ssh-port"
+	// ArgsSSHAgentForwarding is a ssh argument.
+	ArgsSSHAgentForwarding = "ssh-agent-forwarding"
 	// ArgUserData is a user data argument.
 	ArgUserData = "user-data"
 	// ArgUserDataFile is a user data file location argument.

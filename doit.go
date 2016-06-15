@@ -154,7 +154,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient(trace bool) (*godo.Client, error)
-	SSH(user, host, keyPath string, port int) runner.Runner
+	SSH(user, host, keyPath string, port int, agentForwarding bool) runner.Runner
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) (string, error)
 	GetBool(ns, key string) (bool, error)
@@ -205,14 +205,14 @@ func (c *LiveConfig) GetGodoClient(trace bool) (*godo.Client, error) {
 }
 
 // SSH creates a ssh connection to a host.
-func (c *LiveConfig) SSH(user, host, keyPath string, port int) runner.Runner {
+func (c *LiveConfig) SSH(user, host, keyPath string, port int, agentForwarding bool) runner.Runner {
 	return &ssh.Runner{
-		User:    user,
-		Host:    host,
-		KeyPath: keyPath,
-		Port:    port,
+		User:            user,
+		Host:            host,
+		KeyPath:         keyPath,
+		Port:            port,
+		AgentForwarding: agentForwarding,
 	}
-
 }
 
 // Set sets a config key.
