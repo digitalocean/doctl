@@ -18,7 +18,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"reflect"
 	"testing"
 
@@ -128,6 +127,15 @@ func TestAuth_createAuthURL_with_keypairs(t *testing.T) {
 }
 
 func TestAuth_initAuthCLI(t *testing.T) {
+	ogRUTF := retrieveUserTokenFunc
+	defer func() {
+		retrieveUserTokenFunc = ogRUTF
+	}()
+
+	retrieveUserTokenFunc = func() (string, error) {
+		return "token", nil
+	}
+
 	dsa := newDoitServerAuth()
 
 	ac := &doitserver.AuthCredentials{
@@ -135,7 +143,10 @@ func TestAuth_initAuthCLI(t *testing.T) {
 		CS: "cs",
 	}
 
+	done := make(chan struct{})
+
 	go func() {
+		defer close(done)
 		s, err := dsa.initAuthCLI(ac)
 		if err != nil {
 			t.Fatalf("initAuthCLI() unexpected error: %v", err)
@@ -146,7 +157,7 @@ func TestAuth_initAuthCLI(t *testing.T) {
 		}
 	}()
 
-	os.Stdin.Write([]byte("token\n"))
+	<-done
 }
 
 func TestAuth_initAuth(t *testing.T) {
