@@ -135,7 +135,9 @@ func TestAuth_initAuthCLI(t *testing.T) {
 		CS: "cs",
 	}
 
+	done := make(chan struct{}, 1)
 	go func() {
+		defer close(done)
 		s, err := dsa.initAuthCLI(ac)
 		if err != nil {
 			t.Fatalf("initAuthCLI() unexpected error: %v", err)
@@ -147,6 +149,7 @@ func TestAuth_initAuthCLI(t *testing.T) {
 	}()
 
 	os.Stdin.Write([]byte("token\n"))
+	<-done
 }
 
 func TestAuth_initAuth(t *testing.T) {
