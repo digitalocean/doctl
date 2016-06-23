@@ -1,7 +1,6 @@
 package godo
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -68,15 +67,63 @@ func testURLParseError(t *testing.T, err error) {
 	}
 }
 
-func TestNewClient(t *testing.T) {
-	c := NewClient(nil)
-	if c.BaseURL.String() != defaultBaseURL {
-		t.Errorf("NewClient BaseURL = %v, expected %v", c.BaseURL.String(), defaultBaseURL)
+func testClientServices(t *testing.T, c *Client) {
+	services := []string{
+		"Account",
+		"Actions",
+		"Domains",
+		"Droplets",
+		"DropletActions",
+		"Images",
+		"ImageActions",
+		"Keys",
+		"Regions",
+		"Sizes",
+		"FloatingIPs",
+		"FloatingIPActions",
+		"Tags",
 	}
 
+	cp := reflect.ValueOf(c)
+	cv := reflect.Indirect(cp)
+
+	for _, s := range services {
+		if cv.FieldByName(s).IsNil() {
+			t.Errorf("c.%s shouldn't be nil", s)
+		}
+	}
+}
+
+func testClientDefaultBaseURL(t *testing.T, c *Client) {
+	if c.BaseURL == nil || c.BaseURL.String() != defaultBaseURL {
+		t.Errorf("NewClient BaseURL = %v, expected %v", c.BaseURL, defaultBaseURL)
+	}
+}
+
+func testClientDefaultUserAgent(t *testing.T, c *Client) {
 	if c.UserAgent != userAgent {
 		t.Errorf("NewClick UserAgent = %v, expected %v", c.UserAgent, userAgent)
 	}
+}
+
+func testClientDefaults(t *testing.T, c *Client) {
+	testClientDefaultBaseURL(t, c)
+	testClientDefaultUserAgent(t, c)
+	testClientServices(t, c)
+}
+
+func TestNewClient(t *testing.T) {
+	c := NewClient(nil)
+	testClientDefaults(t, c)
+}
+
+func TestNew(t *testing.T) {
+	c, err := New(nil)
+
+	if err != nil {
+		t.Fatalf("New(): %v", err)
+	}
+	testClientDefaults(t, c)
 }
 
 func TestNewRequest(t *testing.T) {
@@ -135,26 +182,26 @@ func TestNewRequest_withUserData(t *testing.T) {
 	}
 }
 
-func TestNewRequest_invalidJSON(t *testing.T) {
-	c := NewClient(nil)
-
-	type T struct {
-		A map[int]interface{}
-	}
-	_, err := c.NewRequest("GET", "/", &T{})
-
-	if err == nil {
-		t.Error("Expected error to be returned.")
-	}
-	if err, ok := err.(*json.UnsupportedTypeError); !ok {
-		t.Errorf("Expected a JSON error; got %#v.", err)
-	}
-}
-
 func TestNewRequest_badURL(t *testing.T) {
 	c := NewClient(nil)
 	_, err := c.NewRequest("GET", ":", nil)
 	testURLParseError(t, err)
+}
+
+func TestNewRequest_withCustomUserAgent(t *testing.T) {
+	ua := "testing"
+	c, err := New(nil, SetUserAgent(ua))
+
+	if err != nil {
+		t.Fatalf("New() unexpected error: %v", err)
+	}
+
+	req, _ := c.NewRequest("GET", "/foo", nil)
+
+	expected := fmt.Sprintf("%s+%s", ua, userAgent)
+	if got := req.Header.Get("User-Agent"); got != expected {
+		t.Errorf("New() UserAgent = %s; expected %s", got, expected)
+	}
 }
 
 func TestDo(t *testing.T) {
@@ -451,5 +498,18 @@ func TestAddOptions(t *testing.T) {
 			t.Errorf("%q query = %#v; expected %#v", c.name, g, e)
 			continue
 		}
+	}
+}
+
+func TestCustomUserAgent(t *testing.T) {
+	c, err := New(nil, SetUserAgent("testing"))
+
+	if err != nil {
+		t.Fatalf("New() unexpected error: %v", err)
+	}
+
+	expected := fmt.Sprintf("%s+%s", "testing", userAgent)
+	if got := c.UserAgent; got != expected {
+		t.Errorf("New() UserAgent = %s; expected %s", got, expected)
 	}
 }

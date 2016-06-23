@@ -237,7 +237,7 @@ func (d *droplet) Cols() []string {
 		"ID", "Name", "PublicIPv4", "Memory", "VCPUs", "Disk", "Region", "Image", "Status", "Tags",
 	}
 	if isBeta() {
-		cols = append(cols, "Drives")
+		cols = append(cols, "Volumes")
 	}
 	return cols
 }
@@ -247,7 +247,7 @@ func (d *droplet) ColMap() map[string]string {
 		"ID": "ID", "Name": "Name", "PublicIPv4": "Public IPv4",
 		"Memory": "Memory", "VCPUs": "VCPUs", "Disk": "Disk",
 		"Region": "Region", "Image": "Image", "Status": "Status",
-		"Tags": "Tags", "Drives": "Drives",
+		"Tags": "Tags", "Volumes": "Volumes",
 	}
 }
 
@@ -257,12 +257,12 @@ func (d *droplet) KV() []map[string]interface{} {
 		tags := strings.Join(d.Tags, ",")
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
 		ip, _ := d.PublicIPv4()
-		drives := strings.Join(d.DriveIDs, ",")
+		volumes := strings.Join(d.VolumeIDs, ",")
 		m := map[string]interface{}{
 			"ID": d.ID, "Name": d.Name, "PublicIPv4": ip,
 			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
 			"Region": d.Region.Slug, "Image": image, "Status": d.Status,
-			"Tags": tags, "Drives": drives,
+			"Tags": tags, "Volumes": volumes,
 		}
 		out = append(out, m)
 	}
@@ -576,44 +576,44 @@ func (t *tag) KV() []map[string]interface{} {
 	return out
 }
 
-type drive struct {
-	drives []do.Drive
+type volume struct {
+	volumes []do.Volume
 }
 
-var _ Displayable = &drive{}
+var _ Displayable = &volume{}
 
-func (a *drive) JSON(out io.Writer) error {
-	return writeJSON(a.drives, out)
+func (a *volume) JSON(out io.Writer) error {
+	return writeJSON(a.volumes, out)
 
 }
 
-func (a *drive) Cols() []string {
+func (a *volume) Cols() []string {
 	return []string{
 		"ID", "Name", "Size", "Region", "Droplet IDs",
 	}
 
 }
 
-func (a *drive) ColMap() map[string]string {
+func (a *volume) ColMap() map[string]string {
 	return map[string]string{
 		"ID": "ID", "Name": "Name", "Size": "Size", "Region": "Region", "Droplet IDs": "Droplet IDs",
 	}
 
 }
 
-func (a *drive) KV() []map[string]interface{} {
+func (a *volume) KV() []map[string]interface{} {
 	out := []map[string]interface{}{}
-	for _, drive := range a.drives {
+	for _, volume := range a.volumes {
 
 		m := map[string]interface{}{
-			"ID":     drive.ID,
-			"Name":   drive.Name,
-			"Size":   strconv.FormatInt(drive.SizeGigaBytes, 10) + " GiB",
-			"Region": drive.Region.Slug,
+			"ID":     volume.ID,
+			"Name":   volume.Name,
+			"Size":   strconv.FormatInt(volume.SizeGigaBytes, 10) + " GiB",
+			"Region": volume.Region.Slug,
 		}
 		m["Droplet IDs"] = ""
-		if len(drive.DropletIDs) != 0 {
-			m["Droplet IDs"] = fmt.Sprintf("%v", drive.DropletIDs)
+		if len(volume.DropletIDs) != 0 {
+			m["Droplet IDs"] = fmt.Sprintf("%v", volume.DropletIDs)
 		}
 		out = append(out, m)
 

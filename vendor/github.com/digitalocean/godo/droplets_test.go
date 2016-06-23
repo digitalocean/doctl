@@ -147,10 +147,10 @@ func TestDroplets_Create(t *testing.T) {
 		Image: DropletCreateImage{
 			ID: 1,
 		},
-		Drives: []DropletCreateDrive{
-			{Name: "hello-im-a-drive"},
-			{ID: "hello-im-another-drive"},
-			{Name: "hello-im-still-a-drive", ID: "should be ignored due to Name"},
+		Volumes: []DropletCreateVolume{
+			{Name: "hello-im-a-volume"},
+			{ID: "hello-im-another-volume"},
+			{Name: "hello-im-still-a-volume", ID: "should be ignored due to Name"},
 		},
 	}
 
@@ -164,10 +164,10 @@ func TestDroplets_Create(t *testing.T) {
 			"backups":            false,
 			"ipv6":               false,
 			"private_networking": false,
-			"drives": []interface{}{
-				map[string]interface{}{"name": "hello-im-a-drive"},
-				map[string]interface{}{"id": "hello-im-another-drive"},
-				map[string]interface{}{"name": "hello-im-still-a-drive"},
+			"volumes": []interface{}{
+				map[string]interface{}{"name": "hello-im-a-volume"},
+				map[string]interface{}{"id": "hello-im-another-volume"},
+				map[string]interface{}{"name": "hello-im-still-a-volume"},
 			},
 		}
 

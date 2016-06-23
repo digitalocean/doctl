@@ -110,12 +110,12 @@ const (
 	// ArgOutput is an output type argument.
 	ArgOutput = "output"
 
-	// ArgDriveSize is the size of a drive.
-	ArgDriveSize = "size"
-	// ArgDriveDesc is the description of a drive.
-	ArgDriveDesc = "desc"
-	// ArgDriveRegion is the region of a drive.
-	ArgDriveRegion = "region"
-	// ArgDriveList is the IDs of many drives.
-	ArgDriveList = "drives"
+	// ArgVolumeSize is the size of a volume.
+	ArgVolumeSize = "size"
+	// ArgVolumeDesc is the description of a volume.
+	ArgVolumeDesc = "desc"
+	// ArgVolumeRegion is the region of a volume.
+	ArgVolumeRegion = "region"
+	// ArgVolumeList is the IDs of many volumes.
+	ArgVolumeList = "volumes"
 )

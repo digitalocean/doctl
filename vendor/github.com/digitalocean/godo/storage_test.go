@@ -9,18 +9,18 @@ import (
 	"time"
 )
 
-func TestStorageDrives_ListStorageDrives(t *testing.T) {
+func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 	setup()
 	defer teardown()
 
 	jBlob := `
 	{
-		"drives": [
+		"volumes": [
 			{
 				"user_id": 42,
 				"region": {"slug": "nyc3"},
 				"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-				"name": "my drive",
+				"name": "my volume",
 				"description": "my description",
 				"size_gigabytes": 100,
 				"droplet_ids": [10],
@@ -30,7 +30,7 @@ func TestStorageDrives_ListStorageDrives(t *testing.T) {
 				"user_id": 42,
 				"region": {"slug": "nyc3"},
 				"id": "96d414c6-295e-4e3a-ac59-eb9456c1e1d1",
-				"name": "my other drive",
+				"name": "my other volume",
 				"description": "my other description",
 				"size_gigabytes": 100,
 				"created_at": "2012-10-03T15:00:01.05Z"
@@ -38,8 +38,8 @@ func TestStorageDrives_ListStorageDrives(t *testing.T) {
 		],
 		"links": {
 	    "pages": {
-	      "last": "https://api.digitalocean.com/v2/drives?page=2",
-	      "next": "https://api.digitalocean.com/v2/drives?page=2"
+	      "last": "https://api.digitalocean.com/v2/volumes?page=2",
+	      "next": "https://api.digitalocean.com/v2/volumes?page=2"
 	    }
 	  },
 	  "meta": {
@@ -47,21 +47,21 @@ func TestStorageDrives_ListStorageDrives(t *testing.T) {
 	  }
 	}`
 
-	mux.HandleFunc("/v2/drives/", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v2/volumes/", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
 		fmt.Fprint(w, jBlob)
 	})
 
-	drives, _, err := client.Storage.ListDrives(nil)
+	volumes, _, err := client.Storage.ListVolumes(nil)
 	if err != nil {
-		t.Errorf("Storage.ListDrives returned error: %v", err)
+		t.Errorf("Storage.ListVolumes returned error: %v", err)
 	}
 
-	expected := []Drive{
+	expected := []Volume{
 		{
 			Region:        &Region{Slug: "nyc3"},
 			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			Name:          "my drive",
+			Name:          "my volume",
 			Description:   "my description",
 			SizeGigaBytes: 100,
 			DropletIDs:    []int{10},
@@ -70,42 +70,42 @@ func TestStorageDrives_ListStorageDrives(t *testing.T) {
 		{
 			Region:        &Region{Slug: "nyc3"},
 			ID:            "96d414c6-295e-4e3a-ac59-eb9456c1e1d1",
-			Name:          "my other drive",
+			Name:          "my other volume",
 			Description:   "my other description",
 			SizeGigaBytes: 100,
 			CreatedAt:     time.Date(2012, 10, 03, 15, 00, 01, 50000000, time.UTC),
 		},
 	}
-	if !reflect.DeepEqual(drives, expected) {
-		t.Errorf("Storage.ListDrives returned %+v, expected %+v", drives, expected)
+	if !reflect.DeepEqual(volumes, expected) {
+		t.Errorf("Storage.ListVolumes returned %+v, expected %+v", volumes, expected)
 	}
 }
 
-func TestStorageDrives_Get(t *testing.T) {
+func TestStorageVolumes_Get(t *testing.T) {
 	setup()
 	defer teardown()
-	want := &Drive{
+	want := &Volume{
 		Region:        &Region{Slug: "nyc3"},
 		ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-		Name:          "my drive",
+		Name:          "my volume",
 		Description:   "my description",
 		SizeGigaBytes: 100,
 		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
 	}
 	jBlob := `{
-		"drive":{
+		"volume":{
 			"region": {"slug":"nyc3"},
 			"attached_to_droplet": null,
 			"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			"name": "my drive",
+			"name": "my volume",
 			"description": "my description",
 			"size_gigabytes": 100,
 			"created_at": "2002-10-02T15:00:00.05Z"
 		},
 		"links": {
 	    "pages": {
-	      "last": "https://api.digitalocean.com/v2/drives?page=2",
-	      "next": "https://api.digitalocean.com/v2/drives?page=2"
+	      "last": "https://api.digitalocean.com/v2/volumes?page=2",
+	      "next": "https://api.digitalocean.com/v2/volumes?page=2"
 	    }
 	  },
 	  "meta": {
@@ -113,44 +113,44 @@ func TestStorageDrives_Get(t *testing.T) {
 	  }
 	}`
 
-	mux.HandleFunc("/v2/drives/80d414c6-295e-4e3a-ac58-eb9456c1e1d1", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v2/volumes/80d414c6-295e-4e3a-ac58-eb9456c1e1d1", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := client.Storage.GetDrive("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
+	got, _, err := client.Storage.GetVolume("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
 	if err != nil {
-		t.Errorf("Storage.GetDrive returned error: %v", err)
+		t.Errorf("Storage.GetVolume returned error: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Storage.GetDrive returned %+v, want %+v", got, want)
+		t.Errorf("Storage.GetVolume returned %+v, want %+v", got, want)
 	}
 }
 
-func TestStorageDrives_Create(t *testing.T) {
+func TestStorageVolumes_Create(t *testing.T) {
 	setup()
 	defer teardown()
 
-	createRequest := &DriveCreateRequest{
+	createRequest := &VolumeCreateRequest{
 		Region:        "nyc3",
-		Name:          "my drive",
+		Name:          "my volume",
 		Description:   "my description",
-		SizeGibiBytes: 100,
+		SizeGigaBytes: 100,
 	}
 
-	want := &Drive{
+	want := &Volume{
 		Region:        &Region{Slug: "nyc3"},
 		ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-		Name:          "my drive",
+		Name:          "my volume",
 		Description:   "my description",
 		SizeGigaBytes: 100,
 		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
 	}
 	jBlob := `{
-		"drive":{
+		"volume":{
 			"region": {"slug":"nyc3"},
 			"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			"name": "my drive",
+			"name": "my volume",
 			"description": "my description",
 			"size_gigabytes": 100,
 			"created_at": "2002-10-02T15:00:00.05Z"
@@ -158,8 +158,8 @@ func TestStorageDrives_Create(t *testing.T) {
 		"links": {}
 	}`
 
-	mux.HandleFunc("/v2/drives", func(w http.ResponseWriter, r *http.Request) {
-		v := new(DriveCreateRequest)
+	mux.HandleFunc("/v2/volumes", func(w http.ResponseWriter, r *http.Request) {
+		v := new(VolumeCreateRequest)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {
 			t.Fatal(err)
@@ -173,26 +173,26 @@ func TestStorageDrives_Create(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := client.Storage.CreateDrive(createRequest)
+	got, _, err := client.Storage.CreateVolume(createRequest)
 	if err != nil {
-		t.Errorf("Storage.CreateDrive returned error: %v", err)
+		t.Errorf("Storage.CreateVolume returned error: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("Storage.CreateDrive returned %+v, want %+v", got, want)
+		t.Errorf("Storage.CreateVolume returned %+v, want %+v", got, want)
 	}
 }
 
-func TestStorageDrives_Destroy(t *testing.T) {
+func TestStorageVolumes_Destroy(t *testing.T) {
 	setup()
 	defer teardown()
 
-	mux.HandleFunc("/v2/drives/80d414c6-295e-4e3a-ac58-eb9456c1e1d1", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v2/volumes/80d414c6-295e-4e3a-ac58-eb9456c1e1d1", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Storage.DeleteDrive("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
+	_, err := client.Storage.DeleteVolume("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
 	if err != nil {
-		t.Errorf("Storage.DeleteDrive returned error: %v", err)
+		t.Errorf("Storage.DeleteVolume returned error: %v", err)
 	}
 }
 
@@ -206,7 +206,7 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 			{
 				"region": {"slug": "nyc3"},
 				"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-				"drive_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+				"volume_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 				"name": "my snapshot",
 				"description": "my description",
 				"size_gigabytes": 100,
@@ -215,7 +215,7 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 			{
 				"region": {"slug": "nyc3"},
 				"id": "96d414c6-295e-4e3a-ac59-eb9456c1e1d1",
-				"drive_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+				"volume_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 				"name": "my other snapshot",
 				"description": "my other description",
 				"size_gigabytes": 100,
@@ -224,8 +224,8 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 		],
 		"links": {
 	    "pages": {
-	      "last": "https://api.digitalocean.com/v2/drives?page=2",
-	      "next": "https://api.digitalocean.com/v2/drives?page=2"
+	      "last": "https://api.digitalocean.com/v2/volumes?page=2",
+	      "next": "https://api.digitalocean.com/v2/volumes?page=2"
 	    }
 	  },
 	  "meta": {
@@ -233,12 +233,12 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 	  }
 	}`
 
-	mux.HandleFunc("/v2/drives/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v2/volumes/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
 		fmt.Fprint(w, jBlob)
 	})
 
-	drives, _, err := client.Storage.ListSnapshots("98d414c6-295e-4e3a-ac58-eb9456c1e1d1", nil)
+	volumes, _, err := client.Storage.ListSnapshots("98d414c6-295e-4e3a-ac58-eb9456c1e1d1", nil)
 	if err != nil {
 		t.Errorf("Storage.ListSnapshots returned error: %v", err)
 	}
@@ -247,24 +247,24 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 		{
 			Region:        &Region{Slug: "nyc3"},
 			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			DriveID:       "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+			VolumeID:      "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 			Name:          "my snapshot",
 			Description:   "my description",
-			SizeGibiBytes: 100,
+			SizeGigaBytes: 100,
 			CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
 		},
 		{
 			Region:        &Region{Slug: "nyc3"},
 			ID:            "96d414c6-295e-4e3a-ac59-eb9456c1e1d1",
-			DriveID:       "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+			VolumeID:      "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 			Name:          "my other snapshot",
 			Description:   "my other description",
-			SizeGibiBytes: 100,
+			SizeGigaBytes: 100,
 			CreatedAt:     time.Date(2012, 10, 03, 15, 00, 01, 50000000, time.UTC),
 		},
 	}
-	if !reflect.DeepEqual(drives, expected) {
-		t.Errorf("Storage.ListSnapshots returned %+v, expected %+v", drives, expected)
+	if !reflect.DeepEqual(volumes, expected) {
+		t.Errorf("Storage.ListSnapshots returned %+v, expected %+v", volumes, expected)
 	}
 }
 
@@ -274,17 +274,17 @@ func TestStorageSnapshots_Get(t *testing.T) {
 	want := &Snapshot{
 		Region:        &Region{Slug: "nyc3"},
 		ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-		DriveID:       "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+		VolumeID:      "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 		Name:          "my snapshot",
 		Description:   "my description",
-		SizeGibiBytes: 100,
+		SizeGigaBytes: 100,
 		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
 	}
 	jBlob := `{
 		"snapshot":{
 			"region": {"slug": "nyc3"},
 			"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			"drive_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+			"volume_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 			"name": "my snapshot",
 			"description": "my description",
 			"size_gigabytes": 100,
@@ -292,8 +292,8 @@ func TestStorageSnapshots_Get(t *testing.T) {
 		},
 		"links": {
 	    "pages": {
-				"last": "https://api.digitalocean.com/v2/drives/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2",
-				"next": "https://api.digitalocean.com/v2/drives/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2"
+				"last": "https://api.digitalocean.com/v2/volumes/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2",
+				"next": "https://api.digitalocean.com/v2/volumes/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2"
 	    }
 	  },
 	  "meta": {
@@ -320,7 +320,7 @@ func TestStorageSnapshots_Create(t *testing.T) {
 	defer teardown()
 
 	createRequest := &SnapshotCreateRequest{
-		DriveID:     "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+		VolumeID:    "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 		Name:        "my snapshot",
 		Description: "my description",
 	}
@@ -328,17 +328,17 @@ func TestStorageSnapshots_Create(t *testing.T) {
 	want := &Snapshot{
 		Region:        &Region{Slug: "nyc3"},
 		ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-		DriveID:       "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+		VolumeID:      "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 		Name:          "my snapshot",
 		Description:   "my description",
-		SizeGibiBytes: 100,
+		SizeGigaBytes: 100,
 		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
 	}
 	jBlob := `{
 		"snapshot":{
 			"region": {"slug": "nyc3"},
 			"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			"drive_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+			"volume_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 			"name": "my snapshot",
 			"description": "my description",
 			"size_gigabytes": 100,
@@ -346,8 +346,8 @@ func TestStorageSnapshots_Create(t *testing.T) {
 		},
 		"links": {
 	    "pages": {
-	      "last": "https://api.digitalocean.com/v2/drives/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2",
-	      "next": "https://api.digitalocean.com/v2/drives/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2"
+	      "last": "https://api.digitalocean.com/v2/volumes/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2",
+	      "next": "https://api.digitalocean.com/v2/volumes/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2"
 	    }
 	  },
 	  "meta": {
@@ -355,7 +355,7 @@ func TestStorageSnapshots_Create(t *testing.T) {
 	  }
 	}`
 
-	mux.HandleFunc("/v2/drives/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/v2/volumes/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots", func(w http.ResponseWriter, r *http.Request) {
 		v := new(SnapshotCreateRequest)
 		err := json.NewDecoder(r.Body).Decode(v)
 		if err != nil {

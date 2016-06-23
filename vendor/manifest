@@ -87,7 +87,7 @@
 			"importpath": "github.com/digitalocean/godo",
 			"repository": "https://github.com/digitalocean/godo",
 			"vcs": "",
-			"revision": "ee84e3120012ead04df6a48f2e4f2fbd4fc58b79",
+			"revision": "bbb5d7d360023ac99ae82a25205a4d38095124b9",
 			"branch": "beta-storage-blockstore"
 		},
 		{

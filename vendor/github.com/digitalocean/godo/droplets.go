@@ -55,7 +55,7 @@ type Droplet struct {
 	Created     string    `json:"created_at,omitempty"`
 	Kernel      *Kernel   `json:"kernel,omitempty"`
 	Tags        []string  `json:"tags,ommitempty"`
-	DriveIDs    []string  `json:"drives"`
+	VolumeIDs   []string  `json:"volumes"`
 }
 
 // PublicIPv4 returns the public IPv4 address for the Droplet.
@@ -147,16 +147,16 @@ type DropletCreateImage struct {
 	Slug string
 }
 
-// DropletCreateDrive identifies a drive to attach for the create request. It
+// DropletCreateVolume identifies a volume to attach for the create request. It
 // prefers Name over ID,
-type DropletCreateDrive struct {
+type DropletCreateVolume struct {
 	ID   string
 	Name string
 }
 
-// MarshalJSON returns an object with either the name or id of the drive. It
+// MarshalJSON returns an object with either the name or id of the volume. It
 // returns the id if the name is empty.
-func (d DropletCreateDrive) MarshalJSON() ([]byte, error) {
+func (d DropletCreateVolume) MarshalJSON() ([]byte, error) {
 	if d.Name != "" {
 		return json.Marshal(struct {
 			Name string `json:"name"`
@@ -205,7 +205,7 @@ type DropletCreateRequest struct {
 	IPv6              bool                  `json:"ipv6"`
 	PrivateNetworking bool                  `json:"private_networking"`
 	UserData          string                `json:"user_data,omitempty"`
-	Drives            []DropletCreateDrive  `json:"drives,omitempty"`
+	Volumes           []DropletCreateVolume `json:"volumes,omitempty"`
 }
 
 // DropletMultiCreateRequest is a request to create multiple droplets.
