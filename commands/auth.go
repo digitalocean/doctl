@@ -38,6 +38,18 @@ import (
 // can't ascertain the current terminal type with requesting an auth token.
 var ErrUnknownTerminal = errors.New("unknown terminal")
 
+// retrieveUserTokenFunc is a function that can retrieve a token. By default,
+// it will prompt the user. In test, you can replace this with code that returns the appropriate response.
+var retrieveUserTokenFunc = func() (string, error) {
+	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
+		return "", ErrUnknownTerminal
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter token: ")
+	return reader.ReadString('\n')
+}
+
 // UnknownSchemeError signifies an unknown HTTP scheme.
 type UnknownSchemeError struct {
 	Scheme string
@@ -114,10 +126,6 @@ func (dsa *doitServerAuth) initAuth(ac *doitserver.AuthCredentials) (string, err
 }
 
 func (dsa *doitServerAuth) initAuthCLI(ac *doitserver.AuthCredentials) (string, error) {
-	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
-		return "", ErrUnknownTerminal
-	}
-
 	u, err := dsa.createAuthURL(ac, keyPair{k: "cliauth", v: "1"})
 	if err != nil {
 		return "", err
@@ -125,9 +133,7 @@ func (dsa *doitServerAuth) initAuthCLI(ac *doitserver.AuthCredentials) (string, 
 
 	fmt.Printf("Visit the following URL in your browser: %s\n", u)
 
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter token: ")
-	return reader.ReadString('\n')
+	return retrieveUserTokenFunc()
 }
 
 func (dsa *doitServerAuth) initAuthBrowser(ac *doitserver.AuthCredentials) (string, error) {
