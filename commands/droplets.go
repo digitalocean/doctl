@@ -65,7 +65,7 @@ func Droplet() *Command {
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "Tag name")
 
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgDriveList, []string{}, "Drives to attach",
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, []string{}, "Volumes to attach",
 		betaOpt()) // TODO(antoine): remove once out of beta
 
 	CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
@@ -183,11 +183,11 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
-	driveList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDriveList)
+	volumeList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgVolumeList)
 	if err != nil {
 		return err
 	}
-	drives := extractDrives(driveList)
+	volumes := extractVolumes(volumeList)
 
 	filename, err := c.Doit.GetString(c.NS, doctl.ArgUserDataFile)
 	if err != nil {
@@ -224,7 +224,7 @@ func RunDropletCreate(c *CmdConfig) error {
 			Region:            region,
 			Size:              size,
 			Image:             createImage,
-			Drives:            drives,
+			Volumes:           volumes,
 			Backups:           backups,
 			IPv6:              ipv6,
 			PrivateNetworking: privateNetworking,
@@ -374,27 +374,27 @@ func extractUserData(userData, filename string) (string, error) {
 	return userData, nil
 }
 
-func extractDrives(driveList []string) []godo.DropletCreateDrive {
-	var drives []godo.DropletCreateDrive
-	for _, rawDrive := range driveList {
-		rawDrive = strings.TrimPrefix(rawDrive, "[")
-		rawDrive = strings.TrimSuffix(rawDrive, "]")
+func extractVolumes(volumeList []string) []godo.DropletCreateVolume {
+	var volumes []godo.DropletCreateVolume
+	for _, rawVolume := range volumeList {
+		rawVolume = strings.TrimPrefix(rawVolume, "[")
+		rawVolume = strings.TrimSuffix(rawVolume, "]")
 
-		list := strings.Split(rawDrive, ",")
+		list := strings.Split(rawVolume, ",")
 		for _, v := range list {
 			if v == "" {
 				continue
 			}
-			var req godo.DropletCreateDrive
+			var req godo.DropletCreateVolume
 			if uuid.Parse(v) != nil {
 				req.ID = v
 			} else {
 				req.Name = v
 			}
-			drives = append(drives, req)
+			volumes = append(volumes, req)
 		}
 	}
-	return drives
+	return volumes
 }
 
 func allInt(in []string) ([]int, error) {

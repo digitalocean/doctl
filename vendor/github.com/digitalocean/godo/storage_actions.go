@@ -6,8 +6,8 @@ import "fmt"
 // storage actions endpoints of the Digital Ocean API.
 // See: https://developers.digitalocean.com/documentation/v2#storage-actions
 type StorageActionsService interface {
-	Attach(driveID string, dropletID int) (*Action, *Response, error)
-	Detach(driveID string) (*Action, *Response, error)
+	Attach(volumeID string, dropletID int) (*Action, *Response, error)
+	Detach(volumeID string) (*Action, *Response, error)
 }
 
 // StorageActionsServiceOp handles communication with the floating IPs
@@ -17,30 +17,30 @@ type StorageActionsServiceOp struct {
 }
 
 // StorageAttachment represents the attachement of a block storage
-// drive to a specific droplet under the device name.
+// volume to a specific droplet under the device name.
 type StorageAttachment struct {
 	DropletID int `json:"droplet_id"`
 }
 
-// Attach a storage drive to a droplet.
-func (s *StorageActionsServiceOp) Attach(driveID string, dropletID int) (*Action, *Response, error) {
+// Attach a storage volume to a droplet.
+func (s *StorageActionsServiceOp) Attach(volumeID string, dropletID int) (*Action, *Response, error) {
 	request := &ActionRequest{
 		"type":       "attach",
 		"droplet_id": dropletID,
 	}
-	return s.doAction(driveID, request)
+	return s.doAction(volumeID, request)
 }
 
-// Detach a storage drive from a droplet.
-func (s *StorageActionsServiceOp) Detach(driveID string) (*Action, *Response, error) {
+// Detach a storage volume from a droplet.
+func (s *StorageActionsServiceOp) Detach(volumeID string) (*Action, *Response, error) {
 	request := &ActionRequest{
 		"type": "detach",
 	}
-	return s.doAction(driveID, request)
+	return s.doAction(volumeID, request)
 }
 
-func (s *StorageActionsServiceOp) doAction(driveID string, request *ActionRequest) (*Action, *Response, error) {
-	path := storageAllocationActionPath(driveID)
+func (s *StorageActionsServiceOp) doAction(volumeID string, request *ActionRequest) (*Action, *Response, error) {
+	path := storageAllocationActionPath(volumeID)
 
 	req, err := s.client.NewRequest("POST", path, request)
 	if err != nil {
@@ -56,6 +56,6 @@ func (s *StorageActionsServiceOp) doAction(driveID string, request *ActionReques
 	return &root.Event, resp, err
 }
 
-func storageAllocationActionPath(driveID string) string {
-	return fmt.Sprintf("%s/%s/actions", storageAllocPath, driveID)
+func storageAllocationActionPath(volumeID string) string {
+	return fmt.Sprintf("%s/%s/actions", storageAllocPath, volumeID)
 }

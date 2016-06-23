@@ -7,7 +7,7 @@ import (
 
 const (
 	storageBasePath  = "v2"
-	storageAllocPath = storageBasePath + "/drives"
+	storageAllocPath = storageBasePath + "/volumes"
 	storageSnapPath  = storageBasePath + "/snapshots"
 )
 
@@ -15,18 +15,18 @@ const (
 // endpoints of the Digital Ocean API.
 // See: https://developers.digitalocean.com/documentation/v2#storage
 type StorageService interface {
-	ListDrives(*ListOptions) ([]Drive, *Response, error)
-	GetDrive(string) (*Drive, *Response, error)
-	CreateDrive(*DriveCreateRequest) (*Drive, *Response, error)
-	DeleteDrive(string) (*Response, error)
+	ListVolumes(*ListOptions) ([]Volume, *Response, error)
+	GetVolume(string) (*Volume, *Response, error)
+	CreateVolume(*VolumeCreateRequest) (*Volume, *Response, error)
+	DeleteVolume(string) (*Response, error)
 
-	ListSnapshots(driveID string, opts *ListOptions) ([]Snapshot, *Response, error)
+	ListSnapshots(volumeID string, opts *ListOptions) ([]Snapshot, *Response, error)
 	GetSnapshot(string) (*Snapshot, *Response, error)
 	CreateSnapshot(*SnapshotCreateRequest) (*Snapshot, *Response, error)
 	DeleteSnapshot(string) (*Response, error)
 }
 
-// StorageServiceOp handles communication with the storage drives related methods of the
+// StorageServiceOp handles communication with the storage volumes related methods of the
 // DigitalOcean API.
 type StorageServiceOp struct {
 	client *Client
@@ -34,8 +34,8 @@ type StorageServiceOp struct {
 
 var _ StorageService = &StorageServiceOp{}
 
-// Drive represents a Digital Ocean block store drive.
-type Drive struct {
+// Volume represents a Digital Ocean block store volume.
+type Volume struct {
 	ID            string    `json:"id"`
 	Region        *Region   `json:"region"`
 	Name          string    `json:"name"`
@@ -45,31 +45,31 @@ type Drive struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-func (f Drive) String() string {
+func (f Volume) String() string {
 	return Stringify(f)
 }
 
-type storageDrivesRoot struct {
-	Drives []Drive `json:"drives"`
-	Links  *Links  `json:"links"`
+type storageVolumesRoot struct {
+	Volumes []Volume `json:"volumes"`
+	Links   *Links   `json:"links"`
 }
 
-type storageDriveRoot struct {
-	Drive *Drive `json:"drive"`
-	Links *Links `json:"links,omitempty"`
+type storageVolumeRoot struct {
+	Volume *Volume `json:"volume"`
+	Links  *Links  `json:"links,omitempty"`
 }
 
-// DriveCreateRequest represents a request to create a block store
-// drive.
-type DriveCreateRequest struct {
+// VolumeCreateRequest represents a request to create a block store
+// volume.
+type VolumeCreateRequest struct {
 	Region        string `json:"region"`
 	Name          string `json:"name"`
 	Description   string `json:"description"`
-	SizeGibiBytes int64  `json:"size_gigabytes"`
+	SizeGigaBytes int64  `json:"size_gigabytes"`
 }
 
-// ListDrives lists all storage drives.
-func (svc *StorageServiceOp) ListDrives(opt *ListOptions) ([]Drive, *Response, error) {
+// ListVolumes lists all storage volumes.
+func (svc *StorageServiceOp) ListVolumes(opt *ListOptions) ([]Volume, *Response, error) {
 	path, err := addOptions(storageAllocPath, opt)
 	if err != nil {
 		return nil, nil, err
@@ -80,7 +80,7 @@ func (svc *StorageServiceOp) ListDrives(opt *ListOptions) ([]Drive, *Response, e
 		return nil, nil, err
 	}
 
-	root := new(storageDrivesRoot)
+	root := new(storageVolumesRoot)
 	resp, err := svc.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
@@ -90,11 +90,11 @@ func (svc *StorageServiceOp) ListDrives(opt *ListOptions) ([]Drive, *Response, e
 		resp.Links = l
 	}
 
-	return root.Drives, resp, nil
+	return root.Volumes, resp, nil
 }
 
-// CreateDrive creates a storage drive. The name must be unique.
-func (svc *StorageServiceOp) CreateDrive(createRequest *DriveCreateRequest) (*Drive, *Response, error) {
+// CreateVolume creates a storage volume. The name must be unique.
+func (svc *StorageServiceOp) CreateVolume(createRequest *VolumeCreateRequest) (*Volume, *Response, error) {
 	path := storageAllocPath
 
 	req, err := svc.client.NewRequest("POST", path, createRequest)
@@ -102,16 +102,16 @@ func (svc *StorageServiceOp) CreateDrive(createRequest *DriveCreateRequest) (*Dr
 		return nil, nil, err
 	}
 
-	root := new(storageDriveRoot)
+	root := new(storageVolumeRoot)
 	resp, err := svc.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
-	return root.Drive, resp, nil
+	return root.Volume, resp, nil
 }
 
-// GetDrive retrieves an individual storage drive.
-func (svc *StorageServiceOp) GetDrive(id string) (*Drive, *Response, error) {
+// GetVolume retrieves an individual storage volume.
+func (svc *StorageServiceOp) GetVolume(id string) (*Volume, *Response, error) {
 	path := fmt.Sprintf("%s/%s", storageAllocPath, id)
 
 	req, err := svc.client.NewRequest("GET", path, nil)
@@ -119,17 +119,17 @@ func (svc *StorageServiceOp) GetDrive(id string) (*Drive, *Response, error) {
 		return nil, nil, err
 	}
 
-	root := new(storageDriveRoot)
+	root := new(storageVolumeRoot)
 	resp, err := svc.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return root.Drive, resp, nil
+	return root.Volume, resp, nil
 }
 
-// DeleteDrive deletes a storage drive.
-func (svc *StorageServiceOp) DeleteDrive(id string) (*Response, error) {
+// DeleteVolume deletes a storage volume.
+func (svc *StorageServiceOp) DeleteVolume(id string) (*Response, error) {
 	path := fmt.Sprintf("%s/%s", storageAllocPath, id)
 
 	req, err := svc.client.NewRequest("DELETE", path, nil)
@@ -142,10 +142,10 @@ func (svc *StorageServiceOp) DeleteDrive(id string) (*Response, error) {
 // Snapshot represents a Digital Ocean block store snapshot.
 type Snapshot struct {
 	ID            string    `json:"id"`
-	DriveID       string    `json:"drive_id"`
+	VolumeID      string    `json:"volume_id"`
 	Region        *Region   `json:"region"`
 	Name          string    `json:"name"`
-	SizeGibiBytes int64     `json:"size_gigabytes"`
+	SizeGigaBytes int64     `json:"size_gigabytes"`
 	Description   string    `json:"description"`
 	CreatedAt     time.Time `json:"created_at"`
 }
@@ -161,16 +161,16 @@ type storageSnapRoot struct {
 }
 
 // SnapshotCreateRequest represents a request to create a block store
-// drive.
+// volume.
 type SnapshotCreateRequest struct {
-	DriveID     string `json:"drive_id"`
+	VolumeID    string `json:"volume_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
 
-// ListSnapshots lists all snapshots related to a storage drive.
-func (svc *StorageServiceOp) ListSnapshots(driveID string, opt *ListOptions) ([]Snapshot, *Response, error) {
-	path := fmt.Sprintf("%s/%s/snapshots", storageAllocPath, driveID)
+// ListSnapshots lists all snapshots related to a storage volume.
+func (svc *StorageServiceOp) ListSnapshots(volumeID string, opt *ListOptions) ([]Snapshot, *Response, error) {
+	path := fmt.Sprintf("%s/%s/snapshots", storageAllocPath, volumeID)
 	path, err := addOptions(path, opt)
 	if err != nil {
 		return nil, nil, err
@@ -194,9 +194,9 @@ func (svc *StorageServiceOp) ListSnapshots(driveID string, opt *ListOptions) ([]
 	return root.Snapshots, resp, nil
 }
 
-// CreateSnapshot creates a snapshot of a storage drive.
+// CreateSnapshot creates a snapshot of a storage volume.
 func (svc *StorageServiceOp) CreateSnapshot(createRequest *SnapshotCreateRequest) (*Snapshot, *Response, error) {
-	path := fmt.Sprintf("%s/%s/snapshots", storageAllocPath, createRequest.DriveID)
+	path := fmt.Sprintf("%s/%s/snapshots", storageAllocPath, createRequest.VolumeID)
 
 	req, err := svc.client.NewRequest("POST", path, createRequest)
 	if err != nil {

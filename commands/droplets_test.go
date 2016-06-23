@@ -64,16 +64,16 @@ func TestDropletBackupList(t *testing.T) {
 
 func TestDropletCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		driveUUID := uuid.New()
+		volumeUUID := uuid.New()
 		dcr := &godo.DropletCreateRequest{
 			Name:    "droplet",
 			Region:  "dev0",
 			Size:    "1gb",
 			Image:   godo.DropletCreateImage{ID: 0, Slug: "image"},
 			SSHKeys: []godo.DropletCreateSSHKey{},
-			Drives: []godo.DropletCreateDrive{
-				{Name: "test-drive"},
-				{ID: driveUUID},
+			Volumes: []godo.DropletCreateVolume{
+				{Name: "test-volume"},
+				{ID: volumeUUID},
 			},
 			Backups:           false,
 			IPv6:              false,
@@ -88,7 +88,7 @@ func TestDropletCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
 		config.Doit.Set(config.NS, doctl.ArgImage, "image")
 		config.Doit.Set(config.NS, doctl.ArgUserData, "#cloud-config")
-		config.Doit.Set(config.NS, doctl.ArgDriveList, fmt.Sprintf("[test-drive, %s]", driveUUID))
+		config.Doit.Set(config.NS, doctl.ArgVolumeList, fmt.Sprintf("[test-volume, %s]", volumeUUID))
 
 		err := RunDropletCreate(config)
 		assert.NoError(t, err)
