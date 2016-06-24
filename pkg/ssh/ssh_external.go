@@ -34,6 +34,10 @@ func runExternalSSH(r *Runner) error {
 		args = append(args, "-p", strconv.Itoa(r.Port))
 	}
 
+	if r.AgentForwarding {
+		args = append(args, "-A")
+	}
+
 	args = append(args, sshHost)
 
 	cmd := exec.Command("ssh", args...)

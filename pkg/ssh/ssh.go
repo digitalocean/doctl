@@ -23,6 +23,9 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+// Options is the type used to specify options passed to the SSH command
+type Options map[string]interface{}
+
 func sshConnect(user string, host string, method ssh.AuthMethod) error {
 	sshc := &ssh.ClientConfig{
 		User: user,
@@ -96,10 +99,11 @@ func sshConnect(user string, host string, method ssh.AuthMethod) error {
 
 // Runner runs ssh commands.
 type Runner struct {
-	User    string
-	Host    string
-	KeyPath string
-	Port    int
+	User            string
+	Host            string
+	KeyPath         string
+	Port            int
+	AgentForwarding bool
 }
 
 var _ runner.Runner = &Runner{}

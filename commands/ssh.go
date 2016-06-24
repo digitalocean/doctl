@@ -23,6 +23,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/pkg/ssh"
 )
 
 var (
@@ -41,6 +42,7 @@ func SSH(parent *Command) *Command {
 	AddStringFlag(cmdSSH, doctl.ArgSSHUser, "root", "ssh user")
 	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, path, "path to private ssh key")
 	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, 22, "port sshd is running on")
+	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, false, "enable ssh agent forwarding")
 
 	return cmdSSH
 }
@@ -72,6 +74,12 @@ func RunSSH(c *CmdConfig) error {
 		return err
 	}
 
+	var opts = make(ssh.Options)
+	opts[doctl.ArgsSSHAgentForwarding], err = c.Doit.GetBool(c.NS, doctl.ArgsSSHAgentForwarding)
+	if err != nil {
+		return err
+	}
+
 	var droplet *do.Droplet
 
 	ds := c.Droplets()
@@ -93,7 +101,7 @@ func RunSSH(c *CmdConfig) error {
 
 		shi := extractHostInfo(dropletID)
 
-		if (shi.user != "") {
+		if shi.user != "" {
 			user = shi.user
 		}
 
@@ -131,7 +139,7 @@ func RunSSH(c *CmdConfig) error {
 		return errors.New("could not find droplet address")
 	}
 
-	runner := c.Doit.SSH(user, ip, keyPath, port)
+	runner := c.Doit.SSH(user, ip, keyPath, port, opts)
 	return runner.Run()
 }
 

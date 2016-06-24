@@ -20,6 +20,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/runner/mocks"
+	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
@@ -83,7 +84,7 @@ func TestSSH_CustomPort(t *testing.T) {
 		rm.On("Run").Return(nil)
 
 		tc := config.Doit.(*TestConfig)
-		tc.SSHFn = func(user, host, keyPath string, port int) runner.Runner {
+		tc.SSHFn = func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
 			assert.Equal(t, 2222, port)
 			return rm
 		}
@@ -104,7 +105,7 @@ func TestSSH_CustomUser(t *testing.T) {
 		rm.On("Run").Return(nil)
 
 		tc := config.Doit.(*TestConfig)
-		tc.SSHFn = func(user, host, keyPath string, port int) runner.Runner {
+		tc.SSHFn = func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
 			assert.Equal(t, "foobar", user)
 			return rm
 		}
@@ -112,6 +113,27 @@ func TestSSH_CustomUser(t *testing.T) {
 		tm.droplets.On("List").Return(testDropletList, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgSSHUser, "foobar")
+		config.Args = append(config.Args, testDroplet.Name)
+
+		err := RunSSH(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSSH_AgentForwarding(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		rm := &mocks.Runner{}
+		rm.On("Run").Return(nil)
+
+		tc := config.Doit.(*TestConfig)
+		tc.SSHFn = func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
+			assert.Equal(t, true, opts[doctl.ArgsSSHAgentForwarding])
+			return rm
+		}
+
+		tm.droplets.On("List").Return(testDropletList, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgsSSHAgentForwarding, true)
 		config.Args = append(config.Args, testDroplet.Name)
 
 		err := RunSSH(config)
