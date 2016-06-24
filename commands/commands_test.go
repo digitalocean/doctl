@@ -23,6 +23,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/doctl/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -196,7 +197,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 }
 
 type TestConfig struct {
-	SSHFn func(user, host, keyPath string, port int, agentForwarding bool) runner.Runner
+	SSHFn func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	v     *viper.Viper
 }
 
@@ -204,7 +205,7 @@ var _ doctl.Config = &TestConfig{}
 
 func NewTestConfig() *TestConfig {
 	return &TestConfig{
-		SSHFn: func(u, h, kp string, p int, a bool) runner.Runner {
+		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
 			return &doctl.MockRunner{}
 		},
 		v: viper.New(),
@@ -217,8 +218,8 @@ func (c *TestConfig) GetGodoClient(trace bool) (*godo.Client, error) {
 	return &godo.Client{}, nil
 }
 
-func (c *TestConfig) SSH(user, host, keyPath string, port int, agentForwarding bool) runner.Runner {
-	return c.SSHFn(user, host, keyPath, port, agentForwarding)
+func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
+	return c.SSHFn(user, host, keyPath, port, opts)
 }
 
 func (c *TestConfig) Set(ns, key string, val interface{}) {

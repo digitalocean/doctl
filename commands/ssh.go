@@ -23,6 +23,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/pkg/ssh"
 )
 
 var (
@@ -73,7 +74,8 @@ func RunSSH(c *CmdConfig) error {
 		return err
 	}
 
-	agentForwarding, err := c.Doit.GetBool(c.NS, doctl.ArgsSSHAgentForwarding)
+	var opts = make(ssh.Options)
+	opts[doctl.ArgsSSHAgentForwarding], err = c.Doit.GetBool(c.NS, doctl.ArgsSSHAgentForwarding)
 	if err != nil {
 		return err
 	}
@@ -137,7 +139,7 @@ func RunSSH(c *CmdConfig) error {
 		return errors.New("could not find droplet address")
 	}
 
-	runner := c.Doit.SSH(user, ip, keyPath, port, agentForwarding)
+	runner := c.Doit.SSH(user, ip, keyPath, port, opts)
 	return runner.Run()
 }
 
