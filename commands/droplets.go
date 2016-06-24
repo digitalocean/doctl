@@ -439,7 +439,6 @@ func RunDropletDelete(c *CmdConfig) error {
 			if err := ds.Delete(id); err != nil {
 				return fmt.Errorf("unable to delete droplet %d: %v", id, err)
 			}
-			fmt.Printf("deleted droplet %d\n", id)
 		}
 
 		return nil
