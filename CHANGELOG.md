@@ -2,20 +2,35 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.3.0] - 2016-06-25
+
+### Added
+- #88 Add a --ssh-agent-forwarding-flag - @tbalthazar
+
+### Changed
+- #92 Rename drive to volume - @aybabtme
+- #93 Extract token retrieval process - @bryanl
+- #98 Remove output when deleting droplets - @bryanl
+
+### Fixed
+- #85 Don't report new release available when already installed - @andrewsomething
+- #87 Update help output in documentation - @gmontalvoriv
+- #97 User list images returns distributions - @bryanl
+
 ## [1.2.0] - 2016-06-07
 
 ### Added
-- #37 Add a script to regenerate test mocks
+- #37 Add a script to regenerate test mocks - @bryanl
 
 ### Changed
-- #79 Ensure pagination is 1 indexed, and not 0 indexed
+- #79 Ensure pagination is 1 indexed, and not 0 indexed - @jphines
 
 ### Fixed
-- #68 Respect ssh-user flag
-- #69 Fix type in README
-- #70 Fix type in README
-- #74 Add more specific install instructions to README
-- #80 Fix a typo in usage text
+- #68 Respect ssh-user flag - @vkurchatkin
+- #69 Fix type in README - @aybabtme
+- #70 Fix type in README - @aybabtme
+- #74 Add more specific install instructions to README - @aybabtme
+- #80 Fix a typo in usage text - @davidkuridza
 
 ## [1.1.0] - 2016-04-22
 
