@@ -55,6 +55,8 @@ type Client struct {
 	Sizes             SizesService
 	FloatingIPs       FloatingIPsService
 	FloatingIPActions FloatingIPActionsService
+	Storage           StorageService
+	StorageActions    StorageActionsService
 	Tags              TagsService
 
 	// Optional function called after every successful request made to the DO APIs
@@ -94,7 +96,10 @@ type ErrorResponse struct {
 	Response *http.Response
 
 	// Error message
-	Message string
+	Message string `json:"message"`
+
+	// RequestID returned from the API, useful to contact support.
+	RequestID string `json:"request_id"`
 }
 
 // Rate contains the rate limit for the current client.
@@ -157,6 +162,8 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Sizes = &SizesServiceOp{client: c}
 	c.FloatingIPs = &FloatingIPsServiceOp{client: c}
 	c.FloatingIPActions = &FloatingIPActionsServiceOp{client: c}
+	c.Storage = &StorageServiceOp{client: c}
+	c.StorageActions = &StorageActionsServiceOp{client: c}
 	c.Tags = &TagsServiceOp{client: c}
 
 	return c
@@ -318,6 +325,10 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 	return response, err
 }
 func (r *ErrorResponse) Error() string {
+	if r.RequestID != "" {
+		return fmt.Sprintf("%v %v: %d (request %q) %v",
+			r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.RequestID, r.Message)
+	}
 	return fmt.Sprintf("%v %v: %d %v",
 		r.Response.Request.Method, r.Response.Request.URL, r.Response.StatusCode, r.Message)
 }
