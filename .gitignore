@@ -1,4 +1,3 @@
-cmd/doit/doit
 .goxc.local.json
 .DS_Store
 builds
@@ -9,4 +8,5 @@ project.json
 dist
 public
 docs/content
-doctl
+
+out/doctl
