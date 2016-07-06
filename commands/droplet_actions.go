@@ -94,7 +94,7 @@ func DropletAction() *Command {
 	AddBoolFlag(cmdDropletActionPowerOn, doctl.ArgCommandWait, false, "Wait for action to complete")
 
 	cmdDropletActionPasswordReset := CmdBuilder(cmd, RunDropletActionPasswordReset,
-		"power-reset <droplet-id>", "power reset droplet", Writer,
+		"password-reset <droplet-id>", "password reset droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
 	AddBoolFlag(cmdDropletActionPasswordReset, doctl.ArgCommandWait, false, "Wait for action to complete")
 
