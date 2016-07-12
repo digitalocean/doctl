@@ -19,6 +19,17 @@ type StorageService interface {
 	GetVolume(string) (*Volume, *Response, error)
 	CreateVolume(*VolumeCreateRequest) (*Volume, *Response, error)
 	DeleteVolume(string) (*Response, error)
+}
+
+// BetaStorageService is an interface for the storage services that are
+// not yet stable. The interface is not exposed in the godo.Client and
+// requires type-asserting the `StorageService` to make it available.
+//
+// Note that Beta features will change and compiling against those
+// symbols (using type-assertion) is prone to breaking your build
+// if you use our master.
+type BetaStorageService interface {
+	StorageService
 
 	ListSnapshots(volumeID string, opts *ListOptions) ([]Snapshot, *Response, error)
 	GetSnapshot(string) (*Snapshot, *Response, error)

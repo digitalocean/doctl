@@ -86,9 +86,9 @@
 		{
 			"importpath": "github.com/digitalocean/godo",
 			"repository": "https://github.com/digitalocean/godo",
-			"vcs": "",
-			"revision": "bbb5d7d360023ac99ae82a25205a4d38095124b9",
-			"branch": "beta-storage-blockstore"
+			"vcs": "git",
+			"revision": "e03ac28c3d9b216f7e9ed16bc6aa39e344d56491",
+			"branch": "master"
 		},
 		{
 			"importpath": "github.com/dustin/go-humanize",
@@ -125,14 +125,6 @@
 			"vcs": "",
 			"revision": "0dfe8f37844c14cb32c7247925270e0f7ba90973",
 			"branch": "master"
-		},
-		{
-			"importpath": "github.com/golang/protobuf/proto/testdata",
-			"repository": "https://github.com/golang/protobuf",
-			"vcs": "",
-			"revision": "0dfe8f37844c14cb32c7247925270e0f7ba90973",
-			"branch": "master",
-			"path": "/proto/testdata"
 		},
 		{
 			"importpath": "github.com/google/go-querystring/query",
@@ -398,22 +390,6 @@
 			"branch": "master"
 		},
 		{
-			"importpath": "github.com/stretchr/testify/assert",
-			"repository": "https://github.com/stretchr/testify",
-			"vcs": "",
-			"revision": "9f9027faeb0dad515336ed2f28317f9f8f527ab4",
-			"branch": "master",
-			"path": "/assert"
-		},
-		{
-			"importpath": "github.com/stretchr/testify/mock",
-			"repository": "https://github.com/stretchr/testify",
-			"vcs": "",
-			"revision": "9f9027faeb0dad515336ed2f28317f9f8f527ab4",
-			"branch": "master",
-			"path": "/mock"
-		},
-		{
 			"importpath": "github.com/tent/http-link-go",
 			"repository": "https://github.com/tent/http-link-go",
 			"vcs": "",
@@ -608,22 +584,6 @@
 			"vcs": "",
 			"revision": "13a9796a2e309e58ed41962c740c11042bc9db63",
 			"branch": "master"
-		},
-		{
-			"importpath": "google.golang.org/cloud/compute/metadata",
-			"repository": "https://code.googlesource.com/gocloud",
-			"vcs": "",
-			"revision": "13a9796a2e309e58ed41962c740c11042bc9db63",
-			"branch": "master",
-			"path": "/compute/metadata"
-		},
-		{
-			"importpath": "google.golang.org/cloud/internal",
-			"repository": "https://code.googlesource.com/gocloud",
-			"vcs": "",
-			"revision": "13a9796a2e309e58ed41962c740c11042bc9db63",
-			"branch": "master",
-			"path": "/internal"
 		},
 		{
 			"importpath": "google.golang.org/grpc",
