@@ -9,8 +9,6 @@ import (
 )
 
 // Volume creates the Volume command
-// NOTE: This command will currently only work for those in the
-// block storage private beta on DigitalOcean.
 func Volume() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -19,7 +17,6 @@ func Volume() *Command {
 			Long:  "volume is used to access volume commands",
 		},
 	}
-	defer betaCmd()(cmd) // TODO(antoine): remove once out of beta
 
 	CmdBuilder(cmd, RunVolumeList, "list", "list volume", Writer,
 		aliasOpt("ls"), displayerType(&volume{}))

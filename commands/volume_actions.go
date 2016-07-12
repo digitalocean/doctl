@@ -36,8 +36,6 @@ func performVolumeAction(c *CmdConfig, fn volumeActionFn) error {
 }
 
 // VolumeAction creates the volume command
-// NOTE: This command will only work for those accepted
-// into the block storage private beta on DigitalOcean
 func VolumeAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -46,7 +44,6 @@ func VolumeAction() *Command {
 			Long:  "volume-action is used to access volume action commands",
 		},
 	}
-	defer betaCmd()(cmd) // TODO(antoine): remove once out of beta
 
 	CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "attach a volume", Writer,
 		aliasOpt("a"))
