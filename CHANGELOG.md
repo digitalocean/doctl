@@ -2,6 +2,16 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.3.1] - 2016-07-13
+
+### Changed
+- #99 build test bin in out directory - @bryanl
+- #104 Remove beta status for storage - @bryanl
+
+### Fixed
+
+- #100 password-reset, not power-reset - @aybabtme
+
 ## [1.3.0] - 2016-06-25
 
 ### Added
