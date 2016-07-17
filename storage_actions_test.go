@@ -71,3 +71,35 @@ func TestStoragesActions_Detach(t *testing.T) {
 		t.Errorf("StoragesActions.Detach returned error: %v", err)
 	}
 }
+
+func TestStoragesActions_Resize(t *testing.T) {
+	setup()
+	defer teardown()
+	volumeID := "98d414c6-295e-4e3a-ac58-eb9456c1e1d1"
+
+	resizeRequest := &ActionRequest{
+		"type":           "resize",
+		"size_gigabytes": float64(500),
+		"region":         "nyc1",
+	}
+
+	mux.HandleFunc("/v2/volumes/"+volumeID+"/actions", func(w http.ResponseWriter, r *http.Request) {
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+		if !reflect.DeepEqual(v, resizeRequest) {
+			t.Errorf("want=%#v", resizeRequest)
+			t.Errorf("got=%#v", v)
+		}
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	_, _, err := client.StorageActions.Resize(volumeID, 500, "nyc1")
+	if err != nil {
+		t.Errorf("StoragesActions.Resize returned error: %v", err)
+	}
+}

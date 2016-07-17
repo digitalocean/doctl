@@ -8,6 +8,7 @@ import "fmt"
 type StorageActionsService interface {
 	Attach(volumeID string, dropletID int) (*Action, *Response, error)
 	Detach(volumeID string) (*Action, *Response, error)
+	Resize(volumeID string, sizeGigabytes int, regionSlug string) (*Action, *Response, error)
 }
 
 // StorageActionsServiceOp handles communication with the floating IPs
@@ -35,6 +36,16 @@ func (s *StorageActionsServiceOp) Attach(volumeID string, dropletID int) (*Actio
 func (s *StorageActionsServiceOp) Detach(volumeID string) (*Action, *Response, error) {
 	request := &ActionRequest{
 		"type": "detach",
+	}
+	return s.doAction(volumeID, request)
+}
+
+// Resize a storage volume.
+func (s *StorageActionsServiceOp) Resize(volumeID string, sizeGigabytes int, regionSlug string) (*Action, *Response, error) {
+	request := &ActionRequest{
+		"type":           "resize",
+		"size_gigabytes": sizeGigabytes,
+		"region":         regionSlug,
 	}
 	return s.doAction(volumeID, request)
 }
