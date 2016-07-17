@@ -72,6 +72,48 @@ func TestStoragesActions_Detach(t *testing.T) {
 	}
 }
 
+func TestStorageActions_Get(t *testing.T) {
+	setup()
+	defer teardown()
+	volumeID := "98d414c6-295e-4e3a-ac58-eb9456c1e1d1"
+
+	mux.HandleFunc("/v2/volumes/"+volumeID+"/actions/456", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	action, _, err := client.StorageActions.Get(volumeID, 456)
+	if err != nil {
+		t.Errorf("StorageActions.Get returned error: %v", err)
+	}
+
+	expected := &Action{Status: "in-progress"}
+	if !reflect.DeepEqual(action, expected) {
+		t.Errorf("StorageActions.Get returned %+v, expected %+v", action, expected)
+	}
+}
+
+func TestStorageActions_List(t *testing.T) {
+	setup()
+	defer teardown()
+	volumeID := "98d414c6-295e-4e3a-ac58-eb9456c1e1d1"
+
+	mux.HandleFunc("/v2/volumes/"+volumeID+"/actions", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, "GET")
+		fmt.Fprintf(w, `{"actions":[{"status":"in-progress"}]}`)
+	})
+
+	actions, _, err := client.StorageActions.List(volumeID, nil)
+	if err != nil {
+		t.Errorf("StorageActions.List returned error: %v", err)
+	}
+
+	expected := []Action{Action{Status: "in-progress"}}
+	if !reflect.DeepEqual(actions, expected) {
+		t.Errorf("StorageActions.List returned %+v, expected %+v", actions, expected)
+	}
+}
+
 func TestStoragesActions_Resize(t *testing.T) {
 	setup()
 	defer teardown()
