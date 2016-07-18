@@ -175,7 +175,7 @@ func TestTags_List(t *testing.T) {
 
 	tags, _, err := client.Tags.List(nil)
 	if err != nil {
-		t.Error("Tags.List returned error: %v", err)
+		t.Errorf("Tags.List returned error: %v", err)
 	}
 
 	expected := []Tag{{Name: "testing-1", Resources: &TaggedResources{Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}}},
@@ -196,7 +196,7 @@ func TestTags_ListEmpty(t *testing.T) {
 
 	tags, _, err := client.Tags.List(nil)
 	if err != nil {
-		t.Error("Tags.List returned error: %v", err)
+		t.Errorf("Tags.List returned error: %v", err)
 	}
 
 	expected := []Tag{}
@@ -216,7 +216,7 @@ func TestTags_ListPaging(t *testing.T) {
 
 	_, resp, err := client.Tags.List(nil)
 	if err != nil {
-		t.Error("Tags.List returned error: %v", err)
+		t.Errorf("Tags.List returned error: %v", err)
 	}
 	checkCurrentPage(t, resp, 2)
 }
@@ -232,19 +232,19 @@ func TestTags_Get(t *testing.T) {
 
 	tag, _, err := client.Tags.Get("testing-1")
 	if err != nil {
-		t.Error("Tags.Get returned error: %v", err)
+		t.Errorf("Tags.Get returned error: %v", err)
 	}
 
 	if tag.Name != "testing-1" {
-		t.Error("Tags.Get return an incorrect name, got %+v, expected %+v", tag.Name, "testing-1")
+		t.Errorf("Tags.Get return an incorrect name, got %+v, expected %+v", tag.Name, "testing-1")
 	}
 
 	if tag.Resources.Droplets.Count != 1 {
-		t.Error("Tags.Get return an incorrect droplet resource count, got %+v, expected %+v", tag.Resources.Droplets.Count, 1)
+		t.Errorf("Tags.Get return an incorrect droplet resource count, got %+v, expected %+v", tag.Resources.Droplets.Count, 1)
 	}
 
 	if tag.Resources.Droplets.LastTagged.ID != 1 {
-		t.Error("Tags.Get return an incorrect last tagged droplet %+v, expected %+v", tag.Resources.Droplets.LastTagged.ID, 1)
+		t.Errorf("Tags.Get return an incorrect last tagged droplet %+v, expected %+v", tag.Resources.Droplets.LastTagged.ID, 1)
 	}
 }
 
