@@ -1,0 +1,11 @@
+[submodule "github.com/vektra/errors"]
+  path = vendor/github.com/vektra/errors
+  url = git@github.com:vektra/errors.git
+
+[submodule "github.com/vektra/mockery"]
+  path = vendor/github.com/vektra/mockery
+  url = git@github.com:vektra/mockery.git
+
+[submodule "golang.org/x/tools"]
+  path = vendor/golang.org/x/tools
+  url = https://go.googlesource.com/tools
