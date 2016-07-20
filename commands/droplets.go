@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Ask for confirmation helper
+// Helper: Ask for confirmation
 func askForConfirmation() bool {
 	var response string
 
@@ -49,6 +49,22 @@ func askForConfirmation() bool {
 		fmt.Println("Please type yes or no and then press enter:")
 		return askForConfirmation()
 	}
+}
+
+// Helper: posString returns the first index of element in slice.
+// If slice does not contain element, returns -1.
+func posString(slice []string, element string) int {
+	for index, elem := range slice {
+		if elem == element {
+			return index
+		}
+	}
+	return -1
+}
+
+// Helper: containsString returns true iff slice contains element
+func containsString(slice []string, element string) bool {
+	return !(posString(slice, element) == -1)
 }
 
 // Droplet creates the droplet command.
