@@ -484,6 +484,8 @@ func RunDropletDelete(c *CmdConfig) error {
 
 		return matchDroplets(c.Args, ds, fn)
 	}
+
+	return nil
 }
 
 type matchDropletsFn func(ids []int) error
