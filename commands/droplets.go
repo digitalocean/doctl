@@ -29,6 +29,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Ask for confirmation helper
+func askForConfirmation() bool {
+	var response string
+
+	_, err := fmt.Scanln(&response)
+	if err != nil {
+		return err
+	}
+
+	okayResponses := []string{"y", "Y", "yes", "Yes", "YES"}
+	nokayResponses := []string{"n", "N", "no", "No", "NO"}
+
+	if containsString(okayResponses, response) {
+		return true
+	} else if containsString(nokayResponses, response) {
+		return false
+	} else {
+		fmt.Println("Please type yes or no and then press enter:")
+		return askForConfirmation()
+	}
+}
+
 // Droplet creates the droplet command.
 func Droplet() *Command {
 	cmd := &Command{
@@ -420,6 +442,8 @@ func allInt(in []string) ([]int, error) {
 func RunDropletDelete(c *CmdConfig) error {
 	ds := c.Droplets()
 
+	var confirmation bool
+
 	tagName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
@@ -430,20 +454,36 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if len(c.Args) > 0 && tagName != "" {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
-		return ds.DeleteByTag(tagName)
-	}
-
-	fn := func(ids []int) error {
-		for _, id := range ids {
-			if err := ds.Delete(id); err != nil {
-				return fmt.Errorf("unable to delete droplet %d: %v", id, err)
-			}
+		fmt.Println("WARNING: Are you sure? (yes/no)")
+		confirmation, err := askForConfirmation()
+		if err != nil {
+			return err
 		}
 
-		return nil
+		if confirmation {
+			return ds.DeleteByTag(tagName)
+		}
 	}
 
-	return matchDroplets(c.Args, ds, fn)
+	fmt.Println("WARNING: Are you sure? (yes/no)")
+	confirmation, err := askForConfirmation()
+	if err != nil {
+		return err
+	}
+
+	if confirmation {
+		fn := func(ids []int) error {
+			for _, id := range ids {
+				if err := ds.Delete(id); err != nil {
+					return fmt.Errorf("unable to delete droplet %d: %v", id, err)
+				}
+			}
+
+			return nil
+		}
+
+		return matchDroplets(c.Args, ds, fn)
+	}
 }
 
 type matchDropletsFn func(ids []int) error
