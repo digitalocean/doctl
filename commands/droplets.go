@@ -35,7 +35,7 @@ func askForConfirmation() bool {
 
 	_, err := fmt.Scanln(&response)
 	if err != nil {
-		return err
+		return false
 	}
 
 	okayResponses := []string{"y", "Y", "yes", "Yes", "YES"}
@@ -471,10 +471,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
 		fmt.Println("WARNING: Are you sure? (yes/no)")
-		confirmation, err := askForConfirmation()
-		if err != nil {
-			return err
-		}
+		confirmation = askForConfirmation()
 
 		if confirmation {
 			return ds.DeleteByTag(tagName)
@@ -482,10 +479,7 @@ func RunDropletDelete(c *CmdConfig) error {
 	}
 
 	fmt.Println("WARNING: Are you sure? (yes/no)")
-	confirmation, err := askForConfirmation()
-	if err != nil {
-		return err
-	}
+	confirmation = askForConfirmation()
 
 	if confirmation {
 		fn := func(ids []int) error {
