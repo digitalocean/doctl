@@ -13,15 +13,7 @@ limitations under the License.
 
 package doctl
 
-import (
-	"github.com/digitalocean/doctl/pkg/runner"
-	"golang.org/x/oauth2"
-)
-
-// TokenSource holds an oauth token.
-type TokenSource struct {
-	AccessToken string
-}
+import "github.com/digitalocean/doctl/pkg/runner"
 
 // MockRunner is an implemenation of Runner for mocking.
 type MockRunner struct {
@@ -33,11 +25,4 @@ var _ runner.Runner = &MockRunner{}
 // Run mock runs things.
 func (tr *MockRunner) Run() error {
 	return tr.Err
-}
-
-// Token returns an oauth token.
-func (t *TokenSource) Token() (*oauth2.Token, error) {
-	return &oauth2.Token{
-		AccessToken: t.AccessToken,
-	}, nil
 }

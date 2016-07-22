@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"fmt"
+
+	"github.com/digitalocean/godo"
+)
 
 // Account is a wrapper for godo.Account.
 type Account struct {
@@ -46,6 +49,7 @@ func NewAccountService(godoClient *godo.Client) AccountService {
 }
 
 func (as *accountService) Get() (*Account, error) {
+	fmt.Printf("as: %#v\n", as)
 	godoAccount, _, err := as.client.Account.Get()
 	if err != nil {
 		return nil, err

@@ -14,12 +14,15 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -56,7 +59,8 @@ var Trace bool
 // cfgFile is the location of the config file
 var cfgFile string
 
-var cfgFileName = ".doctlcfg"
+// cfgFileWriter is the config file writer
+var cfgFileWriter = defaultConfigFileWriter
 
 func init() {
 	cobra.OnInitialize(initConfig)
@@ -93,7 +97,6 @@ func initConfig() {
 	}
 
 	viper.SetDefault("output", "text")
-
 }
 
 // Execute executes the current command using DoitCmd.
@@ -244,6 +247,8 @@ type CmdConfig struct {
 	Out  io.Writer
 	Args []string
 
+	initServices func(*CmdConfig) error
+
 	// services
 	Keys              func() do.KeysService
 	Sizes             func() do.SizesService
@@ -264,33 +269,44 @@ type CmdConfig struct {
 
 // NewCmdConfig creates an instance of a CmdConfig.
 func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) (*CmdConfig, error) {
-	godoClient, err := dc.GetGodoClient(Trace)
-	if err != nil {
-		return nil, err
-	}
 
-	return &CmdConfig{
+	cmdConfig := &CmdConfig{
 		NS:   ns,
 		Doit: dc,
 		Out:  out,
 		Args: args,
 
-		Keys:              func() do.KeysService { return do.NewKeysService(godoClient) },
-		Sizes:             func() do.SizesService { return do.NewSizesService(godoClient) },
-		Regions:           func() do.RegionsService { return do.NewRegionsService(godoClient) },
-		Images:            func() do.ImagesService { return do.NewImagesService(godoClient) },
-		ImageActions:      func() do.ImageActionsService { return do.NewImageActionsService(godoClient) },
-		FloatingIPs:       func() do.FloatingIPsService { return do.NewFloatingIPsService(godoClient) },
-		FloatingIPActions: func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(godoClient) },
-		Droplets:          func() do.DropletsService { return do.NewDropletsService(godoClient) },
-		DropletActions:    func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) },
-		Domains:           func() do.DomainsService { return do.NewDomainsService(godoClient) },
-		Actions:           func() do.ActionsService { return do.NewActionsService(godoClient) },
-		Account:           func() do.AccountService { return do.NewAccountService(godoClient) },
-		Tags:              func() do.TagsService { return do.NewTagsService(godoClient) },
-		Volumes:           func() do.VolumesService { return do.NewVolumesService(godoClient) },
-		VolumeActions:     func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) },
-	}, nil
+		initServices: func(c *CmdConfig) error {
+			godoClient, err := c.Doit.GetGodoClient(Trace)
+			if err != nil {
+				return fmt.Errorf("unable to retrieve godo client: %s", err)
+			}
+
+			c.Keys = func() do.KeysService { return do.NewKeysService(godoClient) }
+			c.Sizes = func() do.SizesService { return do.NewSizesService(godoClient) }
+			c.Regions = func() do.RegionsService { return do.NewRegionsService(godoClient) }
+			c.Images = func() do.ImagesService { return do.NewImagesService(godoClient) }
+			c.ImageActions = func() do.ImageActionsService { return do.NewImageActionsService(godoClient) }
+			c.FloatingIPs = func() do.FloatingIPsService { return do.NewFloatingIPsService(godoClient) }
+			c.FloatingIPActions = func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(godoClient) }
+			c.Droplets = func() do.DropletsService { return do.NewDropletsService(godoClient) }
+			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
+			c.Domains = func() do.DomainsService { return do.NewDomainsService(godoClient) }
+			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
+			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
+			c.Tags = func() do.TagsService { return do.NewTagsService(godoClient) }
+			c.Volumes = func() do.VolumesService { return do.NewVolumesService(godoClient) }
+			c.VolumeActions = func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) }
+
+			return nil
+		},
+	}
+
+	if err := cmdConfig.initServices(cmdConfig); err != nil {
+		return nil, fmt.Errorf("unable to initial godo client: %s", err)
+	}
+
+	return cmdConfig, nil
 }
 
 // Display displayes the output from a command.
@@ -343,4 +359,34 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 	}
 
 	return c
+}
+
+func writeConfig() error {
+	f, err := cfgFileWriter()
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	b, err := yaml.Marshal(viper.AllSettings())
+	if err != nil {
+		return errors.New("unable to encode configuration to YAML format")
+	}
+
+	_, err = f.Write(b)
+	if err != nil {
+		return errors.New("unable to write configuration")
+	}
+
+	return nil
+}
+
+func defaultConfigFileWriter() (io.WriteCloser, error) {
+	f, err := os.Create(cfgFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return f, nil
 }
