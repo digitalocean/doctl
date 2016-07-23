@@ -31,6 +31,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	// defaultConfigName is the name of the config file when no alternative is supplied.
+	defaultConfigName = "config.yaml"
+)
+
 // DoitCmd is the base command.
 var DoitCmd = &Command{
 	Command: &cobra.Command{
@@ -62,6 +67,9 @@ var cfgFile string
 // cfgFileWriter is the config file writer
 var cfgFileWriter = defaultConfigFileWriter
 
+// ErrNoAccessToken is an error for when there is no access token.
+var ErrNoAccessToken = errors.New("no access token has been configured")
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -81,9 +89,14 @@ func init() {
 }
 
 func initConfig() {
-	if cfgFile == "" {
-		cfgFile = filepath.Join(homeDir(), ".doctlcfg")
+	var err error
+	cfgFile, err = findConfig()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
 	}
+
+	legacyConfigCheck()
 
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(cfgFile)
@@ -97,6 +110,26 @@ func initConfig() {
 	}
 
 	viper.SetDefault("output", "text")
+}
+
+func findConfig() (string, error) {
+	if cfgFile != "" {
+		return cfgFile, nil
+	}
+
+	legacyConfigPath := filepath.Join(homeDir(), ".doctlcfg")
+	if _, err := os.Stat(legacyConfigPath); err == nil {
+		msg := fmt.Sprintf("Configuration detected at %q. Please move .doctlcfg to %s/%s",
+			legacyConfigPath, configHome(), defaultConfigName)
+		warn(msg)
+	}
+
+	ch := configHome()
+	if err := os.MkdirAll(ch, 0755); err != nil {
+		return "", err
+	}
+
+	return filepath.Join(ch, defaultConfigName), nil
 }
 
 // Execute executes the current command using DoitCmd.
@@ -268,7 +301,7 @@ type CmdConfig struct {
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
-func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) (*CmdConfig, error) {
+func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, initGodo bool) (*CmdConfig, error) {
 
 	cmdConfig := &CmdConfig{
 		NS:   ns,
@@ -279,7 +312,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) (*Cm
 		initServices: func(c *CmdConfig) error {
 			godoClient, err := c.Doit.GetGodoClient(Trace)
 			if err != nil {
-				return fmt.Errorf("unable to retrieve godo client: %s", err)
+				return fmt.Errorf("unable to initialize DigitalOcean api client: %s", err)
 			}
 
 			c.Keys = func() do.KeysService { return do.NewKeysService(godoClient) }
@@ -302,8 +335,10 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) (*Cm
 		},
 	}
 
-	if err := cmdConfig.initServices(cmdConfig); err != nil {
-		return nil, fmt.Errorf("unable to initial godo client: %s", err)
+	if initGodo {
+		if err := cmdConfig.initServices(cmdConfig); err != nil {
+			return nil, err
+		}
 	}
 
 	return cmdConfig, nil
@@ -323,6 +358,10 @@ func (c *CmdConfig) Display(d Displayable) error {
 
 // CmdBuilder builds a new command.
 func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *Command {
+	return cmdBuilderWithInit(parent, cr, cliText, desc, out, true, options...)
+}
+
+func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, initCmd bool, options ...cmdOption) *Command {
 	cc := &cobra.Command{
 		Use:   cliText,
 		Short: desc,
@@ -333,6 +372,7 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 				doctl.DoitConfig,
 				out,
 				args,
+				initCmd,
 			)
 			checkErr(err, cmd)
 
@@ -359,6 +399,7 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 	}
 
 	return c
+
 }
 
 func writeConfig() error {
@@ -385,6 +426,9 @@ func writeConfig() error {
 func defaultConfigFileWriter() (io.WriteCloser, error) {
 	f, err := os.Create(cfgFile)
 	if err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(cfgFile, 0600); err != nil {
 		return nil, err
 	}
 

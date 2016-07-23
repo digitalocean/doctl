@@ -173,7 +173,7 @@ var _ Config = &LiveConfig{}
 func (c *LiveConfig) GetGodoClient(trace bool) (*godo.Client, error) {
 	token := viper.GetString("access-token")
 	if token == "" {
-		return nil, fmt.Errorf("access token is required")
+		return nil, fmt.Errorf("access token is required. (hint: run 'doctl auth init')")
 	}
 
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})

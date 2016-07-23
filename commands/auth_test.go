@@ -15,6 +15,7 @@ package commands
 
 import (
 	"io"
+	"io/ioutil"
 	"testing"
 
 	"github.com/digitalocean/doctl/do"
@@ -39,7 +40,7 @@ func TestAuthInit(t *testing.T) {
 		return "valid-token", nil
 	}
 
-	cfgFileWriter = func() (io.WriteCloser, error) { return &discardCloser{}, nil }
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.account.On("Get").Return(&do.Account{}, nil)
@@ -49,14 +50,12 @@ func TestAuthInit(t *testing.T) {
 	})
 }
 
-type discardCloser struct{}
-
-var _ io.WriteCloser = (*discardCloser)(nil)
-
-func (d *discardCloser) Write(p []byte) (n int, err error) {
-	return len(p), nil
+type nopWriteCloser struct {
+	io.Writer
 }
 
-func (d *discardCloser) Close() error {
+var _ io.WriteCloser = (*nopWriteCloser)(nil)
+
+func (d *nopWriteCloser) Close() error {
 	return nil
 }

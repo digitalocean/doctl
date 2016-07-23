@@ -63,17 +63,17 @@ func Auth() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunAuthInit, "init", "initialize configuration", Writer, docCategories("account"))
+	cmdBuilderWithInit(cmd, RunAuthInit, "init", "initialize configuration", Writer, false, docCategories("auth"))
 
 	return cmd
 }
 
-// RunAuthInit initializes the doctl config. Configuring is stored in $XDG_CONFIG_HOME/doctl. On Unix, if
+// RunAuthInit initializes the doctl config. Configuration is stored in $XDG_CONFIG_HOME/doctl. On Unix, if
 // XDG_CONFIG_HOME is not set, use $HOME/.config. On Windows use %APPDATA%/doctl/config.
 func RunAuthInit(c *CmdConfig) error {
 	in, err := retrieveUserTokenFunc()
 	if err != nil {
-		return errors.New("unable to read input")
+		return fmt.Errorf("unable to read DigitalOcean access token: %s", err)
 	}
 
 	token := strings.TrimSpace(in)
@@ -91,7 +91,7 @@ func RunAuthInit(c *CmdConfig) error {
 	if _, err := c.Account().Get(); err != nil {
 		fmt.Fprintln(c.Out, "invalid token")
 		fmt.Fprintln(c.Out)
-		return errors.New("unable to use supplied token to access API")
+		return fmt.Errorf("unable to use supplied token to access API: %s", err)
 	}
 
 	fmt.Fprintln(c.Out, "OK")

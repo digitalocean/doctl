@@ -13,11 +13,7 @@ limitations under the License.
 
 package do
 
-import (
-	"fmt"
-
-	"github.com/digitalocean/godo"
-)
+import "github.com/digitalocean/godo"
 
 // Account is a wrapper for godo.Account.
 type Account struct {
@@ -49,7 +45,6 @@ func NewAccountService(godoClient *godo.Client) AccountService {
 }
 
 func (as *accountService) Get() (*Account, error) {
-	fmt.Printf("as: %#v\n", as)
 	godoAccount, _, err := as.client.Account.Get()
 	if err != nil {
 		return nil, err
