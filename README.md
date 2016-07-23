@@ -51,12 +51,12 @@ You can download the archive from your browser, or copy its URL and retrieve it 
 cd ~
 
 # OS X
-curl -L https://github.com/digitalocean/doctl/releases/download/v1.1.0/doctl-1.1.0-darwin-10.6-amd64.tar.gz | tar xz
+curl -L https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-darwin-10.6-amd64.tar.gz | tar xz
 
 # linux (with wget)
-wget -qO- https://github.com/digitalocean/doctl/releases/download/v1.1.0/doctl-1.1.0-linux-amd64.tar.gz  | tar xz
+wget -qO- https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-linux-amd64.tar.gz  | tar xz
 # linux (with curl)
-curl -L https://github.com/digitalocean/doctl/releases/download/v1.1.0/doctl-1.1.0-linux-amd64.tar.gz  | tar xz
+curl -L https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-linux-amd64.tar.gz  | tar xz
 ```
 
 Move the `doctl` binary to somewhere in your path.  For example:
@@ -79,14 +79,18 @@ go get github.com/digitalocean/doctl/cmd/doctl
 
 ## Initialization
 
-To automatically retrieve your access token from DigitalOcean, run `doctl auth login`. This process will authenticate
-you with DigitalOcean and retrieve an access token. If your shell does not have access to a web browser
-(because of a remote Linux shell with no DISPLAY environment variable or you've specified the CLIAUTH=1 flag), `doctl`
-will give you a link for offline authentication.
+To use `doctl`, a DigitalOcean access token is required. [Generate](https://cloud.digitalocean.com/settings/api/tokens)
+a new token and run `doctl auth init`, or set the environment variable, `DIGITALOCEAN_ACCESS_TOKEN`, with your new
+token.
 
 ## Configuration
 
-By default, `doctl` will load a configuration file from `$HOME/.doctlcfg` if found.
+By default, `doctl` will load a configuration file from `$XDG_CONFIG_HOME/doctl/config.yaml` if found. If
+the `XDG_CONFIG_HOME` environment variable is not, the path will default to `$HOME/.config/doctl/config.yaml` on
+Unix like systems, and `%APPDATA%/doctl/config/config.yaml` on Windows.
+
+The configuration file has changed locations in recent versions, and a warning will be displayed if your configuration
+exists at the legacy location.
 
 ### Configuration OPTIONS
 
@@ -143,4 +147,4 @@ repository is required.
 
 [tutorial]: https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client
 [doctl-releases]: https://github.com/digitalocean/doctl/releases
-[windows-release]: https://github.com/digitalocean/doctl/releases/download/v1.1.0/doctl-1.1.0-windows-4.0-amd64.zip
+[windows-release]: https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-windows-4.0-amd64.zip
