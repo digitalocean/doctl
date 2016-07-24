@@ -14,6 +14,8 @@ limitations under the License.
 package ssh
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -21,6 +23,54 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )
+
+func signerFromEncryptedKey(p *pem.Block, pwd []byte) (ssh.Signer, error) {
+	b, err := x509.DecryptPEMBlock(p, pwd)
+	if err != nil {
+		return nil, err
+	}
+
+	k, err := x509.ParsePKCS1PrivateKey(b)
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := ssh.NewSignerFromKey(k)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func signerFromKey(b []byte) (ssh.Signer, error) {
+	s, err := ssh.ParsePrivateKey(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+func askForPassword(prompt string) (string, error) {
+	fd := os.Stdin.Fd()
+	state, err := terminal.MakeRaw(int(fd))
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = terminal.Restore(int(fd), state)
+	}()
+
+	t := terminal.NewTerminal(os.Stdin, ">")
+	fmt.Printf(prompt)
+	password, err := t.ReadPassword("")
+	if err != nil {
+		return "", err
+	}
+
+	return password, nil
+}
 
 func runInternalSSH(r *Runner) error {
 	sshHost := fmt.Sprintf("%s:%d", r.Host, r.Port)
@@ -30,23 +80,32 @@ func runInternalSSH(r *Runner) error {
 	if err != nil {
 		return err
 	}
-	privateKey, err := ssh.ParsePrivateKey(key)
-	if err != nil {
+
+	// Convert key to PEM
+	pemBlock, _ := pem.Decode(key)
+	if pemBlock == nil {
 		return err
 	}
 
-	if err := sshConnect(r.User, sshHost, ssh.PublicKeys(privateKey)); err != nil {
-		// Password Auth if Key Auth Fails
-		fd := os.Stdin.Fd()
-		state, err := terminal.MakeRaw(int(fd))
-		if err != nil {
+	var signer ssh.Signer
+	if x509.IsEncryptedPEMBlock(pemBlock) {
+		var pwd string
+		prompt := fmt.Sprintf("Enter passphrase for key '%s': ", r.KeyPath)
+		if pwd, err = askForPassword(prompt); err != nil {
 			return err
 		}
-		defer func() {
-			_ = terminal.Restore(int(fd), state)
-		}()
-		t := terminal.NewTerminal(os.Stdout, ">")
-		password, err := t.ReadPassword("Password: ")
+		if signer, err = signerFromEncryptedKey(pemBlock, []byte(pwd)); err != nil {
+			return err
+		}
+	} else {
+		if signer, err = signerFromKey(key); err != nil {
+			return err
+		}
+	}
+
+	if err := sshConnect(r.User, sshHost, ssh.PublicKeys(signer)); err != nil {
+		prompt := fmt.Sprintf("%s@%s's password: ", r.User, r.Host)
+		password, err := askForPassword(prompt)
 		if err != nil {
 			return err
 		}

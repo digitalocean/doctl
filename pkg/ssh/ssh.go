@@ -80,10 +80,8 @@ func sshConnect(user string, host string, method ssh.AuthMethod) error {
 	if err := session.RequestPty("xterm", termHeight, termWidth, modes); err != nil {
 		return err
 	}
-	if err == nil {
-		err = session.Shell()
-	}
-	if err != nil {
+
+	if err := session.Shell(); err != nil {
 		return err
 	}
 
