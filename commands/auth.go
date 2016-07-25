@@ -15,21 +15,13 @@ package commands
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
-	"runtime"
+	"strings"
 
 	"golang.org/x/crypto/ssh/terminal"
 
-	"github.com/bryanl/doit-server"
-	"github.com/bryanl/webbrowser"
-	"github.com/gorilla/websocket"
-	"github.com/satori/go.uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -46,7 +38,7 @@ var retrieveUserTokenFunc = func() (string, error) {
 	}
 
 	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter token: ")
+	fmt.Print("DigitalOcean access token: ")
 	return reader.ReadString('\n')
 }
 
@@ -71,187 +63,39 @@ func Auth() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunAuthLogin, "login", "login to DigitalOcean account", Writer, docCategories("account"))
+	cmdBuilderWithInit(cmd, RunAuthInit, "init", "initialize configuration", Writer, false, docCategories("auth"))
 
 	return cmd
 }
 
-// RunAuthLogin runs auth login. It communicates with doit-server to perform auth.
-func RunAuthLogin(c *CmdConfig) error {
-	dsa := newDoitServerAuth()
-
-	ac, err := dsa.retrieveAuthCredentials()
+// RunAuthInit initializes the doctl config. Configuration is stored in $XDG_CONFIG_HOME/doctl. On Unix, if
+// XDG_CONFIG_HOME is not set, use $HOME/.config. On Windows use %APPDATA%/doctl/config.
+func RunAuthInit(c *CmdConfig) error {
+	in, err := retrieveUserTokenFunc()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to read DigitalOcean access token: %s", err)
 	}
 
-	token, err := dsa.initAuth(ac)
-	if err != nil {
-		return err
+	token := strings.TrimSpace(in)
+
+	viper.Set("access-token", string(token))
+
+	fmt.Fprintln(c.Out)
+	fmt.Fprint(c.Out, "Validating token: ")
+
+	// need to initial the godo client since we've changed the configuration.
+	if err := c.initServices(c); err != nil {
+		return fmt.Errorf("unable to initialize DigitalOcean API client with new token: %s", err)
 	}
 
-	viper.Set("access-token", token)
-
-	fmt.Println("updated access token")
-
-	return nil
-}
-
-type doitServerAuth struct {
-	url         string
-	browserOpen func(u string) error
-	isCLI       func() bool
-	monitorAuth func(u string, ac *doitserver.AuthCredentials) (*doitserver.TokenResponse, error)
-}
-
-func newDoitServerAuth() *doitServerAuth {
-	return &doitServerAuth{
-		url: "http://doit-server.apps.pifft.com",
-		browserOpen: func(u string) error {
-			return webbrowser.Open(u, webbrowser.NewTab, true)
-		},
-		isCLI: func() bool {
-			return (runtime.GOOS == "linux" && os.Getenv("DISPLAY") == "") || os.Getenv("CLIAUTH") != ""
-		},
-		monitorAuth: monitorAuthWS,
-	}
-}
-
-func (dsa *doitServerAuth) initAuth(ac *doitserver.AuthCredentials) (string, error) {
-	if dsa.isCLI() {
-		return dsa.initAuthCLI(ac)
+	if _, err := c.Account().Get(); err != nil {
+		fmt.Fprintln(c.Out, "invalid token")
+		fmt.Fprintln(c.Out)
+		return fmt.Errorf("unable to use supplied token to access API: %s", err)
 	}
 
-	return dsa.initAuthBrowser(ac)
-}
+	fmt.Fprintln(c.Out, "OK")
+	fmt.Fprintln(c.Out)
 
-func (dsa *doitServerAuth) initAuthCLI(ac *doitserver.AuthCredentials) (string, error) {
-	u, err := dsa.createAuthURL(ac, keyPair{k: "cliauth", v: "1"})
-	if err != nil {
-		return "", err
-	}
-
-	fmt.Printf("Visit the following URL in your browser: %s\n", u)
-
-	return retrieveUserTokenFunc()
-}
-
-func (dsa *doitServerAuth) initAuthBrowser(ac *doitserver.AuthCredentials) (string, error) {
-	u, err := dsa.createAuthURL(ac)
-	if err != nil {
-		return "", err
-	}
-
-	err = dsa.browserOpen(u)
-	if err != nil {
-		return "", err
-	}
-
-	tr, err := dsa.monitorAuth(dsa.url, ac)
-	if err != nil {
-		return "", err
-	}
-
-	return tr.AccessToken, nil
-}
-
-func (dsa *doitServerAuth) retrieveAuthCredentials() (*doitserver.AuthCredentials, error) {
-	u, err := url.Parse(dsa.url)
-	if err != nil {
-		return nil, err
-	}
-
-	u.Path = "/token"
-	v := u.Query()
-	v.Set("id", uuid.NewV4().String())
-	u.RawQuery = v.Encode()
-
-	r, err := http.Get(u.String())
-	if err != nil {
-		return nil, err
-	}
-	defer r.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if r.StatusCode != 200 {
-		return nil, errors.New("it's broke, Jim")
-	}
-
-	var m doitserver.AuthCredentials
-	err = json.Unmarshal(body, &m)
-	if err != nil {
-		return nil, err
-	}
-
-	return &m, nil
-}
-
-type keyPair struct {
-	k, v string
-}
-
-func (dsa *doitServerAuth) createAuthURL(ac *doitserver.AuthCredentials, kps ...keyPair) (string, error) {
-	authURL, err := url.Parse(dsa.url)
-	if err != nil {
-		return "", err
-	}
-
-	authURL.Path = "/auth/digitalocean"
-
-	q := authURL.Query()
-	q.Set("id", ac.ID)
-	q.Set("cs", ac.CS)
-
-	for _, kp := range kps {
-		q.Set(kp.k, kp.v)
-	}
-
-	authURL.RawQuery = q.Encode()
-
-	return authURL.String(), nil
-
-}
-
-func monitorAuthWS(serverURL string, ac *doitserver.AuthCredentials) (*doitserver.TokenResponse, error) {
-	u, err := url.Parse(serverURL)
-	if err != nil {
-		return nil, err
-	}
-
-	switch u.Scheme {
-	case "http":
-		u.Scheme = "ws"
-	case "https":
-		u.Scheme = "wss"
-	default:
-		return nil, &UnknownSchemeError{Scheme: u.Scheme}
-	}
-
-	u.Path = "/status"
-
-	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	err = conn.WriteJSON(ac)
-	if err != nil {
-		return nil, err
-	}
-
-	var tr doitserver.TokenResponse
-
-	err = conn.ReadJSON(&tr)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tr, nil
+	return writeConfig()
 }

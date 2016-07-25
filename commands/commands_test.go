@@ -160,6 +160,9 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Doit: cfg,
 		Out:  ioutil.Discard,
 
+		// can stub this out, since the return is dictated by the mocks.
+		initServices: func(c *CmdConfig) error { return nil },
+
 		Keys:              func() do.KeysService { return &tm.keys },
 		Sizes:             func() do.SizesService { return &tm.sizes },
 		Regions:           func() do.RegionsService { return &tm.regions },

@@ -33,6 +33,10 @@ var (
 	}
 )
 
+func init() {
+	color.Output = os.Stderr
+}
+
 type outputErrors struct {
 	Errors []outputError `json:"errors"`
 }
@@ -69,5 +73,5 @@ func checkErr(err error, cmd ...*cobra.Command) {
 }
 
 func warn(msg string) {
-	fmt.Fprintf(color.Output, "%s: %s\n", colorWarn, msg)
+	fmt.Fprintf(color.Output, "%s: %s\n\n", colorWarn, msg)
 }

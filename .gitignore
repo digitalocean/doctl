@@ -9,4 +9,4 @@ dist
 public
 docs/content
 
-out/doctl
+/out

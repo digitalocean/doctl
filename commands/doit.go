@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -21,11 +22,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v2"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+)
+
+const (
+	// defaultConfigName is the name of the config file when no alternative is supplied.
+	defaultConfigName = "config.yaml"
 )
 
 // DoitCmd is the base command.
@@ -56,7 +64,11 @@ var Trace bool
 // cfgFile is the location of the config file
 var cfgFile string
 
-var cfgFileName = ".doctlcfg"
+// cfgFileWriter is the config file writer
+var cfgFileWriter = defaultConfigFileWriter
+
+// ErrNoAccessToken is an error for when there is no access token.
+var ErrNoAccessToken = errors.New("no access token has been configured")
 
 func init() {
 	cobra.OnInitialize(initConfig)
@@ -77,9 +89,14 @@ func init() {
 }
 
 func initConfig() {
-	if cfgFile == "" {
-		cfgFile = filepath.Join(homeDir(), ".doctlcfg")
+	var err error
+	cfgFile, err = findConfig()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
 	}
+
+	legacyConfigCheck()
 
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(cfgFile)
@@ -93,7 +110,26 @@ func initConfig() {
 	}
 
 	viper.SetDefault("output", "text")
+}
 
+func findConfig() (string, error) {
+	if cfgFile != "" {
+		return cfgFile, nil
+	}
+
+	legacyConfigPath := filepath.Join(homeDir(), ".doctlcfg")
+	if _, err := os.Stat(legacyConfigPath); err == nil {
+		msg := fmt.Sprintf("Configuration detected at %q. Please move .doctlcfg to %s/%s",
+			legacyConfigPath, configHome(), defaultConfigName)
+		warn(msg)
+	}
+
+	ch := configHome()
+	if err := os.MkdirAll(ch, 0755); err != nil {
+		return "", err
+	}
+
+	return filepath.Join(ch, defaultConfigName), nil
 }
 
 // Execute executes the current command using DoitCmd.
@@ -244,6 +280,8 @@ type CmdConfig struct {
 	Out  io.Writer
 	Args []string
 
+	initServices func(*CmdConfig) error
+
 	// services
 	Keys              func() do.KeysService
 	Sizes             func() do.SizesService
@@ -263,34 +301,47 @@ type CmdConfig struct {
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
-func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string) (*CmdConfig, error) {
-	godoClient, err := dc.GetGodoClient(Trace)
-	if err != nil {
-		return nil, err
-	}
+func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, initGodo bool) (*CmdConfig, error) {
 
-	return &CmdConfig{
+	cmdConfig := &CmdConfig{
 		NS:   ns,
 		Doit: dc,
 		Out:  out,
 		Args: args,
 
-		Keys:              func() do.KeysService { return do.NewKeysService(godoClient) },
-		Sizes:             func() do.SizesService { return do.NewSizesService(godoClient) },
-		Regions:           func() do.RegionsService { return do.NewRegionsService(godoClient) },
-		Images:            func() do.ImagesService { return do.NewImagesService(godoClient) },
-		ImageActions:      func() do.ImageActionsService { return do.NewImageActionsService(godoClient) },
-		FloatingIPs:       func() do.FloatingIPsService { return do.NewFloatingIPsService(godoClient) },
-		FloatingIPActions: func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(godoClient) },
-		Droplets:          func() do.DropletsService { return do.NewDropletsService(godoClient) },
-		DropletActions:    func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) },
-		Domains:           func() do.DomainsService { return do.NewDomainsService(godoClient) },
-		Actions:           func() do.ActionsService { return do.NewActionsService(godoClient) },
-		Account:           func() do.AccountService { return do.NewAccountService(godoClient) },
-		Tags:              func() do.TagsService { return do.NewTagsService(godoClient) },
-		Volumes:           func() do.VolumesService { return do.NewVolumesService(godoClient) },
-		VolumeActions:     func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) },
-	}, nil
+		initServices: func(c *CmdConfig) error {
+			godoClient, err := c.Doit.GetGodoClient(Trace)
+			if err != nil {
+				return fmt.Errorf("unable to initialize DigitalOcean api client: %s", err)
+			}
+
+			c.Keys = func() do.KeysService { return do.NewKeysService(godoClient) }
+			c.Sizes = func() do.SizesService { return do.NewSizesService(godoClient) }
+			c.Regions = func() do.RegionsService { return do.NewRegionsService(godoClient) }
+			c.Images = func() do.ImagesService { return do.NewImagesService(godoClient) }
+			c.ImageActions = func() do.ImageActionsService { return do.NewImageActionsService(godoClient) }
+			c.FloatingIPs = func() do.FloatingIPsService { return do.NewFloatingIPsService(godoClient) }
+			c.FloatingIPActions = func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(godoClient) }
+			c.Droplets = func() do.DropletsService { return do.NewDropletsService(godoClient) }
+			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
+			c.Domains = func() do.DomainsService { return do.NewDomainsService(godoClient) }
+			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
+			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
+			c.Tags = func() do.TagsService { return do.NewTagsService(godoClient) }
+			c.Volumes = func() do.VolumesService { return do.NewVolumesService(godoClient) }
+			c.VolumeActions = func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) }
+
+			return nil
+		},
+	}
+
+	if initGodo {
+		if err := cmdConfig.initServices(cmdConfig); err != nil {
+			return nil, err
+		}
+	}
+
+	return cmdConfig, nil
 }
 
 // Display displayes the output from a command.
@@ -307,6 +358,10 @@ func (c *CmdConfig) Display(d Displayable) error {
 
 // CmdBuilder builds a new command.
 func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *Command {
+	return cmdBuilderWithInit(parent, cr, cliText, desc, out, true, options...)
+}
+
+func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, initCmd bool, options ...cmdOption) *Command {
 	cc := &cobra.Command{
 		Use:   cliText,
 		Short: desc,
@@ -317,6 +372,7 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 				doctl.DoitConfig,
 				out,
 				args,
+				initCmd,
 			)
 			checkErr(err, cmd)
 
@@ -343,4 +399,38 @@ func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writ
 	}
 
 	return c
+
+}
+
+func writeConfig() error {
+	f, err := cfgFileWriter()
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	b, err := yaml.Marshal(viper.AllSettings())
+	if err != nil {
+		return errors.New("unable to encode configuration to YAML format")
+	}
+
+	_, err = f.Write(b)
+	if err != nil {
+		return errors.New("unable to write configuration")
+	}
+
+	return nil
+}
+
+func defaultConfigFileWriter() (io.WriteCloser, error) {
+	f, err := os.Create(cfgFile)
+	if err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(cfgFile, 0600); err != nil {
+		return nil, err
+	}
+
+	return f, nil
 }
