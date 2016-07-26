@@ -196,8 +196,17 @@ func (c *LiveConfig) GetGodoClient(trace bool) (*godo.Client, error) {
 		oauthClient.Transport = r
 	}
 
-	c.godoClient = godo.NewClient(oauthClient)
+	godoClient, err := godo.New(oauthClient, godo.SetUserAgent(userAgent()))
+	if err != nil {
+		return nil, err
+	}
+	c.godoClient = godoClient
+
 	return c.godoClient, nil
+}
+
+func userAgent() string {
+	return "doctl/" + DoitVersion.String()
 }
 
 // SSH creates a ssh connection to a host.
