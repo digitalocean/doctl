@@ -16,10 +16,23 @@ package doctl
 import (
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
 	os.Exit(m.Run())
+}
+
+func TestUserAgent(t *testing.T) {
+	dv := DoitVersion
+	defer func() {
+		DoitVersion = dv
+	}()
+
+	DoitVersion = Version{Major: 0, Minor: 1, Patch: 2}
+
+	assert.Equal(t, "doctl/0.1.2", userAgent())
 }
 
 func TestVersion(t *testing.T) {
