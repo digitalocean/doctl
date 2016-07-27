@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -88,7 +87,7 @@ func TestDropletCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
 		config.Doit.Set(config.NS, doctl.ArgImage, "image")
 		config.Doit.Set(config.NS, doctl.ArgUserData, "#cloud-config")
-		config.Doit.Set(config.NS, doctl.ArgVolumeList, fmt.Sprintf("[test-volume, %s]", volumeUUID))
+		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{"test-volume", volumeUUID})
 
 		err := RunDropletCreate(config)
 		assert.NoError(t, err)
@@ -360,8 +359,8 @@ func TestDropletsUntag(t *testing.T) {
 		tm.tags.On("UntagResources", "my-tag", urr).Return(nil)
 		tm.droplets.On("List").Return(testDropletList, nil)
 
-		config.Args = append(config.Args, "my-tag")
-		config.Doit.Set(config.NS, doctl.ArgDropletName, testDroplet.Name)
+		config.Args = []string{testDroplet.Name}
+		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
 
 		err := RunDropletUntag(config)
 		assert.NoError(t, err)
@@ -370,29 +369,29 @@ func TestDropletsUntag(t *testing.T) {
 
 func Test_extractSSHKey(t *testing.T) {
 	cases := []struct {
-		in       string
+		in       []string
 		expected []godo.DropletCreateSSHKey
 	}{
 		{
-			in:       "1",
+			in:       []string{"1"},
 			expected: []godo.DropletCreateSSHKey{{ID: 1}},
 		},
 		{
-			in:       "fingerprint",
+			in:       []string{"fingerprint"},
 			expected: []godo.DropletCreateSSHKey{{Fingerprint: "fingerprint"}},
 		},
 		{
-			in:       "1,2",
+			in:       []string{"1", "2"},
 			expected: []godo.DropletCreateSSHKey{{ID: 1}, {ID: 2}},
 		},
 		{
-			in:       "1,fingerprint",
+			in:       []string{"1", "fingerprint"},
 			expected: []godo.DropletCreateSSHKey{{ID: 1}, {Fingerprint: "fingerprint"}},
 		},
 	}
 
 	for _, c := range cases {
-		got := extractSSHKeys([]string{fmt.Sprintf("[%s]", c.in)})
+		got := extractSSHKeys(c.in)
 		assert.Equal(t, c.expected, got)
 	}
 }

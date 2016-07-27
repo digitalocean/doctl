@@ -275,5 +275,21 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 		}
 	}
 
-	return viper.GetStringSlice(nskey), nil
+	out := []string{}
+	for _, item := range viper.GetStringSlice(nskey) {
+
+		item = strings.TrimPrefix(item, "[")
+		item = strings.TrimSuffix(item, "]")
+
+		list := strings.Split(item, ",")
+		for _, str := range list {
+			if str == "" {
+				continue
+			}
+
+			out = append(out, str)
+		}
+	}
+
+	return out, nil
 }
