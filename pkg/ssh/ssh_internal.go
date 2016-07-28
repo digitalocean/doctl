@@ -44,6 +44,7 @@ func askForPassword(prompt string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	fmt.Println("")
 
 	return password, nil
 }
@@ -170,34 +171,46 @@ func agentWithKey(k interface{}) (agent.Agent, error) {
 }
 
 func runInternalSSH(r *Runner) error {
-	k, err := parsePrivateKey(r.KeyPath, askForPassword)
-	if err != nil {
-		return err
-	}
+	sshHost := fmt.Sprintf("%s:%d", r.Host, r.Port)
+	shouldTryPasswordMethod := false
 
-	s, err := ssh.NewSignerFromKey(k)
-	if err != nil {
-		return err
-	}
-
-	var a agent.Agent
-	if r.AgentForwarding {
-		a, err = agentWithKey(k)
+	if _, err := os.Stat(r.KeyPath); err == nil {
+		k, err := parsePrivateKey(r.KeyPath, askForPassword)
 		if err != nil {
 			return err
 		}
+
+		s, err := ssh.NewSignerFromKey(k)
+		if err != nil {
+			return err
+		}
+
+		var a agent.Agent
+		if r.AgentForwarding {
+			a, err = agentWithKey(k)
+			if err != nil {
+				return err
+			}
+		}
+
+		if err := sshConnect(r.User, sshHost, ssh.PublicKeys(s), a); err != nil {
+			shouldTryPasswordMethod = true
+		}
+	} else {
+		fmt.Printf("Warning: Identity file %s not accessible: No such file or directory.\n", r.KeyPath)
+		shouldTryPasswordMethod = true
 	}
 
-	sshHost := fmt.Sprintf("%s:%d", r.Host, r.Port)
-	if err := sshConnect(r.User, sshHost, ssh.PublicKeys(s), a); err != nil {
+	if shouldTryPasswordMethod {
 		prompt := fmt.Sprintf("%s@%s's password: ", r.User, r.Host)
 		password, err := askForPassword(prompt)
 		if err != nil {
 			return err
 		}
-		if err := sshConnect(r.User, sshHost, ssh.Password(string(password)), a); err != nil {
+		if err := sshConnect(r.User, sshHost, ssh.Password(string(password)), nil); err != nil {
 			return err
 		}
 	}
-	return err
+
+	return nil
 }
