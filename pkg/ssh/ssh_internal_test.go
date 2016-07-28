@@ -1,95 +1,59 @@
 package ssh
 
 import (
-	"encoding/pem"
-	"io/ioutil"
-	"path/filepath"
+	"crypto/rsa"
+	"reflect"
 	"testing"
 )
 
-func loadTestData(t *testing.T, n string) []byte {
-	testDataDir := "./testdata"
-	p := filepath.Join(testDataDir, n)
-	b, err := ioutil.ReadFile(p)
+func correctPassword(p string) (string, error) {
+	return "changeme", nil
+}
+
+func wrongPassword(p string) (string, error) {
+	return "wrongpwd", nil
+}
+
+func emptyPassword(p string) (string, error) {
+	return "", nil
+}
+
+func TestParsePrivateKey_keyWithPassword(t *testing.T) {
+	path := "./testdata/id_rsa_with_password"
+	k, err := parsePrivateKey(path, correctPassword)
 	if err != nil {
-		t.Fatalf("Error while trying to read %s: %v\n", n, err)
+		t.Fatalf("Couldn't parse private key (%s): %s\n", path, err)
 	}
-
-	return b
+	if _, ok := k.(*rsa.PrivateKey); !ok {
+		t.Fatalf("Key type should be *rsa.PrivateKey, but is: %v", reflect.TypeOf(k))
+	}
 }
 
-func TestSignerFromKey_keyWithEmptyPassphrase(t *testing.T) {
-	key := loadTestData(t, "id_rsa_without_password")
-	s, err := signerFromKey(key)
+func TestParsePrivateKey_keyWithPasswordWrongPassword(t *testing.T) {
+	providers := []passwordProvider{
+		wrongPassword,
+		emptyPassword,
+	}
+	path := "./testdata/id_rsa_with_password"
+	for _, p := range providers {
+		k, err := parsePrivateKey(path, p)
+		if err == nil {
+			pwd, _ := p("")
+			t.Fatalf("parsePrivateKey should return an error %s, '%s'", path, pwd)
+		}
+		if k != nil {
+			t.Fatalf("parsePrivateKey shouldn't return a key but did: %v", k)
+		}
+	}
+}
+
+func TestParsePrivateKey_keyWithoutPassword(t *testing.T) {
+	path := "./testdata/id_rsa_without_password"
+	k, err := parsePrivateKey(path, nil)
 	if err != nil {
-		t.Fatalf("signerFromKey shouldn't return an error: %s\n", err)
+		t.Fatalf("Couldn't parse private key (%s): %s\n", path, err)
 	}
-	if s == nil {
-		t.Fatalf("signerFromKey should return a non-nil signer.\n")
-	}
-}
-
-func TestSignerFromKey_keyWithPassphrase(t *testing.T) {
-	key := loadTestData(t, "id_rsa_with_password")
-	s, err := signerFromKey(key)
-	if err == nil {
-		t.Fatalf("signerFromKey should return an error\n")
-	}
-	if s != nil {
-		t.Fatalf("signerFromKey shouldn't return signer.\n")
-	}
-}
-
-func TestSignerFromEncryptedKey_keyWithPassphrase(t *testing.T) {
-	key := loadTestData(t, "id_rsa_with_password")
-
-	// Convert key to PEM
-	pemBlock, _ := pem.Decode(key)
-	if pemBlock == nil {
-		t.Fatalf("An error occured while trying to decode id_rsa_with_password\n")
-	}
-
-	s, err := signerFromEncryptedKey(pemBlock, []byte("changeme"))
-	if err != nil {
-		t.Fatalf("signerFromEncryptedKey shouldn't return an error: %s\n", err)
-	}
-	if s == nil {
-		t.Fatalf("signerFromEncryptedKey should return a non-nil signer.\n")
-	}
-}
-
-func TestSignerFromEncryptedKey_keyWithPassphraseWrongPassword(t *testing.T) {
-	key := loadTestData(t, "id_rsa_with_password")
-
-	// Convert key to PEM
-	pemBlock, _ := pem.Decode(key)
-	if pemBlock == nil {
-		t.Fatalf("An error occured while trying to decode id_rsa_with_password\n")
-	}
-
-	s, err := signerFromEncryptedKey(pemBlock, []byte("wrongpassword"))
-	if err == nil {
-		t.Fatalf("signerFromEncryptedKey should return an error.\n")
-	}
-	if s != nil {
-		t.Fatalf("signerFromEncryptedKey shouldn't return a signer.\n")
-	}
-}
-
-func TestSignerFromEncryptedKey_keyWithEmptyPassphrase(t *testing.T) {
-	key := loadTestData(t, "id_rsa_without_password")
-
-	// Convert key to PEM
-	pemBlock, _ := pem.Decode(key)
-	if pemBlock == nil {
-		t.Fatalf("An error occured while trying to decode id_rsa_without_password\n")
-	}
-
-	s, err := signerFromEncryptedKey(pemBlock, []byte(""))
-	if err == nil {
-		t.Fatalf("signerFromEncryptedKey should return an error.\n")
-	}
-	if s != nil {
-		t.Fatalf("signerFromEncryptedKey shouldn't return a signer.\n")
+	if _, ok := k.(*rsa.PrivateKey); !ok {
+		t.Fatalf("Key type should be *rsa.PrivateKey, but is: %v", reflect.TypeOf(k))
 	}
 }

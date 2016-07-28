@@ -17,40 +17,18 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 
+	"github.com/digitalocean/doctl/pkg/term"
+
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-func signerFromEncryptedKey(p *pem.Block, pwd []byte) (ssh.Signer, error) {
-	b, err := x509.DecryptPEMBlock(p, pwd)
-	if err != nil {
-		return nil, err
-	}
-
-	k, err := x509.ParsePKCS1PrivateKey(b)
-	if err != nil {
-		return nil, err
-	}
-
-	s, err := ssh.NewSignerFromKey(k)
-	if err != nil {
-		return nil, err
-	}
-
-	return s, nil
-}
-
-func signerFromKey(b []byte) (ssh.Signer, error) {
-	s, err := ssh.ParsePrivateKey(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return s, nil
-}
+type passwordProvider func(string) (string, error)
 
 func askForPassword(prompt string) (string, error) {
 	fd := os.Stdin.Fd()
@@ -72,44 +50,160 @@ func askForPassword(prompt string) (string, error) {
 	return password, nil
 }
 
-func runInternalSSH(r *Runner) error {
-	sshHost := fmt.Sprintf("%s:%d", r.Host, r.Port)
+func sshConnect(user string, host string, method ssh.AuthMethod, a agent.Agent) error {
+	sshc := &ssh.ClientConfig{
+		User: user,
+		Auth: []ssh.AuthMethod{method},
+	}
+	conn, err := ssh.Dial("tcp", host, sshc)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = conn.Close()
+	}()
 
-	// Key Auth
-	key, err := ioutil.ReadFile(r.KeyPath)
+	session, err := conn.NewSession()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = session.Close()
+	}()
+
+	session.Stdout = os.Stdout
+	session.Stderr = os.Stderr
+	session.Stdin = os.Stdin
+
+	if a != nil {
+		if err := agent.RequestAgentForwarding(session); err != nil {
+			return err
+		}
+
+		if err := agent.ForwardToAgent(conn, a); err != nil {
+			return err
+		}
+	}
+
+	var (
+		termWidth, termHeight int
+	)
+	fd := os.Stdin.Fd()
+
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = term.RestoreTerminal(fd, oldState)
+	}()
+
+	winsize, err := term.GetWinsize(fd)
+	if err != nil {
+		termWidth = 80
+		termHeight = 24
+	} else {
+		termWidth = int(winsize.Width)
+		termHeight = int(winsize.Height)
+	}
+
+	modes := ssh.TerminalModes{
+		ssh.ECHO: 1,
+	}
+
+	if err := session.RequestPty("xterm", termHeight, termWidth, modes); err != nil {
+		return err
+	}
+
+	if err := session.Shell(); err != nil {
+		return err
+	}
+
+	err = session.Wait()
+	if _, ok := err.(*ssh.ExitError); ok {
+		return nil
+	}
+	if err == io.EOF {
+		return nil
+	}
+	return err
+}
+
+func parsePrivateKey(path string, pwdProvider passwordProvider) (interface{}, error) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert key to PEM
+	pemBlock, _ := pem.Decode(b)
+	if pemBlock == nil {
+		return nil, err
+	}
+
+	var k interface{}
+	if x509.IsEncryptedPEMBlock(pemBlock) {
+		prompt := fmt.Sprintf("Enter passphrase for key '%s': ", path)
+		pwd, err := pwdProvider(prompt)
+		if err != nil {
+			return nil, err
+		}
+		b, err := x509.DecryptPEMBlock(pemBlock, []byte(pwd))
+		if err != nil {
+			return nil, err
+		}
+		k, err = x509.ParsePKCS1PrivateKey(b)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		k, err = ssh.ParseRawPrivateKey(b)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return k, nil
+}
+
+func agentWithKey(k interface{}) (agent.Agent, error) {
+	a := agent.NewKeyring()
+	ak := agent.AddedKey{
+		PrivateKey:   k,
+		LifetimeSecs: 0,
+	}
+	if err := a.Add(ak); err != nil {
+		return nil, err
+	}
+	return a, nil
+}
+
+func runInternalSSH(r *Runner) error {
+	k, err := parsePrivateKey(r.KeyPath, askForPassword)
 	if err != nil {
 		return err
 	}
 
-	// Convert key to PEM
-	pemBlock, _ := pem.Decode(key)
-	if pemBlock == nil {
+	s, err := ssh.NewSignerFromKey(k)
+	if err != nil {
 		return err
 	}
 
-	var signer ssh.Signer
-	if x509.IsEncryptedPEMBlock(pemBlock) {
-		var pwd string
-		prompt := fmt.Sprintf("Enter passphrase for key '%s': ", r.KeyPath)
-		if pwd, err = askForPassword(prompt); err != nil {
-			return err
-		}
-		if signer, err = signerFromEncryptedKey(pemBlock, []byte(pwd)); err != nil {
-			return err
-		}
-	} else {
-		if signer, err = signerFromKey(key); err != nil {
+	var a agent.Agent
+	if r.AgentForwarding {
+		a, err = agentWithKey(k)
+		if err != nil {
 			return err
 		}
 	}
 
-	if err := sshConnect(r.User, sshHost, ssh.PublicKeys(signer)); err != nil {
+	sshHost := fmt.Sprintf("%s:%d", r.Host, r.Port)
+	if err := sshConnect(r.User, sshHost, ssh.PublicKeys(s), a); err != nil {
 		prompt := fmt.Sprintf("%s@%s's password: ", r.User, r.Host)
 		password, err := askForPassword(prompt)
 		if err != nil {
 			return err
 		}
-		if err := sshConnect(r.User, sshHost, ssh.Password(string(password))); err != nil {
+		if err := sshConnect(r.User, sshHost, ssh.Password(string(password)), a); err != nil {
 			return err
 		}
 	}
