@@ -21,8 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/digitalocean/doctl/pkg/term"
-
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/crypto/ssh/terminal"
@@ -85,26 +83,20 @@ func sshConnect(user string, host string, method ssh.AuthMethod, a agent.Agent) 
 		}
 	}
 
-	var (
-		termWidth, termHeight int
-	)
-	fd := os.Stdin.Fd()
+	fd := int(os.Stdin.Fd())
 
-	oldState, err := term.MakeRaw(fd)
+	oldState, err := terminal.MakeRaw(fd)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		_ = term.RestoreTerminal(fd, oldState)
+		_ = terminal.Restore(fd, oldState)
 	}()
 
-	winsize, err := term.GetWinsize(fd)
+	termWidth, termHeight, err := terminal.GetSize(fd)
 	if err != nil {
 		termWidth = 80
 		termHeight = 24
-	} else {
-		termWidth = int(winsize.Width)
-		termHeight = int(winsize.Height)
 	}
 
 	modes := ssh.TerminalModes{
