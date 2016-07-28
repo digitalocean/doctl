@@ -19,13 +19,14 @@ import (
 	"os"
 
 	"github.com/fatih/color"
+	"github.com/shiena/ansicolor"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	colorErr  = color.New(color.FgRed).SprintFunc()("Error")
-	colorWarn = color.New(color.FgYellow).SprintFunc()("Warning")
+	colorErr  = color.RedString("Error")
+	colorWarn = color.YellowString("Warning")
 
 	// errAction specifies what should happen when an error occurs
 	errAction = func() {
@@ -34,7 +35,7 @@ var (
 )
 
 func init() {
-	color.Output = os.Stderr
+	color.Output = ansicolor.NewAnsiColorWriter(os.Stderr)
 }
 
 type outputErrors struct {
