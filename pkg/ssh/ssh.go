@@ -14,86 +14,13 @@ limitations under the License.
 package ssh
 
 import (
-	"io"
-	"os"
 	"runtime"
 
 	"github.com/digitalocean/doctl/pkg/runner"
-	"github.com/digitalocean/doctl/pkg/term"
-	"golang.org/x/crypto/ssh"
 )
 
 // Options is the type used to specify options passed to the SSH command
 type Options map[string]interface{}
-
-func sshConnect(user string, host string, method ssh.AuthMethod) error {
-	sshc := &ssh.ClientConfig{
-		User: user,
-		Auth: []ssh.AuthMethod{method},
-	}
-	conn, err := ssh.Dial("tcp", host, sshc)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = conn.Close()
-	}()
-
-	session, err := conn.NewSession()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = session.Close()
-	}()
-
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
-
-	var (
-		termWidth, termHeight int
-	)
-	fd := os.Stdin.Fd()
-
-	oldState, err := term.MakeRaw(fd)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = term.RestoreTerminal(fd, oldState)
-	}()
-
-	winsize, err := term.GetWinsize(fd)
-	if err != nil {
-		termWidth = 80
-		termHeight = 24
-	} else {
-		termWidth = int(winsize.Width)
-		termHeight = int(winsize.Height)
-	}
-
-	modes := ssh.TerminalModes{
-		ssh.ECHO: 1,
-	}
-
-	if err := session.RequestPty("xterm", termHeight, termWidth, modes); err != nil {
-		return err
-	}
-
-	if err := session.Shell(); err != nil {
-		return err
-	}
-
-	err = session.Wait()
-	if _, ok := err.(*ssh.ExitError); ok {
-		return nil
-	}
-	if err == io.EOF {
-		return nil
-	}
-	return err
-}
 
 // Runner runs ssh commands.
 type Runner struct {
