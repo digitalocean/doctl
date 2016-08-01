@@ -216,6 +216,7 @@ func RunDropletCreate(c *CmdConfig) error {
 	ts := c.Tags()
 
 	var wg sync.WaitGroup
+	var createdList do.Droplets
 	errs := make(chan error, len(c.Args))
 	for _, name := range c.Args {
 		dcr := &godo.DropletCreateRequest{
@@ -254,13 +255,15 @@ func RunDropletCreate(c *CmdConfig) error {
 
 			}
 
-			item := &droplet{droplets: do.Droplets{*d}}
-			c.Display(item)
+			append(createdList, *d)
 		}()
 	}
 
 	wg.Wait()
 	close(errs)
+	
+	item := &droplet{droplets: createdList}
+	c.Display(item)
 
 	for err := range errs {
 		if err != nil {
