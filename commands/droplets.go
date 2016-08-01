@@ -255,7 +255,7 @@ func RunDropletCreate(c *CmdConfig) error {
 
 			}
 
-			append(createdList, *d)
+			createdList = append(createdList, *d)
 		}()
 	}
 
