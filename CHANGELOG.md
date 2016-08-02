@@ -2,10 +2,25 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.4.0] - 2016-08-02
+
+### Added
+- #111 Replace `auth login` with `auth init` - @bryanl
+
+### Changed
+- #118 Add doctl version to user agent - @bryanl
+- #122 Add SSH agent forward support for Windows - @tbalthazar
+
+### Fixed
+- #113 Update SSH client support for Windows - @tbalthazar
+- #117 Update download links - @garykrige
+- #123 Use Windows compatible ANSI colors - @bryanl
+- #125 Create valid JSON when creating multiple droplets - @snoopdouglas
+
 ## [1.3.1] - 2016-07-13
 
 ### Changed
-- #99 build test bin in out directory - @bryanl
+- #99 Build test bin in out directory - @bryanl
 - #104 Remove beta status for storage - @bryanl
 
 ### Fixed
