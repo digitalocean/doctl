@@ -94,7 +94,7 @@ func Droplet() *Command {
 
 	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet id or name>", "untag", Writer,
 		docCategories("droplet"))
-	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgDropletName, []string{}, "Droplet names")
+	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, []string{}, "tag names")
 
 	return cmd
 }
@@ -110,6 +110,9 @@ func RunDropletActions(c *CmdConfig) error {
 	}
 
 	list, err := ds.Actions(id)
+	if err != nil {
+		return err
+	}
 	item := &action{actions: list}
 	return c.Display(item)
 }
@@ -198,13 +201,16 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
-	var createImage godo.DropletCreateImage
-
 	imageStr, err := c.Doit.GetString(c.NS, doctl.ArgImage)
-	if i, err := strconv.Atoi(imageStr); err == nil {
+	if err != nil {
+		return err
+	}
+
+	createImage := godo.DropletCreateImage{Slug: imageStr}
+
+	i, err := strconv.Atoi(imageStr)
+	if err == nil {
 		createImage = godo.DropletCreateImage{ID: i}
-	} else {
-		createImage = godo.DropletCreateImage{Slug: imageStr}
 	}
 
 	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
@@ -309,13 +315,13 @@ func RunDropletUntag(c *CmdConfig) error {
 	ds := c.Droplets()
 	ts := c.Tags()
 
-	if len(c.Args) != 1 {
+	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	tagName := c.Args[0]
+	dropletIDStrs := c.Args
 
-	dropletIDStrs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDropletName)
+	tagNames, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
 	}
@@ -324,15 +330,22 @@ func RunDropletUntag(c *CmdConfig) error {
 		urr := &godo.UntagResourcesRequest{}
 
 		for _, id := range ids {
-			r := godo.Resource{
-				ID:   strconv.Itoa(id),
-				Type: godo.DropletResourceType,
-			}
+			for _, tagName := range tagNames {
+				r := godo.Resource{
+					ID:   strconv.Itoa(id),
+					Type: godo.DropletResourceType,
+				}
 
-			urr.Resources = append(urr.Resources, r)
+				urr.Resources = append(urr.Resources, r)
+
+				err := ts.UntagResources(tagName, urr)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
-		return ts.UntagResources(tagName, urr)
+		return nil
 	}
 
 	return matchDroplets(dropletIDStrs, ds, fn)
@@ -341,23 +354,16 @@ func RunDropletUntag(c *CmdConfig) error {
 func extractSSHKeys(keys []string) []godo.DropletCreateSSHKey {
 	sshKeys := []godo.DropletCreateSSHKey{}
 
-	for _, rawKey := range keys {
-		rawKey = strings.TrimPrefix(rawKey, "[")
-		rawKey = strings.TrimSuffix(rawKey, "]")
-
-		keys := strings.Split(rawKey, ",")
-
-		for _, k := range keys {
-			if i, err := strconv.Atoi(k); err == nil {
-				if i > 0 {
-					sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: i})
-				}
-				continue
+	for _, k := range keys {
+		if i, err := strconv.Atoi(k); err == nil {
+			if i > 0 {
+				sshKeys = append(sshKeys, godo.DropletCreateSSHKey{ID: i})
 			}
+			continue
+		}
 
-			if k != "" {
-				sshKeys = append(sshKeys, godo.DropletCreateSSHKey{Fingerprint: k})
-			}
+		if k != "" {
+			sshKeys = append(sshKeys, godo.DropletCreateSSHKey{Fingerprint: k})
 		}
 	}
 
@@ -378,24 +384,19 @@ func extractUserData(userData, filename string) (string, error) {
 
 func extractVolumes(volumeList []string) []godo.DropletCreateVolume {
 	var volumes []godo.DropletCreateVolume
-	for _, rawVolume := range volumeList {
-		rawVolume = strings.TrimPrefix(rawVolume, "[")
-		rawVolume = strings.TrimSuffix(rawVolume, "]")
 
-		list := strings.Split(rawVolume, ",")
-		for _, v := range list {
-			if v == "" {
-				continue
-			}
-			var req godo.DropletCreateVolume
-			if uuid.Parse(v) != nil {
-				req.ID = v
-			} else {
-				req.Name = v
-			}
-			volumes = append(volumes, req)
+	fmt.Printf("extracting volumes from %#v\n", volumeList)
+
+	for _, v := range volumeList {
+		var req godo.DropletCreateVolume
+		if uuid.Parse(v) != nil {
+			req.ID = v
+		} else {
+			req.Name = v
 		}
+		volumes = append(volumes, req)
 	}
+
 	return volumes
 }
 
