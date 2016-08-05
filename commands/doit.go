@@ -119,8 +119,8 @@ func findConfig() (string, error) {
 
 	legacyConfigPath := filepath.Join(homeDir(), ".doctlcfg")
 	if _, err := os.Stat(legacyConfigPath); err == nil {
-		msg := fmt.Sprintf("Configuration detected at %q. Please move .doctlcfg to %s/%s",
-			legacyConfigPath, configHome(), defaultConfigName)
+		msg := fmt.Sprintf("Configuration detected at %q. Please move .doctlcfg to %s",
+			legacyConfigPath, configPath())
 		warn(msg)
 	}
 
@@ -130,6 +130,10 @@ func findConfig() (string, error) {
 	}
 
 	return filepath.Join(ch, defaultConfigName), nil
+}
+
+func configPath() string {
+	return fmt.Sprintf("%s/%s", configHome(), defaultConfigName)
 }
 
 // Execute executes the current command using DoitCmd.
