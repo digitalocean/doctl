@@ -51,12 +51,12 @@ You can download the archive from your browser, or copy its URL and retrieve it 
 cd ~
 
 # OS X
-curl -L https://github.com/digitalocean/doctl/releases/download/v1.3.1/doctl-1.3.1-darwin-10.6-amd64.tar.gz | tar xz
+curl -L https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-darwin-10.6-amd64.tar.gz | tar xz
 
 # linux (with wget)
-wget -qO- https://github.com/digitalocean/doctl/releases/download/v1.3.1/doctl-1.3.1-linux-amd64.tar.gz  | tar xz
+wget -qO- https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-linux-amd64.tar.gz  | tar xz
 # linux (with curl)
-curl -L https://github.com/digitalocean/doctl/releases/download/v1.3.1/doctl-1.3.1-linux-amd64.tar.gz  | tar xz
+curl -L https://github.com/digitalocean/doctl/releases/download/v1.4.0/doctl-1.4.0-linux-amd64.tar.gz  | tar xz
 ```
 
 Move the `doctl` binary to somewhere in your path.  For example:
