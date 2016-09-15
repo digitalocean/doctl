@@ -203,14 +203,19 @@ func RunImagesUpdate(c *CmdConfig) error {
 func RunImagesDelete(c *CmdConfig) error {
 	is := c.Images()
 
-	if len(c.Args) != 1 {
+	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	id, err := strconv.Atoi(c.Args[0])
-	if err != nil {
-		return err
+	for _, el := range c.Args {
+		id, err := strconv.Atoi(el)
+		if err != nil {
+			return err
+		}
+		if err := is.Delete(id); err != nil {
+			return err
+		}
 	}
 
-	return is.Delete(id)
+	return nil
 }
