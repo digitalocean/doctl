@@ -43,6 +43,7 @@ func SSH(parent *Command) *Command {
 	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, path, "path to private ssh key")
 	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, 22, "port sshd is running on")
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, false, "enable ssh agent forwarding")
+	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, false, "ssh to private ip instead of public ip")
 
 	return cmdSSH
 }
@@ -76,6 +77,11 @@ func RunSSH(c *CmdConfig) error {
 
 	var opts = make(ssh.Options)
 	opts[doctl.ArgsSSHAgentForwarding], err = c.Doit.GetBool(c.NS, doctl.ArgsSSHAgentForwarding)
+	if err != nil {
+		return err
+	}
+
+	privateIPChoice, err := c.Doit.GetBool(c.NS, doctl.ArgsSSHPrivateIP)
 	if err != nil {
 		return err
 	}
@@ -130,7 +136,7 @@ func RunSSH(c *CmdConfig) error {
 		user = defaultSSHUser(droplet)
 	}
 
-	ip, err := droplet.PublicIPv4()
+	ip, err := privateIPElsePub(droplet, privateIPChoice)
 	if err != nil {
 		return err
 	}
@@ -170,4 +176,11 @@ func extractHostInfo(in string) sshHostInfo {
 		host: r["m2"],
 		port: r["m3"],
 	}
+}
+
+func privateIPElsePub(droplet *do.Droplet, choice bool) (string, error) {
+	if choice {
+		return droplet.PrivateIPv4()
+	}
+	return droplet.PublicIPv4()
 }
