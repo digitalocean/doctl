@@ -29,6 +29,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Helper: Ask for confirmation
+func askForConfirmation() bool {
+	var response string
+
+	_, err := fmt.Scanln(&response)
+	if err != nil {
+		return false
+	}
+
+	okayResponses := []string{"y", "Y", "yes", "Yes", "YES"}
+	nokayResponses := []string{"n", "N", "no", "No", "NO"}
+
+	if containsString(okayResponses, response) {
+		return true
+	} else if containsString(nokayResponses, response) {
+		return false
+	} else {
+		fmt.Println("Please type yes or no and then press enter:")
+		return askForConfirmation()
+	}
+}
+
+// Helper: posString returns the first index of element in slice.
+// If slice does not contain element, returns -1.
+func posString(slice []string, element string) int {
+	for index, elem := range slice {
+		if elem == element {
+			return index
+		}
+	}
+	return -1
+}
+
+// Helper: containsString returns true iff slice contains element
+func containsString(slice []string, element string) bool {
+	return !(posString(slice, element) == -1)
+}
+
 // Droplet creates the droplet command.
 func Droplet() *Command {
 	cmd := &Command{
@@ -424,6 +462,8 @@ func allInt(in []string) ([]int, error) {
 func RunDropletDelete(c *CmdConfig) error {
 	ds := c.Droplets()
 
+	var confirmation bool
+
 	tagName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
@@ -434,20 +474,32 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if len(c.Args) > 0 && tagName != "" {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
-		return ds.DeleteByTag(tagName)
+		fmt.Println("WARNING: Are you sure? (yes/no)")
+		confirmation = askForConfirmation()
+
+		if confirmation {
+			return ds.DeleteByTag(tagName)
+		}
 	}
 
-	fn := func(ids []int) error {
-		for _, id := range ids {
-			if err := ds.Delete(id); err != nil {
-				return fmt.Errorf("unable to delete droplet %d: %v", id, err)
+	fmt.Println("WARNING: Are you sure? (yes/no)")
+	confirmation = askForConfirmation()
+
+	if confirmation {
+		fn := func(ids []int) error {
+			for _, id := range ids {
+				if err := ds.Delete(id); err != nil {
+					return fmt.Errorf("unable to delete droplet %d: %v", id, err)
+				}
 			}
+
+			return nil
 		}
 
-		return nil
+		return matchDroplets(c.Args, ds, fn)
 	}
 
-	return matchDroplets(c.Args, ds, fn)
+	return nil
 }
 
 type matchDropletsFn func(ids []int) error
