@@ -77,6 +77,18 @@ Alternatively, if you have a Go environment configured, you can install the deve
 go get github.com/digitalocean/doctl/cmd/doctl
 ```
 
+### Option 4 – Build with Docker
+
+If you have Docker installed, you can build with the Dockerfile a Docker image and run `doctl` within a Docker container.
+
+```
+# build Docker image
+docker build -t doctl .
+
+# usage
+docker run -e DIGITALOCEAN_ACCESS_TOKEN doctl <followed by doctl commands>
+```
+
 ## Initialization
 
 To use `doctl`, a DigitalOcean access token is required. [Generate](https://cloud.digitalocean.com/settings/api/tokens)
