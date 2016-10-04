@@ -267,7 +267,7 @@ func RunDropletCreate(c *CmdConfig) error {
 
 	wg.Wait()
 	close(errs)
-	
+
 	item := &droplet{droplets: createdList}
 	c.Display(item)
 
@@ -385,7 +385,7 @@ func extractUserData(userData, filename string) (string, error) {
 func extractVolumes(volumeList []string) []godo.DropletCreateVolume {
 	var volumes []godo.DropletCreateVolume
 
-	notice(fmt.Sprintf("extracting volumes from %#v\n", volumeList))
+	fmt.Printf("extracting volumes from %#v\n", volumeList)
 
 	for _, v := range volumeList {
 		var req godo.DropletCreateVolume
@@ -434,20 +434,31 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if len(c.Args) > 0 && tagName != "" {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
-		return ds.DeleteByTag(tagName)
-	}
-
-	fn := func(ids []int) error {
-		for _, id := range ids {
-			if err := ds.Delete(id); err != nil {
-				return fmt.Errorf("unable to delete droplet %d: %v", id, err)
-			}
+		if Force || askForConfirm("delete droplet by \""+tagName+"\" tag") {
+			return ds.DeleteByTag(tagName)
+		} else {
+			return fmt.Errorf("Operation aborted.")
 		}
-
 		return nil
 	}
 
-	return matchDroplets(c.Args, ds, fn)
+	if Force || askForConfirm("delete droplet(s)") {
+
+		fn := func(ids []int) error {
+			for _, id := range ids {
+				if err := ds.Delete(id); err != nil {
+					return fmt.Errorf("unable to delete droplet %d: %v", id, err)
+				}
+			}
+			return nil
+		}
+		return matchDroplets(c.Args, ds, fn)
+	} else {
+		return fmt.Errorf("Operation aborted.")
+	}
+
+	return nil
+
 }
 
 type matchDropletsFn func(ids []int) error
