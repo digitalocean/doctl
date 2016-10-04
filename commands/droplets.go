@@ -385,7 +385,7 @@ func extractUserData(userData, filename string) (string, error) {
 func extractVolumes(volumeList []string) []godo.DropletCreateVolume {
 	var volumes []godo.DropletCreateVolume
 
-	fmt.Printf("extracting volumes from %#v\n", volumeList)
+	notice(fmt.Sprintf("extracting volumes from %#v\n", volumeList))
 
 	for _, v := range volumeList {
 		var req godo.DropletCreateVolume
