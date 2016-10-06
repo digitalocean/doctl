@@ -1,23 +1,18 @@
 package commands
 
 import (
-	"fmt"
+	"bufio"
+	"os"
 	"strings"
 )
 
-func askForConfirm(message string) bool {
-	var answer string
-	warn("Are you sure you want to " + message + " (y/N) ? ")
-	_, err := fmt.Scanln(&answer)
+func AskForConfirm(message string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	warnConfirm("Are you sure you want to " + message + " (y/N) ? ")
+	answer, err := reader.ReadString('\n')
 	if err != nil {
 		return false
 	}
-	return verifyAnswer(answer)
-}
-
-func verifyAnswer(answer string) bool {
-	if strings.ToLower(answer) == "y" || strings.ToLower(answer) == "yes" {
-		return true
-	}
-	return false
+	answer = strings.ToLower(strings.Replace(answer, "\n", "", 1))
+	return answer == "y" || answer == "ye" || answer == "yes"
 }

@@ -434,7 +434,7 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if len(c.Args) > 0 && tagName != "" {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
-		if Force || askForConfirm("delete droplet by \""+tagName+"\" tag") {
+		if Force || AskForConfirm("delete droplet by \""+tagName+"\" tag") {
 			return ds.DeleteByTag(tagName)
 		} else {
 			return fmt.Errorf("Operation aborted.")
@@ -442,7 +442,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	if Force || askForConfirm("delete droplet(s)") {
+	if Force || AskForConfirm("delete droplet(s)") {
 
 		fn := func(ids []int) error {
 			for _, id := range ids {
