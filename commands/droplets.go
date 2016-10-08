@@ -67,8 +67,9 @@ func Droplet() *Command {
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, []string{}, "Volumes to attach")
 
-	CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
+	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
+	AddBoolFlag(cmdRunDropletDelete, doctl.ArgDeleteForce, false, "Froce droplet delete")
 
 	CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
@@ -424,6 +425,11 @@ func allInt(in []string) ([]int, error) {
 func RunDropletDelete(c *CmdConfig) error {
 	ds := c.Droplets()
 
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	if err != nil {
+		return err
+	}
+
 	tagName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
@@ -434,7 +440,7 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if len(c.Args) > 0 && tagName != "" {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
-		if Force || AskForConfirm("delete droplet by \""+tagName+"\" tag") == nil {
+		if force || AskForConfirm("delete droplet by \""+tagName+"\" tag") == nil {
 			return ds.DeleteByTag(tagName)
 		} else {
 			return fmt.Errorf("Operation aborted.")
@@ -442,7 +448,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	if Force || AskForConfirm("delete droplet(s)") == nil {
+	if force || AskForConfirm("delete droplet(s)") == nil {
 
 		fn := func(ids []int) error {
 			for _, id := range ids {

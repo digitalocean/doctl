@@ -53,9 +53,6 @@ var Output string
 // Verbose toggles verbose output.
 var Verbose bool
 
-// Force froces command execution.
-var Force bool
-
 var requiredColor = color.New(color.Bold, color.FgWhite).SprintfFunc()
 
 // Writer is where output should be written to.
@@ -80,7 +77,6 @@ func init() {
 	DoitCmd.PersistentFlags().StringVarP(&Token, "access-token", "t", "", "API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
 	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
-	DoitCmd.PersistentFlags().BoolVarP(&Force, "force", "f", false, "force execution")
 	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
 
 	viper.SetEnvPrefix("DIGITALOCEAN")

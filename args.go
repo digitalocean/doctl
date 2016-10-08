@@ -122,4 +122,7 @@ const (
 	ArgVolumeRegion = "region"
 	// ArgVolumeList is the IDs of many volumes.
 	ArgVolumeList = "volumes"
+
+	// ArgDeleteForce forces deletion actions
+	ArgDeleteForce = "force"
 )
