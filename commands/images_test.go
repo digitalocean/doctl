@@ -116,7 +116,7 @@ func TestImagesDelete(t *testing.T) {
 
 }
 
-func TestImagesDeleteS(t *testing.T) {
+func TestImagesDeleteMultiple(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.images.On("Delete", testImage.ID).Return(nil)
 		tm.images.On("Delete", testImageSecondary.ID).Return(nil)
