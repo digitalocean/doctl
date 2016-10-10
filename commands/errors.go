@@ -77,6 +77,9 @@ func checkErr(err error, cmd ...*cobra.Command) {
 func warn(msg string) {
 	fmt.Fprintf(color.Output, "%s: %s\n\n", colorWarn, msg)
 }
+func warnConfirm(msg string) {
+	fmt.Fprintf(color.Output, "%s: %s", colorWarn, msg)
+}
 
 func notice(msg string) {
 	fmt.Fprintf(color.Output, "%s: %s\n\n", colorNotice, msg)

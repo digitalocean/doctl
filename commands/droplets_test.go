@@ -141,9 +141,11 @@ func TestDropletDelete(t *testing.T) {
 		tm.droplets.On("Delete", 1).Return(nil)
 
 		config.Args = append(config.Args, strconv.Itoa(testDroplet.ID))
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunDropletDelete(config)
 		assert.NoError(t, err)
+
 	})
 }
 
@@ -152,6 +154,7 @@ func TestDropletDeleteByTag(t *testing.T) {
 		tm.droplets.On("DeleteByTag", "my-tag").Return(nil)
 
 		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunDropletDelete(config)
 		assert.NoError(t, err)
@@ -165,6 +168,7 @@ func TestDropletDeleteRepeatedID(t *testing.T) {
 
 		id := strconv.Itoa(testDroplet.ID)
 		config.Args = append(config.Args, id, id)
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunDropletDelete(config)
 		assert.NoError(t, err)
@@ -177,6 +181,7 @@ func TestDropletDeleteByName(t *testing.T) {
 		tm.droplets.On("Delete", 1).Return(nil)
 
 		config.Args = append(config.Args, testDroplet.Name)
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunDropletDelete(config)
 		assert.NoError(t, err)
@@ -189,6 +194,7 @@ func TestDropletDeleteByName_Ambiguous(t *testing.T) {
 		tm.droplets.On("List").Return(list, nil)
 
 		config.Args = append(config.Args, testDroplet.Name)
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunDropletDelete(config)
 		t.Log(err)
@@ -203,6 +209,7 @@ func TestDropletDelete_MixedNameAndType(t *testing.T) {
 
 		id := strconv.Itoa(testDroplet.ID)
 		config.Args = append(config.Args, id, testDroplet.Name)
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunDropletDelete(config)
 		assert.NoError(t, err)
