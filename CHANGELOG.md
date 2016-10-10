@@ -2,6 +2,21 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.5.0] - 2016-10-10
+
+### Added
+- #144 SSH to private Droplet IP - @haz-mat
+- #148 Add confirmation for destructive actions - @xmudrii
+
+### Changed
+- #121 Allow untagging droplets - @bryanl
+
+### Fixed
+- #126 Fix location of config in help - @bryanl
+- #132 Update download location - @xmudrii
+- #135 Fix location of doctl configuration - @xmudrii
+- #143 Send progress report to stderr - @kkpoon
+
 ## [1.4.0] - 2016-08-02
 
 ### Added
