@@ -95,7 +95,7 @@ exists at the legacy location.
 ### Configuration OPTIONS
 
 * `access-token` - The DigitalOcean access token. You can generate a token in the
-[Apps & API](https://cloud.digitalocean.com/settings/applications) section of the DigitalOcean control panel or use
+[Apps & API](https://cloud.digitalocean.com/settings/api/tokens) section of the DigitalOcean control panel or use
 `doctl auth login`.
 * `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doctl` will default
  to `text`.
@@ -142,7 +142,7 @@ By default, it assumes you are using the `root` user. If you want to SSH as a sp
 ## Releasing
 
 To build `doctl` for all its platforms, run `script/build.sh <version>`. To upload `doctl` to Github,
-run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `bryanl/doctl`
+run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl`
 repository is required.
 
 [tutorial]: https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client
