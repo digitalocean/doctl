@@ -69,7 +69,7 @@ func Droplet() *Command {
 
 	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
-	AddBoolFlag(cmdRunDropletDelete, doctl.ArgDeleteForce, false, "Froce droplet delete")
+	AddBoolFlag(cmdRunDropletDelete, doctl.ArgDeleteForce, false, "Force droplet delete")
 
 	CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
