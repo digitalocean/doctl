@@ -228,6 +228,18 @@ func TestDropletGet(t *testing.T) {
 	})
 }
 
+func TestDropletGet_Template(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.On("Get", testDroplet.ID).Return(&testDroplet, nil)
+
+		config.Args = append(config.Args, strconv.Itoa(testDroplet.ID))
+		config.Doit.Set(config.NS, doctl.ArgTemplate, ".Name")
+
+		err := RunDropletGet(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestDropletKernelList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.droplets.On("Kernels", testDroplet.ID).Return(testKernelList, nil)

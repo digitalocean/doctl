@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"sort"
 	"strconv"
@@ -71,8 +72,9 @@ func Droplet() *Command {
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgDeleteForce, false, "Force droplet delete")
 
-	CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
+	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
+	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "Template format")
 
 	CmdBuilder(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", Writer,
 		aliasOpt("k"), displayerType(&kernel{}), docCategories("droplet"))
@@ -517,6 +519,11 @@ func RunDropletGet(c *CmdConfig) error {
 		return err
 	}
 
+	getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)
+	if err != nil {
+		return err
+	}
+
 	ds := c.Droplets()
 
 	d, err := ds.Get(id)
@@ -525,6 +532,14 @@ func RunDropletGet(c *CmdConfig) error {
 	}
 
 	item := &droplet{droplets: do.Droplets{*d}}
+	if getTemplate != "" {
+		t := template.New("get template")
+		t, err = t.Parse(getTemplate)
+		if err != nil {
+			return err
+		}
+		return t.Execute(c.Out, item)
+	}
 	return c.Display(item)
 }
 
