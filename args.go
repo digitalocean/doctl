@@ -110,6 +110,8 @@ const (
 	ArgPollTime = "poll-timeout"
 	// ArgTagName is a tag name
 	ArgTagName = "tag-name"
+	//ArgTemplate is template format
+	ArgTemplate = "template"
 
 	// ArgOutput is an output type argument.
 	ArgOutput = "output"
