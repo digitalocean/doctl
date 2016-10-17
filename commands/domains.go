@@ -46,7 +46,7 @@ func Domain() *Command {
 	CmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", Writer,
 		aliasOpt("g"), displayerType(&domain{}), docCategories("domain"))
 
-	CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete droplet", Writer, aliasOpt("g"))
+	CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete domain", Writer, aliasOpt("g"))
 
 	cmdRecord := &Command{
 		Command: &cobra.Command{
