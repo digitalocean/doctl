@@ -1,0 +1,18 @@
+name: doctl
+version: "1.5.0"
+summary: A command line tool for DigitalOcean services
+description: doctl is a command line tool for DigitalOcean servics using the API.
+confinement: strict
+
+apps:
+  doctl:
+    command: bin/doctl
+    plugs: [network]
+
+parts:
+  doctl:
+    source: ..
+    plugin: go
+    go-importpath: github.com/digitalocean/doctl
+    build-packages: [git]
+    go-packages: [github.com/digitalocean/doctl/cmd/doctl]

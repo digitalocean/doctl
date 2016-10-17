@@ -10,3 +10,9 @@ public
 docs/content
 
 /out
+
+# Snapcraft
+parts/
+prime/
+stage/
+*.snap
