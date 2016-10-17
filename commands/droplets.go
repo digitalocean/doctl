@@ -15,7 +15,7 @@ package commands
 
 import (
 	"fmt"
-	"html/template"
+	"text/template"
 	"io/ioutil"
 	"sort"
 	"strconv"
@@ -74,7 +74,7 @@ func Droplet() *Command {
 
 	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
-	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "Template format")
+	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "Go template format. Few sample values:{{.ID}} {{.Name}} {{.Memory}} {{.Region.Name}} {{.Image}} {{.Tags}}")
 
 	CmdBuilder(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", Writer,
 		aliasOpt("k"), displayerType(&kernel{}), docCategories("droplet"))
@@ -538,7 +538,7 @@ func RunDropletGet(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
-		return t.Execute(c.Out, item)
+		return t.Execute(c.Out, d)
 	}
 	return c.Display(item)
 }
