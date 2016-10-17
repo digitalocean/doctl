@@ -61,8 +61,9 @@ func Images() *Command {
 		displayerType(&image{}), docCategories("image"))
 	AddStringFlag(cmdImagesUpdate, doctl.ArgImageName, "", "Image name", requiredOpt())
 
-	CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer,
+	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer,
 		docCategories("image"))
+	AddBoolFlag(cmdRunImagesDelete, doctl.ArgDeleteForce, false, "Force image delete")
 
 	return cmd
 }
@@ -203,14 +204,30 @@ func RunImagesUpdate(c *CmdConfig) error {
 func RunImagesDelete(c *CmdConfig) error {
 	is := c.Images()
 
-	if len(c.Args) != 1 {
+	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	id, err := strconv.Atoi(c.Args[0])
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
 	if err != nil {
 		return err
 	}
 
-	return is.Delete(id)
+	if force || AskForConfirm("delete image(s)") == nil {
+
+		for _, el := range c.Args {
+			id, err := strconv.Atoi(el)
+			if err != nil {
+				return err
+			}
+			if err := is.Delete(id); err != nil {
+				return err
+			}
+		}
+
+	} else {
+		return fmt.Errorf("Operation aborted.")
+	}
+
+	return nil
 }

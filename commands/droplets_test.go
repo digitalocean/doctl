@@ -30,7 +30,12 @@ var (
 		Slug:    "slug",
 		Regions: []string{"test0"},
 	}}
-	testImageList = do.Images{testImage}
+	testImageSecondary = do.Image{Image: &godo.Image{
+		ID:      2,
+		Slug:    "slug-secondary",
+		Regions: []string{"test0"},
+	}}
+	testImageList = do.Images{testImage, testImageSecondary}
 )
 
 func TestDropletCommand(t *testing.T) {

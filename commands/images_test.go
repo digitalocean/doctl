@@ -108,6 +108,21 @@ func TestImagesDelete(t *testing.T) {
 		tm.images.On("Delete", testImage.ID).Return(nil)
 
 		config.Args = append(config.Args, strconv.Itoa(testImage.ID))
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
+
+		err := RunImagesDelete(config)
+		assert.NoError(t, err)
+	})
+
+}
+
+func TestImagesDeleteMultiple(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.images.On("Delete", testImage.ID).Return(nil)
+		tm.images.On("Delete", testImageSecondary.ID).Return(nil)
+
+		config.Args = append(config.Args, strconv.Itoa(testImage.ID), strconv.Itoa(testImageSecondary.ID))
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunImagesDelete(config)
 		assert.NoError(t, err)
