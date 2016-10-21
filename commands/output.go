@@ -234,7 +234,7 @@ func (d *droplet) JSON(out io.Writer) error {
 
 func (d *droplet) Cols() []string {
 	cols := []string{
-		"ID", "Name", "PublicIPv4", "PublicIPv6", "Memory", "VCPUs", "Disk", "Region", "Image", "Status", "Tags",
+		"ID", "Name", "PublicIPv4", "PrivateIPv4", "PublicIPv6", "Memory", "VCPUs", "Disk", "Region", "Image", "Status", "Tags",
 	}
 	if isBeta() {
 		cols = append(cols, "Volumes")
@@ -244,7 +244,7 @@ func (d *droplet) Cols() []string {
 
 func (d *droplet) ColMap() map[string]string {
 	return map[string]string{
-		"ID": "ID", "Name": "Name", "PublicIPv4": "Public IPv4", "PublicIPv6": "Public IPv6",
+		"ID": "ID", "Name": "Name", "PublicIPv4": "Public IPv4", "PrivateIPv4": "Private IPv4", "PublicIPv6": "Public IPv6",
 		"Memory": "Memory", "VCPUs": "VCPUs", "Disk": "Disk",
 		"Region": "Region", "Image": "Image", "Status": "Status",
 		"Tags": "Tags", "Volumes": "Volumes",
@@ -257,10 +257,11 @@ func (d *droplet) KV() []map[string]interface{} {
 		tags := strings.Join(d.Tags, ",")
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
 		ip, _ := d.PublicIPv4()
+		privIP, _ := d.PrivateIPv4()
 		ip6, _ := d.PublicIPv6()
 		volumes := strings.Join(d.VolumeIDs, ",")
 		m := map[string]interface{}{
-			"ID": d.ID, "Name": d.Name, "PublicIPv4": ip, "PublicIPv6": ip6,
+			"ID": d.ID, "Name": d.Name, "PublicIPv4": ip, "PrivateIPv4": privIP, "PublicIPv6": ip6,
 			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
 			"Region": d.Region.Slug, "Image": image, "Status": d.Status,
 			"Tags": tags, "Volumes": volumes,
