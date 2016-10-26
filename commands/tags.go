@@ -14,6 +14,8 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
@@ -46,8 +48,9 @@ func Tags() *Command {
 	AddStringFlag(cmdTagUpdate, doctl.ArgTagName, "", "Tag name",
 		requiredOpt())
 
-	CmdBuilder(cmd, RunCmdTagDelete, "delete NAME", "delete tag", Writer,
+	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete NAME", "delete tag", Writer,
 		docCategories("tag"))
+	AddBoolFlag(cmdRunTagDelete, doctl.ArgDeleteForce, false, "Force tag delete")
 
 	return cmd
 }
@@ -117,11 +120,26 @@ func RunCmdTagUpdate(c *CmdConfig) error {
 
 // RunCmdTagDelete runs tag delete.
 func RunCmdTagDelete(c *CmdConfig) error {
-	if len(c.Args) != 1 {
+	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	name := c.Args[0]
-	ts := c.Tags()
-	return ts.Delete(name)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirm("delete tag(s)") == nil {
+		for id, _ := range c.Args {
+			name := c.Args[id]
+			ts := c.Tags()
+			if err := ts.Delete(name); err != nil {
+				return err
+			}
+		}
+	} else {
+		fmt.Errorf("Operation aborted.")
+	}
+
+	return nil
 }
