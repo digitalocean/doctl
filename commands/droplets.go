@@ -244,6 +244,19 @@ func RunDropletCreate(c *CmdConfig) error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+
+			if tagName != "" {
+				tag, err := ts.Get(tagName)
+				if err != nil {
+					errs <- err
+					return
+				}
+				if tag == nil {
+					errs <- fmt.Errorf("Specified Tag must exist")
+					return
+				}
+			}
+
 			d, err := ds.Create(dcr, wait)
 			if err != nil {
 				errs <- err
@@ -272,13 +285,13 @@ func RunDropletCreate(c *CmdConfig) error {
 	close(errs)
 
 	item := &droplet{droplets: createdList}
-	c.Display(item)
 
 	for err := range errs {
 		if err != nil {
 			return err
 		}
 	}
+	c.Display(item)
 
 	return nil
 }
