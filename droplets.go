@@ -131,7 +131,7 @@ type kernelsRoot struct {
 	Links   *Links   `json:"links"`
 }
 
-type snapshotsRoot struct {
+type dropletSnapshotsRoot struct {
 	Snapshots []Image `json:"snapshots,omitempty"`
 	Links     *Links  `json:"links"`
 }
@@ -507,7 +507,7 @@ func (s *DropletsServiceOp) Snapshots(dropletID int, opt *ListOptions) ([]Image,
 		return nil, nil, err
 	}
 
-	root := new(snapshotsRoot)
+	root := new(dropletSnapshotsRoot)
 	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
