@@ -152,6 +152,7 @@ func TestDroplets_Create(t *testing.T) {
 			{ID: "hello-im-another-volume"},
 			{Name: "hello-im-still-a-volume", ID: "should be ignored due to Name"},
 		},
+		Tags: []string{"one", "two"},
 	}
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
@@ -169,6 +170,7 @@ func TestDroplets_Create(t *testing.T) {
 				map[string]interface{}{"id": "hello-im-another-volume"},
 				map[string]interface{}{"name": "hello-im-still-a-volume"},
 			},
+			"tags": []interface{}{"one", "two"},
 		}
 
 		var v map[string]interface{}
@@ -209,6 +211,7 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 		Image: DropletCreateImage{
 			ID: 1,
 		},
+		Tags: []string{"one", "two"},
 	}
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
@@ -221,6 +224,7 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 			"backups":            false,
 			"ipv6":               false,
 			"private_networking": false,
+			"tags":               []interface{}{"one", "two"},
 		}
 
 		var v map[string]interface{}
