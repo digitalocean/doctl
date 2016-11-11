@@ -206,6 +206,7 @@ type DropletCreateRequest struct {
 	PrivateNetworking bool                  `json:"private_networking"`
 	UserData          string                `json:"user_data,omitempty"`
 	Volumes           []DropletCreateVolume `json:"volumes,omitempty"`
+	Tags              []string              `json:"tags"`
 }
 
 // DropletMultiCreateRequest is a request to create multiple droplets.
@@ -219,6 +220,7 @@ type DropletMultiCreateRequest struct {
 	IPv6              bool                  `json:"ipv6"`
 	PrivateNetworking bool                  `json:"private_networking"`
 	UserData          string                `json:"user_data,omitempty"`
+	Tags              []string              `json:"tags"`
 }
 
 func (d DropletCreateRequest) String() string {
