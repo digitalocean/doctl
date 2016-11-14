@@ -147,6 +147,16 @@ type DropletCreateImage struct {
 	Slug string
 }
 
+// MarshalJSON returns either the slug or id of the image. It returns the id
+// if the slug is empty.
+func (d DropletCreateImage) MarshalJSON() ([]byte, error) {
+	if d.Slug != "" {
+		return json.Marshal(d.Slug)
+	}
+
+	return json.Marshal(d.ID)
+}
+
 // DropletCreateVolume identifies a volume to attach for the create request. It
 // prefers Name over ID,
 type DropletCreateVolume struct {
@@ -166,16 +176,6 @@ func (d DropletCreateVolume) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		ID string `json:"id"`
 	}{ID: d.ID})
-}
-
-// MarshalJSON returns either the slug or id of the image. It returns the id
-// if the slug is empty.
-func (d DropletCreateImage) MarshalJSON() ([]byte, error) {
-	if d.Slug != "" {
-		return json.Marshal(d.Slug)
-	}
-
-	return json.Marshal(d.ID)
 }
 
 // DropletCreateSSHKey identifies a SSH Key for the create request. It prefers fingerprint over ID.
@@ -206,6 +206,7 @@ type DropletCreateRequest struct {
 	PrivateNetworking bool                  `json:"private_networking"`
 	UserData          string                `json:"user_data,omitempty"`
 	Volumes           []DropletCreateVolume `json:"volumes,omitempty"`
+	Tags              []string              `json:"tags"`
 }
 
 // DropletMultiCreateRequest is a request to create multiple droplets.
@@ -219,6 +220,7 @@ type DropletMultiCreateRequest struct {
 	IPv6              bool                  `json:"ipv6"`
 	PrivateNetworking bool                  `json:"private_networking"`
 	UserData          string                `json:"user_data,omitempty"`
+	Tags              []string              `json:"tags"`
 }
 
 func (d DropletCreateRequest) String() string {

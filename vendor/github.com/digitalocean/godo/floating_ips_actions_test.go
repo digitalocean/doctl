@@ -112,7 +112,7 @@ func TestFloatingIPsActions_List(t *testing.T) {
 		t.Errorf("FloatingIPsActions.List returned error: %v", err)
 	}
 
-	expected := []Action{Action{Status: "in-progress"}}
+	expected := []Action{{Status: "in-progress"}}
 	if !reflect.DeepEqual(actions, expected) {
 		t.Errorf("FloatingIPsActions.List returned %+v, expected %+v", actions, expected)
 	}

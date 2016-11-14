@@ -83,6 +83,7 @@ func TestDropletCreate(t *testing.T) {
 			IPv6:              false,
 			PrivateNetworking: false,
 			UserData:          "#cloud-config",
+			Tags:              []string{"one", "two"},
 		}
 		tm.droplets.On("Create", dcr, false).Return(&testDroplet, nil)
 
@@ -93,6 +94,7 @@ func TestDropletCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgImage, "image")
 		config.Doit.Set(config.NS, doctl.ArgUserData, "#cloud-config")
 		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{"test-volume", volumeUUID})
+		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"one", "two"})
 
 		err := RunDropletCreate(config)
 		assert.NoError(t, err)

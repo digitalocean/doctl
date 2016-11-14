@@ -65,6 +65,7 @@ func Droplet() *Command {
 	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "Droplet image",
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "Tag name")
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, []string{}, "Tag names")
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, []string{}, "Volumes to attach")
 
@@ -181,6 +182,11 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	tagNames, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
+	if err != nil {
+		return err
+	}
+
 	sshKeys := extractSSHKeys(keys)
 
 	userData, err := c.Doit.GetString(c.NS, doctl.ArgUserData)
@@ -239,6 +245,7 @@ func RunDropletCreate(c *CmdConfig) error {
 			PrivateNetworking: privateNetworking,
 			SSHKeys:           sshKeys,
 			UserData:          userData,
+			Tags:              tagNames,
 		}
 
 		wg.Add(1)
