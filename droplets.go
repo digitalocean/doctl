@@ -54,7 +54,7 @@ type Droplet struct {
 	Networks    *Networks `json:"networks,omitempty"`
 	Created     string    `json:"created_at,omitempty"`
 	Kernel      *Kernel   `json:"kernel,omitempty"`
-	Tags        []string  `json:"tags,ommitempty"`
+	Tags        []string  `json:"tags,omitempty"`
 	VolumeIDs   []string  `json:"volume_ids"`
 }
 
