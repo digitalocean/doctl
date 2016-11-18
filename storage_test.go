@@ -238,7 +238,7 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	volumes, _, err := client.Storage.(BetaStorageService).ListSnapshots("98d414c6-295e-4e3a-ac58-eb9456c1e1d1", nil)
+	volumes, _, err := client.Storage.ListSnapshots("98d414c6-295e-4e3a-ac58-eb9456c1e1d1", nil)
 	if err != nil {
 		t.Errorf("Storage.ListSnapshots returned error: %v", err)
 	}
@@ -306,7 +306,7 @@ func TestStorageSnapshots_Get(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := client.Storage.(BetaStorageService).GetSnapshot("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
+	got, _, err := client.Storage.GetSnapshot("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
 	if err != nil {
 		t.Errorf("Storage.GetSnapshot returned error: %v", err)
 	}
@@ -370,7 +370,7 @@ func TestStorageSnapshots_Create(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := client.Storage.(BetaStorageService).CreateSnapshot(createRequest)
+	got, _, err := client.Storage.CreateSnapshot(createRequest)
 	if err != nil {
 		t.Errorf("Storage.CreateSnapshot returned error: %v", err)
 	}
@@ -387,7 +387,7 @@ func TestStorageSnapshots_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Storage.(BetaStorageService).DeleteSnapshot("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
+	_, err := client.Storage.DeleteSnapshot("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
 	if err != nil {
 		t.Errorf("Storage.DeleteSnapshot returned error: %v", err)
 	}
