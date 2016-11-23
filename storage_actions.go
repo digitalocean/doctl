@@ -93,7 +93,7 @@ func (s *StorageActionsServiceOp) doAction(volumeID string, request *ActionReque
 		return nil, resp, err
 	}
 
-	return &root.Event, resp, err
+	return root.Event, resp, err
 }
 
 func (s *StorageActionsServiceOp) get(path string) (*Action, *Response, error) {
@@ -108,7 +108,7 @@ func (s *StorageActionsServiceOp) get(path string) (*Action, *Response, error) {
 		return nil, resp, err
 	}
 
-	return &root.Event, resp, err
+	return root.Event, resp, err
 }
 
 func (s *StorageActionsServiceOp) list(path string) ([]Action, *Response, error) {

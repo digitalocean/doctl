@@ -256,7 +256,7 @@ func (s *DropletActionsServiceOp) doAction(id int, request *ActionRequest) (*Act
 		return nil, resp, err
 	}
 
-	return &root.Event, resp, err
+	return root.Event, resp, err
 }
 
 func (s *DropletActionsServiceOp) doActionByTag(tag string, request *ActionRequest) (*Action, *Response, error) {
@@ -281,7 +281,7 @@ func (s *DropletActionsServiceOp) doActionByTag(tag string, request *ActionReque
 		return nil, resp, err
 	}
 
-	return &root.Event, resp, err
+	return root.Event, resp, err
 }
 
 // Get an action for a particular droplet by id.
@@ -321,7 +321,7 @@ func (s *DropletActionsServiceOp) get(path string) (*Action, *Response, error) {
 		return nil, resp, err
 	}
 
-	return &root.Event, resp, err
+	return root.Event, resp, err
 
 }
 

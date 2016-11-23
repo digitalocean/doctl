@@ -30,7 +30,7 @@ type regionsRoot struct {
 }
 
 type regionRoot struct {
-	Region Region
+	Region *Region
 }
 
 func (r Region) String() string {
