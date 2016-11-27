@@ -241,7 +241,7 @@ func TestDropletGet_Template(t *testing.T) {
 		tm.droplets.On("Get", testDroplet.ID).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, strconv.Itoa(testDroplet.ID))
-		config.Doit.Set(config.NS, doctl.ArgTemplate, ".Name")
+		config.Doit.Set(config.NS, doctl.ArgTemplate, "{{.Name}}")
 
 		err := RunDropletGet(config)
 		assert.NoError(t, err)
