@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/dustin/go-humanize"
+	"github.com/gobwas/glob"
 	"github.com/spf13/cobra"
 )
 
@@ -18,8 +21,9 @@ func Volume() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunVolumeList, "list", "list volume", Writer,
+	cmdRunVolumeList := CmdBuilder(cmd, RunVolumeList, "list", "list volume", Writer,
 		aliasOpt("ls"), displayerType(&volume{}))
+	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "Volume region")
 
 	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create [name]", "create a volume", Writer,
 		aliasOpt("c"), displayerType(&volume{}))
@@ -42,12 +46,56 @@ func Volume() *Command {
 
 // RunVolumeList returns a list of volumes.
 func RunVolumeList(c *CmdConfig) error {
+
 	al := c.Volumes()
-	d, err := al.List()
+
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	if err != nil {
+		return nil
+	}
+
+	matches := []glob.Glob{}
+	for _, globStr := range c.Args {
+		g, err := glob.Compile(globStr)
+		if err != nil {
+			return fmt.Errorf("unknown glob %q", globStr)
+		}
+
+		matches = append(matches, g)
+	}
+
+	list, err := al.List()
 	if err != nil {
 		return err
 	}
-	item := &volume{volumes: d}
+	var matchedList []do.Volume
+
+	for _, volume := range list {
+		var skip = true
+		if len(matches) == 0 {
+			skip = false
+		} else {
+			for _, m := range matches {
+				if m.Match(volume.ID) {
+					skip = false
+				}
+				if m.Match(volume.Name) {
+					skip = false
+				}
+			}
+		}
+
+		if !skip && region != "" {
+			if region != volume.Region.Slug {
+				skip = true
+			}
+		}
+
+		if !skip {
+			matchedList = append(matchedList, volume)
+		}
+	}
+	item := &volume{volumes: matchedList}
 	return c.Display(item)
 }
 

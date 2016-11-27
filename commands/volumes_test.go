@@ -51,6 +51,28 @@ func TestVolumesList(t *testing.T) {
 	})
 }
 
+func TestVolumesListID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.volumes.On("List").Return(testVolumeList, nil)
+
+		config.Args = append(config.Args, testVolume.ID)
+
+		err := RunVolumeList(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestVolumesListName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.volumes.On("List").Return(testVolumeList, nil)
+
+		config.Args = append(config.Args, "test-volume")
+
+		err := RunVolumeList(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestVolumeCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tcr := godo.VolumeCreateRequest{
