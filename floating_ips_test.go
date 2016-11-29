@@ -17,7 +17,7 @@ func TestFloatingIPs_ListFloatingIPs(t *testing.T) {
 		fmt.Fprint(w, `{"floating_ips": [{"region":{"slug":"nyc3"},"droplet":{"id":1},"ip":"192.168.0.1"},{"region":{"slug":"nyc3"},"droplet":{"id":2},"ip":"192.168.0.2"}]}`)
 	})
 
-	floatingIPs, _, err := client.FloatingIPs.List(nil)
+	floatingIPs, _, err := client.FloatingIPs.List(ctx, nil)
 	if err != nil {
 		t.Errorf("FloatingIPs.List returned error: %v", err)
 	}
@@ -40,7 +40,7 @@ func TestFloatingIPs_ListFloatingIPsMultiplePages(t *testing.T) {
 		fmt.Fprint(w, `{"floating_ips": [{"region":{"slug":"nyc3"},"droplet":{"id":1},"ip":"192.168.0.1"},{"region":{"slug":"nyc3"},"droplet":{"id":2},"ip":"192.168.0.2"}], "links":{"pages":{"next":"http://example.com/v2/floating_ips/?page=2"}}}`)
 	})
 
-	_, resp, err := client.FloatingIPs.List(nil)
+	_, resp, err := client.FloatingIPs.List(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestFloatingIPs_RetrievePageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.FloatingIPs.List(opt)
+	_, resp, err := client.FloatingIPs.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestFloatingIPs_Get(t *testing.T) {
 		fmt.Fprint(w, `{"floating_ip":{"region":{"slug":"nyc3"},"droplet":{"id":1},"ip":"192.168.0.1"}}`)
 	})
 
-	floatingIP, _, err := client.FloatingIPs.Get("192.168.0.1")
+	floatingIP, _, err := client.FloatingIPs.Get(ctx, "192.168.0.1")
 	if err != nil {
 		t.Errorf("domain.Get returned error: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestFloatingIPs_Create(t *testing.T) {
 		fmt.Fprint(w, `{"floating_ip":{"region":{"slug":"nyc3"},"droplet":{"id":1},"ip":"192.168.0.1"}}`)
 	})
 
-	floatingIP, _, err := client.FloatingIPs.Create(createRequest)
+	floatingIP, _, err := client.FloatingIPs.Create(ctx, createRequest)
 	if err != nil {
 		t.Errorf("FloatingIPs.Create returned error: %v", err)
 	}
@@ -142,7 +142,7 @@ func TestFloatingIPs_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.FloatingIPs.Delete("192.168.0.1")
+	_, err := client.FloatingIPs.Delete(ctx, "192.168.0.1")
 	if err != nil {
 		t.Errorf("FloatingIPs.Delete returned error: %v", err)
 	}

@@ -59,7 +59,7 @@ func TestCertificates_Get(t *testing.T) {
 		fmt.Fprint(w, certJSONResponse)
 	})
 
-	certificate, _, err := client.Certificates.Get(cID)
+	certificate, _, err := client.Certificates.Get(ctx, cID)
 	if err != nil {
 		t.Errorf("Certificates.Get returned error: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestCertificates_List(t *testing.T) {
 		fmt.Fprint(w, certsJSONResponse)
 	})
 
-	certificates, _, err := client.Certificates.List(nil)
+	certificates, _, err := client.Certificates.List(ctx, nil)
 
 	if err != nil {
 		t.Errorf("Certificates.List returned error: %v", err)
@@ -136,7 +136,7 @@ func TestCertificates_Create(t *testing.T) {
 		fmt.Fprint(w, certJSONResponse)
 	})
 
-	certificate, _, err := client.Certificates.Create(createRequest)
+	certificate, _, err := client.Certificates.Create(ctx, createRequest)
 	if err != nil {
 		t.Errorf("Certificates.Create returned error: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestCertificates_Delete(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Certificates.Delete(cID)
+	_, err := client.Certificates.Delete(ctx, cID)
 
 	if err != nil {
 		t.Errorf("Certificates.Delete returned error: %v", err)
