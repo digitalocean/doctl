@@ -13,7 +13,7 @@ func TestSnapshots_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/snapshots", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		fmt.Fprint(w, `{"snapshots":[{"id":"1"},{"id":"2"}]}`)
+		fmt.Fprint(w, `{"snapshots":[{"id":"1"},{"id":"2", "size_gigabytes": 4.84}]}`)
 	})
 
 	snapshots, _, err := client.Snapshots.List(nil)
@@ -21,7 +21,7 @@ func TestSnapshots_List(t *testing.T) {
 		t.Errorf("Snapshots.List returned error: %v", err)
 	}
 
-	expected := []Snapshot{{ID: "1"}, {ID: "2"}}
+	expected := []Snapshot{{ID: "1"}, {ID: "2", SizeGigaBytes: 4.84}}
 	if !reflect.DeepEqual(snapshots, expected) {
 		t.Errorf("Snapshots.List returned %+v, expected %+v", snapshots, expected)
 	}
@@ -64,7 +64,7 @@ func TestSnapshots_ListDroplet(t *testing.T) {
 			t.Errorf("'resource_type' query = %v, expected %v", actual, expected)
 		}
 
-		fmt.Fprint(w, `{"snapshots":[{"id":"1"},{"id":"2"}]}`)
+		fmt.Fprint(w, `{"snapshots":[{"id":"1"},{"id":"2", "size_gigabytes": 4.84}]}`)
 	})
 
 	snapshots, _, err := client.Snapshots.ListDroplet(nil)
@@ -72,7 +72,7 @@ func TestSnapshots_ListDroplet(t *testing.T) {
 		t.Errorf("Snapshots.ListDroplet returned error: %v", err)
 	}
 
-	expected := []Snapshot{{ID: "1"}, {ID: "2"}}
+	expected := []Snapshot{{ID: "1"}, {ID: "2", SizeGigaBytes: 4.84}}
 	if !reflect.DeepEqual(snapshots, expected) {
 		t.Errorf("Snapshots.ListDroplet returned %+v, expected %+v", snapshots, expected)
 	}
@@ -167,12 +167,12 @@ func TestSnapshot_String(t *testing.T) {
 		ResourceType:  "droplet",
 		Regions:       []string{"one"},
 		MinDiskSize:   20,
-		SizeGigaBytes: 0,
+		SizeGigaBytes: 4.84,
 		Created:       "2013-11-27T09:24:55Z",
 	}
 
 	stringified := snapshot.String()
-	expected := `godo.Snapshot{ID:"1", Name:"Snapsh176ot", ResourceID:"0", ResourceType:"droplet", Regions:["one"], MinDiskSize:20, SizeGigaBytes:0, Created:"2013-11-27T09:24:55Z"}`
+	expected := `godo.Snapshot{ID:"1", Name:"Snapsh176ot", ResourceID:"0", ResourceType:"droplet", Regions:["one"], MinDiskSize:20, SizeGigaBytes:4.84, Created:"2013-11-27T09:24:55Z"}`
 	if expected != stringified {
 		t.Errorf("Snapshot.String returned %+v, expected %+v", stringified, expected)
 	}
