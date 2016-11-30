@@ -204,20 +204,16 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 	{
 		"snapshots": [
 			{
-				"region": {"slug": "nyc3"},
+				"regions": ["nyc3"],
 				"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-				"volume_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 				"name": "my snapshot",
-				"description": "my description",
 				"size_gigabytes": 100,
 				"created_at": "2002-10-02T15:00:00.05Z"
 			},
 			{
-				"region": {"slug": "nyc3"},
+				"regions": ["nyc3"],
 				"id": "96d414c6-295e-4e3a-ac59-eb9456c1e1d1",
-				"volume_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 				"name": "my other snapshot",
-				"description": "my other description",
 				"size_gigabytes": 100,
 				"created_at": "2012-10-03T15:00:01.05Z"
 			}
@@ -245,22 +241,18 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 
 	expected := []Snapshot{
 		{
-			Region:        &Region{Slug: "nyc3"},
+			Regions:       []string{"nyc3"},
 			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			VolumeID:      "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 			Name:          "my snapshot",
-			Description:   "my description",
 			SizeGigaBytes: 100,
-			CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+			Created:       "2002-10-02T15:00:00.05Z",
 		},
 		{
-			Region:        &Region{Slug: "nyc3"},
+			Regions:       []string{"nyc3"},
 			ID:            "96d414c6-295e-4e3a-ac59-eb9456c1e1d1",
-			VolumeID:      "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 			Name:          "my other snapshot",
-			Description:   "my other description",
 			SizeGigaBytes: 100,
-			CreatedAt:     time.Date(2012, 10, 03, 15, 00, 01, 50000000, time.UTC),
+			Created:       "2012-10-03T15:00:01.05Z",
 		},
 	}
 	if !reflect.DeepEqual(volumes, expected) {
@@ -272,21 +264,17 @@ func TestStorageSnapshots_Get(t *testing.T) {
 	setup()
 	defer teardown()
 	want := &Snapshot{
-		Region:        &Region{Slug: "nyc3"},
+		Regions:       []string{"nyc3"},
 		ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-		VolumeID:      "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 		Name:          "my snapshot",
-		Description:   "my description",
 		SizeGigaBytes: 100,
-		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+		Created:       "2002-10-02T15:00:00.05Z",
 	}
 	jBlob := `{
 		"snapshot":{
-			"region": {"slug": "nyc3"},
+			"regions": ["nyc3"],
 			"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			"volume_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 			"name": "my snapshot",
-			"description": "my description",
 			"size_gigabytes": 100,
 			"created_at": "2002-10-02T15:00:00.05Z"
 		},
@@ -326,19 +314,16 @@ func TestStorageSnapshots_Create(t *testing.T) {
 	}
 
 	want := &Snapshot{
-		Region:        &Region{Slug: "nyc3"},
+		Regions:       []string{"nyc3"},
 		ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-		VolumeID:      "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 		Name:          "my snapshot",
-		Description:   "my description",
 		SizeGigaBytes: 100,
-		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+		Created:       "2002-10-02T15:00:00.05Z",
 	}
 	jBlob := `{
 		"snapshot":{
-			"region": {"slug": "nyc3"},
+			"regions": ["nyc3"],
 			"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-			"volume_id": "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 			"name": "my snapshot",
 			"description": "my description",
 			"size_gigabytes": 100,

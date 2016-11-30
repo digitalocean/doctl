@@ -150,27 +150,6 @@ func (svc *StorageServiceOp) DeleteVolume(id string) (*Response, error) {
 	return svc.client.Do(req, nil)
 }
 
-// Snapshot represents a Digital Ocean block store snapshot.
-type Snapshot struct {
-	ID            string    `json:"id"`
-	VolumeID      string    `json:"volume_id"`
-	Region        *Region   `json:"region"`
-	Name          string    `json:"name"`
-	SizeGigaBytes int64     `json:"size_gigabytes"`
-	Description   string    `json:"description"`
-	CreatedAt     time.Time `json:"created_at"`
-}
-
-type storageSnapsRoot struct {
-	Snapshots []Snapshot `json:"snapshots"`
-	Links     *Links     `json:"links"`
-}
-
-type storageSnapRoot struct {
-	Snapshot *Snapshot `json:"snapshot"`
-	Links    *Links    `json:"links,omitempty"`
-}
-
 // SnapshotCreateRequest represents a request to create a block store
 // volume.
 type SnapshotCreateRequest struct {
@@ -192,7 +171,7 @@ func (svc *StorageServiceOp) ListSnapshots(volumeID string, opt *ListOptions) ([
 		return nil, nil, err
 	}
 
-	root := new(storageSnapsRoot)
+	root := new(snapshotsRoot)
 	resp, err := svc.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
@@ -214,7 +193,7 @@ func (svc *StorageServiceOp) CreateSnapshot(createRequest *SnapshotCreateRequest
 		return nil, nil, err
 	}
 
-	root := new(storageSnapRoot)
+	root := new(snapshotRoot)
 	resp, err := svc.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
@@ -231,7 +210,7 @@ func (svc *StorageServiceOp) GetSnapshot(id string) (*Snapshot, *Response, error
 		return nil, nil, err
 	}
 
-	root := new(storageSnapRoot)
+	root := new(snapshotRoot)
 	resp, err := svc.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err
