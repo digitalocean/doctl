@@ -31,7 +31,7 @@ type Snapshot struct {
 	ResourceType  string   `json:"resource_type,omitempty"`
 	Regions       []string `json:"regions,omitempty"`
 	MinDiskSize   int      `json:"min_disk_size,omitempty"`
-	SizeGigaBytes int      `json:"size_gigabytes,omitempty"`
+	SizeGigaBytes float64  `json:"size_gigabytes,omitempty"`
 	Created       string   `json:"created_at,omitempty"`
 }
 
