@@ -54,8 +54,8 @@ type Droplet struct {
 	Networks    *Networks `json:"networks,omitempty"`
 	Created     string    `json:"created_at,omitempty"`
 	Kernel      *Kernel   `json:"kernel,omitempty"`
-	Tags        []string  `json:"tags,ommitempty"`
-	VolumeIDs   []string  `json:"volumes"`
+	Tags        []string  `json:"tags,omitempty"`
+	VolumeIDs   []string  `json:"volume_ids"`
 }
 
 // PublicIPv4 returns the public IPv4 address for the Droplet.
@@ -131,7 +131,7 @@ type kernelsRoot struct {
 	Links   *Links   `json:"links"`
 }
 
-type snapshotsRoot struct {
+type dropletSnapshotsRoot struct {
 	Snapshots []Image `json:"snapshots,omitempty"`
 	Links     *Links  `json:"links"`
 }
@@ -509,7 +509,7 @@ func (s *DropletsServiceOp) Snapshots(dropletID int, opt *ListOptions) ([]Image,
 		return nil, nil, err
 	}
 
-	root := new(snapshotsRoot)
+	root := new(dropletSnapshotsRoot)
 	resp, err := s.client.Do(req, root)
 	if err != nil {
 		return nil, resp, err

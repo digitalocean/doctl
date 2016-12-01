@@ -186,6 +186,40 @@ func (d *domain) KV() []map[string]interface{} {
 	return out
 }
 
+type snapshot struct {
+	snapshots do.Snapshots
+}
+
+var _ Displayable = &snapshot{}
+
+func (s *snapshot) JSON(out io.Writer) error {
+	return writeJSON(s.snapshots, out)
+}
+
+func (s *snapshot) Cols() []string {
+	return []string{"ID", "Name", "CreatedAt", "Regions", "ResourceId", "ResourceType", "MinDiskSize", "Size"}
+}
+
+func (s *snapshot) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Name": "Name", "CreatedAt": "Created at", "Regions": "Regions", "ResourceId": "Resource ID", "ResourceType": "Resource Type", "MinDiskSize": "Min Disk Size", "Size": "Size"}
+}
+
+func (s *snapshot) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, d := range s.snapshots {
+		o := map[string]interface{}{
+			"ID": d.ID, "Name": d.Name, "ResourceID": d.ResourceID,
+			"ResourceType": d.ResourceType, "Regions": d.Regions,
+			"MinDiskSize": d.MinDiskSize, "Size": d.SizeGigaBytes, "CreatedAt": d.Created,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
 type domainRecord struct {
 	domainRecords do.DomainRecords
 }

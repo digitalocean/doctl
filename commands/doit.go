@@ -172,6 +172,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(Plugin())
 	cmd.AddCommand(Region())
 	cmd.AddCommand(Size())
+	cmd.AddCommand(Snapshot())
 	cmd.AddCommand(SSHKeys())
 	cmd.AddCommand(Tags())
 	cmd.AddCommand(Volume())
@@ -302,6 +303,7 @@ type CmdConfig struct {
 	Tags              func() do.TagsService
 	Volumes           func() do.VolumesService
 	VolumeActions     func() do.VolumeActionsService
+	Snapshots         func() do.SnapshotsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -334,6 +336,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Tags = func() do.TagsService { return do.NewTagsService(godoClient) }
 			c.Volumes = func() do.VolumesService { return do.NewVolumesService(godoClient) }
 			c.VolumeActions = func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) }
+			c.Snapshots = func() do.SnapshotsService { return do.NewSnapshotsService(godoClient) }
 
 			return nil
 		},
