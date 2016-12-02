@@ -22,7 +22,7 @@ func Snapshot() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "snapshot",
-			Aliases: []string{"d"},
+			Aliases: []string{"s"},
 			Short:   "snapshot commands",
 			Long:    "snapshot is used to access snapshot commands",
 		},
@@ -33,14 +33,8 @@ func Snapshot() *Command {
 		aliasOpt("ls"), displayerType(&snapshot{}), docCategories("droplet"))
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "Resource type")
 
-	/*CmdBuilder(cmd, RunSnapshotListVolume, "lvolume", "list volume", Writer,
-		aliasOpt("lsv"), displayerType(&snapshot{}), docCategories("droplet"))
-
-	CmdBuilder(cmd, RunSnapshotListDroplet, "ldroplet", "list droplet", Writer,
-		aliasOpt("lsd"), displayerType(&snapshot{}), docCategories("droplet"))
-
-		cmdRunDropletGet := CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
-		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))*/
+	/*		cmdRunDropletGet := CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
+			aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))*/
 
 	CmdBuilder(cmd, RunSnapshotDelete, "delete", "delete snapshot", Writer,
 		aliasOpt("d"), displayerType(&droplet{}), docCategories("droplet"))
@@ -80,46 +74,6 @@ func RunSnapshotList(c *CmdConfig) error {
 	}
 	return nil
 }
-
-/*func RunSnapshotListVolume(c *CmdConfig) error {
-	ss := c.Snapshots()
-
-	list, err := ss.ListVolume()
-	if err != nil {
-		return err
-	}
-	item := &snapshot{snapshots: list}
-	return c.Display(item)
-}
-
-func RunSnapshotListDroplet(c *CmdConfig) error {
-	ss := c.Snapshots()
-
-	list, err := ss.ListDroplet()
-	if err != nil {
-		return err
-	}
-	item := &snapshot{snapshots: list}
-	return c.Display(item)
-}*/
-
-/*func RunSnapshotGet(c *CmdConfig) error {
-	snapshotId, err := getSnapshotIDArg(c.NS, c.Args)
-	if err != nil {
-		return err
-	}
-
-	ss := c.Snapshots()
-
-	s, err := ss.Get(snapshotId)
-	if err != nil {
-		return err
-	}
-
-	//item := &snapshot{snapshots: do.Snapshot{*s}}
-
-	return nil
-}*/
 
 func RunSnapshotDelete(c *CmdConfig) error {
 	snapshotId, err := getSnapshotStringArg(c.NS, c.Args)
