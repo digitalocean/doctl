@@ -42,7 +42,7 @@ func TestSnapshotDelete(t *testing.T) {
 		//config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunSnapshotDelete(config)
-		assert.Error(t, err)
+		assert.NoError(t, err)
 
 	})
 }
