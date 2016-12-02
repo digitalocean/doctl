@@ -1,3 +1,16 @@
+/*
+Copyright 2016 The Doctl Authors All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package commands
 
 import (
@@ -16,16 +29,17 @@ func Snapshot() *Command {
 		IsIndex: true,
 	}
 
-	CmdBuilder(cmd, RunSnapshotList, "list", "list", Writer,
+	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [GLOB]", "list snapshots", Writer,
 		aliasOpt("ls"), displayerType(&snapshot{}), docCategories("droplet"))
+	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "Resource type")
 
-	CmdBuilder(cmd, RunSnapshotListVolume, "lvolume", "list volume", Writer,
+	/*CmdBuilder(cmd, RunSnapshotListVolume, "lvolume", "list volume", Writer,
 		aliasOpt("lsv"), displayerType(&snapshot{}), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunSnapshotListDroplet, "ldroplet", "list droplet", Writer,
 		aliasOpt("lsd"), displayerType(&snapshot{}), docCategories("droplet"))
 
-	/*	cmdRunDropletGet := CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
+		cmdRunDropletGet := CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))*/
 
 	CmdBuilder(cmd, RunSnapshotDelete, "delete", "delete snapshot", Writer,
@@ -37,15 +51,37 @@ func Snapshot() *Command {
 func RunSnapshotList(c *CmdConfig) error {
 	ss := c.Snapshots()
 
-	list, err := ss.List()
+	restype, err := c.Doit.GetString(c.NS, doctl.ArgResourceType)
 	if err != nil {
 		return err
 	}
-	item := &snapshot{snapshots: list}
-	return c.Display(item)
+
+	if restype == "droplet" {
+		list, err := ss.ListDroplet()
+		if err != nil {
+			return err
+		}
+		item := &snapshot{snapshots: list}
+		return c.Display(item)
+	} else if restype == "volume" {
+		list, err := ss.ListVolume()
+		if err != nil {
+			return err
+		}
+		item := &snapshot{snapshots: list}
+		return c.Display(item)
+	} else {
+		list, err := ss.List()
+		if err != nil {
+			return err
+		}
+		item := &snapshot{snapshots: list}
+		return c.Display(item)
+	}
+	return nil
 }
 
-func RunSnapshotListVolume(c *CmdConfig) error {
+/*func RunSnapshotListVolume(c *CmdConfig) error {
 	ss := c.Snapshots()
 
 	list, err := ss.ListVolume()
@@ -65,7 +101,7 @@ func RunSnapshotListDroplet(c *CmdConfig) error {
 	}
 	item := &snapshot{snapshots: list}
 	return c.Display(item)
-}
+}*/
 
 /*func RunSnapshotGet(c *CmdConfig) error {
 	snapshotId, err := getSnapshotIDArg(c.NS, c.Args)
@@ -86,7 +122,7 @@ func RunSnapshotListDroplet(c *CmdConfig) error {
 }*/
 
 func RunSnapshotDelete(c *CmdConfig) error {
-	snapshotId, err := getSnapshotIDArg(c.NS, c.Args)
+	snapshotId, err := getSnapshotStringArg(c.NS, c.Args)
 	if err != nil {
 		return err
 	}
@@ -101,7 +137,7 @@ func RunSnapshotDelete(c *CmdConfig) error {
 	return nil
 }
 
-func getSnapshotIDArg(ns string, args []string) (string, error) {
+func getSnapshotStringArg(ns string, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", doctl.NewMissingArgsErr(ns)
 	}

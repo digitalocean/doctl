@@ -129,4 +129,7 @@ const (
 
 	// ArgDeleteForce forces deletion actions
 	ArgDeleteForce = "force"
+
+	// ArgResourceType is the resource type for snapshot.
+	ArgResourceType = "resource"
 )
