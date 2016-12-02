@@ -142,6 +142,7 @@ type tcMocks struct {
 	actions           domocks.ActionsService
 	account           domocks.AccountService
 	tags              domocks.TagsService
+	snapshots         domocks.SnapshotsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
