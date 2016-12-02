@@ -22,7 +22,16 @@ import (
 func TestSnapshotCommand(t *testing.T) {
 	cmd := Snapshot()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "list", "get", "delete")
+	assertCommandNames(t, cmd, "delete", "list", "get")
+}
+
+func TestSnapshotList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.snapshots.On("List").Return(testSnapshotList, nil)
+
+		err := RunSnapshotList(config)
+		assert.NoError(t, err)
+	})
 }
 
 func TestSnapshotDelete(t *testing.T) {
@@ -33,7 +42,7 @@ func TestSnapshotDelete(t *testing.T) {
 		//config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunSnapshotDelete(config)
-		assert.NoError(t, err)
+		assert.Error(t, err)
 
 	})
 }

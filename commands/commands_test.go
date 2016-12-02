@@ -95,6 +95,13 @@ var (
 		},
 	}
 
+	testSnapshot = do.Snapshot{
+		Snapshot: &godo.Snapshot{
+			ID: "1",
+		},
+	}
+	testSnapshotList = do.Snapshots{testSnapshot}
+
 	testDropletList        = do.Droplets{testDroplet, anotherTestDroplet}
 	testPrivateDropletList = do.Droplets{testPrivateDroplet}
 	testKernel             = do.Kernel{Kernel: &godo.Kernel{ID: 1}}
@@ -179,6 +186,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Tags:              func() do.TagsService { return &tm.tags },
 		Volumes:           func() do.VolumesService { return &tm.volumes },
 		VolumeActions:     func() do.VolumeActionsService { return &tm.volumeActions },
+		Snapshots:         func() do.SnapshotsService { return &tm.snapshots },
 	}
 
 	tFn(config, tm)
@@ -198,6 +206,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.tags.AssertExpectations(t))
 	assert.True(t, tm.volumes.AssertExpectations(t))
 	assert.True(t, tm.volumeActions.AssertExpectations(t))
+	assert.True(t, tm.snapshots.AssertExpectations(t))
 }
 
 type TestConfig struct {
