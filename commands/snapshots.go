@@ -15,6 +15,7 @@ package commands
 
 import (
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
 
@@ -33,8 +34,8 @@ func Snapshot() *Command {
 		aliasOpt("ls"), displayerType(&snapshot{}), docCategories("droplet"))
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "Resource type")
 
-	/*		cmdRunDropletGet := CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
-			aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))*/
+	CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
+		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunSnapshotDelete, "delete", "delete snapshot", Writer,
 		aliasOpt("d"), displayerType(&droplet{}), docCategories("droplet"))
@@ -75,8 +76,26 @@ func RunSnapshotList(c *CmdConfig) error {
 	return nil
 }
 
+func RunSnapshotGet(c *CmdConfig) error {
+	snapshotId, errId := getSnapshotIdArg(c.NS, c.Args)
+	if errId != nil {
+		return errId
+	}
+
+	ss := c.Snapshots()
+
+	s, err := ss.Get(snapshotId)
+	if err != nil {
+		return err
+	}
+
+	item := &snapshot{snapshots: do.Snapshots{*s}}
+
+	return c.Display(item)
+}
+
 func RunSnapshotDelete(c *CmdConfig) error {
-	snapshotId, err := getSnapshotStringArg(c.NS, c.Args)
+	snapshotId, err := getSnapshotIdArg(c.NS, c.Args)
 	if err != nil {
 		return err
 	}
@@ -91,7 +110,7 @@ func RunSnapshotDelete(c *CmdConfig) error {
 	return nil
 }
 
-func getSnapshotStringArg(ns string, args []string) (string, error) {
+func getSnapshotIdArg(ns string, args []string) (string, error) {
 	if len(args) != 1 {
 		return "", doctl.NewMissingArgsErr(ns)
 	}
