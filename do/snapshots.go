@@ -20,7 +20,7 @@ type Snapshot struct {
 	*godo.Snapshot
 }
 
-// Snapshots is a slice of Droplet.
+// Snapshots is a slice of Snapshot.
 type Snapshots []Snapshot
 
 // SnapshotsService is an interface for interacting with DigitalOcean's snapshot api.

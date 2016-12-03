@@ -210,7 +210,7 @@ func (s *snapshot) KV() []map[string]interface{} {
 
 	for _, d := range s.snapshots {
 		o := map[string]interface{}{
-			"ID": d.ID, "Name": d.Name, "ResourceID": d.ResourceID,
+			"ID": d.ID, "Name": d.Name, "ResourceId": d.ResourceID,
 			"ResourceType": d.ResourceType, "Regions": d.Regions,
 			"MinDiskSize": d.MinDiskSize, "Size": d.SizeGigaBytes, "CreatedAt": d.Created,
 		}
