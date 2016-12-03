@@ -80,27 +80,29 @@ func RunSnapshotList(c *CmdConfig) error {
 }
 
 func RunSnapshotGet(c *CmdConfig) error {
-	snapshotId, errId := getSnapshotIdArg(c.NS, c.Args)
-	if errId != nil {
-		return errId
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ss := c.Snapshots()
+	ids := c.Args
 
-	s, err := ss.Get(snapshotId)
-	if err != nil {
-		return err
+	var matchedList []do.Snapshot
+
+	for _, id := range ids {
+		s, err := ss.Get(id)
+		if err != nil {
+			return err
+		}
+		matchedList = append(matchedList, *s)
 	}
-
-	item := &snapshot{snapshots: do.Snapshots{*s}}
-
+	item := &snapshot{snapshots: matchedList}
 	return c.Display(item)
 }
 
 func RunSnapshotDelete(c *CmdConfig) error {
-	snapshotId, id_err := getSnapshotIdArg(c.NS, c.Args)
-	if id_err != nil {
-		return id_err
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	force, f_err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
@@ -109,12 +111,14 @@ func RunSnapshotDelete(c *CmdConfig) error {
 	}
 
 	ss := c.Snapshots()
+	ids := c.Args
 
 	if force || AskForConfirm("delete snapshot(s)") == nil {
-
-		err := ss.Delete(snapshotId)
-		if err != nil {
-			return err
+		for _, id := range ids {
+			err := ss.Delete(id)
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		return fmt.Errorf("Operation aborted.")

@@ -16,8 +16,8 @@ package commands
 import (
 	"testing"
 
+	"github.com/digitalocean/doctl"
 	"github.com/stretchr/testify/assert"
-	"github.com/xmudrii/doctl"
 )
 
 func TestSnapshotCommand(t *testing.T) {
