@@ -35,11 +35,67 @@ func TestSnapshotList(t *testing.T) {
 	})
 }
 
+func TestSnapshotListID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.snapshots.On("List").Return(testSnapshotList, nil)
+
+		config.Args = append(config.Args, testSnapshot.ID)
+
+		err := RunSnapshotList(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSnapshotListName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.snapshots.On("List").Return(testSnapshotList, nil)
+
+		config.Args = append(config.Args, testSnapshot.Name)
+
+		err := RunSnapshotList(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSnapshotListMultiple(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.snapshots.On("List").Return(testSnapshotList, nil)
+
+		config.Args = append(config.Args, testSnapshot.ID, testSnapshotSecondary.ID)
+
+		err := RunSnapshotList(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSnapshotListRegion(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.snapshots.On("List").Return(testSnapshotList, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
+
+		err := RunSnapshotList(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestSnapshotGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.snapshots.On("Get", testSnapshot.ID).Return(&testSnapshot, nil)
 
 		config.Args = append(config.Args, testSnapshot.ID)
+
+		err := RunSnapshotGet(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestSnapshotGetMultiple(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.snapshots.On("Get", testSnapshot.ID).Return(&testSnapshot, nil)
+		tm.snapshots.On("Get", testSnapshotSecondary.ID).Return(&testSnapshotSecondary, nil)
+
+		config.Args = append(config.Args, testSnapshot.ID, testSnapshotSecondary.ID)
 
 		err := RunSnapshotGet(config)
 		assert.NoError(t, err)

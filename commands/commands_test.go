@@ -110,10 +110,20 @@ var (
 
 	testSnapshot = do.Snapshot{
 		Snapshot: &godo.Snapshot{
-			ID: "1",
+			ID:      "1",
+			Name:    "test-snapshot",
+			Regions: []string{"dev0"},
 		},
 	}
-	testSnapshotList = do.Snapshots{testSnapshot}
+	testSnapshotSecondary = do.Snapshot{
+		Snapshot: &godo.Snapshot{
+			ID:      "2",
+			Name:    "test-snapshot-2",
+			Regions: []string{"dev1", "dev2"},
+		},
+	}
+
+	testSnapshotList = do.Snapshots{testSnapshot, testSnapshotSecondary}
 )
 
 func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {

@@ -173,11 +173,3 @@ func RunSnapshotDelete(c *CmdConfig) error {
 	}
 	return nil
 }
-
-func getSnapshotIdArg(ns string, args []string) (string, error) {
-	if len(args) != 1 {
-		return "", doctl.NewMissingArgsErr(ns)
-	}
-
-	return args[0], nil
-}
