@@ -18,6 +18,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/gobwas/glob"
 	"github.com/spf13/cobra"
 )
 
@@ -35,6 +36,7 @@ func Snapshot() *Command {
 	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [GLOB]", "list snapshots", Writer,
 		aliasOpt("ls"), displayerType(&snapshot{}), docCategories("droplet"))
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "Resource type")
+	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "Snapshot region")
 
 	CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
@@ -54,29 +56,75 @@ func RunSnapshotList(c *CmdConfig) error {
 		return err
 	}
 
-	if restype == "droplet" {
-		list, err := ss.ListDroplet()
-		if err != nil {
-			return err
-		}
-		item := &snapshot{snapshots: list}
-		return c.Display(item)
-	} else if restype == "volume" {
-		list, err := ss.ListVolume()
-		if err != nil {
-			return err
-		}
-		item := &snapshot{snapshots: list}
-		return c.Display(item)
-	} else {
-		list, err := ss.List()
-		if err != nil {
-			return err
-		}
-		item := &snapshot{snapshots: list}
-		return c.Display(item)
+	region, reg_err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	if reg_err != nil {
+		return reg_err
 	}
-	return nil
+
+	matches := []glob.Glob{}
+	for _, globStr := range c.Args {
+		g, err := glob.Compile(globStr)
+		if err != nil {
+			return fmt.Errorf("unknown glob %q", globStr)
+		}
+
+		matches = append(matches, g)
+	}
+
+	var matchedList []do.Snapshot
+	list := []do.Snapshot{}
+
+	if restype == "droplet" {
+		list, err = ss.ListDroplet()
+		if err != nil {
+			return err
+		}
+	} else if restype == "volume" {
+		list, err = ss.ListVolume()
+		if err != nil {
+			return err
+		}
+	} else {
+		list, err = ss.List()
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, snapshot := range list {
+		var skip = true
+		if len(matches) == 0 {
+			skip = false
+		} else {
+			for _, m := range matches {
+				if m.Match(snapshot.ID) {
+					skip = false
+				}
+				if m.Match(snapshot.Name) {
+					skip = false
+				}
+			}
+		}
+
+		if !skip && region != "" {
+			for _, snapshotRegion := range snapshot.Regions {
+				if region != snapshotRegion {
+					skip = true
+				} else {
+					skip = false
+					break
+				}
+			}
+
+		}
+
+		if !skip {
+			matchedList = append(matchedList, snapshot)
+		}
+	}
+
+	item := &snapshot{snapshots: matchedList}
+	return c.Display(item)
 }
 
 func RunSnapshotGet(c *CmdConfig) error {
