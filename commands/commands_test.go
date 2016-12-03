@@ -95,13 +95,6 @@ var (
 		},
 	}
 
-	testSnapshot = do.Snapshot{
-		Snapshot: &godo.Snapshot{
-			ID: "1",
-		},
-	}
-	testSnapshotList = do.Snapshots{testSnapshot}
-
 	testDropletList        = do.Droplets{testDroplet, anotherTestDroplet}
 	testPrivateDropletList = do.Droplets{testPrivateDroplet}
 	testKernel             = do.Kernel{Kernel: &godo.Kernel{ID: 1}}
@@ -114,6 +107,13 @@ var (
 		},
 	}
 	testFloatingIPList = do.FloatingIPs{testFloatingIP}
+
+	testSnapshot = do.Snapshot{
+		Snapshot: &godo.Snapshot{
+			ID: "1",
+		},
+	}
+	testSnapshotList = do.Snapshots{testSnapshot}
 )
 
 func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {

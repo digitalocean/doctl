@@ -17,12 +17,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/xmudrii/doctl"
 )
 
 func TestSnapshotCommand(t *testing.T) {
 	cmd := Snapshot()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "delete", "list", "get")
+	assertCommandNames(t, cmd, "list", "get", "delete")
 }
 
 func TestSnapshotList(t *testing.T) {
@@ -34,12 +35,23 @@ func TestSnapshotList(t *testing.T) {
 	})
 }
 
+func TestSnapshotGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.snapshots.On("Get", testSnapshot.ID).Return(&testSnapshot, nil)
+
+		config.Args = append(config.Args, testSnapshot.ID)
+
+		err := RunSnapshotGet(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestSnapshotDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("Delete", "1").Return(nil)
+		tm.snapshots.On("Delete", testSnapshot.ID).Return(nil)
 
-		config.Args = append(config.Args, "1")
-		//config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
+		config.Args = append(config.Args, testSnapshot.ID)
+		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
 
 		err := RunSnapshotDelete(config)
 		assert.NoError(t, err)

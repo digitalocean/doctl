@@ -14,6 +14,8 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
@@ -37,8 +39,9 @@ func Snapshot() *Command {
 	CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
 
-	CmdBuilder(cmd, RunSnapshotDelete, "delete", "delete snapshot", Writer,
+	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete", "delete snapshot", Writer,
 		aliasOpt("d"), displayerType(&droplet{}), docCategories("droplet"))
+	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgDeleteForce, false, "Force snapshot delete")
 
 	return cmd
 }
@@ -95,18 +98,27 @@ func RunSnapshotGet(c *CmdConfig) error {
 }
 
 func RunSnapshotDelete(c *CmdConfig) error {
-	snapshotId, err := getSnapshotIdArg(c.NS, c.Args)
-	if err != nil {
-		return err
+	snapshotId, id_err := getSnapshotIdArg(c.NS, c.Args)
+	if id_err != nil {
+		return id_err
+	}
+
+	force, f_err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	if f_err != nil {
+		return f_err
 	}
 
 	ss := c.Snapshots()
 
-	derr := ss.Delete(snapshotId)
-	if derr != nil {
-		return derr
-	}
+	if force || AskForConfirm("delete snapshot(s)") == nil {
 
+		err := ss.Delete(snapshotId)
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("Operation aborted.")
+	}
 	return nil
 }
 
