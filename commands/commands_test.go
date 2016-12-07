@@ -107,6 +107,23 @@ var (
 		},
 	}
 	testFloatingIPList = do.FloatingIPs{testFloatingIP}
+
+	testSnapshot = do.Snapshot{
+		Snapshot: &godo.Snapshot{
+			ID:      "1",
+			Name:    "test-snapshot",
+			Regions: []string{"dev0"},
+		},
+	}
+	testSnapshotSecondary = do.Snapshot{
+		Snapshot: &godo.Snapshot{
+			ID:      "2",
+			Name:    "test-snapshot-2",
+			Regions: []string{"dev1", "dev2"},
+		},
+	}
+
+	testSnapshotList = do.Snapshots{testSnapshot, testSnapshotSecondary}
 )
 
 func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
@@ -142,6 +159,7 @@ type tcMocks struct {
 	actions           domocks.ActionsService
 	account           domocks.AccountService
 	tags              domocks.TagsService
+	snapshots         domocks.SnapshotsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -178,6 +196,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Tags:              func() do.TagsService { return &tm.tags },
 		Volumes:           func() do.VolumesService { return &tm.volumes },
 		VolumeActions:     func() do.VolumeActionsService { return &tm.volumeActions },
+		Snapshots:         func() do.SnapshotsService { return &tm.snapshots },
 	}
 
 	tFn(config, tm)
@@ -197,6 +216,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.tags.AssertExpectations(t))
 	assert.True(t, tm.volumes.AssertExpectations(t))
 	assert.True(t, tm.volumeActions.AssertExpectations(t))
+	assert.True(t, tm.snapshots.AssertExpectations(t))
 }
 
 type TestConfig struct {

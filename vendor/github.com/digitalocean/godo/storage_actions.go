@@ -8,6 +8,7 @@ import "fmt"
 type StorageActionsService interface {
 	Attach(volumeID string, dropletID int) (*Action, *Response, error)
 	Detach(volumeID string) (*Action, *Response, error)
+	DetachByDropletID(volumeID string, dropletID int) (*Action, *Response, error)
 	Get(volumeID string, actionID int) (*Action, *Response, error)
 	List(volumeID string, opt *ListOptions) ([]Action, *Response, error)
 	Resize(volumeID string, sizeGigabytes int, regionSlug string) (*Action, *Response, error)
@@ -38,6 +39,15 @@ func (s *StorageActionsServiceOp) Attach(volumeID string, dropletID int) (*Actio
 func (s *StorageActionsServiceOp) Detach(volumeID string) (*Action, *Response, error) {
 	request := &ActionRequest{
 		"type": "detach",
+	}
+	return s.doAction(volumeID, request)
+}
+
+// Detach a storage volume from a droplet by droplet ID.
+func (s *StorageActionsServiceOp) DetachByDropletID(volumeID string, dropletID int) (*Action, *Response, error) {
+	request := &ActionRequest{
+		"type":       "detach",
+		"droplet_id": dropletID,
 	}
 	return s.doAction(volumeID, request)
 }
@@ -83,7 +93,7 @@ func (s *StorageActionsServiceOp) doAction(volumeID string, request *ActionReque
 		return nil, resp, err
 	}
 
-	return &root.Event, resp, err
+	return root.Event, resp, err
 }
 
 func (s *StorageActionsServiceOp) get(path string) (*Action, *Response, error) {
@@ -98,7 +108,7 @@ func (s *StorageActionsServiceOp) get(path string) (*Action, *Response, error) {
 		return nil, resp, err
 	}
 
-	return &root.Event, resp, err
+	return root.Event, resp, err
 }
 
 func (s *StorageActionsServiceOp) list(path string) ([]Action, *Response, error) {

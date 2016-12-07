@@ -72,6 +72,38 @@ func TestStoragesActions_Detach(t *testing.T) {
 	}
 }
 
+func TestStoragesActions_DetachByDropletID(t *testing.T) {
+	setup()
+	defer teardown()
+	volumeID := "98d414c6-295e-4e3a-ac58-eb9456c1e1d1"
+	dropletID := 123456
+
+	detachByDropletIDRequest := &ActionRequest{
+		"type":       "detach",
+		"droplet_id": float64(dropletID), // encoding/json decodes numbers as floats
+	}
+
+	mux.HandleFunc("/v2/volumes/"+volumeID+"/actions", func(w http.ResponseWriter, r *http.Request) {
+		v := new(ActionRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatalf("decode json: %v", err)
+		}
+
+		testMethod(t, r, "POST")
+		if !reflect.DeepEqual(v, detachByDropletIDRequest) {
+			t.Errorf("want=%#v", detachByDropletIDRequest)
+			t.Errorf("got=%#v", v)
+		}
+		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
+	})
+
+	_, _, err := client.StorageActions.DetachByDropletID(volumeID, dropletID)
+	if err != nil {
+		t.Errorf("StoragesActions.DetachByDropletID returned error: %v", err)
+	}
+}
+
 func TestStorageActions_Get(t *testing.T) {
 	setup()
 	defer teardown()

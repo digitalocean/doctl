@@ -623,3 +623,39 @@ func (a *volume) KV() []map[string]interface{} {
 	return out
 
 }
+
+type snapshot struct {
+	snapshots do.Snapshots
+}
+
+var _ Displayable = &snapshot{}
+
+func (s *snapshot) JSON(out io.Writer) error {
+	return writeJSON(s.snapshots, out)
+}
+
+func (s *snapshot) Cols() []string {
+	return []string{"ID", "Name", "CreatedAt", "Regions", "ResourceId",
+		"ResourceType", "MinDiskSize", "Size"}
+}
+
+func (s *snapshot) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Name": "Name", "CreatedAt": "Created at", "Regions": "Regions",
+		"ResourceId": "Resource ID", "ResourceType": "Resource Type", "MinDiskSize": "Min Disk Size", "Size": "Size"}
+}
+
+func (s *snapshot) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, ss := range s.snapshots {
+		o := map[string]interface{}{
+			"ID": ss.ID, "Name": ss.Name, "ResourceId": ss.ResourceID,
+			"ResourceType": ss.ResourceType, "Regions": ss.Regions, "MinDiskSize": ss.MinDiskSize,
+			"Size": strconv.FormatFloat(ss.SizeGigaBytes, 'f', 2, 64) + " GiB", "CreatedAt": ss.Created,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
