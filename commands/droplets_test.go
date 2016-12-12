@@ -82,6 +82,7 @@ func TestDropletCreate(t *testing.T) {
 			Backups:           false,
 			IPv6:              false,
 			PrivateNetworking: false,
+			Monitoring:        false,
 			UserData:          "#cloud-config",
 			Tags:              []string{"one", "two"},
 		}
