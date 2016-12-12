@@ -58,6 +58,8 @@ const (
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.
 	ArgPrivateNetworking = "enable-private-networking"
+	// ArgMonitoring is an enable monitoring argument.
+	ArgMonitoring = "enable-monitoring"
 	// ArgRecordData is a record data argument.
 	ArgRecordData = "record-data"
 	// ArgRecordID is a record id argument.
