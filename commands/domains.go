@@ -38,8 +38,8 @@ func Domain() *Command {
 
 	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,
 		aliasOpt("c"), displayerType(&domain{}), docCategories("domain"))
-	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "IP address", requiredOpt())
-
+	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address", requiredOpt())
+	
 	CmdBuilder(cmd, RunDomainList, "list", "list domains", Writer,
 		aliasOpt("ls"), displayerType(&domain{}), docCategories("domain"))
 
@@ -59,29 +59,29 @@ func Domain() *Command {
 
 	cmdRecordList := CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", Writer,
 		aliasOpt("ls"), displayerType(&domainRecord{}), docCategories("domain"))
-	AddStringFlag(cmdRecordList, doctl.ArgDomainName, "", "Domain name")
+	AddStringFlag(cmdRecordList, doctl.ArgDomainName, "", "", "Domain name")
 
 	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "create record", Writer,
 		aliasOpt("c"), displayerType(&domainRecord{}), docCategories("domain"))
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "Record type")
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "Record name")
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "Record data")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPriority, 0, "Record priority")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPort, 0, "Record port")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, 0, "Record weight")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", "Record type")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "", "Record name")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "", "Record data")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPriority, "", 0, "Record priority")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPort, "", 0, "Record port")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, "", 0, "Record weight")
 
 	CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", Writer,
 		aliasOpt("d"), docCategories("domain"))
 
 	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "update record", Writer,
 		aliasOpt("u"), displayerType(&domainRecord{}), docCategories("domain"))
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, 0, "Record ID")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "Record type")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordName, "", "Record name")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "Record data")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, 0, "Record priority")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, 0, "Record port")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, 0, "Record weight")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, "", 0, "Record ID")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "", "Record type")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordName, "", "", "Record name")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "", "Record data")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, "", 0, "Record priority")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, "", 0, "Record port")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "Record weight")
 
 	return cmd
 }

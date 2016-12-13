@@ -36,13 +36,13 @@ func ImageAction() *Command {
 	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,
 		"get <image-id>", "get image action", Writer,
 		displayerType(&action{}), docCategories("image"))
-	AddIntFlag(cmdImageActionsGet, doctl.ArgActionID, 0, "action id", requiredOpt())
+	AddIntFlag(cmdImageActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
 
 	cmdImageActionsTransfer := CmdBuilder(cmd, RunImageActionsTransfer,
 		"transfer <image-id>", "transfer image", Writer,
 		displayerType(&action{}), docCategories("image"))
-	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "region", requiredOpt())
-	AddBoolFlag(cmdImageActionsTransfer, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "", "region", requiredOpt())
+	AddBoolFlag(cmdImageActionsTransfer, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	return cmd
 }

@@ -38,10 +38,10 @@ func FloatingIP() *Command {
 
 	cmdFloatingIPCreate := CmdBuilder(cmd, RunFloatingIPCreate, "create", "create a floating IP", Writer,
 		aliasOpt("c"), displayerType(&floatingIP{}), docCategories("floatingip"))
-	AddStringFlag(cmdFloatingIPCreate, doctl.ArgRegionSlug, "",
+	AddStringFlag(cmdFloatingIPCreate, doctl.ArgRegionSlug, "", "",
 		fmt.Sprintf("Region where to create the floating IP. (mutually exclusive with %s)",
 			doctl.ArgDropletID))
-	AddIntFlag(cmdFloatingIPCreate, doctl.ArgDropletID, 0,
+	AddIntFlag(cmdFloatingIPCreate, doctl.ArgDropletID, "", 0,
 		fmt.Sprintf("ID of the droplet to assign the IP to. (mutually exclusive with %s)",
 			doctl.ArgRegionSlug))
 
@@ -52,7 +52,7 @@ func FloatingIP() *Command {
 
 	cmdFloatingIPList := CmdBuilder(cmd, RunFloatingIPList, "list", "list all floating IP addresses", Writer,
 		aliasOpt("ls"), displayerType(&floatingIP{}), docCategories("floatingip"))
-	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "Floating IP region")
+	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "", "Floating IP region")
 
 	return cmd
 }

@@ -45,12 +45,12 @@ func Tags() *Command {
 
 	cmdTagUpdate := CmdBuilder(cmd, RunCmdTagUpdate, "update NAME", "update tag", Writer,
 		docCategories("tag"))
-	AddStringFlag(cmdTagUpdate, doctl.ArgTagName, "", "Tag name",
+	AddStringFlag(cmdTagUpdate, doctl.ArgTagName, "", "", "Tag name",
 		requiredOpt())
 
 	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete NAME", "delete tag", Writer,
 		docCategories("tag"))
-	AddBoolFlag(cmdRunTagDelete, doctl.ArgDeleteForce, false, "Force tag delete")
+	AddBoolFlag(cmdRunTagDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force tag delete")
 
 	return cmd
 }

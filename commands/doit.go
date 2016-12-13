@@ -213,9 +213,9 @@ func isBeta() bool {
 }
 
 // AddStringFlag adds a string flag to a command.
-func AddStringFlag(cmd *Command, name, dflt, desc string, opts ...flagOpt) {
+func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
-	cmd.Flags().String(name, dflt, desc)
+	cmd.Flags().StringP(name, shorthand, dflt, desc)
 
 	for _, o := range opts {
 		o(cmd, name, fn)
@@ -225,9 +225,9 @@ func AddStringFlag(cmd *Command, name, dflt, desc string, opts ...flagOpt) {
 }
 
 // AddIntFlag adds an integr flag to a command.
-func AddIntFlag(cmd *Command, name string, def int, desc string, opts ...flagOpt) {
+func AddIntFlag(cmd *Command, name, shorthand string, def int, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
-	cmd.Flags().Int(name, def, desc)
+	cmd.Flags().IntP(name, shorthand, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
@@ -236,9 +236,9 @@ func AddIntFlag(cmd *Command, name string, def int, desc string, opts ...flagOpt
 }
 
 // AddBoolFlag adds a boolean flag to a command.
-func AddBoolFlag(cmd *Command, name string, def bool, desc string, opts ...flagOpt) {
+func AddBoolFlag(cmd *Command, name, shorthand string, def bool, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
-	cmd.Flags().Bool(name, def, desc)
+	cmd.Flags().BoolP(name, shorthand, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
@@ -247,9 +247,9 @@ func AddBoolFlag(cmd *Command, name string, def bool, desc string, opts ...flagO
 }
 
 // AddStringSliceFlag adds a string slice flag to a command.
-func AddStringSliceFlag(cmd *Command, name string, def []string, desc string, opts ...flagOpt) {
+func AddStringSliceFlag(cmd *Command, name, shorthand string, def []string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
-	cmd.Flags().StringSlice(name, def, desc)
+	cmd.Flags().StringSliceP(name, shorthand, def, desc)
 	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
@@ -401,8 +401,8 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out
 	if cols := c.fmtCols; cols != nil {
 		formatHelp := fmt.Sprintf("Columns for output in a comma seperated list. Possible values: %s",
 			strings.Join(cols, ","))
-		AddStringFlag(c, doctl.ArgFormat, "", formatHelp)
-		AddBoolFlag(c, doctl.ArgNoHeader, false, "hide headers")
+		AddStringFlag(c, doctl.ArgFormat, "", "", formatHelp)
+		AddBoolFlag(c, doctl.ArgNoHeader, "", false, "hide headers")
 	}
 
 	return c
