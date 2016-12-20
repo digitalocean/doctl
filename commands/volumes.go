@@ -1,3 +1,16 @@
+/*
+Copyright 2016 The Doctl Authors All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package commands
 
 import (
@@ -38,6 +51,11 @@ func Volume() *Command {
 
 	CmdBuilder(cmd, RunVolumeGet, "get [ID]", "get a volume", Writer, aliasOpt("g"),
 		displayerType(&volume{}))
+
+	cmdRunVolumeSnapshot := CmdBuilder(cmd, RunVolumeSnapshot, "snapshot [volume-id]", "create a volume snapshot", Writer,
+		aliasOpt("s"), displayerType(&volume{}))
+	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "Snapshot name", requiredOpt())
+	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "Snapshot description")
 
 	return cmd
 
@@ -173,4 +191,37 @@ func RunVolumeGet(c *CmdConfig) error {
 	}
 	item := &volume{volumes: []do.Volume{*d}}
 	return c.Display(item)
+}
+
+// RunVolumeSnapshot creates a snapshot of a volume
+func RunVolumeSnapshot(c *CmdConfig) error {
+	var err error
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	al := c.Volumes()
+	id := c.Args[0]
+
+	name, err := c.Doit.GetString(c.NS, doctl.ArgSnapshotName)
+	if err != nil {
+		return err
+	}
+
+	desc, err := c.Doit.GetString(c.NS, doctl.ArgSnapshotDesc)
+	if err != nil {
+		return nil
+	}
+
+	req := &godo.SnapshotCreateRequest{
+		VolumeID:    id,
+		Name:        name,
+		Description: desc,
+	}
+
+	if _, err := al.CreateSnapshot(req); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -134,4 +134,6 @@ const (
 
 	// ArgResourceType is the resource type for snapshot.
 	ArgResourceType = "resource"
+	// ArgSnapshotDesc is the description for volume snapshot.
+	ArgSnapshotDesc = "snapshot-desc"
 )
