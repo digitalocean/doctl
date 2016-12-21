@@ -21,12 +21,12 @@ type StorageActionsServiceOp struct {
 }
 
 // StorageAttachment represents the attachement of a block storage
-// volume to a specific droplet under the device name.
+// volume to a specific Droplet under the device name.
 type StorageAttachment struct {
 	DropletID int `json:"droplet_id"`
 }
 
-// Attach a storage volume to a droplet.
+// Attach a storage volume to a Droplet.
 func (s *StorageActionsServiceOp) Attach(volumeID string, dropletID int) (*Action, *Response, error) {
 	request := &ActionRequest{
 		"type":       "attach",
@@ -35,7 +35,7 @@ func (s *StorageActionsServiceOp) Attach(volumeID string, dropletID int) (*Actio
 	return s.doAction(volumeID, request)
 }
 
-// Detach a storage volume from a droplet.
+// Detach a storage volume from a Droplet.
 func (s *StorageActionsServiceOp) Detach(volumeID string) (*Action, *Response, error) {
 	request := &ActionRequest{
 		"type": "detach",
@@ -43,7 +43,7 @@ func (s *StorageActionsServiceOp) Detach(volumeID string) (*Action, *Response, e
 	return s.doAction(volumeID, request)
 }
 
-// Detach a storage volume from a droplet by droplet ID.
+// DetachByDropletID a storage volume from a Droplet by Droplet ID.
 func (s *StorageActionsServiceOp) DetachByDropletID(volumeID string, dropletID int) (*Action, *Response, error) {
 	request := &ActionRequest{
 		"type":       "detach",
