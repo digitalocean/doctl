@@ -165,6 +165,7 @@ func TestDroplets_Create(t *testing.T) {
 			"backups":            false,
 			"ipv6":               false,
 			"private_networking": false,
+			"monitoring":         false,
 			"volumes": []interface{}{
 				map[string]interface{}{"name": "hello-im-a-volume"},
 				map[string]interface{}{"id": "hello-im-another-volume"},
@@ -224,6 +225,7 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 			"backups":            false,
 			"ipv6":               false,
 			"private_networking": false,
+			"monitoring":         false,
 			"tags":               []interface{}{"one", "two"},
 		}
 
