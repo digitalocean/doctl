@@ -133,7 +133,7 @@ func TestNewRequest(t *testing.T) {
 	inBody, outBody := &DropletCreateRequest{Name: "l"},
 		`{"name":"l","region":"","size":"","image":0,`+
 			`"ssh_keys":null,"backups":false,"ipv6":false,`+
-			`"private_networking":false,"tags":null}`+"\n"
+			`"private_networking":false,"monitoring":false,"tags":null}`+"\n"
 	req, _ := c.NewRequest("GET", inURL, inBody)
 
 	// test relative URL was expanded
@@ -161,7 +161,7 @@ func TestNewRequest_withUserData(t *testing.T) {
 	inBody, outBody := &DropletCreateRequest{Name: "l", UserData: "u"},
 		`{"name":"l","region":"","size":"","image":0,`+
 			`"ssh_keys":null,"backups":false,"ipv6":false,`+
-			`"private_networking":false,"user_data":"u","tags":null}`+"\n"
+			`"private_networking":false,"monitoring":false,"user_data":"u","tags":null}`+"\n"
 	req, _ := c.NewRequest("GET", inURL, inBody)
 
 	// test relative URL was expanded
