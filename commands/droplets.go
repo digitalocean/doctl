@@ -59,11 +59,11 @@ func Droplet() *Command {
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "Droplet size",
 		requiredOpt())
-	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, false, "Backup droplet")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, false, "IPv6 support")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, false, "Private networking")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, false, "Monitoring")
-	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "Droplet image",
+	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Backup droplet")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "IPv6 support")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Private networking")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Monitoring")
+	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "Droplet image",
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "Tag name")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "Tag names")
