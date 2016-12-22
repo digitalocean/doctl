@@ -62,6 +62,7 @@ func Droplet() *Command {
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, false, "Backup droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, false, "IPv6 support")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, false, "Private networking")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, false, "Monitoring")
 	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "Droplet image",
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "Tag name")
@@ -172,6 +173,11 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	monitoring, err := c.Doit.GetBool(c.NS, doctl.ArgMonitoring)
+	if err != nil {
+		return err
+	}
+
 	keys, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSSHKeys)
 	if err != nil {
 		return err
@@ -243,6 +249,7 @@ func RunDropletCreate(c *CmdConfig) error {
 			Backups:           backups,
 			IPv6:              ipv6,
 			PrivateNetworking: privateNetworking,
+			Monitoring:        monitoring,
 			SSHKeys:           sshKeys,
 			UserData:          userData,
 			Tags:              tagNames,
