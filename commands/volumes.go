@@ -27,7 +27,6 @@ func Volume() *Command {
 
 	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create [name]", "create a volume", Writer,
 		aliasOpt("c"), displayerType(&volume{}))
-
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSize, "", "4TiB", "Volume size",
 		requiredOpt())
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeDesc, "", "", "Volume description")
@@ -37,7 +36,7 @@ func Volume() *Command {
 	CmdBuilder(cmd, RunVolumeDelete, "delete [ID]", "delete a volume", Writer,
 		aliasOpt("rm"))
 
-		CmdBuilder(cmd, RunVolumeGet, "get [ID]", "get a volume", Writer, aliasOpt("g"),
+	CmdBuilder(cmd, RunVolumeGet, "get [ID]", "get a volume", Writer, aliasOpt("g"),
 		displayerType(&volume{}))
 
 	return cmd

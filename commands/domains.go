@@ -39,7 +39,7 @@ func Domain() *Command {
 	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,
 		aliasOpt("c"), displayerType(&domain{}), docCategories("domain"))
 	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address", requiredOpt())
-	
+
 	CmdBuilder(cmd, RunDomainList, "list", "list domains", Writer,
 		aliasOpt("ls"), displayerType(&domain{}), docCategories("domain"))
 
