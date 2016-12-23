@@ -2,10 +2,12 @@ package do
 
 import "github.com/digitalocean/godo"
 
-// VolumeActionsService is an interface for interacting with DigitalOcean's account api.
+// VolumeActionsService is an interface for interacting with DigitalOcean's volume-action api.
 type VolumeActionsService interface {
 	Attach(string, int) (*Action, error)
 	Detach(string) (*Action, error)
+	DetachByDropletID(string, int) (*Action, error)
+	Resize(string, int, string) (*Action, error)
 }
 
 type volumeActionsService struct {
@@ -40,4 +42,15 @@ func (das *volumeActionsService) Detach(volumeID string) (*Action, error) {
 	a, _, err := das.client.StorageActions.Detach(volumeID)
 	return das.handleActionResponse(a, err)
 
+}
+
+func (das *volumeActionsService) DetachByDropletID(volumeID string, dropletID int) (*Action, error) {
+	a, _, err := das.client.StorageActions.DetachByDropletID(volumeID, dropletID)
+	return das.handleActionResponse(a, err)
+
+}
+
+func (das *volumeActionsService) Resize(volumeID string, sizeGigabytes int, regionSlug string) (*Action, error) {
+	a, _, err := das.client.StorageActions.Resize(volumeID, sizeGigabytes, regionSlug)
+	return das.handleActionResponse(a, err)
 }

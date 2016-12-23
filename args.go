@@ -52,6 +52,10 @@ const (
 	ArgResizeDisk = "resize-disk"
 	// ArgSnapshotName is a snapshot name arugment.
 	ArgSnapshotName = "snapshot-name"
+	// ArgSnapshotDesc is the description for volume snapshot.
+	ArgSnapshotDesc = "snapshot-desc"
+	// ArgResourceType is the resource type for snapshot.
+	ArgResourceType = "resource"
 	// ArgBackups is an enable backups argument.
 	ArgBackups = "enable-backups"
 	// ArgIPv6 is an enable IPv6 argument.
@@ -131,7 +135,4 @@ const (
 
 	// ArgDeleteForce forces deletion actions
 	ArgDeleteForce = "force"
-
-	// ArgResourceType is the resource type for snapshot.
-	ArgResourceType = "resource"
 )

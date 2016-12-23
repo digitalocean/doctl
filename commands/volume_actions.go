@@ -1,3 +1,16 @@
+/*
+Copyright 2016 The Doctl Authors All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package commands
 
 import (
@@ -51,6 +64,16 @@ func VolumeAction() *Command {
 	CmdBuilder(cmd, RunVolumeDetach, "detach <volume-id>", "detach a volume", Writer,
 		aliasOpt("d"))
 
+	CmdBuilder(cmd, RunVolumeDetachByDropletID, "detach-by-droplet-id <volume-id> <droplet-id>", "detach a volume by droplet ID", Writer,
+		aliasOpt("dd"))
+
+	cmdRunVolumeResize := CmdBuilder(cmd, RunVolumeResize, "resize <volume-id>", "resize a volume", Writer,
+		aliasOpt("r"))
+	AddIntFlag(cmdRunVolumeResize, doctl.ArgSizeSlug, "", 0, "New size",
+		requiredOpt())
+	AddStringFlag(cmdRunVolumeResize, doctl.ArgRegionSlug, "", "", "Volume region",
+		requiredOpt())
+
 	return cmd
 
 }
@@ -81,6 +104,48 @@ func RunVolumeDetach(c *CmdConfig) error {
 		}
 		volumeID := c.Args[0]
 		a, err := das.Detach(volumeID)
+		return a, err
+	}
+	return performVolumeAction(c, fn)
+}
+
+// RunVolumeDetachByDropletID detaches a volume by droplet ID
+func RunVolumeDetachByDropletID(c *CmdConfig) error {
+	fn := func(das do.VolumeActionsService) (*do.Action, error) {
+		if len(c.Args) != 2 {
+			return nil, doctl.NewMissingArgsErr(c.NS)
+		}
+		volumeID := c.Args[0]
+		dropletID, err := strconv.Atoi(c.Args[1])
+		if err != nil {
+			return nil, err
+		}
+		a, err := das.DetachByDropletID(volumeID, dropletID)
+		return a, err
+	}
+	return performVolumeAction(c, fn)
+}
+
+// RunVolumeResize resizes a volume
+func RunVolumeResize(c *CmdConfig) error {
+	fn := func(das do.VolumeActionsService) (*do.Action, error) {
+		if len(c.Args) != 1 {
+			return nil, doctl.NewMissingArgsErr(c.NS)
+		}
+
+		volumeID := c.Args[0]
+
+		size, err := c.Doit.GetInt(c.NS, doctl.ArgSizeSlug)
+		if err != nil {
+			return nil, err
+		}
+
+		region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+		if err != nil {
+			return nil, err
+		}
+
+		a, err := das.Resize(volumeID, size, region)
 		return a, err
 	}
 	return performVolumeAction(c, fn)
