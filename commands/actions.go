@@ -40,16 +40,16 @@ func Actions() *Command {
 
 	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
 		aliasOpt("ls"), displayerType(&action{}), docCategories("action"))
-	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "Action resource type")
-	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "Action region")
-	AddStringFlag(cmdActionList, doctl.ArgActionAfter, "", "Action completed after in RFC3339 format")
-	AddStringFlag(cmdActionList, doctl.ArgActionBefore, "", "Action completed before in RFC3339 format")
-	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "Action status")
-	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "Action type")
+	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", "Action resource type")
+	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", "Action region")
+	AddStringFlag(cmdActionList, doctl.ArgActionAfter, "", "", "Action completed after in RFC3339 format")
+	AddStringFlag(cmdActionList, doctl.ArgActionBefore, "", "", "Action completed before in RFC3339 format")
+	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", "Action status")
+	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", "Action type")
 
 	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", Writer,
 		aliasOpt("w"), displayerType(&action{}), docCategories("action"))
-	AddIntFlag(cmdActionWait, doctl.ArgPollTime, 5, "Re-poll time in seconds")
+	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 
 	return cmd
 }

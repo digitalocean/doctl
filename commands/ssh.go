@@ -39,11 +39,11 @@ func SSH(parent *Command) *Command {
 
 	cmdSSH := CmdBuilder(parent, RunSSH, "ssh <droplet-id | host>", "ssh to droplet", Writer,
 		docCategories("droplet"))
-	AddStringFlag(cmdSSH, doctl.ArgSSHUser, "root", "ssh user")
-	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, path, "path to private ssh key")
-	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, 22, "port sshd is running on")
-	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, false, "enable ssh agent forwarding")
-	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, false, "ssh to private ip instead of public ip")
+	AddStringFlag(cmdSSH, doctl.ArgSSHUser, "", "root", "ssh user")
+	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, "", path, "path to private ssh key")
+	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, "", 22, "port sshd is running on")
+	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, "", false, "enable ssh agent forwarding")
+	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, "", false, "ssh to private ip instead of public ip")
 
 	return cmdSSH
 }

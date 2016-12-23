@@ -44,18 +44,18 @@ func SSHKeys() *Command {
 
 	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", Writer,
 		aliasOpt("c"), displayerType(&key{}), docCategories("sshkeys"))
-	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "Key contents", requiredOpt())
+	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "", "Key contents", requiredOpt())
 
 	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", Writer,
 		aliasOpt("i"), displayerType(&key{}), docCategories("sshkeys"))
-	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "Public key file", requiredOpt())
+	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
 
 	CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
 		aliasOpt("d"), docCategories("sshkeys"))
 
 	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
 		aliasOpt("u"), displayerType(&key{}), docCategories("sshkeys"))
-	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "Key name", requiredOpt())
+	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "", "Key name", requiredOpt())
 
 	return cmd
 }

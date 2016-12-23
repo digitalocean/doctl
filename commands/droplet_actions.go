@@ -61,94 +61,94 @@ func DropletAction() *Command {
 
 	cmdDropletActionGet := CmdBuilder(cmd, RunDropletActionGet, "get", "get droplet action", Writer,
 		aliasOpt("g"), displayerType(&action{}), docCategories("droplet"))
-	AddIntFlag(cmdDropletActionGet, doctl.ArgActionID, 0, "Action ID", requiredOpt())
+	AddIntFlag(cmdDropletActionGet, doctl.ArgActionID, "", 0, "Action ID", requiredOpt())
 
 	cmdDropletActionDisableBackups := CmdBuilder(cmd, RunDropletActionDisableBackups,
 		"disable-backups <droplet-id>", "disable backups", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionDisableBackups, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionDisableBackups, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionReboot := CmdBuilder(cmd, RunDropletActionReboot,
 		"reboot <droplet-id>", "reboot droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionReboot, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionReboot, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionPowerCycle := CmdBuilder(cmd, RunDropletActionPowerCycle,
 		"power-cycle <droplet-id>", "power cycle droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionPowerCycle, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionPowerCycle, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionShutdown := CmdBuilder(cmd, RunDropletActionShutdown,
 		"shutdown <droplet-id>", "shutdown droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionShutdown, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionShutdown, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionPowerOff := CmdBuilder(cmd, RunDropletActionPowerOff,
 		"power-off <droplet-id>", "power off droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionPowerOff, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionPowerOff, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionPowerOn := CmdBuilder(cmd, RunDropletActionPowerOn,
 		"power-on <droplet-id>", "power on droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionPowerOn, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionPowerOn, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionPasswordReset := CmdBuilder(cmd, RunDropletActionPasswordReset,
 		"password-reset <droplet-id>", "password reset droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionPasswordReset, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionPasswordReset, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionEnableIPv6 := CmdBuilder(cmd, RunDropletActionEnableIPv6,
 		"enable-ipv6 <droplet-id>", "enable ipv6", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionEnableIPv6, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionEnableIPv6, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionEnablePrivateNetworking := CmdBuilder(cmd, RunDropletActionEnablePrivateNetworking,
 		"enable-private-networking <droplet-id>", "enable private networking", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionEnablePrivateNetworking, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionEnablePrivateNetworking, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionUpgrade := CmdBuilder(cmd, RunDropletActionUpgrade,
 		"upgrade <droplet-id>", "upgrade droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionUpgrade, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionUpgrade, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionRestore := CmdBuilder(cmd, RunDropletActionRestore,
 		"restore <droplet-id>", "restore backup", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddIntFlag(cmdDropletActionRestore, doctl.ArgImageID, 0, "Image ID", requiredOpt())
-	AddBoolFlag(cmdDropletActionRestore, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddIntFlag(cmdDropletActionRestore, doctl.ArgImageID, "", 0, "Image ID", requiredOpt())
+	AddBoolFlag(cmdDropletActionRestore, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionResize := CmdBuilder(cmd, RunDropletActionResize,
 		"resize <droplet-id>", "resize droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, false, "Resize disk")
-	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "New size")
-	AddBoolFlag(cmdDropletActionResize, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, "", false, "Resize disk")
+	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "New size")
+	AddBoolFlag(cmdDropletActionResize, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionRebuild := CmdBuilder(cmd, RunDropletActionRebuild,
 		"rebuild <droplet-id>", "rebuild droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddStringFlag(cmdDropletActionRebuild, doctl.ArgImage, "", "Image ID or Slug", requiredOpt())
-	AddBoolFlag(cmdDropletActionRebuild, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddStringFlag(cmdDropletActionRebuild, doctl.ArgImage, "", "", "Image ID or Slug", requiredOpt())
+	AddBoolFlag(cmdDropletActionRebuild, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionRename := CmdBuilder(cmd, RunDropletActionRename,
 		"rename <droplet-id>", "rename droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddStringFlag(cmdDropletActionRename, doctl.ArgDropletName, "", "Droplet name", requiredOpt())
-	AddBoolFlag(cmdDropletActionRename, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddStringFlag(cmdDropletActionRename, doctl.ArgDropletName, "", "", "Droplet name", requiredOpt())
+	AddBoolFlag(cmdDropletActionRename, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionChangeKernel := CmdBuilder(cmd, RunDropletActionChangeKernel,
 		"change-kernel <droplet-id>", "change kernel", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddIntFlag(cmdDropletActionChangeKernel, doctl.ArgKernelID, 0, "Kernel ID", requiredOpt())
-	AddBoolFlag(cmdDropletActionChangeKernel, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddIntFlag(cmdDropletActionChangeKernel, doctl.ArgKernelID, "", 0, "Kernel ID", requiredOpt())
+	AddBoolFlag(cmdDropletActionChangeKernel, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionSnapshot := CmdBuilder(cmd, RunDropletActionSnapshot,
 		"snapshot <droplet-id>", "snapshot droplet", Writer,
 		displayerType(&action{}), docCategories("droplet"))
-	AddStringFlag(cmdDropletActionSnapshot, doctl.ArgSnapshotName, "", "Snapshot name", requiredOpt())
-	AddBoolFlag(cmdDropletActionSnapshot, doctl.ArgCommandWait, false, "Wait for action to complete")
+	AddStringFlag(cmdDropletActionSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
+	AddBoolFlag(cmdDropletActionSnapshot, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	return cmd
 }
