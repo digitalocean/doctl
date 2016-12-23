@@ -54,8 +54,8 @@ func Volume() *Command {
 
 	cmdRunVolumeSnapshot := CmdBuilder(cmd, RunVolumeSnapshot, "snapshot [volume-id]", "create a volume snapshot", Writer,
 		aliasOpt("s"), displayerType(&volume{}))
-	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "Snapshot name", requiredOpt())
-	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "Snapshot description")
+	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
+	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "Snapshot description")
 
 	return cmd
 
