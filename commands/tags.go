@@ -130,7 +130,7 @@ func RunCmdTagDelete(c *CmdConfig) error {
 	}
 
 	if force || AskForConfirm("delete tag(s)") == nil {
-		for id, _ := range c.Args {
+		for id := range c.Args {
 			name := c.Args[id]
 			ts := c.Tags()
 			if err := ts.Delete(name); err != nil {
@@ -138,7 +138,7 @@ func RunCmdTagDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		fmt.Errorf("Operation aborted.")
+		fmt.Errorf("operation aborted")
 	}
 
 	return nil

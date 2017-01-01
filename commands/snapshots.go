@@ -22,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Snapshot creates the snapshot command
 func Snapshot() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -49,7 +50,9 @@ func Snapshot() *Command {
 	return cmd
 }
 
+// RunSnapshotList returns a list of snapshots
 func RunSnapshotList(c *CmdConfig) error {
+	var err error
 	ss := c.Snapshots()
 
 	restype, err := c.Doit.GetString(c.NS, doctl.ArgResourceType)
@@ -57,9 +60,9 @@ func RunSnapshotList(c *CmdConfig) error {
 		return err
 	}
 
-	region, reg_err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
-	if reg_err != nil {
-		return reg_err
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	if err != nil {
+		return err
 	}
 
 	matches := []glob.Glob{}
@@ -128,6 +131,7 @@ func RunSnapshotList(c *CmdConfig) error {
 	return c.Display(item)
 }
 
+// RunSnapshotGet returns a snapshot
 func RunSnapshotGet(c *CmdConfig) error {
 	if len(c.Args) == 0 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -149,14 +153,15 @@ func RunSnapshotGet(c *CmdConfig) error {
 	return c.Display(item)
 }
 
+// RunSnapshotDelete destroys snapshot(s) by id
 func RunSnapshotDelete(c *CmdConfig) error {
 	if len(c.Args) == 0 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	force, f_err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
-	if f_err != nil {
-		return f_err
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	if err != nil {
+		return err
 	}
 
 	ss := c.Snapshots()
@@ -170,7 +175,7 @@ func RunSnapshotDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return fmt.Errorf("operation aborted")
 	}
 	return nil
 }

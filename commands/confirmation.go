@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+// retriveUserInput is a function that can retrive user input in form of string. By default,
+// it will prompt the user. In test, you can replace this with code that returns the appropriate response.
 var retrieveUserInput = func(message string) (string, error) {
 	reader := bufio.NewReader(os.Stdin)
 	warnConfirm("Are you sure you want to " + message + " (y/N) ? ")
@@ -17,14 +19,16 @@ var retrieveUserInput = func(message string) (string, error) {
 	return strings.ToLower(strings.Replace(answer, "\n", "", 1)), nil
 }
 
+// AskForConfirm parses and verifies user input for confirmation.
 func AskForConfirm(message string) error {
 	answer, err := retrieveUserInput(message)
 	if err != nil {
 		return fmt.Errorf("unable to parse users input: %s", err)
 	}
-	if answer == "y" || answer == "ye" || answer == "yes" {
-		return nil
-	} else {
-		return fmt.Errorf("invaild user input")
+
+	if answer != "y" && answer != "ye" && answer != "yes" {
+		return fmt.Errorf("invalid user input")
 	}
+
+	return nil
 }

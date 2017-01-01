@@ -226,7 +226,7 @@ func RunImagesDelete(c *CmdConfig) error {
 		}
 
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return fmt.Errorf("operation aborted")
 	}
 
 	return nil

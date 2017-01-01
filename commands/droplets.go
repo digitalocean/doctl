@@ -471,8 +471,6 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if tagName != "" {
 		if force || AskForConfirm("delete droplet by \""+tagName+"\" tag") == nil {
 			return ds.DeleteByTag(tagName)
-		} else {
-			return fmt.Errorf("Operation aborted.")
 		}
 		return nil
 	}
@@ -488,9 +486,8 @@ func RunDropletDelete(c *CmdConfig) error {
 			return nil
 		}
 		return matchDroplets(c.Args, ds, fn)
-	} else {
-		return fmt.Errorf("Operation aborted.")
 	}
+	return fmt.Errorf("operation aborted")
 
 	return nil
 
