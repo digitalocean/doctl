@@ -16,7 +16,7 @@ type volumeActionsService struct {
 
 var _ VolumeActionsService = &volumeActionsService{}
 
-// NewAccountService builds an VolumeActionsService instance.
+// NewVolumeActionsService builds an VolumeActionsService instance.
 func NewVolumeActionsService(godoClient *godo.Client) VolumeActionsService {
 	return &volumeActionsService{
 		client: godoClient,

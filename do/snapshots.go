@@ -132,8 +132,8 @@ func (ss *snapshotsService) ListDroplet() (Snapshots, error) {
 	return list, nil
 }
 
-func (ss *snapshotsService) Get(snapshotId string) (*Snapshot, error) {
-	s, _, err := ss.client.Snapshots.Get(snapshotId)
+func (ss *snapshotsService) Get(snapshotID string) (*Snapshot, error) {
+	s, _, err := ss.client.Snapshots.Get(snapshotID)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (ss *snapshotsService) Get(snapshotId string) (*Snapshot, error) {
 	return &Snapshot{Snapshot: s}, nil
 }
 
-func (ss *snapshotsService) Delete(snapshotId string) error {
-	_, err := ss.client.Snapshots.Delete(snapshotId)
+func (ss *snapshotsService) Delete(snapshotID string) error {
+	_, err := ss.client.Snapshots.Delete(snapshotID)
 	return err
 }
