@@ -92,6 +92,8 @@ const (
 	ArgsSSHAgentForwarding = "ssh-agent-forwarding"
 	// ArgsSSHPrivateIP is a ssh argument.
 	ArgsSSHPrivateIP = "ssh-private-ip"
+	// ArgSSHCommand is a ssh argument.
+	ArgSSHCommand = "ssh-command"
 	// ArgUserData is a user data argument.
 	ArgUserData = "user-data"
 	// ArgUserDataFile is a user data file location argument.

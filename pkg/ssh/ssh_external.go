@@ -39,6 +39,9 @@ func runExternalSSH(r *Runner) error {
 	}
 
 	args = append(args, sshHost)
+	if r.Command != "" {
+		args = append(args, r.Command)
+	}
 
 	cmd := exec.Command("ssh", args...)
 

@@ -44,6 +44,7 @@ func SSH(parent *Command) *Command {
 	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, "", 22, "port sshd is running on")
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, "", false, "enable ssh agent forwarding")
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, "", false, "ssh to private ip instead of public ip")
+	AddStringFlag(cmdSSH, doctl.ArgSSHCommand, "", "", "command to execute")
 
 	return cmdSSH
 }
@@ -79,6 +80,11 @@ func RunSSH(c *CmdConfig) error {
 	opts[doctl.ArgsSSHAgentForwarding], err = c.Doit.GetBool(c.NS, doctl.ArgsSSHAgentForwarding)
 	if err != nil {
 		return err
+	}
+
+	opts[doctl.ArgSSHCommand], err = c.Doit.GetString(c.NS, doctl.ArgSSHCommand)
+	if err != nil {
+		return nil
 	}
 
 	privateIPChoice, err := c.Doit.GetBool(c.NS, doctl.ArgsSSHPrivateIP)
