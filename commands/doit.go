@@ -53,7 +53,7 @@ var Output string
 // Verbose toggles verbose output.
 var Verbose bool
 
-var requiredColor = color.New(color.Bold, color.FgWhite).SprintfFunc()
+var requiredColor = color.New(color.Bold).SprintfFunc()
 
 // Writer is where output should be written to.
 var Writer = os.Stdout
