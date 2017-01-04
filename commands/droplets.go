@@ -475,9 +475,26 @@ func RunDropletDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	if force || AskForConfirm("delete droplet(s)") == nil {
-
-		fn := func(ids []int) error {
+	fn := func(ids []int) error {
+		if !force {
+		
+			// If we aren't forcing, print out the list
+			fmt.Printf("Following Droplet(s) will be deleted:\n")
+			
+			var list do.Droplets
+			for _, id := range ids {
+				d, err := ds.Get(id)
+				if err != nil {
+					return err
+				}
+				list = append(list, *d)	
+			}
+			
+			item := &droplet{droplets: list}
+			c.Display(item)
+		}
+			
+		if force || AskForConfirm("delete droplet(s)") == nil {
 			for _, id := range ids {
 				if err := ds.Delete(id); err != nil {
 					return fmt.Errorf("unable to delete droplet %d: %v", id, err)
@@ -485,9 +502,12 @@ func RunDropletDelete(c *CmdConfig) error {
 			}
 			return nil
 		}
-		return matchDroplets(c.Args, ds, fn)
+		return fmt.Errorf("operation aborted")
+			
+			
 	}
-	return fmt.Errorf("operation aborted")
+	return matchDroplets(c.Args, ds, fn)
+	
 
 	return nil
 
