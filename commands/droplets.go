@@ -479,7 +479,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		if !force {
 		
 			// If we aren't forcing, print out the list
-			fmt.Printf("Following Droplet(s) will be deleted:\n")
+			fmt.Println("Following Droplet(s) will be deleted")
 			
 			var list do.Droplets
 			for _, id := range ids {
