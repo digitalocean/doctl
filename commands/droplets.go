@@ -73,7 +73,8 @@ func Droplet() *Command {
 	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force droplet delete")
-
+	AddStringFlag(cmdRunDropletDelete, doctl.ArgTagName, "", "", "Tag name")
+	
 	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
 	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Few sample values:{{.ID}} {{.Name}} {{.Memory}} {{.Region.Name}} {{.Image}} {{.Tags}}")
@@ -464,22 +465,11 @@ func RunDropletDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if len(c.Args) < 1 && tagName == "" {
-		return doctl.NewMissingArgsErr(c.NS)
-	} else if len(c.Args) > 0 && tagName != "" {
-		return fmt.Errorf("please specify droplets identifiers or a tag name")
-	} else if tagName != "" {
-		if force || AskForConfirm("delete droplet by \""+tagName+"\" tag") == nil {
-			return ds.DeleteByTag(tagName)
-		}
-		return nil
-	}
-
-	fn := func(ids []int) error {
+	deleteFn := func(ids []int) error {
 		if !force {
 		
 			// If we aren't forcing, print out the list
-			fmt.Println("Following Droplet(s) will be deleted")
+			fmt.Println("Following Droplet(s) will be deleted:")
 			
 			var list do.Droplets
 			for _, id := range ids {
@@ -504,13 +494,31 @@ func RunDropletDelete(c *CmdConfig) error {
 		}
 		return fmt.Errorf("operation aborted")
 			
-			
 	}
-	return matchDroplets(c.Args, ds, fn)
-	
 
-	return nil
+	if len(c.Args) < 1 && tagName == "" {
+		return doctl.NewMissingArgsErr(c.NS)
+	} else if len(c.Args) > 0 && tagName != "" {
+		return fmt.Errorf("please specify droplets identifiers or a tag name")
+	} else if tagName != "" {
+		var list do.Droplets
+		list, err := ds.ListByTag(tagName)
+	    if err != nil {
+		    return err
+	    }
+	    
+	    var extractedIDs []int
+	    for _, droplet := range list {
+	    	extractedIDs = append(extractedIDs, droplet.ID)
+	    }
+	    
+	    if len(extractedIDs) < 1 {
+	    	return fmt.Errorf("droplet(s) with tag %q could not be found",tagName)
+	    }
+	    return deleteFn(extractedIDs)
+	}
 
+	return matchDroplets(c.Args, ds, deleteFn)
 }
 
 type matchDropletsFn func(ids []int) error
