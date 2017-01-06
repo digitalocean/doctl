@@ -74,7 +74,7 @@ func Droplet() *Command {
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force droplet delete")
 	AddStringFlag(cmdRunDropletDelete, doctl.ArgTagName, "", "", "Tag name")
-	
+
 	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
 	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Few sample values:{{.ID}} {{.Name}} {{.Memory}} {{.Region.Name}} {{.Image}} {{.Tags}}")
@@ -467,23 +467,23 @@ func RunDropletDelete(c *CmdConfig) error {
 
 	deleteFn := func(ids []int) error {
 		if !force {
-		
+
 			// If we aren't forcing, print out the list
 			fmt.Println("Following Droplet(s) will be deleted:")
-			
+
 			var list do.Droplets
 			for _, id := range ids {
 				d, err := ds.Get(id)
 				if err != nil {
 					return err
 				}
-				list = append(list, *d)	
+				list = append(list, *d)
 			}
-			
+
 			item := &droplet{droplets: list}
 			c.Display(item)
 		}
-			
+
 		if force || AskForConfirm("delete droplet(s)") == nil {
 			for _, id := range ids {
 				if err := ds.Delete(id); err != nil {
@@ -493,7 +493,7 @@ func RunDropletDelete(c *CmdConfig) error {
 			return nil
 		}
 		return fmt.Errorf("operation aborted")
-			
+
 	}
 
 	if len(c.Args) < 1 && tagName == "" {
@@ -503,19 +503,19 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if tagName != "" {
 		var list do.Droplets
 		list, err := ds.ListByTag(tagName)
-	    if err != nil {
-		    return err
-	    }
-	    
-	    var extractedIDs []int
-	    for _, droplet := range list {
-	    	extractedIDs = append(extractedIDs, droplet.ID)
-	    }
-	    
-	    if len(extractedIDs) < 1 {
-	    	return fmt.Errorf("droplet(s) with tag %q could not be found",tagName)
-	    }
-	    return deleteFn(extractedIDs)
+		if err != nil {
+			return err
+		}
+
+		var extractedIDs []int
+		for _, droplet := range list {
+			extractedIDs = append(extractedIDs, droplet.ID)
+		}
+
+		if len(extractedIDs) < 1 {
+			return fmt.Errorf("droplet(s) with tag %q could not be found", tagName)
+		}
+		return deleteFn(extractedIDs)
 	}
 
 	return matchDroplets(c.Args, ds, deleteFn)
