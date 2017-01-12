@@ -141,6 +141,26 @@ func TestSSH_AgentForwarding(t *testing.T) {
 	})
 }
 
+func TestSSH_CommandExecuting(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		rm := &mocks.Runner{}
+		rm.On("Run").Return(nil)
+
+		tc := config.Doit.(*TestConfig)
+		tc.SSHFn = func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
+			assert.Equal(t, "uptime", opts[doctl.ArgSSHCommand])
+			return rm
+		}
+
+		tm.droplets.On("List").Return(testDropletList, nil)
+		config.Doit.Set(config.NS, doctl.ArgSSHCommand, "uptime")
+		config.Args = append(config.Args, testDroplet.Name)
+
+		err := RunSSH(config)
+		assert.NoError(t, err)
+	})
+}
+
 func Test_extractHostInfo(t *testing.T) {
 	cases := []struct {
 		s string
