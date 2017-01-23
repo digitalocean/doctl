@@ -81,7 +81,7 @@ func RunAuthInit(c *CmdConfig) error {
 	viper.Set("access-token", string(token))
 
 	fmt.Fprintln(c.Out)
-	fmt.Fprint(c.Out, "Validating token: ")
+	fmt.Fprint(c.Out, "Validating token... ")
 
 	// need to initial the godo client since we've changed the configuration.
 	if err := c.initServices(c); err != nil {
