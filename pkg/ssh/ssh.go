@@ -29,6 +29,7 @@ type Runner struct {
 	KeyPath         string
 	Port            int
 	AgentForwarding bool
+	Command         string
 }
 
 var _ runner.Runner = &Runner{}

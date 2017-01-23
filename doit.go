@@ -217,6 +217,7 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 		KeyPath:         keyPath,
 		Port:            port,
 		AgentForwarding: opts[ArgsSSHAgentForwarding].(bool),
+		Command:         opts[ArgSSHCommand].(string),
 	}
 }
 
