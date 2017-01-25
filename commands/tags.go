@@ -34,21 +34,21 @@ func Tags() *Command {
 		IsIndex:       true,
 	}
 
-	CmdBuilder(cmd, RunCmdTagCreate, "create NAME", "create tag", Writer,
+	CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "create tag", Writer,
 		docCategories("tag"))
 
-	CmdBuilder(cmd, RunCmdTagGet, "get NAME", "get tag", Writer,
+	CmdBuilder(cmd, RunCmdTagGet, "get <tag-name>", "get tag", Writer,
 		docCategories("tag"))
 
 	CmdBuilder(cmd, RunCmdTagList, "list", "list tags", Writer,
 		aliasOpt("ls"), docCategories("tag"))
 
-	cmdTagUpdate := CmdBuilder(cmd, RunCmdTagUpdate, "update NAME", "update tag", Writer,
+	cmdTagUpdate := CmdBuilder(cmd, RunCmdTagUpdate, "update <tag-name>", "update tag", Writer,
 		docCategories("tag"))
 	AddStringFlag(cmdTagUpdate, doctl.ArgTagName, "", "", "Tag name",
 		requiredOpt())
 
-	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete NAME", "delete tag", Writer,
+	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name> [tag-name ...]", "delete tag", Writer,
 		docCategories("tag"))
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force tag delete")
 

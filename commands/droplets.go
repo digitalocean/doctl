@@ -43,13 +43,13 @@ func Droplet() *Command {
 		IsIndex:       true,
 	}
 
-	CmdBuilder(cmd, RunDropletActions, "actions <droplet id>", "droplet actions", Writer,
+	CmdBuilder(cmd, RunDropletActions, "actions <droplet-id>", "droplet actions", Writer,
 		aliasOpt("a"), displayerType(&action{}), docCategories("droplet"))
 
-	CmdBuilder(cmd, RunDropletBackups, "backups <droplet id>", "droplet backups", Writer,
+	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "droplet backups", Writer,
 		aliasOpt("b"), displayerType(&image{}), docCategories("droplet"))
 
-	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create NAME [NAME ...]", "create droplet", Writer,
+	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name> [droplet-name ...]", "create droplet", Writer,
 		aliasOpt("c"), displayerType(&droplet{}), docCategories("droplet"))
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "SSH Keys or fingerprints")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User data")
@@ -70,15 +70,15 @@ func Droplet() *Command {
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "Volumes to attach")
 
-	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete ID [ID|Name ...]", "Delete droplet by id or name", Writer,
+	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name> [droplet-id|droplet-name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force droplet delete")
 
-	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get", "get droplet", Writer,
+	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id>", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
 	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Few sample values:{{.ID}} {{.Name}} {{.Memory}} {{.Region.Name}} {{.Image}} {{.Tags}}")
 
-	CmdBuilder(cmd, RunDropletKernels, "kernels <droplet id>", "droplet kernels", Writer,
+	CmdBuilder(cmd, RunDropletKernels, "kernels <droplet-id>", "droplet kernels", Writer,
 		aliasOpt("k"), displayerType(&kernel{}), docCategories("droplet"))
 
 	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", Writer,
@@ -86,18 +86,18 @@ func Droplet() *Command {
 	AddStringFlag(cmdRunDropletList, doctl.ArgRegionSlug, "", "", "Droplet region")
 	AddStringFlag(cmdRunDropletList, doctl.ArgTagName, "", "", "Tag name")
 
-	CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet id>", "droplet neighbors", Writer,
+	CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet-id>", "droplet neighbors", Writer,
 		aliasOpt("n"), displayerType(&droplet{}), docCategories("droplet"))
 
-	CmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet id>", "snapshots", Writer,
+	CmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet-id>", "snapshots", Writer,
 		aliasOpt("s"), displayerType(&image{}), docCategories("droplet"))
 
-	cmdRunDropletTag := CmdBuilder(cmd, RunDropletTag, "tag <droplet id or name>", "tag", Writer,
+	cmdRunDropletTag := CmdBuilder(cmd, RunDropletTag, "tag <droplet-id|droplet-name>", "tag", Writer,
 		docCategories("droplet"))
 	AddStringFlag(cmdRunDropletTag, doctl.ArgTagName, "", "", "Tag name",
 		requiredOpt())
 
-	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet id or name>", "untag", Writer,
+	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet-id|droplet-name>", "untag", Writer,
 		docCategories("droplet"))
 	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "tag names")
 

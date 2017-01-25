@@ -35,7 +35,7 @@ func Actions() *Command {
 		IsIndex:       true,
 	}
 
-	CmdBuilder(cmd, RunCmdActionGet, "get ACTIONID", "get action", Writer,
+	CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "get action", Writer,
 		aliasOpt("g"), displayerType(&action{}), docCategories("action"))
 
 	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
@@ -47,7 +47,7 @@ func Actions() *Command {
 	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", "Action status")
 	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", "Action type")
 
-	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait ACTIONID", "wait for action to complete", Writer,
+	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "wait for action to complete", Writer,
 		aliasOpt("w"), displayerType(&action{}), docCategories("action"))
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 
