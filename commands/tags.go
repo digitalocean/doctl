@@ -48,7 +48,7 @@ func Tags() *Command {
 	AddStringFlag(cmdTagUpdate, doctl.ArgTagName, "", "", "Tag name",
 		requiredOpt())
 
-	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>", "delete tag", Writer,
+	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name> [tag-name ...]", "delete tag", Writer,
 		docCategories("tag"))
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force tag delete")
 
