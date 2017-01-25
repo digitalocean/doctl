@@ -35,7 +35,7 @@ func Snapshot() *Command {
 		IsIndex:       true,
 	}
 
-	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [GLOB]", "list snapshots", Writer,
+	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [glob]", "list snapshots", Writer,
 		aliasOpt("ls"), displayerType(&snapshot{}), docCategories("snapshot"))
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Resource type")
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Snapshot region")

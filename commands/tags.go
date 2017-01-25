@@ -34,7 +34,7 @@ func Tags() *Command {
 		IsIndex:       true,
 	}
 
-	CmdBuilder(cmd, RunCmdTagCreate, "create [tag-name]", "create tag", Writer,
+	CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "create tag", Writer,
 		docCategories("tag"))
 
 	CmdBuilder(cmd, RunCmdTagGet, "get <tag-name>", "get tag", Writer,

@@ -49,7 +49,7 @@ func Droplet() *Command {
 	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "droplet backups", Writer,
 		aliasOpt("b"), displayerType(&image{}), docCategories("droplet"))
 
-	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create [droplet-name ...]", "create droplet", Writer,
+	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name>", "create droplet", Writer,
 		aliasOpt("c"), displayerType(&droplet{}), docCategories("droplet"))
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "SSH Keys or fingerprints")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User data")

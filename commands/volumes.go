@@ -38,7 +38,7 @@ func Volume() *Command {
 		aliasOpt("ls"), displayerType(&volume{}))
 	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "", "Volume region")
 
-	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create [volume-name]", "create a volume", Writer,
+	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create <volume-name>", "create a volume", Writer,
 		aliasOpt("c"), displayerType(&volume{}))
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSize, "", "4TiB", "Volume size",
 		requiredOpt())

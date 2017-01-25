@@ -59,7 +59,7 @@ func DropletAction() *Command {
 		},
 	}
 
-	cmdDropletActionGet := CmdBuilder(cmd, RunDropletActionGet, "get", "get droplet action", Writer,
+	cmdDropletActionGet := CmdBuilder(cmd, RunDropletActionGet, "get <droplet-id>", "get droplet action", Writer,
 		aliasOpt("g"), displayerType(&action{}), docCategories("droplet"))
 	AddIntFlag(cmdDropletActionGet, doctl.ArgActionID, "", 0, "Action ID", requiredOpt())
 
