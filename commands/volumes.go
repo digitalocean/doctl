@@ -38,7 +38,7 @@ func Volume() *Command {
 		aliasOpt("ls"), displayerType(&volume{}))
 	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "", "Volume region")
 
-	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create [name]", "create a volume", Writer,
+	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create [volume-name]", "create a volume", Writer,
 		aliasOpt("c"), displayerType(&volume{}))
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSize, "", "4TiB", "Volume size",
 		requiredOpt())
@@ -46,13 +46,13 @@ func Volume() *Command {
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "Volume region",
 		requiredOpt())
 
-	CmdBuilder(cmd, RunVolumeDelete, "delete [ID]", "delete a volume", Writer,
+	CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "delete a volume", Writer,
 		aliasOpt("rm"))
 
-	CmdBuilder(cmd, RunVolumeGet, "get [ID]", "get a volume", Writer, aliasOpt("g"),
+	CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "get a volume", Writer, aliasOpt("g"),
 		displayerType(&volume{}))
 
-	cmdRunVolumeSnapshot := CmdBuilder(cmd, RunVolumeSnapshot, "snapshot [volume-id]", "create a volume snapshot", Writer,
+	cmdRunVolumeSnapshot := CmdBuilder(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "create a volume snapshot", Writer,
 		aliasOpt("s"), displayerType(&volume{}))
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "Snapshot description")

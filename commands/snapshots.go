@@ -43,7 +43,7 @@ func Snapshot() *Command {
 	CmdBuilder(cmd, RunSnapshotGet, "get", "get snapshot", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("snapshot"))
 
-	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete", "delete snapshot", Writer,
+	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id>", "delete snapshot", Writer,
 		aliasOpt("d"), displayerType(&droplet{}), docCategories("snapshot"))
 	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force snapshot delete")
 
