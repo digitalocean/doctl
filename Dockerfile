@@ -1,6 +1,6 @@
 FROM alpine:3.4
 
-ENV DOCTL_VERSION=1.4.0
+ENV DOCTL_VERSION=1.5.0
 
 RUN apk add --update curl && \
     rm -rf /var/cache/apk/*
