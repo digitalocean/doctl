@@ -29,6 +29,16 @@ func configHome() string {
 	return configHome
 }
 
+func aliasHome() string {
+	aliasHome := os.Getenv("XDG_CONFIG_HOME")
+	if aliasHome == "" {
+		userName := os.Getenv("USERNAME")
+		aliasHome = filepath.Join("C:/", "Users", userName, "AppData", "Local", "doctl", "alias")
+	}
+
+	return aliasHome
+}
+
 // legacyConfigCheck is a no-op on windows since go doesn't have a chmod
 // on this platform.
 func legacyConfigCheck() {

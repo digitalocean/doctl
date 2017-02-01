@@ -34,6 +34,7 @@ import (
 const (
 	// defaultConfigName is the name of the config file when no alternative is supplied.
 	defaultConfigName = "config.yaml"
+	defaultAliasName  = "alias.yaml"
 )
 
 // DoitCmd is the base command.
@@ -70,10 +71,22 @@ var cfgFile string
 // cfgFileWriter is the config file writer
 var cfgFileWriter = defaultConfigFileWriter
 
+// aliasFile is the location of the aliases file
+var aliasFile string
+
+// aliasFileWriter is the alias file writer
+var aliasFileWriter = defaultAliasFileWriter
+
+// AliasReader is the viper object for aliasFile
+var AliasReader *viper.Viper
+
 // ErrNoAccessToken is an error for when there is no access token.
 var ErrNoAccessToken = errors.New("no access token has been configured")
 
 func init() {
+
+	initAlias()
+
 	cobra.OnInitialize(initConfig)
 
 	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.config/doctl/config.yaml)")
@@ -142,6 +155,57 @@ func configPath() string {
 	return fmt.Sprintf("%s/%s", configHome(), defaultConfigName)
 }
 
+func initAlias() {
+	var err error
+	aliasFile, err = findAlias()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+
+	AliasReader = viper.New()
+
+	AliasReader.SetConfigType("yaml")
+	AliasReader.SetConfigFile(aliasFile)
+
+	if _, err := os.Stat(aliasFile); err == nil {
+		if err := AliasReader.ReadInConfig(); err != nil {
+			log.Fatalln("alias reading initialization failed:", err)
+		}
+	}
+
+	matchAlias()
+}
+
+func findAlias() (string, error) {
+	if aliasFile != "" {
+		return aliasFile, nil
+	}
+
+	ah := aliasHome()
+	if err := os.MkdirAll(ah, 0755); err != nil {
+		return "", err
+	}
+
+	return filepath.Join(ah, defaultAliasName), nil
+}
+
+func matchAlias() {
+
+	args := os.Args[1:]
+	args_len := len(args)
+
+	for i := args_len; i > 0; i-- {
+		if alias := AliasReader.GetString(strings.Join(args[:i], " ")); alias != "" {
+			alias_args := strings.Split(alias, " ")
+			os.Args = append([]string{"doctl"}, alias_args...)
+			os.Args = append(os.Args, args[i:]...)
+			break
+		}
+	}
+
+}
+
 // Execute executes the current command using DoitCmd.
 func Execute() {
 	if err := DoitCmd.Execute(); err != nil {
@@ -153,6 +217,7 @@ func Execute() {
 // AddCommands adds sub commands to the base command.
 func addCommands() {
 	DoitCmd.AddCommand(Account())
+	DoitCmd.AddCommand(Alias())
 	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(Completion())
 	DoitCmd.AddCommand(computeCmd())
@@ -452,6 +517,39 @@ func defaultConfigFileWriter() (io.WriteCloser, error) {
 		return nil, err
 	}
 	if err := os.Chmod(cfgFile, 0600); err != nil {
+		return nil, err
+	}
+
+	return f, nil
+}
+
+func writeAlias() error {
+	f, err := aliasFileWriter()
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	b, err := yaml.Marshal(AliasReader.AllSettings())
+	if err != nil {
+		return errors.New("unable to encode alias confiugration to YAML format")
+	}
+
+	_, err = f.Write(b)
+	if err != nil {
+		return errors.New("unable to write alias configuration")
+	}
+
+	return nil
+}
+
+func defaultAliasFileWriter() (io.WriteCloser, error) {
+	f, err := os.Create(aliasFile)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.Chmod(aliasFile, 0600); err != nil {
 		return nil, err
 	}
 

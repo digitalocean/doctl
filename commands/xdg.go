@@ -28,6 +28,15 @@ func configHome() string {
 	return configHome
 }
 
+func aliasHome() string {
+	aliasHome := os.Getenv("XDG_CONFIG_HOME")
+	if aliasHome == "" {
+		aliasHome = filepath.Join(homeDir(), ".config", "doctl")
+	}
+
+	return aliasHome
+}
+
 func legacyConfigCheck() {
 	fi, err := os.Stat(cfgFile)
 	expectedPerms := os.FileMode(0600)
