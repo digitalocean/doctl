@@ -399,7 +399,7 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out
 	}
 
 	if cols := c.fmtCols; cols != nil {
-		formatHelp := fmt.Sprintf("Columns for output in a comma seperated list. Possible values: %s",
+		formatHelp := fmt.Sprintf("Columns for output in a comma separated list. Possible values: %s",
 			strings.Join(cols, ","))
 		AddStringFlag(c, doctl.ArgFormat, "", "", formatHelp)
 		AddBoolFlag(c, doctl.ArgNoHeader, "", false, "hide headers")
