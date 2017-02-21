@@ -140,7 +140,7 @@ func TestStorageActions_List(t *testing.T) {
 		t.Errorf("StorageActions.List returned error: %v", err)
 	}
 
-	expected := []Action{Action{Status: "in-progress"}}
+	expected := []Action{{Status: "in-progress"}}
 	if !reflect.DeepEqual(actions, expected) {
 		t.Errorf("StorageActions.List returned %+v, expected %+v", actions, expected)
 	}

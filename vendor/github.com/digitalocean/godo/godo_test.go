@@ -513,3 +513,24 @@ func TestCustomUserAgent(t *testing.T) {
 		t.Errorf("New() UserAgent = %s; expected %s", got, expected)
 	}
 }
+
+func TestCustomBaseURL(t *testing.T) {
+	baseURL := "http://localhost/foo"
+	c, err := New(nil, SetBaseURL(baseURL))
+
+	if err != nil {
+		t.Fatalf("New() unexpected error: %v", err)
+	}
+
+	expected := baseURL
+	if got := c.BaseURL.String(); got != expected {
+		t.Errorf("New() BaseURL = %s; expected %s", got, expected)
+	}
+}
+
+func TestCustomBaseURL_badURL(t *testing.T) {
+	baseURL := ":"
+	_, err := New(nil, SetBaseURL(baseURL))
+
+	testURLParseError(t, err)
+}
