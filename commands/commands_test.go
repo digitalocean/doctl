@@ -160,6 +160,7 @@ type tcMocks struct {
 	account           domocks.AccountService
 	tags              domocks.TagsService
 	snapshots         domocks.SnapshotsService
+	certificates      domocks.CertificatesService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -197,12 +198,14 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Volumes:           func() do.VolumesService { return &tm.volumes },
 		VolumeActions:     func() do.VolumeActionsService { return &tm.volumeActions },
 		Snapshots:         func() do.SnapshotsService { return &tm.snapshots },
+		Certificates:      func() do.CertificatesService { return &tm.certificates },
 	}
 
 	tFn(config, tm)
 
 	assert.True(t, tm.account.AssertExpectations(t))
 	assert.True(t, tm.actions.AssertExpectations(t))
+	assert.True(t, tm.certificates.AssertExpectations(t))
 	assert.True(t, tm.domains.AssertExpectations(t))
 	assert.True(t, tm.dropletActions.AssertExpectations(t))
 	assert.True(t, tm.droplets.AssertExpectations(t))

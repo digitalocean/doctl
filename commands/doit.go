@@ -162,6 +162,7 @@ func computeCmd() *Command {
 	}
 
 	cmd.AddCommand(Actions())
+	cmd.AddCommand(Certificate())
 	cmd.AddCommand(DropletAction())
 	cmd.AddCommand(Droplet())
 	cmd.AddCommand(Domain())
@@ -304,6 +305,7 @@ type CmdConfig struct {
 	Volumes           func() do.VolumesService
 	VolumeActions     func() do.VolumeActionsService
 	Snapshots         func() do.SnapshotsService
+	Certificates      func() do.CertificatesService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -337,6 +339,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Volumes = func() do.VolumesService { return do.NewVolumesService(godoClient) }
 			c.VolumeActions = func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) }
 			c.Snapshots = func() do.SnapshotsService { return do.NewSnapshotsService(godoClient) }
+			c.Certificates = func() do.CertificatesService { return do.NewCertificatesService(godoClient) }
 
 			return nil
 		},
