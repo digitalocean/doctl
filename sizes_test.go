@@ -16,7 +16,7 @@ func TestSizes_List(t *testing.T) {
 		fmt.Fprint(w, `{"sizes":[{"slug":"1"},{"slug":"2"}]}`)
 	})
 
-	sizes, _, err := client.Sizes.List(nil)
+	sizes, _, err := client.Sizes.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Sizes.List returned error: %v", err)
 	}
@@ -36,7 +36,7 @@ func TestSizes_ListSizesMultiplePages(t *testing.T) {
 		fmt.Fprint(w, `{"sizes": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/sizes/?page=2"}}}`)
 	})
 
-	_, resp, err := client.Sizes.List(nil)
+	_, resp, err := client.Sizes.List(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestSizes_RetrievePageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.Sizes.List(opt)
+	_, resp, err := client.Sizes.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}

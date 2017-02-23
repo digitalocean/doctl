@@ -2,6 +2,7 @@ package godo
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -214,7 +215,7 @@ func SetUserAgent(ua string) ClientOpt {
 // NewRequest creates an API request. A relative URL can be provided in urlStr, which will be resolved to the
 // BaseURL of the Client. Relative URLS should always be specified without a preceding slash. If specified, the
 // value pointed to by body is JSON encoded and included in as the request body.
-func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Request, error) {
+func (c *Client) NewRequest(ctx context.Context, method, urlStr string, body interface{}) (*http.Request, error) {
 	rel, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, err
@@ -235,6 +236,7 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 		return nil, err
 	}
 
+	req = req.WithContext(ctx)
 	req.Header.Add("Content-Type", mediaType)
 	req.Header.Add("Accept", mediaType)
 	req.Header.Add("User-Agent", c.UserAgent)

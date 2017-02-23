@@ -17,7 +17,7 @@ func TestKeys_List(t *testing.T) {
 		fmt.Fprint(w, `{"ssh_keys":[{"id":1},{"id":2}]}`)
 	})
 
-	keys, _, err := client.Keys.List(nil)
+	keys, _, err := client.Keys.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Keys.List returned error: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestKeys_ListKeysMultiplePages(t *testing.T) {
 		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/account/keys/?page=2"}}}`)
 	})
 
-	_, resp, err := client.Keys.List(nil)
+	_, resp, err := client.Keys.List(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestKeys_RetrievePageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.Keys.List(opt)
+	_, resp, err := client.Keys.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestKeys_GetByID(t *testing.T) {
 		fmt.Fprint(w, `{"ssh_key": {"id":12345}}`)
 	})
 
-	keys, _, err := client.Keys.GetByID(12345)
+	keys, _, err := client.Keys.GetByID(ctx, 12345)
 	if err != nil {
 		t.Errorf("Keys.GetByID returned error: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestKeys_GetByFingerprint(t *testing.T) {
 		fmt.Fprint(w, `{"ssh_key": {"fingerprint":"aa:bb:cc"}}`)
 	})
 
-	keys, _, err := client.Keys.GetByFingerprint("aa:bb:cc")
+	keys, _, err := client.Keys.GetByFingerprint(ctx, "aa:bb:cc")
 	if err != nil {
 		t.Errorf("Keys.GetByFingerprint returned error: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestKeys_Create(t *testing.T) {
 		fmt.Fprintf(w, `{"ssh_key":{"id":1}}`)
 	})
 
-	key, _, err := client.Keys.Create(createRequest)
+	key, _, err := client.Keys.Create(ctx, createRequest)
 	if err != nil {
 		t.Errorf("Keys.Create returned error: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestKeys_UpdateByID(t *testing.T) {
 		fmt.Fprintf(w, `{"ssh_key":{"id":1}}`)
 	})
 
-	key, _, err := client.Keys.UpdateByID(12345, updateRequest)
+	key, _, err := client.Keys.UpdateByID(ctx, 12345, updateRequest)
 	if err != nil {
 		t.Errorf("Keys.Update returned error: %v", err)
 	} else {
@@ -211,7 +211,7 @@ func TestKeys_UpdateByFingerprint(t *testing.T) {
 		fmt.Fprintf(w, `{"ssh_key":{"id":1}}`)
 	})
 
-	key, _, err := client.Keys.UpdateByFingerprint("3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa", updateRequest)
+	key, _, err := client.Keys.UpdateByFingerprint(ctx, "3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa", updateRequest)
 	if err != nil {
 		t.Errorf("Keys.Update returned error: %v", err)
 	} else {
@@ -229,7 +229,7 @@ func TestKeys_DestroyByID(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Keys.DeleteByID(12345)
+	_, err := client.Keys.DeleteByID(ctx, 12345)
 	if err != nil {
 		t.Errorf("Keys.Delete returned error: %v", err)
 	}
@@ -243,7 +243,7 @@ func TestKeys_DestroyByFingerprint(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Keys.DeleteByFingerprint("aa:bb:cc")
+	_, err := client.Keys.DeleteByFingerprint(ctx, "aa:bb:cc")
 	if err != nil {
 		t.Errorf("Keys.Delete returned error: %v", err)
 	}

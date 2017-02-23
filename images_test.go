@@ -17,7 +17,7 @@ func TestImages_List(t *testing.T) {
 		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
 	})
 
-	images, _, err := client.Images.List(nil)
+	images, _, err := client.Images.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Images.List returned error: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestImages_ListDistribution(t *testing.T) {
 		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
 	})
 
-	images, _, err := client.Images.ListDistribution(nil)
+	images, _, err := client.Images.ListDistribution(ctx, nil)
 	if err != nil {
 		t.Errorf("Images.ListDistribution returned error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestImages_ListApplication(t *testing.T) {
 		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
 	})
 
-	images, _, err := client.Images.ListApplication(nil)
+	images, _, err := client.Images.ListApplication(ctx, nil)
 	if err != nil {
 		t.Errorf("Images.ListApplication returned error: %v", err)
 	}
@@ -93,7 +93,7 @@ func TestImages_ListUser(t *testing.T) {
 		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
 	})
 
-	images, _, err := client.Images.ListUser(nil)
+	images, _, err := client.Images.ListUser(ctx, nil)
 	if err != nil {
 		t.Errorf("Images.ListUser returned error: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestImages_ListImagesMultiplePages(t *testing.T) {
 		fmt.Fprint(w, `{"images": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/images/?page=2"}}}`)
 	})
 
-	_, resp, err := client.Images.List(&ListOptions{Page: 2})
+	_, resp, err := client.Images.List(ctx, &ListOptions{Page: 2})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestImages_RetrievePageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.Images.List(opt)
+	_, resp, err := client.Images.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,7 +160,7 @@ func TestImages_GetImageByID(t *testing.T) {
 		fmt.Fprint(w, `{"image":{"id":12345}}`)
 	})
 
-	images, _, err := client.Images.GetByID(12345)
+	images, _, err := client.Images.GetByID(ctx, 12345)
 	if err != nil {
 		t.Errorf("Image.GetByID returned error: %v", err)
 	}
@@ -180,7 +180,7 @@ func TestImages_GetImageBySlug(t *testing.T) {
 		fmt.Fprint(w, `{"image":{"id":12345}}`)
 	})
 
-	images, _, err := client.Images.GetBySlug("ubuntu")
+	images, _, err := client.Images.GetBySlug(ctx, "ubuntu")
 	if err != nil {
 		t.Errorf("Image.GetBySlug returned error: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestImages_Update(t *testing.T) {
 		fmt.Fprintf(w, `{"image":{"id":1}}`)
 	})
 
-	image, _, err := client.Images.Update(12345, updateRequest)
+	image, _, err := client.Images.Update(ctx, 12345, updateRequest)
 	if err != nil {
 		t.Errorf("Images.Update returned error: %v", err)
 	} else {
@@ -235,7 +235,7 @@ func TestImages_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Images.Delete(12345)
+	_, err := client.Images.Delete(ctx, 12345)
 	if err != nil {
 		t.Errorf("Image.Delete returned error: %v", err)
 	}

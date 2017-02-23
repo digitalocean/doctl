@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"context"
 	"net/url"
 	"strconv"
 )
@@ -77,6 +78,6 @@ func pageForURL(urlText string) (int, error) {
 }
 
 // Get a link action by id.
-func (la *LinkAction) Get(client *Client) (*Action, *Response, error) {
-	return client.Actions.Get(la.ID)
+func (la *LinkAction) Get(ctx context.Context, client *Client) (*Action, *Response, error) {
+	return client.Actions.Get(ctx, la.ID)
 }

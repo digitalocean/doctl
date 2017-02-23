@@ -27,7 +27,7 @@ func TestAccountGet(t *testing.T) {
 		fmt.Fprint(w, response)
 	})
 
-	acct, _, err := client.Account.Get()
+	acct, _, err := client.Account.Get(ctx)
 	if err != nil {
 		t.Errorf("Account.Get returned error: %v", err)
 	}
