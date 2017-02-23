@@ -69,7 +69,7 @@ func (s *SnapshotsServiceOp) ListVolume(opt *ListOptions) ([]Snapshot, *Response
 	return s.list(opt, &listOpt)
 }
 
-// GetByID retrieves an snapshot by id.
+// Get retrieves an snapshot by id.
 func (s *SnapshotsServiceOp) Get(snapshotID string) (*Snapshot, *Response, error) {
 	return s.get(interface{}(snapshotID))
 }

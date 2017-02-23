@@ -127,6 +127,63 @@ func TestStorageVolumes_Get(t *testing.T) {
 	}
 }
 
+func TestStorageVolumes_ListVolumesByName(t *testing.T) {
+	setup()
+	defer teardown()
+
+	jBlob :=
+		`{
+			"volumes": [
+				{
+					"region": {"slug": "nyc3"},
+					"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+					"name": "myvolume",
+					"description": "my description",
+					"size_gigabytes": 100,
+					"droplet_ids": [10],
+					"created_at": "2002-10-02T15:00:00.05Z"
+				}
+			],
+			"links": {},
+		  "meta": {
+				"total": 1
+			}
+		}`
+
+	expected := []Volume{
+		{
+			Region:        &Region{Slug: "nyc3"},
+			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+			Name:          "myvolume",
+			Description:   "my description",
+			SizeGigaBytes: 100,
+			DropletIDs:    []int{10},
+			CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+		},
+	}
+
+	mux.HandleFunc("/v2/volumes", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("name") != "myvolume" || r.URL.Query().Get("region") != "nyc3" {
+			t.Errorf("Storage.GetVolumeByName did not request the correct name or region")
+		}
+		testMethod(t, r, "GET")
+		fmt.Fprint(w, jBlob)
+	})
+
+	options := &ListVolumeParams{
+		Name:   "myvolume",
+		Region: "nyc3",
+	}
+	volumes, _, err := client.Storage.ListVolumes(options)
+	if err != nil {
+		t.Errorf("Storage.GetVolumeByName returned error: %v", err)
+	}
+
+	if !reflect.DeepEqual(volumes, expected) {
+		t.Errorf("Storage.GetVolumeByName returned %+v, expected %+v", volumes, expected)
+	}
+}
+
 func TestStorageVolumes_Create(t *testing.T) {
 	setup()
 	defer teardown()

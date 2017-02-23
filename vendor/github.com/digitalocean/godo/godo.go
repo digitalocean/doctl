@@ -59,6 +59,8 @@ type Client struct {
 	Storage           StorageService
 	StorageActions    StorageActionsService
 	Tags              TagsService
+	LoadBalancers     LoadBalancersService
+	Certificates	  CertificatesService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -167,6 +169,8 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Storage = &StorageServiceOp{client: c}
 	c.StorageActions = &StorageActionsServiceOp{client: c}
 	c.Tags = &TagsServiceOp{client: c}
+	c.LoadBalancers = &LoadBalancersServiceOp{client: c}
+	c.Certificates = &CertificatesServiceOp{client: c}
 
 	return c
 }
@@ -220,7 +224,7 @@ func (c *Client) NewRequest(method, urlStr string, body interface{}) (*http.Requ
 
 	buf := new(bytes.Buffer)
 	if body != nil {
-		err := json.NewEncoder(buf).Encode(body)
+		err = json.NewEncoder(buf).Encode(body)
 		if err != nil {
 			return nil, err
 		}
@@ -312,12 +316,12 @@ func (c *Client) Do(req *http.Request, v interface{}) (*Response, error) {
 
 	if v != nil {
 		if w, ok := v.(io.Writer); ok {
-			_, err := io.Copy(w, resp.Body)
+			_, err = io.Copy(w, resp.Body)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			err := json.NewDecoder(resp.Body).Decode(v)
+			err = json.NewDecoder(resp.Body).Decode(v)
 			if err != nil {
 				return nil, err
 			}

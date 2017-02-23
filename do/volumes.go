@@ -32,7 +32,8 @@ func NewVolumesService(godoClient *godo.Client) VolumesService {
 
 func (a *volumesService) List() ([]Volume, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := a.client.Storage.ListVolumes(opt)
+		params := &godo.ListVolumeParams{ListOptions: opt}
+		list, resp, err := a.client.Storage.ListVolumes(params)
 		if err != nil {
 			return nil, nil, err
 

@@ -135,6 +135,15 @@ const (
 	// ArgVolumeList is the IDs of many volumes.
 	ArgVolumeList = "volumes"
 
+	// ArgCertificateName is a name of the certificate.
+	ArgCertificateName = "name"
+	// ArgPrivateKeyPath is a path to a private key for the certificate.
+	ArgPrivateKeyPath = "private-key-path"
+	// ArgLeafCertificatePath is a path to a certificate leaf.
+	ArgLeafCertificatePath = "leaf-certificate-path"
+	// ArgCertificateChainPath is a path to a certificate chain.
+	ArgCertificateChainPath = "certificate-chain-path"
+
 	// ArgDeleteForce forces deletion actions
 	ArgDeleteForce = "force"
 )

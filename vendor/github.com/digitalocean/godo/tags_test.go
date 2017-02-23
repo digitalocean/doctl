@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	listEmptyJson string = `
+	listEmptyJSON = `
 	{
 		"tags": [
 		],
@@ -19,7 +19,7 @@ var (
 	}
 	`
 
-	listJson string = `
+	listJSON = `
 	{
 		"tags": [
 		{
@@ -55,7 +55,7 @@ var (
 	}
 	`
 
-	createJson string = `
+	createJSON = `
 	{
 		"tag": {
 			"name": "testing-1",
@@ -69,7 +69,7 @@ var (
 	}
 	`
 
-	getJson string = `
+	getJSON = `
 	{
 		"tag": {
 			"name": "testing-1",
@@ -170,7 +170,7 @@ func TestTags_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/tags", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		fmt.Fprint(w, listJson)
+		fmt.Fprint(w, listJSON)
 	})
 
 	tags, _, err := client.Tags.List(nil)
@@ -191,7 +191,7 @@ func TestTags_ListEmpty(t *testing.T) {
 
 	mux.HandleFunc("/v2/tags", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		fmt.Fprint(w, listEmptyJson)
+		fmt.Fprint(w, listEmptyJSON)
 	})
 
 	tags, _, err := client.Tags.List(nil)
@@ -211,7 +211,7 @@ func TestTags_ListPaging(t *testing.T) {
 
 	mux.HandleFunc("/v2/tags", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		fmt.Fprint(w, listJson)
+		fmt.Fprint(w, listJSON)
 	})
 
 	_, resp, err := client.Tags.List(nil)
@@ -227,7 +227,7 @@ func TestTags_Get(t *testing.T) {
 
 	mux.HandleFunc("/v2/tags/testing-1", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, "GET")
-		fmt.Fprint(w, getJson)
+		fmt.Fprint(w, getJSON)
 	})
 
 	tag, _, err := client.Tags.Get("testing-1")
@@ -268,7 +268,7 @@ func TestTags_Create(t *testing.T) {
 			t.Errorf("Request body = %+v, expected %+v", v, createRequest)
 		}
 
-		fmt.Fprintf(w, createJson)
+		fmt.Fprintf(w, createJSON)
 	})
 
 	tag, _, err := client.Tags.Create(createRequest)

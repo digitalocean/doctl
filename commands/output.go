@@ -659,3 +659,50 @@ func (s *snapshot) KV() []map[string]interface{} {
 
 	return out
 }
+
+type certificate struct {
+	certificates do.Certificates
+}
+
+var _ Displayable = &certificate{}
+
+func (c *certificate) JSON(out io.Writer) error {
+	return writeJSON(c.certificates, out)
+}
+
+func (c *certificate) Cols() []string {
+	return []string{
+		"ID",
+		"Name",
+		"SHA1Fingerprint",
+		"NotAfter",
+		"Created",
+	}
+}
+
+func (c *certificate) ColMap() map[string]string {
+	return map[string]string{
+		"ID":              "ID",
+		"Name":            "Name",
+		"SHA1Fingerprint": "SHA-1 Fingerprint",
+		"NotAfter":        "Expiration Date",
+		"Created":         "Created At",
+	}
+}
+
+func (c *certificate) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, c := range c.certificates {
+		o := map[string]interface{}{
+			"ID":              c.ID,
+			"Name":            c.Name,
+			"SHA1Fingerprint": c.SHA1Fingerprint,
+			"NotAfter":        c.NotAfter,
+			"Created":         c.Created,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
