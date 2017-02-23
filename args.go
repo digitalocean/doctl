@@ -34,6 +34,8 @@ const (
 	ArgDomainName = "domain-name"
 	// ArgDropletID is a droplet id argument.
 	ArgDropletID = "droplet-id"
+	// ArgDropletIDs is a list of droplet IDs.
+	ArgDropletIDs = "droplet-ids"
 	// ArgKernelID is a ekrnel id argument.
 	ArgKernelID = "kernel-id"
 	// ArgImage is an image argument.
@@ -143,6 +145,19 @@ const (
 	ArgLeafCertificatePath = "leaf-certificate-path"
 	// ArgCertificateChainPath is a path to a certificate chain.
 	ArgCertificateChainPath = "certificate-chain-path"
+
+	// ArgLoadBalancerName is a name of the load balancer.
+	ArgLoadBalancerName = "name"
+	// ArgLoadBalancerAlgorithm is a load balancing algorithm.
+	ArgLoadBalancerAlgorithm = "algorithm"
+	// ArgRedirectHttptoHttps is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
+	ArgRedirectHttpToHttps = "redirect-http-to-https"
+	// ArgStickySessions is a list of sticky sessions settings for the load balancer.
+	ArgStickySessions = "sticky-sessions"
+	// ArgHealthCheck is a list of health check settings for the load balancer.
+	ArgHealthCheck = "health-check"
+	// ArgForwardingRules is a list of forwarding rules for the load balancer.
+	ArgForwardingRules = "forwarding-rules"
 
 	// ArgDeleteForce forces deletion actions
 	ArgDeleteForce = "force"

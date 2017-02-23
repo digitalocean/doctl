@@ -170,6 +170,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(FloatingIPAction())
 	cmd.AddCommand(Images())
 	cmd.AddCommand(ImageAction())
+	cmd.AddCommand(LoadBalancer())
 	cmd.AddCommand(Plugin())
 	cmd.AddCommand(Region())
 	cmd.AddCommand(Size())
@@ -294,6 +295,7 @@ type CmdConfig struct {
 	Regions           func() do.RegionsService
 	Images            func() do.ImagesService
 	ImageActions      func() do.ImageActionsService
+	LoadBalancers     func() do.LoadBalancersService
 	FloatingIPs       func() do.FloatingIPsService
 	FloatingIPActions func() do.FloatingIPActionsService
 	Droplets          func() do.DropletsService
@@ -340,6 +342,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.VolumeActions = func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) }
 			c.Snapshots = func() do.SnapshotsService { return do.NewSnapshotsService(godoClient) }
 			c.Certificates = func() do.CertificatesService { return do.NewCertificatesService(godoClient) }
+			c.LoadBalancers = func() do.LoadBalancersService { return do.NewLoadBalancersService(godoClient) }
 
 			return nil
 		},
