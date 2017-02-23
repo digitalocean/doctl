@@ -34,6 +34,8 @@ const (
 	ArgDomainName = "domain-name"
 	// ArgDropletID is a droplet id argument.
 	ArgDropletID = "droplet-id"
+	// ArgDropletIDs is a list of droplet IDs.
+	ArgDropletIDs = "droplet-ids"
 	// ArgKernelID is a ekrnel id argument.
 	ArgKernelID = "kernel-id"
 	// ArgImage is an image argument.
@@ -150,10 +152,6 @@ const (
 	ArgLoadBalancerAlgorithm = "algorithm"
 	// ArgRedirectHttptoHttps is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
 	ArgRedirectHttpToHttps = "redirect-http-to-https"
-	// ArgTag is a droplet tag.
-	ArgTag = "tag"
-	// ArgDropletIDs is a list of droplet IDs.
-	ArgDropletIDs = "droplet-ids"
 	// ArgStickySessions is a list of sticky sessions settings for the load balancer.
 	ArgStickySessions = "sticky-sessions"
 	// ArgHealthCheck is a list of health check settings for the load balancer.

@@ -43,7 +43,7 @@ func LoadBalancer() *Command {
 	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "", "load balancer region location, example value: nyc1", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "", "round_robin", "load balancing algorithm, possible values: round_robin or least_connections")
 	AddBoolFlag(cmdRecordCreate, doctl.ArgRedirectHttpToHttps, "", false, "flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
-	AddStringFlag(cmdRecordCreate, doctl.ArgTag, "", "", "droplet tag")
+	AddStringFlag(cmdRecordCreate, doctl.ArgTagName, "", "", "droplet tag name")
 	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 12,33")
 	AddStringFlag(cmdRecordCreate, doctl.ArgStickySessions, "", "", "comma-separated key:value list, example value: type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
 	AddStringFlag(cmdRecordCreate, doctl.ArgHealthCheck, "", "", "comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
@@ -54,7 +54,7 @@ func LoadBalancer() *Command {
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "", "load balancer region location, example value: nyc1", requiredOpt())
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "", "round_robin", "load balancing algorithm, possible values: round_robin or least_connections")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgRedirectHttpToHttps, "", false, "flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgTag, "", "", "droplet tag")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgTagName, "", "", "droplet tag name")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 12,33")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgStickySessions, "", "", "comma-separated key:value list, example value, example value: type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgHealthCheck, "", "", "comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
@@ -369,7 +369,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 	r.Algorithm = algorithm
 
-	tag, err := c.Doit.GetString(c.NS, doctl.ArgTag)
+	tag, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
 	if err != nil {
 		return err
 	}
