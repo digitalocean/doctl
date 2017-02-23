@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -29,7 +30,7 @@ var (
 
 func newTabWriter(out io.Writer) *tabwriter.Writer {
 	w := new(tabwriter.Writer)
-	w.Init(out, 0, 8, 1, '\t', 0)
+	w.Init(out, 0, 0, 4, ' ', 0)
 
 	return w
 }
@@ -705,4 +706,99 @@ func (c *certificate) KV() []map[string]interface{} {
 	}
 
 	return out
+}
+
+type loadBalancer struct {
+	loadBalancers do.LoadBalancers
+}
+
+var _ Displayable = &loadBalancer{}
+
+func (lb *loadBalancer) JSON(out io.Writer) error {
+	return writeJSON(lb.loadBalancers, out)
+}
+
+func (lb *loadBalancer) Cols() []string {
+	return []string{
+		"ID",
+		"IP",
+		"Name",
+		"Status",
+		"Created",
+		"Algorithm",
+		"Region",
+		"Tag",
+		"DropletIDs",
+		"RedirectHttpToHttps",
+		"StickySessions",
+		"HealthCheck",
+		"ForwardingRules",
+	}
+}
+
+func (lb *loadBalancer) ColMap() map[string]string {
+	return map[string]string{
+		"ID":                  "ID",
+		"IP":                  "IP",
+		"Name":                "Name",
+		"Status":              "Status",
+		"Created":             "Created At",
+		"Algorithm":           "Algorithm",
+		"Region":              "Region",
+		"Tag":                 "Tag",
+		"DropletIDs":          "Droplet IDs",
+		"RedirectHttpToHttps": "SSL",
+		"StickySessions":      "Sticky Sessions",
+		"HealthCheck":         "Health Check",
+		"ForwardingRules":     "Forwarding Rules",
+	}
+}
+
+func (lb *loadBalancer) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, l := range lb.loadBalancers {
+		forwardingRules := []string{}
+		for _, r := range l.ForwardingRules {
+			forwardingRules = append(forwardingRules, prettyPrintStruct(r))
+		}
+
+		o := map[string]interface{}{
+			"ID":                  l.ID,
+			"IP":                  l.IP,
+			"Name":                l.Name,
+			"Status":              l.Status,
+			"Created":             l.Created,
+			"Algorithm":           l.Algorithm,
+			"Region":              l.Region.Slug,
+			"Tag":                 l.Tag,
+			"DropletIDs":          fmt.Sprintf(strings.Trim(strings.Replace(fmt.Sprint(l.DropletIDs), " ", ",", -1), "[]")),
+			"RedirectHttpToHttps": l.RedirectHttpToHttps,
+			"StickySessions":      prettyPrintStruct(l.StickySessions),
+			"HealthCheck":         prettyPrintStruct(l.HealthCheck),
+			"ForwardingRules":     fmt.Sprintf(strings.Join(forwardingRules, " ")),
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
+func prettyPrintStruct(obj interface{}) string {
+	output := []string{}
+
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("Recovered from %v", err)
+		}
+	}()
+
+	val := reflect.Indirect(reflect.ValueOf(obj))
+	for i := 0; i < val.NumField(); i++ {
+		k := strings.Split(val.Type().Field(i).Tag.Get("json"), ",")[0]
+		v := reflect.ValueOf(val.Field(i).Interface())
+		output = append(output, fmt.Sprintf("%v:%v", k, v))
+	}
+
+	return fmt.Sprintf(strings.Join(output, ","))
 }
