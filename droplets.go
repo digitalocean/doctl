@@ -91,15 +91,15 @@ func (d *Droplet) PrivateIPv4() (string, error) {
 	return "", nil
 }
 
-// PublicIPv6 returns the private IPv6 address for the Droplet.
+// PublicIPv6 returns the public IPv6 address for the Droplet.
 func (d *Droplet) PublicIPv6() (string, error) {
 	if d.Networks == nil {
 		return "", errNoNetworks
 	}
 
-	for _, v4 := range d.Networks.V6 {
-		if v4.Type == "public" {
-			return v4.IPAddress, nil
+	for _, v6 := range d.Networks.V6 {
+		if v6.Type == "public" {
+			return v6.IPAddress, nil
 		}
 	}
 
