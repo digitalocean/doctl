@@ -284,7 +284,7 @@ func TestLoadBlanacers_Get(t *testing.T) {
 		fmt.Fprint(w, lbGetJSONResponse)
 	})
 
-	loadBalancer, _, err := client.LoadBalancers.Get(loadBalancerId)
+	loadBalancer, _, err := client.LoadBalancers.Get(ctx, loadBalancerId)
 	if err != nil {
 		t.Errorf("LoadBalancers.Get returned error: %v", err)
 	}
@@ -383,7 +383,7 @@ func TestLoadBlanacers_Create(t *testing.T) {
 		fmt.Fprint(w, lbCreateJSONResponse)
 	})
 
-	loadBalancer, _, err := client.LoadBalancers.Create(createRequest)
+	loadBalancer, _, err := client.LoadBalancers.Create(ctx, createRequest)
 	if err != nil {
 		t.Errorf("LoadBalancers.Create returned error: %v", err)
 	}
@@ -495,7 +495,7 @@ func TestLoadBlanacers_Update(t *testing.T) {
 		fmt.Fprint(w, lbUpdateJSONResponse)
 	})
 
-	loadBalancer, _, err := client.LoadBalancers.Update(loadBalancerId, updateRequest)
+	loadBalancer, _, err := client.LoadBalancers.Update(ctx, loadBalancerId, updateRequest)
 	if err != nil {
 		t.Errorf("LoadBalancers.Update returned error: %v", err)
 	}
@@ -557,7 +557,7 @@ func TestLoadBlanacers_List(t *testing.T) {
 		fmt.Fprint(w, lbListJSONResponse)
 	})
 
-	loadBalancers, _, err := client.LoadBalancers.List(nil)
+	loadBalancers, _, err := client.LoadBalancers.List(ctx, nil)
 
 	if err != nil {
 		t.Errorf("LoadBalancers.List returned error: %v", err)
@@ -620,7 +620,7 @@ func TestLoadBlanacers_List_Pagination(t *testing.T) {
 	})
 
 	opts := &ListOptions{Page: 2}
-	_, resp, err := client.LoadBalancers.List(opts)
+	_, resp, err := client.LoadBalancers.List(ctx, opts)
 
 	if err != nil {
 		t.Errorf("LoadBalancers.List returned error: %v", err)
@@ -641,7 +641,7 @@ func TestLoadBlanacers_Delete(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.LoadBalancers.Delete(lbID)
+	_, err := client.LoadBalancers.Delete(ctx, lbID)
 
 	if err != nil {
 		t.Errorf("LoadBalancers.Delete returned error: %v", err)
@@ -671,7 +671,7 @@ func TestLoadBlanacers_AddDroplets(t *testing.T) {
 		fmt.Fprint(w, nil)
 	})
 
-	_, err := client.LoadBalancers.AddDroplets(lbID, dropletIdsRequest.IDs...)
+	_, err := client.LoadBalancers.AddDroplets(ctx, lbID, dropletIdsRequest.IDs...)
 
 	if err != nil {
 		t.Errorf("LoadBalancers.AddDroplets returned error: %v", err)
@@ -701,7 +701,7 @@ func TestLoadBlanacers_RemoveDroplets(t *testing.T) {
 		fmt.Fprint(w, nil)
 	})
 
-	_, err := client.LoadBalancers.RemoveDroplets(lbID, dropletIdsRequest.IDs...)
+	_, err := client.LoadBalancers.RemoveDroplets(ctx, lbID, dropletIdsRequest.IDs...)
 
 	if err != nil {
 		t.Errorf("LoadBalancers.RemoveDroplets returned error: %v", err)
@@ -745,7 +745,7 @@ func TestLoadBlanacers_AddForwardingRules(t *testing.T) {
 		fmt.Fprint(w, nil)
 	})
 
-	_, err := client.LoadBalancers.AddForwardingRules(lbID, frr.Rules...)
+	_, err := client.LoadBalancers.AddForwardingRules(ctx, lbID, frr.Rules...)
 
 	if err != nil {
 		t.Errorf("LoadBalancers.AddForwardingRules returned error: %v", err)
@@ -788,7 +788,7 @@ func TestLoadBlanacers_RemoveForwardingRules(t *testing.T) {
 		fmt.Fprint(w, nil)
 	})
 
-	_, err := client.LoadBalancers.RemoveForwardingRules(lbID, frr.Rules...)
+	_, err := client.LoadBalancers.RemoveForwardingRules(ctx, lbID, frr.Rules...)
 
 	if err != nil {
 		t.Errorf("LoadBalancers.RemoveForwardingRules returned error: %v", err)

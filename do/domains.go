@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // Domain wraps a godo Domain.
 type Domain struct {
@@ -61,7 +64,7 @@ func NewDomainsService(client *godo.Client) DomainsService {
 
 func (ds *domainsService) List() (Domains, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ds.client.Domains.List(opt)
+		list, resp, err := ds.client.Domains.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -89,7 +92,7 @@ func (ds *domainsService) List() (Domains, error) {
 }
 
 func (ds *domainsService) Get(name string) (*Domain, error) {
-	d, _, err := ds.client.Domains.Get(name)
+	d, _, err := ds.client.Domains.Get(context.TODO(), name)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +101,7 @@ func (ds *domainsService) Get(name string) (*Domain, error) {
 }
 
 func (ds *domainsService) Create(dcr *godo.DomainCreateRequest) (*Domain, error) {
-	d, _, err := ds.client.Domains.Create(dcr)
+	d, _, err := ds.client.Domains.Create(context.TODO(), dcr)
 	if err != nil {
 		return nil, err
 	}
@@ -107,13 +110,13 @@ func (ds *domainsService) Create(dcr *godo.DomainCreateRequest) (*Domain, error)
 }
 
 func (ds *domainsService) Delete(name string) error {
-	_, err := ds.client.Domains.Delete(name)
+	_, err := ds.client.Domains.Delete(context.TODO(), name)
 	return err
 }
 
 func (ds *domainsService) Records(name string) (DomainRecords, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ds.client.Domains.Records(name, opt)
+		list, resp, err := ds.client.Domains.Records(context.TODO(), name, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -141,7 +144,7 @@ func (ds *domainsService) Records(name string) (DomainRecords, error) {
 }
 
 func (ds *domainsService) Record(domain string, id int) (*DomainRecord, error) {
-	dr, _, err := ds.client.Domains.Record(domain, id)
+	dr, _, err := ds.client.Domains.Record(context.TODO(), domain, id)
 	if err != nil {
 		return nil, err
 	}
@@ -150,12 +153,12 @@ func (ds *domainsService) Record(domain string, id int) (*DomainRecord, error) {
 }
 
 func (ds *domainsService) DeleteRecord(domain string, id int) error {
-	_, err := ds.client.Domains.DeleteRecord(domain, id)
+	_, err := ds.client.Domains.DeleteRecord(context.TODO(), domain, id)
 	return err
 }
 
 func (ds *domainsService) EditRecord(domain string, id int, drer *godo.DomainRecordEditRequest) (*DomainRecord, error) {
-	dr, _, err := ds.client.Domains.EditRecord(domain, id, drer)
+	dr, _, err := ds.client.Domains.EditRecord(context.TODO(), domain, id, drer)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +167,7 @@ func (ds *domainsService) EditRecord(domain string, id int, drer *godo.DomainRec
 }
 
 func (ds *domainsService) CreateRecord(domain string, drer *godo.DomainRecordEditRequest) (*DomainRecord, error) {
-	dr, _, err := ds.client.Domains.CreateRecord(domain, drer)
+	dr, _, err := ds.client.Domains.CreateRecord(context.TODO(), domain, drer)
 	if err != nil {
 		return nil, err
 	}

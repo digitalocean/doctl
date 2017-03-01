@@ -13,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // Certificate wraps a godo Certificate.
 type Certificate struct {
@@ -45,7 +49,7 @@ func NewCertificatesService(client *godo.Client) CertificatesService {
 }
 
 func (cs *certificatesService) Get(cID string) (*Certificate, error) {
-	c, _, err := cs.client.Certificates.Get(cID)
+	c, _, err := cs.client.Certificates.Get(context.TODO(), cID)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +58,7 @@ func (cs *certificatesService) Get(cID string) (*Certificate, error) {
 }
 
 func (cs *certificatesService) Create(cr *godo.CertificateRequest) (*Certificate, error) {
-	c, _, err := cs.client.Certificates.Create(cr)
+	c, _, err := cs.client.Certificates.Create(context.TODO(), cr)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +68,7 @@ func (cs *certificatesService) Create(cr *godo.CertificateRequest) (*Certificate
 
 func (cs *certificatesService) List() (Certificates, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := cs.client.Certificates.List(opt)
+		list, resp, err := cs.client.Certificates.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -92,6 +96,6 @@ func (cs *certificatesService) List() (Certificates, error) {
 }
 
 func (cs *certificatesService) Delete(cID string) error {
-	_, err := cs.client.Certificates.Delete(cID)
+	_, err := cs.client.Certificates.Delete(context.TODO(), cID)
 	return err
 }

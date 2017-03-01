@@ -13,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // Account is a wrapper for godo.Account.
 type Account struct {
@@ -45,7 +49,7 @@ func NewAccountService(godoClient *godo.Client) AccountService {
 }
 
 func (as *accountService) Get() (*Account, error) {
-	godoAccount, _, err := as.client.Account.Get()
+	godoAccount, _, err := as.client.Account.Get(context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +59,7 @@ func (as *accountService) Get() (*Account, error) {
 }
 
 func (as *accountService) RateLimit() (*RateLimit, error) {
-	_, resp, err := as.client.Account.Get()
+	_, resp, err := as.client.Account.Get(context.TODO())
 	if err != nil {
 		return nil, err
 	}

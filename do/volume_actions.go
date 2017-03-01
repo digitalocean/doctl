@@ -1,6 +1,10 @@
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // VolumeActionsService is an interface for interacting with DigitalOcean's volume-action api.
 type VolumeActionsService interface {
@@ -33,24 +37,24 @@ func (das *volumeActionsService) handleActionResponse(a *godo.Action, err error)
 }
 
 func (das *volumeActionsService) Attach(volumeID string, dropletID int) (*Action, error) {
-	a, _, err := das.client.StorageActions.Attach(volumeID, dropletID)
+	a, _, err := das.client.StorageActions.Attach(context.TODO(), volumeID, dropletID)
 	return das.handleActionResponse(a, err)
 
 }
 
 func (das *volumeActionsService) Detach(volumeID string) (*Action, error) {
-	a, _, err := das.client.StorageActions.Detach(volumeID)
+	a, _, err := das.client.StorageActions.Detach(context.TODO(), volumeID)
 	return das.handleActionResponse(a, err)
 
 }
 
 func (das *volumeActionsService) DetachByDropletID(volumeID string, dropletID int) (*Action, error) {
-	a, _, err := das.client.StorageActions.DetachByDropletID(volumeID, dropletID)
+	a, _, err := das.client.StorageActions.DetachByDropletID(context.TODO(), volumeID, dropletID)
 	return das.handleActionResponse(a, err)
 
 }
 
 func (das *volumeActionsService) Resize(volumeID string, sizeGigabytes int, regionSlug string) (*Action, error) {
-	a, _, err := das.client.StorageActions.Resize(volumeID, sizeGigabytes, regionSlug)
+	a, _, err := das.client.StorageActions.Resize(context.TODO(), volumeID, sizeGigabytes, regionSlug)
 	return das.handleActionResponse(a, err)
 }

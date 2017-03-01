@@ -13,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // LoadBalancer wraps a godo LoadBalancer.
 type LoadBalancer struct {
@@ -50,7 +54,7 @@ func NewLoadBalancersService(client *godo.Client) LoadBalancersService {
 }
 
 func (lbs *loadBalancersService) Get(lbID string) (*LoadBalancer, error) {
-	lb, _, err := lbs.client.LoadBalancers.Get(lbID)
+	lb, _, err := lbs.client.LoadBalancers.Get(context.TODO(), lbID)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +64,7 @@ func (lbs *loadBalancersService) Get(lbID string) (*LoadBalancer, error) {
 
 func (lbs *loadBalancersService) List() (LoadBalancers, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := lbs.client.LoadBalancers.List(opt)
+		list, resp, err := lbs.client.LoadBalancers.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -88,7 +92,7 @@ func (lbs *loadBalancersService) List() (LoadBalancers, error) {
 }
 
 func (lbs *loadBalancersService) Create(lbr *godo.LoadBalancerRequest) (*LoadBalancer, error) {
-	lb, _, err := lbs.client.LoadBalancers.Create(lbr)
+	lb, _, err := lbs.client.LoadBalancers.Create(context.TODO(), lbr)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +101,7 @@ func (lbs *loadBalancersService) Create(lbr *godo.LoadBalancerRequest) (*LoadBal
 }
 
 func (lbs *loadBalancersService) Update(lbID string, lbr *godo.LoadBalancerRequest) (*LoadBalancer, error) {
-	lb, _, err := lbs.client.LoadBalancers.Update(lbID, lbr)
+	lb, _, err := lbs.client.LoadBalancers.Update(context.TODO(), lbID, lbr)
 	if err != nil {
 		return nil, err
 	}
@@ -106,26 +110,26 @@ func (lbs *loadBalancersService) Update(lbID string, lbr *godo.LoadBalancerReque
 }
 
 func (lbs *loadBalancersService) Delete(lbID string) error {
-	_, err := lbs.client.LoadBalancers.Delete(lbID)
+	_, err := lbs.client.LoadBalancers.Delete(context.TODO(), lbID)
 	return err
 }
 
 func (lbs *loadBalancersService) AddDroplets(lbID string, dIDs ...int) error {
-	_, err := lbs.client.LoadBalancers.AddDroplets(lbID, dIDs...)
+	_, err := lbs.client.LoadBalancers.AddDroplets(context.TODO(), lbID, dIDs...)
 	return err
 }
 
 func (lbs *loadBalancersService) RemoveDroplets(lbID string, dIDs ...int) error {
-	_, err := lbs.client.LoadBalancers.RemoveDroplets(lbID, dIDs...)
+	_, err := lbs.client.LoadBalancers.RemoveDroplets(context.TODO(), lbID, dIDs...)
 	return err
 }
 
 func (lbs *loadBalancersService) AddForwardingRules(lbID string, rules ...godo.ForwardingRule) error {
-	_, err := lbs.client.LoadBalancers.AddForwardingRules(lbID, rules...)
+	_, err := lbs.client.LoadBalancers.AddForwardingRules(context.TODO(), lbID, rules...)
 	return err
 }
 
 func (lbs *loadBalancersService) RemoveForwardingRules(lbID string, rules ...godo.ForwardingRule) error {
-	_, err := lbs.client.LoadBalancers.RemoveForwardingRules(lbID, rules...)
+	_, err := lbs.client.LoadBalancers.RemoveForwardingRules(context.TODO(), lbID, rules...)
 	return err
 }

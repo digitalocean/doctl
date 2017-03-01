@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // Size wraps godo Size.
 type Size struct {
@@ -44,7 +47,7 @@ func NewSizesService(client *godo.Client) SizesService {
 
 func (rs *sizesService) List() (Sizes, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := rs.client.Sizes.List(opt)
+		list, resp, err := rs.client.Sizes.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}

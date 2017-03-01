@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // FloatingIPActionsService is an interface for interacting with
 // DigitalOcean's floating ip action api.
@@ -39,7 +42,7 @@ func NewFloatingIPActionsService(godoClient *godo.Client) FloatingIPActionsServi
 }
 
 func (fia *floatingIPActionsService) Assign(ip string, dropletID int) (*Action, error) {
-	a, _, err := fia.client.FloatingIPActions.Assign(ip, dropletID)
+	a, _, err := fia.client.FloatingIPActions.Assign(context.TODO(), ip, dropletID)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +51,7 @@ func (fia *floatingIPActionsService) Assign(ip string, dropletID int) (*Action, 
 }
 
 func (fia *floatingIPActionsService) Unassign(ip string) (*Action, error) {
-	a, _, err := fia.client.FloatingIPActions.Unassign(ip)
+	a, _, err := fia.client.FloatingIPActions.Unassign(context.TODO(), ip)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +60,7 @@ func (fia *floatingIPActionsService) Unassign(ip string) (*Action, error) {
 }
 
 func (fia *floatingIPActionsService) Get(ip string, actionID int) (*Action, error) {
-	a, _, err := fia.client.FloatingIPActions.Get(ip, actionID)
+	a, _, err := fia.client.FloatingIPActions.Get(context.TODO(), ip, actionID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +70,7 @@ func (fia *floatingIPActionsService) Get(ip string, actionID int) (*Action, erro
 
 func (fia *floatingIPActionsService) List(ip string, opt *godo.ListOptions) ([]Action, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := fia.client.FloatingIPActions.List(ip, opt)
+		list, resp, err := fia.client.FloatingIPActions.List(context.TODO(), ip, opt)
 		if err != nil {
 			return nil, nil, err
 		}

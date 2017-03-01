@@ -33,7 +33,7 @@ func TestFloatingIPsActions_Assign(t *testing.T) {
 
 	})
 
-	assign, _, err := client.FloatingIPActions.Assign("192.168.0.1", 12345)
+	assign, _, err := client.FloatingIPActions.Assign(ctx, "192.168.0.1", 12345)
 	if err != nil {
 		t.Errorf("FloatingIPsActions.Assign returned error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestFloatingIPsActions_Unassign(t *testing.T) {
 		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
 	})
 
-	action, _, err := client.FloatingIPActions.Unassign("192.168.0.1")
+	action, _, err := client.FloatingIPActions.Unassign(ctx, "192.168.0.1")
 	if err != nil {
 		t.Errorf("FloatingIPsActions.Get returned error: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestFloatingIPsActions_Get(t *testing.T) {
 		fmt.Fprintf(w, `{"action":{"status":"in-progress"}}`)
 	})
 
-	action, _, err := client.FloatingIPActions.Get("192.168.0.1", 456)
+	action, _, err := client.FloatingIPActions.Get(ctx, "192.168.0.1", 456)
 	if err != nil {
 		t.Errorf("FloatingIPsActions.Get returned error: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestFloatingIPsActions_List(t *testing.T) {
 		fmt.Fprintf(w, `{"actions":[{"status":"in-progress"}]}`)
 	})
 
-	actions, _, err := client.FloatingIPActions.List("192.168.0.1", nil)
+	actions, _, err := client.FloatingIPActions.List(ctx, "192.168.0.1", nil)
 	if err != nil {
 		t.Errorf("FloatingIPsActions.List returned error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestFloatingIPsActions_ListMultiplePages(t *testing.T) {
 		fmt.Fprint(w, `{"actions":[{"status":"in-progress"}], "links":{"pages":{"next":"http://example.com/v2/floating_ips/192.168.0.1/actions?page=2"}}}`)
 	})
 
-	_, resp, err := client.FloatingIPActions.List("192.168.0.1", nil)
+	_, resp, err := client.FloatingIPActions.List(ctx, "192.168.0.1", nil)
 	if err != nil {
 		t.Errorf("FloatingIPsActions.List returned error: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestFloatingIPsActions_ListPageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.FloatingIPActions.List("192.168.0.1", opt)
+	_, resp, err := client.FloatingIPActions.List(ctx, "192.168.0.1", opt)
 	if err != nil {
 		t.Errorf("FloatingIPsActions.List returned error: %v", err)
 	}

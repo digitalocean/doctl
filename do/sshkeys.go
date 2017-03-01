@@ -14,6 +14,7 @@ limitations under the License.
 package do
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -52,7 +53,7 @@ func NewKeysService(client *godo.Client) KeysService {
 
 func (ks *keysService) List() (SSHKeys, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ks.client.Keys.List(opt)
+		list, resp, err := ks.client.Keys.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -84,10 +85,10 @@ func (ks *keysService) Get(id string) (*SSHKey, error) {
 	var k *godo.Key
 
 	if i, aerr := strconv.Atoi(id); aerr == nil {
-		k, _, err = ks.client.Keys.GetByID(i)
+		k, _, err = ks.client.Keys.GetByID(context.TODO(), i)
 	} else {
 		if len(id) > 0 {
-			k, _, err = ks.client.Keys.GetByFingerprint(id)
+			k, _, err = ks.client.Keys.GetByFingerprint(context.TODO(), id)
 		} else {
 			err = fmt.Errorf("missing key id or fingerprint")
 		}
@@ -101,7 +102,7 @@ func (ks *keysService) Get(id string) (*SSHKey, error) {
 }
 
 func (ks *keysService) Create(kcr *godo.KeyCreateRequest) (*SSHKey, error) {
-	k, _, err := ks.client.Keys.Create(kcr)
+	k, _, err := ks.client.Keys.Create(context.TODO(), kcr)
 	if err != nil {
 		return nil, err
 	}
@@ -113,9 +114,9 @@ func (ks *keysService) Update(id string, kur *godo.KeyUpdateRequest) (*SSHKey, e
 	var k *godo.Key
 	var err error
 	if i, aerr := strconv.Atoi(id); aerr == nil {
-		k, _, err = ks.client.Keys.UpdateByID(i, kur)
+		k, _, err = ks.client.Keys.UpdateByID(context.TODO(), i, kur)
 	} else {
-		k, _, err = ks.client.Keys.UpdateByFingerprint(id, kur)
+		k, _, err = ks.client.Keys.UpdateByFingerprint(context.TODO(), id, kur)
 	}
 
 	if err != nil {
@@ -129,9 +130,9 @@ func (ks *keysService) Delete(id string) error {
 	var err error
 
 	if i, aerr := strconv.Atoi(id); aerr == nil {
-		_, err = ks.client.Keys.DeleteByID(i)
+		_, err = ks.client.Keys.DeleteByID(context.TODO(), i)
 	} else {
-		_, err = ks.client.Keys.DeleteByFingerprint(id)
+		_, err = ks.client.Keys.DeleteByFingerprint(context.TODO(), id)
 	}
 
 	return err

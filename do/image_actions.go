@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // ImageActionsService is an interface for interacting with DigitalOcean's image action api.
 type ImageActionsService interface {
@@ -36,7 +39,7 @@ func NewImageActionsService(client *godo.Client) ImageActionsService {
 }
 
 func (ia *imageActionsService) Get(imageID, actionID int) (*Action, error) {
-	a, _, err := ia.client.ImageActions.Get(imageID, actionID)
+	a, _, err := ia.client.ImageActions.Get(context.TODO(), imageID, actionID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +48,7 @@ func (ia *imageActionsService) Get(imageID, actionID int) (*Action, error) {
 }
 
 func (ia *imageActionsService) Transfer(imageID int, transferRequest *godo.ActionRequest) (*Action, error) {
-	a, _, err := ia.client.ImageActions.Transfer(imageID, transferRequest)
+	a, _, err := ia.client.ImageActions.Transfer(context.TODO(), imageID, transferRequest)
 	if err != nil {
 		return nil, err
 	}

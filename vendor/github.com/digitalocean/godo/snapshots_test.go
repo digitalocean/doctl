@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -15,8 +16,8 @@ func TestSnapshots_List(t *testing.T) {
 		testMethod(t, r, "GET")
 		fmt.Fprint(w, `{"snapshots":[{"id":"1"},{"id":"2", "size_gigabytes": 4.84}]}`)
 	})
-
-	snapshots, _, err := client.Snapshots.List(nil)
+	ctx := context.Background()
+	snapshots, _, err := client.Snapshots.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Snapshots.List returned error: %v", err)
 	}
@@ -41,7 +42,8 @@ func TestSnapshots_ListVolume(t *testing.T) {
 		fmt.Fprint(w, `{"snapshots":[{"id":"1"},{"id":"2"}]}`)
 	})
 
-	snapshots, _, err := client.Snapshots.ListVolume(nil)
+	ctx := context.Background()
+	snapshots, _, err := client.Snapshots.ListVolume(ctx, nil)
 	if err != nil {
 		t.Errorf("Snapshots.ListVolume returned error: %v", err)
 	}
@@ -67,7 +69,8 @@ func TestSnapshots_ListDroplet(t *testing.T) {
 		fmt.Fprint(w, `{"snapshots":[{"id":"1"},{"id":"2", "size_gigabytes": 4.84}]}`)
 	})
 
-	snapshots, _, err := client.Snapshots.ListDroplet(nil)
+	ctx := context.Background()
+	snapshots, _, err := client.Snapshots.ListDroplet(ctx, nil)
 	if err != nil {
 		t.Errorf("Snapshots.ListDroplet returned error: %v", err)
 	}
@@ -87,7 +90,8 @@ func TestSnapshots_ListSnapshotsMultiplePages(t *testing.T) {
 		fmt.Fprint(w, `{"snapshots": [{"id":"1"},{"id":"2"}], "links":{"pages":{"next":"http://example.com/v2/snapshots/?page=2"}}}`)
 	})
 
-	_, resp, err := client.Snapshots.List(&ListOptions{Page: 2})
+	ctx := context.Background()
+	_, resp, err := client.Snapshots.List(ctx, &ListOptions{Page: 2})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,8 +120,9 @@ func TestSnapshots_RetrievePageByNumber(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
+	ctx := context.Background()
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.Snapshots.List(opt)
+	_, resp, err := client.Snapshots.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +139,8 @@ func TestSnapshots_GetSnapshotByID(t *testing.T) {
 		fmt.Fprint(w, `{"snapshot":{"id":"12345"}}`)
 	})
 
-	snapshots, _, err := client.Snapshots.Get("12345")
+	ctx := context.Background()
+	snapshots, _, err := client.Snapshots.Get(ctx, "12345")
 	if err != nil {
 		t.Errorf("Snapshot.GetByID returned error: %v", err)
 	}
@@ -153,7 +159,8 @@ func TestSnapshots_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Snapshots.Delete("12345")
+	ctx := context.Background()
+	_, err := client.Snapshots.Delete(ctx, "12345")
 	if err != nil {
 		t.Errorf("Snapshot.Delete returned error: %v", err)
 	}

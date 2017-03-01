@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 //Action is a wrapper for godo.Action
 type Action struct {
@@ -45,7 +48,7 @@ func NewActionsService(godoClient *godo.Client) ActionsService {
 
 func (as *actionsService) List() (Actions, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := as.client.Actions.List(opt)
+		list, resp, err := as.client.Actions.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -73,7 +76,7 @@ func (as *actionsService) List() (Actions, error) {
 }
 
 func (as *actionsService) Get(id int) (*Action, error) {
-	a, _, err := as.client.Actions.Get(id)
+	a, _, err := as.client.Actions.Get(context.TODO(), id)
 	if err != nil {
 		return nil, err
 	}
