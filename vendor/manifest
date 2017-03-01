@@ -46,13 +46,6 @@
 			"branch": "master"
 		},
 		{
-			"importpath": "github.com/bryanl/godomock",
-			"repository": "https://github.com/bryanl/godomock",
-			"vcs": "",
-			"revision": "dd0b0cf1c93c7acaf2e660b9e289d51a665eb249",
-			"branch": "master"
-		},
-		{
 			"importpath": "github.com/bryanl/webbrowser",
 			"repository": "https://github.com/bryanl/webbrowser",
 			"vcs": "",

@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,19 +14,56 @@ limitations under the License.
 package do
 
 import (
+	"context"
 	"testing"
 
-	"github.com/bryanl/godomock"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
+
+type GoDoAccountService struct {
+	mock.Mock
+}
+
+// Get provides a mock function with given fields: _a0
+func (_m *GoDoAccountService) Get(_a0 context.Context) (*godo.Account, *godo.Response, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *godo.Account
+	if rf, ok := ret.Get(0).(func(context.Context) *godo.Account); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*godo.Account)
+		}
+	}
+
+	var r1 *godo.Response
+	if rf, ok := ret.Get(1).(func(context.Context) *godo.Response); ok {
+		r1 = rf(_a0)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*godo.Response)
+		}
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(context.Context) error); ok {
+		r2 = rf(_a0)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
 
 func TestAccountServiceGet(t *testing.T) {
 
-	gAccountSvc := &godomock.MockAccountService{}
+	gAccountSvc := &GoDoAccountService{}
 
 	gAccount := &godo.Account{UUID: "uuid"}
-	gAccountSvc.On("Get").Return(gAccount, nil, nil)
+	gAccountSvc.On("Get", context.TODO()).Return(gAccount, nil, nil)
 
 	client := &godo.Client{
 		Account: gAccountSvc,
