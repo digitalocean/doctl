@@ -17,7 +17,7 @@ func TestAction_List(t *testing.T) {
 		testMethod(t, r, "GET")
 	})
 
-	actions, _, err := client.Actions.List(nil)
+	actions, _, err := client.Actions.List(ctx, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
@@ -37,7 +37,7 @@ func TestAction_ListActionMultiplePages(t *testing.T) {
 		testMethod(t, r, "GET")
 	})
 
-	_, resp, err := client.Actions.List(nil)
+	_, resp, err := client.Actions.List(ctx, nil)
 	if err != nil {
 		t.Fatal(nil)
 	}
@@ -68,7 +68,7 @@ func TestAction_RetrievePageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.Actions.List(opt)
+	_, resp, err := client.Actions.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestAction_Get(t *testing.T) {
 		testMethod(t, r, "GET")
 	})
 
-	action, _, err := client.Actions.Get(12345)
+	action, _, err := client.Actions.Get(ctx, 12345)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}

@@ -17,7 +17,7 @@ func TestDomains_ListDomains(t *testing.T) {
 		fmt.Fprint(w, `{"domains": [{"name":"foo.com"},{"name":"bar.com"}]}`)
 	})
 
-	domains, _, err := client.Domains.List(nil)
+	domains, _, err := client.Domains.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Domains.List returned error: %v", err)
 	}
@@ -37,7 +37,7 @@ func TestDomains_ListDomainsMultiplePages(t *testing.T) {
 		fmt.Fprint(w, `{"domains": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/domains/?page=2"}}}`)
 	})
 
-	_, resp, err := client.Domains.List(nil)
+	_, resp, err := client.Domains.List(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestDomains_RetrievePageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.Domains.List(opt)
+	_, resp, err := client.Domains.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestDomains_GetDomain(t *testing.T) {
 		fmt.Fprint(w, `{"domain":{"name":"example.com"}}`)
 	})
 
-	domains, _, err := client.Domains.Get("example.com")
+	domains, _, err := client.Domains.Get(ctx, "example.com")
 	if err != nil {
 		t.Errorf("domain.Get returned error: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestDomains_Create(t *testing.T) {
 		fmt.Fprint(w, `{"domain":{"name":"example.com"}}`)
 	})
 
-	domain, _, err := client.Domains.Create(createRequest)
+	domain, _, err := client.Domains.Create(ctx, createRequest)
 	if err != nil {
 		t.Errorf("Domains.Create returned error: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestDomains_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Domains.Delete("example.com")
+	_, err := client.Domains.Delete(ctx, "example.com")
 	if err != nil {
 		t.Errorf("Domains.Delete returned error: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestDomains_AllRecordsForDomainName(t *testing.T) {
 		fmt.Fprint(w, `{"domain_records":[{"id":1},{"id":2}]}`)
 	})
 
-	records, _, err := client.Domains.Records("example.com", nil)
+	records, _, err := client.Domains.Records(ctx, "example.com", nil)
 	if err != nil {
 		t.Errorf("Domains.List returned error: %v", err)
 	}
@@ -179,7 +179,7 @@ func TestDomains_AllRecordsForDomainName_PerPage(t *testing.T) {
 	})
 
 	dro := &ListOptions{PerPage: 2}
-	records, _, err := client.Domains.Records("example.com", dro)
+	records, _, err := client.Domains.Records(ctx, "example.com", dro)
 	if err != nil {
 		t.Errorf("Domains.List returned error: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestDomains_GetRecordforDomainName(t *testing.T) {
 		fmt.Fprint(w, `{"domain_record":{"id":1}}`)
 	})
 
-	record, _, err := client.Domains.Record("example.com", 1)
+	record, _, err := client.Domains.Record(ctx, "example.com", 1)
 	if err != nil {
 		t.Errorf("Domains.GetRecord returned error: %v", err)
 	}
@@ -218,7 +218,7 @@ func TestDomains_DeleteRecordForDomainName(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Domains.DeleteRecord("example.com", 1)
+	_, err := client.Domains.DeleteRecord(ctx, "example.com", 1)
 	if err != nil {
 		t.Errorf("Domains.RecordDelete returned error: %v", err)
 	}
@@ -254,7 +254,7 @@ func TestDomains_CreateRecordForDomainName(t *testing.T) {
 			fmt.Fprintf(w, `{"domain_record": {"id":1}}`)
 		})
 
-	record, _, err := client.Domains.CreateRecord("example.com", createRequest)
+	record, _, err := client.Domains.CreateRecord(ctx, "example.com", createRequest)
 	if err != nil {
 		t.Errorf("Domains.CreateRecord returned error: %v", err)
 	}
@@ -293,7 +293,7 @@ func TestDomains_EditRecordForDomainName(t *testing.T) {
 		fmt.Fprintf(w, `{"id":1}`)
 	})
 
-	record, _, err := client.Domains.EditRecord("example.com", 1, editRequest)
+	record, _, err := client.Domains.EditRecord(ctx, "example.com", 1, editRequest)
 	if err != nil {
 		t.Errorf("Domains.EditRecord returned error: %v", err)
 	}

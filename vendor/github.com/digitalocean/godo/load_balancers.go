@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -11,15 +12,15 @@ const dropletsPath = "droplets"
 // LoadBalancersService is an interface for managing load balancers with the DigitalOcean API.
 // See: https://developers.digitalocean.com/documentation/v2#load-balancers
 type LoadBalancersService interface {
-	Get(lbID string) (*LoadBalancer, *Response, error)
-	List(opt *ListOptions) ([]LoadBalancer, *Response, error)
-	Create(lbr *LoadBalancerRequest) (*LoadBalancer, *Response, error)
-	Update(lbID string, lbr *LoadBalancerRequest) (*LoadBalancer, *Response, error)
-	Delete(lbID string) (*Response, error)
-	AddDroplets(lbID string, dropletIDs ...int) (*Response, error)
-	RemoveDroplets(lbID string, dropletIDs ...int) (*Response, error)
-	AddForwardingRules(lbID string, rules ...ForwardingRule) (*Response, error)
-	RemoveForwardingRules(lbID string, rules ...ForwardingRule) (*Response, error)
+	Get(context.Context, string) (*LoadBalancer, *Response, error)
+	List(context.Context, *ListOptions) ([]LoadBalancer, *Response, error)
+	Create(context.Context, *LoadBalancerRequest) (*LoadBalancer, *Response, error)
+	Update(ctx context.Context, lbID string, lbr *LoadBalancerRequest) (*LoadBalancer, *Response, error)
+	Delete(ctx context.Context, lbID string) (*Response, error)
+	AddDroplets(ctx context.Context, lbID string, dropletIDs ...int) (*Response, error)
+	RemoveDroplets(ctx context.Context, lbID string, dropletIDs ...int) (*Response, error)
+	AddForwardingRules(ctx context.Context, lbID string, rules ...ForwardingRule) (*Response, error)
+	RemoveForwardingRules(ctx context.Context, lbID string, rules ...ForwardingRule) (*Response, error)
 }
 
 // LoadBalancer represents a DigitalOcean load balancer configuration.
@@ -138,10 +139,10 @@ type LoadBalancersServiceOp struct {
 var _ LoadBalancersService = &LoadBalancersServiceOp{}
 
 // Get an existing load balancer by its identifier.
-func (l *LoadBalancersServiceOp) Get(lbID string) (*LoadBalancer, *Response, error) {
+func (l *LoadBalancersServiceOp) Get(ctx context.Context, lbID string) (*LoadBalancer, *Response, error) {
 	path := fmt.Sprintf("%s/%s", loadBalancersBasePath, lbID)
 
-	req, err := l.client.NewRequest("GET", path, nil)
+	req, err := l.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -156,13 +157,13 @@ func (l *LoadBalancersServiceOp) Get(lbID string) (*LoadBalancer, *Response, err
 }
 
 // List load balancers, with optional pagination.
-func (l *LoadBalancersServiceOp) List(opt *ListOptions) ([]LoadBalancer, *Response, error) {
+func (l *LoadBalancersServiceOp) List(ctx context.Context, opt *ListOptions) ([]LoadBalancer, *Response, error) {
 	path, err := addOptions(loadBalancersBasePath, opt)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	req, err := l.client.NewRequest("GET", path, nil)
+	req, err := l.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -180,8 +181,8 @@ func (l *LoadBalancersServiceOp) List(opt *ListOptions) ([]LoadBalancer, *Respon
 }
 
 // Create a new load balancer with a given configuration.
-func (l *LoadBalancersServiceOp) Create(lbr *LoadBalancerRequest) (*LoadBalancer, *Response, error) {
-	req, err := l.client.NewRequest("POST", loadBalancersBasePath, lbr)
+func (l *LoadBalancersServiceOp) Create(ctx context.Context, lbr *LoadBalancerRequest) (*LoadBalancer, *Response, error) {
+	req, err := l.client.NewRequest(ctx, "POST", loadBalancersBasePath, lbr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -196,10 +197,10 @@ func (l *LoadBalancersServiceOp) Create(lbr *LoadBalancerRequest) (*LoadBalancer
 }
 
 // Update an existing load balancer with new configuration.
-func (l *LoadBalancersServiceOp) Update(lbID string, lbr *LoadBalancerRequest) (*LoadBalancer, *Response, error) {
+func (l *LoadBalancersServiceOp) Update(ctx context.Context, lbID string, lbr *LoadBalancerRequest) (*LoadBalancer, *Response, error) {
 	path := fmt.Sprintf("%s/%s", loadBalancersBasePath, lbID)
 
-	req, err := l.client.NewRequest("PUT", path, lbr)
+	req, err := l.client.NewRequest(ctx, "PUT", path, lbr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -214,10 +215,10 @@ func (l *LoadBalancersServiceOp) Update(lbID string, lbr *LoadBalancerRequest) (
 }
 
 // Delete a load balancer by its identifier.
-func (l *LoadBalancersServiceOp) Delete(ldID string) (*Response, error) {
+func (l *LoadBalancersServiceOp) Delete(ctx context.Context, ldID string) (*Response, error) {
 	path := fmt.Sprintf("%s/%s", loadBalancersBasePath, ldID)
 
-	req, err := l.client.NewRequest("DELETE", path, nil)
+	req, err := l.client.NewRequest(ctx, "DELETE", path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -226,10 +227,10 @@ func (l *LoadBalancersServiceOp) Delete(ldID string) (*Response, error) {
 }
 
 // AddDroplets adds droplets to a load balancer.
-func (l *LoadBalancersServiceOp) AddDroplets(lbID string, dropletIDs ...int) (*Response, error) {
+func (l *LoadBalancersServiceOp) AddDroplets(ctx context.Context, lbID string, dropletIDs ...int) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/%s", loadBalancersBasePath, lbID, dropletsPath)
 
-	req, err := l.client.NewRequest("POST", path, &dropletIDsRequest{IDs: dropletIDs})
+	req, err := l.client.NewRequest(ctx, "POST", path, &dropletIDsRequest{IDs: dropletIDs})
 	if err != nil {
 		return nil, err
 	}
@@ -238,10 +239,10 @@ func (l *LoadBalancersServiceOp) AddDroplets(lbID string, dropletIDs ...int) (*R
 }
 
 // RemoveDroplets removes droplets from a load balancer.
-func (l *LoadBalancersServiceOp) RemoveDroplets(lbID string, dropletIDs ...int) (*Response, error) {
+func (l *LoadBalancersServiceOp) RemoveDroplets(ctx context.Context, lbID string, dropletIDs ...int) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/%s", loadBalancersBasePath, lbID, dropletsPath)
 
-	req, err := l.client.NewRequest("DELETE", path, &dropletIDsRequest{IDs: dropletIDs})
+	req, err := l.client.NewRequest(ctx, "DELETE", path, &dropletIDsRequest{IDs: dropletIDs})
 	if err != nil {
 		return nil, err
 	}
@@ -250,10 +251,10 @@ func (l *LoadBalancersServiceOp) RemoveDroplets(lbID string, dropletIDs ...int) 
 }
 
 // AddForwardingRules adds forwarding rules to a load balancer.
-func (l *LoadBalancersServiceOp) AddForwardingRules(lbID string, rules ...ForwardingRule) (*Response, error) {
+func (l *LoadBalancersServiceOp) AddForwardingRules(ctx context.Context, lbID string, rules ...ForwardingRule) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/%s", loadBalancersBasePath, lbID, forwardingRulesPath)
 
-	req, err := l.client.NewRequest("POST", path, &forwardingRulesRequest{Rules: rules})
+	req, err := l.client.NewRequest(ctx, "POST", path, &forwardingRulesRequest{Rules: rules})
 	if err != nil {
 		return nil, err
 	}
@@ -262,10 +263,10 @@ func (l *LoadBalancersServiceOp) AddForwardingRules(lbID string, rules ...Forwar
 }
 
 // RemoveForwardingRules removes forwarding rules from a load balancer.
-func (l *LoadBalancersServiceOp) RemoveForwardingRules(lbID string, rules ...ForwardingRule) (*Response, error) {
+func (l *LoadBalancersServiceOp) RemoveForwardingRules(ctx context.Context, lbID string, rules ...ForwardingRule) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/%s", loadBalancersBasePath, lbID, forwardingRulesPath)
 
-	req, err := l.client.NewRequest("DELETE", path, &forwardingRulesRequest{Rules: rules})
+	req, err := l.client.NewRequest(ctx, "DELETE", path, &forwardingRulesRequest{Rules: rules})
 	if err != nil {
 		return nil, err
 	}

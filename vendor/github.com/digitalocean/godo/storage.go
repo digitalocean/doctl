@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -15,14 +16,14 @@ const (
 // endpoints of the Digital Ocean API.
 // See: https://developers.digitalocean.com/documentation/v2#storage
 type StorageService interface {
-	ListVolumes(*ListVolumeParams) ([]Volume, *Response, error)
-	GetVolume(string) (*Volume, *Response, error)
-	CreateVolume(*VolumeCreateRequest) (*Volume, *Response, error)
-	DeleteVolume(string) (*Response, error)
-	ListSnapshots(volumeID string, opts *ListOptions) ([]Snapshot, *Response, error)
-	GetSnapshot(string) (*Snapshot, *Response, error)
-	CreateSnapshot(*SnapshotCreateRequest) (*Snapshot, *Response, error)
-	DeleteSnapshot(string) (*Response, error)
+	ListVolumes(context.Context, *ListVolumeParams) ([]Volume, *Response, error)
+	GetVolume(context.Context, string) (*Volume, *Response, error)
+	CreateVolume(context.Context, *VolumeCreateRequest) (*Volume, *Response, error)
+	DeleteVolume(context.Context, string) (*Response, error)
+	ListSnapshots(ctx context.Context, volumeID string, opts *ListOptions) ([]Snapshot, *Response, error)
+	GetSnapshot(context.Context, string) (*Snapshot, *Response, error)
+	CreateSnapshot(context.Context, *SnapshotCreateRequest) (*Snapshot, *Response, error)
+	DeleteSnapshot(context.Context, string) (*Response, error)
 }
 
 // StorageServiceOp handles communication with the storage volumes related methods of the
@@ -75,7 +76,7 @@ type VolumeCreateRequest struct {
 }
 
 // ListVolumes lists all storage volumes.
-func (svc *StorageServiceOp) ListVolumes(params *ListVolumeParams) ([]Volume, *Response, error) {
+func (svc *StorageServiceOp) ListVolumes(ctx context.Context, params *ListVolumeParams) ([]Volume, *Response, error) {
 	path := storageAllocPath
 	if params != nil {
 		if params.Region != "" && params.Name != "" {
@@ -91,7 +92,7 @@ func (svc *StorageServiceOp) ListVolumes(params *ListVolumeParams) ([]Volume, *R
 		}
 	}
 
-	req, err := svc.client.NewRequest("GET", path, nil)
+	req, err := svc.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -110,10 +111,10 @@ func (svc *StorageServiceOp) ListVolumes(params *ListVolumeParams) ([]Volume, *R
 }
 
 // CreateVolume creates a storage volume. The name must be unique.
-func (svc *StorageServiceOp) CreateVolume(createRequest *VolumeCreateRequest) (*Volume, *Response, error) {
+func (svc *StorageServiceOp) CreateVolume(ctx context.Context, createRequest *VolumeCreateRequest) (*Volume, *Response, error) {
 	path := storageAllocPath
 
-	req, err := svc.client.NewRequest("POST", path, createRequest)
+	req, err := svc.client.NewRequest(ctx, "POST", path, createRequest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -127,10 +128,10 @@ func (svc *StorageServiceOp) CreateVolume(createRequest *VolumeCreateRequest) (*
 }
 
 // GetVolume retrieves an individual storage volume.
-func (svc *StorageServiceOp) GetVolume(id string) (*Volume, *Response, error) {
+func (svc *StorageServiceOp) GetVolume(ctx context.Context, id string) (*Volume, *Response, error) {
 	path := fmt.Sprintf("%s/%s", storageAllocPath, id)
 
-	req, err := svc.client.NewRequest("GET", path, nil)
+	req, err := svc.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -145,10 +146,10 @@ func (svc *StorageServiceOp) GetVolume(id string) (*Volume, *Response, error) {
 }
 
 // DeleteVolume deletes a storage volume.
-func (svc *StorageServiceOp) DeleteVolume(id string) (*Response, error) {
+func (svc *StorageServiceOp) DeleteVolume(ctx context.Context, id string) (*Response, error) {
 	path := fmt.Sprintf("%s/%s", storageAllocPath, id)
 
-	req, err := svc.client.NewRequest("DELETE", path, nil)
+	req, err := svc.client.NewRequest(ctx, "DELETE", path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -164,14 +165,14 @@ type SnapshotCreateRequest struct {
 }
 
 // ListSnapshots lists all snapshots related to a storage volume.
-func (svc *StorageServiceOp) ListSnapshots(volumeID string, opt *ListOptions) ([]Snapshot, *Response, error) {
+func (svc *StorageServiceOp) ListSnapshots(ctx context.Context, volumeID string, opt *ListOptions) ([]Snapshot, *Response, error) {
 	path := fmt.Sprintf("%s/%s/snapshots", storageAllocPath, volumeID)
 	path, err := addOptions(path, opt)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	req, err := svc.client.NewRequest("GET", path, nil)
+	req, err := svc.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -190,10 +191,10 @@ func (svc *StorageServiceOp) ListSnapshots(volumeID string, opt *ListOptions) ([
 }
 
 // CreateSnapshot creates a snapshot of a storage volume.
-func (svc *StorageServiceOp) CreateSnapshot(createRequest *SnapshotCreateRequest) (*Snapshot, *Response, error) {
+func (svc *StorageServiceOp) CreateSnapshot(ctx context.Context, createRequest *SnapshotCreateRequest) (*Snapshot, *Response, error) {
 	path := fmt.Sprintf("%s/%s/snapshots", storageAllocPath, createRequest.VolumeID)
 
-	req, err := svc.client.NewRequest("POST", path, createRequest)
+	req, err := svc.client.NewRequest(ctx, "POST", path, createRequest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -207,10 +208,10 @@ func (svc *StorageServiceOp) CreateSnapshot(createRequest *SnapshotCreateRequest
 }
 
 // GetSnapshot retrieves an individual snapshot.
-func (svc *StorageServiceOp) GetSnapshot(id string) (*Snapshot, *Response, error) {
+func (svc *StorageServiceOp) GetSnapshot(ctx context.Context, id string) (*Snapshot, *Response, error) {
 	path := fmt.Sprintf("%s/%s", storageSnapPath, id)
 
-	req, err := svc.client.NewRequest("GET", path, nil)
+	req, err := svc.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -225,10 +226,10 @@ func (svc *StorageServiceOp) GetSnapshot(id string) (*Snapshot, *Response, error
 }
 
 // DeleteSnapshot deletes a snapshot.
-func (svc *StorageServiceOp) DeleteSnapshot(id string) (*Response, error) {
+func (svc *StorageServiceOp) DeleteSnapshot(ctx context.Context, id string) (*Response, error) {
 	path := fmt.Sprintf("%s/%s", storageSnapPath, id)
 
-	req, err := svc.client.NewRequest("DELETE", path, nil)
+	req, err := svc.client.NewRequest(ctx, "DELETE", path, nil)
 	if err != nil {
 		return nil, err
 	}

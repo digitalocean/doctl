@@ -14,6 +14,8 @@ limitations under the License.
 package do
 
 import (
+	"context"
+
 	"github.com/digitalocean/godo"
 	"github.com/digitalocean/godo/util"
 )
@@ -78,7 +80,7 @@ func NewDropletsService(client *godo.Client) DropletsService {
 
 func (ds *dropletsService) List() (Droplets, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ds.client.Droplets.List(opt)
+		list, resp, err := ds.client.Droplets.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -107,7 +109,7 @@ func (ds *dropletsService) List() (Droplets, error) {
 
 func (ds *dropletsService) ListByTag(tagName string) (Droplets, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ds.client.Droplets.ListByTag(tagName, opt)
+		list, resp, err := ds.client.Droplets.ListByTag(context.TODO(), tagName, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -135,7 +137,7 @@ func (ds *dropletsService) ListByTag(tagName string) (Droplets, error) {
 }
 
 func (ds *dropletsService) Get(id int) (*Droplet, error) {
-	d, _, err := ds.client.Droplets.Get(id)
+	d, _, err := ds.client.Droplets.Get(context.TODO(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +146,7 @@ func (ds *dropletsService) Get(id int) (*Droplet, error) {
 }
 
 func (ds *dropletsService) Create(dcr *godo.DropletCreateRequest, wait bool) (*Droplet, error) {
-	d, resp, err := ds.client.Droplets.Create(dcr)
+	d, resp, err := ds.client.Droplets.Create(context.TODO(), dcr)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +161,7 @@ func (ds *dropletsService) Create(dcr *godo.DropletCreateRequest, wait bool) (*D
 		}
 
 		if action != nil {
-			_ = util.WaitForActive(ds.client, action.HREF)
+			_ = util.WaitForActive(context.TODO(), ds.client, action.HREF)
 			doDroplet, err := ds.Get(d.ID)
 			if err != nil {
 				return nil, err
@@ -172,7 +174,7 @@ func (ds *dropletsService) Create(dcr *godo.DropletCreateRequest, wait bool) (*D
 }
 
 func (ds *dropletsService) CreateMultiple(dmcr *godo.DropletMultiCreateRequest) (Droplets, error) {
-	godoDroplets, _, err := ds.client.Droplets.CreateMultiple(dmcr)
+	godoDroplets, _, err := ds.client.Droplets.CreateMultiple(context.TODO(), dmcr)
 	if err != nil {
 		return nil, err
 	}
@@ -186,18 +188,18 @@ func (ds *dropletsService) CreateMultiple(dmcr *godo.DropletMultiCreateRequest) 
 }
 
 func (ds *dropletsService) Delete(id int) error {
-	_, err := ds.client.Droplets.Delete(id)
+	_, err := ds.client.Droplets.Delete(context.TODO(), id)
 	return err
 }
 
 func (ds *dropletsService) DeleteByTag(tag string) error {
-	_, err := ds.client.Droplets.DeleteByTag(tag)
+	_, err := ds.client.Droplets.DeleteByTag(context.TODO(), tag)
 	return err
 }
 
 func (ds *dropletsService) Kernels(id int) (Kernels, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ds.client.Droplets.Kernels(id, opt)
+		list, resp, err := ds.client.Droplets.Kernels(context.TODO(), id, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -226,7 +228,7 @@ func (ds *dropletsService) Kernels(id int) (Kernels, error) {
 
 func (ds *dropletsService) Snapshots(id int) (Images, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ds.client.Droplets.Snapshots(id, opt)
+		list, resp, err := ds.client.Droplets.Snapshots(context.TODO(), id, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -255,7 +257,7 @@ func (ds *dropletsService) Snapshots(id int) (Images, error) {
 
 func (ds *dropletsService) Backups(id int) (Images, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ds.client.Droplets.Backups(id, opt)
+		list, resp, err := ds.client.Droplets.Backups(context.TODO(), id, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -284,7 +286,7 @@ func (ds *dropletsService) Backups(id int) (Images, error) {
 
 func (ds *dropletsService) Actions(id int) (Actions, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ds.client.Droplets.Actions(id, opt)
+		list, resp, err := ds.client.Droplets.Actions(context.TODO(), id, opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -312,7 +314,7 @@ func (ds *dropletsService) Actions(id int) (Actions, error) {
 }
 
 func (ds *dropletsService) Neighbors(id int) (Droplets, error) {
-	list, _, err := ds.client.Droplets.Neighbors(id)
+	list, _, err := ds.client.Droplets.Neighbors(context.TODO(), id)
 	if err != nil {
 		return nil, err
 	}

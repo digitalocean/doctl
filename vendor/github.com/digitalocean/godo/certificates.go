@@ -1,16 +1,19 @@
 package godo
 
-import "path"
+import (
+	"context"
+	"path"
+)
 
 const certificatesBasePath = "/v2/certificates"
 
 // CertificatesService is an interface for managing certificates with the DigitalOcean API.
 // See: https://developers.digitalocean.com/documentation/v2/#certificates
 type CertificatesService interface {
-	Get(cID string) (*Certificate, *Response, error)
-	List(opt *ListOptions) ([]Certificate, *Response, error)
-	Create(cr *CertificateRequest) (*Certificate, *Response, error)
-	Delete(cID string) (*Response, error)
+	Get(context.Context, string) (*Certificate, *Response, error)
+	List(context.Context, *ListOptions) ([]Certificate, *Response, error)
+	Create(context.Context, *CertificateRequest) (*Certificate, *Response, error)
+	Delete(context.Context, string) (*Response, error)
 }
 
 // Certificate represents a DigitalOcean certificate configuration.
@@ -47,10 +50,10 @@ type CertificatesServiceOp struct {
 var _ CertificatesService = &CertificatesServiceOp{}
 
 // Get an existing certificate by its identifier.
-func (c *CertificatesServiceOp) Get(cID string) (*Certificate, *Response, error) {
+func (c *CertificatesServiceOp) Get(ctx context.Context, cID string) (*Certificate, *Response, error) {
 	urlStr := path.Join(certificatesBasePath, cID)
 
-	req, err := c.client.NewRequest("GET", urlStr, nil)
+	req, err := c.client.NewRequest(ctx, "GET", urlStr, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,13 +68,13 @@ func (c *CertificatesServiceOp) Get(cID string) (*Certificate, *Response, error)
 }
 
 // List all certificates.
-func (c *CertificatesServiceOp) List(opt *ListOptions) ([]Certificate, *Response, error) {
+func (c *CertificatesServiceOp) List(ctx context.Context, opt *ListOptions) ([]Certificate, *Response, error) {
 	urlStr, err := addOptions(certificatesBasePath, opt)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	req, err := c.client.NewRequest("GET", urlStr, nil)
+	req, err := c.client.NewRequest(ctx, "GET", urlStr, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -89,8 +92,8 @@ func (c *CertificatesServiceOp) List(opt *ListOptions) ([]Certificate, *Response
 }
 
 // Create a new certificate with provided configuration.
-func (c *CertificatesServiceOp) Create(cr *CertificateRequest) (*Certificate, *Response, error) {
-	req, err := c.client.NewRequest("POST", certificatesBasePath, cr)
+func (c *CertificatesServiceOp) Create(ctx context.Context, cr *CertificateRequest) (*Certificate, *Response, error) {
+	req, err := c.client.NewRequest(ctx, "POST", certificatesBasePath, cr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -105,10 +108,10 @@ func (c *CertificatesServiceOp) Create(cr *CertificateRequest) (*Certificate, *R
 }
 
 // Delete a certificate by its identifier.
-func (c *CertificatesServiceOp) Delete(cID string) (*Response, error) {
+func (c *CertificatesServiceOp) Delete(ctx context.Context, cID string) (*Response, error) {
 	urlStr := path.Join(certificatesBasePath, cID)
 
-	req, err := c.client.NewRequest("DELETE", urlStr, nil)
+	req, err := c.client.NewRequest(ctx, "DELETE", urlStr, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -17,7 +17,7 @@ func TestDroplets_ListDroplets(t *testing.T) {
 		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
 	})
 
-	droplets, _, err := client.Droplets.List(nil)
+	droplets, _, err := client.Droplets.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Droplets.List returned error: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestDroplets_ListDropletsByTag(t *testing.T) {
 		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
 	})
 
-	droplets, _, err := client.Droplets.ListByTag("testing-1", nil)
+	droplets, _, err := client.Droplets.ListByTag(ctx, "testing-1", nil)
 	if err != nil {
 		t.Errorf("Droplets.ListByTag returned error: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestDroplets_ListDropletsMultiplePages(t *testing.T) {
 		fmt.Fprint(w, string(b))
 	})
 
-	_, resp, err := client.Droplets.List(nil)
+	_, resp, err := client.Droplets.List(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestDroplets_RetrievePageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.Droplets.List(opt)
+	_, resp, err := client.Droplets.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestDroplets_GetDroplet(t *testing.T) {
 		fmt.Fprint(w, `{"droplet":{"id":12345}}`)
 	})
 
-	droplets, _, err := client.Droplets.Get(12345)
+	droplets, _, err := client.Droplets.Get(ctx, 12345)
 	if err != nil {
 		t.Errorf("Droplet.Get returned error: %v", err)
 	}
@@ -187,7 +187,7 @@ func TestDroplets_Create(t *testing.T) {
 		fmt.Fprintf(w, `{"droplet":{"id":1}, "links":{"actions": [{"id": 1, "href": "http://example.com", "rel": "create"}]}}`)
 	})
 
-	droplet, resp, err := client.Droplets.Create(createRequest)
+	droplet, resp, err := client.Droplets.Create(ctx, createRequest)
 	if err != nil {
 		t.Errorf("Droplets.Create returned error: %v", err)
 	}
@@ -242,7 +242,7 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 		fmt.Fprintf(w, `{"droplets":[{"id":1},{"id":2}], "links":{"actions": [{"id": 1, "href": "http://example.com", "rel": "multiple_create"}]}}`)
 	})
 
-	droplets, resp, err := client.Droplets.CreateMultiple(createRequest)
+	droplets, resp, err := client.Droplets.CreateMultiple(ctx, createRequest)
 	if err != nil {
 		t.Errorf("Droplets.CreateMultiple returned error: %v", err)
 	}
@@ -268,7 +268,7 @@ func TestDroplets_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Droplets.Delete(12345)
+	_, err := client.Droplets.Delete(ctx, 12345)
 	if err != nil {
 		t.Errorf("Droplet.Delete returned error: %v", err)
 	}
@@ -286,7 +286,7 @@ func TestDroplets_DestroyByTag(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Droplets.DeleteByTag("testing-1")
+	_, err := client.Droplets.DeleteByTag(ctx, "testing-1")
 	if err != nil {
 		t.Errorf("Droplet.Delete returned error: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestDroplets_Kernels(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	kernels, _, err := client.Droplets.Kernels(12345, opt)
+	kernels, _, err := client.Droplets.Kernels(ctx, 12345, opt)
 	if err != nil {
 		t.Errorf("Droplets.Kernels returned error: %v", err)
 	}
@@ -323,7 +323,7 @@ func TestDroplets_Snapshots(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	snapshots, _, err := client.Droplets.Snapshots(12345, opt)
+	snapshots, _, err := client.Droplets.Snapshots(ctx, 12345, opt)
 	if err != nil {
 		t.Errorf("Droplets.Snapshots returned error: %v", err)
 	}
@@ -344,7 +344,7 @@ func TestDroplets_Backups(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	backups, _, err := client.Droplets.Backups(12345, opt)
+	backups, _, err := client.Droplets.Backups(ctx, 12345, opt)
 	if err != nil {
 		t.Errorf("Droplets.Backups returned error: %v", err)
 	}
@@ -365,7 +365,7 @@ func TestDroplets_Actions(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	actions, _, err := client.Droplets.Actions(12345, opt)
+	actions, _, err := client.Droplets.Actions(ctx, 12345, opt)
 	if err != nil {
 		t.Errorf("Droplets.Actions returned error: %v", err)
 	}
@@ -385,7 +385,7 @@ func TestDroplets_Neighbors(t *testing.T) {
 		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
 	})
 
-	neighbors, _, err := client.Droplets.Neighbors(12345)
+	neighbors, _, err := client.Droplets.Neighbors(ctx, 12345)
 	if err != nil {
 		t.Errorf("Droplets.Neighbors returned error: %v", err)
 	}

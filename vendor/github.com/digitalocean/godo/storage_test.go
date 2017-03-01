@@ -52,7 +52,7 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	volumes, _, err := client.Storage.ListVolumes(nil)
+	volumes, _, err := client.Storage.ListVolumes(ctx, nil)
 	if err != nil {
 		t.Errorf("Storage.ListVolumes returned error: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestStorageVolumes_Get(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := client.Storage.GetVolume("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
+	got, _, err := client.Storage.GetVolume(ctx, "80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
 	if err != nil {
 		t.Errorf("Storage.GetVolume returned error: %v", err)
 	}
@@ -174,7 +174,7 @@ func TestStorageVolumes_ListVolumesByName(t *testing.T) {
 		Name:   "myvolume",
 		Region: "nyc3",
 	}
-	volumes, _, err := client.Storage.ListVolumes(options)
+	volumes, _, err := client.Storage.ListVolumes(ctx, options)
 	if err != nil {
 		t.Errorf("Storage.GetVolumeByName returned error: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestStorageVolumes_Create(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := client.Storage.CreateVolume(createRequest)
+	got, _, err := client.Storage.CreateVolume(ctx, createRequest)
 	if err != nil {
 		t.Errorf("Storage.CreateVolume returned error: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestStorageVolumes_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Storage.DeleteVolume("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
+	_, err := client.Storage.DeleteVolume(ctx, "80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
 	if err != nil {
 		t.Errorf("Storage.DeleteVolume returned error: %v", err)
 	}
@@ -291,7 +291,7 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	volumes, _, err := client.Storage.ListSnapshots("98d414c6-295e-4e3a-ac58-eb9456c1e1d1", nil)
+	volumes, _, err := client.Storage.ListSnapshots(ctx, "98d414c6-295e-4e3a-ac58-eb9456c1e1d1", nil)
 	if err != nil {
 		t.Errorf("Storage.ListSnapshots returned error: %v", err)
 	}
@@ -351,7 +351,7 @@ func TestStorageSnapshots_Get(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := client.Storage.GetSnapshot("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
+	got, _, err := client.Storage.GetSnapshot(ctx, "80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
 	if err != nil {
 		t.Errorf("Storage.GetSnapshot returned error: %v", err)
 	}
@@ -412,7 +412,7 @@ func TestStorageSnapshots_Create(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := client.Storage.CreateSnapshot(createRequest)
+	got, _, err := client.Storage.CreateSnapshot(ctx, createRequest)
 	if err != nil {
 		t.Errorf("Storage.CreateSnapshot returned error: %v", err)
 	}
@@ -429,7 +429,7 @@ func TestStorageSnapshots_Destroy(t *testing.T) {
 		testMethod(t, r, "DELETE")
 	})
 
-	_, err := client.Storage.DeleteSnapshot("80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
+	_, err := client.Storage.DeleteSnapshot(ctx, "80d414c6-295e-4e3a-ac58-eb9456c1e1d1")
 	if err != nil {
 		t.Errorf("Storage.DeleteSnapshot returned error: %v", err)
 	}

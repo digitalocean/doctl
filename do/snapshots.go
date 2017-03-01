@@ -13,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // Snapshot is a wrapper for godo.Snapshot
 type Snapshot struct {
@@ -47,7 +51,7 @@ func NewSnapshotsService(client *godo.Client) SnapshotsService {
 
 func (ss *snapshotsService) List() (Snapshots, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ss.client.Snapshots.List(opt)
+		list, resp, err := ss.client.Snapshots.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -76,7 +80,7 @@ func (ss *snapshotsService) List() (Snapshots, error) {
 
 func (ss *snapshotsService) ListVolume() (Snapshots, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ss.client.Snapshots.ListVolume(opt)
+		list, resp, err := ss.client.Snapshots.ListVolume(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -105,7 +109,7 @@ func (ss *snapshotsService) ListVolume() (Snapshots, error) {
 
 func (ss *snapshotsService) ListDroplet() (Snapshots, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ss.client.Snapshots.ListDroplet(opt)
+		list, resp, err := ss.client.Snapshots.ListDroplet(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -133,7 +137,7 @@ func (ss *snapshotsService) ListDroplet() (Snapshots, error) {
 }
 
 func (ss *snapshotsService) Get(snapshotID string) (*Snapshot, error) {
-	s, _, err := ss.client.Snapshots.Get(snapshotID)
+	s, _, err := ss.client.Snapshots.Get(context.TODO(), snapshotID)
 	if err != nil {
 		return nil, err
 	}
@@ -142,6 +146,6 @@ func (ss *snapshotsService) Get(snapshotID string) (*Snapshot, error) {
 }
 
 func (ss *snapshotsService) Delete(snapshotID string) error {
-	_, err := ss.client.Snapshots.Delete(snapshotID)
+	_, err := ss.client.Snapshots.Delete(context.TODO(), snapshotID)
 	return err
 }

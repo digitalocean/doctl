@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // FloatingIP wraps a godo FloatingIP.
 type FloatingIP struct {
@@ -47,7 +50,7 @@ func NewFloatingIPsService(client *godo.Client) FloatingIPsService {
 
 func (fis *floatingIPsService) List() (FloatingIPs, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := fis.client.FloatingIPs.List(opt)
+		list, resp, err := fis.client.FloatingIPs.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -75,7 +78,7 @@ func (fis *floatingIPsService) List() (FloatingIPs, error) {
 }
 
 func (fis *floatingIPsService) Get(ip string) (*FloatingIP, error) {
-	fip, _, err := fis.client.FloatingIPs.Get(ip)
+	fip, _, err := fis.client.FloatingIPs.Get(context.TODO(), ip)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +87,7 @@ func (fis *floatingIPsService) Get(ip string) (*FloatingIP, error) {
 }
 
 func (fis *floatingIPsService) Create(ficr *godo.FloatingIPCreateRequest) (*FloatingIP, error) {
-	fip, _, err := fis.client.FloatingIPs.Create(ficr)
+	fip, _, err := fis.client.FloatingIPs.Create(context.TODO(), ficr)
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +96,6 @@ func (fis *floatingIPsService) Create(ficr *godo.FloatingIPCreateRequest) (*Floa
 }
 
 func (fis *floatingIPsService) Delete(ip string) error {
-	_, err := fis.client.FloatingIPs.Delete(ip)
+	_, err := fis.client.FloatingIPs.Delete(context.TODO(), ip)
 	return err
 }

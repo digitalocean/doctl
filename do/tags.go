@@ -13,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // Tag is a wrapper for godo.Tag
 type Tag struct {
@@ -49,7 +53,7 @@ func NewTagsService(godoClient *godo.Client) TagsService {
 
 func (ts *tagsService) List() (Tags, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := ts.client.Tags.List(opt)
+		list, resp, err := ts.client.Tags.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -77,7 +81,7 @@ func (ts *tagsService) List() (Tags, error) {
 }
 
 func (ts *tagsService) Get(name string) (*Tag, error) {
-	t, _, err := ts.client.Tags.Get(name)
+	t, _, err := ts.client.Tags.Get(context.TODO(), name)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +90,7 @@ func (ts *tagsService) Get(name string) (*Tag, error) {
 }
 
 func (ts *tagsService) Create(tcr *godo.TagCreateRequest) (*Tag, error) {
-	t, _, err := ts.client.Tags.Create(tcr)
+	t, _, err := ts.client.Tags.Create(context.TODO(), tcr)
 	if err != nil {
 		return nil, err
 	}
@@ -95,21 +99,21 @@ func (ts *tagsService) Create(tcr *godo.TagCreateRequest) (*Tag, error) {
 }
 
 func (ts *tagsService) Update(name string, tur *godo.TagUpdateRequest) error {
-	_, err := ts.client.Tags.Update(name, tur)
+	_, err := ts.client.Tags.Update(context.TODO(), name, tur)
 	return err
 }
 
 func (ts *tagsService) Delete(name string) error {
-	_, err := ts.client.Tags.Delete(name)
+	_, err := ts.client.Tags.Delete(context.TODO(), name)
 	return err
 }
 
 func (ts *tagsService) TagResources(name string, trr *godo.TagResourcesRequest) error {
-	_, err := ts.client.Tags.TagResources(name, trr)
+	_, err := ts.client.Tags.TagResources(context.TODO(), name, trr)
 	return err
 }
 
 func (ts *tagsService) UntagResources(name string, urr *godo.UntagResourcesRequest) error {
-	_, err := ts.client.Tags.UntagResources(name, urr)
+	_, err := ts.client.Tags.UntagResources(context.TODO(), name, urr)
 	return err
 }

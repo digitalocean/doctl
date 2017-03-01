@@ -1,6 +1,9 @@
 package godo
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 const tagsBasePath = "v2/tags"
 
@@ -8,14 +11,14 @@ const tagsBasePath = "v2/tags"
 // endpoints of the DigitalOcean API
 // See: https://developers.digitalocean.com/documentation/v2#tags
 type TagsService interface {
-	List(*ListOptions) ([]Tag, *Response, error)
-	Get(string) (*Tag, *Response, error)
-	Create(*TagCreateRequest) (*Tag, *Response, error)
-	Update(string, *TagUpdateRequest) (*Response, error)
-	Delete(string) (*Response, error)
+	List(context.Context, *ListOptions) ([]Tag, *Response, error)
+	Get(context.Context, string) (*Tag, *Response, error)
+	Create(context.Context, *TagCreateRequest) (*Tag, *Response, error)
+	Update(context.Context, string, *TagUpdateRequest) (*Response, error)
+	Delete(context.Context, string) (*Response, error)
 
-	TagResources(string, *TagResourcesRequest) (*Response, error)
-	UntagResources(string, *UntagResourcesRequest) (*Response, error)
+	TagResources(context.Context, string, *TagResourcesRequest) (*Response, error)
+	UntagResources(context.Context, string, *UntagResourcesRequest) (*Response, error)
 }
 
 // TagsServiceOp handles communication with tag related method of the
@@ -87,7 +90,7 @@ type tagRoot struct {
 }
 
 // List all tags
-func (s *TagsServiceOp) List(opt *ListOptions) ([]Tag, *Response, error) {
+func (s *TagsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Tag, *Response, error) {
 	path := tagsBasePath
 	path, err := addOptions(path, opt)
 
@@ -95,7 +98,7 @@ func (s *TagsServiceOp) List(opt *ListOptions) ([]Tag, *Response, error) {
 		return nil, nil, err
 	}
 
-	req, err := s.client.NewRequest("GET", path, nil)
+	req, err := s.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -113,10 +116,10 @@ func (s *TagsServiceOp) List(opt *ListOptions) ([]Tag, *Response, error) {
 }
 
 // Get a single tag
-func (s *TagsServiceOp) Get(name string) (*Tag, *Response, error) {
+func (s *TagsServiceOp) Get(ctx context.Context, name string) (*Tag, *Response, error) {
 	path := fmt.Sprintf("%s/%s", tagsBasePath, name)
 
-	req, err := s.client.NewRequest("GET", path, nil)
+	req, err := s.client.NewRequest(ctx, "GET", path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -131,12 +134,12 @@ func (s *TagsServiceOp) Get(name string) (*Tag, *Response, error) {
 }
 
 // Create a new tag
-func (s *TagsServiceOp) Create(createRequest *TagCreateRequest) (*Tag, *Response, error) {
+func (s *TagsServiceOp) Create(ctx context.Context, createRequest *TagCreateRequest) (*Tag, *Response, error) {
 	if createRequest == nil {
 		return nil, nil, NewArgError("createRequest", "cannot be nil")
 	}
 
-	req, err := s.client.NewRequest("POST", tagsBasePath, createRequest)
+	req, err := s.client.NewRequest(ctx, "POST", tagsBasePath, createRequest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -151,7 +154,7 @@ func (s *TagsServiceOp) Create(createRequest *TagCreateRequest) (*Tag, *Response
 }
 
 // Update an exsting tag
-func (s *TagsServiceOp) Update(name string, updateRequest *TagUpdateRequest) (*Response, error) {
+func (s *TagsServiceOp) Update(ctx context.Context, name string, updateRequest *TagUpdateRequest) (*Response, error) {
 	if name == "" {
 		return nil, NewArgError("name", "cannot be empty")
 	}
@@ -161,7 +164,7 @@ func (s *TagsServiceOp) Update(name string, updateRequest *TagUpdateRequest) (*R
 	}
 
 	path := fmt.Sprintf("%s/%s", tagsBasePath, name)
-	req, err := s.client.NewRequest("PUT", path, updateRequest)
+	req, err := s.client.NewRequest(ctx, "PUT", path, updateRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -172,13 +175,13 @@ func (s *TagsServiceOp) Update(name string, updateRequest *TagUpdateRequest) (*R
 }
 
 // Delete an existing tag
-func (s *TagsServiceOp) Delete(name string) (*Response, error) {
+func (s *TagsServiceOp) Delete(ctx context.Context, name string) (*Response, error) {
 	if name == "" {
 		return nil, NewArgError("name", "cannot be empty")
 	}
 
 	path := fmt.Sprintf("%s/%s", tagsBasePath, name)
-	req, err := s.client.NewRequest("DELETE", path, nil)
+	req, err := s.client.NewRequest(ctx, "DELETE", path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +192,7 @@ func (s *TagsServiceOp) Delete(name string) (*Response, error) {
 }
 
 // TagResources associates resources with a given Tag.
-func (s *TagsServiceOp) TagResources(name string, tagRequest *TagResourcesRequest) (*Response, error) {
+func (s *TagsServiceOp) TagResources(ctx context.Context, name string, tagRequest *TagResourcesRequest) (*Response, error) {
 	if name == "" {
 		return nil, NewArgError("name", "cannot be empty")
 	}
@@ -199,7 +202,7 @@ func (s *TagsServiceOp) TagResources(name string, tagRequest *TagResourcesReques
 	}
 
 	path := fmt.Sprintf("%s/%s/resources", tagsBasePath, name)
-	req, err := s.client.NewRequest("POST", path, tagRequest)
+	req, err := s.client.NewRequest(ctx, "POST", path, tagRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +213,7 @@ func (s *TagsServiceOp) TagResources(name string, tagRequest *TagResourcesReques
 }
 
 // UntagResources dissociates resources with a given Tag.
-func (s *TagsServiceOp) UntagResources(name string, untagRequest *UntagResourcesRequest) (*Response, error) {
+func (s *TagsServiceOp) UntagResources(ctx context.Context, name string, untagRequest *UntagResourcesRequest) (*Response, error) {
 	if name == "" {
 		return nil, NewArgError("name", "cannot be empty")
 	}
@@ -220,7 +223,7 @@ func (s *TagsServiceOp) UntagResources(name string, untagRequest *UntagResources
 	}
 
 	path := fmt.Sprintf("%s/%s/resources", tagsBasePath, name)
-	req, err := s.client.NewRequest("DELETE", path, untagRequest)
+	req, err := s.client.NewRequest(ctx, "DELETE", path, untagRequest)
 	if err != nil {
 		return nil, err
 	}

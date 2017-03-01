@@ -1,4 +1,3 @@
-
 /*
 Copyright 2016 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,11 @@ limitations under the License.
 
 package do
 
-import "github.com/digitalocean/godo"
+import (
+	"context"
+
+	"github.com/digitalocean/godo"
+)
 
 // Image is a werapper for godo.Image
 type Image struct {
@@ -66,7 +69,7 @@ func (is *imagesService) ListUser(public bool) (Images, error) {
 }
 
 func (is *imagesService) GetByID(id int) (*Image, error) {
-	i, _, err := is.client.Images.GetByID(id)
+	i, _, err := is.client.Images.GetByID(context.TODO(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +78,7 @@ func (is *imagesService) GetByID(id int) (*Image, error) {
 }
 
 func (is *imagesService) GetBySlug(slug string) (*Image, error) {
-	i, _, err := is.client.Images.GetBySlug(slug)
+	i, _, err := is.client.Images.GetBySlug(context.TODO(), slug)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +87,7 @@ func (is *imagesService) GetBySlug(slug string) (*Image, error) {
 }
 
 func (is *imagesService) Update(id int, iur *godo.ImageUpdateRequest) (*Image, error) {
-	i, _, err := is.client.Images.Update(id, iur)
+	i, _, err := is.client.Images.Update(context.TODO(), id, iur)
 	if err != nil {
 		return nil, err
 	}
@@ -93,15 +96,15 @@ func (is *imagesService) Update(id int, iur *godo.ImageUpdateRequest) (*Image, e
 }
 
 func (is *imagesService) Delete(id int) error {
-	_, err := is.client.Images.Delete(id)
+	_, err := is.client.Images.Delete(context.TODO(), id)
 	return err
 }
 
-type listFn func(*godo.ListOptions) ([]godo.Image, *godo.Response, error)
+type listFn func(context.Context, *godo.ListOptions) ([]godo.Image, *godo.Response, error)
 
 func (is *imagesService) listImages(lFn listFn, public bool) (Images, error) {
 	fn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := lFn(opt)
+		list, resp, err := lFn(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}

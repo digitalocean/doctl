@@ -16,7 +16,7 @@ func TestRegions_List(t *testing.T) {
 		fmt.Fprint(w, `{"regions":[{"slug":"1"},{"slug":"2"}]}`)
 	})
 
-	regions, _, err := client.Regions.List(nil)
+	regions, _, err := client.Regions.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Regions.List returned error: %v", err)
 	}
@@ -36,7 +36,7 @@ func TestRegions_ListRegionsMultiplePages(t *testing.T) {
 		fmt.Fprint(w, `{"regions": [{"id":1},{"id":2}], "links":{"pages":{"next":"http://example.com/v2/regions/?page=2"}}}`)
 	})
 
-	_, resp, err := client.Regions.List(nil)
+	_, resp, err := client.Regions.List(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestRegions_RetrievePageByNumber(t *testing.T) {
 	})
 
 	opt := &ListOptions{Page: 2}
-	_, resp, err := client.Regions.List(opt)
+	_, resp, err := client.Regions.List(ctx, opt)
 	if err != nil {
 		t.Fatal(err)
 	}
