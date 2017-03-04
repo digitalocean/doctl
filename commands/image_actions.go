@@ -93,6 +93,7 @@ func RunImageActionsTransfer(c *CmdConfig) error {
 	}
 
 	req := &godo.ActionRequest{
+		"type":   "transfer",
 		"region": region,
 	}
 
