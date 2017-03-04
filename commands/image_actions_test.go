@@ -43,7 +43,7 @@ func TestImageActionsGet(t *testing.T) {
 
 func TestImageActionsTransfer(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		ar := &godo.ActionRequest{"region": "dev0"}
+		ar := &godo.ActionRequest{"type": "transfer", "region": "dev0"}
 		tm.imageActions.On("Transfer", 1, ar).Return(&testAction, nil)
 
 		config.Args = append(config.Args, "1")
