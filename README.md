@@ -51,12 +51,12 @@ You can download the archive from your browser, or copy its URL and retrieve it 
 cd ~
 
 # OS X
-curl -L https://github.com/digitalocean/doctl/releases/download/v1.5.0/doctl-1.5.0-darwin-10.6-amd64.tar.gz | tar xz
+curl -L https://github.com/digitalocean/doctl/releases/download/v1.6.0/doctl-1.6.0-darwin-10.6-amd64.tar.gz | tar xz
 
 # linux (with wget)
-wget -qO- https://github.com/digitalocean/doctl/releases/download/v1.5.0/doctl-1.5.0-linux-amd64.tar.gz  | tar xz
+wget -qO- https://github.com/digitalocean/doctl/releases/download/v1.6.0/doctl-1.6.0-linux-amd64.tar.gz  | tar xz
 # linux (with curl)
-curl -L https://github.com/digitalocean/doctl/releases/download/v1.5.0/doctl-1.5.0-linux-amd64.tar.gz  | tar xz
+curl -L https://github.com/digitalocean/doctl/releases/download/v1.6.0/doctl-1.6.0-linux-amd64.tar.gz  | tar xz
 ```
 
 Move the `doctl` binary to somewhere in your path.  For example:
@@ -159,4 +159,4 @@ repository is required.
 
 [tutorial]: https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client
 [doctl-releases]: https://github.com/digitalocean/doctl/releases
-[windows-release]: https://github.com/digitalocean/doctl/releases/download/v1.5.0/doctl-1.5.0-windows-4.0-amd64.zip
+[windows-release]: https://github.com/digitalocean/doctl/releases/download/v1.6.0/doctl-1.6.0-windows-4.0-amd64.zip

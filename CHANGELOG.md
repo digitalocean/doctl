@@ -2,6 +2,29 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.6.0] - 2017-03-10
+
+### Added
+- #146 Add the option to run doctl within a docker container - @FuriKuri
+- #153 Add ability to delete snapshots and confirmation before delete - @xmudrii
+- #158 Add private IPv4 address to output - @johscheuer
+- #161 Add multiple tag delete, tag delete confirmation - @xmudrii
+- #165 Allow "tags" attribute for droplet create - @mchitten
+- #169 Implement new unified Snapshots API - @xmudrii
+- #173 Add new actions for Volume and Volume-Action - @xmudrii
+- #191 Add certificate commands - @viola
+- #193 Implement load-balancer commands - @viola
+
+### Changed
+- #160 Improve tag handling for droplet create - @akshaychhajed
+- #171 Add shorthand flags - @xmudrii
+
+### Fixed
+- #159 Add Volume filtering - @xmudrii
+- #177 Fix output color - @xmudrii
+- #178 Implement command forwarding for external SSH - @xmudrii
+- #196 Add type transfer to image-action transfer - @xmudrii
+
 ## [1.5.0] - 2016-10-10
 
 ### Added

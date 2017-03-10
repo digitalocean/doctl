@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	libraryVersion = "0.1.0"
+	libraryVersion = "1.0.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -61,7 +61,7 @@ type Client struct {
 	StorageActions    StorageActionsService
 	Tags              TagsService
 	LoadBalancers     LoadBalancersService
-	Certificates	  CertificatesService
+	Certificates      CertificatesService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
