@@ -80,7 +80,7 @@
 			"importpath": "github.com/digitalocean/godo",
 			"repository": "https://github.com/digitalocean/godo",
 			"vcs": "git",
-			"revision": "7d7ef61f5659edd106f8092d8d36f2e21309ce4c",
+			"revision": "84099941ba2381607e1b05ffd4822781af86675e",
 			"branch": "master"
 		},
 		{
