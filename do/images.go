@@ -111,7 +111,7 @@ func (is *imagesService) listImages(lFn listFn, public bool) (Images, error) {
 
 		si := []interface{}{}
 		for _, i := range list {
-			if (public && i.Public) || !public {
+			if (public && i.Public) || !i.Public {
 				si = append(si, i)
 			}
 		}
