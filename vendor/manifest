@@ -398,6 +398,14 @@
 			"path": "/codec"
 		},
 		{
+			"importpath": "github.com/vektra/errors",
+			"repository": "https://github.com/vektra/errors",
+			"vcs": "git",
+			"revision": "c64d83aba85aa4392895aadeefabbd24e89f3580",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/xordataexchange/crypt/backend",
 			"repository": "https://github.com/xordataexchange/crypt",
 			"vcs": "",
