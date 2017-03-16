@@ -22,22 +22,31 @@ import (
 // DropletActionsService is an interface for interacting with DigitalOcean's droplet action api.
 type DropletActionsService interface {
 	Shutdown(int) (*Action, error)
+	ShutdownByTag(string) (*Action, error)
 	PowerOff(int) (*Action, error)
+	PowerOffByTag(string) (*Action, error)
 	PowerOn(int) (*Action, error)
+	PowerOnByTag(string) (*Action, error)
 	PowerCycle(int) (*Action, error)
+	PowerCycleByTag(string) (*Action, error)
 	Reboot(int) (*Action, error)
 	Restore(int, int) (*Action, error)
 	Resize(int, string, bool) (*Action, error)
 	Rename(int, string) (*Action, error)
 	Snapshot(int, string) (*Action, error)
+	SnapshotByTag(string, string) (*Action, error)
 	EnableBackups(int) (*Action, error)
+	EnableBackupsByTag(string) (*Action, error)
 	DisableBackups(int) (*Action, error)
+	DisableBackupsByTag(string) (*Action, error)
 	PasswordReset(int) (*Action, error)
 	RebuildByImageID(int, int) (*Action, error)
 	RebuildByImageSlug(int, string) (*Action, error)
 	ChangeKernel(int, int) (*Action, error)
 	EnableIPv6(int) (*Action, error)
+	EnableIPv6ByTag(string) (*Action, error)
 	EnablePrivateNetworking(int) (*Action, error)
+	EnablePrivateNetworkingByTag(string) (*Action, error)
 	Upgrade(int) (*Action, error)
 	Get(int, int) (*Action, error)
 	GetByURI(string) (*Action, error)
@@ -69,8 +78,18 @@ func (das *dropletActionsService) Shutdown(id int) (*Action, error) {
 	return das.handleActionResponse(a, err)
 }
 
+func (das *dropletActionsService) ShutdownByTag(tag string) (*Action, error) {
+	a, _, err := das.client.DropletActions.ShutdownByTag(context.TODO(), tag)
+	return das.handleActionResponse(a, err)
+}
+
 func (das *dropletActionsService) PowerOff(id int) (*Action, error) {
 	a, _, err := das.client.DropletActions.PowerOff(context.TODO(), id)
+	return das.handleActionResponse(a, err)
+}
+
+func (das *dropletActionsService) PowerOffByTag(tag string) (*Action, error) {
+	a, _, err := das.client.DropletActions.PowerOffByTag(context.TODO(), tag)
 	return das.handleActionResponse(a, err)
 }
 
@@ -79,8 +98,18 @@ func (das *dropletActionsService) PowerOn(id int) (*Action, error) {
 	return das.handleActionResponse(a, err)
 }
 
+func (das *dropletActionsService) PowerOnByTag(tag string) (*Action, error) {
+	a, _, err := das.client.DropletActions.PowerOnByTag(context.TODO(), tag)
+	return das.handleActionResponse(a, err)
+}
+
 func (das *dropletActionsService) PowerCycle(id int) (*Action, error) {
 	a, _, err := das.client.DropletActions.PowerCycle(context.TODO(), id)
+	return das.handleActionResponse(a, err)
+}
+
+func (das *dropletActionsService) PowerCycleByTag(tag string) (*Action, error) {
+	a, _, err := das.client.DropletActions.PowerCycleByTag(context.TODO(), tag)
 	return das.handleActionResponse(a, err)
 }
 
@@ -109,13 +138,28 @@ func (das *dropletActionsService) Snapshot(id int, name string) (*Action, error)
 	return das.handleActionResponse(a, err)
 }
 
+func (das *dropletActionsService) SnapshotByTag(tag string, name string) (*Action, error) {
+	a, _, err := das.client.DropletActions.SnapshotByTag(context.TODO(), tag, name)
+	return das.handleActionResponse(a, err)
+}
+
 func (das *dropletActionsService) EnableBackups(id int) (*Action, error) {
 	a, _, err := das.client.DropletActions.EnableBackups(context.TODO(), id)
 	return das.handleActionResponse(a, err)
 }
 
+func (das *dropletActionsService) EnableBackupsByTag(tag string) (*Action, error) {
+	a, _, err := das.client.DropletActions.EnableBackupsByTag(context.TODO(), tag)
+	return das.handleActionResponse(a, err)
+}
+
 func (das *dropletActionsService) DisableBackups(id int) (*Action, error) {
 	a, _, err := das.client.DropletActions.DisableBackups(context.TODO(), id)
+	return das.handleActionResponse(a, err)
+}
+
+func (das *dropletActionsService) DisableBackupsByTag(tag string) (*Action, error) {
+	a, _, err := das.client.DropletActions.DisableBackupsByTag(context.TODO(), tag)
 	return das.handleActionResponse(a, err)
 }
 
@@ -144,8 +188,18 @@ func (das *dropletActionsService) EnableIPv6(id int) (*Action, error) {
 	return das.handleActionResponse(a, err)
 }
 
+func (das *dropletActionsService) EnableIPv6ByTag(tag string) (*Action, error) {
+	a, _, err := das.client.DropletActions.EnableIPv6ByTag(context.TODO(), tag)
+	return das.handleActionResponse(a, err)
+}
+
 func (das *dropletActionsService) EnablePrivateNetworking(id int) (*Action, error) {
 	a, _, err := das.client.DropletActions.EnablePrivateNetworking(context.TODO(), id)
+	return das.handleActionResponse(a, err)
+}
+
+func (das *dropletActionsService) EnablePrivateNetworkingByTag(tag string) (*Action, error) {
+	a, _, err := das.client.DropletActions.EnablePrivateNetworkingByTag(context.TODO(), tag)
 	return das.handleActionResponse(a, err)
 }
 

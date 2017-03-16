@@ -1,3 +1,5 @@
+// Generated: please do not edit by hand
+
 package mocks
 
 import do "github.com/digitalocean/doctl/do"
@@ -113,5 +115,3 @@ func (_m *SnapshotsService) ListVolume() (do.Snapshots, error) {
 
 	return r0, r1
 }
-
-var _ do.SnapshotsService = (*SnapshotsService)(nil)

@@ -11,6 +11,8 @@ type VolumeActionsService interface {
 	Attach(string, int) (*Action, error)
 	Detach(string) (*Action, error)
 	DetachByDropletID(string, int) (*Action, error)
+	Get(string, int) (*Action, error)
+	List(string, *godo.ListOptions) ([]Action, error)
 	Resize(string, int, string) (*Action, error)
 }
 
@@ -28,7 +30,7 @@ func NewVolumeActionsService(godoClient *godo.Client) VolumeActionsService {
 
 }
 
-func (das *volumeActionsService) handleActionResponse(a *godo.Action, err error) (*Action, error) {
+func (vas *volumeActionsService) handleActionResponse(a *godo.Action, err error) (*Action, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -36,25 +38,59 @@ func (das *volumeActionsService) handleActionResponse(a *godo.Action, err error)
 	return &Action{Action: a}, nil
 }
 
-func (das *volumeActionsService) Attach(volumeID string, dropletID int) (*Action, error) {
-	a, _, err := das.client.StorageActions.Attach(context.TODO(), volumeID, dropletID)
-	return das.handleActionResponse(a, err)
+func (vas *volumeActionsService) Attach(volumeID string, dropletID int) (*Action, error) {
+	a, _, err := vas.client.StorageActions.Attach(context.TODO(), volumeID, dropletID)
+	return vas.handleActionResponse(a, err)
 
 }
 
-func (das *volumeActionsService) Detach(volumeID string) (*Action, error) {
-	a, _, err := das.client.StorageActions.Detach(context.TODO(), volumeID)
-	return das.handleActionResponse(a, err)
+func (vas *volumeActionsService) Detach(volumeID string) (*Action, error) {
+	a, _, err := vas.client.StorageActions.Detach(context.TODO(), volumeID)
+	return vas.handleActionResponse(a, err)
 
 }
 
-func (das *volumeActionsService) DetachByDropletID(volumeID string, dropletID int) (*Action, error) {
-	a, _, err := das.client.StorageActions.DetachByDropletID(context.TODO(), volumeID, dropletID)
-	return das.handleActionResponse(a, err)
+func (vas *volumeActionsService) DetachByDropletID(volumeID string, dropletID int) (*Action, error) {
+	a, _, err := vas.client.StorageActions.DetachByDropletID(context.TODO(), volumeID, dropletID)
+	return vas.handleActionResponse(a, err)
 
 }
 
-func (das *volumeActionsService) Resize(volumeID string, sizeGigabytes int, regionSlug string) (*Action, error) {
-	a, _, err := das.client.StorageActions.Resize(context.TODO(), volumeID, sizeGigabytes, regionSlug)
-	return das.handleActionResponse(a, err)
+func (vas *volumeActionsService) Get(volumeID string, actionID int) (*Action, error) {
+	a, _, err := vas.client.StorageActions.Get(context.TODO(), volumeID, actionID)
+	return vas.handleActionResponse(a, err)
+}
+
+func (vas *volumeActionsService) List(volumeID string, opt *godo.ListOptions) ([]Action, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := vas.client.StorageActions.List(context.TODO(), volumeID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(Actions, len(si))
+	for i := range si {
+		a := si[i].(godo.Action)
+		list[i] = Action{Action: &a}
+	}
+
+	return list, nil
+}
+
+func (vas *volumeActionsService) Resize(volumeID string, sizeGigabytes int, regionSlug string) (*Action, error) {
+	a, _, err := vas.client.StorageActions.Resize(context.TODO(), volumeID, sizeGigabytes, regionSlug)
+	return vas.handleActionResponse(a, err)
 }

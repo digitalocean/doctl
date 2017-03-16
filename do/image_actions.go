@@ -22,6 +22,7 @@ import (
 // ImageActionsService is an interface for interacting with DigitalOcean's image action api.
 type ImageActionsService interface {
 	Get(int, int) (*Action, error)
+	Convert(int) (*Action, error)
 	Transfer(int, *godo.ActionRequest) (*Action, error)
 }
 
@@ -40,6 +41,15 @@ func NewImageActionsService(client *godo.Client) ImageActionsService {
 
 func (ia *imageActionsService) Get(imageID, actionID int) (*Action, error) {
 	a, _, err := ia.client.ImageActions.Get(context.TODO(), imageID, actionID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Action{Action: a}, nil
+}
+
+func (ia *imageActionsService) Convert(imageID int) (*Action, error) {
+	a, _, err := ia.client.ImageActions.Convert(context.TODO(), imageID)
 	if err != nil {
 		return nil, err
 	}
