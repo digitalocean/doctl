@@ -1,3 +1,5 @@
+// Generated: please do not edit by hand
+
 package mocks
 
 import do "github.com/digitalocean/doctl/do"
@@ -55,6 +57,20 @@ func (_m *VolumesService) CreateVolume(_a0 *godo.VolumeCreateRequest) (*do.Volum
 	return r0, r1
 }
 
+// DeleteSnapshot provides a mock function with given fields: _a0
+func (_m *VolumesService) DeleteSnapshot(_a0 string) error {
+	ret := _m.Called(_a0)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string) error); ok {
+		r0 = rf(_a0)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteVolume provides a mock function with given fields: _a0
 func (_m *VolumesService) DeleteVolume(_a0 string) error {
 	ret := _m.Called(_a0)
@@ -92,6 +108,29 @@ func (_m *VolumesService) Get(_a0 string) (*do.Volume, error) {
 	return r0, r1
 }
 
+// GetSnapshot provides a mock function with given fields: _a0
+func (_m *VolumesService) GetSnapshot(_a0 string) (*do.Snapshot, error) {
+	ret := _m.Called(_a0)
+
+	var r0 *do.Snapshot
+	if rf, ok := ret.Get(0).(func(string) *do.Snapshot); ok {
+		r0 = rf(_a0)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*do.Snapshot)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(_a0)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // List provides a mock function with given fields:
 func (_m *VolumesService) List() ([]do.Volume, error) {
 	ret := _m.Called()
@@ -115,4 +154,25 @@ func (_m *VolumesService) List() ([]do.Volume, error) {
 	return r0, r1
 }
 
-var _ do.VolumesService = (*VolumesService)(nil)
+// ListSnapshots provides a mock function with given fields: _a0, _a1
+func (_m *VolumesService) ListSnapshots(_a0 string, _a1 *godo.ListOptions) ([]do.Snapshot, error) {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 []do.Snapshot
+	if rf, ok := ret.Get(0).(func(string, *godo.ListOptions) []do.Snapshot); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]do.Snapshot)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, *godo.ListOptions) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}

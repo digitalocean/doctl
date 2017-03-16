@@ -18,6 +18,9 @@ type VolumesService interface {
 	DeleteVolume(string) error
 	Get(string) (*Volume, error)
 	CreateSnapshot(*godo.SnapshotCreateRequest) (*Snapshot, error)
+	GetSnapshot(string) (*Snapshot, error)
+	DeleteSnapshot(string) error
+	ListSnapshots(string, *godo.ListOptions) ([]Snapshot, error)
 }
 
 type volumesService struct {
@@ -95,4 +98,51 @@ func (a *volumesService) CreateSnapshot(createRequest *godo.SnapshotCreateReques
 	}
 
 	return &Snapshot{Snapshot: s}, nil
+}
+
+func (a *volumesService) GetSnapshot(snapshotID string) (*Snapshot, error) {
+	s, _, err := a.client.Storage.GetSnapshot(context.TODO(), snapshotID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Snapshot{Snapshot: s}, nil
+}
+
+func (a *volumesService) DeleteSnapshot(snapshotID string) error {
+	_, err := a.client.Storage.DeleteSnapshot(context.TODO(), snapshotID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *volumesService) ListSnapshots(volumeID string, opt *godo.ListOptions) ([]Snapshot, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := a.client.Storage.ListSnapshots(context.TODO(), volumeID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(Snapshots, len(si))
+	for i := range si {
+		a := si[i].(godo.Snapshot)
+		list[i] = Snapshot{Snapshot: &a}
+	}
+
+	return list, nil
 }
