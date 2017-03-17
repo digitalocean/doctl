@@ -107,8 +107,8 @@ exists at the legacy location.
 ### Configuration OPTIONS
 
 * `access-token` - The DigitalOcean access token. You can generate a token in the
-[Apps & API](https://cloud.digitalocean.com/settings/api/tokens) section of the DigitalOcean control panel or use
-`doctl auth login`.
+[Apps & API](https://cloud.digitalocean.com/settings/api/tokens) section of the DigitalOcean control panel and then use it
+with `doctl auth init`.
 * `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doctl` will default
  to `text`.
 
