@@ -73,6 +73,7 @@ type VolumeCreateRequest struct {
 	Name          string `json:"name"`
 	Description   string `json:"description"`
 	SizeGigaBytes int64  `json:"size_gigabytes"`
+	SnapshotID    string `json:"snapshot_id"`
 }
 
 // ListVolumes lists all storage volumes.
