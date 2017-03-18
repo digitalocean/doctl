@@ -1,0 +1,98 @@
+_doctl_prev()
+{
+    local cur prev level compreply
+    level=$1
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD - level - 1]}"
+    compreply=""
+
+    case "$prev" in
+        compute)
+            compreply="action certificate droplet-action droplet domain floating-ip floating-ip-action image image-action load-balancer plugin region size snapshot ssh-key tag volume volume-action ssh"
+            ;;
+        account)
+            compreply="get ratelimit"
+            ;;
+        auth)
+            compreply="init"
+            ;;
+        version)
+            compreply=""
+            ;;
+        action)
+            compreply="get list wait"
+            ;;
+        certificate)
+            compreply="get create list delete"
+            ;;
+        droplet-action)
+            compreply="get disable-backups reboot power-cycle shutdown power-off power-on password-reset enable-ipv6 enable-private-networking upgrade restore resize rebuild rename change-kernel snapshot"
+            ;;
+        droplet)
+            compreply="actions backups create delete get kernels list neighbors snapshots tag untag"
+            ;;
+        domain)
+            compreply="create list get delete records"
+            ;;
+        floating-ip)
+            compreply="create get delete list"
+            ;;
+        floating-ip-action)
+            compreply="get assign unassign"
+            ;;
+        image)
+            compreply="list list-distribution list-application list-user get update delete"
+            ;;
+        image-action)
+            compreply="get transfer"
+            ;;
+        load-balancer)
+            compreply="get create update list delete add-droplets remove-droplets add-forwarding-rules remove-forwarding-rules"
+            ;;
+        plugin)
+            compreply="list run"
+            ;;
+        region)
+            compreply="list"
+            ;;
+        size)
+            compreply="list"
+            ;;
+        snapshot)
+            compreply="list get delete"
+            ;;
+        ssh-key)
+            compreply="list get create import delete update"
+            ;;
+        tag)
+            compreply="create get list update delete"
+            ;;
+        volume)
+            compreply="list create delete get snapshot"
+            ;;
+        volume-action)
+            compreply="attach detach detach-by-droplet-id resize"
+            ;;
+        ssh)
+            compreply=""
+            ;;
+        *)
+            if [ "$level" != "0" ]; then
+                compreply=""
+            else
+                compreply="account auth compute version"
+            fi
+            ;;
+    esac
+    echo "$compreply"
+}
+
+_doctl() 
+{
+    local level words
+    COMPREPLY=()
+    level=0
+    words="$(_doctl_prev $level)"
+    COMPREPLY=( $(compgen -W "${words}" -- ${cur}) )
+}
+complete -F _doctl doctl
