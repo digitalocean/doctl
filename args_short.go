@@ -14,6 +14,9 @@ limitations under the License.
 package doctl
 
 const (
+	// ArgShortCompletionLocation is a store location of completion file
+	ArgShortCompletionLocation = "l"
+
 	// ArgShortDeleteForce forces deletion actions
 	ArgShortDeleteForce = "f"
 )
