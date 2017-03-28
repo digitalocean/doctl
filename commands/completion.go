@@ -17,15 +17,8 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/digitalocean/doctl"
 	"github.com/spf13/cobra"
 )
-
-var bashCompletionSuccMsg = "Bash Completion file generated successfull.\n\n" +
-	"To make completion available, you need to manually copy it to:\n" +
-	"\t/etc/bash_completion.d/\n" +
-	"or source it using\n" +
-	"\tsource <(doctl completion bash -l \"\")\n"
 
 // Completion creates the completion command
 func Completion() *Command {
@@ -39,10 +32,17 @@ func Completion() *Command {
 		IsIndex:       true,
 	}
 
-	cmdRunCompletionBash := CmdBuilder(cmd, RunCompletionBash, "bash", "generate bash completion file",
+	CmdBuilder(cmd, RunCompletionBash, "bash", "generate bash completion script",
 		Writer, aliasOpt("b"))
-	AddStringFlag(cmdRunCompletionBash, doctl.ArgCompletionLocation, doctl.ArgShortCompletionLocation,
-		"./doctl.sh", "location to store completion file; if location is empty, print to screen")
+
+	CmdBuilder(cmd, RunCompletionZsh, "zsh", "generate zsh completion script",
+		Writer, aliasOpt("z"))
+
+	CmdBuilder(cmd, RunCompletionFish, "fish", "generate fish completion script",
+		Writer, aliasOpt("f"))
+
+	// TODO(xmudrii): write help message
+	cmd.SetHelpTemplate("...")
 
 	return cmd
 }
@@ -50,26 +50,12 @@ func Completion() *Command {
 func RunCompletionBash(c *CmdConfig) error {
 	var buf bytes.Buffer
 
-	loc, err := c.Doit.GetString(c.NS, doctl.ArgCompletionLocation)
-	if err != nil {
-		return err
-	}
-
-	err = DoitCmd.GenBashCompletion(&buf)
+	err := DoitCmd.GenBashCompletion(&buf)
 	if err != nil {
 		return fmt.Errorf("error while generating bash completion: %v", err)
 	}
 
-	if loc != "" {
-		err = writeCompletion(loc, &buf)
-		if err != nil {
-			return fmt.Errorf("error while writing bash completion file: %v", err)
-		}
-
-		fmt.Printf("%s", bashCompletionSuccMsg)
-	} else {
-		fmt.Printf("%s", buf.String())
-	}
+	fmt.Printf("%s", buf.String())
 
 	return nil
 }

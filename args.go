@@ -159,9 +159,6 @@ const (
 	// ArgForwardingRules is a list of forwarding rules for the load balancer.
 	ArgForwardingRules = "forwarding-rules"
 
-	// ArgCompletionLocation is a store location of completion file
-	ArgCompletionLocation = "location"
-
 	// ArgDeleteForce forces deletion actions
 	ArgDeleteForce = "force"
 )

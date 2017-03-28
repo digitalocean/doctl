@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -149,9 +148,9 @@ func Execute() {
 func addCommands() {
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Auth())
+	DoitCmd.AddCommand(Completion())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Version())
-	DoitCmd.AddCommand(Completion())
 }
 
 func computeCmd() *Command {
@@ -448,18 +447,4 @@ func defaultConfigFileWriter() (io.WriteCloser, error) {
 	}
 
 	return f, nil
-}
-
-func writeCompletion(location string, buffer *bytes.Buffer) error {
-	f, err := os.Create(location)
-	if err != nil {
-		return errors.New("unable to create completion file")
-	}
-
-	_, err = f.Write(buffer.Bytes())
-	if err != nil {
-		return errors.New("unable to write completion file")
-	}
-
-	return nil
 }
