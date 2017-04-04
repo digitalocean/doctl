@@ -38,16 +38,6 @@ func TestVolumeActionsAttach(t *testing.T) {
 	})
 }
 
-func TestVolumeActionsDetach(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumeActions.On("Detach", testVolume.ID).Return(&testAction, nil)
-		config.Args = append(config.Args, testVolume.ID)
-
-		err := RunVolumeDetach(config)
-		assert.NoError(t, err)
-	})
-}
-
 func TestVolumeDetachByDropletID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.volumeActions.On("DetachByDropletID", testVolume.ID, testDroplet.ID).Return(&testAction, nil)

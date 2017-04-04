@@ -10,7 +10,6 @@ import (
 // See: https://developers.digitalocean.com/documentation/v2#storage-actions
 type StorageActionsService interface {
 	Attach(ctx context.Context, volumeID string, dropletID int) (*Action, *Response, error)
-	Detach(ctx context.Context, volumeID string) (*Action, *Response, error)
 	DetachByDropletID(ctx context.Context, volumeID string, dropletID int) (*Action, *Response, error)
 	Get(ctx context.Context, volumeID string, actionID int) (*Action, *Response, error)
 	List(ctx context.Context, volumeID string, opt *ListOptions) ([]Action, *Response, error)
@@ -34,14 +33,6 @@ func (s *StorageActionsServiceOp) Attach(ctx context.Context, volumeID string, d
 	request := &ActionRequest{
 		"type":       "attach",
 		"droplet_id": dropletID,
-	}
-	return s.doAction(ctx, volumeID, request)
-}
-
-// Detach a storage volume from a Droplet.
-func (s *StorageActionsServiceOp) Detach(ctx context.Context, volumeID string) (*Action, *Response, error) {
-	request := &ActionRequest{
-		"type": "detach",
 	}
 	return s.doAction(ctx, volumeID, request)
 }
