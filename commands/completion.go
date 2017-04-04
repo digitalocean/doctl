@@ -76,9 +76,6 @@ func Completion() *Command {
 	CmdBuilder(cmd, RunCompletionZsh, "zsh", "generate zsh completion code",
 		Writer, aliasOpt("z"))
 
-	CmdBuilder(cmd, RunCompletionFish, "fish", "generate fish completion code",
-		Writer, aliasOpt("f"))
-
 	return cmd
 }
 
@@ -287,9 +284,4 @@ __doctl_bash_source <(__doctl_convert_bash_to_zsh)
 	fmt.Printf("%s", buf.String())
 
 	return nil
-}
-
-// RunCompletionFish outputs completion code for fish shell.
-func RunCompletionFish(c *CmdConfig) error {
-	return fmt.Errorf("Fish completion generation is not supported for now")
 }
