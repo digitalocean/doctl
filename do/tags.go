@@ -32,7 +32,6 @@ type TagsService interface {
 	List() (Tags, error)
 	Get(string) (*Tag, error)
 	Create(*godo.TagCreateRequest) (*Tag, error)
-	Update(string, *godo.TagUpdateRequest) error
 	Delete(string) error
 	TagResources(string, *godo.TagResourcesRequest) error
 	UntagResources(string, *godo.UntagResourcesRequest) error
@@ -96,11 +95,6 @@ func (ts *tagsService) Create(tcr *godo.TagCreateRequest) (*Tag, error) {
 	}
 
 	return &Tag{Tag: t}, nil
-}
-
-func (ts *tagsService) Update(name string, tur *godo.TagUpdateRequest) error {
-	_, err := ts.client.Tags.Update(context.TODO(), name, tur)
-	return err
 }
 
 func (ts *tagsService) Delete(name string) error {

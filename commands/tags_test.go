@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -41,7 +40,7 @@ var (
 func TestTTagCommand(t *testing.T) {
 	cmd := Tags()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "get", "update", "delete", "list")
+	assertCommandNames(t, cmd, "create", "get", "delete", "list")
 }
 
 func TestTagGet(t *testing.T) {
@@ -97,29 +96,5 @@ func TestTagDeleteMultiple(t *testing.T) {
 
 		err := RunCmdTagDelete(config)
 		assert.NoError(t, err)
-	})
-}
-
-func TestTagUpdate(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tur := &godo.TagUpdateRequest{Name: "new-name"}
-		tm.tags.On("Update", "my-tag", tur).Return(nil)
-		config.Args = append(config.Args, "my-tag")
-
-		config.Doit.Set(config.NS, doctl.ArgTagName, "new-name")
-
-		err := RunCmdTagUpdate(config)
-		assert.NoError(t, err)
-	})
-}
-
-func TestTagUpdateMissingName(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tur := &godo.TagUpdateRequest{Name: ""}
-		tm.tags.On("Update", "my-tag", tur).Return(errors.New("boom"))
-		config.Args = append(config.Args, "my-tag")
-
-		err := RunCmdTagUpdate(config)
-		assert.Error(t, err)
 	})
 }
