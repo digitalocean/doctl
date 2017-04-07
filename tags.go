@@ -14,7 +14,6 @@ type TagsService interface {
 	List(context.Context, *ListOptions) ([]Tag, *Response, error)
 	Get(context.Context, string) (*Tag, *Response, error)
 	Create(context.Context, *TagCreateRequest) (*Tag, *Response, error)
-	Update(context.Context, string, *TagUpdateRequest) (*Response, error)
 	Delete(context.Context, string) (*Response, error)
 
 	TagResources(context.Context, string, *TagResourcesRequest) (*Response, error)
@@ -62,11 +61,6 @@ type Tag struct {
 
 //TagCreateRequest represents the JSON structure of a request of that type.
 type TagCreateRequest struct {
-	Name string `json:"name"`
-}
-
-//TagUpdateRequest represents the JSON structure of a request of that type.
-type TagUpdateRequest struct {
 	Name string `json:"name"`
 }
 
@@ -151,27 +145,6 @@ func (s *TagsServiceOp) Create(ctx context.Context, createRequest *TagCreateRequ
 	}
 
 	return root.Tag, resp, err
-}
-
-// Update an exsting tag
-func (s *TagsServiceOp) Update(ctx context.Context, name string, updateRequest *TagUpdateRequest) (*Response, error) {
-	if name == "" {
-		return nil, NewArgError("name", "cannot be empty")
-	}
-
-	if updateRequest == nil {
-		return nil, NewArgError("updateRequest", "cannot be nil")
-	}
-
-	path := fmt.Sprintf("%s/%s", tagsBasePath, name)
-	req, err := s.client.NewRequest(ctx, "PUT", path, updateRequest)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := s.client.Do(req, nil)
-
-	return resp, err
 }
 
 // Delete an existing tag
