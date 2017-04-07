@@ -61,9 +61,6 @@ func VolumeAction() *Command {
 	CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "attach a volume", Writer,
 		aliasOpt("a"))
 
-	CmdBuilder(cmd, RunVolumeDetach, "detach <volume-id>", "detach a volume", Writer,
-		aliasOpt("d"))
-
 	CmdBuilder(cmd, RunVolumeDetachByDropletID, "detach-by-droplet-id <volume-id> <droplet-id>", "detach a volume by droplet ID", Writer,
 		aliasOpt("dd"))
 
@@ -91,19 +88,6 @@ func RunVolumeAttach(c *CmdConfig) error {
 
 		}
 		a, err := das.Attach(volumeID, dropletID)
-		return a, err
-	}
-	return performVolumeAction(c, fn)
-}
-
-// RunVolumeDetach detaches a volume from the droplet it's attached to.
-func RunVolumeDetach(c *CmdConfig) error {
-	fn := func(das do.VolumeActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
-		}
-		volumeID := c.Args[0]
-		a, err := das.Detach(volumeID)
 		return a, err
 	}
 	return performVolumeAction(c, fn)

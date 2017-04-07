@@ -9,7 +9,6 @@ import (
 // VolumeActionsService is an interface for interacting with DigitalOcean's volume-action api.
 type VolumeActionsService interface {
 	Attach(string, int) (*Action, error)
-	Detach(string) (*Action, error)
 	DetachByDropletID(string, int) (*Action, error)
 	Get(string, int) (*Action, error)
 	List(string, *godo.ListOptions) ([]Action, error)
@@ -40,12 +39,6 @@ func (vas *volumeActionsService) handleActionResponse(a *godo.Action, err error)
 
 func (vas *volumeActionsService) Attach(volumeID string, dropletID int) (*Action, error) {
 	a, _, err := vas.client.StorageActions.Attach(context.TODO(), volumeID, dropletID)
-	return vas.handleActionResponse(a, err)
-
-}
-
-func (vas *volumeActionsService) Detach(volumeID string) (*Action, error) {
-	a, _, err := vas.client.StorageActions.Detach(context.TODO(), volumeID)
 	return vas.handleActionResponse(a, err)
 
 }
