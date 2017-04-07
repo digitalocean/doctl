@@ -1,9 +1,10 @@
 package godo
 
 import (
-	"context"
 	"fmt"
 	"net/url"
+
+	"github.com/digitalocean/godo/context"
 )
 
 // ActionRequest reprents DigitalOcean Action Request
@@ -252,7 +253,7 @@ func (s *DropletActionsServiceOp) doAction(ctx context.Context, id int, request 
 	}
 
 	root := new(actionRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -277,7 +278,7 @@ func (s *DropletActionsServiceOp) doActionByTag(ctx context.Context, tag string,
 	}
 
 	root := new(actionRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -317,7 +318,7 @@ func (s *DropletActionsServiceOp) get(ctx context.Context, path string) (*Action
 	}
 
 	root := new(actionRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}

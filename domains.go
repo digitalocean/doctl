@@ -1,8 +1,9 @@
 package godo
 
 import (
-	"context"
 	"fmt"
+
+	"github.com/digitalocean/godo/context"
 )
 
 const domainsBasePath = "v2/domains"
@@ -104,7 +105,7 @@ func (s DomainsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Domain,
 	}
 
 	root := new(domainsRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -129,7 +130,7 @@ func (s *DomainsServiceOp) Get(ctx context.Context, name string) (*Domain, *Resp
 	}
 
 	root := new(domainRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -151,7 +152,7 @@ func (s *DomainsServiceOp) Create(ctx context.Context, createRequest *DomainCrea
 	}
 
 	root := new(domainRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -171,7 +172,7 @@ func (s *DomainsServiceOp) Delete(ctx context.Context, name string) (*Response, 
 		return nil, err
 	}
 
-	resp, err := s.client.Do(req, nil)
+	resp, err := s.client.Do(ctx, req, nil)
 
 	return resp, err
 }
@@ -204,7 +205,7 @@ func (s *DomainsServiceOp) Records(ctx context.Context, domain string, opt *List
 	}
 
 	root := new(domainRecordsRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -233,7 +234,7 @@ func (s *DomainsServiceOp) Record(ctx context.Context, domain string, id int) (*
 	}
 
 	record := new(domainRecordRoot)
-	resp, err := s.client.Do(req, record)
+	resp, err := s.client.Do(ctx, req, record)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -258,7 +259,7 @@ func (s *DomainsServiceOp) DeleteRecord(ctx context.Context, domain string, id i
 		return nil, err
 	}
 
-	resp, err := s.client.Do(req, nil)
+	resp, err := s.client.Do(ctx, req, nil)
 
 	return resp, err
 }
@@ -289,7 +290,7 @@ func (s *DomainsServiceOp) EditRecord(ctx context.Context,
 	}
 
 	d := new(DomainRecord)
-	resp, err := s.client.Do(req, d)
+	resp, err := s.client.Do(ctx, req, d)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -317,7 +318,7 @@ func (s *DomainsServiceOp) CreateRecord(ctx context.Context,
 	}
 
 	d := new(domainRecordRoot)
-	resp, err := s.client.Do(req, d)
+	resp, err := s.client.Do(ctx, req, d)
 	if err != nil {
 		return nil, resp, err
 	}
