@@ -43,11 +43,6 @@ func Tags() *Command {
 	CmdBuilder(cmd, RunCmdTagList, "list", "list tags", Writer,
 		aliasOpt("ls"), docCategories("tag"))
 
-	cmdTagUpdate := CmdBuilder(cmd, RunCmdTagUpdate, "update <tag-name>", "update tag", Writer,
-		docCategories("tag"))
-	AddStringFlag(cmdTagUpdate, doctl.ArgTagName, "", "", "Tag name",
-		requiredOpt())
-
 	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name> [tag-name ...]", "delete tag", Writer,
 		docCategories("tag"))
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force tag delete")
@@ -98,24 +93,6 @@ func RunCmdTagList(c *CmdConfig) error {
 	}
 
 	return c.Display(&tag{tags: tags})
-}
-
-// RunCmdTagUpdate runs tag update.
-func RunCmdTagUpdate(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
-	}
-
-	name := c.Args[0]
-
-	newName, err := c.Doit.GetString(c.NS, doctl.ArgTagName)
-	if err != nil {
-		return err
-	}
-
-	ts := c.Tags()
-	tur := &godo.TagUpdateRequest{Name: newName}
-	return ts.Update(name, tur)
 }
 
 // RunCmdTagDelete runs tag delete.
