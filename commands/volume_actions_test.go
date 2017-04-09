@@ -24,7 +24,7 @@ import (
 func TestVolumeActionCommand(t *testing.T) {
 	cmd := VolumeAction()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "attach", "detach-by-droplet-id", "resize")
+	assertCommandNames(t, cmd, "attach", "detach", "detach-by-droplet-id", "resize")
 }
 
 func TestVolumeActionsAttach(t *testing.T) {
@@ -38,13 +38,13 @@ func TestVolumeActionsAttach(t *testing.T) {
 	})
 }
 
-func TestVolumeDetachByDropletID(t *testing.T) {
+func TestVolumeDetach(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumeActions.On("DetachByDropletID", testVolume.ID, testDroplet.ID).Return(&testAction, nil)
+		tm.volumeActions.On("Detach", testVolume.ID, testDroplet.ID).Return(&testAction, nil)
 		config.Args = append(config.Args, testVolume.ID)
 		config.Args = append(config.Args, fmt.Sprintf("%d", testDroplet.ID))
 
-		err := RunVolumeDetachByDropletID(config)
+		err := RunVolumeDetach(config)
 		assert.NoError(t, err)
 	})
 }
