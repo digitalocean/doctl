@@ -1,8 +1,9 @@
 package godo
 
 import (
-	"context"
 	"fmt"
+
+	"github.com/digitalocean/godo/context"
 )
 
 const tagsBasePath = "v2/tags"
@@ -98,7 +99,7 @@ func (s *TagsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Tag, *Res
 	}
 
 	root := new(tagsRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -119,7 +120,7 @@ func (s *TagsServiceOp) Get(ctx context.Context, name string) (*Tag, *Response, 
 	}
 
 	root := new(tagRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -139,7 +140,7 @@ func (s *TagsServiceOp) Create(ctx context.Context, createRequest *TagCreateRequ
 	}
 
 	root := new(tagRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -159,7 +160,7 @@ func (s *TagsServiceOp) Delete(ctx context.Context, name string) (*Response, err
 		return nil, err
 	}
 
-	resp, err := s.client.Do(req, nil)
+	resp, err := s.client.Do(ctx, req, nil)
 
 	return resp, err
 }
@@ -180,7 +181,7 @@ func (s *TagsServiceOp) TagResources(ctx context.Context, name string, tagReques
 		return nil, err
 	}
 
-	resp, err := s.client.Do(req, nil)
+	resp, err := s.client.Do(ctx, req, nil)
 
 	return resp, err
 }
@@ -201,7 +202,7 @@ func (s *TagsServiceOp) UntagResources(ctx context.Context, name string, untagRe
 		return nil, err
 	}
 
-	resp, err := s.client.Do(req, nil)
+	resp, err := s.client.Do(ctx, req, nil)
 
 	return resp, err
 }
