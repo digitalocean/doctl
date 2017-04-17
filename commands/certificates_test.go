@@ -85,6 +85,37 @@ func TestCertificatesCreate(t *testing.T) {
 	})
 }
 
+func TestCertificatesCreateWithoutACertificateChain(t *testing.T) {
+	privateKey := "-----BEGIN PRIVATE KEY-----"
+	privateKeyPath := filepath.Join(os.TempDir(), "pkey.pem")
+	pkErr := ioutil.WriteFile(privateKeyPath, []byte(privateKey), 0600)
+	assert.NoError(t, pkErr)
+	defer os.Remove(privateKeyPath)
+
+	cert := "-----BEGIN CERTIFICATE-----"
+	certPath := filepath.Join(os.TempDir(), "cert.crt")
+	certErr := ioutil.WriteFile(certPath, []byte(cert), 0600)
+	assert.NoError(t, certErr)
+	defer os.Remove(certPath)
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := godo.CertificateRequest{
+			Name:            "web-cert-01",
+			PrivateKey:      privateKey,
+			LeafCertificate: cert,
+		}
+
+		tm.certificates.On("Create", &r).Return(&testCertificate, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgCertificateName, "web-cert-01")
+		config.Doit.Set(config.NS, doctl.ArgPrivateKeyPath, privateKeyPath)
+		config.Doit.Set(config.NS, doctl.ArgLeafCertificatePath, certPath)
+
+		err := RunCertificateCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestCertificateList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.certificates.On("List").Return(testCertificateList, nil)
