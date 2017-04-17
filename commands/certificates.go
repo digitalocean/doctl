@@ -40,7 +40,7 @@ func Certificate() *Command {
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateName, "", "", "certificate name", requiredOpt())
 	AddStringFlag(cmdCertificateCreate, doctl.ArgPrivateKeyPath, "", "", "path to a private key for the certificate", requiredOpt())
 	AddStringFlag(cmdCertificateCreate, doctl.ArgLeafCertificatePath, "", "", "path to a certificate leaf", requiredOpt())
-	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "", "path to a certificate chain", requiredOpt())
+	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "", "path to a certificate chain")
 
 	CmdBuilder(cmd, RunCertificateList, "list", "list certificates", Writer, aliasOpt("ls"))
 
@@ -94,24 +94,27 @@ func RunCertificateCreate(c *CmdConfig) error {
 		return err
 	}
 
+	r := &godo.CertificateRequest{
+		Name:            name,
+		PrivateKey:      pc,
+		LeafCertificate: lc,
+	}
+
 	ccPath, err := c.Doit.GetString(c.NS, doctl.ArgCertificateChainPath)
 	if err != nil {
 		return err
 	}
 
-	cc, err := readInputFromFile(ccPath)
-	if err != nil {
-		return err
+	if len(ccPath) > 0 {
+		cc, err := readInputFromFile(ccPath)
+		if err != nil {
+			return err
+		}
+
+		r.CertificateChain = cc
 	}
 
 	cs := c.Certificates()
-	r := &godo.CertificateRequest{
-		Name:             name,
-		PrivateKey:       pc,
-		LeafCertificate:  lc,
-		CertificateChain: cc,
-	}
-
 	cer, err := cs.Create(r)
 	if err != nil {
 		return err
