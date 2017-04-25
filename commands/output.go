@@ -197,14 +197,14 @@ func (dr *domainRecord) JSON(out io.Writer) error {
 
 func (dr *domainRecord) Cols() []string {
 	return []string{
-		"ID", "Type", "Name", "Data", "Priority", "Port", "Weight",
+		"ID", "Type", "Name", "Data", "Priority", "Port", "TTL", "Weight",
 	}
 }
 
 func (dr *domainRecord) ColMap() map[string]string {
 	return map[string]string{
 		"ID": "ID", "Type": "Type", "Name": "Name", "Data": "Data",
-		"Priority": "Priority", "Port": "Port", "Weight": "Weight",
+		"Priority": "Priority", "Port": "Port", "TTL": "TTL", "Weight": "Weight",
 	}
 }
 
@@ -215,7 +215,7 @@ func (dr *domainRecord) KV() []map[string]interface{} {
 		o := map[string]interface{}{
 			"ID": d.ID, "Type": d.Type, "Name": d.Name,
 			"Data": d.Data, "Priority": d.Priority,
-			"Port": d.Port, "Weight": d.Weight,
+			"Port": d.Port, "TTL": d.TTL, "Weight": d.Weight,
 		}
 		out = append(out, o)
 	}

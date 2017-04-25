@@ -78,6 +78,8 @@ const (
 	ArgRecordPriority = "record-priority"
 	// ArgRecordType is a record type argument.
 	ArgRecordType = "record-type"
+	// ArgRecordTTL is a record ttl argument.
+	ArgRecordTTL = "record-ttl"
 	// ArgRecordWeight is a record weight argument.
 	ArgRecordWeight = "record-weight"
 	// ArgRegionSlug is a region slug argument.

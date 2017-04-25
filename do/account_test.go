@@ -14,10 +14,10 @@ limitations under the License.
 package do
 
 import (
-	"context"
 	"testing"
 
 	"github.com/digitalocean/godo"
+	"github.com/digitalocean/godo/context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

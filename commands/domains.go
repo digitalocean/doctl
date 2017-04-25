@@ -68,6 +68,7 @@ func Domain() *Command {
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "", "Record data")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPriority, "", 0, "Record priority")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPort, "", 0, "Record port")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordTTL, "", 1800, "Record TTL")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, "", 0, "Record weight")
 
 	CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", Writer,
@@ -81,6 +82,7 @@ func Domain() *Command {
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "", "Record data")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, "", 0, "Record priority")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, "", 0, "Record port")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 1800, "Record TTL")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "Record weight")
 
 	return cmd
@@ -223,6 +225,11 @@ func RunRecordCreate(c *CmdConfig) error {
 		return err
 	}
 
+	rTTL, err := c.Doit.GetInt(c.NS, doctl.ArgRecordTTL)
+	if err != nil {
+		return err
+	}
+
 	rWeight, err := c.Doit.GetInt(c.NS, doctl.ArgRecordWeight)
 	if err != nil {
 		return err
@@ -234,6 +241,7 @@ func RunRecordCreate(c *CmdConfig) error {
 		Data:     rData,
 		Priority: rPriority,
 		Port:     rPort,
+		TTL:      rTTL,
 		Weight:   rWeight,
 	}
 
@@ -318,6 +326,11 @@ func RunRecordUpdate(c *CmdConfig) error {
 		return err
 	}
 
+	rTTL, err := c.Doit.GetInt(c.NS, doctl.ArgRecordTTL)
+	if err != nil {
+		return err
+	}
+
 	rWeight, err := c.Doit.GetInt(c.NS, doctl.ArgRecordWeight)
 	if err != nil {
 		return err
@@ -329,6 +342,7 @@ func RunRecordUpdate(c *CmdConfig) error {
 		Data:     rData,
 		Priority: rPriority,
 		Port:     rPort,
+		TTL:      rTTL,
 		Weight:   rWeight,
 	}
 
