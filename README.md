@@ -43,9 +43,9 @@ You can use [snap](https://snapcraft.io) to install `doctl` on Ubuntu and [snap 
 snap install doctl
 ```
 
-#### Windows and GNU/Linux
+#### Windows
 
-Integrations with package managers for GNU/Linux and Windows are to come.
+Integrations with package managers for Windows are to come.
 
 ### Option 2 – Download a Release from GitHub
 
