@@ -34,31 +34,8 @@ func (_m *VolumeActionsService) Attach(_a0 string, _a1 int) (*do.Action, error) 
 	return r0, r1
 }
 
-// Detach provides a mock function with given fields: _a0
-func (_m *VolumeActionsService) Detach(_a0 string) (*do.Action, error) {
-	ret := _m.Called(_a0)
-
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
-		r0 = rf(_a0)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(_a0)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// DetachByDropletID provides a mock function with given fields: _a0, _a1
-func (_m *VolumeActionsService) DetachByDropletID(_a0 string, _a1 int) (*do.Action, error) {
+// Detach provides a mock function with given fields: _a0, _a1
+func (_m *VolumeActionsService) Detach(_a0 string, _a1 int) (*do.Action, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 *do.Action
