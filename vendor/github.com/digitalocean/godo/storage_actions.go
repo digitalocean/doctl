@@ -1,8 +1,9 @@
 package godo
 
 import (
-	"context"
 	"fmt"
+
+	"github.com/digitalocean/godo/context"
 )
 
 // StorageActionsService is an interface for interfacing with the
@@ -82,7 +83,7 @@ func (s *StorageActionsServiceOp) doAction(ctx context.Context, volumeID string,
 	}
 
 	root := new(actionRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -97,7 +98,7 @@ func (s *StorageActionsServiceOp) get(ctx context.Context, path string) (*Action
 	}
 
 	root := new(actionRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}
@@ -112,7 +113,7 @@ func (s *StorageActionsServiceOp) list(ctx context.Context, path string) ([]Acti
 	}
 
 	root := new(actionsRoot)
-	resp, err := s.client.Do(req, root)
+	resp, err := s.client.Do(ctx, req, root)
 	if err != nil {
 		return nil, resp, err
 	}

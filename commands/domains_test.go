@@ -113,7 +113,7 @@ func TestRecordList_RequiredArguments(t *testing.T) {
 
 func TestRecordsCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, Weight: 0}
+		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, TTL: 0, Weight: 0}
 		tm.domains.On("CreateRecord", "example.com", dcer).Return(&testRecord, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRecordType, "A")
@@ -147,7 +147,7 @@ func TestRecordsDelete(t *testing.T) {
 
 func TestRecordsUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, Weight: 0}
+		dcer := &godo.DomainRecordEditRequest{Type: "A", Name: "foo.example.com.", Data: "192.168.1.1", Priority: 0, Port: 0, TTL: 0, Weight: 0}
 		tm.domains.On("EditRecord", "example.com", 1, dcer).Return(&testRecord, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRecordID, 1)

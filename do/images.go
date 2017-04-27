@@ -14,9 +14,8 @@ limitations under the License.
 package do
 
 import (
-	"context"
-
 	"github.com/digitalocean/godo"
+	"github.com/digitalocean/godo/context"
 )
 
 // Image is a werapper for godo.Image
