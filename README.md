@@ -35,6 +35,14 @@ You can use [Homebrew](http://brew.sh) to install `doctl` on Mac OS X by using t
 brew install doctl
 ```
 
+#### Linux
+
+You can use [snap](https://snapcraft.io) to install `doctl` on Ubuntu and [snap supported](https://snapcraft.io/docs/core/install) systems by using the command below:
+
+```
+snap install doctl
+```
+
 #### Windows and GNU/Linux
 
 Integrations with package managers for GNU/Linux and Windows are to come.
