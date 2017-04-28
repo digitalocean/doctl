@@ -81,6 +81,8 @@ func TestDomainsDelete(t *testing.T) {
 
 		config.Args = append(config.Args, testDomain.Name)
 
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
 		err := RunDomainDelete(config)
 		assert.NoError(t, err)
 	})
@@ -139,6 +141,8 @@ func TestRecordsDelete(t *testing.T) {
 		tm.domains.On("DeleteRecord", "example.com", 1).Return(nil)
 
 		config.Args = append(config.Args, "example.com", "1")
+
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		err := RunRecordDelete(config)
 		assert.NoError(t, err)

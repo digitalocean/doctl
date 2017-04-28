@@ -46,7 +46,8 @@ func Domain() *Command {
 	CmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", Writer,
 		aliasOpt("g"), displayerType(&domain{}), docCategories("domain"))
 
-	CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete domain", Writer, aliasOpt("g"))
+	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete domain", Writer, aliasOpt("g"))
+	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force domain delete")
 
 	cmdRecord := &Command{
 		Command: &cobra.Command{
@@ -71,8 +72,9 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordTTL, "", 1800, "Record TTL")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, "", 0, "Record weight")
 
-	CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", Writer,
+	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", Writer,
 		aliasOpt("d"), docCategories("domain"))
+	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force record delete")
 
 	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "update record", Writer,
 		aliasOpt("u"), displayerType(&domainRecord{}), docCategories("domain"))
@@ -158,14 +160,25 @@ func RunDomainDelete(c *CmdConfig) error {
 	}
 	name := c.Args[0]
 
-	ds := c.Domains()
-
-	if len(name) < 1 {
-		return errors.New("invalid domain name")
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
 	}
 
-	err := ds.Delete(name)
-	return err
+	if force || AskForConfirm("delete domain") == nil {
+		ds := c.Domains()
+
+		if len(name) < 1 {
+			return errors.New("invalid domain name")
+		}
+
+		err := ds.Delete(name)
+		return err
+	} else {
+		return fmt.Errorf("operation aborted")
+	}
+
+	return nil
 }
 
 // RunRecordList list records for a domain.
@@ -265,26 +278,36 @@ func RunRecordDelete(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	domainName, ids := c.Args[0], c.Args[1:]
-	if len(ids) < 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
 	}
 
-	ds := c.Domains()
-
-	for _, i := range ids {
-		id, err := strconv.Atoi(i)
-		if err != nil {
-			return fmt.Errorf("invalid record id %q", i)
+	if force || AskForConfirm("delete record(s)") == nil {
+		domainName, ids := c.Args[0], c.Args[1:]
+		if len(ids) < 1 {
+			return doctl.NewMissingArgsErr(c.NS)
 		}
 
-		err = ds.DeleteRecord(domainName, id)
-		if err != nil {
-			return err
+		ds := c.Domains()
+
+		for _, i := range ids {
+			id, err := strconv.Atoi(i)
+			if err != nil {
+				return fmt.Errorf("invalid record id %q", i)
+			}
+
+			err = ds.DeleteRecord(domainName, id)
+			if err != nil {
+				return err
+			}
 		}
+	} else {
+		return fmt.Errorf("opertaion aborted")
 	}
 
 	return nil
+
 }
 
 // RunRecordUpdate updates a domain record.

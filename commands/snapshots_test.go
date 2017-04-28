@@ -107,7 +107,7 @@ func TestSnapshotDelete(t *testing.T) {
 		tm.snapshots.On("Delete", testSnapshot.ID).Return(nil)
 
 		config.Args = append(config.Args, testSnapshot.ID)
-		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		err := RunSnapshotDelete(config)
 		assert.NoError(t, err)

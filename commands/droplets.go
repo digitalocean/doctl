@@ -72,7 +72,7 @@ func Droplet() *Command {
 
 	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name> [droplet-id|droplet-name ...]", "Delete droplet by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
-	AddBoolFlag(cmdRunDropletDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force droplet delete")
+	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force droplet delete")
 
 	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id>", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
@@ -452,7 +452,7 @@ func allInt(in []string) ([]int, error) {
 func RunDropletDelete(c *CmdConfig) error {
 	ds := c.Droplets()
 
-	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
 	}

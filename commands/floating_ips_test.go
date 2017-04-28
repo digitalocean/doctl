@@ -92,6 +92,8 @@ func TestFloatingIPsDelete(t *testing.T) {
 
 		config.Args = append(config.Args, "127.0.0.1")
 
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
 		RunFloatingIPDelete(config)
 	})
 }

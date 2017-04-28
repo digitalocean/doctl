@@ -48,7 +48,8 @@ func FloatingIP() *Command {
 	CmdBuilder(cmd, RunFloatingIPGet, "get <floating-ip>", "get the details of a floating IP", Writer,
 		aliasOpt("g"), displayerType(&floatingIP{}), docCategories("floatingip"))
 
-	CmdBuilder(cmd, RunFloatingIPDelete, "delete <floating-ip>", "delete a floating IP address", Writer, aliasOpt("d"))
+	cmdRunFloatingIPDelete := CmdBuilder(cmd, RunFloatingIPDelete, "delete <floating-ip>", "delete a floating IP address", Writer, aliasOpt("d"))
+	AddBoolFlag(cmdRunFloatingIPDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force floating IP delete")
 
 	cmdFloatingIPList := CmdBuilder(cmd, RunFloatingIPList, "list", "list all floating IP addresses", Writer,
 		aliasOpt("ls"), displayerType(&floatingIP{}), docCategories("floatingip"))
@@ -119,9 +120,18 @@ func RunFloatingIPDelete(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	ip := c.Args[0]
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
 
-	return fis.Delete(ip)
+	if force || AskForConfirm("delete floating IP") == nil {
+		ip := c.Args[0]
+		return fis.Delete(ip)
+	} else {
+		return fmt.Errorf("operation aborted")
+	}
+	return nil
 }
 
 // RunFloatingIPList runs floating IP create.

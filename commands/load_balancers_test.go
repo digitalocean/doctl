@@ -177,7 +177,7 @@ func TestLoadBalancerDelete(t *testing.T) {
 		tm.loadBalancers.On("Delete", lbID).Return(nil)
 
 		config.Args = append(config.Args, lbID)
-		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		err := RunLoadBalancerDelete(config)
 		assert.NoError(t, err)

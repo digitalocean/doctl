@@ -45,7 +45,7 @@ func Snapshot() *Command {
 
 	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id> [snapshot-id ...]", "delete snapshot", Writer,
 		aliasOpt("d"), displayerType(&droplet{}), docCategories("snapshot"))
-	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force snapshot delete")
+	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force snapshot delete")
 
 	return cmd
 }
@@ -159,7 +159,7 @@ func RunSnapshotDelete(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
 	}
