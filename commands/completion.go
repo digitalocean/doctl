@@ -22,17 +22,17 @@ import (
 
 const (
 	completionLong = `
-completion is used to output completion code for bash/zsh/fish shell.
+completion is used to output completion code for bash and zsh shells.
 
 Before using completion features, you have to source completion code
 from your .profile or .bashrc/.zshrc file. This is done by adding
 following line to one of above files:
 	source <(doctl completion SHELL)
 
-Bash users can as well save it to file and copy it to:
+Bash users can as well save it to the file and copy it to:
 	/etc/bash_completion.d/
 
-Correct arguments for SHELL are: "bash", "zsh" and "fish".
+Correct arguments for SHELL are: "bash" and "zsh".
 
 Notes:
 1) zsh completions requires zsh 5.2 or newer.
