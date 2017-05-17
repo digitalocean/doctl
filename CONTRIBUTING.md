@@ -64,3 +64,10 @@ following steps in order to be able to compile and test doctl.
 
 1. If everything works well and the tests pass, run `go fmt` on your code
    before submitting a pull request.
+
+## Contributing code
+
+### Upgrading `godo`
+
+When you upgrade `godo` you have to re-generate the mocks using [mockery](https://github.com/vektra/mockery),
+so first install mockery in your `GOPATH` then run the `script/regenmocks.sh` script to produce them.

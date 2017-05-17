@@ -727,6 +727,7 @@ func Test_AssertExpectationsForObjects_Helper(t *testing.T) {
 	mockedService3.Called(3)
 
 	assert.True(t, AssertExpectationsForObjects(t, mockedService1.Mock, mockedService2.Mock, mockedService3.Mock))
+	assert.True(t, AssertExpectationsForObjects(t, mockedService1, mockedService2, mockedService3))
 
 }
 
@@ -745,6 +746,7 @@ func Test_AssertExpectationsForObjects_Helper_Failed(t *testing.T) {
 
 	tt := new(testing.T)
 	assert.False(t, AssertExpectationsForObjects(tt, mockedService1.Mock, mockedService2.Mock, mockedService3.Mock))
+	assert.False(t, AssertExpectationsForObjects(tt, mockedService1, mockedService2, mockedService3))
 
 }
 
@@ -759,6 +761,68 @@ func Test_Mock_AssertExpectations(t *testing.T) {
 
 	// make the call now
 	mockedService.Called(1, 2, 3)
+
+	// now assert expectations
+	assert.True(t, mockedService.AssertExpectations(tt))
+
+}
+
+func Test_Mock_AssertExpectations_Placeholder_NoArgs(t *testing.T) {
+
+	var mockedService = new(TestExampleImplementation)
+
+	mockedService.On("Test_Mock_AssertExpectations_Placeholder_NoArgs").Return(5, 6, 7).Once()
+	mockedService.On("Test_Mock_AssertExpectations_Placeholder_NoArgs").Return(7, 6, 5)
+
+	tt := new(testing.T)
+	assert.False(t, mockedService.AssertExpectations(tt))
+
+	// make the call now
+	mockedService.Called()
+
+	// now assert expectations
+	assert.True(t, mockedService.AssertExpectations(tt))
+
+}
+
+func Test_Mock_AssertExpectations_Placeholder(t *testing.T) {
+
+	var mockedService = new(TestExampleImplementation)
+
+	mockedService.On("Test_Mock_AssertExpectations_Placeholder", 1, 2, 3).Return(5, 6, 7).Once()
+	mockedService.On("Test_Mock_AssertExpectations_Placeholder", 3, 2, 1).Return(7, 6, 5)
+
+	tt := new(testing.T)
+	assert.False(t, mockedService.AssertExpectations(tt))
+
+	// make the call now
+	mockedService.Called(1, 2, 3)
+
+	// now assert expectations
+	assert.False(t, mockedService.AssertExpectations(tt))
+
+	// make call to the second expectation
+	mockedService.Called(3, 2, 1)
+
+	// now assert expectations again
+	assert.True(t, mockedService.AssertExpectations(tt))
+}
+
+func Test_Mock_AssertExpectations_With_Pointers(t *testing.T) {
+
+	var mockedService = new(TestExampleImplementation)
+
+	mockedService.On("Test_Mock_AssertExpectations_With_Pointers", &struct{ Foo int }{1}).Return(1)
+	mockedService.On("Test_Mock_AssertExpectations_With_Pointers", &struct{ Foo int }{2}).Return(2)
+
+	tt := new(testing.T)
+	assert.False(t, mockedService.AssertExpectations(tt))
+
+	s := struct{ Foo int }{1}
+	// make the calls now
+	mockedService.Called(&s)
+	s.Foo = 2
+	mockedService.Called(&s)
 
 	// now assert expectations
 	assert.True(t, mockedService.AssertExpectations(tt))
@@ -1065,4 +1129,30 @@ func Test_Arguments_Bool(t *testing.T) {
 	var args = Arguments([]interface{}{"string", 123, true})
 	assert.Equal(t, true, args.Bool(2))
 
+}
+
+func Test_WaitUntil_Parallel(t *testing.T) {
+
+	// make a test impl object
+	var mockedService *TestExampleImplementation = new(TestExampleImplementation)
+
+	ch1 := make(chan time.Time)
+	ch2 := make(chan time.Time)
+
+	mockedService.Mock.On("TheExampleMethod2", true).Return().WaitUntil(ch2).Run(func(args Arguments) {
+		ch1 <- time.Now()
+	})
+
+	mockedService.Mock.On("TheExampleMethod2", false).Return().WaitUntil(ch1)
+
+	// Lock both goroutines on the .WaitUntil method
+	go func() {
+		mockedService.TheExampleMethod2(false)
+	}()
+	go func() {
+		mockedService.TheExampleMethod2(true)
+	}()
+
+	// Allow the first call to execute, so the second one executes afterwards
+	ch2 <- time.Now()
 }

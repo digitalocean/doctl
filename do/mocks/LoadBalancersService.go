@@ -13,7 +13,14 @@ type LoadBalancersService struct {
 
 // AddDroplets provides a mock function with given fields: lbID, dIDs
 func (_m *LoadBalancersService) AddDroplets(lbID string, dIDs ...int) error {
-	ret := _m.Called(lbID, dIDs)
+	_va := make([]interface{}, len(dIDs))
+	for _i := range dIDs {
+		_va[_i] = dIDs[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, lbID)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, ...int) error); ok {
@@ -27,7 +34,14 @@ func (_m *LoadBalancersService) AddDroplets(lbID string, dIDs ...int) error {
 
 // AddForwardingRules provides a mock function with given fields: lbID, rules
 func (_m *LoadBalancersService) AddForwardingRules(lbID string, rules ...godo.ForwardingRule) error {
-	ret := _m.Called(lbID, rules)
+	_va := make([]interface{}, len(rules))
+	for _i := range rules {
+		_va[_i] = rules[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, lbID)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, ...godo.ForwardingRule) error); ok {
@@ -124,7 +138,14 @@ func (_m *LoadBalancersService) List() (do.LoadBalancers, error) {
 
 // RemoveDroplets provides a mock function with given fields: lbID, dIDs
 func (_m *LoadBalancersService) RemoveDroplets(lbID string, dIDs ...int) error {
-	ret := _m.Called(lbID, dIDs)
+	_va := make([]interface{}, len(dIDs))
+	for _i := range dIDs {
+		_va[_i] = dIDs[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, lbID)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, ...int) error); ok {
@@ -138,7 +159,14 @@ func (_m *LoadBalancersService) RemoveDroplets(lbID string, dIDs ...int) error {
 
 // RemoveForwardingRules provides a mock function with given fields: lbID, rules
 func (_m *LoadBalancersService) RemoveForwardingRules(lbID string, rules ...godo.ForwardingRule) error {
-	ret := _m.Called(lbID, rules)
+	_va := make([]interface{}, len(rules))
+	for _i := range rules {
+		_va[_i] = rules[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, lbID)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(string, ...godo.ForwardingRule) error); ok {
