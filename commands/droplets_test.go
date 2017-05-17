@@ -160,7 +160,9 @@ func TestDropletDelete(t *testing.T) {
 
 func TestDropletDeleteByTag(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("DeleteByTag", "my-tag").Return(nil)
+		tm.droplets.On("ListByTag", "my-tag").Return(testDropletList, nil)
+		tm.droplets.On("Delete", 1).Return(nil)
+		tm.droplets.On("Delete", 3).Return(nil)
 
 		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
 		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
