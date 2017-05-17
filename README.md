@@ -191,6 +191,6 @@ description to contain all changelog entries for this specific release.
 
 ## More info
 
-[tutorial]: https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client
-[doctl-releases]: https://github.com/digitalocean/doctl/releases
-[windows-release]: https://github.com/digitalocean/doctl/releases/download/v1.6.1/doctl-1.6.1-windows-4.0-amd64.zip
+* [Tutorial](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
+* [doctl Releases](https://github.com/digitalocean/doctl/releases)
+* [windows Release](https://github.com/digitalocean/doctl/releases/download/v1.6.1/doctl-1.6.1-windows-4.0-amd64.zip)
