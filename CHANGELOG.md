@@ -2,6 +2,30 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.6.1] - 2017-05-17
+
+### Added
+- #202 Including missing API endpoints for doctl - @xmudrii
+- #206 Bash and ZSH completion - @xmudrii
+- #220 domains: Add TTL field - @xmudrii
+
+### Changed
+- #210 Deprecate tag rename (PUT /v2/tags/:name) - @mchitten
+- #208 Remove Detach function - @xmudrii
+- #215 Allow certificate-chain-path to be optional - @viola
+- #214 Rename DetachByDropletID function to Detach - @xmudrii
+- #217 Minimize Docker build context - @SISheogorath
+- #228 Upgrading doctl version - @mauricio
+- #224 consistency changes: ask for confirm added to all delete actions - @xmudrii
+- #222 docs: improve package manager part in readme - @xmudrii
+
+### Fixed
+- #198 Hiding public images by deault - @xmudrii
+- #194 Use apk's --no-cache option instead of updating and removing cache - @cspicer 
+- #201 fix vektra/{errors,mockery} to static vendoring instead submodule - @zchee
+- #223 completion: fix command description typos - @xmudrii
+- #225 completion: make completion code generation independent on auth status - @xmudrii
+
 ## [1.6.0] - 2017-03-10
 
 ### Added
