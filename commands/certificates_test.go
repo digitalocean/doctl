@@ -131,7 +131,7 @@ func TestCertificateDelete(t *testing.T) {
 		tm.certificates.On("Delete", cID).Return(nil)
 
 		config.Args = append(config.Args, cID)
-		config.Doit.Set(config.NS, doctl.ArgDeleteForce, true)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		err := RunCertificateDelete(config)
 		assert.NoError(t, err)

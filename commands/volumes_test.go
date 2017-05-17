@@ -113,6 +113,8 @@ func TestVolumesDelete(t *testing.T) {
 
 		config.Args = append(config.Args, "test-volume")
 
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
 		err := RunVolumeDelete(config)
 		assert.NoError(t, err)
 	})

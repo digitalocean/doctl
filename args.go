@@ -161,6 +161,6 @@ const (
 	// ArgForwardingRules is a list of forwarding rules for the load balancer.
 	ArgForwardingRules = "forwarding-rules"
 
-	// ArgDeleteForce forces deletion actions
-	ArgDeleteForce = "force"
+	// ArgForce forces confirmation on actions
+	ArgForce = "force"
 )

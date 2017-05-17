@@ -14,6 +14,6 @@ limitations under the License.
 package doctl
 
 const (
-	// ArgShortDeleteForce forces deletion actions
-	ArgShortDeleteForce = "f"
+	// ArgShortForce forces confirmation on actions
+	ArgShortForce = "f"
 )

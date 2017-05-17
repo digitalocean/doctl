@@ -63,7 +63,7 @@ func Images() *Command {
 
 	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer,
 		docCategories("image"))
-	AddBoolFlag(cmdRunImagesDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force image delete")
+	AddBoolFlag(cmdRunImagesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force image delete")
 
 	return cmd
 }
@@ -208,7 +208,7 @@ func RunImagesDelete(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
 	}

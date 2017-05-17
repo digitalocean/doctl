@@ -46,8 +46,9 @@ func Volume() *Command {
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "Volume region",
 		requiredOpt())
 
-	CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "delete a volume", Writer,
+	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "delete a volume", Writer,
 		aliasOpt("rm"))
+	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force volume delete")
 
 	CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "get a volume", Writer, aliasOpt("g"),
 		displayerType(&volume{}))
@@ -168,11 +169,21 @@ func RunVolumeDelete(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 
 	}
-	id := c.Args[0]
-	al := c.Volumes()
-	if err := al.DeleteVolume(id); err != nil {
-		return err
 
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirm("delete volume") == nil {
+		id := c.Args[0]
+		al := c.Volumes()
+		if err := al.DeleteVolume(id); err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return fmt.Errorf("operation aborted")
 	}
 	return nil
 }

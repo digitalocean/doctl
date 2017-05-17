@@ -63,7 +63,7 @@ func LoadBalancer() *Command {
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "list load balancers", Writer, aliasOpt("ls"))
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>", "delete load balancer", Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdRunRecordDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force load balancer delete")
+	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force load balancer delete")
 
 	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>", "add droplets to the load balancer", Writer)
 	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example valus: 12,33")
@@ -155,7 +155,7 @@ func RunLoadBalancerDelete(c *CmdConfig) error {
 	}
 	lbID := c.Args[0]
 
-	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
 	}

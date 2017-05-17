@@ -45,7 +45,7 @@ func Certificate() *Command {
 	CmdBuilder(cmd, RunCertificateList, "list", "list certificates", Writer, aliasOpt("ls"))
 
 	cmdCertificateDelete := CmdBuilder(cmd, RunCertificateDelete, "delete <id>", "delete certificate", Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdCertificateDelete, doctl.ArgDeleteForce, doctl.ArgShortDeleteForce, false, "Force certificate delete")
+	AddBoolFlag(cmdCertificateDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force certificate delete")
 
 	return cmd
 }
@@ -143,7 +143,7 @@ func RunCertificateDelete(c *CmdConfig) error {
 	}
 	cID := c.Args[0]
 
-	force, err := c.Doit.GetBool(c.NS, doctl.ArgDeleteForce)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
 	}

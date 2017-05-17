@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"github.com/digitalocean/doctl"
@@ -50,8 +51,9 @@ func SSHKeys() *Command {
 		aliasOpt("i"), displayerType(&key{}), docCategories("sshkeys"))
 	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
 
-	CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
+	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
 		aliasOpt("d"), docCategories("sshkeys"))
+	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force ssh key delete")
 
 	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
 		aliasOpt("u"), displayerType(&key{}), docCategories("sshkeys"))
@@ -172,8 +174,18 @@ func RunKeyDelete(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	rawKey := c.Args[0]
-	return ks.Delete(rawKey)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return nil
+	}
+
+	if force || AskForConfirm("delete ssh key") == nil {
+		rawKey := c.Args[0]
+		return ks.Delete(rawKey)
+	} else {
+		return fmt.Errorf("operation aborted")
+	}
+	return nil
 }
 
 // RunKeyUpdate updates a key.

@@ -87,6 +87,8 @@ func TestKeysDeleteByID(t *testing.T) {
 
 		config.Args = append(config.Args, "1")
 
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
 		err := RunKeyDelete(config)
 		assert.NoError(t, err)
 	})
@@ -97,6 +99,8 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 		tm.keys.On("Delete", "fingerprint").Return(nil)
 
 		config.Args = append(config.Args, "fingerprint")
+
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		err := RunKeyDelete(config)
 		assert.NoError(t, err)
