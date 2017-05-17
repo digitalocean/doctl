@@ -161,9 +161,35 @@ By default, it assumes you are using the `root` user. If you want to SSH as a sp
 
 ## Releasing
 
-To build `doctl` for all its platforms, run `script/build.sh <version>`. To upload `doctl` to Github,
-run `script/release.sh <version>`. A valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl`
-repository is required.
+First, make sure the [CHANGELOG](https://github.com/digitalocean/doctl/blob/master/CHANGELOG.md)
+contains all changes for the version you're going to release.
+
+### Setup
+
+To release `doctl` you need to install:
+
+* [xgo](https://github.com/karalabe/xgo)
+* [github-release](https://github.com/aktau/github-release)
+
+And make them available at your `PATH`. You can use `go get -u` for both of them and add your
+`$GOPATH/bin` to your `PATH` so your scripts will find them.
+
+You will also need valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo.
+
+### Scripts
+
+To build `doctl` for all it's platforms run `script/stage.sh major minor patch` 
+(ie. `script/stage.sh 1 5 0`). This will place all files and it's checksums 
+at `builds/major.minor.patch/release`.
+
+Then mark the release on github with `script/release.sh <version>` (ie. `script/release.sh 1.5.0`).
+
+Then upload using `script/upload.sh <version>` to mark it on github.
+
+Now go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
+description to contain all changelog entries for this specific release.
+
+## More info
 
 [tutorial]: https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client
 [doctl-releases]: https://github.com/digitalocean/doctl/releases
