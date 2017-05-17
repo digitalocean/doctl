@@ -70,11 +70,8 @@ func Completion() *Command {
 		IsIndex: true,
 	}
 
-	CmdBuilder(cmd, RunCompletionBash, "bash", "generate bash completion code",
-		Writer, aliasOpt("b"))
-
-	CmdBuilder(cmd, RunCompletionZsh, "zsh", "generate zsh completion code",
-		Writer, aliasOpt("z"))
+	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "generate bash completion code", Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "generate zsh completion code", Writer, false)
 
 	return cmd
 }
