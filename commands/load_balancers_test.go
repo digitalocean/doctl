@@ -194,8 +194,7 @@ func TestLoadBalancerDeleteNoID(t *testing.T) {
 func TestLoadBalancerAddDroplets(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
-		dropletIDs := []int{1, 23}
-		tm.loadBalancers.On("AddDroplets", lbID, dropletIDs).Return(nil)
+		tm.loadBalancers.On("AddDroplets", lbID, 1, 23).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "23"})
@@ -215,8 +214,7 @@ func TestLoadBalancerAddDropletsNoID(t *testing.T) {
 func TestLoadBalancerRemoveDroplets(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
-		dropletIDs := []int{321}
-		tm.loadBalancers.On("RemoveDroplets", lbID, dropletIDs).Return(nil)
+		tm.loadBalancers.On("RemoveDroplets", lbID, 321).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"321"})
@@ -236,15 +234,13 @@ func TestLoadBalancerRemoveDropletsNoID(t *testing.T) {
 func TestLoadBalancerAddForwardingRules(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
-		forwardingRules := []godo.ForwardingRule{
-			{
-				EntryProtocol:  "http",
-				EntryPort:      80,
-				TargetProtocol: "http",
-				TargetPort:     80,
-			},
+		forwardingRule := godo.ForwardingRule{
+			EntryProtocol:  "http",
+			EntryPort:      80,
+			TargetProtocol: "http",
+			TargetPort:     80,
 		}
-		tm.loadBalancers.On("AddForwardingRules", lbID, forwardingRules).Return(nil)
+		tm.loadBalancers.On("AddForwardingRules", lbID, forwardingRule).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80")
@@ -279,7 +275,7 @@ func TestLoadBalancerRemoveForwardingRules(t *testing.T) {
 				TlsPassthrough: true,
 			},
 		}
-		tm.loadBalancers.On("RemoveForwardingRules", lbID, forwardingRules).Return(nil)
+		tm.loadBalancers.On("RemoveForwardingRules", lbID, forwardingRules[0], forwardingRules[1] ).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80 entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306,tls_passthrough:true")

@@ -80,7 +80,7 @@
 			"importpath": "github.com/digitalocean/godo",
 			"repository": "https://github.com/digitalocean/godo",
 			"vcs": "git",
-			"revision": "83908b1ddd666d08a9b020c697b55ae3895be2fd",
+			"revision": "1bbce1028c89b0a3ee2061f04b3da6c5d75129d1",
 			"branch": "master"
 		},
 		{
@@ -371,15 +371,15 @@
 		{
 			"importpath": "github.com/stretchr/objx",
 			"repository": "https://github.com/stretchr/objx",
-			"vcs": "",
+			"vcs": "git",
 			"revision": "1a9d0bb9f541897e62256577b352fdbc1fb4fd94",
 			"branch": "master"
 		},
 		{
 			"importpath": "github.com/stretchr/testify",
 			"repository": "https://github.com/stretchr/testify",
-			"vcs": "",
-			"revision": "9f9027faeb0dad515336ed2f28317f9f8f527ab4",
+			"vcs": "git",
+			"revision": "4d4bfba8f1d1027c4fdbe371823030df51419987",
 			"branch": "master"
 		},
 		{
@@ -409,7 +409,7 @@
 			"importpath": "github.com/vektra/mockery",
 			"repository": "https://github.com/vektra/mockery",
 			"vcs": "git",
-			"revision": "35af6ab863ac461de148c218959646621c1c3d2c",
+			"revision": "e4fa38885187a4dd421cbe250b50f3fc566a087a",
 			"branch": "master",
 			"notests": true
 		},

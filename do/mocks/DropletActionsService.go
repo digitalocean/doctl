@@ -57,15 +57,15 @@ func (_m *DropletActionsService) DisableBackups(_a0 int) (*do.Action, error) {
 }
 
 // DisableBackupsByTag provides a mock function with given fields: _a0
-func (_m *DropletActionsService) DisableBackupsByTag(_a0 string) (*do.Action, error) {
+func (_m *DropletActionsService) DisableBackupsByTag(_a0 string) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string) do.Actions); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
@@ -103,15 +103,15 @@ func (_m *DropletActionsService) EnableBackups(_a0 int) (*do.Action, error) {
 }
 
 // EnableBackupsByTag provides a mock function with given fields: _a0
-func (_m *DropletActionsService) EnableBackupsByTag(_a0 string) (*do.Action, error) {
+func (_m *DropletActionsService) EnableBackupsByTag(_a0 string) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string) do.Actions); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
@@ -149,15 +149,15 @@ func (_m *DropletActionsService) EnableIPv6(_a0 int) (*do.Action, error) {
 }
 
 // EnableIPv6ByTag provides a mock function with given fields: _a0
-func (_m *DropletActionsService) EnableIPv6ByTag(_a0 string) (*do.Action, error) {
+func (_m *DropletActionsService) EnableIPv6ByTag(_a0 string) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string) do.Actions); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
@@ -195,15 +195,15 @@ func (_m *DropletActionsService) EnablePrivateNetworking(_a0 int) (*do.Action, e
 }
 
 // EnablePrivateNetworkingByTag provides a mock function with given fields: _a0
-func (_m *DropletActionsService) EnablePrivateNetworkingByTag(_a0 string) (*do.Action, error) {
+func (_m *DropletActionsService) EnablePrivateNetworkingByTag(_a0 string) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string) do.Actions); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
@@ -310,15 +310,15 @@ func (_m *DropletActionsService) PowerCycle(_a0 int) (*do.Action, error) {
 }
 
 // PowerCycleByTag provides a mock function with given fields: _a0
-func (_m *DropletActionsService) PowerCycleByTag(_a0 string) (*do.Action, error) {
+func (_m *DropletActionsService) PowerCycleByTag(_a0 string) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string) do.Actions); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
@@ -356,15 +356,15 @@ func (_m *DropletActionsService) PowerOff(_a0 int) (*do.Action, error) {
 }
 
 // PowerOffByTag provides a mock function with given fields: _a0
-func (_m *DropletActionsService) PowerOffByTag(_a0 string) (*do.Action, error) {
+func (_m *DropletActionsService) PowerOffByTag(_a0 string) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string) do.Actions); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
@@ -402,15 +402,15 @@ func (_m *DropletActionsService) PowerOn(_a0 int) (*do.Action, error) {
 }
 
 // PowerOnByTag provides a mock function with given fields: _a0
-func (_m *DropletActionsService) PowerOnByTag(_a0 string) (*do.Action, error) {
+func (_m *DropletActionsService) PowerOnByTag(_a0 string) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string) do.Actions); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
@@ -586,15 +586,15 @@ func (_m *DropletActionsService) Shutdown(_a0 int) (*do.Action, error) {
 }
 
 // ShutdownByTag provides a mock function with given fields: _a0
-func (_m *DropletActionsService) ShutdownByTag(_a0 string) (*do.Action, error) {
+func (_m *DropletActionsService) ShutdownByTag(_a0 string) (do.Actions, error) {
 	ret := _m.Called(_a0)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string) do.Actions); ok {
 		r0 = rf(_a0)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
@@ -632,15 +632,15 @@ func (_m *DropletActionsService) Snapshot(_a0 int, _a1 string) (*do.Action, erro
 }
 
 // SnapshotByTag provides a mock function with given fields: _a0, _a1
-func (_m *DropletActionsService) SnapshotByTag(_a0 string, _a1 string) (*do.Action, error) {
+func (_m *DropletActionsService) SnapshotByTag(_a0 string, _a1 string) (do.Actions, error) {
 	ret := _m.Called(_a0, _a1)
 
-	var r0 *do.Action
-	if rf, ok := ret.Get(0).(func(string, string) *do.Action); ok {
+	var r0 do.Actions
+	if rf, ok := ret.Get(0).(func(string, string) do.Actions); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*do.Action)
+			r0 = ret.Get(0).(do.Actions)
 		}
 	}
 
