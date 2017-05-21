@@ -16,7 +16,11 @@ var retrieveUserInput = func(message string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.ToLower(strings.Replace(answer, "\n", "", 1)), nil
+
+	answer = strings.Replace(answer, "\r", "", 1)
+	answer = strings.Replace(answer, "\n", "", 1)
+
+	return strings.ToLower(answer), nil
 }
 
 // AskForConfirm parses and verifies user input for confirmation.
