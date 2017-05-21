@@ -11,13 +11,15 @@ Usage:
 Available Commands:
   account     account commands
   auth        auth commands
+  completion  completion commands
   compute     compute commands
   version     show the current version
 
 Flags:
-  -t, --access-token string   DigitalOcean API V2 Access Token
-  -h, --help                  help for doctl
+  -t, --access-token string   API V2 Access Token
+  -c, --config string         config file (default is $HOME/.config/doctl/config.yaml)
   -o, --output string         output format [text|json] (default "text")
+      --trace                 trace api access
   -v, --verbose               verbose output
 
 Use "doctl [command] --help" for more information about a command.
@@ -49,7 +51,7 @@ Integrations with package managers for Windows are to come.
 
 ### Option 2 – Download a Release from GitHub
 
-Visit the [Releases page][doctl-releases] for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive.)
+Visit the [Releases page](doctl-releases) for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive.)
 
 #### OS X and GNU/Linux
 
@@ -75,7 +77,7 @@ sudo mv ./doctl /usr/local/bin
 
 #### Windows
 
-On Windows systems, you should be able to [download the Windows release][windows-release], and then double-click the zip archive to extract the `doctl.exe` executable.
+On Windows systems, you should be able to [download the Windows release](windows-release), and then double-click the zip archive to extract the `doctl.exe` executable.
 
 ### Option 3 – Build From Source
 
