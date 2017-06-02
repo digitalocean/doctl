@@ -16,3 +16,8 @@ parts:
     go-importpath: github.com/digitalocean/doctl
     build-packages: [git]
     go-packages: [github.com/digitalocean/doctl/cmd/doctl]
+    install: |
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bash_completions
+      mkdir -p $SNAPCRAFT_PART_INSTALL/zsh_completions
+      doctl completion bash > $SNAPCRAFT_PART_INSTALL/bash_completions/doctl
+      doctl completion zsh > $SNAPCRAFT_PART_INSTALL/zsh_completions/doctl
