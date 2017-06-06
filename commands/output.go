@@ -784,6 +784,124 @@ func (lb *loadBalancer) KV() []map[string]interface{} {
 	return out
 }
 
+type firewall struct {
+	firewalls do.Firewalls
+}
+
+var _ Displayable = &firewall{}
+
+func (f *firewall) JSON(out io.Writer) error {
+	return writeJSON(f.firewalls, out)
+}
+
+func (f *firewall) Cols() []string {
+	return []string{
+		"ID",
+		"Name",
+		"Status",
+		"Created",
+		"InboundRules",
+		"OutboundRules",
+		"DropletIDs",
+		"Tags",
+		"PendingChanges",
+	}
+}
+
+//"created_at":"2017-05-08T18:56:10Z","droplet_ids":[46298047],"disa
+func (f *firewall) ColMap() map[string]string {
+	return map[string]string{
+		"ID":             "ID",
+		"Name":           "Name",
+		"Status":         "Status",
+		"Created":        "Created At",
+		"InboundRules":   "Inbound Rules",
+		"OutboundRules":  "Outbound Rules",
+		"DropletIDs":     "Droplet IDs",
+		"Tags":           "Tags",
+		"PendingChanges": "Pending Changes",
+	}
+}
+
+func (f *firewall) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, fw := range f.firewalls {
+		irs, ors := firewallRulesPrintHelper(fw)
+		o := map[string]interface{}{
+			"ID":             fw.ID,
+			"Name":           fw.Name,
+			"Status":         fw.Status,
+			"Created":        fw.Created,
+			"InboundRules":   irs,
+			"OutboundRules":  ors,
+			"DropletIDs":     dropletListHelper(fw.DropletIDs),
+			"Tags":           strings.Join(fw.Tags, ","),
+			"PendingChanges": firewallPendingChangesPrintHelper(fw),
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
+func firewallRulesPrintHelper(fw do.Firewall) (string, string) {
+	var irs, ors []string
+
+	for _, ir := range fw.InboundRules {
+		ss := firewallInAndOutboundRulesPrintHelper(ir.Sources.Addresses, ir.Sources.Tags, ir.Sources.DropletIDs, ir.Sources.LoadBalancerUIDs)
+		irs = append(irs, fmt.Sprintf("%v:%v,%v:%v,%v", "protocol", ir.Protocol, "ports", ir.PortRange, ss))
+	}
+
+	for _, or := range fw.OutboundRules {
+		ds := firewallInAndOutboundRulesPrintHelper(or.Destinations.Addresses, or.Destinations.Tags, or.Destinations.DropletIDs, or.Destinations.LoadBalancerUIDs)
+		ors = append(ors, fmt.Sprintf("%v:%v,%v:%v,%v", "protocol", or.Protocol, "ports", or.PortRange, ds))
+	}
+
+	return strings.Join(irs, " "), strings.Join(ors, " ")
+}
+
+func firewallInAndOutboundRulesPrintHelper(addresses []string, tags []string, dropletIDs []int, loadBalancerUIDs []string) string {
+	output := []string{}
+	resources := map[string][]string{
+		"address":           addresses,
+		"tag":               tags,
+		"load_balancer_uid": loadBalancerUIDs,
+	}
+
+	for k, vs := range resources {
+		for _, r := range vs {
+			output = append(output, fmt.Sprintf("%v:%v", k, r))
+		}
+	}
+
+	for _, dID := range dropletIDs {
+		output = append(output, fmt.Sprintf("%v:%v", "droplet_id", dID))
+	}
+
+	return strings.Join(output, ",")
+}
+
+func firewallPendingChangesPrintHelper(fw do.Firewall) string {
+	output := []string{}
+
+	for _, pc := range fw.PendingChanges {
+		output = append(output, fmt.Sprintf("%v:%v,%v:%v,%v:%v", "droplet_id", pc.DropletID, "removing", pc.Removing, "status", pc.Status))
+	}
+
+	return strings.Join(output, " ")
+}
+
+func dropletListHelper(IDs []int) string {
+	output := []string{}
+
+	for _, id := range IDs {
+		output = append(output, strconv.Itoa(id))
+	}
+
+	return strings.Join(output, ",")
+}
+
 func prettyPrintStruct(obj interface{}) string {
 	output := []string{}
 

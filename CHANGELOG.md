@@ -2,6 +2,11 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.7.0] - 2017-06-06
+
+### Added
+- #234 Implement firewall commands - @viola
+
 ## [1.6.1] - 2017-05-17
 
 ### Added
@@ -21,7 +26,7 @@ All changes to `doctl` will be documented in this file.
 
 ### Fixed
 - #198 Hiding public images by deault - @xmudrii
-- #194 Use apk's --no-cache option instead of updating and removing cache - @cspicer 
+- #194 Use apk's --no-cache option instead of updating and removing cache - @cspicer
 - #201 fix vektra/{errors,mockery} to static vendoring instead submodule - @zchee
 - #223 completion: fix command description typos - @xmudrii
 - #225 completion: make completion code generation independent on auth status - @xmudrii

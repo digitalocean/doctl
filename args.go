@@ -161,6 +161,13 @@ const (
 	// ArgForwardingRules is a list of forwarding rules for the load balancer.
 	ArgForwardingRules = "forwarding-rules"
 
+	// ArgFirewallName is a name of the firewall.
+	ArgFirewallName = "name"
+	// ArgInboundRules is a list of inbound rules for the firewall.
+	ArgInboundRules = "inbound-rules"
+	// ArgOutboundRules is a list of outbound rules for the firewall.
+	ArgOutboundRules = "outbound-rules"
+
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
 )
