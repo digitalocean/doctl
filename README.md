@@ -178,16 +178,21 @@ You will also need valid `GITHUB_TOKEN` environment variable with access to the 
 
 ### Scripts
 
-To build `doctl` for all it's platforms run `script/stage.sh major minor patch` 
-(ie. `script/stage.sh 1 5 0`). This will place all files and it's checksums 
+To build `doctl` for all it's platforms run `scripts/stage.sh major minor patch` 
+(ie. `scripts/stage.sh 1 5 0`). This will place all files and it's checksums 
 at `builds/major.minor.patch/release`.
 
-Then mark the release on github with `script/release.sh <version>` (ie. `script/release.sh 1.5.0`).
+Then mark the release on github with `scripts/release.sh v<version>` (ie. `scripts/release.sh v1.5.0`, _note_ the `v`).
 
-Then upload using `script/upload.sh <version>` to mark it on github.
+Then upload using `scripts/upload.sh <version>` to mark it on github.
 
 Now go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
 description to contain all changelog entries for this specific release.
+
+Also don't forget to update:
+- Dockerfile
+- snapcraft
+- homebrew formula
 
 ## More info
 
