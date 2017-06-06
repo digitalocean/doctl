@@ -167,6 +167,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(DropletAction())
 	cmd.AddCommand(Droplet())
 	cmd.AddCommand(Domain())
+	cmd.AddCommand(Firewall())
 	cmd.AddCommand(FloatingIP())
 	cmd.AddCommand(FloatingIPAction())
 	cmd.AddCommand(Images())
@@ -309,6 +310,7 @@ type CmdConfig struct {
 	VolumeActions     func() do.VolumeActionsService
 	Snapshots         func() do.SnapshotsService
 	Certificates      func() do.CertificatesService
+	Firewalls         func() do.FirewallsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -344,6 +346,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Snapshots = func() do.SnapshotsService { return do.NewSnapshotsService(godoClient) }
 			c.Certificates = func() do.CertificatesService { return do.NewCertificatesService(godoClient) }
 			c.LoadBalancers = func() do.LoadBalancersService { return do.NewLoadBalancersService(godoClient) }
+			c.Firewalls = func() do.FirewallsService { return do.NewFirewallsService(godoClient) }
 
 			return nil
 		},

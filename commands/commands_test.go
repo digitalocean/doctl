@@ -162,6 +162,7 @@ type tcMocks struct {
 	snapshots         domocks.SnapshotsService
 	certificates      domocks.CertificatesService
 	loadBalancers     domocks.LoadBalancersService
+	firewalls         domocks.FirewallsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -201,6 +202,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Snapshots:         func() do.SnapshotsService { return &tm.snapshots },
 		Certificates:      func() do.CertificatesService { return &tm.certificates },
 		LoadBalancers:     func() do.LoadBalancersService { return &tm.loadBalancers },
+		Firewalls:         func() do.FirewallsService { return &tm.firewalls },
 	}
 
 	tFn(config, tm)
@@ -223,6 +225,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.volumeActions.AssertExpectations(t))
 	assert.True(t, tm.snapshots.AssertExpectations(t))
 	assert.True(t, tm.loadBalancers.AssertExpectations(t))
+	assert.True(t, tm.firewalls.AssertExpectations(t))
 }
 
 type TestConfig struct {
