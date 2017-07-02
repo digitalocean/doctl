@@ -2,12 +2,14 @@ package godo
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/digitalocean/godo/context"
 )
 
 const loadBalancersBasePath = "/v2/load_balancers"
 const forwardingRulesPath = "forwarding_rules"
+
 const dropletsPath = "droplets"
 
 // LoadBalancersService is an interface for managing load balancers with the DigitalOcean API.
@@ -143,7 +145,7 @@ var _ LoadBalancersService = &LoadBalancersServiceOp{}
 func (l *LoadBalancersServiceOp) Get(ctx context.Context, lbID string) (*LoadBalancer, *Response, error) {
 	path := fmt.Sprintf("%s/%s", loadBalancersBasePath, lbID)
 
-	req, err := l.client.NewRequest(ctx, "GET", path, nil)
+	req, err := l.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -164,7 +166,7 @@ func (l *LoadBalancersServiceOp) List(ctx context.Context, opt *ListOptions) ([]
 		return nil, nil, err
 	}
 
-	req, err := l.client.NewRequest(ctx, "GET", path, nil)
+	req, err := l.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -183,7 +185,7 @@ func (l *LoadBalancersServiceOp) List(ctx context.Context, opt *ListOptions) ([]
 
 // Create a new load balancer with a given configuration.
 func (l *LoadBalancersServiceOp) Create(ctx context.Context, lbr *LoadBalancerRequest) (*LoadBalancer, *Response, error) {
-	req, err := l.client.NewRequest(ctx, "POST", loadBalancersBasePath, lbr)
+	req, err := l.client.NewRequest(ctx, http.MethodPost, loadBalancersBasePath, lbr)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -219,7 +221,7 @@ func (l *LoadBalancersServiceOp) Update(ctx context.Context, lbID string, lbr *L
 func (l *LoadBalancersServiceOp) Delete(ctx context.Context, ldID string) (*Response, error) {
 	path := fmt.Sprintf("%s/%s", loadBalancersBasePath, ldID)
 
-	req, err := l.client.NewRequest(ctx, "DELETE", path, nil)
+	req, err := l.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +233,7 @@ func (l *LoadBalancersServiceOp) Delete(ctx context.Context, ldID string) (*Resp
 func (l *LoadBalancersServiceOp) AddDroplets(ctx context.Context, lbID string, dropletIDs ...int) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/%s", loadBalancersBasePath, lbID, dropletsPath)
 
-	req, err := l.client.NewRequest(ctx, "POST", path, &dropletIDsRequest{IDs: dropletIDs})
+	req, err := l.client.NewRequest(ctx, http.MethodPost, path, &dropletIDsRequest{IDs: dropletIDs})
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +245,7 @@ func (l *LoadBalancersServiceOp) AddDroplets(ctx context.Context, lbID string, d
 func (l *LoadBalancersServiceOp) RemoveDroplets(ctx context.Context, lbID string, dropletIDs ...int) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/%s", loadBalancersBasePath, lbID, dropletsPath)
 
-	req, err := l.client.NewRequest(ctx, "DELETE", path, &dropletIDsRequest{IDs: dropletIDs})
+	req, err := l.client.NewRequest(ctx, http.MethodDelete, path, &dropletIDsRequest{IDs: dropletIDs})
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +257,7 @@ func (l *LoadBalancersServiceOp) RemoveDroplets(ctx context.Context, lbID string
 func (l *LoadBalancersServiceOp) AddForwardingRules(ctx context.Context, lbID string, rules ...ForwardingRule) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/%s", loadBalancersBasePath, lbID, forwardingRulesPath)
 
-	req, err := l.client.NewRequest(ctx, "POST", path, &forwardingRulesRequest{Rules: rules})
+	req, err := l.client.NewRequest(ctx, http.MethodPost, path, &forwardingRulesRequest{Rules: rules})
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +269,7 @@ func (l *LoadBalancersServiceOp) AddForwardingRules(ctx context.Context, lbID st
 func (l *LoadBalancersServiceOp) RemoveForwardingRules(ctx context.Context, lbID string, rules ...ForwardingRule) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/%s", loadBalancersBasePath, lbID, forwardingRulesPath)
 
-	req, err := l.client.NewRequest(ctx, "DELETE", path, &forwardingRulesRequest{Rules: rules})
+	req, err := l.client.NewRequest(ctx, http.MethodDelete, path, &forwardingRulesRequest{Rules: rules})
 	if err != nil {
 		return nil, err
 	}
