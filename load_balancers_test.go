@@ -280,7 +280,7 @@ func TestLoadBlanacers_Get(t *testing.T) {
 	loadBalancerId := "37e6be88-01ec-4ec7-9bc6-a514d4719057"
 	path = fmt.Sprintf("%s/%s", path, loadBalancerId)
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "GET")
+		testMethod(t, r, http.MethodGet)
 		fmt.Fprint(w, lbGetJSONResponse)
 	})
 
@@ -377,7 +377,7 @@ func TestLoadBlanacers_Create(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		testMethod(t, r, "POST")
+		testMethod(t, r, http.MethodPost)
 		assert.Equal(t, createRequest, v)
 
 		fmt.Fprint(w, lbCreateJSONResponse)
@@ -553,7 +553,7 @@ func TestLoadBlanacers_List(t *testing.T) {
 
 	path := "/v2/load_balancers"
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "GET")
+		testMethod(t, r, http.MethodGet)
 		fmt.Fprint(w, lbListJSONResponse)
 	})
 
@@ -614,7 +614,7 @@ func TestLoadBlanacers_List_Pagination(t *testing.T) {
 
 	path := "/v2/load_balancers"
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "GET")
+		testMethod(t, r, http.MethodGet)
 		testFormValues(t, r, map[string]string{"page": "2"})
 		fmt.Fprint(w, lbListJSONResponse)
 	})
@@ -638,7 +638,7 @@ func TestLoadBlanacers_Delete(t *testing.T) {
 	path := "/v2/load_balancers"
 	path = fmt.Sprintf("%s/%s", path, lbID)
 	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, "DELETE")
+		testMethod(t, r, http.MethodDelete)
 	})
 
 	_, err := client.LoadBalancers.Delete(ctx, lbID)
@@ -665,7 +665,7 @@ func TestLoadBlanacers_AddDroplets(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		testMethod(t, r, "POST")
+		testMethod(t, r, http.MethodPost)
 		assert.Equal(t, dropletIdsRequest, v)
 
 		fmt.Fprint(w, nil)
@@ -695,7 +695,7 @@ func TestLoadBlanacers_RemoveDroplets(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		testMethod(t, r, "DELETE")
+		testMethod(t, r, http.MethodDelete)
 		assert.Equal(t, dropletIdsRequest, v)
 
 		fmt.Fprint(w, nil)
@@ -739,7 +739,7 @@ func TestLoadBlanacers_AddForwardingRules(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		testMethod(t, r, "POST")
+		testMethod(t, r, http.MethodPost)
 		assert.Equal(t, frr, v)
 
 		fmt.Fprint(w, nil)
@@ -782,7 +782,7 @@ func TestLoadBlanacers_RemoveForwardingRules(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		testMethod(t, r, "DELETE")
+		testMethod(t, r, http.MethodDelete)
 		assert.Equal(t, frr, v)
 
 		fmt.Fprint(w, nil)
