@@ -131,7 +131,7 @@ output: text
 
 ## Examples
 
-`doctl` is able to interact with all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site][tutorial].
+`doctl` is able to interact with all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site](tutorial).
 
 * List all Droplets on your account:
 
