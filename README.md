@@ -198,6 +198,6 @@ Also don't forget to update:
 
 ## More info
 
-* [Tutorial](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
+* [tutorial](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
 * [doctl Releases](https://github.com/digitalocean/doctl/releases)
 * [windows Release](https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-windows-4.0-amd64.zip)
