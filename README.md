@@ -131,7 +131,7 @@ output: text
 
 ## Examples
 
-`doctl` is able to interact with all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site](tutorial).
+`doctl` is able to interact with all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client).
 
 * List all Droplets on your account:
 
@@ -198,6 +198,6 @@ Also don't forget to update:
 
 ## More info
 
-* [tutorial](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
+* [Tutorial](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
 * [doctl Releases](https://github.com/digitalocean/doctl/releases)
 * [windows Release](https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-windows-4.0-amd64.zip)
