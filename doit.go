@@ -25,6 +25,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/digitalocean/doctl/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/scp"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
 	jww "github.com/spf13/jwalterweatherman"
@@ -155,6 +156,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 type Config interface {
 	GetGodoClient(trace bool) (*godo.Client, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	SCP(file1 string, file2, keyPath string, port int) runner.Runner
 	Set(ns, key string, val interface{})
 	GetString(ns, key string) (string, error)
 	GetBool(ns, key string) (bool, error)
@@ -218,6 +220,16 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 		Port:            port,
 		AgentForwarding: opts[ArgsSSHAgentForwarding].(bool),
 		Command:         opts[ArgSSHCommand].(string),
+	}
+}
+
+// SCP create a scp connection to a host.
+func (c *LiveConfig) SCP(file1, file2, keyPath string, port int) runner.Runner {
+	return &scp.Runner{
+		File1:   file1,
+		File2:   file2,
+		KeyPath: keyPath,
+		Port:    port,
 	}
 }
 
