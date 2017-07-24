@@ -26,8 +26,10 @@ import (
 	"strings"
 )
 
-var r1 = regexp.MustCompile("([^:]+):(.+)")
-var r2 = regexp.MustCompile("(([^@]+)@)?(.+)")
+var (
+	scpREPath = regexp.MustCompile("([^:]+):(.+)")
+	scpREHost = regexp.MustCompile("(([^@]+)@)?(.+)")
+)
 
 func SCP(parent *Command) *Command {
 	usr, err := user.Current()
@@ -59,39 +61,39 @@ func RunSCP(c *CmdConfig) error {
 	}
 
 	arg1 := c.Args[0]
-	host1, err := extractArg(arg1)
+	host1, err := extractArgument(arg1)
 	if err != nil {
 		return err
 	}
 	arg2 := c.Args[1]
-	host2, err := extractArg(arg2)
+	host2, err := extractArgument(arg2)
 	if err != nil {
 		return err
 	}
 
 	ds := c.Droplets()
-	err = matchSCPDropletIP(host1, ds)
+	err = matchSCPDroplet(host1, ds)
 	if err != nil {
 		return err
 	}
-	err = matchSCPDropletIP(host2, ds)
+	err = matchSCPDroplet(host2, ds)
 	if err != nil {
 		return err
 	}
 
-	runner := c.Doit.SCP(parseArg(host1), parseArg(host2), keyPath, port)
+	runner := c.Doit.SCP(formatSCPArgument(host1), formatSCPArgument(host2), keyPath, port)
 	return runner.Run()
 }
 
-type hostInfo struct {
+type scpHostInfo struct {
 	username string
 	host     string
 	file     string
 }
 
-func extractArg(arg string) (*hostInfo, error) {
+func extractArgument(arg string) (*scpHostInfo, error) {
 	if !strings.Contains(arg, "@") && !strings.Contains(arg, ":") {
-		h := &hostInfo{
+		h := &scpHostInfo{
 			username: "",
 			host:     "",
 			file:     arg,
@@ -99,13 +101,13 @@ func extractArg(arg string) (*hostInfo, error) {
 		return h, nil
 	}
 
-	m := r1.FindStringSubmatch(arg)
+	m := scpREPath.FindStringSubmatch(arg)
 	if len(m) != 3 {
 		return nil, fmt.Errorf("incorrect argument format")
 	}
 	hostData := m[1]
 	file := m[2]
-	m = r2.FindStringSubmatch(hostData)
+	m = scpREHost.FindStringSubmatch(hostData)
 	if len(m) != 4 {
 		return nil, fmt.Errorf("incorrect argument format")
 	}
@@ -118,7 +120,7 @@ func extractArg(arg string) (*hostInfo, error) {
 	user := m[2]
 	host := m[3]
 
-	h := &hostInfo{
+	h := &scpHostInfo{
 		username: user,
 		host:     host,
 		file:     file,
@@ -126,7 +128,7 @@ func extractArg(arg string) (*hostInfo, error) {
 	return h, nil
 }
 
-func parseArg(host *hostInfo) string {
+func formatSCPArgument(host *scpHostInfo) string {
 	var arg string
 	if host.username != "" {
 		arg = host.username + "@"
@@ -137,7 +139,7 @@ func parseArg(host *hostInfo) string {
 	return arg + host.file
 }
 
-func matchSCPDropletIP(h *hostInfo, ds do.DropletsService) error {
+func matchSCPDroplet(h *scpHostInfo, ds do.DropletsService) error {
 	if h.host != "" {
 		var droplet *do.Droplet
 		var err error

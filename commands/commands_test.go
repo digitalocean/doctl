@@ -230,6 +230,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 type TestConfig struct {
 	SSHFn func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	SCPFn func(file1, file2, keyPath string, port int) runner.Runner
 	v     *viper.Viper
 }
 
@@ -252,6 +253,10 @@ func (c *TestConfig) GetGodoClient(trace bool) (*godo.Client, error) {
 
 func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
 	return c.SSHFn(user, host, keyPath, port, opts)
+}
+
+func (c *TestConfig) SCP(file1, file2, keyPath string, port int) runner.Runner {
+	return c.SCPFn(file1, file2, keyPath, port)
 }
 
 func (c *TestConfig) Set(ns, key string, val interface{}) {
