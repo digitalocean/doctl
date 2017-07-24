@@ -16,11 +16,13 @@ package commands
 import (
 	"github.com/digitalocean/doctl"
 
+	"errors"
 	"fmt"
 	"github.com/digitalocean/doctl/do"
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -42,37 +44,118 @@ func SCP(parent *Command) *Command {
 }
 
 func RunSCP(c *CmdConfig) error {
-	/*if len(c.Args) != 2 {
+	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
-	}*/
+	}
+
+	keyPath, err := c.Doit.GetString(c.NS, doctl.ArgsSSHKeyPath)
+	if err != nil {
+		return err
+	}
+
+	port, err := c.Doit.GetInt(c.NS, doctl.ArgsSSHPort)
+	if err != nil {
+		return err
+	}
 
 	arg1 := c.Args[0]
-	file1, err := parseArg(arg1)
+	host1, err := parseArg(arg1)
 	if err != nil {
 		return err
 	}
 	arg2 := c.Args[1]
-	file2, err := parseArg(arg2)
+	host2, err := parseArg(arg2)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(file1)
-	fmt.Println(file2)
+	var droplet1 *do.Droplet
+	var droplet2 *do.Droplet
 
-	return nil
+	ds := c.Droplets()
+
+	// Parse first argument
+	if id, err := strconv.Atoi(host1.host); err == nil {
+		// dropletID is an integer
+
+		doDroplet, err := ds.Get(id)
+		if err != nil {
+			return err
+		}
+
+		droplet1 = doDroplet
+	} else {
+		// dropletID is a string
+		droplets, err := ds.List()
+		if err != nil {
+			return err
+		}
+
+		for _, d := range droplets {
+			if d.Name == host1.host {
+				droplet1 = &d
+				break
+			}
+		}
+
+		if droplet1 == nil {
+			return errors.New("could not find droplet")
+		}
+	}
+
+	// Parse second argument
+	if id, err := strconv.Atoi(host2.host); err == nil {
+		// dropletID is an integer
+
+		doDroplet, err := ds.Get(id)
+		if err != nil {
+			return err
+		}
+
+		droplet2 = doDroplet
+	} else {
+		// dropletID is a string
+		droplets, err := ds.List()
+		if err != nil {
+			return err
+		}
+
+		for _, d := range droplets {
+			if d.Name == host1.host {
+				droplet2 = &d
+				break
+			}
+		}
+
+		if droplet2 == nil {
+			return errors.New("could not find droplet")
+		}
+	}
+
+	host1.host, err = droplet1.PublicIPv4()
+	if err != nil {
+		return err
+	}
+	host2.host, err = droplet2.PublicIPv4()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(host1.host)
+	fmt.Println(host2.host)
+
+	file1 := host1.username + "@" + host1.host + ":" + host1.file
+	file2 := host2.username + "@" + host2.host + ":" + host2.file
+
+	runner := c.Doit.SCP(file1, file2, keyPath, port)
+	return runner.Run()
 }
 
 type hostInfo struct {
 	username string
-	ip       string
+	host     string
 	file     string
 }
-
-/*type scpInfo struct {
-	file1 *hostInfo
-	file2 *hostInfo
-}*/
 
 func parseArg(arg string) (*hostInfo, error) {
 	m := r1.FindStringSubmatch(arg)
@@ -96,7 +179,7 @@ func parseArg(arg string) (*hostInfo, error) {
 
 	h := &hostInfo{
 		username: user,
-		ip:       host,
+		host:     host,
 		file:     file,
 	}
 	return h, nil
