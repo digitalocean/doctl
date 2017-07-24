@@ -69,87 +69,14 @@ func RunSCP(c *CmdConfig) error {
 		return err
 	}
 
-	var droplet1 *do.Droplet
-	var droplet2 *do.Droplet
-
 	ds := c.Droplets()
-
-	// Parse first argument.
-	// Only if host is not local.
-	if host1.host != "" {
-		if id, err := strconv.Atoi(host1.host); err == nil {
-			// dropletID is an integer
-
-			doDroplet, err := ds.Get(id)
-			if err != nil {
-				return err
-			}
-
-			droplet1 = doDroplet
-		} else {
-			// dropletID is a string
-			droplets, err := ds.List()
-			if err != nil {
-				return err
-			}
-
-			for _, d := range droplets {
-				if d.Name == host1.host {
-					droplet1 = &d
-					break
-				}
-			}
-
-			if droplet1 == nil {
-				return errors.New("could not find droplet")
-			}
-		}
-		host1.host, err = droplet1.PublicIPv4()
-		if err != nil {
-			return err
-		}
-		if host1.username == "" {
-			host1.username = defaultSSHUser(droplet2)
-		}
+	err = matchSCPDropletIP(host1, ds)
+	if err != nil {
+		return err
 	}
-
-	// Parse second argument
-	// Only if host is not local.
-	if host2.host != "" {
-		if id, err := strconv.Atoi(host2.host); err == nil {
-			// dropletID is an integer
-
-			doDroplet, err := ds.Get(id)
-			if err != nil {
-				return err
-			}
-
-			droplet2 = doDroplet
-		} else {
-			// dropletID is a string
-			droplets, err := ds.List()
-			if err != nil {
-				return err
-			}
-
-			for _, d := range droplets {
-				if d.Name == host2.host {
-					droplet2 = &d
-					break
-				}
-			}
-
-			if droplet2 == nil {
-				return errors.New("could not find droplet")
-			}
-		}
-		host2.host, err = droplet2.PublicIPv4()
-		if err != nil {
-			return err
-		}
-		if host2.username == "" {
-			host2.username = defaultSSHUser(droplet2)
-		}
+	err = matchSCPDropletIP(host2, ds)
+	if err != nil {
+		return err
 	}
 
 	runner := c.Doit.SCP(parseArg(host1), parseArg(host2), keyPath, port)
@@ -208,4 +135,47 @@ func parseArg(host *hostInfo) string {
 		arg = arg + host.host + ":"
 	}
 	return arg + host.file
+}
+
+func matchSCPDropletIP(h *hostInfo, ds do.DropletsService) error {
+	if h.host != "" {
+		var droplet *do.Droplet
+		var err error
+		if id, err := strconv.Atoi(h.host); err == nil {
+			// dropletID is an integer
+
+			doDroplet, err := ds.Get(id)
+			if err != nil {
+				return err
+			}
+
+			droplet = doDroplet
+		} else {
+			// dropletID is a string
+			droplets, err := ds.List()
+			if err != nil {
+				return err
+			}
+
+			for _, d := range droplets {
+				if d.Name == h.host {
+					droplet = &d
+					break
+				}
+			}
+
+			if droplet == nil {
+				return errors.New("could not find droplet")
+			}
+		}
+		h.host, err = droplet.PublicIPv4()
+		if err != nil {
+			return err
+		}
+		if h.username == "" {
+			h.username = defaultSSHUser(droplet)
+		}
+	}
+
+	return nil
 }
