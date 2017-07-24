@@ -59,12 +59,12 @@ func RunSCP(c *CmdConfig) error {
 	}
 
 	arg1 := c.Args[0]
-	host1, err := parseArg(arg1)
+	host1, err := extractArg(arg1)
 	if err != nil {
 		return err
 	}
 	arg2 := c.Args[1]
-	host2, err := parseArg(arg2)
+	host2, err := extractArg(arg2)
 	if err != nil {
 		return err
 	}
@@ -74,80 +74,85 @@ func RunSCP(c *CmdConfig) error {
 
 	ds := c.Droplets()
 
-	// Parse first argument
-	if id, err := strconv.Atoi(host1.host); err == nil {
-		// dropletID is an integer
+	// Parse first argument.
+	// Only if host is not local.
+	if host1.host != "" {
+		if id, err := strconv.Atoi(host1.host); err == nil {
+			// dropletID is an integer
 
-		doDroplet, err := ds.Get(id)
-		if err != nil {
-			return err
-		}
+			doDroplet, err := ds.Get(id)
+			if err != nil {
+				return err
+			}
 
-		droplet1 = doDroplet
-	} else {
-		// dropletID is a string
-		droplets, err := ds.List()
-		if err != nil {
-			return err
-		}
+			droplet1 = doDroplet
+		} else {
+			// dropletID is a string
+			droplets, err := ds.List()
+			if err != nil {
+				return err
+			}
 
-		for _, d := range droplets {
-			if d.Name == host1.host {
-				droplet1 = &d
-				break
+			for _, d := range droplets {
+				if d.Name == host1.host {
+					droplet1 = &d
+					break
+				}
+			}
+
+			if droplet1 == nil {
+				return errors.New("could not find droplet")
 			}
 		}
-
-		if droplet1 == nil {
-			return errors.New("could not find droplet")
+		host1.host, err = droplet1.PublicIPv4()
+		if err != nil {
+			return err
+		}
+		if host1.username == "" {
+			host1.username = defaultSSHUser(droplet2)
 		}
 	}
 
 	// Parse second argument
-	if id, err := strconv.Atoi(host2.host); err == nil {
-		// dropletID is an integer
+	// Only if host is not local.
+	if host2.host != "" {
+		if id, err := strconv.Atoi(host2.host); err == nil {
+			// dropletID is an integer
 
-		doDroplet, err := ds.Get(id)
-		if err != nil {
-			return err
-		}
+			doDroplet, err := ds.Get(id)
+			if err != nil {
+				return err
+			}
 
-		droplet2 = doDroplet
-	} else {
-		// dropletID is a string
-		droplets, err := ds.List()
-		if err != nil {
-			return err
-		}
+			droplet2 = doDroplet
+		} else {
+			// dropletID is a string
+			droplets, err := ds.List()
+			if err != nil {
+				return err
+			}
 
-		for _, d := range droplets {
-			if d.Name == host1.host {
-				droplet2 = &d
-				break
+			for _, d := range droplets {
+				if d.Name == host2.host {
+					droplet2 = &d
+					break
+				}
+			}
+
+			if droplet2 == nil {
+				return errors.New("could not find droplet")
 			}
 		}
-
-		if droplet2 == nil {
-			return errors.New("could not find droplet")
+		host2.host, err = droplet2.PublicIPv4()
+		if err != nil {
+			return err
+		}
+		if host2.username == "" {
+			host2.username = defaultSSHUser(droplet2)
 		}
 	}
 
-	host1.host, err = droplet1.PublicIPv4()
-	if err != nil {
-		return err
-	}
-	host2.host, err = droplet2.PublicIPv4()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(host1.host)
-	fmt.Println(host2.host)
-
-	file1 := host1.username + "@" + host1.host + ":" + host1.file
-	file2 := host2.username + "@" + host2.host + ":" + host2.file
-
-	runner := c.Doit.SCP(file1, file2, keyPath, port)
+	runner := c.Doit.SCP(parseArg(host1), parseArg(host2), keyPath, port)
 	return runner.Run()
 }
 
@@ -157,7 +162,16 @@ type hostInfo struct {
 	file     string
 }
 
-func parseArg(arg string) (*hostInfo, error) {
+func extractArg(arg string) (*hostInfo, error) {
+	if !strings.Contains(arg, "@") && !strings.Contains(arg, ":") {
+		h := &hostInfo{
+			username: "",
+			host:     "",
+			file:     arg,
+		}
+		return h, nil
+	}
+
 	m := r1.FindStringSubmatch(arg)
 	if len(m) != 3 {
 		return nil, fmt.Errorf("incorrect argument format")
@@ -183,4 +197,15 @@ func parseArg(arg string) (*hostInfo, error) {
 		file:     file,
 	}
 	return h, nil
+}
+
+func parseArg(host *hostInfo) string {
+	var arg string
+	if host.username != "" {
+		arg = host.username + "@"
+	}
+	if host.host != "" {
+		arg = arg + host.host + ":"
+	}
+	return arg + host.file
 }

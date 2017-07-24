@@ -21,12 +21,13 @@ import (
 
 func runExternalSCP(r *Runner) error {
 	args := []string{}
+
 	if r.KeyPath != "" {
 		args = append(args, "-i", r.KeyPath)
 	}
 
 	if r.Port > 0 {
-		args = append(args, "-p", strconv.Itoa(r.Port))
+		args = append(args, "-P", strconv.Itoa(r.Port))
 	}
 
 	if r.File1 != "" {
