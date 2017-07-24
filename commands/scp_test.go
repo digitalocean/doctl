@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/runner/mocks"
@@ -163,7 +164,21 @@ func Test_extractArgument(t *testing.T) {
 		e   *scpHostInfo
 		err error
 	}{
+		// success cases
 		{s: "test@example.com:~/abc", e: &scpHostInfo{username: "test", host: "example.com", file: "~/abc"}, err: nil},
+		{s: "test@123456:~/abc", e: &scpHostInfo{username: "test", host: "123456", file: "~/abc"}, err: nil},
+		{s: "example.com:~/abc", e: &scpHostInfo{username: "", host: "example.com", file: "~/abc"}, err: nil},
+		{s: "test@example:~/abc", e: &scpHostInfo{username: "test", host: "example", file: "~/abc"}, err: nil},
+		{s: "example:~/abc", e: &scpHostInfo{username: "", host: "example", file: "~/abc"}, err: nil},
+		{s: "example:~/abc", e: &scpHostInfo{username: "", host: "example", file: "~/abc"}, err: nil},
+		// fail cases
+		{s: ":", e: nil, err: errors.New("incorrect argument format")},
+		{s: "@", e: nil, err: errors.New("incorrect argument format")},
+		{s: "@:", e: nil, err: errors.New("incorrect argument format")},
+		{s: "test@:", e: nil, err: errors.New("incorrect argument format")},
+		{s: "@test:", e: nil, err: errors.New("incorrect argument format")},
+		{s: "abc@test:", e: nil, err: errors.New("incorrect argument format")},
+		{s: "abc@:~/abc", e: nil, err: errors.New("host not provided")},
 	}
 
 	for _, c := range cases {

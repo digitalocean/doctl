@@ -30,6 +30,7 @@ var (
 	scpREHost = regexp.MustCompile("(([^@]+)@)?(.+)")
 )
 
+// SCP represents scp command tree.
 func SCP(parent *Command) *Command {
 	usr, err := user.Current()
 	checkErr(err)
@@ -44,6 +45,7 @@ func SCP(parent *Command) *Command {
 	return cmdSCP
 }
 
+// RunSCP runs scp.
 func RunSCP(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
