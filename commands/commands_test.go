@@ -241,6 +241,9 @@ func NewTestConfig() *TestConfig {
 		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
 			return &doctl.MockRunner{}
 		},
+		SCPFn: func(f1, f2, kp string, p int) runner.Runner {
+			return &doctl.MockRunner{}
+		},
 		v: viper.New(),
 	}
 }

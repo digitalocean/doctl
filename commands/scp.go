@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2017 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,7 +17,6 @@ import (
 	"github.com/digitalocean/doctl"
 
 	"errors"
-	"fmt"
 	"github.com/digitalocean/doctl/do"
 	"os/user"
 	"path/filepath"
@@ -65,6 +64,7 @@ func RunSCP(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
 	arg2 := c.Args[1]
 	host2, err := extractArgument(arg2)
 	if err != nil {
@@ -103,18 +103,26 @@ func extractArgument(arg string) (*scpHostInfo, error) {
 
 	m := scpREPath.FindStringSubmatch(arg)
 	if len(m) != 3 {
-		return nil, fmt.Errorf("incorrect argument format")
+		return nil, errors.New("incorrect argument format")
 	}
 	hostData := m[1]
 	file := m[2]
 	m = scpREHost.FindStringSubmatch(hostData)
 	if len(m) != 4 {
-		return nil, fmt.Errorf("incorrect argument format")
+		return nil, errors.New("incorrect argument format")
 	}
+	// check host
+	if m[3] == "" {
+		return nil, errors.New("droplet not provided")
+	}
+	// check user
 	if m[2] == "" {
 		// make sure host is in the correct format.
-		if strings.Contains(m[3], "@") {
-			m[3] = m[3][1:]
+		if i := strings.Index(m[3], "@"); i != -1 {
+			m[3] = m[3][i+1:]
+		}
+		if len(m[3]) == 0 {
+			return nil, errors.New("host not provided")
 		}
 	}
 	user := m[2]
