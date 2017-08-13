@@ -22,8 +22,9 @@ import (
 func configHome() string {
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if configHome == "" {
-		configHome = filepath.Join(homeDir(), ".config", "doctl")
+		configHome = filepath.Join(homeDir(), ".config")
 	}
+	configHome = filepath.Join(configHome, "doctl")
 
 	return configHome
 }
