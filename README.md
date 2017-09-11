@@ -51,7 +51,7 @@ Integrations with package managers for Windows are to come.
 
 ### Option 2 – Download a Release from GitHub
 
-Visit the [Releases page](doctl-releases) for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive.)
+Visit the [Releases page](https://github.com/digitalocean/doctl/releases) for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive.)
 
 #### OS X and GNU/Linux
 
