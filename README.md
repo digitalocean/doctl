@@ -109,7 +109,7 @@ token.
 
 By default, `doctl` will load a configuration file from `$XDG_CONFIG_HOME/doctl/config.yaml` if found. If
 the `XDG_CONFIG_HOME` environment variable is not, the path will default to `$HOME/.config/doctl/config.yaml` on
-Unix like systems, and `%APPDATA%/doctl/config/config.yaml` on Windows.
+Unix-like systems, and `%APPDATA%/doctl/config/config.yaml` on Windows.
 
 The configuration file has changed locations in recent versions, and a warning will be displayed if your configuration
 exists at the legacy location.
@@ -180,8 +180,8 @@ You will also need valid `GITHUB_TOKEN` environment variable with access to the 
 
 ### Scripts
 
-To build `doctl` for all it's platforms run `scripts/stage.sh major minor patch` 
-(ie. `scripts/stage.sh 1 5 0`). This will place all files and it's checksums 
+To build `doctl` for all its platforms run `scripts/stage.sh major minor patch` 
+(ie. `scripts/stage.sh 1 5 0`). This will place all files and its checksums 
 at `builds/major.minor.patch/release`.
 
 Then mark the release on github with `scripts/release.sh v<version>` (ie. `scripts/release.sh v1.5.0`, _note_ the `v`).
