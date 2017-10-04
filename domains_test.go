@@ -236,6 +236,8 @@ func TestDomains_CreateRecordForDomainName(t *testing.T) {
 		Port:     10,
 		TTL:      1800,
 		Weight:   10,
+		Flags:    1,
+		Tag:      "test",
 	}
 
 	mux.HandleFunc("/v2/domains/example.com/records",
@@ -278,6 +280,8 @@ func TestDomains_EditRecordForDomainName(t *testing.T) {
 		Port:     10,
 		TTL:      1800,
 		Weight:   10,
+		Flags:    1,
+		Tag:      "test",
 	}
 
 	mux.HandleFunc("/v2/domains/example.com/records/1", func(w http.ResponseWriter, r *http.Request) {
@@ -316,10 +320,12 @@ func TestDomainRecord_String(t *testing.T) {
 		Port:     10,
 		TTL:      1800,
 		Weight:   10,
+		Flags:    1,
+		Tag:      "test",
 	}
 
 	stringified := record.String()
-	expected := `godo.DomainRecord{ID:1, Type:"CNAME", Name:"example", Data:"@", Priority:10, Port:10, TTL:1800, Weight:10}`
+	expected := `godo.DomainRecord{ID:1, Type:"CNAME", Name:"example", Data:"@", Priority:10, Port:10, TTL:1800, Weight:10, Flags:1, Tag:"test"}`
 	if expected != stringified {
 		t.Errorf("DomainRecord.String returned %+v, expected %+v", stringified, expected)
 	}
@@ -334,10 +340,12 @@ func TestDomainRecordEditRequest_String(t *testing.T) {
 		Port:     10,
 		TTL:      1800,
 		Weight:   10,
+		Flags:    1,
+		Tag:      "test",
 	}
 
 	stringified := record.String()
-	expected := `godo.DomainRecordEditRequest{Type:"CNAME", Name:"example", Data:"@", Priority:10, Port:10, TTL:1800, Weight:10}`
+	expected := `godo.DomainRecordEditRequest{Type:"CNAME", Name:"example", Data:"@", Priority:10, Port:10, TTL:1800, Weight:10, Flags:1, Tag:"test"}`
 	if expected != stringified {
 		t.Errorf("DomainRecordEditRequest.String returned %+v, expected %+v", stringified, expected)
 	}
