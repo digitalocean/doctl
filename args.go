@@ -82,6 +82,10 @@ const (
 	ArgRecordTTL = "record-ttl"
 	// ArgRecordWeight is a record weight argument.
 	ArgRecordWeight = "record-weight"
+	// ArgRecordFlags is a record flags argument.
+	ArgRecordFlags = "record-flags"
+	// ArgRecordTag is a record tag argument.
+	ArgRecordTag = "record-tag"
 	// ArgRegionSlug is a region slug argument.
 	ArgRegionSlug = "region"
 	// ArgSizeSlug is a size slug argument.
