@@ -71,6 +71,8 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPort, "", 0, "Record port")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordTTL, "", 1800, "Record TTL")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, "", 0, "Record weight")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "Record flags")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "Record tag")
 
 	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", Writer,
 		aliasOpt("d"), docCategories("domain"))
@@ -86,6 +88,8 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, "", 0, "Record port")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 1800, "Record TTL")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "Record weight")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "Record flags")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "Record tag")
 
 	return cmd
 }
@@ -248,6 +252,16 @@ func RunRecordCreate(c *CmdConfig) error {
 		return err
 	}
 
+	rFlags, err := c.Doit.GetInt(c.NS, doctl.ArgRecordFlags)
+	if err != nil {
+		return err
+	}
+
+	rTag, err := c.Doit.GetString(c.NS, doctl.ArgRecordTag)
+	if err != nil {
+		return err
+	}
+
 	drcr := &godo.DomainRecordEditRequest{
 		Type:     rType,
 		Name:     rName,
@@ -256,6 +270,8 @@ func RunRecordCreate(c *CmdConfig) error {
 		Port:     rPort,
 		TTL:      rTTL,
 		Weight:   rWeight,
+		Flags:    rFlags,
+		Tag:      rTag,
 	}
 
 	if len(drcr.Type) == 0 {
@@ -359,6 +375,16 @@ func RunRecordUpdate(c *CmdConfig) error {
 		return err
 	}
 
+	rFlags, err := c.Doit.GetInt(c.NS, doctl.ArgRecordFlags)
+	if err != nil {
+		return err
+	}
+
+	rTag, err := c.Doit.GetString(c.NS, doctl.ArgRecordTag)
+	if err != nil {
+		return err
+	}
+
 	drcr := &godo.DomainRecordEditRequest{
 		Type:     rType,
 		Name:     rName,
@@ -367,6 +393,8 @@ func RunRecordUpdate(c *CmdConfig) error {
 		Port:     rPort,
 		TTL:      rTTL,
 		Weight:   rWeight,
+		Flags:    rFlags,
+		Tag:      rTag,
 	}
 
 	r, err := ds.EditRecord(domainName, recordID, drcr)
