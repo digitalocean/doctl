@@ -15,6 +15,7 @@ var (
 	en    = language.English
 	fr    = language.French
 	en_US = language.AmericanEnglish
+	en_GB = language.BritishEnglish
 	en_AU = language.MustParse("en-AU")
 	und   = language.Und
 )
@@ -37,7 +38,7 @@ func TestFormatting(t *testing.T) {
 		6: {en, AUD.Amount(6.20), Symbol, "A$ 6.20"},
 
 		7: {en_AU, AUD.Amount(7.20), Symbol, "$ 7.20"},
-		8: {en_AU, USD.Amount(8.20), Symbol, "US$ 8.20"},
+		8: {en_GB, USD.Amount(8.20), Symbol, "US$ 8.20"},
 
 		9:  {en, 9.0, Symbol.Default(EUR), "€ 9.00"},
 		10: {en, 10.123, Symbol.Default(KRW), "₩ 10"},
@@ -53,7 +54,7 @@ func TestFormatting(t *testing.T) {
 		17: {en, USD, nil, "USD"},
 		18: {en, USD, ISO, "USD"},
 		19: {en, USD, Symbol, "$"},
-		20: {en_AU, USD, Symbol, "US$"},
+		20: {en_GB, USD, Symbol, "US$"},
 		21: {en_AU, USD, NarrowSymbol, "$"},
 	}
 	for i, tc := range testCases {

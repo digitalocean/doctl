@@ -10,7 +10,7 @@ type Extension interface {
 	// Proto must be either the ICMPv4 or ICMPv6 protocol number.
 	Len(proto int) int
 
-	// Marshal returns the binary enconding of ICMP extension.
+	// Marshal returns the binary encoding of ICMP extension.
 	// Proto must be either the ICMPv4 or ICMPv6 protocol number.
 	Marshal(proto int) ([]byte, error)
 }

@@ -59,7 +59,7 @@ type Message struct {
 	Body     MessageBody // body
 }
 
-// Marshal returns the binary enconding of the ICMP message m.
+// Marshal returns the binary encoding of the ICMP message m.
 //
 // For an ICMPv4 message, the returned message always contains the
 // calculated checksum field.

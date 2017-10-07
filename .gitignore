@@ -9,6 +9,8 @@ dist
 public
 docs/content
 
+_vendor-*
+
 /out
 
 # Snapcraft

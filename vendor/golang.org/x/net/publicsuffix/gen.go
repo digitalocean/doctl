@@ -12,6 +12,16 @@ package main
 //	go run gen.go -version "xxx"       >table.go
 //	go run gen.go -version "xxx" -test >table_test.go
 //
+// The first of those two will take around 20 minutes to complete, as the final
+// table is optimized for size. When testing the code generation workflow, pass
+// -crush=false to skip this optimization step, although the results of such a
+// run should not be committed, as the generated table can be around 50% larger
+// and, more importantly, require a larger number of scarce node table bits.
+// You may need to increase nodesBitsTextOffset or other constants to generate
+// a table with -crush=false.
+//
+// Pass -v to print verbose progress information.
+//
 // The version is derived from information found at
 // https://github.com/publicsuffix/list/commits/master/public_suffix_list.dat
 //
@@ -35,11 +45,13 @@ import (
 )
 
 const (
+	// These sum of these four values must be no greater than 32.
 	nodesBitsChildren   = 9
 	nodesBitsICANN      = 1
 	nodesBitsTextOffset = 15
 	nodesBitsTextLength = 6
 
+	// These sum of these four values must be no greater than 32.
 	childrenBitsWildcard = 1
 	childrenBitsNodeType = 2
 	childrenBitsHi       = 14
@@ -299,8 +311,11 @@ const numTLD = %d
 			return fmt.Errorf("internal error: could not find %q in text %q", label, text)
 		}
 		maxTextOffset, maxTextLength = max(maxTextOffset, offset), max(maxTextLength, length)
-		if offset >= 1<<nodesBitsTextOffset || length >= 1<<nodesBitsTextLength {
-			return fmt.Errorf("text offset/length is too large: %d/%d", offset, length)
+		if offset >= 1<<nodesBitsTextOffset {
+			return fmt.Errorf("text offset %d is too large, or nodeBitsTextOffset is too small", offset)
+		}
+		if length >= 1<<nodesBitsTextLength {
+			return fmt.Errorf("text length %d is too large, or nodeBitsTextLength is too small", length)
 		}
 		labelEncoding[label] = uint32(offset)<<nodesBitsTextLength | uint32(length)
 	}
@@ -462,14 +477,17 @@ func assignIndexes(w io.Writer, n *node) error {
 		// Assign childrenIndex.
 		maxChildren = max(maxChildren, len(childrenEncoding))
 		if len(childrenEncoding) >= 1<<nodesBitsChildren {
-			return fmt.Errorf("children table is too large")
+			return fmt.Errorf("children table size %d is too large, or nodeBitsChildren is too small", len(childrenEncoding))
 		}
 		n.childrenIndex = len(childrenEncoding)
 		lo := uint32(n.firstChild)
 		hi := lo + uint32(len(n.children))
 		maxLo, maxHi = u32max(maxLo, lo), u32max(maxHi, hi)
-		if lo >= 1<<childrenBitsLo || hi >= 1<<childrenBitsHi {
-			return fmt.Errorf("children lo/hi is too large: %d/%d", lo, hi)
+		if lo >= 1<<childrenBitsLo {
+			return fmt.Errorf("children lo %d is too large, or childrenBitsLo is too small", lo)
+		}
+		if hi >= 1<<childrenBitsHi {
+			return fmt.Errorf("children hi %d is too large, or childrenBitsHi is too small", hi)
 		}
 		enc := hi<<childrenBitsLo | lo
 		enc |= uint32(n.nodeType) << (childrenBitsLo + childrenBitsHi)

@@ -16,7 +16,7 @@ import (
 )
 
 func ExampleConn_markingTCP() {
-	ln, err := net.Listen("tcp6", "[::]:1024")
+	ln, err := net.Listen("tcp", "[::]:1024")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -29,12 +29,14 @@ func ExampleConn_markingTCP() {
 		}
 		go func(c net.Conn) {
 			defer c.Close()
-			p := ipv6.NewConn(c)
-			if err := p.SetTrafficClass(0x28); err != nil { // DSCP AF11
-				log.Fatal(err)
-			}
-			if err := p.SetHopLimit(128); err != nil {
-				log.Fatal(err)
+			if c.RemoteAddr().(*net.TCPAddr).IP.To16() != nil && c.RemoteAddr().(*net.TCPAddr).IP.To4() == nil {
+				p := ipv6.NewConn(c)
+				if err := p.SetTrafficClass(0x28); err != nil { // DSCP AF11
+					log.Fatal(err)
+				}
+				if err := p.SetHopLimit(128); err != nil {
+					log.Fatal(err)
+				}
 			}
 			if _, err := c.Write([]byte("HELLO-R-U-THERE-ACK")); err != nil {
 				log.Fatal(err)

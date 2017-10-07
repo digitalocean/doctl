@@ -6,26 +6,18 @@ import (
 	"testing"
 
 	"golang.org/x/text/internal/gen"
+	"golang.org/x/text/internal/testtext"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"golang.org/x/text/unicode/cldr"
 )
 
-var (
-	long = flag.Bool("long", false,
-		"run time-consuming tests, such as tests that fetch data online")
-
-	draft = flag.String("draft",
-		"contributed",
-		`Minimal draft requirements (approved, contributed, provisional, unconfirmed).`)
-)
+var draft = flag.String("draft",
+	"contributed",
+	`Minimal draft requirements (approved, contributed, provisional, unconfirmed).`)
 
 func TestTables(t *testing.T) {
-	if !*long {
-		return
-	}
-
-	gen.Init()
+	testtext.SkipIfNotLong(t)
 
 	// Read the CLDR zip file.
 	r := gen.OpenCLDRCoreZip()
