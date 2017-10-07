@@ -106,12 +106,21 @@ func (cldr *CLDR) Supplemental() *SupplementalData {
 
 // Locales returns the locales for which there exist files.
 // Valid sublocales for which there is no file are not included.
+// The root locale is always sorted first.
 func (cldr *CLDR) Locales() []string {
-	loc := []string{}
+	loc := []string{"root"}
+	hasRoot := false
 	for l, _ := range cldr.locale {
+		if l == "root" {
+			hasRoot = true
+			continue
+		}
 		loc = append(loc, l)
 	}
-	sort.Strings(loc)
+	sort.Strings(loc[1:])
+	if !hasRoot {
+		return loc[1:]
+	}
 	return loc
 }
 

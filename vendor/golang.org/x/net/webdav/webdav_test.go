@@ -5,11 +5,16 @@
 package webdav
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -150,6 +155,88 @@ func TestPrefix(t *testing.T) {
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("prefix=%-9q find:\ngot  %v\nwant %v", prefix, got, want)
 			continue
+		}
+	}
+}
+
+func TestFilenameEscape(t *testing.T) {
+	re := regexp.MustCompile(`<D:href>([^<]*)</D:href>`)
+	do := func(method, urlStr string) (string, error) {
+		req, err := http.NewRequest(method, urlStr, nil)
+		if err != nil {
+			return "", err
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+		defer res.Body.Close()
+
+		b, err := ioutil.ReadAll(res.Body)
+		if err != nil {
+			return "", err
+		}
+		m := re.FindStringSubmatch(string(b))
+		if len(m) != 2 {
+			return "", errors.New("D:href not found")
+		}
+
+		return m[1], nil
+	}
+
+	testCases := []struct {
+		name, want string
+	}{{
+		name: `/foo%bar`,
+		want: `/foo%25bar`,
+	}, {
+		name: `/こんにちわ世界`,
+		want: `/%E3%81%93%E3%82%93%E3%81%AB%E3%81%A1%E3%82%8F%E4%B8%96%E7%95%8C`,
+	}, {
+		name: `/Program Files/`,
+		want: `/Program%20Files`,
+	}, {
+		name: `/go+lang`,
+		want: `/go+lang`,
+	}, {
+		name: `/go&lang`,
+		want: `/go&amp;lang`,
+	}}
+	fs := NewMemFS()
+	for _, tc := range testCases {
+		if strings.HasSuffix(tc.name, "/") {
+			if err := fs.Mkdir(tc.name, 0755); err != nil {
+				t.Fatalf("name=%q: Mkdir: %v", tc.name, err)
+			}
+		} else {
+			f, err := fs.OpenFile(tc.name, os.O_CREATE, 0644)
+			if err != nil {
+				t.Fatalf("name=%q: OpenFile: %v", tc.name, err)
+			}
+			f.Close()
+		}
+	}
+
+	srv := httptest.NewServer(&Handler{
+		FileSystem: fs,
+		LockSystem: NewMemLS(),
+	})
+	defer srv.Close()
+
+	u, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range testCases {
+		u.Path = tc.name
+		got, err := do("PROPFIND", u.String())
+		if err != nil {
+			t.Errorf("name=%q: PROPFIND: %v", tc.name, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("name=%q: got %q, want %q", tc.name, got, tc.want)
 		}
 	}
 }

@@ -5,20 +5,11 @@
 package ipv4
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"runtime"
 	"syscall"
 	"unsafe"
-)
-
-var (
-	errMissingAddress  = errors.New("missing address")
-	errMissingHeader   = errors.New("missing header")
-	errHeaderTooShort  = errors.New("header too short")
-	errBufferTooShort  = errors.New("buffer too short")
-	errInvalidConnType = errors.New("invalid conn type")
 )
 
 const (
@@ -55,7 +46,7 @@ func (h *Header) String() string {
 	if h == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ver: %v, hdrlen: %v, tos: %#x, totallen: %v, id: %#x, flags: %#x, fragoff: %#x, ttl: %v, proto: %v, cksum: %#x, src: %v, dst: %v", h.Version, h.Len, h.TOS, h.TotalLen, h.ID, h.Flags, h.FragOff, h.TTL, h.Protocol, h.Checksum, h.Src, h.Dst)
+	return fmt.Sprintf("ver=%d hdrlen=%d tos=%#x totallen=%d id=%#x flags=%#x fragoff=%#x ttl=%d proto=%d cksum=%#x src=%v dst=%v", h.Version, h.Len, h.TOS, h.TotalLen, h.ID, h.Flags, h.FragOff, h.TTL, h.Protocol, h.Checksum, h.Src, h.Dst)
 }
 
 // Marshal returns the binary encoding of the IPv4 header h.

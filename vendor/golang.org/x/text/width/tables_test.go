@@ -5,14 +5,10 @@
 package width
 
 import (
-	"flag"
 	"testing"
 
-	"golang.org/x/text/internal/gen"
+	"golang.org/x/text/internal/testtext"
 )
-
-var long = flag.Bool("long", false,
-	"run time-consuming tests, such as tests that fetch data online")
 
 const (
 	loSurrogate = 0xD800
@@ -20,9 +16,8 @@ const (
 )
 
 func TestTables(t *testing.T) {
-	if !gen.IsLocal() && !*long {
-		t.Skip("skipping test to prevent downloading; to run use -long or use -local to specify a local source")
-	}
+	testtext.SkipIfNotLong(t)
+
 	runes := map[rune]Kind{}
 	getWidthData(func(r rune, tag elem, _ rune) {
 		runes[r] = tag.kind()

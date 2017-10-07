@@ -91,6 +91,8 @@ func (b *builder) genCurrencies(w *gen.CodeWriter, data *cldr.SupplementalData) 
 			currencies = append(currencies, cur.Iso4217)
 		}
 	}
+	// Not included in the list for some reasons:
+	currencies = append(currencies, "MVP")
 
 	sort.Strings(currencies)
 	// Unique the elements.
@@ -249,8 +251,12 @@ func (b *builder) genSymbols(w *gen.CodeWriter, data *cldr.CLDR) {
 					v = ""
 				}
 				cur := b.currencies.Index([]byte(c.Type))
+				// XXX gets reassigned to 0 in the package's code.
+				if c.Type == "XXX" {
+					cur = 0
+				}
 				if cur == -1 {
-					fmt.Println("Unsupported:", c.Type) // TODO: mark MVP as supported.
+					fmt.Println("Unsupported:", c.Type)
 					continue
 				}
 

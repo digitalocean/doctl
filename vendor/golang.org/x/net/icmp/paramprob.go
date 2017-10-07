@@ -19,13 +19,13 @@ func (p *ParamProb) Len(proto int) int {
 		return 0
 	}
 	l, _ := multipartMessageBodyDataLen(proto, p.Data, p.Extensions)
-	return l
+	return 4 + l
 }
 
 // Marshal implements the Marshal method of MessageBody interface.
 func (p *ParamProb) Marshal(proto int) ([]byte, error) {
 	if proto == iana.ProtocolIPv6ICMP {
-		b := make([]byte, 4+p.Len(proto))
+		b := make([]byte, p.Len(proto))
 		b[0], b[1], b[2], b[3] = byte(p.Pointer>>24), byte(p.Pointer>>16), byte(p.Pointer>>8), byte(p.Pointer)
 		copy(b[4:], p.Data)
 		return b, nil
