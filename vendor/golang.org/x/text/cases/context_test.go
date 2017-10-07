@@ -142,6 +142,40 @@ func TestMapping(t *testing.T) {
 	}
 }
 
+func runeFoldData(r rune) (x struct{ simple, full, special string }) {
+	x = foldMap[r]
+	if x.simple == "" {
+		x.simple = string(unicode.ToLower(r))
+	}
+	if x.full == "" {
+		x.full = string(unicode.ToLower(r))
+	}
+	if x.special == "" {
+		x.special = x.full
+	}
+	return
+}
+
+func TestFoldData(t *testing.T) {
+	assigned := rangetable.Assigned(UnicodeVersion)
+	coreVersion := rangetable.Assigned(unicode.Version)
+	apply := func(r rune, f func(c *context) bool) (string, info) {
+		c := contextFromRune(r)
+		f(c)
+		return string(c.dst[:c.pDst]), c.info.cccType()
+	}
+	for r := rune(0); r <= lastRuneForTesting; r++ {
+		if !unicode.In(r, assigned) || !unicode.In(r, coreVersion) {
+			continue
+		}
+		x := runeFoldData(r)
+		if got, info := apply(r, foldFull); got != x.full {
+			t.Errorf("full:%q (%U): got %q %U; want %q %U (ccc=%x)", r, r, got, []rune(got), x.full, []rune(x.full), info)
+		}
+		// TODO: special and simple.
+	}
+}
+
 func TestCCC(t *testing.T) {
 	assigned := rangetable.Assigned(UnicodeVersion)
 	normVersion := rangetable.Assigned(norm.Version)

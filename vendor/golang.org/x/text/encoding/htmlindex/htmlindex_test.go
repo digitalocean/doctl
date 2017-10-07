@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
+	"golang.org/x/text/encoding/internal/identifier"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/language"
 )
@@ -35,6 +36,22 @@ func TestGet(t *testing.T) {
 		}
 		if got, err := Name(enc); got != tc.canonical {
 			t.Errorf("%d: Name(Get(%q)) = %q; want %q (%v)", i, tc.name, got, tc.canonical, err)
+		}
+	}
+}
+
+func TestTables(t *testing.T) {
+	for name, index := range nameMap {
+		got, err := Get(name)
+		if err != nil {
+			t.Errorf("%s:err: expected non-nil error", name)
+		}
+		if want := encodings[index]; got != want {
+			t.Errorf("%s:encoding: got %v; want %v", name, got, want)
+		}
+		mib, _ := got.(identifier.Interface).ID()
+		if mibMap[mib] != index {
+			t.Errorf("%s:mibMab: got %d; want %d", name, mibMap[mib], index)
 		}
 	}
 }
