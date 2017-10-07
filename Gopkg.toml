@@ -1,0 +1,60 @@
+
+[[constraint]]
+  name = "github.com/blang/semver"
+  version = "3.1.0"
+
+[[constraint]]
+  name = "github.com/digitalocean/godo"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/dustin/go-humanize"
+
+[[constraint]]
+  name = "github.com/fatih/color"
+
+[[constraint]]
+  name = "github.com/gobwas/glob"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mitchellh/ioprogress"
+
+[[constraint]]
+  name = "github.com/natefinch/pie"
+
+[[constraint]]
+  name = "github.com/pborman/uuid"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/shiena/ansicolor"
+
+[[constraint]]
+  name = "github.com/spf13/afero"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+
+[[constraint]]
+  name = "github.com/spf13/jwalterweatherman"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+
+[[constraint]]
+  name = "github.com/davecgh/go-spew"
+  version = "v1.1.0"
+
+[[constraint]]
+  name = "golang.org/x/crypto"
+
+[[constraint]]
+  name = "golang.org/x/oauth2"
+
+[[constraint]]
+  branch = "v2"
+  name = "gopkg.in/yaml.v2"

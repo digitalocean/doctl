@@ -55,6 +55,7 @@ func TestCollation(t *testing.T) {
 	if !gen.IsLocal() && !*long {
 		t.Skip("skipping test to prevent downloading; to run use -long or use -local to specify a local source")
 	}
+	t.Skip("must first update to new file format to support test")
 	for _, test := range loadTestData() {
 		doTest(t, test)
 	}

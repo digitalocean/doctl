@@ -5,6 +5,7 @@
 package display
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"unicode"
@@ -37,6 +38,11 @@ func TestValues(t *testing.T) {
 	checkDefined := func(x interface{}, namers []testcase) {
 		for _, n := range namers {
 			if n.n.Name(x) == "" {
+				// As of version 28 there is no data for az-Arab in English,
+				// although there is useful data in other languages.
+				if x.(fmt.Stringer).String() == "az-Arab" {
+					continue
+				}
 				t.Errorf("%s.Name(%s): supported but no result", n.kind, x)
 			}
 		}
@@ -207,6 +213,11 @@ func TestCoverage(t *testing.T) {
 		v := reflect.ValueOf(tt.x)
 		for j := 0; j < v.Len(); j++ {
 			x := v.Index(j).Interface()
+			// As of version 28 there is no data for az-Arab in English,
+			// although there is useful data in other languages.
+			if x.(fmt.Stringer).String() == "az-Arab" {
+				continue
+			}
 			s := tt.n.Name(x)
 			if s == "" {
 				t.Errorf("%d:%d:%s: missing content", i, j, x)
@@ -429,7 +440,7 @@ func TestScript(t *testing.T) {
 		{"en", "Arab", "Arabic"},
 		{"en", "Zzzz", "Unknown Script"},
 		{"zh-Hant", "Hang", "韓文字"},
-		{"zh-Hant-HK", "Hang", "韓文字"},
+		{"zh-Hant-HK", "Hang", "韓文字母"},
 		{"zh", "Arab", "阿拉伯文"},
 		{"zh-Hans-HK", "Arab", "阿拉伯文"}, // same as zh
 		{"zh-Hant", "Arab", "阿拉伯文"},
