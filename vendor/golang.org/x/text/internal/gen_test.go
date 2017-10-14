@@ -20,7 +20,7 @@ func TestParents(t *testing.T) {
 		{"en-AU", "en-001"},
 		{"en-US", "en"},
 		{"en-US-u-va-posix", "en-US"},
-		{"ca-ES-valencia", "ca"}, // ca-ES has no data.
+		{"ca-ES-valencia", "ca-ES"},
 	}
 	for _, tc := range testCases {
 		tag, ok := language.CompactIndex(language.MustParse(tc.tag))

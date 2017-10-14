@@ -215,7 +215,16 @@ func (b *builder) generate() {
 	b.setData("script", func(g *group, loc language.Tag, ldn *cldr.LocaleDisplayNames) {
 		if ldn.Scripts != nil {
 			for _, v := range ldn.Scripts.Script {
-				g.set(loc, language.MustParseScript(v.Type).String(), v.Data())
+				code := language.MustParseScript(v.Type)
+				if code.IsPrivateUse() { // Qaaa..Qabx
+					// TODO: data currently appears to be very meager.
+					// Reconsider if we have data for English.
+					if loc == language.English {
+						log.Fatal("Consider including data for private use scripts.")
+					}
+					continue
+				}
+				g.set(loc, code.String(), v.Data())
 			}
 		}
 	})

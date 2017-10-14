@@ -632,6 +632,16 @@ func (b *builder) parseIndices() {
 			}
 		}
 	}
+	// Include locales for plural rules, which uses a different structure.
+	for _, plurals := range b.data.Supplemental().Plurals {
+		for _, rules := range plurals.PluralRules {
+			for _, lang := range strings.Split(rules.Locales, " ") {
+				if lang = strings.Split(lang, "_")[0]; lang != "root" {
+					b.lang.add(lang)
+				}
+			}
+		}
+	}
 	// Include languages in likely subtags.
 	for _, m := range b.supp.LikelySubtags.LikelySubtag {
 		from := strings.Split(m.From, "_")
@@ -1445,16 +1455,15 @@ func (b *builder) writeMatchData() {
 				oneway: m.Oneway == "true",
 			})
 		} else {
-			// TODO: Handle the es_MX -> es_419 mapping. This does not seem to
-			// make much sense for our purposes, though.
+			// TODO: Handle other mappings.
 			a := []string{"*;*", "*_*;*_*", "es_MX;es_419"}
 			s := strings.Join([]string{desired, supported}, ";")
 			if i := sort.SearchStrings(a, s); i == len(a) || a[i] != s {
-				log.Fatalf("%q not handled", s)
+				log.Printf("%q not handled", s)
 			}
 		}
 	}
-	sort.Sort(sortByConf(matchLang))
+	sort.Stable(sortByConf(matchLang))
 	// collapse percentage into confidence classes
 	for i, m := range matchLang {
 		matchLang[i].conf = toConf(m.conf)

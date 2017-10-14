@@ -159,7 +159,7 @@ By default, it assumes you are using the `root` user. If you want to SSH as a sp
 
 ## Building and dependencies
 
-`doctl`'s dependencies are managed by [gvt](https://github.com/FiloSottile/gvt). To add dependencies, use `gvt fetch`.
+`doctl`'s dependencies are managed with [`dep`](https://github.com/golang/dep). To add dependencies, use [`dep ensure -add github.com/foo/bar`](https://github.com/golang/dep#adding-a-dependency)
 
 ## Releasing
 

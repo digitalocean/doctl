@@ -52,7 +52,7 @@ type runeInfo struct {
 	Conditional bool
 	Special     [1 + maxCaseMode][]rune
 
-	// Folding (TODO)
+	// Folding
 	FoldSimple  rune
 	FoldSpecial rune
 	FoldFull    []rune
@@ -169,22 +169,23 @@ func parseUCD() []runeInfo {
 		}
 	})
 
-	// TODO: Support case folding.
-	// // <code>; <status>; <mapping>;
-	// parse("CaseFolding.txt", func (p *ucd.Parser) {
-	// 	ri := get(p.Rune(0))
-	// 	switch p.String(1) {
-	// 	case "C":
-	// 		ri.FoldSimple = p.Rune(2)
-	// 		ri.FoldFull = p.Runes(2)
-	// 	case "S":
-	// 		ri.FoldSimple = p.Rune(2)
-	// 	case "T":
-	// 		ri.FoldSpecial = p.Rune(2)
-	// 	case "F":
-	// 		ri.FoldFull = p.Runes(2)
-	// 	}
-	// })
+	// <code>; <type>; <mapping>
+	parse("CaseFolding.txt", func(p *ucd.Parser) {
+		ri := get(p.Rune(0))
+		switch p.String(1) {
+		case "C":
+			ri.FoldSimple = p.Rune(2)
+			ri.FoldFull = p.Runes(2)
+		case "S":
+			ri.FoldSimple = p.Rune(2)
+		case "T":
+			ri.FoldSpecial = p.Rune(2)
+		case "F":
+			ri.FoldFull = p.Runes(2)
+		default:
+			log.Fatalf("%U: unknown type: %s", p.Rune(0), p.String(1))
+		}
+	})
 
 	return chars
 }
@@ -200,28 +201,23 @@ func genTables() {
 		t.Insert(rune(i), uint64(c.entry))
 	}
 
-	w := &bytes.Buffer{}
+	w := gen.NewCodeWriter()
+	defer w.WriteGoFile("tables.go", "cases")
+
+	gen.WriteUnicodeVersion(w)
+
+	// TODO: write CLDR version after adding a mechanism to detect that the
+	// tables on which the manually created locale-sensitive casing code is
+	// based hasn't changed.
+
+	w.WriteVar("xorData", string(xorData))
+	w.WriteVar("exceptions", string(exceptionData))
 
 	sz, err := t.Gen(w, triegen.Compact(&sparseCompacter{}))
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	gen.WriteUnicodeVersion(w)
-	// TODO: write CLDR version after adding a mechanism to detect that the
-	// tables on which the manually created locale-sensitive casing code is
-	// based hasn't changed.
-
-	fmt.Fprintf(w, "// xorData: %d bytes\n", len(xorData))
-	fmt.Fprintf(w, "var xorData = %+q\n\n", string(xorData))
-
-	fmt.Fprintf(w, "// exceptions: %d bytes\n", len(exceptionData))
-	fmt.Fprintf(w, "var exceptions = %q\n\n", string(exceptionData))
-
-	sz += len(exceptionData)
-	fmt.Fprintf(w, "// Total table size %d bytes (%dKiB)\n", sz, sz/1024)
-
-	gen.WriteGoFile("tables.go", "cases", w.Bytes())
+	w.Size += sz
 }
 
 func makeEntry(ri *runeInfo) {
@@ -259,6 +255,10 @@ func makeEntry(ri *runeInfo) {
 		makeException(ri)
 		return
 	}
+	if f := string(ri.FoldFull); len(f) > 0 && f != ri.mapping(cUpper) && f != ri.mapping(cLower) {
+		makeException(ri)
+		return
+	}
 
 	// Rune is either lowercase or uppercase.
 
@@ -273,6 +273,10 @@ func makeEntry(ri *runeInfo) {
 	if len(orig) != len(mapped) {
 		makeException(ri)
 		return
+	}
+
+	if string(ri.FoldFull) == ri.mapping(cUpper) {
+		ri.entry |= inverseFoldBit
 	}
 
 	n := len(orig)
@@ -317,11 +321,10 @@ var exceptionData = []byte{0}
 // makeException encodes case mappings that cannot be expressed in a simple
 // XOR diff.
 func makeException(ri *runeInfo) {
+	ccc := ri.entry & cccMask
+	// Set exception bit and retain case type.
+	ri.entry &= 0x0007
 	ri.entry |= exceptionBit
-
-	if ccc := ri.entry & cccMask; ccc != cccZero {
-		log.Fatalf("%U:CCC type was %d; want %d", ri.Rune, ccc, cccZero)
-	}
 
 	if len(exceptionData) >= 1<<numExceptionBits {
 		log.Fatalf("%U:exceptionData too large %x > %d bits", ri.Rune, len(exceptionData), numExceptionBits)
@@ -334,6 +337,7 @@ func makeException(ri *runeInfo) {
 	tc := ri.mapping(cTitle)
 	uc := ri.mapping(cUpper)
 	lc := ri.mapping(cLower)
+	ff := string(ri.FoldFull)
 
 	// addString sets the length of a string and adds it to the expansions array.
 	addString := func(s string, b *byte) {
@@ -354,12 +358,16 @@ func makeException(ri *runeInfo) {
 	}
 
 	// byte 0:
-	exceptionData = append(exceptionData, 0)
+	exceptionData = append(exceptionData, byte(ccc)|byte(len(ff)))
 
 	// byte 1:
 	p := len(exceptionData)
 	exceptionData = append(exceptionData, 0)
 
+	if len(ff) > 7 { // May be zero-length.
+		log.Fatalf("%U: fold string larger than 7 (%d)", ri.Rune, len(ff))
+	}
+	exceptionData = append(exceptionData, ff...)
 	ct := ri.CaseMode
 	if ct != cLower {
 		addString(lc, &exceptionData[p])
@@ -642,6 +650,39 @@ func genTablesTest() {
 		fmt.Fprintf(w, "\t\t0x%04x: {%q, %q, %q},\n",
 			r, string(p.Runes(1)), string(p.Runes(2)), string(p.Runes(3)))
 	})
+	fmt.Fprint(w, "\t}\n\n")
+
+	// <code>; <type>; <runes>
+	table := map[rune]struct{ simple, full, special string }{}
+	parse("CaseFolding.txt", func(p *ucd.Parser) {
+		r := p.Rune(0)
+		t := p.String(1)
+		v := string(p.Runes(2))
+		if t != "T" && v == string(unicode.ToLower(r)) {
+			return
+		}
+		x := table[r]
+		switch t {
+		case "C":
+			x.full = v
+			x.simple = v
+		case "S":
+			x.simple = v
+		case "F":
+			x.full = v
+		case "T":
+			x.special = v
+		}
+		table[r] = x
+	})
+	fmt.Fprintln(w, "\tfoldMap = map[rune]struct{ simple, full, special string }{")
+	for r := rune(0); r < 0x10FFFF; r++ {
+		x, ok := table[r]
+		if !ok {
+			continue
+		}
+		fmt.Fprintf(w, "\t\t0x%04x: {%q, %q, %q},\n", r, x.simple, x.full, x.special)
+	}
 	fmt.Fprint(w, "\t}\n\n")
 
 	// Break property

@@ -64,26 +64,41 @@ func main() {
 
 	m := map[language.Tag]bool{}
 	for _, lang := range data.Locales() {
-		if x := data.RawLDML(lang); false ||
-			x.LocaleDisplayNames != nil ||
-			x.Characters != nil ||
-			x.Delimiters != nil ||
-			x.Measurement != nil ||
-			x.Dates != nil ||
-			x.Numbers != nil ||
-			x.Units != nil ||
-			x.ListPatterns != nil ||
-			x.Collations != nil ||
-			x.Segmentations != nil ||
-			x.Rbnf != nil ||
-			x.Annotations != nil ||
-			x.Metadata != nil {
+		// We include all locales unconditionally to be consistent with en_US.
+		// We want en_US, even though it has no data associated with it.
 
-			// TODO: support POSIX natively, albeit non-standard.
-			tag := language.Make(strings.Replace(lang, "_POSIX", "-u-va-posix", 1))
-			m[tag] = true
+		// TODO: put any of the languages for which no data exists at the end
+		// of the index. This allows all components based on ICU to use that
+		// as the cutoff point.
+		// if x := data.RawLDML(lang); false ||
+		// 	x.LocaleDisplayNames != nil ||
+		// 	x.Characters != nil ||
+		// 	x.Delimiters != nil ||
+		// 	x.Measurement != nil ||
+		// 	x.Dates != nil ||
+		// 	x.Numbers != nil ||
+		// 	x.Units != nil ||
+		// 	x.ListPatterns != nil ||
+		// 	x.Collations != nil ||
+		// 	x.Segmentations != nil ||
+		// 	x.Rbnf != nil ||
+		// 	x.Annotations != nil ||
+		// 	x.Metadata != nil {
+
+		// TODO: support POSIX natively, albeit non-standard.
+		tag := language.Make(strings.Replace(lang, "_POSIX", "-u-va-posix", 1))
+		m[tag] = true
+		// }
+	}
+	// Include locales for plural rules, which uses a different structure.
+	for _, plurals := range data.Supplemental().Plurals {
+		for _, rules := range plurals.PluralRules {
+			for _, lang := range strings.Split(rules.Locales, " ") {
+				m[language.Make(lang)] = true
+			}
 		}
 	}
+
 	var core, special []language.Tag
 
 	for t := range m {

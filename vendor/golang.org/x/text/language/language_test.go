@@ -89,11 +89,11 @@ func TestCompactIndex(t *testing.T) {
 		{"ca-ES-valencia-u-co-phonebk", 1, true},
 		{"ca-ES-valencia-u-co-phonebk-va-posix", 0, false},
 		{"x-klingon", 0, false},
-		{"en-US", 140, true},
+		{"en-US", 227, true},
 		{"en-US-u-va-posix", 2, true},
-		{"en", 65, true},
-		{"en-u-co-phonebk", 65, true},
-		{"en-001", 66, true},
+		{"en", 131, true},
+		{"en-u-co-phonebk", 131, true},
+		{"en-001", 132, true},
 		{"sh", 0, false}, // We don't normalize.
 	}
 	for _, tt := range tests {
