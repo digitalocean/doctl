@@ -44,6 +44,8 @@ You can use [snap](https://snapcraft.io) to install `doctl` on Ubuntu and [snap 
 ```
 snap install doctl
 ```
+  #### Arch Linux 
+  Arch users not using snaps can install from the (AUR)[https://aur.archlinux.org/packages/doctl-bin/]
 
 #### Windows
 
