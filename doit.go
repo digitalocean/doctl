@@ -196,12 +196,19 @@ func (c *LiveConfig) GetGodoClient(trace bool) (*godo.Client, error) {
 		oauthClient.Transport = r
 	}
 
-	godoClient, err := godo.New(oauthClient, godo.SetUserAgent(userAgent()))
+	args := []godo.ClientOpt{godo.SetUserAgent(userAgent())}
+
+	apiURL := viper.GetString("api-url")
+	if apiURL != "" {
+		args = append(args, godo.SetBaseURL(apiURL))
+	}
+
+	godoClient, err := godo.New(oauthClient, args...)
 	if err != nil {
 		return nil, err
 	}
-	c.godoClient = godoClient
 
+	c.godoClient = godoClient
 	return c.godoClient, nil
 }
 
