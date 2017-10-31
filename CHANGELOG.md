@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.7.1] - 2017-06-06
+
+- #267 Add flag for overriding API endpoint - @utlemming
+
 ## [1.7.0] - 2017-06-06
 
 ### Added
