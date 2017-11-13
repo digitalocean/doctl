@@ -1,6 +1,4 @@
-# doctl
-
-[![Build Status](https://travis-ci.org/digitalocean/doctl.svg?branch=master)](https://travis-ci.org/digitalocean/doctl)
+# doctl [![Build Status](https://travis-ci.org/digitalocean/doctl.svg?branch=master)](https://travis-ci.org/digitalocean/doctl) [![GoDoc](https://godoc.org/github.com/digitalocean/doctl?status.svg)](https://godoc.org/github.com/digitalocean/doctl) [![Go Report Card](https://goreportcard.com/badge/github.com/digitalocean/doctl)](https://goreportcard.com/report/github.com/digitalocean/doctl)
 
 ```
 doctl is a command line interface for the DigitalOcean API.
@@ -25,179 +23,209 @@ Flags:
 Use "doctl [command] --help" for more information about a command.
 ```
 
-## Installation
+## Installing `doctl`
 
-### Option 1 - Use a Package Manager (preferred method)
+There are four ways to install `doctl`: using a package manager, downloading a GitHub release, building a development version from source, or building it with [Docker](https://www.digitalocean.com/community/tutorials/the-docker-ecosystem-an-introduction-to-common-components).
 
-#### OS X
+### Option 1 – Using a Package Manager (Preferred)
 
-You can use [Homebrew](http://brew.sh) to install `doctl` on Mac OS X by using the command below:
+A package manager allows you to install and keep up with new `doctl` versions using only a few commands. Currently, `doctl` is available as part of [Homebrew](https://brew.sh/) for macOS users and [Snap](https://snapcraft.io/) for GNU/Linux users.
 
-```
+You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this command:
+
+```command
 brew install doctl
 ```
 
-#### Linux
-
-You can use [snap](https://snapcraft.io) to install `doctl` on Ubuntu and [snap supported](https://snapcraft.io/docs/core/install) systems by using the command below:
+You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
 
 ```
-snap install doctl
+sudo snap install doctl
 ```
 
-#### Windows
+Support for Windows package managers is on the way.
 
-Integrations with package managers for Windows are to come.
+### Option 2 — Downloading a Release from GitHub
 
-### Option 2 – Download a Release from GitHub
+Visit the [Releases page](https://github.com/digitalocean/doctl/releases) for the [`doctl` GitHub project](https://github.com/digitalocean/doctl), and find the appropriate archive for your operating system and architecture.  You can download the archive from from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`.
 
-Visit the [Releases page](https://github.com/digitalocean/doctl/releases) for the `doctl` GitHub project, and find the appropriate archive for your operating system and architecture.  (For OS X systems, remember to use the `darwin` archive).
+For example, with `wget`:
 
-#### OS X and GNU/Linux
-
-You can download the archive from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`:
-
-```
+```command
 cd ~
-
-# OS X
-curl -L https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-darwin-10.6-amd64.tar.gz | tar xz
-
-# linux (with wget)
-wget -qO- https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz  | tar xz
-# linux (with curl)
-curl -L https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz  | tar xz
+wget https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz
 ```
 
-Move the `doctl` binary to somewhere in your path.  For example:
+Or with `curl`:
 
-```
-sudo mv ./doctl /usr/local/bin
-```
-
-#### Windows
-
-On Windows systems, you should be able to [download the Windows release](windows-release), and then double-click the zip archive to extract the `doctl.exe` executable.
-
-### Option 3 – Build From Source
-
-Alternatively, if you have a Go environment configured, you can install the development version of `doctl` from the command line like so:
-
-```
-go get github.com/digitalocean/doctl/cmd/doctl
+```command
+cd ~
+curl -OL https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz
 ```
 
-### Option 4 – Build with Docker
+Extract the binary. On GNU/Linux or OS X systems, you can use `tar`.
 
-If you have Docker installed, you can build with the Dockerfile a Docker image and run `doctl` within a Docker container.
-
+```command
+tar xf ~/doctl-1.7.0-linux-amd64.tar.gz
 ```
-# build Docker image
+
+On Windows systems, you should be able to double-click the zip archive to extract the `doctl` executable.
+
+Move the `doctl` binary to somewhere in your path. For example, on GNU/Linux and OS X systems:
+
+```command
+sudo mv ~/doctl /usr/local/bin
+```
+Windows users can follow [How to: Add Tool Locations to the PATH Environment Variable](https://msdn.microsoft.com/en-us/library/office/ee537574(v=office.14).aspx) in order to add `doctl` to their `PATH`.
+
+### Option 3 — Building the Development Version from Source
+
+If you have a [Go environment](https://www.digitalocean.com/community/tutorials/how-to-install-go-1-6-on-ubuntu-16-04) configured, you can install the development version of `doctl` from the command line.
+
+```command
+go get -u github.com/digitalocean/doctl/cmd/doctl
+```
+
+While the development version is a good way to take a peek at `doctl`'s latest features before they get released, be aware that it may have bugs. Officially released versions will generally be more stable.
+
+### Option 4 — Building with Docker
+
+If you have [Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04) configured, you can build a Docker image using `doctl`'s [Dockerfile](https://github.com/digitalocean/doctl/blob/master/Dockerfile) and run `doctl` within a container.
+
+```command
 docker build -t doctl .
-
-# usage
-docker run -e DIGITALOCEAN_ACCESS_TOKEN doctl <followed by doctl commands>
 ```
 
-## Initialization
+Then you can run it within a container.
 
-To use `doctl`, a DigitalOcean access token is required. [Generate](https://cloud.digitalocean.com/settings/api/tokens)
-a new token and run `doctl auth init`, or set the environment variable, `DIGITALOCEAN_ACCESS_TOKEN`, with your new
-token.
-
-## Configuration
-
-By default, `doctl` will load a configuration file from `$XDG_CONFIG_HOME/doctl/config.yaml` if found. If
-the `XDG_CONFIG_HOME` environment variable is not, the path will default to `$HOME/.config/doctl/config.yaml` on
-Unix-like systems, and `%APPDATA%/doctl/config/config.yaml` on Windows.
-
-The configuration file has changed locations in recent versions, and a warning will be displayed if your configuration
-exists at the legacy location.
-
-### Configuration OPTIONS
-
-* `access-token` - The DigitalOcean access token. You can generate a token in the
-[Apps & API](https://cloud.digitalocean.com/settings/api/tokens) section of the DigitalOcean control panel and then use it
-with `doctl auth init`.
-* `output` - Type of output to display results in. Choices are `json` or `text`. If not supplied, `doctl` will default
- to `text`.
-
-Example:
-
-```yaml
-access-token: MY_TOKEN
-output: text
+```command
+docker run --rm -e DIGITALOCEAN_ACCESS_TOKEN="your_DO_token" doctl any_doctl_command
 ```
+
+## Authenticating with DigitalOcean
+
+In order to use `doctl`, you need to authenticate with DigitalOcean by providing an access token, which can be created from the [Applications & API](https://cloud.digitalocean.com/settings/api/tokens) section of the Control Panel. You can learn how to generate a token by following the [DigitalOcean API guide](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2).
+
+Docker users will have to use the `DIGITALOCEAN_ACCESS_TOKEN` environmental variable to authenticate, as explained in the Installation section of this document.
+
+If you're not using Docker to run `doctl`, authenticate with the `auth init` command.
+
+```command
+doctl auth init
+```
+
+You will be prompted to enter the DigitalOcean access token that you generated in the DigitalOcean control panel.
+
+```
+[secondary_label Output]
+DigitalOcean access token: your_DO_token
+```
+
+After entering your token, you will receive confirmation that the credentials were accepted. If the token doesn't validate, make sure you copied and pasted it correctly.
+
+```
+[secondary_label Output]
+Validating token: OK
+```
+
+This will create the necessary directory structure and configuration file to store your credentials.
+
+## Configuring Default Values
+
+The `doctl` configuration file is used to store your API Access Token as well as the defaults for command flags. If you find yourself using certain flags frequently, you can change their default values to avoid typing them every time. This can be useful when, for example, you want to change the username or port used for SSH.
+
+On OS X and Linux, `doctl`'s configuration file can be found at `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set. Otherwise, the config will be written to `~/.config/doctl/config.yaml`. For Windows users, the config will be available at `%LOCALAPPDATA%/doctl/config/config.yaml`.
+
+The configuration file was automatically created and populated with default properties when you authenticated with `doctl` for the first time. The typical format for a property is `<^>category<^>.<^>command<^>.<^>sub-command<^>.<^>flag<^>: <^>value<^>`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
+
+To change the default SSH user used when connecting to a Droplet with `doctl`, look for the `compute.ssh.ssh-user` property and change the value after the colon. In this example, we changed it to the username **sammy**.
+
+```
+[label doctl configuration file]
+. . .
+compute.ssh.ssh-user: sammy
+. . .
+```
+
+Save and close the file. The next time you use `doctl`, the new default values you set will be in effect. In this example, that means that it will SSH as the **sammy** user (instead of the default **root** user) next time you log into a Droplet.
+
+## Enabling Shell Auto-Completion
+
+`doctl` also has auto-completion support. It can be set up so that if you partially type a command and then press `TAB`, the rest of the command is automatically filled in. For example, if you type `doctl comp<TAB><TAB> drop<TAB><TAB>` with auto-completion enabled, you'll see `doctl compute droplet` appear on your command prompt.
+
+**Note:** Shell auto-completion is not available for Windows users.
+
+How you enable auto-completion depends on which operating system you're using. If you installed `doctl` via Homebrew or Snap, auto-completion is activated automatically, though you may need to configure your local environment to enable it.
+
+`doctl` can generate an auto-completion script with the `doctl completion your_shell_here` command. Valid arguments for the shell are Bash (`bash`) and ZSH (`zsh`). By default, the script will be printed to the command line output.  For more usage examples for the `completion` command, use `doctl completion --help`.
+
+### Linux
+
+The most common way to use the `completion` command is by adding a line to your local profile configuration. At the end of your `~/.profile` file, add this line:
+
+```
+source <(doctl completion your_shell_here)
+```
+
+Then refresh your profile.
+
+```command
+source ~/.profile
+```
+
+### macOS
+
+macOS users will have to install the `bash-completion` framework to use the auto-completion feature.
+
+```command
+brew install bash-completion
+```
+
+After it's installed, load `bash_completion` by adding following line to your `.profile` or `.bashrc`/`.zshrc` file.
+
+```
+source $(brew --prefix)/etc/bash_completion
+```
+
 
 ## Examples
 
 `doctl` is able to interact with all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client).
 
 * List all Droplets on your account:
-
-    `doctl compute droplet list`
-
+```command
+doctl compute droplet list
+```
 * Create a Droplet:
-
-    `doctl compute droplet create <name> --region <region-slug> --image <image-slug> --size <size-slug>`
-
+```command
+doctl compute droplet create <name> --region <region-slug> --image <image-slug> --size <size-slug>
+```
 * Assign a Floating IP to a Droplet:
-
-    `doctl compute floating-ip-action assign <ip-addr> <droplet-id>`
-
+```command
+doctl compute floating-ip-action assign <ip-addr> <droplet-id>
+```
 * Create a new A record for an existing domain:
-
-    `doctl compute domain records create --record-type A --record-name www --record-data <ip-addr> <domain-name>`
+```command
+doctl compute domain records create --record-type A --record-name www --record-data <ip-addr> <domain-name>
+```
 
 `doctl` also simplifies actions without an API endpoint. For instance, it allows you to SSH to your Droplet by name:
-
-    doctl compute ssh <droplet-name>
+```command
+doctl compute ssh <droplet-name>
+```
 
 By default, it assumes you are using the `root` user. If you want to SSH as a specific user, you can do that as well:
-
-    doctl compute ssh <user>@<droplet-name>
+```command
+doctl compute ssh <user>@<droplet-name>
+```
 
 ## Building and dependencies
 
 `doctl`'s dependencies are managed with [`dep`](https://github.com/golang/dep). To add dependencies, use [`dep ensure -add github.com/foo/bar`](https://github.com/golang/dep#adding-a-dependency)
 
-## Releasing
-
-First, make sure the [CHANGELOG](https://github.com/digitalocean/doctl/blob/master/CHANGELOG.md)
-contains all changes for the version you're going to release.
-
-### Setup
-
-To release `doctl` you need to install:
-
-* [xgo](https://github.com/karalabe/xgo)
-* [github-release](https://github.com/aktau/github-release)
-
-And make them available at your `PATH`. You can use `go get -u` for both of them and add your
-`$GOPATH/bin` to your `PATH` so your scripts will find them.
-
-You will also need valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo.
-
-### Scripts
-
-To build `doctl` for all its platforms run `scripts/stage.sh major minor patch` 
-(ie. `scripts/stage.sh 1 5 0`). This will place all files and its checksums 
-at `builds/major.minor.patch/release`.
-
-Then mark the release on github with `scripts/release.sh v<version>` (ie. `scripts/release.sh v1.5.0`, _note_ the `v`).
-
-Then upload using `scripts/upload.sh <version>` to mark it on github.
-
-Now go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
-description to contain all changelog entries for this specific release.
-
-Also don't forget to update:
-- Dockerfile
-- snapcraft
-- homebrew formula
-
 ## More info
 
-* [Tutorial](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
+* [How To Use Doctl, the Official DigitalOcean Command-Line Client](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
+* [How To Work with DigitalOcean Load Balancers Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-work-with-digitalocean-load-balancers-using-doctl)
+* [How To Secure Web Server Infrastructure With DigitalOcean Cloud Firewalls Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-secure-web-server-infrastructure-with-digitalocean-cloud-firewalls-using-doctl) 
 * [doctl Releases](https://github.com/digitalocean/doctl/releases)
-* [windows Release](https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-windows-4.0-amd64.zip)
