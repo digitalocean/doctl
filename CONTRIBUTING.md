@@ -72,12 +72,12 @@ following steps in order to be able to compile and test doctl.
 When you upgrade `godo` you have to re-generate the mocks using [mockery](https://github.com/vektra/mockery),
 so first install mockery in your `GOPATH` then run the `script/regenmocks.sh` script to produce them.
 
-## Releasing `doctl`
+### Releasing `doctl`
 
 First, make sure the [CHANGELOG](https://github.com/digitalocean/doctl/blob/master/CHANGELOG.md)
 contains all changes for the version you're going to release.
 
-### Setup
+#### Setup
 
 To release `doctl` you need to install:
 
@@ -89,7 +89,7 @@ And make them available at your `PATH`. You can use `go get -u` for both of them
 
 You will also need valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo.
 
-### Scripts
+#### Scripts
 
 To build `doctl` for all its platforms run `scripts/stage.sh major minor patch` 
 (ie. `scripts/stage.sh 1 5 0`). This will place all files and its checksums 
