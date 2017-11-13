@@ -100,7 +100,7 @@ func main() {
 		log.Fatalf("could not download doit checksum file: %v", err)
 	}
 	checksumFile.Close()
-	fmt.Println("\n")
+	fmt.Println(" ")
 
 	// validate binary
 	fmt.Println("validating doit checksum...")
@@ -124,7 +124,7 @@ func main() {
 		return
 	}
 
-	fmt.Println("checksum was valid\n")
+	fmt.Println("checksum was valid")
 
 	// place binary in install directory
 	doitInstallPath := filepath.Join(installDir, "bin", "doit")
@@ -135,7 +135,7 @@ func main() {
 	}
 	os.Chmod(doitInstallPath, 0755)
 
-	fmt.Println("install complete!\n")
+	fmt.Println("install complete!")
 }
 
 func homeDir() (string, error) {
