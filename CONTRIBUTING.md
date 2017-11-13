@@ -79,27 +79,26 @@ contains all changes for the version you're going to release.
 
 #### Setup
 
-To release `doctl` you need to install:
+To release `doctl`, you need to install:
 
 * [xgo](https://github.com/karalabe/xgo)
 * [github-release](https://github.com/aktau/github-release)
 
-And make them available at your `PATH`. You can use `go get -u` for both of them and add your
+And make them available in your `PATH`. You can use `go get -u` for both of them and add your
 `$GOPATH/bin` to your `PATH` so your scripts will find them.
 
-You will also need valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo.
+You will also need a valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo.
 
 #### Scripts
 
-To build `doctl` for all its platforms run `scripts/stage.sh major minor patch` 
-(ie. `scripts/stage.sh 1 5 0`). This will place all files and its checksums 
-at `builds/major.minor.patch/release`.
+To build `doctl` for all its platforms, run `scripts/stage.sh major minor patch` 
+(e.g. `scripts/stage.sh 1 5 0`). This will place all files and their checksums 
+in `builds/major.minor.patch/release`.
 
-Then mark the release on github with `scripts/release.sh v<version>` (ie. `scripts/release.sh v1.5.0`, _note_ the `v`).
+Mark the release on GitHub with `scripts/release.sh v<version>` (e.g. `scripts/release.sh v1.5.0`, _note_ the `v`),
+then upload using `scripts/upload.sh <version>`.
 
-Then upload using `scripts/upload.sh <version>` to mark it on github.
-
-Now go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
+Finally, go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
 description to contain all changelog entries for this specific release.
 
 Also don't forget to update:
