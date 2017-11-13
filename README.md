@@ -43,7 +43,7 @@ You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.
 sudo snap install doctl
 ```
 
-Support for Windows package managers are on the way.
+Support for Windows package managers is on the way.
 
 ### Option 2 — Downloading a Release from GitHub
 
@@ -63,7 +63,7 @@ cd ~
 curl -OL https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz
 ```
 
-Extract the binary.  On GNU/Linux or OS X systems, you can use `tar`.
+Extract the binary. On GNU/Linux or OS X systems, you can use `tar`.
 
 ```command
 tar xf ~/doctl-1.7.0-linux-amd64.tar.gz
@@ -106,8 +106,9 @@ docker run --rm -e DIGITALOCEAN_ACCESS_TOKEN="your_DO_token" doctl any_doctl_com
 
 In order to use `doctl`, you need to authenticate with DigitalOcean by providing an access token, which can be created from the [Applications & API](https://cloud.digitalocean.com/settings/api/tokens) section of the Control Panel. You can learn how to generate a token by following the [DigitalOcean API guide](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2).
 
-In case you're not using Docker to run `doctl`, this is done using the `auth init` command.
-Docker users will have to use `DIGITALOCEAN_ACCESS_TOKEN` environmental variable, as exlained in the Installation part of this document.
+Docker users will have to use the `DIGITALOCEAN_ACCESS_TOKEN` environmental variable to authenticate, as explained in the Installation section of this document.
+
+If you're not using Docker to run `doctl`, authenticate with the `auth init` command.
 
 ```command
 doctl auth init
@@ -150,9 +151,7 @@ Save and close the file. The next time you use `doctl`, the new default values y
 
 ## Enabling Shell Auto-Completion
 
-`doctl` also has auto-completion support. It can be set up so that if you partially type a command and then press `TAB`, the rest of the command is automatically filled in.
-
-For example, if you type `doctl comp<TAB><TAB> drop<TAB><TAB>` with auto-completion enabled, you'll see `doctl compute droplet` appear on your command prompt.
+`doctl` also has auto-completion support. It can be set up so that if you partially type a command and then press `TAB`, the rest of the command is automatically filled in. For example, if you type `doctl comp<TAB><TAB> drop<TAB><TAB>` with auto-completion enabled, you'll see `doctl compute droplet` appear on your command prompt.
 
 **Note:** Shell auto-completion is not available for Windows users.
 
@@ -162,19 +161,13 @@ How you enable auto-completion depends on which operating system you're using. I
 
 ### Linux
 
-The most common way to use the `completion` command is by adding a line to your local profile configuration. Open `~/.profile` for editing.
-
-```command
-nano ~/.profile
-```
-
-At the end of the file, add this line:
+The most common way to use the `completion` command is by adding a line to your local profile configuration. At the end of your `~/.profile` file, add this line:
 
 ```
 source <(doctl completion your_shell_here)
 ```
 
-Save file and close the editor. Finally, refresh your profile.
+Then refresh your profile.
 
 ```command
 source ~/.profile
@@ -182,7 +175,7 @@ source ~/.profile
 
 ### macOS
 
-macOS users will have to install the `bash-completion` framework to use the auto-completion feature..
+macOS users will have to install the `bash-completion` framework to use the auto-completion feature.
 
 ```command
 brew install bash-completion
