@@ -29,15 +29,15 @@ There are four ways to install `doctl`: using a package manager, downloading a G
 
 ### Option 1 – Using a Package Manager (Preferred)
 
-A package manager allows you to install and keep up with new `doctl` versions using only a few commands. Currently, `doctl` is available as part of [Homebrew](homebrew) for macOS users and [Snap](snap) for GNU/Linux users.
+A package manager allows you to install and keep up with new `doctl` versions using only a few commands. Currently, `doctl` is available as part of [Homebrew](https://brew.sh/) for macOS users and [Snap](https://snapcraft.io/) for GNU/Linux users.
 
-You can use [Homebrew](homebrew) to install `doctl` on macOS with this command:
+You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this command:
 
 ```command
 brew install doctl
 ```
 
-You can use [Snap](snap) on [Snap-supported](snap-supported-systems) systems to install `doctl` with this command:
+You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
 
 ```
 sudo snap install doctl
@@ -47,7 +47,7 @@ Support for Windows package managers are on the way.
 
 ### Option 2 — Downloading a Release from GitHub
 
-Visit the [Releases page][doctl-releases] for the [`doctl` GitHub project](doctl-github), and find the appropriate archive for your operating system and architecture.  You can download the archive from from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`.
+Visit the [Releases page](https://github.com/digitalocean/doctl/releases) for the [`doctl` GitHub project](https://github.com/digitalocean/doctl), and find the appropriate archive for your operating system and architecture.  You can download the archive from from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`.
 
 For example, with `wget`:
 
@@ -79,7 +79,7 @@ sudo mv ~/doctl /usr/local/bin
 
 ### Option 3 — Building the Development Version from Source
 
-If you have a [Go environment][install-go] configured, you can install the development version of `doctl` from the command line.
+If you have a [Go environment](https://www.digitalocean.com/community/tutorials/how-to-install-go-1-6-on-ubuntu-16-04) configured, you can install the development version of `doctl` from the command line.
 
 ```command
 go get -u github.com/digitalocean/doctl/cmd/doctl
@@ -89,7 +89,7 @@ While the development version is a good way to take a peek at `doctl`'s latest f
 
 ### Option 4 — Building with Docker
 
-If you have [Docker](install-docker) configured, you can build a Docker image using `doctl`'s [Dockerfile](doctl-dockerfile) and run `doctl` within a container.
+If you have [Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04) configured, you can build a Docker image using `doctl`'s [Dockerfile](https://github.com/digitalocean/doctl/blob/master/Dockerfile) and run `doctl` within a container.
 
 ```command
 docker build -t doctl .
@@ -103,7 +103,7 @@ docker run --rm -e DIGITALOCEAN_ACCESS_TOKEN="your_DO_token" doctl any_doctl_com
 
 ## Authenticating with DigitalOcean
 
-In order to use `doctl`, you need to authenticate with DigitalOcean.
+In order to use `doctl`, you need to authenticate with DigitalOcean by providing an access token, which can be created from the [Applications & API](https://cloud.digitalocean.com/settings/api/tokens) section of the Control Panel. You can learn how to generate a token by following the [DigitalOcean API guide](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2).
 
 In case you're not using Docker to run `doctl`, this is done using the `auth init` command.
 Docker users will have to use `DIGITALOCEAN_ACCESS_TOKEN` environmental variable, as exlained in the Installation part of this document.
