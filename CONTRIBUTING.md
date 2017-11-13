@@ -71,3 +71,38 @@ following steps in order to be able to compile and test doctl.
 
 When you upgrade `godo` you have to re-generate the mocks using [mockery](https://github.com/vektra/mockery),
 so first install mockery in your `GOPATH` then run the `script/regenmocks.sh` script to produce them.
+
+## Releasing `doctl`
+
+First, make sure the [CHANGELOG](https://github.com/digitalocean/doctl/blob/master/CHANGELOG.md)
+contains all changes for the version you're going to release.
+
+### Setup
+
+To release `doctl` you need to install:
+
+* [xgo](https://github.com/karalabe/xgo)
+* [github-release](https://github.com/aktau/github-release)
+
+And make them available at your `PATH`. You can use `go get -u` for both of them and add your
+`$GOPATH/bin` to your `PATH` so your scripts will find them.
+
+You will also need valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo.
+
+### Scripts
+
+To build `doctl` for all its platforms run `scripts/stage.sh major minor patch` 
+(ie. `scripts/stage.sh 1 5 0`). This will place all files and its checksums 
+at `builds/major.minor.patch/release`.
+
+Then mark the release on github with `scripts/release.sh v<version>` (ie. `scripts/release.sh v1.5.0`, _note_ the `v`).
+
+Then upload using `scripts/upload.sh <version>` to mark it on github.
+
+Now go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
+description to contain all changelog entries for this specific release.
+
+Also don't forget to update:
+- Dockerfile
+- snapcraft
+- homebrew formula
