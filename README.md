@@ -23,8 +23,6 @@ Flags:
 Use "doctl [command] --help" for more information about a command.
 ```
 
-=======
-
 ## Installing `doctl`
 
 There are four ways to install `doctl`: using a package manager, downloading a GitHub release, building a development version from source, or building it with [Docker](https://www.digitalocean.com/community/tutorials/the-docker-ecosystem-an-introduction-to-common-components).
