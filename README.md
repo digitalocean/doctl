@@ -76,6 +76,7 @@ Move the `doctl` binary to somewhere in your path. For example, on GNU/Linux and
 ```command
 sudo mv ~/doctl /usr/local/bin
 ```
+Windows users can follow [How to: Add Tool Locations to the PATH Environment Variable](https://msdn.microsoft.com/en-us/library/office/ee537574(v=office.14).aspx) in order to add `doctl` to their `PATH`.
 
 ### Option 3 — Building the Development Version from Source
 
