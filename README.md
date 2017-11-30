@@ -52,21 +52,24 @@ Visit the [Releases page](https://github.com/digitalocean/doctl/releases) for th
 For example, with `wget`:
 
 ```command
-cd ~
-wget https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz
+wget https://github.com/digitalocean/doctl/releases/download/v1.7.1/doctl-1.7.1-linux-amd64.tar.gz
 ```
 
 Or with `curl`:
 
 ```command
-cd ~
-curl -OL https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz
+curl -OL https://github.com/digitalocean/doctl/releases/download/v1.7.1/doctl-1.7.1-linux-amd64.tar.gz
 ```
 
 Extract the binary. On GNU/Linux or OS X systems, you can use `tar`.
 
 ```command
-tar xf ~/doctl-1.7.0-linux-amd64.tar.gz
+tar xf ~/doctl-1.7.1-linux-amd64.tar.gz
+```
+
+Or download and extract with this oneliner:
+```command
+curl -sL https://github.com/digitalocean/doctl/releases/download/v1.7.1/doctl-1.7.1-linux-amd64.tar.gz | tar -xzv
 ```
 
 On Windows systems, you should be able to double-click the zip archive to extract the `doctl` executable.
