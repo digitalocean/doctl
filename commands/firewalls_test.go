@@ -48,7 +48,7 @@ func TestFirewallCreate(t *testing.T) {
 			InboundRules: []godo.InboundRule{
 				{
 					Protocol:  "icmp",
-					PortRange: "0",
+					PortRange: "",
 					Sources:   &godo.Sources{},
 				},
 				{
@@ -67,7 +67,7 @@ func TestFirewallCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgFirewallName, "firewall")
 		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"backend"})
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
-		config.Doit.Set(config.NS, doctl.ArgInboundRules, "protocol:icmp,ports:0 protocol:tcp,ports:8000-9000,address:127.0.0.0,address:0::/0,address:::/1")
+		config.Doit.Set(config.NS, doctl.ArgInboundRules, "protocol:icmp protocol:tcp,ports:8000-9000,address:127.0.0.0,address:0::/0,address:::/1")
 
 		err := RunFirewallCreate(config)
 		assert.NoError(t, err)

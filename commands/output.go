@@ -848,12 +848,20 @@ func firewallRulesPrintHelper(fw do.Firewall) (string, string) {
 
 	for _, ir := range fw.InboundRules {
 		ss := firewallInAndOutboundRulesPrintHelper(ir.Sources.Addresses, ir.Sources.Tags, ir.Sources.DropletIDs, ir.Sources.LoadBalancerUIDs)
-		irs = append(irs, fmt.Sprintf("%v:%v,%v:%v,%v", "protocol", ir.Protocol, "ports", ir.PortRange, ss))
+		if ir.Protocol == "icmp" {
+			irs = append(irs, fmt.Sprintf("%v:%v,%v", "protocol", ir.Protocol, ss))
+		} else {
+			irs = append(irs, fmt.Sprintf("%v:%v,%v:%v,%v", "protocol", ir.Protocol, "ports", ir.PortRange, ss))
+		}
 	}
 
 	for _, or := range fw.OutboundRules {
 		ds := firewallInAndOutboundRulesPrintHelper(or.Destinations.Addresses, or.Destinations.Tags, or.Destinations.DropletIDs, or.Destinations.LoadBalancerUIDs)
-		ors = append(ors, fmt.Sprintf("%v:%v,%v:%v,%v", "protocol", or.Protocol, "ports", or.PortRange, ds))
+		if or.Protocol == "icmp" {
+			ors = append(ors, fmt.Sprintf("%v:%v,%v", "protocol", or.Protocol, ds))
+		} else {
+			ors = append(ors, fmt.Sprintf("%v:%v,%v:%v,%v", "protocol", or.Protocol, "ports", or.PortRange, ds))
+		}
 	}
 
 	return strings.Join(irs, " "), strings.Join(ors, " ")
