@@ -20,12 +20,11 @@ import (
 )
 
 func configHome() string {
-	configHome := os.Getenv("XDG_CONFIG_HOME")
-	if configHome == "" {
-		configHome = filepath.Join(homeDir(), ".config", "doctl")
+	if xdgPath := os.Getenv("XDG_CONFIG_HOME"); xdgPath != "" {
+		return filepath.Join(xdgPath, "doctl")
+	} else {
+		return filepath.Join(homeDir(), ".config", "doctl")
 	}
-
-	return configHome
 }
 
 func legacyConfigCheck() {
