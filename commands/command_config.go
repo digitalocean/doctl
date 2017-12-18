@@ -23,9 +23,7 @@ func aliasOpt(aliases ...string) cmdOption {
 			c.Aliases = []string{}
 		}
 
-		for _, a := range aliases {
-			c.Aliases = append(c.Aliases, a)
-		}
+		c.Aliases = append(c.Aliases, aliases...)
 	}
 }
 
