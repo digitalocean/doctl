@@ -211,12 +211,7 @@ func RunFirewallAddDroplets(c *CmdConfig) error {
 		return err
 	}
 
-	fs := c.Firewalls()
-	if err := fs.AddDroplets(fID, dropletIDs...); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Firewalls().AddDroplets(fID, dropletIDs...)
 }
 
 // RunFirewallRemoveDroplets removes droplets from a Firewall.
@@ -236,12 +231,7 @@ func RunFirewallRemoveDroplets(c *CmdConfig) error {
 		return err
 	}
 
-	fs := c.Firewalls()
-	if err := fs.RemoveDroplets(fID, dropletIDs...); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Firewalls().RemoveDroplets(fID, dropletIDs...)
 }
 
 // RunFirewallAddTags adds tags to a Firewall.
@@ -256,12 +246,7 @@ func RunFirewallAddTags(c *CmdConfig) error {
 		return err
 	}
 
-	fs := c.Firewalls()
-	if err := fs.AddTags(fID, tagList...); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Firewalls().AddTags(fID, tagList...)
 }
 
 // RunFirewallRemoveTags removes tags from a Firewall.
@@ -276,12 +261,7 @@ func RunFirewallRemoveTags(c *CmdConfig) error {
 		return err
 	}
 
-	fs := c.Firewalls()
-	if err := fs.RemoveTags(fID, tagList...); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Firewalls().RemoveTags(fID, tagList...)
 }
 
 // RunFirewallAddRules adds rules to a Firewall.
@@ -296,12 +276,7 @@ func RunFirewallAddRules(c *CmdConfig) error {
 		return err
 	}
 
-	fs := c.Firewalls()
-	if err := fs.AddRules(fID, rr); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Firewalls().AddRules(fID, rr)
 }
 
 // RunFirewallRemoveRules removes rules from a Firewall.
@@ -316,12 +291,7 @@ func RunFirewallRemoveRules(c *CmdConfig) error {
 		return err
 	}
 
-	fs := c.Firewalls()
-	if err := fs.RemoveRules(fID, rr); err != nil {
-		return err
-	}
-
-	return nil
+	return c.Firewalls().RemoveRules(fID, rr)
 }
 
 func buildFirewallRequestFromArgs(c *CmdConfig, r *godo.FirewallRequest) error {
