@@ -33,7 +33,7 @@ A package manager allows you to install and keep up with new `doctl` versions us
 
 You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this command:
 
-```command
+```
 brew install doctl
 ```
 
@@ -51,21 +51,21 @@ Visit the [Releases page](https://github.com/digitalocean/doctl/releases) for th
 
 For example, with `wget`:
 
-```command
+```
 cd ~
 wget https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz
 ```
 
 Or with `curl`:
 
-```command
+```
 cd ~
 curl -OL https://github.com/digitalocean/doctl/releases/download/v1.7.0/doctl-1.7.0-linux-amd64.tar.gz
 ```
 
 Extract the binary. On GNU/Linux or OS X systems, you can use `tar`.
 
-```command
+```
 tar xf ~/doctl-1.7.0-linux-amd64.tar.gz
 ```
 
@@ -73,16 +73,17 @@ On Windows systems, you should be able to double-click the zip archive to extrac
 
 Move the `doctl` binary to somewhere in your path. For example, on GNU/Linux and OS X systems:
 
-```command
+```
 sudo mv ~/doctl /usr/local/bin
 ```
+
 Windows users can follow [How to: Add Tool Locations to the PATH Environment Variable](https://msdn.microsoft.com/en-us/library/office/ee537574(v=office.14).aspx) in order to add `doctl` to their `PATH`.
 
 ### Option 3 — Building the Development Version from Source
 
 If you have a [Go environment](https://www.digitalocean.com/community/tutorials/how-to-install-go-1-6-on-ubuntu-16-04) configured, you can install the development version of `doctl` from the command line.
 
-```command
+```
 go get -u github.com/digitalocean/doctl/cmd/doctl
 ```
 
@@ -92,13 +93,13 @@ While the development version is a good way to take a peek at `doctl`'s latest f
 
 If you have [Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04) configured, you can build a Docker image using `doctl`'s [Dockerfile](https://github.com/digitalocean/doctl/blob/master/Dockerfile) and run `doctl` within a container.
 
-```command
+```
 docker build -t doctl .
 ```
 
 Then you can run it within a container.
 
-```command
+```
 docker run --rm -e DIGITALOCEAN_ACCESS_TOKEN="your_DO_token" doctl any_doctl_command
 ```
 
@@ -110,21 +111,19 @@ Docker users will have to use the `DIGITALOCEAN_ACCESS_TOKEN` environmental vari
 
 If you're not using Docker to run `doctl`, authenticate with the `auth init` command.
 
-```command
+```
 doctl auth init
 ```
 
 You will be prompted to enter the DigitalOcean access token that you generated in the DigitalOcean control panel.
 
 ```
-[secondary_label Output]
 DigitalOcean access token: your_DO_token
 ```
 
 After entering your token, you will receive confirmation that the credentials were accepted. If the token doesn't validate, make sure you copied and pasted it correctly.
 
 ```
-[secondary_label Output]
 Validating token: OK
 ```
 
@@ -141,7 +140,6 @@ The configuration file was automatically created and populated with default prop
 To change the default SSH user used when connecting to a Droplet with `doctl`, look for the `compute.ssh.ssh-user` property and change the value after the colon. In this example, we changed it to the username **sammy**.
 
 ```
-[label doctl configuration file]
 . . .
 compute.ssh.ssh-user: sammy
 . . .
@@ -169,7 +167,7 @@ source <(doctl completion your_shell_here)
 
 Then refresh your profile.
 
-```command
+```
 source ~/.profile
 ```
 
@@ -177,7 +175,7 @@ source ~/.profile
 
 macOS users will have to install the `bash-completion` framework to use the auto-completion feature.
 
-```command
+```
 brew install bash-completion
 ```
 
@@ -193,29 +191,29 @@ source $(brew --prefix)/etc/bash_completion
 `doctl` is able to interact with all of your DigitalOcean resources. Below are a few common usage examples. To learn more about the features available, see [the full tutorial on the DigitalOcean community site](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client).
 
 * List all Droplets on your account:
-```command
+```
 doctl compute droplet list
 ```
 * Create a Droplet:
-```command
+```
 doctl compute droplet create <name> --region <region-slug> --image <image-slug> --size <size-slug>
 ```
 * Assign a Floating IP to a Droplet:
-```command
+```
 doctl compute floating-ip-action assign <ip-addr> <droplet-id>
 ```
 * Create a new A record for an existing domain:
-```command
+```
 doctl compute domain records create --record-type A --record-name www --record-data <ip-addr> <domain-name>
 ```
 
 `doctl` also simplifies actions without an API endpoint. For instance, it allows you to SSH to your Droplet by name:
-```command
+```
 doctl compute ssh <droplet-name>
 ```
 
 By default, it assumes you are using the `root` user. If you want to SSH as a specific user, you can do that as well:
-```command
+```
 doctl compute ssh <user>@<droplet-name>
 ```
 
