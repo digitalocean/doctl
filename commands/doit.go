@@ -130,6 +130,12 @@ func findConfig() (string, error) {
 		warn(msg)
 	}
 
+	legacyXDGPath := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "config.yaml")
+	if _, err := os.Stat(legacyXDGPath); err == nil {
+		msg := fmt.Sprintf("Configuration detected at %q. Please move config.yaml to %s",
+			legacyXDGPath, configPath())
+		warn(msg)
+	}
 	ch := configHome()
 	if err := os.MkdirAll(ch, 0755); err != nil {
 		return "", err
