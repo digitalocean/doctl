@@ -177,15 +177,9 @@ func RunVolumeDelete(c *CmdConfig) error {
 
 	if force || AskForConfirm("delete volume") == nil {
 		id := c.Args[0]
-		al := c.Volumes()
-		if err := al.DeleteVolume(id); err != nil {
-			return err
-		}
-		return nil
-	} else {
-		return fmt.Errorf("operation aborted")
+		return c.Volumes().DeleteVolume(id)
 	}
-	return nil
+	return fmt.Errorf("operation aborted")
 }
 
 // RunVolumeGet gets a volume.
@@ -211,7 +205,6 @@ func RunVolumeSnapshot(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	al := c.Volumes()
 	id := c.Args[0]
 
 	name, err := c.Doit.GetString(c.NS, doctl.ArgSnapshotName)
@@ -230,9 +223,6 @@ func RunVolumeSnapshot(c *CmdConfig) error {
 		Description: desc,
 	}
 
-	if _, err := al.CreateSnapshot(req); err != nil {
-		return err
-	}
-
-	return nil
+	_, err = c.Volumes().CreateSnapshot(req)
+	return err
 }

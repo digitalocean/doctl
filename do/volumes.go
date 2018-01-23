@@ -75,11 +75,7 @@ func (a *volumesService) CreateVolume(r *godo.VolumeCreateRequest) (*Volume, err
 
 func (a *volumesService) DeleteVolume(id string) error {
 	_, err := a.client.Storage.DeleteVolume(context.TODO(), id)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (a *volumesService) Get(id string) (*Volume, error) {
@@ -111,11 +107,7 @@ func (a *volumesService) GetSnapshot(snapshotID string) (*Snapshot, error) {
 
 func (a *volumesService) DeleteSnapshot(snapshotID string) error {
 	_, err := a.client.Storage.DeleteSnapshot(context.TODO(), snapshotID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (a *volumesService) ListSnapshots(volumeID string, opt *godo.ListOptions) ([]Snapshot, error) {

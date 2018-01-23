@@ -189,12 +189,7 @@ func RunLoadBalancerAddDroplets(c *CmdConfig) error {
 		return err
 	}
 
-	lbs := c.LoadBalancers()
-	if err := lbs.AddDroplets(lbID, dropletIDs...); err != nil {
-		return err
-	}
-
-	return nil
+	return c.LoadBalancers().AddDroplets(lbID, dropletIDs...)
 }
 
 // RunLoadBalancerRemoveDroplets removes droplets from a load balancer.
@@ -214,12 +209,7 @@ func RunLoadBalancerRemoveDroplets(c *CmdConfig) error {
 		return err
 	}
 
-	lbs := c.LoadBalancers()
-	if err := lbs.RemoveDroplets(lbID, dropletIDs...); err != nil {
-		return err
-	}
-
-	return nil
+	return c.LoadBalancers().RemoveDroplets(lbID, dropletIDs...)
 }
 
 // RunLoadBalancerAddForwardingRules adds forwarding rules to a load balancer.
@@ -239,12 +229,7 @@ func RunLoadBalancerAddForwardingRules(c *CmdConfig) error {
 		return err
 	}
 
-	lbs := c.LoadBalancers()
-	if err := lbs.AddForwardingRules(lbID, forwardingRules...); err != nil {
-		return err
-	}
-
-	return nil
+	return c.LoadBalancers().AddForwardingRules(lbID, forwardingRules...)
 }
 
 // RunLoadBalancerRemoveForwardingRules removes forwarding rules from a load balancer.
@@ -264,12 +249,7 @@ func RunLoadBalancerRemoveForwardingRules(c *CmdConfig) error {
 		return err
 	}
 
-	lbs := c.LoadBalancers()
-	if err := lbs.RemoveForwardingRules(lbID, forwardingRules...); err != nil {
-		return err
-	}
-
-	return nil
+	return c.LoadBalancers().RemoveForwardingRules(lbID, forwardingRules...)
 }
 
 func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, err error) {
