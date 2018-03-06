@@ -1,5 +1,11 @@
 # Change Log
 
+## [v1.1.2] - 2018-03-06
+
+- #157 storage: list volumes should handle only name or only region params - @andrewsykim
+- #154 docs: replace first example with fully-runnable example - @xmudrii
+- #152 Handle flags & tag properties of domain record - @jaymecd
+
 ## [v1.1.1] - 2017-09-29
 
 - #151 Following user agent field recommendations - @joonas
