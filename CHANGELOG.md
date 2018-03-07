@@ -2,6 +2,16 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.7.2] - 2018-03-07
+
+- #186 ssh: windows support for command forwarding - @xmudrii
+- #280 commands: show public images for distros and apps by default - @mudrii
+- #294 Respect access token flag when calling init as well - @mauricio
+- #291 Adds `SizeSlug` to format fields - @lxfontes
+- #284 commands: General simplifications - @ferhatelmas
+- #282 xdg: fix config path when XDG_CONFIG_HOME is set - @mudrii
+- #278 firewall: omit the port field for the icmp - @caglar10ur
+
 ## [1.7.1] - 2017-06-06
 
 - #267 Add flag for overriding API endpoint - @utlemming

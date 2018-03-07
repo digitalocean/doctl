@@ -10,3 +10,5 @@ go build \
   -o $OUT_DIR/doctl \
   -ldflags "-X github.com/digitalocean/doctl/Build=`git rev-parse --short HEAD`" \
   github.com/digitalocean/doctl/cmd/doctl
+
+chmod +x $OUT_DIR/doctl
