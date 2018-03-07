@@ -49,7 +49,7 @@ func askForPassword(prompt string) (string, error) {
 	return password, nil
 }
 
-func sshConnect(user string, host string, method ssh.AuthMethod, a agent.Agent) error {
+func sshConnect(user string, host string, method ssh.AuthMethod, a agent.Agent, command string) error {
 	sshc := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{method},
@@ -108,18 +108,25 @@ func sshConnect(user string, host string, method ssh.AuthMethod, a agent.Agent) 
 		return err
 	}
 
-	if err := session.Shell(); err != nil {
+	if command != "" {
+		if err := session.Run(command); err != nil {
+			return err
+		}
+	} else {
+		if err := session.Shell(); err != nil {
+			return err
+		}
+
+		err = session.Wait()
+		if _, ok := err.(*ssh.ExitError); ok {
+			return nil
+		}
+		if err == io.EOF {
+			return nil
+		}
 		return err
 	}
-
-	err = session.Wait()
-	if _, ok := err.(*ssh.ExitError); ok {
-		return nil
-	}
-	if err == io.EOF {
-		return nil
-	}
-	return err
+	return nil
 }
 
 func parsePrivateKey(path string, pwdProvider passwordProvider) (interface{}, error) {
@@ -193,7 +200,7 @@ func runInternalSSH(r *Runner) error {
 			}
 		}
 
-		if err := sshConnect(r.User, sshHost, ssh.PublicKeys(s), a); err != nil {
+		if err := sshConnect(r.User, sshHost, ssh.PublicKeys(s), a, r.Command); err != nil {
 			shouldTryPasswordMethod = true
 		}
 	} else {
@@ -207,7 +214,7 @@ func runInternalSSH(r *Runner) error {
 		if err != nil {
 			return err
 		}
-		if err := sshConnect(r.User, sshHost, ssh.Password(string(password)), nil); err != nil {
+		if err := sshConnect(r.User, sshHost, ssh.Password(string(password)), nil, r.Command); err != nil {
 			return err
 		}
 	}
