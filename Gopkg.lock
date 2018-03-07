@@ -27,7 +27,7 @@
 [[projects]]
   name = "github.com/digitalocean/godo"
   packages = [".","context","util"]
-  revision = "801cee9569723107654606a8e00d79b56470072e"
+  revision = "54622b1d85b2f0f4949cbd7e0637e04fc1f56ad9"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -237,6 +237,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5ec58c0377514960532431bddfa8c19ce21d0230d508060121339f4fb0d7494c"
+  inputs-digest = "67f5bbe2fd9a197e18083e7a6f1b04b4e48bbf8c6092e5a0a51b240d79e3ac1a"
   solver-name = "gps-cdcl"
   solver-version = 1

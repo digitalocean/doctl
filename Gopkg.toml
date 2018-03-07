@@ -5,7 +5,7 @@
 
 [[constraint]]
   name = "github.com/digitalocean/godo"
-  revision = "801cee9569723107654606a8e00d79b56470072e"
+  revision = "54622b1d85b2f0f4949cbd7e0637e04fc1f56ad9"
 
 [[constraint]]
   name = "github.com/dustin/go-humanize"
