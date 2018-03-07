@@ -42,12 +42,12 @@ func Images() *Command {
 	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-distribution", "list distribution images", Writer,
 		displayerType(&image{}), docCategories("image"))
-	AddBoolFlag(cmdImagesListDistribution, doctl.ArgImagePublic, "", false, "List public images")
+	AddBoolFlag(cmdImagesListDistribution, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListApplication := CmdBuilder(cmd, RunImagesListApplication,
 		"list-application", "list application images", Writer,
 		displayerType(&image{}), docCategories("image"))
-	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, "", false, "List public images")
+	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListUser := CmdBuilder(cmd, RunImagesListUser,
 		"list-user", "list user images", Writer,
