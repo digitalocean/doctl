@@ -28,3 +28,12 @@ func TestConfigHome(t *testing.T) {
 	expected := `C:\Users\testuser\AppData\Local\doctl\config`
 	assert.Equal(t, expected, ch)
 }
+
+func TestAliasHome(t *testing.T) {
+	os.Setenv("USERNAME", "testuser")
+	defer os.Unsetenv("USERNAME")
+
+	ch := aliasHome()
+	expected := `C:\Users\testuser\AppData\Local\doctl\alias`
+	assert.Equal(t, expected, ch)
+}

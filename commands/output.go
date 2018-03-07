@@ -154,6 +154,44 @@ func (a *action) KV() []map[string]interface{} {
 	return out
 }
 
+type alias struct {
+	aliases []aliasDesc
+}
+
+var _ Displayable = &alias{}
+
+func (al *alias) JSON(out io.Writer) error {
+	return writeJSON(al.aliases, out)
+}
+
+func (al *alias) Cols() []string {
+	return []string{
+		"Alias", "AliasCommand",
+	}
+}
+
+func (al *alias) ColMap() map[string]string {
+	return map[string]string{
+		"Alias":        "Alias",
+		"AliasCommand": "Command",
+	}
+}
+
+func (al *alias) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, ali := range al.aliases {
+		o := map[string]interface{}{
+			"Alias":        ali.Alias,
+			"AliasCommand": ali.AliasCommand,
+		}
+
+		out = append(out, o)
+	}
+
+	return out
+}
+
 type domain struct {
 	domains do.Domains
 }
