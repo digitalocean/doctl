@@ -58,9 +58,8 @@ func Domain() *Command {
 	}
 	cmd.AddCommand(cmdRecord)
 
-	cmdRecordList := CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", Writer,
+	CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", Writer,
 		aliasOpt("ls"), displayerType(&domainRecord{}), docCategories("domain"))
-	AddStringFlag(cmdRecordList, doctl.ArgDomainName, "", "", "Domain name")
 
 	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "create record", Writer,
 		aliasOpt("c"), displayerType(&domainRecord{}), docCategories("domain"))

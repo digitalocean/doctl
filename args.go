@@ -30,8 +30,6 @@ const (
 	ArgActionType = "action-type"
 	// ArgCommandWait is a wait for a droplet to be created argument.
 	ArgCommandWait = "wait"
-	// ArgDomainName is a domain name argument.
-	ArgDomainName = "domain-name"
 	// ArgDropletID is a droplet id argument.
 	ArgDropletID = "droplet-id"
 	// ArgDropletIDs is a list of droplet IDs.
