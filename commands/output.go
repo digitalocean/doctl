@@ -246,6 +246,7 @@ func (d *droplet) ColMap() map[string]string {
 		"Memory": "Memory", "VCPUs": "VCPUs", "Disk": "Disk",
 		"Region": "Region", "Image": "Image", "Status": "Status",
 		"Tags": "Tags", "Features": "Features", "Volumes": "Volumes",
+		"SizeSlug": "Size Slug",
 	}
 }
 
@@ -264,6 +265,7 @@ func (d *droplet) KV() []map[string]interface{} {
 			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
 			"Region": d.Region.Slug, "Image": image, "Status": d.Status,
 			"Tags": tags, "Features": features, "Volumes": volumes,
+			"SizeSlug": d.SizeSlug,
 		}
 		out = append(out, m)
 	}
