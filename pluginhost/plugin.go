@@ -22,6 +22,7 @@ import (
 
 	"github.com/natefinch/pie"
 	"github.com/spf13/viper"
+	"github.com/digitalocean/doctl"
 )
 
 // Host is an object consumers can retrieve doit information from.
@@ -44,7 +45,7 @@ func NewHost(pluginPath string) (*Host, error) {
 // Call a method on the plugin.
 func (h *Host) Call(method string, args ...string) (string, error) {
 	opts := &CallOptions{
-		AccessToken: viper.GetString("access-token"),
+		AccessToken: viper.GetString(doctl.ArgAccessToken),
 		Args:        args,
 	}
 

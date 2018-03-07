@@ -24,15 +24,16 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/digitalocean/doctl"
 )
 
 // ErrUnknownTerminal signies an unknown terminal. It is returned when doit
 // can't ascertain the current terminal type with requesting an auth token.
 var ErrUnknownTerminal = errors.New("unknown terminal")
 
-// retrieveUserTokenFunc is a function that can retrieve a token. By default,
+// retrieveUserTokenFromCommandLine is a function that can retrieve a token. By default,
 // it will prompt the user. In test, you can replace this with code that returns the appropriate response.
-var retrieveUserTokenFunc = func() (string, error) {
+func retrieveUserTokenFromCommandLine() (string, error) {
 	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
 		return "", ErrUnknownTerminal
 	}
@@ -63,39 +64,47 @@ func Auth() *Command {
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunAuthInit, "init", "initialize configuration", Writer, false, docCategories("auth"))
+	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "initialize configuration", Writer, false, docCategories("auth"))
 
 	return cmd
 }
 
 // RunAuthInit initializes the doctl config. Configuration is stored in $XDG_CONFIG_HOME/doctl. On Unix, if
 // XDG_CONFIG_HOME is not set, use $HOME/.config. On Windows use %APPDATA%/doctl/config.
-func RunAuthInit(c *CmdConfig) error {
-	in, err := retrieveUserTokenFunc()
-	if err != nil {
-		return fmt.Errorf("unable to read DigitalOcean access token: %s", err)
-	}
+func RunAuthInit( retrieveUserTokenFunc func() (string, error) ) func (c *CmdConfig) error {
+	return func(c * CmdConfig) error {
+		token := viper.GetString(doctl.ArgAccessToken)
 
-	token := strings.TrimSpace(in)
+		if token == "" {
+			in, err := retrieveUserTokenFunc()
+			if err != nil {
+				return fmt.Errorf("unable to read DigitalOcean access token: %s", err)
+			}
+			token = strings.TrimSpace(in)
+		} else {
+			fmt.Fprintf(c.Out,"Using token [%v]", token)
+			fmt.Fprintln(c.Out)
+		}
 
-	viper.Set("access-token", string(token))
+		viper.Set(doctl.ArgAccessToken, string(token))
 
-	fmt.Fprintln(c.Out)
-	fmt.Fprint(c.Out, "Validating token... ")
-
-	// need to initial the godo client since we've changed the configuration.
-	if err := c.initServices(c); err != nil {
-		return fmt.Errorf("unable to initialize DigitalOcean API client with new token: %s", err)
-	}
-
-	if _, err := c.Account().Get(); err != nil {
-		fmt.Fprintln(c.Out, "invalid token")
 		fmt.Fprintln(c.Out)
-		return fmt.Errorf("unable to use supplied token to access API: %s", err)
+		fmt.Fprint(c.Out, "Validating token... ")
+
+		// need to initial the godo client since we've changed the configuration.
+		if err := c.initServices(c); err != nil {
+			return fmt.Errorf("unable to initialize DigitalOcean API client with new token: %s", err)
+		}
+
+		if _, err := c.Account().Get(); err != nil {
+			fmt.Fprintln(c.Out, "invalid token")
+			fmt.Fprintln(c.Out)
+			return fmt.Errorf("unable to use supplied token to access API: %s", err)
+		}
+
+		fmt.Fprintln(c.Out, "OK")
+		fmt.Fprintln(c.Out)
+
+		return writeConfig()
 	}
-
-	fmt.Fprintln(c.Out, "OK")
-	fmt.Fprintln(c.Out)
-
-	return writeConfig()
 }

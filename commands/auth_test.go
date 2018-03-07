@@ -20,6 +20,9 @@ import (
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/stretchr/testify/assert"
+	"errors"
+	"github.com/spf13/viper"
+	"github.com/digitalocean/doctl"
 )
 
 func TestAuthCommand(t *testing.T) {
@@ -29,14 +32,13 @@ func TestAuthCommand(t *testing.T) {
 }
 
 func TestAuthInit(t *testing.T) {
-	rtf := retrieveUserTokenFunc
 	cfw := cfgFileWriter
+	viper.Set(doctl.ArgAccessToken, nil);
 	defer func() {
-		retrieveUserTokenFunc = rtf
 		cfgFileWriter = cfw
 	}()
 
-	retrieveUserTokenFunc = func() (string, error) {
+	retrieveUserTokenFunc := func() (string, error) {
 		return "valid-token", nil
 	}
 
@@ -45,7 +47,29 @@ func TestAuthInit(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.account.On("Get").Return(&do.Account{}, nil)
 
-		err := RunAuthInit(config)
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestAuthInitWithProvidedToken(t *testing.T) {
+	cfw := cfgFileWriter
+	viper.Set(doctl.ArgAccessToken, "valid-token");
+	defer func() {
+		cfgFileWriter = cfw
+		viper.Set(doctl.ArgAccessToken, nil);
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "", errors.New("should not have called this")
+	}
+
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.account.On("Get").Return(&do.Account{}, nil)
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
 	})
 }

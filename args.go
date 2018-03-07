@@ -14,6 +14,8 @@ limitations under the License.
 package doctl
 
 const (
+	// ArgAccessToken is the access token to be used for the operations
+	ArgAccessToken = "access-token"
 	// ArgActionID is an action id argument.
 	ArgActionID = "action-id"
 	// ArgActionAfter is an action after argument.

@@ -47,9 +47,9 @@ var (
 	// DoitVersion is doit's version.
 	DoitVersion = Version{
 		Major: 1,
-		Minor: 0,
-		Patch: 0,
-		Label: "dev",
+		Minor: 7,
+		Patch: 2,
+		Label: "stable",
 	}
 
 	// Build is doit's build tag.
@@ -171,7 +171,7 @@ var _ Config = &LiveConfig{}
 
 // GetGodoClient returns a GodoClient.
 func (c *LiveConfig) GetGodoClient(trace bool) (*godo.Client, error) {
-	token := viper.GetString("access-token")
+	token := viper.GetString(ArgAccessToken)
 	if token == "" {
 		return nil, fmt.Errorf("access token is required. (hint: run 'doctl auth init')")
 	}
