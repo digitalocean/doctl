@@ -26,11 +26,11 @@ func configHome() string {
 		if configHome == "" {
 			// If still empty, use the default path
 			userName := os.Getenv("USERNAME")
-			configHome = filepath.Join("C:/", "Users", userName, "AppData", "Local", "doctl", "config")
+			configHome = filepath.Join("C:/", "Users", userName, "AppData", "Local")
 		}
 	}
 
-	return filepath.Join(configHome, "doctl")
+	return filepath.Join(configHome, "doctl", "config")
 }
 
 // legacyConfigCheck is a no-op on windows since go doesn't have a chmod
