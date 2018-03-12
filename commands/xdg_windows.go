@@ -19,14 +19,18 @@ import (
 )
 
 func configHome() string {
-	// is this even a thing on windows?
-	configHome := os.Getenv("XDG_CONFIG_HOME")
+	configHome := os.Getenv("LOCALAPPDATA")
 	if configHome == "" {
-		userName := os.Getenv("USERNAME")
-		configHome = filepath.Join("C:/", "Users", userName, "AppData", "Local", "doctl", "config")
+		// Resort to APPDATA for Windows XP users.
+		configHome = os.Getenv("APPDATA")
+		if configHome == "" {
+			// If still empty, use the default path
+			userName := os.Getenv("USERNAME")
+			configHome = filepath.Join("C:/", "Users", userName, "AppData", "Local")
+		}
 	}
 
-	return configHome
+	return filepath.Join(configHome, "doctl", "config")
 }
 
 // legacyConfigCheck is a no-op on windows since go doesn't have a chmod
