@@ -473,7 +473,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	if force || AskForConfirm("delete droplet(s)") == nil {
+	if force || AskForConfirm(fmt.Sprintf("delete %d droplet(s)", len(c.Args))) == nil {
 
 		fn := func(ids []int) error {
 			for _, id := range ids {
