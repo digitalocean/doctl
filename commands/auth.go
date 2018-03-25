@@ -23,11 +23,9 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/digitalocean/doctl"
 )
 
-// ErrUnknownTerminal signies an unknown terminal. It is returned when doit
+// ErrUnknownTerminal signifies an unknown terminal. It is returned when doit
 // can't ascertain the current terminal type with requesting an auth token.
 var ErrUnknownTerminal = errors.New("unknown terminal")
 
@@ -73,7 +71,7 @@ func Auth() *Command {
 // XDG_CONFIG_HOME is not set, use $HOME/.config. On Windows use %APPDATA%/doctl/config.
 func RunAuthInit( retrieveUserTokenFunc func() (string, error) ) func (c *CmdConfig) error {
 	return func(c * CmdConfig) error {
-		token := viper.GetString(doctl.ArgAccessToken)
+		token := c.getContextAccessToken()
 
 		if token == "" {
 			in, err := retrieveUserTokenFunc()
@@ -86,7 +84,7 @@ func RunAuthInit( retrieveUserTokenFunc func() (string, error) ) func (c *CmdCon
 			fmt.Fprintln(c.Out)
 		}
 
-		viper.Set(doctl.ArgAccessToken, string(token))
+		c.setContextAccessToken(string(token))
 
 		fmt.Fprintln(c.Out)
 		fmt.Fprint(c.Out, "Validating token... ")

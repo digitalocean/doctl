@@ -246,7 +246,7 @@ func NewTestConfig() *TestConfig {
 
 var _ doctl.Config = &TestConfig{}
 
-func (c *TestConfig) GetGodoClient(trace bool) (*godo.Client, error) {
+func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client, error) {
 	return &godo.Client{}, nil
 }
 
