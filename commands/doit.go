@@ -81,11 +81,12 @@ func init() {
 
 	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.config/doctl/config.yaml)")
 	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
-	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", "default", "authentication context name")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
 	DoitCmd.PersistentFlags().StringVarP(&ApiURL, "api-url", "u", "", "Override default API V2 endpoint")
 	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
+
+	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", "", "authentication context name")
 
 	viper.SetEnvPrefix("DIGITALOCEAN")
 	viper.BindEnv(doctl.ArgAccessToken, "DIGITALOCEAN_ACCESS_TOKEN")
@@ -94,8 +95,6 @@ func init() {
 	viper.BindPFlag("api-url", DoitCmd.PersistentFlags().Lookup("api-url"))
 	viper.BindPFlag("output", DoitCmd.PersistentFlags().Lookup("output"))
 	viper.BindEnv("enable-beta", "DIGITALOCEAN_ENABLE_BETA")
-	viper.BindEnv(doctl.ArgContext, "DIGITALOCEAN_CONTEXT")
-	viper.BindPFlag(doctl.ArgContext, DoitCmd.PersistentFlags().Lookup("context"))
 
 	addCommands()
 }
@@ -122,6 +121,7 @@ func initConfig() {
 	}
 
 	viper.SetDefault("output", "text")
+	viper.SetDefault("context", "default")
 }
 
 func findConfig() (string, error) {
@@ -373,8 +373,12 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		},
 
 		getContextAccessToken: func() string {
-			context := viper.GetString("context")
+			context := Context
+			if context == "" {
+				context = viper.GetString("context")
+			}
 			token := ""
+
 			switch context {
 			case "default":
 				token = viper.GetString(doctl.ArgAccessToken)
@@ -388,7 +392,11 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 	},
 
 	setContextAccessToken: func(token string) {
-		context := viper.GetString("context")
+		context := Context
+		if context == "" {
+			context = viper.GetString("context")
+		}
+
 		switch context {
 		case "default":
 			viper.Set(doctl.ArgAccessToken, token)
