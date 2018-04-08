@@ -18,22 +18,23 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/digitalocean/doctl/do"
-	"github.com/stretchr/testify/assert"
 	"errors"
-	"github.com/spf13/viper"
+
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
+	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuthCommand(t *testing.T) {
 	cmd := Auth()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "init")
+	assertCommandNames(t, cmd, "init", "switch")
 }
 
 func TestAuthInit(t *testing.T) {
 	cfw := cfgFileWriter
-	viper.Set(doctl.ArgAccessToken, nil);
+	viper.Set(doctl.ArgAccessToken, nil)
 	defer func() {
 		cfgFileWriter = cfw
 	}()
@@ -54,10 +55,10 @@ func TestAuthInit(t *testing.T) {
 
 func TestAuthInitWithProvidedToken(t *testing.T) {
 	cfw := cfgFileWriter
-	viper.Set(doctl.ArgAccessToken, "valid-token");
+	viper.Set(doctl.ArgAccessToken, "valid-token")
 	defer func() {
 		cfgFileWriter = cfw
-		viper.Set(doctl.ArgAccessToken, nil);
+		viper.Set(doctl.ArgAccessToken, nil)
 	}()
 
 	retrieveUserTokenFunc := func() (string, error) {
