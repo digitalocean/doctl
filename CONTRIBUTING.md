@@ -104,4 +104,4 @@ description to contain all changelog entries for this specific release.
 Also don't forget to update:
 - Dockerfile
 - snapcraft
-- homebrew formula
+- [homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb)
