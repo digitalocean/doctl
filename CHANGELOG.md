@@ -2,6 +2,12 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.8.0] - 2018-04-09
+
+- #295 commands: fix configuration file location for windows xp users - @xmudrii
+- #296 Confirm dialog for deleting by ID now specifies number of droplets to be deleted - @justinbeal
+- #299 Implement context switching, allowing for multiple configured API access keys - @kamaln7
+
 ## [1.7.2] - 2018-03-07
 
 - #186 ssh: windows support for command forwarding - @xmudrii
