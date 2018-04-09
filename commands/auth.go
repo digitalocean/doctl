@@ -24,10 +24,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/digitalocean/doctl"
 )
 
-// ErrUnknownTerminal signies an unknown terminal. It is returned when doit
+// ErrUnknownTerminal signifies an unknown terminal. It is returned when doit
 // can't ascertain the current terminal type with requesting an auth token.
 var ErrUnknownTerminal = errors.New("unknown terminal")
 
@@ -65,15 +64,16 @@ func Auth() *Command {
 	}
 
 	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "initialize configuration", Writer, false, docCategories("auth"))
+	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "writes the auth context permanently to config", Writer, false, docCategories("auth"))
 
 	return cmd
 }
 
 // RunAuthInit initializes the doctl config. Configuration is stored in $XDG_CONFIG_HOME/doctl. On Unix, if
 // XDG_CONFIG_HOME is not set, use $HOME/.config. On Windows use %APPDATA%/doctl/config.
-func RunAuthInit( retrieveUserTokenFunc func() (string, error) ) func (c *CmdConfig) error {
-	return func(c * CmdConfig) error {
-		token := viper.GetString(doctl.ArgAccessToken)
+func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig) error {
+	return func(c *CmdConfig) error {
+		token := c.getContextAccessToken()
 
 		if token == "" {
 			in, err := retrieveUserTokenFunc()
@@ -82,11 +82,11 @@ func RunAuthInit( retrieveUserTokenFunc func() (string, error) ) func (c *CmdCon
 			}
 			token = strings.TrimSpace(in)
 		} else {
-			fmt.Fprintf(c.Out,"Using token [%v]", token)
+			fmt.Fprintf(c.Out, "Using token [%v]", token)
 			fmt.Fprintln(c.Out)
 		}
 
-		viper.Set(doctl.ArgAccessToken, string(token))
+		c.setContextAccessToken(string(token))
 
 		fmt.Fprintln(c.Out)
 		fmt.Fprint(c.Out, "Validating token... ")
@@ -107,4 +107,16 @@ func RunAuthInit( retrieveUserTokenFunc func() (string, error) ) func (c *CmdCon
 
 		return writeConfig()
 	}
+}
+
+func RunAuthSwitch(c *CmdConfig) error {
+	context := Context
+	if context == "" {
+		context = viper.GetString("context")
+	}
+
+	viper.Set("context", context)
+
+	fmt.Printf("Now using context [%s] by default\n", context)
+	return writeConfig()
 }

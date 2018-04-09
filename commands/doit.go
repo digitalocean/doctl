@@ -44,6 +44,9 @@ var DoitCmd = &Command{
 	},
 }
 
+// Context holds the current auth context
+var Context string
+
 // ApiURL holds the API URL to use.
 var ApiURL string
 
@@ -83,6 +86,8 @@ func init() {
 	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
 
+	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", "", "authentication context name")
+
 	viper.SetEnvPrefix("DIGITALOCEAN")
 	viper.BindEnv(doctl.ArgAccessToken, "DIGITALOCEAN_ACCESS_TOKEN")
 	viper.BindPFlag(doctl.ArgAccessToken, DoitCmd.PersistentFlags().Lookup("access-token"))
@@ -116,6 +121,7 @@ func initConfig() {
 	}
 
 	viper.SetDefault("output", "text")
+	viper.SetDefault("context", "default")
 }
 
 func findConfig() (string, error) {
@@ -302,6 +308,8 @@ type CmdConfig struct {
 	Args []string
 
 	initServices func(*CmdConfig) error
+	getContextAccessToken func() string
+	setContextAccessToken func(string)
 
 	// services
 	Keys              func() do.KeysService
@@ -335,7 +343,8 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		Args: args,
 
 		initServices: func(c *CmdConfig) error {
-			godoClient, err := c.Doit.GetGodoClient(Trace)
+			accessToken := c.getContextAccessToken()
+			godoClient, err := c.Doit.GetGodoClient(Trace, accessToken)
 			if err != nil {
 				return fmt.Errorf("unable to initialize DigitalOcean api client: %s", err)
 			}
@@ -362,6 +371,42 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 
 			return nil
 		},
+
+		getContextAccessToken: func() string {
+			context := Context
+			if context == "" {
+				context = viper.GetString("context")
+			}
+			token := ""
+
+			switch context {
+			case "default":
+				token = viper.GetString(doctl.ArgAccessToken)
+			default:
+				contexts := viper.GetStringMapString("auth-contexts")
+
+				token = contexts[context]
+			}
+
+			return token
+	},
+
+	setContextAccessToken: func(token string) {
+		context := Context
+		if context == "" {
+			context = viper.GetString("context")
+		}
+
+		switch context {
+		case "default":
+			viper.Set(doctl.ArgAccessToken, token)
+		default:
+			contexts := viper.GetStringMapString("auth-contexts")
+			contexts[context] = token
+
+			viper.Set("auth-contexts", contexts)
+		}
+	},
 	}
 
 	if initGodo {

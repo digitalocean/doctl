@@ -184,6 +184,12 @@ func withTestClient(t *testing.T, tFn testFn) {
 		// can stub this out, since the return is dictated by the mocks.
 		initServices: func(c *CmdConfig) error { return nil },
 
+		getContextAccessToken: func() string {
+			return viper.GetString(doctl.ArgAccessToken)
+		},
+
+		setContextAccessToken: func(token string) {	},
+
 		Keys:              func() do.KeysService { return &tm.keys },
 		Sizes:             func() do.SizesService { return &tm.sizes },
 		Regions:           func() do.RegionsService { return &tm.regions },
@@ -246,7 +252,7 @@ func NewTestConfig() *TestConfig {
 
 var _ doctl.Config = &TestConfig{}
 
-func (c *TestConfig) GetGodoClient(trace bool) (*godo.Client, error) {
+func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client, error) {
 	return &godo.Client{}, nil
 }
 
