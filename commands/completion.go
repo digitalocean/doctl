@@ -63,9 +63,10 @@ line to your .profile or .bashrc/.zshrc:
 func Completion() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "completion",
-			Short: "completion commands",
-			Long:  completionLong,
+			Use:    "completion",
+			Short:  "completion commands",
+			Long:   completionLong,
+			Hidden: true,
 		},
 		IsIndex: true,
 	}
