@@ -36,25 +36,25 @@ func Firewall() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunFirewallGet, "get <id>", "get firewall", Writer, aliasOpt("g"))
+	CmdBuilder(cmd, RunFirewallGet, "get <id>", "get firewall", Writer, aliasOpt("g"), displayerType(&firewall{}))
 
-	cmdRecordCreate := CmdBuilder(cmd, RunFirewallCreate, "create", "create firewall", Writer, aliasOpt("c"))
-	AddStringFlag(cmdRecordCreate, doctl.ArgFirewallName, "", "", "firewall name", requiredOpt())
-	AddStringFlag(cmdRecordCreate, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,droplet_id:1,droplet_id:2,tag:frontend, use quoted string of space-separated values for multiple rules")
-	AddStringFlag(cmdRecordCreate, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
-	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
-	AddStringSliceFlag(cmdRecordCreate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
+	cmdFirewallCreate := CmdBuilder(cmd, RunFirewallCreate, "create", "create firewall", Writer, aliasOpt("c"), displayerType(&firewall{}))
+	AddStringFlag(cmdFirewallCreate, doctl.ArgFirewallName, "", "", "firewall name", requiredOpt())
+	AddStringFlag(cmdFirewallCreate, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,droplet_id:1,droplet_id:2,tag:frontend, use quoted string of space-separated values for multiple rules")
+	AddStringFlag(cmdFirewallCreate, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
+	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
+	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
 
-	cmdRecordUpdate := CmdBuilder(cmd, RunFirewallUpdate, "update <id>", "update firewall", Writer, aliasOpt("u"))
-	AddStringFlag(cmdRecordUpdate, doctl.ArgFirewallName, "", "", "firewall name", requiredOpt())
-	AddStringFlag(cmdRecordUpdate, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,droplet_id:123, use quoted string of space-separated values for multiple rules")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
-	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
-	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
+	cmdFirewallUpdate := CmdBuilder(cmd, RunFirewallUpdate, "update <id>", "update firewall", Writer, aliasOpt("u"), displayerType(&firewall{}))
+	AddStringFlag(cmdFirewallUpdate, doctl.ArgFirewallName, "", "", "firewall name", requiredOpt())
+	AddStringFlag(cmdFirewallUpdate, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,droplet_id:123, use quoted string of space-separated values for multiple rules")
+	AddStringFlag(cmdFirewallUpdate, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
+	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
+	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
 
-	CmdBuilder(cmd, RunFirewallList, "list", "list firewalls", Writer, aliasOpt("ls"))
+	CmdBuilder(cmd, RunFirewallList, "list", "list firewalls", Writer, aliasOpt("ls"), displayerType(&firewall{}))
 
-	CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "list firewalls by droplet ID", Writer)
+	CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "list firewalls by droplet ID", Writer, displayerType(&firewall{}))
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id>", "delete firewall", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force firewall delete")
