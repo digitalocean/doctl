@@ -43,7 +43,7 @@ You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.
 sudo snap install doctl
 ```
   #### Arch Linux 
-  Arch users not using snaps can install from the (AUR)[https://aur.archlinux.org/packages/doctl-bin/]
+  Arch users not using snaps can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
 
 Support for Windows package managers is on the way.
 
