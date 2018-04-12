@@ -52,7 +52,7 @@ func Firewall() *Command {
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
 
-	CmdBuilder(cmd, RunFirewallList, "list", "list firewalls", Writer, aliasOpt("ls"))
+	CmdBuilder(cmd, RunFirewallList, "list", "list firewalls", Writer, aliasOpt("ls"), displayerType(&firewall{}))
 
 	CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "list firewalls by droplet ID", Writer)
 
