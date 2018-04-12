@@ -166,7 +166,7 @@ func Execute() {
 func addCommands() {
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Auth())
-	DoitCmd.AddCommand(Completion())
+	DoitCmd.AddCommand(Generate())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Version())
 }
@@ -307,7 +307,7 @@ type CmdConfig struct {
 	Out  io.Writer
 	Args []string
 
-	initServices func(*CmdConfig) error
+	initServices          func(*CmdConfig) error
 	getContextAccessToken func() string
 	setContextAccessToken func(string)
 
@@ -389,24 +389,24 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 
 			return token
-	},
+		},
 
-	setContextAccessToken: func(token string) {
-		context := Context
-		if context == "" {
-			context = viper.GetString("context")
-		}
+		setContextAccessToken: func(token string) {
+			context := Context
+			if context == "" {
+				context = viper.GetString("context")
+			}
 
-		switch context {
-		case "default":
-			viper.Set(doctl.ArgAccessToken, token)
-		default:
-			contexts := viper.GetStringMapString("auth-contexts")
-			contexts[context] = token
+			switch context {
+			case "default":
+				viper.Set(doctl.ArgAccessToken, token)
+			default:
+				contexts := viper.GetStringMapString("auth-contexts")
+				contexts[context] = token
 
-			viper.Set("auth-contexts", contexts)
-		}
-	},
+				viper.Set("auth-contexts", contexts)
+			}
+		},
 	}
 
 	if initGodo {
