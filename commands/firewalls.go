@@ -56,7 +56,7 @@ func Firewall() *Command {
 
 	CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "list firewalls by droplet ID", Writer, displayerType(&firewall{}))
 
-	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id>", "delete firewall", Writer, aliasOpt("d", "rm"))
+	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id> [id ...]", "delete firewall", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force firewall delete")
 
 	cmdAddDroplets := CmdBuilder(cmd, RunFirewallAddDroplets, "add-droplets <id>", "add droplets to the firewall", Writer)
@@ -172,20 +172,21 @@ func RunFirewallListByDroplet(c *CmdConfig) error {
 
 // RunFirewallDelete deletes a Firewall by its identifier.
 func RunFirewallDelete(c *CmdConfig) error {
-	if len(c.Args) != 1 {
+	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	fID := c.Args[0]
 
 	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
 	}
 
-	if force || AskForConfirm("delete this Firewall") == nil {
-		fs := c.Firewalls()
-		if err := fs.Delete(fID); err != nil {
-			return err
+	fs := c.Firewalls()
+	if force || AskForConfirm(fmt.Sprintf("delete %d firewall(s)", len(c.Args))) == nil {
+		for _, id := range c.Args {
+			if err := fs.Delete(id); err != nil {
+				return err
+			}
 		}
 	} else {
 		return fmt.Errorf("operation aborted")
