@@ -15,7 +15,10 @@ Available Commands:
 
 Flags:
   -t, --access-token string   API V2 Access Token
+  -u, --api-url string        Override default API V2 endpoint
   -c, --config string         config file (default is $HOME/.config/doctl/config.yaml)
+      --context string        authentication context name
+  -h, --help                  help for doctl
   -o, --output string         output format [text|json] (default "text")
       --trace                 trace api access
   -v, --verbose               verbose output
@@ -136,13 +139,23 @@ Validating token: OK
 
 This will create the necessary directory structure and configuration file to store your credentials.
 
+### Logging in to multiple DigitalOcean accounts
+
+`doctl` allows you to log in to multiple DigitalOcean accounts at the same time and easily switch between them with the use of authentication contexts.
+
+By default, a context named `default` is used. To create a new context, run `doctl auth init --context new-context-name`. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` variable. You will be prompted for your API access token which will be associated with the new context.
+
+To use a non-default context, pass the context name as described above to any `doctl` command. To set a new default context, run `doctl auth switch`. This command will save the current context to the config file and use it for all commands by default if a context is not specified.
+
+The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` variable are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
+
 ## Configuring Default Values
 
 The `doctl` configuration file is used to store your API Access Token as well as the defaults for command flags. If you find yourself using certain flags frequently, you can change their default values to avoid typing them every time. This can be useful when, for example, you want to change the username or port used for SSH.
 
 On OS X and Linux, `doctl`'s configuration file can be found at `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set. Otherwise, the config will be written to `~/.config/doctl/config.yaml`. For Windows users, the config will be available at `%LOCALAPPDATA%/doctl/config/config.yaml`.
 
-The configuration file was automatically created and populated with default properties when you authenticated with `doctl` for the first time. The typical format for a property is `<^>category<^>.<^>command<^>.<^>sub-command<^>.<^>flag<^>: <^>value<^>`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
+The configuration file was automatically created and populated with default properties when you authenticated with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
 
 To change the default SSH user used when connecting to a Droplet with `doctl`, look for the `compute.ssh.ssh-user` property and change the value after the colon. In this example, we changed it to the username **sammy**.
 
