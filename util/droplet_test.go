@@ -1,10 +1,11 @@
 package util
 
 import (
+	"context"
+
 	"golang.org/x/oauth2"
 
 	"github.com/digitalocean/godo"
-	"github.com/digitalocean/godo/context"
 )
 
 func ExampleWaitForActive() {

@@ -1,12 +1,11 @@
 package godo
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
-
-	"github.com/digitalocean/godo/context"
 )
 
 func TestSnapshots_List(t *testing.T) {

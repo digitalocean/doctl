@@ -1,10 +1,9 @@
 package godo
 
 import (
+	"context"
 	"net/http"
 	"path"
-
-	"github.com/digitalocean/godo/context"
 )
 
 const certificatesBasePath = "/v2/certificates"
