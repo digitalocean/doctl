@@ -675,9 +675,12 @@ func (c *certificate) Cols() []string {
 	return []string{
 		"ID",
 		"Name",
+		"DNSNames",
 		"SHA1Fingerprint",
 		"NotAfter",
 		"Created",
+		"Type",
+		"State",
 	}
 }
 
@@ -685,9 +688,12 @@ func (c *certificate) ColMap() map[string]string {
 	return map[string]string{
 		"ID":              "ID",
 		"Name":            "Name",
+		"DNSNames":        "DNS Names",
 		"SHA1Fingerprint": "SHA-1 Fingerprint",
 		"NotAfter":        "Expiration Date",
 		"Created":         "Created At",
+		"Type":            "Type",
+		"State":           "State",
 	}
 }
 
@@ -698,9 +704,12 @@ func (c *certificate) KV() []map[string]interface{} {
 		o := map[string]interface{}{
 			"ID":              c.ID,
 			"Name":            c.Name,
+			"DNSNames":        fmt.Sprintf(strings.Join(c.DNSNames, ",")),
 			"SHA1Fingerprint": c.SHA1Fingerprint,
 			"NotAfter":        c.NotAfter,
 			"Created":         c.Created,
+			"Type":            c.Type,
+			"State":           c.State,
 		}
 		out = append(out, o)
 	}
