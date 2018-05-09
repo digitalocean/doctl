@@ -147,12 +147,16 @@ const (
 
 	// ArgCertificateName is a name of the certificate.
 	ArgCertificateName = "name"
+	// ArgCertificateDNSNames is a list of DNS names.
+	ArgCertificateDNSNames = "dns-names"
 	// ArgPrivateKeyPath is a path to a private key for the certificate.
 	ArgPrivateKeyPath = "private-key-path"
 	// ArgLeafCertificatePath is a path to a certificate leaf.
 	ArgLeafCertificatePath = "leaf-certificate-path"
 	// ArgCertificateChainPath is a path to a certificate chain.
 	ArgCertificateChainPath = "certificate-chain-path"
+	// ArgCertificateType is a certificate type.
+	ArgCertificateType = "type"
 
 	// ArgLoadBalancerName is a name of the load balancer.
 	ArgLoadBalancerName = "name"

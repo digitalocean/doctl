@@ -2,6 +2,11 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.8.1] - 2018-05-09
+
+### Added
+- #313 Add support for Let's Encrypt certificates - @viola
+
 ## [1.8.0] - 2018-04-09
 
 - #295 commands: fix configuration file location for windows xp users - @xmudrii

@@ -38,9 +38,11 @@ func Certificate() *Command {
 
 	cmdCertificateCreate := CmdBuilder(cmd, RunCertificateCreate, "create", "create new certificate", Writer, aliasOpt("c"))
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateName, "", "", "certificate name", requiredOpt())
-	AddStringFlag(cmdCertificateCreate, doctl.ArgPrivateKeyPath, "", "", "path to a private key for the certificate", requiredOpt())
-	AddStringFlag(cmdCertificateCreate, doctl.ArgLeafCertificatePath, "", "", "path to a certificate leaf", requiredOpt())
+	AddStringSliceFlag(cmdCertificateCreate, doctl.ArgCertificateDNSNames, "", []string{}, "comma-separated list of domain names, required for lets_encrypt certificate")
+	AddStringFlag(cmdCertificateCreate, doctl.ArgPrivateKeyPath, "", "", "path to a private key for the certificate, required for custom certificate")
+	AddStringFlag(cmdCertificateCreate, doctl.ArgLeafCertificatePath, "", "", "path to a certificate leaf, required for custom certificate")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "", "path to a certificate chain")
+	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "", "certificate type, possible values: custom or lets_encrypt")
 
 	CmdBuilder(cmd, RunCertificateList, "list", "list certificates", Writer, aliasOpt("ls"))
 
@@ -74,14 +76,34 @@ func RunCertificateCreate(c *CmdConfig) error {
 		return err
 	}
 
+	domainList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgCertificateDNSNames)
+	if err != nil {
+		return err
+	}
+
+	cType, err := c.Doit.GetString(c.NS, doctl.ArgCertificateType)
+	if err != nil {
+		return err
+	}
+
+	r := &godo.CertificateRequest{
+		Name:     name,
+		DNSNames: domainList,
+		Type:     cType,
+	}
+
 	pkPath, err := c.Doit.GetString(c.NS, doctl.ArgPrivateKeyPath)
 	if err != nil {
 		return err
 	}
 
-	pc, err := readInputFromFile(pkPath)
-	if err != nil {
-		return err
+	if len(pkPath) > 0 {
+		pc, err := readInputFromFile(pkPath)
+		if err != nil {
+			return err
+		}
+
+		r.PrivateKey = pc
 	}
 
 	lcPath, err := c.Doit.GetString(c.NS, doctl.ArgLeafCertificatePath)
@@ -89,15 +111,13 @@ func RunCertificateCreate(c *CmdConfig) error {
 		return err
 	}
 
-	lc, err := readInputFromFile(lcPath)
-	if err != nil {
-		return err
-	}
+	if len(lcPath) > 0 {
+		lc, err := readInputFromFile(lcPath)
+		if err != nil {
+			return err
+		}
 
-	r := &godo.CertificateRequest{
-		Name:            name,
-		PrivateKey:      pc,
-		LeafCertificate: lc,
+		r.LeafCertificate = lc
 	}
 
 	ccPath, err := c.Doit.GetString(c.NS, doctl.ArgCertificateChainPath)

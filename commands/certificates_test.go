@@ -53,67 +53,108 @@ func TestCertificateGet(t *testing.T) {
 }
 
 func TestCertificatesCreate(t *testing.T) {
-	privateKey := "-----BEGIN PRIVATE KEY-----"
-	privateKeyPath := filepath.Join(os.TempDir(), "pkey.pem")
-	pkErr := ioutil.WriteFile(privateKeyPath, []byte(privateKey), 0600)
-	assert.NoError(t, pkErr)
-	defer os.Remove(privateKeyPath)
+	tests := []struct {
+		desc           string
+		certName       string
+		DNSNames       []string
+		privateKeyPath string
+		certLeafPath   string
+		certChainPath  string
+		certType       string
+		certificate    godo.CertificateRequest
+	}{
+		{
+			desc:           "creates custom certificate",
+			certName:       "custom-cert",
+			privateKeyPath: filepath.Join(os.TempDir(), "cer-key.crt"),
+			certLeafPath:   filepath.Join(os.TempDir(), "leaf-cer.crt"),
+			certChainPath:  filepath.Join(os.TempDir(), "cer-chain.crt"),
+			certificate: godo.CertificateRequest{
+				Name:             "custom-cert",
+				PrivateKey:       "-----BEGIN PRIVATE KEY-----",
+				LeafCertificate:  "-----BEGIN CERTIFICATE-----",
+				CertificateChain: "-----BEGIN CERTIFICATE-----",
+			},
+		},
 
-	cert := "-----BEGIN CERTIFICATE-----"
-	certPath := filepath.Join(os.TempDir(), "cert.crt")
-	certErr := ioutil.WriteFile(certPath, []byte(cert), 0600)
-	assert.NoError(t, certErr)
-	defer os.Remove(certPath)
+		{
+			desc:           "creates custom cerftificate without specifying chain",
+			certName:       "cert-without-chain",
+			privateKeyPath: filepath.Join(os.TempDir(), "cer-key.crt"),
+			certLeafPath:   filepath.Join(os.TempDir(), "leaf-cer.crt"),
+			certificate: godo.CertificateRequest{
+				Name:             "cert-without-chain",
+				PrivateKey:       "-----BEGIN PRIVATE KEY-----",
+				LeafCertificate:  "-----BEGIN CERTIFICATE-----",
+				CertificateChain: "",
+			},
+		},
+		{
+			desc:     "creates lets_encrypt cerftificate",
+			certName: "lets-encrypt-cert",
+			DNSNames: []string{"sampledomain.org", "api.sampledomain.org"},
+			certType: "lets_encrypt",
+			certificate: godo.CertificateRequest{
+				Name:     "lets-encrypt-cert",
+				DNSNames: []string{"sampledomain.org", "api.sampledomain.org"},
+				Type:     "lets_encrypt",
+			},
+		},
+	}
 
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		r := godo.CertificateRequest{
-			Name:             "web-cert-01",
-			PrivateKey:       privateKey,
-			LeafCertificate:  cert,
-			CertificateChain: cert,
-		}
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.privateKeyPath != "" {
+					pkErr := ioutil.WriteFile(test.privateKeyPath, []byte("-----BEGIN PRIVATE KEY-----"), 0600)
+					assert.NoError(t, pkErr)
 
-		tm.certificates.On("Create", &r).Return(&testCertificate, nil)
+					defer os.Remove(test.privateKeyPath)
+				}
 
-		config.Doit.Set(config.NS, doctl.ArgCertificateName, "web-cert-01")
-		config.Doit.Set(config.NS, doctl.ArgPrivateKeyPath, privateKeyPath)
-		config.Doit.Set(config.NS, doctl.ArgLeafCertificatePath, certPath)
-		config.Doit.Set(config.NS, doctl.ArgCertificateChainPath, certPath)
+				if test.certLeafPath != "" {
+					certErr := ioutil.WriteFile(test.certLeafPath, []byte("-----BEGIN CERTIFICATE-----"), 0600)
+					assert.NoError(t, certErr)
 
-		err := RunCertificateCreate(config)
-		assert.NoError(t, err)
-	})
-}
+					defer os.Remove(test.certLeafPath)
+				}
 
-func TestCertificatesCreateWithoutACertificateChain(t *testing.T) {
-	privateKey := "-----BEGIN PRIVATE KEY-----"
-	privateKeyPath := filepath.Join(os.TempDir(), "pkey.pem")
-	pkErr := ioutil.WriteFile(privateKeyPath, []byte(privateKey), 0600)
-	assert.NoError(t, pkErr)
-	defer os.Remove(privateKeyPath)
+				if test.certChainPath != "" {
+					certErr := ioutil.WriteFile(test.certChainPath, []byte("-----BEGIN CERTIFICATE-----"), 0600)
+					assert.NoError(t, certErr)
 
-	cert := "-----BEGIN CERTIFICATE-----"
-	certPath := filepath.Join(os.TempDir(), "cert.crt")
-	certErr := ioutil.WriteFile(certPath, []byte(cert), 0600)
-	assert.NoError(t, certErr)
-	defer os.Remove(certPath)
+					defer os.Remove(test.certChainPath)
+				}
 
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		r := godo.CertificateRequest{
-			Name:            "web-cert-01",
-			PrivateKey:      privateKey,
-			LeafCertificate: cert,
-		}
+				tm.certificates.On("Create", &test.certificate).Return(&testCertificate, nil)
 
-		tm.certificates.On("Create", &r).Return(&testCertificate, nil)
+				config.Doit.Set(config.NS, doctl.ArgCertificateName, test.certName)
 
-		config.Doit.Set(config.NS, doctl.ArgCertificateName, "web-cert-01")
-		config.Doit.Set(config.NS, doctl.ArgPrivateKeyPath, privateKeyPath)
-		config.Doit.Set(config.NS, doctl.ArgLeafCertificatePath, certPath)
+				if test.privateKeyPath != "" {
+					config.Doit.Set(config.NS, doctl.ArgPrivateKeyPath, test.privateKeyPath)
+				}
 
-		err := RunCertificateCreate(config)
-		assert.NoError(t, err)
-	})
+				if test.certLeafPath != "" {
+					config.Doit.Set(config.NS, doctl.ArgLeafCertificatePath, test.certLeafPath)
+				}
+
+				if test.certChainPath != "" {
+					config.Doit.Set(config.NS, doctl.ArgCertificateChainPath, test.certChainPath)
+				}
+
+				if test.DNSNames != nil {
+					config.Doit.Set(config.NS, doctl.ArgCertificateDNSNames, test.DNSNames)
+				}
+
+				if test.certType != "" {
+					config.Doit.Set(config.NS, doctl.ArgCertificateType, test.certType)
+				}
+
+				err := RunCertificateCreate(config)
+				assert.NoError(t, err)
+			})
+		})
+	}
 }
 
 func TestCertificateList(t *testing.T) {
