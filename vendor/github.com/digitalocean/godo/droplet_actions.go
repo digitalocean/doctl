@@ -1,11 +1,10 @@
 package godo
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
-
-	"github.com/digitalocean/godo/context"
 )
 
 // ActionRequest reprents DigitalOcean Action Request

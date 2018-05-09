@@ -1,5 +1,15 @@
 # Change Log
 
+## [v1.2.0] - 2018-05-08
+
+- #166 Remove support for Go 1.6 - @iheanyi
+- #165 Add support for Let's Encrypt Certificates - @viola
+
+## [v1.1.3] - 2018-03-07
+
+- #156 Handle non-json errors from the API - @aknuds1
+- #158 Update droplet example to use latest instance type - @dan-v
+
 ## [v1.1.2] - 2018-03-06
 
 - #157 storage: list volumes should handle only name or only region params - @andrewsykim

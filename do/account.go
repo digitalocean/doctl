@@ -15,7 +15,7 @@ package do
 
 import (
 	"github.com/digitalocean/godo"
-	"github.com/digitalocean/godo/context"
+	"context"
 )
 
 // Account is a wrapper for godo.Account.

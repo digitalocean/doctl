@@ -15,7 +15,7 @@ package do
 
 import (
 	"github.com/digitalocean/godo"
-	"github.com/digitalocean/godo/context"
+	"context"
 )
 
 // Image is a werapper for godo.Image

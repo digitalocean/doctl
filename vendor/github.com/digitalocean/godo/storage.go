@@ -1,12 +1,10 @@
 package godo
 
 import (
+	"context"
 	"fmt"
-	"time"
-
 	"net/http"
-
-	"github.com/digitalocean/godo/context"
+	"time"
 )
 
 const (

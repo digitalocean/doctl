@@ -26,8 +26,9 @@
 
 [[projects]]
   name = "github.com/digitalocean/godo"
-  packages = [".","context","util"]
-  revision = "54622b1d85b2f0f4949cbd7e0637e04fc1f56ad9"
+  packages = [".","util"]
+  revision = "970b46ffe46bacda668dd58a8a1aba9d775b8895"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -198,7 +199,7 @@
 
 [[projects]]
   name = "golang.org/x/net"
-  packages = ["context","context/ctxhttp"]
+  packages = ["context"]
   revision = "cbbbe2bc0f2efdd2afb318d93f1eadb19350e4a3"
 
 [[projects]]
@@ -237,6 +238,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "67f5bbe2fd9a197e18083e7a6f1b04b4e48bbf8c6092e5a0a51b240d79e3ac1a"
+  inputs-digest = "1787f89ee12ce8855e7e91b55611236bd0524c3c95254e94fe19de0b6e56da98"
   solver-name = "gps-cdcl"
   solver-version = 1

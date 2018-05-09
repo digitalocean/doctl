@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,8 +12,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/digitalocean/godo/context"
 )
 
 var (
