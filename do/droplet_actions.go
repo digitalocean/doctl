@@ -47,7 +47,6 @@ type DropletActionsService interface {
 	EnableIPv6ByTag(string) (Actions, error)
 	EnablePrivateNetworking(int) (*Action, error)
 	EnablePrivateNetworkingByTag(string) (Actions, error)
-	Upgrade(int) (*Action, error)
 	Get(int, int) (*Action, error)
 	GetByURI(string) (*Action, error)
 }
@@ -215,11 +214,6 @@ func (das *dropletActionsService) EnablePrivateNetworking(id int) (*Action, erro
 func (das *dropletActionsService) EnablePrivateNetworkingByTag(tag string) (Actions, error) {
 	a, _, err := das.client.DropletActions.EnablePrivateNetworkingByTag(context.TODO(), tag)
 	return das.handleTagActionResponse(a, err)
-}
-
-func (das *dropletActionsService) Upgrade(id int) (*Action, error) {
-	a, _, err := das.client.DropletActions.Upgrade(context.TODO(), id)
-	return das.handleActionResponse(a, err)
 }
 
 func (das *dropletActionsService) Get(id int, actionID int) (*Action, error) {

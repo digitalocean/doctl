@@ -108,11 +108,6 @@ func DropletAction() *Command {
 		displayerType(&action{}), docCategories("droplet"))
 	AddBoolFlag(cmdDropletActionEnablePrivateNetworking, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
-	cmdDropletActionUpgrade := CmdBuilder(cmd, RunDropletActionUpgrade,
-		"upgrade <droplet-id>", "upgrade droplet", Writer,
-		displayerType(&action{}), docCategories("droplet"))
-	AddBoolFlag(cmdDropletActionUpgrade, doctl.ArgCommandWait, "", false, "Wait for action to complete")
-
 	cmdDropletActionRestore := CmdBuilder(cmd, RunDropletActionRestore,
 		"restore <droplet-id>", "restore backup", Writer,
 		displayerType(&action{}), docCategories("droplet"))
@@ -335,25 +330,6 @@ func RunDropletActionEnablePrivateNetworking(c *CmdConfig) error {
 		}
 
 		a, err := das.EnablePrivateNetworking(id)
-		return a, err
-	}
-
-	return performAction(c, fn)
-}
-
-// RunDropletActionUpgrade upgrades a droplet.
-func RunDropletActionUpgrade(c *CmdConfig) error {
-	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
-		}
-		id, err := strconv.Atoi(c.Args[0])
-
-		if err != nil {
-			return nil, err
-		}
-
-		a, err := das.Upgrade(id)
 		return a, err
 	}
 

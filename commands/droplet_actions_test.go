@@ -23,7 +23,7 @@ import (
 func TestDropletActionCommand(t *testing.T) {
 	cmd := DropletAction()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "change-kernel", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot", "upgrade")
+	assertCommandNames(t, cmd, "change-kernel", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
 }
 
 func TestDropletActionsChangeKernel(t *testing.T) {
@@ -226,17 +226,6 @@ func TestDropletActionsSnapshot(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSnapshotName, "name")
 
 		err := RunDropletActionSnapshot(config)
-		assert.NoError(t, err)
-	})
-}
-
-func TestDropletActionsUpgrade(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.dropletActions.On("Upgrade", 1).Return(&testAction, nil)
-
-		config.Args = append(config.Args, "1")
-
-		err := RunDropletActionUpgrade(config)
 		assert.NoError(t, err)
 	})
 }
