@@ -23,7 +23,7 @@ import (
 func TestDropletActionCommand(t *testing.T) {
 	cmd := DropletAction()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "change-kernel", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
+	assertCommandNames(t, cmd, "change-kernel", "enable-backups", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
 }
 
 func TestDropletActionsChangeKernel(t *testing.T) {
@@ -36,6 +36,17 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 		err := RunDropletActionChangeKernel(config)
 		assert.NoError(t, err)
 	})
+}
+func TestDropletActionsEnableBackups(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.dropletActions.On("EnableBackups", 1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, "1")
+
+		err := RunDropletActionEnableBackups(config)
+		assert.NoError(t, err)
+	})
+
 }
 func TestDropletActionsDisableBackups(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {

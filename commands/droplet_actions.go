@@ -63,6 +63,11 @@ func DropletAction() *Command {
 		aliasOpt("g"), displayerType(&action{}), docCategories("droplet"))
 	AddIntFlag(cmdDropletActionGet, doctl.ArgActionID, "", 0, "Action ID", requiredOpt())
 
+	cmdDropletActionEnableBackups := CmdBuilder(cmd, RunDropletActionEnableBackups,
+		"enable-backups <droplet-id>", "enable backups", Writer,
+		displayerType(&action{}), docCategories("droplet"))
+	AddBoolFlag(cmdDropletActionEnableBackups, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+
 	cmdDropletActionDisableBackups := CmdBuilder(cmd, RunDropletActionDisableBackups,
 		"disable-backups <droplet-id>", "disable backups", Writer,
 		displayerType(&action{}), docCategories("droplet"))
@@ -165,6 +170,24 @@ func RunDropletActionGet(c *CmdConfig) error {
 		}
 
 		a, err := das.Get(dropletID, actionID)
+		return a, err
+	}
+
+	return performAction(c, fn)
+}
+
+// RunDropletActionEnableBackups disables backups for a droplet.
+func RunDropletActionEnableBackups(c *CmdConfig) error {
+	fn := func(das do.DropletActionsService) (*do.Action, error) {
+		if len(c.Args) != 1 {
+			return nil, doctl.NewMissingArgsErr(c.NS)
+		}
+		id, err := strconv.Atoi(c.Args[0])
+		if err != nil {
+			return nil, err
+		}
+
+		a, err := das.EnableBackups(id)
 		return a, err
 	}
 
