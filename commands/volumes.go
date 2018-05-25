@@ -45,6 +45,8 @@ func Volume() *Command {
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeDesc, "", "", "Volume description")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "Volume region",
 		requiredOpt())
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemType, "", "", "Volume filesystem type (ext4 or xfs)")
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "Volume filesystem label")
 
 	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "delete a volume", Writer,
 		aliasOpt("rm"))
@@ -145,12 +147,23 @@ func RunVolumeCreate(c *CmdConfig) error {
 
 	}
 
+	fsType, err := c.Doit.GetString(c.NS, doctl.ArgVolumeFilesystemType)
+	if err != nil {
+		return err
+	}
+	fsLabel, err := c.Doit.GetString(c.NS, doctl.ArgVolumeFilesystemLabel)
+	if err != nil {
+		return err
+	}
+
 	var createVolume godo.VolumeCreateRequest
 
 	createVolume.Name = name
 	createVolume.SizeGigaBytes = int64(size / (1 << 30))
 	createVolume.Description = desc
 	createVolume.Region = region
+	createVolume.FilesystemType = fsType
+	createVolume.FilesystemLabel = fsLabel
 
 	al := c.Volumes()
 
