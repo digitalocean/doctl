@@ -25,8 +25,8 @@
     ".",
     "util"
   ]
-  revision = "970b46ffe46bacda668dd58a8a1aba9d775b8895"
-  version = "v1.2.0"
+  revision = "51f18c0e42941703dc13d15bc0ad69aef6a49830"
+  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -281,6 +281,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "24938c14fd5830cda7bae547517c8b3f73db92d028b20e2551b49878d6556ce7"
+  inputs-digest = "ba0256b25abf3e3006977241fd348dbf5d01efaa4de095ee639959244ce9bf93"
   solver-name = "gps-cdcl"
   solver-version = 1

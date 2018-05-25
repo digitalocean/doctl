@@ -24,7 +24,9 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 				"description": "my description",
 				"size_gigabytes": 100,
 				"droplet_ids": [10],
-				"created_at": "2002-10-02T15:00:00.05Z"
+				"created_at": "2002-10-02T15:00:00.05Z",
+				"filesystem_type": "",
+				"filesystem_label": ""
 			},
 			{
 				"user_id": 42,
@@ -33,7 +35,9 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 				"name": "my other volume",
 				"description": "my other description",
 				"size_gigabytes": 100,
-				"created_at": "2012-10-03T15:00:01.05Z"
+				"created_at": "2012-10-03T15:00:01.05Z",
+				"filesystem_type": "ext4",
+				"filesystem_label": "my-volume"
 			}
 		],
 		"links": {
@@ -68,12 +72,14 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 			CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
 		},
 		{
-			Region:        &Region{Slug: "nyc3"},
-			ID:            "96d414c6-295e-4e3a-ac59-eb9456c1e1d1",
-			Name:          "my other volume",
-			Description:   "my other description",
-			SizeGigaBytes: 100,
-			CreatedAt:     time.Date(2012, 10, 03, 15, 00, 01, 50000000, time.UTC),
+			Region:          &Region{Slug: "nyc3"},
+			ID:              "96d414c6-295e-4e3a-ac59-eb9456c1e1d1",
+			Name:            "my other volume",
+			Description:     "my other description",
+			SizeGigaBytes:   100,
+			CreatedAt:       time.Date(2012, 10, 03, 15, 00, 01, 50000000, time.UTC),
+			FilesystemType:  "ext4",
+			FilesystemLabel: "my-volume",
 		},
 	}
 	if !reflect.DeepEqual(volumes, expected) {
@@ -85,12 +91,14 @@ func TestStorageVolumes_Get(t *testing.T) {
 	setup()
 	defer teardown()
 	want := &Volume{
-		Region:        &Region{Slug: "nyc3"},
-		ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
-		Name:          "my volume",
-		Description:   "my description",
-		SizeGigaBytes: 100,
-		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+		Region:          &Region{Slug: "nyc3"},
+		ID:              "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+		Name:            "my volume",
+		Description:     "my description",
+		SizeGigaBytes:   100,
+		CreatedAt:       time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+		FilesystemType:  "xfs",
+		FilesystemLabel: "my-vol",
 	}
 	jBlob := `{
 		"volume":{
@@ -100,7 +108,9 @@ func TestStorageVolumes_Get(t *testing.T) {
 			"name": "my volume",
 			"description": "my description",
 			"size_gigabytes": 100,
-			"created_at": "2002-10-02T15:00:00.05Z"
+			"created_at": "2002-10-02T15:00:00.05Z",
+			"filesystem_type": "xfs",
+			"filesystem_label": "my-vol"
 		},
 		"links": {
 	    "pages": {
@@ -141,7 +151,9 @@ func TestStorageVolumes_ListVolumesByName(t *testing.T) {
 					"description": "my description",
 					"size_gigabytes": 100,
 					"droplet_ids": [10],
-					"created_at": "2002-10-02T15:00:00.05Z"
+					"created_at": "2002-10-02T15:00:00.05Z",
+					"filesystem_type": "",
+					"filesystem_label": ""
 				}
 			],
 			"links": {},
@@ -197,7 +209,9 @@ func TestStorageVolumes_ListVolumesByRegion(t *testing.T) {
 					"description": "my description",
 					"size_gigabytes": 100,
 					"droplet_ids": [10],
-					"created_at": "2002-10-02T15:00:00.05Z"
+					"created_at": "2002-10-02T15:00:00.05Z",
+					"filesystem_type": "",
+					"filesystem_label": ""
 				}
 			],
 			"links": {},
@@ -253,7 +267,9 @@ func TestStorageVolumes_ListVolumesByNameAndRegion(t *testing.T) {
 					"description": "my description",
 					"size_gigabytes": 100,
 					"droplet_ids": [10],
-					"created_at": "2002-10-02T15:00:00.05Z"
+					"created_at": "2002-10-02T15:00:00.05Z",
+					"filesystem_type": "",
+					"filesystem_label": ""
 				}
 			],
 			"links": {},
@@ -323,6 +339,65 @@ func TestStorageVolumes_Create(t *testing.T) {
 			"description": "my description",
 			"size_gigabytes": 100,
 			"created_at": "2002-10-02T15:00:00.05Z"
+		},
+		"links": {}
+	}`
+
+	mux.HandleFunc("/v2/volumes", func(w http.ResponseWriter, r *http.Request) {
+		v := new(VolumeCreateRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodPost)
+		if !reflect.DeepEqual(v, createRequest) {
+			t.Errorf("Request body = %+v, expected %+v", v, createRequest)
+		}
+
+		fmt.Fprint(w, jBlob)
+	})
+
+	got, _, err := client.Storage.CreateVolume(ctx, createRequest)
+	if err != nil {
+		t.Errorf("Storage.CreateVolume returned error: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Storage.CreateVolume returned %+v, want %+v", got, want)
+	}
+}
+
+func TestStorageVolumes_CreateFormatted(t *testing.T) {
+	setup()
+	defer teardown()
+
+	createRequest := &VolumeCreateRequest{
+		Region:         "nyc3",
+		Name:           "my volume",
+		Description:    "my description",
+		SizeGigaBytes:  100,
+		FilesystemType: "xfs",
+	}
+
+	want := &Volume{
+		Region:         &Region{Slug: "nyc3"},
+		ID:             "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+		Name:           "my volume",
+		Description:    "my description",
+		SizeGigaBytes:  100,
+		CreatedAt:      time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+		FilesystemType: "xfs",
+	}
+	jBlob := `{
+		"volume":{
+			"region": {"slug":"nyc3"},
+			"id": "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
+			"name": "my volume",
+			"description": "my description",
+			"size_gigabytes": 100,
+			"created_at": "2002-10-02T15:00:00.05Z",
+			"filesystem_type": "xfs",
+			"filesystem_label": ""
 		},
 		"links": {}
 	}`
