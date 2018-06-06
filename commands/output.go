@@ -592,14 +592,14 @@ func (a *volume) JSON(out io.Writer) error {
 
 func (a *volume) Cols() []string {
 	return []string{
-		"ID", "Name", "Size", "Region", "Droplet IDs",
+		"ID", "Name", "Size", "Region", "DropletIDs",
 	}
 
 }
 
 func (a *volume) ColMap() map[string]string {
 	return map[string]string{
-		"ID": "ID", "Name": "Name", "Size": "Size", "Region": "Region", "Droplet IDs": "Droplet IDs",
+		"ID": "ID", "Name": "Name", "Size": "Size", "Region": "Region", "DropletIDs": "Droplet IDs",
 	}
 
 }
@@ -614,9 +614,9 @@ func (a *volume) KV() []map[string]interface{} {
 			"Size":   strconv.FormatInt(volume.SizeGigaBytes, 10) + " GiB",
 			"Region": volume.Region.Slug,
 		}
-		m["Droplet IDs"] = ""
+		m["DropletIDs"] = ""
 		if len(volume.DropletIDs) != 0 {
-			m["Droplet IDs"] = fmt.Sprintf("%v", volume.DropletIDs)
+			m["DropletIDs"] = fmt.Sprintf("%v", volume.DropletIDs)
 		}
 		out = append(out, m)
 
