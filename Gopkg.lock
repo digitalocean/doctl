@@ -2,11 +2,6 @@
 
 
 [[projects]]
-  name = "github.com/BurntSushi/toml"
-  packages = ["."]
-  revision = "5c4df71dfe9ac89ef6287afc05e4c1b16ae65a1e"
-
-[[projects]]
   name = "github.com/blang/semver"
   packages = ["."]
   revision = "aea32c919a18e5ef4537bbd283ff29594b1b0165"
@@ -26,9 +21,12 @@
 
 [[projects]]
   name = "github.com/digitalocean/godo"
-  packages = [".","util"]
-  revision = "970b46ffe46bacda668dd58a8a1aba9d775b8895"
-  version = "v1.2.0"
+  packages = [
+    ".",
+    "util"
+  ]
+  revision = "51f18c0e42941703dc13d15bc0ad69aef6a49830"
+  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -41,8 +39,17 @@
   revision = "7a5857db0b2752a436d8461d88c42dea0ee191c0"
 
 [[projects]]
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   name = "github.com/gobwas/glob"
-  packages = [".","match"]
+  packages = [
+    ".",
+    "match"
+  ]
   revision = "3222d377756fc0940b549f57a038bc9ba2716628"
 
 [[projects]]
@@ -57,7 +64,18 @@
 
 [[projects]]
   name = "github.com/hashicorp/hcl"
-  packages = [".","hcl/ast","hcl/parser","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
+  packages = [
+    ".",
+    "hcl/ast",
+    "hcl/parser",
+    "hcl/printer",
+    "hcl/scanner",
+    "hcl/strconv",
+    "hcl/token",
+    "json/parser",
+    "json/scanner",
+    "json/token"
+  ]
   revision = "1c284ec98f4b398443cbabb0d9197f7f4cc0077c"
 
 [[projects]]
@@ -71,16 +89,6 @@
   name = "github.com/kr/fs"
   packages = ["."]
   revision = "2788f0dbd16903de03cb8186e5c7d97b69ad387b"
-
-[[projects]]
-  name = "github.com/kr/pretty"
-  packages = ["."]
-  revision = "e6ac2fc51e89a3249e82157fa0bb7a18ef9dd5bb"
-
-[[projects]]
-  name = "github.com/kr/text"
-  packages = ["."]
-  revision = "bb797dc4fb8320488f47bf11de07a733d7233e1f"
 
 [[projects]]
   name = "github.com/magiconair/properties"
@@ -119,6 +127,12 @@
   revision = "c55201b036063326c5b1b89ccfe45a184973d073"
 
 [[projects]]
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  revision = "acdc4509485b587f5e675510c4f2c63e90ff68a8"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/pkg/sftp"
   packages = ["."]
   revision = "e84cc8c755ca39b7b64f510fe1fffc1b51f210a5"
@@ -147,17 +161,25 @@
 
 [[projects]]
   name = "github.com/spf13/afero"
-  packages = [".","mem","sftp"]
+  packages = [
+    ".",
+    "mem",
+    "sftp"
+  ]
   revision = "28789ef4b78c82371d454bb13c56ef641bf50c6e"
 
 [[projects]]
   name = "github.com/spf13/cast"
   packages = ["."]
-  revision = "ee7b3e0353166ab1f3a605294ac8cd2b77953778"
+  revision = "8965335b8c7107321228e3e3702cab9832751bac"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/spf13/cobra"
-  packages = [".","doc"]
+  packages = [
+    ".",
+    "doc"
+  ]
   revision = "65a708cee0a4424f4e353d031ce440643e312f92"
 
 [[projects]]
@@ -173,7 +195,8 @@
 [[projects]]
   name = "github.com/spf13/viper"
   packages = ["."]
-  revision = "c975dc1b4eacf4ec7fdbf0873638de5d090ba323"
+  revision = "b5e8006cbee93ec955a89ab31e0e3ce3204f3736"
+  version = "v1.0.2"
 
 [[projects]]
   branch = "master"
@@ -183,7 +206,10 @@
 
 [[projects]]
   name = "github.com/stretchr/testify"
-  packages = ["assert","mock"]
+  packages = [
+    "assert",
+    "mock"
+  ]
   revision = "4d4bfba8f1d1027c4fdbe371823030df51419987"
 
 [[projects]]
@@ -194,7 +220,12 @@
 
 [[projects]]
   name = "golang.org/x/crypto"
-  packages = ["curve25519","ssh","ssh/agent","ssh/terminal"]
+  packages = [
+    "curve25519",
+    "ssh",
+    "ssh/agent",
+    "ssh/terminal"
+  ]
   revision = "1f22c0103821b9390939b6776727195525381532"
 
 [[projects]]
@@ -204,7 +235,10 @@
 
 [[projects]]
   name = "golang.org/x/oauth2"
-  packages = [".","internal"]
+  packages = [
+    ".",
+    "internal"
+  ]
   revision = "8a57ed94ffd43444c0879fe75701732a38afc985"
 
 [[projects]]
@@ -215,19 +249,28 @@
 
 [[projects]]
   name = "golang.org/x/text"
-  packages = ["internal/gen","internal/triegen","internal/ucd","transform","unicode/cldr","unicode/norm"]
+  packages = [
+    "internal/gen",
+    "internal/triegen",
+    "internal/ucd",
+    "transform",
+    "unicode/cldr",
+    "unicode/norm"
+  ]
   revision = "07b9a78963006a15c538ec5175243979025fa7a8"
 
 [[projects]]
   name = "google.golang.org/appengine"
-  packages = ["internal","internal/base","internal/datastore","internal/log","internal/remote_api","internal/urlfetch","urlfetch"]
+  packages = [
+    "internal",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch"
+  ]
   revision = "6a436539be38c296a8075a871cc536686b458371"
-
-[[projects]]
-  name = "gopkg.in/fsnotify.v1"
-  packages = ["."]
-  revision = "8611c35ab31c1c28aa903d33cf8b6e44a399b09e"
-  version = "v1.2.9"
 
 [[projects]]
   branch = "v2"
@@ -238,6 +281,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1787f89ee12ce8855e7e91b55611236bd0524c3c95254e94fe19de0b6e56da98"
+  inputs-digest = "ba0256b25abf3e3006977241fd348dbf5d01efaa4de095ee639959244ce9bf93"
   solver-name = "gps-cdcl"
   solver-version = 1
