@@ -142,6 +142,10 @@ const (
 	ArgVolumeDesc = "desc"
 	// ArgVolumeRegion is the region of a volume.
 	ArgVolumeRegion = "region"
+	// ArgVolumeFilesystemType is the filesystem type for a volume.
+	ArgVolumeFilesystemType = "fs-type"
+	// ArgVolumeFilesystemLabel is the filesystem label for a volume.
+	ArgVolumeFilesystemLabel = "fs-label"
 	// ArgVolumeList is the IDs of many volumes.
 	ArgVolumeList = "volumes"
 

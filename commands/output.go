@@ -592,14 +592,19 @@ func (a *volume) JSON(out io.Writer) error {
 
 func (a *volume) Cols() []string {
 	return []string{
-		"ID", "Name", "Size", "Region", "DropletIDs",
+		"ID", "Name", "Size", "Region", "Filesystem Type", "Filesystem Label", "Droplet IDs",
 	}
-
 }
 
 func (a *volume) ColMap() map[string]string {
 	return map[string]string{
-		"ID": "ID", "Name": "Name", "Size": "Size", "Region": "Region", "DropletIDs": "Droplet IDs",
+		"ID":               "ID",
+		"Name":             "Name",
+		"Size":             "Size",
+		"Region":           "Region",
+		"Filesystem Type":  "Filesystem Type",
+		"Filesystem Label": "Filesystem Label",
+		"Droplet IDs":      "Droplet IDs",
 	}
 
 }
@@ -609,10 +614,12 @@ func (a *volume) KV() []map[string]interface{} {
 	for _, volume := range a.volumes {
 
 		m := map[string]interface{}{
-			"ID":     volume.ID,
-			"Name":   volume.Name,
-			"Size":   strconv.FormatInt(volume.SizeGigaBytes, 10) + " GiB",
-			"Region": volume.Region.Slug,
+			"ID":               volume.ID,
+			"Name":             volume.Name,
+			"Size":             strconv.FormatInt(volume.SizeGigaBytes, 10) + " GiB",
+			"Region":           volume.Region.Slug,
+			"Filesystem Type":  volume.FilesystemType,
+			"Filesystem Label": volume.FilesystemLabel,
 		}
 		m["DropletIDs"] = ""
 		if len(volume.DropletIDs) != 0 {
