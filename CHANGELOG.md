@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.8.3] - 2018-06-13
+
+- #326 Fix required arguments (#325). - @adamwg
+
 ## [1.8.2] - 2018-06-12
 
 - #323 Add support for formatted volumes - @adamwg
