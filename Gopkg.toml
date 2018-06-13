@@ -41,10 +41,13 @@
 
 [[constraint]]
   name = "github.com/spf13/viper"
-  version = "v1.0.2"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
+
+[[constraint]]
+  name = "github.com/davecgh/go-spew"
+  version = "v1.1.0"
 
 [[constraint]]
   name = "golang.org/x/crypto"
@@ -55,8 +58,3 @@
 [[constraint]]
   branch = "v2"
   name = "gopkg.in/yaml.v2"
-
-# Required by viper
-[[override]]
-  name = "github.com/spf13/cast"
-  version = "v1.2.0"
