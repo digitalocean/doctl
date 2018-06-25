@@ -47,9 +47,9 @@ var (
 	// DoitVersion is doit's version.
 	DoitVersion = Version{
 		Major: 1,
-		Minor: 7,
-		Patch: 2,
-		Label: "stable",
+		Minor: 8,
+		Patch: 3,
+		Label: "dev",
 	}
 
 	// Build is doit's build tag.
