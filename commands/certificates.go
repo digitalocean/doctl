@@ -92,46 +92,48 @@ func RunCertificateCreate(c *CmdConfig) error {
 		Type:     cType,
 	}
 
-	pkPath, err := c.Doit.GetString(c.NS, doctl.ArgPrivateKeyPath)
-	if err != nil {
-		return err
-	}
-
-	if len(pkPath) > 0 {
-		pc, err := readInputFromFile(pkPath)
+	if cType == "custom" || cType == "" {
+		pkPath, err := c.Doit.GetString(c.NS, doctl.ArgPrivateKeyPath)
 		if err != nil {
 			return err
 		}
 
-		r.PrivateKey = pc
-	}
+		if len(pkPath) > 0 {
+			pc, err := readInputFromFile(pkPath)
+			if err != nil {
+				return err
+			}
 
-	lcPath, err := c.Doit.GetString(c.NS, doctl.ArgLeafCertificatePath)
-	if err != nil {
-		return err
-	}
+			r.PrivateKey = pc
+		}
 
-	if len(lcPath) > 0 {
-		lc, err := readInputFromFile(lcPath)
+		lcPath, err := c.Doit.GetString(c.NS, doctl.ArgLeafCertificatePath)
 		if err != nil {
 			return err
 		}
 
-		r.LeafCertificate = lc
-	}
+		if len(lcPath) > 0 {
+			lc, err := readInputFromFile(lcPath)
+			if err != nil {
+				return err
+			}
 
-	ccPath, err := c.Doit.GetString(c.NS, doctl.ArgCertificateChainPath)
-	if err != nil {
-		return err
-	}
+			r.LeafCertificate = lc
+		}
 
-	if len(ccPath) > 0 {
-		cc, err := readInputFromFile(ccPath)
+		ccPath, err := c.Doit.GetString(c.NS, doctl.ArgCertificateChainPath)
 		if err != nil {
 			return err
 		}
 
-		r.CertificateChain = cc
+		if len(ccPath) > 0 {
+			cc, err := readInputFromFile(ccPath)
+			if err != nil {
+				return err
+			}
+
+			r.CertificateChain = cc
+		}
 	}
 
 	cs := c.Certificates()
