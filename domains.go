@@ -52,7 +52,7 @@ type domainsRoot struct {
 // DomainCreateRequest respresents a request to create a domain.
 type DomainCreateRequest struct {
 	Name      string `json:"name"`
-	IPAddress string `json:"ip_address"`
+	IPAddress string `json:"ip_address,omitempty"`
 }
 
 // DomainRecordRoot is the root of an individual Domain Record response
