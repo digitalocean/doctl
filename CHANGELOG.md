@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.4.0] - 2018-08-22
+
+- #170 Add support for Spaces CDN - @sunny-b
+
 ## [v1.3.0] - 2018-05-24
 
 - #170 Add support for volume formatting - @adamwg
