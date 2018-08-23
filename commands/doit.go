@@ -129,19 +129,24 @@ func findConfig() (string, error) {
 		return cfgFile, nil
 	}
 
-	legacyConfigPath := filepath.Join(homeDir(), ".doctlcfg")
-	if _, err := os.Stat(legacyConfigPath); err == nil {
-		msg := fmt.Sprintf("Configuration detected at %q. Please move .doctlcfg to %s",
-			legacyConfigPath, configPath())
-		warn(msg)
+	if homeDir() != "" {
+		legacyConfigPath := filepath.Join(homeDir(), ".doctlcfg")
+		if _, err := os.Stat(legacyConfigPath); err == nil {
+			msg := fmt.Sprintf("Configuration detected at %q. Please move .doctlcfg to %s",
+				legacyConfigPath, configPath())
+			warn(msg)
+		}
 	}
 
-	legacyXDGPath := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "config.yaml")
-	if _, err := os.Stat(legacyXDGPath); err == nil {
-		msg := fmt.Sprintf("Configuration detected at %q. Please move config.yaml to %s",
-			legacyXDGPath, configPath())
-		warn(msg)
+	if os.Getenv("XDG_CONFIG_HOME") != "" {
+		legacyXDGPath := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "config.yaml")
+		if _, err := os.Stat(legacyXDGPath); err == nil {
+			msg := fmt.Sprintf("Configuration detected at %q. Please move config.yaml to %s",
+				legacyXDGPath, configPath())
+			warn(msg)
+		}
 	}
+
 	ch := configHome()
 	if err := os.MkdirAll(ch, 0755); err != nil {
 		return "", err
