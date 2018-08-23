@@ -164,7 +164,7 @@ func (c CDNServiceOp) FlushCache(ctx context.Context, id string, flushCacheReque
 		return nil, NewArgError("id", "cannot be an empty string")
 	}
 
-	path := fmt.Sprintf("%s/%s", cdnBasePath, id)
+	path := fmt.Sprintf("%s/%s/cache", cdnBasePath, id)
 
 	req, err := c.client.NewRequest(ctx, http.MethodDelete, path, flushCacheRequest)
 	if err != nil {
