@@ -157,7 +157,7 @@ func TestFirewallAddDroplets(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		fID := "ab06e011-6dd1-4034-9293-201f71aba299"
 		dropletIDs := []int{1, 2}
-		tm.firewalls.On("AddDroplets", fID, dropletIDs).Return(nil)
+		tm.firewalls.On("AddDroplets", fID, dropletIDs[0], dropletIDs[1]).Return(nil)
 
 		config.Args = append(config.Args, fID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
@@ -171,7 +171,7 @@ func TestFirewallRemoveDroplets(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		fID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
 		dropletIDs := []int{1}
-		tm.firewalls.On("RemoveDroplets", fID, dropletIDs).Return(nil)
+		tm.firewalls.On("RemoveDroplets", fID, dropletIDs[0]).Return(nil)
 
 		config.Args = append(config.Args, fID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1"})
@@ -185,7 +185,7 @@ func TestFirewallAddTags(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		fID := "ab06e011-6dd1-4034-9293-201f71aba299"
 		tags := []string{"frontend", "backend"}
-		tm.firewalls.On("AddTags", fID, tags).Return(nil)
+		tm.firewalls.On("AddTags", fID, tags[0], tags[1]).Return(nil)
 
 		config.Args = append(config.Args, fID)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"frontend", "backend"})
@@ -199,7 +199,7 @@ func TestFirewallRemoveTags(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		fID := "ab06e011-6dd1-4034-9293-201f71aba299"
 		tags := []string{"backend"}
-		tm.firewalls.On("RemoveTags", fID, tags).Return(nil)
+		tm.firewalls.On("RemoveTags", fID, tags[0]).Return(nil)
 
 		config.Args = append(config.Args, fID)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"backend"})

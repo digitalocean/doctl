@@ -52,7 +52,7 @@ type domainsRoot struct {
 // DomainCreateRequest respresents a request to create a domain.
 type DomainCreateRequest struct {
 	Name      string `json:"name"`
-	IPAddress string `json:"ip_address"`
+	IPAddress string `json:"ip_address,omitempty"`
 }
 
 // DomainRecordRoot is the root of an individual Domain Record response
@@ -72,7 +72,7 @@ type DomainRecord struct {
 	Type     string `json:"type,omitempty"`
 	Name     string `json:"name,omitempty"`
 	Data     string `json:"data,omitempty"`
-	Priority int    `json:"priority,omitempty"`
+	Priority int    `json:"priority"`
 	Port     int    `json:"port,omitempty"`
 	TTL      int    `json:"ttl,omitempty"`
 	Weight   int    `json:"weight,omitempty"`
@@ -85,7 +85,7 @@ type DomainRecordEditRequest struct {
 	Type     string `json:"type,omitempty"`
 	Name     string `json:"name,omitempty"`
 	Data     string `json:"data,omitempty"`
-	Priority int    `json:"priority,omitempty"`
+	Priority int    `json:"priority"`
 	Port     int    `json:"port,omitempty"`
 	TTL      int    `json:"ttl,omitempty"`
 	Weight   int    `json:"weight,omitempty"`
