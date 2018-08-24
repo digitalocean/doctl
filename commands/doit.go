@@ -186,6 +186,7 @@ func computeCmd() *Command {
 	}
 
 	cmd.AddCommand(Actions())
+	cmd.AddCommand(CDN())
 	cmd.AddCommand(Certificate())
 	cmd.AddCommand(DropletAction())
 	cmd.AddCommand(Droplet())
@@ -312,7 +313,7 @@ type CmdConfig struct {
 	Out  io.Writer
 	Args []string
 
-	initServices func(*CmdConfig) error
+	initServices          func(*CmdConfig) error
 	getContextAccessToken func() string
 	setContextAccessToken func(string)
 
@@ -336,6 +337,7 @@ type CmdConfig struct {
 	Snapshots         func() do.SnapshotsService
 	Certificates      func() do.CertificatesService
 	Firewalls         func() do.FirewallsService
+	CDNs              func() do.CDNsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -373,6 +375,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Certificates = func() do.CertificatesService { return do.NewCertificatesService(godoClient) }
 			c.LoadBalancers = func() do.LoadBalancersService { return do.NewLoadBalancersService(godoClient) }
 			c.Firewalls = func() do.FirewallsService { return do.NewFirewallsService(godoClient) }
+			c.CDNs = func() do.CDNsService { return do.NewCDNsService(godoClient) }
 
 			return nil
 		},
@@ -394,24 +397,24 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 
 			return token
-	},
+		},
 
-	setContextAccessToken: func(token string) {
-		context := Context
-		if context == "" {
-			context = viper.GetString("context")
-		}
+		setContextAccessToken: func(token string) {
+			context := Context
+			if context == "" {
+				context = viper.GetString("context")
+			}
 
-		switch context {
-		case "default":
-			viper.Set(doctl.ArgAccessToken, token)
-		default:
-			contexts := viper.GetStringMapString("auth-contexts")
-			contexts[context] = token
+			switch context {
+			case "default":
+				viper.Set(doctl.ArgAccessToken, token)
+			default:
+				contexts := viper.GetStringMapString("auth-contexts")
+				contexts[context] = token
 
-			viper.Set("auth-contexts", contexts)
-		}
-	},
+				viper.Set("auth-contexts", contexts)
+			}
+		},
 	}
 
 	if initGodo {

@@ -163,6 +163,7 @@ type tcMocks struct {
 	certificates      domocks.CertificatesService
 	loadBalancers     domocks.LoadBalancersService
 	firewalls         domocks.FirewallsService
+	cdns              domocks.CDNsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -188,7 +189,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 			return viper.GetString(doctl.ArgAccessToken)
 		},
 
-		setContextAccessToken: func(token string) {	},
+		setContextAccessToken: func(token string) {},
 
 		Keys:              func() do.KeysService { return &tm.keys },
 		Sizes:             func() do.SizesService { return &tm.sizes },
@@ -209,6 +210,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Certificates:      func() do.CertificatesService { return &tm.certificates },
 		LoadBalancers:     func() do.LoadBalancersService { return &tm.loadBalancers },
 		Firewalls:         func() do.FirewallsService { return &tm.firewalls },
+		CDNs:              func() do.CDNsService { return &tm.cdns },
 	}
 
 	tFn(config, tm)
@@ -232,6 +234,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.snapshots.AssertExpectations(t))
 	assert.True(t, tm.loadBalancers.AssertExpectations(t))
 	assert.True(t, tm.firewalls.AssertExpectations(t))
+	assert.True(t, tm.cdns.AssertExpectations(t))
 }
 
 type TestConfig struct {
