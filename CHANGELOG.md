@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.9.0] - 2018-08-27
+
+- #343 Add support for Spaces CDN. - @sunny-b
+
 ## [1.8.3] - 2018-06-13
 
 - #326 Fix required arguments (#325). - @adamwg

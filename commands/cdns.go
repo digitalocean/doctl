@@ -53,7 +53,7 @@ func CDN() *Command {
 
 	cmdCDNFlushCache := CmdBuilder(cmd, RunCDNFlushCache, "flush <cdn-id>", "flush cdn cache", Writer,
 		aliasOpt("fc"))
-	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", nil, "cdn files",
+	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", []string{}, "cdn files",
 		requiredOpt())
 
 	return cmd
@@ -154,7 +154,7 @@ func RunCDNDelete(c *CmdConfig) error {
 	return fmt.Errorf("operation aborted")
 }
 
-// RunCDNFlushCache flushes the cache of an individual cdn ttl
+// RunCDNFlushCache flushes the cache of an individual cdn
 func RunCDNFlushCache(c *CmdConfig) error {
 	if len(c.Args) == 0 {
 		return doctl.NewMissingArgsErr(c.NS)

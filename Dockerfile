@@ -1,6 +1,6 @@
 FROM alpine:3.5
 
-ENV DOCTL_VERSION=1.8.2
+ENV DOCTL_VERSION=1.9.0
 
 RUN apk add --no-cache curl
 

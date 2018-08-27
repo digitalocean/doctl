@@ -45,7 +45,7 @@ You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.
 ```
 sudo snap install doctl
 ```
-  #### Arch Linux 
+  #### Arch Linux
   Arch users not using snaps can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
 
 Support for Windows package managers is on the way.
@@ -58,25 +58,25 @@ For example, with `wget`:
 
 ```
 cd ~
-wget https://github.com/digitalocean/doctl/releases/download/v1.8.3/doctl-1.8.3-linux-amd64.tar.gz
+wget https://github.com/digitalocean/doctl/releases/download/v1.9.0/doctl-1.9.0-linux-amd64.tar.gz
 ```
 
 Or with `curl`:
 
 ```
 cd ~
-curl -OL https://github.com/digitalocean/doctl/releases/download/v1.8.3/doctl-1.8.3-linux-amd64.tar.gz
+curl -OL https://github.com/digitalocean/doctl/releases/download/v1.9.0/doctl-1.9.0-linux-amd64.tar.gz
 ```
 
 Extract the binary. On GNU/Linux or OS X systems, you can use `tar`.
 
 ```
-tar xf ~/doctl-1.8.3-linux-amd64.tar.gz
+tar xf ~/doctl-1.9.0-linux-amd64.tar.gz
 ```
 
 Or download and extract with this oneliner:
 ```
-curl -sL https://github.com/digitalocean/doctl/releases/download/v1.8.3/doctl-1.8.3-linux-amd64.tar.gz | tar -xzv
+curl -sL https://github.com/digitalocean/doctl/releases/download/v1.9.0/doctl-1.9.0-linux-amd64.tar.gz | tar -xzv
 ```
 
 On Windows systems, you should be able to double-click the zip archive to extract the `doctl` executable.
@@ -245,6 +245,6 @@ doctl compute ssh <user>@<droplet-name>
 
 * [How To Use Doctl, the Official DigitalOcean Command-Line Client](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
 * [How To Work with DigitalOcean Load Balancers Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-work-with-digitalocean-load-balancers-using-doctl)
-* [How To Secure Web Server Infrastructure With DigitalOcean Cloud Firewalls Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-secure-web-server-infrastructure-with-digitalocean-cloud-firewalls-using-doctl) 
-* [How To Work with DigitalOcean Block Storage Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-work-with-digitalocean-block-storage-using-doctl) 
+* [How To Secure Web Server Infrastructure With DigitalOcean Cloud Firewalls Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-secure-web-server-infrastructure-with-digitalocean-cloud-firewalls-using-doctl)
+* [How To Work with DigitalOcean Block Storage Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-work-with-digitalocean-block-storage-using-doctl)
 * [doctl Releases](https://github.com/digitalocean/doctl/releases)

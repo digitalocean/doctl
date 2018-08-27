@@ -47,8 +47,8 @@ var (
 	// DoitVersion is doit's version.
 	DoitVersion = Version{
 		Major: 1,
-		Minor: 8,
-		Patch: 3,
+		Minor: 9,
+		Patch: 0,
 		Label: "dev",
 	}
 
@@ -269,7 +269,7 @@ func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
-		if viper.GetInt(nskey) <= 0 {
+		if viper.GetInt(nskey) == 0 {
 			return 0, NewMissingArgsErr(nskey)
 		}
 	}
@@ -286,7 +286,7 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
-		if viper.GetStringSlice(nskey) == nil || viper.GetStringSlice(nskey)[0] == "[]" {
+		if emptyStringSlice(viper.GetStringSlice(nskey)) {
 			return nil, NewMissingArgsErr(nskey)
 		}
 	}
@@ -308,4 +308,9 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	}
 
 	return out, nil
+}
+
+// This is needed because an empty StringSlice flag returns `["[]"]`
+func emptyStringSlice(s []string) bool {
+	return len(s) == 1 && s[0] == "[]"
 }
