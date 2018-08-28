@@ -5,7 +5,7 @@
 
 [[constraint]]
   name = "github.com/digitalocean/godo"
-  version = "1.4.0"
+  version = "1.4.1"
 
 [[constraint]]
   name = "github.com/dustin/go-humanize"

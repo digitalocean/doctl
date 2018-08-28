@@ -149,6 +149,11 @@ const (
 	// ArgVolumeList is the IDs of many volumes.
 	ArgVolumeList = "volumes"
 
+	// ArgCDNTTL is a cdn ttl argument
+	ArgCDNTTL = "ttl"
+	// ArgCDNFiles is a cdn files argument
+	ArgCDNFiles = "files"
+
 	// ArgCertificateName is a name of the certificate.
 	ArgCertificateName = "name"
 	// ArgCertificateDNSNames is a list of DNS names.
