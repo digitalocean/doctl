@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/digitalocean/doctl"
@@ -48,13 +49,11 @@ func CDN() *Command {
 
 	cmdCDNUpdate := CmdBuilder(cmd, RunCDNUpdateTTL, "update <cdn-id>", "update a cdn", Writer,
 		aliasOpt("u"), displayerType(&cdn{}))
-	AddIntFlag(cmdCDNUpdate, doctl.ArgCDNTTL, "", 0, "cdn ttl",
-		requiredOpt())
+	AddIntFlag(cmdCDNUpdate, doctl.ArgCDNTTL, "", 3600, "cdn ttl")
 
 	cmdCDNFlushCache := CmdBuilder(cmd, RunCDNFlushCache, "flush <cdn-id>", "flush cdn cache", Writer,
 		aliasOpt("fc"))
-	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", []string{}, "cdn files",
-		requiredOpt())
+	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", []string{"*"}, "cdn files")
 
 	return cmd
 }
@@ -96,6 +95,9 @@ func RunCDNCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if ttl <= 0 {
+		return errors.New("ttl cannot be zero or negative")
+	}
 
 	createCDN := &godo.CDNCreateRequest{
 		Origin: origin,
@@ -124,6 +126,9 @@ func RunCDNUpdateTTL(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if ttl <= 0 {
+		return errors.New("ttl cannot be zero or negative")
+	}
 
 	updateCDN := &godo.CDNUpdateRequest{TTL: uint32(ttl)}
 
@@ -146,7 +151,7 @@ func RunCDNDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("delete volume") == nil {
+	if force || AskForConfirm("delete cdn") == nil {
 		id := c.Args[0]
 		return c.CDNs().Delete(id)
 	}

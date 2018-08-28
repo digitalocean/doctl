@@ -109,6 +109,16 @@ func TestCDNsCreate_RequiredArguments(t *testing.T) {
 	})
 }
 
+func TestCDNsCreate_ZeroFail(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, cdnOrigin)
+		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 0)
+
+		err := RunCDNCreate(config)
+		assert.Error(t, err)
+	})
+}
+
 func TestCDNsUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		cdnur := &godo.CDNUpdateRequest{
@@ -124,8 +134,11 @@ func TestCDNsUpdate(t *testing.T) {
 	})
 }
 
-func TestCDNsUpdate_RequiredArguments(t *testing.T) {
+func TestCDNsUpdate_ZeroFail(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, cdnID)
+		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 0)
+
 		err := RunCDNUpdateTTL(config)
 		assert.Error(t, err)
 	})
@@ -152,11 +165,11 @@ func TestCDNsDelete_RequiredArguments(t *testing.T) {
 
 func TestCDNsFlushCache(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		flushReq := &godo.CDNFlushCacheRequest{Files: []string{}}
+		flushReq := &godo.CDNFlushCacheRequest{Files: []string{"*"}}
 		tm.cdns.On("FlushCache", cdnID, flushReq).Return(nil)
 
 		config.Args = append(config.Args, cdnID)
-		config.Doit.Set(config.NS, doctl.ArgCDNFiles, []string{})
+		config.Doit.Set(config.NS, doctl.ArgCDNFiles, []string{"*"})
 
 		err := RunCDNFlushCache(config)
 		assert.NoError(t, err)
