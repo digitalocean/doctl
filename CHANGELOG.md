@@ -1,5 +1,10 @@
 # Change Log
 
+## [v1.4.2] - 2018-08-30
+
+- #178 Allowing creating domain records with weight of 0 - @TFaga
+- #177 Adding `VolumeLimit` to account - @lxfontes
+
 ## [v1.4.1] - 2018-08-23
 
 - #176 Fix cdn flush cache API endpoint - @sunny-b
