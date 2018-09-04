@@ -25,18 +25,26 @@ var (
 		{
 			"name": "testing-1",
 			"resources": {
+				"count": 0,
 				"droplets": {
 					"count": 0,
 					"last_tagged": null
+				},
+				"images": {
+					"count": 0
 				}
 			}
 		},
 		{
 			"name": "testing-2",
 			"resources": {
+				"count": 0,
 				"droplets": {
 					"count": 0,
 					"last_tagged": null
+				},
+				"images": {
+					"count": 0
 				}
 			}
 		}
@@ -60,9 +68,13 @@ var (
 		"tag": {
 			"name": "testing-1",
 			"resources": {
+				"count": 0,
 				"droplets": {
 					"count": 0,
 					"last_tagged": null
+				},
+				"images": {
+					"count": 0
 				}
 			}
 		}
@@ -74,8 +86,11 @@ var (
 		"tag": {
 			"name": "testing-1",
 			"resources": {
+				"count": 2,
+				"last_tagged_uri": "https://api.digitalocean.com/v2/droplets/1",
 				"droplets": {
 					"count": 1,
+					"last_tagged_uri": "https://api.digitalocean.com/v2/droplets/1",
 					"last_tagged": {
 						"id": 1,
 						"name": "test.example.com",
@@ -157,6 +172,10 @@ var (
 						"tag-2"
 						]
 					}
+				},
+				"images": {
+					"count": 1,
+					"last_tagged_uri": "https://api.digitalocean.com/v2/images/1"
 				}
 			}
 		}
@@ -178,8 +197,8 @@ func TestTags_List(t *testing.T) {
 		t.Errorf("Tags.List returned error: %v", err)
 	}
 
-	expected := []Tag{{Name: "testing-1", Resources: &TaggedResources{Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}}},
-		{Name: "testing-2", Resources: &TaggedResources{Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}}}}
+	expected := []Tag{{Name: "testing-1", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}}},
+		{Name: "testing-2", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}}}}
 	if !reflect.DeepEqual(tags, expected) {
 		t.Errorf("Tags.List returned %+v, expected %+v", tags, expected)
 	}
@@ -239,12 +258,32 @@ func TestTags_Get(t *testing.T) {
 		t.Errorf("Tags.Get return an incorrect name, got %+v, expected %+v", tag.Name, "testing-1")
 	}
 
+	if tag.Resources.Count != 2 {
+		t.Errorf("Tags.Get return an incorrect resource count, got %+v, expected %+v", tag.Resources.Count, 2)
+	}
+
+	if tag.Resources.LastTaggedURI != "https://api.digitalocean.com/v2/droplets/1" {
+		t.Errorf("Tags.Get return an incorrect last tagged uri %+v, expected %+v", tag.Resources.LastTaggedURI, "https://api.digitalocean.com/v2/droplets/1")
+	}
+
 	if tag.Resources.Droplets.Count != 1 {
 		t.Errorf("Tags.Get return an incorrect droplet resource count, got %+v, expected %+v", tag.Resources.Droplets.Count, 1)
 	}
 
 	if tag.Resources.Droplets.LastTagged.ID != 1 {
 		t.Errorf("Tags.Get return an incorrect last tagged droplet %+v, expected %+v", tag.Resources.Droplets.LastTagged.ID, 1)
+	}
+
+	if tag.Resources.Droplets.LastTaggedURI != "https://api.digitalocean.com/v2/droplets/1" {
+		t.Errorf("Tags.Get return an incorrect last tagged droplet uri %+v, expected %+v", tag.Resources.Droplets.LastTaggedURI, "https://api.digitalocean.com/v2/droplets/1")
+	}
+
+	if tag.Resources.Images.Count != 1 {
+		t.Errorf("Tags.Get return an incorrect image resource count, got %+v, expected %+v", tag.Resources.Images.Count, 1)
+	}
+
+	if tag.Resources.Images.LastTaggedURI != "https://api.digitalocean.com/v2/images/1" {
+		t.Errorf("Tags.Get return an incorrect last tagged droplet uri %+v, expected %+v", tag.Resources.Images.LastTaggedURI, "https://api.digitalocean.com/v2/images/1")
 	}
 }
 
@@ -276,7 +315,7 @@ func TestTags_Create(t *testing.T) {
 		t.Errorf("Tags.Create returned error: %v", err)
 	}
 
-	expected := &Tag{Name: "testing-1", Resources: &TaggedResources{Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}}}
+	expected := &Tag{Name: "testing-1", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}}}
 	if !reflect.DeepEqual(tag, expected) {
 		t.Errorf("Tags.Create returned %+v, expected %+v", tag, expected)
 	}
@@ -301,7 +340,10 @@ func TestTags_TagResource(t *testing.T) {
 	defer teardown()
 
 	tagResourcesRequest := &TagResourcesRequest{
-		Resources: []Resource{{ID: "1", Type: DropletResourceType}},
+		Resources: []Resource{
+			{ID: "1", Type: DropletResourceType},
+			{ID: "1", Type: ImageResourceType},
+		},
 	}
 
 	mux.HandleFunc("/v2/tags/testing-1/resources", func(w http.ResponseWriter, r *http.Request) {
@@ -330,7 +372,10 @@ func TestTags_UntagResource(t *testing.T) {
 	defer teardown()
 
 	untagResourcesRequest := &UntagResourcesRequest{
-		Resources: []Resource{{ID: "1", Type: DropletResourceType}},
+		Resources: []Resource{
+			{ID: "1", Type: DropletResourceType},
+			{ID: "1", Type: ImageResourceType},
+		},
 	}
 
 	mux.HandleFunc("/v2/tags/testing-1/resources", func(w http.ResponseWriter, r *http.Request) {
