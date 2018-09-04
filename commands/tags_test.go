@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -27,9 +28,14 @@ var (
 		Tag: &godo.Tag{
 			Name: "mytag",
 			Resources: &godo.TaggedResources{
+				Count:         5,
+				LastTaggedURI: fmt.Sprintf("https://api.digitalocean.com/v2/droplets/%d", testDroplet.ID),
 				Droplets: &godo.TaggedDropletsResources{
 					Count:      5,
 					LastTagged: testDroplet.Droplet,
+				},
+				Images: &godo.TaggedImagesResources{
+					Count: 0,
 				},
 			}}}
 	testTagList = do.Tags{

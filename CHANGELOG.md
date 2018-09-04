@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.10.0] - 2018-10-01
+
+- #348 Add support for tagging Images. - @hugocorbucci
+
 ## [1.9.0] - 2018-08-27
 
 - #343 Add support for Spaces CDN. - @sunny-b
