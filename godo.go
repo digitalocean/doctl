@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.5.0"
+	libraryVersion = "1.6.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -64,6 +64,7 @@ type Client struct {
 	LoadBalancers     LoadBalancersService
 	Certificates      CertificatesService
 	Firewalls         FirewallsService
+	Projects          ProjectsService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -159,23 +160,24 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Account = &AccountServiceOp{client: c}
 	c.Actions = &ActionsServiceOp{client: c}
 	c.CDNs = &CDNServiceOp{client: c}
+	c.Certificates = &CertificatesServiceOp{client: c}
 	c.Domains = &DomainsServiceOp{client: c}
 	c.Droplets = &DropletsServiceOp{client: c}
 	c.DropletActions = &DropletActionsServiceOp{client: c}
+	c.Firewalls = &FirewallsServiceOp{client: c}
 	c.FloatingIPs = &FloatingIPsServiceOp{client: c}
 	c.FloatingIPActions = &FloatingIPActionsServiceOp{client: c}
 	c.Images = &ImagesServiceOp{client: c}
 	c.ImageActions = &ImageActionsServiceOp{client: c}
 	c.Keys = &KeysServiceOp{client: c}
+	c.LoadBalancers = &LoadBalancersServiceOp{client: c}
+	c.Projects = &ProjectsServiceOp{client: c}
 	c.Regions = &RegionsServiceOp{client: c}
-	c.Snapshots = &SnapshotsServiceOp{client: c}
 	c.Sizes = &SizesServiceOp{client: c}
+	c.Snapshots = &SnapshotsServiceOp{client: c}
 	c.Storage = &StorageServiceOp{client: c}
 	c.StorageActions = &StorageActionsServiceOp{client: c}
 	c.Tags = &TagsServiceOp{client: c}
-	c.LoadBalancers = &LoadBalancersServiceOp{client: c}
-	c.Certificates = &CertificatesServiceOp{client: c}
-	c.Firewalls = &FirewallsServiceOp{client: c}
 
 	return c
 }

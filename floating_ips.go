@@ -37,6 +37,10 @@ func (f FloatingIP) String() string {
 	return Stringify(f)
 }
 
+func (f FloatingIP) URN() string {
+	return ToURN("FloatingIP", f.IP)
+}
+
 type floatingIPsRoot struct {
 	FloatingIPs []FloatingIP `json:"floating_ips"`
 	Links       *Links       `json:"links"`
