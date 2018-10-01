@@ -25,16 +25,10 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:8a964cb8355fb61ebe48ae8b543e93e4d687d6f4ad45a10e197fde8676b462a9"
   name = "github.com/digitalocean/godo"
-  packages = [
-    ".",
-    "util",
-  ]
-  pruneopts = ""
-  revision = "ddc940d8ef8b736b5cdfc47f24cdf95b9a4b73f6"
-  version = "v1.4.1"
-
+  packages = [".","util"]
+  revision = "6472cf252de3eba83b26ca4bb7dc962a519c53e1"
+  version = "v1.5.0"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -244,6 +238,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1787f89ee12ce8855e7e91b55611236bd0524c3c95254e94fe19de0b6e56da98"
+  inputs-digest = "077a484eeec95d4a18fa366a9bc6fa10246b21d657cb0fa0e24d67fc4a04b411"
   solver-name = "gps-cdcl"
   solver-version = 1

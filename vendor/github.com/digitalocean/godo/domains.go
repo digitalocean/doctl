@@ -75,7 +75,7 @@ type DomainRecord struct {
 	Priority int    `json:"priority"`
 	Port     int    `json:"port,omitempty"`
 	TTL      int    `json:"ttl,omitempty"`
-	Weight   int    `json:"weight,omitempty"`
+	Weight   int    `json:"weight"`
 	Flags    int    `json:"flags"`
 	Tag      string `json:"tag,omitempty"`
 }
@@ -88,7 +88,7 @@ type DomainRecordEditRequest struct {
 	Priority int    `json:"priority"`
 	Port     int    `json:"port,omitempty"`
 	TTL      int    `json:"ttl,omitempty"`
-	Weight   int    `json:"weight,omitempty"`
+	Weight   int    `json:"weight"`
 	Flags    int    `json:"flags"`
 	Tag      string `json:"tag,omitempty"`
 }
