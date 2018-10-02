@@ -30,7 +30,7 @@ it raises the chances we can quickly merge or address your contributions.
 1. The issue is reported.
 
 2. The issue is verified and categorized by a _doctl_ collaborator.
-   Categorization is done via tags. For example, bugs are marked as "bugs".
+   Categorization is done via labels. For example, bugs are marked as "bugs".
 
 3. Unless it is critical, the issue is left for a period of time (sometimes
    many weeks), giving outside contributors a chance to address the issue.
@@ -49,7 +49,7 @@ If you have never worked with Go before, you will have to complete the
 following steps in order to be able to compile and test doctl.
 
 1. Install Go. Make sure the Go version is at least Go 1.6.
-   On Mac OS X, you can `brew install go` to install Go 1.6.
+   On Mac OS X, you can `brew install go` to install the latest stable version.
 
 1. Set and export the `GOPATH` environment variable and update your `PATH`.
    For example, you can add to your `.bash_profile`.
