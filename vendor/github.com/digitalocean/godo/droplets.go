@@ -125,6 +125,10 @@ func (d Droplet) String() string {
 	return Stringify(d)
 }
 
+func (d Droplet) URN() string {
+	return ToURN("Droplet", d.ID)
+}
+
 // DropletRoot represents a Droplet root
 type dropletRoot struct {
 	Droplet *Droplet `json:"droplet"`

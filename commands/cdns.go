@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -34,10 +35,10 @@ func CDN() *Command {
 	}
 
 	CmdBuilder(cmd, RunCDNList, "list", "list cdn", Writer,
-		aliasOpt("ls"), displayerType(&cdn{}))
+		aliasOpt("ls"), displayerType(&displayers.CDN{}))
 
 	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "create a cdn", Writer,
-		aliasOpt("c"), displayerType(&cdn{}))
+		aliasOpt("c"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNCreate, doctl.ArgCDNTTL, "", 3600, "CDN ttl")
 
 	cmdRunCDNDelete := CmdBuilder(cmd, RunCDNDelete, "delete <cdn-id>", "delete a cdn", Writer,
@@ -45,10 +46,10 @@ func CDN() *Command {
 	AddBoolFlag(cmdRunCDNDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force cdn delete")
 
 	CmdBuilder(cmd, RunCDNGet, "get <cdn-id>", "get a cdn", Writer, aliasOpt("g"),
-		displayerType(&cdn{}))
+		displayerType(&displayers.CDN{}))
 
 	cmdCDNUpdate := CmdBuilder(cmd, RunCDNUpdateTTL, "update <cdn-id>", "update a cdn", Writer,
-		aliasOpt("u"), displayerType(&cdn{}))
+		aliasOpt("u"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNUpdate, doctl.ArgCDNTTL, "", 3600, "cdn ttl")
 
 	cmdCDNFlushCache := CmdBuilder(cmd, RunCDNFlushCache, "flush <cdn-id>", "flush cdn cache", Writer,
@@ -65,7 +66,7 @@ func RunCDNList(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&cdn{cdns: cdns})
+	return c.Display(&displayers.CDN{CDNs: cdns})
 }
 
 // RunCDNGet returns an individual CDN.
@@ -80,7 +81,7 @@ func RunCDNGet(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&cdn{cdns: []do.CDN{*item}})
+	return c.Display(&displayers.CDN{CDNs: []do.CDN{*item}})
 }
 
 // RunCDNCreate creates a cdn.
@@ -109,7 +110,7 @@ func RunCDNCreate(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&cdn{cdns: []do.CDN{*item}})
+	return c.Display(&displayers.CDN{CDNs: []do.CDN{*item}})
 }
 
 // RunCDNUpdateTTL updates an individual cdn ttl
@@ -137,7 +138,7 @@ func RunCDNUpdateTTL(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&cdn{cdns: []do.CDN{*item}})
+	return c.Display(&displayers.CDN{CDNs: []do.CDN{*item}})
 }
 
 // RunCDNDelete deletes a cdn.

@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
@@ -36,10 +37,10 @@ func Actions() *Command {
 	}
 
 	CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "get action", Writer,
-		aliasOpt("g"), displayerType(&action{}), docCategories("action"))
+		aliasOpt("g"), displayerType(&displayers.Action{}), docCategories("action"))
 
 	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
-		aliasOpt("ls"), displayerType(&action{}), docCategories("action"))
+		aliasOpt("ls"), displayerType(&displayers.Action{}), docCategories("action"))
 	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", "Action resource type")
 	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", "Action region")
 	AddStringFlag(cmdActionList, doctl.ArgActionAfter, "", "", "Action completed after in RFC3339 format")
@@ -48,7 +49,7 @@ func Actions() *Command {
 	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", "Action type")
 
 	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "wait for action to complete", Writer,
-		aliasOpt("w"), displayerType(&action{}), docCategories("action"))
+		aliasOpt("w"), displayerType(&displayers.Action{}), docCategories("action"))
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 
 	return cmd
@@ -68,7 +69,7 @@ func RunCmdActionList(c *CmdConfig) error {
 
 	sort.Sort(actionsByCompletedAt(actions))
 
-	item := &action{actions: actions}
+	item := &displayers.Action{Actions: actions}
 	return c.Display(item)
 }
 
@@ -190,7 +191,7 @@ func RunCmdActionGet(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&action{actions: do.Actions{*a}})
+	return c.Display(&displayers.Action{Actions: do.Actions{*a}})
 }
 
 // RunCmdActionWait waits for an action to complete or error.
@@ -214,7 +215,7 @@ func RunCmdActionWait(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&action{actions: do.Actions{*a}})
+	return c.Display(&displayers.Action{Actions: do.Actions{*a}})
 }
 
 func actionWait(c *CmdConfig, actionID, pollTime int) (*do.Action, error) {

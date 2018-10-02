@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -156,6 +158,7 @@ type Config interface {
 	GetGodoClient(trace bool, accessToken string) (*godo.Client, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Set(ns, key string, val interface{})
+	IsSet(key string) bool
 	GetString(ns, key string) (string, error)
 	GetBool(ns, key string) (bool, error)
 	GetInt(ns, key string) (int, error)
@@ -165,6 +168,7 @@ type Config interface {
 // LiveConfig is an implementation of Config for live values.
 type LiveConfig struct {
 	godoClient *godo.Client
+	cliArgs    map[string]bool
 }
 
 var _ Config = &LiveConfig{}
@@ -233,6 +237,24 @@ func (c *LiveConfig) Set(ns, key string, val interface{}) {
 	viper.Set(nskey, val)
 }
 
+func (c *LiveConfig) IsSet(key string) bool {
+	r := regexp.MustCompile("\b*--([a-z-_]+)")
+	matches := r.FindAllStringSubmatch(strings.Join(os.Args, " "), -1)
+	if len(matches) == 0 {
+		return false
+	}
+
+	if len(c.cliArgs) == 0 {
+		args := make(map[string]bool)
+		for _, match := range matches {
+			args[match[1]] = true
+		}
+		c.cliArgs = args
+	}
+
+	return c.cliArgs[key]
+}
+
 // GetString returns a config value as a string.
 func (c *LiveConfig) GetString(ns, key string) (string, error) {
 	if ns == NSRoot {
@@ -241,12 +263,14 @@ func (c *LiveConfig) GetString(ns, key string) (string, error) {
 
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
-	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
-		if viper.GetString(nskey) == "" {
-			return "", NewMissingArgsErr(nskey)
-		}
+	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
+	str := viper.GetString(nskey)
+
+	if isRequired && strings.TrimSpace(str) == "" {
+		return "", NewMissingArgsErr(nskey)
 	}
-	return viper.GetString(nskey), nil
+
+	return str, nil
 }
 
 // GetBool returns a config value as a bool.
@@ -268,13 +292,14 @@ func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
-	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
-		if viper.GetInt(nskey) == 0 {
-			return 0, NewMissingArgsErr(nskey)
-		}
+	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
+	val := viper.GetInt(nskey)
+
+	if isRequired && val == 0 {
+		return 0, NewMissingArgsErr(nskey)
 	}
 
-	return viper.GetInt(nskey), nil
+	return val, nil
 }
 
 // GetStringSlice returns a config value as a string slice.
@@ -285,15 +310,14 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
-	if _, ok := viper.AllSettings()[fmt.Sprintf("%s.required", nskey)]; ok {
-		if emptyStringSlice(viper.GetStringSlice(nskey)) {
-			return nil, NewMissingArgsErr(nskey)
-		}
+	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
+	val := viper.GetStringSlice(nskey)
+	if isRequired && emptyStringSlice(val) {
+		return nil, NewMissingArgsErr(nskey)
 	}
 
 	out := []string{}
 	for _, item := range viper.GetStringSlice(nskey) {
-
 		item = strings.TrimPrefix(item, "[")
 		item = strings.TrimSuffix(item, "]")
 

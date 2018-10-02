@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"strconv"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,7 @@ func performVolumeAction(c *CmdConfig, fn volumeActionFn) error {
 
 	}
 
-	item := &action{actions: do.Actions{*a}}
+	item := &displayers.Action{Actions: do.Actions{*a}}
 	return c.Display(item)
 }
 

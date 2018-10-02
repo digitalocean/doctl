@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -186,6 +186,19 @@ const (
 	ArgInboundRules = "inbound-rules"
 	// ArgOutboundRules is a list of outbound rules for the firewall.
 	ArgOutboundRules = "outbound-rules"
+
+	// ArgProjectName is the name of a project.
+	ArgProjectName = "name"
+	// ArgProjectDescription is the description of a project.
+	ArgProjectDescription = "description"
+	// ArgProjectPurpose is the purpose of a project.
+	ArgProjectPurpose = "purpose"
+	// ArgProjectEnvironment is the environment of a project. Should be one of 'Development', 'Staging', 'Production'.
+	ArgProjectEnvironment = "environment"
+	// ArgProjectIsDefault is used to change the default project.
+	ArgProjectIsDefault = "is_default"
+	// ArgProjectResource is a flag for your resource URNs
+	ArgProjectResource = "resource"
 
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"

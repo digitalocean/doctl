@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/dustin/go-humanize"
@@ -35,11 +36,11 @@ func Volume() *Command {
 	}
 
 	cmdRunVolumeList := CmdBuilder(cmd, RunVolumeList, "list", "list volume", Writer,
-		aliasOpt("ls"), displayerType(&volume{}))
+		aliasOpt("ls"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "", "Volume region")
 
 	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create <volume-name>", "create a volume", Writer,
-		aliasOpt("c"), displayerType(&volume{}))
+		aliasOpt("c"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSize, "", "4TiB", "Volume size",
 		requiredOpt())
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeDesc, "", "", "Volume description")
@@ -53,10 +54,10 @@ func Volume() *Command {
 	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force volume delete")
 
 	CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "get a volume", Writer, aliasOpt("g"),
-		displayerType(&volume{}))
+		displayerType(&displayers.Volume{}))
 
 	cmdRunVolumeSnapshot := CmdBuilder(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "create a volume snapshot", Writer,
-		aliasOpt("s"), displayerType(&volume{}))
+		aliasOpt("s"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "Snapshot description")
 
@@ -115,7 +116,7 @@ func RunVolumeList(c *CmdConfig) error {
 			matchedList = append(matchedList, volume)
 		}
 	}
-	item := &volume{volumes: matchedList}
+	item := &displayers.Volume{Volumes: matchedList}
 	return c.Display(item)
 }
 
@@ -171,7 +172,7 @@ func RunVolumeCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	item := &volume{volumes: []do.Volume{*d}}
+	item := &displayers.Volume{Volumes: []do.Volume{*d}}
 	return c.Display(item)
 
 }
@@ -207,7 +208,7 @@ func RunVolumeGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	item := &volume{volumes: []do.Volume{*d}}
+	item := &displayers.Volume{Volumes: []do.Volume{*d}}
 	return c.Display(item)
 }
 

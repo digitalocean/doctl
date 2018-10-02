@@ -47,6 +47,10 @@ func (l LoadBalancer) String() string {
 	return Stringify(l)
 }
 
+func (l LoadBalancer) URN() string {
+	return ToURN("LoadBalancer", l.ID)
+}
+
 // AsRequest creates a LoadBalancerRequest that can be submitted to Update with the current values of the LoadBalancer.
 // Modifying the returned LoadBalancerRequest will not modify the original LoadBalancer.
 func (l LoadBalancer) AsRequest() *LoadBalancerRequest {

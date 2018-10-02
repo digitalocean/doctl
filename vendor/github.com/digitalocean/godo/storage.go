@@ -59,6 +59,10 @@ func (f Volume) String() string {
 	return Stringify(f)
 }
 
+func (f Volume) URN() string {
+	return ToURN("Volume", f.ID)
+}
+
 type storageVolumesRoot struct {
 	Volumes []Volume `json:"volumes"`
 	Links   *Links   `json:"links"`

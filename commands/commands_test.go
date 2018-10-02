@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -164,6 +164,7 @@ type tcMocks struct {
 	loadBalancers     domocks.LoadBalancersService
 	firewalls         domocks.FirewallsService
 	cdns              domocks.CDNsService
+	projects          domocks.ProjectsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -211,6 +212,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		LoadBalancers:     func() do.LoadBalancersService { return &tm.loadBalancers },
 		Firewalls:         func() do.FirewallsService { return &tm.firewalls },
 		CDNs:              func() do.CDNsService { return &tm.cdns },
+		Projects:          func() do.ProjectsService { return &tm.projects },
 	}
 
 	tFn(config, tm)
@@ -235,11 +237,13 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.loadBalancers.AssertExpectations(t))
 	assert.True(t, tm.firewalls.AssertExpectations(t))
 	assert.True(t, tm.cdns.AssertExpectations(t))
+	assert.True(t, tm.projects.AssertExpectations(t))
 }
 
 type TestConfig struct {
-	SSHFn func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	v     *viper.Viper
+	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	v        *viper.Viper
+	IsSetMap map[string]bool
 }
 
 var _ doctl.Config = &TestConfig{}
@@ -249,7 +253,8 @@ func NewTestConfig() *TestConfig {
 		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
 			return &doctl.MockRunner{}
 		},
-		v: viper.New(),
+		v:        viper.New(),
+		IsSetMap: make(map[string]bool),
 	}
 }
 
@@ -266,6 +271,10 @@ func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 func (c *TestConfig) Set(ns, key string, val interface{}) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	c.v.Set(nskey, val)
+}
+
+func (c *TestConfig) IsSet(key string) bool {
+	return c.IsSetMap[key]
 }
 
 func (c *TestConfig) GetString(ns, key string) (string, error) {

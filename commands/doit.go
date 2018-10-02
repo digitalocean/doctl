@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -25,6 +25,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -173,6 +174,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(Completion())
 	DoitCmd.AddCommand(computeCmd())
+	DoitCmd.AddCommand(Projects())
 	DoitCmd.AddCommand(Version())
 }
 
@@ -218,6 +220,7 @@ type flagOpt func(c *Command, name, key string)
 func requiredOpt() flagOpt {
 	return func(c *Command, name, key string) {
 		c.MarkFlagRequired(key)
+
 		key = requiredKey(key)
 		viper.Set(key, true)
 
@@ -226,14 +229,14 @@ func requiredOpt() flagOpt {
 	}
 }
 
+func requiredKey(key string) string {
+	return fmt.Sprintf("required.%s", key)
+}
+
 func betaOpt() flagOpt {
 	return func(c *Command, name, key string) {
 		c.Flag(name).Hidden = !isBeta()
 	}
-}
-
-func requiredKey(key string) string {
-	return fmt.Sprintf("%s.required", key)
 }
 
 func isBeta() bool {
@@ -338,6 +341,7 @@ type CmdConfig struct {
 	Certificates      func() do.CertificatesService
 	Firewalls         func() do.FirewallsService
 	CDNs              func() do.CDNsService
+	Projects          func() do.ProjectsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -376,6 +380,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.LoadBalancers = func() do.LoadBalancersService { return do.NewLoadBalancersService(godoClient) }
 			c.Firewalls = func() do.FirewallsService { return do.NewFirewallsService(godoClient) }
 			c.CDNs = func() do.CDNsService { return do.NewCDNsService(godoClient) }
+			c.Projects = func() do.ProjectsService { return do.NewProjectsService(godoClient) }
 
 			return nil
 		},
@@ -427,12 +432,12 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 }
 
 // Display displayes the output from a command.
-func (c *CmdConfig) Display(d Displayable) error {
-	dc := &displayer{
-		ns:     c.NS,
-		config: c.Doit,
-		item:   d,
-		out:    c.Out,
+func (c *CmdConfig) Display(d displayers.Displayable) error {
+	dc := &displayers.Displayer{
+		NS:     c.NS,
+		Config: c.Doit,
+		Item:   d,
+		Out:    c.Out,
 	}
 
 	return dc.Display()

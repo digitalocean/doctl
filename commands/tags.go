@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -65,7 +66,7 @@ func RunCmdTagCreate(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&tag{tags: do.Tags{*t}})
+	return c.Display(&displayers.Tag{Tags: do.Tags{*t}})
 }
 
 // RunCmdTagGet runs tag get.
@@ -81,7 +82,7 @@ func RunCmdTagGet(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&tag{tags: do.Tags{*t}})
+	return c.Display(&displayers.Tag{Tags: do.Tags{*t}})
 }
 
 // RunCmdTagList runs tag list.
@@ -92,7 +93,7 @@ func RunCmdTagList(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&tag{tags: tags})
+	return c.Display(&displayers.Tag{Tags: tags})
 }
 
 // RunCmdTagDelete runs tag delete.

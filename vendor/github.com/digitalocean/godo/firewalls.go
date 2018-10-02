@@ -49,6 +49,10 @@ func (fw Firewall) String() string {
 	return Stringify(fw)
 }
 
+func (fw Firewall) URN() string {
+	return ToURN("Firewall", fw.ID)
+}
+
 // FirewallRequest represents the configuration to be applied to an existing or a new Firewall.
 type FirewallRequest struct {
 	Name          string         `json:"name"`

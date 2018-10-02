@@ -1,8 +1,12 @@
 # Change Log
 
+## [v1.6.0] - 2018-10-16
+
+- #185 Projects support [beta] - @mchitten
+
 ## [v1.5.0] - 2018-10-01
 
-- #179 Adding tagging images support - @hugocorbucci
+- #181 Adding tagging images support - @hugocorbucci
 
 ## [v1.4.2] - 2018-08-30
 

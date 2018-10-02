@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/gobwas/glob"
 	"github.com/spf13/cobra"
@@ -36,15 +37,15 @@ func Snapshot() *Command {
 	}
 
 	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [glob]", "list snapshots", Writer,
-		aliasOpt("ls"), displayerType(&snapshot{}), docCategories("snapshot"))
+		aliasOpt("ls"), displayerType(&displayers.Snapshot{}), docCategories("snapshot"))
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Resource type")
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Snapshot region")
 
 	CmdBuilder(cmd, RunSnapshotGet, "get <snapshot-id> [snapshot-id ...]", "get snapshot", Writer,
-		aliasOpt("g"), displayerType(&droplet{}), docCategories("snapshot"))
+		aliasOpt("g"), displayerType(&displayers.Droplet{}), docCategories("snapshot"))
 
 	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id> [snapshot-id ...]", "delete snapshot", Writer,
-		aliasOpt("d"), displayerType(&droplet{}), docCategories("snapshot"))
+		aliasOpt("d"), displayerType(&displayers.Droplet{}), docCategories("snapshot"))
 	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force snapshot delete")
 
 	return cmd
@@ -127,7 +128,7 @@ func RunSnapshotList(c *CmdConfig) error {
 		}
 	}
 
-	item := &snapshot{snapshots: matchedList}
+	item := &displayers.Snapshot{Snapshots: matchedList}
 	return c.Display(item)
 }
 
@@ -149,7 +150,7 @@ func RunSnapshotGet(c *CmdConfig) error {
 		}
 		matchedList = append(matchedList, *s)
 	}
-	item := &snapshot{snapshots: matchedList}
+	item := &displayers.Snapshot{Snapshots: matchedList}
 	return c.Display(item)
 }
 
