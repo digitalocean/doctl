@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -13,7 +13,10 @@ limitations under the License.
 
 package commands
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/spf13/cobra"
+)
 
 // Account creates the account commands heirarchy.
 func Account() *Command {
@@ -28,10 +31,10 @@ func Account() *Command {
 	}
 
 	CmdBuilder(cmd, RunAccountGet, "get", "get account", Writer,
-		aliasOpt("g"), displayerType(&account{}), docCategories("account"))
+		aliasOpt("g"), displayerType(&displayers.Account{}), docCategories("account"))
 
 	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "get API rate limits", Writer,
-		aliasOpt("rl"), displayerType(&rateLimit{}), docCategories("account"))
+		aliasOpt("rl"), displayerType(&displayers.RateLimit{}), docCategories("account"))
 
 	return cmd
 }
@@ -43,7 +46,7 @@ func RunAccountGet(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&account{Account: a})
+	return c.Display(&displayers.Account{Account: a})
 }
 
 // RunAccountRateLimit retrieves API rate limits for the account.
@@ -53,5 +56,5 @@ func RunAccountRateLimit(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&rateLimit{RateLimit: rl})
+	return c.Display(&displayers.RateLimit{RateLimit: rl})
 }

@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import (
 	"strconv"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -37,14 +38,14 @@ func Domain() *Command {
 	}
 
 	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,
-		aliasOpt("c"), displayerType(&domain{}), docCategories("domain"))
+		aliasOpt("c"), displayerType(&displayers.Domain{}), docCategories("domain"))
 	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address", requiredOpt())
 
 	CmdBuilder(cmd, RunDomainList, "list", "list domains", Writer,
-		aliasOpt("ls"), displayerType(&domain{}), docCategories("domain"))
+		aliasOpt("ls"), displayerType(&displayers.Domain{}), docCategories("domain"))
 
 	CmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", Writer,
-		aliasOpt("g"), displayerType(&domain{}), docCategories("domain"))
+		aliasOpt("g"), displayerType(&displayers.Domain{}), docCategories("domain"))
 
 	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete domain", Writer, aliasOpt("g"))
 	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force domain delete")
@@ -59,10 +60,10 @@ func Domain() *Command {
 	cmd.AddCommand(cmdRecord)
 
 	CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", Writer,
-		aliasOpt("ls"), displayerType(&domainRecord{}), docCategories("domain"))
+		aliasOpt("ls"), displayerType(&displayers.DomainRecord{}), docCategories("domain"))
 
 	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "create record", Writer,
-		aliasOpt("c"), displayerType(&domainRecord{}), docCategories("domain"))
+		aliasOpt("c"), displayerType(&displayers.DomainRecord{}), docCategories("domain"))
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", "Record type")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "", "Record name")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "", "Record data")
@@ -78,7 +79,7 @@ func Domain() *Command {
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force record delete")
 
 	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "update record", Writer,
-		aliasOpt("u"), displayerType(&domainRecord{}), docCategories("domain"))
+		aliasOpt("u"), displayerType(&displayers.DomainRecord{}), docCategories("domain"))
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, "", 0, "Record ID")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "", "Record type")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordName, "", "", "Record name")
@@ -117,7 +118,7 @@ func RunDomainCreate(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Display(&domain{domains: do.Domains{*d}})
+	return c.Display(&displayers.Domain{Domains: do.Domains{*d}})
 }
 
 // RunDomainList runs domain create.
@@ -130,7 +131,7 @@ func RunDomainList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &domain{domains: domains}
+	item := &displayers.Domain{Domains: domains}
 	return c.Display(item)
 }
 
@@ -152,7 +153,7 @@ func RunDomainGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &domain{domains: do.Domains{*d}}
+	item := &displayers.Domain{Domains: do.Domains{*d}}
 	return c.Display(item)
 }
 
@@ -202,7 +203,7 @@ func RunRecordList(c *CmdConfig) error {
 		return err
 	}
 
-	items := &domainRecord{domainRecords: list}
+	items := &displayers.DomainRecord{DomainRecords: list}
 	return c.Display(items)
 
 }
@@ -282,7 +283,7 @@ func RunRecordCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &domainRecord{domainRecords: do.DomainRecords{*r}}
+	item := &displayers.DomainRecord{DomainRecords: do.DomainRecords{*r}}
 	return c.Display(item)
 
 }
@@ -401,6 +402,6 @@ func RunRecordUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &domainRecord{domainRecords: do.DomainRecords{*r}}
+	item := &displayers.DomainRecord{DomainRecords: do.DomainRecords{*r}}
 	return c.Display(item)
 }

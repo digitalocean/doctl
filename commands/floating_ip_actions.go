@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
@@ -35,15 +36,15 @@ func FloatingIPAction() *Command {
 
 	CmdBuilder(cmd, RunFloatingIPActionsGet,
 		"get <floating-ip> <action-id>", "get floating-ip action", Writer,
-		displayerType(&action{}), docCategories("floatingip"))
+		displayerType(&displayers.Action{}), docCategories("floatingip"))
 
 	CmdBuilder(cmd, RunFloatingIPActionsAssign,
 		"assign <floating-ip> <droplet-id>", "assign a floating IP to a droplet", Writer,
-		displayerType(&action{}), docCategories("floatingip"))
+		displayerType(&displayers.Action{}), docCategories("floatingip"))
 
 	CmdBuilder(cmd, RunFloatingIPActionsUnassign,
 		"unassign <floating-ip>", "unassign a floating IP to a droplet", Writer,
-		displayerType(&action{}), docCategories("floatingip"))
+		displayerType(&displayers.Action{}), docCategories("floatingip"))
 
 	return cmd
 }
@@ -68,7 +69,7 @@ func RunFloatingIPActionsGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &action{actions: do.Actions{*a}}
+	item := &displayers.Action{Actions: do.Actions{*a}}
 	return c.Display(item)
 }
 
@@ -92,7 +93,7 @@ func RunFloatingIPActionsAssign(c *CmdConfig) error {
 		checkErr(fmt.Errorf("could not assign IP to droplet: %v", err))
 	}
 
-	item := &action{actions: do.Actions{*a}}
+	item := &displayers.Action{Actions: do.Actions{*a}}
 	return c.Display(item)
 }
 
@@ -111,6 +112,6 @@ func RunFloatingIPActionsUnassign(c *CmdConfig) error {
 		checkErr(fmt.Errorf("could not unassign IP to droplet: %v", err))
 	}
 
-	item := &action{actions: do.Actions{*a}}
+	item := &displayers.Action{Actions: do.Actions{*a}}
 	return c.Display(item)
 }

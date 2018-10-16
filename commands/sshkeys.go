@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -38,17 +39,17 @@ func SSHKeys() *Command {
 	}
 
 	CmdBuilder(cmd, RunKeyList, "list", "list ssh keys", Writer,
-		aliasOpt("ls"), displayerType(&key{}), docCategories("sshkeys"))
+		aliasOpt("ls"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
 
 	CmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", Writer,
-		aliasOpt("g"), displayerType(&key{}), docCategories("sshkeys"))
+		aliasOpt("g"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
 
 	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", Writer,
-		aliasOpt("c"), displayerType(&key{}), docCategories("sshkeys"))
+		aliasOpt("c"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
 	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "", "Key contents", requiredOpt())
 
 	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", Writer,
-		aliasOpt("i"), displayerType(&key{}), docCategories("sshkeys"))
+		aliasOpt("i"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
 	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
 
 	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
@@ -56,7 +57,7 @@ func SSHKeys() *Command {
 	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force ssh key delete")
 
 	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
-		aliasOpt("u"), displayerType(&key{}), docCategories("sshkeys"))
+		aliasOpt("u"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
 	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "", "Key name", requiredOpt())
 
 	return cmd
@@ -71,7 +72,7 @@ func RunKeyList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &key{keys: list}
+	item := &displayers.Key{Keys: list}
 	return c.Display(item)
 }
 
@@ -90,7 +91,7 @@ func RunKeyGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &key{keys: do.SSHKeys{*k}}
+	item := &displayers.Key{Keys: do.SSHKeys{*k}}
 	return c.Display(item)
 }
 
@@ -119,7 +120,7 @@ func RunKeyCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &key{keys: do.SSHKeys{*r}}
+	item := &displayers.Key{Keys: do.SSHKeys{*r}}
 	return c.Display(item)
 }
 
@@ -162,7 +163,7 @@ func RunKeyImport(c *CmdConfig) error {
 		return err
 	}
 
-	item := &key{keys: do.SSHKeys{*r}}
+	item := &displayers.Key{Keys: do.SSHKeys{*r}}
 	return c.Display(item)
 }
 
@@ -212,6 +213,6 @@ func RunKeyUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &key{keys: do.SSHKeys{*k}}
+	item := &displayers.Key{Keys: do.SSHKeys{*k}}
 	return c.Display(item)
 }

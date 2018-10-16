@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -13,7 +13,10 @@ limitations under the License.
 
 package commands
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/spf13/cobra"
+)
 
 // Size creates the size commands heirarchy.
 func Size() *Command {
@@ -26,7 +29,7 @@ func Size() *Command {
 	}
 
 	CmdBuilder(cmd, RunSizeList, "list", "list sizes", Writer, aliasOpt("ls"),
-		displayerType(&size{}), docCategories("compute"))
+		displayerType(&displayers.Size{}), docCategories("compute"))
 
 	return cmd
 }
@@ -40,6 +43,6 @@ func RunSizeList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &size{sizes: list}
+	item := &displayers.Size{Sizes: list}
 	return c.Display(item)
 }

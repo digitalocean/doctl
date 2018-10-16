@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -37,7 +38,7 @@ func FloatingIP() *Command {
 	}
 
 	cmdFloatingIPCreate := CmdBuilder(cmd, RunFloatingIPCreate, "create", "create a floating IP", Writer,
-		aliasOpt("c"), displayerType(&floatingIP{}), docCategories("floatingip"))
+		aliasOpt("c"), displayerType(&displayers.FloatingIP{}), docCategories("floatingip"))
 	AddStringFlag(cmdFloatingIPCreate, doctl.ArgRegionSlug, "", "",
 		fmt.Sprintf("Region where to create the floating IP. (mutually exclusive with %s)",
 			doctl.ArgDropletID))
@@ -46,13 +47,13 @@ func FloatingIP() *Command {
 			doctl.ArgRegionSlug))
 
 	CmdBuilder(cmd, RunFloatingIPGet, "get <floating-ip>", "get the details of a floating IP", Writer,
-		aliasOpt("g"), displayerType(&floatingIP{}), docCategories("floatingip"))
+		aliasOpt("g"), displayerType(&displayers.FloatingIP{}), docCategories("floatingip"))
 
 	cmdRunFloatingIPDelete := CmdBuilder(cmd, RunFloatingIPDelete, "delete <floating-ip>", "delete a floating IP address", Writer, aliasOpt("d"))
 	AddBoolFlag(cmdRunFloatingIPDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force floating IP delete")
 
 	cmdFloatingIPList := CmdBuilder(cmd, RunFloatingIPList, "list", "list all floating IP addresses", Writer,
-		aliasOpt("ls"), displayerType(&floatingIP{}), docCategories("floatingip"))
+		aliasOpt("ls"), displayerType(&displayers.FloatingIP{}), docCategories("floatingip"))
 	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "", "Floating IP region")
 
 	return cmd
@@ -85,7 +86,7 @@ func RunFloatingIPCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &floatingIP{floatingIPs: do.FloatingIPs{*ip}}
+	item := &displayers.FloatingIP{FloatingIPs: do.FloatingIPs{*ip}}
 	return c.Display(item)
 }
 
@@ -108,7 +109,7 @@ func RunFloatingIPGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &floatingIP{floatingIPs: do.FloatingIPs{*fip}}
+	item := &displayers.FloatingIP{FloatingIPs: do.FloatingIPs{*fip}}
 	return c.Display(item)
 }
 
@@ -148,7 +149,7 @@ func RunFloatingIPList(c *CmdConfig) error {
 		return err
 	}
 
-	fips := &floatingIP{floatingIPs: do.FloatingIPs{}}
+	fips := &displayers.FloatingIP{FloatingIPs: do.FloatingIPs{}}
 	for _, fip := range list {
 		var skip bool
 		if region != "" && region != fip.Region.Slug {
@@ -156,7 +157,7 @@ func RunFloatingIPList(c *CmdConfig) error {
 		}
 
 		if !skip {
-			fips.floatingIPs = append(fips.floatingIPs, fip)
+			fips.FloatingIPs = append(fips.FloatingIPs, fip)
 		}
 	}
 

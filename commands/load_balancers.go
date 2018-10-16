@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 
@@ -93,7 +94,7 @@ func RunLoadBalancerGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &loadBalancer{loadBalancers: do.LoadBalancers{*lb}}
+	item := &displayers.LoadBalancer{LoadBalancers: do.LoadBalancers{*lb}}
 	return c.Display(item)
 }
 
@@ -105,7 +106,7 @@ func RunLoadBalancerList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &loadBalancer{loadBalancers: list}
+	item := &displayers.LoadBalancer{LoadBalancers: list}
 	return c.Display(item)
 }
 
@@ -122,7 +123,7 @@ func RunLoadBalancerCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &loadBalancer{loadBalancers: do.LoadBalancers{*lb}}
+	item := &displayers.LoadBalancer{LoadBalancers: do.LoadBalancers{*lb}}
 	return c.Display(item)
 }
 
@@ -144,7 +145,7 @@ func RunLoadBalancerUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &loadBalancer{loadBalancers: do.LoadBalancers{*lb}}
+	item := &displayers.LoadBalancer{LoadBalancers: do.LoadBalancers{*lb}}
 	return c.Display(item)
 }
 

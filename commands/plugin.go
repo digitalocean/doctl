@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/pluginhost"
 	"github.com/spf13/cobra"
 )
@@ -53,7 +54,7 @@ func RunPluginRun(c *CmdConfig) error {
 		return err
 	}
 
-	var selectedPlugin *plugDesc
+	var selectedPlugin *displayers.PlugDesc
 	for i, p := range plugs {
 		if p.Name == c.Args[0] {
 			selectedPlugin = &plugs[i]
@@ -107,20 +108,15 @@ func RunPluginList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &plugin{plugins: plugs}
+	item := &displayers.Plugin{Plugins: plugs}
 	return c.Display(item)
 }
 
-type plugDesc struct {
-	Path string `json:"path"`
-	Name string `json:"name"`
-}
-
-func searchPlugins() ([]plugDesc, error) {
+func searchPlugins() ([]displayers.PlugDesc, error) {
 	envPath := os.Getenv("PATH")
 	paths := strings.Split(envPath, string(os.PathListSeparator))
 
-	var plugs []plugDesc
+	var plugs []displayers.PlugDesc
 
 	for _, p := range paths {
 		matches, err := filepath.Glob(filepath.Join(p, "doit-provider-*"))
@@ -130,7 +126,7 @@ func searchPlugins() ([]plugDesc, error) {
 
 		for _, pluginPath := range matches {
 			name := pluginName(pluginPath)
-			plugs = append(plugs, plugDesc{Path: pluginPath, Name: name})
+			plugs = append(plugs, displayers.PlugDesc{Path: pluginPath, Name: name})
 		}
 	}
 

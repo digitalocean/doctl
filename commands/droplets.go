@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -23,6 +23,7 @@ import (
 	"text/template"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/gobwas/glob"
@@ -44,13 +45,13 @@ func Droplet() *Command {
 	}
 
 	CmdBuilder(cmd, RunDropletActions, "actions <droplet-id>", "droplet actions", Writer,
-		aliasOpt("a"), displayerType(&action{}), docCategories("droplet"))
+		aliasOpt("a"), displayerType(&displayers.Action{}), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "droplet backups", Writer,
-		aliasOpt("b"), displayerType(&image{}), docCategories("droplet"))
+		aliasOpt("b"), displayerType(&displayers.Image{}), docCategories("droplet"))
 
 	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name> [droplet-name ...]", "create droplet", Writer,
-		aliasOpt("c"), displayerType(&droplet{}), docCategories("droplet"))
+		aliasOpt("c"), displayerType(&displayers.Droplet{}), docCategories("droplet"))
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "SSH Keys or fingerprints")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User data")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "User data file")
@@ -75,22 +76,22 @@ func Droplet() *Command {
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force droplet delete")
 
 	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id>", "get droplet", Writer,
-		aliasOpt("g"), displayerType(&droplet{}), docCategories("droplet"))
+		aliasOpt("g"), displayerType(&displayers.Droplet{}), docCategories("droplet"))
 	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Few sample values:{{.ID}} {{.Name}} {{.Memory}} {{.Region.Name}} {{.Image}} {{.Tags}}")
 
 	CmdBuilder(cmd, RunDropletKernels, "kernels <droplet-id>", "droplet kernels", Writer,
-		aliasOpt("k"), displayerType(&kernel{}), docCategories("droplet"))
+		aliasOpt("k"), displayerType(&displayers.Kernel{}), docCategories("droplet"))
 
 	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "list droplets", Writer,
-		aliasOpt("ls"), displayerType(&droplet{}), docCategories("droplet"))
+		aliasOpt("ls"), displayerType(&displayers.Droplet{}), docCategories("droplet"))
 	AddStringFlag(cmdRunDropletList, doctl.ArgRegionSlug, "", "", "Droplet region")
 	AddStringFlag(cmdRunDropletList, doctl.ArgTagName, "", "", "Tag name")
 
 	CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet-id>", "droplet neighbors", Writer,
-		aliasOpt("n"), displayerType(&droplet{}), docCategories("droplet"))
+		aliasOpt("n"), displayerType(&displayers.Droplet{}), docCategories("droplet"))
 
 	CmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet-id>", "snapshots", Writer,
-		aliasOpt("s"), displayerType(&image{}), docCategories("droplet"))
+		aliasOpt("s"), displayerType(&displayers.Image{}), docCategories("droplet"))
 
 	cmdRunDropletTag := CmdBuilder(cmd, RunDropletTag, "tag <droplet-id|droplet-name>", "tag", Writer,
 		docCategories("droplet"))
@@ -118,7 +119,7 @@ func RunDropletActions(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	item := &action{actions: list}
+	item := &displayers.Action{Actions: list}
 	return c.Display(item)
 }
 
@@ -137,7 +138,7 @@ func RunDropletBackups(c *CmdConfig) error {
 		return err
 	}
 
-	item := &image{images: list}
+	item := &displayers.Image{Images: list}
 	return c.Display(item)
 }
 
@@ -298,7 +299,7 @@ func RunDropletCreate(c *CmdConfig) error {
 	wg.Wait()
 	close(errs)
 
-	item := &droplet{droplets: createdList}
+	item := &displayers.Droplet{Droplets: createdList}
 
 	for err := range errs {
 		if err != nil {
@@ -553,7 +554,7 @@ func RunDropletGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &droplet{droplets: do.Droplets{*d}}
+	item := &displayers.Droplet{Droplets: do.Droplets{*d}}
 	if getTemplate != "" {
 		t := template.New("get template")
 		t, err = t.Parse(getTemplate)
@@ -579,7 +580,7 @@ func RunDropletKernels(c *CmdConfig) error {
 		return err
 	}
 
-	item := &kernel{kernels: list}
+	item := &displayers.Kernel{Kernels: list}
 	return c.Display(item)
 }
 
@@ -643,7 +644,7 @@ func RunDropletList(c *CmdConfig) error {
 		}
 	}
 
-	item := &droplet{droplets: matchedList}
+	item := &displayers.Droplet{Droplets: matchedList}
 	return c.Display(item)
 }
 
@@ -662,7 +663,7 @@ func RunDropletNeighbors(c *CmdConfig) error {
 		return err
 	}
 
-	item := &droplet{droplets: list}
+	item := &displayers.Droplet{Droplets: list}
 	return c.Display(item)
 }
 
@@ -680,7 +681,7 @@ func RunDropletSnapshots(c *CmdConfig) error {
 		return err
 	}
 
-	item := &image{images: list}
+	item := &displayers.Image{Images: list}
 	return c.Display(item)
 }
 

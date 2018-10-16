@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -35,12 +36,12 @@ func ImageAction() *Command {
 
 	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,
 		"get <image-id>", "get image action", Writer,
-		displayerType(&action{}), docCategories("image"))
+		displayerType(&displayers.Action{}), docCategories("image"))
 	AddIntFlag(cmdImageActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
 
 	cmdImageActionsTransfer := CmdBuilder(cmd, RunImageActionsTransfer,
 		"transfer <image-id>", "transfer image", Writer,
-		displayerType(&action{}), docCategories("image"))
+		displayerType(&displayers.Action{}), docCategories("image"))
 	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "", "region", requiredOpt())
 	AddBoolFlag(cmdImageActionsTransfer, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
@@ -70,7 +71,7 @@ func RunImageActionsGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &action{actions: do.Actions{*a}}
+	item := &displayers.Action{Actions: do.Actions{*a}}
 	return c.Display(item)
 }
 
@@ -115,6 +116,6 @@ func RunImageActionsTransfer(c *CmdConfig) error {
 
 	}
 
-	item := &action{actions: do.Actions{*a}}
+	item := &displayers.Action{Actions: do.Actions{*a}}
 	return c.Display(item)
 }

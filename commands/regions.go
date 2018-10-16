@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -13,7 +13,10 @@ limitations under the License.
 
 package commands
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/spf13/cobra"
+)
 
 // Region creates the region commands heirarchy.
 func Region() *Command {
@@ -26,7 +29,7 @@ func Region() *Command {
 	}
 
 	CmdBuilder(cmd, RunRegionList, "list", "list regions", Writer, aliasOpt("ls"),
-		displayerType(&region{}), docCategories("compute"))
+		displayerType(&displayers.Region{}), docCategories("compute"))
 
 	return cmd
 }
@@ -40,6 +43,6 @@ func RunRegionList(c *CmdConfig) error {
 		return err
 	}
 
-	image := &region{regions: list}
+	image := &displayers.Region{Regions: list}
 	return c.Display(image)
 }

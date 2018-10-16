@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 
@@ -65,7 +66,7 @@ func RunCertificateGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &certificate{certificates: do.Certificates{*cer}}
+	item := &displayers.Certificate{Certificates: do.Certificates{*cer}}
 	return c.Display(item)
 }
 
@@ -140,7 +141,7 @@ func RunCertificateCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &certificate{certificates: do.Certificates{*cer}}
+	item := &displayers.Certificate{Certificates: do.Certificates{*cer}}
 	return c.Display(item)
 }
 
@@ -152,7 +153,7 @@ func RunCertificateList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &certificate{certificates: list}
+	item := &displayers.Certificate{Certificates: list}
 	return c.Display(item)
 }
 

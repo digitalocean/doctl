@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.11.0] - 2018-10-01
+
+- #348 Add support for projects API [beta] - @mchitten
+
 ## [1.10.0] - 2018-10-01
 
 - #348 Add support for tagging Images. - @hugocorbucci

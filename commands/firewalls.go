@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 
@@ -36,25 +37,25 @@ func Firewall() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunFirewallGet, "get <id>", "get firewall", Writer, aliasOpt("g"), displayerType(&firewall{}))
+	CmdBuilder(cmd, RunFirewallGet, "get <id>", "get firewall", Writer, aliasOpt("g"), displayerType(&displayers.Firewall{}))
 
-	cmdFirewallCreate := CmdBuilder(cmd, RunFirewallCreate, "create", "create firewall", Writer, aliasOpt("c"), displayerType(&firewall{}))
+	cmdFirewallCreate := CmdBuilder(cmd, RunFirewallCreate, "create", "create firewall", Writer, aliasOpt("c"), displayerType(&displayers.Firewall{}))
 	AddStringFlag(cmdFirewallCreate, doctl.ArgFirewallName, "", "", "firewall name", requiredOpt())
 	AddStringFlag(cmdFirewallCreate, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,droplet_id:1,droplet_id:2,tag:frontend, use quoted string of space-separated values for multiple rules")
 	AddStringFlag(cmdFirewallCreate, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
 	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
 	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
 
-	cmdFirewallUpdate := CmdBuilder(cmd, RunFirewallUpdate, "update <id>", "update firewall", Writer, aliasOpt("u"), displayerType(&firewall{}))
+	cmdFirewallUpdate := CmdBuilder(cmd, RunFirewallUpdate, "update <id>", "update firewall", Writer, aliasOpt("u"), displayerType(&displayers.Firewall{}))
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgFirewallName, "", "", "firewall name", requiredOpt())
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,droplet_id:123, use quoted string of space-separated values for multiple rules")
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
 	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
 	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
 
-	CmdBuilder(cmd, RunFirewallList, "list", "list firewalls", Writer, aliasOpt("ls"), displayerType(&firewall{}))
+	CmdBuilder(cmd, RunFirewallList, "list", "list firewalls", Writer, aliasOpt("ls"), displayerType(&displayers.Firewall{}))
 
-	CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "list firewalls by droplet ID", Writer, displayerType(&firewall{}))
+	CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "list firewalls by droplet ID", Writer, displayerType(&displayers.Firewall{}))
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id> [id ...]", "delete firewall", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force firewall delete")
@@ -95,7 +96,7 @@ func RunFirewallGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &firewall{firewalls: do.Firewalls{*f}}
+	item := &displayers.Firewall{Firewalls: do.Firewalls{*f}}
 	return c.Display(item)
 }
 
@@ -112,7 +113,7 @@ func RunFirewallCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &firewall{firewalls: do.Firewalls{*f}}
+	item := &displayers.Firewall{Firewalls: do.Firewalls{*f}}
 	return c.Display(item)
 }
 
@@ -134,7 +135,7 @@ func RunFirewallUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &firewall{firewalls: do.Firewalls{*f}}
+	item := &displayers.Firewall{Firewalls: do.Firewalls{*f}}
 	return c.Display(item)
 }
 
@@ -146,7 +147,7 @@ func RunFirewallList(c *CmdConfig) error {
 		return err
 	}
 
-	items := &firewall{firewalls: list}
+	items := &displayers.Firewall{Firewalls: list}
 	return c.Display(items)
 }
 
@@ -166,7 +167,7 @@ func RunFirewallListByDroplet(c *CmdConfig) error {
 		return err
 	}
 
-	items := &firewall{firewalls: list}
+	items := &displayers.Firewall{Firewalls: list}
 	return c.Display(items)
 }
 

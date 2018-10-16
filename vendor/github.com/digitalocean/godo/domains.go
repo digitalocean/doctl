@@ -97,6 +97,10 @@ func (d Domain) String() string {
 	return Stringify(d)
 }
 
+func (d Domain) URN() string {
+	return ToURN("Domain", d.Name)
+}
+
 // List all domains.
 func (s DomainsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Domain, *Response, error) {
 	path := domainsBasePath

@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Doctl Authors All rights reserved.
+Copyright 2018 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import (
 	"strconv"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -36,29 +37,29 @@ func Images() *Command {
 	}
 
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", Writer,
-		aliasOpt("ls"), displayerType(&image{}), docCategories("image"))
+		aliasOpt("ls"), displayerType(&displayers.Image{}), docCategories("image"))
 	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "List public images")
 
 	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-distribution", "list distribution images", Writer,
-		displayerType(&image{}), docCategories("image"))
+		displayerType(&displayers.Image{}), docCategories("image"))
 	AddBoolFlag(cmdImagesListDistribution, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListApplication := CmdBuilder(cmd, RunImagesListApplication,
 		"list-application", "list application images", Writer,
-		displayerType(&image{}), docCategories("image"))
+		displayerType(&displayers.Image{}), docCategories("image"))
 	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListUser := CmdBuilder(cmd, RunImagesListUser,
 		"list-user", "list user images", Writer,
-		displayerType(&image{}), docCategories("image"))
+		displayerType(&displayers.Image{}), docCategories("image"))
 	AddBoolFlag(cmdImagesListUser, doctl.ArgImagePublic, "", false, "List public images")
 
 	CmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", Writer,
-		displayerType(&image{}), docCategories("image"))
+		displayerType(&displayers.Image{}), docCategories("image"))
 
 	cmdImagesUpdate := CmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", Writer,
-		displayerType(&image{}), docCategories("image"))
+		displayerType(&displayers.Image{}), docCategories("image"))
 	AddStringFlag(cmdImagesUpdate, doctl.ArgImageName, "", "", "Image name", requiredOpt())
 
 	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer,
@@ -82,7 +83,7 @@ func RunImagesList(c *CmdConfig) error {
 		return err
 	}
 
-	item := &image{images: list}
+	item := &displayers.Image{Images: list}
 	return c.Display(item)
 }
 
@@ -100,7 +101,7 @@ func RunImagesListDistribution(c *CmdConfig) error {
 		return err
 	}
 
-	item := &image{images: list}
+	item := &displayers.Image{Images: list}
 	return c.Display(item)
 
 }
@@ -119,7 +120,7 @@ func RunImagesListApplication(c *CmdConfig) error {
 		return err
 	}
 
-	item := &image{images: list}
+	item := &displayers.Image{Images: list}
 	return c.Display(item)
 }
 
@@ -137,7 +138,7 @@ func RunImagesListUser(c *CmdConfig) error {
 		return err
 	}
 
-	item := &image{images: list}
+	item := &displayers.Image{Images: list}
 	return c.Display(item)
 }
 
@@ -168,7 +169,7 @@ func RunImagesGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &image{images: do.Images{*i}}
+	item := &displayers.Image{Images: do.Images{*i}}
 	return c.Display(item)
 }
 
@@ -196,7 +197,7 @@ func RunImagesUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &image{images: do.Images{*i}}
+	item := &displayers.Image{Images: do.Images{*i}}
 	return c.Display(item)
 }
 
