@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// FloatingIPAction creates the floating IP action commmand.
+// FloatingIPAction creates the floating IP action command.
 func FloatingIPAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

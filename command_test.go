@@ -40,7 +40,7 @@ func TestLiveCommand_Start(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestMockCommmand_Run(t *testing.T) {
+func TestMockCommand_Run(t *testing.T) {
 	mc := NewMockCommand("/bin/ls")
 	assert.Equal(t, "/bin/ls", mc.path)
 

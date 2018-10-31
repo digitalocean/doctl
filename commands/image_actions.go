@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ImageAction creates the image action commmand.
+// ImageAction creates the image action command.
 func ImageAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

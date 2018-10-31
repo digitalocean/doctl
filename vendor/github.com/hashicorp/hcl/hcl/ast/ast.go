@@ -184,7 +184,7 @@ func (o *ObjectType) Pos() token.Pos {
 	return o.Lbrace
 }
 
-// Comment node represents a single //, # style or /*- style commment
+// Comment node represents a single //, # style or /*- style comment
 type Comment struct {
 	Start token.Pos // position of / or #
 	Text  string
