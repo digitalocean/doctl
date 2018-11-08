@@ -49,7 +49,7 @@ func Projects() *Command {
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectEnvironment, "", "", "the environment in which your project resides. Should be one of 'Development', 'Staging', 'Production'.")
 	AddBoolFlag(cmdProjectsUpdate, doctl.ArgProjectIsDefault, "", false, "set the specified project as your default project")
 
-	cmdProjectsDelete := CmdBuilder(cmd, RunProjectsDelete, "delete <id> [<id> ...]", "delete project", Writer, aliasOpt("d", "rm"), betaCmd())
+	cmdProjectsDelete := CmdBuilder(cmd, RunProjectsDelete, "delete <id>...", "delete projects", Writer, aliasOpt("d", "rm"), betaCmd())
 	AddBoolFlag(cmdProjectsDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force project delete")
 
 	cmd.AddCommand(ProjectResourcesCmd())

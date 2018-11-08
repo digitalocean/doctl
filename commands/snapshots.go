@@ -41,10 +41,10 @@ func Snapshot() *Command {
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Resource type")
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Snapshot region")
 
-	CmdBuilder(cmd, RunSnapshotGet, "get <snapshot-id> [snapshot-id ...]", "get snapshot", Writer,
+	CmdBuilder(cmd, RunSnapshotGet, "get <snapshot-id>...", "get snapshots", Writer,
 		aliasOpt("g"), displayerType(&displayers.Droplet{}), docCategories("snapshot"))
 
-	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id> [snapshot-id ...]", "delete snapshot", Writer,
+	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id>...", "delete snapshots", Writer,
 		aliasOpt("d"), displayerType(&displayers.Droplet{}), docCategories("snapshot"))
 	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force snapshot delete")
 
