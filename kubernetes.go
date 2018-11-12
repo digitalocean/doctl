@@ -151,7 +151,6 @@ type kubernetesClustersRoot struct {
 
 type kubernetesClusterRoot struct {
 	Cluster *KubernetesCluster `json:"kubernetes_cluster,omitempty"`
-	Links   *Links             `json:"links,omitempty"`
 }
 
 type kubernetesNodePoolRoot struct {
