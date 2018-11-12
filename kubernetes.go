@@ -158,8 +158,8 @@ type kubernetesNodePoolRoot struct {
 }
 
 type kubernetesNodePoolsRoot struct {
-	NodePool []*KubernetesNodePool `json:"node_pools,omitempty"`
-	Links    *Links                `json:"links,omitempty"`
+	NodePools []*KubernetesNodePool `json:"node_pools,omitempty"`
+	Links     *Links                `json:"links,omitempty"`
 }
 
 // Get retrieves the details of a Kubernetes cluster.
@@ -312,7 +312,7 @@ func (svc *KubernetesServiceOp) ListNodePools(ctx context.Context, clusterID str
 	if err != nil {
 		return nil, resp, err
 	}
-	return root.NodePool, resp, nil
+	return root.NodePools, resp, nil
 }
 
 // UpdateNodePool updates the details of an existing node pool.
