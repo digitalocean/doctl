@@ -35,6 +35,14 @@ type KubernetesNodePool struct {
 // KubernetesNodePools is a slice of KubernetesNodePool.
 type KubernetesNodePools []KubernetesNodePool
 
+// KubernetesVersions is a slice of KubernetesVersions.
+type KubernetesVersions []KubernetesVersion
+
+// KubernetesVersion wraps a godo KubernetesVersion.
+type KubernetesVersion struct {
+	*godo.KubernetesVersion
+}
+
 // KubernetesService is the godo KubernetesService interface.
 type KubernetesService interface {
 	Get(clusterID string) (*KubernetesCluster, error)
@@ -46,12 +54,12 @@ type KubernetesService interface {
 
 	CreateNodePool(clusterID string, req *godo.KubernetesNodePoolCreateRequest) (*KubernetesNodePool, error)
 	GetNodePool(clusterID, poolID string) (*KubernetesNodePool, error)
-	ListNodePools(clusterID string, opts *godo.ListOptions) (KubernetesNodePools, error)
+	ListNodePools(clusterID string) (KubernetesNodePools, error)
 	UpdateNodePool(clusterID, poolID string, req *godo.KubernetesNodePoolUpdateRequest) (*KubernetesNodePool, error)
 	RecycleNodePoolNodes(clusterID, poolID string, req *godo.KubernetesNodePoolRecycleNodesRequest) error
 	DeleteNodePool(clusterID, poolID string) error
 
-	GetOptions() (*godo.KubernetesOptions, error)
+	GetVersions() (KubernetesVersions, error)
 }
 
 var _ KubernetesService = &kubernetesClusterService{}
@@ -107,8 +115,8 @@ func (k8s *kubernetesClusterService) List() (KubernetesClusters, error) {
 
 	list := make([]KubernetesCluster, 0, len(si))
 	for _, item := range si {
-		a := item.(godo.KubernetesCluster)
-		list = append(list, KubernetesCluster{KubernetesCluster: &a})
+		a := item.(*godo.KubernetesCluster)
+		list = append(list, KubernetesCluster{KubernetesCluster: a})
 	}
 
 	return list, nil
@@ -151,7 +159,7 @@ func (k8s *kubernetesClusterService) GetNodePool(clusterID, poolID string) (*Kub
 	return &KubernetesNodePool{KubernetesNodePool: pool}, nil
 }
 
-func (k8s *kubernetesClusterService) ListNodePools(clusterID string, opts *godo.ListOptions) (KubernetesNodePools, error) {
+func (k8s *kubernetesClusterService) ListNodePools(clusterID string) (KubernetesNodePools, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := k8s.client.ListNodePools(context.TODO(), clusterID, opt)
 		if err != nil {
@@ -171,10 +179,10 @@ func (k8s *kubernetesClusterService) ListNodePools(clusterID string, opts *godo.
 		return nil, err
 	}
 
-	list := make([]KubernetesNodePool, len(si))
+	list := make([]KubernetesNodePool, 0, len(si))
 	for _, item := range si {
-		a := item.(godo.KubernetesNodePool)
-		list = append(list, KubernetesNodePool{KubernetesNodePool: &a})
+		a := item.(*godo.KubernetesNodePool)
+		list = append(list, KubernetesNodePool{KubernetesNodePool: a})
 	}
 
 	return list, nil
@@ -199,7 +207,14 @@ func (k8s *kubernetesClusterService) DeleteNodePool(clusterID, poolID string) er
 	return err
 }
 
-func (k8s *kubernetesClusterService) GetOptions() (*godo.KubernetesOptions, error) {
+func (k8s *kubernetesClusterService) GetVersions() (KubernetesVersions, error) {
 	opts, _, err := k8s.client.GetOptions(context.TODO())
-	return opts, err
+	if err != nil {
+		return nil, err
+	}
+	list := make(KubernetesVersions, 0, len(opts.Versions))
+	for _, item := range opts.Versions {
+		list = append(list, KubernetesVersion{KubernetesVersion: item})
+	}
+	return list, err
 }
