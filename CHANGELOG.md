@@ -1,6 +1,6 @@
 # Change Log
 
-## [v1.7.0] - 2018-10-16
+## [v1.7.0] - 2018-11-13
 
 - #188 Kubernetes support [beta] - @aybabtme
 
