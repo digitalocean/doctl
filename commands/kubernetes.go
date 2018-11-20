@@ -32,8 +32,9 @@ func Kubernetes() *Command {
 		Command: &cobra.Command{
 			Use:     "kubernetes",
 			Aliases: []string{"kube", "k8s", "k"},
-			Short:   "kubernetes commands",
-			Long:    "kubernetes is used to access Kubernetes commands",
+			Short:   "[beta] kubernetes commands",
+			Long:    "[beta] kubernetes is used to access Kubernetes commands",
+			Hidden:  !isBeta(),
 		},
 	}
 
