@@ -23,6 +23,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/pborman/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -38,9 +39,9 @@ func Kubernetes() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunKubernetesGet, "get <id>", "get a cluster", Writer, aliasOpt("g"))
+	CmdBuilder(cmd, RunKubernetesGet, "get <id|name>", "get a cluster", Writer, aliasOpt("g"))
 
-	CmdBuilder(cmd, RunKubernetesGetKubeconfig, "kubeconfig <id>", "get a cluster's kubeconfig file", Writer, aliasOpt("cfg"))
+	CmdBuilder(cmd, RunKubernetesGetKubeconfig, "kubeconfig <id|name>", "get a cluster's kubeconfig file", Writer, aliasOpt("cfg"))
 
 	CmdBuilder(cmd, RunKubernetesList, "list", "get a list of your clusters", Writer, aliasOpt("ls"))
 
@@ -51,11 +52,11 @@ func Kubernetes() *Command {
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTagNames, "", nil, "cluster tags")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePools, "", nil, `cluster node pools in the form "name=your-name;size=droplet_size;count=5;tag=tag1;tag=tag2"`, requiredOpt())
 
-	cmdKubeClusterUpdate := CmdBuilder(cmd, RunKubernetesUpdate, "update <id>", "update a cluster's properties", Writer, aliasOpt("u"))
+	cmdKubeClusterUpdate := CmdBuilder(cmd, RunKubernetesUpdate, "update <id|name>", "update a cluster's properties", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "", "cluster name")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTagNames, "", nil, "cluster tags")
 
-	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesDelete, "delete <id>", "delete a cluster", Writer, aliasOpt("d", "rm"))
+	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesDelete, "delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force cluster delete")
 
 	nodePoolCmd := &Command{
@@ -67,24 +68,24 @@ func Kubernetes() *Command {
 		},
 	}
 
-	CmdBuilder(nodePoolCmd, RunClusterNodePoolGet, "get <cluster-id> <pool-id>", "get a cluster's node pool", Writer, aliasOpt("g"))
-	CmdBuilder(nodePoolCmd, RunClusterNodePoolList, "list <cluster-id>", "list a cluster's node pools", Writer, aliasOpt("ls"))
+	CmdBuilder(nodePoolCmd, RunClusterNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>", "get a cluster's node pool", Writer, aliasOpt("g"))
+	CmdBuilder(nodePoolCmd, RunClusterNodePoolList, "list <cluster-id|cluster-name>", "list a cluster's node pools", Writer, aliasOpt("ls"))
 
-	cmdKubeNodePoolCreate := CmdBuilder(nodePoolCmd, RunClusterNodePoolCreate, "create <cluster-id>", "create a new node pool for a cluster", Writer, aliasOpt("c"))
+	cmdKubeNodePoolCreate := CmdBuilder(nodePoolCmd, RunClusterNodePoolCreate, "create <cluster-id|cluster-name>", "create a new node pool for a cluster", Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "", "node pool name", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "", "size of nodes in the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", "", "count of nodes in the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTagNames, "", "", "tags to apply to the node pool")
 
-	cmdKubeNodePoolUpdate := CmdBuilder(nodePoolCmd, RunClusterNodePoolUpdate, "update <cluster-id> <pool-id>", "update an existing node pool in a cluster", Writer, aliasOpt("u"))
+	cmdKubeNodePoolUpdate := CmdBuilder(nodePoolCmd, RunClusterNodePoolUpdate, "update <cluster-id|cluster-name> <pool-id|pool-name>", "update an existing node pool in a cluster", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "node pool name")
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", "", "count of nodes in the node pool")
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTagNames, "", "", "tags to apply to the node pool")
 
-	cmdKubeNodePoolRecycle := CmdBuilder(nodePoolCmd, RunClusterNodePoolRecycle, "recycle <cluster-id> <pool-id>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
-	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "", "ID of the nodes in the node pool to recycle")
+	cmdKubeNodePoolRecycle := CmdBuilder(nodePoolCmd, RunClusterNodePoolRecycle, "recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
+	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "", "ID or name of the nodes in the node pool to recycle")
 
-	cmdKubeNodePoolDelete := CmdBuilder(nodePoolCmd, RunClusterNodePoolDelete, "delete <cluster-id> <pool-id>", "delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
+	cmdKubeNodePoolDelete := CmdBuilder(nodePoolCmd, RunClusterNodePoolDelete, "delete <cluster-id|cluster-name> <pool-id|pool-name>", "delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force node pool delete")
 
 	cmd.AddCommand(nodePoolCmd)
@@ -112,10 +113,9 @@ func RunKubernetesGet(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
+	clusterIDorName := c.Args[0]
 
-	kube := c.Kubernetes()
-	cluster, err := kube.Get(clusterID)
+	cluster, err := clusterByIDorName(c.Kubernetes(), clusterIDorName)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,10 @@ func RunKubernetesGetKubeconfig(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
 
 	kube := c.Kubernetes()
 	kubeconfig, err := kube.GetKubeConfig(clusterID)
@@ -173,7 +176,10 @@ func RunKubernetesUpdate(c *CmdConfig) error {
 	if len(c.Args) == 0 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
 
 	r := new(godo.KubernetesClusterUpdateRequest)
 	if err := buildClusterUpdateRequestFromArgs(c, r); err != nil {
@@ -194,7 +200,10 @@ func RunKubernetesDelete(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
 
 	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
@@ -220,11 +229,11 @@ func RunClusterNodePoolGet(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
-	poolID := c.Args[1]
-
-	kube := c.Kubernetes()
-	nodePool, err := kube.GetNodePool(clusterID, poolID)
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
+	nodePool, err := poolByIDorName(c.Kubernetes(), clusterID, c.Args[1])
 	if err != nil {
 		return err
 	}
@@ -236,7 +245,10 @@ func RunClusterNodePoolList(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
 	kube := c.Kubernetes()
 	list, err := kube.ListNodePools(clusterID)
 	if err != nil {
@@ -251,7 +263,10 @@ func RunClusterNodePoolCreate(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
 
 	r := new(godo.KubernetesNodePoolCreateRequest)
 	if err := buildNodePoolCreateRequestFromArgs(c, r); err != nil {
@@ -272,8 +287,14 @@ func RunClusterNodePoolUpdate(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
-	poolID := c.Args[1]
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
+	poolID, err := poolIDize(c.Kubernetes(), clusterID, c.Args[1])
+	if err != nil {
+		return err
+	}
 
 	r := new(godo.KubernetesNodePoolUpdateRequest)
 	if err := buildNodePoolUpdateRequestFromArgs(c, r); err != nil {
@@ -294,11 +315,17 @@ func RunClusterNodePoolRecycle(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
-	poolID := c.Args[1]
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
+	poolID, err := poolIDize(c.Kubernetes(), clusterID, c.Args[1])
+	if err != nil {
+		return err
+	}
 
 	r := new(godo.KubernetesNodePoolRecycleNodesRequest)
-	if err := buildNodePoolRecycleRequestFromArgs(c, r); err != nil {
+	if err := buildNodePoolRecycleRequestFromArgs(c, clusterID, poolID, r); err != nil {
 		return err
 	}
 
@@ -311,8 +338,14 @@ func RunClusterNodePoolDelete(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID := c.Args[0]
-	poolID := c.Args[1]
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
+	poolID, err := poolIDize(c.Kubernetes(), clusterID, c.Args[1])
+	if err != nil {
+		return err
+	}
 
 	kube := c.Kubernetes()
 	return kube.DeleteNodePool(clusterID, poolID)
@@ -380,13 +413,29 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	return nil
 }
 
-func buildNodePoolRecycleRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePoolRecycleNodesRequest) error {
-	nodes, err := c.Doit.GetStringSlice(c.NS, doctl.ArgNodePoolNodeIDs)
+func buildNodePoolRecycleRequestFromArgs(c *CmdConfig, clusterID, poolID string, r *godo.KubernetesNodePoolRecycleNodesRequest) error {
+	nodeIDorNames, err := c.Doit.GetStringSlice(c.NS, doctl.ArgNodePoolNodeIDs)
 	if err != nil {
 		return err
 	}
-	r.Nodes = nodes
-
+	allUUIDs := true
+	for _, node := range nodeIDorNames {
+		if !looksLikeUUID(node) {
+			allUUIDs = false
+		}
+	}
+	if allUUIDs {
+		r.Nodes = nodeIDorNames
+	} else {
+		// at least some of the args weren't UUIDs, so assume that they're all names
+		nodes, err := nodesByNames(c.Kubernetes(), clusterID, poolID, nodeIDorNames)
+		if err != nil {
+			return err
+		}
+		for _, node := range nodes {
+			r.Nodes = append(r.Nodes, node.ID)
+		}
+	}
 	return nil
 }
 
@@ -497,4 +546,178 @@ func displayClusters(c *CmdConfig, clusters ...do.KubernetesCluster) error {
 func displayNodePools(c *CmdConfig, nodePools ...do.KubernetesNodePool) error {
 	item := &displayers.KubernetesNodePools{KubernetesNodePools: do.KubernetesNodePools(nodePools)}
 	return c.Display(item)
+}
+
+// clusterByIDorName attempts to find a cluster by ID or by name if the argument isn't an ID. If multiple
+// clusters have the same name, then an error with the cluster IDs matching this name is returned.
+func clusterByIDorName(kube do.KubernetesService, idOrName string) (*do.KubernetesCluster, error) {
+	if looksLikeUUID(idOrName) {
+		clusterID := idOrName
+		return kube.Get(clusterID)
+	}
+	clusters, err := kube.List()
+	if err != nil {
+		return nil, err
+	}
+	var out []*do.KubernetesCluster
+	for _, c := range clusters {
+		if c.Name == idOrName {
+			out = append(out, &c)
+		}
+	}
+	switch {
+	case len(out) == 0:
+		return nil, fmt.Errorf("no cluster goes by the name %q", idOrName)
+	case len(out) > 1:
+		var ids []string
+		for _, c := range out {
+			ids = append(ids, c.ID)
+		}
+		return nil, fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", idOrName, ids)
+	default:
+		if len(out) != 1 {
+			panic("the default case should always have len(out) == 1")
+		}
+		return out[0], nil
+	}
+}
+
+// clusterIDize attempts to make a cluster ID/name string be a cluster ID.
+// use this as opposed to `clusterByIDorName` if you just care about getting
+// a cluster ID and don't need the cluster object itself
+func clusterIDize(kube do.KubernetesService, idOrName string) (string, error) {
+	if looksLikeUUID(idOrName) {
+		return idOrName, nil
+	}
+	clusters, err := kube.List()
+	if err != nil {
+		return "", err
+	}
+	var ids []string
+	for _, c := range clusters {
+		if c.Name == idOrName {
+			ids = append(ids, c.ID)
+		}
+	}
+	switch {
+	case len(ids) == 0:
+		return "", fmt.Errorf("no cluster goes by the name %q", idOrName)
+	case len(ids) > 1:
+		return "", fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", idOrName, ids)
+	default:
+		if len(ids) != 1 {
+			panic("the default case should always have len(ids) == 1")
+		}
+		return ids[0], nil
+	}
+}
+
+// poolByIDorName attempts to find a pool by ID or by name if the argument isn't an ID. If multiple
+// pools have the same name, then an error with the pool IDs matching this name is returned.
+func poolByIDorName(kube do.KubernetesService, clusterID, idOrName string) (*do.KubernetesNodePool, error) {
+	if looksLikeUUID(idOrName) {
+		poolID := idOrName
+		return kube.GetNodePool(clusterID, poolID)
+	}
+	nodePools, err := kube.ListNodePools(clusterID)
+	if err != nil {
+		return nil, err
+	}
+	var out []*do.KubernetesNodePool
+	for _, c := range nodePools {
+		if c.Name == idOrName {
+			out = append(out, &c)
+		}
+	}
+	switch {
+	case len(out) == 0:
+		return nil, fmt.Errorf("no node pool goes by the name %q", idOrName)
+	case len(out) > 1:
+		var ids []string
+		for _, c := range out {
+			ids = append(ids, c.ID)
+		}
+		return nil, fmt.Errorf("many node pools go by the name %q, they have the following IDs: %v", idOrName, ids)
+	default:
+		if len(out) != 1 {
+			panic("the default case should always have len(out) == 1")
+		}
+		return out[0], nil
+	}
+}
+
+// poolIDize attempts to make a node pool ID/name string be a node pool ID.
+// use this as opposed to `poolByIDorName` if you just care about getting
+// a node pool ID and don't need the node pool object itself
+func poolIDize(kube do.KubernetesService, clusterID, idOrName string) (string, error) {
+	if looksLikeUUID(idOrName) {
+		return idOrName, nil
+	}
+	pools, err := kube.ListNodePools(clusterID)
+	if err != nil {
+		return "", err
+	}
+	var ids []string
+	for _, c := range pools {
+		if c.Name == idOrName {
+			ids = append(ids, c.ID)
+		}
+	}
+	switch {
+	case len(ids) == 0:
+		return "", fmt.Errorf("no node pool goes by the name %q", idOrName)
+	case len(ids) > 1:
+		return "", fmt.Errorf("many node pools go by the name %q, they have the following IDs: %v", idOrName, ids)
+	default:
+		if len(ids) != 1 {
+			panic("the default case should always have len(ids) == 1")
+		}
+		return ids[0], nil
+	}
+}
+
+// nodesByNames attempts to find nodes by names. If multiple nodes have the same name,
+// then an error with the node IDs matching this name is returned.
+func nodesByNames(kube do.KubernetesService, clusterID, poolID string, nodeNames []string) ([]*godo.KubernetesNode, error) {
+	nodePool, err := kube.GetNodePool(clusterID, poolID)
+	if err != nil {
+		return nil, err
+	}
+	var out []*godo.KubernetesNode
+	for _, name := range nodeNames {
+		node, err := nodeByName(name, nodePool.Nodes)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, node)
+	}
+	return out, nil
+}
+
+func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode, error) {
+	var out []*godo.KubernetesNode
+	for _, n := range nodes {
+		if n.Name == name {
+			out = append(out, n)
+		}
+	}
+	switch {
+	case len(out) == 0:
+		return nil, fmt.Errorf("no node goes by the name %q", name)
+	case len(out) > 1:
+		var ids []string
+		for _, c := range out {
+			ids = append(ids, c.ID)
+		}
+		return nil, fmt.Errorf("many nodes go by the name %q, they have the following IDs: %v", name, ids)
+	default:
+		if len(out) != 1 {
+			panic("the default case should always have len(out) == 1")
+		}
+		return out[0], nil
+	}
+}
+
+func looksLikeUUID(str string) bool {
+	return uuid.Parse(str) != nil
 }
