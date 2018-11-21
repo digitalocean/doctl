@@ -22,14 +22,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v2"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -174,6 +173,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(Completion())
 	DoitCmd.AddCommand(computeCmd())
+	DoitCmd.AddCommand(Kubernetes())
 	DoitCmd.AddCommand(Projects())
 	DoitCmd.AddCommand(Version())
 }
@@ -342,6 +342,7 @@ type CmdConfig struct {
 	Firewalls         func() do.FirewallsService
 	CDNs              func() do.CDNsService
 	Projects          func() do.ProjectsService
+	Kubernetes        func() do.KubernetesService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -381,6 +382,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Firewalls = func() do.FirewallsService { return do.NewFirewallsService(godoClient) }
 			c.CDNs = func() do.CDNsService { return do.NewCDNsService(godoClient) }
 			c.Projects = func() do.ProjectsService { return do.NewProjectsService(godoClient) }
+			c.Kubernetes = func() do.KubernetesService { return do.NewKubernetesService(godoClient) }
 
 			return nil
 		},
