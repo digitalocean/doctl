@@ -2,6 +2,11 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.12.0] - 2018-11-26
+
+- #370 Projects API is no longer in beta. See https://developers.digitalocean.com/documentation/v2/#projects for more details - @mchitten
+- #365 Add support for kubernetes API [beta] - @aybabtme
+
 ## [1.11.0] - 2018-10-01
 
 - #348 Add support for projects API [beta] - @mchitten
