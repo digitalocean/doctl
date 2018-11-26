@@ -27,6 +27,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func errNoClusterByName(name string) error {
+	return fmt.Errorf("no cluster goes by the name %q", name)
+}
+
+func errAmbigousClusterName(name string, ids []string) error {
+	return fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", name, ids)
+}
+
+func errNoPoolByName(name string) error {
+	return fmt.Errorf("no node pool goes by the name %q", name)
+}
+
+func errAmbigousPoolName(name string, ids []string) error {
+	return fmt.Errorf("many node pools go by the name %q, they have the following IDs: %v", name, ids)
+}
+
+func errNoClusterNodeByName(name string) error {
+	return fmt.Errorf("no node goes by the name %q", name)
+}
+
+func errAmbigousClusterNodeName(name string, ids []string) error {
+	return fmt.Errorf("many nodes go by the name %q, they have the following IDs: %v", name, ids)
+}
+
 // Kubernetes creates the kubernetes command.
 func Kubernetes() *Command {
 	cmd := &Command{
@@ -59,7 +83,15 @@ func Kubernetes() *Command {
 	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesDelete, "delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force cluster delete")
 
-	nodePoolCmd := &Command{
+	cmd.AddCommand(kubernetesNodePools())
+
+	cmd.AddCommand(kubernetesOptions())
+
+	return cmd
+}
+
+func kubernetesNodePools() *Command {
+	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "node-pool",
 			Aliases: []string{"pool", "np", "p"},
@@ -68,29 +100,30 @@ func Kubernetes() *Command {
 		},
 	}
 
-	CmdBuilder(nodePoolCmd, RunClusterNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>", "get a cluster's node pool", Writer, aliasOpt("g"))
-	CmdBuilder(nodePoolCmd, RunClusterNodePoolList, "list <cluster-id|cluster-name>", "list a cluster's node pools", Writer, aliasOpt("ls"))
+	CmdBuilder(cmd, RunClusterNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>", "get a cluster's node pool", Writer, aliasOpt("g"))
+	CmdBuilder(cmd, RunClusterNodePoolList, "list <cluster-id|cluster-name>", "list a cluster's node pools", Writer, aliasOpt("ls"))
 
-	cmdKubeNodePoolCreate := CmdBuilder(nodePoolCmd, RunClusterNodePoolCreate, "create <cluster-id|cluster-name>", "create a new node pool for a cluster", Writer, aliasOpt("c"))
+	cmdKubeNodePoolCreate := CmdBuilder(cmd, RunClusterNodePoolCreate, "create <cluster-id|cluster-name>", "create a new node pool for a cluster", Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "", "node pool name", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "", "size of nodes in the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", "", "count of nodes in the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTagNames, "", "", "tags to apply to the node pool")
 
-	cmdKubeNodePoolUpdate := CmdBuilder(nodePoolCmd, RunClusterNodePoolUpdate, "update <cluster-id|cluster-name> <pool-id|pool-name>", "update an existing node pool in a cluster", Writer, aliasOpt("u"))
+	cmdKubeNodePoolUpdate := CmdBuilder(cmd, RunClusterNodePoolUpdate, "update <cluster-id|cluster-name> <pool-id|pool-name>", "update an existing node pool in a cluster", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "node pool name")
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", "", "count of nodes in the node pool")
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTagNames, "", "", "tags to apply to the node pool")
 
-	cmdKubeNodePoolRecycle := CmdBuilder(nodePoolCmd, RunClusterNodePoolRecycle, "recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
+	cmdKubeNodePoolRecycle := CmdBuilder(cmd, RunClusterNodePoolRecycle, "recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
 	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "", "ID or name of the nodes in the node pool to recycle")
 
-	cmdKubeNodePoolDelete := CmdBuilder(nodePoolCmd, RunClusterNodePoolDelete, "delete <cluster-id|cluster-name> <pool-id|pool-name>", "delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
+	cmdKubeNodePoolDelete := CmdBuilder(cmd, RunClusterNodePoolDelete, "delete <cluster-id|cluster-name> <pool-id|pool-name>", "delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force node pool delete")
+	return cmd
+}
 
-	cmd.AddCommand(nodePoolCmd)
-
-	optionsCmd := &Command{
+func kubernetesOptions() *Command {
+	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "options",
 			Aliases: []string{"opts", "o"},
@@ -99,10 +132,7 @@ func Kubernetes() *Command {
 		},
 	}
 
-	CmdBuilder(optionsCmd, RunKubeOptionsListVersion, "versions", "versions that can be used to create a Kubernetes cluster", Writer, aliasOpt("v"))
-
-	cmd.AddCommand(optionsCmd)
-
+	CmdBuilder(cmd, RunKubeOptionsListVersion, "versions", "versions that can be used to create a Kubernetes cluster", Writer, aliasOpt("v"))
 	return cmd
 }
 
@@ -347,8 +377,19 @@ func RunClusterNodePoolDelete(c *CmdConfig) error {
 		return err
 	}
 
-	kube := c.Kubernetes()
-	return kube.DeleteNodePool(clusterID, poolID)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+	if force || AskForConfirm("delete this Kubernetes node pool") == nil {
+		kube := c.Kubernetes()
+		if err := kube.DeleteNodePool(clusterID, poolID); err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("operation aborted")
+	}
+	return nil
 }
 
 // RunKubeOptionsListVersion deletes a kubernetes by its identifier.
@@ -561,19 +602,20 @@ func clusterByIDorName(kube do.KubernetesService, idOrName string) (*do.Kubernet
 	}
 	var out []*do.KubernetesCluster
 	for _, c := range clusters {
+		c1 := c
 		if c.Name == idOrName {
-			out = append(out, &c)
+			out = append(out, &c1)
 		}
 	}
 	switch {
 	case len(out) == 0:
-		return nil, fmt.Errorf("no cluster goes by the name %q", idOrName)
+		return nil, errNoClusterByName(idOrName)
 	case len(out) > 1:
 		var ids []string
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", idOrName, ids)
+		return nil, errAmbigousClusterName(idOrName, ids)
 	default:
 		if len(out) != 1 {
 			panic("the default case should always have len(out) == 1")
@@ -596,14 +638,15 @@ func clusterIDize(kube do.KubernetesService, idOrName string) (string, error) {
 	var ids []string
 	for _, c := range clusters {
 		if c.Name == idOrName {
-			ids = append(ids, c.ID)
+			id := c.ID
+			ids = append(ids, id)
 		}
 	}
 	switch {
 	case len(ids) == 0:
-		return "", fmt.Errorf("no cluster goes by the name %q", idOrName)
+		return "", errNoClusterByName(idOrName)
 	case len(ids) > 1:
-		return "", fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", idOrName, ids)
+		return "", errAmbigousClusterName(idOrName, ids)
 	default:
 		if len(ids) != 1 {
 			panic("the default case should always have len(ids) == 1")
@@ -625,19 +668,20 @@ func poolByIDorName(kube do.KubernetesService, clusterID, idOrName string) (*do.
 	}
 	var out []*do.KubernetesNodePool
 	for _, c := range nodePools {
+		c1 := c
 		if c.Name == idOrName {
-			out = append(out, &c)
+			out = append(out, &c1)
 		}
 	}
 	switch {
 	case len(out) == 0:
-		return nil, fmt.Errorf("no node pool goes by the name %q", idOrName)
+		return nil, errNoPoolByName(idOrName)
 	case len(out) > 1:
 		var ids []string
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, fmt.Errorf("many node pools go by the name %q, they have the following IDs: %v", idOrName, ids)
+		return nil, errAmbigousPoolName(idOrName, ids)
 	default:
 		if len(out) != 1 {
 			panic("the default case should always have len(out) == 1")
@@ -665,9 +709,9 @@ func poolIDize(kube do.KubernetesService, clusterID, idOrName string) (string, e
 	}
 	switch {
 	case len(ids) == 0:
-		return "", fmt.Errorf("no node pool goes by the name %q", idOrName)
+		return "", errNoPoolByName(idOrName)
 	case len(ids) > 1:
-		return "", fmt.Errorf("many node pools go by the name %q, they have the following IDs: %v", idOrName, ids)
+		return "", errAmbigousPoolName(idOrName, ids)
 	default:
 		if len(ids) != 1 {
 			panic("the default case should always have len(ids) == 1")
@@ -697,19 +741,20 @@ func nodesByNames(kube do.KubernetesService, clusterID, poolID string, nodeNames
 func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode, error) {
 	var out []*godo.KubernetesNode
 	for _, n := range nodes {
+		n1 := n
 		if n.Name == name {
-			out = append(out, n)
+			out = append(out, n1)
 		}
 	}
 	switch {
 	case len(out) == 0:
-		return nil, fmt.Errorf("no node goes by the name %q", name)
+		return nil, errNoClusterNodeByName(name)
 	case len(out) > 1:
 		var ids []string
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, fmt.Errorf("many nodes go by the name %q, they have the following IDs: %v", name, ids)
+		return nil, errAmbigousClusterNodeName(name, ids)
 	default:
 		if len(out) != 1 {
 			panic("the default case should always have len(out) == 1")
