@@ -156,16 +156,16 @@ func (_m *KubernetesService) GetNodePool(clusterID string, poolID string) (*do.K
 	return r0, r1
 }
 
-// GetOptions provides a mock function with given fields:
-func (_m *KubernetesService) GetOptions() (*godo.KubernetesOptions, error) {
+// GetVersions provides a mock function with given fields:
+func (_m *KubernetesService) GetVersions() (do.KubernetesVersions, error) {
 	ret := _m.Called()
 
-	var r0 *godo.KubernetesOptions
-	if rf, ok := ret.Get(0).(func() *godo.KubernetesOptions); ok {
+	var r0 do.KubernetesVersions
+	if rf, ok := ret.Get(0).(func() do.KubernetesVersions); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*godo.KubernetesOptions)
+			r0 = ret.Get(0).(do.KubernetesVersions)
 		}
 	}
 
@@ -202,13 +202,13 @@ func (_m *KubernetesService) List() (do.KubernetesClusters, error) {
 	return r0, r1
 }
 
-// ListNodePools provides a mock function with given fields: clusterID, opts
-func (_m *KubernetesService) ListNodePools(clusterID string, opts *godo.ListOptions) (do.KubernetesNodePools, error) {
-	ret := _m.Called(clusterID, opts)
+// ListNodePools provides a mock function with given fields: clusterID
+func (_m *KubernetesService) ListNodePools(clusterID string) (do.KubernetesNodePools, error) {
+	ret := _m.Called(clusterID)
 
 	var r0 do.KubernetesNodePools
-	if rf, ok := ret.Get(0).(func(string, *godo.ListOptions) do.KubernetesNodePools); ok {
-		r0 = rf(clusterID, opts)
+	if rf, ok := ret.Get(0).(func(string) do.KubernetesNodePools); ok {
+		r0 = rf(clusterID)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(do.KubernetesNodePools)
@@ -216,8 +216,8 @@ func (_m *KubernetesService) ListNodePools(clusterID string, opts *godo.ListOpti
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, *godo.ListOptions) error); ok {
-		r1 = rf(clusterID, opts)
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(clusterID)
 	} else {
 		r1 = ret.Error(1)
 	}

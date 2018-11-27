@@ -165,6 +165,7 @@ type tcMocks struct {
 	firewalls         domocks.FirewallsService
 	cdns              domocks.CDNsService
 	projects          domocks.ProjectsService
+	kubernetes        domocks.KubernetesService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -213,6 +214,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Firewalls:         func() do.FirewallsService { return &tm.firewalls },
 		CDNs:              func() do.CDNsService { return &tm.cdns },
 		Projects:          func() do.ProjectsService { return &tm.projects },
+		Kubernetes:        func() do.KubernetesService { return &tm.kubernetes },
 	}
 
 	tFn(config, tm)
@@ -238,6 +240,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.firewalls.AssertExpectations(t))
 	assert.True(t, tm.cdns.AssertExpectations(t))
 	assert.True(t, tm.projects.AssertExpectations(t))
+	assert.True(t, tm.kubernetes.AssertExpectations(t))
 }
 
 type TestConfig struct {

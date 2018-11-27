@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/digitalocean/godo"
+
 	"github.com/digitalocean/doctl/do"
 )
 
@@ -62,6 +64,9 @@ func (clusters *KubernetesClusters) KV() []map[string]interface{} {
 		nodePools := make([]string, 0, len(cluster.NodePools))
 		for _, pool := range cluster.NodePools {
 			nodePools = append(nodePools, pool.Name)
+		}
+		if cluster.Status == nil {
+			cluster.Status = new(godo.KubernetesClusterStatus)
 		}
 
 		o := map[string]interface{}{
