@@ -1,5 +1,7 @@
 package match
 
+// todo common table of rune's length
+
 import (
 	"fmt"
 	"strings"
@@ -27,59 +29,53 @@ func (m Matchers) String() string {
 	return fmt.Sprintf("%s", strings.Join(s, ","))
 }
 
-func appendIfNotAsPrevious(target []int, val int) []int {
-	l := len(target)
-	if l != 0 && target[l-1] == val {
-		return target
+// appendMerge merges and sorts given already SORTED and UNIQUE segments.
+func appendMerge(target, sub []int) []int {
+	lt, ls := len(target), len(sub)
+	out := make([]int, 0, lt+ls)
+
+	for x, y := 0, 0; x < lt || y < ls; {
+		if x >= lt {
+			out = append(out, sub[y:]...)
+			break
+		}
+
+		if y >= ls {
+			out = append(out, target[x:]...)
+			break
+		}
+
+		xValue := target[x]
+		yValue := sub[y]
+
+		switch {
+
+		case xValue == yValue:
+			out = append(out, xValue)
+			x++
+			y++
+
+		case xValue < yValue:
+			out = append(out, xValue)
+			x++
+
+		case yValue < xValue:
+			out = append(out, yValue)
+			y++
+
+		}
 	}
 
-	return append(target, val)
+	target = append(target[:0], out...)
+
+	return target
 }
 
-// mergeSegments merges and sorts given already SORTED and UNIQUE segments.
-func mergeSegments(segments [][]int) []int {
-	var current []int
-	for _, s := range segments {
-		if current == nil {
-			current = s
-			continue
-		}
+func reverseSegments(input []int) {
+	l := len(input)
+	m := l / 2
 
-		var next []int
-		for x, y := 0, 0; x < len(current) || y < len(s); {
-			if x >= len(current) {
-				next = append(next, s[y:]...)
-				break
-			}
-
-			if y >= len(s) {
-				next = append(next, current[x:]...)
-				break
-			}
-
-			xValue := current[x]
-			yValue := s[y]
-
-			switch {
-
-			case xValue == yValue:
-				x++
-				y++
-				next = appendIfNotAsPrevious(next, xValue)
-
-			case xValue < yValue:
-				next = appendIfNotAsPrevious(next, xValue)
-				x++
-
-			case yValue < xValue:
-				next = appendIfNotAsPrevious(next, yValue)
-				y++
-
-			}
-		}
-
-		current = next
+	for i := 0; i < m; i++ {
+		input[i], input[l-i-1] = input[l-i-1], input[i]
 	}
-
-	return current
 }

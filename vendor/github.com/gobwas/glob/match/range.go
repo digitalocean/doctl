@@ -10,6 +10,10 @@ type Range struct {
 	Not    bool
 }
 
+func NewRange(lo, hi rune, not bool) Range {
+	return Range{lo, hi, not}
+}
+
 func (self Range) Len() int {
 	return lenOne
 }
@@ -28,7 +32,7 @@ func (self Range) Match(s string) bool {
 func (self Range) Index(s string) (int, []int) {
 	for i, r := range s {
 		if self.Not != (r >= self.Lo && r <= self.Hi) {
-			return i, []int{utf8.RuneLen(r)}
+			return i, segmentsByRuneLength[utf8.RuneLen(r)]
 		}
 	}
 

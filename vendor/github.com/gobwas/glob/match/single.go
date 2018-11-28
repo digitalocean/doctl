@@ -2,13 +2,17 @@ package match
 
 import (
 	"fmt"
-	"strings"
+	"github.com/gobwas/glob/util/runes"
 	"unicode/utf8"
 )
 
 // single represents ?
 type Single struct {
-	Separators string
+	Separators []rune
+}
+
+func NewSingle(s []rune) Single {
+	return Single{s}
 }
 
 func (self Single) Match(s string) bool {
@@ -17,7 +21,7 @@ func (self Single) Match(s string) bool {
 		return false
 	}
 
-	return strings.IndexRune(self.Separators, r) == -1
+	return runes.IndexRune(self.Separators, r) == -1
 }
 
 func (self Single) Len() int {
@@ -26,8 +30,8 @@ func (self Single) Len() int {
 
 func (self Single) Index(s string) (int, []int) {
 	for i, r := range s {
-		if strings.IndexRune(self.Separators, r) == -1 {
-			return i, []int{utf8.RuneLen(r)}
+		if runes.IndexRune(self.Separators, r) == -1 {
+			return i, segmentsByRuneLength[utf8.RuneLen(r)]
 		}
 	}
 
@@ -35,5 +39,5 @@ func (self Single) Index(s string) (int, []int) {
 }
 
 func (self Single) String() string {
-	return fmt.Sprintf("<single:![%s]>", self.Separators)
+	return fmt.Sprintf("<single:![%s]>", string(self.Separators))
 }

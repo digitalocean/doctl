@@ -7,6 +7,8 @@ package language
 import (
 	"reflect"
 	"testing"
+
+	"golang.org/x/text/internal/testtext"
 )
 
 func TestTagSize(t *testing.T) {
@@ -69,7 +71,7 @@ func TestMakeString(t *testing.T) {
 		// The bytes to string conversion as used in remakeString
 		// occasionally measures as more than one alloc, breaking this test.
 		// To alleviate this we set the number of runs to more than 1.
-		if n := testing.AllocsPerRun(8, id.remakeString); n > 1 {
+		if n := testtext.AllocsPerRun(8, id.remakeString); n > 1 {
 			t.Errorf("%d: # allocs got %.1f; want <= 1", i, n)
 		}
 	}
@@ -89,17 +91,50 @@ func TestCompactIndex(t *testing.T) {
 		{"ca-ES-valencia-u-co-phonebk", 1, true},
 		{"ca-ES-valencia-u-co-phonebk-va-posix", 0, false},
 		{"x-klingon", 0, false},
-		{"en-US", 227, true},
+		{"en-US", 232, true},
 		{"en-US-u-va-posix", 2, true},
-		{"en", 131, true},
-		{"en-u-co-phonebk", 131, true},
-		{"en-001", 132, true},
+		{"en", 136, true},
+		{"en-u-co-phonebk", 136, true},
+		{"en-001", 137, true},
 		{"sh", 0, false}, // We don't normalize.
 	}
 	for _, tt := range tests {
 		x, ok := CompactIndex(Raw.MustParse(tt.tag))
 		if x != tt.index || ok != tt.ok {
 			t.Errorf("%s: got %d, %v; want %d %v", tt.tag, x, ok, tt.index, tt.ok)
+		}
+	}
+}
+
+func TestMarshal(t *testing.T) {
+	testCases := []string{
+		// TODO: these values will change with each CLDR update. This issue
+		// will be solved if we decide to fix the indexes.
+		"und",
+		"ca-ES-valencia",
+		"ca-ES-valencia-u-va-posix",
+		"ca-ES-valencia-u-co-phonebk",
+		"ca-ES-valencia-u-co-phonebk-va-posix",
+		"x-klingon",
+		"en-US",
+		"en-US-u-va-posix",
+		"en",
+		"en-u-co-phonebk",
+		"en-001",
+		"sh",
+	}
+	for _, tc := range testCases {
+		var tag Tag
+		err := tag.UnmarshalText([]byte(tc))
+		if err != nil {
+			t.Errorf("UnmarshalText(%q): unexpected error: %v", tc, err)
+		}
+		b, err := tag.MarshalText()
+		if err != nil {
+			t.Errorf("MarshalText(%q): unexpected error: %v", tc, err)
+		}
+		if got := string(b); got != tc {
+			t.Errorf("%s: got %q; want %q", tc, got, tc)
 		}
 	}
 }
@@ -172,7 +207,7 @@ func TestScript(t *testing.T) {
 		{"cmn", "Hans", Low},
 		{"ru", "Cyrl", High},
 		{"ru-RU", "Cyrl", High},
-		{"yue", "Zzzz", No},
+		{"yue", "Hant", Low},
 		{"x-abc", "Zzzz", Low},
 		{"und-zyyy", "Zyyy", Exact},
 	}
@@ -226,17 +261,17 @@ func TestRegion(t *testing.T) {
 		{"en-US", "US", Exact},
 		{"cmn", "CN", Low},
 		{"ru", "RU", Low},
-		{"yue", "ZZ", No},
+		{"yue", "HK", Low},
 		{"x-abc", "ZZ", Low},
 	}
 	for i, tt := range tests {
 		loc, _ := Raw.Parse(tt.loc)
 		reg, conf := loc.Region()
 		if reg.String() != tt.reg {
-			t.Errorf("%d: region was %s; want %s", i, reg, tt.reg)
+			t.Errorf("%d:%s: region was %s; want %s", i, tt.loc, reg, tt.reg)
 		}
 		if conf != tt.conf {
-			t.Errorf("%d: confidence was %d; want %d", i, conf, tt.conf)
+			t.Errorf("%d:%s: confidence was %d; want %d", i, tt.loc, conf, tt.conf)
 		}
 	}
 }
@@ -504,6 +539,7 @@ func TestCanonicalize(t *testing.T) {
 		{"no", "nb", Legacy | CLDR},
 		{"cmn", "cmn", Legacy},
 		{"cmn", "zh", Macro},
+		{"cmn-u-co-stroke", "zh-u-co-stroke", Macro},
 		{"yue", "yue", Macro},
 		{"nb", "no", Macro},
 		{"nb", "nb", Macro | CLDR},
@@ -529,6 +565,9 @@ func TestCanonicalize(t *testing.T) {
 		if in.String() != tt.out {
 			t.Errorf("%d:%s: was %s; want %s", i, tt.in, in.String(), tt.out)
 		}
+		if int(in.pVariant) > int(in.pExt) || int(in.pExt) > len(in.str) {
+			t.Errorf("%d:%s:offsets %d <= %d <= %d must be true", i, tt.in, in.pVariant, in.pExt, len(in.str))
+		}
 	}
 	// Test idempotence.
 	for _, base := range Supported.BaseLanguages() {
@@ -549,6 +588,7 @@ func TestTypeForKey(t *testing.T) {
 		{"co", "en-u-co-phonebk-cu-aud", "phonebk"},
 		{"co", "x-foo-u-co-phonebk", ""},
 		{"nu", "en-u-co-phonebk-nu-arabic", "arabic"},
+		{"kc", "cmn-u-co-stroke", ""},
 	}
 	for _, tt := range tests {
 		if v := Make(tt.in).TypeForKey(tt.key); v != tt.out {

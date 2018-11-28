@@ -1,6 +1,8 @@
 package oauth2
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,12 +20,70 @@ func TestTransportNilTokenSource(t *testing.T) {
 	server := newMockServer(func(w http.ResponseWriter, r *http.Request) {})
 	defer server.Close()
 	client := &http.Client{Transport: tr}
-	res, err := client.Get(server.URL)
+	resp, err := client.Get(server.URL)
 	if err == nil {
-		t.Errorf("a nil Source was passed into the transport expected an error")
+		t.Errorf("got no errors, want an error with nil token source")
 	}
-	if res != nil {
-		t.Errorf("expected a nil response, got %v", res)
+	if resp != nil {
+		t.Errorf("Response = %v; want nil", resp)
+	}
+}
+
+type readCloseCounter struct {
+	CloseCount int
+	ReadErr    error
+}
+
+func (r *readCloseCounter) Read(b []byte) (int, error) {
+	return 0, r.ReadErr
+}
+
+func (r *readCloseCounter) Close() error {
+	r.CloseCount++
+	return nil
+}
+
+func TestTransportCloseRequestBody(t *testing.T) {
+	tr := &Transport{}
+	server := newMockServer(func(w http.ResponseWriter, r *http.Request) {})
+	defer server.Close()
+	client := &http.Client{Transport: tr}
+	body := &readCloseCounter{
+		ReadErr: errors.New("readCloseCounter.Read not implemented"),
+	}
+	resp, err := client.Post(server.URL, "application/json", body)
+	if err == nil {
+		t.Errorf("got no errors, want an error with nil token source")
+	}
+	if resp != nil {
+		t.Errorf("Response = %v; want nil", resp)
+	}
+	if expected := 1; body.CloseCount != expected {
+		t.Errorf("Body was closed %d times, expected %d", body.CloseCount, expected)
+	}
+}
+
+func TestTransportCloseRequestBodySuccess(t *testing.T) {
+	tr := &Transport{
+		Source: StaticTokenSource(&Token{
+			AccessToken: "abc",
+		}),
+	}
+	server := newMockServer(func(w http.ResponseWriter, r *http.Request) {})
+	defer server.Close()
+	client := &http.Client{Transport: tr}
+	body := &readCloseCounter{
+		ReadErr: io.EOF,
+	}
+	resp, err := client.Post(server.URL, "application/json", body)
+	if err != nil {
+		t.Errorf("got error %v; expected none", err)
+	}
+	if resp == nil {
+		t.Errorf("Response is nil; expected non-nil")
+	}
+	if expected := 1; body.CloseCount != expected {
+		t.Errorf("Body was closed %d times, expected %d", body.CloseCount, expected)
 	}
 }
 
@@ -37,8 +97,8 @@ func TestTransportTokenSource(t *testing.T) {
 		Source: ts,
 	}
 	server := newMockServer(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Authorization") != "Bearer abc" {
-			t.Errorf("Transport doesn't set the Authorization header from the fetched token")
+		if got, want := r.Header.Get("Authorization"), "Bearer abc"; got != want {
+			t.Errorf("Authorization header = %q; want %q", got, want)
 		}
 	})
 	defer server.Close()
@@ -90,7 +150,7 @@ func TestTransportTokenSourceTypes(t *testing.T) {
 func TestTokenValidNoAccessToken(t *testing.T) {
 	token := &Token{}
 	if token.Valid() {
-		t.Errorf("Token should not be valid with no access token")
+		t.Errorf("got valid with no access token; want invalid")
 	}
 }
 
@@ -99,7 +159,7 @@ func TestExpiredWithExpiry(t *testing.T) {
 		Expiry: time.Now().Add(-5 * time.Hour),
 	}
 	if token.Valid() {
-		t.Errorf("Token should not be valid if it expired in the past")
+		t.Errorf("got valid with expired token; want invalid")
 	}
 }
 

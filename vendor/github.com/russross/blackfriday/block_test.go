@@ -657,6 +657,9 @@ func TestUnorderedList(t *testing.T) {
 		"Paragraph\n\n* Linebreak\n",
 		"<p>Paragraph</p>\n\n<ul>\n<li>Linebreak</li>\n</ul>\n",
 
+		"*   List\n\n1. Spacer Mixed listing\n",
+		"<ul>\n<li>List</li>\n</ul>\n\n<ol>\n<li>Spacer Mixed listing</li>\n</ol>\n",
+
 		"*   List\n    * Nested list\n",
 		"<ul>\n<li>List\n\n<ul>\n<li>Nested list</li>\n</ul></li>\n</ul>\n",
 
@@ -815,6 +818,12 @@ func TestOrderedList(t *testing.T) {
 		"1. List\n\n          code block with spaces\n",
 		"<ol>\n<li><p>List</p>\n\n<pre><code>  code block with spaces\n</code></pre></li>\n</ol>\n",
 
+		"1. List\n\n* Spacer Mixed listing\n",
+		"<ol>\n<li>List</li>\n</ol>\n\n<ul>\n<li>Spacer Mixed listing</li>\n</ul>\n",
+
+		"1. List\n* Mixed listing\n",
+		"<ol>\n<li>List</li>\n<li>Mixed listing</li>\n</ol>\n",
+
 		"1. List\n    * Mixted list\n",
 		"<ol>\n<li>List\n\n<ul>\n<li>Mixted list</li>\n</ul></li>\n</ol>\n",
 
@@ -951,6 +960,14 @@ func TestDefinitionList(t *testing.T) {
 			"<dd><p>Definition b</p></dd>\n" +
 			"</dl>\n" +
 			"\n<p>Text 2</p>\n",
+
+		"Term 1\n:   Definition a\n\n    Text 1\n\n    1. First\n    2. Second",
+		"<dl>\n" +
+			"<dt>Term 1</dt>\n" +
+			"<dd><p>Definition a</p>\n\n" +
+			"<p>Text 1</p>\n\n" +
+			"<ol>\n<li>First</li>\n<li>Second</li>\n</ol></dd>\n" +
+			"</dl>\n",
 	}
 	doTestsBlock(t, tests, EXTENSION_DEFINITION_LISTS)
 }
@@ -1036,6 +1053,9 @@ func TestFencedCodeBlock(t *testing.T) {
 		"``` go\nfunc foo() bool {\n\treturn true;\n}\n```\n",
 		"<pre><code class=\"language-go\">func foo() bool {\n\treturn true;\n}\n</code></pre>\n",
 
+		"``` go foo bar\nfunc foo() bool {\n\treturn true;\n}\n```\n",
+		"<pre><code class=\"language-go\">func foo() bool {\n\treturn true;\n}\n</code></pre>\n",
+
 		"``` c\n/* special & char < > \" escaping */\n```\n",
 		"<pre><code class=\"language-c\">/* special &amp; char &lt; &gt; &quot; escaping */\n</code></pre>\n",
 
@@ -1113,6 +1133,12 @@ func TestFencedCodeBlock(t *testing.T) {
 
 		"Some text before a fenced code block\n``` oz\ncode blocks breakup paragraphs\n```\nSome text in between\n``` oz\nmultiple code blocks work okay\n```\nAnd some text after a fenced code block",
 		"<p>Some text before a fenced code block</p>\n\n<pre><code class=\"language-oz\">code blocks breakup paragraphs\n</code></pre>\n\n<p>Some text in between</p>\n\n<pre><code class=\"language-oz\">multiple code blocks work okay\n</code></pre>\n\n<p>And some text after a fenced code block</p>\n",
+
+		"```\n[]:()\n```\n",
+		"<pre><code>[]:()\n</code></pre>\n",
+
+		"```\n[]:()\n[]:)\n[]:(\n[]:x\n[]:testing\n[:testing\n\n[]:\nlinebreak\n[]()\n\n[]:\n[]()\n```",
+		"<pre><code>[]:()\n[]:)\n[]:(\n[]:x\n[]:testing\n[:testing\n\n[]:\nlinebreak\n[]()\n\n[]:\n[]()\n</code></pre>\n",
 	}
 	doTestsBlock(t, tests, EXTENSION_FENCED_CODE)
 }
@@ -1488,6 +1514,9 @@ func TestFencedCodeBlock_EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK(t *testing.T) {
 		"``` go\nfunc foo() bool {\n\treturn true;\n}\n```\n",
 		"<pre><code class=\"language-go\">func foo() bool {\n\treturn true;\n}\n</code></pre>\n",
 
+		"``` go foo bar\nfunc foo() bool {\n\treturn true;\n}\n```\n",
+		"<pre><code class=\"language-go\">func foo() bool {\n\treturn true;\n}\n</code></pre>\n",
+
 		"``` c\n/* special & char < > \" escaping */\n```\n",
 		"<pre><code class=\"language-c\">/* special &amp; char &lt; &gt; &quot; escaping */\n</code></pre>\n",
 
@@ -1554,6 +1583,44 @@ func TestFencedCodeBlock_EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK(t *testing.T) {
 	doTestsBlock(t, tests, EXTENSION_FENCED_CODE|EXTENSION_NO_EMPTY_LINE_BEFORE_BLOCK)
 }
 
+func TestListWithFencedCodeBlock(t *testing.T) {
+	var tests = []string{
+		"1. one\n\n    ```\n    code\n    ```\n\n2. two\n",
+		"<ol>\n<li><p>one</p>\n\n<pre><code>code\n</code></pre></li>\n\n<li><p>two</p></li>\n</ol>\n",
+		// https://github.com/russross/blackfriday/issues/239
+		"1. one\n\n    ```\n    - code\n    ```\n\n2. two\n",
+		"<ol>\n<li><p>one</p>\n\n<pre><code>- code\n</code></pre></li>\n\n<li><p>two</p></li>\n</ol>\n",
+	}
+	doTestsBlock(t, tests, EXTENSION_FENCED_CODE)
+}
+
+func TestListWithMalformedFencedCodeBlock(t *testing.T) {
+	// Ensure that in the case of an unclosed fenced code block in a list,
+	// no source gets ommitted (even if it is malformed).
+	// See russross/blackfriday#372 for context.
+	var tests = []string{
+		"1. one\n\n    ```\n    code\n\n2. two\n",
+		"<ol>\n<li>one\n\n```\ncode\n\n2. two</li>\n</ol>\n",
+
+		"1. one\n\n    ```\n    - code\n\n2. two\n",
+		"<ol>\n<li>one\n\n```\n- code\n\n2. two</li>\n</ol>\n",
+	}
+	doTestsBlock(t, tests, EXTENSION_FENCED_CODE)
+}
+
+func TestListWithFencedCodeBlockNoExtensions(t *testing.T) {
+	// If there is a fenced code block in a list, and FencedCode is not set,
+	// lists should be processed normally.
+	var tests = []string{
+		"1. one\n\n    ```\n    code\n    ```\n\n2. two\n",
+		"<ol>\n<li><p>one</p>\n\n<p><code>\ncode\n</code></p></li>\n\n<li><p>two</p></li>\n</ol>\n",
+
+		"1. one\n\n    ```\n    - code\n    ```\n\n2. two\n",
+		"<ol>\n<li><p>one</p>\n\n<p>```</p>\n\n<ul>\n<li>code\n```</li>\n</ul></li>\n\n<li><p>two</p></li>\n</ol>\n",
+	}
+	doTestsBlock(t, tests, 0)
+}
+
 func TestTitleBlock_EXTENSION_TITLEBLOCK(t *testing.T) {
 	var tests = []string{
 		"% Some title\n" +
@@ -1618,4 +1685,157 @@ func TestCDATA(t *testing.T) {
 ]]>
 `,
 	}, EXTENSION_FENCED_CODE)
+}
+
+func TestIsFenceLine(t *testing.T) {
+	tests := []struct {
+		data            []byte
+		infoRequested   bool
+		newlineOptional bool
+		wantEnd         int
+		wantMarker      string
+		wantInfo        string
+	}{
+		{
+			data:    []byte("```"),
+			wantEnd: 0,
+		},
+		{
+			data:       []byte("```\nstuff here\n"),
+			wantEnd:    4,
+			wantMarker: "```",
+		},
+		{
+			data:          []byte("```\nstuff here\n"),
+			infoRequested: true,
+			wantEnd:       4,
+			wantMarker:    "```",
+		},
+		{
+			data:    []byte("stuff here\n```\n"),
+			wantEnd: 0,
+		},
+		{
+			data:            []byte("```"),
+			newlineOptional: true,
+			wantEnd:         3,
+			wantMarker:      "```",
+		},
+		{
+			data:            []byte("```"),
+			infoRequested:   true,
+			newlineOptional: true,
+			wantEnd:         3,
+			wantMarker:      "```",
+		},
+		{
+			data:            []byte("``` go"),
+			infoRequested:   true,
+			newlineOptional: true,
+			wantEnd:         6,
+			wantMarker:      "```",
+			wantInfo:        "go",
+		},
+		{
+			data:            []byte("``` go foo bar"),
+			infoRequested:   true,
+			newlineOptional: true,
+			wantEnd:         14,
+			wantMarker:      "```",
+			wantInfo:        "go foo bar",
+		},
+		{
+			data:            []byte("``` go foo bar  "),
+			infoRequested:   true,
+			newlineOptional: true,
+			wantEnd:         16,
+			wantMarker:      "```",
+			wantInfo:        "go foo bar",
+		},
+	}
+
+	for _, test := range tests {
+		var info *string
+		if test.infoRequested {
+			info = new(string)
+		}
+		end, marker := isFenceLine(test.data, info, "```", test.newlineOptional)
+		if got, want := end, test.wantEnd; got != want {
+			t.Errorf("got end %v, want %v", got, want)
+		}
+		if got, want := marker, test.wantMarker; got != want {
+			t.Errorf("got marker %q, want %q", got, want)
+		}
+		if test.infoRequested {
+			if got, want := *info, test.wantInfo; got != want {
+				t.Errorf("got info %q, want %q", got, want)
+			}
+		}
+	}
+}
+
+func TestJoinLines(t *testing.T) {
+	input := `# 标题
+
+第一
+行文字。
+
+第
+二
+行文字。
+`
+	result := `<h1>标题</h1>
+
+<p>第一行文字。</p>
+
+<p>第二行文字。</p>
+`
+	opt := Options{Extensions: commonExtensions | EXTENSION_JOIN_LINES}
+	renderer := HtmlRenderer(commonHtmlFlags, "", "")
+	output := MarkdownOptions([]byte(input), renderer, opt)
+
+	if string(output) != result {
+		t.Error("output dose not match.")
+	}
+}
+
+func TestSanitizedAnchorName(t *testing.T) {
+	tests := []struct {
+		text string
+		want string
+	}{
+		{
+			text: "This is a header",
+			want: "this-is-a-header",
+		},
+		{
+			text: "This is also          a header",
+			want: "this-is-also-a-header",
+		},
+		{
+			text: "main.go",
+			want: "main-go",
+		},
+		{
+			text: "Article 123",
+			want: "article-123",
+		},
+		{
+			text: "<- Let's try this, shall we?",
+			want: "let-s-try-this-shall-we",
+		},
+		{
+			text: "        ",
+			want: "",
+		},
+		{
+			text: "Hello, 世界",
+			want: "hello-世界",
+		},
+	}
+	for _, test := range tests {
+		if got := SanitizedAnchorName(test.text); got != test.want {
+			t.Errorf("SanitizedAnchorName(%q):\ngot %q\nwant %q", test.text, got, test.want)
+		}
+	}
 }

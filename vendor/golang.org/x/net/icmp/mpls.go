@@ -4,7 +4,9 @@
 
 package icmp
 
-// A MPLSLabel represents a MPLS label stack entry.
+import "encoding/binary"
+
+// MPLSLabel represents an MPLS label stack entry.
 type MPLSLabel struct {
 	Label int  // label value
 	TC    int  // traffic class; formerly experimental use
@@ -17,7 +19,7 @@ const (
 	typeIncomingMPLSLabelStack = 1
 )
 
-// A MPLSLabelStack represents a MPLS label stack.
+// MPLSLabelStack represents an MPLS label stack.
 type MPLSLabelStack struct {
 	Class  int // extension object class number
 	Type   int // extension object sub-type
@@ -40,7 +42,7 @@ func (ls *MPLSLabelStack) Marshal(proto int) ([]byte, error) {
 
 func (ls *MPLSLabelStack) marshal(proto int, b []byte) error {
 	l := ls.Len(proto)
-	b[0], b[1] = byte(l>>8), byte(l)
+	binary.BigEndian.PutUint16(b[:2], uint16(l))
 	b[2], b[3] = classMPLSLabelStack, typeIncomingMPLSLabelStack
 	off := 4
 	for _, ll := range ls.Labels {

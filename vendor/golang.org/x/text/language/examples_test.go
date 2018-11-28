@@ -6,6 +6,7 @@ package language_test
 
 import (
 	"fmt"
+	"net/http"
 
 	"golang.org/x/text/language"
 )
@@ -274,7 +275,7 @@ func ExampleMatcher() {
 
 	fmt.Println("----")
 
-	// Croatian speakers will likely understand Serbian written in Latin script.
+	// Someone specifying sr-Latn is probably fine with getting Croatian.
 	fmt.Println(m.Match(language.Make("sr-Latn")))
 
 	// We match SimplifiedChinese, but with Low confidence.
@@ -331,11 +332,27 @@ func ExampleMatcher() {
 	// af 3 High
 	// ----
 	// iw 9 Exact
-	// iw-IL 8 Exact
+	// he 10 Exact
 	// ----
 	// fr-u-cu-frf 2 Exact
 	// fr-u-cu-frf 2 High
 	// en-u-co-phonebk 0 No
+
+	// TODO: "he" should be "he-u-rg-IL High"
+}
+
+func ExampleMatchStrings() {
+	// languages supported by this service:
+	matcher := language.NewMatcher([]language.Tag{
+		language.English, language.Dutch, language.German,
+	})
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		lang, _ := r.Cookie("lang")
+		tag, _ := language.MatchStrings(matcher, lang.String(), r.Header.Get("Accept-Language"))
+
+		fmt.Println("User language:", tag)
+	})
 }
 
 func ExampleComprehends() {
@@ -373,25 +390,6 @@ func ExampleComprehends() {
 	// ----
 	// High
 	// No
-}
-
-func ExampleParseAcceptLanguage() {
-	// Tags are reordered based on their q rating. A missing q value means 1.0.
-	fmt.Println(language.ParseAcceptLanguage(" nn;q=0.3, en-gb;q=0.8, en,"))
-
-	m := language.NewMatcher([]language.Tag{language.Norwegian, language.Make("en-AU")})
-
-	t, _, _ := language.ParseAcceptLanguage("da, en-gb;q=0.8, en;q=0.7")
-	fmt.Println(m.Match(t...))
-
-	// Danish is pretty close to Norwegian.
-	t, _, _ = language.ParseAcceptLanguage(" da, nl")
-	fmt.Println(m.Match(t...))
-
-	// Output:
-	// [en en-GB nn] [1 0.8 0.3] <nil>
-	// en-AU 1 High
-	// no 0 High
 }
 
 func ExampleTag_values() {

@@ -5,9 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/digitalocean/godo"
-
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 )
 
 type KubernetesClusters struct {

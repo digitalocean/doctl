@@ -2,24 +2,26 @@ package match
 
 import (
 	"fmt"
-	"strings"
+	"github.com/gobwas/glob/util/runes"
 	"unicode/utf8"
 )
 
 type List struct {
-	List string
+	List []rune
 	Not  bool
 }
 
+func NewList(list []rune, not bool) List {
+	return List{list, not}
+}
+
 func (self List) Match(s string) bool {
-	// if s 100% have two symbols
-	//	_, w := utf8.DecodeRuneInString(s)
-	//	if len(s) > w {
-	if len(s) > 4 {
+	r, w := utf8.DecodeRuneInString(s)
+	if len(s) > w {
 		return false
 	}
 
-	inList := strings.Index(self.List, s) != -1
+	inList := runes.IndexRune(self.List, r) != -1
 	return inList == !self.Not
 }
 
@@ -29,8 +31,8 @@ func (self List) Len() int {
 
 func (self List) Index(s string) (int, []int) {
 	for i, r := range s {
-		if self.Not == (strings.IndexRune(self.List, r) == -1) {
-			return i, []int{utf8.RuneLen(r)}
+		if self.Not == (runes.IndexRune(self.List, r) == -1) {
+			return i, segmentsByRuneLength[utf8.RuneLen(r)]
 		}
 	}
 
@@ -43,5 +45,5 @@ func (self List) String() string {
 		not = "!"
 	}
 
-	return fmt.Sprintf("<list:%s[%s]>", not, self.List)
+	return fmt.Sprintf("<list:%s[%s]>", not, string(self.List))
 }

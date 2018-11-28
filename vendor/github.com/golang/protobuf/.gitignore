@@ -12,4 +12,6 @@ core
 _obj
 _test
 _testmain.go
-protoc-gen-go/testdata/multi/*.pb.go
+
+# Conformance test output and transient files.
+conformance/failing_tests.txt

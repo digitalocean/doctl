@@ -91,7 +91,7 @@ func genTree(
 	filePrepender func(string, string) string,
 ) error {
 	for _, c := range cmd.ChildCommands() {
-		if !c.IsAvailableCommand() || c.IsHelpCommand() {
+		if !c.IsAvailableCommand() {
 			continue
 		}
 		if err := genTree(c, dir, filePrepender); err != nil {

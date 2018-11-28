@@ -80,18 +80,15 @@ func (r *Reader) drawProgress() {
 }
 
 func (r *Reader) finishProgress() {
-	// Only output the final draw if we drawed prior
-	if !r.lastDraw.IsZero() {
-		f := r.drawFunc()
-		f(r.progress, r.Size)
+	f := r.drawFunc()
+	f(r.progress, r.Size)
 
-		// Print a newline
-		f(-1, -1)
+	// Print a newline
+	f(-1, -1)
 
-		// Reset lastDraw so we don't finish again
-		var zeroDraw time.Time
-		r.lastDraw = zeroDraw
-	}
+	// Reset lastDraw so we don't finish again
+	var zeroDraw time.Time
+	r.lastDraw = zeroDraw
 }
 
 func (r *Reader) initProgress() {

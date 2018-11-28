@@ -5,8 +5,10 @@
 package number
 
 import (
+	"fmt"
 	"testing"
 
+	"golang.org/x/text/internal/testtext"
 	"golang.org/x/text/language"
 )
 
@@ -25,9 +27,13 @@ func TestInfo(t *testing.T) {
 		// U+096F DEVANAGARI DIGIT NINE ('९')
 		{"de-BE-u-nu-deva", SymGroup, ".", '\u096f'}, // miss -> latn -> de
 		{"de-Cyrl-BE", SymGroup, ",", '9'},           // inherits from root
-		{"de-CH", SymGroup, "'", '9'},                // overrides values in de
-		{"de-CH-oxendict", SymGroup, "'", '9'},       // inherits from de-CH (no compact index)
-		{"de-CH-u-nu-deva", SymGroup, "'", '\u096f'}, // miss -> latn -> de-CH
+		{"de-CH", SymGroup, "’", '9'},                // overrides values in de
+		{"de-CH-oxendict", SymGroup, "’", '9'},       // inherits from de-CH (no compact index)
+		{"de-CH-u-nu-deva", SymGroup, "’", '\u096f'}, // miss -> latn -> de-CH
+
+		{"bn-u-nu-beng", SymGroup, ",", '\u09ef'},
+		{"bn-u-nu-deva", SymGroup, ",", '\u096f'},
+		{"bn-u-nu-latn", SymGroup, ",", '9'},
 
 		{"pa", SymExponential, "E", '9'},
 
@@ -50,12 +56,49 @@ func TestInfo(t *testing.T) {
 		{"en-u-nu-roman", SymPlusSign, "+", '9'},
 	}
 	for _, tc := range testCases {
-		info := InfoFromTag(language.MustParse(tc.lang))
-		if got := info.Symbol(tc.sym); got != tc.wantSym {
-			t.Errorf("%s:%v:sym: got %q; want %q", tc.lang, tc.sym, got, tc.wantSym)
-		}
-		if got := info.Digit('9'); got != tc.wantNine {
-			t.Errorf("%s:%v:nine: got %q; want %q", tc.lang, tc.sym, got, tc.wantNine)
-		}
+		t.Run(fmt.Sprintf("%s:%v", tc.lang, tc.sym), func(t *testing.T) {
+			info := InfoFromTag(language.MustParse(tc.lang))
+			if got := info.Symbol(tc.sym); got != tc.wantSym {
+				t.Errorf("sym: got %q; want %q", got, tc.wantSym)
+			}
+			if got := info.Digit('9'); got != tc.wantNine {
+				t.Errorf("Digit(9): got %+q; want %+q", got, tc.wantNine)
+			}
+			var buf [4]byte
+			if got := string(buf[:info.WriteDigit(buf[:], '9')]); got != string(tc.wantNine) {
+				t.Errorf("WriteDigit(9): got %+q; want %+q", got, tc.wantNine)
+			}
+			if got := string(info.AppendDigit([]byte{}, 9)); got != string(tc.wantNine) {
+				t.Errorf("AppendDigit(9): got %+q; want %+q", got, tc.wantNine)
+			}
+		})
+	}
+}
+
+func TestFormats(t *testing.T) {
+	testCases := []struct {
+		lang    string
+		pattern string
+		index   []byte
+	}{
+		{"en", "#,##0.###", tagToDecimal},
+		{"de", "#,##0.###", tagToDecimal},
+		{"de-CH", "#,##0.###", tagToDecimal},
+		{"pa", "#,##,##0.###", tagToDecimal},
+		{"pa-Arab", "#,##0.###", tagToDecimal}, // Does NOT inherit from pa!
+		{"mr", "#,##,##0.###", tagToDecimal},
+		{"mr-IN", "#,##,##0.###", tagToDecimal}, // Inherits from mr.
+		{"nl", "#E0", tagToScientific},
+		{"nl-MX", "#E0", tagToScientific}, // Inherits through Tag.Parent.
+		{"zgh", "#,##0 %", tagToPercent},
+	}
+	for _, tc := range testCases {
+		testtext.Run(t, tc.lang, func(t *testing.T) {
+			got := formatForLang(language.MustParse(tc.lang), tc.index)
+			want, _ := ParsePattern(tc.pattern)
+			if *got != *want {
+				t.Errorf("\ngot  %#v;\nwant %#v", got, want)
+			}
+		})
 	}
 }

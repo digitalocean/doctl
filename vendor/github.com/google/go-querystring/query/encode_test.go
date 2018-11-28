@@ -25,6 +25,7 @@ type SubNested struct {
 func TestValues_types(t *testing.T) {
 	str := "string"
 	strPtr := &str
+	timeVal := time.Date(2000, 1, 1, 12, 34, 56, 0, time.UTC)
 
 	tests := []struct {
 		in   interface{}
@@ -53,11 +54,17 @@ func TestValues_types(t *testing.T) {
 				A *string
 				B *int
 				C **string
-			}{A: strPtr, C: &strPtr},
+				D *time.Time
+			}{
+				A: strPtr,
+				C: &strPtr,
+				D: &timeVal,
+			},
 			url.Values{
 				"A": {str},
 				"B": {""},
 				"C": {str},
+				"D": {"2000-01-01T12:34:56Z"},
 			},
 		},
 		{
@@ -72,6 +79,8 @@ func TestValues_types(t *testing.T) {
 				G []*string `url:",space"`
 				H []bool    `url:",int,space"`
 				I []string  `url:",brackets"`
+				J []string  `url:",semicolon"`
+				K []string  `url:",numbered"`
 			}{
 				A: []string{"a", "b"},
 				B: []string{"a", "b"},
@@ -82,6 +91,8 @@ func TestValues_types(t *testing.T) {
 				G: []*string{&str, &str},
 				H: []bool{true, false},
 				I: []string{"a", "b"},
+				J: []string{"a", "b"},
+				K: []string{"a", "b"},
 			},
 			url.Values{
 				"A":   {"a", "b"},
@@ -93,6 +104,9 @@ func TestValues_types(t *testing.T) {
 				"G":   {"string string"},
 				"H":   {"1 0"},
 				"I[]": {"a", "b"},
+				"J":   {"a;b"},
+				"K0":  {"a"},
+				"K1":  {"b"},
 			},
 		},
 		{
@@ -203,6 +217,15 @@ type D struct {
 	C string
 }
 
+type e struct {
+	B
+	C string
+}
+
+type F struct {
+	e
+}
+
 func TestValues_embeddedStructs(t *testing.T) {
 	tests := []struct {
 		in   interface{}
@@ -214,6 +237,10 @@ func TestValues_embeddedStructs(t *testing.T) {
 		},
 		{
 			D{B: B{C: "bar"}, C: "foo"},
+			url.Values{"C": {"foo", "bar"}},
+		},
+		{
+			F{e{B: B{C: "bar"}, C: "foo"}}, // With unexported embed
 			url.Values{"C": {"foo", "bar"}},
 		},
 	}

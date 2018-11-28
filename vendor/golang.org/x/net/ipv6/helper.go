@@ -1,4 +1,4 @@
-// Copyright 2013 The Go Authors.  All rights reserved.
+// Copyright 2013 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	errInvalidConn     = errors.New("invalid connection")
 	errMissingAddress  = errors.New("missing address")
 	errHeaderTooShort  = errors.New("header too short")
 	errInvalidConnType = errors.New("invalid conn type")
@@ -36,4 +37,22 @@ func netAddrToIP16(a net.Addr) net.IP {
 		}
 	}
 	return nil
+}
+
+func opAddr(a net.Addr) net.Addr {
+	switch a.(type) {
+	case *net.TCPAddr:
+		if a == nil {
+			return nil
+		}
+	case *net.UDPAddr:
+		if a == nil {
+			return nil
+		}
+	case *net.IPAddr:
+		if a == nil {
+			return nil
+		}
+	}
+	return a
 }

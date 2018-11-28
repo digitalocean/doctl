@@ -7,25 +7,25 @@ import (
 
 func TestSingleIndex(t *testing.T) {
 	for id, test := range []struct {
-		separators string
+		separators []rune
 		fixture    string
 		index      int
 		segments   []int
 	}{
 		{
-			".",
+			[]rune{'.'},
 			".abc",
 			1,
 			[]int{1},
 		},
 		{
-			".",
+			[]rune{'.'},
 			".",
 			-1,
 			nil,
 		},
 	} {
-		p := Single{test.separators}
+		p := NewSingle(test.separators)
 		index, segments := p.Index(test.fixture)
 		if index != test.index {
 			t.Errorf("#%d unexpected index: exp: %d, act: %d", id, test.index, index)
@@ -37,8 +37,21 @@ func TestSingleIndex(t *testing.T) {
 }
 
 func BenchmarkIndexSingle(b *testing.B) {
-	m := Single{bench_separators}
+	m := NewSingle(bench_separators)
+
 	for i := 0; i < b.N; i++ {
-		m.Index(bench_pattern)
+		_, s := m.Index(bench_pattern)
+		releaseSegments(s)
 	}
+}
+
+func BenchmarkIndexSingleParallel(b *testing.B) {
+	m := NewSingle(bench_separators)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, s := m.Index(bench_pattern)
+			releaseSegments(s)
+		}
+	})
 }

@@ -59,13 +59,11 @@ func doTestsInlineParam(t *testing.T, tests []string, opts Options, htmlFlags in
 	params HtmlRendererParameters) {
 	// catch and report panics
 	var candidate string
-	/*
-		defer func() {
-			if err := recover(); err != nil {
-				t.Errorf("\npanic while processing [%#v] (%v)\n", candidate, err)
-			}
-		}()
-	*/
+	defer func() {
+		if err := recover(); err != nil {
+			t.Errorf("\npanic while processing [%#v]: %s\n", candidate, err)
+		}
+	}()
 
 	for i := 0; i+1 < len(tests); i += 2 {
 		input := tests[i]
@@ -855,7 +853,7 @@ func TestAutoLink(t *testing.T) {
 
 var footnoteTests = []string{
 	"testing footnotes.[^a]\n\n[^a]: This is the note\n",
-	`<p>testing footnotes.<sup class="footnote-ref" id="fnref:a"><a rel="footnote" href="#fn:a">1</a></sup></p>
+	`<p>testing footnotes.<sup class="footnote-ref" id="fnref:a"><a href="#fn:a">1</a></sup></p>
 <div class="footnotes">
 
 <hr />
@@ -879,7 +877,7 @@ var footnoteTests = []string{
 
 No longer in the footnote
 `,
-	`<p>testing long<sup class="footnote-ref" id="fnref:b"><a rel="footnote" href="#fn:b">1</a></sup> notes.</p>
+	`<p>testing long<sup class="footnote-ref" id="fnref:b"><a href="#fn:b">1</a></sup> notes.</p>
 
 <p>No longer in the footnote</p>
 <div class="footnotes">
@@ -915,7 +913,7 @@ what happens here
 [note]: /link/c
 
 `,
-	`<p>testing<sup class="footnote-ref" id="fnref:c"><a rel="footnote" href="#fn:c">1</a></sup> multiple<sup class="footnote-ref" id="fnref:d"><a rel="footnote" href="#fn:d">2</a></sup> notes.</p>
+	`<p>testing<sup class="footnote-ref" id="fnref:c"><a href="#fn:c">1</a></sup> multiple<sup class="footnote-ref" id="fnref:d"><a href="#fn:d">2</a></sup> notes.</p>
 
 <p>omg</p>
 
@@ -934,7 +932,7 @@ what happens here
 `,
 
 	"testing inline^[this is the note] notes.\n",
-	`<p>testing inline<sup class="footnote-ref" id="fnref:this-is-the-note"><a rel="footnote" href="#fn:this-is-the-note">1</a></sup> notes.</p>
+	`<p>testing inline<sup class="footnote-ref" id="fnref:this-is-the-note"><a href="#fn:this-is-the-note">1</a></sup> notes.</p>
 <div class="footnotes">
 
 <hr />
@@ -946,7 +944,7 @@ what happens here
 `,
 
 	"testing multiple[^1] types^[inline note] of notes[^2]\n\n[^2]: the second deferred note\n[^1]: the first deferred note\n\n\twhich happens to be a block\n",
-	`<p>testing multiple<sup class="footnote-ref" id="fnref:1"><a rel="footnote" href="#fn:1">1</a></sup> types<sup class="footnote-ref" id="fnref:inline-note"><a rel="footnote" href="#fn:inline-note">2</a></sup> of notes<sup class="footnote-ref" id="fnref:2"><a rel="footnote" href="#fn:2">3</a></sup></p>
+	`<p>testing multiple<sup class="footnote-ref" id="fnref:1"><a href="#fn:1">1</a></sup> types<sup class="footnote-ref" id="fnref:inline-note"><a href="#fn:inline-note">2</a></sup> of notes<sup class="footnote-ref" id="fnref:2"><a href="#fn:2">3</a></sup></p>
 <div class="footnotes">
 
 <hr />
@@ -969,7 +967,7 @@ what happens here
 
     may be multiple paragraphs.
 `,
-	`<p>This is a footnote<sup class="footnote-ref" id="fnref:1"><a rel="footnote" href="#fn:1">1</a></sup><sup class="footnote-ref" id="fnref:and-this-is-an-i"><a rel="footnote" href="#fn:and-this-is-an-i">2</a></sup></p>
+	`<p>This is a footnote<sup class="footnote-ref" id="fnref:1"><a href="#fn:1">1</a></sup><sup class="footnote-ref" id="fnref:and-this-is-an-i"><a href="#fn:and-this-is-an-i">2</a></sup></p>
 <div class="footnotes">
 
 <hr />
@@ -985,13 +983,13 @@ what happens here
 `,
 
 	"empty footnote[^]\n\n[^]: fn text",
-	"<p>empty footnote<sup class=\"footnote-ref\" id=\"fnref:\"><a rel=\"footnote\" href=\"#fn:\">1</a></sup></p>\n<div class=\"footnotes\">\n\n<hr />\n\n<ol>\n<li id=\"fn:\">fn text\n</li>\n</ol>\n</div>\n",
+	"<p>empty footnote<sup class=\"footnote-ref\" id=\"fnref:\"><a href=\"#fn:\">1</a></sup></p>\n<div class=\"footnotes\">\n\n<hr />\n\n<ol>\n<li id=\"fn:\">fn text\n</li>\n</ol>\n</div>\n",
 
 	"Some text.[^note1]\n\n[^note1]: fn1",
-	"<p>Some text.<sup class=\"footnote-ref\" id=\"fnref:note1\"><a rel=\"footnote\" href=\"#fn:note1\">1</a></sup></p>\n<div class=\"footnotes\">\n\n<hr />\n\n<ol>\n<li id=\"fn:note1\">fn1\n</li>\n</ol>\n</div>\n",
+	"<p>Some text.<sup class=\"footnote-ref\" id=\"fnref:note1\"><a href=\"#fn:note1\">1</a></sup></p>\n<div class=\"footnotes\">\n\n<hr />\n\n<ol>\n<li id=\"fn:note1\">fn1\n</li>\n</ol>\n</div>\n",
 
 	"Some text.[^note1][^note2]\n\n[^note1]: fn1\n[^note2]: fn2\n",
-	"<p>Some text.<sup class=\"footnote-ref\" id=\"fnref:note1\"><a rel=\"footnote\" href=\"#fn:note1\">1</a></sup><sup class=\"footnote-ref\" id=\"fnref:note2\"><a rel=\"footnote\" href=\"#fn:note2\">2</a></sup></p>\n<div class=\"footnotes\">\n\n<hr />\n\n<ol>\n<li id=\"fn:note1\">fn1\n</li>\n<li id=\"fn:note2\">fn2\n</li>\n</ol>\n</div>\n",
+	"<p>Some text.<sup class=\"footnote-ref\" id=\"fnref:note1\"><a href=\"#fn:note1\">1</a></sup><sup class=\"footnote-ref\" id=\"fnref:note2\"><a href=\"#fn:note2\">2</a></sup></p>\n<div class=\"footnotes\">\n\n<hr />\n\n<ol>\n<li id=\"fn:note1\">fn1\n</li>\n<li id=\"fn:note2\">fn2\n</li>\n</ol>\n</div>\n",
 
 	`Bla bla [^1] [WWW][w3]
 
@@ -999,7 +997,7 @@ what happens here
 
 [w3]: http://www.w3.org/
 `,
-	`<p>Bla bla <sup class="footnote-ref" id="fnref:1"><a rel="footnote" href="#fn:1">1</a></sup> <a href="http://www.w3.org/">WWW</a></p>
+	`<p>Bla bla <sup class="footnote-ref" id="fnref:1"><a href="#fn:1">1</a></sup> <a href="http://www.w3.org/">WWW</a></p>
 <div class="footnotes">
 
 <hr />
@@ -1015,13 +1013,35 @@ what happens here
 
 [^fn1]: Fine print
 `,
-	`<p>This is exciting!<sup class="footnote-ref" id="fnref:fn1"><a rel="footnote" href="#fn:fn1">1</a></sup></p>
+	`<p>This is exciting!<sup class="footnote-ref" id="fnref:fn1"><a href="#fn:fn1">1</a></sup></p>
 <div class="footnotes">
 
 <hr />
 
 <ol>
 <li id="fn:fn1">Fine print
+</li>
+</ol>
+</div>
+`,
+	`testing footnotes.[^a]
+
+test footnotes the second.[^b]
+
+[^a]: This is the first note[^a].
+[^b]: this is the second note.[^a]
+`,
+	`<p>testing footnotes.<sup class="footnote-ref" id="fnref:a"><a href="#fn:a">1</a></sup></p>
+
+<p>test footnotes the second.<sup class="footnote-ref" id="fnref:b"><a href="#fn:b">2</a></sup></p>
+<div class="footnotes">
+
+<hr />
+
+<ol>
+<li id="fn:a">This is the first note<sup class="footnote-ref" id="fnref:a"><a href="#fn:a">1</a></sup>.
+</li>
+<li id="fn:b">this is the second note.<sup class="footnote-ref" id="fnref:a"><a href="#fn:a">1</a></sup>
 </li>
 </ol>
 </div>
@@ -1066,15 +1086,43 @@ func TestNestedFootnotes(t *testing.T) {
 
 [^fn2]:
   Obelisk`,
-		`<p>Paragraph.<sup class="footnote-ref" id="fnref:fn1"><a rel="footnote" href="#fn:fn1">1</a></sup></p>
+		`<p>Paragraph.<sup class="footnote-ref" id="fnref:fn1"><a href="#fn:fn1">1</a></sup></p>
 <div class="footnotes">
 
 <hr />
 
 <ol>
-<li id="fn:fn1">Asterisk<sup class="footnote-ref" id="fnref:fn2"><a rel="footnote" href="#fn:fn2">2</a></sup>
+<li id="fn:fn1">Asterisk<sup class="footnote-ref" id="fnref:fn2"><a href="#fn:fn2">2</a></sup>
 </li>
 <li id="fn:fn2">Obelisk
+</li>
+</ol>
+</div>
+`,
+		`This uses footnote A.[^A]
+
+This uses footnote C.[^C]
+
+[^A]:
+  A note. use itself.[^A]
+[^B]:
+  B note, uses A to test duplicate.[^A]
+[^C]:
+  C note, uses B.[^B]
+`,
+		`<p>This uses footnote A.<sup class="footnote-ref" id="fnref:A"><a href="#fn:A">1</a></sup></p>
+
+<p>This uses footnote C.<sup class="footnote-ref" id="fnref:C"><a href="#fn:C">2</a></sup></p>
+<div class="footnotes">
+
+<hr />
+
+<ol>
+<li id="fn:A">A note. use itself.<sup class="footnote-ref" id="fnref:A"><a href="#fn:A">1</a></sup>
+</li>
+<li id="fn:C">C note, uses B.<sup class="footnote-ref" id="fnref:B"><a href="#fn:B">3</a></sup>
+</li>
+<li id="fn:B">B note, uses A to test duplicate.<sup class="footnote-ref" id="fnref:A"><a href="#fn:A">1</a></sup>
 </li>
 </ol>
 </div>
@@ -1125,6 +1173,18 @@ func TestSmartDoubleQuotes(t *testing.T) {
 	doTestsInlineParam(t, tests, Options{}, HTML_USE_SMARTYPANTS, HtmlRendererParameters{})
 }
 
+func TestSmartDoubleQuotesNbsp(t *testing.T) {
+	var tests = []string{
+		"this should be normal \"quoted\" text.\n",
+		"<p>this should be normal &ldquo;&nbsp;quoted&nbsp;&rdquo; text.</p>\n",
+		"this \" single double\n",
+		"<p>this &ldquo;&nbsp; single double</p>\n",
+		"two pair of \"some\" quoted \"text\".\n",
+		"<p>two pair of &ldquo;&nbsp;some&nbsp;&rdquo; quoted &ldquo;&nbsp;text&nbsp;&rdquo;.</p>\n"}
+
+	doTestsInlineParam(t, tests, Options{}, HTML_USE_SMARTYPANTS|HTML_SMARTYPANTS_QUOTES_NBSP, HtmlRendererParameters{})
+}
+
 func TestSmartAngledDoubleQuotes(t *testing.T) {
 	var tests = []string{
 		"this should be angled \"quoted\" text.\n",
@@ -1135,6 +1195,18 @@ func TestSmartAngledDoubleQuotes(t *testing.T) {
 		"<p>two pair of &laquo;some&raquo; quoted &laquo;text&raquo;.</p>\n"}
 
 	doTestsInlineParam(t, tests, Options{}, HTML_USE_SMARTYPANTS|HTML_SMARTYPANTS_ANGLED_QUOTES, HtmlRendererParameters{})
+}
+
+func TestSmartAngledDoubleQuotesNbsp(t *testing.T) {
+	var tests = []string{
+		"this should be angled \"quoted\" text.\n",
+		"<p>this should be angled &laquo;&nbsp;quoted&nbsp;&raquo; text.</p>\n",
+		"this \" single double\n",
+		"<p>this &laquo;&nbsp; single double</p>\n",
+		"two pair of \"some\" quoted \"text\".\n",
+		"<p>two pair of &laquo;&nbsp;some&nbsp;&raquo; quoted &laquo;&nbsp;text&nbsp;&raquo;.</p>\n"}
+
+	doTestsInlineParam(t, tests, Options{}, HTML_USE_SMARTYPANTS|HTML_SMARTYPANTS_ANGLED_QUOTES|HTML_SMARTYPANTS_QUOTES_NBSP, HtmlRendererParameters{})
 }
 
 func TestSmartFractions(t *testing.T) {
@@ -1191,4 +1263,10 @@ func TestDisableSmartDashes(t *testing.T) {
 	}, Options{},
 		HTML_USE_SMARTYPANTS|HTML_SMARTYPANTS_LATEX_DASHES,
 		HtmlRendererParameters{})
+}
+
+func BenchmarkSmartDoubleQuotes(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		runMarkdownInline("this should be normal \"quoted\" text.\n", Options{}, HTML_USE_SMARTYPANTS, HtmlRendererParameters{})
+	}
 }

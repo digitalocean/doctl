@@ -25,7 +25,7 @@ func TestMaxIndex(t *testing.T) {
 			[]int{0, 1, 2, 3},
 		},
 	} {
-		p := Max{test.limit}
+		p := NewMax(test.limit)
 		index, segments := p.Index(test.fixture)
 		if index != test.index {
 			t.Errorf("#%d unexpected index: exp: %d, act: %d", id, test.index, index)
@@ -37,8 +37,21 @@ func TestMaxIndex(t *testing.T) {
 }
 
 func BenchmarkIndexMax(b *testing.B) {
-	m := Max{10}
+	m := NewMax(10)
+
 	for i := 0; i < b.N; i++ {
-		m.Index(bench_pattern)
+		_, s := m.Index(bench_pattern)
+		releaseSegments(s)
 	}
+}
+
+func BenchmarkIndexMaxParallel(b *testing.B) {
+	m := NewMax(10)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, s := m.Index(bench_pattern)
+			releaseSegments(s)
+		}
+	})
 }
