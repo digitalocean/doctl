@@ -11,6 +11,7 @@ import (
 
 type KubernetesClusters struct {
 	KubernetesClusters do.KubernetesClusters
+	Short              bool
 }
 
 var _ Displayable = &KubernetesClusters{}
@@ -20,6 +21,16 @@ func (clusters *KubernetesClusters) JSON(out io.Writer) error {
 }
 
 func (clusters *KubernetesClusters) Cols() []string {
+	if clusters.Short {
+		return []string{
+			"ID",
+			"Name",
+			"Region",
+			"Version",
+			"Status",
+			"NodePools",
+		}
+	}
 	return []string{
 		"ID",
 		"Name",
@@ -38,6 +49,16 @@ func (clusters *KubernetesClusters) Cols() []string {
 }
 
 func (clusters *KubernetesClusters) ColMap() map[string]string {
+	if clusters.Short {
+		return map[string]string{
+			"ID":        "ID",
+			"Name":      "Name",
+			"Region":    "Region",
+			"Version":   "Version",
+			"Status":    "Status",
+			"NodePools": "Node Pools",
+		}
+	}
 	return map[string]string{
 		"ID":            "ID",
 		"Name":          "Name",
