@@ -14,7 +14,7 @@ func TestAnyOfIndex(t *testing.T) {
 	}{
 		{
 			Matchers{
-				Any{},
+				NewAny(nil),
 				NewText("b"),
 				NewText("c"),
 			},
@@ -24,8 +24,8 @@ func TestAnyOfIndex(t *testing.T) {
 		},
 		{
 			Matchers{
-				Prefix{"b"},
-				Suffix{"c"},
+				NewPrefix("b"),
+				NewSuffix("c"),
 			},
 			"abc",
 			0,
@@ -33,15 +33,15 @@ func TestAnyOfIndex(t *testing.T) {
 		},
 		{
 			Matchers{
-				List{"[def]", false},
-				List{"[abc]", false},
+				NewList([]rune("[def]"), false),
+				NewList([]rune("[abc]"), false),
 			},
 			"abcdef",
 			0,
 			[]int{1},
 		},
 	} {
-		everyOf := AnyOf{test.matchers}
+		everyOf := NewAnyOf(test.matchers...)
 		index, segments := everyOf.Index(test.fixture)
 		if index != test.index {
 			t.Errorf("#%d unexpected index: exp: %d, act: %d", id, test.index, index)

@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/text/internal"
 	"golang.org/x/text/internal/gen"
+	"golang.org/x/text/internal/number"
 	"golang.org/x/text/internal/stringset"
 	"golang.org/x/text/language"
 	"golang.org/x/text/unicode/cldr"
@@ -24,7 +25,8 @@ import (
 var (
 	test = flag.Bool("test", false,
 		"test existing tables; can be used to compare web data with package data.")
-	outputFile = flag.String("output", "tables.go", "output file")
+	outputFile     = flag.String("output", "tables.go", "output file")
+	outputTestFile = flag.String("testoutput", "data_test.go", "output file")
 
 	draft = flag.String("draft",
 		"contributed",
@@ -58,6 +60,7 @@ func main() {
 
 	genNumSystem(w, data)
 	genSymbols(w, data)
+	genFormats(w, data)
 }
 
 var systemMap = map[string]system{"latn": 0}
@@ -171,24 +174,36 @@ func genSymbols(w *gen.CodeWriter, data *cldr.CLDR) {
 		syms := cldr.MakeSlice(&ldml.Numbers.Symbols)
 		syms.SelectDraft(d)
 
+		getFirst := func(name string, x interface{}) string {
+			v := reflect.ValueOf(x)
+			slice := cldr.MakeSlice(x)
+			slice.SelectAnyOf("alt", "", "alt")
+			if reflect.Indirect(v).Len() == 0 {
+				return ""
+			} else if reflect.Indirect(v).Len() > 1 {
+				log.Fatalf("%s: multiple values of %q within single symbol not supported.", lang, name)
+			}
+			return reflect.Indirect(v).Index(0).MethodByName("Data").Call(nil)[0].String()
+		}
+
 		for _, sym := range ldml.Numbers.Symbols {
 			if sym.NumberSystem == "" {
 				// This is just linking the default of root to "latn".
 				continue
 			}
 			symbolMap[key{langIndex, getNumberSystem(sym.NumberSystem)}] = &symbols{
-				SymDecimal:                getFirst("decimal", sym.Decimal),
-				SymGroup:                  getFirst("group", sym.Group),
-				SymList:                   getFirst("list", sym.List),
-				SymPercentSign:            getFirst("percentSign", sym.PercentSign),
-				SymPlusSign:               getFirst("plusSign", sym.PlusSign),
-				SymMinusSign:              getFirst("minusSign", sym.MinusSign),
-				SymExponential:            getFirst("exponential", sym.Exponential),
-				SymSuperscriptingExponent: getFirst("superscriptingExponent", sym.SuperscriptingExponent),
-				SymPerMille:               getFirst("perMille", sym.PerMille),
-				SymInfinity:               getFirst("infinity", sym.Infinity),
-				SymNan:                    getFirst("nan", sym.Nan),
-				SymTimeSeparator:          getFirst("timeSeparator", sym.TimeSeparator),
+				SymDecimal:                getFirst("decimal", &sym.Decimal),
+				SymGroup:                  getFirst("group", &sym.Group),
+				SymList:                   getFirst("list", &sym.List),
+				SymPercentSign:            getFirst("percentSign", &sym.PercentSign),
+				SymPlusSign:               getFirst("plusSign", &sym.PlusSign),
+				SymMinusSign:              getFirst("minusSign", &sym.MinusSign),
+				SymExponential:            getFirst("exponential", &sym.Exponential),
+				SymSuperscriptingExponent: getFirst("superscriptingExponent", &sym.SuperscriptingExponent),
+				SymPerMille:               getFirst("perMille", &sym.PerMille),
+				SymInfinity:               getFirst("infinity", &sym.Infinity),
+				SymNan:                    getFirst("nan", &sym.Nan),
+				SymTimeSeparator:          getFirst("timeSeparator", &sym.TimeSeparator),
 			}
 		}
 	}
@@ -240,10 +255,10 @@ func genSymbols(w *gen.CodeWriter, data *cldr.CLDR) {
 
 	// resolveSymbolIndex gets the index from the closest matching locale,
 	// including the locale itself.
-	resolveSymbolIndex := func(langIndex int, ns system) byte {
+	resolveSymbolIndex := func(langIndex int, ns system) symOffset {
 		for {
 			if sym := symbolMap[key{langIndex, ns}]; sym != nil {
-				return byte(m[*sym])
+				return symOffset(m[*sym])
 			}
 			if langIndex == 0 {
 				return 0 // und, latn
@@ -255,7 +270,7 @@ func genSymbols(w *gen.CodeWriter, data *cldr.CLDR) {
 	// Create an index with the symbols for each locale for the latn numbering
 	// system. If this is not the default, or the only one, for a locale, we
 	// will overwrite the value later.
-	var langToDefaults [language.NumCompactTags]byte
+	var langToDefaults [language.NumCompactTags]symOffset
 	for _, l := range data.Locales() {
 		langIndex, _ := language.CompactIndex(language.MustParse(l))
 		langToDefaults[langIndex] = resolveSymbolIndex(langIndex, 0)
@@ -285,8 +300,8 @@ func genSymbols(w *gen.CodeWriter, data *cldr.CLDR) {
 	for _, l := range data.Locales() {
 		langIndex, _ := language.CompactIndex(language.MustParse(l))
 		start := len(langToAlt)
-		if start > 0x7F {
-			log.Fatal("Number of alternative assignments > 0x7F")
+		if start >= hasNonLatnMask {
+			log.Fatalf("Number of alternative assignments >= %x", hasNonLatnMask)
 		}
 		// Create the entry for the default value.
 		def := defaults[langIndex]
@@ -313,7 +328,7 @@ func genSymbols(w *gen.CodeWriter, data *cldr.CLDR) {
 			langToAlt = langToAlt[:start]
 		} else {
 			// Overwrite the entry in langToDefaults.
-			langToDefaults[langIndex] = 0x80 | byte(start)
+			langToDefaults[langIndex] = hasNonLatnMask | symOffset(start)
 		}
 	}
 	w.WriteComment(`
@@ -327,12 +342,117 @@ marked by compact language index.`)
 	w.WriteVar("langToAlt", langToAlt)
 }
 
-func getFirst(name string, x interface{}) string {
-	v := reflect.ValueOf(x)
-	if v.Len() == 0 {
-		return ""
-	} else if v.Len() > 1 {
-		log.Fatalf("Multiple values of %q within single symbol not supported.", name)
+// genFormats generates the lookup table for decimal, scientific and percent
+// patterns.
+//
+// CLDR allows for patterns to be different per language for different numbering
+// systems. In practice the patterns are set to be consistent for a language
+// independent of the numbering system. genFormats verifies that no language
+// deviates from this.
+func genFormats(w *gen.CodeWriter, data *cldr.CLDR) {
+	d, err := cldr.ParseDraft(*draft)
+	if err != nil {
+		log.Fatalf("invalid draft level: %v", err)
 	}
-	return v.Index(0).MethodByName("Data").Call(nil)[0].String()
+
+	// Fill the first slot with a dummy so we can identify unspecified tags.
+	formats := []number.Pattern{{}}
+	patterns := map[string]int{}
+
+	// TODO: It would be possible to eliminate two of these slices by having
+	// another indirection and store a reference to the combination of patterns.
+	decimal := make([]byte, language.NumCompactTags)
+	scientific := make([]byte, language.NumCompactTags)
+	percent := make([]byte, language.NumCompactTags)
+
+	for _, lang := range data.Locales() {
+		ldml := data.RawLDML(lang)
+		if ldml.Numbers == nil {
+			continue
+		}
+		langIndex, ok := language.CompactIndex(language.MustParse(lang))
+		if !ok {
+			log.Fatalf("No compact index for language %s", lang)
+		}
+		type patternSlice []*struct {
+			cldr.Common
+			Numbers string `xml:"numbers,attr"`
+			Count   string `xml:"count,attr"`
+		}
+
+		add := func(name string, tags []byte, ps patternSlice) {
+			sl := cldr.MakeSlice(&ps)
+			sl.SelectDraft(d)
+			if len(ps) == 0 {
+				return
+			}
+			if len(ps) > 2 || len(ps) == 2 && ps[0] != ps[1] {
+				log.Fatalf("Inconsistent %d patterns for language %s", name, lang)
+			}
+			s := ps[0].Data()
+
+			index, ok := patterns[s]
+			if !ok {
+				nf, err := number.ParsePattern(s)
+				if err != nil {
+					log.Fatal(err)
+				}
+				index = len(formats)
+				patterns[s] = index
+				formats = append(formats, *nf)
+			}
+			tags[langIndex] = byte(index)
+		}
+
+		for _, df := range ldml.Numbers.DecimalFormats {
+			for _, l := range df.DecimalFormatLength {
+				if l.Type != "" {
+					continue
+				}
+				for _, f := range l.DecimalFormat {
+					add("decimal", decimal, f.Pattern)
+				}
+			}
+		}
+		for _, df := range ldml.Numbers.ScientificFormats {
+			for _, l := range df.ScientificFormatLength {
+				if l.Type != "" {
+					continue
+				}
+				for _, f := range l.ScientificFormat {
+					add("scientific", scientific, f.Pattern)
+				}
+			}
+		}
+		for _, df := range ldml.Numbers.PercentFormats {
+			for _, l := range df.PercentFormatLength {
+				if l.Type != "" {
+					continue
+				}
+				for _, f := range l.PercentFormat {
+					add("percent", percent, f.Pattern)
+				}
+			}
+		}
+	}
+
+	// Complete the parent tag array to reflect inheritance. An index of 0
+	// indicates an unspecified value.
+	for _, data := range [][]byte{decimal, scientific, percent} {
+		for i := range data {
+			p := uint16(i)
+			for ; data[p] == 0; p = internal.Parent[p] {
+			}
+			data[i] = data[p]
+		}
+	}
+	w.WriteVar("tagToDecimal", decimal)
+	w.WriteVar("tagToScientific", scientific)
+	w.WriteVar("tagToPercent", percent)
+
+	value := strings.Replace(fmt.Sprintf("%#v", formats), "number.", "", -1)
+	// Break up the lines. This won't give ideal perfect formatting, but it is
+	// better than one huge line.
+	value = strings.Replace(value, ", ", ",\n", -1)
+	fmt.Fprintf(w, "var formats = %s\n", value)
 }

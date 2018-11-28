@@ -20,6 +20,8 @@ func TestCommas(t *testing.T) {
 		{"10,001,000", Comma(10001000), "10,001,000"},
 		{"123,456,789", Comma(123456789), "123,456,789"},
 		{"maxint", Comma(9.223372e+18), "9,223,372,000,000,000,000"},
+		{"math.maxint", Comma(math.MaxInt64), "9,223,372,036,854,775,807"},
+		{"math.minint", Comma(math.MinInt64), "-9,223,372,036,854,775,808"},
 		{"minint", Comma(-9.223372e+18), "-9,223,372,000,000,000,000"},
 		{"-123,456,789", Comma(-123456789), "-123,456,789"},
 		{"-10,100,000", Comma(-10100000), "-10,100,000"},
@@ -31,6 +33,15 @@ func TestCommas(t *testing.T) {
 		{"-1,000", Comma(-1000), "-1,000"},
 		{"-100", Comma(-100), "-100"},
 		{"-10", Comma(-10), "-10"},
+	}.validate(t)
+}
+
+func TestCommafWithDigits(t *testing.T) {
+	testList{
+		{"1.23, 0", CommafWithDigits(1.23, 0), "1"},
+		{"1.23, 1", CommafWithDigits(1.23, 1), "1.2"},
+		{"1.23, 2", CommafWithDigits(1.23, 2), "1.23"},
+		{"1.23, 3", CommafWithDigits(1.23, 3), "1.23"},
 	}.validate(t)
 }
 

@@ -1,4 +1,4 @@
-// Copyright 2015 Frank Schroeder. All rights reserved.
+// Copyright 2018 Frank Schroeder. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -73,7 +73,7 @@
 //   # refers to the users' home dir
 //   home = ${HOME}
 //
-//   # local key takes precendence over env var: u = foo
+//   # local key takes precedence over env var: u = foo
 //   USER = foo
 //   u = ${USER}
 //
@@ -101,6 +101,16 @@
 //   v = p.GetFloat64("key", 123.0)
 //   v = p.GetString("key", "def")
 //   v = p.GetDuration("key", 999)
+//
+// As an alternative properties may be applied with the standard
+// library's flag implementation at any time.
+//
+//   # Standard configuration
+//   v = flag.Int("key", 999, "help message")
+//   flag.Parse()
+//
+//   # Merge p into the flag set
+//   p.MustFlag(flag.CommandLine)
 //
 // Properties provides several MustXXX() convenience functions
 // which will terminate the app if an error occurs. The behavior

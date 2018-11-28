@@ -7,6 +7,15 @@ import (
 type Row struct {
 	Matchers    Matchers
 	RunesLength int
+	Segments    []int
+}
+
+func NewRow(len int, m ...Matcher) Row {
+	return Row{
+		Matchers:    Matchers(m),
+		RunesLength: len,
+		Segments:    []int{len},
+	}
 }
 
 func (self Row) matchAll(s string) bool {
@@ -36,12 +45,11 @@ func (self Row) lenOk(s string) bool {
 	var i int
 	for range s {
 		i++
-		if i >= self.RunesLength {
-			return true
+		if i > self.RunesLength {
+			return false
 		}
 	}
-
-	return false
+	return self.RunesLength == i
 }
 
 func (self Row) Match(s string) bool {
@@ -53,23 +61,14 @@ func (self Row) Len() (l int) {
 }
 
 func (self Row) Index(s string) (int, []int) {
-	if !self.lenOk(s) {
-		return -1, nil
-	}
-
 	for i := range s {
-		// this is not strict check but useful
-		// when glob will be refactored for usage with []rune
-		// it will be better
 		if len(s[i:]) < self.RunesLength {
 			break
 		}
-
 		if self.matchAll(s[i:]) {
-			return i, []int{self.RunesLength}
+			return i, self.Segments
 		}
 	}
-
 	return -1, nil
 }
 

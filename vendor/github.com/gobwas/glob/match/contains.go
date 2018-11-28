@@ -3,7 +3,6 @@ package match
 import (
 	"fmt"
 	"strings"
-	"unicode/utf8"
 )
 
 type Contains struct {
@@ -11,15 +10,16 @@ type Contains struct {
 	Not    bool
 }
 
+func NewContains(needle string, not bool) Contains {
+	return Contains{needle, not}
+}
+
 func (self Contains) Match(s string) bool {
 	return strings.Contains(s, self.Needle) != self.Not
 }
 
 func (self Contains) Index(s string) (int, []int) {
-	var (
-		sub    string
-		offset int
-	)
+	var offset int
 
 	idx := strings.Index(s, self.Needle)
 
@@ -29,27 +29,20 @@ func (self Contains) Index(s string) (int, []int) {
 		}
 
 		offset = idx + len(self.Needle)
-
 		if len(s) <= offset {
 			return 0, []int{offset}
 		}
-
-		sub = s[offset:]
-	} else {
-		switch idx {
-		case -1:
-			sub = s
-		default:
-			sub = s[:idx]
-		}
+		s = s[offset:]
+	} else if idx != -1 {
+		s = s[:idx]
 	}
 
-	segments := make([]int, 0, utf8.RuneCountInString(sub)+1)
-	for i, _ := range sub {
+	segments := acquireSegments(len(s) + 1)
+	for i := range s {
 		segments = append(segments, offset+i)
 	}
 
-	return 0, append(segments, offset+len(sub))
+	return 0, append(segments, offset+len(s))
 }
 
 func (self Contains) Len() int {

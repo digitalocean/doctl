@@ -65,8 +65,8 @@ func (self BTree) Match(s string) bool {
 		return false
 	}
 
-	//	 try to cut unnecessary parts
-	//	 by knowledge of length of right and left part
+	// try to cut unnecessary parts
+	// by knowledge of length of right and left part
 	var offset, limit int
 	if self.LeftLengthRunes >= 0 {
 		offset = self.LeftLengthRunes
@@ -81,6 +81,7 @@ func (self BTree) Match(s string) bool {
 		// search for matching part in substring
 		index, segments := self.Value.Index(s[offset:limit])
 		if index == -1 {
+			releaseSegments(segments)
 			return false
 		}
 
@@ -112,6 +113,7 @@ func (self BTree) Match(s string) bool {
 				}
 
 				if right {
+					releaseSegments(segments)
 					return true
 				}
 			}
@@ -119,11 +121,26 @@ func (self BTree) Match(s string) bool {
 
 		_, step := utf8.DecodeRuneInString(s[offset+index:])
 		offset += index + step
+
+		releaseSegments(segments)
 	}
 
 	return false
 }
 
 func (self BTree) String() string {
-	return fmt.Sprintf("<btree:[%s<-%s->%s]>", self.Left, self.Value, self.Right)
+	const n string = "<nil>"
+	var l, r string
+	if self.Left == nil {
+		l = n
+	} else {
+		l = self.Left.String()
+	}
+	if self.Right == nil {
+		r = n
+	} else {
+		r = self.Right.String()
+	}
+
+	return fmt.Sprintf("<btree:[%s<-%s->%s]>", l, self.Value, r)
 }

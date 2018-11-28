@@ -1,4 +1,4 @@
-// Copyright 2012 The Go Authors.  All rights reserved.
+// Copyright 2012 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -7,11 +7,13 @@ package icmp
 // A MessageBody represents an ICMP message body.
 type MessageBody interface {
 	// Len returns the length of ICMP message body.
-	// Proto must be either the ICMPv4 or ICMPv6 protocol number.
+	// The provided proto must be either the ICMPv4 or ICMPv6
+	// protocol number.
 	Len(proto int) int
 
 	// Marshal returns the binary encoding of ICMP message body.
-	// Proto must be either the ICMPv4 or ICMPv6 protocol number.
+	// The provided proto must be either the ICMPv4 or ICMPv6
+	// protocol number.
 	Marshal(proto int) ([]byte, error)
 }
 

@@ -6,10 +6,10 @@ package precis
 
 import (
 	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
-	"golang.org/x/text/width"
 )
 
 // An Option is used to define the behavior and rules of a Profile.
@@ -17,15 +17,18 @@ type Option func(*options)
 
 type options struct {
 	// Preparation options
-	allowwidechars bool
+	foldWidth bool
 
 	// Enforcement options
-	cases         transform.Transformer
+	asciiLower    bool
+	cases         transform.SpanningTransformer
 	disallow      runes.Set
-	norm          norm.Form
-	additional    []func() transform.Transformer
-	width         *width.Transformer
+	norm          transform.SpanningTransformer
+	additional    []func() transform.SpanningTransformer
+	width         transform.SpanningTransformer
 	disallowEmpty bool
+	bidiRule      bool
+	repeat        bool
 
 	// Comparison options
 	ignorecase bool
@@ -35,6 +38,11 @@ func getOpts(o ...Option) (res options) {
 	for _, f := range o {
 		f(&res)
 	}
+	// Using a SpanningTransformer, instead of norm.Form prevents an allocation
+	// down the road.
+	if res.norm == nil {
+		res.norm = norm.NFC
+	}
 	return
 }
 
@@ -43,34 +51,69 @@ var (
 	// comparison during the PRECIS comparison step.
 	IgnoreCase Option = ignoreCase
 
-	// The AllowWide option causes the profile to allow full-width and half-width
-	// characters by mapping them to their decomposition mappings. This is useful
-	// for profiles that are based on the identifier class which would otherwise
-	// disallow wide characters.
-	AllowWide Option = allowWide
+	// The FoldWidth option causes the profile to map non-canonical wide and
+	// narrow variants to their decomposition mapping. This is useful for
+	// profiles that are based on the identifier class which would otherwise
+	// disallow such characters.
+	FoldWidth Option = foldWidth
 
 	// The DisallowEmpty option causes the enforcement step to return an error if
 	// the resulting string would be empty.
 	DisallowEmpty Option = disallowEmpty
+
+	// The BidiRule option causes the Bidi Rule defined in RFC 5893 to be
+	// applied.
+	BidiRule Option = bidiRule
 )
 
 var (
 	ignoreCase = func(o *options) {
 		o.ignorecase = true
 	}
-	allowWide = func(o *options) {
-		o.allowwidechars = true
+	foldWidth = func(o *options) {
+		o.foldWidth = true
 	}
 	disallowEmpty = func(o *options) {
 		o.disallowEmpty = true
 	}
+	bidiRule = func(o *options) {
+		o.bidiRule = true
+	}
+	repeat = func(o *options) {
+		o.repeat = true
+	}
 )
+
+// TODO: move this logic to package transform
+
+type spanWrap struct{ transform.Transformer }
+
+func (s spanWrap) Span(src []byte, atEOF bool) (n int, err error) {
+	return 0, transform.ErrEndOfSpan
+}
+
+// TODO: allow different types? For instance:
+//     func() transform.Transformer
+//     func() transform.SpanningTransformer
+//     func([]byte) bool  // validation only
+//
+// Also, would be great if we could detect if a transformer is reentrant.
 
 // The AdditionalMapping option defines the additional mapping rule for the
 // Profile by applying Transformer's in sequence.
 func AdditionalMapping(t ...func() transform.Transformer) Option {
 	return func(o *options) {
-		o.additional = t
+		for _, f := range t {
+			sf := func() transform.SpanningTransformer {
+				return f().(transform.SpanningTransformer)
+			}
+			if _, ok := f().(transform.SpanningTransformer); !ok {
+				sf = func() transform.SpanningTransformer {
+					return spanWrap{f()}
+				}
+			}
+			o.additional = append(o.additional, sf)
+		}
 	}
 }
 
@@ -81,18 +124,27 @@ func Norm(f norm.Form) Option {
 	}
 }
 
-// The Width option defines a Profile's width mapping rule.
-func Width(w width.Transformer) Option {
-	return func(o *options) {
-		o.width = &w
-	}
-}
-
 // The FoldCase option defines a Profile's case mapping rule. Options can be
 // provided to determine the type of case folding used.
 func FoldCase(opts ...cases.Option) Option {
 	return func(o *options) {
+		o.asciiLower = true
 		o.cases = cases.Fold(opts...)
+	}
+}
+
+// The LowerCase option defines a Profile's case mapping rule. Options can be
+// provided to determine the type of case folding used.
+func LowerCase(opts ...cases.Option) Option {
+	return func(o *options) {
+		o.asciiLower = true
+		if len(opts) == 0 {
+			o.cases = cases.Lower(language.Und, cases.HandleFinalSigma(false))
+			return
+		}
+
+		opts = append([]cases.Option{cases.HandleFinalSigma(false)}, opts...)
+		o.cases = cases.Lower(language.Und, opts...)
 	}
 }
 
@@ -103,12 +155,3 @@ func Disallow(set runes.Set) Option {
 		o.disallow = set
 	}
 }
-
-// TODO: Pending finalization of the unicode/bidi API
-// // The Dir option defines a Profile's directionality mapping rule. Generally
-// // profiles based on the Identifier string class will want to use the "Bidi
-// // Rule" defined in RFC5893, and profiles based on the Freeform string class
-// // will want to use the Unicode bidirectional algorithm defined in UAX9.
-// func Dir() Option {
-// 	panic("unimplemented")
-// }

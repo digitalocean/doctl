@@ -27,7 +27,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 			IPv4:          "",
 			Tags:          []string(nil),
 			Status: &KubernetesClusterStatus{
-				State: "running",
+				State: KubernetesClusterStatusRunning,
 			},
 			NodePools: []*KubernetesNodePool{
 				{
@@ -65,7 +65,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 			ServiceSubnet: "10.245.0.0/16",
 			IPv4:          "1.2.3.4",
 			Status: &KubernetesClusterStatus{
-				State: "running",
+				State: KubernetesClusterStatusRunning,
 			},
 			NodePools: []*KubernetesNodePool{
 				{
@@ -215,7 +215,7 @@ func TestKubernetesClusters_Get(t *testing.T) {
 		ServiceSubnet: "10.245.0.0/16",
 		IPv4:          "1.2.3.4",
 		Status: &KubernetesClusterStatus{
-			State: "running",
+			State: KubernetesClusterStatusRunning,
 		},
 		NodePools: []*KubernetesNodePool{
 			{

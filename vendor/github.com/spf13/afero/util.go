@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +45,7 @@ func WriteReader(fs Fs, path string, r io.Reader) (err error) {
 		err = fs.MkdirAll(ospath, 0777) // rwx, rw, r
 		if err != nil {
 			if err != os.ErrExist {
-				log.Fatalln(err)
+				return err
 			}
 		}
 	}
@@ -157,7 +156,7 @@ func UnicodeSanitize(s string) string {
 	return string(target)
 }
 
-// Transform characters with accents into plan forms
+// Transform characters with accents into plain forms.
 func NeuterAccents(s string) string {
 	t := transform.Chain(norm.NFD, transform.RemoveFunc(isMn), norm.NFC)
 	result, _, _ := transform.String(t, string(s))
@@ -173,7 +172,7 @@ func (a Afero) FileContainsBytes(filename string, subslice []byte) (bool, error)
 	return FileContainsBytes(a.Fs, filename, subslice)
 }
 
-// Check if a file contains a specified string.
+// Check if a file contains a specified byte slice.
 func FileContainsBytes(fs Fs, filename string, subslice []byte) (bool, error) {
 	f, err := fs.Open(filename)
 	if err != nil {
@@ -181,17 +180,44 @@ func FileContainsBytes(fs Fs, filename string, subslice []byte) (bool, error) {
 	}
 	defer f.Close()
 
-	return readerContains(f, subslice), nil
+	return readerContainsAny(f, subslice), nil
 }
 
-// readerContains reports whether subslice is within r.
-func readerContains(r io.Reader, subslice []byte) bool {
+func (a Afero) FileContainsAnyBytes(filename string, subslices [][]byte) (bool, error) {
+	return FileContainsAnyBytes(a.Fs, filename, subslices)
+}
 
-	if r == nil || len(subslice) == 0 {
+// Check if a file contains any of the specified byte slices.
+func FileContainsAnyBytes(fs Fs, filename string, subslices [][]byte) (bool, error) {
+	f, err := fs.Open(filename)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	return readerContainsAny(f, subslices...), nil
+}
+
+// readerContains reports whether any of the subslices is within r.
+func readerContainsAny(r io.Reader, subslices ...[]byte) bool {
+
+	if r == nil || len(subslices) == 0 {
 		return false
 	}
 
-	bufflen := len(subslice) * 4
+	largestSlice := 0
+
+	for _, sl := range subslices {
+		if len(sl) > largestSlice {
+			largestSlice = len(sl)
+		}
+	}
+
+	if largestSlice == 0 {
+		return false
+	}
+
+	bufflen := largestSlice * 4
 	halflen := bufflen / 2
 	buff := make([]byte, bufflen)
 	var err error
@@ -209,8 +235,12 @@ func readerContains(r io.Reader, subslice []byte) bool {
 			n, err = io.ReadAtLeast(r, buff[halflen:], halflen)
 		}
 
-		if n > 0 && bytes.Contains(buff, subslice) {
-			return true
+		if n > 0 {
+			for _, sl := range subslices {
+				if bytes.Contains(buff, sl) {
+					return true
+				}
+			}
 		}
 
 		if err != nil {
@@ -264,10 +294,10 @@ func IsEmpty(fs Fs, path string) (bool, error) {
 	}
 	if fi.IsDir() {
 		f, err := fs.Open(path)
-		defer f.Close()
 		if err != nil {
 			return false, err
 		}
+		defer f.Close()
 		list, err := f.Readdir(-1)
 		return len(list) == 0, nil
 	}
@@ -288,4 +318,13 @@ func Exists(fs Fs, path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+func FullBaseFsPath(basePathFs *BasePathFs, relativePath string) string {
+	combinedPath := filepath.Join(basePathFs.path, relativePath)
+	if parent, ok := basePathFs.source.(*BasePathFs); ok {
+		return FullBaseFsPath(parent, combinedPath)
+	}
+
+	return combinedPath
 }

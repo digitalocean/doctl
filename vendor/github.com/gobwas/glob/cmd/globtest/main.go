@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func benchString(r testing.BenchmarkResult) string {
@@ -42,7 +43,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	separators := strings.Split(*sep, ",")
+	var separators []rune
+	for _, c := range strings.Split(*sep, ",") {
+		if r, w := utf8.DecodeRuneInString(c); len(c) > w {
+			fmt.Println("only single charactered separators are allowed")
+			os.Exit(1)
+		} else {
+			separators = append(separators, r)
+		}
+	}
+
 	g, err := glob.Compile(*pattern, separators...)
 	if err != nil {
 		fmt.Println("could not compile pattern:", err)

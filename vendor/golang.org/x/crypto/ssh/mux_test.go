@@ -20,7 +20,7 @@ func muxPair() (*mux, *mux) {
 	return s, c
 }
 
-// Returns both ends of a channel, and the mux for the the 2nd
+// Returns both ends of a channel, and the mux for the 2nd
 // channel.
 func channelPair(t *testing.T) (*channel, *channel, *mux) {
 	c, s := muxPair()
@@ -107,10 +107,6 @@ func TestMuxReadWrite(t *testing.T) {
 		_, err = s.Extended(1).Write([]byte(magicExt))
 		if err != nil {
 			t.Fatalf("Write: %v", err)
-		}
-		err = s.Close()
-		if err != nil {
-			t.Fatalf("Close: %v", err)
 		}
 	}()
 
@@ -331,7 +327,6 @@ func TestMuxGlobalRequest(t *testing.T) {
 			ok, data, err)
 	}
 
-	clientMux.Disconnect(0, "")
 	if !seen {
 		t.Errorf("never saw 'peek' request")
 	}
@@ -375,28 +370,6 @@ func TestMuxChannelRequestUnblock(t *testing.T) {
 
 	if err != io.EOF {
 		t.Errorf("want EOF, got %v", err)
-	}
-}
-
-func TestMuxDisconnect(t *testing.T) {
-	a, b := muxPair()
-	defer a.Close()
-	defer b.Close()
-
-	go func() {
-		for r := range b.incomingRequests {
-			r.Reply(true, nil)
-		}
-	}()
-
-	a.Disconnect(42, "whatever")
-	ok, _, err := a.SendRequest("hello", true, nil)
-	if ok || err == nil {
-		t.Errorf("got reply after disconnecting")
-	}
-	err = b.Wait()
-	if d, ok := err.(*disconnectMsg); !ok || d.Reason != 42 {
-		t.Errorf("got %#v, want disconnectMsg{Reason:42}", err)
 	}
 }
 
@@ -521,5 +494,8 @@ func TestDebug(t *testing.T) {
 	}
 	if debugHandshake {
 		t.Error("handshake debug switched on")
+	}
+	if debugTransport {
+		t.Error("transport debug switched on")
 	}
 }

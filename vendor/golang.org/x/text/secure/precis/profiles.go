@@ -10,49 +10,69 @@ import (
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
-	"golang.org/x/text/width"
 )
 
 var (
-	Nickname              Profile = nickname          // Implements the Nickname profile specified in RFC 7700.
-	UsernameCaseMapped    Profile = usernamecasemap   // Implements the UsernameCaseMapped profile specified in RFC 7613.
-	UsernameCasePreserved Profile = usernamenocasemap // Implements the UsernameCasePreserved profile specified in RFC 7613.
-	OpaqueString          Profile = opaquestring      // Implements the OpaqueString profile defined in RFC 7613 for passwords and other secure labels.
+	// Implements the Nickname profile specified in RFC 8266.
+	Nickname *Profile = nickname
+
+	// Implements the UsernameCaseMapped profile specified in RFC 8265.
+	UsernameCaseMapped *Profile = usernameCaseMap
+
+	// Implements the UsernameCasePreserved profile specified in RFC 8265.
+	UsernameCasePreserved *Profile = usernameNoCaseMap
+
+	// Implements the OpaqueString profile defined in RFC 8265 for passwords and
+	// other secure labels.
+	OpaqueString *Profile = opaquestring
 )
 
-// TODO: mvl: "Ultimately, I would manually define the structs for the internal
-// profiles. This avoid pulling in unneeded tables when they are not used."
 var (
-	nickname Profile = NewFreeform(
-		AdditionalMapping(func() transform.Transformer {
-			return &nickAdditionalMapping{}
-		}),
-		IgnoreCase,
-		Norm(norm.NFKC),
-		DisallowEmpty,
-	)
-	usernamecasemap Profile = NewIdentifier(
-		AllowWide,
-		FoldCase(),
-		Norm(norm.NFC),
-		// TODO: BIDI rule
-	)
-	usernamenocasemap Profile = NewIdentifier(
-		AllowWide,
-		Norm(norm.NFC),
-		Width(width.Fold), // TODO: Is this correct?
-		// TODO: BIDI rule
-	)
-	opaquestring Profile = NewFreeform(
-		AdditionalMapping(func() transform.Transformer {
-			return runes.Map(func(r rune) rune {
-				if unicode.Is(unicode.Zs, r) {
-					return ' '
-				}
-				return r
-			})
-		}),
-		Norm(norm.NFC),
-		DisallowEmpty,
-	)
+	nickname = &Profile{
+		options: getOpts(
+			AdditionalMapping(func() transform.Transformer {
+				return &nickAdditionalMapping{}
+			}),
+			IgnoreCase,
+			Norm(norm.NFKC),
+			DisallowEmpty,
+			repeat,
+		),
+		class: freeform,
+	}
+	usernameCaseMap = &Profile{
+		options: getOpts(
+			FoldWidth,
+			LowerCase(),
+			Norm(norm.NFC),
+			BidiRule,
+		),
+		class: identifier,
+	}
+	usernameNoCaseMap = &Profile{
+		options: getOpts(
+			FoldWidth,
+			Norm(norm.NFC),
+			BidiRule,
+		),
+		class: identifier,
+	}
+	opaquestring = &Profile{
+		options: getOpts(
+			AdditionalMapping(func() transform.Transformer {
+				return mapSpaces
+			}),
+			Norm(norm.NFC),
+			DisallowEmpty,
+		),
+		class: freeform,
+	}
 )
+
+// mapSpaces is a shared value of a runes.Map transformer.
+var mapSpaces transform.Transformer = runes.Map(func(r rune) rune {
+	if unicode.Is(unicode.Zs, r) {
+		return ' '
+	}
+	return r
+})

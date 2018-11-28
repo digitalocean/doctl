@@ -3,8 +3,10 @@ package godo
 import (
 	"bytes"
 	"context"
+	"encoding"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -100,10 +102,46 @@ type KubernetesCluster struct {
 	UpdatedAt time.Time                `json:"updated_at,omitempty"`
 }
 
+// Possible states for a cluster.
+const (
+	KubernetesClusterStatusProvisioning = KubernetesClusterStatusState("provisioning")
+	KubernetesClusterStatusRunning      = KubernetesClusterStatusState("running")
+	KubernetesClusterStatusDegraded     = KubernetesClusterStatusState("degraded")
+	KubernetesClusterStatusError        = KubernetesClusterStatusState("error")
+	KubernetesClusterStatusDeleted      = KubernetesClusterStatusState("deleted")
+	KubernetesClusterStatusInvalid      = KubernetesClusterStatusState("invalid")
+)
+
+// KubernetesClusterStatusState represents states for a cluster.
+type KubernetesClusterStatusState string
+
+var _ encoding.TextUnmarshaler = (*KubernetesClusterStatusState)(nil)
+
+// UnmarshalText unmarshals the state.
+func (s *KubernetesClusterStatusState) UnmarshalText(text []byte) error {
+	switch KubernetesClusterStatusState(strings.ToLower(string(text))) {
+	case KubernetesClusterStatusProvisioning:
+		*s = KubernetesClusterStatusProvisioning
+	case KubernetesClusterStatusRunning:
+		*s = KubernetesClusterStatusRunning
+	case KubernetesClusterStatusDegraded:
+		*s = KubernetesClusterStatusDegraded
+	case KubernetesClusterStatusError:
+		*s = KubernetesClusterStatusError
+	case KubernetesClusterStatusDeleted:
+		*s = KubernetesClusterStatusDeleted
+	case "", KubernetesClusterStatusInvalid:
+		*s = KubernetesClusterStatusInvalid
+	default:
+		return fmt.Errorf("unknown cluster state %q", string(text))
+	}
+	return nil
+}
+
 // KubernetesClusterStatus describes the status of a cluster.
 type KubernetesClusterStatus struct {
-	State   string `json:"state,omitempty"`
-	Message string `json:"message,omitempty"`
+	State   KubernetesClusterStatusState `json:"state,omitempty"`
+	Message string                       `json:"message,omitempty"`
 }
 
 // KubernetesNodePool represents a node pool in a Kubernetes cluster.

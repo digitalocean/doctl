@@ -53,10 +53,10 @@ const (
 type test struct {
 	pattern, match string
 	should         bool
-	delimiters     []string
+	delimiters     []rune
 }
 
-func glob(s bool, p, m string, d ...string) test {
+func glob(s bool, p, m string, d ...rune) test {
 	return test{p, m, s, d}
 }
 
@@ -64,26 +64,30 @@ func TestGlob(t *testing.T) {
 	for _, test := range []test{
 		glob(true, "* ?at * eyes", "my cat has very bright eyes"),
 
+		glob(true, "", ""),
+		glob(false, "", "b"),
+
+		glob(true, "*ä", "åä"),
 		glob(true, "abc", "abc"),
 		glob(true, "a*c", "abc"),
 		glob(true, "a*c", "a12345c"),
 		glob(true, "a?c", "a1c"),
-		glob(true, "a.b", "a.b", "."),
-		glob(true, "a.*", "a.b", "."),
-		glob(true, "a.**", "a.b.c", "."),
-		glob(true, "a.?.c", "a.b.c", "."),
-		glob(true, "a.?.?", "a.b.c", "."),
+		glob(true, "a.b", "a.b", '.'),
+		glob(true, "a.*", "a.b", '.'),
+		glob(true, "a.**", "a.b.c", '.'),
+		glob(true, "a.?.c", "a.b.c", '.'),
+		glob(true, "a.?.?", "a.b.c", '.'),
 		glob(true, "?at", "cat"),
 		glob(true, "?at", "fat"),
 		glob(true, "*", "abc"),
 		glob(true, `\*`, "*"),
-		glob(true, "**", "a.b.c", "."),
+		glob(true, "**", "a.b.c", '.'),
 
 		glob(false, "?at", "at"),
-		glob(false, "?at", "fat", "f"),
-		glob(false, "a.*", "a.b.c", "."),
-		glob(false, "a.?.c", "a.bb.c", "."),
-		glob(false, "*", "a.b.c", "."),
+		glob(false, "?at", "fat", 'f'),
+		glob(false, "a.*", "a.b.c", '.'),
+		glob(false, "a.?.c", "a.bb.c", '.'),
+		glob(false, "*", "a.b.c", '.'),
 
 		glob(true, "*test", "this is a test"),
 		glob(true, "this*", "this is a test"),
@@ -101,12 +105,30 @@ func TestGlob(t *testing.T) {
 		glob(true, "???", "abc"),
 		glob(true, "?*?", "abc"),
 		glob(true, "?*?", "ac"),
+		glob(false, "sta", "stagnation"),
+		glob(true, "sta*", "stagnation"),
+		glob(false, "sta?", "stagnation"),
+		glob(false, "sta?n", "stagnation"),
 
 		glob(true, "{abc,def}ghi", "defghi"),
 		glob(true, "{abc,abcd}a", "abcda"),
 		glob(true, "{a,ab}{bc,f}", "abc"),
 		glob(true, "{*,**}{a,b}", "ab"),
 		glob(false, "{*,**}{a,b}", "ac"),
+
+		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/rate"),
+		glob(true, "/{rate,[0-9][0-9][0-9]}*", "/rate"),
+		glob(true, "/{rate,[a-z][a-z][a-z]}*", "/usd"),
+
+		glob(true, "{*.google.*,*.yandex.*}", "www.google.com", '.'),
+		glob(true, "{*.google.*,*.yandex.*}", "www.yandex.com", '.'),
+		glob(false, "{*.google.*,*.yandex.*}", "yandex.com", '.'),
+		glob(false, "{*.google.*,*.yandex.*}", "google.com", '.'),
+
+		glob(true, "{*.google.*,yandex.*}", "www.google.com", '.'),
+		glob(true, "{*.google.*,yandex.*}", "yandex.com", '.'),
+		glob(false, "{*.google.*,yandex.*}", "www.yandex.com", '.'),
+		glob(false, "{*.google.*,yandex.*}", "google.com", '.'),
 
 		glob(true, pattern_all, fixture_all_match),
 		glob(false, pattern_all, fixture_all_mismatch),
@@ -137,15 +159,46 @@ func TestGlob(t *testing.T) {
 		glob(true, pattern_prefix_suffix, fixture_prefix_suffix_match),
 		glob(false, pattern_prefix_suffix, fixture_prefix_suffix_mismatch),
 	} {
-		g, err := Compile(test.pattern, test.delimiters...)
-		if err != nil {
-			t.Errorf("parsing pattern %q error: %s", test.pattern, err)
-			continue
-		}
+		t.Run("", func(t *testing.T) {
+			g := MustCompile(test.pattern, test.delimiters...)
+			result := g.Match(test.match)
+			if result != test.should {
+				t.Errorf(
+					"pattern %q matching %q should be %v but got %v\n%s",
+					test.pattern, test.match, test.should, result, g,
+				)
+			}
+		})
+	}
+}
 
-		result := g.Match(test.match)
-		if result != test.should {
-			t.Errorf("pattern %q matching %q should be %v but got %v\n%s", test.pattern, test.match, test.should, result, g)
+func TestQuoteMeta(t *testing.T) {
+	for id, test := range []struct {
+		in, out string
+	}{
+		{
+			in:  `[foo*]`,
+			out: `\[foo\*\]`,
+		},
+		{
+			in:  `{foo*}`,
+			out: `\{foo\*\}`,
+		},
+		{
+			in:  `*?\[]{}`,
+			out: `\*\?\\\[\]\{\}`,
+		},
+		{
+			in:  `some text and *?\[]{}`,
+			out: `some text and \*\?\\\[\]\{\}`,
+		},
+	} {
+		act := QuoteMeta(test.in)
+		if act != test.out {
+			t.Errorf("#%d QuoteMeta(%q) = %q; want %q", id, test.in, act, test.out)
+		}
+		if _, err := Compile(act); err != nil {
+			t.Errorf("#%d _, err := Compile(QuoteMeta(%q) = %q); err = %q", id, test.in, act, err)
 		}
 	}
 }
@@ -168,6 +221,16 @@ func BenchmarkAllGlobMatch(b *testing.B) {
 		_ = m.Match(fixture_all_match)
 	}
 }
+func BenchmarkAllGlobMatchParallel(b *testing.B) {
+	m, _ := Compile(pattern_all)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = m.Match(fixture_all_match)
+		}
+	})
+}
+
 func BenchmarkAllRegexpMatch(b *testing.B) {
 	m := regexp.MustCompile(regexp_all)
 	f := []byte(fixture_all_match)
@@ -182,6 +245,15 @@ func BenchmarkAllGlobMismatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_ = m.Match(fixture_all_mismatch)
 	}
+}
+func BenchmarkAllGlobMismatchParallel(b *testing.B) {
+	m, _ := Compile(pattern_all)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_ = m.Match(fixture_all_mismatch)
+		}
+	})
 }
 func BenchmarkAllRegexpMismatch(b *testing.B) {
 	m := regexp.MustCompile(regexp_all)

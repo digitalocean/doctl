@@ -9,6 +9,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"testing"
 )
@@ -27,8 +29,14 @@ func (cr keyboardInteractive) Challenge(user string, instruction string, questio
 var clientPassword = "tiger"
 
 // tryAuth runs a handshake with a given config against an SSH server
-// with config serverConfig
+// with config serverConfig. Returns both client and server side errors.
 func tryAuth(t *testing.T, config *ClientConfig) error {
+	err, _ := tryAuthBothSides(t, config)
+	return err
+}
+
+// tryAuthBothSides runs the handshake and returns the resulting errors from both sides of the connection.
+func tryAuthBothSides(t *testing.T, config *ClientConfig) (clientError error, serverAuthErrors []error) {
 	c1, c2, err := netPipe()
 	if err != nil {
 		t.Fatalf("netPipe: %v", err)
@@ -37,7 +45,7 @@ func tryAuth(t *testing.T, config *ClientConfig) error {
 	defer c2.Close()
 
 	certChecker := CertChecker{
-		IsAuthority: func(k PublicKey) bool {
+		IsUserAuthority: func(k PublicKey) bool {
 			return bytes.Equal(k.Marshal(), testPublicKeys["ecdsa"].Marshal())
 		},
 		UserKeyFallback: func(conn ConnMetadata, key PublicKey) (*Permissions, error) {
@@ -75,15 +83,16 @@ func tryAuth(t *testing.T, config *ClientConfig) error {
 			}
 			return nil, errors.New("keyboard-interactive failed")
 		},
-		AuthLogCallback: func(conn ConnMetadata, method string, err error) {
-			t.Logf("user %q, method %q: %v", conn.User(), method, err)
-		},
 	}
 	serverConfig.AddHostKey(testSigners["rsa"])
 
+	serverConfig.AuthLogCallback = func(conn ConnMetadata, method string, err error) {
+		serverAuthErrors = append(serverAuthErrors, err)
+	}
+
 	go newServer(c1, serverConfig)
 	_, _, _, err = NewClientConn(c2, "", config)
-	return err
+	return err, serverAuthErrors
 }
 
 func TestClientAuthPublicKey(t *testing.T) {
@@ -92,6 +101,7 @@ func TestClientAuthPublicKey(t *testing.T) {
 		Auth: []AuthMethod{
 			PublicKeys(testSigners["rsa"]),
 		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 	if err := tryAuth(t, config); err != nil {
 		t.Fatalf("unable to dial remote side: %s", err)
@@ -104,6 +114,7 @@ func TestAuthMethodPassword(t *testing.T) {
 		Auth: []AuthMethod{
 			Password(clientPassword),
 		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 
 	if err := tryAuth(t, config); err != nil {
@@ -123,6 +134,7 @@ func TestAuthMethodFallback(t *testing.T) {
 					return "WRONG", nil
 				}),
 		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 
 	if err := tryAuth(t, config); err != nil {
@@ -141,6 +153,7 @@ func TestAuthMethodWrongPassword(t *testing.T) {
 			Password("wrong"),
 			PublicKeys(testSigners["rsa"]),
 		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 
 	if err := tryAuth(t, config); err != nil {
@@ -158,6 +171,7 @@ func TestAuthMethodKeyboardInteractive(t *testing.T) {
 		Auth: []AuthMethod{
 			KeyboardInteractive(answers.Challenge),
 		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 
 	if err := tryAuth(t, config); err != nil {
@@ -203,9 +217,49 @@ func TestAuthMethodRSAandDSA(t *testing.T) {
 		Auth: []AuthMethod{
 			PublicKeys(testSigners["dsa"], testSigners["rsa"]),
 		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 	if err := tryAuth(t, config); err != nil {
 		t.Fatalf("client could not authenticate with rsa key: %v", err)
+	}
+}
+
+type invalidAlgSigner struct {
+	Signer
+}
+
+func (s *invalidAlgSigner) Sign(rand io.Reader, data []byte) (*Signature, error) {
+	sig, err := s.Signer.Sign(rand, data)
+	if sig != nil {
+		sig.Format = "invalid"
+	}
+	return sig, err
+}
+
+func TestMethodInvalidAlgorithm(t *testing.T) {
+	config := &ClientConfig{
+		User: "testuser",
+		Auth: []AuthMethod{
+			PublicKeys(&invalidAlgSigner{testSigners["rsa"]}),
+		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
+	}
+
+	err, serverErrors := tryAuthBothSides(t, config)
+	if err == nil {
+		t.Fatalf("login succeeded")
+	}
+
+	found := false
+	want := "algorithm \"invalid\""
+
+	var errStrings []string
+	for _, err := range serverErrors {
+		found = found || (err != nil && strings.Contains(err.Error(), want))
+		errStrings = append(errStrings, err.Error())
+	}
+	if !found {
+		t.Errorf("server got error %q, want substring %q", errStrings, want)
 	}
 }
 
@@ -219,6 +273,7 @@ func TestClientHMAC(t *testing.T) {
 			Config: Config{
 				MACs: []string{mac},
 			},
+			HostKeyCallback: InsecureIgnoreHostKey(),
 		}
 		if err := tryAuth(t, config); err != nil {
 			t.Fatalf("client could not authenticate with mac algo %s: %v", mac, err)
@@ -243,6 +298,9 @@ func TestClientUnsupportedCipher(t *testing.T) {
 }
 
 func TestClientUnsupportedKex(t *testing.T) {
+	if os.Getenv("GO_BUILDER_NAME") != "" {
+		t.Skip("skipping known-flaky test on the Go build dashboard; see golang.org/issue/15198")
+	}
 	config := &ClientConfig{
 		User: "testuser",
 		Auth: []AuthMethod{
@@ -251,6 +309,7 @@ func TestClientUnsupportedKex(t *testing.T) {
 		Config: Config{
 			KeyExchanges: []string{"diffie-hellman-group-exchange-sha256"}, // not currently supported
 		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 	if err := tryAuth(t, config); err == nil || !strings.Contains(err.Error(), "common algorithm") {
 		t.Errorf("got %v, expected 'common algorithm'", err)
@@ -270,22 +329,23 @@ func TestClientLoginCert(t *testing.T) {
 	}
 
 	clientConfig := &ClientConfig{
-		User: "user",
+		User:            "user",
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 	clientConfig.Auth = append(clientConfig.Auth, PublicKeys(certSigner))
 
-	t.Log("should succeed")
+	// should succeed
 	if err := tryAuth(t, clientConfig); err != nil {
 		t.Errorf("cert login failed: %v", err)
 	}
 
-	t.Log("corrupted signature")
+	// corrupted signature
 	cert.Signature.Blob[0]++
 	if err := tryAuth(t, clientConfig); err == nil {
 		t.Errorf("cert login passed with corrupted sig")
 	}
 
-	t.Log("revoked")
+	// revoked
 	cert.Serial = 666
 	cert.SignCert(rand.Reader, testSigners["ecdsa"])
 	if err := tryAuth(t, clientConfig); err == nil {
@@ -293,13 +353,13 @@ func TestClientLoginCert(t *testing.T) {
 	}
 	cert.Serial = 1
 
-	t.Log("sign with wrong key")
+	// sign with wrong key
 	cert.SignCert(rand.Reader, testSigners["dsa"])
 	if err := tryAuth(t, clientConfig); err == nil {
-		t.Errorf("cert login passed with non-authoritive key")
+		t.Errorf("cert login passed with non-authoritative key")
 	}
 
-	t.Log("host cert")
+	// host cert
 	cert.CertType = HostCert
 	cert.SignCert(rand.Reader, testSigners["ecdsa"])
 	if err := tryAuth(t, clientConfig); err == nil {
@@ -307,14 +367,14 @@ func TestClientLoginCert(t *testing.T) {
 	}
 	cert.CertType = UserCert
 
-	t.Log("principal specified")
+	// principal specified
 	cert.ValidPrincipals = []string{"user"}
 	cert.SignCert(rand.Reader, testSigners["ecdsa"])
 	if err := tryAuth(t, clientConfig); err != nil {
 		t.Errorf("cert login failed: %v", err)
 	}
 
-	t.Log("wrong principal specified")
+	// wrong principal specified
 	cert.ValidPrincipals = []string{"fred"}
 	cert.SignCert(rand.Reader, testSigners["ecdsa"])
 	if err := tryAuth(t, clientConfig); err == nil {
@@ -322,22 +382,22 @@ func TestClientLoginCert(t *testing.T) {
 	}
 	cert.ValidPrincipals = nil
 
-	t.Log("added critical option")
+	// added critical option
 	cert.CriticalOptions = map[string]string{"root-access": "yes"}
 	cert.SignCert(rand.Reader, testSigners["ecdsa"])
 	if err := tryAuth(t, clientConfig); err == nil {
 		t.Errorf("cert login passed with unrecognized critical option")
 	}
 
-	t.Log("allowed source address")
-	cert.CriticalOptions = map[string]string{"source-address": "127.0.0.42/24"}
+	// allowed source address
+	cert.CriticalOptions = map[string]string{"source-address": "127.0.0.42/24,::42/120"}
 	cert.SignCert(rand.Reader, testSigners["ecdsa"])
 	if err := tryAuth(t, clientConfig); err != nil {
 		t.Errorf("cert login with source-address failed: %v", err)
 	}
 
-	t.Log("disallowed source address")
-	cert.CriticalOptions = map[string]string{"source-address": "127.0.0.42"}
+	// disallowed source address
+	cert.CriticalOptions = map[string]string{"source-address": "127.0.0.42,::42"}
 	cert.SignCert(rand.Reader, testSigners["ecdsa"])
 	if err := tryAuth(t, clientConfig); err == nil {
 		t.Errorf("cert login with source-address succeeded")
@@ -349,9 +409,8 @@ func testPermissionsPassing(withPermissions bool, t *testing.T) {
 		PublicKeyCallback: func(conn ConnMetadata, key PublicKey) (*Permissions, error) {
 			if conn.User() == "nopermissions" {
 				return nil, nil
-			} else {
-				return &Permissions{}, nil
 			}
+			return &Permissions{}, nil
 		},
 	}
 	serverConfig.AddHostKey(testSigners["rsa"])
@@ -360,6 +419,7 @@ func testPermissionsPassing(withPermissions bool, t *testing.T) {
 		Auth: []AuthMethod{
 			PublicKeys(testSigners["rsa"]),
 		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
 	}
 	if withPermissions {
 		clientConfig.User = "permissions"
@@ -390,4 +450,229 @@ func TestPermissionsPassing(t *testing.T) {
 
 func TestNoPermissionsPassing(t *testing.T) {
 	testPermissionsPassing(false, t)
+}
+
+func TestRetryableAuth(t *testing.T) {
+	n := 0
+	passwords := []string{"WRONG1", "WRONG2"}
+
+	config := &ClientConfig{
+		User: "testuser",
+		Auth: []AuthMethod{
+			RetryableAuthMethod(PasswordCallback(func() (string, error) {
+				p := passwords[n]
+				n++
+				return p, nil
+			}), 2),
+			PublicKeys(testSigners["rsa"]),
+		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
+	}
+
+	if err := tryAuth(t, config); err != nil {
+		t.Fatalf("unable to dial remote side: %s", err)
+	}
+	if n != 2 {
+		t.Fatalf("Did not try all passwords")
+	}
+}
+
+func ExampleRetryableAuthMethod(t *testing.T) {
+	user := "testuser"
+	NumberOfPrompts := 3
+
+	// Normally this would be a callback that prompts the user to answer the
+	// provided questions
+	Cb := func(user, instruction string, questions []string, echos []bool) (answers []string, err error) {
+		return []string{"answer1", "answer2"}, nil
+	}
+
+	config := &ClientConfig{
+		HostKeyCallback: InsecureIgnoreHostKey(),
+		User:            user,
+		Auth: []AuthMethod{
+			RetryableAuthMethod(KeyboardInteractiveChallenge(Cb), NumberOfPrompts),
+		},
+	}
+
+	if err := tryAuth(t, config); err != nil {
+		t.Fatalf("unable to dial remote side: %s", err)
+	}
+}
+
+// Test if username is received on server side when NoClientAuth is used
+func TestClientAuthNone(t *testing.T) {
+	user := "testuser"
+	serverConfig := &ServerConfig{
+		NoClientAuth: true,
+	}
+	serverConfig.AddHostKey(testSigners["rsa"])
+
+	clientConfig := &ClientConfig{
+		User:            user,
+		HostKeyCallback: InsecureIgnoreHostKey(),
+	}
+
+	c1, c2, err := netPipe()
+	if err != nil {
+		t.Fatalf("netPipe: %v", err)
+	}
+	defer c1.Close()
+	defer c2.Close()
+
+	go NewClientConn(c2, "", clientConfig)
+	serverConn, err := newServer(c1, serverConfig)
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
+	if serverConn.User() != user {
+		t.Fatalf("server: got %q, want %q", serverConn.User(), user)
+	}
+}
+
+// Test if authentication attempts are limited on server when MaxAuthTries is set
+func TestClientAuthMaxAuthTries(t *testing.T) {
+	user := "testuser"
+
+	serverConfig := &ServerConfig{
+		MaxAuthTries: 2,
+		PasswordCallback: func(conn ConnMetadata, pass []byte) (*Permissions, error) {
+			if conn.User() == "testuser" && string(pass) == "right" {
+				return nil, nil
+			}
+			return nil, errors.New("password auth failed")
+		},
+	}
+	serverConfig.AddHostKey(testSigners["rsa"])
+
+	expectedErr := fmt.Errorf("ssh: handshake failed: %v", &disconnectMsg{
+		Reason:  2,
+		Message: "too many authentication failures",
+	})
+
+	for tries := 2; tries < 4; tries++ {
+		n := tries
+		clientConfig := &ClientConfig{
+			User: user,
+			Auth: []AuthMethod{
+				RetryableAuthMethod(PasswordCallback(func() (string, error) {
+					n--
+					if n == 0 {
+						return "right", nil
+					}
+					return "wrong", nil
+				}), tries),
+			},
+			HostKeyCallback: InsecureIgnoreHostKey(),
+		}
+
+		c1, c2, err := netPipe()
+		if err != nil {
+			t.Fatalf("netPipe: %v", err)
+		}
+		defer c1.Close()
+		defer c2.Close()
+
+		go newServer(c1, serverConfig)
+		_, _, _, err = NewClientConn(c2, "", clientConfig)
+		if tries > 2 {
+			if err == nil {
+				t.Fatalf("client: got no error, want %s", expectedErr)
+			} else if err.Error() != expectedErr.Error() {
+				t.Fatalf("client: got %s, want %s", err, expectedErr)
+			}
+		} else {
+			if err != nil {
+				t.Fatalf("client: got %s, want no error", err)
+			}
+		}
+	}
+}
+
+// Test if authentication attempts are correctly limited on server
+// when more public keys are provided then MaxAuthTries
+func TestClientAuthMaxAuthTriesPublicKey(t *testing.T) {
+	signers := []Signer{}
+	for i := 0; i < 6; i++ {
+		signers = append(signers, testSigners["dsa"])
+	}
+
+	validConfig := &ClientConfig{
+		User: "testuser",
+		Auth: []AuthMethod{
+			PublicKeys(append([]Signer{testSigners["rsa"]}, signers...)...),
+		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
+	}
+	if err := tryAuth(t, validConfig); err != nil {
+		t.Fatalf("unable to dial remote side: %s", err)
+	}
+
+	expectedErr := fmt.Errorf("ssh: handshake failed: %v", &disconnectMsg{
+		Reason:  2,
+		Message: "too many authentication failures",
+	})
+	invalidConfig := &ClientConfig{
+		User: "testuser",
+		Auth: []AuthMethod{
+			PublicKeys(append(signers, testSigners["rsa"])...),
+		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
+	}
+	if err := tryAuth(t, invalidConfig); err == nil {
+		t.Fatalf("client: got no error, want %s", expectedErr)
+	} else if err.Error() != expectedErr.Error() {
+		t.Fatalf("client: got %s, want %s", err, expectedErr)
+	}
+}
+
+// Test whether authentication errors are being properly logged if all
+// authentication methods have been exhausted
+func TestClientAuthErrorList(t *testing.T) {
+	publicKeyErr := errors.New("This is an error from PublicKeyCallback")
+
+	clientConfig := &ClientConfig{
+		Auth: []AuthMethod{
+			PublicKeys(testSigners["rsa"]),
+		},
+		HostKeyCallback: InsecureIgnoreHostKey(),
+	}
+	serverConfig := &ServerConfig{
+		PublicKeyCallback: func(_ ConnMetadata, _ PublicKey) (*Permissions, error) {
+			return nil, publicKeyErr
+		},
+	}
+	serverConfig.AddHostKey(testSigners["rsa"])
+
+	c1, c2, err := netPipe()
+	if err != nil {
+		t.Fatalf("netPipe: %v", err)
+	}
+	defer c1.Close()
+	defer c2.Close()
+
+	go NewClientConn(c2, "", clientConfig)
+	_, err = newServer(c1, serverConfig)
+	if err == nil {
+		t.Fatal("newServer: got nil, expected errors")
+	}
+
+	authErrs, ok := err.(*ServerAuthError)
+	if !ok {
+		t.Fatalf("errors: got %T, want *ssh.ServerAuthError", err)
+	}
+	for i, e := range authErrs.Errors {
+		switch i {
+		case 0:
+			if e != ErrNoAuth {
+				t.Fatalf("errors: got error %v, want ErrNoAuth", e)
+			}
+		case 1:
+			if e != publicKeyErr {
+				t.Fatalf("errors: got %v, want %v", e, publicKeyErr)
+			}
+		default:
+			t.Fatalf("errors: got %v, expected 2 errors", authErrs.Errors)
+		}
+	}
 }

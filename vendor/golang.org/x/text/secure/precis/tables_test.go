@@ -31,19 +31,7 @@ var exceptions = runes.Predicate(func(r rune) bool {
 	}
 })
 
-func (tt *tableTest) run(t *testing.T) {
-	rangetable.Visit(tt.rangeTable, func(r rune) {
-		b := make([]byte, 4)
-		n := utf8.EncodeRune(b, r)
-		trieval, _ := dpTrie.lookup(b[:n])
-		p := property(trieval)
-		if p != tt.prop && !exceptions.Contains(r) {
-			t.Fail()
-		}
-	})
-}
-
-// Ensure that ceratain properties were generated correctly.
+// Ensure that certain properties were generated correctly.
 func TestTable(t *testing.T) {
 	tests := []tableTest{
 		tableTest{
@@ -54,7 +42,7 @@ func TestTable(t *testing.T) {
 				unicode.So,             // Symbols
 				unicode.Pi, unicode.Pf, // Punctuation
 			),
-			freePVal | idDis,
+			idDisOrFreePVal,
 		},
 		tableTest{
 			rangetable.New(0x30000, 0x30101, 0xDFFFF),
@@ -62,7 +50,20 @@ func TestTable(t *testing.T) {
 		},
 	}
 
+	assigned := rangetable.Assigned(UnicodeVersion)
+
 	for _, test := range tests {
-		test.run(t)
+		rangetable.Visit(test.rangeTable, func(r rune) {
+			if !unicode.In(r, assigned) {
+				return
+			}
+			b := make([]byte, 4)
+			n := utf8.EncodeRune(b, r)
+			trieval, _ := dpTrie.lookup(b[:n])
+			p := entry(trieval).property()
+			if p != test.prop && !exceptions.Contains(r) {
+				t.Errorf("%U: got %+x; want %+x", r, test.prop, p)
+			}
+		})
 	}
 }

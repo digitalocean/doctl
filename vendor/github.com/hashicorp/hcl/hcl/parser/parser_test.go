@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -58,12 +59,12 @@ func TestListType(t *testing.T) {
 			[]token.Type{token.NUMBER, token.STRING},
 		},
 		{
-			`foo = []`,
-			[]token.Type{},
+			`foo = [false]`,
+			[]token.Type{token.BOOL},
 		},
 		{
-			`foo = ["123", 123]`,
-			[]token.Type{token.STRING, token.NUMBER},
+			`foo = []`,
+			[]token.Type{},
 		},
 		{
 			`foo = [1,
@@ -96,6 +97,161 @@ EOF
 		}
 
 		equals(t, l.tokens, tokens)
+	}
+}
+
+func TestListOfMaps(t *testing.T) {
+	src := `foo = [
+    {key = "bar"},
+    {key = "baz", key2 = "qux"},
+  ]`
+	p := newParser([]byte(src))
+
+	file, err := p.Parse()
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	// Here we make all sorts of assumptions about the input structure w/ type
+	// assertions. The intent is only for this to be a "smoke test" ensuring
+	// parsing actually performed its duty - giving this test something a bit
+	// more robust than _just_ "no error occurred".
+	expected := []string{`"bar"`, `"baz"`, `"qux"`}
+	actual := make([]string, 0, 3)
+	ol := file.Node.(*ast.ObjectList)
+	objItem := ol.Items[0]
+	list := objItem.Val.(*ast.ListType)
+	for _, node := range list.List {
+		obj := node.(*ast.ObjectType)
+		for _, item := range obj.List.Items {
+			val := item.Val.(*ast.LiteralType)
+			actual = append(actual, val.Token.Text)
+		}
+
+	}
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("Expected: %#v, got %#v", expected, actual)
+	}
+}
+
+func TestListOfMaps_requiresComma(t *testing.T) {
+	src := `foo = [
+    {key = "bar"}
+    {key = "baz"}
+  ]`
+	p := newParser([]byte(src))
+
+	_, err := p.Parse()
+	if err == nil {
+		t.Fatalf("Expected error, got none!")
+	}
+
+	expected := "error parsing list, expected comma or list end"
+	if !strings.Contains(err.Error(), expected) {
+		t.Fatalf("Expected err:\n  %s\nTo contain:\n  %s\n", err, expected)
+	}
+}
+
+func TestListType_leadComment(t *testing.T) {
+	var literals = []struct {
+		src     string
+		comment []string
+	}{
+		{
+			`foo = [
+			1,
+			# bar
+			2,
+			3,
+			]`,
+			[]string{"", "# bar", ""},
+		},
+	}
+
+	for _, l := range literals {
+		p := newParser([]byte(l.src))
+		item, err := p.objectItem()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		list, ok := item.Val.(*ast.ListType)
+		if !ok {
+			t.Fatalf("node should be of type LiteralType, got: %T", item.Val)
+		}
+
+		if len(list.List) != len(l.comment) {
+			t.Fatalf("bad: %d", len(list.List))
+		}
+
+		for i, li := range list.List {
+			lt := li.(*ast.LiteralType)
+			comment := l.comment[i]
+
+			if (lt.LeadComment == nil) != (comment == "") {
+				t.Fatalf("bad: %#v", lt)
+			}
+
+			if comment == "" {
+				continue
+			}
+
+			actual := lt.LeadComment.List[0].Text
+			if actual != comment {
+				t.Fatalf("bad: %q %q", actual, comment)
+			}
+		}
+	}
+}
+
+func TestListType_lineComment(t *testing.T) {
+	var literals = []struct {
+		src     string
+		comment []string
+	}{
+		{
+			`foo = [
+			1,
+			2, # bar
+			3,
+			]`,
+			[]string{"", "# bar", ""},
+		},
+	}
+
+	for _, l := range literals {
+		p := newParser([]byte(l.src))
+		item, err := p.objectItem()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		list, ok := item.Val.(*ast.ListType)
+		if !ok {
+			t.Fatalf("node should be of type LiteralType, got: %T", item.Val)
+		}
+
+		if len(list.List) != len(l.comment) {
+			t.Fatalf("bad: %d", len(list.List))
+		}
+
+		for i, li := range list.List {
+			lt := li.(*ast.LiteralType)
+			comment := l.comment[i]
+
+			if (lt.LineComment == nil) != (comment == "") {
+				t.Fatalf("bad: %s", lt)
+			}
+
+			if comment == "" {
+				continue
+			}
+
+			actual := lt.LineComment.List[0].Text
+			if actual != comment {
+				t.Fatalf("bad: %q %q", actual, comment)
+			}
+		}
 	}
 }
 
@@ -151,6 +307,8 @@ func TestObjectType(t *testing.T) {
 	}
 
 	for _, l := range literals {
+		t.Logf("Source: %s", l.src)
+
 		p := newParser([]byte(l.src))
 		// p.enableTrace = true
 		item, err := p.objectItem()
@@ -229,6 +387,30 @@ func TestObjectKey(t *testing.T) {
 	}
 }
 
+func TestCommentGroup(t *testing.T) {
+	var cases = []struct {
+		src    string
+		groups int
+	}{
+		{"# Hello\n# World", 1},
+		{"# Hello\r\n# Windows", 1},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.src, func(t *testing.T) {
+			p := newParser([]byte(tc.src))
+			file, err := p.Parse()
+			if err != nil {
+				t.Fatalf("parse error: %s", err)
+			}
+
+			if len(file.Comments) != tc.groups {
+				t.Fatalf("bad: %#v", file.Comments)
+			}
+		})
+	}
+}
+
 // Official HCL tests
 func TestParse(t *testing.T) {
 	cases := []struct {
@@ -241,6 +423,10 @@ func TestParse(t *testing.T) {
 		},
 		{
 			"comment.hcl",
+			false,
+		},
+		{
+			"comment_crlf.hcl",
 			false,
 		},
 		{
@@ -264,6 +450,10 @@ func TestParse(t *testing.T) {
 			false,
 		},
 		{
+			"object_list_comma.hcl",
+			false,
+		},
+		{
 			"structure.hcl",
 			false,
 		},
@@ -280,8 +470,8 @@ func TestParse(t *testing.T) {
 			false,
 		},
 		{
-			"assign_deep.hcl",
-			true,
+			"complex_crlf.hcl",
+			false,
 		},
 		{
 			"types.hcl",
@@ -303,19 +493,74 @@ func TestParse(t *testing.T) {
 			"unterminated_object.hcl",
 			true,
 		},
+		{
+			"unterminated_object_2.hcl",
+			true,
+		},
+		{
+			"key_without_value.hcl",
+			true,
+		},
+		{
+			"object_key_without_value.hcl",
+			true,
+		},
+		{
+			"object_key_assign_without_value.hcl",
+			true,
+		},
+		{
+			"object_key_assign_without_value2.hcl",
+			true,
+		},
+		{
+			"object_key_assign_without_value3.hcl",
+			true,
+		},
+		{
+			"git_crypt.hcl",
+			true,
+		},
 	}
 
 	const fixtureDir = "./test-fixtures"
 
 	for _, tc := range cases {
-		d, err := ioutil.ReadFile(filepath.Join(fixtureDir, tc.Name))
-		if err != nil {
-			t.Fatalf("err: %s", err)
-		}
+		t.Run(tc.Name, func(t *testing.T) {
+			d, err := ioutil.ReadFile(filepath.Join(fixtureDir, tc.Name))
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
 
-		_, err = Parse(d)
+			v, err := Parse(d)
+			if (err != nil) != tc.Err {
+				t.Fatalf("Input: %s\n\nError: %s\n\nAST: %#v", tc.Name, err, v)
+			}
+		})
+	}
+}
+
+func TestParse_inline(t *testing.T) {
+	cases := []struct {
+		Value string
+		Err   bool
+	}{
+		{"t t e{{}}", true},
+		{"o{{}}", true},
+		{"t t e d N{{}}", true},
+		{"t t e d{{}}", true},
+		{"N{}N{{}}", true},
+		{"v\nN{{}}", true},
+		{"v=/\n[,", true},
+		{"v=10kb", true},
+		{"v=/foo", true},
+	}
+
+	for _, tc := range cases {
+		t.Logf("Testing: %q", tc.Value)
+		ast, err := Parse([]byte(tc.Value))
 		if (err != nil) != tc.Err {
-			t.Fatalf("Input: %s\n\nError: %s", tc.Name, err)
+			t.Fatalf("Input: %q\n\nError: %s\n\nAST: %#v", tc.Value, err, ast)
 		}
 	}
 }

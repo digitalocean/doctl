@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"testing"
 
-	"golang.org/x/text/collate/colltab"
+	"golang.org/x/text/internal/colltab"
 	"golang.org/x/text/language"
 )
 
@@ -392,6 +392,9 @@ var keyTests = []keyTest{
 			255, 255, 255, 255, 255,
 		},
 	},
+	// Issue 16391: incomplete rune at end of UTF-8 sequence.
+	{"\xc2", []byte{133, 255, 253, 0, 0, 0, 32, 0, 0, 2, 0, 255}},
+	{"\xc2a", []byte{133, 255, 253, 0, 100, 0, 0, 0, 32, 0, 32, 0, 0, 2, 2, 0, 255, 255}},
 }
 
 func TestKey(t *testing.T) {

@@ -11,6 +11,7 @@ package test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -276,27 +277,104 @@ func TestValidTerminalMode(t *testing.T) {
 	}
 }
 
+func TestWindowChange(t *testing.T) {
+	server := newServer(t)
+	defer server.Shutdown()
+	conn := server.Dial(clientConfig())
+	defer conn.Close()
+
+	session, err := conn.NewSession()
+	if err != nil {
+		t.Fatalf("session failed: %v", err)
+	}
+	defer session.Close()
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		t.Fatalf("unable to acquire stdout pipe: %s", err)
+	}
+
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		t.Fatalf("unable to acquire stdin pipe: %s", err)
+	}
+
+	tm := ssh.TerminalModes{ssh.ECHO: 0}
+	if err = session.RequestPty("xterm", 80, 40, tm); err != nil {
+		t.Fatalf("req-pty failed: %s", err)
+	}
+
+	if err := session.WindowChange(100, 100); err != nil {
+		t.Fatalf("window-change failed: %s", err)
+	}
+
+	err = session.Shell()
+	if err != nil {
+		t.Fatalf("session failed: %s", err)
+	}
+
+	stdin.Write([]byte("stty size && exit\n"))
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, stdout); err != nil {
+		t.Fatalf("reading failed: %s", err)
+	}
+
+	if sttyOutput := buf.String(); !strings.Contains(sttyOutput, "100 100") {
+		t.Fatalf("terminal WindowChange failure: expected \"100 100\" stty output, got %s", sttyOutput)
+	}
+}
+
+func testOneCipher(t *testing.T, cipher string, cipherOrder []string) {
+	server := newServer(t)
+	defer server.Shutdown()
+	conf := clientConfig()
+	conf.Ciphers = []string{cipher}
+	// Don't fail if sshd doesn't have the cipher.
+	conf.Ciphers = append(conf.Ciphers, cipherOrder...)
+	conn, err := server.TryDial(conf)
+	if err != nil {
+		t.Fatalf("TryDial: %v", err)
+	}
+	defer conn.Close()
+
+	numBytes := 4096
+
+	// Exercise sending data to the server
+	if _, _, err := conn.Conn.SendRequest("drop-me", false, make([]byte, numBytes)); err != nil {
+		t.Fatalf("SendRequest: %v", err)
+	}
+
+	// Exercise receiving data from the server
+	session, err := conn.NewSession()
+	if err != nil {
+		t.Fatalf("NewSession: %v", err)
+	}
+
+	out, err := session.Output(fmt.Sprintf("dd if=/dev/zero of=/dev/stdout bs=%d count=1", numBytes))
+	if err != nil {
+		t.Fatalf("Output: %v", err)
+	}
+
+	if len(out) != numBytes {
+		t.Fatalf("got %d bytes, want %d bytes", len(out), numBytes)
+	}
+}
+
+var deprecatedCiphers = []string{
+	"aes128-cbc", "3des-cbc",
+	"arcfour128", "arcfour256",
+}
+
 func TestCiphers(t *testing.T) {
 	var config ssh.Config
 	config.SetDefaults()
-	cipherOrder := config.Ciphers
-	// This cipher will not be tested when commented out in cipher.go it will
-	// fallback to the next available as per line 292.
-	cipherOrder = append(cipherOrder, "aes128-cbc")
+	cipherOrder := append(config.Ciphers, deprecatedCiphers...)
 
 	for _, ciph := range cipherOrder {
-		server := newServer(t)
-		defer server.Shutdown()
-		conf := clientConfig()
-		conf.Ciphers = []string{ciph}
-		// Don't fail if sshd doesnt have the cipher.
-		conf.Ciphers = append(conf.Ciphers, cipherOrder...)
-		conn, err := server.TryDial(conf)
-		if err == nil {
-			conn.Close()
-		} else {
-			t.Fatalf("failed for cipher %q", ciph)
-		}
+		t.Run(ciph, func(t *testing.T) {
+			testOneCipher(t, ciph, cipherOrder)
+		})
 	}
 }
 
@@ -310,7 +388,7 @@ func TestMACs(t *testing.T) {
 		defer server.Shutdown()
 		conf := clientConfig()
 		conf.MACs = []string{mac}
-		// Don't fail if sshd doesnt have the MAC.
+		// Don't fail if sshd doesn't have the MAC.
 		conf.MACs = append(conf.MACs, macOrder...)
 		if conn, err := server.TryDial(conf); err == nil {
 			conn.Close()
@@ -328,7 +406,7 @@ func TestKeyExchanges(t *testing.T) {
 		server := newServer(t)
 		defer server.Shutdown()
 		conf := clientConfig()
-		// Don't fail if sshd doesnt have the kex.
+		// Don't fail if sshd doesn't have the kex.
 		conf.KeyExchanges = append([]string{kex}, kexOrder...)
 		conn, err := server.TryDial(conf)
 		if err == nil {
@@ -336,5 +414,30 @@ func TestKeyExchanges(t *testing.T) {
 		} else {
 			t.Errorf("failed for kex %q", kex)
 		}
+	}
+}
+
+func TestClientAuthAlgorithms(t *testing.T) {
+	for _, key := range []string{
+		"rsa",
+		"dsa",
+		"ecdsa",
+		"ed25519",
+	} {
+		server := newServer(t)
+		conf := clientConfig()
+		conf.SetDefaults()
+		conf.Auth = []ssh.AuthMethod{
+			ssh.PublicKeys(testSigners[key]),
+		}
+
+		conn, err := server.TryDial(conf)
+		if err == nil {
+			conn.Close()
+		} else {
+			t.Errorf("failed for key %q", key)
+		}
+
+		server.Shutdown()
 	}
 }

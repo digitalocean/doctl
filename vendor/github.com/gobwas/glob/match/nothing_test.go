@@ -22,7 +22,7 @@ func TestNothingIndex(t *testing.T) {
 			[]int{0},
 		},
 	} {
-		p := Nothing{}
+		p := NewNothing()
 		index, segments := p.Index(test.fixture)
 		if index != test.index {
 			t.Errorf("#%d unexpected index: exp: %d, act: %d", id, test.index, index)
@@ -34,8 +34,21 @@ func TestNothingIndex(t *testing.T) {
 }
 
 func BenchmarkIndexNothing(b *testing.B) {
-	m := Nothing{}
+	m := NewNothing()
+
 	for i := 0; i < b.N; i++ {
-		m.Index(bench_pattern)
+		_, s := m.Index(bench_pattern)
+		releaseSegments(s)
 	}
+}
+
+func BenchmarkIndexNothingParallel(b *testing.B) {
+	m := NewNothing()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, s := m.Index(bench_pattern)
+			releaseSegments(s)
+		}
+	})
 }

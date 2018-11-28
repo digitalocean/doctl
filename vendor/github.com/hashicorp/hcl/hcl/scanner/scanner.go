@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"regexp"
 	"unicode"
 	"unicode/utf8"
 
@@ -73,14 +74,6 @@ func (s *Scanner) next() rune {
 		return eof
 	}
 
-	if ch == utf8.RuneError && size == 1 {
-		s.srcPos.Column++
-		s.srcPos.Offset += size
-		s.lastCharLen = size
-		s.err("illegal UTF-8 encoding")
-		return ch
-	}
-
 	// remember last position
 	s.prevPos = s.srcPos
 
@@ -88,10 +81,25 @@ func (s *Scanner) next() rune {
 	s.lastCharLen = size
 	s.srcPos.Offset += size
 
+	if ch == utf8.RuneError && size == 1 {
+		s.err("illegal UTF-8 encoding")
+		return ch
+	}
+
 	if ch == '\n' {
 		s.srcPos.Line++
 		s.lastLineLen = s.srcPos.Column
 		s.srcPos.Column = 0
+	}
+
+	if ch == '\x00' {
+		s.err("unexpected null character (0x00)")
+		return eof
+	}
+
+	if ch == '\uE123' {
+		s.err("unicode code point U+E123 reserved for internal use")
+		return utf8.RuneError
 	}
 
 	// debug
@@ -223,6 +231,11 @@ func (s *Scanner) Scan() token.Token {
 func (s *Scanner) scanComment(ch rune) {
 	// single line comments
 	if ch == '#' || (ch == '/' && s.peek() != '*') {
+		if ch == '/' && s.peek() != '/' {
+			s.err("expected '/' for comment")
+			return
+		}
+
 		ch = s.next()
 		for ch != '\n' && ch >= 0 && ch != eof {
 			ch = s.next()
@@ -339,7 +352,7 @@ func (s *Scanner) scanNumber(ch rune) token.Type {
 	return token.NUMBER
 }
 
-// scanMantissa scans the mantissa begining from the rune. It returns the next
+// scanMantissa scans the mantissa beginning from the rune. It returns the next
 // non decimal rune. It's used to determine wheter it's a fraction or exponent.
 func (s *Scanner) scanMantissa(ch rune) rune {
 	scanned := false
@@ -376,7 +389,7 @@ func (s *Scanner) scanExponent(ch rune) rune {
 	return ch
 }
 
-// scanHeredoc scans a heredoc string.
+// scanHeredoc scans a heredoc string
 func (s *Scanner) scanHeredoc() {
 	// Scan the second '<' in example: '<<EOF'
 	if s.next() != '<' {
@@ -389,6 +402,12 @@ func (s *Scanner) scanHeredoc() {
 
 	// Scan the identifier
 	ch := s.next()
+
+	// Indented heredoc syntax
+	if ch == '-' {
+		ch = s.next()
+	}
+
 	for isLetter(ch) || isDigit(ch) {
 		ch = s.next()
 	}
@@ -414,6 +433,17 @@ func (s *Scanner) scanHeredoc() {
 
 	// Read the identifier
 	identBytes := s.src[offs : s.srcPos.Offset-s.lastCharLen]
+	if len(identBytes) == 0 || (len(identBytes) == 1 && identBytes[0] == '-') {
+		s.err("zero-length heredoc anchor")
+		return
+	}
+
+	var identRegexp *regexp.Regexp
+	if identBytes[0] == '-' {
+		identRegexp = regexp.MustCompile(fmt.Sprintf(`^[[:space:]]*%s\r*\z`, identBytes[1:]))
+	} else {
+		identRegexp = regexp.MustCompile(fmt.Sprintf(`^[[:space:]]*%s\r*\z`, identBytes))
+	}
 
 	// Read the actual string value
 	lineStart := s.srcPos.Offset
@@ -422,12 +452,11 @@ func (s *Scanner) scanHeredoc() {
 
 		// Special newline handling.
 		if ch == '\n' {
-			// Math is fast, so we first compare the byte counts to
-			// see if we have a chance of seeing the same identifier. If those
-			// match, then we compare the string values directly.
+			// Math is fast, so we first compare the byte counts to see if we have a chance
+			// of seeing the same identifier - if the length is less than the number of bytes
+			// in the identifier, this cannot be a valid terminator.
 			lineBytesLen := s.srcPos.Offset - s.lastCharLen - lineStart
-			if lineBytesLen == len(identBytes) &&
-				bytes.Equal(identBytes, s.src[lineStart:s.srcPos.Offset-s.lastCharLen]) {
+			if lineBytesLen >= len(identBytes) && identRegexp.Match(s.src[lineStart:s.srcPos.Offset-s.lastCharLen]) {
 				break
 			}
 
@@ -452,7 +481,7 @@ func (s *Scanner) scanString() {
 		// read character after quote
 		ch := s.next()
 
-		if ch == '\n' || ch < 0 || ch == eof {
+		if (ch == '\n' && braces == 0) || ch < 0 || ch == eof {
 			s.err("literal not terminated")
 			return
 		}
@@ -508,16 +537,27 @@ func (s *Scanner) scanEscape() rune {
 // scanDigits scans a rune with the given base for n times. For example an
 // octal notation \184 would yield in scanDigits(ch, 8, 3)
 func (s *Scanner) scanDigits(ch rune, base, n int) rune {
+	start := n
 	for n > 0 && digitVal(ch) < base {
 		ch = s.next()
+		if ch == eof {
+			// If we see an EOF, we halt any more scanning of digits
+			// immediately.
+			break
+		}
+
 		n--
 	}
 	if n > 0 {
 		s.err("illegal char escape")
 	}
 
-	// we scanned all digits, put the last non digit char back
-	s.unread()
+	if n != start && ch != eof {
+		// we scanned all digits, put the last non digit char back,
+		// only if we read anything at all
+		s.unread()
+	}
+
 	return ch
 }
 

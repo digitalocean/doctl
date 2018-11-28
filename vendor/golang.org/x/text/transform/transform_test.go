@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 	"unicode/utf8"
+
+	"golang.org/x/text/internal/testtext"
 )
 
 type lowerCaseASCII struct{ NopResetter }
@@ -28,6 +30,27 @@ func (lowerCaseASCII) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, er
 			c += 'a' - 'A'
 		}
 		dst[i] = c
+	}
+	return n, n, err
+}
+
+// lowerCaseASCIILookahead lowercases the string and reports ErrShortSrc as long
+// as the input is not atEOF.
+type lowerCaseASCIILookahead struct{ NopResetter }
+
+func (lowerCaseASCIILookahead) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
+	n := len(src)
+	if n > len(dst) {
+		n, err = len(dst), ErrShortDst
+	}
+	for i, c := range src[:n] {
+		if 'A' <= c && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		dst[i] = c
+	}
+	if !atEOF {
+		err = ErrShortSrc
 	}
 	return n, n, err
 }
@@ -48,6 +71,58 @@ func (dontMentionX) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err 
 		dst[i] = c
 	}
 	return n, n, err
+}
+
+var errAtEnd = errors.New("error after all text")
+
+type errorAtEnd struct{ NopResetter }
+
+func (errorAtEnd) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
+	n := copy(dst, src)
+	if n < len(src) {
+		return n, n, ErrShortDst
+	}
+	if atEOF {
+		return n, n, errAtEnd
+	}
+	return n, n, nil
+}
+
+type replaceWithConstant struct {
+	replacement string
+	written     int
+}
+
+func (t *replaceWithConstant) Reset() {
+	t.written = 0
+}
+
+func (t *replaceWithConstant) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
+	if atEOF {
+		nDst = copy(dst, t.replacement[t.written:])
+		t.written += nDst
+		if t.written < len(t.replacement) {
+			err = ErrShortDst
+		}
+	}
+	return nDst, len(src), err
+}
+
+type addAnXAtTheEnd struct{ NopResetter }
+
+func (addAnXAtTheEnd) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
+	n := copy(dst, src)
+	if n < len(src) {
+		return n, n, ErrShortDst
+	}
+	if !atEOF {
+		return n, n, nil
+	}
+	if len(dst) == n {
+		return n, n, ErrShortDst
+	}
+	dst[n] = 'X'
+	return n + 1, n, nil
 }
 
 // doublerAtEOF is a strange Transformer that transforms "this" to "tthhiiss",
@@ -166,6 +241,7 @@ type delayedTrickler []byte
 func (t *delayedTrickler) Reset() {
 	*t = nil
 }
+
 func (t *delayedTrickler) Transform(dst, src []byte, atEOF bool) (nDst, nSrc int, err error) {
 	if len(*t) > 0 && len(dst) > 0 {
 		dst[0] = (*t)[0]
@@ -272,13 +348,123 @@ var testCases = []testCase{
 	},
 
 	{
-		desc:    "basic",
+		desc:    "small dst with lookahead",
+		t:       lowerCaseASCIILookahead{},
+		src:     "Hello WORLD.",
+		dstSize: 3,
+		srcSize: 100,
+		wantStr: "hello world.",
+	},
+
+	{
+		desc:    "small src with lookahead",
+		t:       lowerCaseASCIILookahead{},
+		src:     "Hello WORLD.",
+		dstSize: 100,
+		srcSize: 4,
+		wantStr: "hello world.",
+	},
+
+	{
+		desc:    "small buffers with lookahead",
+		t:       lowerCaseASCIILookahead{},
+		src:     "Hello WORLD.",
+		dstSize: 3,
+		srcSize: 4,
+		wantStr: "hello world.",
+	},
+
+	{
+		desc:    "very small buffers with lookahead",
+		t:       lowerCaseASCIILookahead{},
+		src:     "Hello WORLD.",
+		dstSize: 1,
+		srcSize: 2,
+		wantStr: "hello world.",
+	},
+
+	{
+		desc:    "user error",
 		t:       dontMentionX{},
 		src:     "The First Rule of Transform Club: don't mention Mister X, ever.",
 		dstSize: 100,
 		srcSize: 100,
 		wantStr: "The First Rule of Transform Club: don't mention Mister ",
 		wantErr: errYouMentionedX,
+	},
+
+	{
+		desc:    "user error at end",
+		t:       errorAtEnd{},
+		src:     "All goes well until it doesn't.",
+		dstSize: 100,
+		srcSize: 100,
+		wantStr: "All goes well until it doesn't.",
+		wantErr: errAtEnd,
+	},
+
+	{
+		desc:    "user error at end, incremental",
+		t:       errorAtEnd{},
+		src:     "All goes well until it doesn't.",
+		dstSize: 10,
+		srcSize: 10,
+		wantStr: "All goes well until it doesn't.",
+		wantErr: errAtEnd,
+	},
+
+	{
+		desc:    "replace entire non-empty string with one byte",
+		t:       &replaceWithConstant{replacement: "X"},
+		src:     "none of this will be copied",
+		dstSize: 1,
+		srcSize: 10,
+		wantStr: "X",
+	},
+
+	{
+		desc:    "replace entire empty string with one byte",
+		t:       &replaceWithConstant{replacement: "X"},
+		src:     "",
+		dstSize: 1,
+		srcSize: 10,
+		wantStr: "X",
+	},
+
+	{
+		desc:    "replace entire empty string with seven bytes",
+		t:       &replaceWithConstant{replacement: "ABCDEFG"},
+		src:     "",
+		dstSize: 3,
+		srcSize: 10,
+		wantStr: "ABCDEFG",
+	},
+
+	{
+		desc:    "add an X (initialBufSize-1)",
+		t:       addAnXAtTheEnd{},
+		src:     aaa[:initialBufSize-1],
+		dstSize: 10,
+		srcSize: 10,
+		wantStr: aaa[:initialBufSize-1] + "X",
+	},
+
+	{
+		desc:    "add an X (initialBufSize+0)",
+		t:       addAnXAtTheEnd{},
+		src:     aaa[:initialBufSize+0],
+		dstSize: 10,
+		srcSize: 10,
+		wantStr: aaa[:initialBufSize+0] + "X",
+	},
+
+	{
+		desc:    "add an X (initialBufSize+1)",
+		t:       addAnXAtTheEnd{},
+		src:     aaa[:initialBufSize+1],
+		dstSize: 10,
+		srcSize: 10,
+		wantStr: aaa[:initialBufSize+1] + "X",
 	},
 
 	{
@@ -456,16 +642,18 @@ var testCases = []testCase{
 
 func TestReader(t *testing.T) {
 	for _, tc := range testCases {
-		r := NewReader(strings.NewReader(tc.src), tc.t)
-		// Differently sized dst and src buffers are not part of the
-		// exported API. We override them manually.
-		r.dst = make([]byte, tc.dstSize)
-		r.src = make([]byte, tc.srcSize)
-		got, err := ioutil.ReadAll(r)
-		str := string(got)
-		if str != tc.wantStr || err != tc.wantErr {
-			t.Errorf("%s:\ngot  %q, %v\nwant %q, %v", tc, str, err, tc.wantStr, tc.wantErr)
-		}
+		testtext.Run(t, tc.desc, func(t *testing.T) {
+			r := NewReader(strings.NewReader(tc.src), tc.t)
+			// Differently sized dst and src buffers are not part of the
+			// exported API. We override them manually.
+			r.dst = make([]byte, tc.dstSize)
+			r.src = make([]byte, tc.srcSize)
+			got, err := ioutil.ReadAll(r)
+			str := string(got)
+			if str != tc.wantStr || err != tc.wantErr {
+				t.Errorf("\ngot  %q, %v\nwant %q, %v", str, err, tc.wantStr, tc.wantErr)
+			}
+		})
 	}
 }
 
@@ -477,30 +665,32 @@ func TestWriter(t *testing.T) {
 			sizes = []int{tc.ioSize}
 		}
 		for _, sz := range sizes {
-			bb := &bytes.Buffer{}
-			w := NewWriter(bb, tc.t)
-			// Differently sized dst and src buffers are not part of the
-			// exported API. We override them manually.
-			w.dst = make([]byte, tc.dstSize)
-			w.src = make([]byte, tc.srcSize)
-			src := make([]byte, sz)
-			var err error
-			for b := tc.src; len(b) > 0 && err == nil; {
-				n := copy(src, b)
-				b = b[n:]
-				m := 0
-				m, err = w.Write(src[:n])
-				if m != n && err == nil {
-					t.Errorf("%s:%d: did not consume all bytes %d < %d", tc, sz, m, n)
+			testtext.Run(t, fmt.Sprintf("%s/%d", tc.desc, sz), func(t *testing.T) {
+				bb := &bytes.Buffer{}
+				w := NewWriter(bb, tc.t)
+				// Differently sized dst and src buffers are not part of the
+				// exported API. We override them manually.
+				w.dst = make([]byte, tc.dstSize)
+				w.src = make([]byte, tc.srcSize)
+				src := make([]byte, sz)
+				var err error
+				for b := tc.src; len(b) > 0 && err == nil; {
+					n := copy(src, b)
+					b = b[n:]
+					m := 0
+					m, err = w.Write(src[:n])
+					if m != n && err == nil {
+						t.Errorf("did not consume all bytes %d < %d", m, n)
+					}
 				}
-			}
-			if err == nil {
-				err = w.Close()
-			}
-			str := bb.String()
-			if str != tc.wantStr || err != tc.wantErr {
-				t.Errorf("%s:%d:\ngot  %q, %v\nwant %q, %v", tc, sz, str, err, tc.wantStr, tc.wantErr)
-			}
+				if err == nil {
+					err = w.Close()
+				}
+				str := bb.String()
+				if str != tc.wantStr || err != tc.wantErr {
+					t.Errorf("\ngot  %q, %v\nwant %q, %v", str, err, tc.wantStr, tc.wantErr)
+				}
+			})
 		}
 	}
 }
@@ -959,16 +1149,20 @@ func testString(t *testing.T, f func(Transformer, string) (string, int, error)) 
 			// The result string will be different.
 			continue
 		}
-		got, n, err := f(tt.t, tt.src)
-		if tt.wantErr != err {
-			t.Errorf("%s:error: got %v; want %v", tt.desc, err, tt.wantErr)
-		}
-		if got, want := err == nil, n == len(tt.src); got != want {
-			t.Errorf("%s:n: got %v; want %v", tt.desc, got, want)
-		}
-		if got != tt.wantStr {
-			t.Errorf("%s:string: got %q; want %q", tt.desc, got, tt.wantStr)
-		}
+		testtext.Run(t, tt.desc, func(t *testing.T) {
+			got, n, err := f(tt.t, tt.src)
+			if tt.wantErr != err {
+				t.Errorf("error: got %v; want %v", err, tt.wantErr)
+			}
+			// Check that err == nil implies that n == len(tt.src). Note that vice
+			// versa isn't necessarily true.
+			if err == nil && n != len(tt.src) {
+				t.Errorf("err == nil: got %d bytes, want %d", n, err)
+			}
+			if got != tt.wantStr {
+				t.Errorf("string: got %q; want %q", got, tt.wantStr)
+			}
+		})
 	}
 }
 
@@ -999,57 +1193,64 @@ func TestAppend(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	testString(t, String)
+	testtext.Run(t, "transform", func(t *testing.T) { testString(t, String) })
 
 	// Overrun the internal destination buffer.
 	for i, s := range []string{
-		strings.Repeat("a", initialBufSize-1),
-		strings.Repeat("a", initialBufSize+0),
-		strings.Repeat("a", initialBufSize+1),
-		strings.Repeat("A", initialBufSize-1),
-		strings.Repeat("A", initialBufSize+0),
-		strings.Repeat("A", initialBufSize+1),
-		strings.Repeat("A", 2*initialBufSize-1),
-		strings.Repeat("A", 2*initialBufSize+0),
-		strings.Repeat("A", 2*initialBufSize+1),
-		strings.Repeat("a", initialBufSize-2) + "A",
-		strings.Repeat("a", initialBufSize-1) + "A",
-		strings.Repeat("a", initialBufSize+0) + "A",
-		strings.Repeat("a", initialBufSize+1) + "A",
+		aaa[:1*initialBufSize-1],
+		aaa[:1*initialBufSize+0],
+		aaa[:1*initialBufSize+1],
+		AAA[:1*initialBufSize-1],
+		AAA[:1*initialBufSize+0],
+		AAA[:1*initialBufSize+1],
+		AAA[:2*initialBufSize-1],
+		AAA[:2*initialBufSize+0],
+		AAA[:2*initialBufSize+1],
+		aaa[:1*initialBufSize-2] + "A",
+		aaa[:1*initialBufSize-1] + "A",
+		aaa[:1*initialBufSize+0] + "A",
+		aaa[:1*initialBufSize+1] + "A",
 	} {
-		got, _, _ := String(lowerCaseASCII{}, s)
-		if want := strings.ToLower(s); got != want {
-			t.Errorf("%d:dst buffer test: got %s (%d); want %s (%d)", i, got, len(got), want, len(want))
-		}
+		testtext.Run(t, fmt.Sprint("dst buffer test using lower/", i), func(t *testing.T) {
+			got, _, _ := String(lowerCaseASCII{}, s)
+			if want := strings.ToLower(s); got != want {
+				t.Errorf("got %s (%d); want %s (%d)", got, len(got), want, len(want))
+			}
+		})
 	}
 
 	// Overrun the internal source buffer.
 	for i, s := range []string{
-		strings.Repeat("a", initialBufSize-1),
-		strings.Repeat("a", initialBufSize+0),
-		strings.Repeat("a", initialBufSize+1),
-		strings.Repeat("a", 2*initialBufSize+1),
-		strings.Repeat("a", 2*initialBufSize+0),
-		strings.Repeat("a", 2*initialBufSize+1),
+		aaa[:1*initialBufSize-1],
+		aaa[:1*initialBufSize+0],
+		aaa[:1*initialBufSize+1],
+		aaa[:2*initialBufSize+1],
+		aaa[:2*initialBufSize+0],
+		aaa[:2*initialBufSize+1],
 	} {
-		got, _, _ := String(rleEncode{}, s)
-		if want := fmt.Sprintf("%da", len(s)); got != want {
-			t.Errorf("%d:src buffer test: got %s (%d); want %s (%d)", i, got, len(got), want, len(want))
-		}
+		testtext.Run(t, fmt.Sprint("src buffer test using rleEncode/", i), func(t *testing.T) {
+			got, _, _ := String(rleEncode{}, s)
+			if want := fmt.Sprintf("%da", len(s)); got != want {
+				t.Errorf("got %s (%d); want %s (%d)", got, len(got), want, len(want))
+			}
+		})
 	}
 
 	// Test allocations for non-changing strings.
 	// Note we still need to allocate a single buffer.
 	for i, s := range []string{
 		"",
-		"123",
 		"123456789",
-		strings.Repeat("a", initialBufSize),
-		strings.Repeat("a", 10*initialBufSize),
+		aaa[:initialBufSize-1],
+		aaa[:initialBufSize+0],
+		aaa[:initialBufSize+1],
+		aaa[:10*initialBufSize],
 	} {
-		if n := testing.AllocsPerRun(5, func() { String(&lowerCaseASCII{}, s) }); n > 1 {
-			t.Errorf("%d: #allocs was %f; want 1", i, n)
-		}
+		testtext.Run(t, fmt.Sprint("alloc/", i), func(t *testing.T) {
+			if n := testtext.AllocsPerRun(5, func() { String(&lowerCaseASCIILookahead{}, s) }); n > 1 {
+				t.Errorf("#allocs was %f; want 1", n)
+			}
+		})
 	}
 }
 
@@ -1081,9 +1282,8 @@ func TestBytesAllocation(t *testing.T) {
 func TestStringAllocation(t *testing.T) {
 	done := make(chan bool)
 	go func() {
-		in := strings.Repeat("a", 1000)
 		tr := trickler(make([]byte, 1))
-		String(&tr, in)
+		String(&tr, aaa[:1000])
 		done <- true
 	}()
 	select {
@@ -1093,9 +1293,25 @@ func TestStringAllocation(t *testing.T) {
 	}
 }
 
-func BenchmarkStringLower(b *testing.B) {
-	in := strings.Repeat("a", 4096)
+func BenchmarkStringLowerEmpty(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		String(&lowerCaseASCII{}, in)
+		String(&lowerCaseASCIILookahead{}, "")
 	}
 }
+
+func BenchmarkStringLowerIdentical(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		String(&lowerCaseASCIILookahead{}, aaa[:4096])
+	}
+}
+
+func BenchmarkStringLowerChanged(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		String(&lowerCaseASCIILookahead{}, AAA[:4096])
+	}
+}
+
+var (
+	aaa = strings.Repeat("a", 4096)
+	AAA = strings.Repeat("A", 4096)
+)
