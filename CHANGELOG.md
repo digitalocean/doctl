@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.7.1] - 2018-11-27
+
+- #190 Expose constants for the state of Kubernetes clusters.
+
 ## [v1.7.0] - 2018-11-13
 
 - #188 Kubernetes support [beta] - @aybabtme
