@@ -86,8 +86,8 @@ func kubernetesCluster() *Command {
 
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "clusters",
-			Aliases: []string{"cluster", "c"},
+			Use:     "cluster",
+			Aliases: []string{"clusters", "c"},
 			Short:   "clusters commands",
 			Long:    "clusters is used to access commands on Kubernetes clusters",
 		},
