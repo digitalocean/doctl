@@ -753,12 +753,6 @@ func TestKubernetesVersions_List(t *testing.T) {
 		Sizes: []*KubernetesNodeSize{
 			{Name: "c-8", Slug: "c-8"},
 		},
-		Defaults: &KubernetesDefaults{
-			VersionSlug:  "1.10.0-gen0",
-			RegionSlug:   "nyc3",
-			NodeSizeSlug: "c-8",
-			NodeCount:    3,
-		},
 	}
 	jBlob := `
 {
@@ -780,13 +774,7 @@ func TestKubernetesVersions_List(t *testing.T) {
 				"name": "c-8",
 				"slug": "c-8"
 			}
-		],
-		"defaults": {
-			"version_slug": "1.10.0-gen0",
-			"node_size_slug": "c-8",
-			"region_slug": "nyc3",
-			"node_count": 3
-		}
+		]
 	}
 }`
 

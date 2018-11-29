@@ -176,7 +176,6 @@ type KubernetesOptions struct {
 	Versions []*KubernetesVersion  `json:"versions,omitempty"`
 	Regions  []*KubernetesRegion   `json:"regions,omitempty"`
 	Sizes    []*KubernetesNodeSize `json:"sizes,omitempty"`
-	Defaults *KubernetesDefaults   `json:"defaults,omitempty"`
 }
 
 // KubernetesVersion is a DigitalOcean Kubernetes release.
@@ -195,14 +194,6 @@ type KubernetesNodeSize struct {
 type KubernetesRegion struct {
 	Name string `json:"name"`
 	Slug string `json:"slug"`
-}
-
-// KubernetesDefaults are sensible defaults for creating Kubernetes clusters.
-type KubernetesDefaults struct {
-	VersionSlug  string `json:"version_slug"`
-	NodeSizeSlug string `json:"node_size_slug"`
-	RegionSlug   string `json:"region_slug"`
-	NodeCount    int    `json:"node_count"`
 }
 
 type kubernetesClustersRoot struct {
