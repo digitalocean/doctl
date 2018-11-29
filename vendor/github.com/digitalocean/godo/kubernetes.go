@@ -173,36 +173,13 @@ type KubernetesNodeStatus struct {
 
 // KubernetesOptions represents options available for creating Kubernetes clusters.
 type KubernetesOptions struct {
-	Versions []*KubernetesVersion  `json:"versions,omitempty"`
-	Regions  []*KubernetesRegion   `json:"regions,omitempty"`
-	Sizes    []*KubernetesNodeSize `json:"sizes,omitempty"`
-	Defaults *KubernetesDefaults   `json:"defaults,omitempty"`
+	Versions []*KubernetesVersion `json:"versions,omitempty"`
 }
 
 // KubernetesVersion is a DigitalOcean Kubernetes release.
 type KubernetesVersion struct {
 	Slug              string `json:"slug,omitempty"`
 	KubernetesVersion string `json:"kubernetes_version,omitempty"`
-}
-
-// KubernetesNodeSize is a node sizes supported for Kubernetes clusters.
-type KubernetesNodeSize struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
-}
-
-// KubernetesRegion is a region usable by Kubernetes clusters.
-type KubernetesRegion struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
-}
-
-// KubernetesDefaults are sensible defaults for creating Kubernetes clusters.
-type KubernetesDefaults struct {
-	VersionSlug  string `json:"version_slug"`
-	NodeSizeSlug string `json:"node_size_slug"`
-	RegionSlug   string `json:"region_slug"`
-	NodeCount    int    `json:"node_count"`
 }
 
 type kubernetesClustersRoot struct {
