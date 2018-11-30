@@ -611,11 +611,11 @@ func RunDropletList(c *CmdConfig) error {
 	var list do.Droplets
 	if tagName == "" {
 		list, err = ds.List()
-		if err != nil {
-			return err
-		}
 	} else {
 		list, err = ds.ListByTag(tagName)
+	}
+	if err != nil {
+		return err
 	}
 
 	for _, droplet := range list {

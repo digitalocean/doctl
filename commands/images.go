@@ -187,6 +187,9 @@ func RunImagesUpdate(c *CmdConfig) error {
 	}
 
 	name, err := c.Doit.GetString(c.NS, doctl.ArgImageName)
+	if err != nil {
+		return err
+	}
 
 	req := &godo.ImageUpdateRequest{
 		Name: name,
