@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Actions creates the action commands heirarchy.
+// Actions creates the action commands hierarchy.
 func Actions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

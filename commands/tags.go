@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Tags creates the tag commands heirarchy.
+// Tags creates the tag commands hierarchy.
 func Tags() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -116,7 +116,7 @@ func RunCmdTagDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		fmt.Errorf("operation aborted")
+		return fmt.Errorf("operation aborted")
 	}
 
 	return nil

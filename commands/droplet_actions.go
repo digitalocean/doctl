@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/digitalocean/doctl"
@@ -257,6 +258,9 @@ func RunDropletActionShutdown(c *CmdConfig) error {
 			return nil, doctl.NewMissingArgsErr(c.NS)
 		}
 		id, err := strconv.Atoi(c.Args[0])
+		if err != nil {
+			return nil, fmt.Errorf("Could not convert args into integer")
+		}
 
 		a, err := das.Shutdown(id)
 		return a, err

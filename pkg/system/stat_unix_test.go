@@ -14,7 +14,9 @@ func TestFromStatT(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	stat := &syscall.Stat_t{}
-	err := syscall.Lstat(file, stat)
+	if err := syscall.Lstat(file, stat); err != nil {
+		t.Fatal(err)
+	}
 
 	s, err := fromStatT(stat)
 	if err != nil {

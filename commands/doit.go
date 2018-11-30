@@ -433,7 +433,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 	return cmdConfig, nil
 }
 
-// Display displayes the output from a command.
+// Display displays the output from a command.
 func (c *CmdConfig) Display(d displayers.Displayable) error {
 	dc := &displayers.Displayer{
 		NS:     c.NS,

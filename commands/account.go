@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Account creates the account commands heirarchy.
+// Account creates the account commands hierarchy.
 func Account() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

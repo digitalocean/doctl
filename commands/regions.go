@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Region creates the region commands heirarchy.
+// Region creates the region commands hierarchy.
 func Region() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
