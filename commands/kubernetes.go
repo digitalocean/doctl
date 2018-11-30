@@ -17,10 +17,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/blang/semver"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -77,12 +79,11 @@ func Kubernetes() *Command {
 
 func kubernetesCluster() *Command {
 
-	// TODO(antoine): pull them from the API
-
-	defaultNodeSize := "s-1vcpu-1gb"
-	defaultNodeCount := 3
-	defaultRegion := "nyc1"
-	defaultVersion := "1.12.1-do.3"
+	const (
+		defaultNodeSize  = "s-1vcpu-1gb"
+		defaultNodeCount = 3
+		defaultRegion    = "nyc1"
+	)
 
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -102,7 +103,7 @@ func kubernetesCluster() *Command {
 
 	cmdKubeClusterCreate := CmdBuilder(cmd, RunKubernetesClusterCreate(defaultNodeSize, defaultNodeCount), "create <name>", "create a cluster", Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultRegion, "cluster region location, example value: nyc1", requiredOpt())
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", defaultVersion, "cluster version", requiredOpt())
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "", "cluster version")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTagNames, "", nil, "cluster tags")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "", defaultNodeSize, "size of the nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "", strconv.Itoa(defaultNodeCount), "size of the nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
@@ -142,7 +143,7 @@ func kubernetesNodePools() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "node-pool",
-			Aliases: []string{"pool", "np", "p"},
+			Aliases: []string{"node-pools", "nodepool", "nodepools", "pool", "pools", "np", "p"},
 			Short:   "node pool commands",
 			Long:    "node pool commands are used to act on a cluster's node pools",
 		},
@@ -575,7 +576,7 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.RegionSlug = region
 
-	version, err := c.Doit.GetString(c.NS, doctl.ArgClusterVersionSlug)
+	version, err := getVersionOrLatest(c)
 	if err != nil {
 		return err
 	}
@@ -1086,4 +1087,103 @@ func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode
 
 func looksLikeUUID(str string) bool {
 	return uuid.Parse(str) != nil
+}
+
+func getVersionOrLatest(c *CmdConfig) (string, error) {
+	version, err := c.Doit.GetString(c.NS, doctl.ArgClusterVersionSlug)
+	if err != nil {
+		return "", err
+	}
+	if version != "" {
+		return version, nil
+	}
+	versions, err := c.Kubernetes().GetVersions()
+	if err != nil {
+		return "", fmt.Errorf("no version flag provided and unable to lookup the latest version from the API: %v", err)
+	}
+	if len(versions) > 0 {
+		return versions[0].Slug, nil
+	}
+	releases, err := latestReleases(versions)
+	if err != nil {
+		return "", err
+	}
+	i, err := versionMaxBy(releases, func(v do.KubernetesVersion) string {
+		return v.KubernetesVersion.KubernetesVersion
+	})
+	if err != nil {
+		return "", err
+	}
+	return releases[i].Slug, nil
+}
+
+func latestReleases(versions []do.KubernetesVersion) ([]do.KubernetesVersion, error) {
+	versionsByK8S := versionMapBy(versions, func(v do.KubernetesVersion) string {
+		return v.KubernetesVersion.KubernetesVersion
+	})
+
+	var out []do.KubernetesVersion
+	for _, versions := range versionsByK8S {
+		i, err := versionMaxBy(versions, func(v do.KubernetesVersion) string {
+			return v.Slug
+		})
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, versions[i])
+	}
+	var serr error
+	out = versionSortBy(out, func(i, j do.KubernetesVersion) bool {
+		iv, err := semver.Parse(i.KubernetesVersion.KubernetesVersion)
+		if err != nil {
+			serr = err
+			return false
+		}
+		jv, err := semver.Parse(j.KubernetesVersion.KubernetesVersion)
+		if err != nil {
+			serr = err
+			return false
+		}
+		return iv.LT(jv)
+	})
+	return out, serr
+}
+
+func versionMapBy(versions []do.KubernetesVersion, selector func(do.KubernetesVersion) string) map[string][]do.KubernetesVersion {
+	m := make(map[string][]do.KubernetesVersion)
+	for _, v := range versions {
+		key := selector(v)
+		m[key] = append(m[key], v)
+	}
+	return m
+}
+
+func versionMaxBy(versions []do.KubernetesVersion, selector func(do.KubernetesVersion) string) (int, error) {
+	if len(versions) == 0 {
+		return -1, nil
+	}
+	if len(versions) == 1 {
+		return 0, nil
+	}
+	max := 0
+	maxSV, err := semver.Parse(selector(versions[max]))
+	if err != nil {
+		return max, err
+	}
+	for i, v := range versions[1:] {
+		sv, err := semver.Parse(selector(v))
+		if err != nil {
+			return max, err
+		}
+		if sv.GT(maxSV) {
+			max = i
+			maxSV = sv
+		}
+	}
+	return max, nil
+}
+
+func versionSortBy(versions []do.KubernetesVersion, less func(i, j do.KubernetesVersion) bool) []do.KubernetesVersion {
+	sort.Slice(versions, func(i, j int) bool { return less(versions[i], versions[j]) })
+	return versions
 }

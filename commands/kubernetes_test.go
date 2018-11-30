@@ -8,6 +8,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 			ID:          "cde2c0d6-41e3-479e-ba60-ad971227232b",
 			Name:        "antoine_s_cluster",
 			RegionSlug:  "sfo2",
-			VersionSlug: "",
+			VersionSlug: "1.13.0",
 			NodePools: []*godo.KubernetesNodePool{
 				testNodePool.KubernetesNodePool,
 			},
@@ -56,7 +57,7 @@ func TestKubernetesCommand(t *testing.T) {
 	cmd := Kubernetes()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
-		"clusters",
+		"cluster",
 		"options",
 	)
 }
@@ -563,4 +564,40 @@ func TestKubernetesOptions_Versions(t *testing.T) {
 		err := RunKubeOptionsListVersion(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestKubernetesLatestVersions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []do.KubernetesVersion
+		want  []do.KubernetesVersion
+	}{
+		{
+			name: "base case",
+			input: []do.KubernetesVersion{
+				{&godo.KubernetesVersion{Slug: "1.13.0-do.not.use", KubernetesVersion: "1.13.0"}},
+				{&godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
+				{&godo.KubernetesVersion{Slug: "1.12.1-do.2", KubernetesVersion: "1.12.1"}},
+				{&godo.KubernetesVersion{Slug: "1.12.1-do.1", KubernetesVersion: "1.12.1"}},
+				{&godo.KubernetesVersion{Slug: "1.11.1-do.2", KubernetesVersion: "1.11.1"}},
+				{&godo.KubernetesVersion{Slug: "1.11.1-do.1", KubernetesVersion: "1.11.1"}},
+				{&godo.KubernetesVersion{Slug: "1.10.7-gen2", KubernetesVersion: "1.10.7"}},
+				{&godo.KubernetesVersion{Slug: "1.10.7-gen1", KubernetesVersion: "1.10.7"}},
+				{&godo.KubernetesVersion{Slug: "1.10.7-gen0", KubernetesVersion: "1.10.7"}},
+			},
+			want: []do.KubernetesVersion{
+				{&godo.KubernetesVersion{Slug: "1.10.7-gen2", KubernetesVersion: "1.10.7"}},
+				{&godo.KubernetesVersion{Slug: "1.11.1-do.2", KubernetesVersion: "1.11.1"}},
+				{&godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
+				{&godo.KubernetesVersion{Slug: "1.13.0-do.not.use", KubernetesVersion: "1.13.0"}},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := latestReleases(tt.input)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }
