@@ -487,9 +487,6 @@ func RunDropletDelete(c *CmdConfig) error {
 		return matchDroplets(c.Args, ds, fn)
 	}
 	return fmt.Errorf("operation aborted")
-
-	return nil
-
 }
 
 type matchDropletsFn func(ids []int) error

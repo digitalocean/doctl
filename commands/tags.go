@@ -116,7 +116,7 @@ func RunCmdTagDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		fmt.Errorf("operation aborted")
+		return fmt.Errorf("operation aborted")
 	}
 
 	return nil

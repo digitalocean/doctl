@@ -186,7 +186,6 @@ func RunKeyDelete(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
-	return nil
 }
 
 // RunKeyUpdate updates a key.

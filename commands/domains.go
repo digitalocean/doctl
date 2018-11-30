@@ -181,8 +181,6 @@ func RunDomainDelete(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
-
-	return nil
 }
 
 // RunRecordList list records for a domain.

@@ -132,7 +132,6 @@ func RunFloatingIPDelete(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
-	return nil
 }
 
 // RunFloatingIPList runs floating IP create.
