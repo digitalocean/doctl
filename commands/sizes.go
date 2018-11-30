@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Size creates the size commands heirarchy.
+// Size creates the size commands hierarchy.
 func Size() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

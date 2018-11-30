@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Plugin creates the plugin commands heirarchy.
+// Plugin creates the plugin commands hierarchy.
 func Plugin() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

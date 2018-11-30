@@ -30,7 +30,7 @@ var (
 	sshHostRE = regexp.MustCompile(`^((?P<m1>\w+)@)?(?P<m2>.*?)(:(?P<m3>\d+))?$`)
 )
 
-// SSH creates the ssh commands heirarchy
+// SSH creates the ssh commands hierarchy
 func SSH(parent *Command) *Command {
 	usr, err := user.Current()
 	checkErr(err)

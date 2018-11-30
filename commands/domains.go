@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Domain creates the domain commands heirarchy.
+// Domain creates the domain commands hierarchy.
 func Domain() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

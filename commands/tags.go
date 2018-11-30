@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Tags creates the tag commands heirarchy.
+// Tags creates the tag commands hierarchy.
 func Tags() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{

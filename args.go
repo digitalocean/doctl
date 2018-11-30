@@ -66,7 +66,7 @@ const (
 	ArgDropletName = "droplet-name"
 	// ArgResizeDisk is a resize disk argument.
 	ArgResizeDisk = "resize-disk"
-	// ArgSnapshotName is a snapshot name arugment.
+	// ArgSnapshotName is a snapshot name argument.
 	ArgSnapshotName = "snapshot-name"
 	// ArgSnapshotDesc is the description for volume snapshot.
 	ArgSnapshotDesc = "snapshot-desc"

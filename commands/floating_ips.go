@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// FloatingIP creates the command heirarchy for floating ips.
+// FloatingIP creates the command hierarchy for floating ips.
 func FloatingIP() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
