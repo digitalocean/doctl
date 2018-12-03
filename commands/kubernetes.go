@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -34,7 +35,10 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-const maxAPIFailures = 3
+const (
+	maxAPIFailures            = 5
+	timeoutFetchingKubeconfig = 30 * time.Second
+)
 
 func errNoClusterByName(name string) error {
 	return fmt.Errorf("no cluster goes by the name %q", name)
@@ -133,7 +137,7 @@ func kubernetesKubeconfig() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunKubernetesKubeconfigPrint, "print <cluster-id|cluster-name>", "print a cluster's kubeconfig to standard out", Writer, aliasOpt("p", "g"))
+	CmdBuilder(cmd, RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "show a cluster's kubeconfig to standard out", Writer, aliasOpt("p", "g"))
 	CmdBuilder(cmd, RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "save a cluster's credentials to your local kubeconfig", Writer, aliasOpt("s"))
 	CmdBuilder(cmd, RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "remove a cluster's credentials from your local kubeconfig", Writer, aliasOpt("d", "rm"))
 	return cmd
@@ -294,16 +298,20 @@ func tryUpdateKubeconfig(kube do.KubernetesService, clusterID string) {
 		kubeconfig []byte
 		err        error
 	)
-	for tries := 0; ; tries++ {
+	ctx, cancel := context.WithTimeout(context.TODO(), timeoutFetchingKubeconfig)
+	defer cancel()
+	for {
 		kubeconfig, err = kube.GetKubeConfig(clusterID)
-		if err == nil {
+		if err != nil {
+			select {
+			case <-ctx.Done():
+				warn("couldn't get credentials for cluster, it will not be added to your kubeconfig: %v", err)
+				return
+			case <-time.After(time.Second):
+			}
+		} else {
 			break
 		}
-		if tries >= maxAPIFailures {
-			warn("couldn't get credentials for cluster, it will not be added to your kubeconfig: %v", err)
-			return
-		}
-		time.Sleep(2 * time.Second)
 	}
 	if err := writeOrAddToKubeconfig(kubeconfig); err != nil {
 		warn("couldn't write cluster credentials: %v", err)
@@ -360,8 +368,8 @@ func RunKubernetesClusterDelete(c *CmdConfig) error {
 
 // Kubeconfig
 
-// RunKubernetesKubeconfigPrint retrieves an existing kubernetes config and prints it.
-func RunKubernetesKubeconfigPrint(c *CmdConfig) error {
+// RunKubernetesKubeconfigShow retrieves an existing kubernetes config and prints it.
+func RunKubernetesKubeconfigShow(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
@@ -788,8 +796,6 @@ func writeOrAddToKubeconfig(kubeconfig []byte) error {
 	if err := mergeKubeconfig(remote, currentConfig); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
 	}
-	currentConfig.CurrentContext = remote.CurrentContext
-	notice("current kubectl context changed to %q", currentConfig.CurrentContext)
 	return clientcmd.ModifyConfig(kubectlDefaults, *currentConfig, false)
 }
 
