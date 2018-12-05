@@ -1,6 +1,6 @@
 # Change Log
 
-## [v1.7.2] - UNRELEASED
+## [v1.7.2] - 2018-12-04
 
 - #192 Exposes more options for Kubernetes clusters.
 
