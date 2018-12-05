@@ -5,6 +5,7 @@ All changes to `doctl` will be documented in this file.
 ## [1.12.1] - UNRELEASED
 
 - #369 No longer require ip-address when creating domains - @andrewsomething
+- #372 Add handling of kubeconfig files for kubernetes commands - @aybabtme
 
 ## [1.12.0] - 2018-11-26
 
