@@ -8,6 +8,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 			ID:          "cde2c0d6-41e3-479e-ba60-ad971227232b",
 			Name:        "antoine_s_cluster",
 			RegionSlug:  "sfo2",
-			VersionSlug: "",
+			VersionSlug: "1.13.0",
 			NodePools: []*godo.KubernetesNodePool{
 				testNodePool.KubernetesNodePool,
 			},
@@ -56,6 +57,15 @@ func TestKubernetesCommand(t *testing.T) {
 	cmd := Kubernetes()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
+		"cluster",
+		"options",
+	)
+}
+
+func TestKubernetesClusterCommand(t *testing.T) {
+	cmd := kubernetesCluster()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd,
 		"get",
 		"kubeconfig",
 		"list",
@@ -63,7 +73,6 @@ func TestKubernetesCommand(t *testing.T) {
 		"update",
 		"delete",
 		"node-pool",
-		"options",
 	)
 }
 
@@ -93,7 +102,7 @@ func TestKubernetesGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
 		config.Args = append(config.Args, testCluster.ID)
-		err := RunKubernetesGet(config)
+		err := RunKubernetesClusterGet(config)
 		assert.NoError(t, err)
 	})
 
@@ -102,7 +111,7 @@ func TestKubernetesGet(t *testing.T) {
 		// it'll see that no UUID is given and do a List call to find the cluster
 		tm.kubernetes.On("List").Return(testClusterList, nil)
 		config.Args = append(config.Args, testCluster.Name)
-		err := RunKubernetesGet(config)
+		err := RunKubernetesClusterGet(config)
 		assert.NoError(t, err)
 	})
 
@@ -111,7 +120,7 @@ func TestKubernetesGet(t *testing.T) {
 		// it'll see that no UUID is given and do a List call to find the cluster
 		tm.kubernetes.On("List").Return(testClusterList, nil)
 		config.Args = append(config.Args, name)
-		err := RunKubernetesGet(config)
+		err := RunKubernetesClusterGet(config)
 		assert.EqualError(t, err, errNoClusterByName(name).Error())
 	})
 
@@ -133,7 +142,7 @@ func TestKubernetesGet(t *testing.T) {
 		// it'll see that no UUID is given and do a List call to find the cluster
 		tm.kubernetes.On("List").Return(clustersWithDups, nil)
 		config.Args = append(config.Args, name)
-		err := RunKubernetesGet(config)
+		err := RunKubernetesClusterGet(config)
 		assert.EqualError(t, err, errAmbigousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
 	})
 }
@@ -143,7 +152,7 @@ func TestKubernetesKubeconfig(t *testing.T) {
 		kubeconfig := []byte(`i'm some yaml`)
 		tm.kubernetes.On("GetKubeConfig", testCluster.ID).Return(kubeconfig, nil)
 		config.Args = append(config.Args, testCluster.ID)
-		err := RunKubernetesGetKubeconfig(config)
+		err := RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
 	})
 
@@ -153,7 +162,7 @@ func TestKubernetesKubeconfig(t *testing.T) {
 		tm.kubernetes.On("List").Return(testClusterList, nil)
 		tm.kubernetes.On("GetKubeConfig", testCluster.ID).Return(kubeconfig, nil)
 		config.Args = append(config.Args, testCluster.Name)
-		err := RunKubernetesGetKubeconfig(config)
+		err := RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
 	})
 }
@@ -161,7 +170,7 @@ func TestKubernetesKubeconfig(t *testing.T) {
 func TestKubernetesList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.kubernetes.On("List").Return(testClusterList, nil)
-		err := RunKubernetesList(config)
+		err := RunKubernetesClusterList(config)
 		assert.NoError(t, err)
 	})
 }
@@ -190,11 +199,11 @@ func TestKubernetesCreate(t *testing.T) {
 		}
 		tm.kubernetes.On("Create", &r).Return(&testCluster, nil)
 
-		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
+		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testCluster.RegionSlug)
 		config.Doit.Set(config.NS, doctl.ArgClusterVersionSlug, testCluster.VersionSlug)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testCluster.Tags)
-		config.Doit.Set(config.NS, doctl.ArgClusterNodePools, []string{
+		config.Doit.Set(config.NS, doctl.ArgClusterNodePool, []string{
 			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s",
 				testNodePool.Name+"1", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
 			),
@@ -203,7 +212,7 @@ func TestKubernetesCreate(t *testing.T) {
 			),
 		})
 
-		err := RunKubernetesCreate(config)
+		err := RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
 	})
 }
@@ -221,7 +230,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testCluster.Tags)
 
-		err := RunKubernetesUpdate(config)
+		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
 	})
 	// by name
@@ -237,7 +246,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testCluster.Tags)
 
-		err := RunKubernetesUpdate(config)
+		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
 	})
 }
@@ -248,7 +257,7 @@ func TestKubernetesDelete(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgForce, "false")
 		config.Args = append(config.Args, testCluster.ID)
 
-		err := RunKubernetesDelete(config)
+		err := RunKubernetesClusterDelete(config)
 		assert.Error(t, err, "should have been challenged before deletion")
 	})
 	// by id
@@ -258,7 +267,7 @@ func TestKubernetesDelete(t *testing.T) {
 		config.Args = append(config.Args, testCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
 
-		err := RunKubernetesDelete(config)
+		err := RunKubernetesClusterDelete(config)
 		assert.NoError(t, err)
 	})
 	// by name
@@ -269,7 +278,7 @@ func TestKubernetesDelete(t *testing.T) {
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
 
-		err := RunKubernetesDelete(config)
+		err := RunKubernetesClusterDelete(config)
 		assert.NoError(t, err)
 	})
 }
@@ -281,7 +290,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 
-		err := RunClusterNodePoolGet(config)
+		err := RunKubernetesNodePoolGet(config)
 		assert.NoError(t, err)
 	})
 	// by name
@@ -291,7 +300,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 		// cluster ID but pool name
 		config.Args = append(config.Args, testCluster.ID, testNodePool.Name)
 
-		err := RunClusterNodePoolGet(config)
+		err := RunKubernetesNodePoolGet(config)
 		assert.NoError(t, err)
 	})
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -301,7 +310,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 		// cluster name and pool ID
 		config.Args = append(config.Args, testCluster.Name, testNodePool.ID)
 
-		err := RunClusterNodePoolGet(config)
+		err := RunKubernetesNodePoolGet(config)
 		assert.NoError(t, err)
 	})
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -311,7 +320,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 		// cluster name and pool name
 		config.Args = append(config.Args, testCluster.Name, testNodePool.Name)
 
-		err := RunClusterNodePoolGet(config)
+		err := RunKubernetesNodePoolGet(config)
 		assert.NoError(t, err)
 	})
 	// ambiguous names
@@ -328,7 +337,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 		// it'll see that no UUID is given and do a List call to find the cluster
 		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(nodePoolsWithDups, nil)
 		config.Args = append(config.Args, testCluster.ID, name)
-		err := RunClusterNodePoolGet(config)
+		err := RunKubernetesNodePoolGet(config)
 		assert.EqualError(t, err, errAmbigousPoolName(name, []string{testNodePool.ID, testNodePoolWithSameName.ID}).Error())
 	})
 }
@@ -339,7 +348,7 @@ func TestKubernetesNodePool_List(t *testing.T) {
 
 		config.Args = append(config.Args, testCluster.ID)
 
-		err := RunClusterNodePoolList(config)
+		err := RunKubernetesNodePoolList(config)
 		assert.NoError(t, err)
 	})
 	// by name
@@ -349,7 +358,7 @@ func TestKubernetesNodePool_List(t *testing.T) {
 
 		config.Args = append(config.Args, testCluster.Name)
 
-		err := RunClusterNodePoolList(config)
+		err := RunKubernetesNodePoolList(config)
 		assert.NoError(t, err)
 	})
 }
@@ -372,7 +381,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
 
-		err := RunClusterNodePoolCreate(config)
+		err := RunKubernetesNodePoolCreate(config)
 		assert.NoError(t, err)
 	})
 	// by cluster name
@@ -393,7 +402,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
 
-		err := RunClusterNodePoolCreate(config)
+		err := RunKubernetesNodePoolCreate(config)
 		assert.NoError(t, err)
 	})
 }
@@ -414,7 +423,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
 
-		err := RunClusterNodePoolUpdate(config)
+		err := RunKubernetesNodePoolUpdate(config)
 		assert.NoError(t, err)
 	})
 	// by cluster name, pool ID
@@ -433,7 +442,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
 
-		err := RunClusterNodePoolUpdate(config)
+		err := RunKubernetesNodePoolUpdate(config)
 		assert.NoError(t, err)
 	})
 	// by cluster ID, pool name
@@ -452,7 +461,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
 
-		err := RunClusterNodePoolUpdate(config)
+		err := RunKubernetesNodePoolUpdate(config)
 		assert.NoError(t, err)
 	})
 	// by cluster name, pool name
@@ -472,7 +481,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
 
-		err := RunClusterNodePoolUpdate(config)
+		err := RunKubernetesNodePoolUpdate(config)
 		assert.NoError(t, err)
 	})
 }
@@ -490,7 +499,7 @@ func TestKubernetesNodePool_Recycle(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgNodePoolNodeIDs, testNode.ID)
 
-		err := RunClusterNodePoolRecycle(config)
+		err := RunKubernetesNodePoolRecycle(config)
 		assert.NoError(t, err)
 	})
 	// by node names
@@ -506,7 +515,7 @@ func TestKubernetesNodePool_Recycle(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgNodePoolNodeIDs, testNode.Name)
 
-		err := RunClusterNodePoolRecycle(config)
+		err := RunKubernetesNodePoolRecycle(config)
 		assert.NoError(t, err)
 	})
 }
@@ -517,7 +526,7 @@ func TestKubernetesNodePool_Delete(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgForce, "false")
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 
-		err := RunClusterNodePoolDelete(config)
+		err := RunKubernetesNodePoolDelete(config)
 		assert.Error(t, err, "should have been challenged before deletion")
 	})
 	// by id
@@ -527,7 +536,7 @@ func TestKubernetesNodePool_Delete(t *testing.T) {
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
 
-		err := RunClusterNodePoolDelete(config)
+		err := RunKubernetesNodePoolDelete(config)
 		assert.NoError(t, err)
 	})
 	// by cluster ID and pool name
@@ -538,7 +547,7 @@ func TestKubernetesNodePool_Delete(t *testing.T) {
 		config.Args = append(config.Args, testCluster.ID, testNodePool.Name)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
 
-		err := RunClusterNodePoolDelete(config)
+		err := RunKubernetesNodePoolDelete(config)
 		assert.NoError(t, err)
 	})
 }
@@ -555,4 +564,40 @@ func TestKubernetesOptions_Versions(t *testing.T) {
 		err := RunKubeOptionsListVersion(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestKubernetesLatestVersions(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []do.KubernetesVersion
+		want  []do.KubernetesVersion
+	}{
+		{
+			name: "base case",
+			input: []do.KubernetesVersion{
+				{&godo.KubernetesVersion{Slug: "1.13.0-do.not.use", KubernetesVersion: "1.13.0"}},
+				{&godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
+				{&godo.KubernetesVersion{Slug: "1.12.1-do.2", KubernetesVersion: "1.12.1"}},
+				{&godo.KubernetesVersion{Slug: "1.12.1-do.1", KubernetesVersion: "1.12.1"}},
+				{&godo.KubernetesVersion{Slug: "1.11.1-do.2", KubernetesVersion: "1.11.1"}},
+				{&godo.KubernetesVersion{Slug: "1.11.1-do.1", KubernetesVersion: "1.11.1"}},
+				{&godo.KubernetesVersion{Slug: "1.10.7-gen2", KubernetesVersion: "1.10.7"}},
+				{&godo.KubernetesVersion{Slug: "1.10.7-gen1", KubernetesVersion: "1.10.7"}},
+				{&godo.KubernetesVersion{Slug: "1.10.7-gen0", KubernetesVersion: "1.10.7"}},
+			},
+			want: []do.KubernetesVersion{
+				{&godo.KubernetesVersion{Slug: "1.10.7-gen2", KubernetesVersion: "1.10.7"}},
+				{&godo.KubernetesVersion{Slug: "1.11.1-do.2", KubernetesVersion: "1.11.1"}},
+				{&godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
+				{&godo.KubernetesVersion{Slug: "1.13.0-do.not.use", KubernetesVersion: "1.13.0"}},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := latestReleases(tt.input)
+			require.NoError(t, err)
+			require.Equal(t, tt.want, got)
+		})
+	}
 }

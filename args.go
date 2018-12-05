@@ -33,18 +33,20 @@ const (
 	// ArgActionType is an action type argument.
 	ArgActionType = "action-type"
 	// ArgClusterName is a cluster name argument.
-	ArgClusterName = "name"
+	ArgClusterName = "cluster-name"
 	// ArgClusterVersionSlug is a cluster version argument.
 	ArgClusterVersionSlug = "version"
-	// ArgClusterNodePools are a cluster's node pools arguments.
-	ArgClusterNodePools = "node-pools"
+	// ArgClusterNodePool are a cluster's node pools arguments.
+	ArgClusterNodePool = "node-pool"
+	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
+	ArgClusterUpdateKubeconfig = "update-kubeconfig"
 	// ArgNodePoolName is a cluster's node pool name argument.
 	ArgNodePoolName = "name"
 	// ArgNodePoolCount is a cluster's node pool count argument.
 	ArgNodePoolCount = "count"
 	// ArgNodePoolNodeIDs is a cluster's node pool nodes argument.
 	ArgNodePoolNodeIDs = "node-ids"
-	// ArgCommandWait is a wait for a droplet to be created argument.
+	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgDropletID is a droplet id argument.
 	ArgDropletID = "droplet-id"
