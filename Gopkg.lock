@@ -10,12 +10,12 @@
   version = "v3.5.1"
 
 [[projects]]
-  digest = "1:982e2547680f9fd2212c6443ab73ea84eef40ee1cdcecb61d997de838445214c"
+  digest = "1:8001ddd97e56640692a2960d028ec5d691a1ac5e0166fb065d70fb592985058b"
   name = "github.com/cpuguy83/go-md2man"
   packages = ["md2man"]
   pruneopts = ""
-  revision = "20f5889cbdc3c73dbd2862796665e7c465ade7d1"
-  version = "v1.0.8"
+  revision = "1d903dcb749992f3741d744c0f8376b4bd7eb3e1"
+  version = "v1.0.7"
 
 [[projects]]
   digest = "1:0deddd908b6b4b768cfc272c16ee61e7088a60f7fe2f06c547bd3d8e1f8b8e77"
@@ -26,15 +26,15 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:10dc7d76cc157a47b9efe944cd68262945d818d525e1c4df05e1b3a97f157374"
+  digest = "1:baae642d4303745093c2aba2c0eaf3b492e56c1f8a205c515b9f5b31388ab730"
   name = "github.com/digitalocean/godo"
   packages = [
     ".",
     "util",
   ]
   pruneopts = ""
-  revision = "890c05eebffff27adf6de556949a3dc0813f87a4"
-  version = "v1.7.1"
+  revision = "e85f1d337911645f87d08c7c9b4df98de8b710cd"
+  version = "v1.7.2"
 
 [[projects]]
   digest = "1:f1a75a8e00244e5ea77ff274baa9559eb877437b240ee7b278f3fc560d9f08bf"
@@ -343,6 +343,7 @@
   packages = [
     "assert",
     "mock",
+    "require",
   ]
   pruneopts = ""
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
@@ -358,7 +359,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:52cfc16d4fc39fd1d779c9b52e391c7b2a31537b722d38aa9cca0f33d88d62ef"
+  digest = "1:887074c37fcefc2f49b5ae9c6f9f36107341aec23185613d0e9f1ee81db7f94a"
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
@@ -372,11 +373,11 @@
     "ssh/terminal",
   ]
   pruneopts = ""
-  revision = "eb0de9b17e854e9b1ccd9963efafc79862359959"
+  revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
 
 [[projects]]
   branch = "master"
-  digest = "1:4ac199b027ed34460ec4e0a92c882156f561e78cd046fef095e50f867462435a"
+  digest = "1:ea539c13b066dac72a940b62f37600a20ab8e88057397c78f3197c1a48475425"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -387,29 +388,29 @@
     "idna",
   ]
   pruneopts = ""
-  revision = "adae6a3d119ae4890b46832a2e88a95adc62b8e7"
+  revision = "351d144fa1fc0bd934e2408202be0c29f25e35a0"
 
 [[projects]]
   branch = "master"
-  digest = "1:76df884b1ac08579aff75a621a538800759808f000bb4a1b08c91b485bfb3522"
+  digest = "1:ea010cdb976f9de0c763728a76278f9109fca3299abd0dc3e8f2ccb9ff347268"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
     "internal",
   ]
   pruneopts = ""
-  revision = "8f65e3013ebad444f13bc19536f7865efc793816"
+  revision = "d668ce993890a79bda886613ee587a69dd5da7a6"
 
 [[projects]]
   branch = "master"
-  digest = "1:303c0ee48d6229a2423950f41b3ccb5a2067dc4c7b65f8863cfbd962bef05a85"
+  digest = "1:f358024b019f87eecaadcb098113a40852c94fe58ea670ef3c3e2d2c7bd93db1"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = ""
-  revision = "62eef0e2fa9b2c385f7b2778e763486da6880d37"
+  revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
 
 [[projects]]
   digest = "1:5acd3512b047305d49e8763eef7ba423901e85d5dd2fd1e71778a0ea8de10bd4"
@@ -467,16 +468,16 @@
   version = "v0.9.1"
 
 [[projects]]
-  digest = "1:f0620375dd1f6251d9973b5f2596228cc8042e887cd7f827e4220bc1ce8c30e2"
+  digest = "1:cedccf16b71e86db87a24f8d4c70b0a855872eb967cb906a66b95de56aefbd0d"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
   pruneopts = ""
-  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
-  version = "v2.2.1"
+  revision = "51d6538a90f86fe93ac480b35f37b2be17fef232"
+  version = "v2.2.2"
 
 [[projects]]
   branch = "master"
-  digest = "1:66b0292f815d508d11ed5fe94fdeb0bcc5a988703a08e73bf3cb3a415de676cf"
+  digest = "1:edd5daab2118f7bf3297ec9df89b20843c250fdc4f2831ee5d46d280052f068e"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -514,7 +515,7 @@
     "third_party/forked/golang/reflect",
   ]
   pruneopts = ""
-  revision = "4a9a8137c0a17bc4594f544987b3f0d48b2e3d3a"
+  revision = "eb8c8024849baa3681995b2b0bd4da7ea1734ace"
 
 [[projects]]
   digest = "1:5d4153d12c3aed2c90a94262520d2498d5afa4d692554af55e65a7c5af0bc399"
@@ -581,6 +582,7 @@
     "github.com/spf13/viper",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/mock",
+    "github.com/stretchr/testify/require",
     "golang.org/x/crypto/ssh",
     "golang.org/x/crypto/ssh/agent",
     "golang.org/x/crypto/ssh/terminal",
