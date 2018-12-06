@@ -57,7 +57,7 @@ func Firewall() *Command {
 
 	CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "list firewalls by droplet ID", Writer, displayerType(&displayers.Firewall{}))
 
-	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id> [id ...]", "delete firewall", Writer, aliasOpt("d", "rm"))
+	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id>...", "delete firewalls", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force firewall delete")
 
 	cmdAddDroplets := CmdBuilder(cmd, RunFirewallAddDroplets, "add-droplets <id>", "add droplets to the firewall", Writer)

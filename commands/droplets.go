@@ -50,7 +50,7 @@ func Droplet() *Command {
 	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "droplet backups", Writer,
 		aliasOpt("b"), displayerType(&displayers.Image{}), docCategories("droplet"))
 
-	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name> [droplet-name ...]", "create droplet", Writer,
+	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name>...", "create droplets", Writer,
 		aliasOpt("c"), displayerType(&displayers.Droplet{}), docCategories("droplet"))
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "SSH Keys or fingerprints")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User data")
@@ -71,7 +71,7 @@ func Droplet() *Command {
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "Volumes to attach")
 
-	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name> [droplet-id|droplet-name ...]", "Delete droplet by id or name", Writer,
+	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Delete droplets by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force droplet delete")
 

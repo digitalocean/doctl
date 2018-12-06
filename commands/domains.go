@@ -74,7 +74,7 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "Record flags")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "Record tag")
 
-	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record id...>", "delete record", Writer,
+	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "delete records", Writer,
 		aliasOpt("d"), docCategories("domain"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force record delete")
 
