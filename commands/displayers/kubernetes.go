@@ -204,3 +204,81 @@ func (versions *KubernetesVersions) KV() []map[string]interface{} {
 
 	return out
 }
+
+type KubernetesRegions struct {
+	KubernetesRegions do.KubernetesRegions
+}
+
+var _ Displayable = &KubernetesRegions{}
+
+func (regions *KubernetesRegions) JSON(out io.Writer) error {
+	return writeJSON(regions.KubernetesRegions, out)
+}
+
+func (regions *KubernetesRegions) Cols() []string {
+	return []string{
+		"Slug",
+		"Name",
+	}
+}
+
+func (regions *KubernetesRegions) ColMap() map[string]string {
+	return map[string]string{
+		"Slug": "Slug",
+		"Name": "Name",
+	}
+}
+
+func (regions *KubernetesRegions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(regions.KubernetesRegions))
+
+	for _, region := range regions.KubernetesRegions {
+
+		o := map[string]interface{}{
+			"Slug": region.KubernetesRegion.Slug,
+			"Name": region.KubernetesRegion.Name,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
+type KubernetesNodeSizes struct {
+	KubernetesNodeSizes do.KubernetesNodeSizes
+}
+
+var _ Displayable = &KubernetesNodeSizes{}
+
+func (nodeSizes *KubernetesNodeSizes) JSON(out io.Writer) error {
+	return writeJSON(nodeSizes.KubernetesNodeSizes, out)
+}
+
+func (nodeSizes *KubernetesNodeSizes) Cols() []string {
+	return []string{
+		"Slug",
+		"Name",
+	}
+}
+
+func (nodeSizes *KubernetesNodeSizes) ColMap() map[string]string {
+	return map[string]string{
+		"Slug": "Slug",
+		"Name": "Name",
+	}
+}
+
+func (nodeSizes *KubernetesNodeSizes) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(nodeSizes.KubernetesNodeSizes))
+
+	for _, size := range nodeSizes.KubernetesNodeSizes {
+
+		o := map[string]interface{}{
+			"Slug": size.KubernetesNodeSize.Slug,
+			"Name": size.KubernetesNodeSize.Name,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}

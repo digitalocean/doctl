@@ -106,11 +106,11 @@ func kubernetesCluster() *Command {
 	CmdBuilder(cmd, RunKubernetesClusterList, "list", "get a list of your clusters", Writer, aliasOpt("ls"))
 
 	cmdKubeClusterCreate := CmdBuilder(cmd, RunKubernetesClusterCreate(defaultNodeSize, defaultNodeCount), "create <name>", "create a cluster", Writer, aliasOpt("c"))
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultRegion, "cluster region location, example value: nyc1", requiredOpt())
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "", "cluster version")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultRegion, "cluster region, possible values: see `doctl k8s options regions`.", requiredOpt())
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "", "cluster version, possible values: see `doctl k8s options versions`")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTagNames, "", nil, "cluster tags")
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "", defaultNodeSize, "size of the nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "", strconv.Itoa(defaultNodeCount), "size of the nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "", defaultNodeSize, "size of the nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"), possible values: see `doctl k8s options sizes`.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "", strconv.Itoa(defaultNodeCount), "number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil, `cluster node pools in the form "name=your-name;size=droplet_size;count=5;tag=tag1;tag=tag2"`, requiredOpt())
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to add the created cluster to your kubeconfig")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true, "whether to wait for the created cluster become running")
@@ -158,7 +158,7 @@ func kubernetesNodePools() *Command {
 
 	cmdKubeNodePoolCreate := CmdBuilder(cmd, RunKubernetesNodePoolCreate, "create <cluster-id|cluster-name>", "create a new node pool for a cluster", Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "", "node pool name", requiredOpt())
-	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "", "size of nodes in the node pool", requiredOpt())
+	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "", "size of nodes in the node pool (see `doctl k8s options sizes`)", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", "", "count of nodes in the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTagNames, "", "", "tags to apply to the node pool")
 
@@ -186,6 +186,8 @@ func kubernetesOptions() *Command {
 	}
 
 	CmdBuilder(cmd, RunKubeOptionsListVersion, "versions", "versions that can be used to create a Kubernetes cluster", Writer, aliasOpt("v"))
+	CmdBuilder(cmd, RunKubeOptionsListRegion, "regions", "regions that can be used to create a Kubernetes cluster", Writer, aliasOpt("r"))
+	CmdBuilder(cmd, RunKubeOptionsListNodeSizes, "sizes", "sizes that nodes in a Kubernetes cluster can have", Writer, aliasOpt("s"))
 	return cmd
 }
 
@@ -566,7 +568,7 @@ func RunKubernetesNodePoolDelete(c *CmdConfig) error {
 	return nil
 }
 
-// RunKubeOptionsListVersion deletes a kubernetes by its identifier.
+// RunKubeOptionsListVersion lists valid versions for kubernetes clusters.
 func RunKubeOptionsListVersion(c *CmdConfig) error {
 	kube := c.Kubernetes()
 	versions, err := kube.GetVersions()
@@ -574,6 +576,28 @@ func RunKubeOptionsListVersion(c *CmdConfig) error {
 		return err
 	}
 	item := &displayers.KubernetesVersions{KubernetesVersions: versions}
+	return c.Display(item)
+}
+
+// RunKubeOptionsListRegion lists valid regions for kubernetes clusters.
+func RunKubeOptionsListRegion(c *CmdConfig) error {
+	kube := c.Kubernetes()
+	regions, err := kube.GetRegions()
+	if err != nil {
+		return err
+	}
+	item := &displayers.KubernetesRegions{KubernetesRegions: regions}
+	return c.Display(item)
+}
+
+// RunKubeOptionsListNodeSizes lists valid node sizes for kubernetes clusters.
+func RunKubeOptionsListNodeSizes(c *CmdConfig) error {
+	kube := c.Kubernetes()
+	sizes, err := kube.GetNodeSizes()
+	if err != nil {
+		return err
+	}
+	item := &displayers.KubernetesNodeSizes{KubernetesNodeSizes: sizes}
 	return c.Display(item)
 }
 

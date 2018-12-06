@@ -43,6 +43,22 @@ type KubernetesVersion struct {
 	*godo.KubernetesVersion
 }
 
+// KubernetesRegions is a slice of KubernetesRegions.
+type KubernetesRegions []KubernetesRegion
+
+// KubernetesRegion wraps a godo KubernetesRegion.
+type KubernetesRegion struct {
+	*godo.KubernetesRegion
+}
+
+// KubernetesNodeSizes is a slice of KubernetesNodeSizes.
+type KubernetesNodeSizes []KubernetesNodeSize
+
+// KubernetesNodeSize wraps a godo KubernetesNodeSize.
+type KubernetesNodeSize struct {
+	*godo.KubernetesNodeSize
+}
+
 // KubernetesService is the godo KubernetesService interface.
 type KubernetesService interface {
 	Get(clusterID string) (*KubernetesCluster, error)
@@ -60,6 +76,8 @@ type KubernetesService interface {
 	DeleteNodePool(clusterID, poolID string) error
 
 	GetVersions() (KubernetesVersions, error)
+	GetRegions() (KubernetesRegions, error)
+	GetNodeSizes() (KubernetesNodeSizes, error)
 }
 
 var _ KubernetesService = &kubernetesClusterService{}
@@ -215,6 +233,30 @@ func (k8s *kubernetesClusterService) GetVersions() (KubernetesVersions, error) {
 	list := make(KubernetesVersions, 0, len(opts.Versions))
 	for _, item := range opts.Versions {
 		list = append(list, KubernetesVersion{KubernetesVersion: item})
+	}
+	return list, err
+}
+
+func (k8s *kubernetesClusterService) GetRegions() (KubernetesRegions, error) {
+	opts, _, err := k8s.client.GetOptions(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	list := make(KubernetesRegions, 0, len(opts.Regions))
+	for _, item := range opts.Regions {
+		list = append(list, KubernetesRegion{KubernetesRegion: item})
+	}
+	return list, err
+}
+
+func (k8s *kubernetesClusterService) GetNodeSizes() (KubernetesNodeSizes, error) {
+	opts, _, err := k8s.client.GetOptions(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+	list := make(KubernetesNodeSizes, 0, len(opts.Sizes))
+	for _, item := range opts.Sizes {
+		list = append(list, KubernetesNodeSize{KubernetesNodeSize: item})
 	}
 	return list, err
 }
