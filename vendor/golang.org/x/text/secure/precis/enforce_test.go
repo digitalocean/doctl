@@ -5,129 +5,158 @@
 package precis
 
 import (
+	"bytes"
+	"fmt"
+	"reflect"
 	"testing"
+
+	"golang.org/x/text/internal/testtext"
+	"golang.org/x/text/transform"
 )
 
-func TestEnforce(t *testing.T) {
-	var data = []struct {
-		prof          Profile
-		input, output string
-		isErr         bool
-	}{
-		// Nickname profile
-		{Nickname, "  Swan  of   Avon   ", "Swan of Avon", false},
-		{Nickname, "", "", true},
-		{Nickname, " ", "", true},
-		{Nickname, "  ", "", true},
-		{Nickname, "a\u00A0a\u1680a\u2000a\u2001a\u2002a\u2003a\u2004a\u2005a\u2006a\u2007a\u2008a\u2009a\u200Aa\u202Fa\u205Fa\u3000a", "a a a a a a a a a a a a a a a a a", false},
-		{Nickname, "Foo", "Foo", false},
-		{Nickname, "foo", "foo", false},
-		{Nickname, "Foo Bar", "Foo Bar", false},
-		{Nickname, "foo bar", "foo bar", false},
-		{Nickname, "\u03C3", "\u03C3", false},
-		// TODO: Figure out why this is failing.
-		// {Nickname, "\u03C2", "\u03C3", false},
-		{Nickname, "\u265A", "♚", false},
-		{Nickname, "Richard \u2163", "Richard IV", false},
-		{Nickname, "\u212B", "Å", false},
-		// Opaque string profile
-		{OpaqueString, "  Swan  of   Avon   ", "  Swan  of   Avon   ", false},
-		{OpaqueString, "", "", true},
-		{OpaqueString, " ", " ", false},
-		{OpaqueString, "  ", "  ", false},
-		{OpaqueString, "a\u00A0a\u1680a\u2000a\u2001a\u2002a\u2003a\u2004a\u2005a\u2006a\u2007a\u2008a\u2009a\u200Aa\u202Fa\u205Fa\u3000a", "a a a a a a a a a a a a a a a a a", false},
-		{OpaqueString, "Foo", "Foo", false},
-		{OpaqueString, "foo", "foo", false},
-		{OpaqueString, "Foo Bar", "Foo Bar", false},
-		{OpaqueString, "foo bar", "foo bar", false},
-		{OpaqueString, "\u03C3", "\u03C3", false},
-		{OpaqueString, "Richard \u2163", "Richard \u2163", false},
-		{OpaqueString, "\u212B", "Å", false},
-		{OpaqueString, "Jack of \u2666s", "Jack of \u2666s", false},
-		{OpaqueString, "my cat is a \u0009by", "", true},
-		{OpaqueString, "·", "", true}, // Middle dot
-		{OpaqueString, "͵", "", true}, // Keraia
-		{OpaqueString, "׳", "", true},
-		{OpaqueString, "׳ה", "", true},
-		{OpaqueString, "a׳b", "", true},
-		// TOOD: This should be allowed right? Lack of Bidi rule?
-		// {OpaqueString, "ש׳", "", false},
+type testCase struct {
+	input  string
+	output string
+	err    error
+}
 
-		// Katakana Middle Dot
-		{OpaqueString, "abc・def", "", true},
-		// TODO: These should not be disallowed, methinks?
-		// {OpaqueString, "aヅc・def", "", false},
-		// {OpaqueString, "abc・dぶf", "", false},
-		// {OpaqueString, "⺐bc・def", "", false},
+func doTests(t *testing.T, fn func(t *testing.T, p *Profile, tc testCase)) {
+	for _, g := range enforceTestCases {
+		for i, tc := range g.cases {
+			name := fmt.Sprintf("%s:%d:%+q", g.name, i, tc.input)
+			testtext.Run(t, name, func(t *testing.T) {
+				fn(t, g.p, tc)
+			})
+		}
+	}
+}
 
-		// Arabic Indic Digit
-		// TODO: I think these two should be allowed?
-		// {OpaqueString, "١٢٣٤٥", "١٢٣٤٥", false},
-		// {OpaqueString, "۱۲۳۴۵", "۱۲۳۴۵", false},
-		{OpaqueString, "١٢٣٤٥۶", "", true},
-		{OpaqueString, "۱۲۳۴۵٦", "", true},
+func TestString(t *testing.T) {
+	doTests(t, func(t *testing.T, p *Profile, tc testCase) {
+		if e, err := p.String(tc.input); tc.err != err || e != tc.output {
+			t.Errorf("got %+q (err: %v); want %+q (err: %v)", e, err, tc.output, tc.err)
+		}
+	})
+}
 
-		// UsernameCaseMapped profile
-		{UsernameCaseMapped, "juliet@example.com", "juliet@example.com", false},
-		{UsernameCaseMapped, "fussball", "fussball", false},
-		{UsernameCaseMapped, "fu\u00DFball", "fussball", false},
-		{UsernameCaseMapped, "\u03C0", "\u03C0", false},
-		{UsernameCaseMapped, "\u03A3", "\u03C3", false},
-		{UsernameCaseMapped, "\u03C3", "\u03C3", false},
-		{UsernameCaseMapped, "\u03C2", "\u03C3", false},
-		{UsernameCaseMapped, "\u0049", "\u0069", false},
-		{UsernameCaseMapped, "\u0049", "\u0069", false},
-		// TODO: Should this be disallowed?
-		// {UsernameCaseMapped, "\u03D2", "\u03C5", false},
-		{UsernameCaseMapped, "\u03B0", "\u03B0", false},
-		{UsernameCaseMapped, "foo bar", "", true},
-		{UsernameCaseMapped, "♚", "", true},
-		{UsernameCaseMapped, "\u007E", "\u007E", false},
-		{UsernameCaseMapped, "a", "a", false},
-		{UsernameCaseMapped, "!", "!", false},
-		{UsernameCaseMapped, "²", "", true},
-		// TODO: Should this work?
-		// {UsernameCaseMapped, "", "", true},
-		{UsernameCaseMapped, "\t", "", true},
-		{UsernameCaseMapped, "\n", "", true},
-		{UsernameCaseMapped, "\u26D6", "", true},
-		{UsernameCaseMapped, "\u26FF", "", true},
-		{UsernameCaseMapped, "\uFB00", "", true},
-		{UsernameCaseMapped, "\u1680", "", true},
-		{UsernameCaseMapped, " ", "", true},
-		{UsernameCaseMapped, "  ", "", true},
-		{UsernameCaseMapped, "\u01C5", "", true},
-		{UsernameCaseMapped, "\u16EE", "", true}, // Nl RUNIC ARLAUG SYMBOL
-		{UsernameCaseMapped, "\u0488", "", true}, // Me COMBINING CYRILLIC HUNDRED THOUSANDS SIGN
-		// TODO: Should this be disallowed and/or case mapped?
-		// {UsernameCaseMapped, "\u212B", "å", false}, // angstrom sign
-		{UsernameCaseMapped, "A\u030A", "å", false},      // A + ring
-		{UsernameCaseMapped, "\u00C5", "å", false},       // A with ring
-		{UsernameCaseMapped, "\u00E7", "ç", false},       // c cedille
-		{UsernameCaseMapped, "\u0063\u0327", "ç", false}, // c + cedille
-		{UsernameCaseMapped, "\u0158", "ř", false},
-		{UsernameCaseMapped, "\u0052\u030C", "ř", false},
+func TestBytes(t *testing.T) {
+	doTests(t, func(t *testing.T, p *Profile, tc testCase) {
+		if e, err := p.Bytes([]byte(tc.input)); tc.err != err || string(e) != tc.output {
+			t.Errorf("got %+q (err: %v); want %+q (err: %v)", string(e), err, tc.output, tc.err)
+		}
+	})
 
-		{UsernameCaseMapped, "\u1E61", "\u1E61", false}, // LATIN SMALL LETTER S WITH DOT ABOVE
-		// TODO: Why is this disallowed?
-		// {UsernameCaseMapped, "ẛ", "\u1E61", false}, // LATIN SMALL LETTER LONG S WITH DOT ABOVE
+	t.Run("Copy", func(t *testing.T) {
+		// Test that calling Bytes with something that doesn't transform returns a
+		// copy.
+		orig := []byte("hello")
+		b, _ := NewFreeform().Bytes(orig)
+		if reflect.ValueOf(b).Pointer() == reflect.ValueOf(orig).Pointer() {
+			t.Error("original and result are the same slice; should be a copy")
+		}
+	})
+}
 
-		// Confusable characters ARE allowed and should NOT be mapped.
-		{UsernameCaseMapped, "\u0410", "\u0430", false}, // CYRILLIC CAPITAL LETTER A
+func TestAppend(t *testing.T) {
+	doTests(t, func(t *testing.T, p *Profile, tc testCase) {
+		if e, err := p.Append(nil, []byte(tc.input)); tc.err != err || string(e) != tc.output {
+			t.Errorf("got %+q (err: %v); want %+q (err: %v)", string(e), err, tc.output, tc.err)
+		}
+	})
+}
 
-		// Full width should be mapped to the narrow or canonical decomposition… no
-		// idea which, but either way in this case it should be the same:
-		{UsernameCaseMapped, "ＡＢ", "ab", false},
+func TestStringMallocs(t *testing.T) {
+	if n := testtext.AllocsPerRun(100, func() { UsernameCaseMapped.String("helloworld") }); n > 0 {
+		// TODO: reduce this to 0.
+		t.Skipf("got %f allocs, want 0", n)
+	}
+}
 
-		{UsernameCasePreserved, "ABC", "ABC", false},
-		{UsernameCasePreserved, "ＡＢ", "AB", false},
+func TestAppendMallocs(t *testing.T) {
+	str := []byte("helloworld")
+	out := make([]byte, 0, len(str))
+	if n := testtext.AllocsPerRun(100, func() { UsernameCaseMapped.Append(out, str) }); n > 0 {
+		t.Errorf("got %f allocs, want 0", n)
+	}
+}
+
+func TestTransformMallocs(t *testing.T) {
+	str := []byte("helloworld")
+	out := make([]byte, 0, len(str))
+	tr := UsernameCaseMapped.NewTransformer()
+	if n := testtext.AllocsPerRun(100, func() {
+		tr.Reset()
+		tr.Transform(out, str, true)
+	}); n > 0 {
+		t.Errorf("got %f allocs, want 0", n)
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// TestTransformerShortBuffers tests that the precis.Transformer implements the
+// spirit, not just the letter (the method signatures), of the
+// transform.Transformer interface.
+//
+// In particular, it tests that, if one or both of the dst or src buffers are
+// short, so that multiple Transform calls are required to complete the overall
+// transformation, the end result is identical to one Transform call with
+// sufficiently long buffers.
+func TestTransformerShortBuffers(t *testing.T) {
+	srcUnit := []byte("a\u0300cce\u0301nts") // NFD normalization form.
+	wantUnit := []byte("àccénts")            // NFC normalization form.
+	src := bytes.Repeat(srcUnit, 16)
+	want := bytes.Repeat(wantUnit, 16)
+	const long = 4096
+	dst := make([]byte, long)
+
+	// 5, 7, 9, 11, 13, 16 and 17 are all pair-wise co-prime, which means that
+	// slicing the dst and src buffers into 5, 7, 13 and 17 byte chunks will
+	// fall at different places inside the repeated srcUnit's and wantUnit's.
+	if len(srcUnit) != 11 || len(wantUnit) != 9 || len(src) > long || len(want) > long {
+		t.Fatal("inconsistent lengths")
 	}
 
-	for _, d := range data {
-		if e, err := d.prof.String(d.input); (d.isErr && err == nil) ||
-			!d.isErr && (err != nil || e != d.output) {
-			t.Log("Expected '"+d.output+"'", "but got", "'"+e+"'", "with error:", err)
-			t.Fail()
+	tr := NewFreeform().NewTransformer()
+	for _, deltaD := range []int{5, 7, 13, 17, long} {
+	loop:
+		for _, deltaS := range []int{5, 7, 13, 17, long} {
+			tr.Reset()
+			d0 := 0
+			s0 := 0
+			for {
+				d1 := min(len(dst), d0+deltaD)
+				s1 := min(len(src), s0+deltaS)
+				nDst, nSrc, err := tr.Transform(dst[d0:d1:d1], src[s0:s1:s1], s1 == len(src))
+				d0 += nDst
+				s0 += nSrc
+				if err == nil {
+					break
+				}
+				if err == transform.ErrShortDst || err == transform.ErrShortSrc {
+					continue
+				}
+				t.Errorf("deltaD=%d, deltaS=%d: %v", deltaD, deltaS, err)
+				continue loop
+			}
+			if s0 != len(src) {
+				t.Errorf("deltaD=%d, deltaS=%d: s0: got %d, want %d", deltaD, deltaS, s0, len(src))
+				continue
+			}
+			if d0 != len(want) {
+				t.Errorf("deltaD=%d, deltaS=%d: d0: got %d, want %d", deltaD, deltaS, d0, len(want))
+				continue
+			}
+			got := dst[:d0]
+			if !bytes.Equal(got, want) {
+				t.Errorf("deltaD=%d, deltaS=%d:\ngot  %q\nwant %q", deltaD, deltaS, got, want)
+				continue
+			}
 		}
 	}
 }

@@ -5,7 +5,7 @@
 
 [[constraint]]
   name = "github.com/digitalocean/godo"
-  version = "1.5.0"
+  version = ">= 1.7.2"
 
 [[constraint]]
   name = "github.com/dustin/go-humanize"
@@ -56,5 +56,9 @@
   name = "golang.org/x/oauth2"
 
 [[constraint]]
-  branch = "v2"
+  version = "v2.2.1"
   name = "gopkg.in/yaml.v2"
+
+[[constraint]]
+  name = "k8s.io/client-go"
+  version = "9.0.0"

@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Domain creates the domain commands heirarchy.
+// Domain creates the domain commands hierarchy.
 func Domain() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -39,7 +39,7 @@ func Domain() *Command {
 
 	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,
 		aliasOpt("c"), displayerType(&displayers.Domain{}), docCategories("domain"))
-	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address", requiredOpt())
+	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address, creates an initial A record when provided")
 
 	CmdBuilder(cmd, RunDomainList, "list", "list domains", Writer,
 		aliasOpt("ls"), displayerType(&displayers.Domain{}), docCategories("domain"))
@@ -181,8 +181,6 @@ func RunDomainDelete(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
-
-	return nil
 }
 
 // RunRecordList list records for a domain.

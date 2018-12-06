@@ -224,6 +224,37 @@ func NewElGamalPublicKey(creationTime time.Time, pub *elgamal.PublicKey) *Public
 	return pk
 }
 
+func NewECDSAPublicKey(creationTime time.Time, pub *ecdsa.PublicKey) *PublicKey {
+	pk := &PublicKey{
+		CreationTime: creationTime,
+		PubKeyAlgo:   PubKeyAlgoECDSA,
+		PublicKey:    pub,
+		ec:           new(ecdsaKey),
+	}
+
+	switch pub.Curve {
+	case elliptic.P256():
+		pk.ec.oid = oidCurveP256
+	case elliptic.P384():
+		pk.ec.oid = oidCurveP384
+	case elliptic.P521():
+		pk.ec.oid = oidCurveP521
+	default:
+		panic("unknown elliptic curve")
+	}
+
+	pk.ec.p.bytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+
+	// The bit length is 3 (for the 0x04 specifying an uncompressed key)
+	// plus two field elements (for x and y), which are rounded up to the
+	// nearest byte. See https://tools.ietf.org/html/rfc6637#section-6
+	fieldBytes := (pub.Curve.Params().BitSize + 7) & ^7
+	pk.ec.p.bitLength = uint16(3 + fieldBytes + fieldBytes)
+
+	pk.setFingerPrintAndKeyId()
+	return pk
+}
+
 func (pk *PublicKey) parse(r io.Reader) (err error) {
 	// RFC 4880, section 5.5.2
 	var buf [6]byte
@@ -489,7 +520,7 @@ func (pk *PublicKey) VerifySignature(signed hash.Hash, sig *Signature) (err erro
 	switch pk.PubKeyAlgo {
 	case PubKeyAlgoRSA, PubKeyAlgoRSASignOnly:
 		rsaPublicKey, _ := pk.PublicKey.(*rsa.PublicKey)
-		err = rsa.VerifyPKCS1v15(rsaPublicKey, sig.Hash, hashBytes, sig.RSASignature.bytes)
+		err = rsa.VerifyPKCS1v15(rsaPublicKey, sig.Hash, hashBytes, padToKeySize(rsaPublicKey, sig.RSASignature.bytes))
 		if err != nil {
 			return errors.SignatureError("RSA verification failure")
 		}
@@ -514,7 +545,6 @@ func (pk *PublicKey) VerifySignature(signed hash.Hash, sig *Signature) (err erro
 	default:
 		return errors.SignatureError("Unsupported public key algorithm used in signature")
 	}
-	panic("unreachable")
 }
 
 // VerifySignatureV3 returns nil iff sig is a valid signature, made by this
@@ -541,7 +571,7 @@ func (pk *PublicKey) VerifySignatureV3(signed hash.Hash, sig *SignatureV3) (err 
 	switch pk.PubKeyAlgo {
 	case PubKeyAlgoRSA, PubKeyAlgoRSASignOnly:
 		rsaPublicKey := pk.PublicKey.(*rsa.PublicKey)
-		if err = rsa.VerifyPKCS1v15(rsaPublicKey, sig.Hash, hashBytes, sig.RSASignature.bytes); err != nil {
+		if err = rsa.VerifyPKCS1v15(rsaPublicKey, sig.Hash, hashBytes, padToKeySize(rsaPublicKey, sig.RSASignature.bytes)); err != nil {
 			return errors.SignatureError("RSA verification failure")
 		}
 		return
@@ -559,7 +589,6 @@ func (pk *PublicKey) VerifySignatureV3(signed hash.Hash, sig *SignatureV3) (err 
 	default:
 		panic("shouldn't happen")
 	}
-	panic("unreachable")
 }
 
 // keySignatureHash returns a Hash of the message that needs to be signed for

@@ -22,7 +22,7 @@ func TestSuperIndex(t *testing.T) {
 			[]int{0},
 		},
 	} {
-		p := Super{}
+		p := NewSuper()
 		index, segments := p.Index(test.fixture)
 		if index != test.index {
 			t.Errorf("#%d unexpected index: exp: %d, act: %d", id, test.index, index)
@@ -34,8 +34,21 @@ func TestSuperIndex(t *testing.T) {
 }
 
 func BenchmarkIndexSuper(b *testing.B) {
-	m := Super{}
+	m := NewSuper()
+
 	for i := 0; i < b.N; i++ {
-		m.Index(bench_pattern)
+		_, s := m.Index(bench_pattern)
+		releaseSegments(s)
 	}
+}
+
+func BenchmarkIndexSuperParallel(b *testing.B) {
+	m := NewSuper()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, s := m.Index(bench_pattern)
+			releaseSegments(s)
+		}
+	})
 }

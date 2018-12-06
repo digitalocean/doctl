@@ -16,18 +16,21 @@ var _ runes.Set = (*class)(nil)
 // Ensure that certain characters are (or are not) in the identifer class.
 func TestClassContains(t *testing.T) {
 	tests := []struct {
+		name       string
 		class      *class
 		allowed    []rune
 		disallowed []rune
 	}{
 		{
+			name:       "Identifier",
 			class:      identifier,
 			allowed:    []rune("Aa0\u0021\u007e\u00df\u3007"),
-			disallowed: []rune("\u2150\u2100\u2200\u3164\u2190\u2600\u303b"),
+			disallowed: []rune("\u2150\u2100\u2200\u3164\u2190\u2600\u303b\u1e9b"),
 		},
 		{
+			name:       "Freeform",
 			class:      freeform,
-			allowed:    []rune("Aa0\u0021\u007e\u00df\u3007 \u2150\u2100\u2200\u2190\u2600"),
+			allowed:    []rune("Aa0\u0021\u007e\u00df\u3007 \u2150\u2100\u2200\u2190\u2600\u1e9b"),
 			disallowed: []rune("\u3164\u303b"),
 		},
 	}
@@ -35,12 +38,12 @@ func TestClassContains(t *testing.T) {
 	for _, rt := range tests {
 		for _, r := range rt.allowed {
 			if !rt.class.Contains(r) {
-				t.Errorf("Class %d should contain \"%U\"", rt.class, r)
+				t.Errorf("Class %s should contain %U", rt.name, r)
 			}
 		}
 		for _, r := range rt.disallowed {
 			if rt.class.Contains(r) {
-				t.Errorf("Class %d should not contain \"%U\"", rt.class, r)
+				t.Errorf("Class %s should not contain %U", rt.name, r)
 			}
 		}
 	}

@@ -9,6 +9,10 @@ type Min struct {
 	Limit int
 }
 
+func NewMin(l int) Min {
+	return Min{l}
+}
+
 func (self Min) Match(s string) bool {
 	var l int
 	for range s {
@@ -24,17 +28,21 @@ func (self Min) Match(s string) bool {
 func (self Min) Index(s string) (int, []int) {
 	var count int
 
-	c := utf8.RuneCountInString(s)
-	if c < self.Limit {
+	c := len(s) - self.Limit + 1
+	if c <= 0 {
 		return -1, nil
 	}
 
-	segments := make([]int, 0, c-self.Limit+1)
+	segments := acquireSegments(c)
 	for i, r := range s {
 		count++
 		if count >= self.Limit {
 			segments = append(segments, i+utf8.RuneLen(r))
 		}
+	}
+
+	if len(segments) == 0 {
+		return -1, nil
 	}
 
 	return 0, segments

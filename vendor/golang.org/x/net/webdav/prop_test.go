@@ -5,21 +5,23 @@
 package webdav
 
 import (
+	"context"
+	"encoding/xml"
 	"fmt"
 	"net/http"
 	"os"
 	"reflect"
+	"regexp"
 	"sort"
 	"testing"
-
-	"golang.org/x/net/webdav/internal/xml"
 )
 
 func TestMemPS(t *testing.T) {
+	ctx := context.Background()
 	// calcProps calculates the getlastmodified and getetag DAV: property
 	// values in pstats for resource name in file-system fs.
 	calcProps := func(name string, fs FileSystem, ls LockSystem, pstats []Propstat) error {
-		fi, err := fs.Stat(name)
+		fi, err := fs.Stat(ctx, name)
 		if err != nil {
 			return err
 		}
@@ -27,13 +29,13 @@ func TestMemPS(t *testing.T) {
 			for i, p := range pst.Props {
 				switch p.XMLName {
 				case xml.Name{Space: "DAV:", Local: "getlastmodified"}:
-					p.InnerXML = []byte(fi.ModTime().Format(http.TimeFormat))
+					p.InnerXML = []byte(fi.ModTime().UTC().Format(http.TimeFormat))
 					pst.Props[i] = p
 				case xml.Name{Space: "DAV:", Local: "getetag"}:
 					if fi.IsDir() {
 						continue
 					}
-					etag, err := findETag(fs, ls, name, fi)
+					etag, err := findETag(ctx, fs, ls, name, fi)
 					if err != nil {
 						return err
 					}
@@ -75,21 +77,22 @@ func TestMemPS(t *testing.T) {
 			op:   "propname",
 			name: "/dir",
 			wantPnames: []xml.Name{
-				xml.Name{Space: "DAV:", Local: "resourcetype"},
-				xml.Name{Space: "DAV:", Local: "displayname"},
-				xml.Name{Space: "DAV:", Local: "supportedlock"},
+				{Space: "DAV:", Local: "resourcetype"},
+				{Space: "DAV:", Local: "displayname"},
+				{Space: "DAV:", Local: "supportedlock"},
+				{Space: "DAV:", Local: "getlastmodified"},
 			},
 		}, {
 			op:   "propname",
 			name: "/file",
 			wantPnames: []xml.Name{
-				xml.Name{Space: "DAV:", Local: "resourcetype"},
-				xml.Name{Space: "DAV:", Local: "displayname"},
-				xml.Name{Space: "DAV:", Local: "getcontentlength"},
-				xml.Name{Space: "DAV:", Local: "getlastmodified"},
-				xml.Name{Space: "DAV:", Local: "getcontenttype"},
-				xml.Name{Space: "DAV:", Local: "getetag"},
-				xml.Name{Space: "DAV:", Local: "supportedlock"},
+				{Space: "DAV:", Local: "resourcetype"},
+				{Space: "DAV:", Local: "displayname"},
+				{Space: "DAV:", Local: "getcontentlength"},
+				{Space: "DAV:", Local: "getlastmodified"},
+				{Space: "DAV:", Local: "getcontenttype"},
+				{Space: "DAV:", Local: "getetag"},
+				{Space: "DAV:", Local: "supportedlock"},
 			},
 		}},
 	}, {
@@ -106,6 +109,9 @@ func TestMemPS(t *testing.T) {
 				}, {
 					XMLName:  xml.Name{Space: "DAV:", Local: "displayname"},
 					InnerXML: []byte("dir"),
+				}, {
+					XMLName:  xml.Name{Space: "DAV:", Local: "getlastmodified"},
+					InnerXML: nil, // Calculated during test.
 				}, {
 					XMLName:  xml.Name{Space: "DAV:", Local: "supportedlock"},
 					InnerXML: []byte(lockEntry),
@@ -452,14 +458,14 @@ func TestMemPS(t *testing.T) {
 			op:   "propname",
 			name: "/file",
 			wantPnames: []xml.Name{
-				xml.Name{Space: "DAV:", Local: "resourcetype"},
-				xml.Name{Space: "DAV:", Local: "displayname"},
-				xml.Name{Space: "DAV:", Local: "getcontentlength"},
-				xml.Name{Space: "DAV:", Local: "getlastmodified"},
-				xml.Name{Space: "DAV:", Local: "getcontenttype"},
-				xml.Name{Space: "DAV:", Local: "getetag"},
-				xml.Name{Space: "DAV:", Local: "supportedlock"},
-				xml.Name{Space: "foo", Local: "bar"},
+				{Space: "DAV:", Local: "resourcetype"},
+				{Space: "DAV:", Local: "displayname"},
+				{Space: "DAV:", Local: "getcontentlength"},
+				{Space: "DAV:", Local: "getlastmodified"},
+				{Space: "DAV:", Local: "getcontenttype"},
+				{Space: "DAV:", Local: "getetag"},
+				{Space: "DAV:", Local: "supportedlock"},
+				{Space: "foo", Local: "bar"},
 			},
 		}},
 	}, {
@@ -516,7 +522,7 @@ func TestMemPS(t *testing.T) {
 			var propstats []Propstat
 			switch op.op {
 			case "propname":
-				pnames, err := propnames(fs, ls, op.name)
+				pnames, err := propnames(ctx, fs, ls, op.name)
 				if err != nil {
 					t.Errorf("%s: got error %v, want nil", desc, err)
 					continue
@@ -528,11 +534,11 @@ func TestMemPS(t *testing.T) {
 				}
 				continue
 			case "allprop":
-				propstats, err = allprop(fs, ls, op.name, op.pnames)
+				propstats, err = allprop(ctx, fs, ls, op.name, op.pnames)
 			case "propfind":
-				propstats, err = props(fs, ls, op.name, op.pnames)
+				propstats, err = props(ctx, fs, ls, op.name, op.pnames)
 			case "proppatch":
-				propstats, err = patch(fs, ls, op.name, op.patches)
+				propstats, err = patch(ctx, fs, ls, op.name, op.patches)
 			default:
 				t.Fatalf("%s: %s not implemented", desc, op.op)
 			}
@@ -585,8 +591,8 @@ type noDeadPropsFS struct {
 	FileSystem
 }
 
-func (fs noDeadPropsFS) OpenFile(name string, flag int, perm os.FileMode) (File, error) {
-	f, err := fs.FileSystem.OpenFile(name, flag, perm)
+func (fs noDeadPropsFS) OpenFile(ctx context.Context, name string, flag int, perm os.FileMode) (File, error) {
+	f, err := fs.FileSystem.OpenFile(ctx, name, flag, perm)
 	if err != nil {
 		return nil, err
 	}
@@ -605,3 +611,106 @@ func (f noDeadPropsFile) Readdir(count int) ([]os.FileInfo, error)  { return f.f
 func (f noDeadPropsFile) Seek(off int64, whence int) (int64, error) { return f.f.Seek(off, whence) }
 func (f noDeadPropsFile) Stat() (os.FileInfo, error)                { return f.f.Stat() }
 func (f noDeadPropsFile) Write(p []byte) (int, error)               { return f.f.Write(p) }
+
+type overrideContentType struct {
+	os.FileInfo
+	contentType string
+	err         error
+}
+
+func (o *overrideContentType) ContentType(ctx context.Context) (string, error) {
+	return o.contentType, o.err
+}
+
+func TestFindContentTypeOverride(t *testing.T) {
+	fs, err := buildTestFS([]string{"touch /file"})
+	if err != nil {
+		t.Fatalf("cannot create test filesystem: %v", err)
+	}
+	ctx := context.Background()
+	fi, err := fs.Stat(ctx, "/file")
+	if err != nil {
+		t.Fatalf("cannot Stat /file: %v", err)
+	}
+
+	// Check non overridden case
+	originalContentType, err := findContentType(ctx, fs, nil, "/file", fi)
+	if err != nil {
+		t.Fatalf("findContentType /file failed: %v", err)
+	}
+	if originalContentType != "text/plain; charset=utf-8" {
+		t.Fatalf("ContentType wrong want %q got %q", "text/plain; charset=utf-8", originalContentType)
+	}
+
+	// Now try overriding the ContentType
+	o := &overrideContentType{fi, "OverriddenContentType", nil}
+	ContentType, err := findContentType(ctx, fs, nil, "/file", o)
+	if err != nil {
+		t.Fatalf("findContentType /file failed: %v", err)
+	}
+	if ContentType != o.contentType {
+		t.Fatalf("ContentType wrong want %q got %q", o.contentType, ContentType)
+	}
+
+	// Now return ErrNotImplemented and check we get the original content type
+	o = &overrideContentType{fi, "OverriddenContentType", ErrNotImplemented}
+	ContentType, err = findContentType(ctx, fs, nil, "/file", o)
+	if err != nil {
+		t.Fatalf("findContentType /file failed: %v", err)
+	}
+	if ContentType != originalContentType {
+		t.Fatalf("ContentType wrong want %q got %q", originalContentType, ContentType)
+	}
+}
+
+type overrideETag struct {
+	os.FileInfo
+	eTag string
+	err  error
+}
+
+func (o *overrideETag) ETag(ctx context.Context) (string, error) {
+	return o.eTag, o.err
+}
+
+func TestFindETagOverride(t *testing.T) {
+	fs, err := buildTestFS([]string{"touch /file"})
+	if err != nil {
+		t.Fatalf("cannot create test filesystem: %v", err)
+	}
+	ctx := context.Background()
+	fi, err := fs.Stat(ctx, "/file")
+	if err != nil {
+		t.Fatalf("cannot Stat /file: %v", err)
+	}
+
+	// Check non overridden case
+	originalETag, err := findETag(ctx, fs, nil, "/file", fi)
+	if err != nil {
+		t.Fatalf("findETag /file failed: %v", err)
+	}
+	matchETag := regexp.MustCompile(`^"-?[0-9a-f]{6,}"$`)
+	if !matchETag.MatchString(originalETag) {
+		t.Fatalf("ETag wrong, wanted something matching %v got %q", matchETag, originalETag)
+	}
+
+	// Now try overriding the ETag
+	o := &overrideETag{fi, `"OverriddenETag"`, nil}
+	ETag, err := findETag(ctx, fs, nil, "/file", o)
+	if err != nil {
+		t.Fatalf("findETag /file failed: %v", err)
+	}
+	if ETag != o.eTag {
+		t.Fatalf("ETag wrong want %q got %q", o.eTag, ETag)
+	}
+
+	// Now return ErrNotImplemented and check we get the original Etag
+	o = &overrideETag{fi, `"OverriddenETag"`, ErrNotImplemented}
+	ETag, err = findETag(ctx, fs, nil, "/file", o)
+	if err != nil {
+		t.Fatalf("findETag /file failed: %v", err)
+	}
+	if ETag != originalETag {
+		t.Fatalf("ETag wrong want %q got %q", originalETag, ETag)
+	}
+}

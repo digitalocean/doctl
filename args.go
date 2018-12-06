@@ -32,7 +32,21 @@ const (
 	ArgActionStatus = "status"
 	// ArgActionType is an action type argument.
 	ArgActionType = "action-type"
-	// ArgCommandWait is a wait for a droplet to be created argument.
+	// ArgClusterName is a cluster name argument.
+	ArgClusterName = "cluster-name"
+	// ArgClusterVersionSlug is a cluster version argument.
+	ArgClusterVersionSlug = "version"
+	// ArgClusterNodePool are a cluster's node pools arguments.
+	ArgClusterNodePool = "node-pool"
+	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
+	ArgClusterUpdateKubeconfig = "update-kubeconfig"
+	// ArgNodePoolName is a cluster's node pool name argument.
+	ArgNodePoolName = "name"
+	// ArgNodePoolCount is a cluster's node pool count argument.
+	ArgNodePoolCount = "count"
+	// ArgNodePoolNodeIDs is a cluster's node pool nodes argument.
+	ArgNodePoolNodeIDs = "node-ids"
+	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgDropletID is a droplet id argument.
 	ArgDropletID = "droplet-id"
@@ -54,7 +68,7 @@ const (
 	ArgDropletName = "droplet-name"
 	// ArgResizeDisk is a resize disk argument.
 	ArgResizeDisk = "resize-disk"
-	// ArgSnapshotName is a snapshot name arugment.
+	// ArgSnapshotName is a snapshot name argument.
 	ArgSnapshotName = "snapshot-name"
 	// ArgSnapshotDesc is the description for volume snapshot.
 	ArgSnapshotDesc = "snapshot-desc"

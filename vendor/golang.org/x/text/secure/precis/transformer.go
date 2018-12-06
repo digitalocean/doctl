@@ -4,9 +4,7 @@
 
 package precis
 
-import (
-	"golang.org/x/text/transform"
-)
+import "golang.org/x/text/transform"
 
 // Transformer implements the transform.Transformer interface.
 type Transformer struct {

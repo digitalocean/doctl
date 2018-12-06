@@ -79,16 +79,16 @@ func resolvePairedBrackets(s *isolatingRunSequence) {
 		codesIsolatedRun: s.types,
 		indexes:          s.indexes,
 	}
-	dirEmbed := _L
+	dirEmbed := L
 	if s.level&1 != 0 {
-		dirEmbed = _R
+		dirEmbed = R
 	}
 	p.locateBrackets(s.p.pairTypes, s.p.pairValues)
-	p.resolveBrackets(dirEmbed)
+	p.resolveBrackets(dirEmbed, s.p.initialTypes)
 }
 
 type bracketPairer struct {
-	sos class // direction corresponding to start of sequence
+	sos Class // direction corresponding to start of sequence
 
 	// The following is a restatement of BD 16 using non-algorithmic language.
 	//
@@ -114,7 +114,7 @@ type bracketPairer struct {
 	// bracket pair positions sorted by location of opening bracket
 	pairPositions bracketPairs
 
-	codesIsolatedRun []class // directional bidi codes for an isolated run
+	codesIsolatedRun []Class // directional bidi codes for an isolated run
 	indexes          []int   // array of index values into the original string
 
 }
@@ -124,6 +124,8 @@ type bracketPairer struct {
 func (p *bracketPairer) matchOpener(pairValues []rune, opener, closer int) bool {
 	return pairValues[p.indexes[opener]] == pairValues[p.indexes[closer]]
 }
+
+const maxPairingDepth = 63
 
 // locateBrackets locates matching bracket pairs according to BD16.
 //
@@ -136,11 +138,17 @@ func (p *bracketPairer) locateBrackets(pairTypes []bracketType, pairValues []run
 	for i, index := range p.indexes {
 
 		// look at the bracket type for each character
-		switch pairTypes[index] {
-		case bpNone:
+		if pairTypes[index] == bpNone || p.codesIsolatedRun[i] != ON {
 			// continue scanning
-
+			continue
+		}
+		switch pairTypes[index] {
 		case bpOpen:
+			// check if maximum pairing depth reached
+			if p.openers.Len() == maxPairingDepth {
+				p.openers.Init()
+				return
+			}
 			// remember opener location, most recent first
 			p.openers.PushFront(i)
 
@@ -222,30 +230,30 @@ func (p *bracketPairer) locateBrackets(pairTypes []bracketType, pairValues []run
 // by rule N0.
 //
 // TODO: have separate type for "strong" directionality.
-func (p *bracketPairer) getStrongTypeN0(index int) class {
+func (p *bracketPairer) getStrongTypeN0(index int) Class {
 	switch p.codesIsolatedRun[index] {
 	// in the scope of N0, number types are treated as R
-	case _EN, _AN, _AL, _R:
-		return _R
-	case _L:
-		return _L
+	case EN, AN, AL, R:
+		return R
+	case L:
+		return L
 	default:
-		return _ON
+		return ON
 	}
 }
 
 // classifyPairContent reports the strong types contained inside a Bracket Pair,
 // assuming the given embedding direction.
 //
-// It returns _ON if no strong type is found. If a single strong type is found,
+// It returns ON if no strong type is found. If a single strong type is found,
 // it returns this this type. Otherwise it returns the embedding direction.
 //
 // TODO: use separate type for "strong" directionality.
-func (p *bracketPairer) classifyPairContent(loc bracketPair, dirEmbed class) class {
-	dirOpposite := _ON
+func (p *bracketPairer) classifyPairContent(loc bracketPair, dirEmbed Class) Class {
+	dirOpposite := ON
 	for i := loc.opener + 1; i < loc.closer; i++ {
 		dir := p.getStrongTypeN0(i)
-		if dir == _ON {
+		if dir == ON {
 			continue
 		}
 		if dir == dirEmbed {
@@ -259,9 +267,9 @@ func (p *bracketPairer) classifyPairContent(loc bracketPair, dirEmbed class) cla
 
 // classBeforePair determines which strong types are present before a Bracket
 // Pair. Return R or L if strong type found, otherwise ON.
-func (p *bracketPairer) classBeforePair(loc bracketPair) class {
+func (p *bracketPairer) classBeforePair(loc bracketPair) Class {
 	for i := loc.opener - 1; i >= 0; i-- {
-		if dir := p.getStrongTypeN0(i); dir != _ON {
+		if dir := p.getStrongTypeN0(i); dir != ON {
 			return dir
 		}
 	}
@@ -270,7 +278,7 @@ func (p *bracketPairer) classBeforePair(loc bracketPair) class {
 }
 
 // assignBracketType implements rule N0 for a single bracket pair.
-func (p *bracketPairer) assignBracketType(loc bracketPair, dirEmbed class) {
+func (p *bracketPairer) assignBracketType(loc bracketPair, dirEmbed Class, initialTypes []Class) {
 	// rule "N0, a", inspect contents of pair
 	dirPair := p.classifyPairContent(loc, dirEmbed)
 
@@ -278,14 +286,14 @@ func (p *bracketPairer) assignBracketType(loc bracketPair, dirEmbed class) {
 
 	// the following logical tests are performed out of order compared to
 	// the statement of the rules but yield the same results
-	if dirPair == _ON {
+	if dirPair == ON {
 		return // case "d" - nothing to do
 	}
 
 	if dirPair != dirEmbed {
 		// case "c": strong type found, opposite - check before (c.1)
 		dirPair = p.classBeforePair(loc)
-		if dirPair == dirEmbed || dirPair == _ON {
+		if dirPair == dirEmbed || dirPair == ON {
 			// no strong opposite type found before - use embedding (c.2)
 			dirPair = dirEmbed
 		}
@@ -295,13 +303,33 @@ func (p *bracketPairer) assignBracketType(loc bracketPair, dirEmbed class) {
 	// direction
 
 	// set the bracket types to the type found
+	p.setBracketsToType(loc, dirPair, initialTypes)
+}
+
+func (p *bracketPairer) setBracketsToType(loc bracketPair, dirPair Class, initialTypes []Class) {
 	p.codesIsolatedRun[loc.opener] = dirPair
 	p.codesIsolatedRun[loc.closer] = dirPair
+
+	for i := loc.opener + 1; i < loc.closer; i++ {
+		index := p.indexes[i]
+		if initialTypes[index] != NSM {
+			break
+		}
+		p.codesIsolatedRun[i] = dirPair
+	}
+
+	for i := loc.closer + 1; i < len(p.indexes); i++ {
+		index := p.indexes[i]
+		if initialTypes[index] != NSM {
+			break
+		}
+		p.codesIsolatedRun[i] = dirPair
+	}
 }
 
 // resolveBrackets implements rule N0 for a list of pairs.
-func (p *bracketPairer) resolveBrackets(dirEmbed class) {
+func (p *bracketPairer) resolveBrackets(dirEmbed Class, initialTypes []Class) {
 	for _, loc := range p.pairPositions {
-		p.assignBracketType(loc, dirEmbed)
+		p.assignBracketType(loc, dirEmbed, initialTypes)
 	}
 }

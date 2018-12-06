@@ -25,7 +25,7 @@ func TestSuffixIndex(t *testing.T) {
 			[]int{5},
 		},
 	} {
-		p := Suffix{test.prefix}
+		p := NewSuffix(test.prefix)
 		index, segments := p.Index(test.fixture)
 		if index != test.index {
 			t.Errorf("#%d unexpected index: exp: %d, act: %d", id, test.index, index)
@@ -37,8 +37,21 @@ func TestSuffixIndex(t *testing.T) {
 }
 
 func BenchmarkIndexSuffix(b *testing.B) {
-	m := Suffix{"qwe"}
+	m := NewSuffix("qwe")
+
 	for i := 0; i < b.N; i++ {
-		m.Index(bench_pattern)
+		_, s := m.Index(bench_pattern)
+		releaseSegments(s)
 	}
+}
+
+func BenchmarkIndexSuffixParallel(b *testing.B) {
+	m := NewSuffix("qwe")
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, s := m.Index(bench_pattern)
+			releaseSegments(s)
+		}
+	})
 }

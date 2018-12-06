@@ -42,7 +42,7 @@ func TestBidiCore(t *testing.T) {
 	}))
 
 	for p.Next() {
-		types := []class{}
+		types := []Class{}
 		for _, s := range p.Strings(0) {
 			types = append(types, bidiClass[s])
 		}
@@ -58,7 +58,7 @@ func TestBidiCore(t *testing.T) {
 			par := newParagraph(types, pairTypes, pairValues, lev)
 
 			if *testLevels {
-				levels := par.resultLevels
+				levels := par.getLevels([]int{len(types)})
 				for i, s := range wantLevels {
 					if s == "x" {
 						continue
@@ -83,13 +83,13 @@ func TestBidiCore(t *testing.T) {
 	}
 }
 
-var removeClasses = map[class]bool{
-	_LRO: true,
-	_RLO: true,
-	_RLE: true,
-	_LRE: true,
-	_PDF: true,
-	_BN:  true,
+var removeClasses = map[Class]bool{
+	LRO: true,
+	RLO: true,
+	RLE: true,
+	LRE: true,
+	PDF: true,
+	BN:  true,
 }
 
 // TestBidiCharacters performs the tests in BidiCharacterTest.txt.
@@ -99,7 +99,7 @@ func TestBidiCharacters(t *testing.T) {
 
 	ucd.Parse(gen.OpenUCDFile("BidiCharacterTest.txt"), func(p *ucd.Parser) {
 		var (
-			types      []class
+			types      []Class
 			pairTypes  []bracketType
 			pairValues []rune
 			parLevel   level
@@ -118,7 +118,6 @@ func TestBidiCharacters(t *testing.T) {
 			// Spec says to ignore unknown parts.
 		}
 
-		trie := newBidiTrie(0)
 		runes := p.Runes(0)
 
 		for _, r := range runes {
@@ -126,22 +125,21 @@ func TestBidiCharacters(t *testing.T) {
 			if d := norm.NFKD.PropertiesString(string(r)).Decomposition(); d != nil {
 				r = []rune(string(d))[0]
 			}
-			e, _ := trie.lookupString(string(r))
-			entry := entry(e)
+			p, _ := LookupRune(r)
 
 			// Assign the class for this rune.
-			types = append(types, entry.class(r))
+			types = append(types, p.Class())
 
 			switch {
-			case !entry.isBracket():
+			case !p.IsBracket():
 				pairTypes = append(pairTypes, bpNone)
 				pairValues = append(pairValues, 0)
-			case entry.isOpen():
+			case p.IsOpeningBracket():
 				pairTypes = append(pairTypes, bpOpen)
 				pairValues = append(pairValues, r)
 			default:
 				pairTypes = append(pairTypes, bpClose)
-				pairValues = append(pairValues, entry.reverseBracket(r))
+				pairValues = append(pairValues, p.reverseBracket(r))
 			}
 		}
 		par := newParagraph(types, pairTypes, pairValues, parLevel)
@@ -152,7 +150,7 @@ func TestBidiCharacters(t *testing.T) {
 		}
 
 		if *testLevels {
-			gotLevels := getLevelStrings(types, par.resultLevels)
+			gotLevels := getLevelStrings(types, par.getLevels([]int{len(types)}))
 			if got, want := fmt.Sprint(gotLevels), fmt.Sprint(wantLevels); got != want {
 				t.Errorf("%04X %q:%d: got %v; want %v\nval: %x\npair: %v", runes, string(runes), parLevel, got, want, pairValues, pairTypes)
 			}
@@ -166,7 +164,7 @@ func TestBidiCharacters(t *testing.T) {
 	})
 }
 
-func getLevelStrings(cl []class, levels []level) []string {
+func getLevelStrings(cl []Class, levels []level) []string {
 	var results []string
 	for i, l := range levels {
 		if !removeClasses[cl[i]] {
@@ -178,7 +176,7 @@ func getLevelStrings(cl []class, levels []level) []string {
 	return results
 }
 
-func filterOrder(cl []class, order []int) []int {
+func filterOrder(cl []Class, order []int) []int {
 	no := []int{}
 	for _, o := range order {
 		if !removeClasses[cl[o]] {
@@ -198,29 +196,29 @@ func reorder(r []rune, order []int) string {
 
 // bidiClass names and codes taken from class "bc" in
 // http://www.unicode.org/Public/8.0.0/ucd/PropertyValueAliases.txt
-var bidiClass = map[string]class{
-	"AL":  _AL,  // classArabicLetter,
-	"AN":  _AN,  // classArabicNumber,
-	"B":   _B,   // classParagraphSeparator,
-	"BN":  _BN,  // classBoundaryNeutral,
-	"CS":  _CS,  // classCommonSeparator,
-	"EN":  _EN,  // classEuropeanNumber,
-	"ES":  _ES,  // classEuropeanSeparator,
-	"ET":  _ET,  // classEuropeanTerminator,
-	"L":   _L,   // classLeftToRight,
-	"NSM": _NSM, // classNonspacingMark,
-	"ON":  _ON,  // classOtherNeutral,
-	"R":   _R,   // classRightToLeft,
-	"S":   _S,   // classSegmentSeparator,
-	"WS":  _WS,  // classWhiteSpace,
+var bidiClass = map[string]Class{
+	"AL":  AL,  // classArabicLetter,
+	"AN":  AN,  // classArabicNumber,
+	"B":   B,   // classParagraphSeparator,
+	"BN":  BN,  // classBoundaryNeutral,
+	"CS":  CS,  // classCommonSeparator,
+	"EN":  EN,  // classEuropeanNumber,
+	"ES":  ES,  // classEuropeanSeparator,
+	"ET":  ET,  // classEuropeanTerminator,
+	"L":   L,   // classLeftToRight,
+	"NSM": NSM, // classNonspacingMark,
+	"ON":  ON,  // classOtherNeutral,
+	"R":   R,   // classRightToLeft,
+	"S":   S,   // classSegmentSeparator,
+	"WS":  WS,  // classWhiteSpace,
 
-	"LRO": _LRO, // classLeftToRightOverride,
-	"RLO": _RLO, // classRightToLeftOverride,
-	"LRE": _LRE, // classLeftToRightEmbedding,
-	"RLE": _RLE, // classRightToLeftEmbedding,
-	"PDF": _PDF, // classPopDirectionalFormat,
-	"LRI": _LRI, // classLeftToRightIsolate,
-	"RLI": _RLI, // classRightToLeftIsolate,
-	"FSI": _FSI, // classFirstStrongIsolate,
-	"PDI": _PDI, // classPopDirectionalIsolate,
+	"LRO": LRO, // classLeftToRightOverride,
+	"RLO": RLO, // classRightToLeftOverride,
+	"LRE": LRE, // classLeftToRightEmbedding,
+	"RLE": RLE, // classRightToLeftEmbedding,
+	"PDF": PDF, // classPopDirectionalFormat,
+	"LRI": LRI, // classLeftToRightIsolate,
+	"RLI": RLI, // classRightToLeftIsolate,
+	"FSI": FSI, // classFirstStrongIsolate,
+	"PDI": PDI, // classPopDirectionalIsolate,
 }

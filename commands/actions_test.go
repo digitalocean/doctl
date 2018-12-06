@@ -76,11 +76,11 @@ func Test_filterActions(t *testing.T) {
 	}
 
 	actions := do.Actions{
-		{&godo.Action{
+		{Action: &godo.Action{
 			ResourceType: "foo", RegionSlug: "nyc1", Status: "completed", Type: "alpha",
 			CompletedAt: &godo.Timestamp{Time: time.Date(2015, time.April, 2, 12, 0, 0, 0, time.UTC)},
 		}},
-		{&godo.Action{
+		{Action: &godo.Action{
 			ResourceType: "bar", RegionSlug: "fra1", Status: "completed", Type: "beta",
 			CompletedAt: &godo.Timestamp{Time: time.Date(2016, time.April, 2, 12, 0, 0, 0, time.UTC)},
 		}},

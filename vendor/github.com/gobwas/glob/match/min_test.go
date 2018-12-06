@@ -25,7 +25,7 @@ func TestMinIndex(t *testing.T) {
 			[]int{3, 4},
 		},
 	} {
-		p := Min{test.limit}
+		p := NewMin(test.limit)
 		index, segments := p.Index(test.fixture)
 		if index != test.index {
 			t.Errorf("#%d unexpected index: exp: %d, act: %d", id, test.index, index)
@@ -37,8 +37,21 @@ func TestMinIndex(t *testing.T) {
 }
 
 func BenchmarkIndexMin(b *testing.B) {
-	m := Min{10}
+	m := NewMin(10)
+
 	for i := 0; i < b.N; i++ {
-		m.Index(bench_pattern)
+		_, s := m.Index(bench_pattern)
+		releaseSegments(s)
 	}
+}
+
+func BenchmarkIndexMinParallel(b *testing.B) {
+	m := NewMin(10)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, s := m.Index(bench_pattern)
+			releaseSegments(s)
+		}
+	})
 }

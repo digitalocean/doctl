@@ -139,6 +139,38 @@ func TestIsEmpty(t *testing.T) {
 	}
 }
 
+func TestReaderContains(t *testing.T) {
+	for i, this := range []struct {
+		v1     string
+		v2     [][]byte
+		expect bool
+	}{
+		{"abc", [][]byte{[]byte("a")}, true},
+		{"abc", [][]byte{[]byte("b")}, true},
+		{"abcdefg", [][]byte{[]byte("efg")}, true},
+		{"abc", [][]byte{[]byte("d")}, false},
+		{"abc", [][]byte{[]byte("d"), []byte("e")}, false},
+		{"abc", [][]byte{[]byte("d"), []byte("a")}, true},
+		{"abc", [][]byte{[]byte("b"), []byte("e")}, true},
+		{"", nil, false},
+		{"", [][]byte{[]byte("a")}, false},
+		{"a", [][]byte{[]byte("")}, false},
+		{"", [][]byte{[]byte("")}, false}} {
+		result := readerContainsAny(strings.NewReader(this.v1), this.v2...)
+		if result != this.expect {
+			t.Errorf("[%d] readerContains: got %t but expected %t", i, result, this.expect)
+		}
+	}
+
+	if readerContainsAny(nil, []byte("a")) {
+		t.Error("readerContains with nil reader")
+	}
+
+	if readerContainsAny(nil, nil) {
+		t.Error("readerContains with nil arguments")
+	}
+}
+
 func createZeroSizedFileInTempDir() (File, error) {
 	filePrefix := "_path_test_"
 	f, e := TempFile(testFS, "", filePrefix) // dir is os.TempDir()
@@ -375,5 +407,44 @@ func deleteTempDir(d string) {
 	err := os.RemoveAll(d)
 	if err != nil {
 		// now what?
+	}
+}
+
+func TestFullBaseFsPath(t *testing.T) {
+	type dirSpec struct {
+		Dir1, Dir2, Dir3 string
+	}
+	dirSpecs := []dirSpec{
+		dirSpec{Dir1: "/", Dir2: "/", Dir3: "/"},
+		dirSpec{Dir1: "/", Dir2: "/path2", Dir3: "/"},
+		dirSpec{Dir1: "/path1/dir", Dir2: "/path2/dir/", Dir3: "/path3/dir"},
+		dirSpec{Dir1: "C:/path1", Dir2: "path2/dir", Dir3: "/path3/dir/"},
+	}
+
+	for _, ds := range dirSpecs {
+		memFs := NewMemMapFs()
+		level1Fs := NewBasePathFs(memFs, ds.Dir1)
+		level2Fs := NewBasePathFs(level1Fs, ds.Dir2)
+		level3Fs := NewBasePathFs(level2Fs, ds.Dir3)
+
+		type spec struct {
+			BaseFs       Fs
+			FileName     string
+			ExpectedPath string
+		}
+		specs := []spec{
+			spec{BaseFs: level3Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "f.txt")},
+			spec{BaseFs: level3Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, ds.Dir3, "")},
+			spec{BaseFs: level2Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "f.txt")},
+			spec{BaseFs: level2Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, ds.Dir2, "")},
+			spec{BaseFs: level1Fs, FileName: "f.txt", ExpectedPath: filepath.Join(ds.Dir1, "f.txt")},
+			spec{BaseFs: level1Fs, FileName: "", ExpectedPath: filepath.Join(ds.Dir1, "")},
+		}
+
+		for _, s := range specs {
+			if actualPath := FullBaseFsPath(s.BaseFs.(*BasePathFs), s.FileName); actualPath != s.ExpectedPath {
+				t.Errorf("Expected \n%s got \n%s", s.ExpectedPath, actualPath)
+			}
+		}
 	}
 }

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/hcl/hcl/token"
 	"strings"
+
+	"github.com/hashicorp/hcl/hcl/token"
 )
 
-var f100 = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+var f100 = strings.Repeat("f", 100)
 
 type tokenPair struct {
 	tok  token.Type
@@ -282,6 +283,11 @@ func TestPosition(t *testing.T) {
 	}
 }
 
+func TestNullChar(t *testing.T) {
+	s := New([]byte("\"\\0"))
+	s.Scan() // Used to panic
+}
+
 func TestComment(t *testing.T) {
 	testTokenList(t, tokenLists["comment"])
 }
@@ -357,7 +363,7 @@ func TestRealExample(t *testing.T) {
 
 	provider "aws" {
 	  access_key = "foo"
-	  secret_key = "bar"
+	  secret_key = "${replace(var.foo, ".", "\\.")}"
 	}
 
 	resource "aws_security_group" "firewall" {
@@ -377,6 +383,14 @@ func TestRealExample(t *testing.T) {
 Main interface
 EOF
 	    }
+
+		network_interface {
+	        device_index = 1
+	        description = <<-EOF
+			Outer text
+				Indented text
+			EOF
+		}
 	}`
 
 	literals := []struct {
@@ -402,7 +416,7 @@ EOF
 		{token.STRING, `"foo"`},
 		{token.IDENT, `secret_key`},
 		{token.ASSIGN, `=`},
-		{token.STRING, `"bar"`},
+		{token.STRING, `"${replace(var.foo, ".", "\\.")}"`},
 		{token.RBRACE, `}`},
 		{token.IDENT, `resource`},
 		{token.STRING, `"aws_security_group"`},
@@ -435,6 +449,15 @@ EOF
 		{token.ASSIGN, `=`},
 		{token.HEREDOC, "<<EOF\nMain interface\nEOF\n"},
 		{token.RBRACE, `}`},
+		{token.IDENT, `network_interface`},
+		{token.LBRACE, `{`},
+		{token.IDENT, `device_index`},
+		{token.ASSIGN, `=`},
+		{token.NUMBER, `1`},
+		{token.IDENT, `description`},
+		{token.ASSIGN, `=`},
+		{token.HEREDOC, "<<-EOF\n\t\t\tOuter text\n\t\t\t\tIndented text\n\t\t\tEOF\n"},
+		{token.RBRACE, `}`},
 		{token.RBRACE, `}`},
 		{token.EOF, ``},
 	}
@@ -447,7 +470,37 @@ EOF
 		}
 
 		if l.literal != tok.Text {
-			t.Errorf("got: %s want %s\n", tok, l.literal)
+			t.Errorf("got:\n%+v\n%s\n want:\n%+v\n%s\n", []byte(tok.String()), tok, []byte(l.literal), l.literal)
+		}
+	}
+
+}
+
+func TestScan_crlf(t *testing.T) {
+	complexHCL := "foo {\r\n  bar = \"baz\"\r\n}\r\n"
+
+	literals := []struct {
+		tokenType token.Type
+		literal   string
+	}{
+		{token.IDENT, `foo`},
+		{token.LBRACE, `{`},
+		{token.IDENT, `bar`},
+		{token.ASSIGN, `=`},
+		{token.STRING, `"baz"`},
+		{token.RBRACE, `}`},
+		{token.EOF, ``},
+	}
+
+	s := New([]byte(complexHCL))
+	for _, l := range literals {
+		tok := s.Scan()
+		if l.tokenType != tok.Type {
+			t.Errorf("got: %s want %s for %s\n", tok, l.tokenType, tok.String())
+		}
+
+		if l.literal != tok.Text {
+			t.Errorf("got:\n%+v\n%s\n want:\n%+v\n%s\n", []byte(tok.String()), tok, []byte(l.literal), l.literal)
 		}
 	}
 
@@ -456,9 +509,12 @@ EOF
 func TestError(t *testing.T) {
 	testError(t, "\x80", "1:1", "illegal UTF-8 encoding", token.ILLEGAL)
 	testError(t, "\xff", "1:1", "illegal UTF-8 encoding", token.ILLEGAL)
+	testError(t, "\uE123", "1:1", "unicode code point U+E123 reserved for internal use", token.ILLEGAL)
 
 	testError(t, "ab\x80", "1:3", "illegal UTF-8 encoding", token.IDENT)
 	testError(t, "abc\xff", "1:4", "illegal UTF-8 encoding", token.IDENT)
+	testError(t, "ab\x00", "1:3", "unexpected null character (0x00)", token.IDENT)
+	testError(t, "ab\x00\n", "1:3", "unexpected null character (0x00)", token.IDENT)
 
 	testError(t, `"ab`+"\x80", "1:4", "illegal UTF-8 encoding", token.STRING)
 	testError(t, `"abc`+"\xff", "1:5", "illegal UTF-8 encoding", token.STRING)
@@ -472,7 +528,12 @@ func TestError(t *testing.T) {
 	testError(t, `"`, "1:2", "literal not terminated", token.STRING)
 	testError(t, `"abc`, "1:5", "literal not terminated", token.STRING)
 	testError(t, `"abc`+"\n", "1:5", "literal not terminated", token.STRING)
+	testError(t, `"${abc`+"\n", "2:1", "literal not terminated", token.STRING)
 	testError(t, `/*/`, "1:4", "comment not terminated", token.COMMENT)
+	testError(t, `/foo`, "1:1", "expected '/' for comment", token.COMMENT)
+
+	testError(t, "<<\nfoo\n\n", "1:3", "zero-length heredoc anchor", token.HEREDOC)
+	testError(t, "<<-\nfoo\n\n", "1:4", "zero-length heredoc anchor", token.HEREDOC)
 }
 
 func testError(t *testing.T, src, pos, msg string, tok token.Type) {
@@ -533,4 +594,49 @@ func countNewlines(s string) int {
 		}
 	}
 	return n
+}
+
+func TestScanDigitsUnread(t *testing.T) {
+	cases := []string{
+		"M=0\"\\00",
+		"M=\"\\00",
+		"\"\\00",
+		"M=[\"\\00",
+		"U{\"\\00",
+		"\"\n{}#\n\"\\00",
+		"M=[[\"\\00",
+		"U{d=0\"\\U00",
+		"#\n\"\\x00",
+		"m=[[[\"\\00",
+	}
+
+	for _, c := range cases {
+		s := New([]byte(c))
+
+		for {
+			tok := s.Scan()
+			if tok.Type == token.EOF {
+				break
+			}
+			t.Logf("s.Scan() = %s", tok)
+		}
+	}
+}
+
+func TestScanHeredocRegexpCompile(t *testing.T) {
+	cases := []string{
+		"0\xe1\n<<ȸ\nhello\nworld\nȸ",
+	}
+
+	for _, c := range cases {
+		s := New([]byte(c))
+
+		for {
+			tok := s.Scan()
+			if tok.Type == token.EOF {
+				break
+			}
+			t.Logf("s.Scan() = %s", tok)
+		}
+	}
 }

@@ -268,6 +268,9 @@ __doctl_bash_source <(__doctl_convert_bash_to_zsh)
 	}
 
 	_, err = buf.Write([]byte(zshInit))
+	if err != nil {
+		return fmt.Errorf("error while generating zsh completion: %v", err)
+	}
 
 	err = DoitCmd.GenBashCompletion(&buf)
 	if err != nil {

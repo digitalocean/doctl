@@ -55,7 +55,7 @@ type level int8
 const implicitLevel level = -1
 
 // in returns if x is equal to any of the values in set.
-func (c class) in(set ...class) bool {
+func (c Class) in(set ...Class) bool {
 	for _, s := range set {
 		if c == s {
 			return true
@@ -66,7 +66,7 @@ func (c class) in(set ...class) bool {
 
 // A paragraph contains the state of a paragraph.
 type paragraph struct {
-	initialTypes []class
+	initialTypes []Class
 
 	// Arrays of properties needed for paired bracket evaluation in N0
 	pairTypes  []bracketType // paired Bracket types for paragraph
@@ -75,7 +75,7 @@ type paragraph struct {
 	embeddingLevel level // default: = implicitLevel;
 
 	// at the paragraph levels
-	resultTypes  []class
+	resultTypes  []Class
 	resultLevels []level
 
 	// Index of matching PDI for isolate initiator characters. For other
@@ -99,20 +99,20 @@ type paragraph struct {
 // may be supplied to encode embedding levels of styled text.
 //
 // TODO: return an error.
-func newParagraph(types []class, pairTypes []bracketType, pairValues []rune, levels level) *paragraph {
+func newParagraph(types []Class, pairTypes []bracketType, pairValues []rune, levels level) *paragraph {
 	validateTypes(types)
 	validatePbTypes(pairTypes)
 	validatePbValues(pairValues, pairTypes)
 	validateParagraphEmbeddingLevel(levels)
 
 	p := &paragraph{
-		initialTypes:   append([]class(nil), types...),
+		initialTypes:   append([]Class(nil), types...),
 		embeddingLevel: levels,
 
 		pairTypes:  pairTypes,
 		pairValues: pairValues,
 
-		resultTypes: append([]class(nil), types...),
+		resultTypes: append([]Class(nil), types...),
 	}
 	p.run()
 	return p
@@ -202,12 +202,12 @@ func (p *paragraph) determineMatchingIsolates() {
 	for i := range p.matchingPDI {
 		p.matchingPDI[i] = -1
 
-		if t := p.resultTypes[i]; t.in(_LRI, _RLI, _FSI) {
+		if t := p.resultTypes[i]; t.in(LRI, RLI, FSI) {
 			depthCounter := 1
 			for j := i + 1; j < p.Len(); j++ {
-				if u := p.resultTypes[j]; u.in(_LRI, _RLI, _FSI) {
+				if u := p.resultTypes[j]; u.in(LRI, RLI, FSI) {
 					depthCounter++
-				} else if u == _PDI {
+				} else if u == PDI {
 					if depthCounter--; depthCounter == 0 {
 						p.matchingPDI[i] = j
 						p.matchingIsolateInitiator[j] = i
@@ -228,14 +228,14 @@ func (p *paragraph) determineMatchingIsolates() {
 // Determines the paragraph level based on rules P2, P3. This is also used
 // in rule X5c to find if an FSI should resolve to LRI or RLI.
 func (p *paragraph) determineParagraphEmbeddingLevel(start, end int) level {
-	var strongType class = -1 // unknown
+	var strongType Class = unknownClass
 
 	// Rule P2.
 	for i := start; i < end; i++ {
-		if t := p.resultTypes[i]; t.in(_L, _AL, _R) {
+		if t := p.resultTypes[i]; t.in(L, AL, R) {
 			strongType = t
 			break
-		} else if t.in(_FSI, _LRI, _RLI) {
+		} else if t.in(FSI, LRI, RLI) {
 			i = p.matchingPDI[i] // skip over to the matching PDI
 			if i > end {
 				log.Panic("assert (i <= end)")
@@ -244,10 +244,10 @@ func (p *paragraph) determineParagraphEmbeddingLevel(start, end int) level {
 	}
 	// Rule P3.
 	switch strongType {
-	case -1: // none found
+	case unknownClass: // none found
 		// default embedding level when no strong types found is 0.
 		return 0
-	case _L:
+	case L:
 		return 0
 	default: // AL, R
 		return 1
@@ -261,7 +261,7 @@ const maxDepth = 125
 type directionalStatusStack struct {
 	stackCounter        int
 	embeddingLevelStack [maxDepth + 1]level
-	overrideStatusStack [maxDepth + 1]class
+	overrideStatusStack [maxDepth + 1]Class
 	isolateStatusStack  [maxDepth + 1]bool
 }
 
@@ -269,7 +269,7 @@ func (s *directionalStatusStack) empty()     { s.stackCounter = 0 }
 func (s *directionalStatusStack) pop()       { s.stackCounter-- }
 func (s *directionalStatusStack) depth() int { return s.stackCounter }
 
-func (s *directionalStatusStack) push(level level, overrideStatus class, isolateStatus bool) {
+func (s *directionalStatusStack) push(level level, overrideStatus Class, isolateStatus bool) {
 	s.embeddingLevelStack[s.stackCounter] = level
 	s.overrideStatusStack[s.stackCounter] = overrideStatus
 	s.isolateStatusStack[s.stackCounter] = isolateStatus
@@ -280,7 +280,7 @@ func (s *directionalStatusStack) lastEmbeddingLevel() level {
 	return s.embeddingLevelStack[s.stackCounter-1]
 }
 
-func (s *directionalStatusStack) lastDirectionalOverrideStatus() class {
+func (s *directionalStatusStack) lastDirectionalOverrideStatus() Class {
 	return s.overrideStatusStack[s.stackCounter-1]
 }
 
@@ -294,21 +294,24 @@ func (p *paragraph) determineExplicitEmbeddingLevels() {
 	var overflowIsolateCount, overflowEmbeddingCount, validIsolateCount int
 
 	// Rule X1.
-	stack.push(p.embeddingLevel, _ON, false)
+	stack.push(p.embeddingLevel, ON, false)
 
 	for i, t := range p.resultTypes {
 		// Rules X2, X3, X4, X5, X5a, X5b, X5c
 		switch t {
-		case _RLE, _LRE, _RLO, _LRO, _RLI, _LRI, _FSI:
-			isIsolate := t.in(_RLI, _LRI, _FSI)
-			isRTL := t.in(_RLE, _RLO, _RLI)
+		case RLE, LRE, RLO, LRO, RLI, LRI, FSI:
+			isIsolate := t.in(RLI, LRI, FSI)
+			isRTL := t.in(RLE, RLO, RLI)
 
 			// override if this is an FSI that resolves to RLI
-			if t == _FSI {
+			if t == FSI {
 				isRTL = (p.determineParagraphEmbeddingLevel(i+1, p.matchingPDI[i]) == 1)
 			}
 			if isIsolate {
 				p.resultLevels[i] = stack.lastEmbeddingLevel()
+				if stack.lastDirectionalOverrideStatus() != ON {
+					p.resultTypes[i] = stack.lastDirectionalOverrideStatus()
+				}
 			}
 
 			var newLevel level
@@ -329,12 +332,12 @@ func (p *paragraph) determineExplicitEmbeddingLevels() {
 				// No check for valid stack counter, since the level check
 				// suffices.
 				switch t {
-				case _LRO:
-					stack.push(newLevel, _L, isIsolate)
-				case _RLO:
-					stack.push(newLevel, _R, isIsolate)
+				case LRO:
+					stack.push(newLevel, L, isIsolate)
+				case RLO:
+					stack.push(newLevel, R, isIsolate)
 				default:
-					stack.push(newLevel, _ON, isIsolate)
+					stack.push(newLevel, ON, isIsolate)
 				}
 				// Not really part of the spec
 				if !isIsolate {
@@ -353,7 +356,7 @@ func (p *paragraph) determineExplicitEmbeddingLevels() {
 			}
 
 		// Rule X6a
-		case _PDI:
+		case PDI:
 			if overflowIsolateCount > 0 {
 				overflowIsolateCount--
 			} else if validIsolateCount == 0 {
@@ -369,7 +372,7 @@ func (p *paragraph) determineExplicitEmbeddingLevels() {
 			p.resultLevels[i] = stack.lastEmbeddingLevel()
 
 		// Rule X7
-		case _PDF:
+		case PDF:
 			// Not really part of the spec
 			p.resultLevels[i] = stack.lastEmbeddingLevel()
 
@@ -381,7 +384,7 @@ func (p *paragraph) determineExplicitEmbeddingLevels() {
 				stack.pop()
 			}
 
-		case _B: // paragraph separator.
+		case B: // paragraph separator.
 			// Rule X8.
 
 			// These values are reset for clarity, in this implementation B
@@ -394,7 +397,7 @@ func (p *paragraph) determineExplicitEmbeddingLevels() {
 
 		default:
 			p.resultLevels[i] = stack.lastEmbeddingLevel()
-			if stack.lastDirectionalOverrideStatus() != _ON {
+			if stack.lastDirectionalOverrideStatus() != ON {
 				p.resultTypes[i] = stack.lastDirectionalOverrideStatus()
 			}
 		}
@@ -406,10 +409,10 @@ type isolatingRunSequence struct {
 
 	indexes []int // indexes to the original string
 
-	types          []class // type of each character using the index
+	types          []Class // type of each character using the index
 	resolvedLevels []level // resolved levels after application of rules
 	level          level
-	sos, eos       class
+	sos, eos       Class
 }
 
 func (i *isolatingRunSequence) Len() int { return len(i.indexes) }
@@ -425,7 +428,7 @@ func maxLevel(a, b level) level {
 // 			 either L or R, for each isolating run sequence.
 func (p *paragraph) isolatingRunSequence(indexes []int) *isolatingRunSequence {
 	length := len(indexes)
-	types := make([]class, length)
+	types := make([]Class, length)
 	for i, x := range indexes {
 		types[i] = p.resultTypes[x]
 	}
@@ -442,7 +445,7 @@ func (p *paragraph) isolatingRunSequence(indexes []int) *isolatingRunSequence {
 
 	var succLevel level
 	lastType := types[length-1]
-	if lastType.in(_LRI, _RLI, _FSI) {
+	if lastType.in(LRI, RLI, FSI) {
 		succLevel = p.embeddingLevel
 	} else {
 		// the first character after the end of run sequence
@@ -473,17 +476,17 @@ func (p *paragraph) isolatingRunSequence(indexes []int) *isolatingRunSequence {
 func (s *isolatingRunSequence) resolveWeakTypes() {
 
 	// on entry, only these types remain
-	s.assertOnly(_L, _R, _AL, _EN, _ES, _ET, _AN, _CS, _B, _S, _WS, _ON, _NSM, _LRI, _RLI, _FSI, _PDI)
+	s.assertOnly(L, R, AL, EN, ES, ET, AN, CS, B, S, WS, ON, NSM, LRI, RLI, FSI, PDI)
 
 	// Rule W1.
 	// Changes all NSMs.
 	preceedingCharacterType := s.sos
 	for i, t := range s.types {
-		if t == _NSM {
+		if t == NSM {
 			s.types[i] = preceedingCharacterType
 		} else {
-			if t.in(_LRI, _RLI, _FSI, _PDI) {
-				preceedingCharacterType = _ON
+			if t.in(LRI, RLI, FSI, PDI) {
+				preceedingCharacterType = ON
 			}
 			preceedingCharacterType = t
 		}
@@ -492,11 +495,11 @@ func (s *isolatingRunSequence) resolveWeakTypes() {
 	// Rule W2.
 	// EN does not change at the start of the run, because sos != AL.
 	for i, t := range s.types {
-		if t == _EN {
+		if t == EN {
 			for j := i - 1; j >= 0; j-- {
-				if t := s.types[j]; t.in(_L, _R, _AL) {
-					if t == _AL {
-						s.types[i] = _AN
+				if t := s.types[j]; t.in(L, R, AL) {
+					if t == AL {
+						s.types[i] = AN
 					}
 					break
 				}
@@ -506,8 +509,8 @@ func (s *isolatingRunSequence) resolveWeakTypes() {
 
 	// Rule W3.
 	for i, t := range s.types {
-		if t == _AL {
-			s.types[i] = _R
+		if t == AL {
+			s.types[i] = R
 		}
 	}
 
@@ -526,37 +529,37 @@ func (s *isolatingRunSequence) resolveWeakTypes() {
 
 	for i := 1; i < s.Len()-1; i++ {
 		t := s.types[i]
-		if t == _ES || t == _CS {
+		if t == ES || t == CS {
 			prevSepType := s.types[i-1]
 			succSepType := s.types[i+1]
-			if prevSepType == _EN && succSepType == _EN {
-				s.types[i] = _EN
-			} else if s.types[i] == _CS && prevSepType == _AN && succSepType == _AN {
-				s.types[i] = _AN
+			if prevSepType == EN && succSepType == EN {
+				s.types[i] = EN
+			} else if s.types[i] == CS && prevSepType == AN && succSepType == AN {
+				s.types[i] = AN
 			}
 		}
 	}
 
 	// Rule W5.
 	for i, t := range s.types {
-		if t == _ET {
+		if t == ET {
 			// locate end of sequence
 			runStart := i
-			runEnd := s.findRunLimit(runStart, _ET)
+			runEnd := s.findRunLimit(runStart, ET)
 
 			// check values at ends of sequence
 			t := s.sos
 			if runStart > 0 {
 				t = s.types[runStart-1]
 			}
-			if t != _EN {
+			if t != EN {
 				t = s.eos
 				if runEnd < len(s.types) {
 					t = s.types[runEnd]
 				}
 			}
-			if t == _EN {
-				setTypes(s.types[runStart:runEnd], _EN)
+			if t == EN {
+				setTypes(s.types[runStart:runEnd], EN)
 			}
 			// continue at end of sequence
 			i = runEnd
@@ -565,25 +568,25 @@ func (s *isolatingRunSequence) resolveWeakTypes() {
 
 	// Rule W6.
 	for i, t := range s.types {
-		if t.in(_ES, _ET, _CS) {
-			s.types[i] = _ON
+		if t.in(ES, ET, CS) {
+			s.types[i] = ON
 		}
 	}
 
 	// Rule W7.
 	for i, t := range s.types {
-		if t == _EN {
+		if t == EN {
 			// set default if we reach start of run
 			prevStrongType := s.sos
 			for j := i - 1; j >= 0; j-- {
 				t = s.types[j]
-				if t == _L || t == _R { // AL's have been changed to R
+				if t == L || t == R { // AL's have been changed to R
 					prevStrongType = t
 					break
 				}
 			}
-			if prevStrongType == _L {
-				s.types[i] = _L
+			if prevStrongType == L {
+				s.types[i] = L
 			}
 		}
 	}
@@ -593,17 +596,17 @@ func (s *isolatingRunSequence) resolveWeakTypes() {
 func (s *isolatingRunSequence) resolveNeutralTypes() {
 
 	// on entry, only these types can be in resultTypes
-	s.assertOnly(_L, _R, _EN, _AN, _B, _S, _WS, _ON, _RLI, _LRI, _FSI, _PDI)
+	s.assertOnly(L, R, EN, AN, B, S, WS, ON, RLI, LRI, FSI, PDI)
 
 	for i, t := range s.types {
 		switch t {
-		case _WS, _ON, _B, _S, _RLI, _LRI, _FSI, _PDI:
+		case WS, ON, B, S, RLI, LRI, FSI, PDI:
 			// find bounds of run of neutrals
 			runStart := i
-			runEnd := s.findRunLimit(runStart, _B, _S, _WS, _ON, _RLI, _LRI, _FSI, _PDI)
+			runEnd := s.findRunLimit(runStart, B, S, WS, ON, RLI, LRI, FSI, PDI)
 
 			// determine effective types at ends of run
-			var leadType, trailType class
+			var leadType, trailType Class
 
 			// Note that the character found can only be L, R, AN, or
 			// EN.
@@ -611,20 +614,20 @@ func (s *isolatingRunSequence) resolveNeutralTypes() {
 				leadType = s.sos
 			} else {
 				leadType = s.types[runStart-1]
-				if leadType.in(_AN, _EN) {
-					leadType = _R
+				if leadType.in(AN, EN) {
+					leadType = R
 				}
 			}
 			if runEnd == len(s.types) {
 				trailType = s.eos
 			} else {
 				trailType = s.types[runEnd]
-				if trailType.in(_AN, _EN) {
-					trailType = _R
+				if trailType.in(AN, EN) {
+					trailType = R
 				}
 			}
 
-			var resolvedType class
+			var resolvedType Class
 			if leadType == trailType {
 				// Rule N1.
 				resolvedType = leadType
@@ -649,7 +652,7 @@ func setLevels(levels []level, newLevel level) {
 	}
 }
 
-func setTypes(types []class, newType class) {
+func setTypes(types []Class, newType Class) {
 	for i := range types {
 		types[i] = newType
 	}
@@ -659,7 +662,7 @@ func setTypes(types []class, newType class) {
 func (s *isolatingRunSequence) resolveImplicitLevels() {
 
 	// on entry, only these types can be in resultTypes
-	s.assertOnly(_L, _R, _EN, _AN)
+	s.assertOnly(L, R, EN, AN)
 
 	s.resolvedLevels = make([]level, len(s.types))
 	setLevels(s.resolvedLevels, s.level)
@@ -667,20 +670,20 @@ func (s *isolatingRunSequence) resolveImplicitLevels() {
 	if (s.level & 1) == 0 { // even level
 		for i, t := range s.types {
 			// Rule I1.
-			if t == _L {
+			if t == L {
 				// no change
-			} else if t == _R {
+			} else if t == R {
 				s.resolvedLevels[i] += 1
-			} else { // t == _AN || t == _EN
+			} else { // t == AN || t == EN
 				s.resolvedLevels[i] += 2
 			}
 		}
 	} else { // odd level
 		for i, t := range s.types {
 			// Rule I2.
-			if t == _R {
+			if t == R {
 				// no change
-			} else { // t == _L || t == _AN || t == _EN
+			} else { // t == L || t == AN || t == EN
 				s.resolvedLevels[i] += 1
 			}
 		}
@@ -699,7 +702,7 @@ func (s *isolatingRunSequence) applyLevelsAndTypes() {
 // Return the limit of the run consisting only of the types in validSet
 // starting at index. This checks the value at index, and will return
 // index if that value is not in validSet.
-func (s *isolatingRunSequence) findRunLimit(index int, validSet ...class) int {
+func (s *isolatingRunSequence) findRunLimit(index int, validSet ...Class) int {
 loop:
 	for ; index < len(s.types); index++ {
 		t := s.types[index]
@@ -715,7 +718,7 @@ loop:
 
 // Algorithm validation. Assert that all values in types are in the
 // provided set.
-func (s *isolatingRunSequence) assertOnly(codes ...class) {
+func (s *isolatingRunSequence) assertOnly(codes ...Class) {
 loop:
 	for i, t := range s.types {
 		for _, c := range codes {
@@ -723,7 +726,7 @@ loop:
 				continue loop
 			}
 		}
-		log.Panicf("invalid bidi code %s present in assertOnly at position %d", t, s.indexes[i])
+		log.Panicf("invalid bidi code %v present in assertOnly at position %d", t, s.indexes[i])
 	}
 }
 
@@ -777,7 +780,7 @@ func (p *paragraph) determineIsolatingRunSequences() []*isolatingRunSequence {
 
 	for _, run := range levelRuns {
 		first := run[0]
-		if p.initialTypes[first] != _PDI || p.matchingIsolateInitiator[first] == -1 {
+		if p.initialTypes[first] != PDI || p.matchingIsolateInitiator[first] == -1 {
 			currentRunSequence = nil
 			// int run = i;
 			for {
@@ -786,7 +789,7 @@ func (p *paragraph) determineIsolatingRunSequences() []*isolatingRunSequence {
 
 				last := currentRunSequence[len(currentRunSequence)-1]
 				lastT := p.initialTypes[last]
-				if lastT.in(_LRI, _RLI, _FSI) && p.matchingPDI[last] != p.Len() {
+				if lastT.in(LRI, RLI, FSI) && p.matchingPDI[last] != p.Len() {
 					run = levelRuns[runForCharacter[p.matchingPDI[last]]]
 				} else {
 					break
@@ -804,7 +807,7 @@ func (p *paragraph) determineIsolatingRunSequences() []*isolatingRunSequence {
 // as to avoid breaking level runs.
 func (p *paragraph) assignLevelsToCharactersRemovedByX9() {
 	for i, t := range p.initialTypes {
-		if t.in(_LRE, _RLE, _LRO, _RLO, _PDF, _BN) {
+		if t.in(LRE, RLE, LRO, RLO, PDF, BN) {
 			p.resultTypes[i] = t
 			p.resultLevels[i] = -1
 		}
@@ -855,7 +858,7 @@ func (p *paragraph) getLevels(linebreaks []int) []level {
 	// a series of WS values preceding S, the linebreak itself
 	// causes the reset.
 	for i, t := range p.initialTypes {
-		if t.in(_B, _S) {
+		if t.in(B, S) {
 			// Rule L1, clauses one and two.
 			result[i] = p.embeddingLevel
 
@@ -973,39 +976,39 @@ func computeReordering(levels []level) []int {
 
 // isWhitespace reports whether the type is considered a whitespace type for the
 // line break rules.
-func isWhitespace(c class) bool {
+func isWhitespace(c Class) bool {
 	switch c {
-	case _LRE, _RLE, _LRO, _RLO, _PDF, _LRI, _RLI, _FSI, _PDI, _BN, _WS:
+	case LRE, RLE, LRO, RLO, PDF, LRI, RLI, FSI, PDI, BN, WS:
 		return true
 	}
 	return false
 }
 
 // isRemovedByX9 reports whether the type is one of the types removed in X9.
-func isRemovedByX9(c class) bool {
+func isRemovedByX9(c Class) bool {
 	switch c {
-	case _LRE, _RLE, _LRO, _RLO, _PDF, _BN:
+	case LRE, RLE, LRO, RLO, PDF, BN:
 		return true
 	}
 	return false
 }
 
 // typeForLevel reports the strong type (L or R) corresponding to the level.
-func typeForLevel(level level) class {
+func typeForLevel(level level) Class {
 	if (level & 0x1) == 0 {
-		return _L
+		return L
 	}
-	return _R
+	return R
 }
 
 // TODO: change validation to not panic
 
-func validateTypes(types []class) {
+func validateTypes(types []Class) {
 	if len(types) == 0 {
 		log.Panic("types is null")
 	}
 	for i, t := range types[:len(types)-1] {
-		if t == _B {
+		if t == B {
 			log.Panicf("B type before end of paragraph at index: %d", i)
 		}
 	}

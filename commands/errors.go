@@ -74,13 +74,13 @@ func checkErr(err error, cmd ...*cobra.Command) {
 	errAction()
 }
 
-func warn(msg string) {
-	fmt.Fprintf(color.Output, "%s: %s\n\n", colorWarn, msg)
+func warn(msg string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s: %s\n\n", colorWarn, fmt.Sprintf(msg, args...))
 }
-func warnConfirm(msg string) {
-	fmt.Fprintf(color.Output, "%s: %s", colorWarn, msg)
+func warnConfirm(msg string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s: %s", colorWarn, fmt.Sprintf(msg, args...))
 }
 
-func notice(msg string) {
-	fmt.Fprintf(color.Output, "%s: %s\n\n", colorNotice, msg)
+func notice(msg string, args ...interface{}) {
+	fmt.Fprintf(color.Output, "%s: %s\n\n", colorNotice, fmt.Sprintf(msg, args...))
 }

@@ -275,7 +275,7 @@ func TestLoadBalancerRemoveForwardingRules(t *testing.T) {
 				TlsPassthrough: true,
 			},
 		}
-		tm.loadBalancers.On("RemoveForwardingRules", lbID, forwardingRules[0], forwardingRules[1] ).Return(nil)
+		tm.loadBalancers.On("RemoveForwardingRules", lbID, forwardingRules[0], forwardingRules[1]).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80 entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306,tls_passthrough:true")

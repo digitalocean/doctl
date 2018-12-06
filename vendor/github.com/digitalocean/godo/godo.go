@@ -65,6 +65,7 @@ type Client struct {
 	Certificates      CertificatesService
 	Firewalls         FirewallsService
 	Projects          ProjectsService
+	Kubernetes        KubernetesService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -178,6 +179,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Storage = &StorageServiceOp{client: c}
 	c.StorageActions = &StorageActionsServiceOp{client: c}
 	c.Tags = &TagsServiceOp{client: c}
+	c.Kubernetes = &KubernetesServiceOp{client: c}
 
 	return c
 }

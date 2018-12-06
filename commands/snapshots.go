@@ -77,7 +77,7 @@ func RunSnapshotList(c *CmdConfig) error {
 	}
 
 	var matchedList []do.Snapshot
-	list := []do.Snapshot{}
+	var list []do.Snapshot
 
 	if restype == "droplet" {
 		list, err = ss.ListDroplet()

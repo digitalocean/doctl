@@ -50,17 +50,28 @@ func TestUnmarshalMessageSetWithDuplicate(t *testing.T) {
 	}
 	t.Logf("Marshaled bytes: %q", b)
 
-	m := make(map[int32]Extension)
-	if err := UnmarshalMessageSet(b, m); err != nil {
+	var extensions XXX_InternalExtensions
+	if err := UnmarshalMessageSet(b, &extensions); err != nil {
 		t.Fatalf("UnmarshalMessageSet: %v", err)
 	}
-	ext, ok := m[12345]
+	ext, ok := extensions.p.extensionMap[12345]
 	if !ok {
-		t.Fatalf("Didn't retrieve extension 12345; map is %v", m)
+		t.Fatalf("Didn't retrieve extension 12345; map is %v", extensions.p.extensionMap)
 	}
 	// Skip wire type/field number and length varints.
 	got := skipVarint(skipVarint(ext.enc))
 	if want := []byte("hoohah"); !bytes.Equal(got, want) {
 		t.Errorf("Combined extension is %q, want %q", got, want)
+	}
+}
+
+func TestMarshalMessageSetJSON_UnknownType(t *testing.T) {
+	extMap := map[int32]Extension{12345: Extension{}}
+	got, err := MarshalMessageSetJSON(extMap)
+	if err != nil {
+		t.Fatalf("MarshalMessageSetJSON: %v", err)
+	}
+	if want := []byte("{}"); !bytes.Equal(got, want) {
+		t.Errorf("MarshalMessageSetJSON(%v) = %q, want %q", extMap, got, want)
 	}
 }

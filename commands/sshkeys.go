@@ -25,7 +25,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// SSHKeys creates the ssh key commands heirarchy.
+// SSHKeys creates the ssh key commands hierarchy.
 func SSHKeys() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -186,7 +186,6 @@ func RunKeyDelete(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
-	return nil
 }
 
 // RunKeyUpdate updates a key.

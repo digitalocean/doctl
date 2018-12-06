@@ -10,6 +10,10 @@ type Prefix struct {
 	Prefix string
 }
 
+func NewPrefix(p string) Prefix {
+	return Prefix{p}
+}
+
 func (self Prefix) Index(s string) (int, []int) {
 	idx := strings.Index(s, self.Prefix)
 	if idx == -1 {
@@ -24,7 +28,7 @@ func (self Prefix) Index(s string) (int, []int) {
 		sub = ""
 	}
 
-	segments := make([]int, 0, utf8.RuneCountInString(sub)+1)
+	segments := acquireSegments(len(sub) + 1)
 	segments = append(segments, length)
 	for i, r := range sub {
 		segments = append(segments, length+i+utf8.RuneLen(r))

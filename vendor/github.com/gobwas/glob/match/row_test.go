@@ -5,20 +5,6 @@ import (
 	"testing"
 )
 
-func BenchmarkRowIndex(b *testing.B) {
-	m := Row{
-		Matchers: Matchers{
-			NewText("abc"),
-			NewText("def"),
-			Single{},
-		},
-		RunesLength: 7,
-	}
-	for i := 0; i < b.N; i++ {
-		m.Index("abcdefghijk")
-	}
-}
-
 func TestRowIndex(t *testing.T) {
 	for id, test := range []struct {
 		matchers Matchers
@@ -31,7 +17,7 @@ func TestRowIndex(t *testing.T) {
 			Matchers{
 				NewText("abc"),
 				NewText("def"),
-				Single{},
+				NewSingle(nil),
 			},
 			7,
 			"qweabcdefghij",
@@ -42,7 +28,7 @@ func TestRowIndex(t *testing.T) {
 			Matchers{
 				NewText("abc"),
 				NewText("def"),
-				Single{},
+				NewSingle(nil),
 			},
 			7,
 			"abcd",
@@ -50,10 +36,7 @@ func TestRowIndex(t *testing.T) {
 			nil,
 		},
 	} {
-		p := Row{
-			Matchers:    test.matchers,
-			RunesLength: test.length,
-		}
+		p := NewRow(test.length, test.matchers...)
 		index, segments := p.Index(test.fixture)
 		if index != test.index {
 			t.Errorf("#%d unexpected index: exp: %d, act: %d", id, test.index, index)
@@ -62,4 +45,38 @@ func TestRowIndex(t *testing.T) {
 			t.Errorf("#%d unexpected segments: exp: %v, act: %v", id, test.segments, segments)
 		}
 	}
+}
+
+func BenchmarkRowIndex(b *testing.B) {
+	m := NewRow(
+		7,
+		Matchers{
+			NewText("abc"),
+			NewText("def"),
+			NewSingle(nil),
+		}...,
+	)
+
+	for i := 0; i < b.N; i++ {
+		_, s := m.Index(bench_pattern)
+		releaseSegments(s)
+	}
+}
+
+func BenchmarkIndexRowParallel(b *testing.B) {
+	m := NewRow(
+		7,
+		Matchers{
+			NewText("abc"),
+			NewText("def"),
+			NewSingle(nil),
+		}...,
+	)
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, s := m.Index(bench_pattern)
+			releaseSegments(s)
+		}
+	})
 }

@@ -34,7 +34,7 @@ func (a *Volume) JSON(out io.Writer) error {
 
 func (a *Volume) Cols() []string {
 	return []string{
-		"ID", "Name", "Size", "Region", "Filesystem Type", "Filesystem Label", "Droplet IDs",
+		"ID", "Name", "Size", "Region", "Filesystem Type", "Filesystem Label", "DropletIDs",
 	}
 }
 
@@ -46,7 +46,7 @@ func (a *Volume) ColMap() map[string]string {
 		"Region":           "Region",
 		"Filesystem Type":  "Filesystem Type",
 		"Filesystem Label": "Filesystem Label",
-		"Droplet IDs":      "Droplet IDs",
+		"DropletIDs":       "Droplet IDs",
 	}
 
 }

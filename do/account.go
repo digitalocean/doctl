@@ -14,8 +14,8 @@ limitations under the License.
 package do
 
 import (
-	"github.com/digitalocean/godo"
 	"context"
+	"github.com/digitalocean/godo"
 )
 
 // Account is a wrapper for godo.Account.

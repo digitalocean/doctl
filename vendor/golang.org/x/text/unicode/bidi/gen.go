@@ -27,31 +27,31 @@ func main() {
 
 // bidiClass names and codes taken from class "bc" in
 // http://www.unicode.org/Public/8.0.0/ucd/PropertyValueAliases.txt
-var bidiClass = map[string]class{
-	"AL":  _AL,  // ArabicLetter
-	"AN":  _AN,  // ArabicNumber
-	"B":   _B,   // ParagraphSeparator
-	"BN":  _BN,  // BoundaryNeutral
-	"CS":  _CS,  // CommonSeparator
-	"EN":  _EN,  // EuropeanNumber
-	"ES":  _ES,  // EuropeanSeparator
-	"ET":  _ET,  // EuropeanTerminator
-	"L":   _L,   // LeftToRight
-	"NSM": _NSM, // NonspacingMark
-	"ON":  _ON,  // OtherNeutral
-	"R":   _R,   // RightToLeft
-	"S":   _S,   // SegmentSeparator
-	"WS":  _WS,  // WhiteSpace
+var bidiClass = map[string]Class{
+	"AL":  AL,  // ArabicLetter
+	"AN":  AN,  // ArabicNumber
+	"B":   B,   // ParagraphSeparator
+	"BN":  BN,  // BoundaryNeutral
+	"CS":  CS,  // CommonSeparator
+	"EN":  EN,  // EuropeanNumber
+	"ES":  ES,  // EuropeanSeparator
+	"ET":  ET,  // EuropeanTerminator
+	"L":   L,   // LeftToRight
+	"NSM": NSM, // NonspacingMark
+	"ON":  ON,  // OtherNeutral
+	"R":   R,   // RightToLeft
+	"S":   S,   // SegmentSeparator
+	"WS":  WS,  // WhiteSpace
 
-	"FSI": classControl,
-	"PDF": classControl,
-	"PDI": classControl,
-	"LRE": classControl,
-	"LRI": classControl,
-	"LRO": classControl,
-	"RLE": classControl,
-	"RLI": classControl,
-	"RLO": classControl,
+	"FSI": Control,
+	"PDF": Control,
+	"PDI": Control,
+	"LRE": Control,
+	"LRI": Control,
+	"LRO": Control,
+	"RLE": Control,
+	"RLI": Control,
+	"RLO": Control,
 }
 
 func genTables() {
@@ -59,7 +59,7 @@ func genTables() {
 		log.Fatalf("Too many Class constants (%#x > 0x0F).", numClass)
 	}
 	w := gen.NewCodeWriter()
-	defer w.WriteGoFile(*outputFile, "bidi")
+	defer w.WriteVersionedGoFile(*outputFile, "bidi")
 
 	gen.WriteUnicodeVersion(w)
 
@@ -92,13 +92,13 @@ func genTables() {
 	})
 
 	w.WriteComment(`
-	xorMasks contains masks to be xor-ed with brackets to get the reverse 
+	xorMasks contains masks to be xor-ed with brackets to get the reverse
 	version.`)
 	w.WriteVar("xorMasks", xorMasks)
 
 	done := map[rune]bool{}
 
-	insert := func(r rune, c class) {
+	insert := func(r rune, c Class) {
 		if !done[r] {
 			t.Insert(r, orMask[r]|uint64(c))
 			done[r] = true

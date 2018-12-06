@@ -23,7 +23,6 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
-
 	"github.com/spf13/cobra"
 )
 

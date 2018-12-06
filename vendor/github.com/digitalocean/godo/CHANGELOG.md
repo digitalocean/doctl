@@ -1,5 +1,17 @@
 # Change Log
 
+## [v1.7.2] - 2018-12-04
+
+- #192 Exposes more options for Kubernetes clusters.
+
+## [v1.7.1] - 2018-11-27
+
+- #190 Expose constants for the state of Kubernetes clusters.
+
+## [v1.7.0] - 2018-11-13
+
+- #188 Kubernetes support [beta] - @aybabtme
+
 ## [v1.6.0] - 2018-10-16
 
 - #185 Projects support [beta] - @mchitten

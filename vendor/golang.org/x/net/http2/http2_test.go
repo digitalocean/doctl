@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"golang.org/x/net/http2/hpack"
 )
@@ -27,8 +28,9 @@ func condSkipFailingTest(t *testing.T) {
 }
 
 func init() {
+	inTests = true
 	DebugGoroutines = true
-	flag.BoolVar(&VerboseLogs, "verboseh2", false, "Verbose HTTP/2 debug logging")
+	flag.BoolVar(&VerboseLogs, "verboseh2", VerboseLogs, "Verbose HTTP/2 debug logging")
 }
 
 func TestSettingString(t *testing.T) {
@@ -65,7 +67,7 @@ func (w twriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-// like encodeHeader, but don't add implicit psuedo headers.
+// like encodeHeader, but don't add implicit pseudo headers.
 func encodeHeaderNoImplicit(t *testing.T, headers ...string) []byte {
 	var buf bytes.Buffer
 	enc := hpack.NewEncoder(&buf)
@@ -170,5 +172,109 @@ func kill(container string) {
 func cleanDate(res *http.Response) {
 	if d := res.Header["Date"]; len(d) == 1 {
 		d[0] = "XXX"
+	}
+}
+
+func TestSorterPoolAllocs(t *testing.T) {
+	ss := []string{"a", "b", "c"}
+	h := http.Header{
+		"a": nil,
+		"b": nil,
+		"c": nil,
+	}
+	sorter := new(sorter)
+
+	if allocs := testing.AllocsPerRun(100, func() {
+		sorter.SortStrings(ss)
+	}); allocs >= 1 {
+		t.Logf("SortStrings allocs = %v; want <1", allocs)
+	}
+
+	if allocs := testing.AllocsPerRun(5, func() {
+		if len(sorter.Keys(h)) != 3 {
+			t.Fatal("wrong result")
+		}
+	}); allocs > 0 {
+		t.Logf("Keys allocs = %v; want <1", allocs)
+	}
+}
+
+// waitCondition reports whether fn eventually returned true,
+// checking immediately and then every checkEvery amount,
+// until waitFor has elapsed, at which point it returns false.
+func waitCondition(waitFor, checkEvery time.Duration, fn func() bool) bool {
+	deadline := time.Now().Add(waitFor)
+	for time.Now().Before(deadline) {
+		if fn() {
+			return true
+		}
+		time.Sleep(checkEvery)
+	}
+	return false
+}
+
+// waitErrCondition is like waitCondition but with errors instead of bools.
+func waitErrCondition(waitFor, checkEvery time.Duration, fn func() error) error {
+	deadline := time.Now().Add(waitFor)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = fn(); err == nil {
+			return nil
+		}
+		time.Sleep(checkEvery)
+	}
+	return err
+}
+
+// Tests that http2.Server.IdleTimeout is initialized from
+// http.Server.{Idle,Read}Timeout. http.Server.IdleTimeout was
+// added in Go 1.8.
+func TestConfigureServerIdleTimeout_Go18(t *testing.T) {
+	const timeout = 5 * time.Second
+	const notThisOne = 1 * time.Second
+
+	// With a zero http2.Server, verify that it copies IdleTimeout:
+	{
+		s1 := &http.Server{
+			IdleTimeout: timeout,
+			ReadTimeout: notThisOne,
+		}
+		s2 := &Server{}
+		if err := ConfigureServer(s1, s2); err != nil {
+			t.Fatal(err)
+		}
+		if s2.IdleTimeout != timeout {
+			t.Errorf("s2.IdleTimeout = %v; want %v", s2.IdleTimeout, timeout)
+		}
+	}
+
+	// And that it falls back to ReadTimeout:
+	{
+		s1 := &http.Server{
+			ReadTimeout: timeout,
+		}
+		s2 := &Server{}
+		if err := ConfigureServer(s1, s2); err != nil {
+			t.Fatal(err)
+		}
+		if s2.IdleTimeout != timeout {
+			t.Errorf("s2.IdleTimeout = %v; want %v", s2.IdleTimeout, timeout)
+		}
+	}
+
+	// Verify that s1's IdleTimeout doesn't overwrite an existing setting:
+	{
+		s1 := &http.Server{
+			IdleTimeout: notThisOne,
+		}
+		s2 := &Server{
+			IdleTimeout: timeout,
+		}
+		if err := ConfigureServer(s1, s2); err != nil {
+			t.Fatal(err)
+		}
+		if s2.IdleTimeout != timeout {
+			t.Errorf("s2.IdleTimeout = %v; want %v", s2.IdleTimeout, timeout)
+		}
 	}
 }
