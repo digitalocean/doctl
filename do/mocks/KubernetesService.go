@@ -156,6 +156,52 @@ func (_m *KubernetesService) GetNodePool(clusterID string, poolID string) (*do.K
 	return r0, r1
 }
 
+// GetNodeSizes provides a mock function with given fields:
+func (_m *KubernetesService) GetNodeSizes() (do.KubernetesNodeSizes, error) {
+	ret := _m.Called()
+
+	var r0 do.KubernetesNodeSizes
+	if rf, ok := ret.Get(0).(func() do.KubernetesNodeSizes); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(do.KubernetesNodeSizes)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetRegions provides a mock function with given fields:
+func (_m *KubernetesService) GetRegions() (do.KubernetesRegions, error) {
+	ret := _m.Called()
+
+	var r0 do.KubernetesRegions
+	if rf, ok := ret.Get(0).(func() do.KubernetesRegions); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(do.KubernetesRegions)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetVersions provides a mock function with given fields:
 func (_m *KubernetesService) GetVersions() (do.KubernetesVersions, error) {
 	ret := _m.Called()

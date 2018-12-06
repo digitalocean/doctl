@@ -94,6 +94,8 @@ func TestKubernetesOptionsCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
 		"versions",
+		"regions",
+		"sizes",
 	)
 }
 
