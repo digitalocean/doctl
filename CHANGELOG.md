@@ -2,8 +2,11 @@
 
 All changes to `doctl` will be documented in this file.
 
-## [1.12.1] - UNRELEASED
+## [1.12.1] - 2018-12-09
 
+- #354 volumes: Fix droplet ID display when listing volumes - @adamwg
+- #357 Change snap to classic confinement - @itbm
+- #361 Update help for multi-argument commands - @bengadbois
 - #369 No longer require ip-address when creating domains - @andrewsomething
 - #372 Add handling of kubeconfig git files for kubernetes commands - @aybabtme
 - #379 Expose suitable regions, versions and node sizes in kubernetes commands - @aybabtme
