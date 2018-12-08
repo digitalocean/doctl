@@ -84,7 +84,7 @@ func Kubernetes() *Command {
 func kubernetesCluster() *Command {
 
 	const (
-		defaultNodeSize  = "s-1vcpu-1gb"
+		defaultNodeSize  = "s-1vcpu-2gb"
 		defaultNodeCount = 3
 		defaultRegion    = "nyc1"
 	)
