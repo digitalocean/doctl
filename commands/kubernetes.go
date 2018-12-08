@@ -15,6 +15,8 @@ package commands
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -251,7 +253,7 @@ func RunKubernetesClusterCreate(defaultNodeSize string, defaultNodeCount int) fu
 
 		if update {
 			notice("cluster created, fetching credentials")
-			tryUpdateKubeconfig(kube, cluster.ID)
+			tryUpdateKubeconfig(kube, cluster.ID, clusterName)
 		}
 
 		if wait {
@@ -275,7 +277,8 @@ func RunKubernetesClusterUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterIDorName := c.Args[0]
+	clusterID, err := clusterIDize(c.Kubernetes(), clusterIDorName)
 	if err != nil {
 		return err
 	}
@@ -293,13 +296,13 @@ func RunKubernetesClusterUpdate(c *CmdConfig) error {
 
 	if update {
 		notice("cluster updated, fetching new credentials")
-		tryUpdateKubeconfig(kube, clusterID)
+		tryUpdateKubeconfig(kube, clusterID, clusterIDorName)
 	}
 
 	return displayClusters(c, true, *cluster)
 }
 
-func tryUpdateKubeconfig(kube do.KubernetesService, clusterID string) {
+func tryUpdateKubeconfig(kube do.KubernetesService, clusterID, clusterName string) {
 	var (
 		kubeconfig []byte
 		err        error
@@ -319,7 +322,7 @@ func tryUpdateKubeconfig(kube do.KubernetesService, clusterID string) {
 			break
 		}
 	}
-	if err := writeOrAddToKubeconfig(kubeconfig); err != nil {
+	if err := writeOrAddToKubeconfig(clusterName, kubeconfig); err != nil {
 		warn("couldn't write cluster credentials: %v", err)
 	}
 }
@@ -398,6 +401,7 @@ func RunKubernetesKubeconfigSave(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	kube := c.Kubernetes()
+	idOrName := c.Args[0]
 	clusterID, err := clusterIDize(kube, c.Args[0])
 	if err != nil {
 		return err
@@ -406,7 +410,7 @@ func RunKubernetesKubeconfigSave(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := writeOrAddToKubeconfig(kubeconfig); err != nil {
+	if err := writeOrAddToKubeconfig(idOrName, kubeconfig); err != nil {
 		return err
 	}
 	return nil
@@ -810,7 +814,7 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	return nil
 }
 
-func writeOrAddToKubeconfig(kubeconfig []byte) error {
+func writeOrAddToKubeconfig(clusterIDOrName string, kubeconfig []byte) error {
 	remote, err := clientcmd.Load(kubeconfig)
 	if err != nil {
 		return err
@@ -820,8 +824,27 @@ func writeOrAddToKubeconfig(kubeconfig []byte) error {
 	if err != nil {
 		return err
 	}
+	catchExpiryDate := func(ai *clientcmdapi.AuthInfo) {
+		if len(ai.ClientCertificateData) == 0 {
+			return // auth info is probably not certificate based
+		}
+		block, _ := pem.Decode(ai.ClientCertificateData)
+		c, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			warn("bad certificate: %v", err)
+			return // auth info is probably not certificate based
+		}
+		if c.NotAfter.IsZero() {
+			return // doesn't expire
+		}
+		warn(
+			`cluster credentials will expire on %v, renew with: "doctl k8s kubeconfig save %s"`,
+			c.NotAfter.Format("2006-01-02 15:04:05 MST"),
+			clusterIDOrName,
+		)
+	}
 	notice("adding cluster credentials to kubeconfig file found in %q", kubectlDefaults.GlobalFile)
-	if err := mergeKubeconfig(remote, currentConfig); err != nil {
+	if err := mergeKubeconfig(remote, currentConfig, catchExpiryDate); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
 	}
 	return clientcmd.ModifyConfig(kubectlDefaults, *currentConfig, false)
@@ -847,7 +870,7 @@ func removeFromKubeconfig(kubeconfig []byte) error {
 // mergeKubeconfig merges a remote cluster's config file with a local config file,
 // assuming that the current context in the remote config file points to the
 // cluster details to add to the local config.
-func mergeKubeconfig(remote, local *clientcmdapi.Config) error {
+func mergeKubeconfig(remote, local *clientcmdapi.Config, authInfoCb func(*clientcmdapi.AuthInfo)) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
@@ -868,6 +891,10 @@ func mergeKubeconfig(remote, local *clientcmdapi.Config) error {
 		return fmt.Errorf("the remote config has no user entry named %q. This is a bug, please open a ticket with DigitalOcean!",
 			remoteCtx.AuthInfo,
 		)
+	}
+
+	if authInfoCb != nil {
+		authInfoCb(remoteAuthInfo)
 	}
 
 	local.Contexts[remote.CurrentContext] = remoteCtx
