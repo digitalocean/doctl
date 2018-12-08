@@ -38,6 +38,8 @@ const (
 	ArgClusterVersionSlug = "version"
 	// ArgClusterNodePool are a cluster's node pools arguments.
 	ArgClusterNodePool = "node-pool"
+	// ArgClusterTag is a cluster's tags arguments.
+	ArgClusterTag = "tag"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
 	ArgClusterUpdateKubeconfig = "update-kubeconfig"
 	// ArgNodePoolName is a cluster's node pool name argument.
