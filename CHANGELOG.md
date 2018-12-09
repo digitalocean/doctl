@@ -2,7 +2,7 @@
 
 All changes to `doctl` will be documented in this file.
 
-## [1.12.2] - UNRELEASED
+## [1.12.2] - 2018-12-09
 
 - #383 Fix bad default for cluster node sizes, improve help and warn of kubeconfig expiry date.
 

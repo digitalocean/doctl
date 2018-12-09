@@ -77,6 +77,13 @@ so first install mockery in your `GOPATH` then run the `script/regenmocks.sh` sc
 First, make sure the [CHANGELOG](https://github.com/digitalocean/doctl/blob/master/CHANGELOG.md)
 contains all changes for the version you're going to release.
 
+Update the version in:
+
+* README.md
+* doit.go
+* Dockerfile
+* snap/snapcraft.yml
+
 #### Setup
 
 To release `doctl`, you need to install:
@@ -101,7 +108,14 @@ then upload using `scripts/upload.sh <version>`.
 Finally, go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
 description to contain all changelog entries for this specific release.
 
-Also don't forget to update:
-- Dockerfile
-- snapcraft
-- [homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb)
+#### Homebrew
+
+Using the url and sha from the github release, update the 
+[homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).
+You can use `brew bump-formula-pr doctl`, or 
+
+1. fork `homebrew-core`
+1. create a branch named `doctl-<version>`
+1. update the url and the sha256 using the values for the archive in the github release
+1. commit your changes
+1. submit a PR to homebrew
