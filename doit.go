@@ -50,7 +50,7 @@ var (
 	DoitVersion = Version{
 		Major: 1,
 		Minor: 12,
-		Patch: 1,
+		Patch: 2,
 		Label: "dev",
 	}
 
