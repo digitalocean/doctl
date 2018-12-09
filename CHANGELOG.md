@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.12.2] - UNRELEASED
+
+- #383 Fix bad default for cluster node sizes, improve help and warn of kubeconfig expiry date.
+
 ## [1.12.1] - 2018-12-09
 
 - #354 volumes: Fix droplet ID display when listing volumes - @adamwg
