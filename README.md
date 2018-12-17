@@ -44,7 +44,7 @@ brew install doctl
 You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
 
 ```
-sudo snap install doctl --classic
+sudo snap install doctl
 ```
 -->
 
