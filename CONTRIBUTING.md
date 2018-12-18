@@ -79,7 +79,7 @@ so first install mockery in your `GOPATH` then run the `script/regenmocks.sh` sc
 To release `doctl`, you need to install:
 
 * [xgo](https://github.com/karalabe/xgo)
-* [github-release](https://github.com/aktau/github-release)
+* [gothub](https://github.com/itchio/gothub)
 
 And make them available in your `PATH`. You can use `go get -u` for both of them and add your
 `$GOPATH/bin` to your `PATH` so your scripts will find them.

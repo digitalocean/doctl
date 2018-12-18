@@ -6,8 +6,11 @@ if [[ -z "$tag" ]]; then
   echo "usage: $0 <tag>"
 fi
 
-github-release release \
+git tag -a -m "release ${tag}" && git push --tags
+
+gothub release \
   --user digitalocean \
   --repo doctl \
   --name "$tag" \
-  --pre-release --tag "$tag"
+  --tag "$tag" \
+  --pre-release
