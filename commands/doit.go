@@ -83,7 +83,7 @@ func init() {
 	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
 	DoitCmd.PersistentFlags().StringVarP(&ApiURL, "api-url", "u", "", "Override default API V2 endpoint")
-	DoitCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+	DoitCmd.PersistentFlags().BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
 
 	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", "", "authentication context name")
