@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.7.3] - UNRELEASED
+
+- #196 Expose tag support for creating Load Balancers.
+
 ## [v1.7.2] - 2018-12-04
 
 - #192 Exposes more options for Kubernetes clusters.
