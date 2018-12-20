@@ -59,7 +59,7 @@ func checkErr(err error, cmd ...*cobra.Command) {
 		if len(cmd) > 0 {
 			cmd[0].Help()
 		}
-		fmt.Fprintf(color.Output, "\n%s: %v\n", colorErr, err)
+		fmt.Fprintf(color.Output, "%s: %v\n", colorErr, err)
 	case "json":
 		es := outputErrors{
 			Errors: []outputError{
@@ -75,12 +75,12 @@ func checkErr(err error, cmd ...*cobra.Command) {
 }
 
 func warn(msg string, args ...interface{}) {
-	fmt.Fprintf(color.Output, "%s: %s\n\n", colorWarn, fmt.Sprintf(msg, args...))
+	fmt.Fprintf(color.Output, "%s: %s\n", colorWarn, fmt.Sprintf(msg, args...))
 }
 func warnConfirm(msg string, args ...interface{}) {
 	fmt.Fprintf(color.Output, "%s: %s", colorWarn, fmt.Sprintf(msg, args...))
 }
 
 func notice(msg string, args ...interface{}) {
-	fmt.Fprintf(color.Output, "%s: %s\n\n", colorNotice, fmt.Sprintf(msg, args...))
+	fmt.Fprintf(color.Output, "%s: %s\n", colorNotice, fmt.Sprintf(msg, args...))
 }
