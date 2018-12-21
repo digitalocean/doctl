@@ -16,10 +16,12 @@ package commands
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -33,6 +35,8 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/spf13/cobra"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientauthentication "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -144,9 +148,15 @@ func kubernetesKubeconfig() *Command {
 	}
 
 	CmdBuilder(cmd, RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "show a cluster's kubeconfig to standard out", Writer, aliasOpt("p", "g"))
+	cmdExecCredential := CmdBuilder(cmd, RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL print a cluster's exec credential", Writer, hiddenCmd())
+	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
 	CmdBuilder(cmd, RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "save a cluster's credentials to your local kubeconfig", Writer, aliasOpt("s"))
 	CmdBuilder(cmd, RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "remove a cluster's credentials from your local kubeconfig", Writer, aliasOpt("d", "rm"))
 	return cmd
+}
+
+func kubeconfigCachePath() string {
+	return filepath.Join(configHome(), "cache", "exec-credential")
 }
 
 func kubernetesNodePools() *Command {
@@ -322,7 +332,7 @@ func tryUpdateKubeconfig(kube do.KubernetesService, clusterID, clusterName strin
 			break
 		}
 	}
-	if err := writeOrAddToKubeconfig(clusterName, kubeconfig); err != nil {
+	if err := writeOrAddToKubeconfig(clusterID, kubeconfig); err != nil {
 		warn("couldn't write cluster credentials: %v", err)
 	}
 }
@@ -395,22 +405,173 @@ func RunKubernetesKubeconfigShow(c *CmdConfig) error {
 	return err
 }
 
+func cachedExecCredentialPath(id string) string {
+	return filepath.Join(kubeconfigCachePath(), id+".json")
+}
+
+// loadCachedExecCredential attempts to load the cached exec credential from disk. Never errors
+// Returns nil if there's no credential, if it failed to load it, or if it's expired.
+func loadCachedExecCredential(id string) (*clientauthentication.ExecCredential, error) {
+	path := cachedExecCredentialPath(id)
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	defer f.Close()
+
+	var execCredential *clientauthentication.ExecCredential
+	if err := json.NewDecoder(f).Decode(&execCredential); err != nil {
+		return nil, err
+	}
+
+	if execCredential.Status == nil {
+		// Invalid ExecCredential, remove it
+		err = os.Remove(path)
+		return nil, err
+	}
+
+	t := execCredential.Status.ExpirationTimestamp
+	if t.IsZero() || t.Time.Before(time.Now()) {
+		err = os.Remove(path)
+		return nil, err
+	}
+
+	return execCredential, nil
+}
+
+// cacheExecCredential caches an ExecCredential to the doctl cache directory
+func cacheExecCredential(id string, execCredential *clientauthentication.ExecCredential) error {
+	// Don't bother caching if there's no expiration set
+	if execCredential.Status.ExpirationTimestamp.IsZero() {
+		return nil
+	}
+
+	cachePath := kubeconfigCachePath()
+	if err := os.MkdirAll(cachePath, os.FileMode(0700)); err != nil {
+		return err
+	}
+
+	path := cachedExecCredentialPath(id)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, os.FileMode(0600))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return json.NewEncoder(f).Encode(execCredential)
+}
+
+// RunKubernetesKubeconfigExecCredential displays the exec credential. It is for internal use only.
+func RunKubernetesKubeconfigExecCredential(c *CmdConfig) error {
+	if len(c.Args) != 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	version, err := c.Doit.GetString(c.NS, doctl.ArgVersion)
+	if err != nil {
+		return err
+	}
+
+	if version != "v1beta1" {
+		return fmt.Errorf("invalid version %q expected 'v1beta1'", version)
+	}
+
+	kube := c.Kubernetes()
+
+	clusterID := c.Args[0]
+	execCredential, err := loadCachedExecCredential(clusterID)
+	if err != nil && Verbose {
+		warn("%v", err)
+	}
+
+	if execCredential != nil {
+		return json.NewEncoder(c.Out).Encode(execCredential)
+	}
+
+	kubeconfig, err := kube.GetKubeConfig(clusterID)
+	if err != nil {
+		if errResponse, ok := err.(*godo.ErrorResponse); ok {
+			return fmt.Errorf("failed to fetch credentials for cluster %q: %v", clusterID, errResponse.Message)
+		}
+		return err
+	}
+
+	config, err := clientcmd.Load(kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	execCredential, err = execCredentialFromConfig(config)
+	if err != nil {
+		return err
+	}
+
+	// Don't error out when caching credentials, just print it if we're being verbose
+	if err := cacheExecCredential(clusterID, execCredential); err != nil && Verbose {
+		warn("%v", err)
+	}
+
+	return json.NewEncoder(c.Out).Encode(execCredential)
+}
+
+func execCredentialFromConfig(config *clientcmdapi.Config) (*clientauthentication.ExecCredential, error) {
+	current := config.CurrentContext
+	context, ok := config.Contexts[current]
+	if !ok {
+		return nil, fmt.Errorf("received invalid config Context %q from API. Please file an issue at https://github.com/digitalocean/doctl/issues/new mentioning this error", current)
+	}
+
+	authInfo, ok := config.AuthInfos[context.AuthInfo]
+	if !ok {
+		return nil, fmt.Errorf("received invalid config AuthInfo %q from API. Please file an issue at https://github.com/digitalocean/doctl/issues/new mentioning this error", context.AuthInfo)
+	}
+
+	var t *metav1.Time
+	// Attempt to parse certificate to extract expiration. If it fails that's OK, maybe we've migrated to tokens
+	block, _ := pem.Decode(authInfo.ClientCertificateData)
+	if cert, err := x509.ParseCertificate(block.Bytes); err == nil && !cert.NotAfter.IsZero() {
+		// Expire the credentials 10 minutes before NotAfter to account for clock skew
+		t = &metav1.Time{cert.NotAfter.Add(-10 * time.Minute)}
+	}
+
+	execCredential := &clientauthentication.ExecCredential{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ExecCredential",
+			APIVersion: clientauthentication.SchemeGroupVersion.String(),
+		},
+		Status: &clientauthentication.ExecCredentialStatus{
+			ClientCertificateData: string(authInfo.ClientCertificateData),
+			ClientKeyData:         string(authInfo.ClientKeyData),
+			ExpirationTimestamp:   t,
+			Token:                 authInfo.Token,
+		},
+	}
+
+	return execCredential, nil
+}
+
 // RunKubernetesKubeconfigSave retrieves an existing kubernetes config and saves it to your local kubeconfig.
 func RunKubernetesKubeconfigSave(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	kube := c.Kubernetes()
-	idOrName := c.Args[0]
 	clusterID, err := clusterIDize(kube, c.Args[0])
 	if err != nil {
 		return err
 	}
+
 	kubeconfig, err := kube.GetKubeConfig(clusterID)
 	if err != nil {
 		return err
 	}
-	if err := writeOrAddToKubeconfig(idOrName, kubeconfig); err != nil {
+
+	if err := writeOrAddToKubeconfig(clusterID, kubeconfig); err != nil {
 		return err
 	}
 	return nil
@@ -814,7 +975,7 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	return nil
 }
 
-func writeOrAddToKubeconfig(clusterIDOrName string, kubeconfig []byte) error {
+func writeOrAddToKubeconfig(clusterID string, kubeconfig []byte) error {
 	remote, err := clientcmd.Load(kubeconfig)
 	if err != nil {
 		return err
@@ -824,27 +985,9 @@ func writeOrAddToKubeconfig(clusterIDOrName string, kubeconfig []byte) error {
 	if err != nil {
 		return err
 	}
-	catchExpiryDate := func(ai *clientcmdapi.AuthInfo) {
-		if len(ai.ClientCertificateData) == 0 {
-			return // auth info is probably not certificate based
-		}
-		block, _ := pem.Decode(ai.ClientCertificateData)
-		c, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			warn("bad certificate: %v", err)
-			return // auth info is probably not certificate based
-		}
-		if c.NotAfter.IsZero() {
-			return // doesn't expire
-		}
-		warn(
-			`cluster credentials will expire on %v, renew with: "doctl k8s kubeconfig save %s"`,
-			c.NotAfter.Format("2006-01-02 15:04:05 MST"),
-			clusterIDOrName,
-		)
-	}
+
 	notice("adding cluster credentials to kubeconfig file found in %q", kubectlDefaults.GlobalFile)
-	if err := mergeKubeconfig(remote, currentConfig, catchExpiryDate); err != nil {
+	if err := mergeKubeconfig(clusterID, remote, currentConfig); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
 	}
 	return clientcmd.ModifyConfig(kubectlDefaults, *currentConfig, false)
@@ -870,7 +1013,7 @@ func removeFromKubeconfig(kubeconfig []byte) error {
 // mergeKubeconfig merges a remote cluster's config file with a local config file,
 // assuming that the current context in the remote config file points to the
 // cluster details to add to the local config.
-func mergeKubeconfig(remote, local *clientcmdapi.Config, authInfoCb func(*clientcmdapi.AuthInfo)) error {
+func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
@@ -885,21 +1028,26 @@ func mergeKubeconfig(remote, local *clientcmdapi.Config, authInfoCb func(*client
 			remoteCtx.Cluster,
 		)
 	}
-	remoteAuthInfo, ok := remote.AuthInfos[remoteCtx.AuthInfo]
-	if !ok {
-		// this is a bug in the backend, we received incomplete/non-sensical data
-		return fmt.Errorf("the remote config has no user entry named %q. This is a bug, please open a ticket with DigitalOcean!",
-			remoteCtx.AuthInfo,
-		)
-	}
-
-	if authInfoCb != nil {
-		authInfoCb(remoteAuthInfo)
-	}
 
 	local.Contexts[remote.CurrentContext] = remoteCtx
 	local.Clusters[remoteCtx.Cluster] = remoteCluster
-	local.AuthInfos[remoteCtx.AuthInfo] = remoteAuthInfo
+
+	// configure kubectl to call doctl to retrieve credentials
+	local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
+		Exec: &clientcmdapi.ExecConfig{
+			APIVersion: clientauthentication.SchemeGroupVersion.String(),
+			Command:    os.Args[0],
+			Args: []string{
+				"kubernetes",
+				"cluster",
+				"kubeconfig",
+				"exec-credential",
+				"--version=v1beta1",
+				clusterID,
+			},
+		},
+	}
+
 	return nil
 }
 
