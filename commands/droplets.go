@@ -468,7 +468,23 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if len(c.Args) > 0 && tagName != "" {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
-		if force || AskForConfirm("delete droplet by \""+tagName+"\" tag") == nil {
+		// Collect affected Droplet IDs to show in confirmation message.
+		var affectedIDs string
+		list, err := ds.ListByTag(tagName)
+		if err != nil {
+			return err
+		}
+		if len(list) == 0 {
+			fmt.Fprintf(c.Out, fmt.Sprintf("nothing to delete: no droplets found by \"%s\" tag\n", tagName))
+			return nil
+		}
+		var ids []string
+		for _, droplet := range list {
+			ids = append(ids, strconv.Itoa(droplet.ID))
+		}
+		affectedIDs = strings.Join(ids, " ")
+
+		if force || AskForConfirm(fmt.Sprintf("delete droplet(s) by \"%s\" tag [affected ID(s): %s]", tagName, affectedIDs)) == nil {
 			return ds.DeleteByTag(tagName)
 		}
 		return nil

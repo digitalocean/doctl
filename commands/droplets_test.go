@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"strconv"
 	"testing"
 
@@ -158,8 +159,9 @@ func TestDropletDelete(t *testing.T) {
 	})
 }
 
-func TestDropletDeleteByTag(t *testing.T) {
+func TestDropletDeleteByTag_DropletsExist(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.On("ListByTag", "my-tag").Return(testDropletList, nil)
 		tm.droplets.On("DeleteByTag", "my-tag").Return(nil)
 
 		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
@@ -168,7 +170,21 @@ func TestDropletDeleteByTag(t *testing.T) {
 		err := RunDropletDelete(config)
 		assert.NoError(t, err)
 	})
+}
 
+func TestDropletDeleteByTag_DropletsMissing(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.On("ListByTag", "my-tag").Return(do.Droplets{}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
+		err := RunDropletDelete(config)
+		assert.NoError(t, err)
+		assert.Contains(t, buf.String(), "nothing to delete")
+	})
 }
 
 func TestDropletDeleteRepeatedID(t *testing.T) {
