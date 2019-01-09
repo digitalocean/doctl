@@ -115,7 +115,7 @@ func kubernetesCluster() *Command {
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest", `cluster version, possible values: see "doctl k8s options versions"`)
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "", defaultKubernetesNodeSize, `size of nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`), possible values: see "doctl k8s options sizes".`)
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "", strconv.Itoa(defaultKubernetesNodeCount), "number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
+	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "", defaultKubernetesNodeCount, "number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil, `cluster node pools, can be repeated to create multiple node pools at once (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
 format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
 	- name:   name of the node pool, must be unique in the cluster
@@ -175,12 +175,12 @@ func kubernetesNodePools() *Command {
 	cmdKubeNodePoolCreate := CmdBuilder(cmd, RunKubernetesNodePoolCreate, "create <cluster-id|cluster-name>", "create a new node pool for a cluster", Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "", "node pool name", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "", "size of nodes in the node pool (see `doctl k8s options sizes`)", requiredOpt())
-	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", "", "count of nodes in the node pool", requiredOpt())
+	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0, "count of nodes in the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgClusterTag, "", "", "tags to apply to the node pool, repeat to add multiple tags at once")
 
 	cmdKubeNodePoolUpdate := CmdBuilder(cmd, RunKubernetesNodePoolUpdate, "update <cluster-id|cluster-name> <pool-id|pool-name>", "update an existing node pool in a cluster", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "node pool name")
-	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", "", "count of nodes in the node pool")
+	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", 0, "count of nodes in the node pool")
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgClusterTag, "", "", "tags to apply to the node pool, repeat to add multiple tags at once")
 
 	cmdKubeNodePoolRecycle := CmdBuilder(cmd, RunKubernetesNodePoolRecycle, "recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
@@ -790,45 +790,42 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	r.Tags = tags
 
 	// node pools
-
-	nodePoolSize, err := c.Doit.GetString(c.NS, doctl.ArgSizeSlug)
-	if err != nil {
-		return err
-	}
-
-	nodePoolCount, err := c.Doit.GetInt(c.NS, doctl.ArgNodePoolCount)
-	if err != nil {
-		return err
-	}
-
 	nodePoolSpecs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgClusterNodePool)
 	if err != nil {
 		return err
 	}
 
-	switch {
-	case len(nodePoolSpecs) != 0 && (nodePoolSize != "" || nodePoolCount != 0):
-		return fmt.Errorf("flags %q and %q cannot be provided when %q is present", doctl.ArgSizeSlug, doctl.ArgNodePoolCount, doctl.ArgClusterNodePool)
-	case len(nodePoolSpecs) != 0:
-		nodePools, err := buildNodePoolCreateRequestsFromArgs(c, nodePoolSpecs, r.Name, defaultNodeSize, defaultNodeCount)
+	if len(nodePoolSpecs) == 0 {
+		nodePoolSize, err := c.Doit.GetString(c.NS, doctl.ArgSizeSlug)
 		if err != nil {
 			return err
 		}
-		r.NodePools = nodePools
-	default:
+
+		nodePoolCount, err := c.Doit.GetInt(c.NS, doctl.ArgNodePoolCount)
+		if err != nil {
+			return err
+		}
+
 		nodePoolName := r.Name + "-default-pool"
-		if nodePoolSize == "" {
-			nodePoolSize = defaultNodeSize
-		}
-		if nodePoolCount == 0 {
-			nodePoolCount = defaultNodeCount
-		}
 		r.NodePools = []*godo.KubernetesNodePoolCreateRequest{{
 			Name:  nodePoolName,
 			Size:  nodePoolSize,
 			Count: nodePoolCount,
 		}}
+
+		return nil
 	}
+
+	// multiple node pools
+	if c.Doit.IsSet(doctl.ArgSizeSlug) || c.Doit.IsSet(doctl.ArgNodePoolCount) {
+		return fmt.Errorf("flags %q and %q cannot be provided when %q is present", doctl.ArgSizeSlug, doctl.ArgNodePoolCount, doctl.ArgClusterNodePool)
+	}
+
+	nodePools, err := buildNodePoolCreateRequestsFromArgs(c, nodePoolSpecs, r.Name, defaultNodeSize, defaultNodeCount)
+	if err != nil {
+		return err
+	}
+	r.NodePools = nodePools
 
 	return nil
 }
