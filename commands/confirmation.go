@@ -25,8 +25,7 @@ func readUserInput(in io.Reader, message string) (string, error) {
 		return "", err
 	}
 
-	answer = strings.Replace(answer, "\r", "", 1)
-	answer = strings.Replace(answer, "\n", "", 1)
+	answer = strings.TrimRight(answer, "\r\n")
 
 	return strings.ToLower(answer), nil
 }
