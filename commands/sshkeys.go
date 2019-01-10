@@ -183,9 +183,9 @@ func RunKeyDelete(c *CmdConfig) error {
 	if force || AskForConfirm("delete ssh key") == nil {
 		rawKey := c.Args[0]
 		return ks.Delete(rawKey)
-	} else {
-		return fmt.Errorf("operation aborted")
 	}
+
+	return fmt.Errorf("operation aborted")
 }
 
 // RunKeyUpdate updates a key.

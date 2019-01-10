@@ -97,7 +97,7 @@ func RunVolumeAttach(c *CmdConfig) error {
 	return performVolumeAction(c, fn)
 }
 
-// RunVolumeDetachByDropletID detaches a volume by droplet ID
+// RunVolumeDetach detaches a volume by droplet ID
 func RunVolumeDetach(c *CmdConfig) error {
 	fn := func(das do.VolumeActionsService) (*do.Action, error) {
 		if len(c.Args) != 2 {

@@ -22,9 +22,8 @@ import (
 func configHome() string {
 	if xdgPath := os.Getenv("XDG_CONFIG_HOME"); xdgPath != "" {
 		return filepath.Join(xdgPath, "doctl")
-	} else {
-		return filepath.Join(homeDir(), ".config", "doctl")
 	}
+	return filepath.Join(homeDir(), ".config", "doctl")
 }
 
 func legacyConfigCheck() {

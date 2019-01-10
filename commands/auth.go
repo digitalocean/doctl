@@ -109,6 +109,8 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 	}
 }
 
+// RunAuthSwitch changes the default context and writes it to the
+// configuration.
 func RunAuthSwitch(c *CmdConfig) error {
 	context := Context
 	if context == "" {

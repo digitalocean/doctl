@@ -536,7 +536,7 @@ func execCredentialFromConfig(config *clientcmdapi.Config) (*clientauthenticatio
 	block, _ := pem.Decode(authInfo.ClientCertificateData)
 	if cert, err := x509.ParseCertificate(block.Bytes); err == nil && !cert.NotAfter.IsZero() {
 		// Expire the credentials 10 minutes before NotAfter to account for clock skew
-		t = &metav1.Time{cert.NotAfter.Add(-10 * time.Minute)}
+		t = &metav1.Time{Time: cert.NotAfter.Add(-10 * time.Minute)}
 	}
 
 	execCredential := &clientauthentication.ExecCredential{
@@ -1017,14 +1017,14 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config) error
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
-		return fmt.Errorf("the remote config has no context entry named %q. This is a bug, please open a ticket with DigitalOcean!",
+		return fmt.Errorf("the remote config has no context entry named %q -- this is a bug, please open a ticket with DigitalOcean",
 			remote.CurrentContext,
 		)
 	}
 	remoteCluster, ok := remote.Clusters[remoteCtx.Cluster]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
-		return fmt.Errorf("the remote config has no cluster entry named %q. This is a bug, please open a ticket with DigitalOcean!",
+		return fmt.Errorf("the remote config has no cluster entry named %q -- this is a bug, please open a ticket with DigitalOcean",
 			remoteCtx.Cluster,
 		)
 	}
@@ -1058,7 +1058,7 @@ func removeKubeconfig(remote, local *clientcmdapi.Config) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
-		return fmt.Errorf("the remote config has no context entry named %q. This is a bug, please open a ticket with DigitalOcean!",
+		return fmt.Errorf("the remote config has no context entry named %q -- this is a bug, please open a ticket with DigitalOcean",
 			remote.CurrentContext,
 		)
 	}

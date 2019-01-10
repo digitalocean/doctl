@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Projects creates the projects commands hierarchy.
 func Projects() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -57,6 +58,7 @@ func Projects() *Command {
 	return cmd
 }
 
+// ProjectResourcesCmd creates the project resources commands hierarchy.
 func ProjectResourcesCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -118,6 +120,7 @@ func RunProjectsCreate(c *CmdConfig) error {
 	return c.Display(&displayers.Project{Projects: do.Projects{*p}})
 }
 
+// RunProjectsUpdate updates an existing Project with a given configuration.
 func RunProjectsUpdate(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -138,6 +141,7 @@ func RunProjectsUpdate(c *CmdConfig) error {
 	return c.Display(&displayers.Project{Projects: do.Projects{*p}})
 }
 
+// RunProjectsDelete deletes a Project with a given configuration.
 func RunProjectsDelete(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -166,6 +170,7 @@ func RunProjectsDelete(c *CmdConfig) error {
 	return fmt.Errorf("operation aborted")
 }
 
+// RunProjectResourcesList lists the Projects.
 func RunProjectResourcesList(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -181,6 +186,7 @@ func RunProjectResourcesList(c *CmdConfig) error {
 	return c.Display(&displayers.ProjectResource{ProjectResources: list})
 }
 
+// RunProjectResourcesGet retrieves a Project Resource.
 func RunProjectResourcesGet(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -209,6 +215,7 @@ func RunProjectResourcesGet(c *CmdConfig) error {
 	}
 }
 
+// RunProjectResourcesAssign assigns a Project Resource.
 func RunProjectResourcesAssign(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)

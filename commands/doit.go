@@ -47,8 +47,8 @@ var DoitCmd = &Command{
 // Context holds the current auth context
 var Context string
 
-// ApiURL holds the API URL to use.
-var ApiURL string
+// APIURL holds the API URL to use.
+var APIURL string
 
 // Token holds the global authorization token.
 var Token string
@@ -82,7 +82,7 @@ func init() {
 	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.config/doctl/config.yaml)")
 	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
-	DoitCmd.PersistentFlags().StringVarP(&ApiURL, "api-url", "u", "", "Override default API V2 endpoint")
+	DoitCmd.PersistentFlags().StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
 	DoitCmd.PersistentFlags().BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
 
