@@ -74,6 +74,7 @@ func Droplet() *Command {
 	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Delete droplets by id or name", Writer,
 		aliasOpt("d", "del", "rm"), docCategories("droplet"))
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force droplet delete")
+	AddStringFlag(cmdRunDropletDelete, doctl.ArgTagName, "", "", "Tag name")
 
 	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id>", "get droplet", Writer,
 		aliasOpt("g"), displayerType(&displayers.Droplet{}), docCategories("droplet"))
@@ -468,7 +469,23 @@ func RunDropletDelete(c *CmdConfig) error {
 	} else if len(c.Args) > 0 && tagName != "" {
 		return fmt.Errorf("please specify droplets identifiers or a tag name")
 	} else if tagName != "" {
-		if force || AskForConfirm("delete droplet by \""+tagName+"\" tag") == nil {
+		// Collect affected Droplet IDs to show in confirmation message.
+		var affectedIDs string
+		list, err := ds.ListByTag(tagName)
+		if err != nil {
+			return err
+		}
+		if len(list) == 0 {
+			fmt.Fprintf(c.Out, fmt.Sprintf("nothing to delete: no droplets found by \"%s\" tag\n", tagName))
+			return nil
+		}
+		ids := make([]string, 0, len(list))
+		for _, droplet := range list {
+			ids = append(ids, strconv.Itoa(droplet.ID))
+		}
+		affectedIDs = strings.Join(ids, " ")
+
+		if force || AskForConfirm(fmt.Sprintf("delete droplet(s) by \"%s\" tag [affected ID(s): %s]", tagName, affectedIDs)) == nil {
 			return ds.DeleteByTag(tagName)
 		}
 		return nil
