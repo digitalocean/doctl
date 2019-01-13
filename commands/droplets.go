@@ -478,7 +478,7 @@ func RunDropletDelete(c *CmdConfig) error {
 			fmt.Fprintf(c.Out, fmt.Sprintf("nothing to delete: no droplets found by \"%s\" tag\n", tagName))
 			return nil
 		}
-		var ids []string
+		ids := make([]string, 0, len(list))
 		for _, droplet := range list {
 			ids = append(ids, strconv.Itoa(droplet.ID))
 		}
