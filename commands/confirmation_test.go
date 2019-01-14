@@ -2,9 +2,11 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAskForConfirmYes(t *testing.T) {
@@ -61,4 +63,28 @@ func TestAskForConfirmError(t *testing.T) {
 
 	err := AskForConfirm("test")
 	assert.Error(t, err)
+}
+
+func TestReadUserInput(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{
+			in:   "UNIX\n",
+			want: "unix",
+		},
+		{
+			in:   "Windows\r\n",
+			want: "windows",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			buf := strings.NewReader(tt.in)
+			answer, err := readUserInput(buf, "msg")
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, answer)
+		})
+	}
 }
