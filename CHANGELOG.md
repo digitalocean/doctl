@@ -2,6 +2,12 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.13.0] - UNRELEASED
+
+- #391 doks: Fix node-pool flags when creating cluster - @bouk
+- #388 errors: Don't print superfluous newlines when logging - @bouk
+- #387 k8s: Use ExecCredential for authentication - @bouk
+
 ## [1.12.2] - 2018-12-09
 
 - #383 Fix bad default for cluster node sizes, improve help and warn of kubeconfig expiry date.
