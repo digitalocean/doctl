@@ -4,6 +4,7 @@ All changes to `doctl` will be documented in this file.
 
 ## [1.13.0] - UNRELEASED
 
+- #393 Fix linter violations - @timoreimann
 - #391 doks: Fix node-pool flags when creating cluster - @bouk
 - #388 errors: Don't print superfluous newlines when logging - @bouk
 - #387 k8s: Use ExecCredential for authentication - @bouk
