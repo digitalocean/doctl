@@ -284,7 +284,7 @@ func fillStructFromStringSliceArgs(obj interface{}, s string) error {
 		if len(p) == 2 {
 			m[p[0]] = p[1]
 		} else {
-			return fmt.Errorf("Unexpected input value %v. Must be a key:value pair.", p)
+			return fmt.Errorf("Unexpected input value %v: must be a key:value pair", p)
 		}
 	}
 
@@ -341,11 +341,11 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 	r.Tag = tag
 
-	redirectHttpToHttps, err := c.Doit.GetBool(c.NS, doctl.ArgRedirectHttpToHttps)
+	redirectHTTPToHTTPS, err := c.Doit.GetBool(c.NS, doctl.ArgRedirectHttpToHttps)
 	if err != nil {
 		return err
 	}
-	r.RedirectHttpToHttps = redirectHttpToHttps
+	r.RedirectHttpToHttps = redirectHTTPToHTTPS
 
 	dropletIDsList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDropletIDs)
 	if err != nil {

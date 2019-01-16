@@ -577,21 +577,44 @@ func TestKubernetesLatestVersions(t *testing.T) {
 		{
 			name: "base case",
 			input: []do.KubernetesVersion{
-				{&godo.KubernetesVersion{Slug: "1.13.0-do.not.use", KubernetesVersion: "1.13.0"}},
-				{&godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
-				{&godo.KubernetesVersion{Slug: "1.12.1-do.2", KubernetesVersion: "1.12.1"}},
-				{&godo.KubernetesVersion{Slug: "1.12.1-do.1", KubernetesVersion: "1.12.1"}},
-				{&godo.KubernetesVersion{Slug: "1.11.1-do.2", KubernetesVersion: "1.11.1"}},
-				{&godo.KubernetesVersion{Slug: "1.11.1-do.1", KubernetesVersion: "1.11.1"}},
-				{&godo.KubernetesVersion{Slug: "1.10.7-gen2", KubernetesVersion: "1.10.7"}},
-				{&godo.KubernetesVersion{Slug: "1.10.7-gen1", KubernetesVersion: "1.10.7"}},
-				{&godo.KubernetesVersion{Slug: "1.10.7-gen0", KubernetesVersion: "1.10.7"}},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.13.0-do.not.use", KubernetesVersion: "1.13.0"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.2", KubernetesVersion: "1.12.1"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.11.1-do.2", KubernetesVersion: "1.11.1"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.11.1-do.1", KubernetesVersion: "1.11.1"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.10.7-gen2", KubernetesVersion: "1.10.7"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.10.7-gen1", KubernetesVersion: "1.10.7"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.10.7-gen0", KubernetesVersion: "1.10.7"},
+				},
 			},
 			want: []do.KubernetesVersion{
-				{&godo.KubernetesVersion{Slug: "1.10.7-gen2", KubernetesVersion: "1.10.7"}},
-				{&godo.KubernetesVersion{Slug: "1.11.1-do.2", KubernetesVersion: "1.11.1"}},
-				{&godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
-				{&godo.KubernetesVersion{Slug: "1.13.0-do.not.use", KubernetesVersion: "1.13.0"}},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.10.7-gen2", KubernetesVersion: "1.10.7"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.11.1-do.2", KubernetesVersion: "1.11.1"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"},
+				},
+				do.KubernetesVersion{
+					KubernetesVersion: &godo.KubernetesVersion{Slug: "1.13.0-do.not.use", KubernetesVersion: "1.13.0"},
+				},
 			},
 		},
 	}

@@ -129,9 +129,9 @@ func RunFloatingIPDelete(c *CmdConfig) error {
 	if force || AskForConfirm("delete floating IP") == nil {
 		ip := c.Args[0]
 		return fis.Delete(ip)
-	} else {
-		return fmt.Errorf("operation aborted")
 	}
+
+	return fmt.Errorf("operation aborted")
 }
 
 // RunFloatingIPList runs floating IP create.
