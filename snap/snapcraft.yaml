@@ -1,5 +1,5 @@
 name: doctl
-version: "1.12.2"
+version: "1.13.0"
 summary: A command line tool for DigitalOcean services
 description: doctl is a command line tool for DigitalOcean servics using the API.
 confinement: classic

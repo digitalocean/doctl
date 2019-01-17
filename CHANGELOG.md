@@ -2,7 +2,7 @@
 
 All changes to `doctl` will be documented in this file.
 
-## [1.13.0] - UNRELEASED
+## [1.13.0] - 2019-01-16
 
 - #393 Fix linter violations - @timoreimann
 - #391 doks: Fix node-pool flags when creating cluster - @bouk
