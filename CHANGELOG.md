@@ -2,6 +2,11 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.13.1] - UNRELEASED
+
+- #398 Link to docs to create a Github token - @bouk
+- #392 Simplify newline trimming in retrieveUserInput - @timoreimann
+
 ## [1.13.0] - 2019-01-16
 
 - #393 Fix linter violations - @timoreimann
