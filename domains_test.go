@@ -291,12 +291,12 @@ func TestDomains_EditRecordForDomainName(t *testing.T) {
 			t.Fatalf("decode json: %v", err)
 		}
 
-		testMethod(t, r, "PUT")
+		testMethod(t, r, http.MethodPut)
 		if !reflect.DeepEqual(v, editRequest) {
 			t.Errorf("Request body = %+v, expected %+v", v, editRequest)
 		}
 
-		fmt.Fprintf(w, `{"id":1}`)
+		fmt.Fprintf(w, `{"domain_record": {"id":1, "type": "CNAME", "name": "example"}}`)
 	})
 
 	record, _, err := client.Domains.EditRecord(ctx, "example.com", 1, editRequest)
@@ -304,7 +304,7 @@ func TestDomains_EditRecordForDomainName(t *testing.T) {
 		t.Errorf("Domains.EditRecord returned error: %v", err)
 	}
 
-	expected := &DomainRecord{ID: 1}
+	expected := &DomainRecord{ID: 1, Type: "CNAME", Name: "example"}
 	if !reflect.DeepEqual(record, expected) {
 		t.Errorf("Domains.EditRecord returned %+v, expected %+v", record, expected)
 	}
