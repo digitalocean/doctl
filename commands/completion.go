@@ -100,6 +100,9 @@ func RunCompletionBash(c *CmdConfig) error {
 func RunCompletionZsh(c *CmdConfig) error {
 	var buf bytes.Buffer
 
+	// zshHead is the header required to declare zsh completion
+	zshHead := "#compdef doctl\n"
+
 	// zshInit represents intialization code needed to convert bash completion
 	// code to zsh completion.
 	zshInit := `
@@ -151,14 +154,6 @@ __doctl_compgen() {
 
 __doctl_compopt() {
 	true # don't do anything. Not supported by bashcompinit in zsh
-}
-
-__doctl_declare() {
-	if [ "$1" == "-F" ]; then
-		whence -w "$@"
-	else
-		builtin declare "$@"
-	fi
 }
 
 __doctl_ltrim_colon_completions()
@@ -226,7 +221,6 @@ __doctl_quote() {
     fi
 }
 
-autoload -U +X compinit && compinit
 autoload -U +X bashcompinit && bashcompinit
 
 # use word boundary patterns for BSD or GNU sed
@@ -240,6 +234,7 @@ fi
 __doctl_convert_bash_to_zsh() {
 	sed \
 	-e 's/declare -F/whence -w/' \
+	-e 's/_get_comp_words_by_ref "\$@"/_get_comp_words_by_ref "\$*"/' \
 	-e 's/local \([a-zA-Z0-9_]*\)=/local \1; \1=/' \
 	-e 's/flags+=("\(--.*\)=")/flags+=("\1"); two_word_flags+=("\1")/' \
 	-e 's/must_have_one_flag+=("\(--.*\)=")/must_have_one_flag+=("\1")/' \
@@ -248,7 +243,7 @@ __doctl_convert_bash_to_zsh() {
 	-e "s/${LWORD}__ltrim_colon_completions${RWORD}/__doctl_ltrim_colon_completions/g" \
 	-e "s/${LWORD}compgen${RWORD}/__doctl_compgen/g" \
 	-e "s/${LWORD}compopt${RWORD}/__doctl_compopt/g" \
-	-e "s/${LWORD}declare${RWORD}/__doctl_declare/g" \
+	-e "s/${LWORD}declare${RWORD}/builtin declare/g" \
 	-e "s/\\\$(type${RWORD}/\$(__doctl_type/g" \
 	<<'BASH_COMPLETION_EOF'
 `
@@ -260,9 +255,15 @@ BASH_COMPLETION_EOF
 }
 
 __doctl_bash_source <(__doctl_convert_bash_to_zsh)
-	`
+_complete doctl 2>/dev/null
+`
 
-	_, err := buf.Write([]byte(doctlLicense))
+	_, err := buf.Write([]byte(zshHead))
+	if err != nil {
+		return fmt.Errorf("error while generating zsh completion: %v", err)
+	}
+
+	_, err = buf.Write([]byte(doctlLicense))
 	if err != nil {
 		return fmt.Errorf("error while generating zsh completion: %v", err)
 	}
