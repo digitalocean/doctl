@@ -6,6 +6,7 @@ All changes to `doctl` will be documented in this file.
 
 - #398 Link to docs to create a Github token - @bouk
 - #392 Simplify newline trimming in retrieveUserInput - @timoreimann
+- #401 k8s: Fetch credentials after cluster is provisioned - @bouk
 
 ## [1.13.0] - 2019-01-16
 
