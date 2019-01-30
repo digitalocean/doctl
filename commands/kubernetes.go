@@ -261,17 +261,17 @@ func RunKubernetesClusterCreate(defaultNodeSize string, defaultNodeCount int) fu
 			return err
 		}
 
-		if update {
-			notice("cluster created, fetching credentials")
-			tryUpdateKubeconfig(kube, cluster.ID, clusterName)
-		}
-
 		if wait {
 			notice("cluster is provisioning, waiting for cluster to be running")
 			cluster, err = waitForClusterRunning(kube, cluster.ID)
 			if err != nil {
 				warn("cluster didn't become running: %v", err)
 			}
+		}
+
+		if update {
+			notice("cluster created, fetching credentials")
+			tryUpdateKubeconfig(kube, cluster.ID, clusterName)
 		}
 
 		return displayClusters(c, true, *cluster)
