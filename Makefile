@@ -1,4 +1,4 @@
-.PHONE: build
+.PHONY: build
 export CGO=0
 
 my_d=$(shell pwd)
