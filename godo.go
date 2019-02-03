@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/google/go-querystring/query"
-	headerLink "github.com/tent/http-link-go"
 )
 
 const (
@@ -261,25 +260,6 @@ func newResponse(r *http.Response) *Response {
 	response.populateRate()
 
 	return &response
-}
-
-func (r *Response) links() (map[string]headerLink.Link, error) {
-	if linkText, ok := r.Response.Header["Link"]; ok {
-		links, err := headerLink.Parse(linkText[0])
-
-		if err != nil {
-			return nil, err
-		}
-
-		linkMap := map[string]headerLink.Link{}
-		for _, link := range links {
-			linkMap[link.Rel] = link
-		}
-
-		return linkMap, nil
-	}
-
-	return map[string]headerLink.Link{}, nil
 }
 
 // populateRate parses the rate related headers and populates the response Rate.
