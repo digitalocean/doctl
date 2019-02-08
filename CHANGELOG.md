@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.7.4] - 2019-02-08
+
+- #202 Allow tagging volumes - @mchitten
+
 ## [v1.7.3] - 2018-12-18
 
 - #196 Expose tag support for creating Load Balancers.

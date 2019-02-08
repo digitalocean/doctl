@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.6.0"
+	libraryVersion = "1.7.4"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
