@@ -37,6 +37,8 @@ const (
 	DropletResourceType ResourceType = "droplet"
 	//ImageResourceType holds the string representing our ResourceType of Image.
 	ImageResourceType ResourceType = "image"
+	//VolumeResourceType holds the string representing our ResourceType of Volume.
+	VolumeResourceType ResourceType = "volume"
 )
 
 // Resource represent a single resource for associating/disassociating with tags
@@ -51,6 +53,7 @@ type TaggedResources struct {
 	LastTaggedURI string                   `json:"last_tagged_uri,omitempty"`
 	Droplets      *TaggedDropletsResources `json:"droplets,omitempty"`
 	Images        *TaggedImagesResources   `json:"images"`
+	Volumes       *TaggedVolumesResources  `json:"volumes"`
 }
 
 // TaggedDropletsResources represent the droplet resources a tag is attached to
@@ -60,11 +63,14 @@ type TaggedDropletsResources struct {
 	LastTaggedURI string   `json:"last_tagged_uri,omitempty"`
 }
 
-// TaggedImagesResources represent the image resources a tag is attached to
-type TaggedImagesResources struct {
+// TaggedResourcesData represent the image resources a tag is attached to
+type TaggedResourcesData struct {
 	Count         int    `json:"count,float64,omitempty"`
 	LastTaggedURI string `json:"last_tagged_uri,omitempty"`
 }
+
+type TaggedImagesResources TaggedResourcesData
+type TaggedVolumesResources TaggedResourcesData
 
 // Tag represent DigitalOcean tag
 type Tag struct {
