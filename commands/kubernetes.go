@@ -1083,16 +1083,17 @@ func waitForClusterRunning(kube do.KubernetesService, clusterID string) (*do.Kub
 			}
 		}
 		cluster, err := kube.Get(clusterID)
-		if err != nil {
+		if err == nil {
+			failCount = 0
+		} else {
+			// Allow for transient API failures
+			failCount++
 			if failCount >= maxAPIFailures {
 				return nil, err
 			}
-			// tolerate transient API failures
-			time.Sleep(time.Second)
-		} else {
-			failCount = 0 // API responded, reset it's error counter
 		}
-		if cluster.Status == nil {
+
+		if cluster == nil || cluster.Status == nil {
 			time.Sleep(1 * time.Second)
 			continue
 		}
