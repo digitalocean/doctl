@@ -626,3 +626,17 @@ func TestKubernetesLatestVersions(t *testing.T) {
 		})
 	}
 }
+
+type nilCluster struct {
+	do.KubernetesService
+}
+
+func (n *nilCluster) Get(clusterID string) (*do.KubernetesCluster, error) {
+	return nil, fmt.Errorf("can't find %s", clusterID)
+}
+
+func Test_waitForClusterRunningDoesntPanicWithNilGet(t *testing.T) {
+	cluster, err := waitForClusterRunning(&nilCluster{}, "123")
+	require.Nil(t, cluster)
+	require.EqualError(t, err, "can't find 123")
+}
