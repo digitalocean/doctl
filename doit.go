@@ -15,6 +15,7 @@ package doctl
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -180,7 +181,7 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 	}
 
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
-	oauthClient := oauth2.NewClient(oauth2.NoContext, tokenSource)
+	oauthClient := oauth2.NewClient(context.Background(), tokenSource)
 
 	if trace {
 		r := newRecorder(oauthClient.Transport)

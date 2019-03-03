@@ -1,7 +1,6 @@
 package displayers
 
 import (
-	"fmt"
 	"io"
 	"strings"
 
@@ -102,7 +101,7 @@ func (clusters *KubernetesClusters) KV() []map[string]interface{} {
 			"Status":        cluster.Status.State,
 			"Created":       cluster.CreatedAt,
 			"Updated":       cluster.UpdatedAt,
-			"NodePools":     fmt.Sprintf(strings.Join(nodePools, " ")),
+			"NodePools":     strings.Join(nodePools, " "),
 		}
 		out = append(out, o)
 	}

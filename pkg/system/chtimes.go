@@ -39,9 +39,5 @@ func Chtimes(name string, atime time.Time, mtime time.Time) error {
 		mtime = unixMinTime
 	}
 
-	if err := os.Chtimes(name, atime, mtime); err != nil {
-		return err
-	}
-
-	return nil
+	return os.Chtimes(name, atime, mtime)
 }

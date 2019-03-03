@@ -571,10 +571,7 @@ func RunKubernetesKubeconfigSave(c *CmdConfig) error {
 		return err
 	}
 
-	if err := writeOrAddToKubeconfig(clusterID, kubeconfig); err != nil {
-		return err
-	}
-	return nil
+	return writeOrAddToKubeconfig(clusterID, kubeconfig)
 }
 
 // RunKubernetesKubeconfigRemove retrieves an existing kubernetes config and removes it from your local kubeconfig.
@@ -591,10 +588,8 @@ func RunKubernetesKubeconfigRemove(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if err := removeFromKubeconfig(kubeconfig); err != nil {
-		return err
-	}
-	return nil
+
+	return removeFromKubeconfig(kubeconfig)
 }
 
 // Node Pools

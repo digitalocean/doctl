@@ -85,11 +85,11 @@ func (lb *LoadBalancer) KV() []map[string]interface{} {
 			"Algorithm":           l.Algorithm,
 			"Region":              l.Region.Slug,
 			"Tag":                 l.Tag,
-			"DropletIDs":          fmt.Sprintf(strings.Trim(strings.Replace(fmt.Sprint(l.DropletIDs), " ", ",", -1), "[]")),
+			"DropletIDs":          strings.Trim(strings.Replace(fmt.Sprint(l.DropletIDs), " ", ",", -1), "[]"),
 			"RedirectHttpToHttps": l.RedirectHttpToHttps,
 			"StickySessions":      prettyPrintStruct(l.StickySessions),
 			"HealthCheck":         prettyPrintStruct(l.HealthCheck),
-			"ForwardingRules":     fmt.Sprintf(strings.Join(forwardingRules, " ")),
+			"ForwardingRules":     strings.Join(forwardingRules, " "),
 		}
 		out = append(out, o)
 	}
