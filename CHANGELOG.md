@@ -1,6 +1,6 @@
 # Change Log
 
-## [v1.7.5] - 2019-02-08
+## [v1.7.5] - 2019-03-04
 
 - #207 Add support for custom subdomains for Spaces CDN [beta] - @xornivore
 
