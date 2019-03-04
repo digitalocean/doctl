@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.7.5] - 2019-02-08
+
+- #207 Add support for custom subdomains for Spaces CDN [beta] - @xornivore
+
 ## [v1.7.4] - 2019-02-08
 
 - #202 Allow tagging volumes - @mchitten
