@@ -195,7 +195,7 @@ const (
 	ArgLoadBalancerName = "name"
 	// ArgLoadBalancerAlgorithm is a load balancing algorithm.
 	ArgLoadBalancerAlgorithm = "algorithm"
-	// ArgRedirectHttpoHttps is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
+	// ArgRedirectHttpToHttps is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
 	ArgRedirectHttpToHttps = "redirect-http-to-https"
 	// ArgStickySessions is a list of sticky sessions settings for the load balancer.
 	ArgStickySessions = "sticky-sessions"
