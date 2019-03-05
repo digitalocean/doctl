@@ -171,6 +171,10 @@ const (
 
 	// ArgCDNTTL is a cdn ttl argument
 	ArgCDNTTL = "ttl"
+	// ArgCDNDomain is a cdn custom domain argument
+	ArgCDNDomain = "domain"
+	// ArgCDNCertificateID is a certificate id to use with a custom domain
+	ArgCDNCertificateID = "certificate-id"
 	// ArgCDNFiles is a cdn files argument
 	ArgCDNFiles = "files"
 
@@ -191,7 +195,7 @@ const (
 	ArgLoadBalancerName = "name"
 	// ArgLoadBalancerAlgorithm is a load balancing algorithm.
 	ArgLoadBalancerAlgorithm = "algorithm"
-	// ArgRedirectHttptoHttps is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
+	// ArgRedirectHttpoHttps is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
 	ArgRedirectHttpToHttps = "redirect-http-to-https"
 	// ArgStickySessions is a list of sticky sessions settings for the load balancer.
 	ArgStickySessions = "sticky-sessions"

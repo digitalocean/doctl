@@ -274,6 +274,7 @@ func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 func (c *TestConfig) Set(ns, key string, val interface{}) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	c.v.Set(nskey, val)
+	c.IsSetMap[key] = true
 }
 
 func (c *TestConfig) IsSet(key string) bool {

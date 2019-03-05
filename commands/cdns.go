@@ -40,6 +40,8 @@ func CDN() *Command {
 	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "create a cdn", Writer,
 		aliasOpt("c"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNCreate, doctl.ArgCDNTTL, "", 3600, "CDN ttl")
+	AddStringFlag(cmdCDNCreate, doctl.ArgCDNDomain, "", "", "cdn custom domain")
+	AddStringFlag(cmdCDNCreate, doctl.ArgCDNCertificateID, "", "", "certificate id for custom domain")
 
 	cmdRunCDNDelete := CmdBuilder(cmd, RunCDNDelete, "delete <cdn-id>", "delete a cdn", Writer,
 		aliasOpt("rm"))
@@ -48,9 +50,11 @@ func CDN() *Command {
 	CmdBuilder(cmd, RunCDNGet, "get <cdn-id>", "get a cdn", Writer, aliasOpt("g"),
 		displayerType(&displayers.CDN{}))
 
-	cmdCDNUpdate := CmdBuilder(cmd, RunCDNUpdateTTL, "update <cdn-id>", "update a cdn", Writer,
+	cmdCDNUpdate := CmdBuilder(cmd, RunCDNUpdate, "update <cdn-id>", "update a cdn", Writer,
 		aliasOpt("u"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNUpdate, doctl.ArgCDNTTL, "", 3600, "cdn ttl")
+	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNDomain, "", "", "cdn custom domain")
+	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNCertificateID, "", "", "certificate id for custom domain")
 
 	cmdCDNFlushCache := CmdBuilder(cmd, RunCDNFlushCache, "flush <cdn-id>", "flush cdn cache", Writer,
 		aliasOpt("fc"))
@@ -100,9 +104,16 @@ func RunCDNCreate(c *CmdConfig) error {
 		return errors.New("ttl cannot be zero or negative")
 	}
 
+	domain, certID, err := getCDNDomainAndCertID(c)
+	if err != nil {
+		return err
+	}
+
 	createCDN := &godo.CDNCreateRequest{
-		Origin: origin,
-		TTL:    uint32(ttl),
+		Origin:        origin,
+		TTL:           uint32(ttl),
+		CustomDomain:  domain,
+		CertificateID: certID,
 	}
 
 	item, err := c.CDNs().Create(createCDN)
@@ -113,8 +124,8 @@ func RunCDNCreate(c *CmdConfig) error {
 	return c.Display(&displayers.CDN{CDNs: []do.CDN{*item}})
 }
 
-// RunCDNUpdateTTL updates an individual cdn ttl
-func RunCDNUpdateTTL(c *CmdConfig) error {
+// RunCDNUpdate updates an individual cdn
+func RunCDNUpdate(c *CmdConfig) error {
 	if len(c.Args) == 0 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
@@ -123,22 +134,69 @@ func RunCDNUpdateTTL(c *CmdConfig) error {
 
 	cs := c.CDNs()
 
-	ttl, err := c.Doit.GetInt(c.NS, doctl.ArgCDNTTL)
+	var item *do.CDN
+	if c.Doit.IsSet(doctl.ArgCDNTTL) {
+		ttl, err := c.Doit.GetInt(c.NS, doctl.ArgCDNTTL)
+		if err != nil {
+			return err
+		}
+		if ttl <= 0 {
+			return errors.New("ttl cannot be zero or negative")
+		}
+
+		updateCDN := &godo.CDNUpdateTTLRequest{TTL: uint32(ttl)}
+
+		item, err = cs.UpdateTTL(id, updateCDN)
+		if err != nil {
+			return err
+		}
+	}
+
+	if c.Doit.IsSet(doctl.ArgCDNDomain) {
+		domain, certID, err := getCDNDomainAndCertID(c)
+		if err != nil {
+			return err
+		}
+
+		updateCDN := &godo.CDNUpdateCustomDomainRequest{
+			CustomDomain:  domain,
+			CertificateID: certID,
+		}
+
+		item, err = cs.UpdateCustomDomain(id, updateCDN)
+		if err != nil {
+			return err
+		}
+	}
+
+	if item != nil {
+		return c.Display(&displayers.CDN{CDNs: []do.CDN{*item}})
+	}
+
+	return errors.New("nothing to update")
+}
+
+func getCDNDomainAndCertID(c *CmdConfig) (string, string, error) {
+	var (
+		domain, certID string
+		err            error
+	)
+	domain, err = c.Doit.GetString(c.NS, doctl.ArgCDNDomain)
 	if err != nil {
-		return err
-	}
-	if ttl <= 0 {
-		return errors.New("ttl cannot be zero or negative")
+		return "", "", err
 	}
 
-	updateCDN := &godo.CDNUpdateRequest{TTL: uint32(ttl)}
+	if domain != "" {
+		certID, err = c.Doit.GetString(c.NS, doctl.ArgCDNCertificateID)
+		if err != nil {
+			return "", "", err
+		}
 
-	item, err := cs.UpdateTTL(id, updateCDN)
-	if err != nil {
-		return err
+		if certID == "" {
+			return "", "", errors.New("certificate id is required to set custom domain")
+		}
 	}
-
-	return c.Display(&displayers.CDN{CDNs: []do.CDN{*item}})
+	return domain, certID, err
 }
 
 // RunCDNDelete deletes a cdn.

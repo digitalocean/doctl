@@ -32,6 +32,9 @@ var (
 				},
 				"images": {
 					"count": 0
+				},
+				"volumes": {
+					"count": 0
 				}
 			}
 		},
@@ -44,6 +47,9 @@ var (
 					"last_tagged": null
 				},
 				"images": {
+					"count": 0
+				},
+				"volumes": {
 					"count": 0
 				}
 			}
@@ -74,6 +80,9 @@ var (
 					"last_tagged": null
 				},
 				"images": {
+					"count": 0
+				},
+				"volumes": {
 					"count": 0
 				}
 			}
@@ -176,6 +185,10 @@ var (
 				"images": {
 					"count": 1,
 					"last_tagged_uri": "https://api.digitalocean.com/v2/images/1"
+				},
+				"volumes": {
+					"count": 1,
+					"last_tagged_uri": "https://api.digitalocean.com/v2/volumes/abc"
 				}
 			}
 		}
@@ -197,8 +210,10 @@ func TestTags_List(t *testing.T) {
 		t.Errorf("Tags.List returned error: %v", err)
 	}
 
-	expected := []Tag{{Name: "testing-1", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}}},
-		{Name: "testing-2", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}}}}
+	expected := []Tag{
+		{Name: "testing-1", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}, Volumes: &TaggedVolumesResources{Count: 0}}},
+		{Name: "testing-2", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}, Volumes: &TaggedVolumesResources{Count: 0}}},
+	}
 	if !reflect.DeepEqual(tags, expected) {
 		t.Errorf("Tags.List returned %+v, expected %+v", tags, expected)
 	}
@@ -315,7 +330,15 @@ func TestTags_Create(t *testing.T) {
 		t.Errorf("Tags.Create returned error: %v", err)
 	}
 
-	expected := &Tag{Name: "testing-1", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}}}
+	expected := &Tag{
+		Name: "testing-1",
+		Resources: &TaggedResources{
+			Count:    0,
+			Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil},
+			Images:   &TaggedImagesResources{Count: 0},
+			Volumes:  &TaggedVolumesResources{Count: 0},
+		},
+	}
 	if !reflect.DeepEqual(tag, expected) {
 		t.Errorf("Tags.Create returned %+v, expected %+v", tag, expected)
 	}

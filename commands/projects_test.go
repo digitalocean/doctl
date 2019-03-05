@@ -96,14 +96,6 @@ func TestProjectsUpdateAllAttributes(t *testing.T) {
 		}
 		tm.projects.On("Update", projectUUID, updateReq).Return(&testProject, nil)
 
-		config.Doit.(*TestConfig).IsSetMap = map[string]bool{
-			doctl.ArgProjectName:        true,
-			doctl.ArgProjectDescription: true,
-			doctl.ArgProjectPurpose:     true,
-			doctl.ArgProjectEnvironment: true,
-			doctl.ArgProjectIsDefault:   true,
-		}
-
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgProjectName, "project name")
 		config.Doit.Set(config.NS, doctl.ArgProjectDescription, "project description")
@@ -128,14 +120,6 @@ func TestProjectsUpdateSomeAttributes(t *testing.T) {
 		}
 		tm.projects.On("Update", projectUUID, updateReq).Return(&testProject, nil)
 
-		config.Doit.(*TestConfig).IsSetMap = map[string]bool{
-			doctl.ArgProjectName:        true,
-			doctl.ArgProjectDescription: true,
-			doctl.ArgProjectPurpose:     false,
-			doctl.ArgProjectEnvironment: false,
-			doctl.ArgProjectIsDefault:   false,
-		}
-
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgProjectName, "project name")
 		config.Doit.Set(config.NS, doctl.ArgProjectDescription, "project description")
@@ -157,17 +141,8 @@ func TestProjectsUpdateOneAttribute(t *testing.T) {
 		}
 		tm.projects.On("Update", projectUUID, updateReq).Return(&testProject, nil)
 
-		config.Doit.(*TestConfig).IsSetMap = map[string]bool{
-			doctl.ArgProjectName:        true,
-			doctl.ArgProjectDescription: false,
-			doctl.ArgProjectPurpose:     false,
-			doctl.ArgProjectEnvironment: false,
-			doctl.ArgProjectIsDefault:   false,
-		}
-
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgProjectName, "project name")
-		config.Doit.Set(config.NS, doctl.ArgProjectDescription, "project description")
 
 		err := RunProjectsUpdate(config)
 		assert.NoError(t, err)

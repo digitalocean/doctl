@@ -138,7 +138,8 @@ var lbCreateJSONResponse = `
                 "storage"
             ],
             "available":true
-        },
+		},
+		"tags": ["my-tag"],
         "droplet_ids":[
             2,
             21
@@ -365,6 +366,7 @@ func TestLoadBalancers_Create(t *testing.T) {
 			CookieTtlSeconds: 5,
 		},
 		Tag:                 "my-tag",
+		Tags:                []string{"my-tag"},
 		DropletIDs:          []int{2, 21},
 		RedirectHttpToHttps: true,
 	}
@@ -433,6 +435,7 @@ func TestLoadBalancers_Create(t *testing.T) {
 			Available: true,
 			Features:  []string{"private_networking", "backups", "ipv6", "metadata", "storage"},
 		},
+		Tags:                []string{"my-tag"},
 		DropletIDs:          []int{2, 21},
 		RedirectHttpToHttps: true,
 	}

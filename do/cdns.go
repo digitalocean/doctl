@@ -16,7 +16,8 @@ type CDNsService interface {
 	List() ([]CDN, error)
 	Get(string) (*CDN, error)
 	Create(*godo.CDNCreateRequest) (*CDN, error)
-	UpdateTTL(string, *godo.CDNUpdateRequest) (*CDN, error)
+	UpdateTTL(string, *godo.CDNUpdateTTLRequest) (*CDN, error)
+	UpdateCustomDomain(string, *godo.CDNUpdateCustomDomainRequest) (*CDN, error)
 	FlushCache(string, *godo.CDNFlushCacheRequest) error
 	Delete(string) error
 }
@@ -78,8 +79,17 @@ func (c *cdnsService) Create(req *godo.CDNCreateRequest) (*CDN, error) {
 	return &CDN{CDN: cdn}, nil
 }
 
-func (c *cdnsService) UpdateTTL(id string, req *godo.CDNUpdateRequest) (*CDN, error) {
+func (c *cdnsService) UpdateTTL(id string, req *godo.CDNUpdateTTLRequest) (*CDN, error) {
 	cdn, _, err := c.client.CDNs.UpdateTTL(context.TODO(), id, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &CDN{CDN: cdn}, nil
+}
+
+func (c *cdnsService) UpdateCustomDomain(id string, req *godo.CDNUpdateCustomDomainRequest) (*CDN, error) {
+	cdn, _, err := c.client.CDNs.UpdateCustomDomain(context.TODO(), id, req)
 	if err != nil {
 		return nil, err
 	}

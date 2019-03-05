@@ -221,6 +221,54 @@ func TestCDN_CreateCDN(t *testing.T) {
 	}
 }
 
+func TestCDN_CreateCustomDomainCDN(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/cdn/endpoints", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPost)
+		fmt.Fprint(
+			w,
+			`{
+        "endpoint": {
+          "id": "12345",
+          "origin": "my-space.nyc3.digitaloceanspaces.com",
+          "endpoint": "my-space.nyc3.cdn.digitaloceanspaces.com",
+          "ttl": 3600,
+          "created_at": "2012-10-02T15:00:01.05Z",
+          "custom_domain": "assets.myacmecorp.com",
+          "certificate_id": "a20489cc-d278-48d2-8e10-45d42a312451"
+        }
+      }`,
+		)
+	})
+
+	req := &CDNCreateRequest{
+		Origin:        "my-space.nyc3.digitaloceanspaces.com",
+		TTL:           3600,
+		CustomDomain:  "assets.myacmecorp.com",
+		CertificateID: "a20489cc-d278-48d2-8e10-45d42a312451",
+	}
+	cdn, _, err := client.CDNs.Create(ctx, req)
+	if err != nil {
+		t.Errorf("CDNs.Create returned error: %v", err)
+	}
+
+	expected := &CDN{
+		ID:            "12345",
+		Origin:        "my-space.nyc3.digitaloceanspaces.com",
+		Endpoint:      "my-space.nyc3.cdn.digitaloceanspaces.com",
+		TTL:           3600,
+		CustomDomain:  "assets.myacmecorp.com",
+		CertificateID: "a20489cc-d278-48d2-8e10-45d42a312451",
+		CreatedAt:     time.Date(2012, 10, 02, 15, 00, 01, 50000000, time.UTC),
+	}
+
+	if !reflect.DeepEqual(cdn, expected) {
+		t.Errorf("CDNs.Create returned %+v, expected %+v", cdn, expected)
+	}
+}
+
 func TestCDN_DeleteCDN(t *testing.T) {
 	setup()
 	defer teardown()
@@ -255,8 +303,93 @@ func TestCDN_UpdateTTLCDN(t *testing.T) {
 		)
 	})
 
-	req := &CDNUpdateRequest{TTL: 60}
+	req := &CDNUpdateTTLRequest{TTL: 60}
 	cdn, _, err := client.CDNs.UpdateTTL(ctx, "12345", req)
+	if err != nil {
+		t.Errorf("CDNs.UpdateTTL returned error: %v", err)
+	}
+
+	expected := &CDN{
+		ID:        "12345",
+		Origin:    "my-space.nyc3.digitaloceanspaces.com",
+		Endpoint:  "my-space.nyc3.cdn.digitaloceanspaces.com",
+		TTL:       60,
+		CreatedAt: time.Date(2012, 10, 02, 15, 00, 01, 50000000, time.UTC),
+	}
+
+	if !reflect.DeepEqual(cdn, expected) {
+		t.Errorf("CDNs.UpdateTTL returned %+v, expected %+v", cdn, expected)
+	}
+}
+
+func TestCDN_UpdateAddCustomDomainCDN(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/cdn/endpoints/12345", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPut)
+		fmt.Fprint(
+			w,
+			`{
+        "endpoint": {
+          "id": "12345",
+          "origin": "my-space.nyc3.digitaloceanspaces.com",
+          "endpoint": "my-space.nyc3.cdn.digitaloceanspaces.com",
+          "ttl": 60,
+          "created_at": "2012-10-02T15:00:01.05Z",
+          "custom_domain": "assets.myacmecorp.com",
+          "certificate_id": "a20489cc-d278-48d2-8e10-45d42a312451"
+        }
+      }`,
+		)
+	})
+
+	req := &CDNUpdateCustomDomainRequest{
+		CustomDomain:  "assets.myacmecorp.com",
+		CertificateID: "a20489cc-d278-48d2-8e10-45d42a312451",
+	}
+	cdn, _, err := client.CDNs.UpdateCustomDomain(ctx, "12345", req)
+	if err != nil {
+		t.Errorf("CDNs.UpdateTTL returned error: %v", err)
+	}
+
+	expected := &CDN{
+		ID:            "12345",
+		Origin:        "my-space.nyc3.digitaloceanspaces.com",
+		Endpoint:      "my-space.nyc3.cdn.digitaloceanspaces.com",
+		CustomDomain:  "assets.myacmecorp.com",
+		CertificateID: "a20489cc-d278-48d2-8e10-45d42a312451",
+		TTL:           60,
+		CreatedAt:     time.Date(2012, 10, 02, 15, 00, 01, 50000000, time.UTC),
+	}
+
+	if !reflect.DeepEqual(cdn, expected) {
+		t.Errorf("CDNs.UpdateTTL returned %+v, expected %+v", cdn, expected)
+	}
+}
+
+func TestCDN_UpdateRemoveCustomDomainCDN(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/cdn/endpoints/12345", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPut)
+		fmt.Fprint(
+			w,
+			`{
+        "endpoint": {
+          "id": "12345",
+          "origin": "my-space.nyc3.digitaloceanspaces.com",
+          "endpoint": "my-space.nyc3.cdn.digitaloceanspaces.com",
+          "ttl": 60,
+          "created_at": "2012-10-02T15:00:01.05Z"
+        }
+      }`,
+		)
+	})
+
+	req := &CDNUpdateCustomDomainRequest{}
+	cdn, _, err := client.CDNs.UpdateCustomDomain(ctx, "12345", req)
 	if err != nil {
 		t.Errorf("CDNs.UpdateTTL returned error: %v", err)
 	}
