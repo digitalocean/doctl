@@ -9,12 +9,10 @@ import (
 	"github.com/russross/blackfriday"
 )
 
-type roffRenderer struct {
-	ListCounters []int
-}
+type roffRenderer struct{}
 
-// RoffRenderer creates a new blackfriday Renderer for generating roff documents
-// from markdown
+var listCounter int
+
 func RoffRenderer(flags int) blackfriday.Renderer {
 	return &roffRenderer{}
 }
@@ -57,7 +55,7 @@ func (r *roffRenderer) BlockQuote(out *bytes.Buffer, text []byte) {
 	out.WriteString("\n.RE\n")
 }
 
-func (r *roffRenderer) BlockHtml(out *bytes.Buffer, text []byte) { // nolint: golint
+func (r *roffRenderer) BlockHtml(out *bytes.Buffer, text []byte) {
 	out.Write(text)
 }
 
@@ -88,20 +86,19 @@ func (r *roffRenderer) HRule(out *bytes.Buffer) {
 
 func (r *roffRenderer) List(out *bytes.Buffer, text func() bool, flags int) {
 	marker := out.Len()
-	r.ListCounters = append(r.ListCounters, 1)
-	out.WriteString("\n.RS\n")
+	if flags&blackfriday.LIST_TYPE_ORDERED != 0 {
+		listCounter = 1
+	}
 	if !text() {
 		out.Truncate(marker)
 		return
 	}
-	r.ListCounters = r.ListCounters[:len(r.ListCounters)-1]
-	out.WriteString("\n.RE\n")
 }
 
 func (r *roffRenderer) ListItem(out *bytes.Buffer, text []byte, flags int) {
 	if flags&blackfriday.LIST_TYPE_ORDERED != 0 {
-		out.WriteString(fmt.Sprintf(".IP \"%3d.\" 5\n", r.ListCounters[len(r.ListCounters)-1]))
-		r.ListCounters[len(r.ListCounters)-1]++
+		out.WriteString(fmt.Sprintf(".IP \"%3d.\" 5\n", listCounter))
+		listCounter += 1
 	} else {
 		out.WriteString(".IP \\(bu 2\n")
 	}
@@ -124,16 +121,16 @@ func (r *roffRenderer) Paragraph(out *bytes.Buffer, text func() bool) {
 func (r *roffRenderer) Table(out *bytes.Buffer, header []byte, body []byte, columnData []int) {
 	out.WriteString("\n.TS\nallbox;\n")
 
-	maxDelims := 0
+	max_delims := 0
 	lines := strings.Split(strings.TrimRight(string(header), "\n")+"\n"+strings.TrimRight(string(body), "\n"), "\n")
 	for _, w := range lines {
-		curDelims := strings.Count(w, "\t")
-		if curDelims > maxDelims {
-			maxDelims = curDelims
+		cur_delims := strings.Count(w, "\t")
+		if cur_delims > max_delims {
+			max_delims = cur_delims
 		}
 	}
-	out.Write([]byte(strings.Repeat("l ", maxDelims+1) + "\n"))
-	out.Write([]byte(strings.Repeat("l ", maxDelims+1) + ".\n"))
+	out.Write([]byte(strings.Repeat("l ", max_delims+1) + "\n"))
+	out.Write([]byte(strings.Repeat("l ", max_delims+1) + ".\n"))
 	out.Write(header)
 	if len(header) > 0 {
 		out.Write([]byte("\n"))
@@ -218,7 +215,7 @@ func (r *roffRenderer) Link(out *bytes.Buffer, link []byte, title []byte, conten
 	r.AutoLink(out, link, 0)
 }
 
-func (r *roffRenderer) RawHtmlTag(out *bytes.Buffer, tag []byte) { // nolint: golint
+func (r *roffRenderer) RawHtmlTag(out *bytes.Buffer, tag []byte) {
 	out.Write(tag)
 }
 
@@ -237,6 +234,25 @@ func (r *roffRenderer) FootnoteRef(out *bytes.Buffer, ref []byte, id int) {
 
 func (r *roffRenderer) Entity(out *bytes.Buffer, entity []byte) {
 	out.WriteString(html.UnescapeString(string(entity)))
+}
+
+func processFooterText(text []byte) []byte {
+	text = bytes.TrimPrefix(text, []byte("% "))
+	newText := []byte{}
+	textArr := strings.Split(string(text), ") ")
+
+	for i, w := range textArr {
+		if i == 0 {
+			w = strings.Replace(w, "(", "\" \"", 1)
+			w = fmt.Sprintf("\"%s\"", w)
+		} else {
+			w = fmt.Sprintf(" \"%s\"", w)
+		}
+		newText = append(newText, []byte(w)...)
+	}
+	newText = append(newText, []byte(" \"\"")...)
+
+	return newText
 }
 
 func (r *roffRenderer) NormalText(out *bytes.Buffer, text []byte) {
