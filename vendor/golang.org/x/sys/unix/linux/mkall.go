@@ -202,22 +202,32 @@ func makeCommand(name string, args ...string) *exec.Cmd {
 	return cmd
 }
 
+// Set GOARCH for target and build environments.
+func (t *target) setTargetBuildArch(cmd *exec.Cmd) {
+	// Set GOARCH_TARGET so command knows what GOARCH is..
+	cmd.Env = append(os.Environ(), "GOARCH_TARGET="+t.GoArch)
+	// Set GOARCH to host arch for command, so it can run natively.
+	for i, s := range cmd.Env {
+		if strings.HasPrefix(s, "GOARCH=") {
+			cmd.Env[i] = "GOARCH=" + BuildArch
+		}
+	}
+}
+
 // Runs the command, pipes output to a formatter, pipes that to an output file.
 func (t *target) commandFormatOutput(formatter string, outputFile string,
 	name string, args ...string) (err error) {
 	mainCmd := makeCommand(name, args...)
+	if name == "mksyscall" {
+		args = append([]string{"run", "mksyscall.go"}, args...)
+		mainCmd = makeCommand("go", args...)
+		t.setTargetBuildArch(mainCmd)
+	}
 
 	fmtCmd := makeCommand(formatter)
 	if formatter == "mkpost" {
 		fmtCmd = makeCommand("go", "run", "mkpost.go")
-		// Set GOARCH_TARGET so mkpost knows what GOARCH is..
-		fmtCmd.Env = append(os.Environ(), "GOARCH_TARGET="+t.GoArch)
-		// Set GOARCH to host arch for mkpost, so it can run natively.
-		for i, s := range fmtCmd.Env {
-			if strings.HasPrefix(s, "GOARCH=") {
-				fmtCmd.Env[i] = "GOARCH=" + BuildArch
-			}
-		}
+		t.setTargetBuildArch(fmtCmd)
 	}
 
 	// mainCmd | fmtCmd > outputFile
@@ -472,7 +482,7 @@ func (t *target) makeZSyscallFile() error {
 
 	args := append(t.mksyscallFlags(), "-tags", "linux,"+t.GoArch,
 		"syscall_linux.go", archSyscallFile)
-	return t.commandFormatOutput("gofmt", zsyscallFile, "./mksyscall.pl", args...)
+	return t.commandFormatOutput("gofmt", zsyscallFile, "mksyscall", args...)
 }
 
 // makes the zerrors_linux_$GOARCH.go file

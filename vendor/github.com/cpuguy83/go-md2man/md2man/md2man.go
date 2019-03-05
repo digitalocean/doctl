@@ -4,7 +4,6 @@ import (
 	"github.com/russross/blackfriday"
 )
 
-// Render converts a markdown document into a roff formatted document.
 func Render(doc []byte) []byte {
 	renderer := RoffRenderer(0)
 	extensions := 0
