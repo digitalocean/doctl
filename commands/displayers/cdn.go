@@ -31,17 +31,19 @@ func (c *CDN) JSON(out io.Writer) error {
 
 func (c *CDN) Cols() []string {
 	return []string{
-		"ID", "Origin", "Endpoint", "TTL", "CreatedAt",
+		"ID", "Origin", "Endpoint", "TTL", "CustomDomain", "CertificateID", "CreatedAt",
 	}
 }
 
 func (c *CDN) ColMap() map[string]string {
 	return map[string]string{
-		"ID":        "ID",
-		"Origin":    "Origin",
-		"Endpoint":  "Endpoint",
-		"TTL":       "TTL",
-		"CreatedAt": "CreatedAt",
+		"ID":            "ID",
+		"Origin":        "Origin",
+		"Endpoint":      "Endpoint",
+		"TTL":           "TTL",
+		"CustomDomain":  "CustomDomain",
+		"CertificateID": "CertificateID",
+		"CreatedAt":     "CreatedAt",
 	}
 }
 
@@ -50,11 +52,13 @@ func (c *CDN) KV() []map[string]interface{} {
 
 	for _, cdn := range c.CDNs {
 		m := map[string]interface{}{
-			"ID":        cdn.ID,
-			"Origin":    cdn.Origin,
-			"Endpoint":  cdn.Endpoint,
-			"TTL":       cdn.TTL,
-			"CreatedAt": cdn.CreatedAt,
+			"ID":            cdn.ID,
+			"Origin":        cdn.Origin,
+			"Endpoint":      cdn.Endpoint,
+			"TTL":           cdn.TTL,
+			"CustomDomain":  cdn.CustomDomain,
+			"CertificateID": cdn.CertificateID,
+			"CreatedAt":     cdn.CreatedAt,
 		}
 
 		out = append(out, m)

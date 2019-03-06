@@ -25,8 +25,8 @@
     ".",
     "util"
   ]
-  revision = "e85f1d337911645f87d08c7c9b4df98de8b710cd"
-  version = "v1.7.2"
+  revision = "169afd3c4cd2071b82740787dae2d8c714db0821"
+  version = "v1.7.5"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -270,12 +270,6 @@
   ]
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/tent/http-link-go"
-  packages = ["."]
-  revision = "ac974c61c2f990f4115b119354b5e0b47550e888"
 
 [[projects]]
   branch = "master"

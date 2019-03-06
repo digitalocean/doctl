@@ -38,6 +38,18 @@ var (
 		},
 	}
 
+	testCDNWithCustomDomain = do.CDN{
+		CDN: &godo.CDN{
+			ID:            cdnID,
+			Origin:        cdnOrigin,
+			Endpoint:      "my-spaces.nyc3.cdn.digitaloceanspaces.com",
+			TTL:           3600,
+			CustomDomain:  "assets.myacmecorp.com",
+			CertificateID: uuid.New(),
+			CreatedAt:     time.Now(),
+		},
+	}
+
 	updatedCDN = do.CDN{
 		CDN: &godo.CDN{
 			ID:        cdnID,
@@ -45,6 +57,18 @@ var (
 			Endpoint:  "my-spaces.nyc3.cdn.digitaloceanspaces.com",
 			TTL:       60,
 			CreatedAt: time.Now(),
+		},
+	}
+
+	updatedCDNWithCustomDomain = do.CDN{
+		CDN: &godo.CDN{
+			ID:            cdnID,
+			Origin:        cdnOrigin,
+			Endpoint:      "my-spaces.nyc3.cdn.digitaloceanspaces.com",
+			TTL:           3600,
+			CustomDomain:  "assets.myacmecorp.com",
+			CertificateID: uuid.New(),
+			CreatedAt:     time.Now(),
 		},
 	}
 
@@ -102,6 +126,37 @@ func TestCDNsCreate(t *testing.T) {
 	})
 }
 
+func TestCDNsCreateCustomDomain(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		cdncr := &godo.CDNCreateRequest{
+			Origin:        cdnOrigin,
+			TTL:           3600,
+			CustomDomain:  testCDNWithCustomDomain.CustomDomain,
+			CertificateID: testCDNWithCustomDomain.CertificateID,
+		}
+		tm.cdns.On("Create", cdncr).Return(&testCDNWithCustomDomain, nil)
+
+		config.Args = append(config.Args, cdnOrigin)
+		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 3600)
+		config.Doit.Set(config.NS, doctl.ArgCDNDomain, testCDNWithCustomDomain.CustomDomain)
+		config.Doit.Set(config.NS, doctl.ArgCDNCertificateID, testCDNWithCustomDomain.CertificateID)
+
+		err := RunCDNCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestCDNsCreateCustomDomain_NoCertIDFail(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, cdnOrigin)
+		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 3600)
+		config.Doit.Set(config.NS, doctl.ArgCDNDomain, updatedCDNWithCustomDomain.CustomDomain)
+
+		err := RunCDNCreate(config)
+		assert.Error(t, err)
+	})
+}
+
 func TestCDNsCreate_RequiredArguments(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunCDNCreate(config)
@@ -119,9 +174,9 @@ func TestCDNsCreate_ZeroFail(t *testing.T) {
 	})
 }
 
-func TestCDNsUpdate(t *testing.T) {
+func TestCDNsUpdateTTL(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		cdnur := &godo.CDNUpdateRequest{
+		cdnur := &godo.CDNUpdateTTLRequest{
 			TTL: 60,
 		}
 		tm.cdns.On("UpdateTTL", cdnID, cdnur).Return(&updatedCDN, nil)
@@ -129,17 +184,67 @@ func TestCDNsUpdate(t *testing.T) {
 		config.Args = append(config.Args, cdnID)
 		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 60)
 
-		err := RunCDNUpdateTTL(config)
+		err := RunCDNUpdate(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestCDNsUpdate_ZeroFail(t *testing.T) {
+func TestCDNsUpdateTTL_ZeroFail(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, cdnID)
 		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 0)
 
-		err := RunCDNUpdateTTL(config)
+		err := RunCDNUpdate(config)
+		assert.Error(t, err)
+	})
+}
+
+func TestCDNsUpdateCustomDomain(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		cdnur := &godo.CDNUpdateCustomDomainRequest{
+			CustomDomain:  updatedCDNWithCustomDomain.CustomDomain,
+			CertificateID: updatedCDNWithCustomDomain.CertificateID,
+		}
+		tm.cdns.On("UpdateCustomDomain", cdnID, cdnur).Return(&updatedCDNWithCustomDomain, nil)
+
+		config.Args = append(config.Args, cdnID)
+		config.Doit.Set(config.NS, doctl.ArgCDNDomain, updatedCDNWithCustomDomain.CustomDomain)
+		config.Doit.Set(config.NS, doctl.ArgCDNCertificateID, updatedCDNWithCustomDomain.CertificateID)
+
+		err := RunCDNUpdate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestCDNsUpdateCustomDomain_NoCertIDFail(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, cdnID)
+		config.Doit.Set(config.NS, doctl.ArgCDNDomain, updatedCDNWithCustomDomain.CustomDomain)
+
+		err := RunCDNUpdate(config)
+		assert.Error(t, err)
+	})
+}
+
+func TestCDNsUpdateRemoveCustomDomain(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		cdnur := &godo.CDNUpdateCustomDomainRequest{
+			CustomDomain: "",
+		}
+		tm.cdns.On("UpdateCustomDomain", cdnID, cdnur).Return(&testCDN, nil)
+
+		config.Args = append(config.Args, cdnID)
+		config.Doit.Set(config.NS, doctl.ArgCDNDomain, "")
+
+		err := RunCDNUpdate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestCDNsUpdate_NothingToUpdateFail(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, cdnID)
+		err := RunCDNUpdate(config)
 		assert.Error(t, err)
 	})
 }

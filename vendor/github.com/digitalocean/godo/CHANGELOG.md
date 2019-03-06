@@ -1,5 +1,17 @@
 # Change Log
 
+## [v1.7.5] - 2019-03-04
+
+- #207 Add support for custom subdomains for Spaces CDN [beta] - @xornivore
+
+## [v1.7.4] - 2019-02-08
+
+- #202 Allow tagging volumes - @mchitten
+
+## [v1.7.3] - 2018-12-18
+
+- #196 Expose tag support for creating Load Balancers.
+
 ## [v1.7.2] - 2018-12-04
 
 - #192 Exposes more options for Kubernetes clusters.

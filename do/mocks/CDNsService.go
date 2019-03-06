@@ -110,12 +110,12 @@ func (_m *CDNsService) List() ([]do.CDN, error) {
 	return r0, r1
 }
 
-// UpdateTTL provides a mock function with given fields: _a0, _a1
-func (_m *CDNsService) UpdateTTL(_a0 string, _a1 *godo.CDNUpdateRequest) (*do.CDN, error) {
+// UpdateCustomDomain provides a mock function with given fields: _a0, _a1
+func (_m *CDNsService) UpdateCustomDomain(_a0 string, _a1 *godo.CDNUpdateCustomDomainRequest) (*do.CDN, error) {
 	ret := _m.Called(_a0, _a1)
 
 	var r0 *do.CDN
-	if rf, ok := ret.Get(0).(func(string, *godo.CDNUpdateRequest) *do.CDN); ok {
+	if rf, ok := ret.Get(0).(func(string, *godo.CDNUpdateCustomDomainRequest) *do.CDN); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
@@ -124,7 +124,30 @@ func (_m *CDNsService) UpdateTTL(_a0 string, _a1 *godo.CDNUpdateRequest) (*do.CD
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, *godo.CDNUpdateRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(string, *godo.CDNUpdateCustomDomainRequest) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateTTL provides a mock function with given fields: _a0, _a1
+func (_m *CDNsService) UpdateTTL(_a0 string, _a1 *godo.CDNUpdateTTLRequest) (*do.CDN, error) {
+	ret := _m.Called(_a0, _a1)
+
+	var r0 *do.CDN
+	if rf, ok := ret.Get(0).(func(string, *godo.CDNUpdateTTLRequest) *do.CDN); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*do.CDN)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string, *godo.CDNUpdateTTLRequest) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
