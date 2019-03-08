@@ -2,6 +2,11 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.14] - UNRELEASED
+
+- #415 Add support for custom domains in Spaces CDN - @xornivore
+- #414 Clean up out of sync vendor deps - @xornivore
+
 ## [1.13.1] - UNRELEASED
 
 - #408 k8s: Fix case where kube.Get returns a nil cluster
