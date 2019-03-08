@@ -26,7 +26,8 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 				"droplet_ids": [10],
 				"created_at": "2002-10-02T15:00:00.05Z",
 				"filesystem_type": "",
-				"filesystem_label": ""
+				"filesystem_label": "",
+				"tags": ["tag1", "tag2"]
 			},
 			{
 				"user_id": 42,
@@ -37,7 +38,8 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 				"size_gigabytes": 100,
 				"created_at": "2012-10-03T15:00:01.05Z",
 				"filesystem_type": "ext4",
-				"filesystem_label": "my-volume"
+				"filesystem_label": "my-volume",
+				"tags": []
 			}
 		],
 		"links": {
@@ -70,6 +72,7 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 			SizeGigaBytes: 100,
 			DropletIDs:    []int{10},
 			CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+			Tags:          []string{"tag1", "tag2"},
 		},
 		{
 			Region:          &Region{Slug: "nyc3"},
@@ -80,6 +83,7 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 			CreatedAt:       time.Date(2012, 10, 03, 15, 00, 01, 50000000, time.UTC),
 			FilesystemType:  "ext4",
 			FilesystemLabel: "my-volume",
+			Tags:            []string{},
 		},
 	}
 	if !reflect.DeepEqual(volumes, expected) {
@@ -99,6 +103,7 @@ func TestStorageVolumes_Get(t *testing.T) {
 		CreatedAt:       time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
 		FilesystemType:  "xfs",
 		FilesystemLabel: "my-vol",
+		Tags:            []string{"tag1", "tag2"},
 	}
 	jBlob := `{
 		"volume":{
@@ -110,7 +115,8 @@ func TestStorageVolumes_Get(t *testing.T) {
 			"size_gigabytes": 100,
 			"created_at": "2002-10-02T15:00:00.05Z",
 			"filesystem_type": "xfs",
-			"filesystem_label": "my-vol"
+			"filesystem_label": "my-vol",
+			"tags": ["tag1", "tag2"]
 		},
 		"links": {
 	    "pages": {
@@ -153,7 +159,8 @@ func TestStorageVolumes_ListVolumesByName(t *testing.T) {
 					"droplet_ids": [10],
 					"created_at": "2002-10-02T15:00:00.05Z",
 					"filesystem_type": "",
-					"filesystem_label": ""
+					"filesystem_label": "",
+					"tags": ["tag1", "tag2"]
 				}
 			],
 			"links": {},
@@ -171,6 +178,7 @@ func TestStorageVolumes_ListVolumesByName(t *testing.T) {
 			SizeGigaBytes: 100,
 			DropletIDs:    []int{10},
 			CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+			Tags:          []string{"tag1", "tag2"},
 		},
 	}
 
@@ -211,7 +219,8 @@ func TestStorageVolumes_ListVolumesByRegion(t *testing.T) {
 					"droplet_ids": [10],
 					"created_at": "2002-10-02T15:00:00.05Z",
 					"filesystem_type": "",
-					"filesystem_label": ""
+					"filesystem_label": "",
+					"tags": ["tag1", "tag2"]
 				}
 			],
 			"links": {},
@@ -229,6 +238,7 @@ func TestStorageVolumes_ListVolumesByRegion(t *testing.T) {
 			SizeGigaBytes: 100,
 			DropletIDs:    []int{10},
 			CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+			Tags:          []string{"tag1", "tag2"},
 		},
 	}
 
@@ -269,7 +279,8 @@ func TestStorageVolumes_ListVolumesByNameAndRegion(t *testing.T) {
 					"droplet_ids": [10],
 					"created_at": "2002-10-02T15:00:00.05Z",
 					"filesystem_type": "",
-					"filesystem_label": ""
+					"filesystem_label": "",
+					"tags": ["tag1", "tag2"]
 				}
 			],
 			"links": {},
@@ -287,6 +298,7 @@ func TestStorageVolumes_ListVolumesByNameAndRegion(t *testing.T) {
 			SizeGigaBytes: 100,
 			DropletIDs:    []int{10},
 			CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+			Tags:          []string{"tag1", "tag2"},
 		},
 	}
 
@@ -321,6 +333,7 @@ func TestStorageVolumes_Create(t *testing.T) {
 		Name:          "my volume",
 		Description:   "my description",
 		SizeGigaBytes: 100,
+		Tags:          []string{"tag1", "tag2"},
 	}
 
 	want := &Volume{
@@ -330,6 +343,7 @@ func TestStorageVolumes_Create(t *testing.T) {
 		Description:   "my description",
 		SizeGigaBytes: 100,
 		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+		Tags:          []string{"tag1", "tag2"},
 	}
 	jBlob := `{
 		"volume":{
@@ -338,7 +352,8 @@ func TestStorageVolumes_Create(t *testing.T) {
 			"name": "my volume",
 			"description": "my description",
 			"size_gigabytes": 100,
-			"created_at": "2002-10-02T15:00:00.05Z"
+			"created_at": "2002-10-02T15:00:00.05Z",
+			"tags": ["tag1", "tag2"]
 		},
 		"links": {}
 	}`
@@ -377,6 +392,7 @@ func TestStorageVolumes_CreateFormatted(t *testing.T) {
 		Description:    "my description",
 		SizeGigaBytes:  100,
 		FilesystemType: "xfs",
+		Tags:           []string{"tag1", "tag2"},
 	}
 
 	want := &Volume{
@@ -387,6 +403,7 @@ func TestStorageVolumes_CreateFormatted(t *testing.T) {
 		SizeGigaBytes:  100,
 		CreatedAt:      time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
 		FilesystemType: "xfs",
+		Tags:           []string{"tag1", "tag2"},
 	}
 	jBlob := `{
 		"volume":{
@@ -397,7 +414,8 @@ func TestStorageVolumes_CreateFormatted(t *testing.T) {
 			"size_gigabytes": 100,
 			"created_at": "2002-10-02T15:00:00.05Z",
 			"filesystem_type": "xfs",
-			"filesystem_label": ""
+			"filesystem_label": "",
+			"tags": ["tag1", "tag2"]
 		},
 		"links": {}
 	}`
@@ -435,6 +453,7 @@ func TestStorageVolumes_CreateFromSnapshot(t *testing.T) {
 		Description:   "my description",
 		SizeGigaBytes: 100,
 		SnapshotID:    "0d165eff-0b4c-11e7-9093-0242ac110207",
+		Tags:          []string{"tag1", "tag2"},
 	}
 
 	want := &Volume{
@@ -444,6 +463,7 @@ func TestStorageVolumes_CreateFromSnapshot(t *testing.T) {
 		Description:   "my description",
 		SizeGigaBytes: 100,
 		CreatedAt:     time.Date(2002, 10, 02, 15, 00, 00, 50000000, time.UTC),
+		Tags:          []string{"tag1", "tag2"},
 	}
 	jBlob := `{
 		"volume":{
@@ -452,7 +472,8 @@ func TestStorageVolumes_CreateFromSnapshot(t *testing.T) {
 			"name": "my-volume-from-a-snapshot",
 			"description": "my description",
 			"size_gigabytes": 100,
-			"created_at": "2002-10-02T15:00:00.05Z"
+			"created_at": "2002-10-02T15:00:00.05Z",
+			"tags": ["tag1", "tag2"]
 		},
 		"links": {}
 	}`
