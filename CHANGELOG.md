@@ -2,7 +2,7 @@
 
 All changes to `doctl` will be documented in this file.
 
-## [1.14.0] - 2019-03-08
+## [1.14.0] - 2019-03-11
 
 - #415 Add support for custom domains in Spaces CDN - @xornivore
 - #414 Clean up out of sync vendor deps - @xornivore
