@@ -14,7 +14,6 @@ limitations under the License.
 package displayers
 
 import (
-	"fmt"
 	"io"
 	"strings"
 
@@ -64,7 +63,7 @@ func (c *Certificate) KV() []map[string]interface{} {
 		o := map[string]interface{}{
 			"ID":              c.ID,
 			"Name":            c.Name,
-			"DNSNames":        fmt.Sprintf(strings.Join(c.DNSNames, ",")),
+			"DNSNames":        strings.Join(c.DNSNames, ","),
 			"SHA1Fingerprint": c.SHA1Fingerprint,
 			"NotAfter":        c.NotAfter,
 			"Created":         c.Created,

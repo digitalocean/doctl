@@ -476,7 +476,7 @@ func RunDropletDelete(c *CmdConfig) error {
 			return err
 		}
 		if len(list) == 0 {
-			fmt.Fprintf(c.Out, fmt.Sprintf("nothing to delete: no droplets found by \"%s\" tag\n", tagName))
+			fmt.Fprintf(c.Out, "nothing to delete: no droplets found by \"%s\" tag\n", tagName)
 			return nil
 		}
 		ids := make([]string, 0, len(list))

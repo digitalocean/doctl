@@ -60,7 +60,7 @@ func prettyPrintStruct(obj interface{}) string {
 		output = append(output, fmt.Sprintf("%v:%v", k, v))
 	}
 
-	return fmt.Sprintf(strings.Join(output, ","))
+	return strings.Join(output, ",")
 }
 
 // Displayable is a displable entity. These are used for printing results.

@@ -39,7 +39,7 @@ func askForPassword(prompt string) (string, error) {
 	}()
 
 	t := terminal.NewTerminal(os.Stdin, ">")
-	fmt.Printf(prompt)
+	fmt.Print(prompt)
 	password, err := t.ReadPassword("")
 	if err != nil {
 		return "", err
