@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.8.0] - 2019-03-13
+
+- #210 Expose tags on storage volume create/list/get. - @jcodybaker
+
 ## [v1.7.5] - 2019-03-04
 
 - #207 Add support for custom subdomains for Spaces CDN [beta] - @xornivore
