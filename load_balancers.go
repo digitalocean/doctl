@@ -42,6 +42,7 @@ type LoadBalancer struct {
 	Tag                 string           `json:"tag,omitempty"`
 	Tags                []string         `json:"tags,omitempty"`
 	RedirectHttpToHttps bool             `json:"redirect_http_to_https,omitempty"`
+	EnableProxyProtocol bool             `json:"enable_proxy_protocol,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancer.
@@ -63,6 +64,7 @@ func (l LoadBalancer) AsRequest() *LoadBalancerRequest {
 		DropletIDs:          append([]int(nil), l.DropletIDs...),
 		Tag:                 l.Tag,
 		RedirectHttpToHttps: l.RedirectHttpToHttps,
+		EnableProxyProtocol: l.EnableProxyProtocol,
 		HealthCheck:         l.HealthCheck,
 	}
 
@@ -135,6 +137,7 @@ type LoadBalancerRequest struct {
 	Tag                 string           `json:"tag,omitempty"`
 	Tags                []string         `json:"tags,omitempty"`
 	RedirectHttpToHttps bool             `json:"redirect_http_to_https,omitempty"`
+	EnableProxyProtocol bool             `json:"enable_proxy_protocol,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancerRequest.
