@@ -62,7 +62,11 @@ type DatabasesServiceOp struct {
 
 var _ DatabasesService = &DatabasesServiceOp{}
 
-// Database represents a database cluster
+// Database represents a DigitalOcean managed database product. These managed databases
+// are usually comprised of a cluster of database nodes, a primary and 0 or more replicas.
+// The EngineSlug is a string which indicates the type of database service. Some examples are
+// "pg", "mysql" or "redis". A Database also includes connection information and other
+// properties of the service like region, size and current status.
 type Database struct {
 	ID                string                     `json:"id,omitempty"`
 	Name              string                     `json:"name,omitempty"`
@@ -139,7 +143,10 @@ type DatabaseUpdateMaintenanceRequest struct {
 	Hour string `json:"hour,omitempty"`
 }
 
-// DatabaseDB represents an engine-specific database created within a database cluster
+// DatabaseDB represents an engine-specific database created within a database cluster. For SQL
+// databases like PostgreSQL or MySQL, a "DB" refers to a database created on the RDBMS. For instance,
+// a PostgreSQL database server can contain many database schemas, each with it's own settings, access
+// permissions and data. ListDBs will return all databases present on the server.
 type DatabaseDB struct {
 	Name string `json:"name"`
 }
