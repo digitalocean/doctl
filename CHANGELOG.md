@@ -1,8 +1,12 @@
 # Change Log
 
-## [v1.9.0] - 2019-03-13
+## [v1.10.0] - 2019-03-20
 
 - #215 Add support for Databases - @mikejholly
+
+## [v1.9.0] - 2019-03-18
+
+- #214 add support for enable_proxy_protocol. - @mregmi
 
 ## [v1.8.0] - 2019-03-13
 

@@ -824,6 +824,7 @@ func TestLoadBalancers_AsRequest(t *testing.T) {
 			Slug: "lon1",
 		},
 		RedirectHttpToHttps: true,
+		EnableProxyProtocol: true,
 	}
 	lb.DropletIDs = make([]int, 1, 2)
 	lb.DropletIDs[0] = 12345
@@ -861,6 +862,7 @@ func TestLoadBalancers_AsRequest(t *testing.T) {
 		},
 		DropletIDs:          []int{12345},
 		RedirectHttpToHttps: true,
+		EnableProxyProtocol: true,
 	}
 
 	r := lb.AsRequest()
