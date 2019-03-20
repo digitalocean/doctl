@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.9.0] - 2019-03-13
+
+- #215 Add support for Databases - @mikejholly
+
 ## [v1.8.0] - 2019-03-13
 
 - #210 Expose tags on storage volume create/list/get. - @jcodybaker
