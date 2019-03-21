@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.7.5"
+	libraryVersion = "1.11.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -65,6 +65,8 @@ type Client struct {
 	Firewalls         FirewallsService
 	Projects          ProjectsService
 	Kubernetes        KubernetesService
+	Databases         DatabasesService
+	VPCs              VPCsService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -179,6 +181,8 @@ func NewClient(httpClient *http.Client) *Client {
 	c.StorageActions = &StorageActionsServiceOp{client: c}
 	c.Tags = &TagsServiceOp{client: c}
 	c.Kubernetes = &KubernetesServiceOp{client: c}
+	c.Databases = &DatabasesServiceOp{client: c}
+	c.VPCs = &VPCsServiceOp{client: c}
 
 	return c
 }

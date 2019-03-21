@@ -16,7 +16,7 @@ const (
 	kubernetesOptionsPath  = kubernetesBasePath + "/options"
 )
 
-// KubernetesService is an interface for interfacing with the kubernetes endpoints
+// KubernetesService is an interface for interfacing with the Kubernetes endpoints
 // of the DigitalOcean API.
 // See: https://developers.digitalocean.com/documentation/v2#kubernetes
 type KubernetesService interface {
@@ -50,6 +50,7 @@ type KubernetesClusterCreateRequest struct {
 	RegionSlug  string   `json:"region,omitempty"`
 	VersionSlug string   `json:"version,omitempty"`
 	Tags        []string `json:"tags,omitempty"`
+	VPCUUID     string   `json:"vpc_uuid,omitempty"`
 
 	NodePools []*KubernetesNodePoolCreateRequest `json:"node_pools,omitempty"`
 }
@@ -94,6 +95,7 @@ type KubernetesCluster struct {
 	IPv4          string   `json:"ipv4,omitempty"`
 	Endpoint      string   `json:"endpoint,omitempty"`
 	Tags          []string `json:"tags,omitempty"`
+	VPCUUID       string   `json:"vpc_uuid,omitempty"`
 
 	NodePools []*KubernetesNodePool `json:"node_pools,omitempty"`
 
