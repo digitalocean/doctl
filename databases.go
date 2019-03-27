@@ -165,7 +165,7 @@ type DatabasePool struct {
 	User       string              `json:"user"`
 	Name       string              `json:"name"`
 	Size       int                 `json:"size"`
-	Database   string              `json:"database"`
+	Database   string              `json:"db"`
 	Mode       string              `json:"mode"`
 	Connection *DatabaseConnection `json:"connection"`
 }

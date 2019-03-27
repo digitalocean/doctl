@@ -614,7 +614,7 @@ func TestDatabases_ListPools(t *testing.T) {
     "user": "user",
     "size": 10,
     "mode": "transaction",
-    "database": "db",
+    "db": "db",
     "connection": {
       "uri": "postgresql://user:pass@host.com/db",
       "host": "host.com",
@@ -669,7 +669,7 @@ func TestDatabases_CreatePool(t *testing.T) {
     "user": "user",
     "size": 10,
     "mode": "transaction",
-    "database": "db",
+    "db": "db",
     "connection": {
       "uri": "postgresql://user:pass@host.com/db",
       "host": "host.com",
@@ -732,7 +732,7 @@ func TestDatabases_GetPool(t *testing.T) {
     "user": "user",
     "size": 10,
     "mode": "transaction",
-    "database": "db",
+    "db": "db",
     "connection": {
       "uri": "postgresql://user:pass@host.com/db",
       "host": "host.com",
