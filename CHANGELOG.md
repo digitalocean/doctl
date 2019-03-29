@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.10.1] - 2019-03-27
+
+- #219 Fix Database Pools json field - @sunny-b
+
 ## [v1.10.0] - 2019-03-20
 
 - #215 Add support for Databases - @mikejholly
