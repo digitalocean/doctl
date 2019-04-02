@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.11.0] - 2019-04-03
+
+- #220 roll out vpc functionality - @jheimann
+
 ## [v1.10.1] - 2019-03-27
 
 - #219 Fix Database Pools json field - @sunny-b
