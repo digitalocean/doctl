@@ -66,6 +66,7 @@ type Client struct {
 	Projects          ProjectsService
 	Kubernetes        KubernetesService
 	Databases         DatabasesService
+	VPCs              VPCsService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -181,6 +182,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Tags = &TagsServiceOp{client: c}
 	c.Kubernetes = &KubernetesServiceOp{client: c}
 	c.Databases = &DatabasesServiceOp{client: c}
+	c.VPCs = &VPCsServiceOp{client: c}
 
 	return c
 }
