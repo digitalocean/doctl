@@ -152,7 +152,8 @@ func TestDroplets_Create(t *testing.T) {
 			{ID: "hello-im-another-volume"},
 			{Name: "hello-im-still-a-volume", ID: "should be ignored due to Name"},
 		},
-		Tags: []string{"one", "two"},
+		Tags:    []string{"one", "two"},
+		VPCUUID: "880b7f98-f062-404d-b33c-458d545696f6",
 	}
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
@@ -171,8 +172,26 @@ func TestDroplets_Create(t *testing.T) {
 				map[string]interface{}{"id": "hello-im-another-volume"},
 				map[string]interface{}{"name": "hello-im-still-a-volume"},
 			},
-			"tags": []interface{}{"one", "two"},
+			"tags":     []interface{}{"one", "two"},
+			"vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f6",
 		}
+		jsonBlob := `
+{
+  "droplet": {
+    "id": 1,
+    "vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f6"
+  },
+  "links": {
+    "actions": [
+      {
+        "id": 1,
+        "href": "http://example.com",
+        "rel": "create"
+      }
+    ]
+  }
+}
+`
 
 		var v map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&v)
@@ -184,7 +203,7 @@ func TestDroplets_Create(t *testing.T) {
 			t.Errorf("Request body\n got=%#v\nwant=%#v", v, expected)
 		}
 
-		fmt.Fprintf(w, `{"droplet":{"id":1}, "links":{"actions": [{"id": 1, "href": "http://example.com", "rel": "create"}]}}`)
+		fmt.Fprintf(w, jsonBlob)
 	})
 
 	droplet, resp, err := client.Droplets.Create(ctx, createRequest)
@@ -194,6 +213,11 @@ func TestDroplets_Create(t *testing.T) {
 
 	if id := droplet.ID; id != 1 {
 		t.Errorf("expected id '%d', received '%d'", 1, id)
+	}
+
+	vpcid := "880b7f98-f062-404d-b33c-458d545696f6"
+	if id := droplet.VPCUUID; id != vpcid {
+		t.Errorf("expected VPC uuid '%s', received '%s'", vpcid, id)
 	}
 
 	if a := resp.Links.Actions[0]; a.ID != 1 {
@@ -212,7 +236,8 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 		Image: DropletCreateImage{
 			ID: 1,
 		},
-		Tags: []string{"one", "two"},
+		Tags:    []string{"one", "two"},
+		VPCUUID: "880b7f98-f062-404d-b33c-458d545696f6",
 	}
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
@@ -227,7 +252,31 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 			"private_networking": false,
 			"monitoring":         false,
 			"tags":               []interface{}{"one", "two"},
+			"vpc_uuid":           "880b7f98-f062-404d-b33c-458d545696f6",
 		}
+		jsonBlob := `
+{
+  "droplets": [
+    {
+      "id": 1,
+	  "vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f6"
+    },
+    {
+      "id": 2,
+	  "vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f6"
+    }
+  ],
+  "links": {
+    "actions": [
+      {
+        "id": 1,
+        "href": "http://example.com",
+        "rel": "multiple_create"
+      }
+    ]
+  }
+}
+`
 
 		var v map[string]interface{}
 		err := json.NewDecoder(r.Body).Decode(&v)
@@ -239,7 +288,7 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 			t.Errorf("Request body = %#v, expected %#v", v, expected)
 		}
 
-		fmt.Fprintf(w, `{"droplets":[{"id":1},{"id":2}], "links":{"actions": [{"id": 1, "href": "http://example.com", "rel": "multiple_create"}]}}`)
+		fmt.Fprintf(w, jsonBlob)
 	})
 
 	droplets, resp, err := client.Droplets.CreateMultiple(ctx, createRequest)
@@ -250,9 +299,16 @@ func TestDroplets_CreateMultiple(t *testing.T) {
 	if id := droplets[0].ID; id != 1 {
 		t.Errorf("expected id '%d', received '%d'", 1, id)
 	}
-
 	if id := droplets[1].ID; id != 2 {
-		t.Errorf("expected id '%d', received '%d'", 1, id)
+		t.Errorf("expected id '%d', received '%d'", 2, id)
+	}
+
+	vpcid := "880b7f98-f062-404d-b33c-458d545696f6"
+	if id := droplets[0].VPCUUID; id != vpcid {
+		t.Errorf("expected VPC uuid '%s', received '%s'", vpcid, id)
+	}
+	if id := droplets[1].VPCUUID; id != vpcid {
+		t.Errorf("expected VPC uuid '%s', received '%s'", vpcid, id)
 	}
 
 	if a := resp.Links.Actions[0]; a.ID != 1 {

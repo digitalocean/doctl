@@ -144,7 +144,8 @@ var lbCreateJSONResponse = `
             2,
             21
         ],
-        "redirect_http_to_https":true
+        "redirect_http_to_https":true,
+        "vpc_uuid":"880b7f98-f062-404d-b33c-458d545696f6"
     }
 }
 `
@@ -369,6 +370,7 @@ func TestLoadBalancers_Create(t *testing.T) {
 		Tags:                []string{"my-tag"},
 		DropletIDs:          []int{2, 21},
 		RedirectHttpToHttps: true,
+		VPCUUID:             "880b7f98-f062-404d-b33c-458d545696f6",
 	}
 
 	path := "/v2/load_balancers"
@@ -438,6 +440,7 @@ func TestLoadBalancers_Create(t *testing.T) {
 		Tags:                []string{"my-tag"},
 		DropletIDs:          []int{2, 21},
 		RedirectHttpToHttps: true,
+		VPCUUID:             "880b7f98-f062-404d-b33c-458d545696f6",
 	}
 
 	assert.Equal(t, expected, loadBalancer)
@@ -825,6 +828,7 @@ func TestLoadBalancers_AsRequest(t *testing.T) {
 		},
 		RedirectHttpToHttps: true,
 		EnableProxyProtocol: true,
+		VPCUUID:             "880b7f98-f062-404d-b33c-458d545696f6",
 	}
 	lb.DropletIDs = make([]int, 1, 2)
 	lb.DropletIDs[0] = 12345
@@ -863,6 +867,7 @@ func TestLoadBalancers_AsRequest(t *testing.T) {
 		DropletIDs:          []int{12345},
 		RedirectHttpToHttps: true,
 		EnableProxyProtocol: true,
+		VPCUUID:             "880b7f98-f062-404d-b33c-458d545696f6",
 	}
 
 	r := lb.AsRequest()

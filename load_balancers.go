@@ -43,6 +43,7 @@ type LoadBalancer struct {
 	Tags                []string         `json:"tags,omitempty"`
 	RedirectHttpToHttps bool             `json:"redirect_http_to_https,omitempty"`
 	EnableProxyProtocol bool             `json:"enable_proxy_protocol,omitempty"`
+	VPCUUID             string           `json:"vpc_uuid,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancer.
@@ -66,6 +67,7 @@ func (l LoadBalancer) AsRequest() *LoadBalancerRequest {
 		RedirectHttpToHttps: l.RedirectHttpToHttps,
 		EnableProxyProtocol: l.EnableProxyProtocol,
 		HealthCheck:         l.HealthCheck,
+		VPCUUID:             l.VPCUUID,
 	}
 
 	if l.HealthCheck != nil {
@@ -138,6 +140,7 @@ type LoadBalancerRequest struct {
 	Tags                []string         `json:"tags,omitempty"`
 	RedirectHttpToHttps bool             `json:"redirect_http_to_https,omitempty"`
 	EnableProxyProtocol bool             `json:"enable_proxy_protocol,omitempty"`
+	VPCUUID             string           `json:"vpc_uuid,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancerRequest.
