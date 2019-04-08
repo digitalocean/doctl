@@ -42,6 +42,9 @@ build_linux_amd64: _build
 clean:
 	@rm -rf builds
 
+test:
+	go test ./cmd/... ./commands/... ./do/... ./install/... ./pkg/... ./pluginhost/... .
+
 _base_docker_cntr:
 	docker build -f Dockerfile.build . -t doctl_builder
 

@@ -28,7 +28,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -174,6 +174,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Completion())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Kubernetes())
+	DoitCmd.AddCommand(Databases())
 	DoitCmd.AddCommand(Projects())
 	DoitCmd.AddCommand(Version())
 }
@@ -343,6 +344,7 @@ type CmdConfig struct {
 	CDNs              func() do.CDNsService
 	Projects          func() do.ProjectsService
 	Kubernetes        func() do.KubernetesService
+	Databases         func() do.DatabasesService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -383,6 +385,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.CDNs = func() do.CDNsService { return do.NewCDNsService(godoClient) }
 			c.Projects = func() do.ProjectsService { return do.NewProjectsService(godoClient) }
 			c.Kubernetes = func() do.KubernetesService { return do.NewKubernetesService(godoClient) }
+			c.Databases = func() do.DatabasesService { return do.NewDatabasesService(godoClient) }
 
 			return nil
 		},

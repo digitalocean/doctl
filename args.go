@@ -224,6 +224,23 @@ const (
 	// ArgProjectResource is a flag for your resource URNs
 	ArgProjectResource = "resource"
 
+	// ArgDatabaseEngine is a flag for specifying which database engine to use
+	ArgDatabaseEngine = "engine"
+	// ArgDatabaseNumNodes is the number of nodes in the database cluster
+	ArgDatabaseNumNodes = "num-nodes"
+	// ArgDatabaseMaintenanceDay is the new day for the maintenance window
+	ArgDatabaseMaintenanceDay = "day"
+	// ArgDatabaseMaintenanceHour is the new hour for the maintenance window
+	ArgDatabaseMaintenanceHour = "hour"
+	// ArgDatabasePoolUserName is the name of user for use with connection pool
+	ArgDatabasePoolUserName = "user"
+	// ArgDatabasePoolDBName is the database for use with connection pool
+	ArgDatabasePoolDBName = "db"
+	// ArgDatabasePoolSize is the flag for connection pool size
+	ArgDatabasePoolSize = "size"
+	// ArgDatabasePoolMode is the flag for connection pool mode
+	ArgDatabasePoolMode = "mode"
+
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
 )
