@@ -8,7 +8,7 @@ GOOS = linux
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
 ifeq ($(UNAME_S),Darwin)
-  NATIVE = darwin
+  GOOS = darwin
   GOARCH = 386
 endif
 
