@@ -122,3 +122,12 @@ You can use `brew bump-formula-pr doctl`, or
 1. update the url and the sha256 using the values for the archive in the github release
 1. commit your changes
 1. submit a PR to homebrew
+
+#### updating the vendored code
+
+we use dep command to create/update the vendored code.
+
+1. Install dep command if its not already. `brew install dep`.
+1. use the dep command to update the vendored code `dep ensure -update github.com/digitalocean/godo`. Replace godo with the name of the project you are updating/installing.
+1. verify that its building correctly before creating a PR. `docker build -t doctl .`
+1. Create a PR to push the changes.
