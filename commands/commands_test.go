@@ -166,6 +166,7 @@ type tcMocks struct {
 	cdns              domocks.CDNsService
 	projects          domocks.ProjectsService
 	kubernetes        domocks.KubernetesService
+	databases         domocks.DatabasesService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -215,6 +216,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		CDNs:              func() do.CDNsService { return &tm.cdns },
 		Projects:          func() do.ProjectsService { return &tm.projects },
 		Kubernetes:        func() do.KubernetesService { return &tm.kubernetes },
+		Databases:         func() do.DatabasesService { return &tm.databases },
 	}
 
 	tFn(config, tm)

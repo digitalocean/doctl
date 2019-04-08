@@ -690,13 +690,11 @@ func TestDatabases_CreatePool(t *testing.T) {
 	})
 
 	got, _, err := client.Databases.CreatePool(ctx, dbID, &DatabaseCreatePoolRequest{
-		Pool: &DatabasePool{
-			Name:     "pool",
-			Database: "db",
-			Size:     10,
-			User:     "foo",
-			Mode:     "transaction",
-		},
+		Name:     "pool",
+		Database: "db",
+		Size:     10,
+		User:     "foo",
+		Mode:     "transaction",
 	})
 	require.NoError(t, err)
 	require.Equal(t, want, got)

@@ -26,35 +26,15 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:f731e6fe7348aef806138b5ba37e004ce7f866f64d35afab0d1d1606490fb316"
-  name = "github.com/digitalocean/doctl"
-  packages = [
-    ".",
-    "commands",
-    "commands/displayers",
-    "do",
-    "do/mocks",
-    "install",
-    "pkg/runner",
-    "pkg/runner/mocks",
-    "pkg/ssh",
-    "pkg/units",
-    "pluginhost",
-  ]
-  pruneopts = ""
-  revision = "8bd69cdac392939af38dc71d47f4129ff49df87c"
-  version = "v1.14.0"
-
-[[projects]]
-  digest = "1:f02c9b50c2cce60bc844f1bab6a4e153577d310cf482b1ad087decd0e11bdee7"
+  digest = "1:9d32b65d4aa95d67351ba8a6cf51b78fbe2b32c10ba2d69d480938393e1bd538"
   name = "github.com/digitalocean/godo"
   packages = [
     ".",
     "util",
   ]
   pruneopts = ""
-  revision = "1438b2a2dd0cf69423232772a860c25bc7b17ea0"
-  version = "v1.11.0"
+  revision = "2e7ec7260974f189ff28c4c278c366b86a4b1050"
+  version = "v1.11.1"
 
 [[projects]]
   digest = "1:f1a75a8e00244e5ea77ff274baa9559eb877437b240ee7b278f3fc560d9f08bf"
@@ -578,17 +558,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/blang/semver",
-    "github.com/digitalocean/doctl",
-    "github.com/digitalocean/doctl/commands",
-    "github.com/digitalocean/doctl/commands/displayers",
-    "github.com/digitalocean/doctl/do",
-    "github.com/digitalocean/doctl/do/mocks",
-    "github.com/digitalocean/doctl/install",
-    "github.com/digitalocean/doctl/pkg/runner",
-    "github.com/digitalocean/doctl/pkg/runner/mocks",
-    "github.com/digitalocean/doctl/pkg/ssh",
-    "github.com/digitalocean/doctl/pkg/units",
-    "github.com/digitalocean/doctl/pluginhost",
     "github.com/digitalocean/godo",
     "github.com/digitalocean/godo/util",
     "github.com/dustin/go-humanize",
