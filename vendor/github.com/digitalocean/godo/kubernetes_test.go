@@ -26,6 +26,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 			ServiceSubnet: "10.245.0.0/16",
 			IPv4:          "",
 			Tags:          []string(nil),
+			VPCUUID:       "880b7f98-f062-404d-b33c-458d545696f6",
 			Status: &KubernetesClusterStatus{
 				State: KubernetesClusterStatusRunning,
 			},
@@ -64,6 +65,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 			ClusterSubnet: "10.244.0.0/16",
 			ServiceSubnet: "10.245.0.0/16",
 			IPv4:          "1.2.3.4",
+			VPCUUID:       "880b7f98-f062-404d-b33c-458d545696f7",
 			Status: &KubernetesClusterStatus{
 				State: KubernetesClusterStatusRunning,
 			},
@@ -107,6 +109,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 			"service_subnet": "10.245.0.0/16",
 			"ipv4": "",
 			"tags": null,
+			"vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f6",
 			"status": {
 				"state": "running"
 			},
@@ -155,6 +158,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 			"status": {
 				"state": "running"
 			},
+			"vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f7",
 			"node_pools": [
 				{
 					"id": "deadbeef-dead-beef-dead-deadbeefb4b3",
@@ -214,6 +218,7 @@ func TestKubernetesClusters_Get(t *testing.T) {
 		ClusterSubnet: "10.244.0.0/16",
 		ServiceSubnet: "10.245.0.0/16",
 		IPv4:          "1.2.3.4",
+		VPCUUID:       "880b7f98-f062-404d-b33c-458d545696f6",
 		Status: &KubernetesClusterStatus{
 			State: KubernetesClusterStatusRunning,
 		},
@@ -255,6 +260,7 @@ func TestKubernetesClusters_Get(t *testing.T) {
 		"service_subnet": "10.245.0.0/16",
 		"ipv4": "1.2.3.4",
 		"tags": null,
+		"vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f6",
 		"status": {
 			"state": "running"
 		},
@@ -332,6 +338,7 @@ func TestKubernetesClusters_Create(t *testing.T) {
 		ClusterSubnet: "10.244.0.0/16",
 		ServiceSubnet: "10.245.0.0/16",
 		Tags:          []string{"cluster-tag-1", "cluster-tag-2"},
+		VPCUUID:       "880b7f98-f062-404d-b33c-458d545696f6",
 		NodePools: []*KubernetesNodePool{
 			&KubernetesNodePool{
 				ID:    "8d91899c-0739-4a1a-acc5-deadbeefbb8a",
@@ -347,6 +354,7 @@ func TestKubernetesClusters_Create(t *testing.T) {
 		RegionSlug:  want.RegionSlug,
 		VersionSlug: want.VersionSlug,
 		Tags:        want.Tags,
+		VPCUUID:     want.VPCUUID,
 		NodePools: []*KubernetesNodePoolCreateRequest{
 			&KubernetesNodePoolCreateRequest{
 				Size:  want.NodePools[0].Size,
@@ -370,6 +378,7 @@ func TestKubernetesClusters_Create(t *testing.T) {
 			"cluster-tag-1",
 			"cluster-tag-2"
 		],
+		"vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f6",
 		"node_pools": [
 			{
 				"id": "8d91899c-0739-4a1a-acc5-deadbeefbb8a",
@@ -415,6 +424,7 @@ func TestKubernetesClusters_Update(t *testing.T) {
 		ClusterSubnet: "10.244.0.0/16",
 		ServiceSubnet: "10.245.0.0/16",
 		Tags:          []string{"cluster-tag-1", "cluster-tag-2"},
+		VPCUUID:       "880b7f98-f062-404d-b33c-458d545696f6",
 		NodePools: []*KubernetesNodePool{
 			&KubernetesNodePool{
 				ID:    "8d91899c-0739-4a1a-acc5-deadbeefbb8a",
@@ -443,6 +453,7 @@ func TestKubernetesClusters_Update(t *testing.T) {
 			"cluster-tag-1",
 			"cluster-tag-2"
 		],
+		"vpc_uuid": "880b7f98-f062-404d-b33c-458d545696f6",
 		"node_pools": [
 			{
 				"id": "8d91899c-0739-4a1a-acc5-deadbeefbb8a",
