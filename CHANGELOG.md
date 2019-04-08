@@ -2,6 +2,11 @@
 
 All changes to `doctl` will be documented in this file.
 
+
+## [1.15.0] - 2019-03-27
+
+- #421 Add support for managed databases - @sunny-b
+
 ## [1.14.0] - 2019-03-11
 
 - #415 Add support for custom domains in Spaces CDN - @xornivore
