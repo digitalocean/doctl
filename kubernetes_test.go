@@ -246,6 +246,10 @@ func TestKubernetesClusters_Get(t *testing.T) {
 				},
 			},
 		},
+		MaintenancePolicy: &KubernetesMaintenancePolicy{
+			StartTime: "00:00",
+			Day:       KubernetesMaintenanceDayMonday,
+		},
 		CreatedAt: time.Date(2018, 6, 15, 7, 10, 23, 0, time.UTC),
 		UpdatedAt: time.Date(2018, 6, 15, 7, 11, 26, 0, time.UTC),
 	}
@@ -294,6 +298,10 @@ func TestKubernetesClusters_Get(t *testing.T) {
 				]
 			}
 		],
+		"maintenance_policy": {
+			"start_time": "00:00",
+			"day": "monday"
+		},
 		"created_at": "2018-06-15T07:10:23Z",
 		"updated_at": "2018-06-15T07:11:26Z"
 	}
@@ -348,6 +356,10 @@ func TestKubernetesClusters_Create(t *testing.T) {
 				Tags:  []string{"tag-1"},
 			},
 		},
+		MaintenancePolicy: &KubernetesMaintenancePolicy{
+			StartTime: "00:00",
+			Day:       KubernetesMaintenanceDayMonday,
+		},
 	}
 	createRequest := &KubernetesClusterCreateRequest{
 		Name:        want.Name,
@@ -363,6 +375,7 @@ func TestKubernetesClusters_Create(t *testing.T) {
 				Tags:  want.NodePools[0].Tags,
 			},
 		},
+		MaintenancePolicy: want.MaintenancePolicy,
 	}
 
 	jBlob := `
@@ -389,7 +402,11 @@ func TestKubernetesClusters_Create(t *testing.T) {
 					"tag-1"
 				]
 			}
-		]
+		],
+		"maintenance_policy": {
+			"start_time": "00:00",
+			"day": "monday"
+		}
 	}
 }`
 
@@ -434,10 +451,15 @@ func TestKubernetesClusters_Update(t *testing.T) {
 				Tags:  []string{"tag-1"},
 			},
 		},
+		MaintenancePolicy: &KubernetesMaintenancePolicy{
+			StartTime: "00:00",
+			Day:       KubernetesMaintenanceDayMonday,
+		},
 	}
 	updateRequest := &KubernetesClusterUpdateRequest{
-		Name: want.Name,
-		Tags: want.Tags,
+		Name:              want.Name,
+		Tags:              want.Tags,
+		MaintenancePolicy: want.MaintenancePolicy,
 	}
 
 	jBlob := `
@@ -464,7 +486,11 @@ func TestKubernetesClusters_Update(t *testing.T) {
 					"tag-1"
 				]
 			}
-		]
+		],
+		"maintenance_policy": {
+			"start_time": "00:00",
+			"day": "monday"
+		}
 	}
 }`
 
