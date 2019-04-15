@@ -180,7 +180,11 @@ func (k *KubernetesMaintenancePolicyDay) UnmarshalJSON(data []byte) error {
 }
 
 func (k KubernetesMaintenancePolicyDay) MarshalJSON() ([]byte, error) {
-	return json.Marshal(days[k])
+	if KubernetesMaintenanceDayAny <= k && k <= KubernetesMaintenanceDaySunday {
+		return json.Marshal(days[k])
+	}
+
+	return nil, fmt.Errorf("invalid day: %d", k)
 }
 
 // Possible states for a cluster.

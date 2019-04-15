@@ -824,3 +824,66 @@ func TestKubernetesVersions_List(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, want, got)
 }
+
+var maintenancePolicyDayTests = []struct {
+	name  string
+	json  string
+	day   KubernetesMaintenancePolicyDay
+	valid bool
+}{
+	{
+		name:  "sunday",
+		day:   KubernetesMaintenanceDaySunday,
+		json:  `"sunday"`,
+		valid: true,
+	},
+
+	{
+		name:  "any",
+		day:   KubernetesMaintenanceDayAny,
+		json:  `"any"`,
+		valid: true,
+	},
+
+	{
+		name:  "invalid",
+		day:   100, // invalid input
+		json:  `"invalid weekday (100)"`,
+		valid: false,
+	},
+}
+
+func TestWeekday_UnmarshalJSON(t *testing.T) {
+	for _, ts := range maintenancePolicyDayTests {
+		t.Run(ts.name, func(t *testing.T) {
+			var got KubernetesMaintenancePolicyDay
+			err := json.Unmarshal([]byte(ts.json), &got)
+			valid := err == nil
+			if valid != ts.valid {
+				t.Errorf("valid unmarshal case\n\tgot: %+v\n\twant : %+v", valid, ts.valid)
+			}
+
+			if valid && got != ts.day {
+				t.Errorf("\ninput: %s\ngot : %+v\nwant  : %+v\n",
+					ts.day, got, ts.day)
+			}
+		})
+	}
+}
+
+func TestWeekday_MarshalJSON(t *testing.T) {
+	for _, ts := range maintenancePolicyDayTests {
+		t.Run(ts.name, func(t *testing.T) {
+			out, err := json.Marshal(ts.day)
+			valid := err == nil
+			if valid != ts.valid {
+				t.Errorf("valid marshal case\n\tgot: %+v\n\twant : %+v", valid, ts.valid)
+			}
+
+			if valid && ts.json != string(out) {
+				t.Errorf("\ninput: %s\ngot : %+v\nwant  : %+v\n",
+					ts.day, string(out), ts.json)
+			}
+		})
+	}
+}
