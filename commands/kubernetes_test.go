@@ -21,6 +21,10 @@ var (
 			NodePools: []*godo.KubernetesNodePool{
 				testNodePool.KubernetesNodePool,
 			},
+			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
+				StartTime: "00:00",
+				Day:       godo.KubernetesMaintenanceDayAny,
+			},
 		},
 	}
 
@@ -198,6 +202,10 @@ func TestKubernetesCreate(t *testing.T) {
 					Tags:  testNodePool.Tags,
 				},
 			},
+			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
+				StartTime: "00:00",
+				Day:       godo.KubernetesMaintenanceDayAny,
+			},
 		}
 		tm.kubernetes.On("Create", &r).Return(&testCluster, nil)
 
@@ -205,6 +213,7 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testCluster.RegionSlug)
 		config.Doit.Set(config.NS, doctl.ArgClusterVersionSlug, testCluster.VersionSlug)
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
+		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgClusterNodePool, []string{
 			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s",
 				testNodePool.Name+"1", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
@@ -225,21 +234,31 @@ func TestKubernetesUpdate(t *testing.T) {
 		r := godo.KubernetesClusterUpdateRequest{
 			Name: testCluster.Name,
 			Tags: testCluster.Tags,
+			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
+				StartTime: "00:00",
+				Day:       godo.KubernetesMaintenanceDayAny,
+			},
 		}
 		tm.kubernetes.On("Update", testCluster.ID, &r).Return(&testCluster, nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
+		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 
 		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
 	})
+
 	// by name
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		r := godo.KubernetesClusterUpdateRequest{
 			Name: testCluster.Name,
 			Tags: testCluster.Tags,
+			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
+				StartTime: "00:00",
+				Day:       godo.KubernetesMaintenanceDayAny,
+			},
 		}
 		tm.kubernetes.On("List").Return(testClusterList, nil)
 		tm.kubernetes.On("Update", testCluster.ID, &r).Return(&testCluster, nil)
@@ -247,6 +266,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
+		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 
 		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
