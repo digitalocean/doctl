@@ -157,6 +157,16 @@ var (
 	}
 )
 
+// KubernetesMaintenanceToDay returns the appropriate KubernetesMaintenancePolicyDay for the given string.
+func KubernetesMaintenanceToDay(day string) (KubernetesMaintenancePolicyDay, error) {
+	d, ok := toDay[day]
+	if !ok {
+		return 0, fmt.Errorf("unknown day: %q", day)
+	}
+
+	return d, nil
+}
+
 func (k KubernetesMaintenancePolicyDay) String() string {
 	if KubernetesMaintenanceDayAny <= k && k <= KubernetesMaintenanceDaySunday {
 		return days[k]
@@ -171,9 +181,9 @@ func (k *KubernetesMaintenancePolicyDay) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	parsed, ok := toDay[val]
-	if !ok {
-		return fmt.Errorf("unknown day: %q", val)
+	parsed, err := KubernetesMaintenanceToDay(val)
+	if err != nil {
+		return err
 	}
 	*k = parsed
 	return nil
