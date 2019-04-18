@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.12.0] - 2019-04-18
+
+- #224 Add maintenance window support for Kubernetes- @fatih
+
 ## [v1.11.1] - 2019-04-04
 
 - #222 Fix Create Database Pools json fields - @sunny-b
