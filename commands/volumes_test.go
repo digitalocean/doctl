@@ -93,6 +93,7 @@ func TestVolumeCreate(t *testing.T) {
 			SizeGigaBytes: 100,
 			Region:        "atlantis",
 			Description:   "test description",
+			Tags:          []string{"one", "two"},
 		}
 		tm.volumes.On("CreateVolume", &tcr).Return(&testVolume, nil)
 
@@ -101,6 +102,7 @@ func TestVolumeCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgVolumeRegion, "atlantis")
 		config.Doit.Set(config.NS, doctl.ArgVolumeSize, "100GiB")
 		config.Doit.Set(config.NS, doctl.ArgVolumeDesc, "test description")
+		config.Doit.Set(config.NS, doctl.ArgTag, []string{"one", "two"})
 
 		err := RunVolumeCreate(config)
 		assert.NoError(t, err)
@@ -126,12 +128,14 @@ func TestVolumesSnapshot(t *testing.T) {
 			VolumeID:    testVolume.ID,
 			Name:        "test-volume-snapshot",
 			Description: "test description",
+			Tags:        []string{"one", "two"},
 		}
 		tm.volumes.On("CreateSnapshot", &tcr).Return(nil, nil)
 
 		config.Args = append(config.Args, testVolume.ID)
 		config.Doit.Set(config.NS, doctl.ArgSnapshotName, "test-volume-snapshot")
 		config.Doit.Set(config.NS, doctl.ArgSnapshotDesc, "test description")
+		config.Doit.Set(config.NS, doctl.ArgTag, []string{"one", "two"})
 
 		err := RunVolumeSnapshot(config)
 		assert.NoError(t, err)

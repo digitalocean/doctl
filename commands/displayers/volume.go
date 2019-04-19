@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/digitalocean/doctl/do"
 )
@@ -34,7 +35,7 @@ func (a *Volume) JSON(out io.Writer) error {
 
 func (a *Volume) Cols() []string {
 	return []string{
-		"ID", "Name", "Size", "Region", "Filesystem Type", "Filesystem Label", "DropletIDs",
+		"ID", "Name", "Size", "Region", "Filesystem Type", "Filesystem Label", "DropletIDs", "Tags",
 	}
 }
 
@@ -47,6 +48,7 @@ func (a *Volume) ColMap() map[string]string {
 		"Filesystem Type":  "Filesystem Type",
 		"Filesystem Label": "Filesystem Label",
 		"DropletIDs":       "Droplet IDs",
+		"Tags":             "Tags",
 	}
 
 }
@@ -61,6 +63,7 @@ func (a *Volume) KV() []map[string]interface{} {
 			"Region":           volume.Region.Slug,
 			"Filesystem Type":  volume.FilesystemType,
 			"Filesystem Label": volume.FilesystemLabel,
+			"Tags":             strings.Join(volume.Tags, ","),
 		}
 		m["DropletIDs"] = ""
 		if len(volume.DropletIDs) != 0 {

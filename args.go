@@ -146,6 +146,8 @@ const (
 	ArgTagName = "tag-name"
 	// ArgTagNames is a slice of possible tag names
 	ArgTagNames = "tag-names"
+	// ArgTag specifies tag.  --tag can be repeated or multiple tags can be , separated.
+	ArgTag = "tag"
 	//ArgTemplate is template format
 	ArgTemplate = "template"
 	// ArgVersion is the version of the command to use
