@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.13.0] - 2019-04-19
+
+- #213 Add tagging support for volume snapshots - @jcodybaker
+
 ## [v1.12.0] - 2019-04-18
 
 - #224 Add maintenance window support for Kubernetes- @fatih
