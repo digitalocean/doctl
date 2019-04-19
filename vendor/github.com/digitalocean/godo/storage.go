@@ -175,9 +175,10 @@ func (svc *StorageServiceOp) DeleteVolume(ctx context.Context, id string) (*Resp
 // SnapshotCreateRequest represents a request to create a block store
 // volume.
 type SnapshotCreateRequest struct {
-	VolumeID    string `json:"volume_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	VolumeID    string   `json:"volume_id"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Tags        []string `json:"tags"`
 }
 
 // ListSnapshots lists all snapshots related to a storage volume.

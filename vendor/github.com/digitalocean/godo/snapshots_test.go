@@ -176,10 +176,11 @@ func TestSnapshot_String(t *testing.T) {
 		MinDiskSize:   20,
 		SizeGigaBytes: 4.84,
 		Created:       "2013-11-27T09:24:55Z",
+		Tags:          []string{"one", "two"},
 	}
 
 	stringified := snapshot.String()
-	expected := `godo.Snapshot{ID:"1", Name:"Snapsh176ot", ResourceID:"0", ResourceType:"droplet", Regions:["one"], MinDiskSize:20, SizeGigaBytes:4.84, Created:"2013-11-27T09:24:55Z"}`
+	expected := `godo.Snapshot{ID:"1", Name:"Snapsh176ot", ResourceID:"0", ResourceType:"droplet", Regions:["one"], MinDiskSize:20, SizeGigaBytes:4.84, Created:"2013-11-27T09:24:55Z", Tags:["one" "two"]}`
 	if expected != stringified {
 		t.Errorf("Snapshot.String returned %+v, expected %+v", stringified, expected)
 	}

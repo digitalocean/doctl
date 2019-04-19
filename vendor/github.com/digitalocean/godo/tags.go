@@ -33,14 +33,16 @@ var _ TagsService = &TagsServiceOp{}
 type ResourceType string
 
 const (
-	//DropletResourceType holds the string representing our ResourceType of Droplet.
+	// DropletResourceType holds the string representing our ResourceType of Droplet.
 	DropletResourceType ResourceType = "droplet"
-	//ImageResourceType holds the string representing our ResourceType of Image.
+	// ImageResourceType holds the string representing our ResourceType of Image.
 	ImageResourceType ResourceType = "image"
-	//VolumeResourceType holds the string representing our ResourceType of Volume.
+	// VolumeResourceType holds the string representing our ResourceType of Volume.
 	VolumeResourceType ResourceType = "volume"
-	//LoadBalancerResourceType holds the string representing our ResourceType of LoadBalancer.
+	// LoadBalancerResourceType holds the string representing our ResourceType of LoadBalancer.
 	LoadBalancerResourceType ResourceType = "load_balancer"
+	// VolumeSnapshotResourceType holds the string representing our ResourceType for storage Snapshots.
+	VolumeSnapshotResourceType ResourceType = "volumesnapshot"
 )
 
 // Resource represent a single resource for associating/disassociating with tags
