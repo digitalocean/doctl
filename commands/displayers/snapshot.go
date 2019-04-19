@@ -16,6 +16,7 @@ package displayers
 import (
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/digitalocean/doctl/do"
 )
@@ -32,13 +33,13 @@ func (s *Snapshot) JSON(out io.Writer) error {
 
 func (s *Snapshot) Cols() []string {
 	return []string{"ID", "Name", "CreatedAt", "Regions", "ResourceId",
-		"ResourceType", "MinDiskSize", "Size"}
+		"ResourceType", "MinDiskSize", "Size", "Tags"}
 }
 
 func (s *Snapshot) ColMap() map[string]string {
 	return map[string]string{
 		"ID": "ID", "Name": "Name", "CreatedAt": "Created at", "Regions": "Regions",
-		"ResourceId": "Resource ID", "ResourceType": "Resource Type", "MinDiskSize": "Min Disk Size", "Size": "Size"}
+		"ResourceId": "Resource ID", "ResourceType": "Resource Type", "MinDiskSize": "Min Disk Size", "Size": "Size", "Tags": "Tags"}
 }
 
 func (s *Snapshot) KV() []map[string]interface{} {
@@ -49,6 +50,7 @@ func (s *Snapshot) KV() []map[string]interface{} {
 			"ID": ss.ID, "Name": ss.Name, "ResourceId": ss.ResourceID,
 			"ResourceType": ss.ResourceType, "Regions": ss.Regions, "MinDiskSize": ss.MinDiskSize,
 			"Size": strconv.FormatFloat(ss.SizeGigaBytes, 'f', 2, 64) + " GiB", "CreatedAt": ss.Created,
+			"Tags": strings.Join(ss.Tags, ","),
 		}
 		out = append(out, o)
 	}

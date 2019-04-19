@@ -48,6 +48,7 @@ func Volume() *Command {
 		requiredOpt())
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemType, "", "", "Volume filesystem type (ext4 or xfs)")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "Volume filesystem label")
+	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "tags to apply to the volume; comma separate or repeat --tag to add multiple tags at once")
 
 	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "delete a volume", Writer,
 		aliasOpt("rm"))
@@ -60,6 +61,7 @@ func Volume() *Command {
 		aliasOpt("s"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "Snapshot description")
+	AddStringSliceFlag(cmdRunVolumeSnapshot, doctl.ArgTag, "", []string{}, "tags to apply to the snapshot; comma separate or repeat --tag to add multiple tags at once")
 
 	return cmd
 
@@ -157,6 +159,11 @@ func RunVolumeCreate(c *CmdConfig) error {
 		return err
 	}
 
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
+	if err != nil {
+		return err
+	}
+
 	var createVolume godo.VolumeCreateRequest
 
 	createVolume.Name = name
@@ -165,6 +172,7 @@ func RunVolumeCreate(c *CmdConfig) error {
 	createVolume.Region = region
 	createVolume.FilesystemType = fsType
 	createVolume.FilesystemLabel = fsLabel
+	createVolume.Tags = tags
 
 	al := c.Volumes()
 
@@ -231,10 +239,16 @@ func RunVolumeSnapshot(c *CmdConfig) error {
 		return nil
 	}
 
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
+	if err != nil {
+		return err
+	}
+
 	req := &godo.SnapshotCreateRequest{
 		VolumeID:    id,
 		Name:        name,
 		Description: desc,
+		Tags:        tags,
 	}
 
 	_, err = c.Volumes().CreateSnapshot(req)
