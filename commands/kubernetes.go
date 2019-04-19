@@ -113,7 +113,7 @@ func kubernetesCluster() *Command {
 	cmdKubeClusterCreate := CmdBuilder(cmd, RunKubernetesClusterCreate(defaultKubernetesNodeSize, defaultKubernetesNodeCount), "create <name>", "create a cluster", Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion, `cluster region, possible values: see "doctl k8s options regions"`, requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest", `cluster version, possible values: see "doctl k8s options versions"`)
-	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "", defaultKubernetesNodeSize, `size of nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`), possible values: see "doctl k8s options sizes".`)
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "", defaultKubernetesNodeCount, "number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil, `cluster node pools, can be repeated to create multiple node pools at once (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
@@ -127,7 +127,7 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 
 	cmdKubeClusterUpdate := CmdBuilder(cmd, RunKubernetesClusterUpdate, "update <id|name>", "update a cluster's properties", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "", "new cluster name")
-	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgClusterTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
+	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to update the cluster in your kubeconfig")
 
 	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesClusterDelete, "delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
@@ -176,12 +176,12 @@ func kubernetesNodePools() *Command {
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "", "node pool name", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "", "size of nodes in the node pool (see `doctl k8s options sizes`)", requiredOpt())
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0, "count of nodes in the node pool", requiredOpt())
-	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgClusterTag, "", "", "tags to apply to the node pool, repeat to add multiple tags at once")
+	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", "", "tags to apply to the node pool, repeat to add multiple tags at once")
 
 	cmdKubeNodePoolUpdate := CmdBuilder(cmd, RunKubernetesNodePoolUpdate, "update <cluster-id|cluster-name> <pool-id|pool-name>", "update an existing node pool in a cluster", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "node pool name")
 	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", 0, "count of nodes in the node pool")
-	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgClusterTag, "", "", "tags to apply to the node pool, repeat to add multiple tags at once")
+	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", "", "tags to apply to the node pool, repeat to add multiple tags at once")
 
 	cmdKubeNodePoolRecycle := CmdBuilder(cmd, RunKubernetesNodePoolRecycle, "recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
 	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "", "ID or name of the nodes in the node pool to recycle")
@@ -778,7 +778,7 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.VersionSlug = version
 
-	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
 	}
@@ -832,7 +832,7 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	}
 	r.Name = name
 
-	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
 	}
@@ -936,7 +936,7 @@ func buildNodePoolCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.Count = count
 
-	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
 	}
@@ -958,7 +958,7 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.Count = count
 
-	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
 	}

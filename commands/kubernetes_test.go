@@ -204,7 +204,7 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testCluster.RegionSlug)
 		config.Doit.Set(config.NS, doctl.ArgClusterVersionSlug, testCluster.VersionSlug)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testCluster.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgClusterNodePool, []string{
 			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s",
 				testNodePool.Name+"1", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
@@ -230,7 +230,7 @@ func TestKubernetesUpdate(t *testing.T) {
 
 		config.Args = append(config.Args, testCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testCluster.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 
 		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -246,7 +246,7 @@ func TestKubernetesUpdate(t *testing.T) {
 
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testCluster.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 
 		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -381,7 +381,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testNodePool.Size)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 
 		err := RunKubernetesNodePoolCreate(config)
 		assert.NoError(t, err)
@@ -402,7 +402,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testNodePool.Size)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 
 		err := RunKubernetesNodePoolCreate(config)
 		assert.NoError(t, err)
@@ -423,7 +423,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 
 		err := RunKubernetesNodePoolUpdate(config)
 		assert.NoError(t, err)
@@ -442,7 +442,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 
 		err := RunKubernetesNodePoolUpdate(config)
 		assert.NoError(t, err)
@@ -461,7 +461,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 
 		err := RunKubernetesNodePoolUpdate(config)
 		assert.NoError(t, err)
@@ -481,7 +481,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTagNames, testNodePool.Tags)
+		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 
 		err := RunKubernetesNodePoolUpdate(config)
 		assert.NoError(t, err)
