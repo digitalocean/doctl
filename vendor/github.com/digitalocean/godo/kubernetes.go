@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -53,12 +54,15 @@ type KubernetesClusterCreateRequest struct {
 	VPCUUID     string   `json:"vpc_uuid,omitempty"`
 
 	NodePools []*KubernetesNodePoolCreateRequest `json:"node_pools,omitempty"`
+
+	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy"`
 }
 
 // KubernetesClusterUpdateRequest represents a request to update a Kubernetes cluster.
 type KubernetesClusterUpdateRequest struct {
-	Name string   `json:"name,omitempty"`
-	Tags []string `json:"tags,omitempty"`
+	Name              string                       `json:"name,omitempty"`
+	Tags              []string                     `json:"tags,omitempty"`
+	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy"`
 }
 
 // KubernetesNodePoolCreateRequest represents a request to create a node pool for a
@@ -99,9 +103,98 @@ type KubernetesCluster struct {
 
 	NodePools []*KubernetesNodePool `json:"node_pools,omitempty"`
 
+	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy,omitempty"`
+
 	Status    *KubernetesClusterStatus `json:"status,omitempty"`
 	CreatedAt time.Time                `json:"created_at,omitempty"`
 	UpdatedAt time.Time                `json:"updated_at,omitempty"`
+}
+
+// KubernetesMaintenancePolicy is a configuration to set the maintenance window
+// of a cluster
+type KubernetesMaintenancePolicy struct {
+	StartTime string                         `json:"start_time"`
+	Duration  string                         `json:"duration"`
+	Day       KubernetesMaintenancePolicyDay `json:"day"`
+}
+
+// KubernetesMaintenancePolicyDay represents the possible days of a maintenance
+// window
+type KubernetesMaintenancePolicyDay int
+
+const (
+	KubernetesMaintenanceDayAny KubernetesMaintenancePolicyDay = iota
+	KubernetesMaintenanceDayMonday
+	KubernetesMaintenanceDayTuesday
+	KubernetesMaintenanceDayWednesday
+	KubernetesMaintenanceDayThursday
+	KubernetesMaintenanceDayFriday
+	KubernetesMaintenanceDaySaturday
+	KubernetesMaintenanceDaySunday
+)
+
+var (
+	days = [...]string{
+		"any",
+		"monday",
+		"tuesday",
+		"wednesday",
+		"thursday",
+		"friday",
+		"saturday",
+		"sunday",
+	}
+
+	toDay = map[string]KubernetesMaintenancePolicyDay{
+		"any":       KubernetesMaintenanceDayAny,
+		"monday":    KubernetesMaintenanceDayMonday,
+		"tuesday":   KubernetesMaintenanceDayTuesday,
+		"wednesday": KubernetesMaintenanceDayWednesday,
+		"thursday":  KubernetesMaintenanceDayThursday,
+		"friday":    KubernetesMaintenanceDayFriday,
+		"saturday":  KubernetesMaintenanceDaySaturday,
+		"sunday":    KubernetesMaintenanceDaySunday,
+	}
+)
+
+// KubernetesMaintenanceToDay returns the appropriate KubernetesMaintenancePolicyDay for the given string.
+func KubernetesMaintenanceToDay(day string) (KubernetesMaintenancePolicyDay, error) {
+	d, ok := toDay[day]
+	if !ok {
+		return 0, fmt.Errorf("unknown day: %q", day)
+	}
+
+	return d, nil
+}
+
+func (k KubernetesMaintenancePolicyDay) String() string {
+	if KubernetesMaintenanceDayAny <= k && k <= KubernetesMaintenanceDaySunday {
+		return days[k]
+	}
+	return fmt.Sprintf("%d !Weekday", k)
+
+}
+
+func (k *KubernetesMaintenancePolicyDay) UnmarshalJSON(data []byte) error {
+	var val string
+	if err := json.Unmarshal(data, &val); err != nil {
+		return err
+	}
+
+	parsed, err := KubernetesMaintenanceToDay(val)
+	if err != nil {
+		return err
+	}
+	*k = parsed
+	return nil
+}
+
+func (k KubernetesMaintenancePolicyDay) MarshalJSON() ([]byte, error) {
+	if KubernetesMaintenanceDayAny <= k && k <= KubernetesMaintenanceDaySunday {
+		return json.Marshal(days[k])
+	}
+
+	return nil, fmt.Errorf("invalid day: %d", k)
 }
 
 // Possible states for a cluster.

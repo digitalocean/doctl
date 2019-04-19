@@ -631,6 +631,7 @@ func TestStorageSnapshots_Create(t *testing.T) {
 		VolumeID:    "98d414c6-295e-4e3a-ac58-eb9456c1e1d1",
 		Name:        "my snapshot",
 		Description: "my description",
+		Tags:        []string{"one", "two"},
 	}
 
 	want := &Snapshot{
@@ -639,6 +640,7 @@ func TestStorageSnapshots_Create(t *testing.T) {
 		Name:          "my snapshot",
 		SizeGigaBytes: 100,
 		Created:       "2002-10-02T15:00:00.05Z",
+		Tags:          []string{"one", "two"},
 	}
 	jBlob := `{
 		"snapshot":{
@@ -647,7 +649,8 @@ func TestStorageSnapshots_Create(t *testing.T) {
 			"name": "my snapshot",
 			"description": "my description",
 			"size_gigabytes": 100,
-			"created_at": "2002-10-02T15:00:00.05Z"
+			"created_at": "2002-10-02T15:00:00.05Z",
+			"tags": ["one", "two"]
 		},
 		"links": {
 	    "pages": {
