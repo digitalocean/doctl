@@ -3,7 +3,6 @@ go:
   - "1.10"
   - "1.11"
   - "1.12"
-  - tip
 sudo: false
 install: true
 script: scripts/ci.sh
