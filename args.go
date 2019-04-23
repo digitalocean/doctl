@@ -141,8 +141,12 @@ const (
 	// ArgPollTime is how long before the next poll argument.
 	ArgPollTime = "poll-timeout"
 	// ArgTagName is a tag name
+	// NOTE: ArgTagName will be deprecated once existing uses have been migrated
+	// to use `--tag` (ArgTag). ArgTagName should not be used on new calls.
 	ArgTagName = "tag-name"
 	// ArgTagNames is a slice of possible tag names
+	// NOTE: ArgTagNames will be deprecated once existing uses have been migrated
+	// to use `--tag` (ArgTag). ArgTagNames should not be used on new calls.
 	ArgTagNames = "tag-names"
 	// ArgTag specifies tag.  --tag can be repeated or multiple tags can be , separated.
 	ArgTag = "tag"
