@@ -243,6 +243,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.cdns.AssertExpectations(t))
 	assert.True(t, tm.projects.AssertExpectations(t))
 	assert.True(t, tm.kubernetes.AssertExpectations(t))
+	assert.True(t, tm.databases.AssertExpectations(t))
 }
 
 type TestConfig struct {
