@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"os"
@@ -37,9 +36,13 @@ func retrieveUserTokenFromCommandLine() (string, error) {
 		return "", ErrUnknownTerminal
 	}
 
-	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("DigitalOcean access token: ")
-	return reader.ReadString('\n')
+	passwdBytes, err := terminal.ReadPassword(0)
+	if err != nil {
+		return "", err
+	}
+
+	return string(passwdBytes), nil
 }
 
 // UnknownSchemeError signifies an unknown HTTP scheme.
