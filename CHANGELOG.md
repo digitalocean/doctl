@@ -2,6 +2,14 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.16.0] - 2019-04-25
+
+- #431 Godo v1.13.0 + Tag Support for Volumes + Vol Snapshots - @jcodybaker
+- #430 fix --tag for kubernetes create/update - @jcodybaker
+- #429 remove flaky tip from travis - @hilary
+- #428 Disable terminal ECHO flag when prompting for auth token - @waynr
+- #427 add mock assertions for database service - @sunny-b
+
 ## [1.15.0] - 2019-04-9
 
 - #422 update CONTRIBUTING.md with info on how to update vendored code - @mregmi

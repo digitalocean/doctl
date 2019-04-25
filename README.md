@@ -52,32 +52,39 @@ Support for Windows package managers is on the way.
 
 ### Option 2 — Downloading a Release from GitHub
 
-Visit the [Releases page](https://github.com/digitalocean/doctl/releases) for the [`doctl` GitHub project](https://github.com/digitalocean/doctl), and find the appropriate archive for your operating system and architecture.  You can download the archive from from your browser, or copy its URL and retrieve it to your home directory with `wget` or `curl`.
+Visit the [Releases
+page](https://github.com/digitalocean/doctl/releases) for the [`doctl`
+GitHub project](https://github.com/digitalocean/doctl), and find the
+appropriate archive for your operating system and architecture.  You
+can download the archive from from your browser, or copy its URL and
+retrieve it to your home directory with `wget` or `curl`.
 
 For example, with `wget`:
 
 ```
 cd ~
-wget https://github.com/digitalocean/doctl/releases/download/v1.15.0/doctl-1.15.0-linux-amd64.tar.gz
+wget https://github.com/digitalocean/doctl/releases/download/v1.16.0/doctl-<version>-linux-amd64.tar.gz
 ```
 
 Or with `curl`:
 
 ```
 cd ~
-curl -OL https://github.com/digitalocean/doctl/releases/download/v1.15.0/doctl-1.15.0-linux-amd64.tar.gz
+curl -OL https://github.com/digitalocean/doctl/releases/download/v1.16.0/doctl-<version>-linux-amd64.tar.gz
 ```
 
 Extract the binary. On GNU/Linux or OS X systems, you can use `tar`.
 
 ```
-tar xf ~/doctl-1.15.0-linux-amd64.tar.gz
+tar xf ~/doctl-<version>-linux-amd64.tar.gz
 ```
 
 Or download and extract with this oneliner:
 ```
-curl -sL https://github.com/digitalocean/doctl/releases/download/v1.15.0/doctl-1.15.0-linux-amd64.tar.gz | tar -xzv
+curl -sL https://github.com/digitalocean/doctl/releases/download/v<version>/doctl-<version>-linux-amd64.tar.gz | tar -xzv
 ```
+
+Where `<version>` is the full semantic version, e.g., `1.15.0`.
 
 On Windows systems, you should be able to double-click the zip archive to extract the `doctl` executable.
 

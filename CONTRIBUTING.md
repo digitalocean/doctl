@@ -93,7 +93,6 @@ You will also need a valid `GITHUB_TOKEN` environment variable with access to th
 
    Update the version in:
 
-   * `README.md`
    * `doit.go`
    * `Dockerfile`
    * `snap/snapcraft.yml`
