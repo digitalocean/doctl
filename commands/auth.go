@@ -78,6 +78,11 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 	return func(c *CmdConfig) error {
 		token := c.getContextAccessToken()
 
+		context := Context
+		if context == "" {
+			context = viper.GetString("context")
+		}
+
 		if token == "" {
 			in, err := retrieveUserTokenFunc()
 			if err != nil {
@@ -85,7 +90,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			}
 			token = strings.TrimSpace(in)
 		} else {
-			fmt.Fprintf(c.Out, "Using token [%v]", token)
+			fmt.Fprintf(c.Out, "Using token for context [%v]", context)
 			fmt.Fprintln(c.Out)
 		}
 
