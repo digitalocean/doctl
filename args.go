@@ -166,6 +166,8 @@ const (
 	ArgVolumeDesc = "desc"
 	// ArgVolumeRegion is the region of a volume.
 	ArgVolumeRegion = "region"
+	// ArgVolumeSnapshot is the snapshot from which to create a volume.
+	ArgVolumeSnapshot = "snapshot"
 	// ArgVolumeFilesystemType is the filesystem type for a volume.
 	ArgVolumeFilesystemType = "fs-type"
 	// ArgVolumeFilesystemLabel is the filesystem label for a volume.

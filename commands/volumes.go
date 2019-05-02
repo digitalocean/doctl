@@ -44,8 +44,8 @@ func Volume() *Command {
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSize, "", "4TiB", "Volume size",
 		requiredOpt())
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeDesc, "", "", "Volume description")
-	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "Volume region",
-		requiredOpt())
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "Volume region; should not be specified with a snapshot")
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSnapshot, "", "", "Volume snapshot; should not specified with a region")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemType, "", "", "Volume filesystem type (ext4 or xfs)")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "Volume filesystem label")
 	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "tags to apply to the volume; comma separate or repeat --tag to add multiple tags at once")
@@ -147,7 +147,16 @@ func RunVolumeCreate(c *CmdConfig) error {
 	region, err := c.Doit.GetString(c.NS, doctl.ArgVolumeRegion)
 	if err != nil {
 		return err
+	}
 
+	snapshotID, err := c.Doit.GetString(c.NS, doctl.ArgVolumeSnapshot)
+	if err != nil {
+		return err
+	}
+
+	if region == "" && snapshotID == "" {
+		errorMsg := fmt.Sprintf("%s.%s || %s.%s", c.NS, doctl.ArgVolumeRegion, c.NS, doctl.ArgVolumeSnapshot)
+		return doctl.NewMissingArgsErr(errorMsg)
 	}
 
 	fsType, err := c.Doit.GetString(c.NS, doctl.ArgVolumeFilesystemType)
@@ -170,6 +179,7 @@ func RunVolumeCreate(c *CmdConfig) error {
 	createVolume.SizeGigaBytes = int64(size / (1 << 30))
 	createVolume.Description = desc
 	createVolume.Region = region
+	createVolume.SnapshotID = snapshotID
 	createVolume.FilesystemType = fsType
 	createVolume.FilesystemLabel = fsLabel
 	createVolume.Tags = tags
