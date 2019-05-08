@@ -66,14 +66,14 @@ For example, with `wget`:
 
 ```
 cd ~
-wget https://github.com/digitalocean/doctl/releases/download/v1.17.0/doctl-<version>-linux-amd64.tar.gz
+wget https://github.com/digitalocean/doctl/releases/download/v<version>/doctl-<version>-linux-amd64.tar.gz
 ```
 
 Or with `curl`:
 
 ```
 cd ~
-curl -OL https://github.com/digitalocean/doctl/releases/download/v1.17.0/doctl-<version>-linux-amd64.tar.gz
+curl -OL https://github.com/digitalocean/doctl/releases/download/v<version>/doctl-<version>-linux-amd64.tar.gz
 ```
 
 Extract the binary. On GNU/Linux or OS X systems, you can use `tar`.
