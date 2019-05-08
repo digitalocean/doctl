@@ -124,11 +124,13 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 	- tag:    tags to apply to the node pool, repeat to add multiple tags at once.`)
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to add the created cluster to your kubeconfig")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true, "whether to wait for the created cluster to become running")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
 
 	cmdKubeClusterUpdate := CmdBuilder(cmd, RunKubernetesClusterUpdate, "update <id|name>", "update a cluster's properties", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "", "new cluster name")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to update the cluster in your kubeconfig")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
 
 	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesClusterDelete, "delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force cluster delete")
@@ -150,7 +152,8 @@ func kubernetesKubeconfig() *Command {
 	CmdBuilder(cmd, RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "show a cluster's kubeconfig to standard out", Writer, aliasOpt("p", "g"))
 	cmdExecCredential := CmdBuilder(cmd, RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL print a cluster's exec credential", Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
-	CmdBuilder(cmd, RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "save a cluster's credentials to your local kubeconfig", Writer, aliasOpt("s"))
+	cmdSaveConfig := CmdBuilder(cmd, RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "save a cluster's credentials to your local kubeconfig", Writer, aliasOpt("s"))
+	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
 	CmdBuilder(cmd, RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "remove a cluster's credentials from your local kubeconfig", Writer, aliasOpt("d", "rm"))
 	return cmd
 }
@@ -253,6 +256,10 @@ func RunKubernetesClusterCreate(defaultNodeSize string, defaultNodeCount int) fu
 		if err != nil {
 			return err
 		}
+		setCurrentContext, err := c.Doit.GetBool(c.NS, doctl.ArgSetCurrentContext)
+		if err != nil {
+			return err
+		}
 
 		kube := c.Kubernetes()
 
@@ -271,7 +278,7 @@ func RunKubernetesClusterCreate(defaultNodeSize string, defaultNodeCount int) fu
 
 		if update {
 			notice("cluster created, fetching credentials")
-			tryUpdateKubeconfig(kube, cluster.ID, clusterName)
+			tryUpdateKubeconfig(kube, cluster.ID, clusterName, setCurrentContext)
 		}
 
 		return displayClusters(c, true, *cluster)
@@ -284,6 +291,10 @@ func RunKubernetesClusterUpdate(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	update, err := c.Doit.GetBool(c.NS, doctl.ArgClusterUpdateKubeconfig)
+	if err != nil {
+		return err
+	}
+	setCurrentContext, err := c.Doit.GetBool(c.NS, doctl.ArgSetCurrentContext)
 	if err != nil {
 		return err
 	}
@@ -306,13 +317,13 @@ func RunKubernetesClusterUpdate(c *CmdConfig) error {
 
 	if update {
 		notice("cluster updated, fetching new credentials")
-		tryUpdateKubeconfig(kube, clusterID, clusterIDorName)
+		tryUpdateKubeconfig(kube, clusterID, clusterIDorName, setCurrentContext)
 	}
 
 	return displayClusters(c, true, *cluster)
 }
 
-func tryUpdateKubeconfig(kube do.KubernetesService, clusterID, clusterName string) {
+func tryUpdateKubeconfig(kube do.KubernetesService, clusterID, clusterName string, setCurrentContext bool) {
 	var (
 		kubeconfig []byte
 		err        error
@@ -332,7 +343,7 @@ func tryUpdateKubeconfig(kube do.KubernetesService, clusterID, clusterName strin
 			break
 		}
 	}
-	if err := writeOrAddToKubeconfig(clusterID, kubeconfig); err != nil {
+	if err := writeOrAddToKubeconfig(clusterID, kubeconfig, setCurrentContext); err != nil {
 		warn("couldn't write cluster credentials: %v", err)
 	}
 }
@@ -571,7 +582,12 @@ func RunKubernetesKubeconfigSave(c *CmdConfig) error {
 		return err
 	}
 
-	return writeOrAddToKubeconfig(clusterID, kubeconfig)
+	setCurrentContext, err := c.Doit.GetBool(c.NS, doctl.ArgSetCurrentContext)
+	if err != nil {
+		return err
+	}
+
+	return writeOrAddToKubeconfig(clusterID, kubeconfig, setCurrentContext)
 }
 
 // RunKubernetesKubeconfigRemove retrieves an existing kubernetes config and removes it from your local kubeconfig.
@@ -967,7 +983,7 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	return nil
 }
 
-func writeOrAddToKubeconfig(clusterID string, kubeconfig []byte) error {
+func writeOrAddToKubeconfig(clusterID string, kubeconfig []byte, setCurrentContext bool) error {
 	remote, err := clientcmd.Load(kubeconfig)
 	if err != nil {
 		return err
@@ -979,7 +995,7 @@ func writeOrAddToKubeconfig(clusterID string, kubeconfig []byte) error {
 	}
 
 	notice("adding cluster credentials to kubeconfig file found in %q", kubectlDefaults.GlobalFile)
-	if err := mergeKubeconfig(clusterID, remote, currentConfig); err != nil {
+	if err := mergeKubeconfig(clusterID, remote, currentConfig, setCurrentContext); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
 	}
 	return clientcmd.ModifyConfig(kubectlDefaults, *currentConfig, false)
@@ -1005,7 +1021,7 @@ func removeFromKubeconfig(kubeconfig []byte) error {
 // mergeKubeconfig merges a remote cluster's config file with a local config file,
 // assuming that the current context in the remote config file points to the
 // cluster details to add to the local config.
-func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config) error {
+func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCurrentContext bool) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
@@ -1023,6 +1039,11 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config) error
 
 	local.Contexts[remote.CurrentContext] = remoteCtx
 	local.Clusters[remoteCtx.Cluster] = remoteCluster
+
+	if setCurrentContext {
+		notice("setting current-context to %s", remote.CurrentContext)
+		local.CurrentContext = remote.CurrentContext
+	}
 
 	// configure kubectl to call doctl to retrieve credentials
 	local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
