@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.18.0] - UNRELEASED
+
+ - #440 Add flag to set local KubeConfig's current-context. - @eddiezane
+
 ## [1.17.0] - UNRELEASED
 
  - #438 Remove need to opt-in to database commands. - @andrewsomething
