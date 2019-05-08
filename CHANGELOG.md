@@ -2,7 +2,7 @@
 
 All changes to `doctl` will be documented in this file.
 
-## [1.17.0] - UNRELEASED
+## [1.17.0] - 2019-05-08
 
  - #438 Remove need to opt-in to database commands. - @andrewsomething
  - #420 Allow creating Volumes from a Snapshots. - @bentranter
