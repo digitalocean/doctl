@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.17.0] - UNRELEASED
+
+ - #438 Remove need to opt-in to database commands. - @andrewsomething
+
 ## [1.16.0] - 2019-04-25
 
 - #431 Godo v1.13.0 + Tag Support for Volumes + Vol Snapshots - @jcodybaker

@@ -40,7 +40,6 @@ func Databases() *Command {
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "database commands",
 			Long:    "database is used to access managed databases commands",
-			Hidden:  !isBeta(),
 		},
 	}
 
