@@ -32,7 +32,7 @@ There are four ways to install `doctl`: using a package manager, downloading a G
 
 ### Option 1 – Using a Package Manager (Preferred)
 
-A package manager allows you to install and keep up with new `doctl` versions using only a few commands. Currently, `doctl` is available as part of [Homebrew](https://brew.sh/) for macOS users and [Snap](https://snapcraft.io/) for GNU/Linux users.
+A package manager allows you to install and keep up with new `doctl` versions using only a few commands. Currently, `doctl` is available as part of [Homebrew](https://brew.sh/) for macOS and GNU/Linux users.
 
 You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this command:
 
@@ -40,13 +40,16 @@ You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this c
 brew install doctl
 ```
 
+<!--- TODO(eddiezane): Uncomment once Snap is updated
 You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
 
 ```
 sudo snap install doctl --classic
 ```
+-->
+
   #### Arch Linux
-  Arch users not using snaps can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
+  Arch users not using a package manager can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
 
 Support for Windows package managers is on the way.
 
@@ -180,7 +183,7 @@ Save and close the file. The next time you use `doctl`, the new default values y
 
 **Note:** Shell auto-completion is not available for Windows users.
 
-How you enable auto-completion depends on which operating system you're using. If you installed `doctl` via Homebrew or Snap, auto-completion is activated automatically, though you may need to configure your local environment to enable it.
+How you enable auto-completion depends on which operating system you're using. If you installed `doctl` via Homebrew, auto-completion is activated automatically, though you may need to configure your local environment to enable it.
 
 `doctl` can generate an auto-completion script with the `doctl completion your_shell_here` command. Valid arguments for the shell are Bash (`bash`) and ZSH (`zsh`). By default, the script will be printed to the command line output.  For more usage examples for the `completion` command, use `doctl completion --help`.
 
