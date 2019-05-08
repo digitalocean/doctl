@@ -109,6 +109,29 @@ func TestVolumeCreate(t *testing.T) {
 	})
 }
 
+func TestVolumeCreateFromSnapshot(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tcr := godo.VolumeCreateRequest{
+			Name:          "test-volume",
+			SizeGigaBytes: 100,
+			SnapshotID:    "ed6414f7-7873-4dd2-90cf-f4f354c293e6",
+			Description:   "test description",
+			Tags:          []string{"one", "two"},
+		}
+		tm.volumes.On("CreateVolume", &tcr).Return(&testVolume, nil)
+
+		config.Args = append(config.Args, "test-volume")
+
+		config.Doit.Set(config.NS, doctl.ArgVolumeSnapshot, "ed6414f7-7873-4dd2-90cf-f4f354c293e6")
+		config.Doit.Set(config.NS, doctl.ArgVolumeSize, "100GiB")
+		config.Doit.Set(config.NS, doctl.ArgVolumeDesc, "test description")
+		config.Doit.Set(config.NS, doctl.ArgTag, []string{"one", "two"})
+
+		err := RunVolumeCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestVolumesDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.volumes.On("DeleteVolume", "test-volume").Return(nil)

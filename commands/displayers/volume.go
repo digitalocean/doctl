@@ -60,10 +60,13 @@ func (a *Volume) KV() []map[string]interface{} {
 			"ID":               volume.ID,
 			"Name":             volume.Name,
 			"Size":             strconv.FormatInt(volume.SizeGigaBytes, 10) + " GiB",
-			"Region":           volume.Region.Slug,
 			"Filesystem Type":  volume.FilesystemType,
 			"Filesystem Label": volume.FilesystemLabel,
 			"Tags":             strings.Join(volume.Tags, ","),
+		}
+		m["Region"] = ""
+		if volume.Region != nil {
+			m["Region"] = volume.Region.Slug
 		}
 		m["DropletIDs"] = ""
 		if len(volume.DropletIDs) != 0 {
