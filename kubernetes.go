@@ -56,6 +56,7 @@ type KubernetesClusterCreateRequest struct {
 	NodePools []*KubernetesNodePoolCreateRequest `json:"node_pools,omitempty"`
 
 	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy"`
+	AutoUpgrade       bool                         `json:"auto_upgrade"`
 }
 
 // KubernetesClusterUpdateRequest represents a request to update a Kubernetes cluster.
@@ -63,6 +64,7 @@ type KubernetesClusterUpdateRequest struct {
 	Name              string                       `json:"name,omitempty"`
 	Tags              []string                     `json:"tags,omitempty"`
 	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy"`
+	AutoUpgrade       bool                         `json:"auto_upgrade"`
 }
 
 // KubernetesNodePoolCreateRequest represents a request to create a node pool for a
@@ -104,6 +106,7 @@ type KubernetesCluster struct {
 	NodePools []*KubernetesNodePool `json:"node_pools,omitempty"`
 
 	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy,omitempty"`
+	AutoUpgrade       bool                         `json:"auto_upgrade,omitempty"`
 
 	Status    *KubernetesClusterStatus `json:"status,omitempty"`
 	CreatedAt time.Time                `json:"created_at,omitempty"`
