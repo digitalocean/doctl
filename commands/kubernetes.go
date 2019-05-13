@@ -113,6 +113,7 @@ func kubernetesCluster() *Command {
 	cmdKubeClusterCreate := CmdBuilder(cmd, RunKubernetesClusterCreate(defaultKubernetesNodeSize, defaultKubernetesNodeCount), "create <name>", "create a cluster", Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion, `cluster region, possible values: see "doctl k8s options regions"`, requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest", `cluster version, possible values: see "doctl k8s options versions"`)
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false, "whether to enable auto-upgrade for the cluster")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "", defaultKubernetesNodeSize, `size of nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`), possible values: see "doctl k8s options sizes".`)
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "", defaultKubernetesNodeCount, "number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
@@ -129,6 +130,7 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 	cmdKubeClusterUpdate := CmdBuilder(cmd, RunKubernetesClusterUpdate, "update <id|name>", "update a cluster's properties", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "", "new cluster name")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgAutoUpgrade, "", false, "whether to enable auto-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to update the cluster in your kubeconfig")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00", "maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
@@ -866,6 +868,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.VersionSlug = version
 
+	autoUpgrade, err := c.Doit.GetBool(c.NS, doctl.ArgAutoUpgrade)
+	if err != nil {
+		return err
+	}
+	r.AutoUpgrade = autoUpgrade
+
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
@@ -937,6 +945,12 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.MaintenancePolicy = maintenancePolicy
+
+	autoUpgrade, err := c.Doit.GetBool(c.NS, doctl.ArgAutoUpgrade)
+	if err != nil {
+		return err
+	}
+	r.AutoUpgrade = autoUpgrade
 
 	return nil
 }

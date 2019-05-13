@@ -25,6 +25,7 @@ var (
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
+			AutoUpgrade: true,
 		},
 	}
 
@@ -254,6 +255,7 @@ func TestKubernetesCreate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
+			AutoUpgrade: true,
 		}
 		tm.kubernetes.On("Create", &r).Return(&testCluster, nil)
 
@@ -270,6 +272,7 @@ func TestKubernetesCreate(t *testing.T) {
 				testNodePool.Name+"2", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
 			),
 		})
+		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
 
 		err := RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
@@ -286,6 +289,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
+			AutoUpgrade: false,
 		}
 		tm.kubernetes.On("Update", testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -293,6 +297,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
+		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
 
 		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -307,6 +312,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
+			AutoUpgrade: false,
 		}
 		tm.kubernetes.On("List").Return(testClusterList, nil)
 		tm.kubernetes.On("Update", testCluster.ID, &r).Return(&testCluster, nil)
@@ -315,6 +321,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
+		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
 
 		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)

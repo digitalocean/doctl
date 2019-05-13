@@ -26,6 +26,7 @@ func (clusters *KubernetesClusters) Cols() []string {
 			"Name",
 			"Region",
 			"Version",
+			"AutoUpgrade",
 			"Status",
 			"NodePools",
 		}
@@ -35,6 +36,7 @@ func (clusters *KubernetesClusters) Cols() []string {
 		"Name",
 		"Region",
 		"Version",
+		"AutoUpgrade",
 		"Status",
 		"Endpoint",
 		"IPv4",
@@ -50,12 +52,13 @@ func (clusters *KubernetesClusters) Cols() []string {
 func (clusters *KubernetesClusters) ColMap() map[string]string {
 	if clusters.Short {
 		return map[string]string{
-			"ID":        "ID",
-			"Name":      "Name",
-			"Region":    "Region",
-			"Version":   "Version",
-			"Status":    "Status",
-			"NodePools": "Node Pools",
+			"ID":          "ID",
+			"Name":        "Name",
+			"Region":      "Region",
+			"Version":     "Version",
+			"AutoUpgrade": "Auto Upgrade",
+			"Status":      "Status",
+			"NodePools":   "Node Pools",
 		}
 	}
 	return map[string]string{
@@ -63,6 +66,7 @@ func (clusters *KubernetesClusters) ColMap() map[string]string {
 		"Name":          "Name",
 		"Region":        "Region",
 		"Version":       "Version",
+		"AutoUpgrade":   "Auto Upgrade",
 		"ClusterSubnet": "Cluster Subnet",
 		"ServiceSubnet": "Service Subnet",
 		"IPv4":          "IPv4",
@@ -93,6 +97,7 @@ func (clusters *KubernetesClusters) KV() []map[string]interface{} {
 			"Name":          cluster.Name,
 			"Region":        cluster.RegionSlug,
 			"Version":       cluster.VersionSlug,
+			"AutoUpgrade":   cluster.AutoUpgrade,
 			"ClusterSubnet": cluster.ClusterSubnet,
 			"ServiceSubnet": cluster.ServiceSubnet,
 			"IPv4":          cluster.IPv4,
