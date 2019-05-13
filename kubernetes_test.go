@@ -332,6 +332,45 @@ func TestKubernetesClusters_GetKubeConfig(t *testing.T) {
 	require.Equal(t, blob, got.KubeconfigYAML)
 }
 
+func TestKubernetesClusters_GetUpgrades(t *testing.T) {
+	setup()
+	defer teardown()
+
+	kubeSvc := client.Kubernetes
+	want := []*KubernetesVersion{
+		{
+			Slug:              "1.12.3-do.2",
+			KubernetesVersion: "1.12.3",
+		},
+		{
+			Slug:              "1.13.1-do.1",
+			KubernetesVersion: "1.13.1",
+		},
+	}
+	jBlob := `
+{
+	"available_upgrade_versions": [
+		{
+			"slug": "1.12.3-do.2",
+			"kubernetes_version": "1.12.3"
+		},
+		{
+			"slug": "1.13.1-do.1",
+			"kubernetes_version": "1.13.1"
+		}
+	]
+}
+`
+
+	mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/upgrades", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, jBlob)
+	})
+	got, _, err := kubeSvc.GetUpgrades(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d")
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
 func TestKubernetesClusters_Create(t *testing.T) {
 	setup()
 	defer teardown()
@@ -509,6 +548,31 @@ func TestKubernetesClusters_Update(t *testing.T) {
 	got, _, err := kubeSvc.Update(ctx, "8d91899c-0739-4a1a-acc5-deadbeefbb8f", updateRequest)
 	require.NoError(t, err)
 	require.Equal(t, want, got)
+}
+
+func TestKubernetesClusters_Upgrade(t *testing.T) {
+	setup()
+	defer teardown()
+
+	kubeSvc := client.Kubernetes
+
+	upgradeRequest := &KubernetesClusterUpgradeRequest{
+		VersionSlug: "1.12.3-do.2",
+	}
+
+	mux.HandleFunc("/v2/kubernetes/clusters/8d91899c-0739-4a1a-acc5-deadbeefbb8f/upgrade", func(w http.ResponseWriter, r *http.Request) {
+		v := new(KubernetesClusterUpgradeRequest)
+		err := json.NewDecoder(r.Body).Decode(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		testMethod(t, r, http.MethodPost)
+		require.Equal(t, v, upgradeRequest)
+	})
+
+	_, err := kubeSvc.Upgrade(ctx, "8d91899c-0739-4a1a-acc5-deadbeefbb8f", upgradeRequest)
+	require.NoError(t, err)
 }
 
 func TestKubernetesClusters_Destroy(t *testing.T) {

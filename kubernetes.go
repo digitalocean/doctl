@@ -23,9 +23,11 @@ const (
 type KubernetesService interface {
 	Create(context.Context, *KubernetesClusterCreateRequest) (*KubernetesCluster, *Response, error)
 	Get(context.Context, string) (*KubernetesCluster, *Response, error)
+	GetUpgrades(context.Context, string) ([]*KubernetesVersion, *Response, error)
 	GetKubeConfig(context.Context, string) (*KubernetesClusterConfig, *Response, error)
 	List(context.Context, *ListOptions) ([]*KubernetesCluster, *Response, error)
 	Update(context.Context, string, *KubernetesClusterUpdateRequest) (*KubernetesCluster, *Response, error)
+	Upgrade(context.Context, string, *KubernetesClusterUpgradeRequest) (*Response, error)
 	Delete(context.Context, string) (*Response, error)
 
 	CreateNodePool(ctx context.Context, clusterID string, req *KubernetesNodePoolCreateRequest) (*KubernetesNodePool, *Response, error)
@@ -65,6 +67,11 @@ type KubernetesClusterUpdateRequest struct {
 	Tags              []string                     `json:"tags,omitempty"`
 	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy"`
 	AutoUpgrade       bool                         `json:"auto_upgrade"`
+}
+
+// KubernetesClusterUpgradeRequest represents a request to upgrade a Kubernetes cluster.
+type KubernetesClusterUpgradeRequest struct {
+	VersionSlug string `json:"version,omitempty"`
 }
 
 // KubernetesNodePoolCreateRequest represents a request to create a node pool for a
@@ -315,6 +322,10 @@ type kubernetesNodePoolsRoot struct {
 	Links     *Links                `json:"links,omitempty"`
 }
 
+type kubernetesUpgradesRoot struct {
+	AvailableUpgradeVersions []*KubernetesVersion `json:"available_upgrade_versions,omitempty"`
+}
+
 // Get retrieves the details of a Kubernetes cluster.
 func (svc *KubernetesServiceOp) Get(ctx context.Context, clusterID string) (*KubernetesCluster, *Response, error) {
 	path := fmt.Sprintf("%s/%s", kubernetesClustersPath, clusterID)
@@ -328,6 +339,22 @@ func (svc *KubernetesServiceOp) Get(ctx context.Context, clusterID string) (*Kub
 		return nil, resp, err
 	}
 	return root.Cluster, resp, nil
+}
+
+// GetUpgrades retrieves versions a Kubernetes cluster can be upgraded to. An
+// upgrade can be requested using `Upgrade`.
+func (svc *KubernetesServiceOp) GetUpgrades(ctx context.Context, clusterID string) ([]*KubernetesVersion, *Response, error) {
+	path := fmt.Sprintf("%s/%s/upgrades", kubernetesClustersPath, clusterID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(kubernetesUpgradesRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, nil, err
+	}
+	return root.AvailableUpgradeVersions, resp, nil
 }
 
 // Create creates a Kubernetes cluster.
@@ -417,6 +444,17 @@ func (svc *KubernetesServiceOp) Update(ctx context.Context, clusterID string, up
 		return nil, resp, err
 	}
 	return root.Cluster, resp, nil
+}
+
+// Upgrade upgrades a Kubernetes cluster to a new version. Valid upgrade
+// versions for a given cluster can be retrieved with `GetUpgrades`.
+func (svc *KubernetesServiceOp) Upgrade(ctx context.Context, clusterID string, upgrade *KubernetesClusterUpgradeRequest) (*Response, error) {
+	path := fmt.Sprintf("%s/%s/upgrade", kubernetesClustersPath, clusterID)
+	req, err := svc.client.NewRequest(ctx, http.MethodPost, path, upgrade)
+	if err != nil {
+		return nil, err
+	}
+	return svc.client.Do(ctx, req, nil)
 }
 
 // CreateNodePool creates a new node pool in an existing Kubernetes cluster.
