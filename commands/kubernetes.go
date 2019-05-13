@@ -108,6 +108,7 @@ func kubernetesCluster() *Command {
 
 	CmdBuilder(cmd, RunKubernetesClusterGet, "get <id|name>", "get a cluster", Writer, aliasOpt("g"))
 	CmdBuilder(cmd, RunKubernetesClusterList, "list", "get a list of your clusters", Writer, aliasOpt("ls"))
+	CmdBuilder(cmd, RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>", "get available upgrades for a cluster", Writer, aliasOpt("gu"))
 
 	cmdKubeClusterCreate := CmdBuilder(cmd, RunKubernetesClusterCreate(defaultKubernetesNodeSize, defaultKubernetesNodeCount), "create <name>", "create a cluster", Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion, `cluster region, possible values: see "doctl k8s options regions"`, requiredOpt())
@@ -130,6 +131,9 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to update the cluster in your kubeconfig")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00", "maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
+
+	cmdKubeClusterUpgrade := CmdBuilder(cmd, RunKubernetesClusterUpgrade, "upgrade <id|name>", "upgrade a cluster to a new version", Writer)
+	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest", `new cluster version, possible values: see "doctl k8s get-upgrades <cluster>".`)
 
 	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesClusterDelete, "delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force cluster delete")
@@ -235,6 +239,28 @@ func RunKubernetesClusterList(c *CmdConfig) error {
 	return displayClusters(c, true, list...)
 }
 
+// RunKubernetesClusterGetUpgrades retrieves available upgrade versions for a cluster.
+func RunKubernetesClusterGetUpgrades(c *CmdConfig) error {
+	if len(c.Args) != 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	clusterIDorName := c.Args[0]
+	clusterID, err := clusterIDize(c.Kubernetes(), clusterIDorName)
+	if err != nil {
+		return err
+	}
+
+	kube := c.Kubernetes()
+
+	upgrades, err := kube.GetUpgrades(clusterID)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.KubernetesVersions{KubernetesVersions: upgrades}
+	return c.Display(item)
+}
+
 // RunKubernetesClusterCreate creates a new kubernetes with a given configuration.
 func RunKubernetesClusterCreate(defaultNodeSize string, defaultNodeCount int) func(*CmdConfig) error {
 	return func(c *CmdConfig) error {
@@ -336,6 +362,67 @@ func tryUpdateKubeconfig(kube do.KubernetesService, clusterID, clusterName strin
 	if err := writeOrAddToKubeconfig(clusterID, kubeconfig); err != nil {
 		warn("couldn't write cluster credentials: %v", err)
 	}
+}
+
+// RunKubernetesClusterUpgrade upgrades an existing cluster to a new version.
+func RunKubernetesClusterUpgrade(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
+
+	version, available, err := getUpgradeVersionOrLatest(c, clusterID)
+	if err != nil {
+		return err
+	}
+	if !available {
+		notice("cluster is already up-to-date - no upgrades available")
+		return nil
+	}
+
+	kube := c.Kubernetes()
+	err = kube.Upgrade(clusterID, version)
+	if err != nil {
+		return err
+	}
+
+	notice("upgrading cluster to version %v", version)
+	return nil
+}
+
+func getUpgradeVersionOrLatest(c *CmdConfig, clusterID string) (string, bool, error) {
+	version, err := c.Doit.GetString(c.NS, doctl.ArgClusterVersionSlug)
+	if err != nil {
+		return "", false, err
+	}
+	if version != "" && version != defaultKubernetesLatestVersion {
+		return version, true, nil
+	}
+	versions, err := c.Kubernetes().GetUpgrades(clusterID)
+	if err != nil {
+		return "", false, fmt.Errorf("no version flag provided and unable to lookup the latest version from the API: %v", err)
+	}
+	switch len(versions) {
+	case 0:
+		return "", false, nil
+	case 1:
+		return versions[0].Slug, true, nil
+	}
+
+	releases, err := latestReleases(versions)
+	if err != nil {
+		return "", false, err
+	}
+	i, err := versionMaxBy(releases, func(v do.KubernetesVersion) string {
+		return v.KubernetesVersion.KubernetesVersion
+	})
+	if err != nil {
+		return "", false, err
+	}
+	return releases[i].Slug, true, nil
 }
 
 // RunKubernetesClusterDelete deletes a kubernetes by its identifier.

@@ -63,9 +63,11 @@ type KubernetesNodeSize struct {
 type KubernetesService interface {
 	Get(clusterID string) (*KubernetesCluster, error)
 	GetKubeConfig(clusterID string) ([]byte, error)
+	GetUpgrades(clusterID string) (KubernetesVersions, error)
 	List() (KubernetesClusters, error)
 	Create(create *godo.KubernetesClusterCreateRequest) (*KubernetesCluster, error)
 	Update(clusterID string, update *godo.KubernetesClusterUpdateRequest) (*KubernetesCluster, error)
+	Upgrade(clusterID string, versionSlug string) error
 	Delete(clusterID string) error
 
 	CreateNodePool(clusterID string, req *godo.KubernetesNodePoolCreateRequest) (*KubernetesNodePool, error)
@@ -111,6 +113,22 @@ func (k8s *kubernetesClusterService) GetKubeConfig(clusterID string) ([]byte, er
 	return config.KubeconfigYAML, nil
 }
 
+func (k8s *kubernetesClusterService) GetUpgrades(clusterID string) (KubernetesVersions, error) {
+	upgrades, _, err := k8s.client.GetUpgrades(context.TODO(), clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	versions := make([]KubernetesVersion, len(upgrades))
+	for i, v := range upgrades {
+		versions[i] = KubernetesVersion{
+			KubernetesVersion: v,
+		}
+	}
+
+	return versions, nil
+}
+
 func (k8s *kubernetesClusterService) List() (KubernetesClusters, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := k8s.client.List(context.TODO(), opt)
@@ -154,6 +172,15 @@ func (k8s *kubernetesClusterService) Update(clusterID string, update *godo.Kuber
 		return nil, err
 	}
 	return &KubernetesCluster{KubernetesCluster: cluster}, nil
+}
+
+func (k8s *kubernetesClusterService) Upgrade(clusterID string, versionSlug string) error {
+	req := &godo.KubernetesClusterUpgradeRequest{
+		VersionSlug: versionSlug,
+	}
+
+	_, err := k8s.client.Upgrade(context.TODO(), clusterID, req)
+	return err
 }
 
 func (k8s *kubernetesClusterService) Delete(clusterID string) error {
