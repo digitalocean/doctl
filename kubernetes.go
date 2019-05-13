@@ -204,6 +204,7 @@ const (
 	KubernetesClusterStatusDegraded     = KubernetesClusterStatusState("degraded")
 	KubernetesClusterStatusError        = KubernetesClusterStatusState("error")
 	KubernetesClusterStatusDeleted      = KubernetesClusterStatusState("deleted")
+	KubernetesClusterStatusUpgrading    = KubernetesClusterStatusState("upgrading")
 	KubernetesClusterStatusInvalid      = KubernetesClusterStatusState("invalid")
 )
 
@@ -225,6 +226,8 @@ func (s *KubernetesClusterStatusState) UnmarshalText(text []byte) error {
 		*s = KubernetesClusterStatusError
 	case KubernetesClusterStatusDeleted:
 		*s = KubernetesClusterStatusDeleted
+	case KubernetesClusterStatusUpgrading:
+		*s = KubernetesClusterStatusUpgrading
 	case "", KubernetesClusterStatusInvalid:
 		*s = KubernetesClusterStatusInvalid
 	default:
