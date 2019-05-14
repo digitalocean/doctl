@@ -93,7 +93,6 @@ func Kubernetes() *Command {
 }
 
 func kubernetesCluster() *Command {
-
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "cluster",
@@ -124,11 +123,13 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 	- tag:    tags to apply to the node pool, repeat to add multiple tags at once.`)
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to add the created cluster to your kubeconfig")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true, "whether to wait for the created cluster to become running")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00", "maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
 	cmdKubeClusterUpdate := CmdBuilder(cmd, RunKubernetesClusterUpdate, "update <id|name>", "update a cluster's properties", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "", "new cluster name")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to update the cluster in your kubeconfig")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00", "maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
 	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesClusterDelete, "delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force cluster delete")
@@ -784,6 +785,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.Tags = tags
 
+	maintenancePolicy, err := parseMaintenancePolicy(c)
+	if err != nil {
+		return err
+	}
+	r.MaintenancePolicy = maintenancePolicy
+
 	// node pools
 	nodePoolSpecs, err := c.Doit.GetStringSlice(c.NS, doctl.ArgClusterNodePool)
 	if err != nil {
@@ -837,6 +844,12 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.Tags = tags
+
+	maintenancePolicy, err := parseMaintenancePolicy(c)
+	if err != nil {
+		return err
+	}
+	r.MaintenancePolicy = maintenancePolicy
 
 	return nil
 }
@@ -1317,6 +1330,28 @@ func getVersionOrLatest(c *CmdConfig) (string, error) {
 		return "", err
 	}
 	return releases[i].Slug, nil
+}
+
+func parseMaintenancePolicy(c *CmdConfig) (*godo.KubernetesMaintenancePolicy, error) {
+	maintenanceWindow, err := c.Doit.GetString(c.NS, doctl.ArgMaintenanceWindow)
+	if err != nil {
+		return nil, err
+	}
+
+	splitted := strings.SplitN(maintenanceWindow, "=", 2)
+	if len(splitted) != 2 {
+		return nil, fmt.Errorf("a maintenance window argument must be of the form `day=HH:MM`, got: %v", splitted)
+	}
+
+	day, err := godo.KubernetesMaintenanceToDay(splitted[0])
+	if err != nil {
+		return nil, err
+	}
+
+	return &godo.KubernetesMaintenancePolicy{
+		StartTime: splitted[1],
+		Day:       day,
+	}, nil
 }
 
 func latestReleases(versions []do.KubernetesVersion) ([]do.KubernetesVersion, error) {
