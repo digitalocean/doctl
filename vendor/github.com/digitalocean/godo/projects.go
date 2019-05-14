@@ -17,7 +17,7 @@ const (
 )
 
 // ProjectsService is an interface for creating and managing Projects with the DigitalOcean API.
-// See: https://developers.digitalocean.com/documentation/documentation/v2/#projects
+// See: https://developers.digitalocean.com/documentation/v2/#projects
 type ProjectsService interface {
 	List(context.Context, *ListOptions) ([]Project, *Response, error)
 	GetDefault(context.Context) (*Project, *Response, error)
