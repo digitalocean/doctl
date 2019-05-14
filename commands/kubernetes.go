@@ -1508,7 +1508,10 @@ func versionMaxBy(versions []do.KubernetesVersion, selector func(do.KubernetesVe
 	if err != nil {
 		return max, err
 	}
-	for i, v := range versions[1:] {
+	// NOTE: We have to iterate over all of versions here even though we know
+	// versions[0] won't be greater than maxSV so that the index i will be a
+	// valid index into versions rather than into versions[1:].
+	for i, v := range versions {
 		sv, err := semver.Parse(selector(v))
 		if err != nil {
 			return max, err
