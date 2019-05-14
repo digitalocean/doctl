@@ -355,6 +355,7 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 	// using "latest" version
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
 		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
 		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
 
@@ -367,6 +368,7 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 	// without version flag set (defaults to latest)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
 		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
 		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
 
@@ -378,6 +380,7 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 	// for cluster that is up-to-date
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
 		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(nil, nil)
 
 		config.Args = append(config.Args, testCluster.ID)
@@ -773,4 +776,78 @@ func Test_waitForClusterRunningDoesntPanicWithNilGet(t *testing.T) {
 	cluster, err := waitForClusterRunning(&nilCluster{}, "123")
 	require.Nil(t, cluster)
 	require.EqualError(t, err, "can't find 123")
+}
+
+func TestLatestVersionForUpgrade(t *testing.T) {
+	tests := []struct {
+		name            string
+		clusterVersion  string
+		upgradeVersions []do.KubernetesVersion
+		want            string
+	}{
+		{
+			name:           "only one patch version",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.1", KubernetesVersion: "1.12.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.2", KubernetesVersion: "1.12.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
+			},
+			want: "1.12.1-do.3",
+		},
+		{
+			name:           "only one minor version",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.3-do.1", KubernetesVersion: "1.12.3"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.1", KubernetesVersion: "1.12.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.2-do.1", KubernetesVersion: "1.12.2"}},
+			},
+			want: "1.12.3-do.1",
+		},
+		{
+			name:           "multiple minor versions",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.14.3-do.1", KubernetesVersion: "1.14.3"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.13.2-do.1", KubernetesVersion: "1.13.2"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
+			},
+			want: "1.12.1-do.3",
+		},
+		{
+			name:           "multiple major versions",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.3-do.3", KubernetesVersion: "1.12.3"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "2.13.2-do.1", KubernetesVersion: "2.13.2"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.15.1-do.1", KubernetesVersion: "1.15.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "2.14.3-do.1", KubernetesVersion: "2.14.3"}},
+			},
+			want: "1.12.3-do.3",
+		},
+		{
+			name:           "no patch upgrades available",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "2.13.2-do.1", KubernetesVersion: "2.13.2"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.15.1-do.1", KubernetesVersion: "1.15.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "2.14.3-do.1", KubernetesVersion: "2.14.3"}},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			slug, found, err := latestVersionForUpgrade(tt.clusterVersion, tt.upgradeVersions)
+			require.NoError(t, err)
+			if tt.want == "" {
+				require.False(t, found)
+			} else {
+				require.True(t, found)
+				require.Equal(t, tt.want, slug)
+			}
+		})
+	}
 }

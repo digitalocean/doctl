@@ -135,7 +135,9 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00", "maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
 	cmdKubeClusterUpgrade := CmdBuilder(cmd, RunKubernetesClusterUpgrade, "upgrade <id|name>", "upgrade a cluster to a new version", Writer)
-	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest", `new cluster version, possible values: see "doctl k8s get-upgrades <cluster>".`)
+	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest", `new cluster version, possible values: see "doctl k8s get-upgrades <cluster>".
+The special value "latest" will select the most recent patch version for your cluster's minor version.
+For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be "latest".`)
 
 	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesClusterDelete, "delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force cluster delete")
@@ -403,28 +405,64 @@ func getUpgradeVersionOrLatest(c *CmdConfig, clusterID string) (string, bool, er
 	if version != "" && version != defaultKubernetesLatestVersion {
 		return version, true, nil
 	}
-	versions, err := c.Kubernetes().GetUpgrades(clusterID)
+
+	cluster, err := c.Kubernetes().Get(clusterID)
 	if err != nil {
-		return "", false, fmt.Errorf("no version flag provided and unable to lookup the latest version from the API: %v", err)
-	}
-	switch len(versions) {
-	case 0:
-		return "", false, nil
-	case 1:
-		return versions[0].Slug, true, nil
+		return "", false, fmt.Errorf("unable to lookup cluster to find the latest version from the API: %v", err)
 	}
 
-	releases, err := latestReleases(versions)
+	versions, err := c.Kubernetes().GetUpgrades(clusterID)
+	if err != nil {
+		return "", false, fmt.Errorf("unable to lookup the latest version from the API: %v", err)
+	}
+	if len(versions) == 0 {
+		return "", false, nil
+	}
+
+	return latestVersionForUpgrade(cluster.VersionSlug, versions)
+}
+
+// latestVersionForUpgrade returns the newest patch version from `versions` for
+// the minor version of `clusterVersionSlug`. This ensures we never use a
+// different minor version than a cluster is running as "latest" for an upgrade,
+// since we want minor version upgrades to be an explicit operation.
+func latestVersionForUpgrade(clusterVersionSlug string, versions []do.KubernetesVersion) (string, bool, error) {
+	clusterSV, err := semver.Parse(clusterVersionSlug)
 	if err != nil {
 		return "", false, err
 	}
-	i, err := versionMaxBy(releases, func(v do.KubernetesVersion) string {
-		return v.KubernetesVersion.KubernetesVersion
+	clusterBucket := fmt.Sprintf("%d.%d", clusterSV.Major, clusterSV.Minor)
+
+	// Sort releases into minor-version buckets.
+	var serr error
+	releases := versionMapBy(versions, func(v do.KubernetesVersion) string {
+		sv, err := semver.Parse(v.Slug)
+		if err != nil {
+			serr = err
+			return ""
+		}
+		return fmt.Sprintf("%d.%d", sv.Major, sv.Minor)
+	})
+	if serr != nil {
+		return "", false, serr
+	}
+
+	// Find the cluster's minor version in the bucketized available versions.
+	bucket, ok := releases[clusterBucket]
+	if !ok {
+		// No upgrades available within the cluster's minor version.
+		return "", false, nil
+	}
+
+	// Find the latest version within the bucket.
+	i, err := versionMaxBy(bucket, func(v do.KubernetesVersion) string {
+		return v.Slug
 	})
 	if err != nil {
 		return "", false, err
 	}
-	return releases[i].Slug, true, nil
+
+	return bucket[i].Slug, true, nil
 }
 
 // RunKubernetesClusterDelete deletes a kubernetes by its identifier.
