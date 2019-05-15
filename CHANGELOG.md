@@ -2,9 +2,12 @@
 
 All changes to `doctl` will be documented in this file.
 
-## [1.18.0] - UNRELEASED
+## [1.18.0] - 2019-05-15
 
+ - #443 Remove beta flag from Kubernetes commands. - @adamwg
+ - #442 Add support for Kubernetes cluster upgrades. - @adamwg
  - #440 Add flag to set local KubeConfig's current-context. - @eddiezane
+ - #426 Add support for configuring Kubernetes maintenance windows. - @fatih
 
 ## [1.17.0] - 2019-05-08
 
