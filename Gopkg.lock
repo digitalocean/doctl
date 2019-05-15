@@ -26,15 +26,15 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:d846ae22056f62e81b30f90c58adadd97877e9c4880073234d7bcc3f05f47b3c"
+  digest = "1:1e939e850618a6703cae7f428bb322de9171567aacfc3fe7fc31faea020b5662"
   name = "github.com/digitalocean/godo"
   packages = [
     ".",
-    "util",
+    "util"
   ]
   pruneopts = ""
-  revision = "780261ee6a33765a8356afbdb8c3841f140e13fd"
-  version = "v1.13.0"
+  revision = "d01d7b058ec6814dfae599e25ff585aeca45c801"
+  version = "v1.14.0"
 
 [[projects]]
   digest = "1:f1a75a8e00244e5ea77ff274baa9559eb877437b240ee7b278f3fc560d9f08bf"
@@ -71,7 +71,7 @@
     "syntax/ast",
     "syntax/lexer",
     "util/runes",
-    "util/strings",
+    "util/strings"
   ]
   pruneopts = ""
   revision = "5ccd90ef52e1e632236f7326478d4faa74f99438"
@@ -82,7 +82,7 @@
   name = "github.com/gogo/protobuf"
   packages = [
     "proto",
-    "sortkeys",
+    "sortkeys"
   ]
   pruneopts = ""
   revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
@@ -141,7 +141,7 @@
     "hcl/token",
     "json/parser",
     "json/scanner",
-    "json/token",
+    "json/token"
   ]
   pruneopts = ""
   revision = "8cb6e5b959231cc1119e43259c4a608f9c51a241"
@@ -280,7 +280,7 @@
   name = "github.com/spf13/afero"
   packages = [
     ".",
-    "mem",
+    "mem"
   ]
   pruneopts = ""
   revision = "d40851caa0d747393da1ffb28f7f9d8b4eeffebd"
@@ -299,7 +299,7 @@
   name = "github.com/spf13/cobra"
   packages = [
     ".",
-    "doc",
+    "doc"
   ]
   pruneopts = ""
   revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
@@ -343,7 +343,7 @@
   packages = [
     "assert",
     "mock",
-    "require",
+    "require"
   ]
   pruneopts = ""
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
@@ -362,7 +362,7 @@
     "poly1305",
     "ssh",
     "ssh/agent",
-    "ssh/terminal",
+    "ssh/terminal"
   ]
   pruneopts = ""
   revision = "505ab145d0a99da450461ae2c1a9f6cd10d1f447"
@@ -377,7 +377,7 @@
     "http/httpguts",
     "http2",
     "http2/hpack",
-    "idna",
+    "idna"
   ]
   pruneopts = ""
   revision = "351d144fa1fc0bd934e2408202be0c29f25e35a0"
@@ -388,7 +388,7 @@
   name = "golang.org/x/oauth2"
   packages = [
     ".",
-    "internal",
+    "internal"
   ]
   pruneopts = ""
   revision = "d668ce993890a79bda886613ee587a69dd5da7a6"
@@ -399,7 +399,7 @@
   name = "golang.org/x/sys"
   packages = [
     "unix",
-    "windows",
+    "windows"
   ]
   pruneopts = ""
   revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
@@ -421,7 +421,7 @@
     "unicode/bidi",
     "unicode/cldr",
     "unicode/norm",
-    "unicode/rangetable",
+    "unicode/rangetable"
   ]
   pruneopts = ""
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
@@ -445,7 +445,7 @@
     "internal/log",
     "internal/remote_api",
     "internal/urlfetch",
-    "urlfetch",
+    "urlfetch"
   ]
   pruneopts = ""
   revision = "4a4468ece617fc8205e99368fa2200e9d1fad421"
@@ -504,7 +504,7 @@
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
-    "third_party/forked/golang/reflect",
+    "third_party/forked/golang/reflect"
   ]
   pruneopts = ""
   revision = "eb8c8024849baa3681995b2b0bd4da7ea1734ace"
@@ -531,7 +531,7 @@
     "util/connrotation",
     "util/flowcontrol",
     "util/homedir",
-    "util/integer",
+    "util/integer"
   ]
   pruneopts = ""
   revision = "1638f8970cefaa404ff3a62950f88b08292b2696"
@@ -583,7 +583,7 @@
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1",
     "k8s.io/client-go/tools/clientcmd",
-    "k8s.io/client-go/tools/clientcmd/api",
+    "k8s.io/client-go/tools/clientcmd/api"
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

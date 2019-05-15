@@ -25,6 +25,7 @@ var (
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
+			AutoUpgrade: true,
 		},
 	}
 
@@ -55,6 +56,13 @@ var (
 	testNodes = []*godo.KubernetesNode{
 		testNode,
 	}
+
+	testClusterUpgrades = do.KubernetesVersions{{
+		KubernetesVersion: &godo.KubernetesVersion{
+			Slug:              "1.13.1-do.1",
+			KubernetesVersion: "1.13.1",
+		},
+	}}
 )
 
 func TestKubernetesCommand(t *testing.T) {
@@ -72,9 +80,11 @@ func TestKubernetesClusterCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"get",
 		"kubeconfig",
+		"get-upgrades",
 		"list",
 		"create",
 		"update",
+		"upgrade",
 		"delete",
 		"node-pool",
 	)
@@ -153,6 +163,45 @@ func TestKubernetesGet(t *testing.T) {
 	})
 }
 
+func TestKubernetesGetUpgrades(t *testing.T) {
+	// by ID
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
+		config.Args = append(config.Args, testCluster.ID)
+		err := RunKubernetesClusterGetUpgrades(config)
+		assert.NoError(t, err)
+	})
+
+	// by name
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// it'll see that no UUID is given and do a List call to find the cluster
+		tm.kubernetes.On("List").Return(testClusterList, nil)
+		// then call GetUpgrades
+		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
+		config.Args = append(config.Args, testCluster.Name)
+		err := RunKubernetesClusterGetUpgrades(config)
+		assert.NoError(t, err)
+	})
+
+	// cluster does not exist
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		name := "not a cluster"
+		// it'll see that no UUID is given and do a List call to find the cluster
+		tm.kubernetes.On("List").Return(testClusterList, nil)
+		config.Args = append(config.Args, name)
+		err := RunKubernetesClusterGetUpgrades(config)
+		assert.EqualError(t, err, errNoClusterByName(name).Error())
+	})
+
+	// no upgrades available
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(nil, nil)
+		config.Args = append(config.Args, testCluster.ID)
+		err := RunKubernetesClusterGetUpgrades(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestKubernetesKubeconfig(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kubeconfig := []byte(`i'm some yaml`)
@@ -206,6 +255,7 @@ func TestKubernetesCreate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
+			AutoUpgrade: true,
 		}
 		tm.kubernetes.On("Create", &r).Return(&testCluster, nil)
 
@@ -222,6 +272,7 @@ func TestKubernetesCreate(t *testing.T) {
 				testNodePool.Name+"2", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
 			),
 		})
+		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
 
 		err := RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
@@ -238,6 +289,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
+			AutoUpgrade: false,
 		}
 		tm.kubernetes.On("Update", testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -245,6 +297,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
+		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
 
 		err := RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -259,6 +312,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
+			AutoUpgrade: false,
 		}
 		tm.kubernetes.On("List").Return(testClusterList, nil)
 		tm.kubernetes.On("Update", testCluster.ID, &r).Return(&testCluster, nil)
@@ -267,8 +321,71 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
+		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
 
 		err := RunKubernetesClusterUpdate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestKubernetesUpgrade(t *testing.T) {
+	testUpgradeVersion := testClusterUpgrades[0].Slug
+
+	// by id
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
+
+		config.Args = append(config.Args, testCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgVersion, testUpgradeVersion)
+
+		err := RunKubernetesClusterUpgrade(config)
+		assert.NoError(t, err)
+	})
+	// by name
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("List").Return(testClusterList, nil)
+		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
+
+		config.Args = append(config.Args, testCluster.Name)
+		config.Doit.Set(config.NS, doctl.ArgVersion, testUpgradeVersion)
+
+		err := RunKubernetesClusterUpgrade(config)
+		assert.NoError(t, err)
+	})
+
+	// using "latest" version
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
+		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
+		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
+
+		config.Args = append(config.Args, testCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgVersion, defaultKubernetesLatestVersion)
+
+		err := RunKubernetesClusterUpgrade(config)
+		assert.NoError(t, err)
+	})
+
+	// without version flag set (defaults to latest)
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
+		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
+		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
+
+		config.Args = append(config.Args, testCluster.ID)
+
+		err := RunKubernetesClusterUpgrade(config)
+		assert.NoError(t, err)
+	})
+
+	// for cluster that is up-to-date
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
+		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(nil, nil)
+
+		config.Args = append(config.Args, testCluster.ID)
+
+		err := RunKubernetesClusterUpgrade(config)
 		assert.NoError(t, err)
 	})
 }
@@ -659,4 +776,78 @@ func Test_waitForClusterRunningDoesntPanicWithNilGet(t *testing.T) {
 	cluster, err := waitForClusterRunning(&nilCluster{}, "123")
 	require.Nil(t, cluster)
 	require.EqualError(t, err, "can't find 123")
+}
+
+func TestLatestVersionForUpgrade(t *testing.T) {
+	tests := []struct {
+		name            string
+		clusterVersion  string
+		upgradeVersions []do.KubernetesVersion
+		want            string
+	}{
+		{
+			name:           "only one patch version",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.1", KubernetesVersion: "1.12.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.2", KubernetesVersion: "1.12.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
+			},
+			want: "1.12.1-do.3",
+		},
+		{
+			name:           "only one minor version",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.3-do.1", KubernetesVersion: "1.12.3"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.1", KubernetesVersion: "1.12.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.2-do.1", KubernetesVersion: "1.12.2"}},
+			},
+			want: "1.12.3-do.1",
+		},
+		{
+			name:           "multiple minor versions",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.14.3-do.1", KubernetesVersion: "1.14.3"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.13.2-do.1", KubernetesVersion: "1.13.2"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.1-do.3", KubernetesVersion: "1.12.1"}},
+			},
+			want: "1.12.1-do.3",
+		},
+		{
+			name:           "multiple major versions",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.12.3-do.3", KubernetesVersion: "1.12.3"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "2.13.2-do.1", KubernetesVersion: "2.13.2"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.15.1-do.1", KubernetesVersion: "1.15.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "2.14.3-do.1", KubernetesVersion: "2.14.3"}},
+			},
+			want: "1.12.3-do.3",
+		},
+		{
+			name:           "no patch upgrades available",
+			clusterVersion: "1.12.1-do.1",
+			upgradeVersions: []do.KubernetesVersion{
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "2.13.2-do.1", KubernetesVersion: "2.13.2"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "1.15.1-do.1", KubernetesVersion: "1.15.1"}},
+				{KubernetesVersion: &godo.KubernetesVersion{Slug: "2.14.3-do.1", KubernetesVersion: "2.14.3"}},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			slug, found, err := latestVersionForUpgrade(tt.clusterVersion, tt.upgradeVersions)
+			require.NoError(t, err)
+			if tt.want == "" {
+				require.False(t, found)
+			} else {
+				require.True(t, found)
+				require.Equal(t, tt.want, slug)
+			}
+		})
+	}
 }

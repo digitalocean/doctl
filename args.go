@@ -48,6 +48,8 @@ const (
 	ArgNodePoolNodeIDs = "node-ids"
 	// ArgMaintenanceWindow is a cluster's maintenance window argument
 	ArgMaintenanceWindow = "maintenance-window"
+	// ArgAutoUpdate is a cluster's auto-upgrade argument.
+	ArgAutoUpgrade = "auto-upgrade"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgDropletID is a droplet id argument.
