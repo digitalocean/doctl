@@ -102,7 +102,7 @@ var dbJSON = `
 		"description": null
 	},
 	"size": "db-s-2vcpu-4gb",
-    "private_network_uuid": "da4e0206-d019-41d7-b51f-deadbeefbb8f"
+	"private_network_uuid": "da4e0206-d019-41d7-b51f-deadbeefbb8f"
 }
 `
 
@@ -218,7 +218,7 @@ func TestDatabases_Create(t *testing.T) {
 			"password": "zt91mum075ofzyww",
 			"ssl": true
 		},
-        "private_connection": {
+		"private_connection": {
 			"uri": "postgres://doadmin:zt91mum075ofzyww@private-dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
 			"database": "defaultdb",
 			"host": "dbtest-do-user-3342561-0.db.ondigitalocean.com",
