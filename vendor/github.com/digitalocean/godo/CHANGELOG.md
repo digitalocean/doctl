@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.14.0] - 2019-05-13
+
+- #229 Add support for upgrading Kubernetes clusters - @adamwg
+
 ## [v1.13.0] - 2019-04-19
 
 - #213 Add tagging support for volume snapshots - @jcodybaker

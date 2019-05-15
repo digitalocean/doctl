@@ -202,6 +202,29 @@ func (_m *KubernetesService) GetRegions() (do.KubernetesRegions, error) {
 	return r0, r1
 }
 
+// GetUpgrades provides a mock function with given fields: clusterID
+func (_m *KubernetesService) GetUpgrades(clusterID string) (do.KubernetesVersions, error) {
+	ret := _m.Called(clusterID)
+
+	var r0 do.KubernetesVersions
+	if rf, ok := ret.Get(0).(func(string) do.KubernetesVersions); ok {
+		r0 = rf(clusterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(do.KubernetesVersions)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(clusterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetVersions provides a mock function with given fields:
 func (_m *KubernetesService) GetVersions() (do.KubernetesVersions, error) {
 	ret := _m.Called()
@@ -329,4 +352,18 @@ func (_m *KubernetesService) UpdateNodePool(clusterID string, poolID string, req
 	}
 
 	return r0, r1
+}
+
+// Upgrade provides a mock function with given fields: clusterID, versionSlug
+func (_m *KubernetesService) Upgrade(clusterID string, versionSlug string) error {
+	ret := _m.Called(clusterID, versionSlug)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(clusterID, versionSlug)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
