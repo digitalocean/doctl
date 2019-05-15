@@ -68,19 +68,21 @@ var _ DatabasesService = &DatabasesServiceOp{}
 // "pg", "mysql" or "redis". A Database also includes connection information and other
 // properties of the service like region, size and current status.
 type Database struct {
-	ID                string                     `json:"id,omitempty"`
-	Name              string                     `json:"name,omitempty"`
-	EngineSlug        string                     `json:"engine,omitempty"`
-	VersionSlug       string                     `json:"version,omitempty"`
-	Connection        *DatabaseConnection        `json:"connection,omitempty"`
-	Users             []DatabaseUser             `json:"users,omitempty"`
-	NumNodes          int                        `json:"num_nodes,omitempty"`
-	SizeSlug          string                     `json:"size,omitempty"`
-	DBNames           []string                   `json:"db_names,omitempty"`
-	RegionSlug        string                     `json:"region,omitempty"`
-	Status            string                     `json:"status,omitempty"`
-	MaintenanceWindow *DatabaseMaintenanceWindow `json:"maintenance_window,omitempty"`
-	CreatedAt         time.Time                  `json:"created_at,omitempty"`
+	ID                 string                     `json:"id,omitempty"`
+	Name               string                     `json:"name,omitempty"`
+	EngineSlug         string                     `json:"engine,omitempty"`
+	VersionSlug        string                     `json:"version,omitempty"`
+	Connection         *DatabaseConnection        `json:"connection,omitempty"`
+	PrivateConnection  *DatabaseConnection        `json:"private_connection,omitempty"`
+	Users              []DatabaseUser             `json:"users,omitempty"`
+	NumNodes           int                        `json:"num_nodes,omitempty"`
+	SizeSlug           string                     `json:"size,omitempty"`
+	DBNames            []string                   `json:"db_names,omitempty"`
+	RegionSlug         string                     `json:"region,omitempty"`
+	Status             string                     `json:"status,omitempty"`
+	MaintenanceWindow  *DatabaseMaintenanceWindow `json:"maintenance_window,omitempty"`
+	CreatedAt          time.Time                  `json:"created_at,omitempty"`
+	PrivateNetworkUUID string                     `json:"private_network_uuid,omitempty"`
 }
 
 // DatabaseConnection represents a database connection
@@ -153,21 +155,24 @@ type DatabaseDB struct {
 
 // DatabaseReplica represents a read-only replica of a particular database
 type DatabaseReplica struct {
-	Name       string              `json:"name"`
-	Connection *DatabaseConnection `json:"connection"`
-	Region     string              `json:"region"`
-	Status     string              `json:"status"`
-	CreatedAt  time.Time           `json:"created_at"`
+	Name               string              `json:"name"`
+	Connection         *DatabaseConnection `json:"connection"`
+	PrivateConnection  *DatabaseConnection `json:"private_connection,omitempty"`
+	Region             string              `json:"region"`
+	Status             string              `json:"status"`
+	CreatedAt          time.Time           `json:"created_at"`
+	PrivateNetworkUUID string              `json:"private_network_uuid"`
 }
 
 // DatabasePool represents a database connection pool
 type DatabasePool struct {
-	User       string              `json:"user"`
-	Name       string              `json:"name"`
-	Size       int                 `json:"size"`
-	Database   string              `json:"db"`
-	Mode       string              `json:"mode"`
-	Connection *DatabaseConnection `json:"connection"`
+	User              string              `json:"user"`
+	Name              string              `json:"name"`
+	Size              int                 `json:"size"`
+	Database          string              `json:"db"`
+	Mode              string              `json:"mode"`
+	Connection        *DatabaseConnection `json:"connection"`
+	PrivateConnection *DatabaseConnection `json:"private_connection,omitempty"`
 }
 
 // DatabaseCreatePoolRequest is used to create a new database connection pool
