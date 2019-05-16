@@ -161,7 +161,7 @@ type DatabaseReplica struct {
 	Region             string              `json:"region"`
 	Status             string              `json:"status"`
 	CreatedAt          time.Time           `json:"created_at"`
-	PrivateNetworkUUID string              `json:"private_network_uuid"`
+	PrivateNetworkUUID string              `json:"private_network_uuid,omitempty"`
 }
 
 // DatabasePool represents a database connection pool
