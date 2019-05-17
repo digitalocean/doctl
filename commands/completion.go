@@ -16,6 +16,7 @@ package commands
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -63,10 +64,9 @@ line to your .profile or .bashrc/.zshrc:
 func Completion() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:    "completion",
-			Short:  "completion commands",
-			Long:   completionLong,
-			Hidden: true,
+			Use:   "completion",
+			Short: "completion commands",
+			Long:  completionLong,
 		},
 		IsIndex: true,
 	}
@@ -91,8 +91,11 @@ func RunCompletionBash(c *CmdConfig) error {
 		return fmt.Errorf("error while generating bash completion: %v", err)
 	}
 
-	fmt.Printf("%s", buf.String())
+	// remove the command "completion" from auto-completion
+	code := buf.String()
+	code = strings.Replace(code, `commands+=("completion")`, "", -1)
 
+	fmt.Print(code)
 	return nil
 }
 
@@ -283,7 +286,10 @@ _complete doctl 2>/dev/null
 		return fmt.Errorf("error while generating zsh completion: %v", err)
 	}
 
-	fmt.Printf("%s", buf.String())
+	// remove the command "completion" from auto-completion
+	code := buf.String()
+	code = strings.Replace(code, `commands+=("completion")`, "", -1)
 
+	fmt.Print(code)
 	return nil
 }
