@@ -813,6 +813,54 @@ func TestKubernetesClusters_DeleteNodePool(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestKubernetesClusters_DeleteNode(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		setup()
+		defer teardown()
+		kubeSvc := client.Kubernetes
+
+		mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/node_pools/8d91899c-nodepool-4a1a-acc5-deadbeefbb8a/nodes/8d91899c-node-4a1a-acc5-deadbeefbb8a", func(w http.ResponseWriter, r *http.Request) {
+			testMethod(t, r, http.MethodDelete)
+			require.Equal(t, "", r.URL.Query().Encode())
+		})
+
+		_, err := kubeSvc.DeleteNode(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d", "8d91899c-nodepool-4a1a-acc5-deadbeefbb8a", "8d91899c-node-4a1a-acc5-deadbeefbb8a", nil)
+		require.NoError(t, err)
+	})
+
+	t.Run("drain", func(t *testing.T) {
+		setup()
+		defer teardown()
+		kubeSvc := client.Kubernetes
+
+		mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/node_pools/8d91899c-nodepool-4a1a-acc5-deadbeefbb8a/nodes/8d91899c-node-4a1a-acc5-deadbeefbb8a", func(w http.ResponseWriter, r *http.Request) {
+			testMethod(t, r, http.MethodDelete)
+			require.Equal(t, "skip_drain=1", r.URL.Query().Encode())
+		})
+
+		_, err := kubeSvc.DeleteNode(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d", "8d91899c-nodepool-4a1a-acc5-deadbeefbb8a", "8d91899c-node-4a1a-acc5-deadbeefbb8a", &KubernetesNodeDeleteRequest{
+			SkipDrain: true,
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("replace", func(t *testing.T) {
+		setup()
+		defer teardown()
+		kubeSvc := client.Kubernetes
+
+		mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/node_pools/8d91899c-nodepool-4a1a-acc5-deadbeefbb8a/nodes/8d91899c-node-4a1a-acc5-deadbeefbb8a", func(w http.ResponseWriter, r *http.Request) {
+			testMethod(t, r, http.MethodDelete)
+			require.Equal(t, "replace=1", r.URL.Query().Encode())
+		})
+
+		_, err := kubeSvc.DeleteNode(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d", "8d91899c-nodepool-4a1a-acc5-deadbeefbb8a", "8d91899c-node-4a1a-acc5-deadbeefbb8a", &KubernetesNodeDeleteRequest{
+			Replace: true,
+		})
+		require.NoError(t, err)
+	})
+}
+
 func TestKubernetesClusters_RecycleNodePoolNodes(t *testing.T) {
 	setup()
 	defer teardown()
