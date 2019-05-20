@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.15.0] - 2019-05-13
+
+- #231 Add private connection fields to Databases - @mikejholly
+
 ## [v1.14.0] - 2019-05-13
 
 - #229 Add support for upgrading Kubernetes clusters - @adamwg
