@@ -3,7 +3,7 @@ version: "1.18.0"
 summary: A command line tool for DigitalOcean services
 description: doctl is a command line tool for DigitalOcean servics using the API.
 
-grade: devel
+grade: stable
 confinement: strict
 
 build-packages:
@@ -23,4 +23,7 @@ parts:
 apps:
   doctl:
     command: bin/doctl
-    plugs: [network, home]
+    plugs:
+      - home
+      - network
+      - ssh-keys

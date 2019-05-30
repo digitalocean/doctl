@@ -46,6 +46,13 @@ You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.
 ```
 sudo snap install doctl
 ```
+
+If you want to use `doctl compute ssh`, you'll need to connect the doctl snap to the core [ssh-keys interface](https://docs.snapcraft.io/ssh-keys-interface):
+
+```
+sudo snap connect doctl:ssh-keys :ssh-keys
+```
+
 -->
 
   #### Arch Linux
