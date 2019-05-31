@@ -68,7 +68,7 @@ func ProjectResourcesCmd() *Command {
 		},
 	}
 	CmdBuilder(cmd, RunProjectResourcesList, "list <project-id>", "list project resources", Writer, aliasOpt("ls"), displayerType(&displayers.ProjectResource{}))
-	CmdBuilder(cmd, RunProjectResourcesGet, "get <urn>", "get a project resource by its URN", Writer, aliasOpt("g"))
+	CmdBuilder(cmd, RunProjectResourcesGet, "get <urn>", "get a project resource by its URN", Writer, aliasOpt("g"), displayerType(&displayers.ProjectResource{}))
 
 	cmdProjectResourcesAssign := CmdBuilder(cmd, RunProjectResourcesAssign, "assign <project-id> --resource=<urn> [--resource=<urn> ...]", "assign one or more resources to a project", Writer, aliasOpt("a"))
 	AddStringSliceFlag(cmdProjectResourcesAssign, doctl.ArgProjectResource, "", []string{}, "resource URNs denoting resources to assign to the project")
