@@ -133,6 +133,10 @@ func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
 		names = append(names, c.Name())
 		if c.Name() == "list" {
 			assert.Contains(t, c.Aliases, "ls", "Missing 'ls' alias for 'list' command.")
+			assert.NotNil(t, c.Flags().Lookup("format"), "Missing 'format' flag for 'list' command.")
+		}
+		if c.Name() == "get" {
+			assert.NotNil(t, c.Flags().Lookup("format"), "Missing 'format' flag for 'get' command.")
 		}
 	}
 

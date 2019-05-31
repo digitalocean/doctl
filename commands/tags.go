@@ -39,10 +39,10 @@ func Tags() *Command {
 		docCategories("tag"))
 
 	CmdBuilder(cmd, RunCmdTagGet, "get <tag-name>", "get tag", Writer,
-		docCategories("tag"))
+		displayerType(&displayers.Tag{}), docCategories("tag"))
 
 	CmdBuilder(cmd, RunCmdTagList, "list", "list tags", Writer,
-		aliasOpt("ls"), docCategories("tag"))
+		aliasOpt("ls"), displayerType(&displayers.Tag{}), docCategories("tag"))
 
 	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>...", "delete tags", Writer,
 		docCategories("tag"))

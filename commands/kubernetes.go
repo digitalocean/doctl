@@ -105,44 +105,74 @@ func kubernetesCluster() *Command {
 
 	cmd.AddCommand(kubernetesNodePools())
 
-	CmdBuilder(cmd, RunKubernetesClusterGet, "get <id|name>", "get a cluster", Writer, aliasOpt("g"))
-	CmdBuilder(cmd, RunKubernetesClusterList, "list", "get a list of your clusters", Writer, aliasOpt("ls"))
-	CmdBuilder(cmd, RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>", "get available upgrades for a cluster", Writer, aliasOpt("gu"))
+	CmdBuilder(cmd, RunKubernetesClusterGet, "get <id|name>", "get a cluster",
+		Writer, aliasOpt("g"), displayerType(&displayers.KubernetesClusters{}))
+	CmdBuilder(cmd, RunKubernetesClusterList, "list", "get a list of your clusters",
+		Writer, aliasOpt("ls"), displayerType(&displayers.KubernetesClusters{}))
+	CmdBuilder(cmd, RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
+		"get available upgrades for a cluster", Writer, aliasOpt("gu"))
 
-	cmdKubeClusterCreate := CmdBuilder(cmd, RunKubernetesClusterCreate(defaultKubernetesNodeSize, defaultKubernetesNodeCount), "create <name>", "create a cluster", Writer, aliasOpt("c"))
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion, `cluster region, possible values: see "doctl k8s options regions"`, requiredOpt())
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest", `cluster version, possible values: see "doctl k8s options versions"`)
-	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false, "whether to enable auto-upgrade for the cluster")
-	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "", defaultKubernetesNodeSize, `size of nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`), possible values: see "doctl k8s options sizes".`)
-	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "", defaultKubernetesNodeCount, "number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
-	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil, `cluster node pools, can be repeated to create multiple node pools at once (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
+	cmdKubeClusterCreate := CmdBuilder(cmd, RunKubernetesClusterCreate(defaultKubernetesNodeSize,
+		defaultKubernetesNodeCount), "create <name>", "create a cluster",
+		Writer, aliasOpt("c"))
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion,
+		`cluster region, possible values: see "doctl k8s options regions"`, requiredOpt())
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest",
+		`cluster version, possible values: see "doctl k8s options versions"`)
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
+		"whether to enable auto-upgrade for the cluster")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
+		"tags to apply to the cluster, repeat to add multiple tags at once")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
+		defaultKubernetesNodeSize,
+		`size of nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`), possible values: see "doctl k8s options sizes".`)
+	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
+		defaultKubernetesNodeCount,
+		"number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
+		`cluster node pools, can be repeated to create multiple node pools at once (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
 format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
 	- name:   name of the node pool, must be unique in the cluster
 	- size:   size for the nodes in the node pool, possible values: see "doctl k8s options sizes".
 	- count:  number of nodes in the node pool.
 	- tag:    tags to apply to the node pool, repeat to add multiple tags at once.`)
-	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to add the created cluster to your kubeconfig")
-	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true, "whether to wait for the created cluster to become running")
-	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00", "maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
+		"whether to add the created cluster to your kubeconfig")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true,
+		"whether to wait for the created cluster to become running")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
+		"whether to set the current kubectl context to that of the new cluster")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
+		"maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
-	cmdKubeClusterUpdate := CmdBuilder(cmd, RunKubernetesClusterUpdate, "update <id|name>", "update a cluster's properties", Writer, aliasOpt("u"))
-	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "", "new cluster name")
-	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil, "tags to apply to the cluster, repeat to add multiple tags at once")
-	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgAutoUpgrade, "", false, "whether to enable auto-upgrade for the cluster")
-	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to update the cluster in your kubeconfig")
-	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
-	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00", "maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
+	cmdKubeClusterUpdate := CmdBuilder(cmd, RunKubernetesClusterUpdate, "update <id|name>",
+		"update a cluster's properties", Writer, aliasOpt("u"))
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "",
+		"new cluster name")
+	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil,
+		"tags to apply to the cluster, repeat to add multiple tags at once")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgAutoUpgrade, "", false,
+		"whether to enable auto-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
+		true, "whether to update the cluster in your kubeconfig")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
+		"whether to set the current kubectl context to that of the new cluster")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00",
+		"maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
-	cmdKubeClusterUpgrade := CmdBuilder(cmd, RunKubernetesClusterUpgrade, "upgrade <id|name>", "upgrade a cluster to a new version", Writer)
-	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest", `new cluster version, possible values: see "doctl k8s get-upgrades <cluster>".
+	cmdKubeClusterUpgrade := CmdBuilder(cmd, RunKubernetesClusterUpgrade,
+		"upgrade <id|name>", "upgrade a cluster to a new version", Writer)
+	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest",
+		`new cluster version, possible values: see "doctl k8s get-upgrades <cluster>".
 The special value "latest" will select the most recent patch version for your cluster's minor version.
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be "latest".`)
 
-	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesClusterDelete, "delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force cluster delete")
-	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgClusterUpdateKubeconfig, "", true, "whether to remove the deleted cluster to your kubeconfig")
+	cmdKubeClusterDelete := CmdBuilder(cmd, RunKubernetesClusterDelete,
+		"delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
+	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false,
+		"force cluster delete")
+	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgClusterUpdateKubeconfig, "", true,
+		"whether to remove the deleted cluster to your kubeconfig")
 
 	return cmd
 }
@@ -180,25 +210,45 @@ func kubernetesNodePools() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunKubernetesNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>", "get a cluster's node pool", Writer, aliasOpt("g"))
-	CmdBuilder(cmd, RunKubernetesNodePoolList, "list <cluster-id|cluster-name>", "list a cluster's node pools", Writer, aliasOpt("ls"))
+	CmdBuilder(cmd, RunKubernetesNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>",
+		"get a cluster's node pool", Writer, aliasOpt("g"),
+		displayerType(&displayers.KubernetesNodePools{}))
+	CmdBuilder(cmd, RunKubernetesNodePoolList, "list <cluster-id|cluster-name>",
+		"list a cluster's node pools", Writer, aliasOpt("ls"),
+		displayerType(&displayers.KubernetesNodePools{}))
 
-	cmdKubeNodePoolCreate := CmdBuilder(cmd, RunKubernetesNodePoolCreate, "create <cluster-id|cluster-name>", "create a new node pool for a cluster", Writer, aliasOpt("c"))
-	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "", "node pool name", requiredOpt())
-	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "", "size of nodes in the node pool (see `doctl k8s options sizes`)", requiredOpt())
-	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0, "count of nodes in the node pool", requiredOpt())
-	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", "", "tags to apply to the node pool, repeat to add multiple tags at once")
+	cmdKubeNodePoolCreate := CmdBuilder(cmd, RunKubernetesNodePoolCreate,
+		"create <cluster-id|cluster-name>", "create a new node pool for a cluster",
+		Writer, aliasOpt("c"))
+	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "",
+		"node pool name", requiredOpt())
+	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "",
+		"size of nodes in the node pool (see `doctl k8s options sizes`)", requiredOpt())
+	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0,
+		"count of nodes in the node pool", requiredOpt())
+	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", "",
+		"tags to apply to the node pool, repeat to add multiple tags at once")
 
-	cmdKubeNodePoolUpdate := CmdBuilder(cmd, RunKubernetesNodePoolUpdate, "update <cluster-id|cluster-name> <pool-id|pool-name>", "update an existing node pool in a cluster", Writer, aliasOpt("u"))
+	cmdKubeNodePoolUpdate := CmdBuilder(cmd, RunKubernetesNodePoolUpdate,
+		"update <cluster-id|cluster-name> <pool-id|pool-name>",
+		"update an existing node pool in a cluster", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "node pool name")
-	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", 0, "count of nodes in the node pool")
-	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", "", "tags to apply to the node pool, repeat to add multiple tags at once")
+	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", 0,
+		"count of nodes in the node pool")
+	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", "",
+		"tags to apply to the node pool, repeat to add multiple tags at once")
 
-	cmdKubeNodePoolRecycle := CmdBuilder(cmd, RunKubernetesNodePoolRecycle, "recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
-	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "", "ID or name of the nodes in the node pool to recycle")
+	cmdKubeNodePoolRecycle := CmdBuilder(cmd, RunKubernetesNodePoolRecycle,
+		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
+	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "",
+		"ID or name of the nodes in the node pool to recycle")
 
-	cmdKubeNodePoolDelete := CmdBuilder(cmd, RunKubernetesNodePoolDelete, "delete <cluster-id|cluster-name> <pool-id|pool-name>", "delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force node pool delete")
+	cmdKubeNodePoolDelete := CmdBuilder(cmd, RunKubernetesNodePoolDelete,
+		"delete <cluster-id|cluster-name> <pool-id|pool-name>",
+		"delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
+	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
+		false, "force node pool delete")
+
 	return cmd
 }
 
@@ -212,9 +262,12 @@ func kubernetesOptions() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunKubeOptionsListVersion, "versions", "versions that can be used to create a Kubernetes cluster", Writer, aliasOpt("v"))
-	CmdBuilder(cmd, RunKubeOptionsListRegion, "regions", "regions that can be used to create a Kubernetes cluster", Writer, aliasOpt("r"))
-	CmdBuilder(cmd, RunKubeOptionsListNodeSizes, "sizes", "sizes that nodes in a Kubernetes cluster can have", Writer, aliasOpt("s"))
+	CmdBuilder(cmd, RunKubeOptionsListVersion, "versions",
+		"versions that can be used to create a Kubernetes cluster", Writer, aliasOpt("v"))
+	CmdBuilder(cmd, RunKubeOptionsListRegion, "regions",
+		"regions that can be used to create a Kubernetes cluster", Writer, aliasOpt("r"))
+	CmdBuilder(cmd, RunKubeOptionsListNodeSizes, "sizes",
+		"sizes that nodes in a Kubernetes cluster can have", Writer, aliasOpt("s"))
 	return cmd
 }
 
