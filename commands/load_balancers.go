@@ -36,7 +36,7 @@ func LoadBalancer() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "get load balancer", Writer, aliasOpt("g"))
+	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "get load balancer", Writer, aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
 	cmdRecordCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create", "create load balancer", Writer, aliasOpt("c"))
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "", "load balancer name", requiredOpt())
@@ -60,7 +60,7 @@ func LoadBalancer() *Command {
 	AddStringFlag(cmdRecordUpdate, doctl.ArgHealthCheck, "", "", "comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "", "comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
 
-	CmdBuilder(cmd, RunLoadBalancerList, "list", "list load balancers", Writer, aliasOpt("ls"))
+	CmdBuilder(cmd, RunLoadBalancerList, "list", "list load balancers", Writer, aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>", "delete load balancer", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force load balancer delete")
