@@ -35,7 +35,7 @@ func Certificate() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunCertificateGet, "get <id>", "get certificate", Writer, aliasOpt("g"))
+	CmdBuilder(cmd, RunCertificateGet, "get <id>", "get certificate", Writer, aliasOpt("g"), displayerType(&displayers.Certificate{}))
 
 	cmdCertificateCreate := CmdBuilder(cmd, RunCertificateCreate, "create", "create new certificate", Writer, aliasOpt("c"))
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateName, "", "", "certificate name", requiredOpt())
@@ -45,7 +45,7 @@ func Certificate() *Command {
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "", "path to a certificate chain")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "", "certificate type, possible values: custom or lets_encrypt")
 
-	CmdBuilder(cmd, RunCertificateList, "list", "list certificates", Writer, aliasOpt("ls"))
+	CmdBuilder(cmd, RunCertificateList, "list", "list certificates", Writer, aliasOpt("ls"), displayerType(&displayers.Certificate{}))
 
 	cmdCertificateDelete := CmdBuilder(cmd, RunCertificateDelete, "delete <id>", "delete certificate", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdCertificateDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force certificate delete")
