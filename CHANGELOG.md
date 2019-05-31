@@ -2,6 +2,13 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.19.0] - 2019-05-31
+
+ - #454 Ensure all 'get' and 'list' commands support the 'format' flag - @andrewsomething
+ - #453 fix doctl compute ssh in snap - @hilary
+ - #450 update snap build - @hilary
+ - #447 Unhide the command "completion" + prevent it from being autocompleted - @kamaln7
+
 ## [1.18.0] - 2019-05-15
 
  - #443 Remove beta flag from Kubernetes commands. - @adamwg
