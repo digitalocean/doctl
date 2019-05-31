@@ -11,6 +11,10 @@ Available Commands:
   auth        auth commands
   completion  completion commands
   compute     compute commands
+  databases   database commands
+  help        Help about any command
+  kubernetes  kubernetes commands
+  projects    projects commands
   version     show the current version
 
 Flags:
@@ -28,11 +32,20 @@ Use "doctl [command] --help" for more information about a command.
 
 ## Installing `doctl`
 
-There are four ways to install `doctl`: using a package manager, downloading a GitHub release, building a development version from source, or building it with [Docker](https://www.digitalocean.com/community/tutorials/the-docker-ecosystem-an-introduction-to-common-components).
+There are four ways to install `doctl`:
+
+1. using a package manager,
+1. downloading a GitHub release,
+1. building a development version from source,
+1. building it with [Docker](https://www.digitalocean.com/community/tutorials/the-docker-ecosystem-an-introduction-to-common-components).
 
 ### Option 1 – Using a Package Manager (Preferred)
 
-A package manager allows you to install and keep up with new `doctl` versions using only a few commands. Currently, `doctl` is available as part of [Homebrew](https://brew.sh/) for macOS and GNU/Linux users.
+A package manager allows you to install and keep up with new `doctl` versions using only a few commands.
+Our community distributes `doctl` via a growing set of package managers in addition to the officially
+supported set listed below; chances are good a solution exists for your platform.
+
+#### MacOS
 
 You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this command:
 
@@ -40,7 +53,8 @@ You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this c
 brew install doctl
 ```
 
-<!--- TODO(eddiezane): Uncomment once Snap is updated
+#### Snap supported OS
+
 You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
 
 ```
@@ -53,10 +67,11 @@ If you want to use `doctl compute ssh`, you'll need to connect the doctl snap to
 sudo snap connect doctl:ssh-keys :ssh-keys
 ```
 
--->
+#### Arch Linux
 
-  #### Arch Linux
-  Arch users not using a package manager can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
+Arch users not using a package manager can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
+
+#### Windows
 
 Support for Windows package managers is on the way.
 
