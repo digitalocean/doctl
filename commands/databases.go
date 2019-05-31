@@ -303,13 +303,16 @@ func databaseMaintenanceWindow() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseMaintenanceGet, "get <database-id>", "get maintenance window info", Writer, aliasOpt("g"),
+	CmdBuilder(cmd, RunDatabaseMaintenanceGet, "get <database-id>",
+		"get maintenance window info", Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseMaintenanceWindow{}))
 
-	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseMaintenanceUpdate, "update <database-id>", "update maintenance window", Writer,
-		aliasOpt("u"))
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceDay, "", "", "new maintenance window day", requiredOpt())
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceHour, "", "", "new maintenance window hour", requiredOpt())
+	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseMaintenanceUpdate,
+		"update <database-id>", "update maintenance window", Writer, aliasOpt("u"))
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceDay, "", "",
+		"new maintenance window day", requiredOpt())
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceHour, "", "",
+		"new maintenance window hour", requiredOpt())
 
 	return cmd
 }
@@ -380,12 +383,17 @@ func databaseUser() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseUserList, "list <database-id>", "list database users", Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseUsers{}))
-	CmdBuilder(cmd, RunDatabaseUserGet, "get <database-id> <user-id>", "get a database user", Writer, aliasOpt("g"), displayerType(&displayers.DatabaseUsers{}))
-	CmdBuilder(cmd, RunDatabaseUserCreate, "create <database-id> <user-name>", "create a database user", Writer, aliasOpt("c"))
+	CmdBuilder(cmd, RunDatabaseUserList, "list <database-id>", "list database users",
+		Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseUsers{}))
+	CmdBuilder(cmd, RunDatabaseUserGet, "get <database-id> <user-id>",
+		"get a database user", Writer, aliasOpt("g"),
+		displayerType(&displayers.DatabaseUsers{}))
+	CmdBuilder(cmd, RunDatabaseUserCreate, "create <database-id> <user-name>",
+		"create a database user", Writer, aliasOpt("c"))
 
-	cmdDatabaseUserDelete := CmdBuilder(cmd, RunDatabaseUserDelete, "delete <database-id> <user-id>", "delete database cluster", Writer,
-		aliasOpt("rm"))
+	cmdDatabaseUserDelete := CmdBuilder(cmd, RunDatabaseUserDelete,
+		"delete <database-id> <user-id>", "delete database cluster",
+		Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseUserDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force database delete")
 
 	return cmd
@@ -478,18 +486,28 @@ func databasePool() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabasePoolList, "list <database-id>", "list database pools", Writer, aliasOpt("ls"), displayerType(&displayers.DatabasePools{}))
-	CmdBuilder(cmd, RunDatabasePoolGet, "get <database-id> <pool-name>", "get a database pool", Writer, aliasOpt("g"), displayerType(&displayers.DatabasePools{}))
-	cmdDatabasePoolCreate := CmdBuilder(cmd, RunDatabasePoolCreate, "create <database-id> <pool-name>", "create a database pool", Writer,
+	CmdBuilder(cmd, RunDatabasePoolList, "list <database-id>", "list database pools",
+		Writer, aliasOpt("ls"), displayerType(&displayers.DatabasePools{}))
+	CmdBuilder(cmd, RunDatabasePoolGet, "get <database-id> <pool-name>",
+		"get a database pool", Writer, aliasOpt("g"),
+		displayerType(&displayers.DatabasePools{}))
+	cmdDatabasePoolCreate := CmdBuilder(cmd, RunDatabasePoolCreate,
+		"create <database-id> <pool-name>", "create a database pool", Writer,
 		aliasOpt("c"))
-	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolMode, "", "transaction", "pool mode")
-	AddIntFlag(cmdDatabasePoolCreate, doctl.ArgSizeSlug, "", 0, "pool size", requiredOpt())
-	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolUserName, "", "", "database user name", requiredOpt())
-	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolDBName, "", "", "database db name", requiredOpt())
+	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolMode, "",
+		"transaction", "pool mode")
+	AddIntFlag(cmdDatabasePoolCreate, doctl.ArgSizeSlug, "", 0, "pool size",
+		requiredOpt())
+	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolUserName, "", "",
+		"database user name", requiredOpt())
+	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolDBName, "", "",
+		"database db name", requiredOpt())
 
-	cmdDatabasePoolDelete := CmdBuilder(cmd, RunDatabasePoolDelete, "delete <database-id> <pool-name>", "delete database cluster", Writer,
+	cmdDatabasePoolDelete := CmdBuilder(cmd, RunDatabasePoolDelete,
+		"delete <database-id> <pool-name>", "delete database cluster", Writer,
 		aliasOpt("rm"))
-	AddBoolFlag(cmdDatabasePoolDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force database delete")
+	AddBoolFlag(cmdDatabasePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
+		false, "force database delete")
 
 	return cmd
 }
@@ -613,13 +631,17 @@ func databaseDB() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseDBList, "list <database-id>", "list dbs", Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseDBs{}))
-	CmdBuilder(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "get a db", Writer, aliasOpt("g"), displayerType(&displayers.DatabaseDBs{}))
-	CmdBuilder(cmd, RunDatabaseDBCreate, "create <database-id> <db-name>", "create a db", Writer, aliasOpt("c"))
+	CmdBuilder(cmd, RunDatabaseDBList, "list <database-id>", "list dbs", Writer,
+		aliasOpt("ls"), displayerType(&displayers.DatabaseDBs{}))
+	CmdBuilder(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "get a db",
+		Writer, aliasOpt("g"), displayerType(&displayers.DatabaseDBs{}))
+	CmdBuilder(cmd, RunDatabaseDBCreate, "create <database-id> <db-name>",
+		"create a db", Writer, aliasOpt("c"))
 
-	cmdDatabaseDBDelete := CmdBuilder(cmd, RunDatabaseDBDelete, "delete <database-id> <db-name>", "delete db", Writer,
-		aliasOpt("rm"))
-	AddBoolFlag(cmdDatabaseDBDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force database delete")
+	cmdDatabaseDBDelete := CmdBuilder(cmd, RunDatabaseDBDelete,
+		"delete <database-id> <db-name>", "delete db", Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdDatabaseDBDelete, doctl.ArgForce, doctl.ArgShortForce,
+		false, "force database delete")
 
 	return cmd
 }
@@ -711,20 +733,30 @@ func databaseReplica() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseReplicaList, "list <database-id>", "list database replicas", Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseReplicas{}))
-	CmdBuilder(cmd, RunDatabaseReplicaGet, "get <database-id> <replica-name>", "get a database replica", Writer, aliasOpt("g"), displayerType(&displayers.DatabaseReplicas{}))
+	CmdBuilder(cmd, RunDatabaseReplicaList, "list <database-id>",
+		"list database replicas", Writer, aliasOpt("ls"),
+		displayerType(&displayers.DatabaseReplicas{}))
+	CmdBuilder(cmd, RunDatabaseReplicaGet, "get <database-id> <replica-name>",
+		"get a database replica", Writer, aliasOpt("g"),
+		displayerType(&displayers.DatabaseReplicas{}))
 
-	cmdDatabaseReplicaCreate := CmdBuilder(cmd, RunDatabaseReplicaCreate, "create <database-id> <replica-name>", "create a database replica", Writer,
-		aliasOpt("c"))
-	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "database replica region")
-	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, "database replica size")
+	cmdDatabaseReplicaCreate := CmdBuilder(cmd, RunDatabaseReplicaCreate,
+		"create <database-id> <replica-name>", "create a database replica",
+		Writer, aliasOpt("c"))
+	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgRegionSlug, "",
+		defaultDatabaseRegion, "database replica region")
+	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgSizeSlug, "",
+		defaultDatabaseNodeSize, "database replica size")
 
-	cmdDatabaseReplicaDelete := CmdBuilder(cmd, RunDatabaseReplicaDelete, "delete <database-id> <replica-name>", "delete database replica", Writer,
-		aliasOpt("rm"))
-	AddBoolFlag(cmdDatabaseReplicaDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force database delete")
+	cmdDatabaseReplicaDelete := CmdBuilder(cmd, RunDatabaseReplicaDelete,
+		"delete <database-id> <replica-name>", "delete database replica",
+		Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdDatabaseReplicaDelete, doctl.ArgForce, doctl.ArgShortForce,
+		false, "force database delete")
 
-	CmdBuilder(cmd, RunDatabaseReplicaConnectionGet, "connection <database-id> <replica-name>", "get database replica connection info", Writer,
-		aliasOpt("conn"))
+	CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
+		"connection <database-id> <replica-name>",
+		"get database replica connection info", Writer, aliasOpt("conn"))
 
 	return cmd
 }

@@ -36,46 +36,76 @@ func LoadBalancer() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "get load balancer", Writer, aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
+	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "get load balancer", Writer,
+		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
-	cmdRecordCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create", "create load balancer", Writer, aliasOpt("c"))
-	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "", "load balancer name", requiredOpt())
-	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "", "load balancer region location, example value: nyc1", requiredOpt())
-	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "", "round_robin", "load balancing algorithm, possible values: round_robin or least_connections")
-	AddBoolFlag(cmdRecordCreate, doctl.ArgRedirectHttpToHttps, "", false, "flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
+	cmdRecordCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
+		"create load balancer", Writer, aliasOpt("c"))
+	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "",
+		"load balancer name", requiredOpt())
+	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "",
+		"load balancer region location, example value: nyc1", requiredOpt())
+	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
+		"round_robin", "load balancing algorithm, possible values: round_robin or least_connections")
+	AddBoolFlag(cmdRecordCreate, doctl.ArgRedirectHttpToHttps, "", false,
+		"flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddStringFlag(cmdRecordCreate, doctl.ArgTagName, "", "", "droplet tag name")
-	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 12,33")
-	AddStringFlag(cmdRecordCreate, doctl.ArgStickySessions, "", "", "comma-separated key:value list, example value: type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
-	AddStringFlag(cmdRecordCreate, doctl.ArgHealthCheck, "", "", "comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
-	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "", "comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{},
+		"comma-separated list of droplet IDs, example value: 12,33")
+	AddStringFlag(cmdRecordCreate, doctl.ArgStickySessions, "", "",
+		"comma-separated key:value list, example value: type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
+	AddStringFlag(cmdRecordCreate, doctl.ArgHealthCheck, "", "",
+		"comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
+	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "",
+		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
 
-	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>", "update load balancer", Writer, aliasOpt("u"))
-	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerName, "", "", "load balancer name", requiredOpt())
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "", "load balancer region location, example value: nyc1", requiredOpt())
-	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "", "round_robin", "load balancing algorithm, possible values: round_robin or least_connections")
-	AddBoolFlag(cmdRecordUpdate, doctl.ArgRedirectHttpToHttps, "", false, "flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
+	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
+		"update load balancer", Writer, aliasOpt("u"))
+	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerName, "", "",
+		"load balancer name", requiredOpt())
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "",
+		"load balancer region location, example value: nyc1", requiredOpt())
+	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "",
+		"round_robin", "load balancing algorithm, possible values: round_robin or least_connections")
+	AddBoolFlag(cmdRecordUpdate, doctl.ArgRedirectHttpToHttps, "", false,
+		"flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgTagName, "", "", "droplet tag name")
-	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 12,33")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgStickySessions, "", "", "comma-separated key:value list, example value, example value: type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgHealthCheck, "", "", "comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "", "comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{},
+		"comma-separated list of droplet IDs, example value: 12,33")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgStickySessions, "", "",
+		"comma-separated key:value list, example value, example value: type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgHealthCheck, "", "",
+		"comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "",
+		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
 
-	CmdBuilder(cmd, RunLoadBalancerList, "list", "list load balancers", Writer, aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
+	CmdBuilder(cmd, RunLoadBalancerList, "list", "list load balancers", Writer,
+		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 
-	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>", "delete load balancer", Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force load balancer delete")
+	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>",
+		"delete load balancer", Writer, aliasOpt("d", "rm"))
+	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Force load balancer delete")
 
-	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>", "add droplets to the load balancer", Writer)
-	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example valus: 12,33")
+	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>",
+		"add droplets to the load balancer", Writer)
+	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{},
+		"comma-separated list of droplet IDs, example valus: 12,33")
 
-	cmdRemoveDroplets := CmdBuilder(cmd, RunLoadBalancerRemoveDroplets, "remove-droplets <id>", "remove droplets from the load balancer", Writer)
-	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 12,33")
+	cmdRemoveDroplets := CmdBuilder(cmd, RunLoadBalancerRemoveDroplets,
+		"remove-droplets <id>", "remove droplets from the load balancer", Writer)
+	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{},
+		"comma-separated list of droplet IDs, example value: 12,33")
 
-	cmdAddForwardingRules := CmdBuilder(cmd, RunLoadBalancerAddForwardingRules, "add-forwarding-rules <id>", "add forwarding rules to the load balancer", Writer)
-	AddStringFlag(cmdAddForwardingRules, doctl.ArgForwardingRules, "", "", "comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+	cmdAddForwardingRules := CmdBuilder(cmd, RunLoadBalancerAddForwardingRules,
+		"add-forwarding-rules <id>", "add forwarding rules to the load balancer", Writer)
+	AddStringFlag(cmdAddForwardingRules, doctl.ArgForwardingRules, "", "",
+		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
 
-	cmdRemoveForwardingRules := CmdBuilder(cmd, RunLoadBalancerRemoveForwardingRules, "remove-forwarding-rules <id>", "remove forwarding rules from the load balancer", Writer)
-	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "", "comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+	cmdRemoveForwardingRules := CmdBuilder(cmd, RunLoadBalancerRemoveForwardingRules,
+		"remove-forwarding-rules <id>", "remove forwarding rules from the load balancer", Writer)
+	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "",
+		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
 
 	return cmd
 }

@@ -35,20 +35,31 @@ func Certificate() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunCertificateGet, "get <id>", "get certificate", Writer, aliasOpt("g"), displayerType(&displayers.Certificate{}))
+	CmdBuilder(cmd, RunCertificateGet, "get <id>", "get certificate", Writer,
+		aliasOpt("g"), displayerType(&displayers.Certificate{}))
 
-	cmdCertificateCreate := CmdBuilder(cmd, RunCertificateCreate, "create", "create new certificate", Writer, aliasOpt("c"))
-	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateName, "", "", "certificate name", requiredOpt())
-	AddStringSliceFlag(cmdCertificateCreate, doctl.ArgCertificateDNSNames, "", []string{}, "comma-separated list of domain names, required for lets_encrypt certificate")
-	AddStringFlag(cmdCertificateCreate, doctl.ArgPrivateKeyPath, "", "", "path to a private key for the certificate, required for custom certificate")
-	AddStringFlag(cmdCertificateCreate, doctl.ArgLeafCertificatePath, "", "", "path to a certificate leaf, required for custom certificate")
-	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "", "path to a certificate chain")
-	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "", "certificate type, possible values: custom or lets_encrypt")
+	cmdCertificateCreate := CmdBuilder(cmd, RunCertificateCreate, "create",
+		"create new certificate", Writer, aliasOpt("c"))
+	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateName, "", "",
+		"certificate name", requiredOpt())
+	AddStringSliceFlag(cmdCertificateCreate, doctl.ArgCertificateDNSNames, "",
+		[]string{}, "comma-separated list of domain names, required for lets_encrypt certificate")
+	AddStringFlag(cmdCertificateCreate, doctl.ArgPrivateKeyPath, "", "",
+		"path to a private key for the certificate, required for custom certificate")
+	AddStringFlag(cmdCertificateCreate, doctl.ArgLeafCertificatePath, "", "",
+		"path to a certificate leaf, required for custom certificate")
+	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "",
+		"path to a certificate chain")
+	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "",
+		"certificate type, possible values: custom or lets_encrypt")
 
-	CmdBuilder(cmd, RunCertificateList, "list", "list certificates", Writer, aliasOpt("ls"), displayerType(&displayers.Certificate{}))
+	CmdBuilder(cmd, RunCertificateList, "list", "list certificates", Writer,
+		aliasOpt("ls"), displayerType(&displayers.Certificate{}))
 
-	cmdCertificateDelete := CmdBuilder(cmd, RunCertificateDelete, "delete <id>", "delete certificate", Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdCertificateDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force certificate delete")
+	cmdCertificateDelete := CmdBuilder(cmd, RunCertificateDelete, "delete <id>",
+		"delete certificate", Writer, aliasOpt("d", "rm"))
+	AddBoolFlag(cmdCertificateDelete, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Force certificate delete")
 
 	return cmd
 }
