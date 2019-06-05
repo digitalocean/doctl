@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.16.0] - 2019-06-04
+
+- #233 Add Kubernetes DeleteNode method, deprecate RecycleNodePoolNodes @bouk
+
 ## [v1.15.0] - 2019-05-13
 
 - #231 Add private connection fields to Databases - @mikejholly
