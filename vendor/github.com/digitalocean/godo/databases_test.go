@@ -17,7 +17,16 @@ var db = Database{
 	VersionSlug: "11",
 	Connection: &DatabaseConnection{
 		URI:      "postgres://doadmin:zt91mum075ofzyww@dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
-		Database: "",
+		Database: "defaultdb",
+		Host:     "dbtest-do-user-3342561-0.db.ondigitalocean.com",
+		Port:     25060,
+		User:     "doadmin",
+		Password: "zt91mum075ofzyww",
+		SSL:      true,
+	},
+	PrivateConnection: &DatabaseConnection{
+		URI:      "postgres://doadmin:zt91mum075ofzyww@private-dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
+		Database: "defaultdb",
 		Host:     "dbtest-do-user-3342561-0.db.ondigitalocean.com",
 		Port:     25060,
 		User:     "doadmin",
@@ -44,7 +53,8 @@ var db = Database{
 		Pending:     false,
 		Description: nil,
 	},
-	SizeSlug: "db-s-2vcpu-4gb",
+	SizeSlug:           "db-s-2vcpu-4gb",
+	PrivateNetworkUUID: "da4e0206-d019-41d7-b51f-deadbeefbb8f",
 }
 
 var dbJSON = `
@@ -55,7 +65,16 @@ var dbJSON = `
 	"version": "11",
 	"connection": {
 		"uri": "postgres://doadmin:zt91mum075ofzyww@dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
-		"database": "",
+		"database": "defaultdb",
+		"host": "dbtest-do-user-3342561-0.db.ondigitalocean.com",
+		"port": 25060,
+		"user": "doadmin",
+		"password": "zt91mum075ofzyww",
+		"ssl": true
+	},
+	"private_connection": {
+		"uri": "postgres://doadmin:zt91mum075ofzyww@private-dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
+		"database": "defaultdb",
 		"host": "dbtest-do-user-3342561-0.db.ondigitalocean.com",
 		"port": 25060,
 		"user": "doadmin",
@@ -82,7 +101,8 @@ var dbJSON = `
 		"pending": false,
 		"description": null
 	},
-	"size": "db-s-2vcpu-4gb"
+	"size": "db-s-2vcpu-4gb",
+	"private_network_uuid": "da4e0206-d019-41d7-b51f-deadbeefbb8f"
 }
 `
 
@@ -147,7 +167,16 @@ func TestDatabases_Create(t *testing.T) {
 		VersionSlug: "10",
 		Connection: &DatabaseConnection{
 			URI:      "postgres://doadmin:zt91mum075ofzyww@dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
-			Database: "",
+			Database: "defaultdb",
+			Host:     "dbtest-do-user-3342561-0.db.ondigitalocean.com",
+			Port:     25060,
+			User:     "doadmin",
+			Password: "zt91mum075ofzyww",
+			SSL:      true,
+		},
+		PrivateConnection: &DatabaseConnection{
+			URI:      "postgres://doadmin:zt91mum075ofzyww@private-dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
+			Database: "defaultdb",
 			Host:     "dbtest-do-user-3342561-0.db.ondigitalocean.com",
 			Port:     25060,
 			User:     "doadmin",
@@ -182,7 +211,16 @@ func TestDatabases_Create(t *testing.T) {
 		"version": "10",
 		"connection": {
 			"uri": "postgres://doadmin:zt91mum075ofzyww@dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
-			"database": "",
+			"database": "defaultdb",
+			"host": "dbtest-do-user-3342561-0.db.ondigitalocean.com",
+			"port": 25060,
+			"user": "doadmin",
+			"password": "zt91mum075ofzyww",
+			"ssl": true
+		},
+		"private_connection": {
+			"uri": "postgres://doadmin:zt91mum075ofzyww@private-dbtest-do-user-3342561-0.db.ondigitalocean.com:25060/defaultdb?sslmode=require",
+			"database": "defaultdb",
 			"host": "dbtest-do-user-3342561-0.db.ondigitalocean.com",
 			"port": 25060,
 			"user": "doadmin",
@@ -604,6 +642,15 @@ func TestDatabases_ListPools(t *testing.T) {
 				SSL:      true,
 				Database: "db",
 			},
+			PrivateConnection: &DatabaseConnection{
+				URI:      "postgresql://user:pass@private-host.com/db",
+				Host:     "private-host.com",
+				Port:     1234,
+				User:     "user",
+				Password: "pass",
+				SSL:      true,
+				Database: "db",
+			},
 		},
 	}
 
@@ -618,6 +665,15 @@ func TestDatabases_ListPools(t *testing.T) {
     "connection": {
       "uri": "postgresql://user:pass@host.com/db",
       "host": "host.com",
+      "port": 1234,
+      "user": "user",
+      "password": "pass",
+      "database": "db",
+      "ssl": true
+    },
+    "private_connection": {
+      "uri": "postgresql://user:pass@private-host.com/db",
+      "host": "private-host.com",
       "port": 1234,
       "user": "user",
       "password": "pass",
@@ -660,6 +716,15 @@ func TestDatabases_CreatePool(t *testing.T) {
 			SSL:      true,
 			Database: "db",
 		},
+		PrivateConnection: &DatabaseConnection{
+			URI:      "postgresql://user:pass@private-host.com/db",
+			Host:     "private-host.com",
+			Port:     1234,
+			User:     "user",
+			Password: "pass",
+			SSL:      true,
+			Database: "db",
+		},
 	}
 
 	body := `
@@ -673,6 +738,15 @@ func TestDatabases_CreatePool(t *testing.T) {
     "connection": {
       "uri": "postgresql://user:pass@host.com/db",
       "host": "host.com",
+      "port": 1234,
+      "user": "user",
+      "password": "pass",
+      "database": "db",
+      "ssl": true
+    },
+    "private_connection": {
+      "uri": "postgresql://user:pass@private-host.com/db",
+      "host": "private-host.com",
       "port": 1234,
       "user": "user",
       "password": "pass",
@@ -721,6 +795,15 @@ func TestDatabases_GetPool(t *testing.T) {
 			SSL:      true,
 			Database: "db",
 		},
+		PrivateConnection: &DatabaseConnection{
+			URI:      "postgresql://user:pass@private-host.com/db",
+			Host:     "private-host.com",
+			Port:     1234,
+			User:     "user",
+			Password: "pass",
+			SSL:      true,
+			Database: "db",
+		},
 	}
 
 	body := `
@@ -734,6 +817,15 @@ func TestDatabases_GetPool(t *testing.T) {
     "connection": {
       "uri": "postgresql://user:pass@host.com/db",
       "host": "host.com",
+      "port": 1234,
+      "user": "user",
+      "password": "pass",
+      "database": "db",
+      "ssl": true
+    },
+    "private_connection": {
+      "uri": "postgresql://user:pass@private-host.com/db",
+      "host": "private-host.com",
       "port": 1234,
       "user": "user",
       "password": "pass",
@@ -793,6 +885,16 @@ func TestDatabases_GetReplica(t *testing.T) {
 			SSL:      true,
 			Database: "db",
 		},
+		PrivateConnection: &DatabaseConnection{
+			URI:      "postgresql://user:pass@private-host.com/db",
+			Host:     "private-host.com",
+			Port:     1234,
+			User:     "user",
+			Password: "pass",
+			SSL:      true,
+			Database: "db",
+		},
+		PrivateNetworkUUID: "deadbeef-dead-4aa5-beef-deadbeef347d",
 	}
 
 	body := `
@@ -810,7 +912,17 @@ func TestDatabases_GetReplica(t *testing.T) {
       "password": "pass",
       "database": "db",
       "ssl": true
-    }
+    },
+    "private_connection": {
+      "uri": "postgresql://user:pass@private-host.com/db",
+      "host": "private-host.com",
+      "port": 1234,
+      "user": "user",
+      "password": "pass",
+      "database": "db",
+      "ssl": true
+    },
+    "private_network_uuid": "deadbeef-dead-4aa5-beef-deadbeef347d"
   }
 }
 `
@@ -849,6 +961,16 @@ func TestDatabases_ListReplicas(t *testing.T) {
 				SSL:      true,
 				Database: "db",
 			},
+			PrivateConnection: &DatabaseConnection{
+				URI:      "postgresql://user:pass@private-host.com/db",
+				Host:     "private-host.com",
+				Port:     1234,
+				User:     "user",
+				Password: "pass",
+				SSL:      true,
+				Database: "db",
+			},
+			PrivateNetworkUUID: "deadbeef-dead-4aa5-beef-deadbeef347d",
 		},
 	}
 
@@ -867,7 +989,17 @@ func TestDatabases_ListReplicas(t *testing.T) {
       "password": "pass",
       "database": "db",
       "ssl": true
-    }
+    },
+    "private_connection": {
+      "uri": "postgresql://user:pass@private-host.com/db",
+      "host": "private-host.com",
+      "port": 1234,
+      "user": "user",
+      "password": "pass",
+      "database": "db",
+      "ssl": true
+    },
+    "private_network_uuid": "deadbeef-dead-4aa5-beef-deadbeef347d"
   }]
 }
 `
@@ -905,6 +1037,16 @@ func TestDatabases_CreateReplica(t *testing.T) {
 			SSL:      true,
 			Database: "db",
 		},
+		PrivateConnection: &DatabaseConnection{
+			URI:      "postgresql://user:pass@private-host.com/db",
+			Host:     "private-host.com",
+			Port:     1234,
+			User:     "user",
+			Password: "pass",
+			SSL:      true,
+			Database: "db",
+		},
+		PrivateNetworkUUID: "deadbeef-dead-4aa5-beef-deadbeef347d",
 	}
 
 	body := `
@@ -922,7 +1064,17 @@ func TestDatabases_CreateReplica(t *testing.T) {
       "password": "pass",
       "database": "db",
       "ssl": true
-    }
+    },
+    "private_connection": {
+      "uri": "postgresql://user:pass@private-host.com/db",
+      "host": "private-host.com",
+      "port": 1234,
+      "user": "user",
+      "password": "pass",
+      "database": "db",
+      "ssl": true
+    },
+    "private_network_uuid": "deadbeef-dead-4aa5-beef-deadbeef347d"
   }
 }
 `

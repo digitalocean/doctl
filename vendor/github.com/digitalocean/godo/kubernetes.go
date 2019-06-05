@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -34,8 +35,11 @@ type KubernetesService interface {
 	GetNodePool(ctx context.Context, clusterID, poolID string) (*KubernetesNodePool, *Response, error)
 	ListNodePools(ctx context.Context, clusterID string, opts *ListOptions) ([]*KubernetesNodePool, *Response, error)
 	UpdateNodePool(ctx context.Context, clusterID, poolID string, req *KubernetesNodePoolUpdateRequest) (*KubernetesNodePool, *Response, error)
+	// RecycleNodePoolNodes is DEPRECATED please use DeleteNode
+	// The method will be removed in godo 2.0.
 	RecycleNodePoolNodes(ctx context.Context, clusterID, poolID string, req *KubernetesNodePoolRecycleNodesRequest) (*Response, error)
 	DeleteNodePool(ctx context.Context, clusterID, poolID string) (*Response, error)
+	DeleteNode(ctx context.Context, clusterID, poolID, nodeID string, req *KubernetesNodeDeleteRequest) (*Response, error)
 
 	GetOptions(context.Context) (*KubernetesOptions, *Response, error)
 }
@@ -91,10 +95,19 @@ type KubernetesNodePoolUpdateRequest struct {
 	Tags  []string `json:"tags,omitempty"`
 }
 
-// KubernetesNodePoolRecycleNodesRequest represents a request to recycle a set of
-// nodes in a node pool. This will recycle the nodes by ID.
+// KubernetesNodePoolRecycleNodesRequest is DEPRECATED please use DeleteNode
+// The type will be removed in godo 2.0.
 type KubernetesNodePoolRecycleNodesRequest struct {
 	Nodes []string `json:"nodes,omitempty"`
+}
+
+// KubernetesNodeDeleteRequest is a request to delete a specific node in a node pool.
+type KubernetesNodeDeleteRequest struct {
+	// Replace will cause a new node to be created to replace the deleted node.
+	Replace bool `json:"replace,omitempty"`
+
+	// SkipDrain skips draining the node before deleting it.
+	SkipDrain bool `json:"skip_drain,omitempty"`
 }
 
 // KubernetesCluster represents a Kubernetes cluster.
@@ -521,7 +534,8 @@ func (svc *KubernetesServiceOp) UpdateNodePool(ctx context.Context, clusterID, p
 	return root.NodePool, resp, nil
 }
 
-// RecycleNodePoolNodes schedules nodes in a node pool for recycling.
+// RecycleNodePoolNodes is DEPRECATED please use DeleteNode
+// The method will be removed in godo 2.0.
 func (svc *KubernetesServiceOp) RecycleNodePoolNodes(ctx context.Context, clusterID, poolID string, recycle *KubernetesNodePoolRecycleNodesRequest) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/node_pools/%s/recycle", kubernetesClustersPath, clusterID, poolID)
 	req, err := svc.client.NewRequest(ctx, http.MethodPost, path, recycle)
@@ -538,6 +552,33 @@ func (svc *KubernetesServiceOp) RecycleNodePoolNodes(ctx context.Context, cluste
 // DeleteNodePool deletes a node pool, and subsequently all the nodes in that pool.
 func (svc *KubernetesServiceOp) DeleteNodePool(ctx context.Context, clusterID, poolID string) (*Response, error) {
 	path := fmt.Sprintf("%s/%s/node_pools/%s", kubernetesClustersPath, clusterID, poolID)
+	req, err := svc.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// DeleteNode deletes a specific node in a node pool.
+func (svc *KubernetesServiceOp) DeleteNode(ctx context.Context, clusterID, poolID, nodeID string, deleteReq *KubernetesNodeDeleteRequest) (*Response, error) {
+	path := fmt.Sprintf("%s/%s/node_pools/%s/nodes/%s", kubernetesClustersPath, clusterID, poolID, nodeID)
+	if deleteReq != nil {
+		v := make(url.Values)
+		if deleteReq.SkipDrain {
+			v.Set("skip_drain", "1")
+		}
+		if deleteReq.Replace {
+			v.Set("replace", "1")
+		}
+		if query := v.Encode(); query != "" {
+			path = path + "?" + query
+		}
+	}
+
 	req, err := svc.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return nil, err

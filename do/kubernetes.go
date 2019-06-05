@@ -76,6 +76,7 @@ type KubernetesService interface {
 	UpdateNodePool(clusterID, poolID string, req *godo.KubernetesNodePoolUpdateRequest) (*KubernetesNodePool, error)
 	RecycleNodePoolNodes(clusterID, poolID string, req *godo.KubernetesNodePoolRecycleNodesRequest) error
 	DeleteNodePool(clusterID, poolID string) error
+	DeleteNode(clusterID, poolID, nodeID string, req *godo.KubernetesNodeDeleteRequest) error
 
 	GetVersions() (KubernetesVersions, error)
 	GetRegions() (KubernetesRegions, error)
@@ -249,6 +250,11 @@ func (k8s *kubernetesClusterService) RecycleNodePoolNodes(clusterID, poolID stri
 
 func (k8s *kubernetesClusterService) DeleteNodePool(clusterID, poolID string) error {
 	_, err := k8s.client.DeleteNodePool(context.TODO(), clusterID, poolID)
+	return err
+}
+
+func (k8s *kubernetesClusterService) DeleteNode(clusterID, poolID, nodeID string, req *godo.KubernetesNodeDeleteRequest) error {
+	_, err := k8s.client.DeleteNode(context.TODO(), clusterID, poolID, nodeID, req)
 	return err
 }
 
