@@ -239,7 +239,7 @@ func kubernetesNodePools() *Command {
 		"tags to apply to the node pool, repeat to add multiple tags at once")
 
 	cmdKubeNodePoolRecycle := CmdBuilder(cmd, RunKubernetesNodePoolRecycle,
-		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
+		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", "DEPRECATED: use delete-node. Recycle nodes in a node pool", Writer, aliasOpt("r"), hiddenCmd())
 	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "",
 		"ID or name of the nodes in the node pool to recycle")
 
