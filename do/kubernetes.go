@@ -74,6 +74,7 @@ type KubernetesService interface {
 	GetNodePool(clusterID, poolID string) (*KubernetesNodePool, error)
 	ListNodePools(clusterID string) (KubernetesNodePools, error)
 	UpdateNodePool(clusterID, poolID string, req *godo.KubernetesNodePoolUpdateRequest) (*KubernetesNodePool, error)
+	// RecycleNodePoolNodes is DEPRECATED please use DeleteNode
 	RecycleNodePoolNodes(clusterID, poolID string, req *godo.KubernetesNodePoolRecycleNodesRequest) error
 	DeleteNodePool(clusterID, poolID string) error
 	DeleteNode(clusterID, poolID, nodeID string, req *godo.KubernetesNodeDeleteRequest) error

@@ -884,7 +884,7 @@ func RunKubernetesNodePoolUpdate(c *CmdConfig) error {
 	return displayNodePools(c, *nodePool)
 }
 
-// RunKubernetesNodePoolRecycle recycles an existing kubernetes with new configuration.
+// RunKubernetesNodePoolRecycle DEPRECATED: will be removed in v2.0, please use delete-node or replace-node
 func RunKubernetesNodePoolRecycle(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)

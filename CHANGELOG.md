@@ -2,7 +2,7 @@
 
 All changes to `doctl` will be documented in this file.
 
-## [1.20.0] -
+## [1.20.0] - UNRELEASED
 
  - #463 Add kubernetes delete-node and replace-node commands, deprecate and hide recycle - @bouk
 
