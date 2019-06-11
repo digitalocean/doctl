@@ -100,6 +100,8 @@ func TestKubernetesNodePoolCommand(t *testing.T) {
 		"update",
 		"recycle",
 		"delete",
+		"delete-node",
+		"replace-node",
 	)
 }
 

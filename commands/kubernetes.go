@@ -239,7 +239,7 @@ func kubernetesNodePools() *Command {
 		"tags to apply to the node pool, repeat to add multiple tags at once")
 
 	cmdKubeNodePoolRecycle := CmdBuilder(cmd, RunKubernetesNodePoolRecycle,
-		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", "recycle nodes in a node pool", Writer, aliasOpt("r"))
+		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", "DEPRECATED: use delete-node. Recycle nodes in a node pool", Writer, aliasOpt("r"), hiddenCmd())
 	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "",
 		"ID or name of the nodes in the node pool to recycle")
 
@@ -248,6 +248,14 @@ func kubernetesNodePools() *Command {
 		"delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "force node pool delete")
+
+	cmdKubeNodeDelete := CmdBuilder(cmd, RunKubernetesNodeDelete, "delete-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "delete node in a pool", Writer)
+	AddBoolFlag(cmdKubeNodeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force node delete")
+	AddBoolFlag(cmdKubeNodeDelete, "skip-drain", "", false, "skip draining the node before deletion")
+
+	cmdKubeNodeReplace := CmdBuilder(cmd, RunKubernetesNodeReplace, "replace-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "replace node in a pool with a new one", Writer)
+	AddBoolFlag(cmdKubeNodeReplace, doctl.ArgForce, doctl.ArgShortForce, false, "force node delete")
+	AddBoolFlag(cmdKubeNodeReplace, "skip-drain", "", false, "skip draining the node before deletion")
 
 	return cmd
 }
@@ -528,7 +536,7 @@ func latestVersionForUpgrade(clusterVersionSlug string, versions []do.Kubernetes
 	return bucket[i].Slug, true, nil
 }
 
-// RunKubernetesClusterDelete deletes a kubernetes by its identifier.
+// RunKubernetesClusterDelete deletes a Kubernetes cluster
 func RunKubernetesClusterDelete(c *CmdConfig) error {
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -876,7 +884,7 @@ func RunKubernetesNodePoolUpdate(c *CmdConfig) error {
 	return displayNodePools(c, *nodePool)
 }
 
-// RunKubernetesNodePoolRecycle recycles an existing kubernetes with new configuration.
+// RunKubernetesNodePoolRecycle DEPRECATED: will be removed in v2.0, please use delete-node or replace-node
 func RunKubernetesNodePoolRecycle(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -899,7 +907,7 @@ func RunKubernetesNodePoolRecycle(c *CmdConfig) error {
 	return kube.RecycleNodePoolNodes(clusterID, poolID, r)
 }
 
-// RunKubernetesNodePoolDelete deletes a kubernetes by its identifier.
+// RunKubernetesNodePoolDelete deletes a Kubernetes node pool
 func RunKubernetesNodePoolDelete(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
@@ -926,6 +934,56 @@ func RunKubernetesNodePoolDelete(c *CmdConfig) error {
 		return fmt.Errorf("operation aborted")
 	}
 	return nil
+}
+
+// RunKubernetesNodeDelete deletes a Kubernetes Node
+func RunKubernetesNodeDelete(c *CmdConfig) error {
+	return kubernetesNodeDelete(false, c)
+}
+
+// RunKubernetesNodeReplace replaces a Kubernetes Node
+func RunKubernetesNodeReplace(c *CmdConfig) error {
+	return kubernetesNodeDelete(true, c)
+}
+
+func kubernetesNodeDelete(replace bool, c *CmdConfig) error {
+	if len(c.Args) != 3 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	if err != nil {
+		return err
+	}
+	poolID, err := poolIDize(c.Kubernetes(), clusterID, c.Args[1])
+	if err != nil {
+		return err
+	}
+	nodeID := c.Args[2]
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	msg := "delete this Kubernetes node"
+	if replace {
+		msg = "replace this Kubernetes node"
+	}
+
+	if !(force || AskForConfirm(msg) == nil) {
+		return fmt.Errorf("operation aborted")
+	}
+
+	skipDrain, err := c.Doit.GetBool(c.NS, "skip-drain")
+	if err != nil {
+		return err
+	}
+
+	kube := c.Kubernetes()
+	return kube.DeleteNode(clusterID, poolID, nodeID, &godo.KubernetesNodeDeleteRequest{
+		Replace:   replace,
+		SkipDrain: skipDrain,
+	})
 }
 
 // RunKubeOptionsListVersion lists valid versions for kubernetes clusters.

@@ -2,6 +2,10 @@
 
 All changes to `doctl` will be documented in this file.
 
+## [1.20.0] - UNRELEASED
+
+ - #463 Add kubernetes delete-node and replace-node commands, deprecate and hide recycle - @bouk
+
 ## [1.19.0] - 2019-05-31
 
  - #454 Ensure all 'get' and 'list' commands support the 'format' flag - @andrewsomething

@@ -73,6 +73,20 @@ func (_m *KubernetesService) Delete(clusterID string) error {
 	return r0
 }
 
+// DeleteNode provides a mock function with given fields: clusterID, poolID, nodeID, req
+func (_m *KubernetesService) DeleteNode(clusterID string, poolID string, nodeID string, req *godo.KubernetesNodeDeleteRequest) error {
+	ret := _m.Called(clusterID, poolID, nodeID, req)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string, string, *godo.KubernetesNodeDeleteRequest) error); ok {
+		r0 = rf(clusterID, poolID, nodeID, req)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteNodePool provides a mock function with given fields: clusterID, poolID
 func (_m *KubernetesService) DeleteNodePool(clusterID string, poolID string) error {
 	ret := _m.Called(clusterID, poolID)
