@@ -70,7 +70,7 @@ following steps in order to be able to compile and test doctl.
 ### `godo` mocks
 
 When you upgrade `godo` you have to re-generate the mocks using [mockery](https://github.com/vektra/mockery),
-so first install mockery in your `GOPATH` then run the `script/regenmocks.sh` script to produce them.
+so first install mockery in your `GOPATH` then run the `scripts/regenmocks.sh` script to produce them.
 
 ### Releasing `doctl`
 
