@@ -1,10 +1,10 @@
 # Change Log
 
-All changes to `doctl` will be documented in this file.
+## [1.20.0] - 2019-06-11
 
-## [1.20.0] - UNRELEASED
-
+ - #465 fix typo in CONTRIBUTING.md - @senechko
  - #463 Add kubernetes delete-node and replace-node commands, deprecate and hide recycle - @bouk
+ - #456 tag the release with the release tag - @hilary
 
 ## [1.19.0] - 2019-05-31
 
