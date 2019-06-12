@@ -1,5 +1,6 @@
 # doctl [![Build Status](https://travis-ci.org/digitalocean/doctl.svg?branch=master)](https://travis-ci.org/digitalocean/doctl) [![GoDoc](https://godoc.org/github.com/digitalocean/doctl?status.svg)](https://godoc.org/github.com/digitalocean/doctl) [![Go Report Card](https://goreportcard.com/badge/github.com/digitalocean/doctl)](https://goreportcard.com/report/github.com/digitalocean/doctl)
 
+
 ```
 doctl is a command line interface for the DigitalOcean API.
 
@@ -30,16 +31,33 @@ Flags:
 Use "doctl [command] --help" for more information about a command.
 ```
 
+## Table of Contents
+
+- [doctl](#doctl---)
+    - [Installing `doctl`](#installing-doctl)
+        - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)
+            - [MacOS](#macos)
+            - [Snap supported OS](#snap-supported-os)
+            - [Arch Linux](#arch-linux)
+            - [Windows](#windows)
+        - [Downloading a Release from GitHub](#downloading-a-release-from-github)
+        - [Building with Docker](#building-with-docker)
+        - [Building the Development Version from Source](#building-the-development-version-from-source)
+            - [Dependencies](#dependencies)
+    - [Authenticating with DigitalOcean](#authenticating-with-digitalocean)
+        - [Logging in to multiple DigitalOcean accounts](#logging-in-to-multiple-digitalocean-accounts)
+    - [Configuring Default Values](#configuring-default-values)
+    - [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
+        - [Linux](#linux)
+        - [macOS](#macos)
+    - [Examples](#examples)
+    - [Tutorials](#tutorials)
+    - [doctl Releases](https://github.com/digitalocean/doctl/releases)
+
+
 ## Installing `doctl`
 
-There are four ways to install `doctl`:
-
-1. using a package manager,
-1. downloading a GitHub release,
-1. building a development version from source,
-1. building it with [Docker](https://www.digitalocean.com/community/tutorials/the-docker-ecosystem-an-introduction-to-common-components).
-
-### Option 1 – Using a Package Manager (Preferred)
+### Using a Package Manager (Preferred)
 
 A package manager allows you to install and keep up with new `doctl` versions using only a few commands.
 Our community distributes `doctl` via a growing set of package managers in addition to the officially
@@ -54,6 +72,9 @@ brew install doctl
 ```
 
 #### Snap supported OS
+
+_Note: If you need to use [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/) with your DO
+resources, you [cannot currently install `doctl` via snap](https://forum.snapcraft.io/t/classic-confinement-request-doctl/11785)._
 
 You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
 
@@ -75,7 +96,7 @@ Arch users not using a package manager can install from the [AUR](https://aur.ar
 
 Support for Windows package managers is on the way.
 
-### Option 2 — Downloading a Release from GitHub
+### Downloading a Release from GitHub
 
 Visit the [Releases
 page](https://github.com/digitalocean/doctl/releases) for the [`doctl`
@@ -121,19 +142,13 @@ sudo mv ~/doctl /usr/local/bin
 
 Windows users can follow [How to: Add Tool Locations to the PATH Environment Variable](https://msdn.microsoft.com/en-us/library/office/ee537574(v=office.14).aspx) in order to add `doctl` to their `PATH`.
 
-### Option 3 — Building the Development Version from Source
+### Building with Docker
 
-If you have a [Go environment](https://www.digitalocean.com/community/tutorials/how-to-install-go-1-6-on-ubuntu-16-04) configured, you can install the development version of `doctl` from the command line.
-
-```
-go get -u github.com/digitalocean/doctl/cmd/doctl
-```
-
-While the development version is a good way to take a peek at `doctl`'s latest features before they get released, be aware that it may have bugs. Officially released versions will generally be more stable.
-
-### Option 4 — Building with Docker
-
-If you have [Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04) configured, you can build a Docker image using `doctl`'s [Dockerfile](https://github.com/digitalocean/doctl/blob/master/Dockerfile) and run `doctl` within a container.
+If you have
+[Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04)
+configured, you can build a Docker image using `doctl`'s
+[Dockerfile](https://github.com/digitalocean/doctl/blob/master/Dockerfile)
+and run `doctl` within a container.
 
 ```
 docker build -t doctl .
@@ -144,6 +159,29 @@ Then you can run it within a container.
 ```
 docker run --rm -e DIGITALOCEAN_ACCESS_TOKEN="your_DO_token" doctl any_doctl_command
 ```
+
+### Building the Development Version from Source
+
+If you have a [Go environment](https://www.digitalocean.com/community/tutorials/how-to-install-go-1-6-on-ubuntu-16-04)
+configured, you can install the development version of `doctl` from
+the command line.
+
+```
+go get -u github.com/digitalocean/doctl/cmd/doctl
+```
+
+While the development version is a good way to take a peek at
+`doctl`'s latest features before they get released, be aware that it
+may have bugs. Officially released versions will generally be more
+stable.
+
+### Dependencies
+
+`doctl`'s dependencies are managed with
+[`dep`](https://github.com/golang/dep). To add dependencies, use [`dep
+ensure -add
+github.com/foo/bar`](https://github.com/golang/dep#adding-a-dependency)
+
 
 ## Authenticating with DigitalOcean
 
@@ -269,14 +307,9 @@ By default, it assumes you are using the `root` user. If you want to SSH as a sp
 doctl compute ssh <user>@<droplet-name>
 ```
 
-## Building and dependencies
-
-`doctl`'s dependencies are managed with [`dep`](https://github.com/golang/dep). To add dependencies, use [`dep ensure -add github.com/foo/bar`](https://github.com/golang/dep#adding-a-dependency)
-
-## More info
+## Tutorials
 
 * [How To Use Doctl, the Official DigitalOcean Command-Line Client](https://www.digitalocean.com/community/tutorials/how-to-use-doctl-the-official-digitalocean-command-line-client)
 * [How To Work with DigitalOcean Load Balancers Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-work-with-digitalocean-load-balancers-using-doctl)
 * [How To Secure Web Server Infrastructure With DigitalOcean Cloud Firewalls Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-secure-web-server-infrastructure-with-digitalocean-cloud-firewalls-using-doctl)
 * [How To Work with DigitalOcean Block Storage Using Doctl](https://www.digitalocean.com/community/tutorials/how-to-work-with-digitalocean-block-storage-using-doctl)
-* [doctl Releases](https://github.com/digitalocean/doctl/releases)
