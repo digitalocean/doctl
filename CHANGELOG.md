@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.20.1] - 2019-06-14
+
+ - #471 add macport to README - @hilary
+ - #469 set default location for config file to configPath - @hilary
+ - #468 advise when not to use snap, revise README for flow - @hilary
+ - #467 set snap version using tag - @hilary
+
 ## [1.20.0] - 2019-06-11
 
  - #465 fix typo in CONTRIBUTING.md - @senechko
