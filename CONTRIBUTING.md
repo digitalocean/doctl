@@ -95,7 +95,6 @@ You will also need a valid `GITHUB_TOKEN` environment variable with access to th
 
    * `doit.go`
    * `Dockerfile`
-   * `snap/snapcraft.yml`
 
 1. Generate a PR, get it reviewed, and merge
 
