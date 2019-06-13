@@ -79,7 +79,8 @@ var ErrNoAccessToken = errors.New("no access token has been configured")
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.config/doctl/config.yaml)")
+	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "",
+		fmt.Sprintf("config file (default is %s)", configPath()))
 	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
 	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
 	DoitCmd.PersistentFlags().StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
