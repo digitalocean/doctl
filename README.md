@@ -71,6 +71,9 @@ You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this c
 brew install doctl
 ```
 
+`doctl` is also available via [MacPorts](https://www.macports.org/ports.php?by=name&substr=doctl). Note that
+the port is community maintained and may not be on the latest version.
+
 #### Snap supported OS
 
 _Note: If you need to use [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/) with your DO
