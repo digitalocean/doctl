@@ -33,6 +33,13 @@ archives:
 checksum:
   name_template: "doctl-{{ .Version }}-checksums.sha256"
 
+dockers:
+- dockerfile: Dockerfile.goreleaser
+  image_templates:
+  - "digitalocean/doctl:latest"
+  - "digitalocean/doctl:{{ .Major }}-latest"
+  - "digitalocean/doctl:{{ .Version }}"
+
 release:
   github:
     owner: digitalocean
