@@ -33,12 +33,13 @@ parse_args() {
 
 parse_args "$@"
 
-if ! git diff --exit-code --quiet --cached; then
-  echo "Aborting due to uncommitted changes in the index" >&2
-  exit 1
-fi
+ORIGIN=${ORIGIN:-origin}
 
-version=$(git fetch --tags &>/dev/null | git tag -l | sort --version-sort | tail -n1 | cut -c 2-)
+BRANCH=${BRANCH:-master}
+git pull "$ORIGIN"
+git checkout "$ORIGIN/$BRANCH"
+
+version=$(git fetch --tags "${ORIGIN}" &>/dev/null | git tag -l | sort --version-sort | tail -n1 | cut -c 2-)
 
 if [[ $short = true ]]; then
   echo "$version"

@@ -1,0 +1,49 @@
+project_name: doctl
+
+builds:
+- main: ./cmd/doctl/main.go
+  env:
+  - CGO_ENABLED=0
+  - GO111MODULE=on
+  flags:
+  - -mod=vendor
+  - -v
+  ldflags:
+  - -X github.com/digitalocean/doctl.Build={{ .ShortCommit }}
+  - -X github.com/digitalocean/doctl.Major={{ .Major }}
+  - -X github.com/digitalocean/doctl.Minor={{ .Minor }}
+  - -X github.com/digitalocean/doctl.Patch={{ .Patch }}
+  - -X github.com/digitalocean/doctl.Label=release
+  goos:
+  - windows
+  - darwin
+  - linux
+  ignore:
+  - goos: darwin
+    goarch: 386
+
+archives:
+- name_template: "doctl-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+  format_overrides:
+  - goos: windows
+    format: zip
+  files: [a-workaround-to-include-only-the-binary*]
+  wrap_in_directory: false
+
+checksum:
+  name_template: "doctl-{{ .Version }}-checksums.sha256"
+
+dockers:
+- dockerfile: Dockerfile.goreleaser
+  image_templates:
+  - "digitalocean/doctl:latest"
+  - "digitalocean/doctl:{{ .Major }}-latest"
+  - "digitalocean/doctl:{{ .Version }}"
+
+release:
+  github:
+    owner: digitalocean
+    name: doctl
+
+changelog:
+  skip: true

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 
-tag=$1
+set -euo pipefail
 
-if [[ -z "$tag" ]]; then
-  echo "usage: $0 <tag>"
+if [[ ! -x $(command -v goreleaser) ]] ; then
+  echo "install https://goreleaser.com/install/ then run again"
+  exit 1
 fi
 
-gothub release \
-  --user digitalocean \
-  --repo doctl \
-  --name "$tag" \
-  --tag "$tag" \
-  --pre-release
+echo "generating changelog"
+release_notes="$(make _changelog)"
+
+goreleaser --skip-publish --rm-dist --release-notes="${release_notes}"
+
+rm -f "$release_notes"

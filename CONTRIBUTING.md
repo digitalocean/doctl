@@ -1,5 +1,6 @@
 # Contributing to doctl
 
+<!-- Non emacs users, feel free to update the toc by hand. -->
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 **Table of Contents**
 
@@ -12,11 +13,14 @@
         - [Docker](#docker)
         - [Testing](#testing)
             - [`godo` mocks](#godo-mocks)
-        - [Build Scripts](#build-scripts)
+            - [Build Scripts](#build-scripts)
     - [Releasing](#releasing)
-        - [Setup](#setup)
+        - [Prerequisites](#prerequisites)
         - [Cutting a release](#cutting-a-release)
-        - [Updating Homebrew](#updating-homebrew)
+            - [Oops! What now?](#oops-what-now)
+            - [Updating Homebrew](#updating-homebrew)
+            - [Snap](#snap)
+            - [Dockerhub](#dockerhub)
 
 <!-- markdown-toc end -->
 
@@ -91,22 +95,29 @@ When you upgrade `godo` you have to re-generate the mocks.
     make mocks
     ```
 
-### Build Scripts
+#### Build Scripts
 
-If you modify the build scripts, use `make shellcheck` to check your changes.
+If you modify the build scripts, you can use `make shellcheck` to
+check your changes. You'll need to install [shellcheck](https://github.com/koalaman/shellcheck)
+to do so. Alternatively, you can open a "WIP" (Work In Progress) pull request
+and let TravisCI run shellcheck for you.
+
 
 ## Releasing
 
-### Setup
+### Prerequisites
 
-To release `doctl`, you need to install:
+* [goreleaser](https://goreleaser.com/install/)
 
-* [gothub](https://github.com/itchio/gothub)
+* [docker](https://docs.docker.com/install/)
 
-And make it available in your `PATH`. You can use `go get -u` and add your
-`$GOPATH/bin` to your `PATH` so your scripts will find it.
+* a valid `GITHUB_TOKEN` environment variable with access to the
+  `digitalocean/doctl` repo. You can generate a token
+  [here](https://github.com/settings/tokens), it needs the `public_repo`
+  access.
 
-You will also need a valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo. You can generate a token [here](https://github.com/settings/tokens), it needs the `public_repo` access.
+* a valid dockerhub login with access to the `digitalocean` account. Post
+  in #it_support to request access.
 
 ### Cutting a release
 
@@ -115,20 +126,21 @@ You will also need a valid `GITHUB_TOKEN` environment variable with access to th
 
 1. Generate a PR, get it reviewed, and merge
 
-1. Tag the release using `BUMP=[patch|feature|breaking] make bump-and-tag`
+1. Cut a release using `BUMP=(bugfix|feature|breaking) make bump_and_release`. 
+   `doctl` follows [semantic versioning](semver.org), ask if
+   you aren't sure. `BUMP=bugfix` is an alias for `BUMP=patch`,
+   `BUMP=feature` is an alias for `BUMP=minor`, and `BUMP=breaking`
+   is an alias for `BUMP=major`.
 
-1. To build `doctl` for all its platforms, run `scripts/stage.sh major minor patch` 
-(e.g. `scripts/stage.sh 1 5 0`). This will place all files and their checksums 
-in `builds/major.minor.patch/release`.
+#### Oops! What now?
 
-1. Mark the release on GitHub with `scripts/release.sh v<version>` (e.g. `scripts/release.sh v1.5.0`, _note_ the `v`),
+`make bump_and_release` calls a series of smaller tasks under the
+hood. If the target fails, fix the problem and use the smaller tasks
+to finish the release. `make release` may be of particular interest; 
+it releases the most recent existing tag. Check `Makefile` for other
+internal targets of interest.
 
-1. Upload using `scripts/upload.sh <version>`.
-
-1. Go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
-   description to contain all changelog entries for this specific release. Uncheck the pre-release checkbox.
-
-### Updating Homebrew
+#### Updating Homebrew
 
 Using the url and sha from the github release, update the 
 [homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).
@@ -139,3 +151,12 @@ You can use `brew bump-formula-pr doctl`, or
 1. update the url and the sha256 using the values for the archive in the github release
 1. commit your changes
 1. submit a PR to homebrew
+
+#### Snap
+
+New releases are automatically published to the snapstore using a webhook and snapcraft's
+automation pipeline.
+
+#### Dockerhub
+
+`make release` pushes new releases to dockerhub.
