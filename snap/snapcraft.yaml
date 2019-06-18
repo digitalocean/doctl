@@ -3,6 +3,7 @@ version-script: git tag -l | sort --version-sort | tail -n1 | cut -c 2-
 version: git
 summary: A command line tool for DigitalOcean services
 description: doctl is a command line tool for DigitalOcean services using the API.
+base: core18
 
 grade: stable
 confinement: strict
@@ -12,10 +13,7 @@ build-packages:
   - git
 
 parts:
-  go:
-    source-tag: go1.11.4
   launcher:
-    after: [go]
     source: snap/local
     plugin: dump
     organize:
@@ -39,6 +37,12 @@ plugs:
     write:
       - $HOME/.kube
       - $HOME/.kube/config
+  doctl-config:
+    interface: personal-files
+    write:
+      - $HOME/.config
+      - $HOME/.config/doctl
+      - $HOME/.config/doctl/.config
 
 apps:
   doctl:
@@ -48,3 +52,4 @@ apps:
       - network
       - ssh-keys
       - kube-config
+      - doctl-config
