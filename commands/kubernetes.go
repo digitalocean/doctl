@@ -1311,7 +1311,7 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 	local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
 		Exec: &clientcmdapi.ExecConfig{
 			APIVersion: clientauthentication.SchemeGroupVersion.String(),
-			Command:    os.Args[0],
+			Command:    doctl.CommandName(),
 			Args: []string{
 				"kubernetes",
 				"cluster",
