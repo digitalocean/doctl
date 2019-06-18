@@ -38,8 +38,9 @@ Use "doctl [command] --help" for more information about a command.
         - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)
             - [MacOS](#macos)
             - [Snap supported OS](#snap-supported-os)
+                - [Use with `kubectl`](#use-with-kubectl)
+                - [Using `doctl compute ssh`](#using-doctl-compute-ssh)
             - [Arch Linux](#arch-linux)
-            - [Windows](#windows)
         - [Downloading a Release from GitHub](#downloading-a-release-from-github)
         - [Building with Docker](#building-with-docker)
         - [Building the Development Version from Source](#building-the-development-version-from-source)
@@ -76,28 +77,41 @@ the port is community maintained and may not be on the latest version.
 
 #### Snap supported OS
 
-_Note: If you need to use [kubectl](https://kubernetes.io/docs/reference/kubectl/overview/) with your DO
-resources, you [cannot currently install `doctl` via snap](https://forum.snapcraft.io/t/classic-confinement-request-doctl/11785)._
-
 You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
 
 ```
 sudo snap install doctl
 ```
 
-If you want to use `doctl compute ssh`, you'll need to connect the doctl snap to the core [ssh-keys interface](https://docs.snapcraft.io/ssh-keys-interface):
+##### Use with `kubectl`
+
+At present, you'll need to connect the snap to the `doctl` and
+`kubectl` config files in order to use `kubectl` with your DOKS. After 
+installing the snap, run
+
+```
+sudo snap connect doctl:doctl-config
+sudo snap connect doctl:kubectl-config
+```
+
+You should only need to create these connections once; upgrades should
+honor the existing connection.
+
+##### Using `doctl compute ssh`
+
+If you want to use `doctl compute ssh`, you'll need to connect the
+doctl snap to the core [ssh-keys interface](https://docs.snapcraft.io/ssh-keys-interface).
+After installing the snap, run
 
 ```
 sudo snap connect doctl:ssh-keys :ssh-keys
 ```
 
+You should only need to create the connection once; upgrades should honor the existing connection.
+
 #### Arch Linux
 
 Arch users not using a package manager can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
-
-#### Windows
-
-Support for Windows package managers is on the way.
 
 ### Downloading a Release from GitHub
 

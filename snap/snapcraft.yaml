@@ -14,17 +14,44 @@ build-packages:
 parts:
   go:
     source-tag: go1.11.4
-  doctl:
+  launcher:
     after: [go]
+    source: snap/local
+    plugin: dump
+    organize:
+      '*': bin/
+    override-stage: |
+      cd $SNAPCRAFT_PART_INSTALL
+      chmod +x bin/doctl-launch
+      snapcraftctl stage
+  doctl:
+    after: [launcher]
     source: .
     plugin: go
     go-importpath: github.com/digitalocean/doctl
     go-packages: [github.com/digitalocean/doctl/cmd/doctl]
+    organize:
+      bin/doctl: bin/doctl.real
+
+plugs:
+  kube-config:
+    interface: personal-files
+    write:
+      - $HOME/.kube
+      - $HOME/.kube/config
+  doctl-config:
+    interface: personal-files
+    write:
+      - $HOME/.config
+      - $HOME/.config/doctl
+      - $HOME/.config/doctl/.config
 
 apps:
   doctl:
-    command: bin/doctl
+    command: bin/doctl-launch
     plugs:
       - home
       - network
       - ssh-keys
+      - kube-config
+      - doctl-config

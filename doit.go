@@ -339,3 +339,12 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 func emptyStringSlice(s []string) bool {
 	return len(s) == 1 && s[0] == "[]"
 }
+
+// CommandName returns the name by which doctl was invoked
+func CommandName() string {
+	name, ok := os.LookupEnv("SNAP_NAME")
+	if !ok {
+		return os.Args[0]
+	}
+	return name
+}
