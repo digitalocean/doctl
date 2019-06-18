@@ -4,7 +4,7 @@ version: git
 summary: A command line tool for DigitalOcean services
 description: doctl is a command line tool for DigitalOcean services using the API.
 
-grade: devel
+grade: stable
 confinement: strict
 
 build-packages:
@@ -37,7 +37,7 @@ plugs:
   kube-config:
     interface: personal-files
     write:
-      -	$HOME/.kube
+      - $HOME/.kube
       - $HOME/.kube/config
   doctl-config:
     interface: personal-files
