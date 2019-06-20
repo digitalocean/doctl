@@ -28,7 +28,7 @@ mkdir -p $OUTPUT_DIR/stage $OUTPUT_DIR/release
 rm -f $STAGE_DIR/doctl $STAGE_DIR/doctl.exe
 
 if [[ -z $SKIPBUILD ]]; then
-  echo "building doctl"
+  echo "building doctl with xgo"
   baseFlag="-X github.com/digitalocean/doctl"
   ldflags="${baseFlag}.Build=$(git rev-parse --short HEAD)"
   ldflags="${ldflags} $baseFlag.Major=${major} $baseFlag.Minor=${minor} $baseFlag.Patch=${patch} $baseFlag.Label=release"

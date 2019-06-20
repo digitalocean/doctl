@@ -189,7 +189,7 @@ configured, you can install the development version of `doctl` from
 the command line.
 
 ```
-go get -u github.com/digitalocean/doctl/cmd/doctl
+go get github.com/digitalocean/doctl/cmd/doctl
 ```
 
 While the development version is a good way to take a peek at

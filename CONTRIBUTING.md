@@ -1,15 +1,31 @@
 # Contributing to doctl
 
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+**Table of Contents**
+
+- [Contributing to doctl](#contributing-to-doctl)
+    - [Issues](#issues)
+        - [Reporting an Issue](#reporting-an-issue)
+        - [Issue Lifecycle](#issue-lifecycle)
+    - [Setting up Go to work on doctl](#setting-up-go-to-work-on-doctl)
+    - [Contributing code](#contributing-code)
+        - [dependencies](#dependencies)
+        - [`godo` mocks](#godo-mocks)
+        - [Releasing `doctl`](#releasing-doctl)
+            - [Setup](#setup)
+            - [Cutting a release](#cutting-a-release)
+            - [Updating Homebrew](#updating-homebrew)
+
+<!-- markdown-toc end -->
+
 **First:** if you're unsure or afraid of _anything_, just ask
 or submit the issue or pull request anyways. You won't be yelled at for
 giving your best effort. The worst that can happen is that you'll be
-politely asked to change something. We appreciate any sort of contributions,
-and don't want a wall of rules to get in the way of that.
+politely asked to change something. We appreciate all contributions!
 
-However, for those people who want a bit more guidance on the
-best way to contribute to the project, read on. This document will cover
-what we're looking for. By addressing all the points we're looking for,
-it raises the chances we can quickly merge or address your contributions.
+For those folks who want a bit more guidance on the best way to
+contribute to the project, read on. Addressing the points below
+lets us merge or address your contributions quickly.
 
 ## Issues
 
@@ -48,7 +64,7 @@ it raises the chances we can quickly merge or address your contributions.
 If you have never worked with Go before, you will have to complete the
 following steps in order to be able to compile and test doctl.
 
-1. Install Go. Make sure the Go version is at least Go 1.6.
+1. Install Go. Make sure the Go version is at least Go 1.11.
    On Mac OS X, you can `brew install go` to install the latest stable version.
 
 1. Set and export the `GOPATH` environment variable and update your `PATH`.
@@ -67,10 +83,17 @@ following steps in order to be able to compile and test doctl.
 
 ## Contributing code
 
+### dependencies
+
+This project uses [Go
+modules](https://github.com/golang/go/wiki/Modules) for dependency
+management and employs vendoring. Please run `make vendor` after any
+dependency modifications.
+
 ### `godo` mocks
 
-When you upgrade `godo` you have to re-generate the mocks using [mockery](https://github.com/vektra/mockery),
-so first install mockery in your `GOPATH` then run the `scripts/regenmocks.sh` script to produce them.
+When you upgrade `godo` you have to re-generate the mocks using [mockery](https://github.com/vektra/mockery).
+Install mockery in your `GOPATH` then run the `scripts/regenmocks.sh` script to produce them.
 
 ### Releasing `doctl`
 
@@ -120,12 +143,3 @@ You can use `brew bump-formula-pr doctl`, or
 1. update the url and the sha256 using the values for the archive in the github release
 1. commit your changes
 1. submit a PR to homebrew
-
-#### updating the vendored code
-
-we use dep command to create/update the vendored code.
-
-1. Install dep command if its not already. `brew install dep`.
-1. use the dep command to update the vendored code `dep ensure -update github.com/digitalocean/godo`. Replace godo with the name of the project you are updating/installing.
-1. verify that its building correctly before creating a PR. `docker build -t doctl .`
-1. Create a PR to push the changes.
