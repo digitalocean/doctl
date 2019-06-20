@@ -41,6 +41,7 @@ Use "doctl [command] --help" for more information about a command.
                 - [Use with `kubectl`](#use-with-kubectl)
                 - [Using `doctl compute ssh`](#using-doctl-compute-ssh)
             - [Arch Linux](#arch-linux)
+            - [Nix supported OS](#nix-supported-os)
         - [Downloading a Release from GitHub](#downloading-a-release-from-github)
         - [Building with Docker](#building-with-docker)
         - [Building the Development Version from Source](#building-the-development-version-from-source)
@@ -112,6 +113,10 @@ You should only need to create the connection once; upgrades should honor the ex
 #### Arch Linux
 
 Arch users not using a package manager can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
+
+#### Nix supported OS
+
+Users of NixOS or other [supported platforms](https://nixos.org/nixpkgs/) may install ```doctl``` from [Nixpkgs](https://nixos.org/nixos/packages.html#doctl). Please note this package is also community maintained and may not be on the latest version.
 
 ### Downloading a Release from GitHub
 
