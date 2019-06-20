@@ -173,13 +173,13 @@ configured, you can build a Docker image using `doctl`'s
 and run `doctl` within a container.
 
 ```
-docker build -t doctl .
+docker build --tag=doctl .
 ```
 
 Then you can run it within a container.
 
 ```
-docker run --rm -e DIGITALOCEAN_ACCESS_TOKEN="your_DO_token" doctl any_doctl_command
+docker run --rm --interactive --tty --env=DIGITALOCEAN_ACCESS_TOKEN="your_DO_token" doctl any_doctl_command
 ```
 
 ### Building the Development Version from Source
