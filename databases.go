@@ -22,6 +22,7 @@ const (
 	databasePoolsPath       = databaseBasePath + "/%s/pools"
 	databaseReplicaPath     = databaseBasePath + "/%s/replicas/%s"
 	databaseReplicasPath    = databaseBasePath + "/%s/replicas"
+	evictionPolicyPath      = databaseBasePath + "/%s/eviction_policy"
 )
 
 // DatabasesService is an interface for interfacing with the databases endpoints
@@ -52,6 +53,8 @@ type DatabasesService interface {
 	ListReplicas(context.Context, string, *ListOptions) ([]DatabaseReplica, *Response, error)
 	CreateReplica(context.Context, string, *DatabaseCreateReplicaRequest) (*DatabaseReplica, *Response, error)
 	DeleteReplica(context.Context, string, string) (*Response, error)
+	GetEvictionPolicy(context.Context, string) (string, *Response, error)
+	SetEvictionPolicy(context.Context, string, string) (*Response, error)
 }
 
 // DatabasesServiceOp handles communication with the Databases related methods
@@ -243,6 +246,10 @@ type databaseReplicaRoot struct {
 
 type databaseReplicasRoot struct {
 	Replicas []DatabaseReplica `json:"replicas"`
+}
+
+type evictionPolicyRoot struct {
+	EvictionPolicy string `json:"eviction_policy"`
 }
 
 // List returns a list of the Databases visible with the caller's API token
@@ -612,6 +619,36 @@ func (svc *DatabasesServiceOp) CreateReplica(ctx context.Context, databaseID str
 func (svc *DatabasesServiceOp) DeleteReplica(ctx context.Context, databaseID, name string) (*Response, error) {
 	path := fmt.Sprintf(databaseReplicaPath, databaseID, name)
 	req, err := svc.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// GetEvictionPolicy loads the eviction policy for a given Redis cluster.
+func (svc *DatabasesServiceOp) GetEvictionPolicy(ctx context.Context, databaseID string) (string, *Response, error) {
+	path := fmt.Sprintf(evictionPolicyPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	root := new(evictionPolicyRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return "", resp, err
+	}
+	return root.EvictionPolicy, resp, nil
+}
+
+// SetEvictionPolicy updates the eviction policy for a given Redis cluster.
+func (svc *DatabasesServiceOp) SetEvictionPolicy(ctx context.Context, databaseID, policy string) (*Response, error) {
+	path := fmt.Sprintf(evictionPolicyPath, databaseID)
+	root := &evictionPolicyRoot{EvictionPolicy: policy}
+	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, root)
 	if err != nil {
 		return nil, err
 	}
