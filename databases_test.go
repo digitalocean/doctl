@@ -1109,3 +1109,41 @@ func TestDatabases_DeleteReplica(t *testing.T) {
 	_, err := client.Databases.DeleteReplica(ctx, dbID, "replica")
 	require.NoError(t, err)
 }
+
+func TestDatabases_SetEvictionPolicy(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/eviction_policy", dbID)
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPut)
+	})
+
+	_, err := client.Databases.SetEvictionPolicy(ctx, dbID, "allkeys_lru")
+	require.NoError(t, err)
+}
+
+func TestDatabases_GetEvictionPolicy(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	want := "allkeys_lru"
+
+	body := `{ "eviction_policy": "allkeys_lru" }`
+
+	path := fmt.Sprintf("/v2/databases/%s/eviction_policy", dbID)
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, body)
+	})
+
+	got, _, err := client.Databases.GetEvictionPolicy(ctx, dbID)
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
