@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.17.0] - 2019-06-21
+
+- #238 Add support for Redis eviction policy in Databases @mikejholly
+
 ## [v1.16.0] - 2019-06-04
 
 - #233 Add Kubernetes DeleteNode method, deprecate RecycleNodePoolNodes @bouk
