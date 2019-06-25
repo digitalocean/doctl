@@ -252,6 +252,10 @@ type evictionPolicyRoot struct {
 	EvictionPolicy string `json:"eviction_policy"`
 }
 
+func (d Database) URN() string {
+	return ToURN("dbaas", d.ID)
+}
+
 // List returns a list of the Databases visible with the caller's API token
 func (svc *DatabasesServiceOp) List(ctx context.Context, opts *ListOptions) ([]Database, *Response, error) {
 	path := databaseBasePath
