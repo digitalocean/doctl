@@ -1307,11 +1307,6 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 		local.CurrentContext = remote.CurrentContext
 	}
 
-	context := Context
-	if context == "" {
-		context = "default"
-	}
-
 	// configure kubectl to call doctl to retrieve credentials
 	local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
 		Exec: &clientcmdapi.ExecConfig{
@@ -1323,7 +1318,7 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 				"kubeconfig",
 				"exec-credential",
 				"--version=v1beta1",
-				"--context=" + context,
+				"--context=" + getCurrentAuthContext(),
 				clusterID,
 			},
 		},

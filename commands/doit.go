@@ -156,6 +156,13 @@ func findConfig() (string, error) {
 	return filepath.Join(ch, defaultConfigName), nil
 }
 
+func getCurrentAuthContext() string {
+	if Context != "" {
+		return Context
+	}
+	return viper.GetString("context")
+}
+
 func configPath() string {
 	return fmt.Sprintf("%s/%s", configHome(), defaultConfigName)
 }
