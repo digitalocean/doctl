@@ -78,6 +78,9 @@ the port is community maintained and may not be on the latest version.
 
 #### Snap supported OS
 
+**NOTE: The version of `doctl` installed via the snapstore is frozen at `v1.20.0` while Snapcraft reviews
+our store request. Once approved, snapped `doctl` and `kubectl` will work smoothly together.**
+
 You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
 
 ```
@@ -86,6 +89,10 @@ sudo snap install doctl
 
 ##### Use with `kubectl`
 
+If you need to use `kubectl`, you cannot use the snapped version
+until the above upgrade.
+
+<!-- 
 At present, you'll need to connect the snap to the `doctl` and
 `kubectl` config files in order to use `kubectl` with your DOKS. After 
 installing the snap, run
@@ -96,7 +103,7 @@ sudo snap connect doctl:kubectl-config
 ```
 
 You should only need to create these connections once; upgrades should
-honor the existing connection.
+honor the existing connection. -->
 
 ##### Using `doctl compute ssh`
 
