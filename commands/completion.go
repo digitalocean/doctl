@@ -247,6 +247,7 @@ __doctl_convert_bash_to_zsh() {
 	-e "s/${LWORD}compgen${RWORD}/__doctl_compgen/g" \
 	-e "s/${LWORD}compopt${RWORD}/__doctl_compopt/g" \
 	-e "s/${LWORD}declare${RWORD}/builtin declare/g" \
+	-e 's/aliashash\["\(.\{1,\}\)"\]/aliashash[\1]/g' \
 	-e "s/\\\$(type${RWORD}/\$(__doctl_type/g" \
 	<<'BASH_COMPLETION_EOF'
 `
