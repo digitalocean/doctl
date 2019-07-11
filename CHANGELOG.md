@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.21.0] - 2019-07-11
+
+- PR #482 - @eddiezane - Allow completion of aliases in zsh
+- PR #477 - @hilary - describe current status of snap in README
+- PR #474 - @DazWilkin - Support "Are you sure?" prompting
+- PR #473 - @KritR - Added NixPkgs as Package Manager Option
+- PR #472 - @hilary - migrate from go dep to go modules
+
 ## [1.20.1] - 2019-06-14
 
  - #471 add macport to README - @hilary
