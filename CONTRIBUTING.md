@@ -101,11 +101,10 @@ Install mockery in your `GOPATH` then run the `scripts/regenmocks.sh` script to 
 
 To release `doctl`, you need to install:
 
-* [xgo](https://github.com/karalabe/xgo)
 * [gothub](https://github.com/itchio/gothub)
 
-And make them available in your `PATH`. You can use `go get -u` for both of them and add your
-`$GOPATH/bin` to your `PATH` so your scripts will find them.
+And make it available in your `PATH`. You can use `go get -u` and add your
+`$GOPATH/bin` to your `PATH` so your scripts will find it.
 
 You will also need a valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo. You can generate a token [here](https://github.com/settings/tokens), it needs the `public_repo` access.
 
