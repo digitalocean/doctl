@@ -28,19 +28,14 @@ mkdir -p $OUTPUT_DIR/stage $OUTPUT_DIR/release
 rm -f $STAGE_DIR/doctl $STAGE_DIR/doctl.exe
 
 if [[ -z $SKIPBUILD ]]; then
-  echo "building doctl with xgo"
-  baseFlag="-X github.com/digitalocean/doctl"
-  ldflags="${baseFlag}.Build=$(git rev-parse --short HEAD)"
-  ldflags="${ldflags} $baseFlag.Major=${major} $baseFlag.Minor=${minor} $baseFlag.Patch=${patch} $baseFlag.Label=release"
-  if [[ -n "$label" ]]; then
-    ldflags="${ldflags} $baseFlag.Label=${label}"
-  fi
+  echo "building doctl"
 
-  xgo \
-    --dest $OUTPUT_DIR/stage \
-    --targets='windows/*,darwin/amd64,linux/amd64,linux/386' \
-    -ldflags "$ldflags" \
-    -out doctl-${ver} $RELEASE_PACKAGE
+  # ugly, but soon to be replaced by goreleaser
+  GO111MODULE=on GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-linux-amd64
+  GO111MODULE=on GOOS=linux GOARCH=386 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-linux-386
+  GO111MODULE=on GOOS=darwin GOARCH=amd64 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-darwin-amd64
+  GO111MODULE=on GOOS=windows GOARCH=amd64 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-windows-amd64
+  GO111MODULE=on GOOS=windows GOARCH=386 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-windows-386
 fi
 
 cd $RELEASE_DIR
