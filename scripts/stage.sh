@@ -19,13 +19,15 @@ fi
 
 RELEASE_PACKAGE=github.com/digitalocean/doctl/cmd/doctl
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 OUTPUT_DIR="${DIR}/../builds/${ver}"
+if [[ -d $OUTPUT_DIR ]]; then
+  rm -rf $OUTPUT_DIR
+fi
+
 STAGE_DIR=$OUTPUT_DIR/stage
 RELEASE_DIR=$OUTPUT_DIR/release
-
-mkdir -p $OUTPUT_DIR/stage $OUTPUT_DIR/release
-
-rm -f $STAGE_DIR/doctl $STAGE_DIR/doctl.exe
+mkdir -p $STAGE_DIR $RELEASE_DIR
 
 if [[ -z $SKIPBUILD ]]; then
   echo "building doctl"
