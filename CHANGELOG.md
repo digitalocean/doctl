@@ -1,5 +1,11 @@
 # Change Log
 
+## [1.21.1] - 2019-07-14
+
+- PR #488 - @hilary - add make changelog using github-release-notes
+- PR #487 - @hilary - clean build dir before building
+- PR #486 - @hilary - ensure tags are up to date before using
+
 ## [1.21.0] - 2019-07-11
 
 - PR #482 - @eddiezane - Allow completion of aliases in zsh
