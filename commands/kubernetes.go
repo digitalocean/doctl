@@ -91,8 +91,33 @@ func Kubernetes() *Command {
 	return cmd
 }
 
+// KubeconfigProvider allows a user to access a remote Kubernetes config.
+type KubeconfigProvider interface {
+	Load(kubeconfig []byte) (*clientcmdapi.Config, error)
+	LoadLocal() (*clientcmdapi.Config, error)
+}
+
+type kubeconfigProvider struct{}
+
+func (p *kubeconfigProvider) Load(kubeconfig []byte) (*clientcmdapi.Config, error) {
+	return clientcmd.Load(kubeconfig)
+}
+
+func (p *kubeconfigProvider) LoadLocal() (*clientcmdapi.Config, error) {
+	kubectlDefaults := clientcmd.NewDefaultPathOptions()
+	return kubectlDefaults.GetStartingConfig()
+}
+
 // KubernetesCommandService is used to execute Kubernetes commands.
-type KubernetesCommandService struct{}
+type KubernetesCommandService struct {
+	KubeconfigProvider KubeconfigProvider
+}
+
+func kubernetesCommandService() *KubernetesCommandService {
+	return &KubernetesCommandService{
+		KubeconfigProvider: &kubeconfigProvider{},
+	}
+}
 
 func kubernetesCluster() *Command {
 	cmd := &Command{
@@ -104,7 +129,7 @@ func kubernetesCluster() *Command {
 		},
 	}
 
-	cmdService := &KubernetesCommandService{}
+	cmdService := kubernetesCommandService()
 
 	cmd.AddCommand(kubernetesKubeconfig())
 
@@ -192,7 +217,7 @@ func kubernetesKubeconfig() *Command {
 		},
 	}
 
-	cmdService := &KubernetesCommandService{}
+	cmdService := kubernetesCommandService()
 
 	CmdBuilder(cmd, cmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "show a cluster's kubeconfig to standard out", Writer, aliasOpt("p", "g"))
 	cmdExecCredential := CmdBuilder(cmd, cmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL print a cluster's exec credential", Writer, hiddenCmd())
@@ -217,7 +242,7 @@ func kubernetesNodePools() *Command {
 		},
 	}
 
-	cmdService := &KubernetesCommandService{}
+	cmdService := kubernetesCommandService()
 
 	CmdBuilder(cmd, cmdService.RunKubernetesNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>",
 		"get a cluster's node pool", Writer, aliasOpt("g"),
@@ -279,7 +304,7 @@ func kubernetesOptions() *Command {
 		},
 	}
 
-	cmdService := &KubernetesCommandService{}
+	cmdService := kubernetesCommandService()
 
 	CmdBuilder(cmd, cmdService.RunKubeOptionsListVersion, "versions",
 		"versions that can be used to create a Kubernetes cluster", Writer, aliasOpt("v"))
@@ -1257,16 +1282,17 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 }
 
 func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, kubeconfig []byte, setCurrentContext bool) error {
-	remote, err := clientcmd.Load(kubeconfig)
-	if err != nil {
-		return err
-	}
-	kubectlDefaults := clientcmd.NewDefaultPathOptions()
-	currentConfig, err := kubectlDefaults.GetStartingConfig()
+	remote, err := s.KubeconfigProvider.Load(kubeconfig)
 	if err != nil {
 		return err
 	}
 
+	currentConfig, err := s.KubeconfigProvider.LoadLocal()
+	if err != nil {
+		return err
+	}
+
+	kubectlDefaults := clientcmd.NewDefaultPathOptions()
 	notice("adding cluster credentials to kubeconfig file found in %q", kubectlDefaults.GlobalFile)
 	if err := mergeKubeconfig(clusterID, remote, currentConfig, setCurrentContext); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
