@@ -1,5 +1,5 @@
 name: doctl
-version-script: git fetch --tags &>/dev/null | git tag -l | sort --version-sort | tail -n1 | cut -c 2-
+version-script: scripts/version.sh
 version: git
 summary: A command line tool for DigitalOcean services
 description: doctl is a command line tool for DigitalOcean services using the API.
