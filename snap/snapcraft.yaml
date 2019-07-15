@@ -41,17 +41,14 @@ parts:
       bin/doctl: bin/doctl.real
 
 plugs:
-  kube-config:
-    interface: personal-files
-    write:
-      - $HOME/.kube
-      - $HOME/.kube/config
   doctl-config:
     interface: personal-files
     write:
-      - $HOME/.config
       - $HOME/.config/doctl
-      - $HOME/.config/doctl/.config
+  kube-config:
+    interface: personal-files
+    write:
+      - $HOME/.kube/config
 
 apps:
   doctl:
@@ -60,5 +57,5 @@ apps:
       - home
       - network
       - ssh-keys
-      - kube-config
       - doctl-config
+      - kube-config
