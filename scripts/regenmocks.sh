@@ -4,7 +4,5 @@
 
 set -e
 
-go get github.com/vektra/mockery/.../
-
-cd do
+cd "do"
 mockery -all -note "Generated: please do not edit by hand"

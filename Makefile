@@ -1,11 +1,38 @@
 # need to set go version to at least 1.11
 
-export CGO=0
+export CGO = 0
 
 export GO111MODULE := on
 
+list:
+	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null |\
+	  awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' |\
+	  sort |\
+	  egrep -v -e '^[^[:alnum:]]' -e '^$@$$'
+
+.PHONY: test
+test:
+	go test ./cmd/... ./commands/... ./do/... ./install/... ./pkg/... ./pluginhost/... .
+
+.PHONY: clean
+clean:
+	@rm -rf builds
+
+.PHONY: vendor
+vendor:
+	go mod vendor
+	go mod tidy
+
+.PHONY: changelog
+changelog:
+	scripts/changelog.sh
+
+.PHONY: mocks
+mocks:
+	scripts/regenmocks.sh
+
 # These builds are for convenience. This logic isn't used in the build-release process
-my_d=$(shell pwd)
+my_d = $(shell pwd)
 OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})
 
 UNAME_S := $(shell uname -s)
@@ -71,20 +98,3 @@ docker_build: _base_docker_cntr
 	@echo "Built binaries to $(OUT_D)"
 	@echo "Created a local Docker container. To use, run: docker run --rm -it doctl_local"
 # end docker targets
-
-.PHONY: clean
-clean:
-	@rm -rf builds
-
-.PHONY: test
-test:
-	go test ./cmd/... ./commands/... ./do/... ./install/... ./pkg/... ./pluginhost/... .
-
-.PHONY: vendor
-vendor:
-	go mod vendor
-	go mod tidy
-
-.PHONY: changelog
-changelog:
-	scripts/changelog.sh

@@ -5,12 +5,14 @@ go 1.12
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/buchanae/github-release-notes v0.0.0-20180827045457-200e1dacadbb
 	github.com/cpuguy83/go-md2man v1.0.7 // indirect
 	github.com/digitalocean/godo v1.16.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.1.1 // indirect
+	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/google/uuid v1.1.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
@@ -32,7 +34,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.0.0
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/spf13/viper v1.2.1
-	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006 // indirect

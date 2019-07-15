@@ -1,5 +1,8 @@
 # github.com/blang/semver v3.5.1+incompatible
 github.com/blang/semver
+# github.com/buchanae/github-release-notes v0.0.0-20180827045457-200e1dacadbb
+github.com/buchanae/github-release-notes
+github.com/buchanae/github-release-notes/ghrn
 # github.com/cpuguy83/go-md2man v1.0.7
 github.com/cpuguy83/go-md2man/md2man
 # github.com/davecgh/go-spew v1.1.1
@@ -27,6 +30,8 @@ github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 # github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
+# github.com/google/go-github v17.0.0+incompatible
+github.com/google/go-github/github
 # github.com/google/go-querystring v1.0.0
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf
@@ -96,6 +101,8 @@ github.com/stretchr/objx
 github.com/stretchr/testify/mock
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
+# github.com/vektra/mockery v0.0.0-20181123154057-e78b021dcbb5
+github.com/vektra/mockery
 # golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/terminal
