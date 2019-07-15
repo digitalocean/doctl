@@ -30,6 +30,13 @@ parts:
     plugin: go
     go-importpath: github.com/digitalocean/doctl
     go-packages: [github.com/digitalocean/doctl/cmd/doctl]
+    override-pull: |
+      git clone https://github.com/digitalocean/doctl.git .
+    override-build: |
+      GO111MODULE=on go build -mod=vendor -o doctl cmd/doctl/main.go
+      chmod +x doctl
+      mkdir -p $SNAPCRAFT_PART_INSTALL/bin
+      mv doctl $SNAPCRAFT_PART_INSTALL/bin/
     organize:
       bin/doctl: bin/doctl.real
 
