@@ -91,10 +91,11 @@ func Kubernetes() *Command {
 	return cmd
 }
 
-// KubeconfigProvider allows a user to access a remote Kubernetes config.
+// KubeconfigProvider allows a user to read from a remote and local Kubeconfig, and write to a
+// local Kubeconfig.
 type KubeconfigProvider interface {
-	Load(kubeconfig []byte) (*clientcmdapi.Config, error)
-	LoadLocal() (*clientcmdapi.Config, error)
+	Remote(kube do.KubernetesService, clusterID string) (*clientcmdapi.Config, error)
+	Local() (*clientcmdapi.Config, error)
 	Write(config *clientcmdapi.Config) error
 }
 
@@ -102,14 +103,21 @@ type kubeconfigProvider struct {
 	pathOptions *clientcmd.PathOptions
 }
 
-func (p *kubeconfigProvider) Load(kubeconfig []byte) (*clientcmdapi.Config, error) {
+// Remote returns the kubeconfig for the cluster with the given ID from DOKS.
+func (p *kubeconfigProvider) Remote(kube do.KubernetesService, clusterID string) (*clientcmdapi.Config, error) {
+	kubeconfig, err := kube.GetKubeConfig(clusterID)
+	if err != nil {
+		return nil, err
+	}
 	return clientcmd.Load(kubeconfig)
 }
 
-func (p *kubeconfigProvider) LoadLocal() (*clientcmdapi.Config, error) {
+// Read reads the kubeconfig from the user's local kubeconfig file.
+func (p *kubeconfigProvider) Local() (*clientcmdapi.Config, error) {
 	return p.pathOptions.GetStartingConfig()
 }
 
+// Write either writes to or updates an existing local kubeconfig file.
 func (p *kubeconfigProvider) Write(config *clientcmdapi.Config) error {
 	return clientcmd.ModifyConfig(p.pathOptions, *config, false)
 }
@@ -137,20 +145,20 @@ func kubernetesCluster() *Command {
 		},
 	}
 
-	cmdService := kubernetesCommandService()
+	k8sCmdService := kubernetesCommandService()
 
 	cmd.AddCommand(kubernetesKubeconfig())
 
 	cmd.AddCommand(kubernetesNodePools())
 
-	CmdBuilder(cmd, cmdService.RunKubernetesClusterGet, "get <id|name>", "get a cluster",
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "get a cluster",
 		Writer, aliasOpt("g"), displayerType(&displayers.KubernetesClusters{}))
-	CmdBuilder(cmd, cmdService.RunKubernetesClusterList, "list", "get a list of your clusters",
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterList, "list", "get a list of your clusters",
 		Writer, aliasOpt("ls"), displayerType(&displayers.KubernetesClusters{}))
-	CmdBuilder(cmd, cmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
 		"get available upgrades for a cluster", Writer, aliasOpt("gu"))
 
-	cmdKubeClusterCreate := CmdBuilder(cmd, cmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
+	cmdKubeClusterCreate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
 		defaultKubernetesNodeCount), "create <name>", "create a cluster",
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion,
@@ -183,7 +191,7 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
 		"maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
-	cmdKubeClusterUpdate := CmdBuilder(cmd, cmdService.RunKubernetesClusterUpdate, "update <id|name>",
+	cmdKubeClusterUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
 		"update a cluster's properties", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "",
 		"new cluster name")
@@ -198,14 +206,14 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00",
 		"maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
-	cmdKubeClusterUpgrade := CmdBuilder(cmd, cmdService.RunKubernetesClusterUpgrade,
+	cmdKubeClusterUpgrade := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
 		"upgrade <id|name>", "upgrade a cluster to a new version", Writer)
 	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest",
 		`new cluster version, possible values: see "doctl k8s get-upgrades <cluster>".
 The special value "latest" will select the most recent patch version for your cluster's minor version.
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be "latest".`)
 
-	cmdKubeClusterDelete := CmdBuilder(cmd, cmdService.RunKubernetesClusterDelete,
+	cmdKubeClusterDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterDelete,
 		"delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"force cluster delete")
@@ -225,14 +233,14 @@ func kubernetesKubeconfig() *Command {
 		},
 	}
 
-	cmdService := kubernetesCommandService()
+	k8sCmdService := kubernetesCommandService()
 
-	CmdBuilder(cmd, cmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "show a cluster's kubeconfig to standard out", Writer, aliasOpt("p", "g"))
-	cmdExecCredential := CmdBuilder(cmd, cmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL print a cluster's exec credential", Writer, hiddenCmd())
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "show a cluster's kubeconfig to standard out", Writer, aliasOpt("p", "g"))
+	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL print a cluster's exec credential", Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
-	cmdSaveConfig := CmdBuilder(cmd, cmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "save a cluster's credentials to your local kubeconfig", Writer, aliasOpt("s"))
+	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "save a cluster's credentials to your local kubeconfig", Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
-	CmdBuilder(cmd, cmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "remove a cluster's credentials from your local kubeconfig", Writer, aliasOpt("d", "rm"))
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "remove a cluster's credentials from your local kubeconfig", Writer, aliasOpt("d", "rm"))
 	return cmd
 }
 
@@ -250,16 +258,16 @@ func kubernetesNodePools() *Command {
 		},
 	}
 
-	cmdService := kubernetesCommandService()
+	k8sCmdService := kubernetesCommandService()
 
-	CmdBuilder(cmd, cmdService.RunKubernetesNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>",
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>",
 		"get a cluster's node pool", Writer, aliasOpt("g"),
 		displayerType(&displayers.KubernetesNodePools{}))
-	CmdBuilder(cmd, cmdService.RunKubernetesNodePoolList, "list <cluster-id|cluster-name>",
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolList, "list <cluster-id|cluster-name>",
 		"list a cluster's node pools", Writer, aliasOpt("ls"),
 		displayerType(&displayers.KubernetesNodePools{}))
 
-	cmdKubeNodePoolCreate := CmdBuilder(cmd, cmdService.RunKubernetesNodePoolCreate,
+	cmdKubeNodePoolCreate := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolCreate,
 		"create <cluster-id|cluster-name>", "create a new node pool for a cluster",
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "",
@@ -271,7 +279,7 @@ func kubernetesNodePools() *Command {
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", "",
 		"tags to apply to the node pool, repeat to add multiple tags at once")
 
-	cmdKubeNodePoolUpdate := CmdBuilder(cmd, cmdService.RunKubernetesNodePoolUpdate,
+	cmdKubeNodePoolUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolUpdate,
 		"update <cluster-id|cluster-name> <pool-id|pool-name>",
 		"update an existing node pool in a cluster", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "node pool name")
@@ -280,22 +288,22 @@ func kubernetesNodePools() *Command {
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", "",
 		"tags to apply to the node pool, repeat to add multiple tags at once")
 
-	cmdKubeNodePoolRecycle := CmdBuilder(cmd, cmdService.RunKubernetesNodePoolRecycle,
+	cmdKubeNodePoolRecycle := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolRecycle,
 		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", "DEPRECATED: use delete-node. Recycle nodes in a node pool", Writer, aliasOpt("r"), hiddenCmd())
 	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "",
 		"ID or name of the nodes in the node pool to recycle")
 
-	cmdKubeNodePoolDelete := CmdBuilder(cmd, cmdService.RunKubernetesNodePoolDelete,
+	cmdKubeNodePoolDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolDelete,
 		"delete <cluster-id|cluster-name> <pool-id|pool-name>",
 		"delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "force node pool delete")
 
-	cmdKubeNodeDelete := CmdBuilder(cmd, cmdService.RunKubernetesNodeDelete, "delete-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "delete node in a pool", Writer)
+	cmdKubeNodeDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodeDelete, "delete-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "delete node in a pool", Writer)
 	AddBoolFlag(cmdKubeNodeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force node delete")
 	AddBoolFlag(cmdKubeNodeDelete, "skip-drain", "", false, "skip draining the node before deletion")
 
-	cmdKubeNodeReplace := CmdBuilder(cmd, cmdService.RunKubernetesNodeReplace, "replace-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "replace node in a pool with a new one", Writer)
+	cmdKubeNodeReplace := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodeReplace, "replace-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "replace node in a pool with a new one", Writer)
 	AddBoolFlag(cmdKubeNodeReplace, doctl.ArgForce, doctl.ArgShortForce, false, "force node delete")
 	AddBoolFlag(cmdKubeNodeReplace, "skip-drain", "", false, "skip draining the node before deletion")
 
@@ -312,13 +320,13 @@ func kubernetesOptions() *Command {
 		},
 	}
 
-	cmdService := kubernetesCommandService()
+	k8sCmdService := kubernetesCommandService()
 
-	CmdBuilder(cmd, cmdService.RunKubeOptionsListVersion, "versions",
+	CmdBuilder(cmd, k8sCmdService.RunKubeOptionsListVersion, "versions",
 		"versions that can be used to create a Kubernetes cluster", Writer, aliasOpt("v"))
-	CmdBuilder(cmd, cmdService.RunKubeOptionsListRegion, "regions",
+	CmdBuilder(cmd, k8sCmdService.RunKubeOptionsListRegion, "regions",
 		"regions that can be used to create a Kubernetes cluster", Writer, aliasOpt("r"))
-	CmdBuilder(cmd, cmdService.RunKubeOptionsListNodeSizes, "sizes",
+	CmdBuilder(cmd, k8sCmdService.RunKubeOptionsListNodeSizes, "sizes",
 		"sizes that nodes in a Kubernetes cluster can have", Writer, aliasOpt("s"))
 	return cmd
 }
@@ -460,13 +468,13 @@ func (s *KubernetesCommandService) RunKubernetesClusterUpdate(c *CmdConfig) erro
 
 func (s *KubernetesCommandService) tryUpdateKubeconfig(kube do.KubernetesService, clusterID, clusterName string, setCurrentContext bool) {
 	var (
-		kubeconfig []byte
-		err        error
+		remoteConfig *clientcmdapi.Config
+		err          error
 	)
 	ctx, cancel := context.WithTimeout(context.TODO(), timeoutFetchingKubeconfig)
 	defer cancel()
 	for {
-		kubeconfig, err = kube.GetKubeConfig(clusterID)
+		remoteConfig, err = s.KubeconfigProvider.Remote(kube, clusterID)
 		if err != nil {
 			select {
 			case <-ctx.Done():
@@ -478,7 +486,7 @@ func (s *KubernetesCommandService) tryUpdateKubeconfig(kube do.KubernetesService
 			break
 		}
 	}
-	if err := s.writeOrAddToKubeconfig(clusterID, kubeconfig, setCurrentContext); err != nil {
+	if err := s.writeOrAddToKubeconfig(clusterID, remoteConfig, setCurrentContext); err != nil {
 		warn("couldn't write cluster credentials: %v", err)
 	}
 }
@@ -809,7 +817,7 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 		return err
 	}
 
-	kubeconfig, err := kube.GetKubeConfig(clusterID)
+	remoteKubeconfig, err := s.KubeconfigProvider.Remote(kube, clusterID)
 	if err != nil {
 		return err
 	}
@@ -819,7 +827,7 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 		return err
 	}
 
-	return s.writeOrAddToKubeconfig(clusterID, kubeconfig, setCurrentContext)
+	return s.writeOrAddToKubeconfig(clusterID, remoteKubeconfig, setCurrentContext)
 }
 
 // RunKubernetesKubeconfigRemove retrieves an existing kubernetes config and removes it from your local kubeconfig.
@@ -1289,23 +1297,18 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	return nil
 }
 
-func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, kubeconfig []byte, setCurrentContext bool) error {
-	remote, err := s.KubeconfigProvider.Load(kubeconfig)
-	if err != nil {
-		return err
-	}
-
-	currentConfig, err := s.KubeconfigProvider.LoadLocal()
+func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, remoteKubeconfig *clientcmdapi.Config, setCurrentContext bool) error {
+	localKubeconfig, err := s.KubeconfigProvider.Local()
 	if err != nil {
 		return err
 	}
 
 	kubectlDefaults := clientcmd.NewDefaultPathOptions()
 	notice("adding cluster credentials to kubeconfig file found in %q", kubectlDefaults.GlobalFile)
-	if err := mergeKubeconfig(clusterID, remote, currentConfig, setCurrentContext); err != nil {
+	if err := mergeKubeconfig(clusterID, remoteKubeconfig, localKubeconfig, setCurrentContext); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
 	}
-	return s.KubeconfigProvider.Write(currentConfig)
+	return s.KubeconfigProvider.Write(localKubeconfig)
 }
 
 func removeFromKubeconfig(kubeconfig []byte) error {
