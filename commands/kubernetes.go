@@ -95,17 +95,23 @@ func Kubernetes() *Command {
 type KubeconfigProvider interface {
 	Load(kubeconfig []byte) (*clientcmdapi.Config, error)
 	LoadLocal() (*clientcmdapi.Config, error)
+	Write(config *clientcmdapi.Config) error
 }
 
-type kubeconfigProvider struct{}
+type kubeconfigProvider struct {
+	pathOptions *clientcmd.PathOptions
+}
 
 func (p *kubeconfigProvider) Load(kubeconfig []byte) (*clientcmdapi.Config, error) {
 	return clientcmd.Load(kubeconfig)
 }
 
 func (p *kubeconfigProvider) LoadLocal() (*clientcmdapi.Config, error) {
-	kubectlDefaults := clientcmd.NewDefaultPathOptions()
-	return kubectlDefaults.GetStartingConfig()
+	return p.pathOptions.GetStartingConfig()
+}
+
+func (p *kubeconfigProvider) Write(config *clientcmdapi.Config) error {
+	return clientcmd.ModifyConfig(p.pathOptions, *config, false)
 }
 
 // KubernetesCommandService is used to execute Kubernetes commands.
@@ -115,7 +121,9 @@ type KubernetesCommandService struct {
 
 func kubernetesCommandService() *KubernetesCommandService {
 	return &KubernetesCommandService{
-		KubeconfigProvider: &kubeconfigProvider{},
+		KubeconfigProvider: &kubeconfigProvider{
+			pathOptions: clientcmd.NewDefaultPathOptions(),
+		},
 	}
 }
 
@@ -1297,7 +1305,7 @@ func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, kube
 	if err := mergeKubeconfig(clusterID, remote, currentConfig, setCurrentContext); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
 	}
-	return clientcmd.ModifyConfig(kubectlDefaults, *currentConfig, false)
+	return s.KubeconfigProvider.Write(currentConfig)
 }
 
 func removeFromKubeconfig(kubeconfig []byte) error {
