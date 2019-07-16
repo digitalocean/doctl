@@ -139,7 +139,8 @@ type DatabaseResizeRequest struct {
 
 // DatabaseMigrateRequest can be used to initiate a database migrate operation.
 type DatabaseMigrateRequest struct {
-	Region string `json:"region,omitempty"`
+	Region             string `json:"region,omitempty"`
+	PrivateNetworkUUID string `json:"private_network_uuid"`
 }
 
 // DatabaseUpdateMaintenanceRequest can be used to update the database's maintenance window.
@@ -199,9 +200,10 @@ type DatabaseCreateDBRequest struct {
 
 // DatabaseCreateReplicaRequest is used to create a new read-only replica
 type DatabaseCreateReplicaRequest struct {
-	Name   string `json:"name"`
-	Region string `json:"region"`
-	Size   string `json:"size"`
+	Name               string `json:"name"`
+	Region             string `json:"region"`
+	Size               string `json:"size"`
+	PrivateNetworkUUID string `json:"private_network_uuid"`
 }
 
 type databaseUserRoot struct {
