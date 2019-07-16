@@ -82,25 +82,28 @@ var (
 )
 
 type mockKubeconfigProvider struct {
-	local, remote, written *clientcmdapi.Config
+	local, remote, written clientcmdapi.Config
 }
 
 func (m *mockKubeconfigProvider) Remote(_ do.KubernetesService, _ string) (*clientcmdapi.Config, error) {
-	return &testKubeconfig, nil
+	return &m.local, nil
 }
 
 func (m *mockKubeconfigProvider) Local() (*clientcmdapi.Config, error) {
-	return &testKubeconfig, nil
+	return &m.remote, nil
 }
 
 func (m *mockKubeconfigProvider) Write(config *clientcmdapi.Config) error {
-	m.written = config
+	m.written = *config
 	return nil
 }
 
 func testK8sCmdService() *KubernetesCommandService {
 	return &KubernetesCommandService{
-		KubeconfigProvider: &mockKubeconfigProvider{},
+		KubeconfigProvider: &mockKubeconfigProvider{
+			local:  testKubeconfig,
+			remote: testKubeconfig,
+		},
 	}
 }
 
@@ -244,6 +247,7 @@ func TestKubernetesGetUpgrades(t *testing.T) {
 }
 
 func TestKubernetesKubeconfigSave(t *testing.T) {
+	// save the remote kubeconfig locally
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -252,7 +256,37 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 		assert.NoError(t, err)
 
 		provider := k8sCmdService.KubeconfigProvider.(*mockKubeconfigProvider)
-		assert.Equal(t, &testKubeconfig, provider.written)
+		assert.Equal(t, provider.remote, provider.written)
+	})
+
+	// save the remote kubeconfig locally, verifying that the provided auth
+	// context is successfully set
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		authContext := "not-default"
+
+		getCurrentAuthContextFn = func() string {
+			authContext, err := config.Doit.GetString(config.NS, doctl.ArgContext)
+			assert.NoError(t, err)
+			return authContext
+		}
+		defer func() {
+			getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
+		}()
+
+		config.Args = append(config.Args, testCluster.ID)
+
+		config.Doit.Set(config.NS, doctl.ArgContext, authContext)
+
+		k8sCmdService := testK8sCmdService()
+		err := k8sCmdService.RunKubernetesKubeconfigSave(config)
+		assert.NoError(t, err)
+
+		provider := k8sCmdService.KubeconfigProvider.(*mockKubeconfigProvider)
+		assert.NoError(t, err)
+		assert.Equal(t, provider.remote, provider.written)
+
+		expectedExecContextArg := "--" + doctl.ArgContext + "=" + authContext
+		assert.Contains(t, provider.written.AuthInfos[""].Exec.Args, expectedExecContextArg)
 	})
 }
 

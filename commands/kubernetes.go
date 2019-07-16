@@ -1366,7 +1366,7 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 				"kubeconfig",
 				"exec-credential",
 				"--version=v1beta1",
-				"--context=" + getCurrentAuthContext(),
+				"--context=" + getCurrentAuthContextFn(),
 				clusterID,
 			},
 		},
