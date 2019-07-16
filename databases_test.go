@@ -1109,9 +1109,10 @@ func TestDatabases_CreateReplica(t *testing.T) {
 	})
 
 	got, _, err := client.Databases.CreateReplica(ctx, dbID, &DatabaseCreateReplicaRequest{
-		Name:   "replica",
-		Region: "nyc1",
-		Size:   "db-s-2vcpu-4gb",
+		Name:               "replica",
+		Region:             "nyc1",
+		Size:               "db-s-2vcpu-4gb",
+		PrivateNetworkUUID: privateNetworkUUID,
 	})
 	require.NoError(t, err)
 	require.Equal(t, want, got)
