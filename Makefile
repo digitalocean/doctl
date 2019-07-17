@@ -64,21 +64,6 @@ native: _build
 # end convenience builds
 
 # docker targets for developing in docker
-.PHONY: build_mac
-build_mac: GOOS = darwin
-build_mac: GOARCH = 386
-build_mac: _build
-
-.PHONY: build_linux_386
-build_linux_386: GOOS = linux
-build_linux_386: GOARCH = 386
-build_linux_386: _build
-
-.PHONY: build_linux_amd64
-build_linux_amd64: GOOS = linux
-build_linux_amd64: GOARCH = amd64
-build_linux_amd64: _build
-
 .PHONY: _base_docker_cntr
 _base_docker_cntr:
 	docker build -f Dockerfile.build . -t doctl_builder
