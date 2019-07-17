@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.18.0] - 2019-07-17
+
+- #241 Databases: support for custom VPC UUID on migrate  @mikejholly
+
 ## [v1.17.0] - 2019-06-21
 
 - #238 Add support for Redis eviction policy in Databases @mikejholly
