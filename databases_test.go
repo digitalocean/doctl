@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var privateNetworkUUID = "880b7f98-f062-404d-b33c-458d545696f6"
+
 var db = Database{
 	ID:          "da4e0206-d019-41d7-b51f-deadbeefbb8f",
 	Name:        "dbtest",
@@ -298,6 +300,27 @@ func TestDatabases_Migrate(t *testing.T) {
 
 	migrateRequest := &DatabaseMigrateRequest{
 		Region: "lon1",
+	}
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/migrate", dbID)
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPut)
+	})
+
+	_, err := client.Databases.Migrate(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d", migrateRequest)
+	require.NoError(t, err)
+}
+
+func TestDatabases_Migrate_WithPrivateNet(t *testing.T) {
+	setup()
+	defer teardown()
+
+	migrateRequest := &DatabaseMigrateRequest{
+		Region:             "lon1",
+		PrivateNetworkUUID: privateNetworkUUID,
 	}
 
 	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
@@ -1086,9 +1109,10 @@ func TestDatabases_CreateReplica(t *testing.T) {
 	})
 
 	got, _, err := client.Databases.CreateReplica(ctx, dbID, &DatabaseCreateReplicaRequest{
-		Name:   "replica",
-		Region: "nyc1",
-		Size:   "db-s-2vcpu-4gb",
+		Name:               "replica",
+		Region:             "nyc1",
+		Size:               "db-s-2vcpu-4gb",
+		PrivateNetworkUUID: privateNetworkUUID,
 	})
 	require.NoError(t, err)
 	require.Equal(t, want, got)
