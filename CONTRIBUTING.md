@@ -62,7 +62,8 @@ lets us merge or address your contributions quickly.
 
 ## Developing
 
-`doctl` has `make` targets for most tooling in the `Makefile`.
+`doctl` has `make` targets for most tooling in the `Makefile`. Run `make`
+or `make list` for a list of available targets.
 
 ### Go environment
 

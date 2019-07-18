@@ -4,6 +4,12 @@ export CGO = 0
 
 export GO111MODULE := on
 
+list:
+	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null |\
+	  awk -v RS= -F: '/^# File/,/^# Finished Make data base/ {if ($$1 !~ "^[#.]") {print $$1}}' |\
+	  sort |\
+	  egrep -v -e '^[^[:alnum:]]' -e '^$@$$'
+
 .PHONY: test
 test:
 	go test ./cmd/... ./commands/... ./do/... ./install/... ./pkg/... ./pluginhost/... .
