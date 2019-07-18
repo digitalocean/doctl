@@ -79,7 +79,7 @@ type Displayer struct {
 }
 
 func (d *Displayer) Display() error {
-	output, err := doctl.DoitConfig.GetString(doctl.NSRoot, "output")
+	output, err := d.Config.GetString(doctl.NSRoot, "output")
 	if err != nil {
 		return nil
 	}
@@ -90,6 +90,10 @@ func (d *Displayer) Display() error {
 
 	switch output {
 	case "json":
+		if containsOnlyNilSlice(d.Item) {
+			_, err := d.Out.Write([]byte("[]"))
+			return err
+		}
 		return d.Item.JSON(d.Out)
 	case "text":
 		cols, err := handleColumns(d.NS, d.Config)
@@ -117,6 +121,36 @@ func writeJSON(item interface{}, w io.Writer) error {
 	_, err = out.WriteTo(w)
 
 	return err
+}
+
+// containsOnlyNiSlice returns true if the given interface's concrete type is
+// a pointer to a struct that contains a single nil slice field.
+func containsOnlyNilSlice(i interface{}) bool {
+	if reflect.TypeOf(i).Kind() != reflect.Ptr {
+		return false
+	}
+
+	element := reflect.ValueOf(i).Elem()
+	if element.NumField() != 1 {
+		return false
+	}
+
+	slice := element.Field(0)
+	if slice.Kind() != reflect.Slice {
+		return false
+	}
+
+	if slice.Cap() != 0 {
+		return false
+	}
+	if slice.Len() != 0 {
+		return false
+	}
+	if slice.Pointer() != 0 {
+		return false
+	}
+
+	return true
 }
 
 func displayText(item Displayable, out io.Writer, includeCols []string) error {

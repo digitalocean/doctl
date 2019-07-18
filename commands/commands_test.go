@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
 	"io/ioutil"
 	"sort"
 	"testing"
@@ -22,8 +21,6 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
-	"github.com/digitalocean/doctl/pkg/runner"
-	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
@@ -179,7 +176,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		doctl.DoitConfig = ogConfig
 	}()
 
-	cfg := NewTestConfig()
+	cfg := doctl.NewTestConfig()
 	doctl.DoitConfig = cfg
 
 	tm := &tcMocks{}
@@ -248,62 +245,4 @@ func withTestClient(t *testing.T, tFn testFn) {
 	assert.True(t, tm.projects.AssertExpectations(t))
 	assert.True(t, tm.kubernetes.AssertExpectations(t))
 	assert.True(t, tm.databases.AssertExpectations(t))
-}
-
-type TestConfig struct {
-	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	v        *viper.Viper
-	IsSetMap map[string]bool
-}
-
-var _ doctl.Config = &TestConfig{}
-
-func NewTestConfig() *TestConfig {
-	return &TestConfig{
-		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
-			return &doctl.MockRunner{}
-		},
-		v:        viper.New(),
-		IsSetMap: make(map[string]bool),
-	}
-}
-
-var _ doctl.Config = &TestConfig{}
-
-func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client, error) {
-	return &godo.Client{}, nil
-}
-
-func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
-	return c.SSHFn(user, host, keyPath, port, opts)
-}
-
-func (c *TestConfig) Set(ns, key string, val interface{}) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	c.v.Set(nskey, val)
-	c.IsSetMap[key] = true
-}
-
-func (c *TestConfig) IsSet(key string) bool {
-	return c.IsSetMap[key]
-}
-
-func (c *TestConfig) GetString(ns, key string) (string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetString(nskey), nil
-}
-
-func (c *TestConfig) GetInt(ns, key string) (int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetInt(nskey), nil
-}
-
-func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetStringSlice(nskey), nil
-}
-
-func (c *TestConfig) GetBool(ns, key string) (bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetBool(nskey), nil
 }
