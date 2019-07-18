@@ -32,14 +32,21 @@ mkdir -p $STAGE_DIR $RELEASE_DIR
 if [[ -z $SKIPBUILD ]]; then
   echo "building doctl"
 
+  baseFlag="-X github.com/digitalocean/doctl"
+  ldflags="${baseFlag}.Build=$(git rev-parse --short HEAD)"
+  ldflags="${ldflags} $baseFlag.Major=${major} $baseFlag.Minor=${minor} $baseFlag.Patch=${patch} $baseFlag.Label=release"
+  if [[ -n "$label" ]]; then
+    ldflags="${ldflags} $baseFlag.Label=${label}"
+  fi
+
   cd $DIR/../cmd/doctl
 
   # ugly, but soon to be replaced by goreleaser
-  GO111MODULE=on GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-linux-amd64
-  GO111MODULE=on GOOS=linux GOARCH=386 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-linux-386
-  GO111MODULE=on GOOS=darwin GOARCH=amd64 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-darwin-amd64
-  GO111MODULE=on GOOS=windows GOARCH=amd64 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-windows-amd64
-  GO111MODULE=on GOOS=windows GOARCH=386 GOFLAGS=-mod=vendor go build -o $STAGE_DIR/doctl-${ver}-windows-386
+  GO111MODULE=on GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-linux-amd64
+  GO111MODULE=on GOOS=linux GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-linux-386
+  GO111MODULE=on GOOS=darwin GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-darwin-amd64
+  GO111MODULE=on GOOS=windows GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-windows-amd64
+  GO111MODULE=on GOOS=windows GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-windows-386
 fi
 
 cd $RELEASE_DIR
