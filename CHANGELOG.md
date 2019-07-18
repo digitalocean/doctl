@@ -1,5 +1,13 @@
 # Change Log
 
+## [1.22.0] = 2019-07-18
+
+- PR #498 - @hilary - Makefile improvements
+- PR #497 - @andrewsomething - Re-add the logic setting LDFLAGS in scripts/stage.sh (Fixes: #496).
+- PR #494 - @bentranter - Write JSON for nil slices as [] instead of null
+- PR #491 - @hilary - build snap using go mod vendor
+- PR #490 - @hilary - consolidate version logic
+
 ## [1.21.1] - 2019-07-14
 
 - PR #488 - @hilary - add make changelog using github-release-notes
