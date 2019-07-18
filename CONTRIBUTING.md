@@ -7,14 +7,15 @@
     - [Issues](#issues)
         - [Reporting an Issue](#reporting-an-issue)
         - [Issue Lifecycle](#issue-lifecycle)
-    - [Setting up Go to work on doctl](#setting-up-go-to-work-on-doctl)
-    - [Contributing code](#contributing-code)
-        - [dependencies](#dependencies)
-        - [`godo` mocks](#godo-mocks)
-        - [Releasing `doctl`](#releasing-doctl)
-            - [Setup](#setup)
-            - [Cutting a release](#cutting-a-release)
-            - [Updating Homebrew](#updating-homebrew)
+    - [Developing](#developing)
+        - [Go environment](#go-environment)
+        - [Docker](#docker)
+        - [Testing](#testing)
+            - [`godo` mocks](#godo-mocks)
+    - [Releasing](#releasing)
+        - [Setup](#setup)
+        - [Cutting a release](#cutting-a-release)
+        - [Updating Homebrew](#updating-homebrew)
 
 <!-- markdown-toc end -->
 
@@ -59,45 +60,38 @@ lets us merge or address your contributions quickly.
    the issue tracker clean. The issue is still indexed and available for
    future viewers, or can be re-opened if necessary.
 
-## Setting up Go to work on doctl
+## Developing
 
-If you have never worked with Go before, you will have to complete the
-following steps in order to be able to compile and test doctl.
+`doctl` has `make` targets for most tooling in the `Makefile`.
 
-1. Install Go. Make sure the Go version is at least Go 1.11.
-   On Mac OS X, you can `brew install go` to install the latest stable version.
+### Go environment
 
-1. Set and export the `GOPATH` environment variable and update your `PATH`.
-   For example, you can add to your `.bash_profile`.
-
-    ```
-    export GOPATH=$HOME/Documents/golang
-    export PATH=$PATH:$GOPATH/bin
-    ```
-
-1. Make your changes to the doctl source, being sure to run the basic
-   tests.
-
-1. If everything works well and the tests pass, run `go fmt` on your code
-   before submitting a pull request.
-
-## Contributing code
-
-### dependencies
-
-This project uses [Go
+The minimal version of Golang for `doctl` is 1.11. `doctl` uses [Go
 modules](https://github.com/golang/go/wiki/Modules) for dependency
-management and employs vendoring. Please run `make vendor` after any
-dependency modifications.
+management [with vendoring](https://github.com/golang/go/wiki/Modules#how-do-i-use-vendoring-with-modules-is-vendoring-going-away). 
+Please run `make vendor` after any dependency modifications.
 
-### `godo` mocks
+Be sure to run `go fmt` on your code before submitting a pull request.
 
-When you upgrade `godo` you have to re-generate the mocks using [mockery](https://github.com/vektra/mockery).
-Install mockery in your `GOPATH` then run the `scripts/regenmocks.sh` script to produce them.
+### Docker
 
-### Releasing `doctl`
+You can create a local Docker container via `make docker_build`.
 
-#### Setup
+### Testing
+
+Run the tests locally via `make test`, or on Travis CI by opening a PR.
+
+#### `godo` mocks
+
+When you upgrade `godo` you have to re-generate the mocks. 
+
+    ```
+    make mocks
+    ```
+
+## Releasing
+
+### Setup
 
 To release `doctl`, you need to install:
 
@@ -108,7 +102,7 @@ And make it available in your `PATH`. You can use `go get -u` and add your
 
 You will also need a valid `GITHUB_TOKEN` environment variable with access to the `digitalocean/doctl` repo. You can generate a token [here](https://github.com/settings/tokens), it needs the `public_repo` access.
 
-#### Cutting a release
+### Cutting a release
 
 1. Run `make changelog` and add the results to the [CHANGELOG](https://github.com/digitalocean/doctl/blob/master/CHANGELOG.md)
    under the version you're going to release if they aren't already there.
@@ -131,7 +125,7 @@ in `builds/major.minor.patch/release`.
 1. Go to [releases](https://github.com/digitalocean/doctl/releases) and update the release
    description to contain all changelog entries for this specific release. Uncheck the pre-release checkbox.
 
-#### Updating Homebrew
+### Updating Homebrew
 
 Using the url and sha from the github release, update the 
 [homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).
