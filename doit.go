@@ -50,8 +50,8 @@ var (
 	// DoitVersion is doit's version.
 	DoitVersion = Version{
 		Major: 1,
-		Minor: 21,
-		Patch: 1,
+		Minor: 22,
+		Patch: 0,
 		Label: "dev",
 	}
 
