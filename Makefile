@@ -42,6 +42,11 @@ mocks:
 	@echo "update mocks"
 	scripts/regenmocks.sh
 
+.PHONY: shellcheck
+shellcheck:
+	@echo "analyze shell scripts"
+	scripts/shell_check.sh
+
 # These builds are for convenience. This logic isn't used in the build-release process
 my_d = $(shell pwd)
 OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})

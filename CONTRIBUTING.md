@@ -12,6 +12,7 @@
         - [Docker](#docker)
         - [Testing](#testing)
             - [`godo` mocks](#godo-mocks)
+        - [Build Scripts](#build-scripts)
     - [Releasing](#releasing)
         - [Setup](#setup)
         - [Cutting a release](#cutting-a-release)
@@ -89,6 +90,10 @@ When you upgrade `godo` you have to re-generate the mocks.
     ```
     make mocks
     ```
+
+### Build Scripts
+
+If you modify the build scripts, use `make shellcheck` to check your changes.
 
 ## Releasing
 
