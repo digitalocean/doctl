@@ -48,6 +48,7 @@ plugs:
   kube-config:
     interface: personal-files
     write:
+      - $HOME/.kube/config.lock
       - $HOME/.kube/config
 
 apps:
