@@ -1,5 +1,12 @@
 # Change Log
 
+## [1.23.0] = 2019-07-22
+
+- PR #505 - @sunny-b - dbaas: add private-network-uuid to create, migrate, and replica create
+- PR #503 - @hilary - try proposed work-around for snap in production
+- PR #502 - @hilary - adopt shellcheck
+- PR #501 - @hilary - add descriptions to `make help`
+
 ## [1.22.0] = 2019-07-18
 
 - PR #498 - @hilary - Makefile improvements
