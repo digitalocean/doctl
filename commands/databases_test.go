@@ -56,6 +56,7 @@ var (
 			Users: []godo.DatabaseUser{
 				*testGODOUser,
 			},
+			PrivateNetworkUUID: "1fe49b6c-ac8e-11e9-98cb-3bec94f411bc",
 		},
 	}
 
@@ -92,11 +93,12 @@ var (
 
 	testDBReplica = do.DatabaseReplica{
 		DatabaseReplica: &godo.DatabaseReplica{
-			Name:       "sunny-db-replica",
-			Connection: testGODOConnection,
-			Region:     "nyc1",
-			Status:     "online",
-			CreatedAt:  time.Now(),
+			Name:               "sunny-db-replica",
+			Connection:         testGODOConnection,
+			Region:             "nyc1",
+			Status:             "online",
+			CreatedAt:          time.Now(),
+			PrivateNetworkUUID: "1fe49b6c-ac8e-11e9-98cb-3bec94f411bc",
 		},
 	}
 
@@ -249,12 +251,13 @@ func TestDatabasesList(t *testing.T) {
 
 func TestDatabasesCreate(t *testing.T) {
 	r := &godo.DatabaseCreateRequest{
-		Name:       testDBCluster.Name,
-		Region:     testDBCluster.RegionSlug,
-		Version:    testDBCluster.VersionSlug,
-		EngineSlug: testDBCluster.EngineSlug,
-		NumNodes:   testDBCluster.NumNodes,
-		SizeSlug:   testDBCluster.SizeSlug,
+		Name:               testDBCluster.Name,
+		Region:             testDBCluster.RegionSlug,
+		Version:            testDBCluster.VersionSlug,
+		EngineSlug:         testDBCluster.EngineSlug,
+		NumNodes:           testDBCluster.NumNodes,
+		SizeSlug:           testDBCluster.SizeSlug,
+		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
 	}
 
 	// Successful call
@@ -267,6 +270,7 @@ func TestDatabasesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgVersion, testDBCluster.VersionSlug)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, testDBCluster.EngineSlug)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
+		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
 
 		err := RunDatabaseCreate(config)
 		assert.NoError(t, err)
@@ -311,7 +315,8 @@ func TestDatabasesDelete(t *testing.T) {
 
 func TestDatabaseMigrate(t *testing.T) {
 	r := &godo.DatabaseMigrateRequest{
-		Region: testDBCluster.RegionSlug,
+		Region:             testDBCluster.RegionSlug,
+		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
 	}
 
 	// Success
@@ -319,6 +324,7 @@ func TestDatabaseMigrate(t *testing.T) {
 		tm.databases.On("Migrate", testDBCluster.ID, r).Return(nil)
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testDBCluster.RegionSlug)
+		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
 
 		err := RunDatabaseMigrate(config)
 		assert.NoError(t, err)
@@ -329,6 +335,7 @@ func TestDatabaseMigrate(t *testing.T) {
 		tm.databases.On("Migrate", testDBCluster.ID, r).Return(errTest)
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testDBCluster.RegionSlug)
+		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
 
 		err := RunDatabaseMigrate(config)
 		assert.EqualError(t, err, errTest.Error())
@@ -801,9 +808,10 @@ func TestDatabasesListReplicas(t *testing.T) {
 
 func TestDatabaseReplicaCreate(t *testing.T) {
 	r := &godo.DatabaseCreateReplicaRequest{
-		Name:   testDBReplica.Name,
-		Region: testDBReplica.Region,
-		Size:   testDBCluster.SizeSlug,
+		Name:               testDBReplica.Name,
+		Region:             testDBReplica.Region,
+		Size:               testDBCluster.SizeSlug,
+		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
 	}
 
 	// Successful call
@@ -813,6 +821,7 @@ func TestDatabaseReplicaCreate(t *testing.T) {
 		config.Args = append(config.Args, testDBCluster.ID, testDBReplica.Name)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testDBReplica.Region)
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
+		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
 
 		err := RunDatabaseReplicaCreate(config)
 		assert.NoError(t, err)

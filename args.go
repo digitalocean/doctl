@@ -253,6 +253,9 @@ const (
 	// ArgDatabasePoolMode is the flag for connection pool mode
 	ArgDatabasePoolMode = "mode"
 
+	// ArgPrivateNetworkUUID is the flag for VPC UUID
+	ArgPrivateNetworkUUID = "private-network-uuid"
+
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
 )
