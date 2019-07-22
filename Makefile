@@ -47,6 +47,11 @@ shellcheck:
 	@echo "analyze shell scripts"
 	scripts/shell_check.sh
 
+.PHONY: version
+version:
+	@echo "doctl version"
+	scripts/version.sh
+
 my_d = $(shell pwd)
 OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})
 
