@@ -1,5 +1,10 @@
 # Change Log
 
+## [1.23.1] = 2019-07-22
+
+- PR #510 - @bentranter - Add .exe suffix to Windows binary filenames
+- PR #508 - @bentranter - Fix distfile basename in staging script
+
 ## [1.23.0] = 2019-07-22
 
 - PR #505 - @sunny-b - dbaas: add private-network-uuid to create, migrate, and replica create
