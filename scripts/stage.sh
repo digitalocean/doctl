@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eo pipefail
+set -euo pipefail
 
 major=$1
 minor=$2
@@ -22,12 +22,12 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 OUTPUT_DIR="${DIR}/../builds/${ver}"
 if [[ -d $OUTPUT_DIR ]]; then
-  rm -rf $OUTPUT_DIR
+  rm -rf "$OUTPUT_DIR"
 fi
 
 STAGE_DIR=$OUTPUT_DIR/stage
 RELEASE_DIR=$OUTPUT_DIR/release
-mkdir -p $STAGE_DIR $RELEASE_DIR
+mkdir -p "$STAGE_DIR" "$RELEASE_DIR"
 
 if [[ -z $SKIPBUILD ]]; then
   echo "building doctl"
@@ -39,24 +39,25 @@ if [[ -z $SKIPBUILD ]]; then
     ldflags="${ldflags} $baseFlag.Label=${label}"
   fi
 
-  cd $DIR/../cmd/doctl
+  cd "$DIR"/../cmd/doctl
 
   # ugly, but soon to be replaced by goreleaser
-  GO111MODULE=on GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-linux-amd64
-  GO111MODULE=on GOOS=linux GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-linux-386
-  GO111MODULE=on GOOS=darwin GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-darwin-amd64
-  GO111MODULE=on GOOS=windows GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-windows-amd64
-  GO111MODULE=on GOOS=windows GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o $STAGE_DIR/doctl-${ver}-windows-386
+  GO111MODULE=on GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-linux-amd64"
+  GO111MODULE=on GOOS=linux GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-linux-386"
+  GO111MODULE=on GOOS=darwin GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-darwin-amd64"
+  GO111MODULE=on GOOS=windows GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-windows-amd64"
+  GO111MODULE=on GOOS=windows GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-windows-386"
 fi
 
-cd $RELEASE_DIR
+cd "$RELEASE_DIR"
 
-for f in $STAGE_DIR/*; do
-  distfile=$(basename ${f%".exe"})
+for f in "$STAGE_DIR"/*; do
+  distfile_basename=$(basename "${f}%.exe")
+
   if [[ $f == *"windows"* ]]; then
-    distfile=${distfile}.zip
+    distfile=${distfile_basename}.zip
   else
-    distfile=${distfile}.tar.gz
+    distfile=${distfile_basename}.tar.gz
   fi
   
   distbin=$(basename $RELEASE_PACKAGE)
@@ -65,17 +66,17 @@ for f in $STAGE_DIR/*; do
   fi
   
   bin=$STAGE_DIR/$distbin
-  cp $f $bin
+  cp "$f" "$bin"
   
   if [[ $distfile == *.zip ]]; then
-    zip -j $distfile $bin
+    zip -j "$distfile" "$bin"
   else
-    tar cvzhf $distfile -C $STAGE_DIR $distbin
+    tar cvzhf "$distfile" -C "$STAGE_DIR" "$distbin"
   fi
   
-  pushd $STAGE_DIR
-  shasum -a 256 $(basename $distbin) > ${RELEASE_DIR}/$(basename ${f%".exe"}).sha256
+  pushd "$STAGE_DIR"
+  shasum -a 256 "$(basename "$distbin")" > "${RELEASE_DIR}/${distfile_basename}.sha256"
   popd
   
-  rm $bin
+  rm "$bin"
 done

@@ -2,9 +2,8 @@
 
 # regenerated generated mocks
 
-set -e
+set -euo pipefail
 
-go get github.com/vektra/mockery/.../
+GO111MODULE=off go get github.com/vektra/mockery/.../
 
-cd do
-mockery -all -note "Generated: please do not edit by hand"
+cd "do" && mockery -all -note "Generated: please do not edit by hand"
