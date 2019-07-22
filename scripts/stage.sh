@@ -45,8 +45,8 @@ if [[ -z ${SKIPBUILD-} ]]; then
   GO111MODULE=on GOOS=linux GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-linux-amd64"
   GO111MODULE=on GOOS=linux GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-linux-386"
   GO111MODULE=on GOOS=darwin GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-darwin-amd64"
-  GO111MODULE=on GOOS=windows GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-windows-amd64"
-  GO111MODULE=on GOOS=windows GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-windows-386"
+  GO111MODULE=on GOOS=windows GOARCH=amd64 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-windows-amd64.exe"
+  GO111MODULE=on GOOS=windows GOARCH=386 GOFLAGS=-mod=vendor go build -ldflags "${ldflags}" -o "${STAGE_DIR}/doctl-${ver}-windows-386.exe"
 fi
 
 cd "$RELEASE_DIR"
