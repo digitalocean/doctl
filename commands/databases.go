@@ -53,6 +53,7 @@ func Databases() *Command {
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, "database size")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "database engine")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", defaultDatabaseEngineVersion, "database engine version")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "private network uuid")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "delete database cluster", Writer,
 		aliasOpt("rm"))
@@ -72,6 +73,7 @@ func Databases() *Command {
 	cmdDatabaseMigrate := CmdBuilder(cmd, RunDatabaseMigrate, "migrate <database-id", "migrate a database cluster", Writer,
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "new database region", requiredOpt())
+	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "private network uuid")
 
 	cmd.AddCommand(databaseReplica())
 	cmd.AddCommand(databaseMaintenanceWindow())
@@ -160,6 +162,12 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 		return nil, err
 	}
 	r.Version = version
+
+	privateNetworkUUID, err := c.Doit.GetString(c.NS, doctl.ArgPrivateNetworkUUID)
+	if err != nil {
+		return nil, err
+	}
+	r.PrivateNetworkUUID = privateNetworkUUID
 
 	return r, nil
 }
@@ -289,6 +297,12 @@ func buildDatabaseMigrateRequestFromArgs(c *CmdConfig) (*godo.DatabaseMigrateReq
 		return nil, err
 	}
 	r.Region = region
+
+	privateNetworkUUID, err := c.Doit.GetString(c.NS, doctl.ArgPrivateNetworkUUID)
+	if err != nil {
+		return nil, err
+	}
+	r.PrivateNetworkUUID = privateNetworkUUID
 
 	return r, nil
 }
@@ -747,6 +761,8 @@ func databaseReplica() *Command {
 		defaultDatabaseRegion, "database replica region")
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgSizeSlug, "",
 		defaultDatabaseNodeSize, "database replica size")
+	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgPrivateNetworkUUID, "",
+		"", "private network uuid")
 
 	cmdDatabaseReplicaDelete := CmdBuilder(cmd, RunDatabaseReplicaDelete,
 		"delete <database-id> <replica-name>", "delete database replica",
@@ -830,6 +846,12 @@ func buildDatabaseCreateReplicaRequestFromArgs(c *CmdConfig) (*godo.DatabaseCrea
 		return nil, err
 	}
 	r.Region = region
+
+	privateNetworkUUID, err := c.Doit.GetString(c.NS, doctl.ArgPrivateNetworkUUID)
+	if err != nil {
+		return nil, err
+	}
+	r.PrivateNetworkUUID = privateNetworkUUID
 
 	return r, nil
 }
