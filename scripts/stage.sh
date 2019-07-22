@@ -5,7 +5,7 @@ set -euo pipefail
 major=$1
 minor=$2
 patch=$3
-label=$4
+label=${4-}
 
 if [[ -z "$major" || -z "$minor" || -z "$patch" ]]; then
   echo "usage: $0 <major> <minor> <patch> [label]"
@@ -29,7 +29,7 @@ STAGE_DIR=$OUTPUT_DIR/stage
 RELEASE_DIR=$OUTPUT_DIR/release
 mkdir -p "$STAGE_DIR" "$RELEASE_DIR"
 
-if [[ -z $SKIPBUILD ]]; then
+if [[ -z ${SKIPBUILD-} ]]; then
   echo "building doctl"
 
   baseFlag="-X github.com/digitalocean/doctl"
@@ -52,7 +52,7 @@ fi
 cd "$RELEASE_DIR"
 
 for f in "$STAGE_DIR"/*; do
-  distfile_basename=$(basename "${f}%.exe")
+  distfile_basename=$(basename "${f%".exe"}")
 
   if [[ $f == *"windows"* ]]; then
     distfile=${distfile_basename}.zip
