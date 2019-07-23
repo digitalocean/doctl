@@ -1,6 +1,13 @@
+# docker build -t doctl_local --build-arg DOCTL_VERSION=1.23.1 .
+#
+# This Dockerfile exists so casual uses of `docker build` and `docker run` do something sane.
+# We don't recommend using it: If you want to develop in docker, please use `make docker_build`
+# instead.
+
 FROM alpine:3.8
 
-ENV DOCTL_VERSION=1.23.1
+ARG DOCTL_VERSION
+ENV DOCTL_VERSION=$DOCTL_VERSION
 
 RUN apk add --no-cache curl
 
