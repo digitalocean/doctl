@@ -47,7 +47,6 @@ shellcheck:
 	@echo "analyze shell scripts"
 	scripts/shell_check.sh
 
-# These builds are for convenience. This logic isn't used in the build-release process
 my_d = $(shell pwd)
 OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})
 
@@ -78,9 +77,11 @@ native: _build
 	@mv $(OUT_D)/doctl_$(GOOS)_$(GOARCH) $(OUT_D)/doctl
 	@echo "built $(OUT_D)/doctl"
 
-# end convenience builds
+.PHONY: _build_linux_amd64
+_build_linux_amd64: GOOS = linux
+_build_linux_amd64: GOARCH = amd64
+_build_linux_amd64: _build
 
-# docker targets for developing in docker
 .PHONY: _base_docker_cntr
 _base_docker_cntr:
 	docker build -f Dockerfile.build . -t doctl_builder
