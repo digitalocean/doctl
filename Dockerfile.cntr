@@ -8,9 +8,7 @@ RUN mkdir -p /go/src/github.com/digitalocean/doctl
 ADD . /go/src/github.com/digitalocean/doctl/
 
 RUN cd /go/src/github.com/digitalocean/doctl && \
-    make build_linux_amd64 OUT=/out && \
-    make build_linux_386   OUT=/out && \
-    make build_mac         OUT=/out
+    make _build_linux_amd64 OUT=/out
 
 RUN find /out
 

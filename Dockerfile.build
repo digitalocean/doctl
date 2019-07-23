@@ -7,4 +7,5 @@ RUN  apk update && \
      apk add curl && \
      apk add git && \
      apk add make && \
+     apk add g++ && \
      apk add libc6-compat
