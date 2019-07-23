@@ -13,6 +13,9 @@ _vendor-*
 
 /out
 
+# Build artifacts
+Dockerfile-e
+
 # Snapcraft
 parts/
 prime/

@@ -52,6 +52,27 @@ version:
 	@echo "doctl version"
 	scripts/version.sh
 
+# Bump defaults to patch. We provide friendly aliases
+# for patch, minor and major
+BUMP ?= patch
+ifeq ($(BUMP),bugfix)
+  BUMP = patch
+else ifeq ($(BUMP),feature)
+  BUMP = minor
+else ifeq ($(BUMP),breaking)
+  BUMP = major
+endif
+
+.PHONY: bump-version
+bump-version:
+	@echo "BUMP=<patch|feature|breaking> bump version"
+	@GO111MODULE=off go get -u github.com/jessfraz/junk/sembump # update sembump tool
+	$(eval VERSION = $(shell ./scripts/version.sh -s))
+	$(eval NEW_VERSION = $(shell sembump --kind $(BUMP) $(VERSION)))
+	@echo "Bumping VERSION from v$(VERSION) to v$(NEW_VERSION)"
+	@echo "v$(NEW_VERSION)" > VERSION
+	@sed -i'' -e 's/${VERSION}/${NEW_VERSION}/g' Dockerfile
+
 my_d = $(shell pwd)
 OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})
 
