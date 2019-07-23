@@ -113,11 +113,6 @@ You will also need a valid `GITHUB_TOKEN` environment variable with access to th
 1. Run `make changelog` and add the results to the [CHANGELOG](https://github.com/digitalocean/doctl/blob/master/CHANGELOG.md)
    under the version you're going to release if they aren't already there.
 
-   Update the version in:
-
-   * `doit.go`
-   * `Dockerfile`
-
 1. Generate a PR, get it reviewed, and merge
 
 1. To build `doctl` for all its platforms, run `scripts/stage.sh major minor patch` 
