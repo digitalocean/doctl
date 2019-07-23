@@ -43,32 +43,21 @@ const (
 	LatestReleaseURL = "https://api.github.com/repos/digitalocean/doctl/releases/latest"
 )
 
+// Version is the version info for doit.
+type Version struct {
+	Major, Minor, Patch int
+	Name, Build, Label  string
+}
+
 var (
 	// DoitConfig holds the app's current configuration.
 	DoitConfig Config = &LiveConfig{}
 
-	// DoitVersion is doit's version.
-	DoitVersion = Version{
-		Major: 1,
-		Minor: 23,
-		Patch: 1,
-		Label: "dev",
-	}
+	// Build, Major, Minor, Patch and Label are set at build time
+	Build, Major, Minor, Patch, Label string
 
-	// Build is doit's build tag.
-	Build string
-
-	// Major is doctl's major version.
-	Major string
-
-	// Minor is doctl's minor version.
-	Minor string
-
-	// Patch is doctl's patch version.
-	Patch string
-
-	// Label is doctl's label.
-	Label string
+	// DoitVersion is doctl's version.
+	DoitVersion Version
 
 	// TraceHTTP traces http connections.
 	TraceHTTP bool
@@ -76,12 +65,27 @@ var (
 
 func init() {
 	jww.SetStdoutThreshold(jww.LevelError)
-}
 
-// Version is the version info for doit.
-type Version struct {
-	Major, Minor, Patch int
-	Name, Build, Label  string
+	if Build != "" {
+		DoitVersion.Build = Build
+	}
+	if Major != "" {
+		i, _ := strconv.Atoi(Major)
+		DoitVersion.Major = i
+	}
+	if Minor != "" {
+		i, _ := strconv.Atoi(Minor)
+		DoitVersion.Minor = i
+	}
+	if Patch != "" {
+		i, _ := strconv.Atoi(Patch)
+		DoitVersion.Patch = i
+	}
+	if Label == "" {
+		DoitVersion.Label = "dev"
+	} else {
+		DoitVersion.Label = Label
+	}
 }
 
 func (v Version) String() string {
