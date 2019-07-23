@@ -115,6 +115,8 @@ You will also need a valid `GITHUB_TOKEN` environment variable with access to th
 
 1. Generate a PR, get it reviewed, and merge
 
+1. Tag the release using `BUMP=[patch|feature|breaking] make bump-and-tag`
+
 1. To build `doctl` for all its platforms, run `scripts/stage.sh major minor patch` 
 (e.g. `scripts/stage.sh 1 5 0`). This will place all files and their checksums 
 in `builds/major.minor.patch/release`.
