@@ -13,7 +13,7 @@ help:
 	@echo ""
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null |\
 	  awk -v RS= -F: \
-	    '/^# File/,/^# Finished Make data base/ {if ($$1 ~ /^[a-zA-Z]/) {printf "%-15s%s\n", $$1, substr($$9, 9, length($$9)-9)}}' |\
+	    '/^# File/,/^# Finished Make data base/ {if ($$1 ~ /^[a-zA-Z]/) {printf "%-20s%s\n", $$1, substr($$9, 9, length($$9)-9)}}' |\
 	  sort
 
 .PHONY: test
@@ -46,6 +46,21 @@ mocks:
 shellcheck:
 	@echo "analyze shell scripts"
 	scripts/shell_check.sh
+
+.PHONY: version
+version:
+	@echo "doctl version"
+	scripts/version.sh
+
+.PHONY: install-sembump
+install-sembump:
+	@echo "install/update sembump tool"
+	@GO111MODULE=off go get -u github.com/jessfraz/junk/sembump
+
+.PHONY: bump-and-tag
+bump-and-tag: install-sembump
+	@echo "BUMP=<patch|feature|breaking> bump and tag version"
+	scripts/bumpversion.sh
 
 my_d = $(shell pwd)
 OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})
