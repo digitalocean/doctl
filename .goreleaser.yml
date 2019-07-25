@@ -36,13 +36,13 @@ checksum:
 dockers:
 - dockerfile: Dockerfile.goreleaser
   image_templates:
-  - "digitalocean/doctl:latest"
-  - "digitalocean/doctl:{{ .Major }}-latest"
-  - "digitalocean/doctl:{{ .Version }}"
+  - "hilz/doctl:latest"
+  - "hilz/doctl:{{ .Major }}-latest"
+  - "hilz/doctl:{{ .Version }}"
 
 release:
   github:
-    owner: digitalocean
+    owner: hilary
     name: doctl
 
 changelog:

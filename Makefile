@@ -119,10 +119,11 @@ changelog: _install_github_release_notes
 	@echo ""
 	@changes=$(shell scripts/changelog.sh) && cat $$changes && rm -f $$changes
 
-ORIGIN ?= origin
 # targets below this point require a BRANCH to be specified
 BRANCH ?= master
 
+# ORIGIN ?= origin
+ORIGIN ?= hilary
 
 BUMP ?= patch
 
