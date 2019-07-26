@@ -31,8 +31,6 @@ Flags:
 Use "doctl [command] --help" for more information about a command.
 ```
 
-## Table of Contents
-
 - [doctl](#doctl---)
     - [Installing `doctl`](#installing-doctl)
         - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)
@@ -42,6 +40,7 @@ Use "doctl [command] --help" for more information about a command.
                 - [Using `doctl compute ssh`](#using-doctl-compute-ssh)
             - [Arch Linux](#arch-linux)
             - [Nix supported OS](#nix-supported-os)
+        - [Docker Hub](#docker-hub)
         - [Downloading a Release from GitHub](#downloading-a-release-from-github)
         - [Building with Docker](#building-with-docker)
         - [Building the Development Version from Source](#building-the-development-version-from-source)
@@ -124,6 +123,12 @@ Arch users not using a package manager can install from the [AUR](https://aur.ar
 #### Nix supported OS
 
 Users of NixOS or other [supported platforms](https://nixos.org/nixpkgs/) may install ```doctl``` from [Nixpkgs](https://nixos.org/nixos/packages.html#doctl). Please note this package is also community maintained and may not be on the latest version.
+
+### Docker Hub
+
+Containers for each release are available under the `digitalocean`
+organization on [Docker Hub](https://hub.docker.com/). Links to the
+containers are available in the github releases.
 
 ### Downloading a Release from GitHub
 
