@@ -2,4 +2,4 @@
 
 set -e
 
-go test ./cmd/... ./commands/... ./do/... ./install/... ./pkg/... ./pluginhost/... .
+go test ./commands/... ./do/... ./pkg/... .

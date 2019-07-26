@@ -4,4 +4,6 @@ go:
   - "1.12"
 sudo: false
 install: true
-script: scripts/ci.sh
+script:
+  - shellcheck scripts/*.sh
+  - scripts/ci.sh
