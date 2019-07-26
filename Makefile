@@ -19,7 +19,7 @@ help:
 .PHONY: test
 test:
 	@echo "run tests"
-	go test ./cmd/... ./commands/... ./do/... ./install/... ./pkg/... ./pluginhost/... .
+	go test ./commands/... ./do/... ./pkg/... .
 
 .PHONY: clean
 clean:
