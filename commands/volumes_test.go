@@ -46,7 +46,7 @@ func TestVolumeCommand(t *testing.T) {
 
 func TestVolumesGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumes.On("Get", "test-volume").Return(&testVolume, nil)
+		tm.volumes.EXPECT().Get("test-volume").Return(&testVolume, nil)
 
 		config.Args = append(config.Args, "test-volume")
 
@@ -57,7 +57,7 @@ func TestVolumesGet(t *testing.T) {
 
 func TestVolumesList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumes.On("List").Return(testVolumeList, nil)
+		tm.volumes.EXPECT().List().Return(testVolumeList, nil)
 
 		err := RunVolumeList(config)
 		assert.NoError(t, err)
@@ -66,7 +66,7 @@ func TestVolumesList(t *testing.T) {
 
 func TestVolumesListID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumes.On("List").Return(testVolumeList, nil)
+		tm.volumes.EXPECT().List().Return(testVolumeList, nil)
 
 		config.Args = append(config.Args, testVolume.ID)
 
@@ -77,7 +77,7 @@ func TestVolumesListID(t *testing.T) {
 
 func TestVolumesListName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumes.On("List").Return(testVolumeList, nil)
+		tm.volumes.EXPECT().List().Return(testVolumeList, nil)
 
 		config.Args = append(config.Args, "test-volume")
 
@@ -95,7 +95,7 @@ func TestVolumeCreate(t *testing.T) {
 			Description:   "test description",
 			Tags:          []string{"one", "two"},
 		}
-		tm.volumes.On("CreateVolume", &tcr).Return(&testVolume, nil)
+		tm.volumes.EXPECT().CreateVolume(&tcr).Return(&testVolume, nil)
 
 		config.Args = append(config.Args, "test-volume")
 
@@ -118,7 +118,7 @@ func TestVolumeCreateFromSnapshot(t *testing.T) {
 			Description:   "test description",
 			Tags:          []string{"one", "two"},
 		}
-		tm.volumes.On("CreateVolume", &tcr).Return(&testVolume, nil)
+		tm.volumes.EXPECT().CreateVolume(&tcr).Return(&testVolume, nil)
 
 		config.Args = append(config.Args, "test-volume")
 
@@ -134,7 +134,7 @@ func TestVolumeCreateFromSnapshot(t *testing.T) {
 
 func TestVolumesDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumes.On("DeleteVolume", "test-volume").Return(nil)
+		tm.volumes.EXPECT().DeleteVolume("test-volume").Return(nil)
 
 		config.Args = append(config.Args, "test-volume")
 
@@ -153,7 +153,7 @@ func TestVolumesSnapshot(t *testing.T) {
 			Description: "test description",
 			Tags:        []string{"one", "two"},
 		}
-		tm.volumes.On("CreateSnapshot", &tcr).Return(nil, nil)
+		tm.volumes.EXPECT().CreateSnapshot(&tcr).Return(nil, nil)
 
 		config.Args = append(config.Args, testVolume.ID)
 		config.Doit.Set(config.NS, doctl.ArgSnapshotName, "test-volume-snapshot")

@@ -34,7 +34,7 @@ func TestSizeCommand(t *testing.T) {
 
 func TestSizesList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.sizes.On("List").Return(testSizeList, nil)
+		tm.sizes.EXPECT().List().Return(testSizeList, nil)
 
 		err := RunSizeList(config)
 		assert.NoError(t, err)

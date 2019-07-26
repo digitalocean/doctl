@@ -27,7 +27,7 @@ func TestFloatingIPActionCommand(t *testing.T) {
 
 func TestFloatingIPActionsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPActions.On("Get", "127.0.0.1", 2).Return(&testAction, nil)
+		tm.floatingIPActions.EXPECT().Get("127.0.0.1", 2).Return(&testAction, nil)
 
 		config.Args = append(config.Args, "127.0.0.1", "2")
 
@@ -39,7 +39,7 @@ func TestFloatingIPActionsGet(t *testing.T) {
 
 func TestFloatingIPActionsAssign(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPActions.On("Assign", "127.0.0.1", 2).Return(&testAction, nil)
+		tm.floatingIPActions.EXPECT().Assign("127.0.0.1", 2).Return(&testAction, nil)
 
 		config.Args = append(config.Args, "127.0.0.1", "2")
 
@@ -50,7 +50,7 @@ func TestFloatingIPActionsAssign(t *testing.T) {
 
 func TestFloatingIPActionsUnassign(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPActions.On("Unassign", "127.0.0.1").Return(&testAction, nil)
+		tm.floatingIPActions.EXPECT().Unassign("127.0.0.1").Return(&testAction, nil)
 
 		config.Args = append(config.Args, "127.0.0.1")
 

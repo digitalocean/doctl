@@ -160,7 +160,7 @@ func TestKubernetesOptionsCommand(t *testing.T) {
 func TestKubernetesGet(t *testing.T) {
 	// by ID
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
+		tm.kubernetes.EXPECT().Get(testCluster.ID).Return(&testCluster, nil)
 		config.Args = append(config.Args, testCluster.ID)
 		err := testK8sCmdService().RunKubernetesClusterGet(config)
 		assert.NoError(t, err)
@@ -169,7 +169,7 @@ func TestKubernetesGet(t *testing.T) {
 	// by name
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		// it'll see that no UUID is given and do a List call to find the cluster
-		tm.kubernetes.On("List").Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		config.Args = append(config.Args, testCluster.Name)
 		err := testK8sCmdService().RunKubernetesClusterGet(config)
 		assert.NoError(t, err)
@@ -178,7 +178,7 @@ func TestKubernetesGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		name := "not a cluster"
 		// it'll see that no UUID is given and do a List call to find the cluster
-		tm.kubernetes.On("List").Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		config.Args = append(config.Args, name)
 		err := testK8sCmdService().RunKubernetesClusterGet(config)
 		assert.EqualError(t, err, errNoClusterByName(name).Error())
@@ -200,7 +200,7 @@ func TestKubernetesGet(t *testing.T) {
 
 		clustersWithDups := append(testClusterList, testClusterWithSameName)
 		// it'll see that no UUID is given and do a List call to find the cluster
-		tm.kubernetes.On("List").Return(clustersWithDups, nil)
+		tm.kubernetes.EXPECT().List().Return(clustersWithDups, nil)
 		config.Args = append(config.Args, name)
 		err := testK8sCmdService().RunKubernetesClusterGet(config)
 		assert.EqualError(t, err, errAmbigousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
@@ -210,7 +210,7 @@ func TestKubernetesGet(t *testing.T) {
 func TestKubernetesGetUpgrades(t *testing.T) {
 	// by ID
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
+		tm.kubernetes.EXPECT().GetUpgrades(testCluster.ID).Return(testClusterUpgrades, nil)
 		config.Args = append(config.Args, testCluster.ID)
 		err := testK8sCmdService().RunKubernetesClusterGetUpgrades(config)
 		assert.NoError(t, err)
@@ -219,9 +219,9 @@ func TestKubernetesGetUpgrades(t *testing.T) {
 	// by name
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		// it'll see that no UUID is given and do a List call to find the cluster
-		tm.kubernetes.On("List").Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		// then call GetUpgrades
-		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
+		tm.kubernetes.EXPECT().GetUpgrades(testCluster.ID).Return(testClusterUpgrades, nil)
 		config.Args = append(config.Args, testCluster.Name)
 		err := testK8sCmdService().RunKubernetesClusterGetUpgrades(config)
 		assert.NoError(t, err)
@@ -231,7 +231,7 @@ func TestKubernetesGetUpgrades(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		name := "not a cluster"
 		// it'll see that no UUID is given and do a List call to find the cluster
-		tm.kubernetes.On("List").Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		config.Args = append(config.Args, name)
 		err := testK8sCmdService().RunKubernetesClusterGetUpgrades(config)
 		assert.EqualError(t, err, errNoClusterByName(name).Error())
@@ -239,7 +239,7 @@ func TestKubernetesGetUpgrades(t *testing.T) {
 
 	// no upgrades available
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(nil, nil)
+		tm.kubernetes.EXPECT().GetUpgrades(testCluster.ID).Return(nil, nil)
 		config.Args = append(config.Args, testCluster.ID)
 		err := testK8sCmdService().RunKubernetesClusterGetUpgrades(config)
 		assert.NoError(t, err)
@@ -293,7 +293,7 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 func TestKubernetesKubeconfigShow(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kubeconfig := []byte(`i'm some yaml`)
-		tm.kubernetes.On("GetKubeConfig", testCluster.ID).Return(kubeconfig, nil)
+		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID).Return(kubeconfig, nil)
 		config.Args = append(config.Args, testCluster.ID)
 		err := testK8sCmdService().RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
@@ -302,8 +302,8 @@ func TestKubernetesKubeconfigShow(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kubeconfig := []byte(`i'm some yaml`)
 		// it'll see that no UUID is given and do a List call to find the cluster
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("GetKubeConfig", testCluster.ID).Return(kubeconfig, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID).Return(kubeconfig, nil)
 		config.Args = append(config.Args, testCluster.Name)
 		err := testK8sCmdService().RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
@@ -312,7 +312,7 @@ func TestKubernetesKubeconfigShow(t *testing.T) {
 
 func TestKubernetesList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("List").Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		err := testK8sCmdService().RunKubernetesClusterList(config)
 		assert.NoError(t, err)
 	})
@@ -345,7 +345,7 @@ func TestKubernetesCreate(t *testing.T) {
 			},
 			AutoUpgrade: true,
 		}
-		tm.kubernetes.On("Create", &r).Return(&testCluster, nil)
+		tm.kubernetes.EXPECT().Create(r).Return(&testCluster, nil)
 
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testCluster.RegionSlug)
@@ -379,7 +379,7 @@ func TestKubernetesUpdate(t *testing.T) {
 			},
 			AutoUpgrade: false,
 		}
-		tm.kubernetes.On("Update", testCluster.ID, &r).Return(&testCluster, nil)
+		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
@@ -402,8 +402,8 @@ func TestKubernetesUpdate(t *testing.T) {
 			},
 			AutoUpgrade: false,
 		}
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("Update", testCluster.ID, &r).Return(&testCluster, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgClusterName, testCluster.Name)
@@ -421,7 +421,7 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 	// by id
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
+		tm.kubernetes.EXPECT().Upgrade(testCluster.ID, testUpgradeVersion).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgVersion, testUpgradeVersion)
@@ -431,8 +431,8 @@ func TestKubernetesUpgrade(t *testing.T) {
 	})
 	// by name
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().Upgrade(testCluster.ID, testUpgradeVersion).Return(nil)
 
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgVersion, testUpgradeVersion)
@@ -443,9 +443,9 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 	// using "latest" version
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
-		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
-		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
+		tm.kubernetes.EXPECT().Get(testCluster.ID).Return(&testCluster, nil)
+		tm.kubernetes.EXPECT().GetUpgrades(testCluster.ID).Return(testClusterUpgrades, nil)
+		tm.kubernetes.EXPECT().Upgrade(testCluster.ID, testUpgradeVersion).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgVersion, defaultKubernetesLatestVersion)
@@ -456,9 +456,9 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 	// without version flag set (defaults to latest)
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
-		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(testClusterUpgrades, nil)
-		tm.kubernetes.On("Upgrade", testCluster.ID, testUpgradeVersion).Return(nil)
+		tm.kubernetes.EXPECT().Get(testCluster.ID).Return(&testCluster, nil)
+		tm.kubernetes.EXPECT().GetUpgrades(testCluster.ID).Return(testClusterUpgrades, nil)
+		tm.kubernetes.EXPECT().Upgrade(testCluster.ID, testUpgradeVersion).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -468,8 +468,8 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 	// for cluster that is up-to-date
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("Get", testCluster.ID).Return(&testCluster, nil)
-		tm.kubernetes.On("GetUpgrades", testCluster.ID).Return(nil, nil)
+		tm.kubernetes.EXPECT().Get(testCluster.ID).Return(&testCluster, nil)
+		tm.kubernetes.EXPECT().GetUpgrades(testCluster.ID).Return(nil, nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -489,7 +489,7 @@ func TestKubernetesDelete(t *testing.T) {
 	})
 	// by id
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("Delete", testCluster.ID).Return(nil)
+		tm.kubernetes.EXPECT().Delete(testCluster.ID).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
@@ -499,8 +499,8 @@ func TestKubernetesDelete(t *testing.T) {
 	})
 	// by name
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("Delete", testCluster.ID).Return(nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().Delete(testCluster.ID).Return(nil)
 
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
@@ -513,7 +513,7 @@ func TestKubernetesDelete(t *testing.T) {
 func TestKubernetesNodePool_Get(t *testing.T) {
 	// by id
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("GetNodePool", testCluster.ID, testNodePool.ID).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().GetNodePool(testCluster.ID, testNodePool.ID).Return(&testNodePool, nil)
 
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 
@@ -522,7 +522,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 	})
 	// by name
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(testNodePools, nil)
+		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
 
 		// cluster ID but pool name
 		config.Args = append(config.Args, testCluster.ID, testNodePool.Name)
@@ -531,8 +531,8 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("GetNodePool", testCluster.ID, testNodePool.ID).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().GetNodePool(testCluster.ID, testNodePool.ID).Return(&testNodePool, nil)
 
 		// cluster name and pool ID
 		config.Args = append(config.Args, testCluster.Name, testNodePool.ID)
@@ -541,8 +541,8 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(testNodePools, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
 
 		// cluster name and pool name
 		config.Args = append(config.Args, testCluster.Name, testNodePool.Name)
@@ -562,7 +562,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 
 		nodePoolsWithDups := append(testNodePools, testNodePoolWithSameName)
 		// it'll see that no UUID is given and do a List call to find the cluster
-		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(nodePoolsWithDups, nil)
+		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(nodePoolsWithDups, nil)
 		config.Args = append(config.Args, testCluster.ID, name)
 		err := testK8sCmdService().RunKubernetesNodePoolGet(config)
 		assert.EqualError(t, err, errAmbigousPoolName(name, []string{testNodePool.ID, testNodePoolWithSameName.ID}).Error())
@@ -571,7 +571,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 
 func TestKubernetesNodePool_List(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(testNodePools, nil)
+		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -580,8 +580,8 @@ func TestKubernetesNodePool_List(t *testing.T) {
 	})
 	// by name
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(testNodePools, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
 
 		config.Args = append(config.Args, testCluster.Name)
 
@@ -599,7 +599,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 			Count: testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
-		tm.kubernetes.On("CreateNodePool", testCluster.ID, &r).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().CreateNodePool(testCluster.ID, &r).Return(&testNodePool, nil)
 
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -619,8 +619,8 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 			Count: testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("CreateNodePool", testCluster.ID, &r).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().CreateNodePool(testCluster.ID, &r).Return(&testNodePool, nil)
 
 		config.Args = append(config.Args, testCluster.Name)
 
@@ -642,7 +642,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 			Count: testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
-		tm.kubernetes.On("UpdateNodePool", testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 
@@ -660,8 +660,8 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 			Count: testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("UpdateNodePool", testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
 		config.Args = append(config.Args, testCluster.Name, testNodePool.ID)
 
@@ -679,8 +679,8 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 			Count: testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
-		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(testNodePools, nil)
-		tm.kubernetes.On("UpdateNodePool", testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
+		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
 		config.Args = append(config.Args, testCluster.ID, testNodePool.Name)
 
@@ -698,9 +698,9 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 			Count: testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
-		tm.kubernetes.On("List").Return(testClusterList, nil)
-		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(testNodePools, nil)
-		tm.kubernetes.On("UpdateNodePool", testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
+		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
 		config.Args = append(config.Args, testCluster.Name, testNodePool.Name)
 
@@ -720,7 +720,7 @@ func TestKubernetesNodePool_Recycle(t *testing.T) {
 			Nodes: []string{testNode.ID},
 		}
 
-		tm.kubernetes.On("RecycleNodePoolNodes", testCluster.ID, testNodePool.ID, &r).Return(nil)
+		tm.kubernetes.EXPECT().RecycleNodePoolNodes(testCluster.ID, testNodePool.ID, &r).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 
@@ -735,8 +735,8 @@ func TestKubernetesNodePool_Recycle(t *testing.T) {
 			Nodes: []string{testNode.ID},
 		}
 
-		tm.kubernetes.On("GetNodePool", testCluster.ID, testNodePool.ID).Return(&testNodePool, nil)
-		tm.kubernetes.On("RecycleNodePoolNodes", testCluster.ID, testNodePool.ID, &r).Return(nil)
+		tm.kubernetes.EXPECT().GetNodePool(testCluster.ID, testNodePool.ID).Return(&testNodePool, nil)
+		tm.kubernetes.EXPECT().RecycleNodePoolNodes(testCluster.ID, testNodePool.ID, &r).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 
@@ -758,7 +758,7 @@ func TestKubernetesNodePool_Delete(t *testing.T) {
 	})
 	// by id
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("DeleteNodePool", testCluster.ID, testNodePool.ID).Return(nil)
+		tm.kubernetes.EXPECT().DeleteNodePool(testCluster.ID, testNodePool.ID).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
@@ -768,8 +768,8 @@ func TestKubernetesNodePool_Delete(t *testing.T) {
 	})
 	// by cluster ID and pool name
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.kubernetes.On("ListNodePools", testCluster.ID).Return(testNodePools, nil)
-		tm.kubernetes.On("DeleteNodePool", testCluster.ID, testNodePool.ID).Return(nil)
+		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
+		tm.kubernetes.EXPECT().DeleteNodePool(testCluster.ID, testNodePool.ID).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID, testNodePool.Name)
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
@@ -786,7 +786,7 @@ func TestKubernetesOptions_Versions(t *testing.T) {
 				KubernetesVersion: &godo.KubernetesVersion{Slug: "1.10gen3", KubernetesVersion: "1.10"},
 			},
 		}
-		tm.kubernetes.On("GetVersions").Return(testVersions, nil)
+		tm.kubernetes.EXPECT().GetVersions().Return(testVersions, nil)
 
 		err := testK8sCmdService().RunKubeOptionsListVersion(config)
 		assert.NoError(t, err)

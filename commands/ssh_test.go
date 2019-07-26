@@ -40,7 +40,7 @@ func TestSSHComand(t *testing.T) {
 
 func TestSSH_ID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Get", testDroplet.ID).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Get(testDroplet.ID).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, strconv.Itoa(testDroplet.ID))
 
@@ -58,7 +58,7 @@ func TestSSH_InvalidID(t *testing.T) {
 
 func TestSSH_UnknownDroplet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 
 		config.Args = append(config.Args, "missing")
 
@@ -69,7 +69,7 @@ func TestSSH_UnknownDroplet(t *testing.T) {
 
 func TestSSH_DropletWithNoPublic(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("List").Return(testPrivateDropletList, nil)
+		tm.droplets.EXPECT().List().Return(testPrivateDropletList, nil)
 
 		config.Args = append(config.Args, testPrivateDroplet.Name)
 
@@ -89,7 +89,7 @@ func TestSSH_CustomPort(t *testing.T) {
 			return rm
 		}
 
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgsSSHPort, "2222")
 		config.Args = append(config.Args, testDroplet.Name)
@@ -110,7 +110,7 @@ func TestSSH_CustomUser(t *testing.T) {
 			return rm
 		}
 
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgSSHUser, "foobar")
 		config.Args = append(config.Args, testDroplet.Name)
@@ -131,7 +131,7 @@ func TestSSH_AgentForwarding(t *testing.T) {
 			return rm
 		}
 
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgsSSHAgentForwarding, true)
 		config.Args = append(config.Args, testDroplet.Name)
@@ -152,7 +152,7 @@ func TestSSH_CommandExecuting(t *testing.T) {
 			return rm
 		}
 
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 		config.Doit.Set(config.NS, doctl.ArgSSHCommand, "uptime")
 		config.Args = append(config.Args, testDroplet.Name)
 

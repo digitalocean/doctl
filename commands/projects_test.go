@@ -45,7 +45,7 @@ func TestProjectsCommand(t *testing.T) {
 
 func TestProjectsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.projects.On("List").Return(testProjectList, nil)
+		tm.projects.EXPECT().List().Return(testProjectList, nil)
 
 		err := RunProjectsList(config)
 		assert.NoError(t, err)
@@ -55,7 +55,7 @@ func TestProjectsList(t *testing.T) {
 func TestProjectsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		projectUUID := "ab06e011-6dd1-4034-9293-201f71aba299"
-		tm.projects.On("Get", projectUUID).Return(&testProject, nil)
+		tm.projects.EXPECT().Get(projectUUID).Return(&testProject, nil)
 
 		config.Args = append(config.Args, projectUUID)
 
@@ -72,7 +72,7 @@ func TestProjectsCreate(t *testing.T) {
 			Purpose:     "personal use",
 			Environment: "Staging",
 		}
-		tm.projects.On("Create", projectCreateRequest).Return(&testProject, nil)
+		tm.projects.EXPECT().Create(projectCreateRequest).Return(&testProject, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgProjectName, "project name")
 		config.Doit.Set(config.NS, doctl.ArgProjectDescription, "project description")
@@ -94,7 +94,7 @@ func TestProjectsUpdateAllAttributes(t *testing.T) {
 			Environment: "Production",
 			IsDefault:   false,
 		}
-		tm.projects.On("Update", projectUUID, updateReq).Return(&testProject, nil)
+		tm.projects.EXPECT().Update(projectUUID, updateReq).Return(&testProject, nil)
 
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgProjectName, "project name")
@@ -118,7 +118,7 @@ func TestProjectsUpdateSomeAttributes(t *testing.T) {
 			Environment: nil,
 			IsDefault:   nil,
 		}
-		tm.projects.On("Update", projectUUID, updateReq).Return(&testProject, nil)
+		tm.projects.EXPECT().Update(projectUUID, updateReq).Return(&testProject, nil)
 
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgProjectName, "project name")
@@ -139,7 +139,7 @@ func TestProjectsUpdateOneAttribute(t *testing.T) {
 			Environment: nil,
 			IsDefault:   nil,
 		}
-		tm.projects.On("Update", projectUUID, updateReq).Return(&testProject, nil)
+		tm.projects.EXPECT().Update(projectUUID, updateReq).Return(&testProject, nil)
 
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgProjectName, "project name")
@@ -152,7 +152,7 @@ func TestProjectsUpdateOneAttribute(t *testing.T) {
 func TestProjectsDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		projectUUID := "ab06e011-6dd1-4034-9293-201f71aba299"
-		tm.projects.On("Delete", projectUUID).Return(nil)
+		tm.projects.EXPECT().Delete(projectUUID).Return(nil)
 
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -171,7 +171,7 @@ func TestProjectResourcesCommand(t *testing.T) {
 func TestProjectResourcesList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		projectUUID := "ab06e011-6dd1-4034-9293-201f71aba299"
-		tm.projects.On("ListResources", projectUUID).Return(testProjectResourcesList, nil)
+		tm.projects.EXPECT().ListResources(projectUUID).Return(testProjectResourcesList, nil)
 
 		config.Args = append(config.Args, projectUUID)
 		err := RunProjectResourcesList(config)
@@ -181,7 +181,7 @@ func TestProjectResourcesList(t *testing.T) {
 
 func TestProjectResourcesGetWithValidURN(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Get", 1234).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Get(1234).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "do:droplet:1234")
 		err := RunProjectResourcesGet(config)
@@ -202,7 +202,7 @@ func TestProjectResourcesAssignOneResource(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		projectUUID := "ab06e011-6dd1-4034-9293-201f71aba299"
 		urn := "do:droplet:1234"
-		tm.projects.On("AssignResources", projectUUID, []string{urn}).Return(testProjectResourcesListSingle, nil)
+		tm.projects.EXPECT().AssignResources(projectUUID, []string{urn}).Return(testProjectResourcesListSingle, nil)
 
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgProjectResource, []string{urn})
@@ -217,7 +217,7 @@ func TestProjectResourcesAssignMultipleResources(t *testing.T) {
 		projectUUID := "ab06e011-6dd1-4034-9293-201f71aba299"
 		urn := "do:droplet:1234"
 		otherURN := "do:floatingip:1.2.3.4"
-		tm.projects.On("AssignResources", projectUUID, []string{urn, otherURN}).Return(testProjectResourcesList, nil)
+		tm.projects.EXPECT().AssignResources(projectUUID, []string{urn, otherURN}).Return(testProjectResourcesList, nil)
 
 		config.Args = append(config.Args, projectUUID)
 		config.Doit.Set(config.NS, doctl.ArgProjectResource, []string{urn, otherURN})

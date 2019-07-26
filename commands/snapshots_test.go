@@ -28,7 +28,7 @@ func TestSnapshotCommand(t *testing.T) {
 
 func TestSnapshotList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("List").Return(testSnapshotList, nil)
+		tm.snapshots.EXPECT().List().Return(testSnapshotList, nil)
 
 		err := RunSnapshotList(config)
 		assert.NoError(t, err)
@@ -37,7 +37,7 @@ func TestSnapshotList(t *testing.T) {
 
 func TestSnapshotListID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("List").Return(testSnapshotList, nil)
+		tm.snapshots.EXPECT().List().Return(testSnapshotList, nil)
 
 		config.Args = append(config.Args, testSnapshot.ID)
 
@@ -48,7 +48,7 @@ func TestSnapshotListID(t *testing.T) {
 
 func TestSnapshotListName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("List").Return(testSnapshotList, nil)
+		tm.snapshots.EXPECT().List().Return(testSnapshotList, nil)
 
 		config.Args = append(config.Args, testSnapshot.Name)
 
@@ -59,7 +59,7 @@ func TestSnapshotListName(t *testing.T) {
 
 func TestSnapshotListMultiple(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("List").Return(testSnapshotList, nil)
+		tm.snapshots.EXPECT().List().Return(testSnapshotList, nil)
 
 		config.Args = append(config.Args, testSnapshot.ID, testSnapshotSecondary.ID)
 
@@ -70,7 +70,7 @@ func TestSnapshotListMultiple(t *testing.T) {
 
 func TestSnapshotListRegion(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("List").Return(testSnapshotList, nil)
+		tm.snapshots.EXPECT().List().Return(testSnapshotList, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
 
@@ -81,7 +81,7 @@ func TestSnapshotListRegion(t *testing.T) {
 
 func TestSnapshotGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("Get", testSnapshot.ID).Return(&testSnapshot, nil)
+		tm.snapshots.EXPECT().Get(testSnapshot.ID).Return(&testSnapshot, nil)
 
 		config.Args = append(config.Args, testSnapshot.ID)
 
@@ -92,8 +92,8 @@ func TestSnapshotGet(t *testing.T) {
 
 func TestSnapshotGetMultiple(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("Get", testSnapshot.ID).Return(&testSnapshot, nil)
-		tm.snapshots.On("Get", testSnapshotSecondary.ID).Return(&testSnapshotSecondary, nil)
+		tm.snapshots.EXPECT().Get(testSnapshot.ID).Return(&testSnapshot, nil)
+		tm.snapshots.EXPECT().Get(testSnapshotSecondary.ID).Return(&testSnapshotSecondary, nil)
 
 		config.Args = append(config.Args, testSnapshot.ID, testSnapshotSecondary.ID)
 
@@ -104,7 +104,7 @@ func TestSnapshotGetMultiple(t *testing.T) {
 
 func TestSnapshotDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.snapshots.On("Delete", testSnapshot.ID).Return(nil)
+		tm.snapshots.EXPECT().Delete(testSnapshot.ID).Return(nil)
 
 		config.Args = append(config.Args, testSnapshot.ID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)

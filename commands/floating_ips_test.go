@@ -29,7 +29,7 @@ func TestFloatingIPCommands(t *testing.T) {
 
 func TestFloatingIPsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPs.On("List").Return(testFloatingIPList, nil)
+		tm.floatingIPs.EXPECT().List().Return(testFloatingIPList, nil)
 
 		RunFloatingIPList(config)
 	})
@@ -37,7 +37,7 @@ func TestFloatingIPsList(t *testing.T) {
 
 func TestFloatingIPsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPs.On("Get", "127.0.0.1").Return(&testFloatingIP, nil)
+		tm.floatingIPs.EXPECT().Get("127.0.0.1").Return(&testFloatingIP, nil)
 
 		config.Args = append(config.Args, "127.0.0.1")
 
@@ -48,7 +48,7 @@ func TestFloatingIPsGet(t *testing.T) {
 func TestFloatingIPsCreate_Droplet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		ficr := &godo.FloatingIPCreateRequest{DropletID: 1}
-		tm.floatingIPs.On("Create", ficr).Return(&testFloatingIP, nil)
+		tm.floatingIPs.EXPECT().Create(ficr).Return(&testFloatingIP, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgDropletID, 1)
 
@@ -60,7 +60,7 @@ func TestFloatingIPsCreate_Droplet(t *testing.T) {
 func TestFloatingIPsCreate_Region(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		ficr := &godo.FloatingIPCreateRequest{Region: "dev0"}
-		tm.floatingIPs.On("Create", ficr).Return(&testFloatingIP, nil)
+		tm.floatingIPs.EXPECT().Create(ficr).Return(&testFloatingIP, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
 
@@ -88,7 +88,7 @@ func TestFloatingIPsCreate_fail_with_both_args(t *testing.T) {
 
 func TestFloatingIPsDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPs.On("Delete", "127.0.0.1").Return(nil)
+		tm.floatingIPs.EXPECT().Delete("127.0.0.1").Return(nil)
 
 		config.Args = append(config.Args, "127.0.0.1")
 

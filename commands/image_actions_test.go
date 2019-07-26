@@ -29,7 +29,7 @@ func TestImageActionCommand(t *testing.T) {
 
 func TestImageActionsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.imageActions.On("Get", 1, 2).Return(&testAction, nil)
+		tm.imageActions.EXPECT().Get(1, 2).Return(&testAction, nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -44,7 +44,7 @@ func TestImageActionsGet(t *testing.T) {
 func TestImageActionsTransfer(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		ar := &godo.ActionRequest{"type": "transfer", "region": "dev0"}
-		tm.imageActions.On("Transfer", 1, ar).Return(&testAction, nil)
+		tm.imageActions.EXPECT().Transfer(1, ar).Return(&testAction, nil)
 
 		config.Args = append(config.Args, "1")
 

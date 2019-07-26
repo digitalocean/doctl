@@ -51,7 +51,7 @@ func TestTTagCommand(t *testing.T) {
 
 func TestTagGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.tags.On("Get", "mytag").Return(&testTag, nil)
+		tm.tags.EXPECT().Get("mytag").Return(&testTag, nil)
 
 		config.Args = append(config.Args, "mytag")
 
@@ -62,7 +62,7 @@ func TestTagGet(t *testing.T) {
 
 func TestTagList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.tags.On("List").Return(testTagList, nil)
+		tm.tags.EXPECT().List().Return(testTagList, nil)
 
 		err := RunCmdTagList(config)
 		assert.NoError(t, err)
@@ -72,7 +72,7 @@ func TestTagList(t *testing.T) {
 func TestTagCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tcr := godo.TagCreateRequest{Name: "new-tag"}
-		tm.tags.On("Create", &tcr).Return(&testTag, nil)
+		tm.tags.EXPECT().Create(&tcr).Return(&testTag, nil)
 		config.Args = append(config.Args, "new-tag")
 
 		err := RunCmdTagCreate(config)
@@ -82,7 +82,7 @@ func TestTagCreate(t *testing.T) {
 
 func TestTagDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.tags.On("Delete", "my-tag").Return(nil)
+		tm.tags.EXPECT().Delete("my-tag").Return(nil)
 		config.Args = append(config.Args, "my-tag")
 
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -94,8 +94,8 @@ func TestTagDelete(t *testing.T) {
 
 func TestTagDeleteMultiple(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.tags.On("Delete", "my-tag").Return(nil)
-		tm.tags.On("Delete", "my-tag-secondary").Return(nil)
+		tm.tags.EXPECT().Delete("my-tag").Return(nil)
+		tm.tags.EXPECT().Delete("my-tag-secondary").Return(nil)
 		config.Args = append(config.Args, "my-tag", "my-tag-secondary")
 
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
