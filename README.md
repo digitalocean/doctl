@@ -67,7 +67,7 @@ supported set listed below; chances are good a solution exists for your platform
 
 #### MacOS
 
-You can use [Homebrew](https://brew.sh/) to install `doctl` on macOS with this command:
+Use [Homebrew](https://brew.sh/) to install `doctl` on macOS:
 
 ```
 brew install doctl
@@ -78,10 +78,8 @@ the port is community maintained and may not be on the latest version.
 
 #### Snap supported OS
 
-**NOTE: The version of `doctl` installed via the snapstore is frozen at `v1.20.0` while Snapcraft reviews
-our store request. Once approved, snapped `doctl` and `kubectl` will work smoothly together.**
-
-You can use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to install `doctl` with this command:
+Use [Snap](https://snapcraft.io/) on [Snap-supported](https://snapcraft.io/docs/core/install) systems to
+install `doctl`:
 
 ```
 sudo snap install doctl
@@ -89,33 +87,15 @@ sudo snap install doctl
 
 ##### Use with `kubectl`
 
-If you need to use `kubectl`, you cannot use the snapped version
-until the above upgrade.
+Using `kubectl` requires the `kube-config` personal-files connection for `doctl`:
 
-<!-- 
-At present, you'll need to connect the snap to the `doctl` and
-`kubectl` config files in order to use `kubectl` with your DOKS. After 
-installing the snap, run
-
-```
-sudo snap connect doctl:doctl-config
-sudo snap connect doctl:kubectl-config
-```
-
-You should only need to create these connections once; upgrades should
-honor the existing connection. -->
+    sudo snap connect doctl:kube-config
 
 ##### Using `doctl compute ssh`
 
-If you want to use `doctl compute ssh`, you'll need to connect the
-doctl snap to the core [ssh-keys interface](https://docs.snapcraft.io/ssh-keys-interface).
-After installing the snap, run
+Using `doctl compute ssh` requires the core [ssh-keys interface](https://docs.snapcraft.io/ssh-keys-interface):
 
-```
-sudo snap connect doctl:ssh-keys :ssh-keys
-```
-
-You should only need to create the connection once; upgrades should honor the existing connection.
+    sudo snap connect doctl:ssh-keys :ssh-keys
 
 #### Arch Linux
 
@@ -123,15 +103,19 @@ Arch users not using a package manager can install from the [AUR](https://aur.ar
 
 #### Nix supported OS
 
-Users of NixOS or other [supported platforms](https://nixos.org/nixpkgs/) may install ```doctl``` from [Nixpkgs](https://nixos.org/nixos/packages.html#doctl). Please note this package is also community maintained and may not be on the latest version.
+Users of NixOS or other [supported
+platforms](https://nixos.org/nixpkgs/) may install ```doctl``` from
+[Nixpkgs](https://nixos.org/nixos/packages.html#doctl). Please note
+this package is also community maintained and may not be on the latest
+version.
 
 ### Downloading a Release from GitHub
 
 Visit the [Releases
-page](https://github.com/digitalocean/doctl/releases) for the [`doctl`
-GitHub project](https://github.com/digitalocean/doctl), and find the
-appropriate archive for your operating system and architecture.  You
-can download the archive from from your browser, or copy its URL and
+page](https://github.com/digitalocean/doctl/releases) for the
+[`doctl` GitHub project](https://github.com/digitalocean/doctl), and find the
+appropriate archive for your operating system and architecture.
+Download the archive from from your browser or copy its URL and
 retrieve it to your home directory with `wget` or `curl`.
 
 For example, with `wget`:
@@ -148,7 +132,7 @@ cd ~
 curl -OL https://github.com/digitalocean/doctl/releases/download/v<version>/doctl-<version>-linux-amd64.tar.gz
 ```
 
-Extract the binary. On GNU/Linux or OS X systems, you can use `tar`.
+Extract the binary:
 
 ```
 tar xf ~/doctl-<version>-linux-amd64.tar.gz
@@ -159,7 +143,7 @@ Or download and extract with this oneliner:
 curl -sL https://github.com/digitalocean/doctl/releases/download/v<version>/doctl-<version>-linux-amd64.tar.gz | tar -xzv
 ```
 
-Where `<version>` is the full semantic version, e.g., `1.17.0`.
+where `<version>` is the full semantic version, e.g., `1.17.0`.
 
 On Windows systems, you should be able to double-click the zip archive to extract the `doctl` executable.
 
