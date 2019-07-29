@@ -38,7 +38,7 @@ func TestAccountCommand(t *testing.T) {
 
 func TestAccountGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.account.On("Get").Return(testAccount, nil)
+		tm.account.EXPECT().Get().Return(testAccount, nil)
 
 		err := RunAccountGet(config)
 		assert.NoError(t, err)

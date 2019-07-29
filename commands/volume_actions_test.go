@@ -29,7 +29,7 @@ func TestVolumeActionCommand(t *testing.T) {
 
 func TestVolumeActionsAttach(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumeActions.On("Attach", testVolume.ID, testDroplet.ID).Return(&testAction, nil)
+		tm.volumeActions.EXPECT().Attach(testVolume.ID, testDroplet.ID).Return(&testAction, nil)
 		config.Args = append(config.Args, testVolume.ID)
 		config.Args = append(config.Args, fmt.Sprintf("%d", testDroplet.ID))
 
@@ -40,7 +40,7 @@ func TestVolumeActionsAttach(t *testing.T) {
 
 func TestVolumeDetach(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumeActions.On("Detach", testVolume.ID, testDroplet.ID).Return(&testAction, nil)
+		tm.volumeActions.EXPECT().Detach(testVolume.ID, testDroplet.ID).Return(&testAction, nil)
 		config.Args = append(config.Args, testVolume.ID)
 		config.Args = append(config.Args, fmt.Sprintf("%d", testDroplet.ID))
 
@@ -51,7 +51,7 @@ func TestVolumeDetach(t *testing.T) {
 
 func TestVolumeResize(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.volumeActions.On("Resize", testVolume.ID, 150, "dev0").Return(&testAction, nil)
+		tm.volumeActions.EXPECT().Resize(testVolume.ID, 150, "dev0").Return(&testAction, nil)
 		config.Args = append(config.Args, testVolume.ID)
 
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, 150)

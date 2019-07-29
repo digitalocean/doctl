@@ -47,7 +47,7 @@ func TestDropletCommand(t *testing.T) {
 
 func TestDropletActionList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Actions", 1).Return(testActionList, nil)
+		tm.droplets.EXPECT().Actions(1).Return(testActionList, nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -58,7 +58,7 @@ func TestDropletActionList(t *testing.T) {
 
 func TestDropletBackupList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Backups", 1).Return(testImageList, nil)
+		tm.droplets.EXPECT().Backups(1).Return(testImageList, nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -87,7 +87,7 @@ func TestDropletCreate(t *testing.T) {
 			UserData:          "#cloud-config",
 			Tags:              []string{"one", "two"},
 		}
-		tm.droplets.On("Create", dcr, false).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
 
@@ -106,15 +106,15 @@ func TestDropletCreate(t *testing.T) {
 func TestDropletCreateWithTag(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config"}
-		tm.droplets.On("Create", dcr, false).Return(&testDroplet, nil)
-		tm.tags.On("Get", "my-tag").Return(&testTag, nil)
+		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+		tm.tags.EXPECT().Get("my-tag").Return(&testTag, nil)
 
 		trr := &godo.TagResourcesRequest{
 			Resources: []godo.Resource{
 				{ID: "1", Type: godo.DropletResourceType},
 			},
 		}
-		tm.tags.On("TagResources", "my-tag", trr).Return(nil)
+		tm.tags.EXPECT().TagResources("my-tag", trr).Return(nil)
 
 		config.Args = append(config.Args, "droplet")
 
@@ -132,7 +132,7 @@ func TestDropletCreateWithTag(t *testing.T) {
 func TestDropletCreateUserDataFile(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config\n\ncoreos:\n  etcd2:\n    # generate a new token for each unique cluster from https://discovery.etcd.io/new?size=5\n    # specify the initial size of your cluster with ?size=X\n    discovery: https://discovery.etcd.io/<token>\n    # multi-region and multi-cloud deployments need to use $public_ipv4\n    advertise-client-urls: http://$private_ipv4:2379,http://$private_ipv4:4001\n    initial-advertise-peer-urls: http://$private_ipv4:2380\n    # listen on both the official ports and the legacy ports\n    # legacy ports can be omitted if your application doesn't depend on them\n    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001\n    listen-peer-urls: http://$private_ipv4:2380\n  units:\n    - name: etcd2.service\n      command: start\n    - name: fleet.service\n      command: start\n"}
-		tm.droplets.On("Create", dcr, false).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
 
@@ -148,7 +148,7 @@ func TestDropletCreateUserDataFile(t *testing.T) {
 
 func TestDropletDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Delete", 1).Return(nil)
+		tm.droplets.EXPECT().Delete(1).Return(nil)
 
 		config.Args = append(config.Args, strconv.Itoa(testDroplet.ID))
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -161,8 +161,8 @@ func TestDropletDelete(t *testing.T) {
 
 func TestDropletDeleteByTag_DropletsExist(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("ListByTag", "my-tag").Return(testDropletList, nil)
-		tm.droplets.On("DeleteByTag", "my-tag").Return(nil)
+		tm.droplets.EXPECT().ListByTag("my-tag").Return(testDropletList, nil)
+		tm.droplets.EXPECT().DeleteByTag("my-tag").Return(nil)
 
 		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -174,7 +174,7 @@ func TestDropletDeleteByTag_DropletsExist(t *testing.T) {
 
 func TestDropletDeleteByTag_DropletsMissing(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("ListByTag", "my-tag").Return(do.Droplets{}, nil)
+		tm.droplets.EXPECT().ListByTag("my-tag").Return(do.Droplets{}, nil)
 
 		var buf bytes.Buffer
 		config.Out = &buf
@@ -189,7 +189,7 @@ func TestDropletDeleteByTag_DropletsMissing(t *testing.T) {
 
 func TestDropletDeleteRepeatedID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Delete", 1).Return(nil).Once()
+		tm.droplets.EXPECT().Delete(1).Return(nil).Times(1)
 
 		id := strconv.Itoa(testDroplet.ID)
 		config.Args = append(config.Args, id, id)
@@ -202,8 +202,8 @@ func TestDropletDeleteRepeatedID(t *testing.T) {
 
 func TestDropletDeleteByName(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("List").Return(testDropletList, nil)
-		tm.droplets.On("Delete", 1).Return(nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
+		tm.droplets.EXPECT().Delete(1).Return(nil)
 
 		config.Args = append(config.Args, testDroplet.Name)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -216,7 +216,7 @@ func TestDropletDeleteByName(t *testing.T) {
 func TestDropletDeleteByName_Ambiguous(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		list := do.Droplets{testDroplet, testDroplet}
-		tm.droplets.On("List").Return(list, nil)
+		tm.droplets.EXPECT().List().Return(list, nil)
 
 		config.Args = append(config.Args, testDroplet.Name)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -229,8 +229,8 @@ func TestDropletDeleteByName_Ambiguous(t *testing.T) {
 
 func TestDropletDelete_MixedNameAndType(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("List").Return(testDropletList, nil)
-		tm.droplets.On("Delete", 1).Return(nil).Once()
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
+		tm.droplets.EXPECT().Delete(1).Return(nil).Times(1)
 
 		id := strconv.Itoa(testDroplet.ID)
 		config.Args = append(config.Args, id, testDroplet.Name)
@@ -244,7 +244,7 @@ func TestDropletDelete_MixedNameAndType(t *testing.T) {
 
 func TestDropletGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Get", testDroplet.ID).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Get(testDroplet.ID).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, strconv.Itoa(testDroplet.ID))
 
@@ -255,7 +255,7 @@ func TestDropletGet(t *testing.T) {
 
 func TestDropletGet_Template(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Get", testDroplet.ID).Return(&testDroplet, nil)
+		tm.droplets.EXPECT().Get(testDroplet.ID).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, strconv.Itoa(testDroplet.ID))
 		config.Doit.Set(config.NS, doctl.ArgTemplate, "{{.Name}}")
@@ -267,7 +267,7 @@ func TestDropletGet_Template(t *testing.T) {
 
 func TestDropletKernelList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Kernels", testDroplet.ID).Return(testKernelList, nil)
+		tm.droplets.EXPECT().Kernels(testDroplet.ID).Return(testKernelList, nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -278,7 +278,7 @@ func TestDropletKernelList(t *testing.T) {
 
 func TestDropletNeighbors(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Neighbors", testDroplet.ID).Return(testDropletList, nil)
+		tm.droplets.EXPECT().Neighbors(testDroplet.ID).Return(testDropletList, nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -289,7 +289,7 @@ func TestDropletNeighbors(t *testing.T) {
 
 func TestDropletSnapshotList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("Snapshots", testDroplet.ID).Return(testImageList, nil)
+		tm.droplets.EXPECT().Snapshots(testDroplet.ID).Return(testImageList, nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -300,7 +300,7 @@ func TestDropletSnapshotList(t *testing.T) {
 
 func TestDropletsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 
 		err := RunDropletList(config)
 		assert.NoError(t, err)
@@ -309,7 +309,7 @@ func TestDropletsList(t *testing.T) {
 
 func TestDropletsListByTag(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.On("ListByTag", "my-tag").Return(testDropletList, nil)
+		tm.droplets.EXPECT().ListByTag("my-tag").Return(testDropletList, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
 
@@ -325,7 +325,7 @@ func TestDropletsTag(t *testing.T) {
 				{ID: "1", Type: godo.DropletResourceType},
 			},
 		}
-		tm.tags.On("TagResources", "my-tag", trr).Return(nil)
+		tm.tags.EXPECT().TagResources("my-tag", trr).Return(nil)
 
 		config.Args = append(config.Args, "1")
 		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
@@ -343,7 +343,7 @@ func TestDropletsTagMultiple(t *testing.T) {
 				{ID: "2", Type: godo.DropletResourceType},
 			},
 		}
-		tm.tags.On("TagResources", "my-tag", trr).Return(nil)
+		tm.tags.EXPECT().TagResources("my-tag", trr).Return(nil)
 
 		config.Args = append(config.Args, "1")
 		config.Args = append(config.Args, "2")
@@ -361,8 +361,8 @@ func TestDropletsTagByName(t *testing.T) {
 				{ID: "1", Type: godo.DropletResourceType},
 			},
 		}
-		tm.tags.On("TagResources", "my-tag", trr).Return(nil)
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.tags.EXPECT().TagResources("my-tag", trr).Return(nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 
 		config.Args = append(config.Args, testDroplet.Name)
 		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
@@ -380,8 +380,8 @@ func TestDropletsTagMultipleNameAndID(t *testing.T) {
 				{ID: "3", Type: godo.DropletResourceType},
 			},
 		}
-		tm.tags.On("TagResources", "my-tag", trr).Return(nil)
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.tags.EXPECT().TagResources("my-tag", trr).Return(nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 
 		config.Args = append(config.Args, testDroplet.Name)
 		config.Args = append(config.Args, strconv.Itoa(anotherTestDroplet.ID))
@@ -400,8 +400,8 @@ func TestDropletsUntag(t *testing.T) {
 			},
 		}
 
-		tm.tags.On("UntagResources", "my-tag", urr).Return(nil)
-		tm.droplets.On("List").Return(testDropletList, nil)
+		tm.tags.EXPECT().UntagResources("my-tag", urr).Return(nil)
+		tm.droplets.EXPECT().List().Return(testDropletList, nil)
 
 		config.Args = []string{testDroplet.Name}
 		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")

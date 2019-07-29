@@ -22,6 +22,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
+	"github.com/golang/mock/gomock"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -145,29 +146,29 @@ func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
 type testFn func(c *CmdConfig, tm *tcMocks)
 
 type tcMocks struct {
-	keys              domocks.KeysService
-	sizes             domocks.SizesService
-	regions           domocks.RegionsService
-	images            domocks.ImagesService
-	imageActions      domocks.ImageActionsService
-	floatingIPs       domocks.FloatingIPsService
-	floatingIPActions domocks.FloatingIPActionsService
-	droplets          domocks.DropletsService
-	dropletActions    domocks.DropletActionsService
-	domains           domocks.DomainsService
-	volumes           domocks.VolumesService
-	volumeActions     domocks.VolumeActionsService
-	actions           domocks.ActionsService
-	account           domocks.AccountService
-	tags              domocks.TagsService
-	snapshots         domocks.SnapshotsService
-	certificates      domocks.CertificatesService
-	loadBalancers     domocks.LoadBalancersService
-	firewalls         domocks.FirewallsService
-	cdns              domocks.CDNsService
-	projects          domocks.ProjectsService
-	kubernetes        domocks.KubernetesService
-	databases         domocks.DatabasesService
+	account           *domocks.MockAccountService
+	actions           *domocks.MockActionsService
+	databases         *domocks.MockDatabasesService
+	dropletActions    *domocks.MockDropletActionsService
+	droplets          *domocks.MockDropletsService
+	keys              *domocks.MockKeysService
+	sizes             *domocks.MockSizesService
+	regions           *domocks.MockRegionsService
+	images            *domocks.MockImagesService
+	imageActions      *domocks.MockImageActionsService
+	floatingIPs       *domocks.MockFloatingIPsService
+	floatingIPActions *domocks.MockFloatingIPActionsService
+	domains           *domocks.MockDomainsService
+	volumes           *domocks.MockVolumesService
+	volumeActions     *domocks.MockVolumeActionsService
+	tags              *domocks.MockTagsService
+	snapshots         *domocks.MockSnapshotsService
+	certificates      *domocks.MockCertificatesService
+	loadBalancers     *domocks.MockLoadBalancersService
+	firewalls         *domocks.MockFirewallsService
+	cdns              *domocks.MockCDNsService
+	projects          *domocks.MockProjectsService
+	kubernetes        *domocks.MockKubernetesService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -179,7 +180,34 @@ func withTestClient(t *testing.T, tFn testFn) {
 	cfg := doctl.NewTestConfig()
 	doctl.DoitConfig = cfg
 
-	tm := &tcMocks{}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tm := &tcMocks{
+		account:           domocks.NewMockAccountService(ctrl),
+		actions:           domocks.NewMockActionsService(ctrl),
+		keys:              domocks.NewMockKeysService(ctrl),
+		sizes:             domocks.NewMockSizesService(ctrl),
+		regions:           domocks.NewMockRegionsService(ctrl),
+		images:            domocks.NewMockImagesService(ctrl),
+		imageActions:      domocks.NewMockImageActionsService(ctrl),
+		floatingIPs:       domocks.NewMockFloatingIPsService(ctrl),
+		floatingIPActions: domocks.NewMockFloatingIPActionsService(ctrl),
+		droplets:          domocks.NewMockDropletsService(ctrl),
+		dropletActions:    domocks.NewMockDropletActionsService(ctrl),
+		domains:           domocks.NewMockDomainsService(ctrl),
+		tags:              domocks.NewMockTagsService(ctrl),
+		volumes:           domocks.NewMockVolumesService(ctrl),
+		volumeActions:     domocks.NewMockVolumeActionsService(ctrl),
+		snapshots:         domocks.NewMockSnapshotsService(ctrl),
+		certificates:      domocks.NewMockCertificatesService(ctrl),
+		loadBalancers:     domocks.NewMockLoadBalancersService(ctrl),
+		firewalls:         domocks.NewMockFirewallsService(ctrl),
+		cdns:              domocks.NewMockCDNsService(ctrl),
+		projects:          domocks.NewMockProjectsService(ctrl),
+		kubernetes:        domocks.NewMockKubernetesService(ctrl),
+		databases:         domocks.NewMockDatabasesService(ctrl),
+	}
 
 	config := &CmdConfig{
 		NS:   "test",
@@ -195,54 +223,30 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 		setContextAccessToken: func(token string) {},
 
-		Keys:              func() do.KeysService { return &tm.keys },
-		Sizes:             func() do.SizesService { return &tm.sizes },
-		Regions:           func() do.RegionsService { return &tm.regions },
-		Images:            func() do.ImagesService { return &tm.images },
-		ImageActions:      func() do.ImageActionsService { return &tm.imageActions },
-		FloatingIPs:       func() do.FloatingIPsService { return &tm.floatingIPs },
-		FloatingIPActions: func() do.FloatingIPActionsService { return &tm.floatingIPActions },
-		Droplets:          func() do.DropletsService { return &tm.droplets },
-		DropletActions:    func() do.DropletActionsService { return &tm.dropletActions },
-		Domains:           func() do.DomainsService { return &tm.domains },
-		Actions:           func() do.ActionsService { return &tm.actions },
-		Account:           func() do.AccountService { return &tm.account },
-		Tags:              func() do.TagsService { return &tm.tags },
-		Volumes:           func() do.VolumesService { return &tm.volumes },
-		VolumeActions:     func() do.VolumeActionsService { return &tm.volumeActions },
-		Snapshots:         func() do.SnapshotsService { return &tm.snapshots },
-		Certificates:      func() do.CertificatesService { return &tm.certificates },
-		LoadBalancers:     func() do.LoadBalancersService { return &tm.loadBalancers },
-		Firewalls:         func() do.FirewallsService { return &tm.firewalls },
-		CDNs:              func() do.CDNsService { return &tm.cdns },
-		Projects:          func() do.ProjectsService { return &tm.projects },
-		Kubernetes:        func() do.KubernetesService { return &tm.kubernetes },
-		Databases:         func() do.DatabasesService { return &tm.databases },
+		Keys:              func() do.KeysService { return tm.keys },
+		Sizes:             func() do.SizesService { return tm.sizes },
+		Regions:           func() do.RegionsService { return tm.regions },
+		Images:            func() do.ImagesService { return tm.images },
+		ImageActions:      func() do.ImageActionsService { return tm.imageActions },
+		FloatingIPs:       func() do.FloatingIPsService { return tm.floatingIPs },
+		FloatingIPActions: func() do.FloatingIPActionsService { return tm.floatingIPActions },
+		Droplets:          func() do.DropletsService { return tm.droplets },
+		DropletActions:    func() do.DropletActionsService { return tm.dropletActions },
+		Domains:           func() do.DomainsService { return tm.domains },
+		Actions:           func() do.ActionsService { return tm.actions },
+		Account:           func() do.AccountService { return tm.account },
+		Tags:              func() do.TagsService { return tm.tags },
+		Volumes:           func() do.VolumesService { return tm.volumes },
+		VolumeActions:     func() do.VolumeActionsService { return tm.volumeActions },
+		Snapshots:         func() do.SnapshotsService { return tm.snapshots },
+		Certificates:      func() do.CertificatesService { return tm.certificates },
+		LoadBalancers:     func() do.LoadBalancersService { return tm.loadBalancers },
+		Firewalls:         func() do.FirewallsService { return tm.firewalls },
+		CDNs:              func() do.CDNsService { return tm.cdns },
+		Projects:          func() do.ProjectsService { return tm.projects },
+		Kubernetes:        func() do.KubernetesService { return tm.kubernetes },
+		Databases:         func() do.DatabasesService { return tm.databases },
 	}
 
 	tFn(config, tm)
-
-	assert.True(t, tm.account.AssertExpectations(t))
-	assert.True(t, tm.actions.AssertExpectations(t))
-	assert.True(t, tm.certificates.AssertExpectations(t))
-	assert.True(t, tm.domains.AssertExpectations(t))
-	assert.True(t, tm.dropletActions.AssertExpectations(t))
-	assert.True(t, tm.droplets.AssertExpectations(t))
-	assert.True(t, tm.floatingIPActions.AssertExpectations(t))
-	assert.True(t, tm.floatingIPs.AssertExpectations(t))
-	assert.True(t, tm.imageActions.AssertExpectations(t))
-	assert.True(t, tm.images.AssertExpectations(t))
-	assert.True(t, tm.regions.AssertExpectations(t))
-	assert.True(t, tm.sizes.AssertExpectations(t))
-	assert.True(t, tm.keys.AssertExpectations(t))
-	assert.True(t, tm.tags.AssertExpectations(t))
-	assert.True(t, tm.volumes.AssertExpectations(t))
-	assert.True(t, tm.volumeActions.AssertExpectations(t))
-	assert.True(t, tm.snapshots.AssertExpectations(t))
-	assert.True(t, tm.loadBalancers.AssertExpectations(t))
-	assert.True(t, tm.firewalls.AssertExpectations(t))
-	assert.True(t, tm.cdns.AssertExpectations(t))
-	assert.True(t, tm.projects.AssertExpectations(t))
-	assert.True(t, tm.kubernetes.AssertExpectations(t))
-	assert.True(t, tm.databases.AssertExpectations(t))
 }

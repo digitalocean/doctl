@@ -35,7 +35,7 @@ func TestLoadBalancerCommand(t *testing.T) {
 func TestLoadBalancerGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
-		tm.loadBalancers.On("Get", lbID).Return(&testLoadBalancer, nil)
+		tm.loadBalancers.EXPECT().Get(lbID).Return(&testLoadBalancer, nil)
 
 		config.Args = append(config.Args, lbID)
 
@@ -53,7 +53,7 @@ func TestLoadBalancerGetNoID(t *testing.T) {
 
 func TestLoadBalancerList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.loadBalancers.On("List").Return(testLoadBalancerList, nil)
+		tm.loadBalancers.EXPECT().List().Return(testLoadBalancerList, nil)
 
 		err := RunLoadBalancerList(config)
 		assert.NoError(t, err)
@@ -105,7 +105,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 				},
 			},
 		}
-		tm.loadBalancers.On("Create", &r).Return(&testLoadBalancer, nil)
+		tm.loadBalancers.EXPECT().Create(&r).Return(&testLoadBalancer, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
@@ -149,7 +149,7 @@ func TestLoadBalancerUpdate(t *testing.T) {
 			},
 		}
 
-		tm.loadBalancers.On("Update", lbID, &r).Return(&testLoadBalancer, nil)
+		tm.loadBalancers.EXPECT().Update(lbID, &r).Return(&testLoadBalancer, nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
@@ -174,7 +174,7 @@ func TestLoadBalancerUpdateNoID(t *testing.T) {
 func TestLoadBalancerDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
-		tm.loadBalancers.On("Delete", lbID).Return(nil)
+		tm.loadBalancers.EXPECT().Delete(lbID).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -194,7 +194,7 @@ func TestLoadBalancerDeleteNoID(t *testing.T) {
 func TestLoadBalancerAddDroplets(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
-		tm.loadBalancers.On("AddDroplets", lbID, 1, 23).Return(nil)
+		tm.loadBalancers.EXPECT().AddDroplets(lbID, 1, 23).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "23"})
@@ -214,7 +214,7 @@ func TestLoadBalancerAddDropletsNoID(t *testing.T) {
 func TestLoadBalancerRemoveDroplets(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
-		tm.loadBalancers.On("RemoveDroplets", lbID, 321).Return(nil)
+		tm.loadBalancers.EXPECT().RemoveDroplets(lbID, 321).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"321"})
@@ -240,7 +240,7 @@ func TestLoadBalancerAddForwardingRules(t *testing.T) {
 			TargetProtocol: "http",
 			TargetPort:     80,
 		}
-		tm.loadBalancers.On("AddForwardingRules", lbID, forwardingRule).Return(nil)
+		tm.loadBalancers.EXPECT().AddForwardingRules(lbID, forwardingRule).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80")
@@ -275,7 +275,7 @@ func TestLoadBalancerRemoveForwardingRules(t *testing.T) {
 				TlsPassthrough: true,
 			},
 		}
-		tm.loadBalancers.On("RemoveForwardingRules", lbID, forwardingRules[0], forwardingRules[1]).Return(nil)
+		tm.loadBalancers.EXPECT().RemoveForwardingRules(lbID, forwardingRules[0], forwardingRules[1]).Return(nil)
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80 entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306,tls_passthrough:true")

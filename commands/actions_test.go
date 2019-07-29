@@ -38,7 +38,7 @@ func TestActionsCommand(t *testing.T) {
 
 func TestActionList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.actions.On("List").Return(testActionList, nil)
+		tm.actions.EXPECT().List().Return(testActionList, nil)
 
 		err := RunCmdActionList(config)
 		assert.NoError(t, err)
@@ -47,7 +47,7 @@ func TestActionList(t *testing.T) {
 
 func TestActionGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.actions.On("Get", 1).Return(&testAction, nil)
+		tm.actions.EXPECT().Get(1).Return(&testAction, nil)
 
 		config.Args = append(config.Args, "1")
 

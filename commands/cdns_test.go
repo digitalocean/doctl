@@ -85,7 +85,7 @@ func TestCDNCommand(t *testing.T) {
 
 func TestCDNsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.cdns.On("Get", cdnID).Return(&testCDN, nil)
+		tm.cdns.EXPECT().Get(cdnID).Return(&testCDN, nil)
 
 		config.Args = append(config.Args, cdnID)
 
@@ -103,7 +103,7 @@ func TestCDNsGet_RequiredArguments(t *testing.T) {
 
 func TestCDNsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.cdns.On("List").Return(testCDNList, nil)
+		tm.cdns.EXPECT().List().Return(testCDNList, nil)
 
 		err := RunCDNList(config)
 		assert.NoError(t, err)
@@ -116,7 +116,7 @@ func TestCDNsCreate(t *testing.T) {
 			Origin: cdnOrigin,
 			TTL:    3600,
 		}
-		tm.cdns.On("Create", cdncr).Return(&testCDN, nil)
+		tm.cdns.EXPECT().Create(cdncr).Return(&testCDN, nil)
 
 		config.Args = append(config.Args, cdnOrigin)
 		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 3600)
@@ -134,7 +134,7 @@ func TestCDNsCreateCustomDomain(t *testing.T) {
 			CustomDomain:  testCDNWithCustomDomain.CustomDomain,
 			CertificateID: testCDNWithCustomDomain.CertificateID,
 		}
-		tm.cdns.On("Create", cdncr).Return(&testCDNWithCustomDomain, nil)
+		tm.cdns.EXPECT().Create(cdncr).Return(&testCDNWithCustomDomain, nil)
 
 		config.Args = append(config.Args, cdnOrigin)
 		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 3600)
@@ -179,7 +179,7 @@ func TestCDNsUpdateTTL(t *testing.T) {
 		cdnur := &godo.CDNUpdateTTLRequest{
 			TTL: 60,
 		}
-		tm.cdns.On("UpdateTTL", cdnID, cdnur).Return(&updatedCDN, nil)
+		tm.cdns.EXPECT().UpdateTTL(cdnID, cdnur).Return(&updatedCDN, nil)
 
 		config.Args = append(config.Args, cdnID)
 		config.Doit.Set(config.NS, doctl.ArgCDNTTL, 60)
@@ -205,7 +205,7 @@ func TestCDNsUpdateCustomDomain(t *testing.T) {
 			CustomDomain:  updatedCDNWithCustomDomain.CustomDomain,
 			CertificateID: updatedCDNWithCustomDomain.CertificateID,
 		}
-		tm.cdns.On("UpdateCustomDomain", cdnID, cdnur).Return(&updatedCDNWithCustomDomain, nil)
+		tm.cdns.EXPECT().UpdateCustomDomain(cdnID, cdnur).Return(&updatedCDNWithCustomDomain, nil)
 
 		config.Args = append(config.Args, cdnID)
 		config.Doit.Set(config.NS, doctl.ArgCDNDomain, updatedCDNWithCustomDomain.CustomDomain)
@@ -231,7 +231,7 @@ func TestCDNsUpdateRemoveCustomDomain(t *testing.T) {
 		cdnur := &godo.CDNUpdateCustomDomainRequest{
 			CustomDomain: "",
 		}
-		tm.cdns.On("UpdateCustomDomain", cdnID, cdnur).Return(&testCDN, nil)
+		tm.cdns.EXPECT().UpdateCustomDomain(cdnID, cdnur).Return(&testCDN, nil)
 
 		config.Args = append(config.Args, cdnID)
 		config.Doit.Set(config.NS, doctl.ArgCDNDomain, "")
@@ -251,7 +251,7 @@ func TestCDNsUpdate_NothingToUpdateFail(t *testing.T) {
 
 func TestCDNsDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.cdns.On("Delete", cdnID).Return(nil)
+		tm.cdns.EXPECT().Delete(cdnID).Return(nil)
 
 		config.Args = append(config.Args, cdnID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
@@ -271,7 +271,7 @@ func TestCDNsDelete_RequiredArguments(t *testing.T) {
 func TestCDNsFlushCache(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		flushReq := &godo.CDNFlushCacheRequest{Files: []string{"*"}}
-		tm.cdns.On("FlushCache", cdnID, flushReq).Return(nil)
+		tm.cdns.EXPECT().FlushCache(cdnID, flushReq).Return(nil)
 
 		config.Args = append(config.Args, cdnID)
 		config.Doit.Set(config.NS, doctl.ArgCDNFiles, []string{"*"})

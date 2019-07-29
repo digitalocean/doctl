@@ -38,7 +38,7 @@ func TestSSHKeysCommand(t *testing.T) {
 
 func TestKeysList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.keys.On("List").Return(testKeyList, nil)
+		tm.keys.EXPECT().List().Return(testKeyList, nil)
 
 		err := RunKeyList(config)
 		assert.NoError(t, err)
@@ -47,7 +47,7 @@ func TestKeysList(t *testing.T) {
 
 func TestKeysGetByID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.keys.On("Get", "1").Return(&testKey, nil)
+		tm.keys.EXPECT().Get("1").Return(&testKey, nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -58,7 +58,7 @@ func TestKeysGetByID(t *testing.T) {
 
 func TestKeysGetByFingerprint(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.keys.On("Get", testKey.Fingerprint).Return(&testKey, nil)
+		tm.keys.EXPECT().Get(testKey.Fingerprint).Return(&testKey, nil)
 
 		config.Args = append(config.Args, testKey.Fingerprint)
 
@@ -70,7 +70,7 @@ func TestKeysGetByFingerprint(t *testing.T) {
 func TestKeysCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kcr := &godo.KeyCreateRequest{Name: "the key", PublicKey: "fingerprint"}
-		tm.keys.On("Create", kcr).Return(&testKey, nil)
+		tm.keys.EXPECT().Create(kcr).Return(&testKey, nil)
 
 		config.Args = append(config.Args, "the key")
 
@@ -83,7 +83,7 @@ func TestKeysCreate(t *testing.T) {
 
 func TestKeysDeleteByID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.keys.On("Delete", "1").Return(nil)
+		tm.keys.EXPECT().Delete("1").Return(nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -96,7 +96,7 @@ func TestKeysDeleteByID(t *testing.T) {
 
 func TestKeysDeleteByFingerprint(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.keys.On("Delete", "fingerprint").Return(nil)
+		tm.keys.EXPECT().Delete("fingerprint").Return(nil)
 
 		config.Args = append(config.Args, "fingerprint")
 
@@ -111,7 +111,7 @@ func TestKeysDeleteByFingerprint(t *testing.T) {
 func TestKeysUpdateByID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kur := &godo.KeyUpdateRequest{Name: "the key"}
-		tm.keys.On("Update", "1", kur).Return(&testKey, nil)
+		tm.keys.EXPECT().Update("1", kur).Return(&testKey, nil)
 
 		config.Args = append(config.Args, "1")
 
@@ -126,7 +126,7 @@ func TestKeysUpdateByID(t *testing.T) {
 func TestKeysUpdateByFingerprint(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kur := &godo.KeyUpdateRequest{Name: "the key"}
-		tm.keys.On("Update", "fingerprint", kur).Return(&testKey, nil)
+		tm.keys.EXPECT().Update("fingerprint", kur).Return(&testKey, nil)
 
 		config.Args = append(config.Args, "fingerprint")
 
@@ -147,7 +147,7 @@ func TestSSHPublicKeyImportWithName(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kcr := &godo.KeyCreateRequest{Name: "custom", PublicKey: pubkey}
-		tm.keys.On("Create", kcr).Return(&testKey, nil)
+		tm.keys.EXPECT().Create(kcr).Return(&testKey, nil)
 
 		config.Args = append(config.Args, "custom")
 

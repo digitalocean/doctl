@@ -46,7 +46,7 @@ func TestAuthInit(t *testing.T) {
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.account.On("Get").Return(&do.Account{}, nil)
+		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
@@ -68,7 +68,7 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.account.On("Get").Return(&do.Account{}, nil)
+		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)

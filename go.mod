@@ -11,6 +11,7 @@ require (
 	github.com/fatih/color v1.7.0
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.1.1 // indirect
+	github.com/golang/mock v1.3.1
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/google/uuid v1.1.0 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
@@ -32,8 +33,7 @@ require (
 	github.com/spf13/viper v1.2.1
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.3.0
-	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
-	golang.org/x/net v0.0.0-20190206173232-65e2d4e15006 // indirect
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	golang.org/x/sys v0.0.0-20190312061237-fead79001313 // indirect
 	golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db // indirect

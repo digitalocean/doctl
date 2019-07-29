@@ -43,7 +43,7 @@ func TestCertificateGetNoID(t *testing.T) {
 func TestCertificateGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		cID := "892071a0-bb95-49bc-8021-3afd67a210bf"
-		tm.certificates.On("Get", cID).Return(&testCertificate, nil)
+		tm.certificates.EXPECT().Get(cID).Return(&testCertificate, nil)
 
 		config.Args = append(config.Args, cID)
 
@@ -126,7 +126,7 @@ func TestCertificatesCreate(t *testing.T) {
 					defer os.Remove(test.certChainPath)
 				}
 
-				tm.certificates.On("Create", &test.certificate).Return(&testCertificate, nil)
+				tm.certificates.EXPECT().Create(&test.certificate).Return(&testCertificate, nil)
 
 				config.Doit.Set(config.NS, doctl.ArgCertificateName, test.certName)
 
@@ -159,7 +159,7 @@ func TestCertificatesCreate(t *testing.T) {
 
 func TestCertificateList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.certificates.On("List").Return(testCertificateList, nil)
+		tm.certificates.EXPECT().List().Return(testCertificateList, nil)
 
 		err := RunCertificateList(config)
 		assert.NoError(t, err)
@@ -169,7 +169,7 @@ func TestCertificateList(t *testing.T) {
 func TestCertificateDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		cID := "892071a0-bb95-49bc-8021-3afd67a210bf"
-		tm.certificates.On("Delete", cID).Return(nil)
+		tm.certificates.EXPECT().Delete(cID).Return(nil)
 
 		config.Args = append(config.Args, cID)
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
