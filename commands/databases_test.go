@@ -5,11 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/mock"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -279,7 +278,7 @@ func TestDatabasesCreate(t *testing.T) {
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().Create(
-			mock.AnythingOfType("*godo.DatabaseCreateRequest"),
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateRequest{}),
 		).Return(nil, errTest)
 
 		config.Args = append(config.Args, testDBCluster.Name)
@@ -522,7 +521,7 @@ func TestDatabaseUserCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().CreateUser(
 			testDBCluster.ID,
-			mock.AnythingOfType("*godo.DatabaseCreateUserRequest"),
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateUserRequest{}),
 		).Return(nil, errTest)
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
@@ -629,7 +628,7 @@ func TestDatabasePoolCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().CreatePool(
 			testDBCluster.ID,
-			mock.AnythingOfType("*godo.DatabaseCreatePoolRequest"),
+			gomock.AssignableToTypeOf(&godo.DatabaseCreatePoolRequest{}),
 		).Return(nil, errTest)
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
@@ -725,7 +724,7 @@ func TestDatabaseDBCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().CreateDB(
 			testDBCluster.ID,
-			mock.AnythingOfType("*godo.DatabaseCreateDBRequest"),
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateDBRequest{}),
 		).Return(nil, errTest)
 
 		config.Args = append(config.Args, testDBCluster.ID, testDB.Name)
@@ -827,7 +826,7 @@ func TestDatabaseReplicaCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().CreateReplica(
 			testDBCluster.ID,
-			mock.AnythingOfType("*godo.DatabaseCreateReplicaRequest"),
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateReplicaRequest{}),
 		).Return(nil, errTest)
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBReplica.Name)

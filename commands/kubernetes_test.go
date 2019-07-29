@@ -345,7 +345,8 @@ func TestKubernetesCreate(t *testing.T) {
 			},
 			AutoUpgrade: true,
 		}
-		tm.kubernetes.EXPECT().Create(r).Return(&testCluster, nil)
+		//
+		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
 		config.Args = append(config.Args, testCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testCluster.RegionSlug)

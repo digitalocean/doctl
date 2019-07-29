@@ -189,7 +189,7 @@ func TestDropletDeleteByTag_DropletsMissing(t *testing.T) {
 
 func TestDropletDeleteRepeatedID(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.droplets.EXPECT().Delete(1).Return(nil).Do(1)
+		tm.droplets.EXPECT().Delete(1).Return(nil).Times(1)
 
 		id := strconv.Itoa(testDroplet.ID)
 		config.Args = append(config.Args, id, id)
