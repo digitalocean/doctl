@@ -1,5 +1,9 @@
 # Change Log
 
+## [1.24.1] = 2019-07-29
+
+- PR #525 - @hilary - release containers to dockerhub
+
 ## [1.24.0] = 2019-07-29
 
 - PR #523 - @hilary - explicitly include .kube/config.lock in snapcraft.yml
