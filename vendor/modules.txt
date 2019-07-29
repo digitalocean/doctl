@@ -25,6 +25,10 @@ github.com/gobwas/glob/util/strings
 # github.com/gogo/protobuf v1.1.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
+# github.com/golang/mock v1.3.1
+github.com/golang/mock/mockgen
+github.com/golang/mock/gomock
+github.com/golang/mock/mockgen/model
 # github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
 # github.com/google/go-querystring v1.0.0
@@ -56,8 +60,6 @@ github.com/magiconair/properties
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.4
 github.com/mattn/go-isatty
-# github.com/mitchellh/ioprogress v0.0.0-20180201004757-6a23b12fa88e
-github.com/mitchellh/ioprogress
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
@@ -96,7 +98,7 @@ github.com/stretchr/objx
 github.com/stretchr/testify/mock
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
+# golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/terminal
 golang.org/x/crypto/ssh/agent
@@ -106,7 +108,7 @@ golang.org/x/crypto/internal/chacha20
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
-# golang.org/x/net v0.0.0-20190206173232-65e2d4e15006
+# golang.org/x/net v0.0.0-20190311183353-d8887717615a
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http2
 golang.org/x/net/context
@@ -119,6 +121,7 @@ golang.org/x/oauth2/internal
 # golang.org/x/sys v0.0.0-20190312061237-fead79001313
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+golang.org/x/sys/cpu
 # golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
@@ -126,6 +129,14 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
 # golang.org/x/time v0.0.0-20181108054448-85acf8d2951c
 golang.org/x/time/rate
+# golang.org/x/tools v0.0.0-20190425150028-36563e24a262
+golang.org/x/tools/go/packages
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/internal/packagesdriver
+golang.org/x/tools/internal/gopathwalk
+golang.org/x/tools/internal/semver
+golang.org/x/tools/go/internal/gcimporter
+golang.org/x/tools/internal/fastwalk
 # google.golang.org/appengine v1.4.0
 google.golang.org/appengine/urlfetch
 google.golang.org/appengine/internal
