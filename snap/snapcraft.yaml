@@ -49,6 +49,7 @@ plugs:
     interface: personal-files
     write:
       - $HOME/.kube/config
+      - $HOME/.kube/config.lock
 
 apps:
   doctl:
