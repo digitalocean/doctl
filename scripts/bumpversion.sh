@@ -34,6 +34,6 @@ new_version="v$(sembump --kind "$BUMP" "$version")"
 
 echo "Bumping version from v${version} to ${new_version}"
 
-git tag -m "release ${new_version}" -a "$new_version" && git push "${ORIGIN}" --tags
+git tag -m "release ${new_version}" -a "$new_version" && git push "${ORIGIN}" tag "$new_version"
 
 echo ""
