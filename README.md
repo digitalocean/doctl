@@ -31,8 +31,6 @@ Flags:
 Use "doctl [command] --help" for more information about a command.
 ```
 
-## Table of Contents
-
 - [doctl](#doctl---)
     - [Installing `doctl`](#installing-doctl)
         - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)

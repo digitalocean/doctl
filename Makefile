@@ -9,58 +9,12 @@ export GO111MODULE := on
 
 .PHONY: help
 help:
-	@echo "describe make commands"
+	@echo "==> describing make commands"
 	@echo ""
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null |\
 	  awk -v RS= -F: \
 	    '/^# File/,/^# Finished Make data base/ {if ($$1 ~ /^[a-zA-Z]/) {printf "%-20s%s\n", $$1, substr($$9, 9, length($$9)-9)}}' |\
 	  sort
-
-.PHONY: test
-test:
-	@echo "run tests"
-	go test ./commands/... ./do/... ./pkg/... .
-
-.PHONY: clean
-clean:
-	@echo "remove build / release artifacts"
-	@rm -rf builds
-
-.PHONY: vendor
-vendor:
-	@echo "vendor dependencies"
-	go mod vendor
-	go mod tidy
-
-.PHONY: changelog
-changelog:
-	@echo "generate changelog entries"
-	scripts/changelog.sh
-
-.PHONY: mocks
-mocks:
-	@echo "update mocks"
-	scripts/regenmocks.sh
-
-.PHONY: shellcheck
-shellcheck:
-	@echo "analyze shell scripts"
-	scripts/shell_check.sh
-
-.PHONY: version
-version:
-	@echo "doctl version"
-	scripts/version.sh
-
-.PHONY: install-sembump
-install-sembump:
-	@echo "install/update sembump tool"
-	@GO111MODULE=off go get -u github.com/jessfraz/junk/sembump
-
-.PHONY: bump-and-tag
-bump-and-tag: install-sembump
-	@echo "BUMP=<patch|feature|breaking> bump and tag version"
-	scripts/bumpversion.sh
 
 my_d = $(shell pwd)
 OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})
@@ -80,15 +34,17 @@ endif
 
 .PHONY: _build
 _build:
+	@echo "==> building doctl via go build"
+	@echo ""
 	@mkdir -p builds
-	@echo "building doctl via go build"
 	@cd cmd/doctl && env GOOS=$(GOOS) GOARCH=$(GOARCH) GOFLAGS=-mod=vendor \
 	  go build -o $(OUT_D)/doctl_$(GOOS)_$(GOARCH)
 	@echo "built $(OUT_D)/doctl_$(GOOS)_$(GOARCH)"
 
 .PHONY: native
 native: _build
-	@echo "build local version"
+	@echo "==> building local version"
+	@echo ""
 	@mv $(OUT_D)/doctl_$(GOOS)_$(GOARCH) $(OUT_D)/doctl
 	@echo "built $(OUT_D)/doctl"
 
@@ -99,11 +55,12 @@ _build_linux_amd64: _build
 
 .PHONY: _base_docker_cntr
 _base_docker_cntr:
-	docker build -f Dockerfile.build . -t doctl_builder
+	@docker build -f Dockerfile.build . -t doctl_builder
 
 .PHONY: docker_build
 docker_build: _base_docker_cntr
-	@echo "build doctl in local docker container"
+	@echo "==> building doctl in local docker container"
+	@echo ""
 	@mkdir -p $(OUT_D)
 	@docker build -f Dockerfile.cntr . -t doctl_local
 	@docker run --rm \
@@ -116,4 +73,90 @@ docker_build: _base_docker_cntr
 		alpine -R $(shell whoami | id -u): /copy
 	@echo "Built binaries to $(OUT_D)"
 	@echo "Created a local Docker container. To use, run: docker run --rm -it doctl_local"
-# end docker targets
+
+.PHONY: test
+test:
+	@echo "==> running tests"
+	@echo ""
+	go test ./commands/... ./do/... ./pkg/... .
+
+.PHONY: shellcheck
+shellcheck:
+	@echo "==> analyzing shell scripts"
+	@echo ""
+	@scripts/shell_check.sh
+
+.PHONY: mocks
+mocks:
+	@echo "==> updating mocks"
+	@echo ""
+	@scripts/regenmocks.sh
+
+.PHONY: vendor
+vendor:
+	@echo "==> vendoring dependencies"
+	@echo ""
+	go mod vendor
+	go mod tidy
+
+.PHONY: clean
+clean:
+	@echo "==> removing build / release artifacts"
+	@echo ""
+	@rm -rf builds
+
+.PHONY: _install_github_release_notes
+_install_github_release_notes:
+	@GO111MODULE=off go get -u github.com/buchanae/github-release-notes
+
+.PHONY: _changelog
+_changelog: _install_github_release_notes
+	@scripts/changelog.sh
+
+.PHONY: changelog
+changelog: _install_github_release_notes
+	@echo "==> generating changelog"
+	@echo ""
+	@changes=$(shell scripts/changelog.sh) && cat $$changes && rm -f $$changes
+
+ORIGIN ?= origin
+
+BUMP ?= patch
+
+.PHONY: version
+version:
+	@echo "==> determining doctl version"
+	@echo ""
+	@ORIGIN=${ORIGIN} scripts/version.sh
+
+.PHONY: _install_sembump
+_install_sembump:
+	@echo "==> installing/updating sembump tool"
+	@echo ""
+	@GO111MODULE=off go get -u github.com/jessfraz/junk/sembump
+
+.PHONY: _bump_and_tag
+_bump_and_tag: _install_sembump
+	@echo "==> BUMP=${BUMP} bumping and tagging version"
+	@echo ""
+	@ORIGIN=${ORIGIN} scripts/bumpversion.sh
+
+.PHONY: _release
+_release:
+	@echo "==> releasing"
+	@echo ""
+	@scripts/release.sh
+
+.PHONY: bump_and_release
+bump_and_release: _bump_and_tag
+	@echo "==> BUMP=${BUMP} bumping and releasing"
+	@echo ""
+	@$(MAKE) _release
+
+.PHONY: release
+release:
+	@echo "==> releasing"
+	@echo ""
+	@$(MAKE) _release
+
+

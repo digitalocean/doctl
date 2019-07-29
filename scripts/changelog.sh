@@ -2,8 +2,9 @@
 
 set -o pipefail
 
-go get -u github.com/buchanae/github-release-notes
-
-github-release-notes -org digitalocean -repo doctl -since-latest-release -include-author
+tfile=$(mktemp /tmp/doctl-CHANGELOG-XXXXXX)
+github-release-notes -org digitalocean -repo doctl -since-latest-release -include-author >"$tfile"
 
 GO111MODULE=on go mod tidy
+
+echo "$tfile"

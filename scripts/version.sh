@@ -33,12 +33,9 @@ parse_args() {
 
 parse_args "$@"
 
-if ! git diff --exit-code --quiet --cached; then
-  echo "Aborting due to uncommitted changes in the index" >&2
-  exit 1
-fi
+ORIGIN=${ORIGIN:-origin}
 
-version=$(git fetch --tags &>/dev/null | git tag -l | sort --version-sort | tail -n1 | cut -c 2-)
+version=$(git fetch --tags "${ORIGIN}" &>/dev/null | git tag -l | sort --version-sort | tail -n1 | cut -c 2-)
 
 if [[ $short = true ]]; then
   echo "$version"
@@ -50,8 +47,7 @@ if [[ $branch != 'master' && $branch != HEAD ]]; then
   version=${version}-${branch}
 fi
 
-num_changes=$(git status --porcelain | wc -l)
-if [[ $num_changes -ne 0 ]]; then
+if [[ $(git status --porcelain) != "" ]]; then
   commit=$(git rev-parse --short HEAD)
   version=${version}-${commit}
 fi
