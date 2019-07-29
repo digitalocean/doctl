@@ -20,6 +20,7 @@
             - [Oops! What now?](#oops-what-now)
             - [Updating Homebrew](#updating-homebrew)
             - [Snap](#snap)
+            - [Dockerhub](#dockerhub)
 
 <!-- markdown-toc end -->
 
@@ -101,7 +102,6 @@ check your changes. You'll need to install [shellcheck](https://github.com/koala
 to do so. Alternatively, you can open a "WIP" (Work In Progress) pull request
 and let TravisCI run shellcheck for you.
 
-
 ## Releasing
 
 ### Prerequisites
@@ -114,6 +114,9 @@ and let TravisCI run shellcheck for you.
   `digitalocean/doctl` repo. You can generate a token
   [here](https://github.com/settings/tokens), it needs the `public_repo`
   access.
+
+* a valid dockerhub login with access to the `digitalocean` account. Post
+  in #it_support to request access.
 
 ### Cutting a release
 
@@ -152,3 +155,7 @@ You can use `brew bump-formula-pr doctl`, or
 
 New releases are automatically published to the snapstore using a webhook and snapcraft's
 automation pipeline.
+
+#### Dockerhub
+
+`make bump_and_release` and `make release` push new releases to dockerhub.
