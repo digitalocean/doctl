@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.24.0] = 2019-07-29
+
+- PR #523 - @hilary - explicitly include .kube/config.lock in snapcraft.yml
+- PR #522 - @bentranter - Migrate from mockery to gomock
+- PR #521 - @hilary - release in one step leveraging goreleaser
+- PR #520 - @hilary - update vendored modules
+- PR #519 - @hilary - add shellcheck to travis config
+- PR #518 - @hilary - update snapcraft config per snapcraft
+- PR #517 - @hilary - remove antique bintray install/release code
+- PR #515 - @hilary - Bump and tag
+- PR #514 - @hilary - Remove hardcoded version
+- PR #513 - @hilary - fix make docker_build
+
 ## [1.23.1] = 2019-07-22
 
 - PR #510 - @bentranter - Add .exe suffix to Windows binary filenames
