@@ -5,10 +5,9 @@
 package mocks
 
 import (
-	reflect "reflect"
-
 	do "github.com/digitalocean/doctl/do"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockAccountService is a mock of AccountService interface
