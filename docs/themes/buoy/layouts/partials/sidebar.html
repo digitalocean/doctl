@@ -1,9 +1,0 @@
-<nav class="SideNav displayNav">
-  <h3>doctl</h3>
-  
-  <ul>
-    {{ range $key, $value := .Paginator.Pages }}
-      {{ .Render "li" }}
-    {{ end }}
-  </ul>
-</nav>
