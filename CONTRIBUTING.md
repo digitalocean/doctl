@@ -18,9 +18,9 @@
         - [Prerequisites](#prerequisites)
         - [Cutting a release](#cutting-a-release)
             - [Oops! What now?](#oops-what-now)
-            - [Updating Homebrew](#updating-homebrew)
+            - [Docker Hub](#docker-hub)
             - [Snap](#snap)
-            - [Dockerhub](#dockerhub)
+            - [Updating Homebrew](#updating-homebrew)
 
 <!-- markdown-toc end -->
 
@@ -115,8 +115,11 @@ and let TravisCI run shellcheck for you.
   [here](https://github.com/settings/tokens), it needs the `public_repo`
   access.
 
-* a valid dockerhub login with access to the `digitalocean` account. Post
+* a valid [Docker Hub](dockerhub.com) login with access to the `digitalocean` account. Post
   in #it_support to request access.
+
+* a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account. 
+  Post in #it_support to request access.
 
 ### Cutting a release
 
@@ -139,6 +142,20 @@ to finish the release. `make release` may be of particular interest;
 it releases the most recent existing tag. Check `Makefile` for other
 internal targets of interest.
 
+#### Docker Hub
+
+`make bump_and_release` and `make release` push new releases to dockerhub. Publishing
+to Docker Hub uses `goreleaser` integration. If something goes wrong, you can run
+`make release` to try again or fall back to `goreleaser`.
+
+#### Snap
+
+`make bump_and_release` and `make release` push new releases to the snap store. You
+can also build and push the snap using `make _snap`. Specify the release channel using
+the environment variable `CHANNEL`, which defaults to `stable`:
+
+    CHANNEL=candidate make _snap
+
 #### Updating Homebrew
 
 Using the url and sha from the github release, update the 
@@ -151,11 +168,3 @@ You can use `brew bump-formula-pr doctl`, or
 1. commit your changes
 1. submit a PR to homebrew
 
-#### Snap
-
-New releases are automatically published to the snapstore using a webhook and snapcraft's
-automation pipeline.
-
-#### Dockerhub
-
-`make bump_and_release` and `make release` push new releases to dockerhub.

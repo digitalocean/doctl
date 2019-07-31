@@ -86,6 +86,14 @@ shellcheck:
 	@echo ""
 	@scripts/shell_check.sh
 
+CHANNEL ?= stable
+
+.PHONY: _snap
+_snap:
+	@echo "==> publishing snap"
+	@echo ""
+	@CHANNEL=${CHANNEL} scripts/snap.sh
+
 .PHONY: mocks
 mocks:
 	@echo "==> updating mocks"
@@ -152,6 +160,7 @@ bump_and_release: _bump_and_tag
 	@echo "==> BUMP=${BUMP} bumping and releasing"
 	@echo ""
 	@$(MAKE) _release
+	@$(MAKE) _snap
 
 .PHONY: release
 release:
