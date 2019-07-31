@@ -1,5 +1,4 @@
 name: doctl
-version-script: scripts/version.sh
 version: git
 summary: A command line tool for DigitalOcean services
 description: doctl is a command line tool for DigitalOcean services using the API.
@@ -33,6 +32,8 @@ parts:
     override-pull: |
       git clone https://github.com/digitalocean/doctl.git .
     override-build: |
+      version=$(scripts/version.sh)
+      snapcraftctl set-version ${version}
       GO111MODULE=on go build -mod=vendor -o doctl cmd/doctl/main.go
       chmod +x doctl
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
