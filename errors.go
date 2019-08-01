@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Doctl Authors All rights reserved.
+Copyright 2018-2019 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -15,7 +15,7 @@ package doctl
 
 import "fmt"
 
-// MissingArgsErr is an error returned when their are too few arguments for a command.
+// MissingArgsErr is returned when there are too few arguments for a command.
 type MissingArgsErr struct {
 	Command string
 }
@@ -31,7 +31,7 @@ func (e *MissingArgsErr) Error() string {
 	return fmt.Sprintf("(%s) command is missing required arguments", e.Command)
 }
 
-// InvalidURNErr is an error returned when their are too few arguments for a command.
+// InvalidURNErr is returned when the URN format is not valid.
 type InvalidURNErr struct {
 	URN string
 }
