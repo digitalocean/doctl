@@ -123,16 +123,14 @@ and let TravisCI run shellcheck for you.
 
 ### Cutting a release
 
-1. Run `make changelog` and add the results to the [CHANGELOG](https://github.com/digitalocean/doctl/blob/master/CHANGELOG.md)
-   under the version you're going to release if they aren't already there.
-
-1. Generate a PR, get it reviewed, and merge
+1. Run `make changes` to review the changes since the last
+   release. Based on the changes, decide what kind of release you are
+   doing (bugfix, feature or breaking). 
+   `doctl` follows [semantic versioning](semver.org), ask if you aren't sure.
 
 1. Cut a release using `BUMP=(bugfix|feature|breaking) make bump_and_release`. 
-   `doctl` follows [semantic versioning](semver.org), ask if
-   you aren't sure. `BUMP=bugfix` is an alias for `BUMP=patch`,
-   `BUMP=feature` is an alias for `BUMP=minor`, and `BUMP=breaking`
-   is an alias for `BUMP=major`.
+   (Bugfix, feature and breaking are aliases for semver's patch, minor and major.
+   BUMP will also accept `patch`, `minor` and `major`, if you prefer.)
 
 #### Oops! What now?
 
