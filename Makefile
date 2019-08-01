@@ -7,9 +7,13 @@ export CGO = 0
 
 export GO111MODULE := on
 
+# ORIGIN is used when testing release code
+ORIGIN ?= origin
+BUMP ?= patch
+
 .PHONY: help
 help:
-	@echo "==> describing make commands"
+	@echo "==> describe make commands"
 	@echo ""
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null |\
 	  awk -v RS= -F: \
@@ -34,7 +38,7 @@ endif
 
 .PHONY: _build
 _build:
-	@echo "==> building doctl via go build"
+	@echo "=> building doctl via go build"
 	@echo ""
 	@mkdir -p builds
 	@cd cmd/doctl && env GOOS=$(GOOS) GOARCH=$(GOARCH) GOFLAGS=-mod=vendor \
@@ -43,7 +47,7 @@ _build:
 
 .PHONY: native
 native: _build
-	@echo "==> building local version"
+	@echo "==> build local version"
 	@echo ""
 	@mv $(OUT_D)/doctl_$(GOOS)_$(GOARCH) $(OUT_D)/doctl
 	@echo "built $(OUT_D)/doctl"
@@ -59,7 +63,7 @@ _base_docker_cntr:
 
 .PHONY: docker_build
 docker_build: _base_docker_cntr
-	@echo "==> building doctl in local docker container"
+	@echo "==> build doctl in local docker container"
 	@echo ""
 	@mkdir -p $(OUT_D)
 	@docker build -f Dockerfile.cntr . -t doctl_local
@@ -76,13 +80,13 @@ docker_build: _base_docker_cntr
 
 .PHONY: test
 test:
-	@echo "==> running tests"
+	@echo "==> run tests"
 	@echo ""
 	go test ./commands/... ./do/... ./pkg/... .
 
 .PHONY: shellcheck
 shellcheck:
-	@echo "==> analyzing shell scripts"
+	@echo "==> analyze shell scripts"
 	@echo ""
 	@scripts/shell_check.sh
 
@@ -90,26 +94,26 @@ CHANNEL ?= stable
 
 .PHONY: _snap
 _snap:
-	@echo "==> publishing snap"
+	@echo "=> publishing snap"
 	@echo ""
 	@CHANNEL=${CHANNEL} scripts/snap.sh
 
 .PHONY: mocks
 mocks:
-	@echo "==> updating mocks"
+	@echo "==> update mocks"
 	@echo ""
 	@scripts/regenmocks.sh
 
 .PHONY: vendor
 vendor:
-	@echo "==> vendoring dependencies"
+	@echo "==> vendor dependencies"
 	@echo ""
 	go mod vendor
 	go mod tidy
 
 .PHONY: clean
 clean:
-	@echo "==> removing build / release artifacts"
+	@echo "==> remove build / release artifacts"
 	@echo ""
 	@rm -rf builds
 
@@ -123,48 +127,44 @@ _changelog: _install_github_release_notes
 
 .PHONY: changes
 changes: _install_github_release_notes
-	@echo "==> listing merged PRs since last release"
+	@echo "==> list merged PRs since last release"
 	@echo ""
 	@changes=$(shell scripts/changelog.sh) && cat $$changes && rm -f $$changes
 
-ORIGIN ?= origin
-
-BUMP ?= patch
-
 .PHONY: version
 version:
-	@echo "==> determining doctl version"
+	@echo "==> doctl version"
 	@echo ""
 	@ORIGIN=${ORIGIN} scripts/version.sh
 
 .PHONY: _install_sembump
 _install_sembump:
-	@echo "==> installing/updating sembump tool"
+	@echo "=> installing/updating sembump tool"
 	@echo ""
 	@GO111MODULE=off go get -u github.com/jessfraz/junk/sembump
 
 .PHONY: _bump_and_tag
 _bump_and_tag: _install_sembump
-	@echo "==> BUMP=${BUMP} bumping and tagging version"
+	@echo "=> BUMP=${BUMP} bumping and tagging version"
 	@echo ""
 	@ORIGIN=${ORIGIN} scripts/bumpversion.sh
 
 .PHONY: _release
 _release:
-	@echo "==> releasing"
+	@echo "=> releasing"
 	@echo ""
 	@scripts/release.sh
 
 .PHONY: bump_and_release
 bump_and_release: _bump_and_tag
-	@echo "==> BUMP=${BUMP} bumping and releasing"
+	@echo "==> BUMP=${BUMP} bump tag and release"
 	@echo ""
 	@$(MAKE) _release
 	@$(MAKE) _snap
 
 .PHONY: release
 release:
-	@echo "==> releasing"
+	@echo "==> release most recent tag"
 	@echo ""
 	@$(MAKE) _release
 
