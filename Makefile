@@ -115,7 +115,7 @@ vendor:
 clean:
 	@echo "==> remove build / release artifacts"
 	@echo ""
-	@rm -rf builds
+	@rm -rf builds dist
 
 .PHONY: _install_github_release_notes
 _install_github_release_notes:
