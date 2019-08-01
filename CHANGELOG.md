@@ -1,5 +1,7 @@
 # Change Log
 
+Changelog moved to Release Notes in [Github Releases](https://github.com/digitalocean/doctl/releases)
+
 ## [1.24.1] = 2019-07-29
 
 - PR #525 - @hilary - release containers to dockerhub

@@ -121,9 +121,9 @@ _install_github_release_notes:
 _changelog: _install_github_release_notes
 	@scripts/changelog.sh
 
-.PHONY: changelog
-changelog: _install_github_release_notes
-	@echo "==> generating changelog"
+.PHONY: changes
+changes: _install_github_release_notes
+	@echo "==> listing merged PRs since last release"
 	@echo ""
 	@changes=$(shell scripts/changelog.sh) && cat $$changes && rm -f $$changes
 
