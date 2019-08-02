@@ -30,7 +30,6 @@ import (
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
-	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 )
@@ -64,8 +63,6 @@ var (
 )
 
 func init() {
-	jww.SetStdoutThreshold(jww.LevelError)
-
 	if Build != "" {
 		DoitVersion.Build = Build
 	}
