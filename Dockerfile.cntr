@@ -16,10 +16,12 @@ FROM alpine:latest
 
 VOLUME ["/copy"]
 
-RUN  apk add --update \
-     rsync \
-     libc6-compat \
-     openssh
+RUN apk add --update \
+        rsync \
+        libc6-compat \
+        openssh \
+        ca-certificates
+
 
 COPY --from=0 /out/* /app/
 

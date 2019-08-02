@@ -1,11 +1,12 @@
-# Note: RUN apk add --no-cache curl
-#  fixes certificate errors
-
 FROM alpine:3.8
 
-RUN mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
-
-RUN apk add --no-cache curl
+RUN apk add --update \
+        bash \
+        curl \
+        rsync \
+        libc6-compat \
+        openssh \
+        ca-certificates
 
 WORKDIR /app
 
