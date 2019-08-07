@@ -36,6 +36,18 @@ func TestVolumeActionsAttach(t *testing.T) {
 		err := RunVolumeAttach(config)
 		assert.NoError(t, err)
 	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.volumeActions.EXPECT().Attach(testVolume.ID, testDroplet.ID).Return(&testAction, nil)
+		tm.actions.EXPECT().Get(1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, testVolume.ID)
+		config.Args = append(config.Args, fmt.Sprintf("%d", testDroplet.ID))
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
+
+		err := RunVolumeAttach(config)
+		assert.NoError(t, err)
+	})
 }
 
 func TestVolumeDetach(t *testing.T) {
@@ -43,6 +55,18 @@ func TestVolumeDetach(t *testing.T) {
 		tm.volumeActions.EXPECT().Detach(testVolume.ID, testDroplet.ID).Return(&testAction, nil)
 		config.Args = append(config.Args, testVolume.ID)
 		config.Args = append(config.Args, fmt.Sprintf("%d", testDroplet.ID))
+
+		err := RunVolumeDetach(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.volumeActions.EXPECT().Detach(testVolume.ID, testDroplet.ID).Return(&testAction, nil)
+		tm.actions.EXPECT().Get(1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, testVolume.ID)
+		config.Args = append(config.Args, fmt.Sprintf("%d", testDroplet.ID))
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
 
 		err := RunVolumeDetach(config)
 		assert.NoError(t, err)
@@ -56,6 +80,20 @@ func TestVolumeResize(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, 150)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
+
+		err := RunVolumeResize(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.volumeActions.EXPECT().Resize(testVolume.ID, 150, "dev0").Return(&testAction, nil)
+		tm.actions.EXPECT().Get(1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, testVolume.ID)
+
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, 150)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
 
 		err := RunVolumeResize(config)
 		assert.NoError(t, err)
