@@ -59,11 +59,13 @@ func VolumeAction() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "attach a volume", Writer,
+	cmdRunVolumeAttach := CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "attach a volume", Writer,
 		aliasOpt("a"))
+	AddBoolFlag(cmdRunVolumeAttach, doctl.ArgCommandWait, "", false, "Wait for volume to attach")
 
-	CmdBuilder(cmd, RunVolumeDetach, "detach <volume-id> <droplet-id>", "detach a volume", Writer,
+	cmdRunVolumeDetach := CmdBuilder(cmd, RunVolumeDetach, "detach <volume-id> <droplet-id>", "detach a volume", Writer,
 		aliasOpt("d"))
+	AddBoolFlag(cmdRunVolumeDetach, doctl.ArgCommandWait, "", false, "Wait for volume to detach")
 
 	CmdBuilder(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "detach a volume (deprecated - use detach instead)",
 		Writer)
@@ -74,6 +76,7 @@ func VolumeAction() *Command {
 		requiredOpt())
 	AddStringFlag(cmdRunVolumeResize, doctl.ArgRegionSlug, "", "", "Volume region",
 		requiredOpt())
+	AddBoolFlag(cmdRunVolumeResize, doctl.ArgCommandWait, "", false, "Wait for volume to resize")
 
 	return cmd
 
