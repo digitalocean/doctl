@@ -72,6 +72,9 @@ github.com/pborman/uuid
 github.com/pelletier/go-toml
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
+# github.com/sclevine/spec v1.2.0
+github.com/sclevine/spec
+github.com/sclevine/spec/report
 # github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
 github.com/shiena/ansicolor
 # github.com/spf13/afero v1.2.2
