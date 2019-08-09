@@ -12,7 +12,7 @@ import (
 	"github.com/sclevine/spec/report"
 )
 
-const packagePath string = "github.com/digitalocean/doctl"
+const packagePath string = "github.com/digitalocean/doctl/cmd/doctl"
 
 var (
 	suite           spec.Suite
