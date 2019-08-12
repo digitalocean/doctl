@@ -1,12 +1,14 @@
 package acceptance
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sclevine/spec"
 	"github.com/stretchr/testify/require"
@@ -43,7 +45,7 @@ func testAccountGet(t *testing.T, when spec.G, it spec.S) {
 					t.Fatal("failed to dump request")
 				}
 
-				t.Fatalf("received unknown request: %s", string(dump))
+				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
 	})
@@ -89,7 +91,7 @@ func testAccountRateLimit(t *testing.T, when spec.G, it spec.S) {
 					t.Fatal("failed to dump request")
 				}
 
-				t.Fatalf("received unknown request: %s", string(dump))
+				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
 	})
@@ -108,7 +110,10 @@ func testAccountRateLimit(t *testing.T, when spec.G, it spec.S) {
 		exitCode := cmd.ProcessState.ExitCode()
 		expect.Equal(0, exitCode, "exit code should be zero")
 
-		expect.Equal(strings.TrimSpace(ratelimitOutput), strings.TrimSpace(string(output)))
+		t := time.Unix(1565385881, 0)
+		expectedOutput := strings.TrimSpace(fmt.Sprintf(ratelimitOutput, t))
+
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 }
 
@@ -119,5 +124,5 @@ sammy@digitalocean.com    25               true              b6fr89dbf6d9156cace
 
 const ratelimitOutput string = `
 Limit    Remaining    Reset
-200      199          2019-08-09 14:24:41 -0700 PDT
+200      199          %s
 `

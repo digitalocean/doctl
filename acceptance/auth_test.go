@@ -37,7 +37,7 @@ func testAuthInit(t *testing.T, when spec.G, it spec.S) {
 					t.Fatal("failed to dump request")
 				}
 
-				t.Fatalf("received unknown request: %s", string(dump))
+				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
 	})
