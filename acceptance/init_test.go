@@ -20,7 +20,13 @@ var (
 )
 
 func init() {
-	suite = spec.New("acceptance", spec.Report(report.Terminal{}))
+	specOptions := []spec.Option{
+		spec.Report(report.Terminal{}),
+		spec.Random(),
+		spec.Parallel(),
+	}
+
+	suite = spec.New("acceptance", specOptions...)
 	suite("account/get", testAccountGet)
 	suite("account/ratelimit", testAccountRateLimit)
 }
