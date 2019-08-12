@@ -29,6 +29,7 @@ func init() {
 	suite = spec.New("acceptance", specOptions...)
 	suite("account/get", testAccountGet)
 	suite("account/ratelimit", testAccountRateLimit)
+	suite("auth/init", testAuthInit)
 }
 
 func TestAll(t *testing.T) {
