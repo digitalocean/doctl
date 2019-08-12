@@ -1,5 +1,7 @@
 # github.com/blang/semver v3.5.1+incompatible
 github.com/blang/semver
+# github.com/creack/pty v1.1.7
+github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/digitalocean/godo v1.19.0
