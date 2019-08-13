@@ -71,9 +71,8 @@ func testAuthInit(t *testing.T, when spec.G, it spec.S) {
 
 		buf := bytes.NewBuffer([]byte{})
 
-		_, err = io.Copy(buf, ptmx)
-		expect.NoError(err)
-
+		count, _ := io.Copy(buf, ptmx) // yes, ignore error intentionally
+		expect.NotZero(count)
 		ptmx.Close()
 
 		expect.Contains(buf.String(), "Validating token... OK")
@@ -107,9 +106,8 @@ func testAuthInit(t *testing.T, when spec.G, it spec.S) {
 
 			buf := bytes.NewBuffer([]byte{})
 
-			_, err = io.Copy(buf, ptmx)
-			expect.NoError(err)
-
+			count, _ := io.Copy(buf, ptmx) // yes, ignore error intentionally
+			expect.NotZero(count)
 			ptmx.Close()
 
 			expect.Contains(buf.String(), "Validating token... invalid token")
