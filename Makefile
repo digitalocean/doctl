@@ -78,11 +78,20 @@ docker_build: _base_docker_cntr
 	@echo "Built binaries to $(OUT_D)"
 	@echo "Created a local Docker container. To use, run: docker run --rm -it doctl_local"
 
-.PHONY: test
-test:
-	@echo "==> run tests"
+.PHONY: test_unit
+test_unit:
+	@echo "==> running only unit tests"
 	@echo ""
 	go test ./commands/... ./do/... ./pkg/... .
+
+.PHONY: test_integration
+test_integration:
+	@echo "==> running just integration tests"
+	@echo ""
+	go test ./integration
+
+.PHONY: test
+test: test_unit test_integration
 
 .PHONY: shellcheck
 shellcheck:

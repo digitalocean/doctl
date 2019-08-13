@@ -5,5 +5,5 @@ go:
 sudo: false
 install: true
 script:
-  - shellcheck scripts/*.sh
-  - scripts/ci.sh
+  - make shellcheck
+  - make test
