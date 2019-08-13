@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/creack/pty v1.1.7
 	github.com/digitalocean/godo v1.19.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
@@ -23,6 +24,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/natefinch/pie v0.0.0-20170715172608-9a0d72014007
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
+	github.com/sclevine/spec v1.2.0
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
 	github.com/spf13/cast v1.3.0 // indirect
 	github.com/spf13/cobra v0.0.3

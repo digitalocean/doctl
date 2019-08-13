@@ -1,9 +1,10 @@
 language: go
+dist: bionic
 go:
-  - "1.11"
-  - "1.12"
+  - 1.11.x
+  - 1.12.x
 sudo: false
 install: true
 script:
-  - shellcheck scripts/*.sh
-  - scripts/ci.sh
+  - make shellcheck
+  - make test
