@@ -1,4 +1,5 @@
 language: go
+dist: bionic
 go:
   - 1.11.x
   - 1.12.x
