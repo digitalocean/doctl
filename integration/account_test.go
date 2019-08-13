@@ -61,9 +61,6 @@ func testAccountGet(t *testing.T, when spec.G, it spec.S) {
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		exitCode := cmd.ProcessState.ExitCode()
-		expect.Equal(0, exitCode, "exit code should be zero")
-
 		expect.Equal(strings.TrimSpace(accountOutput), strings.TrimSpace(string(output)))
 	})
 }
@@ -106,9 +103,6 @@ func testAccountRateLimit(t *testing.T, when spec.G, it spec.S) {
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
-
-		exitCode := cmd.ProcessState.ExitCode()
-		expect.Equal(0, exitCode, "exit code should be zero")
 
 		t := time.Unix(1565385881, 0)
 		expectedOutput := strings.TrimSpace(fmt.Sprintf(ratelimitOutput, t))
