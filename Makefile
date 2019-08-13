@@ -82,13 +82,13 @@ docker_build: _base_docker_cntr
 test_unit:
 	@echo "==> running only unit tests"
 	@echo ""
-	go test -mod=vendor ./commands/... ./do/... ./pkg/... .
+	go test -race -mod=vendor ./commands/... ./do/... ./pkg/... .
 
 .PHONY: test_integration
 test_integration:
 	@echo "==> running just integration tests"
 	@echo ""
-	go test -mod=vendor ./integration
+	go test -race -mod=vendor ./integration
 
 .PHONY: test
 test: test_unit test_integration
