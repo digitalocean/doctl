@@ -293,6 +293,14 @@ After it's installed, load `bash_completion` by adding following line to your `.
 source $(brew --prefix)/etc/bash_completion
 ```
 
+Then refresh your profile using the appropriate command for bash configurations file.
+
+```
+source ~/.profile
+source ~/.bashrc
+source ~/.zshrc
+```
+
 
 ## Examples
 
