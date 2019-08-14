@@ -20,7 +20,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/shiena/ansicolor"
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
@@ -47,7 +46,7 @@ type outputError struct {
 	Detail string `json:"detail"`
 }
 
-func checkErr(err error, cmd ...*cobra.Command) {
+func checkErr(err error) {
 	if err == nil {
 		return
 	}
@@ -56,9 +55,6 @@ func checkErr(err error, cmd ...*cobra.Command) {
 
 	switch output {
 	default:
-		if len(cmd) > 0 {
-			cmd[0].Help()
-		}
 		fmt.Fprintf(color.Output, "%s: %v\n", colorErr, err)
 	case "json":
 		es := outputErrors{
