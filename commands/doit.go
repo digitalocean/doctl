@@ -480,10 +480,10 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out
 				args,
 				initCmd,
 			)
-			checkErr(err, cmd)
+			checkErr(err)
 
 			err = cr(c)
-			checkErr(err, cmd)
+			checkErr(err)
 		},
 	}
 
