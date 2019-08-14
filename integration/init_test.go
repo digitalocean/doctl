@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -43,9 +44,9 @@ func TestMain(m *testing.M) {
 	builtBinaryPath = filepath.Join(tmpDir, path.Base(packagePath))
 
 	cmd := exec.Command("go", "build", "-o", builtBinaryPath, packagePath)
-	err = cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		panic("failed to build doctl")
+		panic(fmt.Sprintf("failed to build doctl: %s", output))
 	}
 
 	code := m.Run()
