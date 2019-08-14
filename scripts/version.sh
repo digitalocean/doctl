@@ -13,43 +13,69 @@ Display doctl version
 
 Options:
 
-  -h, --help  Show this help information.
-  -s, --short major.minor.patch only
+  -h, --help   Show this help information.
+  -s, --short  major.minor.patch only
+  -b, --branch branch only
+  -c, --commit commit only
 "
 
-parse_args() {
-  while : ; do
-    if [[ $1 = "-h" || $1 = "--help" ]]; then
-      echo "$help_message"
-      return 0
-    elif [[ $1 = "-s" || $1 = "--short" ]]; then
-      short=true
-      shift
-    else
-      break
-    fi
-  done
+semver() {
+  git tag -l | sort --version-sort | tail -n1 | cut -c 2-
 }
 
-parse_args "$@"
+branch() {
+  local branch
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  if [[ $branch != 'master' && $branch != HEAD ]]; then
+    echo "${branch}"
+  fi
+}
+
+commit() {
+  if [[ $(git status --porcelain) != "" ]]; then
+    git rev-parse --short HEAD
+  fi
+}
 
 ORIGIN=${ORIGIN:-origin}
+set +e
+git fetch --tags "${ORIGIN}" &>/dev/null
+set -e
 
-version=$(git fetch --tags "${ORIGIN}" &>/dev/null | git tag -l | sort --version-sort | tail -n1 | cut -c 2-)
+if [[ "$#" -eq 0 ]]; then
+  version=$(semver)
 
-if [[ $short = true ]]; then
+  br=$(branch)
+  if [[ -n "$br" ]]; then
+    version="${version}-${br}"
+  fi
+  
+  cm=$(commit)
+  if [[ -n "$cm" ]]; then
+    version="${version}-${cm}"
+  fi
+    
   echo "$version"
   exit 0
 fi
 
-branch=$(git rev-parse --abbrev-ref HEAD)
-if [[ $branch != 'master' && $branch != HEAD ]]; then
-  version=${version}-${branch}
-fi
+case "$1" in
+  "-b"|"--branch")
+    version=$(branch)
+    ;;
 
-if [[ $(git status --porcelain) != "" ]]; then
-  commit=$(git rev-parse --short HEAD)
-  version=${version}-${commit}
-fi
+  "-c"|"--commit")
+    version=$(commit)
+    ;;
+
+  "-s"|"--short")
+    version=$(semver)
+    ;;
+
+  *)
+    echo "$help_message"
+    exit 0
+    ;;
+esac
 
 echo "$version"
