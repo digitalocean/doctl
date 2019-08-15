@@ -130,7 +130,10 @@ and let TravisCI run shellcheck for you.
 
 1. Cut a release using `BUMP=(bugfix|feature|breaking) make bump_and_release`. 
    (Bugfix, feature and breaking are aliases for semver's patch, minor and major.
-   BUMP will also accept `patch`, `minor` and `major`, if you prefer.)
+   BUMP will also accept `patch`, `minor` and `major`, if you prefer). The command
+   assumes you have a remote repository named `origin` pointing to this
+   repository. If you'd prefer to specify a different remote repository, you can
+   do so by setting `ORIGIN=(preferred remote name)`.
 
 #### Oops! What now?
 
