@@ -40,9 +40,7 @@ endif
 _build:
 	@echo "=> building doctl via go build"
 	@echo ""
-	@mkdir -p builds
-	@cd cmd/doctl && env GOOS=$(GOOS) GOARCH=$(GOARCH) GOFLAGS=-mod=vendor \
-	  go build -o $(OUT_D)/doctl_$(GOOS)_$(GOARCH)
+	@OUT_D=${OUT_D} GOOS=${GOOS} GOARCH=${GOARCH} scripts/_build.sh
 	@echo "built $(OUT_D)/doctl_$(GOOS)_$(GOARCH)"
 
 .PHONY: native
@@ -50,7 +48,7 @@ native: _build
 	@echo "==> build local version"
 	@echo ""
 	@mv $(OUT_D)/doctl_$(GOOS)_$(GOARCH) $(OUT_D)/doctl
-	@echo "built $(OUT_D)/doctl"
+	@echo "installed as $(OUT_D)/doctl"
 
 .PHONY: _build_linux_amd64
 _build_linux_amd64: GOOS = linux

@@ -8,4 +8,5 @@ RUN  apk add --update \
      git \
      make \
      g++ \
+     coreutils \
      libc6-compat
