@@ -12,6 +12,7 @@
         - [Go environment](#go-environment)
         - [Docker](#docker)
         - [Testing](#testing)
+            - [Writing Tests](#writing-tests)
             - [`godo` mocks](#godo-mocks)
             - [Build Scripts](#build-scripts)
     - [Releasing](#releasing)
@@ -86,6 +87,61 @@ You can create a local Docker container via `make docker_build`.
 ### Testing
 
 Run the tests locally via `make test`, or on Travis CI by opening a PR.
+
+#### Writing Tests
+
+In doctl, we have two kinds of tests: unit tests and integration tests. Both are run with Go's
+built-in `go test` tool.
+
+Unit tests live in the `_test.go` files. The bulk of these tests live in the `commands` package,
+and exist to ensure that a CLI command produces an expected output. For each unit test, we
+typically rely on an accompanying mocked API call. These mocks are generated via `gomock`, and
+can be set to return different values from the API calls to test how our commands behave when
+given different inputs.
+
+Writing a unit test for a new command typically looks like this,
+
+1. Write your new command.
+2. If your new command depends on a mocked `godo` call, generate a mock for it. See
+[the section below](#godo-mocks) about regenerating mocks to learn how to do this.
+3. Use your new mocks to stub out the API call, and write a test case. We use
+`github.com/stretchr/testify/assert` for our assertions. Test cases typically look like the following:
+    ```go
+    func TestMyNewCommand(t *testing.T) {
+        // Use the `withTestClient` helper to access our tets config, as well as the godo API
+        // mocks.
+        withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+            // Mock the godo API call.
+            tm.myNewCommandMock.EXPECT().Get("some-value").Return("some-other-value")
+
+            // Optionally add a CLI argument.
+            config.Args = append(config.Args, "some-value")
+
+            // Optionally add a CLI flag.
+            config.Doit.Set(config.NS, "--my-flag", "some-value")
+
+            // Execute your command.
+            err := RunMyNewCommand(config)
+
+            // Add assertions to check if your test passes.
+            assert.NoError(t, err)
+        })
+    }
+    ```
+
+Integration tests live under the top-level `integration` directory. These tests exist to ensure
+that an invocation of a command though this CLI produces the expected output. These tests use a
+mocked HTTP client, but run the actual compiled doctl binary.
+
+Writing an integration test typically looks like this,
+
+1. Write your new command.
+2. Mock the API's JSON response that your command depends on.
+3. Execute your command using `exec.Command` on the test CLI binary.
+4. Add assertions to check the output from the CLI command.
+
+Rather than providing an example here, please have a look at the [`integration/account_test.go`](/integration/account_test.go)
+file to see what an integration test typically looks like.
 
 #### `godo` mocks
 
