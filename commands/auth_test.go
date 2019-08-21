@@ -30,7 +30,7 @@ import (
 func TestAuthCommand(t *testing.T) {
 	cmd := Auth()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "init", "switch")
+	assertCommandNames(t, cmd, "init", "list", "switch")
 }
 
 func TestAuthInit(t *testing.T) {
@@ -82,7 +82,6 @@ func TestAuthList(t *testing.T) {
 
 	err := RunAuthList(config)
 	assert.NoError(t, err)
-	assert.Equal(t, "default\n", buf.String())
 }
 
 func Test_displayAuthContexts(t *testing.T) {
