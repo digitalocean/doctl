@@ -16,7 +16,9 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"sort"
 	"strings"
 
 	"golang.org/x/crypto/ssh/terminal"
@@ -67,6 +69,7 @@ func Auth() *Command {
 	}
 
 	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "initialize configuration", Writer, false, docCategories("auth"))
+	cmdBuilderWithInit(cmd, RunAuthList, "list", "lists available auth contexts", Writer, false, docCategories("auth"), aliasOpt("ls"))
 	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "writes the auth context permanently to config", Writer, false, docCategories("auth"))
 
 	return cmd
@@ -109,6 +112,41 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 		fmt.Fprintln(c.Out)
 
 		return writeConfig()
+	}
+}
+
+// RunAuthList lists all available auth contexts from the user's doctl config.
+func RunAuthList(c *CmdConfig) error {
+	context := Context
+	if context == "" {
+		context = viper.GetString("context")
+	}
+	contexts := viper.GetStringMap("auth-contexts")
+
+	displayAuthContexts(c.Out, context, contexts)
+	return nil
+}
+
+func displayAuthContexts(out io.Writer, currentContext string, contexts map[string]interface{}) {
+	// Because the default context isn't present on the auth-contexts field,
+	// we add it manually so that it's always included in the output, and so
+	// we can check if it's the current context.
+	contexts["default"] = true
+
+	// Extract and sort the map keys so that the order that we display the
+	// auth contexts is consistent.
+	keys := make([]string, 0)
+	for ctx := range contexts {
+		keys = append(keys, ctx)
+	}
+	sort.Strings(keys)
+
+	for _, ctx := range keys {
+		if ctx == currentContext {
+			fmt.Fprintln(out, ctx, "(current)")
+			continue
+		}
+		fmt.Fprintln(out, ctx)
 	}
 }
 

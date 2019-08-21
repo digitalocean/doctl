@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 	"testing"
@@ -73,6 +74,72 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestAuthList(t *testing.T) {
+	buf := &bytes.Buffer{}
+	config := &CmdConfig{Out: buf}
+
+	err := RunAuthList(config)
+	assert.NoError(t, err)
+	assert.Equal(t, "default\n", buf.String())
+}
+
+func Test_displayAuthContexts(t *testing.T) {
+	testCases := []struct {
+		Name     string
+		Out      *bytes.Buffer
+		Context  string
+		Contexts map[string]interface{}
+		Expected string
+	}{
+		{
+			Name:    "default context only",
+			Out:     &bytes.Buffer{},
+			Context: "default",
+			Contexts: map[string]interface{}{
+				"default": true,
+			},
+			Expected: "default (current)\n",
+		},
+		{
+			Name:    "default context and additional context",
+			Out:     &bytes.Buffer{},
+			Context: "default",
+			Contexts: map[string]interface{}{
+				"default": true,
+				"test":    true,
+			},
+			Expected: "default (current)\ntest\n",
+		},
+		{
+			Name:    "default context and additional context set to addditional context",
+			Out:     &bytes.Buffer{},
+			Context: "test",
+			Contexts: map[string]interface{}{
+				"default": true,
+				"test":    true,
+			},
+			Expected: "default\ntest (current)\n",
+		},
+		{
+			Name:    "unset context",
+			Out:     &bytes.Buffer{},
+			Context: "missing",
+			Contexts: map[string]interface{}{
+				"default": true,
+				"test":    true,
+			},
+			Expected: "default\ntest\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			displayAuthContexts(tc.Out, tc.Context, tc.Contexts)
+			assert.Equal(t, tc.Expected, tc.Out.String())
+		})
+	}
 }
 
 type nopWriteCloser struct {
