@@ -126,7 +126,7 @@ clean:
 
 .PHONY: _install_github_release_notes
 _install_github_release_notes:
-	@GO111MODULE=off go get -u github.com/buchanae/github-release-notes
+	GO111MODULE=on go build -mod=vendor github.com/digitalocean/github-changelog-generator
 
 .PHONY: _changelog
 _changelog: _install_github_release_notes
@@ -136,7 +136,7 @@ _changelog: _install_github_release_notes
 changes: _install_github_release_notes
 	@echo "==> list merged PRs since last release"
 	@echo ""
-	@changes=$(shell scripts/changelog.sh) && cat $$changes && rm -f $$changes
+	@changes=$(shell scripts/changelog.sh) && cat $$changes && rm -f $$changes && rm -f github-changelog-generator
 
 .PHONY: version
 version:

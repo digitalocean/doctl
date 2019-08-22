@@ -4,6 +4,9 @@ github.com/blang/semver
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+# github.com/digitalocean/github-changelog-generator v0.0.0-20190822155117-98248440dda1
+github.com/digitalocean/github-changelog-generator
+github.com/digitalocean/github-changelog-generator/ghcl
 # github.com/digitalocean/godo v1.19.0
 github.com/digitalocean/godo
 github.com/digitalocean/godo/util
@@ -31,6 +34,8 @@ github.com/golang/mock/gomock
 github.com/golang/mock/mockgen/model
 # github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
+# github.com/google/go-github v17.0.0+incompatible
+github.com/google/go-github/github
 # github.com/google/go-querystring v1.0.0
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf
@@ -115,7 +120,7 @@ golang.org/x/net/context
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
-# golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
+# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
 # golang.org/x/sys v0.0.0-20190312061237-fead79001313

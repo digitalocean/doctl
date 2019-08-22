@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.7
+	github.com/digitalocean/github-changelog-generator v0.0.0-20190822155117-98248440dda1
 	github.com/digitalocean/godo v1.19.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
@@ -33,7 +34,7 @@ require (
 	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.3.0
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
-	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20190312061237-fead79001313 // indirect
 	golang.org/x/text v0.3.1-0.20181227161524-e6919f6577db // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
