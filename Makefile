@@ -126,7 +126,7 @@ clean:
 
 .PHONY: _install_github_release_notes
 _install_github_release_notes:
-	GO111MODULE=on go build -mod=vendor github.com/digitalocean/github-changelog-generator
+	@GO111MODULE=on go build -mod=vendor github.com/digitalocean/github-changelog-generator
 
 .PHONY: _changelog
 _changelog: _install_github_release_notes
