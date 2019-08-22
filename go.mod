@@ -6,7 +6,6 @@ require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.7
-	github.com/digitalocean/github-changelog-generator v0.0.0-20190822155117-98248440dda1
 	github.com/digitalocean/godo v1.19.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
