@@ -3,7 +3,7 @@
 set -o pipefail
 
 tfile=$(mktemp /tmp/doctl-CHANGELOG-XXXXXX)
-github-release-notes -org digitalocean -repo doctl -since-latest-release -include-author >"$tfile"
+github-changelog-generator -org digitalocean -repo doctl >"$tfile"
 
 GO111MODULE=on go mod tidy
 

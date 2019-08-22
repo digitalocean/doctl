@@ -26,9 +26,7 @@ github.com/gobwas/glob/util/strings
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
 # github.com/golang/mock v1.3.1
-github.com/golang/mock/mockgen
 github.com/golang/mock/gomock
-github.com/golang/mock/mockgen/model
 # github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
 # github.com/google/go-querystring v1.0.0
@@ -115,7 +113,7 @@ golang.org/x/net/context
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
-# golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
+# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
 # golang.org/x/sys v0.0.0-20190312061237-fead79001313
@@ -129,14 +127,6 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
 # golang.org/x/time v0.0.0-20181108054448-85acf8d2951c
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20190425150028-36563e24a262
-golang.org/x/tools/go/packages
-golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/packagesdriver
-golang.org/x/tools/internal/gopathwalk
-golang.org/x/tools/internal/semver
-golang.org/x/tools/go/internal/gcimporter
-golang.org/x/tools/internal/fastwalk
 # google.golang.org/appengine v1.4.0
 google.golang.org/appengine/urlfetch
 google.golang.org/appengine/internal
