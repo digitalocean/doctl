@@ -1,38 +1,69 @@
 language: go
 
-jobs:
-  include:
-    - &test-nix
-      stage: test
-      sudo: false
-      script:
-      - make test
-      os: linux
-      dist: bionic
-      go: 1.11.x
-      env:
-        - CACHE_NAME=BIONIC_1.11
-
-    - <<: *test-nix
-      go: 1.12.x
-      script:
-      - make shellcheck
-      - make test
-      env:
-        - CACHE_NAME=BIONIC_1.12
-
-    - <<: *test-nix
-      os: osx
-      go: 1.12.x
-      env:
-        - CACHE_NAME=MACOS_1.12
-
-    - stage: test
-      os: windows
-      go: 1.12.x
-      script: ./scripts/test.sh
-      env:
-        - CACHE_NAME=WINDOWS_1.12
-
+stages:
+- test
+- deploy
+- name: deploy
+  if: |
+    branch = master AND \
+    tag IS present AND \
+    repo = digitalocean/doctl
+  
 install: true
 
+jobs:
+  include:
+  - &test-nix
+    name: "Testing: Bionic, go 1.11"
+    stage: test
+    script: make test
+    os: linux
+    dist: bionic
+    go: 1.11.x
+    env:
+    - CACHE_NAME=BIONIC_1.11
+
+  - <<: *test-nix
+    name: "Testing: Bionic, go 1.12"
+    go: 1.12.x
+    script:
+    - make shellcheck
+    - make test
+    env:
+    - CACHE_NAME=BIONIC_1.12
+
+  - <<: *test-nix
+    name: "Testing: MacOS, go 1.12"
+    os: osx
+    go: 1.12.x
+    env:
+    - CACHE_NAME=MACOS_1.12
+
+  - stage: test
+    name: "Testing: Windows, go 1.12"
+    os: windows
+    go: 1.12.x
+    script: ./scripts/test.sh
+    env:
+    - CACHE_NAME=WINDOWS_1.12
+
+  - stage: deploy
+    name: "deploy"
+    dist: bionic
+    go: 1.12.x
+    script: echo "deploying"
+    before_deploy: docker login -u=myuser -p="$DOCKER_PASSWORD"
+    services: docker
+    env:
+    - CACHE_NAME=DEPLOY
+    deploy:
+      skip_cleanup: true
+
+      provider: script
+      script: curl -sL https://git.io/goreleaser | bash
+      api_key:
+        secure: k+aXHgeeKleiopYCRuU/yyeMwX+FQltJAfSHMEnQLQVsinidNXfy1Ehwk707dGcMNM+q54g0+2NzFPcehGTRr+tKWldhNEN5z2JlBKS3DWdvShcyaob3E8+I4j89PEvqT0+HLLgaU1GAA+Qw/OGk1GSznLQxCOO7htKuOs/m4+sRQYWZS/sJk2yWHIVI9q9H23RsGIjzm0bp9ReJR67dJxyM26oqUrYGi3NiNB4ySN0b3ZIFHk8FyIviYtZjCzflyzmo1t3VzdSaXU6oJhjey8jmZJuxX258hU3r0y5qGXRKCyGaiQ5IXnzr3w4RPYufGuMNQg1XKMjZNYzXDYJP+nCa8JQj7N54UYyH5hOondB9d+yk0ox8VV5DMnadMpDcJBAsFvzf77a09E7jIKupq2sti8gwvKs8KxEmlgjtAT3odBb/YdmmS0Se5WNTRWMOj204EZ00AHk4XwhGRayKDcvvWl8PV5k9RBf14j4tRrkVnoxHTtDovW7un1ue4+wU7TT2NPUkaOxFckRn2ac05YhDzDtL0kRQGSw17GLuhqh4TY4DrmIllg9rMVXsTXxzDE1Kt2pgrXbUoKQ9iXN53Qb/IWAk3a5VO30HJRVh8Byi4AwC4G6I3C69uyLgDK6Dp+AsWE1bSDDM7T5SoR6Cd+GP5lJVHAPtnewqC5dIppM=
+
+      provider: snap
+      snap: doctl*.snap
+      channel: release
