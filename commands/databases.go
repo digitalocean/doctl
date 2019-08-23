@@ -25,11 +25,10 @@ import (
 )
 
 const (
-	defaultDatabaseNodeSize      = "db-s-1vcpu-1gb"
-	defaultDatabaseNodeCount     = 1
-	defaultDatabaseRegion        = "nyc1"
-	defaultDatabaseEngine        = "pg"
-	defaultDatabaseEngineVersion = "11"
+	defaultDatabaseNodeSize  = "db-s-1vcpu-1gb"
+	defaultDatabaseNodeCount = 1
+	defaultDatabaseRegion    = "nyc1"
+	defaultDatabaseEngine    = "pg"
 )
 
 // Databases creates the databases command
@@ -46,13 +45,19 @@ func Databases() *Command {
 	CmdBuilder(cmd, RunDatabaseList, "list", "list database clusters", Writer, aliasOpt("ls"), displayerType(&displayers.Databases{}))
 	CmdBuilder(cmd, RunDatabaseGet, "get <database-id>", "get a database cluster", Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
 
-	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseCreate, "create <name>", "create a database cluster", Writer,
+	createLongDesc := `create a database cluster
+
+When creating a new database cluster, use the '--engine' flag to specify the
+type. Use 'pg' for PostgreSQL, 'mysql' for MySQL, or 'redis' for Redis.
+`
+
+	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseCreate, "create <name>", createLongDesc, Writer,
 		aliasOpt("c"))
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseNumNodes, "", defaultDatabaseNodeCount, "number of nodes in database cluster")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "database region")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, "database size")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "database engine")
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", defaultDatabaseEngineVersion, "database engine version")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "database engine version")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "private network uuid")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "delete database cluster", Writer,
