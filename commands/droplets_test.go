@@ -15,6 +15,8 @@ package commands
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 
@@ -131,7 +133,45 @@ func TestDropletCreateWithTag(t *testing.T) {
 
 func TestDropletCreateUserDataFile(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config\n\ncoreos:\n  etcd2:\n    # generate a new token for each unique cluster from https://discovery.etcd.io/new?size=5\n    # specify the initial size of your cluster with ?size=X\n    discovery: https://discovery.etcd.io/<token>\n    # multi-region and multi-cloud deployments need to use $public_ipv4\n    advertise-client-urls: http://$private_ipv4:2379,http://$private_ipv4:4001\n    initial-advertise-peer-urls: http://$private_ipv4:2380\n    # listen on both the official ports and the legacy ports\n    # legacy ports can be omitted if your application doesn't depend on them\n    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001\n    listen-peer-urls: http://$private_ipv4:2380\n  units:\n    - name: etcd2.service\n      command: start\n    - name: fleet.service\n      command: start\n"}
+		userData := `
+coreos:
+  etcd2:
+    discovery: https://discovery.etcd.io/<token>
+    advertise-client-urls: http://$private_ipv4:2379,http://$private_ipv4:4001
+    initial-advertise-peer-urls: http://$private_ipv4:2380
+    listen-client-urls: http://0.0.0.0:2379,http://0.0.0.0:4001
+    listen-peer-urls: http://$private_ipv4:2380
+  units:
+    - name: etcd2.service
+      command: start
+    - name: fleet.service
+      command: start
+`
+
+		tmpFile, err := ioutil.TempFile(os.TempDir(), "doctlDropletsTest-*.yml")
+		assert.NoError(t, err)
+		defer os.Remove(tmpFile.Name())
+
+		_, err = tmpFile.WriteString(userData)
+		assert.NoError(t, err)
+
+		err = tmpFile.Close()
+		assert.NoError(t, err)
+
+		dcr := &godo.DropletCreateRequest{
+			Name: "droplet",
+			Region: "dev0",
+			Size: "1gb",
+			Image: godo.DropletCreateImage{
+				ID: 0,
+				Slug: "image",
+			},
+			SSHKeys: []godo.DropletCreateSSHKey{},
+			Backups: false,
+			IPv6: false,
+			PrivateNetworking: false,
+			UserData: userData,
+		}
 		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
@@ -139,9 +179,9 @@ func TestDropletCreateUserDataFile(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
 		config.Doit.Set(config.NS, doctl.ArgImage, "image")
-		config.Doit.Set(config.NS, doctl.ArgUserDataFile, "../testdata/cloud-config.yml")
+		config.Doit.Set(config.NS, doctl.ArgUserDataFile, tmpFile.Name())
 
-		err := RunDropletCreate(config)
+		err = RunDropletCreate(config)
 		assert.NoError(t, err)
 	})
 }
