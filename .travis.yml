@@ -6,7 +6,6 @@ jobs:
       stage: test
       sudo: false
       script:
-      - make shellcheck
       - make test
       os: linux
       dist: bionic
@@ -16,6 +15,9 @@ jobs:
 
     - <<: *test-nix
       go: 1.12.x
+      script:
+      - make shellcheck
+      - make test
       env:
         - CACHE_NAME=BIONIC_1.12
 
@@ -31,12 +33,6 @@ jobs:
       script: ./scripts/test.sh
       env:
         - CACHE_NAME=WINDOWS_1.12
-
-addons:
-  homebrew:
-    packages:
-      - shellcheck
-    update: true
 
 install: true
 
