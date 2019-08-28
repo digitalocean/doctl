@@ -58,7 +58,7 @@ lets us merge or address your contributions quickly.
 3. Unless it is critical, the issue is left for a period of time (sometimes
    many weeks), giving outside contributors a chance to address the issue.
 
-4. The issue is addressed in a pull request or commit. The issue will be
+4. The issue is addressed in a pull request. The issue will be
    referenced in the commit message so that the code that fixes it is clearly
    linked.
 
@@ -86,7 +86,8 @@ You can create a local Docker container via `make docker_build`.
 
 ### Testing
 
-Run the tests locally via `make test`, or on Travis CI by opening a PR.
+Run the tests locally via `make test`, or on Travis CI by pushing a branch to your fork
+on github.
 
 #### Writing Tests
 
@@ -155,12 +156,38 @@ When you upgrade `godo` you have to re-generate the mocks.
 
 If you modify the build scripts, you can use `make shellcheck` to
 check your changes. You'll need to install [shellcheck](https://github.com/koalaman/shellcheck)
-to do so. Alternatively, you can open a "WIP" (Work In Progress) pull request
-and let TravisCI run shellcheck for you.
+to do so. Travis also runs shellcheck.
 
 ## Releasing
 
-### Prerequisites
+`doctl` releases are orchestrated by [Travis CI](https://docs.travis-ci.com/user/deployment/),
+triggered when a new tag is pushed to master.
+
+### Tagging a release
+
+1. Run `make changes` to review the changes since the last
+   release. Based on the changes, decide what kind of release you are
+   doing (bugfix, feature or breaking). 
+   `doctl` follows [semantic versioning](semver.org), ask if you aren't sure.
+
+1. Tag the release using `BUMP=(bugfix|feature|breaking) make tag`. 
+   (Bugfix, feature and breaking are aliases for semver's patch, minor and major.
+   BUMP will also accept `patch`, `minor` and `major`, if you prefer). The command
+   assumes you have a remote repository named `origin` pointing to this
+   repository. If you'd prefer to specify a different remote repository, you can
+   do so by setting `ORIGIN=(preferred remote name)`.
+
+### Oops! Something went wrong! What now?
+
+In case of an issue with the travis deployments:
+
+#### Github Releases & Dockerhub
+
+`make release` releases the most recent tag to github releases and
+dockerhub images. If `make release` fails, you can always fall back to
+`goreleaser` itself.
+
+##### Prerequisites
 
 * [goreleaser](https://goreleaser.com/install/)
 
@@ -174,46 +201,25 @@ and let TravisCI run shellcheck for you.
 * a valid [Docker Hub](dockerhub.com) login with access to the `digitalocean` account. Post
   in #it_support to request access.
 
-* a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account. 
-  Post in #it_support to request access.
-
-### Cutting a release
-
-1. Run `make changes` to review the changes since the last
-   release. Based on the changes, decide what kind of release you are
-   doing (bugfix, feature or breaking). 
-   `doctl` follows [semantic versioning](semver.org), ask if you aren't sure.
-
-1. Cut a release using `BUMP=(bugfix|feature|breaking) make bump_and_release`. 
-   (Bugfix, feature and breaking are aliases for semver's patch, minor and major.
-   BUMP will also accept `patch`, `minor` and `major`, if you prefer). The command
-   assumes you have a remote repository named `origin` pointing to this
-   repository. If you'd prefer to specify a different remote repository, you can
-   do so by setting `ORIGIN=(preferred remote name)`.
-
-#### Oops! What now?
-
-`make bump_and_release` calls a series of smaller tasks under the
-hood. If the target fails, fix the problem and use the smaller tasks
-to finish the release. `make release` may be of particular interest; 
-it releases the most recent existing tag. Check `Makefile` for other
-internal targets of interest.
-
-#### Docker Hub
-
-`make bump_and_release` and `make release` push new releases to dockerhub. Publishing
-to Docker Hub uses `goreleaser` integration. If something goes wrong, you can run
-`make release` to try again or fall back to `goreleaser`.
-
 #### Snap
 
-`make bump_and_release` and `make release` push new releases to the snap store. You
-can also build and push the snap using `make _snap`. Specify the release channel using
-the environment variable `CHANNEL`, which defaults to `stable`:
+`make snap` builds and pushes a snap for the most recent tag to the
+snap store.  Specify the release channel using the environment
+variable `CHANNEL`, which defaults to `stable`:
 
     CHANNEL=candidate make _snap
 
-#### Updating Homebrew
+If `make snap` fails, you can fall back to building and pushing the
+snap manually.
+
+##### Prerequisites
+
+* [docker](https://docs.docker.com/install/)
+
+* a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account. 
+  Post in #it_support to request access.
+
+### Updating Homebrew
 
 Using the url and sha from the github release, update the 
 [homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).

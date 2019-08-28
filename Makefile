@@ -78,13 +78,13 @@ docker_build: _base_docker_cntr
 
 .PHONY: test_unit
 test_unit:
-	@echo "==> running only unit tests"
+	@echo "==> run unit tests"
 	@echo ""
 	go test -race -mod=vendor ./commands/... ./do/... ./pkg/... .
 
 .PHONY: test_integration
 test_integration:
-	@echo "==> running just integration tests"
+	@echo "==> run integration tests"
 	@echo ""
 	go test -race -mod=vendor ./integration
 
@@ -99,9 +99,9 @@ shellcheck:
 
 CHANNEL ?= stable
 
-.PHONY: _snap
-_snap:
-	@echo "=> publishing snap"
+.PHONY: snap
+snap:
+	@echo "=> publish snap (normally done by travis)"
 	@echo ""
 	@CHANNEL=${CHANNEL} scripts/snap.sh
 
@@ -150,9 +150,9 @@ _install_sembump:
 	@echo ""
 	@GO111MODULE=off go get -u github.com/jessfraz/junk/sembump
 
-.PHONY: _bump_and_tag
-_bump_and_tag: _install_sembump
-	@echo "=> BUMP=${BUMP} bumping and tagging version"
+.PHONY: tag
+tag: _install_sembump
+	@echo "==> BUMP=${BUMP} tag"
 	@echo ""
 	@ORIGIN=${ORIGIN} scripts/bumpversion.sh
 
@@ -162,16 +162,16 @@ _release:
 	@echo ""
 	@scripts/release.sh
 
-.PHONY: bump_and_release
-bump_and_release: _bump_and_tag
-	@echo "==> BUMP=${BUMP} bump tag and release"
+.PHONY: _tag_and_release
+_tag_and_release: tag
+	@echo "=> DEPRECATED: BUMP=${BUMP} tag and release"
 	@echo ""
 	@$(MAKE) _release
-	@$(MAKE) _snap
+	@$(MAKE) snap
 
 .PHONY: release
 release:
-	@echo "==> release most recent tag"
+	@echo "=> release (most recent tag, normally done by travis)"
 	@echo ""
 	@$(MAKE) _release
 
