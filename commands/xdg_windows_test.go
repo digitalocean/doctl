@@ -15,16 +15,16 @@ package commands
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestConfigHome(t *testing.T) {
-	os.Setenv("USERNAME", "testuser")
-	defer os.Unsetenv("USERNAME")
+	userName := os.Getenv("USERNAME")
 
 	ch := configHome()
-	expected := `C:\Users\testuser\AppData\Local\doctl\config`
+	expected := filepath.Join("C:/", "Users", userName, "AppData", "Local", "doctl", "config")
 	assert.Equal(t, expected, ch)
 }
