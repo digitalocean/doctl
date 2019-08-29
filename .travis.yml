@@ -38,3 +38,10 @@ jobs:
     env:
     - CACHE_NAME=WINDOWS_1.12
 
+notifications:
+  slack:
+    rooms:
+      secure: NR3+H9V0/RAIS98iRqcpoDe9u8d9xMnNVT5EhwRgIiEqtONUUlHWVQaJ0ZS+fzQPHlErhAflGYSLg4L6CStF3UQoojlG6l46d9FQ3WiKFa2YAUtyoOXnOUj8AMPtjfJXwgHDxnOKcZ7RpQWg0uFMG7J8z2I3Mtm0B2MlLmwBa1jPzUkfQDKAjD1h0new7+KoRCaEQLWJA5T/nnyL4gtwjB7lBcr04SDTw91DE/mniT9Jr38UXv8MwOURmm/p5nvlG1blTopLjMWE6F2sOBj4kaDkkizcxUseRsyhu+rFPEFo9X1rPg1gxXW9lKL1JV9JFO29aHe1ZN6T0mSCraYUgqa3UaN3NiYVep/wye8KpMxJ6AiqpGvWP6ABAojlEiQkbKNvklhzKpnqwSQxm8K/mzK8kqOUMzQfEEVdUife5e0SdIk67zeCzu4PZLBJIj661XQzM4zJRy0FgmxyPKWrA8e8RimSzaT1geea96jvCwmG1VfJz+DRV2WFUwg9YIh9Xvb20q0yodvGczZU7AA0AIrePHXntFkjfRB7jQ8RFGwrVL3UqKLo6t2hforrbV0ll1EVRPZ3uUYY/tfYE2z/GNL10dcnzjlW+WYTg3ZA/6GtnsCT6GpaeKUxF9GvOEzQDIG2BwHFfQYTPuXIdFOFqKrMkdz4V+Ak/wviNBD3xrU=
+    on_pull_requests: false
+    os_success: change
+    on_failure: always
