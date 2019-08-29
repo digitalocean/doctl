@@ -55,14 +55,14 @@ jobs:
     - CACHE_NAME=WINDOWS_1.12
 
   - stage: deploy
-    name: "deploy"
+    name: "goreleaser"
     dist: bionic
     go: 1.12.x
     script: echo "deploying"
-    before_deploy: docker login -u=sammytheshark -p="$DOCKER_PASSWORD"
+    before_deploy: echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
     services: docker
     env:
-    - CACHE_NAME=DEPLOY
+    - CACHE_NAME=GORELEASER
     deploy:
       skip_cleanup: true
       on:
@@ -70,8 +70,3 @@ jobs:
 
       provider: script
       script: curl -sL https://git.io/goreleaser | bash
-
-      provider: snap
-      snap: doctl*.snap
-      channel: release
-
