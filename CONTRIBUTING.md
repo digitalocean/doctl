@@ -16,12 +16,13 @@
             - [`godo` mocks](#godo-mocks)
             - [Build Scripts](#build-scripts)
     - [Releasing](#releasing)
-        - [Prerequisites](#prerequisites)
-        - [Cutting a release](#cutting-a-release)
-            - [Oops! What now?](#oops-what-now)
-            - [Docker Hub](#docker-hub)
+        - [Tagging a release](#tagging-a-release)
+        - [Oops! Something went wrong! What now?](#oops-something-went-wrong-what-now)
+            - [Github Releases & Dockerhub](#github-releases--dockerhub)
+                - [Prerequisites](#prerequisites)
             - [Snap](#snap)
-            - [Updating Homebrew](#updating-homebrew)
+                - [Prerequisites](#prerequisites-1)
+        - [Updating Homebrew](#updating-homebrew)
 
 <!-- markdown-toc end -->
 
@@ -59,7 +60,7 @@ lets us merge or address your contributions quickly.
    many weeks), giving outside contributors a chance to address the issue.
 
 4. The issue is addressed in a pull request. The issue will be
-   referenced in the commit message so that the code that fixes it is clearly
+   referenced in commit message(s) so that the code that fixes it is clearly
    linked.
 
 5. The issue is closed. Sometimes, valid issues will be closed to keep
@@ -190,14 +191,11 @@ dockerhub images. If `make release` fails, you can always fall back to
 ##### Prerequisites
 
 * [goreleaser](https://goreleaser.com/install/)
-
 * [docker](https://docs.docker.com/install/)
-
 * a valid `GITHUB_TOKEN` environment variable with access to the
   `digitalocean/doctl` repo. You can generate a token
   [here](https://github.com/settings/tokens), it needs the `public_repo`
   access.
-
 * a valid [Docker Hub](dockerhub.com) login with access to the `digitalocean` account. Post
   in #it_support to request access.
 
@@ -215,7 +213,6 @@ snap manually.
 ##### Prerequisites
 
 * [docker](https://docs.docker.com/install/)
-
 * a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account. 
   Post in #it_support to request access.
 
