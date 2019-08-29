@@ -70,3 +70,8 @@ jobs:
 
       provider: script
       script: curl -sL https://git.io/goreleaser | bash
+
+      provider: snap
+      snap: doctl*.snap
+      channel: release
+
