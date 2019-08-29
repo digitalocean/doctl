@@ -6,7 +6,6 @@ stages:
 - name: deploy
   if: |
     branch = master AND \
-    tag IS present AND \
     repo = digitalocean/doctl
   
 install: true
@@ -52,12 +51,14 @@ jobs:
     dist: bionic
     go: 1.12.x
     script: echo "deploying"
-    before_deploy: docker login -u=myuser -p="$DOCKER_PASSWORD"
+    before_deploy: docker login -u=hilz -p="$DOCKER_PASSWORD"
     services: docker
     env:
     - CACHE_NAME=DEPLOY
     deploy:
       skip_cleanup: true
+      on:
+        tags: true
 
       provider: script
       script: curl -sL https://git.io/goreleaser | bash
