@@ -316,6 +316,34 @@ func TestKubernetesClusters_Get(t *testing.T) {
 	require.Equal(t, want, got)
 }
 
+func TestKubernetesClusters_GetUser(t *testing.T) {
+	setup()
+	defer teardown()
+
+	kubeSvc := client.Kubernetes
+	want := &KubernetesClusterUser{
+		Username: "foo@example.com",
+		Groups: []string{
+			"foo:bar",
+		},
+	}
+	jBlob := `
+{
+	"kubernetes_cluster_user": {
+		"username": "foo@example.com",
+		"groups": ["foo:bar"]
+	}
+}`
+
+	mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/user", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, jBlob)
+	})
+	got, _, err := kubeSvc.GetUser(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d")
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
 func TestKubernetesClusters_GetKubeConfig(t *testing.T) {
 	setup()
 	defer teardown()

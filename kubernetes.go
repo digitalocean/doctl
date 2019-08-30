@@ -24,6 +24,7 @@ const (
 type KubernetesService interface {
 	Create(context.Context, *KubernetesClusterCreateRequest) (*KubernetesCluster, *Response, error)
 	Get(context.Context, string) (*KubernetesCluster, *Response, error)
+	GetUser(context.Context, string) (*KubernetesClusterUser, *Response, error)
 	GetUpgrades(context.Context, string) ([]*KubernetesVersion, *Response, error)
 	GetKubeConfig(context.Context, string) (*KubernetesClusterConfig, *Response, error)
 	List(context.Context, *ListOptions) ([]*KubernetesCluster, *Response, error)
@@ -131,6 +132,12 @@ type KubernetesCluster struct {
 	Status    *KubernetesClusterStatus `json:"status,omitempty"`
 	CreatedAt time.Time                `json:"created_at,omitempty"`
 	UpdatedAt time.Time                `json:"updated_at,omitempty"`
+}
+
+// KubernetesClusterUser represents a Kubernetes cluster user.
+type KubernetesClusterUser struct {
+	Username string   `json:"username,omitempty"`
+	Groups   []string `json:"groups,omitempty"`
 }
 
 // KubernetesMaintenancePolicy is a configuration to set the maintenance window
@@ -326,6 +333,10 @@ type kubernetesClusterRoot struct {
 	Cluster *KubernetesCluster `json:"kubernetes_cluster,omitempty"`
 }
 
+type kubernetesClusterUserRoot struct {
+	User *KubernetesClusterUser `json:"kubernetes_cluster_user,omitempty"`
+}
+
 type kubernetesNodePoolRoot struct {
 	NodePool *KubernetesNodePool `json:"node_pool,omitempty"`
 }
@@ -352,6 +363,21 @@ func (svc *KubernetesServiceOp) Get(ctx context.Context, clusterID string) (*Kub
 		return nil, resp, err
 	}
 	return root.Cluster, resp, nil
+}
+
+// GetUser retrieves the details of a Kubernetes cluster user.
+func (svc *KubernetesServiceOp) GetUser(ctx context.Context, clusterID string) (*KubernetesClusterUser, *Response, error) {
+	path := fmt.Sprintf("%s/%s/user", kubernetesClustersPath, clusterID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(kubernetesClusterUserRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.User, resp, nil
 }
 
 // GetUpgrades retrieves versions a Kubernetes cluster can be upgraded to. An
