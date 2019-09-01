@@ -91,7 +91,7 @@ type KubernetesNodePoolCreateRequest struct {
 // Kubernetes cluster.
 type KubernetesNodePoolUpdateRequest struct {
 	Name  string   `json:"name,omitempty"`
-	Count int      `json:"count,omitempty"`
+	Count *int     `json:"count,omitempty"`
 	Tags  []string `json:"tags,omitempty"`
 }
 

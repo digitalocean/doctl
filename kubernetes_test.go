@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -765,7 +766,7 @@ func TestKubernetesClusters_UpdateNodePool(t *testing.T) {
 	}
 	updateRequest := &KubernetesNodePoolUpdateRequest{
 		Name:  "a better name",
-		Count: 4,
+		Count: intPtr(4),
 		Tags:  []string{"tag-1", "tag-2"},
 	}
 
@@ -788,6 +789,57 @@ func TestKubernetesClusters_UpdateNodePool(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		testMethod(t, r, http.MethodPut)
+		require.Equal(t, v, updateRequest)
+		fmt.Fprint(w, jBlob)
+	})
+
+	got, _, err := kubeSvc.UpdateNodePool(ctx, "8d91899c-0739-4a1a-acc5-deadbeefbb8f", "8d91899c-nodepool-4a1a-acc5-deadbeefbb8a", updateRequest)
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
+func TestKubernetesClusters_UpdateNodePool_ZeroCount(t *testing.T) {
+	setup()
+	defer teardown()
+
+	kubeSvc := client.Kubernetes
+
+	want := &KubernetesNodePool{
+		ID:    "8d91899c-nodepool-4a1a-acc5-deadbeefbb8a",
+		Name:  "name",
+		Size:  "s-1vcpu-1gb",
+		Count: 0,
+		Tags:  []string{"tag-1", "tag-2"},
+	}
+	updateRequest := &KubernetesNodePoolUpdateRequest{
+		Count: intPtr(0),
+	}
+
+	jBlob := `
+{
+	"node_pool": {
+		"id": "8d91899c-nodepool-4a1a-acc5-deadbeefbb8a",
+		"size": "s-1vcpu-1gb",
+		"count": 0,
+		"name": "name",
+		"tags": [
+			"tag-1", "tag-2"
+		]
+	}
+}`
+
+	expectedReqJSON := "{\"count\":0}\n"
+
+	mux.HandleFunc("/v2/kubernetes/clusters/8d91899c-0739-4a1a-acc5-deadbeefbb8f/node_pools/8d91899c-nodepool-4a1a-acc5-deadbeefbb8a", func(w http.ResponseWriter, r *http.Request) {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(r.Body)
+		require.Equal(t, expectedReqJSON, buf.String())
+
+		v := new(KubernetesNodePoolUpdateRequest)
+		err := json.NewDecoder(buf).Decode(v)
+		require.NoError(t, err)
 
 		testMethod(t, r, http.MethodPut)
 		require.Equal(t, v, updateRequest)
