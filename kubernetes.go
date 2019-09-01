@@ -69,8 +69,8 @@ type KubernetesClusterCreateRequest struct {
 type KubernetesClusterUpdateRequest struct {
 	Name              string                       `json:"name,omitempty"`
 	Tags              []string                     `json:"tags,omitempty"`
-	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy"`
-	AutoUpgrade       bool                         `json:"auto_upgrade"`
+	MaintenancePolicy *KubernetesMaintenancePolicy `json:"maintenance_policy,omitempty"`
+	AutoUpgrade       *bool                        `json:"auto_upgrade,omitempty"`
 }
 
 // KubernetesClusterUpgradeRequest represents a request to upgrade a Kubernetes cluster.
