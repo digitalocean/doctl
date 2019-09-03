@@ -99,6 +99,10 @@ shellcheck:
 
 CHANNEL ?= stable
 
+.PHONY: _build_snap
+_build_snap:
+	@CHANNEL=${CHANNEL} scripts/_build_snap.sh
+
 .PHONY: snap
 snap:
 	@echo "=> publish snap (normally done by travis)"
