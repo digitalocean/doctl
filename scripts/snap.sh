@@ -11,14 +11,7 @@ function cleanup {
 }
 trap cleanup EXIT
 
-set +e
-rm doctl_*_amd64.snap 2>/dev/null
-set -e
-
-echo "building snap"
-echo ""
-cd "$DIR" && docker run --rm -v "$DIR":/build -w /build snapcore/snapcraft:stable \
-       bash -c "apt update && snapcraft"
+make _build_snap
 
 snap=$(ls doctl_*_amd64.snap)
 

@@ -24,7 +24,6 @@ jobs:
     name: "Testing: Bionic, go 1.11"
     stage: test
     script: make test
-    os: linux
     dist: bionic
     go: 1.11.x
     env:
@@ -55,18 +54,28 @@ jobs:
     - CACHE_NAME=WINDOWS_1.12
 
   - stage: deploy
-    name: "goreleaser"
+    script: echo "deploying"
     dist: bionic
     go: 1.12.x
-    script: echo "deploying"
-    before_deploy: echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
     services: docker
     env:
-    - CACHE_NAME=GORELEASER
+    - CACHE_NAME=DEPLOY
+    before_deploy:
+    - echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
+    - make _build_snap
     deploy:
+    - provider: script
+      script: curl -sL https://git.io/goreleaser | bash
       skip_cleanup: true
       on:
         tags: true
-
-      provider: script
-      script: curl -sL https://git.io/goreleaser | bash
+    - provider: snap
+      channel: stable
+      snap: doctl_v*.snap
+      skip_cleanup: true
+      on:
+        tags: true
+    - provider: snap
+      channel: candidate
+      snap: doctl_v*.snap
+      skip_cleanup: true
