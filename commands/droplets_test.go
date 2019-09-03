@@ -23,7 +23,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
-	"github.com/pborman/uuid"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,7 +71,7 @@ func TestDropletBackupList(t *testing.T) {
 
 func TestDropletCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		volumeUUID := uuid.New()
+		volumeUUID := uuid.New().String()
 		dcr := &godo.DropletCreateRequest{
 			Name:    "droplet",
 			Region:  "dev0",
@@ -159,18 +159,18 @@ coreos:
 		assert.NoError(t, err)
 
 		dcr := &godo.DropletCreateRequest{
-			Name: "droplet",
+			Name:   "droplet",
 			Region: "dev0",
-			Size: "1gb",
+			Size:   "1gb",
 			Image: godo.DropletCreateImage{
-				ID: 0,
+				ID:   0,
 				Slug: "image",
 			},
-			SSHKeys: []godo.DropletCreateSSHKey{},
-			Backups: false,
-			IPv6: false,
+			SSHKeys:           []godo.DropletCreateSSHKey{},
+			Backups:           false,
+			IPv6:              false,
 			PrivateNetworking: false,
-			UserData: userData,
+			UserData:          userData,
 		}
 		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
 

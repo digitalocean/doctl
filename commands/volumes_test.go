@@ -19,14 +19,14 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
-	"github.com/pborman/uuid"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	testVolume = do.Volume{
 		Volume: &godo.Volume{
-			ID:            uuid.New(),
+			ID:            uuid.New().String(),
 			SizeGigaBytes: 100,
 			Name:          "test-volume",
 			Description:   "test description",
