@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+- #250 Add Kubernetes GetUser method - @snormore
+
 ## [v1.19.0] - 2019-07-19
 
 - #244 dbaas: add private-network-uuid field to create request
