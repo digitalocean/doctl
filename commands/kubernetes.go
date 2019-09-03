@@ -32,7 +32,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
-	"github.com/pborman/uuid"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1620,7 +1620,8 @@ func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode
 }
 
 func looksLikeUUID(str string) bool {
-	return uuid.Parse(str) != nil
+	_, err := uuid.Parse(str)
+	return err == nil
 }
 
 func getVersionOrLatest(c *CmdConfig) (string, error) {
