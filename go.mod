@@ -13,7 +13,7 @@ require (
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/golang/mock v1.3.1
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
-	github.com/google/uuid v1.1.0 // indirect
+	github.com/google/uuid v1.1.0
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.5 // indirect
@@ -23,7 +23,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/natefinch/pie v0.0.0-20170715172608-9a0d72014007
-	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
 	github.com/sclevine/spec v1.2.0
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
 	github.com/spf13/cast v1.3.0 // indirect
