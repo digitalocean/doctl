@@ -38,7 +38,7 @@ func Images() *Command {
 
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", Writer,
 		aliasOpt("ls"), displayerType(&displayers.Image{}), docCategories("image"))
-	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "List public images")
+	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-distribution", "list distribution images", Writer,
