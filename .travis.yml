@@ -54,15 +54,15 @@ jobs:
     - CACHE_NAME=WINDOWS_1.12
 
   - stage: deploy
-    script: echo "deploying"
+    script:
+    - echo "building snap"
+    - make _build_snap
     dist: bionic
     go: 1.12.x
     services: docker
     env:
     - CACHE_NAME=DEPLOY
-    before_deploy:
-    - echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
-    - make _build_snap
+    before_deploy: echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
     deploy:
     - provider: script
       script: curl -sL https://git.io/goreleaser | bash
