@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- #252 Add Kubernetes autoscale config fields - @snormore
 - #250 Add Kubernetes GetUser method - @snormore
 
 ## [v1.19.0] - 2019-07-19
