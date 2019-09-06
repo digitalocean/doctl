@@ -126,7 +126,7 @@ vendor:
 clean:
 	@echo "==> remove build / release artifacts"
 	@echo ""
-	@rm -rf builds dist out
+	@rm -rf builds dist out parts prime stage doctl_v*.snap
 
 .PHONY: _install_github_release_notes
 _install_github_release_notes:
