@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../"
+OUT_D=${OUT_D:-${DIR}/builds}
+mkdir -p "$OUT_D"
+
 base="-X github.com/digitalocean/doctl."
 build="$("$DIR"/scripts/version.sh -c)"
 ldflags="${base}Build=${build}"
@@ -15,10 +19,6 @@ ldflags="${ldflags} ${base}Minor=${minor}"
 
 patch="$(echo "$version" | cut -d . -f3)"
 ldflags="${ldflags} ${base}Patch=${patch}"
-
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../"
-OUT_D=${OUT_D:-${DIR}/builds}
-mkdir -p "$OUT_D"
 
 (
   export GOOS=${GOOS:-linux}
