@@ -111,7 +111,7 @@ version.
 ### Docker Hub
 
 Containers for each release are available under the `digitalocean`
-organization on [Docker Hub](https://hub.docker.com/). Links to the
+organization on [Docker Hub](https://hub.docker.com/r/digitalocean/doctl). Links to the
 containers are available in the github releases.
 
 ### Downloading a Release from GitHub
