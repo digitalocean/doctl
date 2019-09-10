@@ -20,6 +20,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/digitalocean/doctl"
 
@@ -41,7 +42,7 @@ func retrieveUserTokenFromCommandLine() (string, error) {
 	}
 
 	fmt.Print("DigitalOcean access token: ")
-	passwdBytes, err := terminal.ReadPassword(0)
+	passwdBytes, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return "", err
 	}
