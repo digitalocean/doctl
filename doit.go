@@ -163,7 +163,9 @@ type Config interface {
 	IsSet(key string) bool
 	GetString(ns, key string) (string, error)
 	GetBool(ns, key string) (bool, error)
+	GetBoolPtr(ns, key string) (*bool, error)
 	GetInt(ns, key string) (int, error)
+	GetIntPtr(ns, key string) (*int, error)
 	GetStringSlice(ns, key string) ([]string, error)
 }
 
@@ -286,6 +288,23 @@ func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
 	return viper.GetBool(nskey), nil
 }
 
+// GetBoolPtr returns a config value as a bool pointer.
+func (c *LiveConfig) GetBoolPtr(ns, key string) (*bool, error) {
+	if !c.IsSet(key) {
+		return nil, nil
+	}
+
+	if ns == NSRoot {
+		val := viper.GetBool(key)
+		return &val, nil
+	}
+
+	nskey := fmt.Sprintf("%s.%s", ns, key)
+	val := viper.GetBool(nskey)
+
+	return &val, nil
+}
+
 // GetInt returns a config value as an int.
 func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 	if ns == NSRoot {
@@ -302,6 +321,31 @@ func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 	}
 
 	return val, nil
+}
+
+// GetIntPtr returns a config value as an int pointer.
+func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
+	if ns == NSRoot {
+		if !c.IsSet(key) {
+			return nil, nil
+		}
+		val := viper.GetInt(key)
+		return &val, nil
+	}
+
+	nskey := fmt.Sprintf("%s.%s", ns, key)
+	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
+	isSet := c.IsSet(key)
+
+	if !isSet {
+		if isRequired {
+			return nil, NewMissingArgsErr(nskey)
+		}
+		return nil, nil
+	}
+
+	val := viper.GetInt(nskey)
+	return &val, nil
 }
 
 // GetStringSlice returns a config value as a string slice.
@@ -393,6 +437,17 @@ func (c *TestConfig) GetInt(ns, key string) (int, error) {
 	return c.v.GetInt(nskey), nil
 }
 
+// GetIntPtr returns the int value for the key in the given namespace. Because
+// this is a mock implementation, and error will never be returned.
+func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	if !c.v.IsSet(nskey) {
+		return nil, nil
+	}
+	val := c.v.GetInt(nskey)
+	return &val, nil
+}
+
 // GetStringSlice returns the string slice value for the key in the given
 // namespace. Because this is a mock implementation, and error will never be
 // returned.
@@ -406,6 +461,17 @@ func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
 func (c *TestConfig) GetBool(ns, key string) (bool, error) {
 	nskey := fmt.Sprintf("%s-%s", ns, key)
 	return c.v.GetBool(nskey), nil
+}
+
+// GetBoolPtr returns the bool value for the key in the given namespace. Because
+// this is a mock implementation, and error will never be returned.
+func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	if !c.v.IsSet(nskey) {
+		return nil, nil
+	}
+	val := c.v.GetBool(nskey)
+	return &val, nil
 }
 
 // This is needed because an empty StringSlice flag returns `["[]"]`

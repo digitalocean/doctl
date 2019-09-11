@@ -1162,7 +1162,7 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	}
 	r.MaintenancePolicy = maintenancePolicy
 
-	autoUpgrade, err := c.Doit.GetBool(c.NS, doctl.ArgAutoUpgrade)
+	autoUpgrade, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgAutoUpgrade)
 	if err != nil {
 		return err
 	}
@@ -1282,7 +1282,7 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.Name = name
 
-	count, err := c.Doit.GetInt(c.NS, doctl.ArgNodePoolCount)
+	count, err := c.Doit.GetIntPtr(c.NS, doctl.ArgNodePoolCount)
 	if err != nil {
 		return err
 	}

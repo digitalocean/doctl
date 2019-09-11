@@ -378,7 +378,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
-			AutoUpgrade: false,
+			AutoUpgrade: boolPtr(false),
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -401,7 +401,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				StartTime: "00:00",
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
-			AutoUpgrade: false,
+			AutoUpgrade: boolPtr(false),
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
@@ -640,7 +640,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		r := godo.KubernetesNodePoolUpdateRequest{
 			Name:  testNodePool.Name,
-			Count: testNodePool.Count,
+			Count: &testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
 		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
@@ -658,7 +658,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		r := godo.KubernetesNodePoolUpdateRequest{
 			Name:  testNodePool.Name,
-			Count: testNodePool.Count,
+			Count: &testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
@@ -677,7 +677,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		r := godo.KubernetesNodePoolUpdateRequest{
 			Name:  testNodePool.Name,
-			Count: testNodePool.Count,
+			Count: &testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
 		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
@@ -696,7 +696,7 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		r := godo.KubernetesNodePoolUpdateRequest{
 			Name:  testNodePool.Name,
-			Count: testNodePool.Count,
+			Count: &testNodePool.Count,
 			Tags:  testNodePool.Tags,
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
@@ -939,4 +939,8 @@ func TestLatestVersionForUpgrade(t *testing.T) {
 			}
 		})
 	}
+}
+
+func boolPtr(val bool) *bool {
+	return &val
 }
