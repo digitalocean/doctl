@@ -278,6 +278,12 @@ func kubernetesNodePools() *Command {
 		"count of nodes in the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", "",
 		"tags to apply to the node pool, repeat to add multiple tags at once")
+	AddBoolFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolAutoScale, "", false,
+		"enable auto-scaling on the node pool")
+	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMinNodes, "", 0,
+		"minimum number of nodes in the node pool for auto-scaling")
+	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMaxNodes, "", 0,
+		"maximum number of nodes in the node pool for auto-scaling")
 
 	cmdKubeNodePoolUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolUpdate,
 		"update <cluster-id|cluster-name> <pool-id|pool-name>",
@@ -287,6 +293,12 @@ func kubernetesNodePools() *Command {
 		"count of nodes in the node pool")
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", "",
 		"tags to apply to the node pool, repeat to add multiple tags at once")
+	AddBoolFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolAutoScale, "", false,
+		"enable auto-scaling on the node pool")
+	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolMinNodes, "", 0,
+		"minimum number of nodes in the node pool for auto-scaling")
+	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolMaxNodes, "", 0,
+		"maximum number of nodes in the node pool for auto-scaling")
 
 	cmdKubeNodePoolRecycle := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolRecycle,
 		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", "DEPRECATED: use delete-node. Recycle nodes in a node pool", Writer, aliasOpt("r"), hiddenCmd())
@@ -1240,6 +1252,24 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 			out.Count = int(count)
 		case "tag":
 			out.Tags = append(out.Tags, value)
+		case "auto_scale":
+			autoScale, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, errors.New("node pool auto_scale argument must be a valid boolean")
+			}
+			out.AutoScale = autoScale
+		case "min_nodes":
+			minNodes, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return nil, errors.New("node pool min_nodes argument must be a valid integer")
+			}
+			out.MinNodes = int(minNodes)
+		case "max_nodes":
+			maxNodes, err := strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return nil, errors.New("node pool max_nodes argument must be a valid integer")
+			}
+			out.MaxNodes = int(maxNodes)
 		default:
 			return nil, fmt.Errorf("unsupported node pool argument %q", key)
 		}
@@ -1272,6 +1302,24 @@ func buildNodePoolCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.Tags = tags
 
+	autoScale, err := c.Doit.GetBool(c.NS, doctl.ArgNodePoolAutoScale)
+	if err != nil {
+		return err
+	}
+	r.AutoScale = autoScale
+
+	minNodes, err := c.Doit.GetInt(c.NS, doctl.ArgNodePoolMinNodes)
+	if err != nil {
+		return err
+	}
+	r.MinNodes = minNodes
+
+	maxNodes, err := c.Doit.GetInt(c.NS, doctl.ArgNodePoolMaxNodes)
+	if err != nil {
+		return err
+	}
+	r.MaxNodes = maxNodes
+
 	return nil
 }
 
@@ -1293,6 +1341,24 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 		return err
 	}
 	r.Tags = tags
+
+	autoScale, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgNodePoolAutoScale)
+	if err != nil {
+		return err
+	}
+	r.AutoScale = autoScale
+
+	minNodes, err := c.Doit.GetIntPtr(c.NS, doctl.ArgNodePoolMinNodes)
+	if err != nil {
+		return err
+	}
+	r.MinNodes = minNodes
+
+	maxNodes, err := c.Doit.GetIntPtr(c.NS, doctl.ArgNodePoolMaxNodes)
+	if err != nil {
+		return err
+	}
+	r.MaxNodes = maxNodes
 
 	return nil
 }

@@ -44,11 +44,17 @@ const (
 	ArgNodePoolName = "name"
 	// ArgNodePoolCount is a cluster's node pool count argument.
 	ArgNodePoolCount = "count"
+	// ArgNodePoolAutoScale is a cluster's node pool auto_scale argument.
+	ArgNodePoolAutoScale = "auto-scale"
+	// ArgNodePoolMinNodes is a cluster's node pool min_nodes argument.
+	ArgNodePoolMinNodes = "min-nodes"
+	// ArgNodePoolMaxNodes is a cluster's node pool max_nodes argument.
+	ArgNodePoolMaxNodes = "max-nodes"
 	// ArgNodePoolNodeIDs is a cluster's node pool nodes argument.
 	ArgNodePoolNodeIDs = "node-ids"
 	// ArgMaintenanceWindow is a cluster's maintenance window argument
 	ArgMaintenanceWindow = "maintenance-window"
-	// ArgAutoUpdate is a cluster's auto-upgrade argument.
+	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
