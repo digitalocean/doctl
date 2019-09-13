@@ -196,7 +196,7 @@ format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" 
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "",
 		"new cluster name")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil,
-		"tags to apply to the cluster, repeat to add multiple tags at once")
+		"tags to apply to the cluster, repeat to add multiple tags at once. Existing user-provided tags will be removed from the cluster if they are not specified.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgAutoUpgrade, "", false,
 		"whether to enable auto-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
