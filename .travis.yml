@@ -55,8 +55,8 @@ jobs:
       on:
         repo: digitalocean/doctl
 
-  - script: echo "running goreleaser"
-    if: type=push
+  - if: type=push
+    script: echo "running goreleaser"
     dist: bionic
     go: 1.12.x
     services: docker
@@ -70,8 +70,7 @@ jobs:
         tags: true
         repo: digitalocean/doctl
 
-  - stage: deploy
-    if: type=push
+  - if: type=push
     script:
     - echo "building snap"
     - make _build_snap
