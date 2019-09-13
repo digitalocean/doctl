@@ -39,25 +39,7 @@ jobs:
     env: CACHE_NAME=WINDOWS_1.12
 
   - stage: deploy
-    if: branch=master AND type=push
-    script:
-    - echo "building snap"
-    - make _build_snap
-    dist: bionic
-    go: 1.12.x
-    services: docker
-    env: CACHE_NAME=DEPLOY_STABLE_SNAP
-    deploy:
-    - provider: snap
-      channel: stable
-      snap: doctl_v*.snap
-      skip_cleanup: true
-      on:
-        tags: true
-        repo: digitalocean/doctl
-
-  - stage: deploy
-    if: branch=master AND type=push
+    if: branch=master and type=push
     script:
     - echo "building snap"
     - make _build_snap
@@ -74,7 +56,7 @@ jobs:
         repo: digitalocean/doctl
 
   - script: echo "running goreleaser"
-    if: branch=master AND type=push
+    if: type=push
     dist: bionic
     go: 1.12.x
     services: docker
@@ -83,6 +65,24 @@ jobs:
     deploy:
     - provider: script
       script: curl -sL https://git.io/goreleaser | bash
+      skip_cleanup: true
+      on:
+        tags: true
+        repo: digitalocean/doctl
+
+  - stage: deploy
+    if: type=push
+    script:
+    - echo "building snap"
+    - make _build_snap
+    dist: bionic
+    go: 1.12.x
+    services: docker
+    env: CACHE_NAME=DEPLOY_STABLE_SNAP
+    deploy:
+    - provider: snap
+      channel: stable
+      snap: doctl_v*.snap
       skip_cleanup: true
       on:
         tags: true
