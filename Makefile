@@ -97,6 +97,12 @@ shellcheck:
 	@echo ""
 	@scripts/shell_check.sh
 
+.PHONY: snap_image
+snap_image:
+	@echo "==> build docker image for releasing snap"
+	@echo ""
+	@cat dockerfiles/Dockerfile.snap | docker build -t local:doctl-snap-base -
+
 CHANNEL ?= stable
 
 .PHONY: _build_snap

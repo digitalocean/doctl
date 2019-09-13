@@ -2,6 +2,7 @@ name: doctl
 version: git
 summary: A command line tool for DigitalOcean services
 description: doctl is a command line tool for DigitalOcean services using the API.
+base: core18
 
 grade: stable
 confinement: strict

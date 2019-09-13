@@ -20,5 +20,5 @@ Dockerfile-e
 parts/
 prime/
 stage/
-*.snap
+doctl_v*.snap
 snap/.snapcraft/
