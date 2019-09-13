@@ -46,7 +46,7 @@ jobs:
     dist: bionic
     go: 1.12.x
     services: docker
-    env: CACHE_NAME=DEPLOY_SNAP
+    env: CACHE_NAME=DEPLOY_STABLE_SNAP
     deploy:
     - provider: snap
       channel: stable
@@ -55,6 +55,17 @@ jobs:
       on:
         tags: true
         repo: digitalocean/doctl
+
+  - stage: deploy
+    if: branch=master AND type=push
+    script:
+    - echo "building snap"
+    - make _build_snap
+    dist: bionic
+    go: 1.12.x
+    services: docker
+    env: CACHE_NAME=DEPLOY_CANDIDATE_SNAP
+    deploy:
     - provider: snap
       channel: candidate
       snap: doctl_v*.snap
@@ -63,6 +74,7 @@ jobs:
         repo: digitalocean/doctl
 
   - script: echo "running goreleaser"
+    if: branch=master AND type=push
     dist: bionic
     go: 1.12.x
     services: docker
