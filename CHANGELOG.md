@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+- #255 Add DropletID to Kubernetes Node instance - @snormore
+
 ## [v1.20.0] - 2019-09-06
 
 - #252 Add Kubernetes autoscale config fields - @snormore
