@@ -178,10 +178,13 @@ func kubernetesCluster() *Command {
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
 		`cluster node pools, can be repeated to create multiple node pools at once (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
 format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
-	- name:   name of the node pool, must be unique in the cluster
-	- size:   size for the nodes in the node pool, possible values: see "doctl k8s options sizes".
-	- count:  number of nodes in the node pool.
-	- tag:    tags to apply to the node pool, repeat to add multiple tags at once.`)
+	- name:       name of the node pool, must be unique in the cluster
+	- size:       size for the nodes in the node pool, possible values: see "doctl k8s options sizes".
+	- count:      number of nodes in the node pool.
+	- tag:        tags to apply to the node pool, repeat to add multiple tags at once.
+	- auto-scale: whether to enable auto-scaling on the node pool.
+	- min-nodes:  maximum number of nodes that can be auto-scaled to.
+	- max-nodes:  minimum number of nodes that can be auto-scaled to.`)
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
 		"whether to add the created cluster to your kubeconfig")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true,
@@ -1252,22 +1255,22 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 			out.Count = int(count)
 		case "tag":
 			out.Tags = append(out.Tags, value)
-		case "auto_scale":
+		case "auto-scale":
 			autoScale, err := strconv.ParseBool(value)
 			if err != nil {
-				return nil, errors.New("node pool auto_scale argument must be a valid boolean")
+				return nil, errors.New("node pool auto-scale argument must be a valid boolean")
 			}
 			out.AutoScale = autoScale
-		case "min_nodes":
+		case "min-nodes":
 			minNodes, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
-				return nil, errors.New("node pool min_nodes argument must be a valid integer")
+				return nil, errors.New("node pool min-nodes argument must be a valid integer")
 			}
 			out.MinNodes = int(minNodes)
-		case "max_nodes":
+		case "max-nodes":
 			maxNodes, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
-				return nil, errors.New("node pool max_nodes argument must be a valid integer")
+				return nil, errors.New("node pool max-nodes argument must be a valid integer")
 			}
 			out.MaxNodes = int(maxNodes)
 		default:

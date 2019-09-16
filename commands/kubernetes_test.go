@@ -362,7 +362,7 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgClusterNodePool, []string{
-			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s;auto_scale=%v;min_nodes=%d;max_nodes=%d",
+			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s;auto-scale=%v;min-nodes=%d;max-nodes=%d",
 				testNodePool.Name+"1", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
 				testNodePool.AutoScale, testNodePool.MinNodes, testNodePool.MaxNodes,
 			),
