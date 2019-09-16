@@ -42,6 +42,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 							ID:        "",
 							Name:      "",
 							Status:    &KubernetesNodeStatus{},
+							DropletID: "droplet-1",
 							CreatedAt: time.Date(2018, 6, 21, 8, 44, 38, 0, time.UTC),
 							UpdatedAt: time.Date(2018, 6, 21, 8, 44, 38, 0, time.UTC),
 						},
@@ -49,6 +50,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 							ID:        "",
 							Name:      "",
 							Status:    &KubernetesNodeStatus{},
+							DropletID: "droplet-2",
 							CreatedAt: time.Date(2018, 6, 21, 8, 44, 38, 0, time.UTC),
 							UpdatedAt: time.Date(2018, 6, 21, 8, 44, 38, 0, time.UTC),
 						},
@@ -81,6 +83,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 							ID:        "deadbeef-dead-beef-dead-deadbeefb4b1",
 							Name:      "worker-393",
 							Status:    &KubernetesNodeStatus{State: "running"},
+							DropletID: "droplet-3",
 							CreatedAt: time.Date(2018, 6, 15, 7, 10, 23, 0, time.UTC),
 							UpdatedAt: time.Date(2018, 6, 15, 7, 11, 26, 0, time.UTC),
 						},
@@ -88,6 +91,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 							ID:        "deadbeef-dead-beef-dead-deadbeefb4b2",
 							Name:      "worker-394",
 							Status:    &KubernetesNodeStatus{State: "running"},
+							DropletID: "droplet-4",
 							CreatedAt: time.Date(2018, 6, 15, 7, 10, 23, 0, time.UTC),
 							UpdatedAt: time.Date(2018, 6, 15, 7, 11, 26, 0, time.UTC),
 						},
@@ -129,6 +133,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 							"status": {
 								"state": ""
 							},
+							"droplet_id": "droplet-1",
 							"created_at": "2018-06-21T08:44:38Z",
 							"updated_at": "2018-06-21T08:44:38Z"
 						},
@@ -138,6 +143,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 							"status": {
 								"state": ""
 							},
+							"droplet_id": "droplet-2",
 							"created_at": "2018-06-21T08:44:38Z",
 							"updated_at": "2018-06-21T08:44:38Z"
 						}
@@ -175,15 +181,17 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 							"status": {
 								"state": "running"
 							},
+							"droplet_id": "droplet-3",
 							"created_at": "2018-06-15T07:10:23Z",
 							"updated_at": "2018-06-15T07:11:26Z"
 						},
 						{
 							"id": "deadbeef-dead-beef-dead-deadbeefb4b2",
 							"name": "worker-394",
-								"status": {
-									"state": "running"
-								},
+							"status": {
+								"state": "running"
+							},
+							"droplet_id": "droplet-4",
 							"created_at": "2018-06-15T07:10:23Z",
 							"updated_at": "2018-06-15T07:11:26Z"
 						}
@@ -234,6 +242,7 @@ func TestKubernetesClusters_Get(t *testing.T) {
 						ID:        "deadbeef-dead-beef-dead-deadbeefb4b1",
 						Name:      "worker-393",
 						Status:    &KubernetesNodeStatus{State: "running"},
+						DropletID: "droplet-1",
 						CreatedAt: time.Date(2018, 6, 15, 7, 10, 23, 0, time.UTC),
 						UpdatedAt: time.Date(2018, 6, 15, 7, 11, 26, 0, time.UTC),
 					},
@@ -241,6 +250,7 @@ func TestKubernetesClusters_Get(t *testing.T) {
 						ID:        "deadbeef-dead-beef-dead-deadbeefb4b2",
 						Name:      "worker-394",
 						Status:    &KubernetesNodeStatus{State: "running"},
+						DropletID: "droplet-2",
 						CreatedAt: time.Date(2018, 6, 15, 7, 10, 23, 0, time.UTC),
 						UpdatedAt: time.Date(2018, 6, 15, 7, 11, 26, 0, time.UTC),
 					},
@@ -284,15 +294,17 @@ func TestKubernetesClusters_Get(t *testing.T) {
 						"status": {
 							"state": "running"
 						},
+						"droplet_id": "droplet-1",
 						"created_at": "2018-06-15T07:10:23Z",
 						"updated_at": "2018-06-15T07:11:26Z"
 					},
 					{
 						"id": "deadbeef-dead-beef-dead-deadbeefb4b2",
 						"name": "worker-394",
-							"status": {
-								"state": "running"
-							},
+						"status": {
+							"state": "running"
+						},
+						"droplet_id": "droplet-2",
 						"created_at": "2018-06-15T07:10:23Z",
 						"updated_at": "2018-06-15T07:11:26Z"
 					}
