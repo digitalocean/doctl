@@ -68,7 +68,6 @@ func Completion() *Command {
 			Short: "completion commands",
 			Long:  completionLong,
 		},
-		IsIndex: true,
 	}
 
 	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "generate bash completion code", Writer, false)

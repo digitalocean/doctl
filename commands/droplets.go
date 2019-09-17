@@ -40,7 +40,6 @@ func Droplet() *Command {
 			Short:   "droplet commands",
 			Long:    "droplet is used to access droplet commands",
 		},
-		IsIndex: true,
 	}
 
 	CmdBuilder(cmd, RunDropletActions, "actions <droplet-id>", "droplet actions", Writer,

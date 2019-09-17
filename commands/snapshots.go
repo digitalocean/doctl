@@ -32,7 +32,6 @@ func Snapshot() *Command {
 			Short:   "snapshot commands",
 			Long:    "snapshot is used to access snapshot commands",
 		},
-		IsIndex: true,
 	}
 
 	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [glob]", "list snapshots", Writer,

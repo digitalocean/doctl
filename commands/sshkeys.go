@@ -34,7 +34,6 @@ func SSHKeys() *Command {
 			Short:   "sshkey commands",
 			Long:    "sshkey is used to access ssh key commands",
 		},
-		IsIndex: true,
 	}
 
 	CmdBuilder(cmd, RunKeyList, "list", "list ssh keys", Writer,

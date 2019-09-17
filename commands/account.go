@@ -26,7 +26,6 @@ func Account() *Command {
 			Short: "account commands",
 			Long:  "account is used to access account commands",
 		},
-		IsIndex: true,
 	}
 
 	CmdBuilder(cmd, RunAccountGet, "get", "get account", Writer,

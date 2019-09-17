@@ -32,7 +32,6 @@ func Actions() *Command {
 			Short: "action commands",
 			Long:  "action is used to access action commands",
 		},
-		IsIndex: true,
 	}
 
 	CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "get action", Writer,
