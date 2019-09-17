@@ -33,7 +33,6 @@ func Domain() *Command {
 			Short: "domain commands",
 			Long:  "domain is used to access domain commands",
 		},
-		IsIndex: true,
 	}
 
 	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,

@@ -31,7 +31,6 @@ func Tags() *Command {
 			Short: "tag commands",
 			Long:  "tag is used to access tag commands",
 		},
-		IsIndex: true,
 	}
 
 	CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "create tag", Writer)

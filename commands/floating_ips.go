@@ -33,7 +33,6 @@ func FloatingIP() *Command {
 			Long:    "floating-ip is used to access commands on floating IPs",
 			Aliases: []string{"fip"},
 		},
-		IsIndex: true,
 	}
 
 	cmdFloatingIPCreate := CmdBuilder(cmd, RunFloatingIPCreate, "create", "create a floating IP", Writer,

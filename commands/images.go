@@ -32,7 +32,6 @@ func Images() *Command {
 			Short: "image commands",
 			Long:  "image commands",
 		},
-		IsIndex: true,
 	}
 
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", Writer,
