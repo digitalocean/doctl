@@ -32,15 +32,14 @@ func Actions() *Command {
 			Short: "action commands",
 			Long:  "action is used to access action commands",
 		},
-		DocCategories: []string{"action"},
-		IsIndex:       true,
+		IsIndex: true,
 	}
 
 	CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "get action", Writer,
-		aliasOpt("g"), displayerType(&displayers.Action{}), docCategories("action"))
+		aliasOpt("g"), displayerType(&displayers.Action{}))
 
 	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "list actions", Writer,
-		aliasOpt("ls"), displayerType(&displayers.Action{}), docCategories("action"))
+		aliasOpt("ls"), displayerType(&displayers.Action{}))
 	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", "Action resource type")
 	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", "Action region")
 	AddStringFlag(cmdActionList, doctl.ArgActionAfter, "", "", "Action completed after in RFC3339 format")
@@ -49,7 +48,7 @@ func Actions() *Command {
 	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", "Action type")
 
 	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "wait for action to complete", Writer,
-		aliasOpt("w"), displayerType(&displayers.Action{}), docCategories("action"))
+		aliasOpt("w"), displayerType(&displayers.Action{}))
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 
 	return cmd

@@ -43,13 +43,6 @@ func hiddenCmd() cmdOption {
 	}
 }
 
-// docCategories adds documentation categories to a command.
-func docCategories(categories ...string) cmdOption {
-	return func(c *Command) {
-		c.DocCategories = categories
-	}
-}
-
 // betaCmd tags commands as beta.
 func betaCmd() cmdOption {
 	return func(c *Command) {

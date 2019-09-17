@@ -34,30 +34,29 @@ func SSHKeys() *Command {
 			Short:   "sshkey commands",
 			Long:    "sshkey is used to access ssh key commands",
 		},
-		DocCategories: []string{"sshkeys"},
-		IsIndex:       true,
+		IsIndex: true,
 	}
 
 	CmdBuilder(cmd, RunKeyList, "list", "list ssh keys", Writer,
-		aliasOpt("ls"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
+		aliasOpt("ls"), displayerType(&displayers.Key{}))
 
 	CmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", Writer,
-		aliasOpt("g"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
+		aliasOpt("g"), displayerType(&displayers.Key{}))
 
 	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", Writer,
-		aliasOpt("c"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
+		aliasOpt("c"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "", "Key contents", requiredOpt())
 
 	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", Writer,
-		aliasOpt("i"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
+		aliasOpt("i"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
 
 	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
-		aliasOpt("d"), docCategories("sshkeys"))
+		aliasOpt("d"))
 	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force ssh key delete")
 
 	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
-		aliasOpt("u"), displayerType(&displayers.Key{}), docCategories("sshkeys"))
+		aliasOpt("u"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "", "Key name", requiredOpt())
 
 	return cmd

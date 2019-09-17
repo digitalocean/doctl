@@ -32,38 +32,36 @@ func Images() *Command {
 			Short: "image commands",
 			Long:  "image commands",
 		},
-		DocCategories: []string{"image"},
-		IsIndex:       true,
+		IsIndex: true,
 	}
 
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "list images", Writer,
-		aliasOpt("ls"), displayerType(&displayers.Image{}), docCategories("image"))
+		aliasOpt("ls"), displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "List public images")
 
 	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
 		"list-distribution", "list distribution images", Writer,
-		displayerType(&displayers.Image{}), docCategories("image"))
+		displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesListDistribution, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListApplication := CmdBuilder(cmd, RunImagesListApplication,
 		"list-application", "list application images", Writer,
-		displayerType(&displayers.Image{}), docCategories("image"))
+		displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListUser := CmdBuilder(cmd, RunImagesListUser,
 		"list-user", "list user images", Writer,
-		displayerType(&displayers.Image{}), docCategories("image"))
+		displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesListUser, doctl.ArgImagePublic, "", false, "List public images")
 
 	CmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Get image", Writer,
-		displayerType(&displayers.Image{}), docCategories("image"))
+		displayerType(&displayers.Image{}))
 
 	cmdImagesUpdate := CmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update image", Writer,
-		displayerType(&displayers.Image{}), docCategories("image"))
+		displayerType(&displayers.Image{}))
 	AddStringFlag(cmdImagesUpdate, doctl.ArgImageName, "", "", "Image name", requiredOpt())
 
-	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer,
-		docCategories("image"))
+	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer)
 	AddBoolFlag(cmdRunImagesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force image delete")
 
 	return cmd

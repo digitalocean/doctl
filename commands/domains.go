@@ -33,19 +33,18 @@ func Domain() *Command {
 			Short: "domain commands",
 			Long:  "domain is used to access domain commands",
 		},
-		DocCategories: []string{"domain"},
-		IsIndex:       true,
+		IsIndex: true,
 	}
 
 	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,
-		aliasOpt("c"), displayerType(&displayers.Domain{}), docCategories("domain"))
+		aliasOpt("c"), displayerType(&displayers.Domain{}))
 	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address, creates an initial A record when provided")
 
 	CmdBuilder(cmd, RunDomainList, "list", "list domains", Writer,
-		aliasOpt("ls"), displayerType(&displayers.Domain{}), docCategories("domain"))
+		aliasOpt("ls"), displayerType(&displayers.Domain{}))
 
 	CmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", Writer,
-		aliasOpt("g"), displayerType(&displayers.Domain{}), docCategories("domain"))
+		aliasOpt("g"), displayerType(&displayers.Domain{}))
 
 	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete domain", Writer, aliasOpt("g"))
 	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force domain delete")
@@ -60,10 +59,10 @@ func Domain() *Command {
 	cmd.AddCommand(cmdRecord)
 
 	CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", Writer,
-		aliasOpt("ls"), displayerType(&displayers.DomainRecord{}), docCategories("domain"))
+		aliasOpt("ls"), displayerType(&displayers.DomainRecord{}))
 
 	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "create record", Writer,
-		aliasOpt("c"), displayerType(&displayers.DomainRecord{}), docCategories("domain"))
+		aliasOpt("c"), displayerType(&displayers.DomainRecord{}))
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", "Record type")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "", "Record name")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "", "Record data")
@@ -75,11 +74,11 @@ func Domain() *Command {
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "Record tag")
 
 	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "delete records", Writer,
-		aliasOpt("d"), docCategories("domain"))
+		aliasOpt("d"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force record delete")
 
 	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "update record", Writer,
-		aliasOpt("u"), displayerType(&displayers.DomainRecord{}), docCategories("domain"))
+		aliasOpt("u"), displayerType(&displayers.DomainRecord{}))
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, "", 0, "Record ID")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "", "Record type")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordName, "", "", "Record name")

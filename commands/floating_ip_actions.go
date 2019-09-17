@@ -36,15 +36,15 @@ func FloatingIPAction() *Command {
 
 	CmdBuilder(cmd, RunFloatingIPActionsGet,
 		"get <floating-ip> <action-id>", "get floating-ip action", Writer,
-		displayerType(&displayers.Action{}), docCategories("floatingip"))
+		displayerType(&displayers.Action{}))
 
 	CmdBuilder(cmd, RunFloatingIPActionsAssign,
 		"assign <floating-ip> <droplet-id>", "assign a floating IP to a droplet", Writer,
-		displayerType(&displayers.Action{}), docCategories("floatingip"))
+		displayerType(&displayers.Action{}))
 
 	CmdBuilder(cmd, RunFloatingIPActionsUnassign,
 		"unassign <floating-ip>", "unassign a floating IP to a droplet", Writer,
-		displayerType(&displayers.Action{}), docCategories("floatingip"))
+		displayerType(&displayers.Action{}))
 
 	return cmd
 }

@@ -26,15 +26,14 @@ func Account() *Command {
 			Short: "account commands",
 			Long:  "account is used to access account commands",
 		},
-		DocCategories: []string{"account"},
-		IsIndex:       true,
+		IsIndex: true,
 	}
 
 	CmdBuilder(cmd, RunAccountGet, "get", "get account", Writer,
-		aliasOpt("g"), displayerType(&displayers.Account{}), docCategories("account"))
+		aliasOpt("g"), displayerType(&displayers.Account{}))
 
 	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "get API rate limits", Writer,
-		aliasOpt("rl"), displayerType(&displayers.RateLimit{}), docCategories("account"))
+		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))
 
 	return cmd
 }

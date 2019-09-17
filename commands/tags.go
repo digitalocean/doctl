@@ -31,21 +31,18 @@ func Tags() *Command {
 			Short: "tag commands",
 			Long:  "tag is used to access tag commands",
 		},
-		DocCategories: []string{"tag"},
-		IsIndex:       true,
+		IsIndex: true,
 	}
 
-	CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "create tag", Writer,
-		docCategories("tag"))
+	CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "create tag", Writer)
 
 	CmdBuilder(cmd, RunCmdTagGet, "get <tag-name>", "get tag", Writer,
-		displayerType(&displayers.Tag{}), docCategories("tag"))
+		displayerType(&displayers.Tag{}))
 
 	CmdBuilder(cmd, RunCmdTagList, "list", "list tags", Writer,
-		aliasOpt("ls"), displayerType(&displayers.Tag{}), docCategories("tag"))
+		aliasOpt("ls"), displayerType(&displayers.Tag{}))
 
-	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>...", "delete tags", Writer,
-		docCategories("tag"))
+	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>...", "delete tags", Writer)
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force tag delete")
 
 	return cmd
