@@ -29,7 +29,7 @@ func Region() *Command {
 	}
 
 	CmdBuilder(cmd, RunRegionList, "list", "list regions", Writer, aliasOpt("ls"),
-		displayerType(&displayers.Region{}), docCategories("compute"))
+		displayerType(&displayers.Region{}))
 
 	return cmd
 }

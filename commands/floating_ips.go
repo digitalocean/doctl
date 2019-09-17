@@ -33,12 +33,11 @@ func FloatingIP() *Command {
 			Long:    "floating-ip is used to access commands on floating IPs",
 			Aliases: []string{"fip"},
 		},
-		DocCategories: []string{"floatingip"},
-		IsIndex:       true,
+		IsIndex: true,
 	}
 
 	cmdFloatingIPCreate := CmdBuilder(cmd, RunFloatingIPCreate, "create", "create a floating IP", Writer,
-		aliasOpt("c"), displayerType(&displayers.FloatingIP{}), docCategories("floatingip"))
+		aliasOpt("c"), displayerType(&displayers.FloatingIP{}))
 	AddStringFlag(cmdFloatingIPCreate, doctl.ArgRegionSlug, "", "",
 		fmt.Sprintf("Region where to create the floating IP. (mutually exclusive with %s)",
 			doctl.ArgDropletID))
@@ -47,13 +46,13 @@ func FloatingIP() *Command {
 			doctl.ArgRegionSlug))
 
 	CmdBuilder(cmd, RunFloatingIPGet, "get <floating-ip>", "get the details of a floating IP", Writer,
-		aliasOpt("g"), displayerType(&displayers.FloatingIP{}), docCategories("floatingip"))
+		aliasOpt("g"), displayerType(&displayers.FloatingIP{}))
 
 	cmdRunFloatingIPDelete := CmdBuilder(cmd, RunFloatingIPDelete, "delete <floating-ip>", "delete a floating IP address", Writer, aliasOpt("d"))
 	AddBoolFlag(cmdRunFloatingIPDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force floating IP delete")
 
 	cmdFloatingIPList := CmdBuilder(cmd, RunFloatingIPList, "list", "list all floating IP addresses", Writer,
-		aliasOpt("ls"), displayerType(&displayers.FloatingIP{}), docCategories("floatingip"))
+		aliasOpt("ls"), displayerType(&displayers.FloatingIP{}))
 	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "", "Floating IP region")
 
 	return cmd

@@ -20,9 +20,6 @@ import "github.com/spf13/cobra"
 type Command struct {
 	*cobra.Command
 
-	// DocCategories are the documentation categories this command belongs to.
-	DocCategories []string
-
 	fmtCols []string
 
 	childCommands []*Command

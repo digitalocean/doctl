@@ -71,9 +71,9 @@ func Auth() *Command {
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "initialize configuration", Writer, false, docCategories("auth"))
-	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "writes the auth context permanently to config", Writer, false, docCategories("auth"))
-	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "lists available auth contexts", Writer, false, docCategories("auth"), aliasOpt("ls"))
+	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "initialize configuration", Writer, false)
+	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "writes the auth context permanently to config", Writer, false)
+	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "lists available auth contexts", Writer, false, aliasOpt("ls"))
 	// The command runner expects that any command named "list" accepts a
 	// format flag, so we include here despite only supporting text output for
 	// this command.

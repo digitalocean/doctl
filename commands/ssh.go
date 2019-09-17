@@ -37,8 +37,7 @@ func SSH(parent *Command) *Command {
 
 	path := filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 
-	cmdSSH := CmdBuilder(parent, RunSSH, "ssh <droplet-id|host>", "ssh to droplet", Writer,
-		docCategories("droplet"))
+	cmdSSH := CmdBuilder(parent, RunSSH, "ssh <droplet-id|host>", "ssh to droplet", Writer)
 	AddStringFlag(cmdSSH, doctl.ArgSSHUser, "", "root", "ssh user")
 	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, "", path, "path to private ssh key")
 	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, "", 22, "port sshd is running on")
