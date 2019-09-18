@@ -23,7 +23,7 @@ RUN mkdir -p /snap/bin && \
         chmod +x /snap/bin/snapcraft
 
 # Grab the golang snap from the stable channel, unpack it in the proper place, and create a runner for it
-RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/go?channel=1.12/stable' | jq '.download_url' -r) --output go.snap && \
+RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/go?channel=1.13/stable' | jq '.download_url' -r) --output go.snap && \
         mkdir -p /snap/go && \
         unsquashfs -d /snap/go/current go.snap && \
         cd /snap/bin && \
