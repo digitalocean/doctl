@@ -33,6 +33,8 @@ jobs:
     env: CACHE_NAME=MACOS_1.12
 
   - name: "Testing: Windows, go 1.12"
+    before_install:
+      - choco install make
     script: make test
     os: windows
     go: 1.12.x
