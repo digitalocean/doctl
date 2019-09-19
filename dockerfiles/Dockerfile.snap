@@ -1,3 +1,4 @@
+# Note to maintainers: after you make changes to this file, please run `make snap_image`.
 FROM ubuntu:xenial as builder
 
 RUN apt update && \
