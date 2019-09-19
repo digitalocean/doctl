@@ -101,7 +101,7 @@ shellcheck:
 snap_image:
 	@echo "==> build docker image for releasing snap"
 	@echo ""
-	@cat dockerfiles/Dockerfile.snap | docker build -t local:doctl-snap-base -
+	@scripts/snap_image.sh
 
 CHANNEL ?= stable
 
