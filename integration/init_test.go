@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/sclevine/spec"
@@ -42,6 +43,9 @@ func TestMain(m *testing.M) {
 	}
 
 	builtBinaryPath = filepath.Join(tmpDir, path.Base(packagePath))
+	if runtime.GOOS == "windows" {
+		builtBinaryPath += ".exe"
+	}
 
 	cmd := exec.Command("go", "build", "-o", builtBinaryPath, packagePath)
 	output, err := cmd.CombinedOutput()
