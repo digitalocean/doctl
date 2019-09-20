@@ -24,5 +24,7 @@ ldflags="${ldflags} ${base}Patch=${patch}"
   export GOOS=${GOOS:-linux}
   export GOARCH=${GOARCH:-amd64}
   export GOFLAGS=-mod=vendor
+  export GO111MODULE=on
+  export CGO_ENABLED=0
   cd cmd/doctl && go build -ldflags "$ldflags" -o "${OUT_D}/doctl_${GOOS}_${GOARCH}"
 )

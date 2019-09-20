@@ -1,6 +1,6 @@
 FROM doctl_builder
 
-ENV CGO=0
+ENV CGO_ENABLED 0
 ENV OUT_D /out
 
 RUN mkdir -p /out

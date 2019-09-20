@@ -41,7 +41,7 @@ parts:
       ldFlags="${ldFlags} ${baseFlag}.Minor=$(echo ${short} | cut -d'.' -f2)"
       ldFlags="${ldFlags} ${baseFlag}.Patch=$(echo ${short} | cut -d'.' -f3 | cut -d'+' -f1)"
 
-      GO111MODULE=on go build -ldflags "${ldFlags}" -mod=vendor -o doctl cmd/doctl/main.go
+      GO111MODULE=on CGO_ENABLED=0 go build -ldflags "${ldFlags}" -mod=vendor -o doctl cmd/doctl/main.go
 
       chmod +x doctl
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
