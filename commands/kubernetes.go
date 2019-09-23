@@ -1293,11 +1293,14 @@ func buildNodePoolCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.Size = size
 
-	count, err := c.Doit.GetInt(c.NS, doctl.ArgNodePoolCount)
+	count, err := c.Doit.GetIntPtr(c.NS, doctl.ArgNodePoolCount)
 	if err != nil {
 		return err
 	}
-	r.Count = count
+	if count == nil {
+		count = intPtr(0)
+	}
+	r.Count = *count
 
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
@@ -1815,4 +1818,12 @@ func versionMaxBy(versions []do.KubernetesVersion, selector func(do.KubernetesVe
 func versionSortBy(versions []do.KubernetesVersion, less func(i, j do.KubernetesVersion) bool) []do.KubernetesVersion {
 	sort.Slice(versions, func(i, j int) bool { return less(versions[i], versions[j]) })
 	return versions
+}
+
+func boolPtr(val bool) *bool {
+	return &val
+}
+
+func intPtr(val int) *int {
+	return &val
 }
