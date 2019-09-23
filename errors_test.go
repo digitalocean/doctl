@@ -23,8 +23,3 @@ func TestMissingArgsErr(t *testing.T) {
 	err := NewMissingArgsErr("test-cmd")
 	assert.Equal(t, "(test-cmd) command is missing required arguments", err.Error())
 }
-
-func TestInvalidURNErr(t *testing.T) {
-	err := NewInvalidURNErr("Darth Vader")
-	assert.Equal(t, "URN must be in the format \"do:<resource_type>:<resource_id>\"", err.Error())
-}
