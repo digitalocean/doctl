@@ -30,19 +30,3 @@ func NewMissingArgsErr(cmd string) *MissingArgsErr {
 func (e *MissingArgsErr) Error() string {
 	return fmt.Sprintf("(%s) command is missing required arguments", e.Command)
 }
-
-// InvalidURNErr is returned when the URN format is not valid.
-type InvalidURNErr struct {
-	URN string
-}
-
-var _ error = &InvalidURNErr{}
-
-// NewInvalidURNErr creates a InvalidURNErr instance.
-func NewInvalidURNErr(urn string) *InvalidURNErr {
-	return &InvalidURNErr{URN: urn}
-}
-
-func (e *InvalidURNErr) Error() string {
-	return fmt.Sprintf("URN must be in the format \"do:<resource_type>:<resource_id>\"")
-}

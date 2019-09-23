@@ -194,7 +194,7 @@ func TestProjectResourcesGetWithInvalidURN(t *testing.T) {
 		config.Args = append(config.Args, "fakeurn")
 		err := RunProjectResourcesGet(config)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "URN must be in the format")
+		assert.Contains(t, err.Error(), `URN must be in the format "do:<resource_type>:<resource_id>" but was "fakeurn"`)
 	})
 }
 

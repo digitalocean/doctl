@@ -216,7 +216,7 @@ func RunProjectResourcesGet(c *CmdConfig) error {
 
 	parts, isValid := validateURN(urn)
 	if !isValid {
-		return doctl.NewInvalidURNErr(urn)
+		return fmt.Errorf(`URN must be in the format "do:<resource_type>:<resource_id>" but was %q`, urn)
 	}
 
 	c.Args = []string{parts[2]}
