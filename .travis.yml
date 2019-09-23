@@ -20,25 +20,32 @@ jobs:
 
   - name: "Testing: Bionic, go 1.12"
     script:
-    - make shellcheck
     - make test
     dist: bionic
     go: 1.12.x
     env: CACHE_NAME=BIONIC_1.12
 
-  - name: "Testing: MacOS, go 1.12"
+  - name: "Testing: Bionic, go 1.13"
+    script:
+    - make shellcheck
+    - make test
+    dist: bionic
+    go: 1.13.x
+    env: CACHE_NAME=BIONIC_1.13
+
+  - name: "Testing: MacOS, go 1.13"
     script: make test
     os: osx
-    go: 1.12.x
-    env: CACHE_NAME=MACOS_1.12
+    go: 1.13.x
+    env: CACHE_NAME=MACOS_1.13
 
-  - name: "Testing: Windows, go 1.12"
+  - name: "Testing: Windows, go 1.13"
     before_install:
       - choco install make
     script: make test
     os: windows
-    go: 1.12.x
-    env: CACHE_NAME=WINDOWS_1.12
+    go: 1.13.x
+    env: CACHE_NAME=WINDOWS_1.13
 
   - stage: deploy
     if: branch=master and type=push
@@ -46,7 +53,7 @@ jobs:
     - echo "building snap"
     - make _build_snap
     dist: bionic
-    go: 1.12.x
+    go: 1.13.x
     services: docker
     env: CACHE_NAME=DEPLOY_CANDIDATE_SNAP
     deploy:
@@ -60,7 +67,7 @@ jobs:
   - if: type=push
     script: echo "running goreleaser"
     dist: bionic
-    go: 1.12.x
+    go: 1.13.x
     services: docker
     env: CACHE_NAME=DEPLOY_GORELEASER
     before_deploy: echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
@@ -77,7 +84,7 @@ jobs:
     - echo "building snap"
     - make _build_snap
     dist: bionic
-    go: 1.12.x
+    go: 1.13.x
     services: docker
     env: CACHE_NAME=DEPLOY_STABLE_SNAP
     deploy:
