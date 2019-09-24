@@ -1,5 +1,13 @@
 # Change Log
 
+## [v1.22.0] - 2019-09-24
+
+- #259 Add Kubernetes GetCredentials method - @snormore
+
+## [v1.21.1] - 2019-09-19
+
+- #257 Upgrade to Go 1.13 - @bentranter
+
 ## [v1.21.0] - 2019-09-16
 
 - #255 Add DropletID to Kubernetes Node instance - @snormore
