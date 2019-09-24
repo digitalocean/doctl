@@ -1,5 +1,9 @@
 # Change Log
 
+## Unreleased
+
+- #259 Add Kubernetes GetCredentials method - @snormore
+
 ## [v1.21.1] - 2019-09-19
 
 - #257 Upgrade to Go 1.13 - @bentranter
