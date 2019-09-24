@@ -47,7 +47,9 @@ func TestMain(m *testing.M) {
 		builtBinaryPath += ".exe"
 	}
 
+	// tried to use -mod=vendor but it blew up
 	cmd := exec.Command("go", "build", "-o", builtBinaryPath, packagePath)
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		panic(fmt.Sprintf("failed to build doctl: %s", output))

@@ -32,62 +32,46 @@ import (
 )
 
 const (
-	// defaultConfigName is the name of the config file when no alternative is supplied.
-	defaultConfigName = "config.yaml"
+	defaultConfigName = "config.yaml" // default name of config file
+	defaultContext    = "default"     // default authentication context
 )
 
-// DoitCmd is the base command.
-var DoitCmd = &Command{
-	Command: &cobra.Command{
-		Use:   "doctl",
-		Short: "doctl is a command line interface for the DigitalOcean API.",
-	},
-}
+var (
+	DoitCmd = &Command{ // base command
+		Command: &cobra.Command{
+			Use:   "doctl",
+			Short: "doctl is a command line interface for the DigitalOcean API.",
+		},
+	}
 
-// Context holds the current auth context
-var Context string
+	ErrNoAccessToken = errors.New("no access token has been configured")
+	Writer           = os.Stdout
 
-// APIURL holds the API URL to use.
-var APIURL string
+	// PFlag vars
+	APIURL           string // customize API base URL
+	Context          string // current auth context
+	Output           string // global output format
+	Token            string // global authorization token
+	Trace            bool   // toggles http tracing output
+	Verbose          bool
+	// end PFlag vars
 
-// Token holds the global authorization token.
-var Token string
-
-// Output holds the global output format.
-var Output string
-
-// Verbose toggles verbose output.
-var Verbose bool
-
-var requiredColor = color.New(color.Bold).SprintfFunc()
-
-// Writer is where output should be written to.
-var Writer = os.Stdout
-
-// Trace toggles http tracing output.
-var Trace bool
-
-// cfgFile is the location of the config file
-var cfgFile string
-
-// cfgFileWriter is the config file writer
-var cfgFileWriter = defaultConfigFileWriter
-
-// ErrNoAccessToken is an error for when there is no access token.
-var ErrNoAccessToken = errors.New("no access token has been configured")
+	cfgFile       string                    // full path to config file
+	cfgFileWriter = defaultConfigFileWriter // create default cfgFileWriter
+	requiredColor = color.New(color.Bold).SprintfFunc()
+)
 
 func init() {
+	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c",
+		filepath.Join(configHome(), defaultConfigName), "config file")
 	cobra.OnInitialize(initConfig)
 
-	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "",
-		fmt.Sprintf("config file (default is %s)", configPath()))
-	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
-	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
 	DoitCmd.PersistentFlags().StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
-	DoitCmd.PersistentFlags().BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
+	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", defaultContext, "authentication context")
+	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
+	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
 	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
-
-	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", "", "authentication context name")
+	DoitCmd.PersistentFlags().BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 
 	viper.SetEnvPrefix("DIGITALOCEAN")
 	viper.BindEnv(doctl.ArgAccessToken, "DIGITALOCEAN_ACCESS_TOKEN")
@@ -100,16 +84,15 @@ func init() {
 	addCommands()
 }
 
+// in case we ever want to change this, or let folks configure it...
+func configHome() string {
+	cfgDir, err := os.UserConfigDir()
+	checkErr(err)
+
+	return filepath.Join(cfgDir, "doctl")
+}
+
 func initConfig() {
-	var err error
-	cfgFile, err = findConfig()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(-1)
-	}
-
-	legacyConfigCheck()
-
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(cfgFile)
 
@@ -122,38 +105,7 @@ func initConfig() {
 	}
 
 	viper.SetDefault("output", "text")
-	viper.SetDefault("context", "default")
-}
-
-func findConfig() (string, error) {
-	if cfgFile != "" {
-		return cfgFile, nil
-	}
-
-	if homeDir() != "" {
-		legacyConfigPath := filepath.Join(homeDir(), ".doctlcfg")
-		if _, err := os.Stat(legacyConfigPath); err == nil {
-			msg := fmt.Sprintf("Configuration detected at %q. Please move .doctlcfg to %s",
-				legacyConfigPath, configPath())
-			warn(msg)
-		}
-	}
-
-	if os.Getenv("XDG_CONFIG_HOME") != "" {
-		legacyXDGPath := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), "config.yaml")
-		if _, err := os.Stat(legacyXDGPath); err == nil {
-			msg := fmt.Sprintf("Configuration detected at %q. Please move config.yaml to %s",
-				legacyXDGPath, configPath())
-			warn(msg)
-		}
-	}
-
-	ch := configHome()
-	if err := os.MkdirAll(ch, 0755); err != nil {
-		return "", err
-	}
-
-	return filepath.Join(ch, defaultConfigName), nil
+	viper.SetDefault("context", defaultContext)
 }
 
 var getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
@@ -165,12 +117,7 @@ func defaultGetCurrentAuthContextFn() string {
 	if authContext := viper.GetString("context"); authContext != "" {
 		return authContext
 	}
-	return "default"
-
-}
-
-func configPath() string {
-	return fmt.Sprintf("%s/%s", configHome(), defaultConfigName)
+	return defaultContext
 }
 
 // Execute executes the current command using DoitCmd.
@@ -412,7 +359,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			token := ""
 
 			switch context {
-			case "default":
+			case defaultContext:
 				token = viper.GetString(doctl.ArgAccessToken)
 			default:
 				contexts := viper.GetStringMapString("auth-contexts")
@@ -430,7 +377,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 
 			switch context {
-			case "default":
+			case defaultContext:
 				viper.Set(doctl.ArgAccessToken, token)
 			default:
 				contexts := viper.GetStringMapString("auth-contexts")

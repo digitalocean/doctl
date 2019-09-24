@@ -95,18 +95,18 @@ func Test_displayAuthContexts(t *testing.T) {
 		{
 			Name:    "default context only",
 			Out:     &bytes.Buffer{},
-			Context: "default",
+			Context: defaultContext,
 			Contexts: map[string]interface{}{
-				"default": true,
+				defaultContext: true,
 			},
 			Expected: "default (current)\n",
 		},
 		{
 			Name:    "default context and additional context",
 			Out:     &bytes.Buffer{},
-			Context: "default",
+			Context: defaultContext,
 			Contexts: map[string]interface{}{
-				"default": true,
+				defaultContext: true,
 				"test":    true,
 			},
 			Expected: "default (current)\ntest\n",
@@ -116,7 +116,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Out:     &bytes.Buffer{},
 			Context: "test",
 			Contexts: map[string]interface{}{
-				"default": true,
+				defaultContext: true,
 				"test":    true,
 			},
 			Expected: "default\ntest (current)\n",
@@ -126,7 +126,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Out:     &bytes.Buffer{},
 			Context: "missing",
 			Contexts: map[string]interface{}{
-				"default": true,
+				defaultContext: true,
 				"test":    true,
 			},
 			Expected: "default\ntest\n",

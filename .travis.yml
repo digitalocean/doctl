@@ -12,19 +12,6 @@ notifications:
 
 jobs:
   include:
-  - name: "Testing: Bionic, go 1.11"
-    script: make test
-    dist: bionic
-    go: 1.11.x
-    env: CACHE_NAME=BIONIC_1.11
-
-  - name: "Testing: Bionic, go 1.12"
-    script:
-    - make test
-    dist: bionic
-    go: 1.12.x
-    env: CACHE_NAME=BIONIC_1.12
-
   - name: "Testing: Bionic, go 1.13"
     script:
     - make shellcheck

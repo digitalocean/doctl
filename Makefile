@@ -3,7 +3,7 @@
 #    - Only 'public' targets (start with an alphanumeric character) display in the help listing.
 #    - All public targets need a description
 
-export CGO = 0
+export CGO_ENABLED = 0
 
 export GO111MODULE := on
 
@@ -80,13 +80,13 @@ docker_build: _base_docker_cntr
 test_unit:
 	@echo "==> run unit tests"
 	@echo ""
-	go test -race -mod=vendor ./commands/... ./do/... ./pkg/... .
+	go test -mod=vendor ./commands/... ./do/... ./pkg/... .
 
 .PHONY: test_integration
 test_integration:
 	@echo "==> run integration tests"
 	@echo ""
-	go test -race -mod=vendor ./integration
+	go test -mod=vendor ./integration
 
 .PHONY: test
 test: test_unit test_integration
