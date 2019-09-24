@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## [v1.22.0] - 2019-09-24
 
 - #259 Add Kubernetes GetCredentials method - @snormore
 
