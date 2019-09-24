@@ -16,6 +16,7 @@ package displayers
 import (
 	"fmt"
 	"io"
+	"reflect"
 	"strings"
 
 	"github.com/digitalocean/doctl/do"
@@ -95,4 +96,23 @@ func (lb *LoadBalancer) KV() []map[string]interface{} {
 	}
 
 	return out
+}
+
+func prettyPrintStruct(obj interface{}) string {
+	output := []string{}
+
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Printf("Recovered from %v", err)
+		}
+	}()
+
+	val := reflect.Indirect(reflect.ValueOf(obj))
+	for i := 0; i < val.NumField(); i++ {
+		k := strings.Split(val.Type().Field(i).Tag.Get("json"), ",")[0]
+		v := reflect.ValueOf(val.Field(i).Interface())
+		output = append(output, fmt.Sprintf("%v:%v", k, v))
+	}
+
+	return strings.Join(output, ",")
 }

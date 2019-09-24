@@ -21,47 +21,7 @@ import (
 	"reflect"
 	"strings"
 	"text/tabwriter"
-
-	"github.com/digitalocean/doctl"
 )
-
-var (
-	hc = &headerControl{}
-)
-
-func newTabWriter(out io.Writer) *tabwriter.Writer {
-	w := new(tabwriter.Writer)
-	w.Init(out, 0, 0, 4, ' ', 0)
-
-	return w
-}
-
-type headerControl struct {
-	hideHeader bool
-}
-
-func (hc *headerControl) HideHeader(hide bool) {
-	hc.hideHeader = hide
-}
-
-func prettyPrintStruct(obj interface{}) string {
-	output := []string{}
-
-	defer func() {
-		if err := recover(); err != nil {
-			fmt.Printf("Recovered from %v", err)
-		}
-	}()
-
-	val := reflect.Indirect(reflect.ValueOf(obj))
-	for i := 0; i < val.NumField(); i++ {
-		k := strings.Split(val.Type().Field(i).Tag.Get("json"), ",")[0]
-		v := reflect.ValueOf(val.Field(i).Interface())
-		output = append(output, fmt.Sprintf("%v:%v", k, v))
-	}
-
-	return strings.Join(output, ",")
-}
 
 // Displayable is a displable entity. These are used for printing results.
 type Displayable interface {
@@ -71,24 +31,19 @@ type Displayable interface {
 	JSON(io.Writer) error
 }
 
+// Displayer has the display options, the item to display, and where to display to
 type Displayer struct {
-	NS     string
-	Config doctl.Config
-	Item   Displayable
-	Out    io.Writer
+	OutputType string
+	ColumnList string
+	NoHeaders  bool
+
+	Item Displayable
+	Out  io.Writer
 }
 
+// Display ends up rendering the content in one of two formats (text|json)
 func (d *Displayer) Display() error {
-	output, err := d.Config.GetString(doctl.NSRoot, "output")
-	if err != nil {
-		return nil
-	}
-
-	if output == "" {
-		output = "text"
-	}
-
-	switch output {
+	switch d.OutputType {
 	case "json":
 		if containsOnlyNilSlice(d.Item) {
 			_, err := d.Out.Write([]byte("[]"))
@@ -96,15 +51,70 @@ func (d *Displayer) Display() error {
 		}
 		return d.Item.JSON(d.Out)
 	case "text":
-		cols, err := handleColumns(d.NS, d.Config)
-		if err != nil {
-			return err
+		var cols []string
+		for _, c := range strings.Split(strings.Join(strings.Fields(d.ColumnList), ""), ",") {
+			if c != "" {
+				cols = append(cols, c)
+			}
 		}
 
-		return displayText(d.Item, d.Out, cols)
+		return DisplayText(d.Item, d.Out, d.NoHeaders, cols)
 	default:
 		return fmt.Errorf("unknown output type")
 	}
+}
+
+// DisplayText ends up writing tabbed content to the passed in io.Writer
+// while potentially adding our removing headers.
+func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []string) error {
+	w := new(tabwriter.Writer)
+	w.Init(out, 0, 0, 4, ' ', 0)
+
+	cols := item.Cols()
+	if len(includeCols) > 0 && includeCols[0] != "" {
+		cols = includeCols
+	}
+
+	if !noHeaders {
+		headers := []string{}
+		for _, k := range cols {
+			col := item.ColMap()[k]
+			if col == "" {
+				return fmt.Errorf("unknown column %q", k)
+			}
+
+			headers = append(headers, col)
+		}
+		fmt.Fprintln(w, strings.Join(headers, "\t"))
+	}
+
+	for _, r := range item.KV() {
+		values := []interface{}{}
+		formats := []string{}
+
+		for _, col := range cols {
+			v := r[col]
+
+			values = append(values, v)
+
+			switch v.(type) {
+			case string:
+				formats = append(formats, "%s")
+			case int:
+				formats = append(formats, "%d")
+			case float64:
+				formats = append(formats, "%f")
+			case bool:
+				formats = append(formats, "%v")
+			default:
+				formats = append(formats, "%v")
+			}
+		}
+		format := strings.Join(formats, "\t")
+		fmt.Fprintf(w, format+"\n", values...)
+	}
+
+	return w.Flush()
 }
 
 func writeJSON(item interface{}, w io.Writer) error {
@@ -151,54 +161,4 @@ func containsOnlyNilSlice(i interface{}) bool {
 	}
 
 	return true
-}
-
-func displayText(item Displayable, out io.Writer, includeCols []string) error {
-	w := newTabWriter(out)
-
-	cols := item.Cols()
-	if len(includeCols) > 0 && includeCols[0] != "" {
-		cols = includeCols
-	}
-
-	if !hc.hideHeader {
-		headers := []string{}
-		for _, k := range cols {
-			col := item.ColMap()[k]
-			if col == "" {
-				return fmt.Errorf("unknown column %q", k)
-			}
-
-			headers = append(headers, col)
-		}
-		fmt.Fprintln(w, strings.Join(headers, "\t"))
-	}
-
-	for _, r := range item.KV() {
-		values := []interface{}{}
-		formats := []string{}
-
-		for _, col := range cols {
-			v := r[col]
-
-			values = append(values, v)
-
-			switch v.(type) {
-			case string:
-				formats = append(formats, "%s")
-			case int:
-				formats = append(formats, "%d")
-			case float64:
-				formats = append(formats, "%f")
-			case bool:
-				formats = append(formats, "%v")
-			default:
-				formats = append(formats, "%v")
-			}
-		}
-		format := strings.Join(formats, "\t")
-		fmt.Fprintf(w, format+"\n", values...)
-	}
-
-	return w.Flush()
 }
