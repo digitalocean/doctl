@@ -32,27 +32,29 @@ import (
 )
 
 const (
-	// defaultConfigName is the name of the config file when no alternative is supplied.
-	defaultConfigName = "config.yaml"
+	defaultConfigName = "config.yaml" // default name of config file
+	defaultContext    = "default"     // default authentication context
 )
 
-// DoitCmd is the base command.
-var DoitCmd = &Command{
-	Command: &cobra.Command{
-		Use:   "doctl",
-		Short: "doctl is a command line interface for the DigitalOcean API.",
-	},
-}
-
 var (
-	APIURL           string
-	Context          string // current auth context
+	DoitCmd = &Command{ // base command
+		Command: &cobra.Command{
+			Use:   "doctl",
+			Short: "doctl is a command line interface for the DigitalOcean API.",
+		},
+	}
+
 	ErrNoAccessToken = errors.New("no access token has been configured")
+	Writer           = os.Stdout
+
+	// PFlag vars
+	APIURL           string // customize API base URL
+	Context          string // current auth context
 	Output           string // global output format
 	Token            string // global authorization token
-	Trace            bool   // toggles http tracing output.
+	Trace            bool   // toggles http tracing output
 	Verbose          bool
-	Writer           = os.Stdout
+	// end PFlag vars
 
 	cfgFile       string                    // full path to config file
 	cfgFileWriter = defaultConfigFileWriter // create default cfgFileWriter
@@ -60,17 +62,16 @@ var (
 )
 
 func init() {
-	defaultConfigPath := filepath.Join(configHome(), defaultConfigName)
-	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", defaultConfigPath,
-		fmt.Sprintf("config file (default is %s)", defaultConfigPath))
+	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c",
+		filepath.Join(configHome(), defaultConfigName), "config file")
 	cobra.OnInitialize(initConfig)
 
-	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
-	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
 	DoitCmd.PersistentFlags().StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
-	DoitCmd.PersistentFlags().BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
+	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", defaultContext, "authentication context")
+	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
+	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
 	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
-	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", "", "authentication context name")
+	DoitCmd.PersistentFlags().BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 
 	viper.SetEnvPrefix("DIGITALOCEAN")
 	viper.BindEnv(doctl.ArgAccessToken, "DIGITALOCEAN_ACCESS_TOKEN")
@@ -104,7 +105,7 @@ func initConfig() {
 	}
 
 	viper.SetDefault("output", "text")
-	viper.SetDefault("context", "default")
+	viper.SetDefault("context", defaultContext)
 }
 
 var getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
@@ -116,7 +117,7 @@ func defaultGetCurrentAuthContextFn() string {
 	if authContext := viper.GetString("context"); authContext != "" {
 		return authContext
 	}
-	return "default"
+	return defaultContext
 }
 
 // Execute executes the current command using DoitCmd.
@@ -358,7 +359,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			token := ""
 
 			switch context {
-			case "default":
+			case defaultContext:
 				token = viper.GetString(doctl.ArgAccessToken)
 			default:
 				contexts := viper.GetStringMapString("auth-contexts")
@@ -376,7 +377,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 
 			switch context {
-			case "default":
+			case defaultContext:
 				viper.Set(doctl.ArgAccessToken, token)
 			default:
 				contexts := viper.GetStringMapString("auth-contexts")
