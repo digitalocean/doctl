@@ -45,8 +45,6 @@ var (
 		},
 	}
 
-	//ErrNoAccessToken warning when you have failed to configure you access token
-	ErrNoAccessToken = errors.New("no access token has been configured")
 	//Writer wires up stdout for all commands to write to
 	Writer = os.Stdout
 	//APIURL customize API base URL
