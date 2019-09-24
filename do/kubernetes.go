@@ -24,6 +24,11 @@ type KubernetesCluster struct {
 	*godo.KubernetesCluster
 }
 
+// KubernetesClusterCredentials wraps a godo KubernetesClusterCredentials.
+type KubernetesClusterCredentials struct {
+	*godo.KubernetesClusterCredentials
+}
+
 // KubernetesClusters is a slice of KubernetesCluster.
 type KubernetesClusters []KubernetesCluster
 
@@ -63,6 +68,7 @@ type KubernetesNodeSize struct {
 type KubernetesService interface {
 	Get(clusterID string) (*KubernetesCluster, error)
 	GetKubeConfig(clusterID string) ([]byte, error)
+	GetCredentials(clusterID string) (*KubernetesClusterCredentials, error)
 	GetUpgrades(clusterID string) (KubernetesVersions, error)
 	List() (KubernetesClusters, error)
 	Create(create *godo.KubernetesClusterCreateRequest) (*KubernetesCluster, error)
@@ -113,6 +119,17 @@ func (k8s *kubernetesClusterService) GetKubeConfig(clusterID string) ([]byte, er
 	}
 
 	return config.KubeconfigYAML, nil
+}
+
+func (k8s *kubernetesClusterService) GetCredentials(clusterID string) (*KubernetesClusterCredentials, error) {
+	credentials, _, err := k8s.client.GetCredentials(context.TODO(), clusterID, &godo.KubernetesClusterCredentialsGetRequest{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &KubernetesClusterCredentials{
+		KubernetesClusterCredentials: credentials,
+	}, nil
 }
 
 func (k8s *kubernetesClusterService) GetUpgrades(clusterID string) (KubernetesVersions, error) {
