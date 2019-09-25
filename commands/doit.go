@@ -60,32 +60,40 @@ var (
 	//Verbose toggle verbose output on and off
 	Verbose bool
 
-	cfgFile       string                    // full path to config file
 	cfgFileWriter = defaultConfigFileWriter // create default cfgFileWriter
 	requiredColor = color.New(color.Bold).SprintfFunc()
 )
 
 func init() {
-	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c",
-		filepath.Join(configHome(), defaultConfigName), "config file")
-	cobra.OnInitialize(initConfig)
-
-	DoitCmd.PersistentFlags().StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
-	DoitCmd.PersistentFlags().StringVarP(&Context, doctl.ArgContext, "", defaultContext, "authentication context")
-	DoitCmd.PersistentFlags().StringVarP(&Output, "output", "o", "text", "output format [text|json]")
-	DoitCmd.PersistentFlags().StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
-	DoitCmd.PersistentFlags().BoolVarP(&Trace, "trace", "", false, "trace api access")
-	DoitCmd.PersistentFlags().BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
+	var cfgFile string
 
 	viper.SetEnvPrefix("DIGITALOCEAN")
-	viper.BindEnv(doctl.ArgAccessToken, "DIGITALOCEAN_ACCESS_TOKEN")
-	viper.BindPFlag(doctl.ArgAccessToken, DoitCmd.PersistentFlags().Lookup("access-token"))
+
+	rootPFlagSet := DoitCmd.PersistentFlags()
+	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
+		filepath.Join(configHome(), defaultConfigName), "config file")
+	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
+
+	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
 	viper.BindEnv("api-url", "DIGITALOCEAN_API_URL")
-	viper.BindPFlag("api-url", DoitCmd.PersistentFlags().Lookup("api-url"))
-	viper.BindPFlag("output", DoitCmd.PersistentFlags().Lookup("output"))
+	viper.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
+
+	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
+	viper.BindEnv(doctl.ArgAccessToken, "DIGITALOCEAN_ACCESS_TOKEN")
+	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup("access-token"))
+
+	rootPFlagSet.StringVarP(&Output, "output", "o", "text", "output format [text|json]")
+	viper.BindPFlag("output", rootPFlagSet.Lookup("output"))
+
+	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", defaultContext, "authentication context")
+	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "trace api access")
+	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
+
 	viper.BindEnv("enable-beta", "DIGITALOCEAN_ENABLE_BETA")
 
 	addCommands()
+
+	cobra.OnInitialize(initConfig)
 }
 
 // in case we ever want to change this, or let folks configure it...
@@ -93,11 +101,16 @@ func configHome() string {
 	cfgDir, err := os.UserConfigDir()
 	checkErr(err)
 
-	return filepath.Join(cfgDir, "doctl")
+	ch := filepath.Join(cfgDir, "doctl")
+	err = os.MkdirAll(ch, 0755)
+	checkErr(err)
+
+	return ch
 }
 
 func initConfig() {
 	viper.SetConfigType("yaml")
+	cfgFile := viper.GetString("config")
 	viper.SetConfigFile(cfgFile)
 
 	viper.AutomaticEnv()
@@ -493,6 +506,7 @@ func writeConfig() error {
 }
 
 func defaultConfigFileWriter() (io.WriteCloser, error) {
+	cfgFile := viper.GetString("config")
 	f, err := os.Create(cfgFile)
 	if err != nil {
 		return nil, err
