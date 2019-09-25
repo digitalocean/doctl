@@ -12,15 +12,13 @@ const (
 )
 
 func Test_findConfigDir(t *testing.T) {
-	var expectedConfigDir string
-	actualConfigDir := findConfigDir()
-
 	switch runtime.GOOS {
 	case goosDarwin, goosLinux:
-		expectedConfigDir = "/.config/doctl"
-	}
+		expectedConfigDir := "/.config/doctl"
+		actualConfigDir := findConfigDir()
 
-	if !strings.Contains(actualConfigDir, expectedConfigDir) {
-		t.Fatalf("expected %s to contain %s", actualConfigDir, expectedConfigDir)
+		if !strings.Contains(actualConfigDir, expectedConfigDir) {
+			t.Fatalf("expected %s to contain %s", actualConfigDir, expectedConfigDir)
+		}
 	}
 }
