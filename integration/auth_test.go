@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -51,41 +52,79 @@ func testAuthInit(t *testing.T, when spec.G, it spec.S) {
 		}))
 	})
 
-	it("validates and saves the provided auth token", func() {
-		tmpDir, err := ioutil.TempDir("", "")
-		expect.NoError(err)
+	when("a custom config is provided", func() {
+		it("validates and saves the provided auth token", func() {
+			tmpDir, err := ioutil.TempDir("", "")
+			expect.NoError(err)
 
-		testConfig := filepath.Join(tmpDir, "test-config.yml")
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
 
-		cmd := exec.Command(builtBinaryPath,
-			"-u", server.URL,
-			"--config", testConfig,
-			"auth",
-			"init",
-		)
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", testConfig,
+				"auth",
+				"init",
+			)
 
-		ptmx, err := pty.Start(cmd)
-		expect.NoError(err)
+			ptmx, err := pty.Start(cmd)
+			expect.NoError(err)
 
-		go func() {
-			ptmx.Write([]byte("some-magic-token\n"))
-		}()
+			go func() {
+				ptmx.Write([]byte("some-magic-token\n"))
+			}()
 
-		buf := bytes.NewBuffer([]byte{})
+			buf := bytes.NewBuffer([]byte{})
 
-		count, _ := io.Copy(buf, ptmx) // yes, ignore error intentionally
-		expect.NotZero(count)
-		ptmx.Close()
+			count, _ := io.Copy(buf, ptmx) // yes, ignore error intentionally
+			expect.NotZero(count)
+			ptmx.Close()
 
-		expect.Contains(buf.String(), "Validating token... OK")
+			expect.Contains(buf.String(), "Validating token... OK")
 
-		fileBytes, err := ioutil.ReadFile(testConfig)
-		expect.NoError(err)
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
 
-		expect.Contains(string(fileBytes), "access-token: some-magic-token")
+			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+		})
 	})
 
-	when("when a token cannot be validated", func() {
+	when("no custom config is provided", func() {
+		it("saves the auth token to the default config path", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"auth",
+				"init",
+			)
+
+			ptmx, err := pty.Start(cmd)
+			expect.NoError(err)
+
+			go func() {
+				ptmx.Write([]byte("some-magic-token\n"))
+			}()
+
+			buf := bytes.NewBuffer([]byte{})
+
+			count, _ := io.Copy(buf, ptmx) // yes, ignore error intentionally
+			expect.NotZero(count)
+			ptmx.Close()
+
+			expect.Contains(buf.String(), "Validating token... OK")
+
+			location, err := getDefaultConfigLocation()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(location)
+			expect.NoError(err)
+
+			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+
+			err = os.Remove(location)
+			expect.NoError(err)
+		})
+	})
+
+	when("a token cannot be validated", func() {
 		it("exits non-zero with an error", func() {
 			tmpDir, err := ioutil.TempDir("", "")
 			expect.NoError(err)

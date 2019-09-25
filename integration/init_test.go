@@ -56,7 +56,41 @@ func TestMain(m *testing.M) {
 		panic(fmt.Sprintf("failed to build doctl: %s", output))
 	}
 
+	location, err := getDefaultConfigLocation()
+	if err != nil {
+		panic(fmt.Sprintf("failed to get config location: %s", err))
+	}
+
+	var contents []byte
+	if _, err := os.Stat(location); !os.IsNotExist(err) {
+		contents, err = ioutil.ReadFile(location)
+		if err != nil {
+			panic("failed to copy config")
+		}
+
+		err = os.Remove(location)
+		if err != nil {
+			panic("failed to delete initial config")
+		}
+	}
+
 	code := m.Run()
 
+	if len(contents) != 0 {
+		err = ioutil.WriteFile(location, contents, 0700)
+		if err != nil {
+			panic("failed to restore contents of config")
+		}
+	}
+
 	os.Exit(code)
+}
+
+func getDefaultConfigLocation() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user config dir: %s", err)
+	}
+
+	return filepath.Join(configDir, "doctl", "config.yaml"), nil
 }
