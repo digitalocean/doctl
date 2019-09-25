@@ -37,6 +37,7 @@ const (
 )
 
 var (
+	//DoitCmd is the root level doctl command that all other commands attach to
 	DoitCmd = &Command{ // base command
 		Command: &cobra.Command{
 			Use:   "doctl",
@@ -44,17 +45,20 @@ var (
 		},
 	}
 
-	ErrNoAccessToken = errors.New("no access token has been configured")
-	Writer           = os.Stdout
-
-	// PFlag vars
-	APIURL           string // customize API base URL
-	Context          string // current auth context
-	Output           string // global output format
-	Token            string // global authorization token
-	Trace            bool   // toggles http tracing output
-	Verbose          bool
-	// end PFlag vars
+	//Writer wires up stdout for all commands to write to
+	Writer = os.Stdout
+	//APIURL customize API base URL
+	APIURL string
+	//Context current auth context
+	Context string
+	//Output global output format
+	Output string
+	//Token global authorization token
+	Token string
+	//Trace toggles http tracing output
+	Trace bool
+	//Verbose toggle verbose output on and off
+	Verbose bool
 
 	cfgFileWriter = defaultConfigFileWriter // create default cfgFileWriter
 	requiredColor = color.New(color.Bold).SprintfFunc()
@@ -413,11 +417,23 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 // Display displays the output from a command.
 func (c *CmdConfig) Display(d displayers.Displayable) error {
 	dc := &displayers.Displayer{
-		NS:     c.NS,
-		Config: c.Doit,
-		Item:   d,
-		Out:    c.Out,
+		Item: d,
+		Out:  c.Out,
 	}
+
+	columnList, err := c.Doit.GetString(c.NS, doctl.ArgFormat)
+	if err != nil {
+		return err
+	}
+
+	withHeaders, err := c.Doit.GetBool(c.NS, doctl.ArgNoHeader)
+	if err != nil {
+		return err
+	}
+
+	dc.NoHeaders = withHeaders
+	dc.ColumnList = columnList
+	dc.OutputType = Output
 
 	return dc.Display()
 }
