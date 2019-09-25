@@ -64,8 +64,8 @@ func (d *Displayer) Display() error {
 	}
 }
 
-// DisplayText ends up writing tabbed content to the passed in io.Writer
-// while potentially adding our removing headers.
+// DisplayText writes tabbed content to the passed in io.Writer
+// while potentially adding or removing headers.
 func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []string) error {
 	w := new(tabwriter.Writer)
 	w.Init(out, 0, 0, 4, ' ', 0)
