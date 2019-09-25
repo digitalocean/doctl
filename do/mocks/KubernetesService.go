@@ -64,6 +64,21 @@ func (mr *MockKubernetesServiceMockRecorder) GetKubeConfig(clusterID interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKubeConfig", reflect.TypeOf((*MockKubernetesService)(nil).GetKubeConfig), clusterID)
 }
 
+// GetCredentials mocks base method
+func (m *MockKubernetesService) GetCredentials(clusterID string) (*do.KubernetesClusterCredentials, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCredentials", clusterID)
+	ret0, _ := ret[0].(*do.KubernetesClusterCredentials)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCredentials indicates an expected call of GetCredentials
+func (mr *MockKubernetesServiceMockRecorder) GetCredentials(clusterID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredentials", reflect.TypeOf((*MockKubernetesService)(nil).GetCredentials), clusterID)
+}
+
 // GetUpgrades mocks base method
 func (m *MockKubernetesService) GetUpgrades(clusterID string) (do.KubernetesVersions, error) {
 	m.ctrl.T.Helper()
