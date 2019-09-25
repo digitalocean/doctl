@@ -248,7 +248,7 @@ func kubernetesKubeconfig() *Command {
 }
 
 func kubeconfigCachePath() string {
-	return filepath.Join(configHome(), "cache", "exec-credential")
+	return filepath.Join(cfgDir, "cache", "exec-credential")
 }
 
 func kubernetesNodePools() *Command {

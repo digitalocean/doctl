@@ -48,22 +48,30 @@ var (
 	Writer           = os.Stdout
 
 	// PFlag vars
-	APIURL           string // customize API base URL
-	Context          string // current auth context
-	Output           string // global output format
-	Token            string // global authorization token
-	Trace            bool   // toggles http tracing output
-	Verbose          bool
+	APIURL  string // customize API base URL
+	Context string // current auth context
+	Output  string // global output format
+	Token   string // global authorization token
+	Trace   bool   // toggles http tracing output
+	Verbose bool
 	// end PFlag vars
 
+	cfgDir        string                    // full path to the config directory
 	cfgFile       string                    // full path to config file
 	cfgFileWriter = defaultConfigFileWriter // create default cfgFileWriter
 	requiredColor = color.New(color.Bold).SprintfFunc()
 )
 
 func init() {
+	cfgDir = findConfigDir()
+	if err := os.MkdirAll(cfgDir, 0755); err != nil {
+		fmt.Println(err)
+		os.Exit(-1)
+	}
+	cfgFile = filepath.Join(cfgDir, defaultConfigName)
+
 	DoitCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c",
-		filepath.Join(configHome(), defaultConfigName), "config file")
+		cfgFile, "config file")
 	cobra.OnInitialize(initConfig)
 
 	DoitCmd.PersistentFlags().StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
@@ -82,14 +90,6 @@ func init() {
 	viper.BindEnv("enable-beta", "DIGITALOCEAN_ENABLE_BETA")
 
 	addCommands()
-}
-
-// in case we ever want to change this, or let folks configure it...
-func configHome() string {
-	cfgDir, err := os.UserConfigDir()
-	checkErr(err)
-
-	return filepath.Join(cfgDir, "doctl")
 }
 
 func initConfig() {
