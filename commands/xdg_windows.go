@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 )
 
-func findConfigDir() (string, error) {
+func findConfigDir() string {
 	cfgHome := os.Getenv("LOCALAPPDATA")
 	if cfgHome == "" {
 		// Resort to APPDATA for Windows XP users.
