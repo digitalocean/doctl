@@ -28,15 +28,13 @@ func Account() *Command {
 
 It should be noted however, that calling 'doctl account' itself doesn't do anything.`,
 		},
-		DocCategories: []string{"account"},
-		IsIndex:       true,
 	}
 
 	CmdBuilder(cmd, RunAccountGet, "get", "Retrieve details for your account, including the email address, droplet limit, email verification status, account status, and the UUID for the account.", Writer,
-		aliasOpt("g"), displayerType(&displayers.Account{}), docCategories("account"))
+		aliasOpt("g"), displayerType(&displayers.Account{}))
 
 	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieves how many requests you’ve made recently, and when the limit is due to reset.", Writer,
-		aliasOpt("rl"), displayerType(&displayers.RateLimit{}), docCategories("account"))
+		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))
 
 	return cmd
 }
