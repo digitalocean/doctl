@@ -141,8 +141,8 @@ func computeCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "compute",
-			Short: "compute commands",
-			Long:  "compute commands are for controlling and managing infrastructure",
+			Short: "Provides commands that manage infrastructure",
+			Long:  `The subcommands under 'doctl compute' are for managing DigitalOcean resources.`,
 		},
 	}
 

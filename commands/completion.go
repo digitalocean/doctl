@@ -22,29 +22,32 @@ import (
 )
 
 const (
-	completionLong = `
-completion is used to output completion code for bash and zsh shells.
+	completionLong = `The 'doctl completion' commands help you configure your shell so
+doctl commands autocomplete when you press the TAB key in your terminal.
 
 Before using completion features, you have to source completion code
-from your .profile or .bashrc/.zshrc file. This is done by adding
-following line to one of above files:
+from your .profile or .bashrc/.zshrc file. This is done by calling:
+
 	source <(doctl completion SHELL)
 
-Bash users can as well save it to the file and copy it to:
+Valid values for SHELL are "bash" or "zsh".
+
+Bash users can also save the completion code to a file and copy it to:
+
 	/etc/bash_completion.d/
 
-Correct arguments for SHELL are: "bash" and "zsh".
-
 Notes:
-1) zsh completions requires zsh 5.2 or newer.
 
-2) macOS users have to install bash-completion framework to utilize
+- zsh completions requires zsh 5.2 or newer.
+- macOS users have to install bash-completion framework to utilize
 completion features. This can be done using homebrew:
-	brew install bash-completion
 
-Once installed, you must load bash_completion by adding following
-line to your .profile or .bashrc/.zshrc:
-	source $(brew --prefix)/etc/bash_completion
+		brew install bash-completion
+
+	Once installed, you must load bash_completion by adding following
+	line to your .profile or .bashrc/.zshrc:
+
+		source $(brew --prefix)/etc/bash_completion
 `
 	doctlLicense = `# Copyright 2018 The Doctl Authors All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -65,13 +68,13 @@ func Completion() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "completion",
-			Short: "completion commands",
+			Short: "Modifies shell so doctl commands autocomplete with TAB",
 			Long:  completionLong,
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "generate bash completion code", "generate bash completion code", Writer, false)
-	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "generate zsh completion code", "generate zsh completion code", Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "Generates completion code for bash", completionLong, Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "Generates completion code for zsh", completionLong, Writer, false)
 
 	return cmd
 }
@@ -82,12 +85,12 @@ func RunCompletionBash(c *CmdConfig) error {
 
 	_, err := buf.Write([]byte(doctlLicense))
 	if err != nil {
-		return fmt.Errorf("error while generating bash completion: %v", err)
+		return fmt.Errorf("Error while generating bash completion: %v", err)
 	}
 
 	err = DoitCmd.GenBashCompletion(&buf)
 	if err != nil {
-		return fmt.Errorf("error while generating bash completion: %v", err)
+		return fmt.Errorf("Error while generating bash completion: %v", err)
 	}
 
 	// remove the command "completion" from auto-completion
@@ -263,17 +266,17 @@ _complete doctl 2>/dev/null
 
 	_, err := buf.Write([]byte(zshHead))
 	if err != nil {
-		return fmt.Errorf("error while generating zsh completion: %v", err)
+		return fmt.Errorf("Error while generating zsh completion: %v", err)
 	}
 
 	_, err = buf.Write([]byte(doctlLicense))
 	if err != nil {
-		return fmt.Errorf("error while generating zsh completion: %v", err)
+		return fmt.Errorf("Error while generating zsh completion: %v", err)
 	}
 
 	_, err = buf.Write([]byte(zshInit))
 	if err != nil {
-		return fmt.Errorf("error while generating zsh completion: %v", err)
+		return fmt.Errorf("Error while generating zsh completion: %v", err)
 	}
 
 	err = DoitCmd.GenBashCompletion(&buf)
@@ -283,7 +286,7 @@ _complete doctl 2>/dev/null
 
 	_, err = buf.Write([]byte(zshFinalize))
 	if err != nil {
-		return fmt.Errorf("error while generating zsh completion: %v", err)
+		return fmt.Errorf("Error while generating zsh completion: %v", err)
 	}
 
 	// remove the command "completion" from auto-completion
