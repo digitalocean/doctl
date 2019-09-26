@@ -32,12 +32,13 @@ func TestMain(m *testing.M) {
 		spec.Parallel(),
 	}
 
-	suite = spec.New("acceptance", specOptions...)
+	suite = spec.New("integration", specOptions...)
 	suite("account/get", testAccountGet)
 	suite("account/ratelimit", testAccountRateLimit)
 	suite("auth/init", testAuthInit)
+	suite("compute/droplet/create", testDropletCreate)
 
-	tmpDir, err := ioutil.TempDir("", "acceptance-doctl")
+	tmpDir, err := ioutil.TempDir("", "integration-doctl")
 	if err != nil {
 		panic("failed to create temp dir")
 	}
