@@ -30,7 +30,7 @@ For example, 'doctl account get' retrieves account profile details, and 'doctl a
 		},
 	}
 
-	CmdBuilderWithDocs(cmd, RunAccountGet, "get", "Retrieves account details", `Retrieves the following details for your account:
+	CmdBuilderWithDocs(cmd, RunAccountGet, "get", "Retrieves account profile details", `Retrieves the following details from your account profile:
 
 - Email address
 - Account droplet limit
