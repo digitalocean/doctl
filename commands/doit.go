@@ -64,21 +64,21 @@ func init() {
 
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
-		filepath.Join(configHome(), defaultConfigName), "config file")
+		filepath.Join(configHome(), defaultConfigName), "Specify a custom config file")
 	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
 
-	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
+	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API endpoint")
 	viper.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
 
 	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
 	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup(doctl.ArgAccessToken))
 
-	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "output format [text|json]")
+	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "Desired output format [text|json]")
 	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
 
-	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "authentication context")
-	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "trace api access")
-	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
+	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "Specify a custom authentication context name")
+	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "Show a log of network activity while performing a command")
+	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "Enable verbose output")
 
 	addCommands()
 

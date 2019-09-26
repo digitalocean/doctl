@@ -29,10 +29,10 @@ func Actions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "action",
-			Short: "Provides access to commands that retrieve the history of actions taken on your resources.",
-			Long: `Provides access to commands that retrieve the history of actions taken on your resources.
+			Short: "Provides access to commands that retrieve the history of actions taken on your resources",
+			Long: `The sub-commands of 'doctl compute action' retrieve the history of actions taken on your resources.
 
-This can be filtered by the sub-commands to query actions performed on a specific resource type, or a specific resource. For example, while 'doctl compute action list' will list the actions taken on all of the resources in your account, 'doctl compute droplet actions <resource-id>' will list actions for a specific Droplet.`,
+This can be filtered to a specific action. For example, while 'doctl compute action list' will list all of the actions taken on all of the resources in your account, 'doctl compute action get <action-id>' will retrieve details for a specific action.`,
 		},
 	}
 
@@ -46,6 +46,7 @@ This can be filtered by the sub-commands to query actions performed on a specifi
 - The resource ID of the resource upon which the action was taken
 - The resource type (droplet, backend)
 - The region in which the action took place (nyc3, sfo2, etc)`
+
 	CmdBuilderWithDocs(cmd, RunCmdActionGet, "get <action-id>", "Retrieves details about a specific action", `Retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Action{}))
 
@@ -60,7 +61,7 @@ This can be filtered by the sub-commands to query actions performed on a specifi
 
 	cmdActionWait := CmdBuilderWithDocs(cmd, RunCmdActionWait, "wait <action-id>", "Blocks thread, returning when an action completes", `Blocks thread, returning when an action completes.
 
-For example, if you find an action when calling 'doctl compute action list' that has not completed, note the action ID and 'doctl compute action wait <action-id>' and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
+For example, if you find an action when calling 'doctl compute action list' that has a status of 'in-progress', you can note the action ID and call 'doctl compute action wait <action-id>', and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
 		aliasOpt("w"), displayerType(&displayers.Action{}))
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 
