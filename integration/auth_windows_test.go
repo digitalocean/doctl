@@ -3,11 +3,11 @@
 package integration
 
 import (
-    "testing"
+	"testing"
 
-    "github.com/sclevine/spec"
+	"github.com/sclevine/spec"
 )
 
 func testAuthInit(t *testing.T, when spec.G, it spec.S) {
-    it.Pend("this is not implemented on windows", func() {})
+	it.Pend("this is not implemented on windows", func() {})
 }
