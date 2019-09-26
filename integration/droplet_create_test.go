@@ -2,6 +2,7 @@ package integration
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -93,25 +94,31 @@ func testDropletCreate(t *testing.T, when spec.G, it spec.S) {
 			"create",
 		}
 
+		baseErr := `Error: (droplet.create%s) command is missing required arguments`
+
 		cases := []struct {
 			desc string
+			err  string
 			args []string
 		}{
-			{desc: "missing all", args: base},
-			{desc: "missing only name", args: append(base, []string{"--size", "test", "--region", "test", "--image", "test"}...)},
-			{desc: "missing only region", args: append(base, []string{"some-name", "--size", "test", "--image", "test"}...)},
-			{desc: "missing only size", args: append(base, []string{"some-name", "--image", "test", "--region", "test"}...)},
-			{desc: "missing only image", args: append(base, []string{"some-name", "--image", "test", "--region", "test"}...)},
+			{desc: "missing all", err: fmt.Sprintf(baseErr, ""), args: base},
+			{desc: "missing only name", err: fmt.Sprintf(baseErr, ""), args: append(base, []string{"--size", "test", "--region", "test", "--image", "test"}...)},
+			{desc: "missing only region", err: fmt.Sprintf(baseErr, ".region"), args: append(base, []string{"some-name", "--size", "test", "--image", "test"}...)},
+			{desc: "missing only size", err: fmt.Sprintf(baseErr, ".size"), args: append(base, []string{"some-name", "--image", "test", "--region", "test"}...)},
+			{desc: "missing only image", err: fmt.Sprintf(baseErr, ".image"), args: append(base, []string{"some-name", "--size", "test", "--region", "test"}...)},
 		}
 
 		for _, c := range cases {
+			commandArgs := c.args
+			expectedErr := c.err
+
 			when(c.desc, func() {
 				it("returns an error", func() {
-					cmd := exec.Command(builtBinaryPath, c.args...)
+					cmd := exec.Command(builtBinaryPath, commandArgs...)
 
 					output, err := cmd.CombinedOutput()
 					expect.Error(err)
-					expect.Contains(string(output), "Error: (droplet.create.size) command is missing required arguments")
+					expect.Contains(string(output), expectedErr)
 				})
 			})
 		}
