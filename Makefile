@@ -188,7 +188,7 @@ release:
 
 .PHONY: docs
 docs:
-	@echo "=> Generate YAML documenation in ${DOCS_OUT}"
+	@echo "=> Generate YAML documentation in ${DOCS_OUT}"
 	@echo ""
 	@mkdir -p ${DOCS_OUT}
 	@DOCS_OUT=${DOCS_OUT} go run scripts/gen-yaml-docs.go
