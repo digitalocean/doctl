@@ -24,7 +24,7 @@ func Account() *Command {
 		Command: &cobra.Command{
 			Use:   "account",
 			Short: "Provides access to account commands.",
-			Long:  `Commands related to DigitalOcean accounts are accessible under the doctl account namespace.
+			Long: `Commands related to DigitalOcean accounts are accessible under the doctl account namespace.
 
 It should be noted however, that calling 'doctl account' itself doesn't do anything.`,
 		},

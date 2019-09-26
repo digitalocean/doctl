@@ -22,7 +22,7 @@ import (
 
 // GenDocs creates the gen-docs command
 func GenDocs(parent *Command) *Command {
-	cmdGenDocs := cmdBuilderWithInit(parent, RunGenDocs, "gen-docs", "this is a poorly documented command to generate docs", Writer, false, hiddenCmd())
+	cmdGenDocs := cmdBuilderWithInit(parent, RunGenDocs, "gen-docs", "generates documentation", "this is a poorly documented command to generate docs", Writer, false, hiddenCmd())
 	AddStringFlag(cmdGenDocs, "dir", "", "", "path to a directory for yaml output", requiredOpt())
 
 	return cmdGenDocs

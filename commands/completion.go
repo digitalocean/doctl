@@ -37,14 +37,14 @@ Correct arguments for SHELL are: "bash" and "zsh".
 
 Notes:
 1) zsh completions requires zsh 5.2 or newer.
-	
+
 2) macOS users have to install bash-completion framework to utilize
 completion features. This can be done using homebrew:
 	brew install bash-completion
 
 Once installed, you must load bash_completion by adding following
 line to your .profile or .bashrc/.zshrc:
-	source $(brew --prefix)/etc/bash_completion	
+	source $(brew --prefix)/etc/bash_completion
 `
 	doctlLicense = `# Copyright 2018 The Doctl Authors All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,8 +70,8 @@ func Completion() *Command {
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "generate bash completion code", Writer, false)
-	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "generate zsh completion code", Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "generate bash completion code", "generate bash completion code", Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "generate zsh completion code", "generate zsh completion code", Writer, false)
 
 	return cmd
 }
