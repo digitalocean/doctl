@@ -22,6 +22,7 @@ help:
 
 my_d = $(shell pwd)
 OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})
+DOCS_OUT = $(shell echo $${DOCS_OUT:-$(my_d)/builds/docs/yaml})
 
 UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
@@ -185,4 +186,9 @@ release:
 	@echo ""
 	@$(MAKE) _release
 
-
+.PHONY: docs
+docs:
+	@echo "=> Generate YAML documenation in ${DOCS_OUT}"
+	@echo ""
+	@mkdir -p ${DOCS_OUT}
+	@DOCS_OUT=${DOCS_OUT} go run scripts/gen-yaml-docs.go
