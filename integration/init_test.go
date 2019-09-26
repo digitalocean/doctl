@@ -41,6 +41,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("failed to create temp dir")
 	}
+	defer os.RemoveAll(tmpDir) // yes, this is best effort only
 
 	builtBinaryPath = filepath.Join(tmpDir, path.Base(packagePath))
 	if runtime.GOOS == "windows" {
@@ -56,11 +57,6 @@ func TestMain(m *testing.M) {
 	}
 
 	code := m.Run()
-
-	err = os.RemoveAll(tmpDir)
-	if err != nil {
-		panic("failed to cleanup the doctl acceptance artifacts")
-	}
 
 	os.Exit(code)
 }
