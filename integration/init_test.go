@@ -57,10 +57,11 @@ func TestMain(m *testing.M) {
 
 	code := m.Run()
 
-	err = os.RemoveAll(tmpDir)
-	if err != nil {
-		panic("failed to cleanup the doctl acceptance artifacts")
-	}
+	// Fails only on windows sometimes for unknown reasons
+	// making best effort for now since worst problem is
+	// that you leave a temp dir around that will get
+	// cleaned up by the OS on a restart.
+	os.RemoveAll(tmpDir)
 
 	os.Exit(code)
 }
