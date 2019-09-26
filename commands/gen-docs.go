@@ -70,9 +70,10 @@ func writeDocs(cmd *cobra.Command, dir string) error {
 	defer f.Close()
 
 	doc.GenYaml(cmd, f)
-	use := cmd.UseLine()
-	usage := fmt.Sprintf("usage: %s\n", use)
-	if _, err := f.WriteString(usage); err != nil {
+	usage := fmt.Sprintf("usage: %s\n", cmd.UseLine())
+	aliases := fmt.Sprintf("aliases: %s\n", cmd.NameAndAliases())
+	lines := usage + aliases
+	if _, err := f.WriteString(lines); err != nil {
 		return err
 	}
 
