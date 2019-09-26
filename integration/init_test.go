@@ -77,7 +77,7 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	if len(contents) != 0 {
-		err = ioutil.WriteFile(location, contents, 0700)
+		err = ioutil.WriteFile(location, contents, 0644)
 		if err != nil {
 			panic("failed to restore contents of config")
 		}
