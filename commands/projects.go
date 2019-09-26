@@ -26,48 +26,69 @@ import (
 
 // Projects creates the projects commands hierarchy.
 func Projects() *Command {
+	projectsDesc := `
+
+Projects allow you to organize your DigitalOcean resources (like Droplets, Spaces, load balancers, domains, and floating IPs) into groups that fit the way you work. You can create projects that align with the applications, environments, and clients that you host on DigitalOcean.
+`
+
+	projectDetails := `
+
+  - The project's ID, in UUID format
+  - The project owner's account UUID
+  - The name of the project
+  - The project's description
+  - The project's specified purpose
+  - The project's environment (Development, Staging, or Production)
+  - A boolean indicating whether it is you default project
+  - The date and time at which the project was created
+  - The date and time at which the project was last updated
+`
+
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "projects",
-			Short: "projects commands",
-			Long:  "projects commands are for creating and managing projects",
+			Short: "Manage projects and assign resources to them",
+			Long:  "The subcommands of 'doctl projects' allow you to create, manage, and assign resources to your projects." + projectsDesc,
 		},
 	}
 
-	CmdBuilder(cmd, RunProjectsList, "list", "list projects", Writer, aliasOpt("ls"),
-		displayerType(&displayers.Project{}))
-	CmdBuilder(cmd, RunProjectsGet, "get <id>",
-		"get a project; use \"default\" as ID to get default project", Writer,
-		aliasOpt("g"), displayerType(&displayers.Project{}))
+	CmdBuilderWithDocs(cmd, RunProjectsList, "list", "List existing projects",
+		"List details for for your DigitalOcean projects, including:"+projectDetails,
+		Writer, aliasOpt("ls"), displayerType(&displayers.Project{}))
+	CmdBuilderWithDocs(cmd, RunProjectsGet, "get <id>", "Retreive details for a specific project",
+		"Display the following details for an existing project specified by its ID (use \"default\" for <id> to retieve your default project):"+projectDetails,
+		Writer, aliasOpt("g"), displayerType(&displayers.Project{}))
 
-	cmdProjectsCreate := CmdBuilder(cmd, RunProjectsCreate, "create",
-		"create project", Writer, aliasOpt("c"),
-		displayerType(&displayers.Project{}))
+	cmdProjectsCreate := CmdBuilderWithDocs(cmd, RunProjectsCreate, "create",
+		"Create a new project", "Create a new project to organize your resources specifying its name and purpose."+projectsDesc,
+		Writer, aliasOpt("c"), displayerType(&displayers.Project{}))
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectName, "", "",
-		"project name", requiredOpt())
+		"A name for the project", requiredOpt())
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectPurpose, "", "",
-		"project purpose", requiredOpt())
+		"The project's purpose", requiredOpt())
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectDescription, "", "",
-		"a description of your project")
+		"A description of the project")
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectEnvironment, "", "",
-		"the environment in which your project resides. Should be one of 'Development', 'Staging', 'Production'.")
+		"The environment in which your project resides. Possible values: \"Development\", \"Staging', or \"Production\"")
 
-	cmdProjectsUpdate := CmdBuilder(cmd, RunProjectsUpdate, "update <id>",
-		"update project; use \"default\" as ID to update the default project",
+	cmdProjectsUpdate := CmdBuilderWithDocs(cmd, RunProjectsUpdate, "update <id>",
+		"Update an existing project",
+		"Update information about an existing project specified by its ID (use \"default\" for <id> to update your default project)",
 		Writer, aliasOpt("u"), displayerType(&displayers.Project{}))
-	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectName, "", "", "project name")
-	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectPurpose, "", "", "project purpose")
+	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectName, "", "", "A name for the project")
+	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectPurpose, "", "", "The project's purpose")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectDescription, "", "",
-		"a description of your project")
+		"A description of the project")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectEnvironment, "", "",
-		"the environment in which your project resides. Should be one of 'Development', 'Staging', 'Production'.")
+		"The environment in which your project resides. Possible values: \"Development\", \"Staging', or \"Production\"")
 	AddBoolFlag(cmdProjectsUpdate, doctl.ArgProjectIsDefault, "", false,
-		"set the specified project as your default project")
+		"Set the specified project as your default project")
 
-	cmdProjectsDelete := CmdBuilder(cmd, RunProjectsDelete, "delete <id> [<id> ...]",
-		"delete project", Writer, aliasOpt("d", "rm"))
+	cmdProjectsDelete := CmdBuilderWithDocs(cmd, RunProjectsDelete, "delete <id> [<id> ...]",
+		"Delete the specified project", "Delete a project by specifiying its ID. To be deleted, a project must not have any resources assigned to it.",
+		Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdProjectsDelete, doctl.ArgForce, doctl.ArgShortForce, false,
-		"Force project delete")
+		"Delete the project without confirmation")
 
 	cmd.AddCommand(ProjectResourcesCmd())
 
@@ -79,20 +100,33 @@ func ProjectResourcesCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "resources",
-			Short: "project resources commands",
-			Long:  "project resources commands are for assigning and listing resources in projects",
+			Short: "Manage resources assigned to a project",
+			Long:  "The subcommands of 'doctl projects resources' allow you to list and assign resources to your projects.",
 		},
 	}
-	CmdBuilder(cmd, RunProjectResourcesList, "list <project-id>", "list project resources",
+
+	urnDesc := `
+
+A valid URN has the format: 'do:resource_type:resource_id'. For example:
+
+  - do:droplet:4126873
+  - do:volume:6fc4c277-ea5c-448a-93cd-dd496cfef71f
+`
+
+	CmdBuilderWithDocs(cmd, RunProjectResourcesList, "list <project-id>", "List resources assigned to a project",
+		"List all of the resources assigned to the specified project displaying their uniform resource names (\"URNs\").",
 		Writer, aliasOpt("ls"), displayerType(&displayers.ProjectResource{}))
-	CmdBuilder(cmd, RunProjectResourcesGet, "get <urn>", "get a project resource by its URN",
+	CmdBuilderWithDocs(cmd, RunProjectResourcesGet, "get <urn>", "Retrieve a resource by its URN",
+		"Retrieve information about a resource by specifying its uniform resource name (\"URN\"). Currently, ony Droplets, floating IPs, load balancers, domains, and volumes are supported."+urnDesc,
 		Writer, aliasOpt("g"), displayerType(&displayers.ProjectResource{}))
 
-	cmdProjectResourcesAssign := CmdBuilder(cmd, RunProjectResourcesAssign,
+	cmdProjectResourcesAssign := CmdBuilderWithDocs(cmd, RunProjectResourcesAssign,
 		"assign <project-id> --resource=<urn> [--resource=<urn> ...]",
-		"assign one or more resources to a project", Writer, aliasOpt("a"))
+		"Assign one or more resources to a project",
+		"Assign one or more resources to a project by specifying the resource's uniform resource name (\"URN\")."+urnDesc,
+		Writer, aliasOpt("a"))
 	AddStringSliceFlag(cmdProjectResourcesAssign, doctl.ArgProjectResource, "",
-		[]string{}, "resource URNs denoting resources to assign to the project")
+		[]string{}, "URNs specifying resources to assign to the project")
 
 	return cmd
 }
