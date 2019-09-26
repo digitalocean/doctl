@@ -23,16 +23,20 @@ func Account() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "account",
-			Short: "account commands",
-			Long:  "account is used to access account commands",
+			Short: "Provides access to account commands.",
+			Long:  `Commands related to DigitalOcean accounts are accessible under the doctl account namespace.
+
+It should be noted however, that calling 'doctl account' itself doesn't do anything.`,
 		},
+		DocCategories: []string{"account"},
+		IsIndex:       true,
 	}
 
-	CmdBuilder(cmd, RunAccountGet, "get", "get account", Writer,
-		aliasOpt("g"), displayerType(&displayers.Account{}))
+	CmdBuilder(cmd, RunAccountGet, "get", "Retrieve details for your account, including the email address, droplet limit, email verification status, account status, and the UUID for the account.", Writer,
+		aliasOpt("g"), displayerType(&displayers.Account{}), docCategories("account"))
 
-	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "get API rate limits", Writer,
-		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))
+	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieves how many requests you’ve made recently, and when the limit is due to reset.", Writer,
+		aliasOpt("rl"), displayerType(&displayers.RateLimit{}), docCategories("account"))
 
 	return cmd
 }
