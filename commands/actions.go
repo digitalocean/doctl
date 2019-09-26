@@ -29,7 +29,7 @@ func Actions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "action",
-			Short: "Provides access to commands that retrieve the history of actions taken on your resources",
+			Short: "Provides commands that retrieve the history resource actions",
 			Long: `The sub-commands of 'doctl compute action' retrieve the history of actions taken on your resources.
 
 This can be filtered to a specific action. For example, while 'doctl compute action list' will list all of the actions taken on all of the resources in your account, 'doctl compute action get <action-id>' will retrieve details for a specific action.`,

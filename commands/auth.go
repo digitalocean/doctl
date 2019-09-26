@@ -115,7 +115,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 		if token == "" {
 			in, err := retrieveUserTokenFunc()
 			if err != nil {
-				return fmt.Errorf("unable to read DigitalOcean access token: %s", err)
+				return fmt.Errorf("Unable to read DigitalOcean access token: %s", err)
 			}
 			token = strings.TrimSpace(in)
 		} else {
@@ -130,13 +130,13 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 		// need to initial the godo client since we've changed the configuration.
 		if err := c.initServices(c); err != nil {
-			return fmt.Errorf("unable to initialize DigitalOcean API client with new token: %s", err)
+			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
 		}
 
 		if _, err := c.Account().Get(); err != nil {
 			fmt.Fprintln(c.Out, "invalid token")
 			fmt.Fprintln(c.Out)
-			return fmt.Errorf("unable to use supplied token to access API: %s", err)
+			return fmt.Errorf("Unable to use supplied token to access API: %s", err)
 		}
 
 		fmt.Fprintln(c.Out, "OK")

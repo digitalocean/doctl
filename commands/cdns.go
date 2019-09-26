@@ -245,7 +245,7 @@ func RunCDNDelete(c *CmdConfig) error {
 		return c.CDNs().Delete(id)
 	}
 
-	return fmt.Errorf("Operation aborted")
+	return fmt.Errorf("Operation aborted.")
 }
 
 // RunCDNFlushCache flushes the cache of an individual cdn
