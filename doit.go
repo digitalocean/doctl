@@ -35,9 +35,6 @@ import (
 )
 
 const (
-	// NSRoot is a configuration key that signifies this value is at the root.
-	NSRoot = "doctl"
-
 	// LatestReleaseURL is the latest release URL endpoint.
 	LatestReleaseURL = "https://api.github.com/repos/digitalocean/doctl/releases/latest"
 )
@@ -251,10 +248,6 @@ func (c *LiveConfig) IsSet(key string) bool {
 
 // GetString returns a config value as a string.
 func (c *LiveConfig) GetString(ns, key string) (string, error) {
-	if ns == NSRoot {
-		return viper.GetString(key), nil
-	}
-
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
@@ -269,10 +262,6 @@ func (c *LiveConfig) GetString(ns, key string) (string, error) {
 
 // GetBool returns a config value as a bool.
 func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
-	if ns == NSRoot {
-		return viper.GetBool(key), nil
-	}
-
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	return viper.GetBool(nskey), nil
@@ -284,11 +273,6 @@ func (c *LiveConfig) GetBoolPtr(ns, key string) (*bool, error) {
 		return nil, nil
 	}
 
-	if ns == NSRoot {
-		val := viper.GetBool(key)
-		return &val, nil
-	}
-
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 	val := viper.GetBool(nskey)
 
@@ -297,10 +281,6 @@ func (c *LiveConfig) GetBoolPtr(ns, key string) (*bool, error) {
 
 // GetInt returns a config value as an int.
 func (c *LiveConfig) GetInt(ns, key string) (int, error) {
-	if ns == NSRoot {
-		return viper.GetInt(key), nil
-	}
-
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
@@ -315,14 +295,6 @@ func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 
 // GetIntPtr returns a config value as an int pointer.
 func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
-	if ns == NSRoot {
-		if !c.IsSet(key) {
-			return nil, nil
-		}
-		val := viper.GetInt(key)
-		return &val, nil
-	}
-
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
 	isSet := c.IsSet(key)
@@ -340,10 +312,6 @@ func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
 
 // GetStringSlice returns a config value as a string slice.
 func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
-	if ns == NSRoot {
-		return viper.GetStringSlice(key), nil
-	}
-
 	nskey := fmt.Sprintf("%s.%s", ns, key)
 
 	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))

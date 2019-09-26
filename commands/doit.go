@@ -268,21 +268,17 @@ func AddStringSliceFlag(cmd *Command, name, shorthand string, def []string, desc
 }
 
 func flagName(cmd *Command, name string) string {
-	parentName := doctl.NSRoot
 	if cmd.Parent() != nil {
-		parentName = cmd.Parent().Name()
+		return fmt.Sprintf("%s.%s.%s", cmd.Parent().Name(), cmd.Name(), name)
 	}
-
-	return fmt.Sprintf("%s.%s.%s", parentName, cmd.Name(), name)
+	return fmt.Sprintf("%s.%s", cmd.Name(), name)
 }
 
 func cmdNS(cmd *cobra.Command) string {
-	parentName := doctl.NSRoot
 	if cmd.Parent() != nil {
-		parentName = cmd.Parent().Name()
+		return fmt.Sprintf("%s.%s", cmd.Parent().Name(), cmd.Name())
 	}
-
-	return fmt.Sprintf("%s.%s", parentName, cmd.Name())
+	return fmt.Sprintf("%s", cmd.Name())
 }
 
 // CmdRunner runs a command and passes in a cmdConfig.
