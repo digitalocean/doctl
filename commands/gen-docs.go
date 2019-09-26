@@ -14,9 +14,13 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
 )
 
@@ -30,18 +34,47 @@ func GenDocs(parent *Command) *Command {
 
 // RunGenDocs outputs docs.
 func RunGenDocs(c *CmdConfig) error {
-	yamlDir, err := c.Doit.GetString(c.NS, "dir")
+	dir, err := c.Doit.GetString(c.NS, "dir")
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(yamlDir); err != nil {
+	if _, err := os.Stat(dir); err != nil {
 		return err
 	}
-	for _, c := range DoitCmd.ChildCommands() {
-		err := doc.GenYamlTree(c.Command, yamlDir)
+
+	for _, cmd := range DoitCmd.Commands() {
+		err := writeDocs(cmd, dir)
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
+	return nil
+}
+
+func writeDocs(cmd *cobra.Command, dir string) error {
+	for _, c := range cmd.Commands() {
+		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
+			continue
+		}
+		if err := writeDocs(c, dir); err != nil {
+			return err
+		}
+	}
+
+	basename := strings.Replace(cmd.CommandPath(), " ", "_", -1) + ".yaml"
+	filename := filepath.Join(dir, basename)
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	doc.GenYaml(cmd, f)
+	use := cmd.UseLine()
+	usage := fmt.Sprintf("usage: %s\n", use)
+	if _, err := f.WriteString(usage); err != nil {
+		return err
+	}
+
 	return nil
 }
