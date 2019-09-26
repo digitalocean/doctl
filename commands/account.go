@@ -23,14 +23,14 @@ func Account() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "account",
-			Short: "Provides access to account commands.",
-			Long: `Commands related to DigitalOcean accounts are accessible under the doctl account namespace.
+			Short: "Provides commands that retrieve account details",
+			Long: `The subcommands of 'doctl account' retreive information about DigitalOcean accounts.
 
-It should be noted however, that calling 'doctl account' itself doesn't do anything.`,
+For example, 'doctl account get' retrieves account profile details, and 'doctl account ratelimit' retrieves API usage details.`,
 		},
 	}
 
-	CmdBuilderWithDocs(cmd, RunAccountGet, "get", "Retrieve account details", `Retrieves the following details for your account:
+	CmdBuilderWithDocs(cmd, RunAccountGet, "get", "Retrieves account details", `Retrieves the following details for your account:
 
 - Email address
 - Account droplet limit
@@ -45,8 +45,7 @@ It should be noted however, that calling 'doctl account' itself doesn't do anyth
 - The number of API calls you have made in the last hour
 - When the API call count is due to reset to zero, which happens hourly
 
-Note that these details are per OAuth token and are tied to the token you used
-when calling 'doctl auth init' at setup time.`, Writer,
+Note that these details are per OAuth token and are tied to the token you used when calling 'doctl auth init' at setup time.`, Writer,
 		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))
 
 	return cmd
