@@ -172,14 +172,6 @@ type tcMocks struct {
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
-	ogConfig := doctl.DoitConfig
-	defer func() {
-		doctl.DoitConfig = ogConfig
-	}()
-
-	cfg := doctl.NewTestConfig()
-	doctl.DoitConfig = cfg
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -211,7 +203,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 	config := &CmdConfig{
 		NS:   "test",
-		Doit: cfg,
+		Doit: doctl.NewTestConfig(),
 		Out:  ioutil.Discard,
 
 		// can stub this out, since the return is dictated by the mocks.

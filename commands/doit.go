@@ -435,7 +435,7 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out
 		Run: func(cmd *cobra.Command, args []string) {
 			c, err := NewCmdConfig(
 				cmdNS(cmd),
-				doctl.DoitConfig,
+				&doctl.LiveConfig{},
 				out,
 				args,
 				initCmd,

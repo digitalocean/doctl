@@ -49,9 +49,6 @@ type Version struct {
 }
 
 var (
-	// DoitConfig holds the app's current configuration.
-	DoitConfig Config = &LiveConfig{}
-
 	// Build, Major, Minor, Patch and Label are set at build time
 	Build, Major, Minor, Patch, Label string
 
@@ -171,8 +168,7 @@ type Config interface {
 
 // LiveConfig is an implementation of Config for live values.
 type LiveConfig struct {
-	godoClient *godo.Client
-	cliArgs    map[string]bool
+	cliArgs map[string]bool
 }
 
 var _ Config = &LiveConfig{}
@@ -210,13 +206,7 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 		args = append(args, godo.SetBaseURL(apiURL))
 	}
 
-	godoClient, err := godo.New(oauthClient, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	c.godoClient = godoClient
-	return c.godoClient, nil
+	return godo.New(oauthClient, args...)
 }
 
 func userAgent() string {
