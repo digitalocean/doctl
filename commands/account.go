@@ -30,10 +30,23 @@ It should be noted however, that calling 'doctl account' itself doesn't do anyth
 		},
 	}
 
-	CmdBuilder(cmd, RunAccountGet, "get", "Retrieve details for your account, including the email address, droplet limit, email verification status, account status, and the UUID for the account.", Writer,
+	CmdBuilderWithDocs(cmd, RunAccountGet, "get", "Retrieve account details", `Retrieves the following details for your account:
+
+- Email address
+- Account droplet limit
+- Email verification status
+- Account status (active or disabled)
+- UUID for the account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Account{}))
 
-	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieves how many requests you’ve made recently, and when the limit is due to reset.", Writer,
+	CmdBuilderWithDocs(cmd, RunAccountRateLimit, "ratelimit", "Retrieves your API usage and the remaining quota", `Retrieves the following details about your account's API usage:
+
+- The current limit on your account for API calls (5,000 per hour per OAuth token)
+- The number of API calls you have made in the last hour
+- When the API call count is due to reset to zero, which happens hourly
+
+Note that these details are per OAuth token and are tied to the token you used
+when calling 'doctl auth init' at setup time.`, Writer,
 		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))
 
 	return cmd
