@@ -41,6 +41,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("failed to create temp dir")
 	}
+	defer os.RemoveAll(tmpDir) // yes, this is best effort only
 
 	builtBinaryPath = filepath.Join(tmpDir, path.Base(packagePath))
 	if runtime.GOOS == "windows" {
@@ -56,12 +57,6 @@ func TestMain(m *testing.M) {
 	}
 
 	code := m.Run()
-
-	// Fails only on windows sometimes for unknown reasons
-	// making best effort for now since worst problem is
-	// that you leave a temp dir around that will get
-	// cleaned up by the OS on a restart.
-	os.RemoveAll(tmpDir)
 
 	os.Exit(code)
 }
