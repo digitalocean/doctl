@@ -30,7 +30,7 @@ func Region() *Command {
 
 	regionDesc := `List DigitalOcean datacenter regions displaying their name, slug, and availability.
 
-The slug displayed by this command are unique identifiers for each region and should be used to specify the region in other commands.
+The slugs displayed by this command are unique identifiers for each region and should be used to specify the region in other commands.
 `
 	CmdBuilderWithDocs(cmd, RunRegionList, "list", "List datacenter regions", regionDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Region{}))
