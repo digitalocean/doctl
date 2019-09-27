@@ -746,25 +746,37 @@ func displayDatabasePools(c *CmdConfig, pools ...do.DatabasePool) error {
 }
 
 func databaseDB() *Command {
+	getClusterList := `
+
+You can get a list of existing database clusters and their IDs by calling:
+
+	doctl databases list`
+	getDBList := `
+
+You can get a list of existing databases that are hosted within a cluster by calling:
+
+	doctl databases db list {cluster-id}`
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "db",
-			Short: "database db commands",
-			Long:  "database is used to access database db commands",
+			Short: "Provides commands for managing individual databases within a cluster",
+			Long:  `The subcommands under 'doctl databases db' are for managing specific databases that are served by a database cluster.
+
+	You can use these commands to create and delete databases within a cluster, or simply get information about them.` + getClusterList,
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseDBList, "list <database-id>", "list dbs", Writer,
+	CmdBuilderWithDocs(cmd, RunDatabaseDBList, "list <database-id>", "Retrieves list of databases within a cluster", "This command retrieves the names of all databases being hosted in the specified database cluster." + getClusterList, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DatabaseDBs{}))
-	CmdBuilder(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "get a db",
+	CmdBuilderWithDocs(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "Retrieves the name of a database within a cluster", "This command retrieves name of the specified database hosted in the specified database cluster." + getClusterList  + getDBList,
 		Writer, aliasOpt("g"), displayerType(&displayers.DatabaseDBs{}))
-	CmdBuilder(cmd, RunDatabaseDBCreate, "create <database-id> <db-name>",
-		"create a db", Writer, aliasOpt("c"))
+	CmdBuilderWithDocs(cmd, RunDatabaseDBCreate, "create <database-id> <db-name>",
+		"Creates a database within a cluster", "This command creates a database with the specified name in the specified database cluster." + getClusterList, Writer, aliasOpt("c"))
 
-	cmdDatabaseDBDelete := CmdBuilder(cmd, RunDatabaseDBDelete,
-		"delete <database-id> <db-name>", "delete db", Writer, aliasOpt("rm"))
+	cmdDatabaseDBDelete := CmdBuilderWithDocs(cmd, RunDatabaseDBDelete,
+		"delete <database-id> <db-name>", "Deletes the specified database from the cluster", "This command deletes the specified database from the specified database cluster." + getClusterList + getDBList, Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDBDelete, doctl.ArgForce, doctl.ArgShortForce,
-		false, "force database delete")
+		false, "Delete the database without a confirmation prompt")
 
 	return cmd
 }
@@ -832,13 +844,13 @@ func RunDatabaseDBDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("delete this database db") == nil {
+	if force || AskForConfirm("Delete this database?") == nil {
 		databaseID := c.Args[0]
 		dbID := c.Args[1]
 		return c.Databases().DeleteDB(databaseID, dbID)
 	}
 
-	return fmt.Errorf("operation aborted")
+	return fmt.Errorf("Operation aborted.")
 }
 
 func displayDatabaseDBs(c *CmdConfig, dbs ...do.DatabaseDB) error {
