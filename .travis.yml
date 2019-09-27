@@ -57,10 +57,12 @@ jobs:
     go: 1.13.x
     services: docker
     env: CACHE_NAME=DEPLOY_GORELEASER
-    before_deploy: echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
+    before_deploy:
+    - echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
+    - sudo snap install goreleaser --classic
     deploy:
     - provider: script
-      script: curl -sL https://git.io/goreleaser | bash
+      script: make release
       skip_cleanup: true
       on:
         tags: true
