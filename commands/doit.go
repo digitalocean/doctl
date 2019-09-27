@@ -200,16 +200,12 @@ func requiredOpt() flagOpt {
 	return func(c *Command, name, key string) {
 		c.MarkFlagRequired(key)
 
-		key = requiredKey(key)
+		key = fmt.Sprintf("required.%s", key)
 		viper.Set(key, true)
 
 		u := c.Flag(name).Usage
 		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))
 	}
-}
-
-func requiredKey(key string) string {
-	return fmt.Sprintf("required.%s", key)
 }
 
 func betaOpt() flagOpt {
