@@ -29,22 +29,36 @@ func Snapshot() *Command {
 		Command: &cobra.Command{
 			Use:     "snapshot",
 			Aliases: []string{"s"},
-			Short:   "snapshot commands",
-			Long:    "snapshot is used to access snapshot commands",
+			Short:   "Access and manage snapshots",
+			Long:    "The subcommands of 'doctl compute snapshot' allow you to manage and retrieve information about Droplet and block storage volume snapshots.",
 		},
 	}
 
-	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [glob]", "list snapshots", Writer,
-		aliasOpt("ls"), displayerType(&displayers.Snapshot{}))
-	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Resource type")
-	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Snapshot region")
+	snapshotDetail := `
 
-	CmdBuilder(cmd, RunSnapshotGet, "get <snapshot-id>...", "get snapshots", Writer,
-		aliasOpt("g"), displayerType(&displayers.Droplet{}))
+  - The snapshot's ID
+  - The snapshot's Name
+  - The date and time at which the snapshot was created
+  - The slugs of the datacenter regions in which the snapshot is available
+  - The type of resource the snapshot was made from, Droplet or volume, and its ID
+  - The minimum size in GB required for a Droplet or volume to use this snapshot
+  - The compressed, billable size of the snapshot
+`
 
-	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id>...", "delete snapshots", Writer,
-		aliasOpt("d"), displayerType(&displayers.Droplet{}))
-	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force snapshot delete")
+	cmdRunSnapshotList := CmdBuilderWithDocs(cmd, RunSnapshotList, "list [glob]",
+		"List Droplet and volume snapshots", "List information about Droplet and block storage volume snapshots, including:"+snapshotDetail,
+		Writer, aliasOpt("ls"), displayerType(&displayers.Snapshot{}))
+	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Filter by resource type (\"droplet\" or \"volume\")")
+	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Filter by regional availability")
+
+	CmdBuilderWithDocs(cmd, RunSnapshotGet, "get <snapshot-id>...",
+		"Retrieve a Droplet or volume snapshot", "Retrieve information about a Droplet or block storage volume snapshot, including:"+snapshotDetail,
+		Writer, aliasOpt("g"), displayerType(&displayers.Snapshot{}))
+
+	cmdRunSnapshotDelete := CmdBuilderWithDocs(cmd, RunSnapshotDelete, "delete <snapshot-id>...",
+		"Delete a Droplet or volume snapshot", "Delete a Droplet or volume snapshot by specifying its ID.",
+		Writer, aliasOpt("d"), displayerType(&displayers.Snapshot{}))
+	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the snapshot without confirmation")
 
 	return cmd
 }

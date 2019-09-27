@@ -55,7 +55,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 	CmdBuilderWithDocs(cmd, RunProjectsList, "list", "List existing projects",
 		"List details for for your DigitalOcean projects, including:"+projectDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Project{}))
-	CmdBuilderWithDocs(cmd, RunProjectsGet, "get <id>", "Retreive details for a specific project",
+	CmdBuilderWithDocs(cmd, RunProjectsGet, "get <id>", "Retrieve details for a specific project",
 		"Display the following details for an existing project specified by its ID (use \"default\" for <id> to retieve your default project):"+projectDetails,
 		Writer, aliasOpt("g"), displayerType(&displayers.Project{}))
 
