@@ -73,7 +73,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 
 	cmdProjectsUpdate := CmdBuilderWithDocs(cmd, RunProjectsUpdate, "update <id>",
 		"Update an existing project",
-		"Update information about an existing project specified by its ID (use \"default\" for <id> to update your default project)",
+		"Update information about an existing project specified by its ID (use \"default\" for <id> to update your default project).",
 		Writer, aliasOpt("u"), displayerType(&displayers.Project{}))
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectName, "", "", "A name for the project")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectPurpose, "", "", "The project's purpose")
@@ -85,7 +85,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 		"Set the specified project as your default project")
 
 	cmdProjectsDelete := CmdBuilderWithDocs(cmd, RunProjectsDelete, "delete <id> [<id> ...]",
-		"Delete the specified project", "Delete a project by specifiying its ID. To be deleted, a project must not have any resources assigned to it.",
+		"Delete the specified project", "Delete a project by specifying its ID. To be deleted, a project must not have any resources assigned to it.",
 		Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdProjectsDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the project without confirmation")

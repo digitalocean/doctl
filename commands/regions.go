@@ -23,13 +23,17 @@ func Region() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "region",
-			Short: "region commands",
-			Long:  "region is used to access region commands",
+			Short: "List datacenter regions",
+			Long:  "The subcommands of 'doctl compute region' retrieve information about DigitalOcean datacenter regions.",
 		},
 	}
 
-	CmdBuilder(cmd, RunRegionList, "list", "list regions", Writer, aliasOpt("ls"),
-		displayerType(&displayers.Region{}))
+	regionDesc := `List DigitalOcean datacenter regions displaying their name, slug, and availability.
+
+The slug displayed by this command are unique identifiers for each region and should be used to specify the region in other commands.
+`
+	CmdBuilderWithDocs(cmd, RunRegionList, "list", "List datacenter regions", regionDesc,
+		Writer, aliasOpt("ls"), displayerType(&displayers.Region{}))
 
 	return cmd
 }
