@@ -15,6 +15,7 @@ package commands
 
 import (
 	"errors"
+	"fmt"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -37,13 +38,18 @@ func SSH(parent *Command) *Command {
 
 	path := filepath.Join(usr.HomeDir, ".ssh", "id_rsa")
 
-	cmdSSH := CmdBuilder(parent, RunSSH, "ssh <droplet-id|host>", "ssh to droplet", Writer)
-	AddStringFlag(cmdSSH, doctl.ArgSSHUser, "", "root", "ssh user")
-	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, "", path, "path to private ssh key")
-	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, "", 22, "port sshd is running on")
-	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, "", false, "enable ssh agent forwarding")
-	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, "", false, "ssh to private ip instead of public ip")
-	AddStringFlag(cmdSSH, doctl.ArgSSHCommand, "", "", "command to execute")
+	sshDesc := fmt.Sprintf(`Access a Droplet using SSH by providing its ID or name.
+
+You may specify the user to login with by passing the '--%s' flag. To access the Droplet on a non-default port, use the '--%s' flag. By default, the connection will be made to the Droplet's public IP address. In order access it using its private IP address, use the '--%s' flag.
+`, doctl.ArgSSHUser, doctl.ArgsSSHPort, doctl.ArgsSSHPrivateIP)
+
+	cmdSSH := CmdBuilderWithDocs(parent, RunSSH, "ssh <droplet-id|name>", "Access a Droplet using SSH", sshDesc, Writer)
+	AddStringFlag(cmdSSH, doctl.ArgSSHUser, "", "root", "SSH user for connection")
+	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, "", path, "Path to SSH private key")
+	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, "", 22, "The remote port sshd is running on")
+	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, "", false, "Enable SSH agent forwarding")
+	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, "", false, "SSH to Droplet's private IP address")
+	AddStringFlag(cmdSSH, doctl.ArgSSHCommand, "", "", "Command to execute on Droplet")
 
 	return cmdSSH
 }
