@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -49,7 +50,7 @@ func testDropletTag(t *testing.T, when spec.G, it spec.S) {
 				err = json.Unmarshal(body, &tagRequest)
 				expect.NoError(err)
 
-				if req.Method == "POST" {
+				if req.Method == "POST" || req.Method == "DELETE" {
 					if tagRequest.Resources[0].ResourceID == "1444" {
 						w.WriteHeader(http.StatusNotFound)
 						w.Write([]byte(`{"message": "tag not found"}`))
@@ -70,56 +71,84 @@ func testDropletTag(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("all required flags are passed", func() {
-		it("tags the droplet", func() {
-			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"compute",
-				"droplet",
-				"tag",
-				"some-droplet-name",
-				"--tag-name", "my-tag",
-			)
+		base := []string{
+			"-t", "some-magic-token",
+			"compute",
+			"droplet",
+		}
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-		})
+		cases := []struct {
+			desc string
+			args []string
+		}{
+			{desc: "when tagging", args: append(base, []string{"tag", "some-droplet-name", "--tag-name", "my-tag"}...)},
+			{desc: "when untagging", args: append(base, []string{"untag", "some-droplet-name", "--tag-name", "my-tag"}...)},
+		}
+
+		for _, c := range cases {
+			commandArgs := c.args
+
+			when(c.desc, func() {
+				it("completes successfully", func() {
+					finalArgs := append([]string{"-u", server.URL}, commandArgs...)
+					cmd := exec.Command(builtBinaryPath, finalArgs...)
+
+					output, err := cmd.CombinedOutput()
+					expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				})
+			})
+		}
 	})
 
-	when("the droplet-id cannot be found", func() {
-		it("returns no error", func() {
-			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"compute",
-				"droplet",
-				"tag",
-				"1444",
-				"--tag-name", "my-tag",
-			)
+	when("an error occurs", func() {
+		base := []string{
+			"-t", "some-magic-token",
+			"compute",
+			"droplet",
+		}
 
-			output, err := cmd.CombinedOutput()
-			expect.Error(err)
-			expect.Equal(strings.TrimSpace(string(output)), fmt.Sprintf("Error: POST %s/v2/tags/my-tag/resources: 404 tag not found", server.URL))
-		})
-	})
+		cases := []struct {
+			desc string
+			args []string
+			err  string
+		}{
+			{
+				desc: "when tagging and droplet id is missing",
+				args: append(base, []string{"tag", "1444", "--tag-name", "my-tag"}...),
+				err:  "^Error: POST http.*: 404 tag not found",
+			},
+			{
+				desc: "when untagging and droplet id is missing",
+				args: append(base, []string{"untag", "1444", "--tag-name", "my-tag"}...),
+				err:  "^Error: DELETE http.*: 404 tag not found",
+			},
+			{
+				desc: "when tagging and droplet name is missing",
+				args: append(base, []string{"untag", "bad-droplet-name", "--tag-name", "my-tag"}...),
+				err:  `^Error:.*\".*\" could not be found`,
+			},
+			{
+				desc: "when untagging and droplet name is missing",
+				args: append(base, []string{"untag", "bad-droplet-name", "--tag-name", "my-tag"}...),
+				err:  `^Error:.*\".*\" could not be found`,
+			},
+		}
 
-	when("the droplet-name cannot be found", func() {
-		it("returns no error", func() {
-			dropletName := "missing-droplet"
-			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"compute",
-				"droplet",
-				"tag",
-				dropletName,
-				"--tag-name", "my-tag",
-			)
+		for _, c := range cases {
+			commandArgs := c.args
+			errRegex := c.err
 
-			output, err := cmd.CombinedOutput()
-			expect.Error(err)
-			expect.Equal(strings.TrimSpace(string(output)), fmt.Sprintf("Error: droplet with name %q could not be found", dropletName))
-		})
+			when(c.desc, func() {
+				it("completes successfully", func() {
+					finalArgs := append([]string{"-u", server.URL}, commandArgs...)
+					cmd := exec.Command(builtBinaryPath, finalArgs...)
+
+					output, err := cmd.CombinedOutput()
+					expect.Error(err)
+					expect.Regexp(regexp.MustCompile(errRegex), strings.TrimSpace(string(output)))
+
+				})
+			})
+		}
 	})
 }
