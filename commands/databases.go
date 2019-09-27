@@ -348,21 +348,37 @@ func databaseMaintenanceWindow() *Command {
 		Command: &cobra.Command{
 			Use:     "maintenance-window",
 			Aliases: []string{"maintenance", "mw", "main"},
-			Short:   "maintenance window commands",
-			Long:    "maintenance is used to access maintenance window commands for a database cluster",
+			Short:   "Provides commands for scheduling automatic maintenance on your database cluster",
+			Long:    `The 'doctl databases maintenance-window' commands allow you to schedule, and check the schedule of, maintenance windows for your databases.
+
+Maintenance windows are hour-long blocks of time during which DigitalOcean performs automatic maintenance on databases every week. During this time, health checks, security updates, version upgrades, and more are performed.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseMaintenanceGet, "get <database-id>",
-		"get maintenance window info", Writer, aliasOpt("g"),
+	CmdBuilderWithDocs(cmd, RunDatabaseMaintenanceGet, "get <database-id>",
+		"Retrieves details about a database cluster's maintenance windows", `This command retrieves the following information on currently-scheduled maintenance windows for the specified database cluster:
+
+- The day of the week the maintenance window occurs
+- The hour in UTC at which maintenance updates will be applied, in 24 hour format (e.g. "16:00")
+- A boolean representing whether maintence updates are currently pending
+
+To see a list of your databases and their IDs, run 'doctl databases list'.`, Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseMaintenanceWindow{}))
 
-	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseMaintenanceUpdate,
-		"update <database-id>", "update maintenance window", Writer, aliasOpt("u"))
+	cmdDatabaseCreate := CmdBuilderWithDocs(cmd, RunDatabaseMaintenanceUpdate,
+		"update <database-id>", "Update the maintenance window for a database cluster", `This command allows you to update the maintenance window for the specified database cluster.
+
+Maintenance windows are hour-long blocks of time during which DigitalOcean performs automatic maintenance on databases every week. During this time, health checks, security updates, version upgrades, and more are performed.
+
+To change the maintenance window for your database cluster, specify a day of the week and an hour of that day during which you would prefer such maintenance would occur.
+
+	doctl databases maintenance-window ca9f591d-f38h-5555-a0ef-1c02d1d1e35 update --day tuesday --hour 16:00
+
+To see a list of your databases and their IDs, run 'doctl databases list'.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceDay, "", "",
-		"new maintenance window day", requiredOpt())
+		"The day of the week the maintenance window occurs (e.g. 'tuesday')", requiredOpt())
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceHour, "", "",
-		"new maintenance window hour", requiredOpt())
+		"The hour in UTC at which maintenance updates will be applied, in 24 hour format (e.g. '16:00')", requiredOpt())
 
 	return cmd
 }
@@ -428,23 +444,42 @@ func databaseUser() *Command {
 		Command: &cobra.Command{
 			Use:     "user",
 			Aliases: []string{"u"},
-			Short:   "database user commands",
-			Long:    "database is used to access database user commands",
+			Short:   "Provides commands for managing database users",
+			Long:    `The commands under 'doctl databases user' allow you to view details for, and create, database users.
+
+Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseUserList, "list <database-id>", "list database users",
-		Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseUsers{}))
-	CmdBuilder(cmd, RunDatabaseUserGet, "get <database-id> <user-id>",
-		"get a database user", Writer, aliasOpt("g"),
-		displayerType(&displayers.DatabaseUsers{}))
-	CmdBuilder(cmd, RunDatabaseUserCreate, "create <database-id> <user-name>",
-		"create a database user", Writer, aliasOpt("c"))
+	userDetailsDesc := `
 
-	cmdDatabaseUserDelete := CmdBuilder(cmd, RunDatabaseUserDelete,
-		"delete <database-id> <user-id>", "delete database cluster",
+- The username for the user
+- The password for the user
+- The user's role. The value will be either "primary" or "normal".
+
+Primary user accounts are created by DigitalOcean at database cluster creation time and can't be deleted. Normal user accounts are created by you. Both have administrative privileges on the database cluster.
+
+To retrieve a list of your databases and their IDs, call 'doctl databases list'.`
+	CmdBuilderWithDocs(cmd, RunDatabaseUserList, "list <database-id>", "Retrieves list of database users",
+		`This command retrieves a list of users for the specified database with the following details:` + userDetailsDesc, Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseUsers{}))
+	CmdBuilderWithDocs(cmd, RunDatabaseUserGet, "get <database-id> <user-name>",
+		"Retrieves details about a database user", `This command retrieves the following details about the specified user:` + userDetailsDesc + `
+
+To retrieve a list of database users for a database, call 'doctl databases user list {database-id}'`, Writer, aliasOpt("g"),
+		displayerType(&displayers.DatabaseUsers{}))
+	CmdBuilderWithDocs(cmd, RunDatabaseUserCreate, "create <database-id> <user-name>",
+		"Creates a database user", `This command creates a user with the username you specify, who will be granted access to the database cluster you specify.
+
+The user will be created with the role set to 'normal', and given an automatically-generated password.
+
+To retrieve a list of your databases and their IDs, call 'doctl databases list'.`, Writer, aliasOpt("c"))
+
+	cmdDatabaseUserDelete := CmdBuilderWithDocs(cmd, RunDatabaseUserDelete,
+		"delete <database-id> <user-id>", "Deletes a database user", `This command deletes the user with the username you specify, whose account was given access to the database cluster you specify.
+
+To retrieve a list of your databases and their IDs, call 'doctl databases list'.`
 		Writer, aliasOpt("rm"))
-	AddBoolFlag(cmdDatabaseUserDelete, doctl.ArgForce, doctl.ArgShortForce, false, "force database delete")
+	AddBoolFlag(cmdDatabaseUserDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the user without a confirmation prompt")
 
 	return cmd
 }

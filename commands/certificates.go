@@ -41,11 +41,12 @@ After storage, they can be referred to in your doctl and API workflows by using 
 - The certificate ID
 - The name you gave the certificate
 - Comma-separated list of domain names associated with the certificate
-- The SHA-1 Fingerprint for the certificate
-- The certificate's expiration date
-- The certificate's creation date
-- The certificate type
-- The certificate State`
+- The SHA-1 fingerprint of the certificate
+- The certificate's expiration date given in ISO8601 date/time format
+- The certificate's creation date given in ISO8601 date/time format
+- The certificate type ('custom' or 'lets_encrypt')
+- The certificate state ('pending', 'verified', or 'error')`
+
 	CmdBuilderWithDocs(cmd, RunCertificateGet, "get <id>", "Retreives details about a certificate", `This command retrieves the following details about a certificate:`+certDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Certificate{}))
 	cmdCertificateCreate := CmdBuilderWithDocs(cmd, RunCertificateCreate, "create",
@@ -57,19 +58,19 @@ To create a Let's Encrypt certificate, you'll need to add the domain(s) to your 
 
 	doctl compute certificate create --type lets_encrypt --name mycert --dns-names example.org
 
-To upload a custom certificate, you'll need to provide a certificate name, the path to the certificate, the path to the private key for the certificate, and the path to the certificate chain:
+To upload a custom certificate, you'll need to provide a certificate name, the path to the certificate, the path to the private key for the certificate, and the path to the certificate chain, all in PEM format:
 
 	doctl compute certificate create --type custom --name mycert --leaf-certificate-path cert.pem --certificate-chain-path fullchain.pem --private-key-path privkey.pem`, Writer, aliasOpt("c"))
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateName, "", "",
 		"Certificate name", requiredOpt())
 	AddStringSliceFlag(cmdCertificateCreate, doctl.ArgCertificateDNSNames, "",
-		[]string{}, "Comma-separated list of domain names, required for lets_encrypt certificate")
+		[]string{}, "Comma-separated list of domains for which the certificate will be issued. The domains must be managed using DigitalOcean's DNS.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgPrivateKeyPath, "", "",
-		"Path to a private key for the certificate, required for custom certificate")
+		"The path to a PEM-formatted private-key corresponding to the SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgLeafCertificatePath, "", "",
-		"Path to a certificate leaf, required for custom certificate")
+		"The path to a PEM-formatted public SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "",
-		"Path to a certificate chain")
+		"The path to a full PEM-formatted trust chain between the certificate authority's certificate and your domain's SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "",
 		"Certificate type [custom|lets_encrypt]")
 

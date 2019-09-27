@@ -30,7 +30,11 @@ func CDN() *Command {
 		Command: &cobra.Command{
 			Use:   "cdn",
 			Short: "Provides access to commands that manage CDNs.",
-			Long:  "The subcommands of 'doctl compute cdn' enable management of Content Delivery Networks (CDNs). This allows you to deliver content to users based on their geographic location.",
+			Long: `The subcommands of 'doctl compute cdn' enable management of Content Delivery Networks (CDNs).
+
+Content hosted in DigitalOcean's object storage solution, Spaces, can optionally be served by our globally distributed CDN. This allows you to deliver content to users based on their geographic location.
+
+To use a custom subdomain to access the CDN endpoint, provide the ID of a DigitalOcean-managed TLS certificate and the fully qualified domain name (FQDN) for the custom subdomain.`,
 		},
 	}
 
@@ -43,12 +47,12 @@ The "Time To Live" (TTL) is the length of time, in seconds, that a file is cache
 	CDNDetails := `
 
 - The ID for the CDN, in UUID format
-- The URL for the origin server, which provides the content the CDN is delivering
-- The endpoint at which the CDN can be accessed
+- The fully qualified domain name (FQDN) for the origin server which the provides the content for the CDN. This is currently restricted to a Space.
+- The fully qualified domain name (FQDN) of the endpoint from which the CDN-backed content is served.
 - The "Time To Live" (TTL) value for cached content, in seconds. The default is 3,600 (one hour).
 - An optional custom subdomain at which the CDN can be accessed
-- The certificate ID for the custom subdomain
-- The date and time at which the CDN was created.`
+- The ID of a DigitalOcean-managed TLS certificate used for SSL when a custom subdomain is provided.
+- The date and time at which the CDN was created, in ISO8601 date/time format`
 	TTLDesc := "The \"Time To Live\" (TTL) value for cached content, in seconds"
 	DomainDesc := "Specifies a custom domain to use with the CDN"
 	CertIDDesc := "Specifies a Certificate ID for the custom domain"
@@ -86,7 +90,7 @@ Currently, you can only update the custom domain (and its certificate ID) with t
 
 This can be useful if you need to ensure that a file that was recently changed on the origin server is available immediately via the CDN.
 
-You can also provide a path to specific files you would like flushed via the '--files' flag.`, Writer,
+You can also provide a path to specific files you would like flushed via the '--files' flag. A path may be for a single file or may contain a wildcard (*) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.`, Writer,
 		aliasOpt("fc"))
 	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", []string{"*"}, "cdn files")
 

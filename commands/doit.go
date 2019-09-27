@@ -35,7 +35,7 @@ var (
 	DoitCmd = &Command{ // base command
 		Command: &cobra.Command{
 			Use:   "doctl",
-			Short: "doctl is a command line interface for the DigitalOcean API.",
+			Short: "doctl is a command line interface (CLI) for the DigitalOcean API.",
 		},
 	}
 
@@ -99,7 +99,7 @@ func initConfig() {
 
 	if _, err := os.Stat(cfgFile); err == nil {
 		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalln("reading initialization failed:", err)
+			log.Fatalln("Reading initialization failed:", err)
 		}
 	}
 }
