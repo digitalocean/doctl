@@ -37,6 +37,7 @@ func TestMain(m *testing.M) {
 	suite("account/ratelimit", testAccountRateLimit)
 	suite("auth/init", testAuthInit)
 	suite("compute/droplet/create", testDropletCreate)
+	suite("compute/droplet/delete", testDropletDelete)
 
 	tmpDir, err := ioutil.TempDir("", "integration-doctl")
 	if err != nil {
