@@ -565,33 +565,72 @@ func databasePool() *Command {
 		Command: &cobra.Command{
 			Use:     "pool",
 			Aliases: []string{"p"},
-			Short:   "database pool commands",
-			Long:    "database is used to access database pool commands",
+			Short:   "Provides commands for managing connection pools",
+			Long:    `The subcommands under 'doctl databases pool' are for managing connection pools for your database cluster.
+
+A connection pool may be useful if your database:
+
+- Typically handles a large number of idle connections,
+- Has wide variability in the possible number of connections at any given time,
+- Drops connections due to max connection limits, or
+- Experiences performance issues due to high CPU usage.
+
+Connection pools can be created and deleted with these commands, or you can simply retrieve information about them.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabasePoolList, "list <database-id>", "list database pools",
+	connectionPoolDetails := `
+
+- The username of the database user account that the connection pool uses
+- The name of the connection pool
+- The size of the connection pool, i.e. the number of connections that will be allocated
+- The database within the cluster for which the connection pool is used
+- The pool mode for the connection pool, which can be 'session', 'transaction', or 'statement'
+- A connection string for the connection pool`
+  getPoolDetails := `
+
+You can get a list of existing connection pools by calling:
+
+	doctl databases pool list
+
+You can get a list of existing database clusters and their IDs by calling:
+
+	doctl databases list`
+	CmdBuilderWithDocs(cmd, RunDatabasePoolList, "list <database-id>", "Lists connection pools for a database cluster", `This command lists the existing connection pools for the specified database. The following information will be returned:` + connectionPoolDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.DatabasePools{}))
-	CmdBuilder(cmd, RunDatabasePoolGet, "get <database-id> <pool-name>",
-		"get a database pool", Writer, aliasOpt("g"),
+	CmdBuilderWithDocs(cmd, RunDatabasePoolGet, "get <database-id> <pool-name>",
+		"Retrieves information about a database connection pool", `This command retrieves the following information about the specified connection pool for the specified database cluster:` + connectionPoolDetails + getPoolDetails, Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabasePools{}))
-	cmdDatabasePoolCreate := CmdBuilder(cmd, RunDatabasePoolCreate,
-		"create <database-id> <pool-name>", "create a database pool", Writer,
+	cmdDatabasePoolCreate := CmdBuilderWithDocs(cmd, RunDatabasePoolCreate,
+		"create <database-id> <pool-name>", "Creates a connection pool for a database", `This command creates a connection pool for the specified database cluster and gives it the specified name.
+
+You must also use flags to specify the target database, pool size, and database user's username that will be used for the pool. An example call would be:
+
+	pool create ca9f591d-fb58-5555-a0ef-1c02d1d1e352 mypool --db defaultdb --size 10 --user doadmin
+
+The pool size is the minimum number of connections the pool can handle. The maximum pool size varies based on the size of the cluster.
+
+There’s no perfect formula to determine how large your pool should be, but there are a few good guidelines to keep in mind:
+
+- A large pool will stress your database at similar levels as that number of clients would alone.
+- A pool that’s much smaller than the number of clients communicating with the database can act as a bottleneck, reducing the rate at which your database receives and responds to transactions.
+
+We recommend starting with a pool size of about half your available connections and adjusting later based on performance. If you see slow query responses, check the CPU usage on the database’s Overview tab. We recommend decreasing your pool size if CPU usage is high, and increasing your pool size if it’s low.` + getPoolDetails, Writer,
 		aliasOpt("c"))
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolMode, "",
-		"transaction", "pool mode")
+		"transaction", "The pool mode for the connection pool, e.g. 'session', 'transaction', and 'statement'")
 	AddIntFlag(cmdDatabasePoolCreate, doctl.ArgSizeSlug, "", 0, "pool size",
 		requiredOpt())
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolUserName, "", "",
-		"database user name", requiredOpt())
+		"The username for the database user", requiredOpt())
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolDBName, "", "",
-		"database db name", requiredOpt())
+		"The name of the specific database within the database cluster", requiredOpt())
 
-	cmdDatabasePoolDelete := CmdBuilder(cmd, RunDatabasePoolDelete,
-		"delete <database-id> <pool-name>", "delete database cluster", Writer,
+	cmdDatabasePoolDelete := CmdBuilderWithDocs(cmd, RunDatabasePoolDelete,
+		"delete <database-id> <pool-name>", "Deletes a connection pool for a database", `This command deletes the specified connection pool for the specified database cluster.` + getPoolDetails, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabasePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
-		false, "force database delete")
+		false, "Delete connection pool without confirmation prompt")
 
 	return cmd
 }
