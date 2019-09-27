@@ -477,8 +477,7 @@ To retrieve a list of your databases and their IDs, call 'doctl databases list'.
 	cmdDatabaseUserDelete := CmdBuilderWithDocs(cmd, RunDatabaseUserDelete,
 		"delete <database-id> <user-id>", "Deletes a database user", `This command deletes the user with the username you specify, whose account was given access to the database cluster you specify.
 
-To retrieve a list of your databases and their IDs, call 'doctl databases list'.`
-		Writer, aliasOpt("rm"))
+To retrieve a list of your databases and their IDs, call 'doctl databases list'.`, Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseUserDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the user without a confirmation prompt")
 
 	return cmd
