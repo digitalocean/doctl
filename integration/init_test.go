@@ -38,6 +38,7 @@ func TestMain(m *testing.M) {
 	suite("auth/init", testAuthInit)
 	suite("compute/droplet/create", testDropletCreate)
 	suite("compute/droplet/delete", testDropletDelete)
+	suite("compute/droplet/tag", testDropletTag)
 	suite("compute/droplet/list", testDropletList)
 	suite("compute/droplet/kernels", testDropletKernels)
 
