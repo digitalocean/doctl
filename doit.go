@@ -224,13 +224,11 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 
 // Set sets a config key.
 func (c *LiveConfig) Set(ns, key string, val interface{}) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	viper.Set(nskey, val)
+	viper.Set(nskey(ns, key), val)
 }
 
 func (c *LiveConfig) IsSet(key string) bool {
-	r := regexp.MustCompile("\b*--([a-z-_]+)")
-	matches := r.FindAllStringSubmatch(strings.Join(os.Args, " "), -1)
+	matches := regexp.MustCompile("\b*--([a-z-_]+)").FindAllStringSubmatch(strings.Join(os.Args, " "), -1)
 	if len(matches) == 0 {
 		return false
 	}
@@ -242,29 +240,23 @@ func (c *LiveConfig) IsSet(key string) bool {
 		}
 		c.cliArgs = args
 	}
-
 	return c.cliArgs[key]
 }
 
 // GetString returns a config value as a string.
 func (c *LiveConfig) GetString(ns, key string) (string, error) {
-	nskey := fmt.Sprintf("%s.%s", ns, key)
-
-	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
+	nskey := nskey(ns, key)
 	str := viper.GetString(nskey)
 
-	if isRequired && strings.TrimSpace(str) == "" {
+	if isRequired(nskey) && strings.TrimSpace(str) == "" {
 		return "", NewMissingArgsErr(nskey)
 	}
-
 	return str, nil
 }
 
 // GetBool returns a config value as a bool.
 func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
-	nskey := fmt.Sprintf("%s.%s", ns, key)
-
-	return viper.GetBool(nskey), nil
+	return viper.GetBool(nskey(ns, key)), nil
 }
 
 // GetBoolPtr returns a config value as a bool pointer.
@@ -272,51 +264,41 @@ func (c *LiveConfig) GetBoolPtr(ns, key string) (*bool, error) {
 	if !c.IsSet(key) {
 		return nil, nil
 	}
-
-	nskey := fmt.Sprintf("%s.%s", ns, key)
-	val := viper.GetBool(nskey)
-
+	val := viper.GetBool(nskey(ns, key))
 	return &val, nil
 }
 
 // GetInt returns a config value as an int.
 func (c *LiveConfig) GetInt(ns, key string) (int, error) {
-	nskey := fmt.Sprintf("%s.%s", ns, key)
-
-	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
+	nskey := nskey(ns, key)
 	val := viper.GetInt(nskey)
 
-	if isRequired && val == 0 {
+	if isRequired(nskey) && val == 0 {
 		return 0, NewMissingArgsErr(nskey)
 	}
-
 	return val, nil
 }
 
 // GetIntPtr returns a config value as an int pointer.
 func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
-	nskey := fmt.Sprintf("%s.%s", ns, key)
-	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
-	isSet := c.IsSet(key)
+	nskey := nskey(ns, key)
 
-	if !isSet {
-		if isRequired {
+	if !c.IsSet(key) {
+		if isRequired(nskey) {
 			return nil, NewMissingArgsErr(nskey)
 		}
 		return nil, nil
 	}
-
 	val := viper.GetInt(nskey)
 	return &val, nil
 }
 
 // GetStringSlice returns a config value as a string slice.
 func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
-	nskey := fmt.Sprintf("%s.%s", ns, key)
-
-	isRequired := viper.GetBool(fmt.Sprintf("required.%s", nskey))
+	nskey := nskey(ns, key)
 	val := viper.GetStringSlice(nskey)
-	if isRequired && emptyStringSlice(val) {
+
+	if isRequired(nskey) && emptyStringSlice(val) {
 		return nil, NewMissingArgsErr(nskey)
 	}
 
@@ -330,12 +312,18 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 			if str == "" {
 				continue
 			}
-
 			out = append(out, str)
 		}
 	}
-
 	return out, nil
+}
+
+func nskey(ns, key string) string {
+	return fmt.Sprintf("%s.%s", ns, key)
+}
+
+func isRequired(key string) bool {
+	return viper.GetBool(fmt.Sprintf("required.%s", key))
 }
 
 // TestConfig is an implementation of Config for testing.
