@@ -178,7 +178,6 @@ func computeCmd() *Command {
 	cmd.AddCommand(Images())
 	cmd.AddCommand(ImageAction())
 	cmd.AddCommand(LoadBalancer())
-	cmd.AddCommand(Plugin())
 	cmd.AddCommand(Region())
 	cmd.AddCommand(Size())
 	cmd.AddCommand(Snapshot())
