@@ -41,6 +41,12 @@ func TestMain(m *testing.M) {
 	suite("compute/droplet/tag", testDropletTag)
 	suite("compute/droplet/list", testDropletList)
 	suite("compute/droplet/kernels", testDropletKernels)
+	suite("compute/droplet/backups", testDropletBackups)
+	suite("compute/droplet/neighbors", testDropletNeighbors)
+	suite("compute/droplet/snapshots", testDropletSnapshots)
+	suite("compute/droplet/actions", testDropletActions)
+	suite("compute/droplet/get", testDropletGet)
+	suite("compute/region/list", testRegionList)
 
 	tmpDir, err := ioutil.TempDir("", "integration-doctl")
 	if err != nil {

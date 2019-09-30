@@ -15,6 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type dropletRequest struct {
+	Name string `json:"name"`
+}
+
 func testDropletCreate(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect  *require.Assertions
@@ -38,6 +42,22 @@ func testDropletCreate(t *testing.T, when spec.G, it spec.S) {
 				reqBody, err = ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
+				var dr dropletRequest
+				err = json.Unmarshal(reqBody, &dr)
+				expect.NoError(err)
+
+				if dr.Name == "waiting-on-name" {
+					w.Write([]byte(dropletCreateWaitResponse))
+					return
+				}
+
+				w.Write([]byte(dropletCreateResponse))
+			case "/poll-for-droplet":
+				w.Write([]byte(actionCompletedResponse))
+			case "/v2/droplets/777":
+				// we don't really need another fake droplet here
+				// since we've successfully tested all the behavior
+				// at this point
 				w.Write([]byte(dropletCreateResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -65,7 +85,7 @@ func testDropletCreate(t *testing.T, when spec.G, it spec.S) {
 			)
 
 			output, err := cmd.CombinedOutput()
-			expect.NoError(err)
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(dropletCreateOutput), strings.TrimSpace(string(output)))
 
 			request := &struct {
@@ -82,6 +102,26 @@ func testDropletCreate(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal("a-test-image", request.Image)
 			expect.Equal("a-test-region", request.Region)
 			expect.Equal("a-test-size", request.Size)
+		})
+	})
+
+	when("the wait flag is passed", func() {
+		it("polls until the droplet is created", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"droplet",
+				"create",
+				"waiting-on-name",
+				"--wait",
+				"--image", "a-test-image",
+				"--region", "a-test-region",
+				"--size", "a-test-size",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 		})
 	})
 
@@ -149,8 +189,17 @@ const dropletCreateResponse = `{
     "tags": ["yes"],
     "features": ["remotes"],
     "volume_ids": ["some-volume-id"]
+
   }
 }`
+
+const dropletCreateWaitResponse = `
+{"droplet": {"id": 777}, "links": {"actions": [{"id":1, "rel":"create", "href":"poll-for-droplet"}]}}
+`
+
+const actionCompletedResponse = `
+{"action": "id": 1, "status": "completed"}
+`
 
 const dropletCreateOutput = `
 ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          Status    Tags    Features    Volumes
