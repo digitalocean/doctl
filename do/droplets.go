@@ -319,11 +319,9 @@ func (ds *dropletsService) Neighbors(id int) (Droplets, error) {
 		return nil, err
 	}
 
-	var droplets Droplets
-	for _, d := range list {
-		var drop godo.Droplet
-		drop = d
-		droplets = append(droplets, Droplet{Droplet: &drop})
+	droplets := make(Droplets, len(list))
+	for i := range list {
+		droplets[i] = Droplet{&list[i]}
 	}
 
 	return droplets, nil
