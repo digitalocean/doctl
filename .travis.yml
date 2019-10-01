@@ -35,23 +35,7 @@ jobs:
     env: CACHE_NAME=WINDOWS_1.13
 
   - stage: deploy
-    if: branch=master and type=push
-    script:
-    - echo "building snap"
-    - make _build_snap
-    dist: bionic
-    go: 1.13.x
-    services: docker
-    env: CACHE_NAME=DEPLOY_CANDIDATE_SNAP
-    deploy:
-    - provider: snap
-      channel: candidate
-      snap: doctl_v*.snap
-      skip_cleanup: true
-      on:
-        repo: digitalocean/doctl
-
-  - if: type=push
+    if: type=push
     script: echo "running goreleaser"
     dist: bionic
     go: 1.13.x
@@ -60,9 +44,10 @@ jobs:
     before_deploy:
     - echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
     - sudo snap install goreleaser --classic
+    - go get -u github.com/digitalocean/github-changelog-generator
     deploy:
     - provider: script
-      script: make release
+      script: ./scripts/release_travis.sh
       skip_cleanup: true
       on:
         tags: true
@@ -84,3 +69,20 @@ jobs:
       on:
         tags: true
         repo: digitalocean/doctl
+
+  - if: branch=master and type=push
+    script:
+    - echo "building snap"
+    - make _build_snap
+    dist: bionic
+    go: 1.13.x
+    services: docker
+    env: CACHE_NAME=DEPLOY_CANDIDATE_SNAP
+    deploy:
+    - provider: snap
+      channel: candidate
+      snap: doctl_v*.snap
+      skip_cleanup: true
+      on:
+        repo: digitalocean/doctl
+
