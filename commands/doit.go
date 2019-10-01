@@ -89,8 +89,6 @@ func init() {
 	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "trace api access")
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 
-	viper.BindEnv("enable-beta", "DIGITALOCEAN_ENABLE_BETA")
-
 	addCommands()
 
 	cobra.OnInitialize(initConfig)
@@ -200,26 +198,12 @@ func requiredOpt() flagOpt {
 	return func(c *Command, name, key string) {
 		c.MarkFlagRequired(key)
 
-		key = requiredKey(key)
+		key = fmt.Sprintf("required.%s", key)
 		viper.Set(key, true)
 
 		u := c.Flag(name).Usage
 		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))
 	}
-}
-
-func requiredKey(key string) string {
-	return fmt.Sprintf("required.%s", key)
-}
-
-func betaOpt() flagOpt {
-	return func(c *Command, name, key string) {
-		c.Flag(name).Hidden = !isBeta()
-	}
-}
-
-func isBeta() bool {
-	return viper.GetBool("enable-beta")
 }
 
 // AddStringFlag adds a string flag to a command.

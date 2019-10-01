@@ -43,9 +43,3 @@ func hiddenCmd() cmdOption {
 	}
 }
 
-// betaCmd tags commands as beta.
-func betaCmd() cmdOption {
-	return func(c *Command) {
-		c.Hidden = !isBeta()
-	}
-}
