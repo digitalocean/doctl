@@ -44,9 +44,10 @@ jobs:
     before_deploy:
     - echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
     - sudo snap install goreleaser --classic
+    - go get -u github.com/digitalocean/github-changelog-generator
     deploy:
     - provider: script
-      script: make release
+      script: ./scripts/release_travis.sh
       skip_cleanup: true
       on:
         tags: true
