@@ -16,11 +16,12 @@ import (
 func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
-		httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/images":
 				auth := req.Header.Get("Authorization")
@@ -41,19 +42,34 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("all the required flags are passed", func() {
-		cmd := exec.Command(builtBinaryPath,
-			"--image-name", "ubuntu-18.04-minimal",
-			"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
-			"--region", "nyc3",
-		)
+		it("creates an image", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"image",
+				"create",
+				"--image-name", "ubuntu-18.04-minimal",
+				"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
+				"--region", "nyc3",
+			)
 
-		output, err := cmd.CombinedOutput()
-		expect.NoError(err, fmt.Sprintf("received unexpected error: %s", output))
-		expect.Equal(strings.TrimSpace(imageCreateResponse), strings.TrimSpace(string(output)))
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received unexpected error: %s", output))
+			expect.Equal(strings.TrimSpace(imageCreateOutput), strings.TrimSpace(string(output)))
+		})
 	})
 
 	when("required arguments are missing", func() {
-		baseErr := `Error: (images.create%s) command is missing required arguments`
+		base := []string{
+			"-t", "some-magic-token",
+			"-u", "https://www.example.com",
+			"compute",
+			"image",
+			"create",
+		}
+
+		baseErr := `Error: (image.create%s) command is missing required arguments`
 
 		var cases = []struct {
 			desc string
@@ -62,37 +78,35 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 		}{
 			{
 				"missing all",
-				fmt.Sprintf(baseErr, ""),
-				[]string{
-					"--image-description", "an ubuntu custom minimal image",
-				},
+				fmt.Sprintf(baseErr, ".image-name"),
+				base,
 			},
 			{
 				"missing name",
-				fmt.Sprintf(baseErr, ""),
-				[]string{
+				fmt.Sprintf(baseErr, ".image-name"),
+				append(base, []string{
 					"--image-description", "an ubuntu custom minimal image",
 					"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
 					"--region", "nyc3",
-				},
+				}...),
 			},
 			{
 				"missing region",
-				fmt.Sprintf(baseErr, ""),
-				[]string{
+				fmt.Sprintf(baseErr, ".region"),
+				append(base, []string{
 					"--image-description", "an ubuntu custom minimal image",
 					"--image-name", "ubuntu-18.04-minimal",
 					"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
-				},
+				}...),
 			},
 			{
 				"missing image url",
-				fmt.Sprintf(baseErr, ""),
-				[]string{
+				fmt.Sprintf(baseErr, ".image-url"),
+				append(base, []string{
 					"--image-description", "an ubuntu custom minimal image",
 					"--image-name", "ubuntu-18.04-minimal",
 					"--region", "nyc3",
-				},
+				}...),
 			},
 		}
 
@@ -114,13 +128,26 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 }
 
 const imageCreateResponse = `{
-	"name": "ubuntu-18.04-minimal",
-	"url": "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
-	"distribution": "Ubuntu",
-	"region": "nyc3",
-	"description": "Cloud-optimized image w/ small footprint",
-	"tags": [
-	  "base-image",
-	  "prod"
-	]
+	"image": {
+	  "created_at": "2018-09-20T19:28:00Z",
+	  "description": "Cloud-optimized image w/ small footprint",
+	  "distribution": "Ubuntu",
+	  "error_message": "",
+	  "id": 38413969,
+	  "name": "ubuntu-18.04-minimal",
+	  "regions": [
+  
+	  ],
+	  "type": "custom",
+	  "tags": [
+		"base-image",
+		"prod"
+	  ],
+	  "status": "NEW"
+	}
   }`
+
+const imageCreateOutput = `
+ID          Name                    Type      Distribution    Slug    Public    Min Disk
+38413969    ubuntu-18.04-minimal    custom    Ubuntu                  false     0
+`
