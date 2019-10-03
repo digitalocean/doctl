@@ -129,3 +129,32 @@ func TestImagesDeleteMultiple(t *testing.T) {
 	})
 
 }
+
+func TestImagesCreate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		addr := "https://www.example.com/registry/demo-image.tar"
+		r := godo.CustomImageCreateRequest{
+			Name:   "test-image",
+			Url:    addr,
+			Region: "nyc1",
+		}
+
+		tm.images.EXPECT().Create(&r).Return(&testImage, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgImageName, "test-image")
+		config.Doit.Set(config.NS, doctl.ArgImageExternalURL, addr)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+
+		err := RunImagesCreate(config)
+
+		assert.NoError(t, err)
+	})
+}
+
+func TestImagesCreateMissingFlag(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunImagesCreate(config)
+
+		assert.Error(t, err)
+	})
+}
