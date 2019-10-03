@@ -23,11 +23,11 @@ import (
 	"syscall"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/config"
 
 	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // ErrUnknownTerminal signifies an unknown terminal. It is returned when doit
@@ -126,9 +126,9 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 func RunAuthList(c *CmdConfig) error {
 	context := Context
 	if context == "" {
-		context = viper.GetString("context")
+		context = config.RootConfig.GetString("context")
 	}
-	contexts := viper.GetStringMap("auth-contexts")
+	contexts := config.RootConfig.GetStringMap("auth-contexts")
 
 	displayAuthContexts(c.Out, context, contexts)
 	return nil
@@ -162,10 +162,10 @@ func displayAuthContexts(out io.Writer, currentContext string, contexts map[stri
 func RunAuthSwitch(c *CmdConfig) error {
 	context := Context
 	if context == "" {
-		context = viper.GetString("context")
+		context = config.RootConfig.GetString("context")
 	}
 
-	viper.Set("context", context)
+	config.RootConfig.Set("context", context)
 
 	fmt.Printf("Now using context [%s] by default\n", context)
 	return writeConfig()

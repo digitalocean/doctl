@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
+	"github.com/digitalocean/doctl/config"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
@@ -195,7 +196,7 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 
 	args := []godo.ClientOpt{godo.SetUserAgent(userAgent())}
 
-	apiURL := viper.GetString("api-url")
+	apiURL := config.RootConfig.GetString("api-url")
 	if apiURL != "" {
 		args = append(args, godo.SetBaseURL(apiURL))
 	}
@@ -221,7 +222,7 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 
 // Set sets a config key.
 func (c *LiveConfig) Set(ns, key string, val interface{}) {
-	viper.Set(nskey(ns, key), val)
+	config.RootConfig.Set(nskey(ns, key), val)
 }
 
 // IsSet checks whether flag is set.
@@ -232,7 +233,7 @@ func (c *LiveConfig) IsSet(ns, key string) bool {
 // GetString returns a config value as a string.
 func (c *LiveConfig) GetString(ns, key string) (string, error) {
 	nskey := nskey(ns, key)
-	str := viper.GetString(nskey)
+	str := config.RootConfig.GetString(nskey)
 
 	if isRequired(nskey) && strings.TrimSpace(str) == "" {
 		return "", NewMissingArgsErr(nskey)
@@ -242,7 +243,7 @@ func (c *LiveConfig) GetString(ns, key string) (string, error) {
 
 // GetBool returns a config value as a bool.
 func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
-	return viper.GetBool(nskey(ns, key)), nil
+	return config.RootConfig.GetBool(nskey(ns, key)), nil
 }
 
 // GetBoolPtr returns a config value as a bool pointer.
@@ -250,14 +251,14 @@ func (c *LiveConfig) GetBoolPtr(ns, key string) (*bool, error) {
 	if !c.IsSet(ns, key) {
 		return nil, nil
 	}
-	val := viper.GetBool(nskey(ns, key))
+	val := config.RootConfig.GetBool(nskey(ns, key))
 	return &val, nil
 }
 
 // GetInt returns a config value as an int.
 func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 	nskey := nskey(ns, key)
-	val := viper.GetInt(nskey)
+	val := config.RootConfig.GetInt(nskey)
 
 	if isRequired(nskey) && val == 0 {
 		return 0, NewMissingArgsErr(nskey)
@@ -275,21 +276,21 @@ func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
 		}
 		return nil, nil
 	}
-	val := viper.GetInt(nskey)
+	val := config.RootConfig.GetInt(nskey)
 	return &val, nil
 }
 
 // GetStringSlice returns a config value as a string slice.
 func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	nskey := nskey(ns, key)
-	val := viper.GetStringSlice(nskey)
+	val := config.RootConfig.GetStringSlice(nskey)
 
 	if isRequired(nskey) && emptyStringSlice(val) {
 		return nil, NewMissingArgsErr(nskey)
 	}
 
 	out := []string{}
-	for _, item := range viper.GetStringSlice(nskey) {
+	for _, item := range config.RootConfig.GetStringSlice(nskey) {
 		item = strings.TrimPrefix(item, "[")
 		item = strings.TrimSuffix(item, "]")
 
@@ -309,7 +310,7 @@ func nskey(ns, key string) string {
 }
 
 func isRequired(key string) bool {
-	return viper.GetBool(fmt.Sprintf("required.%s", key))
+	return config.RootConfig.GetBool(fmt.Sprintf("required.%s", key))
 }
 
 // TestConfig is an implementation of Config for testing.

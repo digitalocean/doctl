@@ -24,10 +24,10 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/config"
 	"github.com/digitalocean/doctl/do"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -72,16 +72,16 @@ func init() {
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
 		filepath.Join(configHome(), defaultConfigName), "config file")
-	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
+	config.RootConfig.BindPFlag("config", rootPFlagSet.Lookup("config"))
 
 	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
-	viper.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
+	config.RootConfig.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
 
 	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
-	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup("access-token"))
+	config.RootConfig.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup("access-token"))
 
 	rootPFlagSet.StringVarP(&Output, "output", "o", "text", "output format [text|json]")
-	viper.BindPFlag("output", rootPFlagSet.Lookup("output"))
+	config.RootConfig.BindPFlag("output", rootPFlagSet.Lookup("output"))
 
 	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", defaultContext, "authentication context")
 	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "trace api access")
@@ -93,19 +93,19 @@ func init() {
 }
 
 func initConfig() {
-	viper.SetEnvPrefix("DIGITALOCEAN")
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	viper.SetConfigType("yaml")
+	config.RootConfig.SetEnvPrefix("DIGITALOCEAN")
+	config.RootConfig.AutomaticEnv()
+	config.RootConfig.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	config.RootConfig.SetConfigType("yaml")
 
-	cfgFile := viper.GetString("config")
-	viper.SetConfigFile(cfgFile)
+	cfgFile := config.RootConfig.GetString("config")
+	config.RootConfig.SetConfigFile(cfgFile)
 
-	viper.SetDefault("output", "text")
-	viper.SetDefault("context", defaultContext)
+	config.RootConfig.SetDefault("output", "text")
+	config.RootConfig.SetDefault("context", defaultContext)
 
 	if _, err := os.Stat(cfgFile); err == nil {
-		if err := viper.ReadInConfig(); err != nil {
+		if err := config.RootConfig.ReadInConfig(); err != nil {
 			log.Fatalln("reading initialization failed:", err)
 		}
 	}
@@ -129,7 +129,7 @@ func defaultGetCurrentAuthContextFn() string {
 	if Context != "" {
 		return Context
 	}
-	if authContext := viper.GetString("context"); authContext != "" {
+	if authContext := config.RootConfig.GetString("context"); authContext != "" {
 		return authContext
 	}
 	return defaultContext
@@ -199,7 +199,7 @@ func requiredOpt() flagOpt {
 		c.MarkFlagRequired(key)
 
 		key = fmt.Sprintf("required.%s", key)
-		viper.Set(key, true)
+		config.RootConfig.Set(key, true)
 
 		u := c.Flag(name).Usage
 		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))
@@ -215,14 +215,14 @@ func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...fla
 		o(cmd, name, fn)
 	}
 
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	config.RootConfig.BindPFlag(fn, cmd.Flags().Lookup(name))
 }
 
 // AddIntFlag adds an integr flag to a command.
 func AddIntFlag(cmd *Command, name, shorthand string, def int, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().IntP(name, shorthand, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	config.RootConfig.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
@@ -233,7 +233,7 @@ func AddIntFlag(cmd *Command, name, shorthand string, def int, desc string, opts
 func AddBoolFlag(cmd *Command, name, shorthand string, def bool, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().BoolP(name, shorthand, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	config.RootConfig.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
@@ -244,7 +244,7 @@ func AddBoolFlag(cmd *Command, name, shorthand string, def bool, desc string, op
 func AddStringSliceFlag(cmd *Command, name, shorthand string, def []string, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
 	cmd.Flags().StringSliceP(name, shorthand, def, desc)
-	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+	config.RootConfig.BindPFlag(fn, cmd.Flags().Lookup(name))
 
 	for _, o := range opts {
 		o(cmd, name, fn)
@@ -351,15 +351,15 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		getContextAccessToken: func() string {
 			context := Context
 			if context == "" {
-				context = viper.GetString("context")
+				context = config.RootConfig.GetString("context")
 			}
 			token := ""
 
 			switch context {
 			case defaultContext:
-				token = viper.GetString(doctl.ArgAccessToken)
+				token = config.RootConfig.GetString(doctl.ArgAccessToken)
 			default:
-				contexts := viper.GetStringMapString("auth-contexts")
+				contexts := config.RootConfig.GetStringMapString("auth-contexts")
 
 				token = contexts[context]
 			}
@@ -370,17 +370,17 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		setContextAccessToken: func(token string) {
 			context := Context
 			if context == "" {
-				context = viper.GetString("context")
+				context = config.RootConfig.GetString("context")
 			}
 
 			switch context {
 			case defaultContext:
-				viper.Set(doctl.ArgAccessToken, token)
+				config.RootConfig.Set(doctl.ArgAccessToken, token)
 			default:
-				contexts := viper.GetStringMapString("auth-contexts")
+				contexts := config.RootConfig.GetStringMapString("auth-contexts")
 				contexts[context] = token
 
-				viper.Set("auth-contexts", contexts)
+				config.RootConfig.Set("auth-contexts", contexts)
 			}
 		},
 	}
@@ -472,7 +472,7 @@ func writeConfig() error {
 
 	defer f.Close()
 
-	b, err := yaml.Marshal(viper.AllSettings())
+	b, err := yaml.Marshal(config.RootConfig.AllSettings())
 	if err != nil {
 		return errors.New("unable to encode configuration to YAML format")
 	}
@@ -486,7 +486,7 @@ func writeConfig() error {
 }
 
 func defaultConfigFileWriter() (io.WriteCloser, error) {
-	cfgFile := viper.GetString("config")
+	cfgFile := config.RootConfig.GetString("config")
 	f, err := os.Create(cfgFile)
 	if err != nil {
 		return nil, err

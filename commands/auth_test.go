@@ -22,8 +22,9 @@ import (
 	"errors"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/config"
 	"github.com/digitalocean/doctl/do"
-	"github.com/spf13/viper"
+	
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,7 +36,7 @@ func TestAuthCommand(t *testing.T) {
 
 func TestAuthInit(t *testing.T) {
 	cfw := cfgFileWriter
-	viper.Set(doctl.ArgAccessToken, nil)
+	config.RootConfig.Set(doctl.ArgAccessToken, nil)
 	defer func() {
 		cfgFileWriter = cfw
 	}()
@@ -56,10 +57,10 @@ func TestAuthInit(t *testing.T) {
 
 func TestAuthInitWithProvidedToken(t *testing.T) {
 	cfw := cfgFileWriter
-	viper.Set(doctl.ArgAccessToken, "valid-token")
+	config.RootConfig.Set(doctl.ArgAccessToken, "valid-token")
 	defer func() {
 		cfgFileWriter = cfw
-		viper.Set(doctl.ArgAccessToken, nil)
+		config.RootConfig.Set(doctl.ArgAccessToken, nil)
 	}()
 
 	retrieveUserTokenFunc := func() (string, error) {

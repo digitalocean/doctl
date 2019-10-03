@@ -19,11 +19,12 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/config"
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
+	
 	"github.com/golang/mock/gomock"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -210,7 +211,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		initServices: func(c *CmdConfig) error { return nil },
 
 		getContextAccessToken: func() string {
-			return viper.GetString(doctl.ArgAccessToken)
+			return config.RootConfig.GetString(doctl.ArgAccessToken)
 		},
 
 		setContextAccessToken: func(token string) {},

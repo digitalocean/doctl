@@ -18,9 +18,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/digitalocean/doctl/config"
+
 	"github.com/fatih/color"
 	"github.com/shiena/ansicolor"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -51,7 +52,7 @@ func checkErr(err error) {
 		return
 	}
 
-	output := viper.GetString("output")
+	output := config.RootConfig.GetString("output")
 
 	switch output {
 	default:
