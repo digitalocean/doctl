@@ -31,7 +31,7 @@ func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 
 		configPath = filepath.Join(dir, "config.yaml")
 
-		err = ioutil.WriteFile(configPath, []byte(config), 0644)
+		err = ioutil.WriteFile(configPath, []byte(dropletGetConfig), 0644)
 		expect.NoError(err)
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -114,7 +114,7 @@ func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 	})
 }
 
-const config = `
+const dropletGetConfig = `
 ---
 access-token: special-broken
 `
