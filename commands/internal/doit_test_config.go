@@ -17,7 +17,8 @@ import (
 	"fmt"
 
 	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/pkg/runner"
+	sshRunner "github.com/digitalocean/doctl/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/runner/mocks"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/viper"
@@ -25,7 +26,7 @@ import (
 
 // TestConfig is an implementation of Config for testing.
 type TestConfig struct {
-	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) sshRunner.Runner
 	v        *viper.Viper
 	IsSetMap map[string]bool
 }
@@ -35,8 +36,8 @@ var _ doctl.Config = &TestConfig{}
 // NewTestConfig creates a new, ready-to-use instance of a TestConfig.
 func NewTestConfig() *TestConfig {
 	return &TestConfig{
-		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
-			return &doctl.MockRunner{}
+		SSHFn: func(u, h, kp string, p int, opts ssh.Options) sshRunner.Runner {
+			return &runner.MockRunner{}
 		},
 		v:        viper.New(),
 		IsSetMap: make(map[string]bool),
@@ -50,7 +51,7 @@ func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 }
 
 // SSH returns a mock SSH runner.
-func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
+func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options) sshRunner.Runner {
 	return c.SSHFn(user, host, keyPath, port, opts)
 }
 
