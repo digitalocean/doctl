@@ -14,9 +14,10 @@ limitations under the License.
 package ssh
 
 import (
-	"runtime"
-
 	"github.com/digitalocean/doctl/pkg/runner"
+	"os"
+	"os/exec"
+	"strconv"
 )
 
 // Options is the type used to specify options passed to the SSH command
@@ -36,9 +37,34 @@ var _ runner.Runner = &Runner{}
 
 // Run ssh.
 func (r *Runner) Run() error {
-	if runtime.GOOS == "windows" {
-		return runInternalSSH(r)
+	args := []string{}
+	if r.KeyPath != "" {
+		args = append(args, "-i", r.KeyPath)
 	}
 
-	return runExternalSSH(r)
+	sshHost := r.Host
+	if r.User != "" {
+		sshHost = r.User + "@" + sshHost
+	}
+
+	if r.Port > 0 {
+		args = append(args, "-p", strconv.Itoa(r.Port))
+	}
+
+	if r.AgentForwarding {
+		args = append(args, "-A")
+	}
+
+	args = append(args, sshHost)
+	if r.Command != "" {
+		args = append(args, r.Command)
+	}
+
+	cmd := exec.Command("ssh", args...)
+
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+
+	return cmd.Run()
 }
