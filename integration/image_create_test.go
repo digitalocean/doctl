@@ -2,9 +2,9 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"os/exec"
 	"strings"
 	"testing"
@@ -21,18 +21,22 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 	it.Before(func() {
 		expect = require.New(t)
 		httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			auth := req.Header.Get("Authorization")
-			if auth != "Bearer some-magic-token" {
-				w.WriteHeader(http.StatusUnauthorized)
-				return
+			switch req.URL.Path {
+			case "/v2/images":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				w.Write([]byte(imageCreateResponse))
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
 			}
-
-			var err error
-			_, err = ioutil.ReadAll(req.Body)
-			expect.NoError(err)
-
-			w.Write([]byte(imageCreateResponse))
-			return
 		}))
 	})
 
