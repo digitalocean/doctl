@@ -67,7 +67,7 @@ var (
 func init() {
 	var cfgFile string
 
-	viper.SetEnvPrefix("DIGITALOCEAN")
+	initConfig()
 
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
@@ -75,11 +75,9 @@ func init() {
 	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
 
 	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
-	viper.BindEnv("api-url", "DIGITALOCEAN_API_URL")
 	viper.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
 
 	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
-	viper.BindEnv(doctl.ArgAccessToken, "DIGITALOCEAN_ACCESS_TOKEN")
 	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup("access-token"))
 
 	rootPFlagSet.StringVarP(&Output, "output", "o", "text", "output format [text|json]")
@@ -90,8 +88,25 @@ func init() {
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 
 	addCommands()
+}
 
-	cobra.OnInitialize(initConfig)
+func initConfig() {
+	viper.SetEnvPrefix("DIGITALOCEAN")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+
+	viper.SetConfigType("yaml")
+	cfgFile := viper.GetString("config")
+	viper.SetConfigFile(cfgFile)
+
+	viper.SetDefault("output", "text")
+	viper.SetDefault("context", defaultContext)
+
+	if _, err := os.Stat(cfgFile); err == nil {
+		if err := viper.ReadInConfig(); err != nil {
+			log.Fatalln("reading initialization failed:", err)
+		}
+	}
 }
 
 // in case we ever want to change this, or let folks configure it...
@@ -104,23 +119,6 @@ func configHome() string {
 	checkErr(err)
 
 	return ch
-}
-
-func initConfig() {
-	viper.SetConfigType("yaml")
-	cfgFile := viper.GetString("config")
-	viper.SetConfigFile(cfgFile)
-
-	viper.AutomaticEnv()
-
-	if _, err := os.Stat(cfgFile); err == nil {
-		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalln("reading initialization failed:", err)
-		}
-	}
-
-	viper.SetDefault("output", "text")
-	viper.SetDefault("context", defaultContext)
 }
 
 var getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
