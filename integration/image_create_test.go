@@ -60,14 +60,14 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 				"missing all",
 				fmt.Sprintf(baseErr, ""),
 				[]string{
-					"--image-description", "a ubuntu custom minimal image",
+					"--image-description", "an ubuntu custom minimal image",
 				},
 			},
 			{
 				"missing name",
 				fmt.Sprintf(baseErr, ""),
 				[]string{
-					"--image-description", "a ubuntu custom minimal image",
+					"--image-description", "an ubuntu custom minimal image",
 					"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
 					"--region", "nyc3",
 				},
@@ -76,7 +76,7 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 				"missing region",
 				fmt.Sprintf(baseErr, ""),
 				[]string{
-					"--image-description", "a ubuntu custom minimal image",
+					"--image-description", "an ubuntu custom minimal image",
 					"--image-name", "ubuntu-18.04-minimal",
 					"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
 				},
@@ -85,7 +85,7 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 				"missing image url",
 				fmt.Sprintf(baseErr, ""),
 				[]string{
-					"--image-description", "a ubuntu custom minimal image",
+					"--image-description", "an ubuntu custom minimal image",
 					"--image-name", "ubuntu-18.04-minimal",
 					"--region", "nyc3",
 				},
