@@ -22,6 +22,8 @@ import (
 	"github.com/digitalocean/doctl/config"
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
+	"github.com/digitalocean/doctl/commands/internal"
+
 	"github.com/digitalocean/godo"
 	
 	"github.com/golang/mock/gomock"
@@ -204,7 +206,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 	config := &CmdConfig{
 		NS:   "test",
-		Doit: doctl.NewTestConfig(),
+		Doit: internal.NewTestConfig(),
 		Out:  ioutil.Discard,
 
 		// can stub this out, since the return is dictated by the mocks.

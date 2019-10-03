@@ -30,7 +30,6 @@ import (
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
-	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 )
 
@@ -311,92 +310,6 @@ func nskey(ns, key string) string {
 
 func isRequired(key string) bool {
 	return config.RootConfig.GetBool(fmt.Sprintf("required.%s", key))
-}
-
-// TestConfig is an implementation of Config for testing.
-type TestConfig struct {
-	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	v        *viper.Viper
-}
-
-var _ Config = &TestConfig{}
-
-// NewTestConfig creates a new, ready-to-use instance of a TestConfig.
-func NewTestConfig() *TestConfig {
-	return &TestConfig{
-		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
-			return &MockRunner{}
-		},
-		v:        viper.New(),
-	}
-}
-
-// GetGodoClient mocks a GetGodoClient call. The returned godo client will
-// be nil.
-func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client, error) {
-	return &godo.Client{}, nil
-}
-
-// SSH returns a mock SSH runner.
-func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
-	return c.SSHFn(user, host, keyPath, port, opts)
-}
-
-// Set sets a config key.
-func (c *TestConfig) Set(ns, key string, val interface{}) {
-	c.v.Set(nskey(ns, key), val)
-}
-
-// IsSet returns true if the given key is set on the config.
-func (c *TestConfig) IsSet(ns, key string) bool {
-	return c.v.IsSet(nskey(ns, key))
-}
-
-// GetString returns the string value for the key in the given namespace. Because
-// this is a mock implementation, and error will never be returned.
-func (c *TestConfig) GetString(ns, key string) (string, error) {
-	return c.v.GetString(nskey(ns, key)), nil
-}
-
-// GetInt returns the int value for the key in the given namespace. Because
-// this is a mock implementation, and error will never be returned.
-func (c *TestConfig) GetInt(ns, key string) (int, error) {
-	return c.v.GetInt(nskey(ns, key)), nil
-}
-
-// GetIntPtr returns the int value for the key in the given namespace. Because
-// this is a mock implementation, and error will never be returned.
-func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
-	nskey := nskey(ns, key)
-	if !c.v.IsSet(nskey) {
-		return nil, nil
-	}
-	val := c.v.GetInt(nskey)
-	return &val, nil
-}
-
-// GetStringSlice returns the string slice value for the key in the given
-// namespace. Because this is a mock implementation, and error will never be
-// returned.
-func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
-	return c.v.GetStringSlice(nskey(ns, key)), nil
-}
-
-// GetBool returns the bool value for the key in the given namespace. Because
-// this is a mock implementation, and error will never be returned.
-func (c *TestConfig) GetBool(ns, key string) (bool, error) {
-	return c.v.GetBool(nskey(ns, key)), nil
-}
-
-// GetBoolPtr returns the bool value for the key in the given namespace. Because
-// this is a mock implementation, and error will never be returned.
-func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
-	nskey := nskey(ns, key)
-	if !c.v.IsSet(nskey) {
-		return nil, nil
-	}
-	val := c.v.GetBool(nskey)
-	return &val, nil
 }
 
 // This is needed because an empty StringSlice flag returns `["[]"]`
