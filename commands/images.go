@@ -243,10 +243,6 @@ func RunImagesDelete(c *CmdConfig) error {
 
 // RunImagesCreate creates a new custom image.
 func RunImagesCreate(c *CmdConfig) error {
-	if len(c.Args) < 3 {
-		return doctl.NewMissingArgsErr(c.NS)
-	}
-
 	r := new(godo.CustomImageCreateRequest)
 
 	if err := buildCustomImageRequestFromArgs(c, r); err != nil {

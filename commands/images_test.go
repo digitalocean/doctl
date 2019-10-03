@@ -25,7 +25,7 @@ import (
 func TestImageCommand(t *testing.T) {
 	cmd := Images()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "delete", "get", "list", "list-application", "list-distribution", "list-user", "update")
+	assertCommandNames(t, cmd, "create", "delete", "get", "list", "list-application", "list-distribution", "list-user", "update")
 }
 
 func TestImagesList(t *testing.T) {
@@ -148,13 +148,5 @@ func TestImagesCreate(t *testing.T) {
 		err := RunImagesCreate(config)
 
 		assert.NoError(t, err)
-	})
-}
-
-func TestImagesCreateMissingFlag(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		err := RunImagesCreate(config)
-
-		assert.Error(t, err)
 	})
 }
