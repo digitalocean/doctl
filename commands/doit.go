@@ -88,14 +88,16 @@ func init() {
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 
 	addCommands()
+
+	cobra.OnInitialize(initConfig)
 }
 
 func initConfig() {
 	viper.SetEnvPrefix("DIGITALOCEAN")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-
 	viper.SetConfigType("yaml")
+
 	cfgFile := viper.GetString("config")
 	viper.SetConfigFile(cfgFile)
 
