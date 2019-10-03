@@ -136,6 +136,12 @@ const (
 	ArgUserDataFile = "user-data-file"
 	// ArgImageName name is an image name argument.
 	ArgImageName = "image-name"
+	// ArgImageExternalURL is a URL that returns an image file.
+	ArgImageExternalURL = "image-url"
+	// ArgImageDistro is the name of a custom image's distribution
+	ArgImageDistro = "image-distribution"
+	// ArgImageDescription is free text that describes the image.
+	ArgImageDescription = "image-description"
 	// ArgKey is a key argument.
 	ArgKey = "key"
 	// ArgKeyName is a key name argument.
