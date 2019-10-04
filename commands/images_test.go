@@ -141,6 +141,7 @@ func TestImagesCreate(t *testing.T) {
 
 		tm.images.EXPECT().Create(&r).Return(&testImage, nil)
 
+		config.Args = append(config.Args, "test-image")
 		config.Doit.Set(config.NS, doctl.ArgImageName, "test-image")
 		config.Doit.Set(config.NS, doctl.ArgImageExternalURL, addr)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")

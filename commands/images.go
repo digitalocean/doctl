@@ -67,7 +67,7 @@ func Images() *Command {
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageName, "", "", "The custom image name", requiredOpt())
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageExternalURL, "", "", "Custom image retrieval URL", requiredOpt())
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "Region slug identifier", requiredOpt())
-	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "", "Custom image distribution")
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "Unknown", "Custom image distribution")
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDescription, "", "", "Text to describe an image")
 	AddStringSliceFlag(cmdRunImagesCreate, doctl.ArgTagNames, "", []string{}, "List of new or existing tags")
 
@@ -260,10 +260,11 @@ func RunImagesCreate(c *CmdConfig) error {
 }
 
 func buildCustomImageRequestFromArgs(c *CmdConfig, r *godo.CustomImageCreateRequest) error {
-	name, err := c.Doit.GetString(c.NS, doctl.ArgImageName)
-	if err != nil {
-		return err
+	if len(c.Args) != 1 {
+		return doctl.NewMissingArgsErr(c.NS)
 	}
+	name := c.Args[0]
+
 	addr, err := c.Doit.GetString(c.NS, doctl.ArgImageExternalURL)
 	if err != nil {
 		return err
