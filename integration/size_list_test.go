@@ -10,8 +10,13 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
+
+func TestSizeList(t *testing.T) {
+	spec.Run(t, "compute/size/list", testSizeList, spec.Report(report.Terminal{}))
+}
 
 func testSizeList(t *testing.T, when spec.G, it spec.S) {
 	var (

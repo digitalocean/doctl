@@ -17,8 +17,13 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
+
+func TestAuth(t *testing.T) {
+	spec.Run(t, "auth/init", testAuthInit, spec.Report(report.Terminal{}))
+}
 
 func testAuthInit(t *testing.T, when spec.G, it spec.S) {
 	var (
