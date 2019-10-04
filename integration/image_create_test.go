@@ -10,8 +10,13 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
+
+func TestImageCreate(t *testing.T) {
+	spec.Run(t, "compute/image/create", testImageCreate, spec.Report(report.Terminal{}))
+}
 
 func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 	var (

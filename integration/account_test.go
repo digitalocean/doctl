@@ -11,8 +11,14 @@ import (
 	"time"
 
 	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
+
+func TestAccounts(t *testing.T) {
+	spec.Run(t, "account/get", testAccountGet, spec.Report(report.Terminal{}))
+	spec.Run(t, "account/ratelimit", testAccountRateLimit, spec.Report(report.Terminal{}))
+}
 
 func testAccountGet(t *testing.T, when spec.G, it spec.S) {
 	var (

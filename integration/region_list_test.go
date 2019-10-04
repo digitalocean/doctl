@@ -10,8 +10,13 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
+
+func TestRegionList(t *testing.T) {
+	spec.Run(t, "compute/region/list", testRegionList, spec.Report(report.Terminal{}))
+}
 
 func testRegionList(t *testing.T, when spec.G, it spec.S) {
 	var (

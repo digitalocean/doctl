@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,6 +22,10 @@ type tagRequest struct {
 		ResourceID   string `json:"resource_id"`
 		ResourceType string `json:"resource_type"`
 	} `json:"resources"`
+}
+
+func TestDropletTag(t *testing.T) {
+	spec.Run(t, "compute/droplet/tag", testDropletTag, spec.Report(report.Terminal{}))
 }
 
 func testDropletTag(t *testing.T, when spec.G, it spec.S) {

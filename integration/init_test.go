@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 )
 
 const packagePath string = "github.com/digitalocean/doctl/cmd/doctl"
@@ -21,35 +20,7 @@ var (
 	builtBinaryPath string
 )
 
-func TestAll(t *testing.T) {
-	suite.Run(t)
-}
-
 func TestMain(m *testing.M) {
-	specOptions := []spec.Option{
-		spec.Report(report.Terminal{}),
-		spec.Random(),
-		spec.Parallel(),
-	}
-
-	suite = spec.New("integration", specOptions...)
-	suite("account/get", testAccountGet)
-	suite("account/ratelimit", testAccountRateLimit)
-	suite("auth/init", testAuthInit)
-	suite("compute/droplet/create", testDropletCreate)
-	suite("compute/droplet/delete", testDropletDelete)
-	suite("compute/droplet/tag", testDropletTag)
-	suite("compute/droplet/list", testDropletList)
-	suite("compute/droplet/kernels", testDropletKernels)
-	suite("compute/droplet/backups", testDropletBackups)
-	suite("compute/droplet/neighbors", testDropletNeighbors)
-	suite("compute/droplet/snapshots", testDropletSnapshots)
-	suite("compute/droplet/actions", testDropletActions)
-	suite("compute/droplet/get", testDropletGet)
-	suite("compute/image/create", testImageCreate)
-	suite("compute/region/list", testRegionList)
-	suite("compute/size/list", testSizeList)
-
 	tmpDir, err := ioutil.TempDir("", "integration-doctl")
 	if err != nil {
 		panic("failed to create temp dir")

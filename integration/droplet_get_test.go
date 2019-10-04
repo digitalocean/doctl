@@ -13,8 +13,13 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
+
+func TestDropletGet(t *testing.T) {
+	spec.Run(t, "compute/droplet/get", testDropletGet, spec.Report(report.Terminal{}))
+}
 
 func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 	var (
