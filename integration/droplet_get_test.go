@@ -2,10 +2,13 @@ package integration
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,18 +18,27 @@ import (
 
 func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect     *require.Assertions
+		server     *httptest.Server
+		configPath string
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
+		dir, err := ioutil.TempDir("", "doct-integratio-tests")
+		expect.NoError(err)
+
+		configPath = filepath.Join(dir, "config.yaml")
+
+		err = ioutil.WriteFile(configPath, []byte(dropletGetConfig), 0644)
+		expect.NoError(err)
+
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/droplets/5555":
 				auth := req.Header.Get("Authorization")
-				if auth != "Bearer some-magic-token" {
+				if auth != "Bearer special-broken" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
@@ -43,10 +55,15 @@ func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 		}))
 	})
 
+	it.After(func() {
+		err := os.RemoveAll(configPath)
+		expect.NoError(err)
+	})
+
 	when("all required flags are passed", func() {
 		it("gets the specified droplet ID", func() {
 			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
+				"-c", configPath,
 				"-u", server.URL,
 				"compute",
 				"droplet",
@@ -63,7 +80,7 @@ func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 	when("passing a format", func() {
 		it("displays only those columns", func() {
 			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
+				"-c", configPath,
 				"-u", server.URL,
 				"compute",
 				"droplet",
@@ -81,7 +98,7 @@ func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 	when("passing a template", func() {
 		it("renders the template with the values", func() {
 			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
+				"-c", configPath,
 				"-u", server.URL,
 				"compute",
 				"droplet",
@@ -96,6 +113,11 @@ func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 }
+
+const dropletGetConfig = `
+---
+access-token: special-broken
+`
 
 const dropletGetOutput = `
 ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          Status    Tags    Features    Volumes
