@@ -221,17 +221,17 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 
 // Set sets a config key.
 func (c *LiveConfig) Set(ns, key string, val interface{}) {
-	config.RootConfig.Set(nskey(ns, key), val)
+	config.RootConfig.Set(NsKey(ns, key), val)
 }
 
 // IsSet checks whether flag is set.
 func (c *LiveConfig) IsSet(ns, key string) bool {
-	return viper.IsSet(nskey(ns, key))
+	return config.RootConfig.IsSet(NsKey(ns, key))
 }
 
 // GetString returns a config value as a string.
 func (c *LiveConfig) GetString(ns, key string) (string, error) {
-	nskey := nskey(ns, key)
+	nskey := NsKey(ns, key)
 	str := config.RootConfig.GetString(nskey)
 
 	if isRequired(nskey) && strings.TrimSpace(str) == "" {
@@ -242,7 +242,7 @@ func (c *LiveConfig) GetString(ns, key string) (string, error) {
 
 // GetBool returns a config value as a bool.
 func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
-	return config.RootConfig.GetBool(nskey(ns, key)), nil
+	return config.RootConfig.GetBool(NsKey(ns, key)), nil
 }
 
 // GetBoolPtr returns a config value as a bool pointer.
@@ -250,13 +250,13 @@ func (c *LiveConfig) GetBoolPtr(ns, key string) (*bool, error) {
 	if !c.IsSet(ns, key) {
 		return nil, nil
 	}
-	val := config.RootConfig.GetBool(nskey(ns, key))
+	val := config.RootConfig.GetBool(NsKey(ns, key))
 	return &val, nil
 }
 
 // GetInt returns a config value as an int.
 func (c *LiveConfig) GetInt(ns, key string) (int, error) {
-	nskey := nskey(ns, key)
+	nskey := NsKey(ns, key)
 	val := config.RootConfig.GetInt(nskey)
 
 	if isRequired(nskey) && val == 0 {
@@ -267,7 +267,7 @@ func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 
 // GetIntPtr returns a config value as an int pointer.
 func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
-	nskey := nskey(ns, key)
+	nskey := NsKey(ns, key)
 
 	if !c.IsSet(ns, key) {
 		if isRequired(nskey) {
@@ -281,7 +281,7 @@ func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
 
 // GetStringSlice returns a config value as a string slice.
 func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
-	nskey := nskey(ns, key)
+	nskey := NsKey(ns, key)
 	val := config.RootConfig.GetStringSlice(nskey)
 
 	if isRequired(nskey) && emptyStringSlice(val) {
@@ -304,7 +304,7 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	return out, nil
 }
 
-func nskey(ns, key string) string {
+func NsKey(ns, key string) string {
 	return fmt.Sprintf("%s.%s", ns, key)
 }
 

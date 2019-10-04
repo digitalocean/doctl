@@ -14,8 +14,6 @@ limitations under the License.
 package internal
 
 import (
-	"fmt"
-
 	"github.com/digitalocean/doctl"
 	sshRunner "github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/runner/mocks"
@@ -28,7 +26,6 @@ import (
 type TestConfig struct {
 	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) sshRunner.Runner
 	v        *viper.Viper
-	IsSetMap map[string]bool
 }
 
 var _ doctl.Config = &TestConfig{}
@@ -40,7 +37,6 @@ func NewTestConfig() *TestConfig {
 			return &runner.MockRunner{}
 		},
 		v:        viper.New(),
-		IsSetMap: make(map[string]bool),
 	}
 }
 
@@ -57,34 +53,30 @@ func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 
 // Set sets a config key.
 func (c *TestConfig) Set(ns, key string, val interface{}) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	c.v.Set(nskey, val)
-	c.IsSetMap[key] = true
+	c.v.Set(doctl.NsKey(ns, key), val)
 }
 
 // IsSet returns true if the given key is set on the config.
-func (c *TestConfig) IsSet(key string) bool {
-	return c.IsSetMap[key]
+func (c *TestConfig) IsSet(ns, key string) bool {
+	return c.v.IsSet(doctl.NsKey(ns, key))
 }
 
 // GetString returns the string value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetString(ns, key string) (string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetString(nskey), nil
+	return c.v.GetString(doctl.NsKey(ns, key)), nil
 }
 
 // GetInt returns the int value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetInt(ns, key string) (int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetInt(nskey), nil
+	return c.v.GetInt(doctl.NsKey(ns, key)), nil
 }
 
 // GetIntPtr returns the int value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := doctl.NsKey(ns, key)
 	if !c.v.IsSet(nskey) {
 		return nil, nil
 	}
@@ -96,21 +88,19 @@ func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
 // namespace. Because this is a mock implementation, and error will never be
 // returned.
 func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetStringSlice(nskey), nil
+	return c.v.GetStringSlice(doctl.NsKey(ns, key)), nil
 }
 
 // GetBool returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBool(ns, key string) (bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetBool(nskey), nil
+	return c.v.GetBool(doctl.NsKey(ns, key)), nil
 }
 
 // GetBoolPtr returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := doctl.NsKey(ns, key)
 	if !c.v.IsSet(nskey) {
 		return nil, nil
 	}
