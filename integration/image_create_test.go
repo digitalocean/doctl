@@ -48,8 +48,7 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 				"-u", server.URL,
 				"compute",
 				"image",
-				"create",
-				"--image-name", "ubuntu-18.04-minimal",
+				"create", "ubuntu-18.04-minimal",
 				"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
 				"--region", "nyc3",
 			)
@@ -66,7 +65,7 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 			"-u", "https://www.example.com",
 			"compute",
 			"image",
-			"create",
+			"create", "test-image",
 		}
 
 		baseErr := `Error: (image.create%s) command is missing required arguments`
@@ -78,17 +77,8 @@ func testImageCreate(t *testing.T, when spec.G, it spec.S) {
 		}{
 			{
 				"missing all",
-				fmt.Sprintf(baseErr, ".image-name"),
+				fmt.Sprintf(baseErr, ".image-url"),
 				base,
-			},
-			{
-				"missing name",
-				fmt.Sprintf(baseErr, ".image-name"),
-				append(base, []string{
-					"--image-description", "an ubuntu custom minimal image",
-					"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
-					"--region", "nyc3",
-				}...),
 			},
 			{
 				"missing region",
@@ -135,9 +125,7 @@ const imageCreateResponse = `{
 	  "error_message": "",
 	  "id": 38413969,
 	  "name": "ubuntu-18.04-minimal",
-	  "regions": [
-  
-	  ],
+	  "regions": [],
 	  "type": "custom",
 	  "tags": [
 		"base-image",
