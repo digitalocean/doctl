@@ -22,7 +22,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -154,7 +153,7 @@ type Config interface {
 	GetGodoClient(trace bool, accessToken string) (*godo.Client, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Set(ns, key string, val interface{})
-	IsSet(key string) bool
+	IsSet(ns, key string) bool
 	GetString(ns, key string) (string, error)
 	GetBool(ns, key string) (bool, error)
 	GetBoolPtr(ns, key string) (*bool, error)
@@ -164,9 +163,7 @@ type Config interface {
 }
 
 // LiveConfig is an implementation of Config for live values.
-type LiveConfig struct {
-	cliArgs map[string]bool
-}
+type LiveConfig struct {}
 
 var _ Config = &LiveConfig{}
 
@@ -227,20 +224,9 @@ func (c *LiveConfig) Set(ns, key string, val interface{}) {
 	viper.Set(nskey(ns, key), val)
 }
 
-func (c *LiveConfig) IsSet(key string) bool {
-	matches := regexp.MustCompile("\b*--([a-z-_]+)").FindAllStringSubmatch(strings.Join(os.Args, " "), -1)
-	if len(matches) == 0 {
-		return false
-	}
-
-	if len(c.cliArgs) == 0 {
-		args := make(map[string]bool)
-		for _, match := range matches {
-			args[match[1]] = true
-		}
-		c.cliArgs = args
-	}
-	return c.cliArgs[key]
+// IsSet checks whether flag is set.
+func (c *LiveConfig) IsSet(ns, key string) bool {
+	return viper.IsSet(nskey(ns, key))
 }
 
 // GetString returns a config value as a string.
@@ -261,7 +247,7 @@ func (c *LiveConfig) GetBool(ns, key string) (bool, error) {
 
 // GetBoolPtr returns a config value as a bool pointer.
 func (c *LiveConfig) GetBoolPtr(ns, key string) (*bool, error) {
-	if !c.IsSet(key) {
+	if !c.IsSet(ns, key) {
 		return nil, nil
 	}
 	val := viper.GetBool(nskey(ns, key))
@@ -283,7 +269,7 @@ func (c *LiveConfig) GetInt(ns, key string) (int, error) {
 func (c *LiveConfig) GetIntPtr(ns, key string) (*int, error) {
 	nskey := nskey(ns, key)
 
-	if !c.IsSet(key) {
+	if !c.IsSet(ns, key) {
 		if isRequired(nskey) {
 			return nil, NewMissingArgsErr(nskey)
 		}
@@ -330,7 +316,6 @@ func isRequired(key string) bool {
 type TestConfig struct {
 	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	v        *viper.Viper
-	IsSetMap map[string]bool
 }
 
 var _ Config = &TestConfig{}
@@ -342,7 +327,6 @@ func NewTestConfig() *TestConfig {
 			return &MockRunner{}
 		},
 		v:        viper.New(),
-		IsSetMap: make(map[string]bool),
 	}
 }
 
@@ -359,34 +343,30 @@ func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 
 // Set sets a config key.
 func (c *TestConfig) Set(ns, key string, val interface{}) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	c.v.Set(nskey, val)
-	c.IsSetMap[key] = true
+	c.v.Set(nskey(ns, key), val)
 }
 
 // IsSet returns true if the given key is set on the config.
-func (c *TestConfig) IsSet(key string) bool {
-	return c.IsSetMap[key]
+func (c *TestConfig) IsSet(ns, key string) bool {
+	return c.v.IsSet(nskey(ns, key))
 }
 
 // GetString returns the string value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetString(ns, key string) (string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetString(nskey), nil
+	return c.v.GetString(nskey(ns, key)), nil
 }
 
 // GetInt returns the int value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetInt(ns, key string) (int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetInt(nskey), nil
+	return c.v.GetInt(nskey(ns, key)), nil
 }
 
 // GetIntPtr returns the int value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	if !c.v.IsSet(nskey) {
 		return nil, nil
 	}
@@ -398,21 +378,19 @@ func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
 // namespace. Because this is a mock implementation, and error will never be
 // returned.
 func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetStringSlice(nskey), nil
+	return c.v.GetStringSlice(nskey(ns, key)), nil
 }
 
 // GetBool returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBool(ns, key string) (bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
-	return c.v.GetBool(nskey), nil
+	return c.v.GetBool(nskey(ns, key)), nil
 }
 
 // GetBoolPtr returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	if !c.v.IsSet(nskey) {
 		return nil, nil
 	}
