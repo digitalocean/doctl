@@ -63,6 +63,14 @@ func Images() *Command {
 	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer)
 	AddBoolFlag(cmdRunImagesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force image delete")
 
+	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create", "Create custom image", Writer)
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageName, "", "", "The custom image name", requiredOpt())
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageExternalURL, "", "", "Custom image retrieval URL", requiredOpt())
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "Region slug identifier", requiredOpt())
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "", "Custom image distribution")
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDescription, "", "", "Text to describe an image")
+	AddStringSliceFlag(cmdRunImagesCreate, doctl.ArgTagNames, "", []string{}, "List of new or existing tags")
+
 	return cmd
 }
 
@@ -229,6 +237,60 @@ func RunImagesDelete(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
+
+	return nil
+}
+
+// RunImagesCreate creates a new custom image.
+func RunImagesCreate(c *CmdConfig) error {
+	r := new(godo.CustomImageCreateRequest)
+
+	if err := buildCustomImageRequestFromArgs(c, r); err != nil {
+		return err
+	}
+
+	is := c.Images()
+	i, err := is.Create(r)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.Image{Images: do.Images{*i}}
+	return c.Display(item)
+}
+
+func buildCustomImageRequestFromArgs(c *CmdConfig, r *godo.CustomImageCreateRequest) error {
+	name, err := c.Doit.GetString(c.NS, doctl.ArgImageName)
+	if err != nil {
+		return err
+	}
+	addr, err := c.Doit.GetString(c.NS, doctl.ArgImageExternalURL)
+	if err != nil {
+		return err
+	}
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
+	distro, err := c.Doit.GetString(c.NS, doctl.ArgImageDistro)
+	if err != nil {
+		return err
+	}
+	desc, err := c.Doit.GetString(c.NS, doctl.ArgImageDescription)
+	if err != nil {
+		return err
+	}
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
+	if err != nil {
+		return err
+	}
+
+	r.Name = name
+	r.Url = addr
+	r.Region = region
+	r.Distribution = distro
+	r.Description = desc
+	r.Tags = tags
 
 	return nil
 }

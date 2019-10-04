@@ -152,3 +152,18 @@ func (mr *MockImagesServiceMockRecorder) Delete(id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockImagesService)(nil).Delete), id)
 }
+
+// Create mocks base method
+func (m *MockImagesService) Create(icr *godo.CustomImageCreateRequest) (*do.Image, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", icr)
+	ret0, _ := ret[0].(*do.Image)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create
+func (mr *MockImagesServiceMockRecorder) Create(icr interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockImagesService)(nil).Create), icr)
+}

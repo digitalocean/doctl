@@ -46,6 +46,7 @@ func TestMain(m *testing.M) {
 	suite("compute/droplet/snapshots", testDropletSnapshots)
 	suite("compute/droplet/actions", testDropletActions)
 	suite("compute/droplet/get", testDropletGet)
+	suite("compute/image/create", testImageCreate)
 	suite("compute/region/list", testRegionList)
 	suite("compute/size/list", testSizeList)
 

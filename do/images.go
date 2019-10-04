@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+
 	"github.com/digitalocean/godo"
 )
 
@@ -36,6 +37,7 @@ type ImagesService interface {
 	GetBySlug(slug string) (*Image, error)
 	Update(id int, iur *godo.ImageUpdateRequest) (*Image, error)
 	Delete(id int) error
+	Create(icr *godo.CustomImageCreateRequest) (*Image, error)
 }
 
 type imagesService struct {
@@ -97,6 +99,15 @@ func (is *imagesService) Update(id int, iur *godo.ImageUpdateRequest) (*Image, e
 func (is *imagesService) Delete(id int) error {
 	_, err := is.client.Images.Delete(context.TODO(), id)
 	return err
+}
+
+func (is *imagesService) Create(icr *godo.CustomImageCreateRequest) (*Image, error) {
+	i, _, err := is.client.Images.Create(context.TODO(), icr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Image{Image: i}, nil
 }
 
 type listFn func(context.Context, *godo.ListOptions) ([]godo.Image, *godo.Response, error)
