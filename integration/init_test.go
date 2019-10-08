@@ -11,14 +11,19 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
+	"github.com/sclevine/spec/report"
 )
 
 const packagePath string = "github.com/digitalocean/doctl/cmd/doctl"
 
 var (
-	suite           spec.Suite
+	suite           = spec.New("", spec.Report(report.Terminal{}), spec.Random(), spec.Parallel())
 	builtBinaryPath string
 )
+
+func TestRun(t *testing.T) {
+	suite.Run(t)
+}
 
 func TestMain(m *testing.M) {
 	tmpDir, err := ioutil.TempDir("", "integration-doctl")

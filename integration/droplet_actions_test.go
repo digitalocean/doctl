@@ -10,15 +10,10 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDropletActions(t *testing.T) {
-	spec.Run(t, "compute/droplet/actions", testDropletActions, spec.Report(report.Terminal{}))
-}
-
-func testDropletActions(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/droplet/actions", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -64,7 +59,7 @@ func testDropletActions(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(strings.TrimSpace(dropletActionsOutput), strings.TrimSpace(string(output)))
 		})
 	})
-}
+})
 
 const dropletActionsOutput = `
 ID    Status       Type    Started At                       Completed At                     Resource ID    Resource Type    Region

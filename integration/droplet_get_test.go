@@ -13,15 +13,10 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDropletGet(t *testing.T) {
-	spec.Run(t, "compute/droplet/get", testDropletGet, spec.Report(report.Terminal{}))
-}
-
-func testDropletGet(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/droplet/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect     *require.Assertions
 		server     *httptest.Server
@@ -117,7 +112,7 @@ func testDropletGet(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(strings.TrimSpace(dropletGetTemplateOutput), strings.TrimSpace(string(output)))
 		})
 	})
-}
+})
 
 const dropletGetConfig = `
 ---

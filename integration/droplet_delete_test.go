@@ -9,15 +9,10 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDropletDelete(t *testing.T) {
-	spec.Run(t, "compute/droplet/delete", testDropletDelete, spec.Report(report.Terminal{}))
-}
-
-func testDropletDelete(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -85,4 +80,4 @@ func testDropletDelete(t *testing.T, when spec.G, it spec.S) {
 			})
 		}
 	})
-}
+})
