@@ -10,15 +10,10 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDropletBackups(t *testing.T) {
-	spec.Run(t, "compute/droplet/backups", testDropletBackups, spec.Report(report.Terminal{}))
-}
-
-func testDropletBackups(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/droplet/backups", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -72,7 +67,7 @@ func testDropletBackups(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(strings.TrimSpace(dropletBackupsOutput), strings.TrimSpace(string(output)))
 		})
 	})
-}
+})
 
 const dropletBackupsOutput = `
 ID      Name     Type        Distribution    Slug      Public    Min Disk

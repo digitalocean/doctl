@@ -13,15 +13,10 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDropletNeighbors(t *testing.T) {
-	spec.Run(t, "compute/droplet/neighbors", testDropletNeighbors, spec.Report(report.Terminal{}))
-}
-
-func testDropletNeighbors(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/droplet/neighbors", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect     *require.Assertions
 		server     *httptest.Server
@@ -105,7 +100,7 @@ func testDropletNeighbors(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(strings.TrimSpace(dropletNeighborsHeadersOutput), strings.TrimSpace(string(output)))
 		})
 	})
-}
+})
 
 const dropletNeighborsConfig = `
 ---

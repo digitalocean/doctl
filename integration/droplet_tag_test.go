@@ -13,7 +13,6 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,11 +23,7 @@ type tagRequest struct {
 	} `json:"resources"`
 }
 
-func TestDropletTag(t *testing.T) {
-	spec.Run(t, "compute/droplet/tag", testDropletTag, spec.Report(report.Terminal{}))
-}
-
-func testDropletTag(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/droplet/tag", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -156,4 +151,4 @@ func testDropletTag(t *testing.T, when spec.G, it spec.S) {
 			})
 		}
 	})
-}
+})

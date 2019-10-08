@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,11 +19,7 @@ type dropletRequest struct {
 	Name string `json:"name"`
 }
 
-func TestDropletCreate(t *testing.T) {
-	spec.Run(t, "compute/droplet/create", testDropletCreate, spec.Report(report.Terminal{}))
-}
-
-func testDropletCreate(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect  *require.Assertions
 		server  *httptest.Server
@@ -168,7 +163,7 @@ func testDropletCreate(t *testing.T, when spec.G, it spec.S) {
 			})
 		}
 	})
-}
+})
 
 const dropletCreateResponse = `{
   "droplet": {

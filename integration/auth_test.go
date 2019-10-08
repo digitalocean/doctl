@@ -17,15 +17,10 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAuth(t *testing.T) {
-	spec.Run(t, "auth/init", testAuthInit, spec.Report(report.Terminal{}))
-}
-
-func testAuthInit(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -160,4 +155,4 @@ func testAuthInit(t *testing.T, when spec.G, it spec.S) {
 			expect.Contains(buf.String(), fmt.Sprintf("unable to use supplied token to access API: GET %s/v2/account: 418", server.URL))
 		})
 	})
-}
+})

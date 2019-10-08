@@ -14,15 +14,10 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDatabasesCreate(t *testing.T) {
-	spec.Run(t, "databases/create", testDatabasesCreate, spec.Report(report.Terminal{}))
-}
-
-func testDatabasesCreate(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -97,7 +92,7 @@ func testDatabasesCreate(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 
-}
+})
 
 const databasesCreateOutput = `
 ID         Name                Engine    Version         Number of Nodes    Region    Status      Size       URI    Created At

@@ -11,16 +11,10 @@ import (
 	"time"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAccounts(t *testing.T) {
-	spec.Run(t, "account/get", testAccountGet, spec.Report(report.Terminal{}))
-	spec.Run(t, "account/ratelimit", testAccountRateLimit, spec.Report(report.Terminal{}))
-}
-
-func testAccountGet(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("account/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -69,9 +63,9 @@ func testAccountGet(t *testing.T, when spec.G, it spec.S) {
 
 		expect.Equal(strings.TrimSpace(accountOutput), strings.TrimSpace(string(output)))
 	})
-}
+})
 
-func testAccountRateLimit(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("account/ratelimit", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -115,7 +109,7 @@ func testAccountRateLimit(t *testing.T, when spec.G, it spec.S) {
 
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
-}
+})
 
 const accountOutput string = `
 Email                     Droplet Limit    Email Verified    UUID                                        Status

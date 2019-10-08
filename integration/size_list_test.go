@@ -10,15 +10,10 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestSizeList(t *testing.T) {
-	spec.Run(t, "compute/size/list", testSizeList, spec.Report(report.Terminal{}))
-}
-
-func testSizeList(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/size/list", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -96,7 +91,7 @@ func testSizeList(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(strings.TrimSpace(sizeListNoHeaderOutput), strings.TrimSpace(string(output)))
 		})
 	})
-}
+})
 
 const sizeListResponse = `{
   "sizes": [

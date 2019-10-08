@@ -10,15 +10,10 @@ import (
 	"testing"
 
 	"github.com/sclevine/spec"
-	"github.com/sclevine/spec/report"
 	"github.com/stretchr/testify/require"
 )
 
-func TestDropletKernels(t *testing.T) {
-	spec.Run(t, "compute/droplet/kernels", testDropletKernels, spec.Report(report.Terminal{}))
-}
-
-func testDropletKernels(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/droplet/kernels", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -64,7 +59,7 @@ func testDropletKernels(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(strings.TrimSpace(dropletKernelsOutput), strings.TrimSpace(string(output)))
 		})
 	})
-}
+})
 
 const dropletKernelsOutput = `
 ID     Name    Version
