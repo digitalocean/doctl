@@ -28,20 +28,28 @@ func Tags() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "tag",
-			Short: "tag commands",
-			Long:  "tag is used to access tag commands",
+			Short: "Provides commands that manage tags",
+			Long:  `The sub-commands of 'doctl compute tag' manage the tags on your account.
+			
+A tag is a label that can be applied to a resource (currently Droplets, Images, 
+Volumes, Volume Snapshots, and Database clusters) in order to better organize or 
+facilitate the lookups and actions on it.
+Tags have two attributes: a user defined name attribute and an embedded 
+resources attribute with information about resources that have been tagged.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "create tag", Writer)
+	CmdBuilderWithDocs(cmd, RunCmdTagCreate, "create <tag-name>", "create tag", `Use this command to create a new tag on your account.`, Writer)
 
-	CmdBuilder(cmd, RunCmdTagGet, "get <tag-name>", "get tag", Writer,
+	CmdBuilderWithDocs(cmd, RunCmdTagGet, "get <tag-name>", "get tag", `Use this command to retrieve a tag, see how many resources are using the tag, and the last item tagged with the current tag.`,Writer,
 		displayerType(&displayers.Tag{}))
 
-	CmdBuilder(cmd, RunCmdTagList, "list", "list tags", Writer,
+	CmdBuilderWithDocs(cmd, RunCmdTagList, "list", "list tags", `Use this command to retrieve a list of all tags on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Tag{}))
 
-	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>...", "delete tags", Writer)
+	cmdRunTagDelete := CmdBuilderWithDocs(cmd, RunCmdTagDelete, "delete <tag-name>...", "delete tags", `Use this command to delete a tag.
+
+Deleting a tag also untags all the resources that have previously been tagged by the tag.`, Writer)
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force tag delete")
 
 	return cmd
