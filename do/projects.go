@@ -154,8 +154,8 @@ func (ps *projectsService) AssignResources(projectUUID string, resources []strin
 	}
 
 	prs := make(ProjectResources, len(assignedResources))
-	for i, resource := range assignedResources {
-		prs[i] = ProjectResource{&resource}
+	for i := range assignedResources {
+		prs[i] = ProjectResource{&assignedResources[i]}
 	}
 
 	return prs, err
