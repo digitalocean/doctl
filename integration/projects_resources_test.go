@@ -34,7 +34,6 @@ var _ = suite("projects/resources/assign", func(t *testing.T, when spec.G, it sp
 				}
 
 				if req.Method == "POST" {
-
 					reqBody, err := ioutil.ReadAll(req.Body)
 					expect.NoError(err)
 
