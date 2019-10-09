@@ -31,16 +31,43 @@ func LoadBalancer() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "load-balancer",
-			Short: "load-balancer commands",
-			Long:  "load-balancer is used to access load-balancer commands",
+			Short: "Provides commands that manage load balancers",
+			Long:  `The sub-commands of 'doctl compute volume' manage your Block Storage volumes.
+
+With the load-balancer command, you can list, create, or delete load balancers as well as add or remove Droplets, forwarding rules, and other configuration details.`,
 		},
 	}
+	lbDetail := `
 
-	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "get load balancer", Writer,
+	- The load balancer's ID
+	- The load balancer's Name
+	- The load balancer's IP Address
+	- The current load balancing algorithm in use. Must be either "round_robin" or "least_connections"
+	- The current state of the Load Balancer. This can be "new", "active", or "errored".
+	- The load balancer's creation date, in ISO8601 combined date and time format.
+	- The current forwarding rules for the load balancer. See 'doctl compute load-balancer add-forwarding-rules --help' for a list.
+	- The current health_check settings for the load balancer.
+	- The current sticky_sessions settings for the load balancer.
+	- The datacenter region the load balancer is located in.
+	- The Droplet tag corresponding to the Droplets assigned to the load balancer. 
+	- The IDs of the Droplets assigned to the load balancer. 
+	- Whether HTTP request to the load balancer on port 80 will be redirected to HTTPS on port 443.
+	- Whether the PROXY protocol is in use on the load balancer. 
+`
+	forwardingDetail := `
+
+  - entry_protocol: The entry protocol used for traffic to the load balancer. Possible values are: "http", "https", "http2", or "tcp".
+  - entry_port: The entry port used for traffic to the load balancer. 
+  - target_protocol: The target protocol used for traffic from the load balancer to the backend Droplets. Possible values are: "http", "https", "http2", or "tcp".
+  - target_port: The target port used for traffic from the load balancer to the backend Droplets. 
+  - certificate_id: The ID of the TLS certificate used for SSL termination, if enabled. Can be obtained with 'doctl certificate list'
+  - tls_passthrough: Whether SSL passthrough is enabled on the load balancer. 
+`
+	CmdBuilderWithDocs(cmd, RunLoadBalancerGet, "get <id>", "get load balancer","Use this command to retrieve information about a load balancer instance, including:"+lbDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
-	cmdRecordCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
-		"create load balancer", Writer, aliasOpt("c"))
+	cmdRecordCreate := CmdBuilderWithDocs(cmd, RunLoadBalancerCreate, "create",
+		"create load balancer","Use this command to create a new load balancer on your account. You must set at least a name, algorithm, region, and forwarding_rules when creating a load balancer. Valid forwarding rules are:"+forwardingDetail, Writer, aliasOpt("c"))
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "",
 		"load balancer name", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "",
@@ -57,10 +84,10 @@ func LoadBalancer() *Command {
 	AddStringFlag(cmdRecordCreate, doctl.ArgHealthCheck, "", "",
 		"comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
 	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "",
-		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules", requiredOpt())
 
-	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
-		"update load balancer", Writer, aliasOpt("u"))
+	cmdRecordUpdate := CmdBuilderWithDocs(cmd, RunLoadBalancerUpdate, "update <id>",
+		"update load balancer", `Use this command to update the configuration of a load balancer, specified by its ID. Note that any attribute that is not provided will be reset to its default value.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerName, "", "",
 		"load balancer name", requiredOpt())
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "",
@@ -79,31 +106,31 @@ func LoadBalancer() *Command {
 	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "",
 		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
 
-	CmdBuilder(cmd, RunLoadBalancerList, "list", "list load balancers", Writer,
+	CmdBuilderWithDocs(cmd, RunLoadBalancerList, "list", "list load balancers","Use this command to get a list of the load balancers on your account, including the following information for each:"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 
-	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>",
-		"delete load balancer", Writer, aliasOpt("d", "rm"))
+	cmdRunRecordDelete := CmdBuilderWithDocs(cmd, RunLoadBalancerDelete, "delete <id>",
+		"delete load balancer", `Use this command to delete a load balancer, specified by ID. This is irreversable.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Force load balancer delete")
 
-	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>",
-		"add droplets to the load balancer", Writer)
+	cmdAddDroplets := CmdBuilderWithDocs(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>",
+		"add droplets to the load balancer",`Use this command to add Droplets to a load balancer.`, Writer)
 	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{},
 		"comma-separated list of droplet IDs, example valus: 12,33")
 
-	cmdRemoveDroplets := CmdBuilder(cmd, RunLoadBalancerRemoveDroplets,
-		"remove-droplets <id>", "remove droplets from the load balancer", Writer)
+	cmdRemoveDroplets := CmdBuilderWithDocs(cmd, RunLoadBalancerRemoveDroplets,
+		"remove-droplets <id>", "remove droplets from the load balancer",`Use this command to remove Droplets from a load balancer. This command does not destroy any Droplets.`, Writer)
 	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{},
 		"comma-separated list of droplet IDs, example value: 12,33")
 
-	cmdAddForwardingRules := CmdBuilder(cmd, RunLoadBalancerAddForwardingRules,
-		"add-forwarding-rules <id>", "add forwarding rules to the load balancer", Writer)
+	cmdAddForwardingRules := CmdBuilderWithDocs(cmd, RunLoadBalancerAddForwardingRules,
+		"add-forwarding-rules <id>", "add forwarding rules to the load balancer","Use this command to add forwarding rules to a load balancer, specified with the '--forwarding-rules' flag. Valid rules include:"+forwardingDetail, Writer)
 	AddStringFlag(cmdAddForwardingRules, doctl.ArgForwardingRules, "", "",
 		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
 
-	cmdRemoveForwardingRules := CmdBuilder(cmd, RunLoadBalancerRemoveForwardingRules,
-		"remove-forwarding-rules <id>", "remove forwarding rules from the load balancer", Writer)
+	cmdRemoveForwardingRules := CmdBuilderWithDocs(cmd, RunLoadBalancerRemoveForwardingRules,
+		"remove-forwarding-rules <id>", "remove forwarding rules from the load balancer","Use this command to remove forwarding rules from a load balancer, specified with the '--forwarding-rules' flag. Valid rules include:"+forwardingDetail, Writer)
 	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "",
 		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
 
