@@ -31,30 +31,39 @@ func SSHKeys() *Command {
 		Command: &cobra.Command{
 			Use:     "ssh-key",
 			Aliases: []string{"k"},
-			Short:   "sshkey commands",
-			Long:    "sshkey is used to access ssh key commands",
+			Short:   "Provides commands that manage SSH keys on your account",
+			Long:    `The sub-commands of 'doctl compute ssh-key' manage the SSH keys on your account.
+
+DigitalOcean allows you to add SSH public keys to the interface so that you can embed your public key into a Droplet at the time of creation. Only the public key is required to take advantage of this functionality. Note that this command does not add, delete, or otherwise modify any ssh keys that may be on existing Droplets.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunKeyList, "list", "list ssh keys", Writer,
+	CmdBuilderWithDocs(cmd, RunKeyList, "list", "list all ssh keys",`Use this command to list the id, fingerprint, public_key, and name of all SSH keys on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Key{}))
 
-	CmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", Writer,
+	CmdBuilderWithDocs(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "retrieve ssh key",`Use this command to get the id, fingerprint, public_key, and name of a specific SSH key on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Key{}))
 
-	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", Writer,
+	cmdSSHKeysCreate := CmdBuilderWithDocs(cmd, RunKeyCreate, "create <key-name>", "add an ssh key",`Use this command to add a new SSH key to your account.
+
+Set the "name" attribute to the name you wish to use and the "public_key" attribute to a string of the full public key you are adding. 
+Note that this command will not add an ssh key to any existing Droplets.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "", "Key contents", requiredOpt())
 
-	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", Writer,
+	cmdSSHKeysImport := CmdBuilderWithDocs(cmd, RunKeyImport, "import <key-name>", "import an ssh key",`Use this command to add a new SSH key to your account, using a local public key file. 
+
+Note that this command will not add an ssh key to any existing Droplets`, Writer,
 		aliasOpt("i"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
 
-	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
+	cmdRunKeyDelete := CmdBuilderWithDocs(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete an ssh key",`Use this command to delete an ssh key from your account. 
+	
+Note that this does not delete an ssh key from any Droplets.`, Writer,
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force ssh key delete")
 
-	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
+	cmdSSHKeysUpdate := CmdBuilderWithDocs(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update an ssh key",`Use this command to update the name of an ssh key on your account.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "", "Key name", requiredOpt())
 
