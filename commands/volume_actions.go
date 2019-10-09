@@ -54,23 +54,30 @@ func VolumeAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "volume-action",
-			Short: "volume action commands",
-			Long:  "volume-action is used to access volume action commands",
+			Short: "Block Storage volume action commands",
+			Long:  `Block Storage volume actions are commands that can be given to a DigitalOcean Block Storage volume. 
+
+An example would be detaching or attaching a volume from a Droplet.`,
 		},
 	}
 
-	cmdRunVolumeAttach := CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "attach a volume", Writer,
+	cmdRunVolumeAttach := CmdBuilderWithDocs(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "attach a volume", `Use this command to attach a Block Storage volume to a Droplet. 
+
+Each volume may only be attached to a single Droplet. However, up to five volumes may be attached to a Droplet at a time. 
+Pre-formatted volumes will be automatically mounted to Ubuntu, Debian, Fedora, Fedora Atomic, and CentOS Droplets created on or after April 26, 2018 when attached. On older Droplets, additional configuration is required. Visit https://www.digitalocean.com/docs/volumes/how-to/format-and-mount/#mounting-the-filesystems for details`, Writer,
 		aliasOpt("a"))
 	AddBoolFlag(cmdRunVolumeAttach, doctl.ArgCommandWait, "", false, "Wait for volume to attach")
 
-	cmdRunVolumeDetach := CmdBuilder(cmd, RunVolumeDetach, "detach <volume-id> <droplet-id>", "detach a volume", Writer,
+	cmdRunVolumeDetach := CmdBuilderWithDocs(cmd, RunVolumeDetach, "detach <volume-id> <droplet-id>", "detach a volume", `Use this command to detach a Block Storage volume from a Droplet.`, Writer,
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunVolumeDetach, doctl.ArgCommandWait, "", false, "Wait for volume to detach")
 
 	CmdBuilder(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "detach a volume (deprecated - use detach instead)",
 		Writer)
 
-	cmdRunVolumeResize := CmdBuilder(cmd, RunVolumeResize, "resize <volume-id>", "resize a volume", Writer,
+	cmdRunVolumeResize := CmdBuilderWithDocs(cmd, RunVolumeResize, "resize <volume-id>", "resize a volume",`Use this command to resize a Block Storage volume. 
+ 
+Volumes may only be resized upwards. The maximum size for a volume is 16TiB.`, Writer,
 		aliasOpt("r"))
 	AddIntFlag(cmdRunVolumeResize, doctl.ArgSizeSlug, "", 0, "New size",
 		requiredOpt())
