@@ -29,6 +29,11 @@ const (
 	defaultDatabaseNodeCount = 1
 	defaultDatabaseRegion    = "nyc1"
 	defaultDatabaseEngine    = "pg"
+	databaseListDetails = `
+
+This command requires the ID of a database cluster, which you can retrieve by calling:
+
+	doctl databases list`
 )
 
 // Databases creates the databases command
@@ -56,9 +61,7 @@ func Databases() *Command {
 	CmdBuilderWithDocs(cmd, RunDatabaseList, "list", "Lists your database clusters", `This command lists the database clusters associated with your account. The following details are provided:` + clusterDetails, Writer, aliasOpt("ls"), displayerType(&displayers.Databases{}))
 	CmdBuilderWithDocs(cmd, RunDatabaseGet, "get <database-id>", "Get details for a database cluster", `This command retrieves the following details about the specified database cluster: ` + clusterDetails + `
 - A connection string for the database cluster
-- The date and time at which the database cluster was created
-
-This command requires the ID of a database cluster, which you can retrieve by calling 'doctl databases list'.`, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
+- The date and time at which the database cluster was created`+databaseListDetails, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
 
 	nodeSizeDetails := "The size of the nodes in the database cluster, e.g. 'db-s-1vcpu-1gb' for a 1 CPU, 1GB node"
 	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
@@ -863,37 +866,58 @@ func databaseReplica() *Command {
 		Command: &cobra.Command{
 			Use:     "replica",
 			Aliases: []string{"rep", "r"},
-			Short:   "database replica commands",
-			Long:    "database is used to access database replica commands",
+			Short:   "Provides commands to manage read-only database replicas",
+			Long:    `The subcommands under 'doctl databases replica' enable the management of read-only replicas associated with a database cluster.
+
+	In addition to primary nodes in a database cluster, you can create up to 2 read-only replica nodes (also referred to as "standby nodes") to maintain high availability.`,
 		},
 	}
+	howToGetReplica := `
 
-	CmdBuilder(cmd, RunDatabaseReplicaList, "list <database-id>",
-		"list database replicas", Writer, aliasOpt("ls"),
+This command requires that you pass in the replicas name, which you can retrieve by querying a database ID:
+
+	doctl databases replica list ca9f591d-5555-5555-a0ef-1c02d1d1e352`
+	replicaDetails := `
+
+- The name of the replica
+- The region where the database cluster is located (e.g. nyc3, sfo2)
+- The status of the replica (possible values are "forking" and "active")
+`
+	CmdBuilderWithDocs(cmd, RunDatabaseReplicaList, "list <database-id>","Retrieves list of read-only database replicas",`Lists the following details for read-only replicas for the specified database cluster.`+replicaDetails+databaseListDetails,
+	 Writer, aliasOpt("ls"),
 		displayerType(&displayers.DatabaseReplicas{}))
-	CmdBuilder(cmd, RunDatabaseReplicaGet, "get <database-id> <replica-name>",
-		"get a database replica", Writer, aliasOpt("g"),
+	CmdBuilderWithDocs(cmd, RunDatabaseReplicaGet, "get <database-id> <replica-name>","Retrieves information about a read-only database replica",
+`Gets the following details for the specified read-only replica for the specified database cluster:
+
+- The name of the replica
+- Information required to connect to the read-only replica
+- The region where the database cluster is located (e.g. nyc3, sfo2)
+- The status of the replica (possible values are "creating", "forking", and "active")
+- A time value given in ISO8601 combined date and time format that represents when the read-only replica was created.`+howToGetReplica+databaseListDetails,
+		 Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseReplicas{}))
 
-	cmdDatabaseReplicaCreate := CmdBuilder(cmd, RunDatabaseReplicaCreate,
-		"create <database-id> <replica-name>", "create a database replica",
+	cmdDatabaseReplicaCreate := CmdBuilderWithDocs(cmd, RunDatabaseReplicaCreate,
+		"create <database-id> <replica-name>", "Create a read-only database replica",`Creates a read-only database replica for the specified database cluster, giving it the specified name.`+databaseListDetails,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgRegionSlug, "",
-		defaultDatabaseRegion, "database replica region")
+		defaultDatabaseRegion, "Specifies the region (e.g. nyc3, sfo2) in which to create the replica")
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgSizeSlug, "",
-		defaultDatabaseNodeSize, "database replica size")
+		defaultDatabaseNodeSize, "Specifies the machine size for the replica (e.g. db-s-1vcpu-1gb). Must be the same or equal to the original.")
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgPrivateNetworkUUID, "",
-		"", "private network uuid")
+		"", "Specifies a private network UUID for the replica")
 
-	cmdDatabaseReplicaDelete := CmdBuilder(cmd, RunDatabaseReplicaDelete,
-		"delete <database-id> <replica-name>", "delete database replica",
+	cmdDatabaseReplicaDelete := CmdBuilderWithDocs(cmd, RunDatabaseReplicaDelete,
+		"delete <database-id> <replica-name>", "Delete a read-only database replica",
+`Deletes the specified read-only replica for the specified database cluster.`+howToGetReplica+databaseListDetails,
 		Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseReplicaDelete, doctl.ArgForce, doctl.ArgShortForce,
-		false, "force database delete")
+		false, "Deletes the replica without a confirmation prompt")
 
-	CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
+	CmdBuilderWithDocs(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-id> <replica-name>",
-		"get database replica connection info", Writer, aliasOpt("conn"))
+		"Retrieves information for connecting to a read-only database replica",
+`Retrieves information for connecting to the specified read-only database replica in the specified database cluster`+howToGetReplica+databaseListDetails,Writer, aliasOpt("conn"))
 
 	return cmd
 }
