@@ -241,7 +241,9 @@ The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` variable are acknowledg
 
 The `doctl` configuration file is used to store your API Access Token as well as the defaults for command flags. If you find yourself using certain flags frequently, you can change their default values to avoid typing them every time. This can be useful when, for example, you want to change the username or port used for SSH.
 
-On OS X and Linux, `doctl`'s configuration file can be found at `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set. Otherwise, the config will be written to `~/.config/doctl/config.yaml`. For Windows users, the config will be available at `%LOCALAPPDATA%/doctl/config/config.yaml`.
+On OS X, `doctl`'s configuration file can be found at `${HOME}/Library/Application Support/doctl/config.yaml`. This directory will only be created once you run `doctl auth init`
+
+On Linux, `doctl`'s configuration file can be found at `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set. Otherwise, the config will be written to `~/.config/doctl/config.yaml`. For Windows users, the config will be available at `%LOCALAPPDATA%/doctl/config/config.yaml`.
 
 The configuration file was automatically created and populated with default properties when you authenticated with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
 
