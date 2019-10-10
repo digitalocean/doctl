@@ -66,7 +66,7 @@ var _ = suite("projects/list", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("all required flags are passed", func() {
-		it.Focus("lists the projects", func() {
+		it("lists the projects", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
