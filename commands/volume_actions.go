@@ -54,7 +54,7 @@ func VolumeAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "volume-action",
-			Short: "Block Storage volume action commands",
+			Short: "Provides commands to perform actions on Block Storage volumes",
 			Long:  `Block Storage volume actions are commands that can be given to a DigitalOcean Block Storage volume. 
 
 An example would be detaching or attaching a volume from a Droplet.`,
