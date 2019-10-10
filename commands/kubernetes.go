@@ -32,6 +32,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientauthentication "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
@@ -50,6 +51,18 @@ const (
 
 	execCredentialKind = "ExecCredential"
 )
+
+var getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
+
+func defaultGetCurrentAuthContextFn() string {
+	if Context != "" {
+		return Context
+	}
+	if authContext := viper.GetString("context"); authContext != "" {
+		return authContext
+	}
+	return defaultContext
+}
 
 func errNoClusterByName(name string) error {
 	return fmt.Errorf("no cluster goes by the name %q", name)

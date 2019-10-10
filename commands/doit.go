@@ -120,18 +120,6 @@ func configHome() string {
 	return ch
 }
 
-var getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
-
-func defaultGetCurrentAuthContextFn() string {
-	if Context != "" {
-		return Context
-	}
-	if authContext := viper.GetString("context"); authContext != "" {
-		return authContext
-	}
-	return defaultContext
-}
-
 // Execute executes the current command using DoitCmd.
 func Execute() {
 	if err := DoitCmd.Execute(); err != nil {
