@@ -16,8 +16,10 @@ package doctl
 const (
 	// ArgAccessToken is the access token to be used for the operations
 	ArgAccessToken = "access-token"
-	// ArgContext is the name of the auth context to use
+	// ArgContext is the name of the auth context
 	ArgContext = "context"
+	// ArgDefaultContext is the default auth context
+	ArgDefaultContext = "default"
 	// ArgActionID is an action id argument.
 	ArgActionID = "action-id"
 	// ArgActionAfter is an action after argument.
