@@ -13,7 +13,15 @@ limitations under the License.
 
 package commands
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+	"io"
+	"strings"
+
+	"github.com/digitalocean/doctl"
+
+	"github.com/spf13/cobra"
+)
 
 // Command is a wrapper around cobra.Command that adds doctl specific
 // functionality.
@@ -36,4 +44,50 @@ func (c *Command) AddCommand(commands ...*Command) {
 // ChildCommands returns the child commands.
 func (c *Command) ChildCommands() []*Command {
 	return c.childCommands
+}
+
+// CmdBuilder builds a new command.
+func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *Command {
+	return cmdBuilderWithInit(parent, cr, cliText, desc, out, true, options...)
+}
+
+func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, initCmd bool, options ...cmdOption) *Command {
+	cc := &cobra.Command{
+		Use:   cliText,
+		Short: desc,
+		Long:  desc,
+		Run: func(cmd *cobra.Command, args []string) {
+			c, err := NewCmdConfig(
+				cmdNS(cmd),
+				&doctl.LiveConfig{},
+				out,
+				args,
+				initCmd,
+			)
+			checkErr(err)
+
+			err = cr(c)
+			checkErr(err)
+		},
+	}
+
+	c := &Command{Command: cc}
+
+	if parent != nil {
+		parent.AddCommand(c)
+	}
+
+	for _, co := range options {
+		co(c)
+	}
+
+	if cols := c.fmtCols; cols != nil {
+		formatHelp := fmt.Sprintf("Columns for output in a comma separated list. Possible values: %s",
+			strings.Join(cols, ","))
+		AddStringFlag(c, doctl.ArgFormat, "", "", formatHelp)
+		AddBoolFlag(c, doctl.ArgNoHeader, "", false, "hide headers")
+	}
+
+	return c
+
 }
