@@ -71,12 +71,12 @@ func init() {
 	viper.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
 
 	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
-	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup("access-token"))
+	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup(doctl.ArgAccessToken))
 
-	rootPFlagSet.StringVarP(&Output, "output", "o", "text", "output format [text|json]")
-	viper.BindPFlag("output", rootPFlagSet.Lookup("output"))
+	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "output format [text|json]")
+	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
 
-	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", defaultContext, "authentication context")
+	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", doctl.ArgDefaultContext, "authentication context")
 	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "trace api access")
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 
@@ -95,7 +95,7 @@ func initConfig() {
 	viper.SetConfigFile(cfgFile)
 
 	viper.SetDefault("output", "text")
-	viper.SetDefault("context", defaultContext)
+	viper.SetDefault(doctl.ArgContext, doctl.ArgDefaultContext)
 
 	if _, err := os.Stat(cfgFile); err == nil {
 		if err := viper.ReadInConfig(); err != nil {

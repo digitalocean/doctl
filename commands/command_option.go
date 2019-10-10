@@ -42,4 +42,3 @@ func hiddenCmd() cmdOption {
 		c.Hidden = true
 	}
 }
-

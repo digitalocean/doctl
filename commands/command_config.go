@@ -23,10 +23,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-const (
-	defaultContext    = "default"     // default authentication context
-)
-
 // CmdConfig is a command configuration.
 type CmdConfig struct {
 	NS   string
@@ -115,7 +111,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			token := ""
 
 			switch context {
-			case defaultContext:
+			case doctl.ArgDefaultContext:
 				token = viper.GetString(doctl.ArgAccessToken)
 			default:
 				contexts := viper.GetStringMapString("auth-contexts")
@@ -133,7 +129,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 
 			switch context {
-			case defaultContext:
+			case doctl.ArgDefaultContext:
 				viper.Set(doctl.ArgAccessToken, token)
 			default:
 				contexts := viper.GetStringMapString("auth-contexts")

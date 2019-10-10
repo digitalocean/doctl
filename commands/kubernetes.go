@@ -61,7 +61,7 @@ func defaultGetCurrentAuthContextFn() string {
 	if authContext := viper.GetString("context"); authContext != "" {
 		return authContext
 	}
-	return defaultContext
+	return doctl.ArgDefaultContext
 }
 
 func errNoClusterByName(name string) error {

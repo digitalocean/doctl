@@ -29,14 +29,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	yaml "gopkg.in/yaml.v2"
-
 )
 
 // ErrUnknownTerminal signifies an unknown terminal. It is returned when doit
 // can't ascertain the current terminal type with requesting an auth token.
 var (
 	ErrUnknownTerminal = errors.New("unknown terminal")
-	cfgFileWriter = defaultConfigFileWriter // create default cfgFileWriter
+	cfgFileWriter      = defaultConfigFileWriter // create default cfgFileWriter
 )
 
 // retrieveUserTokenFromCommandLine is a function that can retrieve a token. By default,
@@ -143,7 +142,7 @@ func displayAuthContexts(out io.Writer, currentContext string, contexts map[stri
 	// Because the default context isn't present on the auth-contexts field,
 	// we add it manually so that it's always included in the output, and so
 	// we can check if it's the current context.
-	contexts[defaultContext] = true
+	contexts[doctl.ArgDefaultContext] = true
 
 	// Extract and sort the map keys so that the order that we display the
 	// auth contexts is consistent.
