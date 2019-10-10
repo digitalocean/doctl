@@ -17,7 +17,7 @@ import (
 const packagePath string = "github.com/digitalocean/doctl/cmd/doctl"
 
 var (
-	suite           = spec.New("", spec.Report(report.Terminal{}), spec.Random(), spec.Parallel())
+	suite           = spec.New("doctl", spec.Report(report.Terminal{}), spec.Random(), spec.Parallel())
 	builtBinaryPath string
 )
 
