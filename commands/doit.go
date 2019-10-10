@@ -14,9 +14,7 @@ limitations under the License.
 package commands
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -26,7 +24,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -57,7 +54,6 @@ var (
 	//Verbose toggle verbose output on and off
 	Verbose bool
 
-	cfgFileWriter = defaultConfigFileWriter // create default cfgFileWriter
 	requiredColor = color.New(color.Bold).SprintfFunc()
 )
 
@@ -248,38 +244,4 @@ func cmdNS(cmd *cobra.Command) string {
 		return fmt.Sprintf("%s.%s", cmd.Parent().Name(), cmd.Name())
 	}
 	return fmt.Sprintf("%s", cmd.Name())
-}
-
-func writeConfig() error {
-	f, err := cfgFileWriter()
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	b, err := yaml.Marshal(viper.AllSettings())
-	if err != nil {
-		return errors.New("unable to encode configuration to YAML format")
-	}
-
-	_, err = f.Write(b)
-	if err != nil {
-		return errors.New("unable to write configuration")
-	}
-
-	return nil
-}
-
-func defaultConfigFileWriter() (io.WriteCloser, error) {
-	cfgFile := viper.GetString("config")
-	f, err := os.Create(cfgFile)
-	if err != nil {
-		return nil, err
-	}
-	if err := os.Chmod(cfgFile, 0600); err != nil {
-		return nil, err
-	}
-
-	return f, nil
 }
