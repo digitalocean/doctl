@@ -29,18 +29,28 @@ func ImageAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "image-action",
-			Short: "image-action commands",
-			Long:  "image-action commands",
+			Short: "Provides commands that to perform actions on images",
+			Long:  `The sub-commands of 'doctl compute image-actions' can be used to perform actions on images.`,
 		},
 	}
+	actionDetail := `
 
-	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,
-		"get <image-id>", "get image action", Writer,
+	- The unique numeric ID used to identify and reference an image action. 
+	- The status of the image action. This will be either "in-progress", "completed", or "errored".
+	- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
+	- A time value given in ISO8601 combined date and time format that represents when the action was completed.
+	- The resource ID, which is a unique identifier for the resource that the action is associated with.
+	- The type of resource that the action is associated with.
+	- The region where the action occurred.
+	- The slug for the region where the action occurred.
+`
+	cmdImageActionsGet := CmdBuilderWithDocs(cmd, RunImageActionsGet,
+		"get <image-id>", "get an image action, by ID",`Use this command to retrieve the status of an image action, inlcuding the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdImageActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
 
-	cmdImageActionsTransfer := CmdBuilder(cmd, RunImageActionsTransfer,
-		"transfer <image-id>", "transfer image", Writer,
+	cmdImageActionsTransfer := CmdBuilderWithDocs(cmd, RunImageActionsTransfer,
+		"transfer <image-id>", "transfer an image to another region",`Use this command to transfer an image to a different region. Also outputs the following details:`+actionDetail,Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "", "region", requiredOpt())
 	AddBoolFlag(cmdImageActionsTransfer, doctl.ArgCommandWait, "", false, "Wait for action to complete")
