@@ -35,7 +35,6 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			switch req.URL.Path {
 			case "/v2/account":
 				auth := req.Header.Get("Authorization")
-
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusTeapot)
 				}
