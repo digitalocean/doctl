@@ -25,25 +25,14 @@ var _ = suite("projects/delete", func(t *testing.T, when spec.G, it spec.S) {
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/projects/test-project-1":
-				auth := req.Header.Get("Authorization")
-				if auth != "Bearer some-magic-token" {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-
-				if req.Method == "DELETE" {
-					w.Write([]byte(`{}`))
-					return
-				}
-
-				w.WriteHeader(http.StatusTeapot)
+				fallthrough
 			case "/v2/projects/test-project-2":
-				if req.Method == "DELETE" {
-					w.Write([]byte(`{}`))
+				if req.Method != "DELETE" {
+					w.WriteHeader(http.StatusTeapot)
 					return
 				}
 
-				w.WriteHeader(http.StatusTeapot)
+				w.WriteHeader(http.StatusNoContent)
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -60,6 +49,7 @@ var _ = suite("projects/delete", func(t *testing.T, when spec.G, it spec.S) {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
+				"--trace",
 				"projects",
 				"delete",
 				"test-project-1",
@@ -69,7 +59,44 @@ var _ = suite("projects/delete", func(t *testing.T, when spec.G, it spec.S) {
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(""), strings.TrimSpace(string(output)))
+
+			shared := []func(string){
+				func(s string) { expect.Equal("doctl:", s) },
+				func(s string) { expect.Regexp(`\d{4}/\d{2}/\d{2}`, s) },
+				func(s string) { expect.Regexp(`\d{2}:\d{2}:\d{2}`, s) },
+			}
+
+			lines := strings.Split(string(output), "\n")
+
+			line := lines[0]
+			for i, content := range strings.SplitN(line, " ", 5) {
+				matchers := append(shared,
+					func(s string) { expect.Equal("->", s) },
+					func(s string) { expect.Contains(s, "DELETE /v2/projects/test-project-1 HTTP/1.1") },
+				)
+
+				matchers[i](content)
+			}
+
+			line = lines[1]
+			for i, content := range strings.SplitN(line, " ", 5) {
+				matchers := append(shared,
+					func(s string) { expect.Equal("<-", s) },
+					func(s string) { expect.Contains(s, `HTTP/1.1 204 No Content\r\nDate:`) },
+				)
+
+				matchers[i](content)
+			}
+
+			line = lines[2]
+			for i, content := range strings.SplitN(line, " ", 5) {
+				matchers := append(shared,
+					func(s string) { expect.Equal("->", s) },
+					func(s string) { expect.Contains(s, "DELETE /v2/projects/test-project-2 HTTP/1.1") },
+				)
+
+				matchers[i](content)
+			}
 		})
 	})
 })
