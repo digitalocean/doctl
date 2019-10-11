@@ -102,6 +102,25 @@ var _ = suite("database/user/get", func(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(strings.TrimSpace(databaseUserGetFormatOutput), strings.TrimSpace(string(output)))
 		})
 	})
+
+	when("the output is json", func() {
+		it("prints json", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"-o", "json",
+				"database",
+				"user",
+				"get",
+				"some-database-id",
+				"some-user-id",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.JSONEq(databaseUserGetJSONOutput, string(output))
+		})
+	})
 })
 
 const databaseUserGetOutput = `
@@ -114,6 +133,9 @@ some-user-id    normal    jge5lfxtzhx42iff
 const databaseUserGetFormatOutput = `
 Name
 some-user-id
+`
+const databaseUserGetJSONOutput = `
+[{ "name": "some-user-id", "role": "normal", "password": "jge5lfxtzhx42iff" }]
 `
 const databaseUserGetResponse = `
 {
