@@ -35,11 +35,21 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			switch req.URL.Path {
 			case "/v2/account":
 				auth := req.Header.Get("Authorization")
-				if auth != "Bearer some-magic-token" {
-					w.WriteHeader(http.StatusTeapot)
+
+				if auth == "Bearer first-token" || auth == "Bearer second-token" || auth == "Bearer some-magic-token" {
+					w.Write([]byte(`{ "account":{}}`))
+					return
 				}
 
-				w.Write([]byte(`{ "account":{}}`))
+				w.WriteHeader(http.StatusUnauthorized)
+			case "/v2/droplets/1":
+				token := req.Header.Get("Authorization")
+				if token != "Bearer second-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				w.WriteHeader(http.StatusNoContent)
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -151,7 +161,102 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			ptmx.Close()
 
 			expect.Contains(buf.String(), "Validating token... invalid token")
-			expect.Contains(buf.String(), fmt.Sprintf("unable to use supplied token to access API: GET %s/v2/account: 418", server.URL))
+			expect.Contains(buf.String(), fmt.Sprintf("unable to use supplied token to access API: GET %s/v2/account: 401", server.URL))
+		})
+	})
+
+	when("a new auth context is added", func() {
+		it("allows you to switch to that context", func() {
+			const nextContext = "next"
+
+			tmpDir, err := ioutil.TempDir("", "")
+			expect.NoError(err)
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"auth",
+				"init",
+				"--config", testConfig,
+			)
+
+			ptmx, err := pty.Start(cmd)
+			expect.NoError(err)
+
+			go func() {
+				ptmx.Write([]byte("first-token\n"))
+			}()
+			buf := &bytes.Buffer{}
+
+			count, err := io.Copy(buf, ptmx)
+			expect.NoError(err)
+			expect.NotZero(count)
+			expect.NoError(ptmx.Close())
+			expect.Contains(buf.String(), "Validating token... OK")
+
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+			expect.Contains(string(fileBytes), "access-token: first-token")
+
+			cmd = exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"auth",
+				"init",
+				"--config", testConfig,
+				"--context",
+				nextContext,
+			)
+
+			ptmx, err = pty.Start(cmd)
+			expect.NoError(err)
+
+			go func() {
+				ptmx.Write([]byte("second-token\n"))
+			}()
+			buf = &bytes.Buffer{}
+
+			count, err = io.Copy(buf, ptmx)
+			expect.NoError(err)
+			expect.NotZero(count)
+			expect.NoError(ptmx.Close())
+			expect.Contains(buf.String(), "Validating token... OK")
+
+			fileBytes, err = ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+			expect.Contains(string(fileBytes), "access-token: first-token")
+			expect.Contains(string(fileBytes), "auth-contexts:\n  next: second-token")
+
+			cmd = exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"auth",
+				"switch",
+				"--config", testConfig,
+				"--context",
+				nextContext,
+			)
+
+			_, err = cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err = ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+			expect.Contains(string(fileBytes), "context: next")
+
+			cmd = exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", testConfig,
+				"compute",
+				"droplet",
+				"delete",
+				"1",
+				"-f",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, string(output))
+
+			err = os.Remove(testConfig)
+			expect.NoError(err)
 		})
 	})
 })
