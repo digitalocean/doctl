@@ -31,36 +31,36 @@ func Domain() *Command {
 		Command: &cobra.Command{
 			Use:   "domain",
 			Short: "domain commands",
-			Long:  "domain is used to access domain commands",
+			Long:  `Use the subcommands of 'doctl compute domain' to manage domains you have purchased from a domain name registrar that you are managing through the DigitalOcean DNS interface.`,
 		},
 	}
 
-	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "create domain", Writer,
+	cmdDomainCreate := CmdBuilderWithDocs(cmd, RunDomainCreate, "create <domain>", "create domain", `Use this command to add a domain to your account.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Domain{}))
 	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address, creates an initial A record when provided")
 
-	CmdBuilder(cmd, RunDomainList, "list", "list domains", Writer,
+	CmdBuilderWithDocs(cmd, RunDomainList, "list", "list domains", `Use this command to retrive a list of domains added to your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Domain{}))
 
-	CmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", Writer,
+	CmdBuilderWithDocs(cmd, RunDomainGet, "get <domain>", "get domain", `Use this command to retrive a specific domain on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Domain{}))
 
-	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete domain", Writer, aliasOpt("d", "rm"))
+	cmdRunDomainDelete := CmdBuilderWithDocs(cmd, RunDomainDelete, "delete <domain>", "delete domain", `Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force domain delete")
 
 	cmdRecord := &Command{
 		Command: &cobra.Command{
 			Use:   "records",
-			Short: "domain record commands",
-			Long:  "commands for interacting with an individual domain",
+			Short: "manage domain DNS",
+			Long:  "Use the subcommands of 'doctl compute domain records' to manage the DNS records for your domains",
 		},
 	}
 	cmd.AddCommand(cmdRecord)
 
-	CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "list records", Writer,
+	CmdBuilderWithDocs(cmdRecord, RunRecordList, "list <domain>", "list DNS records", `Use this command to list the current DNS records for a domain.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DomainRecord{}))
 
-	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "create record", Writer,
+	cmdRecordCreate := CmdBuilderWithDocs(cmdRecord, RunRecordCreate, "create <domain>", "create DNS record", `Use this command to create DNS records for a domain.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.DomainRecord{}))
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", "Record type")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "", "Record name")
@@ -72,11 +72,11 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "Record flags")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "Record tag")
 
-	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "delete records", Writer,
+	cmdRunRecordDelete := CmdBuilderWithDocs(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "delete DNS record", `Use this command to delete DNS records for a domain.`, Writer,
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force record delete")
 
-	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "update record", Writer,
+	cmdRecordUpdate := CmdBuilderWithDocs(cmdRecord, RunRecordUpdate, "update <domain>", "update DNS record", `Use this command to update or change DNS records for a domain.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.DomainRecord{}))
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, "", 0, "Record ID")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "", "Record type")
