@@ -169,64 +169,18 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 		it("allows you to switch to that context", func() {
 			const nextContext = "next"
 
+			var testConfigBytes = []byte(`access-token: first-token
+auth-contexts:
+  next: second-token
+context: default
+`)
+
 			tmpDir, err := ioutil.TempDir("", "")
 			expect.NoError(err)
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
+			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
 
 			cmd := exec.Command(builtBinaryPath,
-				"-u", server.URL,
-				"auth",
-				"init",
-				"--config", testConfig,
-			)
-
-			ptmx, err := pty.Start(cmd)
-			expect.NoError(err)
-
-			go func() {
-				ptmx.Write([]byte("first-token\n"))
-			}()
-			buf := &bytes.Buffer{}
-
-			count, err := io.Copy(buf, ptmx)
-			expect.NoError(err)
-			expect.NotZero(count)
-			expect.NoError(ptmx.Close())
-			expect.Contains(buf.String(), "Validating token... OK")
-
-			fileBytes, err := ioutil.ReadFile(testConfig)
-			expect.NoError(err)
-			expect.Contains(string(fileBytes), "access-token: first-token")
-
-			cmd = exec.Command(builtBinaryPath,
-				"-u", server.URL,
-				"auth",
-				"init",
-				"--config", testConfig,
-				"--context",
-				nextContext,
-			)
-
-			ptmx, err = pty.Start(cmd)
-			expect.NoError(err)
-
-			go func() {
-				ptmx.Write([]byte("second-token\n"))
-			}()
-			buf = &bytes.Buffer{}
-
-			count, err = io.Copy(buf, ptmx)
-			expect.NoError(err)
-			expect.NotZero(count)
-			expect.NoError(ptmx.Close())
-			expect.Contains(buf.String(), "Validating token... OK")
-
-			fileBytes, err = ioutil.ReadFile(testConfig)
-			expect.NoError(err)
-			expect.Contains(string(fileBytes), "access-token: first-token")
-			expect.Contains(string(fileBytes), "auth-contexts:\n  next: second-token")
-
-			cmd = exec.Command(builtBinaryPath,
 				"-u", server.URL,
 				"auth",
 				"switch",
@@ -234,11 +188,10 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 				"--context",
 				nextContext,
 			)
-
 			_, err = cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err = ioutil.ReadFile(testConfig)
+			fileBytes, err := ioutil.ReadFile(testConfig)
 			expect.NoError(err)
 			expect.Contains(string(fileBytes), "context: next")
 
