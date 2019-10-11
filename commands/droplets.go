@@ -58,10 +58,10 @@ func Droplet() *Command {
 	- A list of features enabled for the Droplet. Examples are backups, ipv6, monitoring, private_networking. 
 	- The IDs of Block Storage volumes attached to the Droplet. 
 	`
-	CmdBuilder(cmd, RunDropletActions, "actions <droplet-id>", "manage Droplet actions", Writer,
+	CmdBuilderWithDocs(cmd, RunDropletActions, "actions <droplet-id>", "list Droplet actions",`Use this command to list actions taken on a Droplet.`, Writer,
 		aliasOpt("a"), displayerType(&displayers.Action{}))
 
-	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "manage Droplet backups", Writer,
+	CmdBuilderWithDocs(cmd, RunDropletBackups, "backups <droplet-id>", "list Droplet backups",`Use this command to list Droplet backups.`, Writer,
 		aliasOpt("b"), displayerType(&displayers.Image{}))
 
 	cmdDropletCreate := CmdBuilderWithDocs(cmd, RunDropletCreate, "create <droplet-name>...", "create Droplets",`Use this command to create a new Droplet. Required values are name, region, size, and image.`, Writer,
