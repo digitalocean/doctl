@@ -74,7 +74,7 @@ github.com/pelletier/go-toml
 github.com/pmezard/go-difflib/difflib
 # github.com/russross/blackfriday v1.5.2
 github.com/russross/blackfriday
-# github.com/sclevine/spec v1.2.0
+# github.com/sclevine/spec v1.3.0
 github.com/sclevine/spec
 github.com/sclevine/spec/report
 # github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644

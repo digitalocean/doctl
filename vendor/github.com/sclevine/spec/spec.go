@@ -257,8 +257,8 @@ func Run(t *testing.T, text string, f func(*testing.T, G, S), opts ...Option) bo
 		if spec == nil {
 			t.Fatal("Failed to locate spec.")
 		}
-		run(t, before...)
 		defer run(t, after...)
+		run(t, before...)
 		run(t, spec)
 	})
 }

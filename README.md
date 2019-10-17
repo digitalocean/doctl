@@ -164,7 +164,7 @@ Windows users can follow [How to: Add Tool Locations to the PATH Environment Var
 
 If you have
 [Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04)
-configured, you can build a Docker image using `doctl`'s
+configured, you can build a local Docker image using `doctl`'s
 [Dockerfile](https://github.com/digitalocean/doctl/blob/master/Dockerfile)
 and run `doctl` within a container.
 
@@ -195,11 +195,7 @@ stable.
 
 ### Dependencies
 
-`doctl`'s dependencies are managed with
-[`dep`](https://github.com/golang/dep). To add dependencies, use [`dep
-ensure -add
-github.com/foo/bar`](https://github.com/golang/dep#adding-a-dependency)
-
+`doctl` uses Go modules with vendoring.
 
 ## Authenticating with DigitalOcean
 
@@ -241,11 +237,11 @@ The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` variable are acknowledg
 
 The `doctl` configuration file is used to store your API Access Token as well as the defaults for command flags. If you find yourself using certain flags frequently, you can change their default values to avoid typing them every time. This can be useful when, for example, you want to change the username or port used for SSH.
 
-On OS X, `doctl`'s configuration file can be found at `${HOME}/Library/Application Support/doctl/config.yaml`. This directory will only be created once you run `doctl auth init`
+On OS X, `doctl` saves its configuration as `${HOME}/Library/Application Support/doctl/config.yaml`. The `${HOME}/Library/Application Support/doctl/` directory will be created once you run `doctl auth init`.
+ 
+On Linux, `doctl` saves its configuration as `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set, or `~/.config/doctl/config.yaml` if it is not. On Windows, the config file location is `%LOCALAPPDATA%/doctl/config/config.yaml`.
 
-On Linux, `doctl`'s configuration file can be found at `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set. Otherwise, the config will be written to `~/.config/doctl/config.yaml`. For Windows users, the config will be available at `%LOCALAPPDATA%/doctl/config/config.yaml`.
-
-The configuration file was automatically created and populated with default properties when you authenticated with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
+The configuration file is automatically created and populated with default properties when you authenticate with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
 
 To change the default SSH user used when connecting to a Droplet with `doctl`, look for the `compute.ssh.ssh-user` property and change the value after the colon. In this example, we changed it to the username **sammy**.
 
