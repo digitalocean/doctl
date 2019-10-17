@@ -76,7 +76,7 @@ func init() {
 	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "output format [text|json]")
 	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
 
-	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", doctl.ArgDefaultContext, "authentication context")
+	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "authentication context")
 	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "trace api access")
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
 
