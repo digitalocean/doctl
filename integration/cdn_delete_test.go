@@ -48,7 +48,7 @@ var _ = suite("compute/cdn/delete", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("all flags are passed", func() {
-		it("creates the cdn", func() {
+		it("deletes the cdn", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
