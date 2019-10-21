@@ -43,8 +43,6 @@ var _ = suite("compute/cdn/create", func(t *testing.T, when spec.G, it spec.S) {
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
-				fmt.Println(string(reqBody))
-
 				request := struct {
 					Origin        string `json:"origin"`
 					CertificateID string `json:"certificate_id"`
