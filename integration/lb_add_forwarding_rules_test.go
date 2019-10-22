@@ -24,7 +24,7 @@ var _ = suite("compute/load-balancer/add-forwarding-rules", func(t *testing.T, w
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/load_balancers/that-droplet-id/forwarding_rules":
+			case "/v2/load_balancers/that-lb-id/forwarding_rules":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -39,8 +39,7 @@ var _ = suite("compute/load-balancer/add-forwarding-rules", func(t *testing.T, w
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
-				expect.JSONEq(`{"forwarding_rules":
-				[{"entry_protocol":"tcp","entry_port":3306,"target_protocol":"https","target_port":8443}]}`, string(reqBody))
+				expect.JSONEq(lbAddForwardingRulesRequest, string(reqBody))
 
 				w.WriteHeader(http.StatusNoContent)
 			default:
@@ -62,12 +61,24 @@ var _ = suite("compute/load-balancer/add-forwarding-rules", func(t *testing.T, w
 				"compute",
 				"load-balancer",
 				"add-forwarding-rules",
-				"that-droplet-id",
-				"--forwarding-rules", "entry_protocol:tcp,entry_port:3306,target_protocol:https,target_port:8443",
+				"that-lb-id",
+				"--forwarding-rules", "entry_protocol:tcp,entry_port:3306,target_protocol:https,target_port:443",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Empty(output)
 		})
 	})
 })
+
+const lbAddForwardingRulesRequest = `{
+"forwarding_rules":[
+    {
+      "entry_protocol":"tcp",
+      "entry_port":3306,
+      "target_protocol":"https",
+      "target_port":443
+    }
+  ]
+}`
