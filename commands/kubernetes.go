@@ -50,6 +50,13 @@ const (
 	defaultKubernetesLatestVersion = "latest"
 
 	execCredentialKind = "ExecCredential"
+
+	workflowDesc = `
+
+A typical workflow is to use 'doctl kubernetes cluster create' to create the cluster on DigitalOcean's infrastructure, then call 'doctl kubernetes cluster kubeconfig' to configure 'kubectl' to connect to the cluster. You are then able to use 'kubectl' to create and manage workloads.`
+	optionsDesc = `
+
+The commands under 'doctl kubernetes options' retrieve values used while creating clusters, such as the list of regions where cluster creation is supported.`
 )
 
 var getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
@@ -65,27 +72,27 @@ func defaultGetCurrentAuthContextFn() string {
 }
 
 func errNoClusterByName(name string) error {
-	return fmt.Errorf("no cluster goes by the name %q", name)
+	return fmt.Errorf("No cluster goes by the name %q", name)
 }
 
 func errAmbigousClusterName(name string, ids []string) error {
-	return fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", name, ids)
+	return fmt.Errorf("Many clusters go by the name %q, they have the following IDs: %v", name, ids)
 }
 
 func errNoPoolByName(name string) error {
-	return fmt.Errorf("no node pool goes by the name %q", name)
+	return fmt.Errorf("No node pool goes by the name %q", name)
 }
 
 func errAmbigousPoolName(name string, ids []string) error {
-	return fmt.Errorf("many node pools go by the name %q, they have the following IDs: %v", name, ids)
+	return fmt.Errorf("Many node pools go by the name %q, they have the following IDs: %v", name, ids)
 }
 
 func errNoClusterNodeByName(name string) error {
-	return fmt.Errorf("no node goes by the name %q", name)
+	return fmt.Errorf("No node goes by the name %q", name)
 }
 
 func errAmbigousClusterNodeName(name string, ids []string) error {
-	return fmt.Errorf("many nodes go by the name %q, they have the following IDs: %v", name, ids)
+	return fmt.Errorf("Many nodes go by the name %q, they have the following IDs: %v", name, ids)
 }
 
 // Kubernetes creates the kubernetes command.
@@ -94,8 +101,8 @@ func Kubernetes() *Command {
 		Command: &cobra.Command{
 			Use:     "kubernetes",
 			Aliases: []string{"kube", "k8s", "k"},
-			Short:   "kubernetes commands",
-			Long:    "kubernetes is used to access Kubernetes commands",
+			Short:   "Manages Kubernetes clusters and retrieves configuration options",
+			Long:    `The commands under 'doctl kubernetes' are for managing Kubernetes clusters and viewing configuration options relating to clusters.` + workflowDesc + optionsDesc,
 		},
 	}
 
@@ -158,8 +165,8 @@ func kubernetesCluster() *Command {
 		Command: &cobra.Command{
 			Use:     "cluster",
 			Aliases: []string{"clusters", "c"},
-			Short:   "clusters commands",
-			Long:    "clusters is used to access commands on Kubernetes clusters",
+			Short:   "Manages Kubernetes clusters",
+			Long:    `The commands under 'doctl kubernetes cluster' are for the management of Kubernetes clusters.` + workflowDesc,
 		},
 	}
 
@@ -169,63 +176,91 @@ func kubernetesCluster() *Command {
 
 	cmd.AddCommand(kubernetesNodePools())
 
-	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "get a cluster",
+	nodePoolDeatils := `- A list of node pools available inside the cluster`
+	clusterDetails := `
+
+- A unique ID for the cluster
+- A human-readable name for the cluster
+- The slug identifier for the region where the Kubernetes cluster is located.
+- The slug identifier for the version of Kubernetes used for the cluster. If set to a minor version (e.g. "1.14"), the latest version within it will be used (e.g. "1.14.6-do.1"); if set to "latest", the latest published version will be used.
+- A boolean value indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window.
+- An object containing a "state" attribute whose value is set to a string indicating the current status of the node. Potential values include "running", "provisioning", and "errored".`
+	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "Retrieve details about a Kubernetes cluster", `
+Retrieves the following details about a Kubernetes cluster: `+clusterDetails+`
+- The base URL of the API server on the Kubernetes master node.
+- The public IPv4 address of the Kubernetes master node.
+- The range of IP addresses in the overlay network of the Kubernetes cluster in CIDR notation.
+- The range of assignable IP addresses for services running in the Kubernetes cluster in CIDR notation.
+- An array of tags applied to the Kubernetes cluster. All clusters are automatically tagged "k8s" and "k8s:$K8S_CLUSTER_ID."
+- A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was created.
+- A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was last updated.
+`+nodePoolDeatils,
 		Writer, aliasOpt("g"), displayerType(&displayers.KubernetesClusters{}))
-	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterList, "list", "get a list of your clusters",
+	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterList, "list", "Retrieves the list of Kubernetes clusters for your account", `
+Retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDeatils,
 		Writer, aliasOpt("ls"), displayerType(&displayers.KubernetesClusters{}))
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
 		"get available upgrades for a cluster", Writer, aliasOpt("gu"))
 
-	cmdKubeClusterCreate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
-		defaultKubernetesNodeCount), "create <name>", "create a cluster",
+	cmdKubeClusterCreate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
+		defaultKubernetesNodeCount), "create <name>", "Creates a Kubernetes cluster", `
+Creates a Kubernetes cluster given the specified options, using the specified name. Before creating the cluster, you can use "doctl kubernetes options" to see possible values for the various configuration flags.
+
+If no configuration flags are used, a three-node cluster with a single node pool will be created in the nyc1 region, using the latest Kubernetes version.
+
+After creating a cluster, a configuration context will be added to kubectl and made active so that you can begin managing your new cluster immediately.`,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion,
-		`cluster region, possible values: see "doctl k8s options regions"`, requiredOpt())
+		`Cluster region. Possible values: see "doctl kubernetes options regions"`, requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest",
-		`cluster version, possible values: see "doctl k8s options versions"`)
+		`Kubernetes version. Possible values: see "doctl kubernetes options versions"`)
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
-		"whether to enable auto-upgrade for the cluster")
+		"Boolean specifying whether to enable auto-upgrade for the cluster")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
-		"tags to apply to the cluster, repeat to add multiple tags at once")
+		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of 'k8s' and 'k8s:$K8S_CLUSTER_ID.'")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
-		`size of nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`), possible values: see "doctl k8s options sizes".`)
+		`Machine size to use when creating nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`). Possible values: see "doctl kubernetes options sizes".`)
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
-		"number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
+		"Number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
-		`cluster node pools, can be repeated to create multiple node pools at once (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
-format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
-	- name:       name of the node pool, must be unique in the cluster
-	- size:       size for the nodes in the node pool, possible values: see "doctl k8s options sizes".
-	- count:      number of nodes in the node pool.
-	- tag:        tags to apply to the node pool, repeat to add multiple tags at once.
-	- auto-scale: whether to enable auto-scaling on the node pool.
-	- min-nodes:  maximum number of nodes that can be auto-scaled to.
-	- max-nodes:  minimum number of nodes that can be auto-scaled to.`)
+		`Comma-separated list of node pools, defined using semicolon-separated configuration values (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
+Format: "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
+	- name:       Name of the node pool, which must be unique in the cluster
+	- size:       Machine size of the nodes to use. Possible values: see "doctl kubernetes options sizes".
+	- count:      Number of nodes to create.
+	- tag:        Comma-separated list of tags to apply to nodes in the pool
+	- auto-scale: Boolean defining whether to enable cluster auto-scaling on the node pool.
+	- min-nodes:  Maximum number of nodes that can be auto-scaled to.
+	- max-nodes:  Minimum number of nodes that can be auto-scaled to.`)
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
-		"whether to add the created cluster to your kubeconfig")
+		"Boolean that specifies whether to add a configuration context for the new cluster to your kubectl")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true,
-		"whether to wait for the created cluster to become running")
+		"Boolean that specifies whether to wait for cluster creation to complete before returning control to the terminal")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
-		"whether to set the current kubectl context to that of the new cluster")
+		"Boolean that specifies whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
+		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
-	cmdKubeClusterUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
-		"update a cluster's properties", Writer, aliasOpt("u"))
+	cmdKubeClusterUpdate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
+		"Update a Kubernetes cluster's configuration", `
+
+This command updates the specified configuration values for the specified Kubernetes cluster. The cluster must be referred to by its name or ID, which you can retrieve by calling:
+
+	doctl kubernetes cluster list`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterName, "", "",
-		"new cluster name")
+		"Specifies a new cluster name")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil,
-		"tags to apply to the cluster, repeat to add multiple tags at once. Existing user-provided tags will be removed from the cluster if they are not specified.")
+		"A comma-separated list of tags to apply to the cluster. Existing user-provided tags will be removed from the cluster if they are not specified.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgAutoUpgrade, "", false,
-		"whether to enable auto-upgrade for the cluster")
+		"Boolean specifying whether to enable auto-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
-		true, "whether to update the cluster in your kubeconfig")
+		true, "Boolean specifying whether to update the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
-		"whether to set the current kubectl context to that of the new cluster")
+		"Boolean specifying whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"maintenance window to be set to the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC time zone. Day can be one of: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
+		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
 
 	cmdKubeClusterUpgrade := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
 		"upgrade <id|name>", "upgrade a cluster to a new version", Writer)
@@ -1019,13 +1054,13 @@ func kubernetesNodeDelete(replace bool, c *CmdConfig) error {
 		return err
 	}
 
-	msg := "delete this Kubernetes node"
+	msg := "Delete this Kubernetes node?"
 	if replace {
-		msg = "replace this Kubernetes node"
+		msg = "Replace this Kubernetes node?"
 	}
 
 	if !(force || AskForConfirm(msg) == nil) {
-		return fmt.Errorf("operation aborted")
+		return fmt.Errorf("Operation aborted.")
 	}
 
 	skipDrain, err := c.Doit.GetBool(c.NS, "skip-drain")
@@ -1133,7 +1168,7 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 
 	// multiple node pools
 	if c.Doit.IsSet(doctl.ArgSizeSlug) || c.Doit.IsSet(doctl.ArgNodePoolCount) {
-		return fmt.Errorf("flags %q and %q cannot be provided when %q is present", doctl.ArgSizeSlug, doctl.ArgNodePoolCount, doctl.ArgClusterNodePool)
+		return fmt.Errorf("Flags %q and %q cannot be provided when %q is present", doctl.ArgSizeSlug, doctl.ArgNodePoolCount, doctl.ArgClusterNodePool)
 	}
 
 	nodePools, err := buildNodePoolCreateRequestsFromArgs(c, nodePoolSpecs, r.Name, defaultNodeSize, defaultNodeCount)
@@ -1205,7 +1240,7 @@ func buildNodePoolCreateRequestsFromArgs(c *CmdConfig, nodePools []string, clust
 		defaultName := fmt.Sprintf("%s-pool-%d", clusterName, i+1)
 		poolCreateReq, err := parseNodePoolString(nodePoolString, defaultName, defaultSize, defaultCount)
 		if err != nil {
-			return nil, fmt.Errorf("invalid node pool arguments for flag %d: %v", i, err)
+			return nil, fmt.Errorf("Invalid node pool arguments for flag %d: %v", i, err)
 		}
 		out = append(out, poolCreateReq)
 	}
@@ -1225,7 +1260,7 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 	for _, arg := range strings.Split(nodePool, argSeparator) {
 		kvs := strings.SplitN(arg, kvSeparator, 2)
 		if len(kvs) < 2 {
-			return nil, fmt.Errorf("a node pool string argument must be of the form `key=value`, got KVs %v", kvs)
+			return nil, fmt.Errorf("A node pool string argument must be of the form `key=value`. Provided KVs: %v", kvs)
 		}
 		key := kvs[0]
 		value := kvs[1]
@@ -1237,7 +1272,7 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 		case "count":
 			count, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
-				return nil, errors.New("node pool count argument must be a valid integer")
+				return nil, errors.New("Node pool count must be a valid integer.")
 			}
 			out.Count = int(count)
 		case "tag":
@@ -1245,23 +1280,23 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 		case "auto-scale":
 			autoScale, err := strconv.ParseBool(value)
 			if err != nil {
-				return nil, errors.New("node pool auto-scale argument must be a valid boolean")
+				return nil, errors.New("Node pool auto-scale value must be a valid boolean.")
 			}
 			out.AutoScale = autoScale
 		case "min-nodes":
 			minNodes, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
-				return nil, errors.New("node pool min-nodes argument must be a valid integer")
+				return nil, errors.New("Node pool min-nodes must be a valid integer.")
 			}
 			out.MinNodes = int(minNodes)
 		case "max-nodes":
 			maxNodes, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
-				return nil, errors.New("node pool max-nodes argument must be a valid integer")
+				return nil, errors.New("Node pool max-nodes must be a valid integer.")
 			}
 			out.MaxNodes = int(maxNodes)
 		default:
-			return nil, fmt.Errorf("unsupported node pool argument %q", key)
+			return nil, fmt.Errorf("Unsupported node pool argument %q", key)
 		}
 	}
 	return out, nil
@@ -1441,7 +1476,7 @@ func removeKubeconfig(remote, local *clientcmdapi.Config) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
-		return fmt.Errorf("the remote config has no context entry named %q -- this is a bug, please open a ticket with DigitalOcean",
+		return fmt.Errorf("The remote config has no context entry named %q. This is a bug, please open a ticket with DigitalOcean.",
 			remote.CurrentContext,
 		)
 	}
@@ -1451,7 +1486,7 @@ func removeKubeconfig(remote, local *clientcmdapi.Config) error {
 	delete(local.AuthInfos, remoteCtx.AuthInfo)
 	if local.CurrentContext == remote.CurrentContext {
 		local.CurrentContext = ""
-		notice("cluster was set as current context for kubectl. It has been removed, you might want to set a new one.")
+		notice("The removed cluster was set as the current context in kubectl. Run 'kubectl config get-contexts' to see a list of other contexts you can use, and 'kubectl config set-context' to specify a new one.")
 	}
 	return nil
 }
@@ -1489,7 +1524,7 @@ func waitForClusterRunning(kube do.KubernetesService, clusterID string) (*do.Kub
 		case godo.KubernetesClusterStatusProvisioning:
 			time.Sleep(5 * time.Second)
 		default:
-			return cluster, fmt.Errorf("unknown status: [%s]", cluster.Status.State)
+			return cluster, fmt.Errorf("Unknown status: [%s]", cluster.Status.State)
 		}
 	}
 }
@@ -1533,7 +1568,7 @@ func clusterByIDorName(kube do.KubernetesService, idOrName string) (*do.Kubernet
 		return nil, errAmbigousClusterName(idOrName, ids)
 	default:
 		if len(out) != 1 {
-			panic("the default case should always have len(out) == 1")
+			panic("The default case should always have len(out) == 1.")
 		}
 		return out[0], nil
 	}
@@ -1564,7 +1599,7 @@ func clusterIDize(kube do.KubernetesService, idOrName string) (string, error) {
 		return "", errAmbigousClusterName(idOrName, ids)
 	default:
 		if len(ids) != 1 {
-			panic("the default case should always have len(ids) == 1")
+			panic("The default case should always have len(ids) == 1.")
 		}
 		return ids[0], nil
 	}
@@ -1599,7 +1634,7 @@ func poolByIDorName(kube do.KubernetesService, clusterID, idOrName string) (*do.
 		return nil, errAmbigousPoolName(idOrName, ids)
 	default:
 		if len(out) != 1 {
-			panic("the default case should always have len(out) == 1")
+			panic("The default case should always have len(out) == 1.")
 		}
 		return out[0], nil
 	}
@@ -1629,7 +1664,7 @@ func poolIDize(kube do.KubernetesService, clusterID, idOrName string) (string, e
 		return "", errAmbigousPoolName(idOrName, ids)
 	default:
 		if len(ids) != 1 {
-			panic("the default case should always have len(ids) == 1")
+			panic("The default case should always have len(ids) == 1.")
 		}
 		return ids[0], nil
 	}
@@ -1672,7 +1707,7 @@ func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode
 		return nil, errAmbigousClusterNodeName(name, ids)
 	default:
 		if len(out) != 1 {
-			panic("the default case should always have len(out) == 1")
+			panic("The default case should always have len(out) == 1.")
 		}
 		return out[0], nil
 	}
@@ -1693,7 +1728,7 @@ func getVersionOrLatest(c *CmdConfig) (string, error) {
 	}
 	versions, err := c.Kubernetes().GetVersions()
 	if err != nil {
-		return "", fmt.Errorf("no version flag provided and unable to lookup the latest version from the API: %v", err)
+		return "", fmt.Errorf("No version flag provided. Unable to lookup the latest version from the API: %v", err)
 	}
 	if len(versions) > 0 {
 		return versions[0].Slug, nil
@@ -1719,7 +1754,7 @@ func parseMaintenancePolicy(c *CmdConfig) (*godo.KubernetesMaintenancePolicy, er
 
 	splitted := strings.SplitN(maintenanceWindow, "=", 2)
 	if len(splitted) != 2 {
-		return nil, fmt.Errorf("a maintenance window argument must be of the form `day=HH:MM`, got: %v", splitted)
+		return nil, fmt.Errorf("A maintenance window argument must be of the form `day=HH:MM`, got: %v", splitted)
 	}
 
 	day, err := godo.KubernetesMaintenanceToDay(splitted[0])
