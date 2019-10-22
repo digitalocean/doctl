@@ -23,7 +23,7 @@ var _ = suite("compute/load-balancer/delete", func(t *testing.T, when spec.G, it
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/load_balancers/that-droplet-id":
+			case "/v2/load_balancers/that-lb-id":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -55,12 +55,13 @@ var _ = suite("compute/load-balancer/delete", func(t *testing.T, when spec.G, it
 				"compute",
 				"load-balancer",
 				"delete",
-				"that-droplet-id",
+				"that-lb-id",
 				"--force",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Empty(output)
 		})
 	})
 })

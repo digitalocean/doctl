@@ -24,7 +24,7 @@ var _ = suite("compute/load-balancer/get", func(t *testing.T, when spec.G, it sp
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/load_balancers/find-droplet-id":
+			case "/v2/load_balancers/find-lb-id":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -56,7 +56,7 @@ var _ = suite("compute/load-balancer/get", func(t *testing.T, when spec.G, it sp
 				"compute",
 				"load-balancer",
 				"get",
-				"find-droplet-id",
+				"find-lb-id",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -67,13 +67,13 @@ var _ = suite("compute/load-balancer/get", func(t *testing.T, when spec.G, it sp
 })
 
 const lbGetOutput = `
-ID                 IP                 Name             Status    Created At              Algorithm      Region    Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                            Forwarding Rules
-find-droplet-id    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    round_robin    nyc3             3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0
+ID            IP                 Name             Status    Created At              Algorithm      Region    Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                            Forwarding Rules
+find-lb-id    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    round_robin    nyc3             3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0
 `
 const lbGetResponse = `
 {
   "load_balancer": {
-    "id": "find-droplet-id",
+    "id": "find-lb-id",
     "name": "example-lb-01",
     "ip": "104.131.186.241",
     "algorithm": "round_robin",

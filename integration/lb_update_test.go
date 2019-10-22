@@ -25,7 +25,7 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/load_balancers/updated-droplet-id":
+			case "/v2/load_balancers/updated-lb-id":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -62,7 +62,7 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 				"compute",
 				"load-balancer",
 				"update",
-				"updated-droplet-id",
+				"updated-lb-id",
 				"--droplet-ids", "1,2,3,4",
 				"--name", "hello",
 				"--region", "the-best-region",

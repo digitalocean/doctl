@@ -40,14 +40,7 @@ var _ = suite("compute/load-balancer/create", func(t *testing.T, when spec.G, it
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
-				expect.JSONEq(`{
-                                "name":"my-lb-name",
-				"algorithm":"round_robin",
-				"region":"venus",
-				"health_check":{},
-				"sticky_sessions":{},
-				"droplet_ids":[22,66],
-				"tag":"magic-lb","redirect_http_to_https":true}`, string(reqBody))
+				expect.JSONEq(lbCreateRequest, string(reqBody))
 
 				w.Write([]byte(lbCreateResponse))
 			default:
@@ -119,4 +112,13 @@ const lbCreateResponse = `{
     "redirect_http_to_https": false,
     "enable_proxy_protocol": false
   }
+}`
+const lbCreateRequest = `{
+  "name":"my-lb-name",
+  "algorithm":"round_robin",
+  "region":"venus",
+  "health_check":{},
+  "sticky_sessions":{},
+  "droplet_ids":[22,66],
+  "tag":"magic-lb","redirect_http_to_https":true
 }`

@@ -24,7 +24,7 @@ var _ = suite("compute/load-balancer/add-droplets", func(t *testing.T, when spec
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/load_balancers/my-droplet-id/droplets":
+			case "/v2/load_balancers/my-lb-id/droplets":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -39,7 +39,7 @@ var _ = suite("compute/load-balancer/add-droplets", func(t *testing.T, when spec
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
-				expect.JSONEq(`{"droplet_ids": [111,222,444]}`, string(reqBody))
+				expect.JSONEq(lbAddDropletsRequest, string(reqBody))
 
 				w.WriteHeader(http.StatusNoContent)
 			default:
@@ -61,12 +61,15 @@ var _ = suite("compute/load-balancer/add-droplets", func(t *testing.T, when spec
 				"compute",
 				"load-balancer",
 				"add-droplets",
-				"my-droplet-id",
+				"my-lb-id",
 				"--droplet-ids", "111,222,444",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Empty(output)
 		})
 	})
 })
+
+const lbAddDropletsRequest = `{"droplet_ids": [111,222,444]}`
