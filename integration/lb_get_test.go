@@ -15,8 +15,10 @@ import (
 
 var _ = suite("compute/load-balancer/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect   *require.Assertions
+		server   *httptest.Server
+		cmd      *exec.Cmd
+		baseArgs []string
 	)
 
 	it.Before(func() {
@@ -46,18 +48,34 @@ var _ = suite("compute/load-balancer/get", func(t *testing.T, when spec.G, it sp
 				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
+
+		cmd = exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"compute",
+			"load-balancer",
+		)
+
+		baseArgs = []string{
+			"find-lb-id",
+		}
 	})
 
-	when("all required flags are passed", func() {
+	when("command is get", func() {
 		it("gets the specified load balancer", func() {
-			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"compute",
-				"load-balancer",
-				"get",
-				"find-lb-id",
-			)
+			args := append([]string{"get"}, baseArgs...)
+			cmd.Args = append(cmd.Args, args...)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(lbGetOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("command is g", func() {
+		it("gets the specified load balancer", func() {
+			args := append([]string{"g"}, baseArgs...)
+			cmd.Args = append(cmd.Args, args...)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))

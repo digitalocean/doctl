@@ -14,8 +14,10 @@ import (
 
 var _ = suite("compute/load-balancer/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect   *require.Assertions
+		server   *httptest.Server
+		cmd      *exec.Cmd
+		baseArgs []string
 	)
 
 	it.Before(func() {
@@ -45,23 +47,43 @@ var _ = suite("compute/load-balancer/delete", func(t *testing.T, when spec.G, it
 				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
+
+		cmd = exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"compute",
+			"load-balancer",
+		)
+
+		baseArgs = []string{
+			"that-lb-id",
+			"--force",
+		}
 	})
 
-	when("all required flags are passed", func() {
-		it("deletes the specified load balancer", func() {
-			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"compute",
-				"load-balancer",
-				"delete",
-				"that-lb-id",
-				"--force",
-			)
+	when("required flags are passed", func() {
+		cases := []struct {
+			desc    string
+			command string
+		}{
+			{desc: "command is delete", command: "delete"},
+			{desc: "command is rm", command: "rm"},
+			{desc: "command is d", command: "d"},
+		}
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Empty(output)
-		})
+		for _, c := range cases {
+			when(c.desc, func() {
+				command := c.command
+
+				it("deletes the specified load balancer", func() {
+					args := append([]string{command}, baseArgs...)
+					cmd.Args = append(cmd.Args, args...)
+
+					output, err := cmd.CombinedOutput()
+					expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+					expect.Empty(output)
+				})
+			})
+		}
 	})
 })
