@@ -16,7 +16,10 @@ var _ = suite("compute/volume/delete", func(t *testing.T, when spec.G, it spec.S
 	var (
 		expect   *require.Assertions
 		cmd      *exec.Cmd
-		baseArgs []string
+		baseArgs = []string{
+			"my-volume-id",
+			"--force",
+		}
 	)
 
 	it.Before(func() {
@@ -32,7 +35,7 @@ var _ = suite("compute/volume/delete", func(t *testing.T, when spec.G, it spec.S
 				}
 
 				if req.Method != "DELETE" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -52,12 +55,6 @@ var _ = suite("compute/volume/delete", func(t *testing.T, when spec.G, it spec.S
 			"-u", server.URL,
 			"compute",
 			"volume")
-
-		baseArgs = []string{
-			"my-volume-id",
-			"--force",
-		}
-
 	})
 
 	when("command is delete", func() {

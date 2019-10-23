@@ -18,7 +18,15 @@ var _ = suite("compute/volume/create", func(t *testing.T, when spec.G, it spec.S
 	var (
 		expect   *require.Assertions
 		cmd      *exec.Cmd
-		baseArgs []string
+		baseArgs = []string{
+			"my-volume",
+			"--fs-label", "some-fs-label",
+			"--fs-type", "xfs",
+			"--region", "mars",
+			"--size", "4TiB",
+			"--tag", "yes",
+			"--tag", "again",
+		}
 	)
 
 	it.Before(func() {
@@ -34,7 +42,7 @@ var _ = suite("compute/volume/create", func(t *testing.T, when spec.G, it spec.S
 				}
 
 				if req.Method != "POST" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -59,17 +67,6 @@ var _ = suite("compute/volume/create", func(t *testing.T, when spec.G, it spec.S
 			"-u", server.URL,
 			"compute",
 			"volume")
-
-		baseArgs = []string{
-			"my-volume",
-			"--fs-label", "some-fs-label",
-			"--fs-type", "xfs",
-			"--region", "mars",
-			"--size", "4TiB",
-			"--tag", "yes",
-			"--tag", "again",
-		}
-
 	})
 
 	when("command is create", func() {
