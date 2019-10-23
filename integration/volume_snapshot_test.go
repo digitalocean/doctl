@@ -17,7 +17,12 @@ var _ = suite("compute/volume/snapshot", func(t *testing.T, when spec.G, it spec
 	var (
 		expect   *require.Assertions
 		cmd      *exec.Cmd
-		baseArgs []string
+		baseArgs = []string{
+			"my-volume-id",
+			"--snapshot-desc", "some magical description",
+			"--snapshot-name", "my-snapshot-name",
+			"--tag", "hey",
+		}
 	)
 
 	it.Before(func() {
@@ -33,7 +38,7 @@ var _ = suite("compute/volume/snapshot", func(t *testing.T, when spec.G, it spec
 				}
 
 				if req.Method != "POST" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -58,14 +63,6 @@ var _ = suite("compute/volume/snapshot", func(t *testing.T, when spec.G, it spec
 			"-u", server.URL,
 			"compute",
 			"volume")
-
-		baseArgs = []string{
-			"my-volume-id",
-			"--snapshot-desc", "some magical description",
-			"--snapshot-name", "my-snapshot-name",
-			"--tag", "hey",
-		}
-
 	})
 
 	when("command is snapshot", func() {

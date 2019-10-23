@@ -17,7 +17,7 @@ var _ = suite("compute/volume/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect   *require.Assertions
 		cmd      *exec.Cmd
-		baseArgs []string
+		baseArgs = []string{"some-volume-id"}
 	)
 
 	it.Before(func() {
@@ -33,7 +33,7 @@ var _ = suite("compute/volume/get", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				if req.Method != "GET" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -54,8 +54,6 @@ var _ = suite("compute/volume/get", func(t *testing.T, when spec.G, it spec.S) {
 			"compute",
 			"volume",
 		)
-
-		baseArgs = []string{"some-volume-id"}
 	})
 
 	when("command is get", func() {
