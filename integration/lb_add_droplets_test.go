@@ -32,7 +32,7 @@ var _ = suite("compute/load-balancer/add-droplets", func(t *testing.T, when spec
 				}
 
 				if req.Method != "POST" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 

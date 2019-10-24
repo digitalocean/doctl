@@ -35,7 +35,7 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 				}
 
 				if req.Method != "PUT" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -98,14 +98,17 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 // easier for us to reuse said resonses from get request.
 // If / when they materially differ we should feel free
 // to make these custom.
-const lbUpdateOutput = lbGetOutput
-const lbUpdateResponse = lbGetResponse
-const lbUpdateRequest = `{
-"name":"hello",
-"algorithm":"round_robin",
-"region":"the-best-region",
-"health_check":{},
-"sticky_sessions":{},
-"droplet_ids":[1,2,3,4],
-"tag":"some-tag"
+const (
+	lbUpdateOutput   = lbGetOutput
+	lbUpdateResponse = lbGetResponse
+	lbUpdateRequest  = `
+{
+    "name":"hello",
+    "algorithm":"round_robin",
+    "region":"the-best-region",
+    "health_check":{},
+    "sticky_sessions":{},
+    "droplet_ids":[1,2,3,4],
+    "tag":"some-tag"
 }`
+)

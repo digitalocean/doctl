@@ -32,7 +32,7 @@ var _ = suite("compute/load-balancer/add-forwarding-rules", func(t *testing.T, w
 				}
 
 				if req.Method != "POST" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
