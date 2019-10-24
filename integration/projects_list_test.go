@@ -33,6 +33,11 @@ var _ = suite("projects/list", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				pageNum := req.URL.Query().Get("page")
 				response := projectsListPageOneResponse
 				if pageNum == "2" {
@@ -81,12 +86,13 @@ var _ = suite("projects/list", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const projectsListOutput = `
+const (
+	projectsListOutput = `
 ID                 Owner UUID    Owner ID    Name     Description    Purpose    Environment    Is Default?    Created At              Updated At
 some-project-id    some-uuid     2           magic    hello          none       mars           false          2018-09-27T20:10:35Z    2018-09-27T20:10:35Z
 other-id           some-uuid     2           yes      no             other      venus          true           2018-09-27T20:10:35Z    2018-09-27T20:10:35Z
 `
-const projectsListPageOneResponse = `
+	projectsListPageOneResponse = `
 {
   "projects": [
     {
@@ -114,7 +120,7 @@ const projectsListPageOneResponse = `
   }
 }
 `
-const projectsListPageTwoResponse = `
+	projectsListPageTwoResponse = `
 {
   "projects": [
     {
@@ -141,3 +147,4 @@ const projectsListPageTwoResponse = `
   }
 }
 `
+)

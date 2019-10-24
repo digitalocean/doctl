@@ -35,31 +35,33 @@ var _ = suite("projects/create", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
-				if req.Method == "POST" {
-					reqBody, err := ioutil.ReadAll(req.Body)
-					expect.NoError(err)
-
-					request := struct {
-						Name        string `json:"name"`
-						Env         string `json:"environment"`
-						Description string `json:"description"`
-						Purpose     string `json:"purpose"`
-					}{}
-
-					err = json.Unmarshal(reqBody, &request)
-					expect.NoError(err)
-
-					t, err := template.New("response").Parse(projectsCreateResponse)
-					expect.NoError(err)
-
-					var b []byte
-					buffer := bytes.NewBuffer(b)
-					err = t.Execute(buffer, request)
-					expect.NoError(err)
-
-					w.Write(buffer.Bytes())
+				if req.Method != "POST" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
+
+				reqBody, err := ioutil.ReadAll(req.Body)
+				expect.NoError(err)
+
+				request := struct {
+					Name        string `json:"name"`
+					Env         string `json:"environment"`
+					Description string `json:"description"`
+					Purpose     string `json:"purpose"`
+				}{}
+
+				err = json.Unmarshal(reqBody, &request)
+				expect.NoError(err)
+
+				t, err := template.New("response").Parse(projectsCreateResponse)
+				expect.NoError(err)
+
+				var b []byte
+				buffer := bytes.NewBuffer(b)
+				err = t.Execute(buffer, request)
+				expect.NoError(err)
+
+				w.Write(buffer.Bytes())
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -127,12 +129,12 @@ var _ = suite("projects/create", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const projectsCreateOutput = `
+const (
+	projectsCreateOutput = `
 ID         Owner UUID         Owner ID    Name            Description    Purpose        Environment    Is Default?    Created At              Updated At
 some-id    some-owner-uuid    2           some-project    just magic     to-organize    Staging        false          2018-09-27T15:52:48Z    2018-09-27T15:52:48Z
 `
-
-const projectsCreateResponse = `
+	projectsCreateResponse = `
 {
   "project": {
     "id": "some-id",
@@ -148,3 +150,4 @@ const projectsCreateResponse = `
   }
 }
 `
+)
