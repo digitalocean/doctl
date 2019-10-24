@@ -35,6 +35,11 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				if req.Method != "POST" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
@@ -94,12 +99,12 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 
 })
 
-const databasesCreateOutput = `
+const (
+	databasesCreateOutput = `
 ID         Name                Engine    Version         Number of Nodes    Region    Status      Size       URI    Created At
 some-id    my-database-name    mysql     what-version    100                nyc3      creating    biggest           2019-01-11 18:37:36 +0000 UTC
 `
-
-const databaseCreateResponse = `
+	databaseCreateResponse = `
 {
   "database": {
     "id": "some-id",
@@ -120,5 +125,5 @@ const databaseCreateResponse = `
       "production"
     ]
   }
-}
-`
+}`
+)

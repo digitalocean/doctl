@@ -35,7 +35,7 @@ var _ = suite("database/user/create", func(t *testing.T, when spec.G, it spec.S)
 				}
 
 				if req.Method != "POST" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -88,11 +88,12 @@ var _ = suite("database/user/create", func(t *testing.T, when spec.G, it spec.S)
 	})
 })
 
-const databaseUserCreateOutput = `
+const (
+	databaseUserCreateOutput = `
 Name              Role      Password
 some-user-name    normal    jge5lfxtzhx42iff
 `
-const databaseUserCreateResponse = `
+	databaseUserCreateResponse = `
 {
   "user": {
     "name": "{{.Name}}",
@@ -101,3 +102,4 @@ const databaseUserCreateResponse = `
   }
 }
 `
+)

@@ -31,7 +31,7 @@ var _ = suite("database/user/list", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				if req.Method != "GET" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -65,12 +65,13 @@ var _ = suite("database/user/list", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const databaseUserListOutput = `
+const (
+	databaseUserListOutput = `
 Name       Role       Password
 app-01     normal     jge5lfxtzhx42iff
 doadmin    primary    wv78n3zpz42xezdk
 `
-const databaseUserListResponse = `
+	databaseUserListResponse = `
 {
   "users": [
     {
@@ -86,3 +87,4 @@ const databaseUserListResponse = `
   ]
 }
 `
+)
