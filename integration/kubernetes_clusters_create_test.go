@@ -33,22 +33,36 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				w.Write([]byte(kubeClustersCreateOptResponse))
-			case "/v2/kubernetes/clusters":
-				if req.Method == "POST" {
-					reqBody, err := ioutil.ReadAll(req.Body)
-					expect.NoError(err)
-
-					expect.JSONEq(string(reqBody), kubeClustersCreateJSONReq)
-
-					w.Write([]byte(kubeClustersCreateResponse))
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				w.WriteHeader(http.StatusTeapot)
+				w.Write([]byte(kubeClustersCreateOptResponse))
+			case "/v2/kubernetes/clusters":
+				if req.Method != "POST" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+				reqBody, err := ioutil.ReadAll(req.Body)
+				expect.NoError(err)
+
+				expect.JSONEq(string(reqBody), kubeClustersCreateJSONReq)
+
+				w.Write([]byte(kubeClustersCreateResponse))
 			case "/v2/kubernetes/clusters/some-cluster-id":
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(kubeClustersWaitResponse))
 			case "/v2/kubernetes/clusters/some-cluster-id/kubeconfig":
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(kubeClustersConfigResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -104,7 +118,9 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 	})
 })
 
-const kubeClustersCreateOptResponse = `{
+const (
+	kubeClustersCreateOptResponse = `
+{
 "options":{
     "versions": [{"slug":"version-slug","kubernetes_version": "some-kube-version"}],
     "regions": [{"name": "region-name", "slug": "some-region-slug"}],
@@ -112,7 +128,7 @@ const kubeClustersCreateOptResponse = `{
   }
 }
 `
-const kubeClustersCreateJSONReq = `
+	kubeClustersCreateJSONReq = `
 {
   "name": "some-cluster-name",
   "region": "mars",
@@ -132,14 +148,14 @@ const kubeClustersCreateJSONReq = `
   ]
 }
 `
-const kubeClustersCreateResponse = `
+	kubeClustersCreateResponse = `
 {
   "kubernetes_cluster": {
     "id": "some-cluster-id"
   }
 }
 `
-const kubeClustersWaitResponse = `
+	kubeClustersWaitResponse = `
 {
   "kubernetes_cluster": {
     "id": "some-cluster-id",
@@ -161,7 +177,7 @@ const kubeClustersWaitResponse = `
   }
 }
 `
-const kubeClustersConfigResponse = `
+	kubeClustersConfigResponse = `
 ---
 apiVersion: v1
 kind: Config
@@ -180,3 +196,4 @@ contexts:
   name: some-context
 current-context: some-context
 `
+)
