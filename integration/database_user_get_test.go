@@ -31,7 +31,7 @@ var _ = suite("database/user/get", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				if req.Method != "GET" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -123,26 +123,26 @@ var _ = suite("database/user/get", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const databaseUserGetOutput = `
+const (
+	databaseUserGetOutput = `
 Name            Role      Password
 some-user-id    normal    jge5lfxtzhx42iff
 `
-const databaseUserGetNoHeaderOutput = `
+	databaseUserGetNoHeaderOutput = `
 some-user-id    normal    jge5lfxtzhx42iff
 `
-const databaseUserGetFormatOutput = `
+	databaseUserGetFormatOutput = `
 Name
 some-user-id
 `
-const databaseUserGetJSONOutput = `
-[{ "name": "some-user-id", "role": "normal", "password": "jge5lfxtzhx42iff" }]
-`
-const databaseUserGetResponse = `
+	databaseUserGetJSONOutput = `
+[{ "name": "some-user-id", "role": "normal", "password": "jge5lfxtzhx42iff" }]`
+	databaseUserGetResponse = `
 {
   "user": {
     "name": "some-user-id",
     "role": "normal",
     "password": "jge5lfxtzhx42iff"
   }
-}
-`
+}`
+)
