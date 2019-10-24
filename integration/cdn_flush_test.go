@@ -33,7 +33,7 @@ var _ = suite("compute/cdn/flush", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				if req.Method != "DELETE" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 

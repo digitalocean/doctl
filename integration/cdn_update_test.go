@@ -34,7 +34,7 @@ var _ = suite("compute/cdn/update", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				if req.Method != "PUT" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -80,11 +80,13 @@ var _ = suite("compute/cdn/update", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const cdnUpdateOutput = `
+const (
+	cdnUpdateOutput = `
 ID              Origin         Endpoint       TTL     CustomDomain          CertificateID    CreatedAt
 other-cdn-id    some-origin    some-static    3600    static.example.com    some-cert-id     2018-07-19 15:04:16 +0000 UTC
 `
-const cdnUpdateResponse = `{
+	cdnUpdateResponse = `
+{
   "endpoint": {
     "id": "other-cdn-id",
     "origin": "some-origin",
@@ -95,3 +97,4 @@ const cdnUpdateResponse = `{
     "ttl": 3600
   }
 }`
+)

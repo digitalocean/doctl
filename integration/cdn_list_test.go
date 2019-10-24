@@ -32,7 +32,7 @@ var _ = suite("compute/cdn/list", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				if req.Method != "GET" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -65,12 +65,13 @@ var _ = suite("compute/cdn/list", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const cdnListOutput = `
+const (
+	cdnListOutput = `
 ID    Origin              Endpoint           TTL     CustomDomain          CertificateID    CreatedAt
 1     static.other.com    static.blah.com    3600    static.example.com    some-cert-id     2018-07-19 15:04:16 +0000 UTC
 2     static.other.com    static.blah.com    3600    static.example.com    some-cert-id     2018-07-19 15:04:16 +0000 UTC
 `
-const cdnListResponse = `
+	cdnListResponse = `
 {
   "endpoints": [
     {
@@ -98,3 +99,4 @@ const cdnListResponse = `
   "links": {
   }
 }`
+)
