@@ -31,15 +31,12 @@ var _ = suite("compute/droplet/backups", func(t *testing.T, when spec.G, it spec
 					return
 				}
 
-				w.Write([]byte(`{"backups": [{
-					"id": 4444,
-					"name": "magic",
-					"distribution": "Fedora",
-					"type": "snapshot",
-					"slug": "slimey",
-					"min_disk_size": 25
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
 				}
-				]}`))
+
+				w.Write([]byte(dropletBackupsResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -69,7 +66,21 @@ var _ = suite("compute/droplet/backups", func(t *testing.T, when spec.G, it spec
 	})
 })
 
-const dropletBackupsOutput = `
+const (
+	dropletBackupsOutput = `
 ID      Name     Type        Distribution    Slug      Public    Min Disk
 4444    magic    snapshot    Fedora          slimey    false     25
 `
+	dropletBackupsResponse = `
+{"backups": [
+  {
+     "id": 4444,
+     "name": "magic",
+     "distribution": "Fedora",
+     "type": "snapshot",
+     "slug": "slimey",
+     "min_disk_size": 25
+    }
+  ]
+}`
+)

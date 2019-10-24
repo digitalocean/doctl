@@ -31,6 +31,11 @@ var _ = suite("compute/droplet/snapshots", func(t *testing.T, when spec.G, it sp
 					return
 				}
 
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(dropletSnapshotsResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -61,13 +66,13 @@ var _ = suite("compute/droplet/snapshots", func(t *testing.T, when spec.G, it sp
 	})
 })
 
-const dropletSnapshotsOutput = `
+const (
+	dropletSnapshotsOutput = `
 ID      Name           Type        Distribution    Slug      Public    Min Disk
 4444    magic          snapshot    Fedora          slimey    false     25
 2222    other-magic    snapshot    Ubuntu          slimey    false     25
 `
-
-const dropletSnapshotsResponse = `
+	dropletSnapshotsResponse = `
 {"snapshots": [
   {
     "id": 4444,
@@ -87,3 +92,4 @@ const dropletSnapshotsResponse = `
   }
 ]}
 `
+)

@@ -31,6 +31,11 @@ var _ = suite("compute/droplet/list", func(t *testing.T, when spec.G, it spec.S)
 					return
 				}
 
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				q := req.URL.Query()
 				tag := q.Get("tag_name")
 				if tag == "some-tag" {
@@ -107,7 +112,9 @@ var _ = suite("compute/droplet/list", func(t *testing.T, when spec.G, it spec.S)
 	})
 })
 
-const dropletListResponse = `{
+const (
+	dropletListResponse = `
+{
   "droplets": [{
     "id": 1111,
     "name": "some-droplet-name",
@@ -125,7 +132,8 @@ const dropletListResponse = `{
   }]
 }`
 
-const dropletListRegionResponse = `{
+	dropletListRegionResponse = `
+{
   "droplets": [{
     "id": 1111,
     "image": {
@@ -155,16 +163,17 @@ const dropletListRegionResponse = `{
   }]
 }`
 
-const dropletListOutput = `
+	dropletListOutput = `
 ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          Status    Tags    Features    Volumes
 1111    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
 `
 
-const dropletListRegionOutput = `
+	dropletListRegionOutput = `
 ID      Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region       Image                          Status    Tags    Features    Volumes
 1440                                                          0         0        0       my-region    some-distro some-image-name    active    yes     remotes     some-volume-id
 `
 
-const dropletListEmptyOutput = `
+	dropletListEmptyOutput = `
 ID    Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region    Image    Status    Tags    Features    Volumes
 `
+)

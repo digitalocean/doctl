@@ -31,6 +31,11 @@ var _ = suite("compute/droplet/actions", func(t *testing.T, when spec.G, it spec
 					return
 				}
 
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(dropletActionsResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -61,20 +66,22 @@ var _ = suite("compute/droplet/actions", func(t *testing.T, when spec.G, it spec
 	})
 })
 
-const dropletActionsOutput = `
+const (
+	dropletActionsOutput = `
 ID    Status       Type    Started At                       Completed At                     Resource ID    Resource Type    Region
 2     completed            2014-11-14 16:37:39 +0000 UTC    2014-11-14 16:37:40 +0000 UTC    0              droplet
 `
-
-const dropletActionsResponse = `{
-"actions": [
-  {
-    "id": 2,
-    "slug": "silly",
-    "started_at": "2014-11-14T16:37:39Z",
-    "completed_at":  "2014-11-14T16:37:40Z",
-    "status": "completed",
-    "resource_type": "droplet"
-  }
-]
+	dropletActionsResponse = `
+{
+    "actions": [
+      {
+        "id": 2,
+        "slug": "silly",
+        "started_at": "2014-11-14T16:37:39Z",
+        "completed_at":  "2014-11-14T16:37:40Z",
+        "status": "completed",
+        "resource_type": "droplet"
+      }
+    ]
 }`
+)
