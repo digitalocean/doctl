@@ -29,6 +29,12 @@ var _ = suite("compute/image/create", func(t *testing.T, when spec.G, it spec.S)
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				if req.Method != "POST" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(imageCreateResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
