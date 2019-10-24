@@ -32,7 +32,7 @@ var _ = suite("compute/load-balancer/remove-forwarding-rules", func(t *testing.T
 				}
 
 				if req.Method != "DELETE" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 

@@ -33,7 +33,7 @@ var _ = suite("compute/load-balancer/delete", func(t *testing.T, when spec.G, it
 				}
 
 				if req.Method != "DELETE" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 

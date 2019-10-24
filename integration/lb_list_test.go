@@ -33,7 +33,7 @@ var _ = suite("compute/load-balancer/list", func(t *testing.T, when spec.G, it s
 				}
 
 				if req.Method != "GET" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -78,12 +78,13 @@ var _ = suite("compute/load-balancer/list", func(t *testing.T, when spec.G, it s
 	})
 })
 
-const lbListOutput = `
+const (
+	lbListOutput = `
 ID        IP                 Name             Status    Created At              Algorithm      Region    Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                   Forwarding Rules
 lb-one    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    round_robin    venus3           3164444        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false
 lb-two    104.131.188.204    example-lb-02    new       2017-02-01T20:44:58Z    round_robin    mars1            3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false
 `
-const lbListResponse = `
+	lbListResponse = `
 {
   "load_balancers": [
     {
@@ -176,3 +177,4 @@ const lbListResponse = `
   }
 }
 `
+)
