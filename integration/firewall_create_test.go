@@ -43,8 +43,8 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 		}))
 	})
 
-	when("doing create", func() {
-		it("does create", func() {
+	when("the minimum required flags are provided", func() {
+		it("creates a firewall", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
