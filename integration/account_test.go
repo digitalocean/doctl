@@ -123,17 +123,18 @@ var _ = suite("account/ratelimit", func(t *testing.T, when spec.G, it spec.S) {
 })
 
 const (
-	accountGetResponse = `{
-	"account": {
-	    "droplet_limit": 25,
-	    "floating_ip_limit": 5,
-	    "email": "sammy@digitalocean.com",
-	    "uuid": "b6fr89dbf6d9156cace5f3c78dc9851d957381ef",
-	    "email_verified": true,
-	    "status": "active",
-	    "status_message": ""
-	  }
-  }`
+	accountGetResponse = `
+{
+  "account": {
+    "droplet_limit": 25,
+    "floating_ip_limit": 5,
+    "email": "sammy@digitalocean.com",
+    "uuid": "b6fr89dbf6d9156cace5f3c78dc9851d957381ef",
+    "email_verified": true,
+    "status": "active",
+    "status_message": ""
+  }
+}`
 	accountOutput = `
 Email                     Droplet Limit    Email Verified    UUID                                        Status
 sammy@digitalocean.com    25               true              b6fr89dbf6d9156cace5f3c78dc9851d957381ef    active

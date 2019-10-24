@@ -36,7 +36,7 @@ var _ = suite("compute/cdn/create", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				if req.Method != "POST" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -94,11 +94,12 @@ var _ = suite("compute/cdn/create", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const cdnCreateOutput = `
+const (
+	cdnCreateOutput = `
 ID                                      Origin         Endpoint                                         TTL    CustomDomain    CertificateID    CreatedAt
 19f06b6a-3ace-4315-b086-499a0e521b76    magic-orgin    static-images.nyc3.cdn.digitaloceanspaces.com    60     example.com     some-cert-id     2018-07-19 15:04:16 +0000 UTC
 `
-const cdnCreateResponse = `
+	cdnCreateResponse = `
 {
   "endpoint": {
     "id": "19f06b6a-3ace-4315-b086-499a0e521b76",
@@ -109,5 +110,5 @@ const cdnCreateResponse = `
     "custom_domain": "{{.Domain}}",
     "ttl": {{.TTL}}
   }
-}
-`
+}`
+)

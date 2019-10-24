@@ -32,7 +32,7 @@ var _ = suite("compute/cdn/get", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				if req.Method != "GET" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -66,11 +66,13 @@ var _ = suite("compute/cdn/get", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const cdnGetOutput = `
+const (
+	cdnGetOutput = `
 ID              Origin                                       Endpoint                                         TTL     CustomDomain          CertificateID                           CreatedAt
 other-cdn-id    static-images.nyc3.digitaloceanspaces.com    static-images.nyc3.cdn.digitaloceanspaces.com    3600    static.example.com    892071a0-bb95-49bc-8021-3afd67a210bf    2018-07-19 15:04:16 +0000 UTC
 `
-const cdnGetResponse = `{
+	cdnGetResponse = `
+{
   "endpoint": {
     "id": "other-cdn-id",
     "origin": "static-images.nyc3.digitaloceanspaces.com",
@@ -81,3 +83,4 @@ const cdnGetResponse = `{
     "ttl": 3600
   }
 }`
+)
