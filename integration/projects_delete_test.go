@@ -28,7 +28,7 @@ var _ = suite("projects/delete", func(t *testing.T, when spec.G, it spec.S) {
 				fallthrough
 			case "/v2/projects/test-project-2":
 				if req.Method != "DELETE" {
-					w.WriteHeader(http.StatusTeapot)
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 

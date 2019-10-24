@@ -35,34 +35,34 @@ var _ = suite("projects/update", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
-				if req.Method == "PATCH" {
-					reqBody, err := ioutil.ReadAll(req.Body)
-					expect.NoError(err)
-
-					request := struct {
-						Name        string `json:"name"`
-						Env         string `json:"environment"`
-						Description string `json:"description"`
-						Purpose     string `json:"purpose"`
-						IsDefault   bool   `json:"is_default"`
-					}{}
-
-					err = json.Unmarshal(reqBody, &request)
-					expect.NoError(err)
-
-					t, err := template.New("response").Parse(projectsUpdateResponse)
-					expect.NoError(err)
-
-					var b []byte
-					buffer := bytes.NewBuffer(b)
-					err = t.Execute(buffer, request)
-					expect.NoError(err)
-
-					w.Write(buffer.Bytes())
+				if req.Method != "PATCH" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				w.WriteHeader(http.StatusTeapot)
+				reqBody, err := ioutil.ReadAll(req.Body)
+				expect.NoError(err)
+
+				request := struct {
+					Name        string `json:"name"`
+					Env         string `json:"environment"`
+					Description string `json:"description"`
+					Purpose     string `json:"purpose"`
+					IsDefault   bool   `json:"is_default"`
+				}{}
+
+				err = json.Unmarshal(reqBody, &request)
+				expect.NoError(err)
+
+				t, err := template.New("response").Parse(projectsUpdateResponse)
+				expect.NoError(err)
+
+				var b []byte
+				buffer := bytes.NewBuffer(b)
+				err = t.Execute(buffer, request)
+				expect.NoError(err)
+
+				w.Write(buffer.Bytes())
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -118,15 +118,16 @@ var _ = suite("projects/update", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const projectsUpdateOutput = `
+const (
+	projectsUpdateOutput = `
 ID                        Owner UUID    Owner ID    Name         Description    Purpose         Environment    Is Default?    Created At              Updated At
 some-project-to-update    owner-uuid    2           some-name    yes            some-purpose    mars           true           2018-09-27T15:52:48Z    2018-09-27T15:52:48Z
 `
-const projectsUpdateFormattedOutput = `
+	projectsUpdateFormattedOutput = `
 ID                        Name
 some-project-to-update    some-name
 `
-const projectsUpdateResponse = `
+	projectsUpdateResponse = `
 {
   "project": {
     "id": "some-project-to-update",
@@ -142,3 +143,4 @@ const projectsUpdateResponse = `
   }
 }
 `
+)

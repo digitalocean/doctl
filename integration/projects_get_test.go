@@ -31,6 +31,11 @@ var _ = suite("projects/get", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(projectsGetResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -77,15 +82,16 @@ var _ = suite("projects/get", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const projectsGetOutput = `
+const (
+	projectsGetOutput = `
 ID                 Owner UUID         Owner ID    Name          Description       Purpose           Environment    Is Default?    Created At              Updated At
 some-project-id    some-owner-uuid    2           my-web-api    My website API    Service or API    Production     false          2018-09-27T20:10:35Z    2018-09-27T20:10:35Z
 `
-const projectsGetFormattedOutput = `
+	projectsGetFormattedOutput = `
 Description
 My website API
 `
-const projectsGetResponse = `
+	projectsGetResponse = `
 {
   "project": {
     "id": "some-project-id",
@@ -101,3 +107,4 @@ const projectsGetResponse = `
   }
 }
 `
+)

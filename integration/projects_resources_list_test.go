@@ -31,6 +31,11 @@ var _ = suite("projects/resources/list", func(t *testing.T, when spec.G, it spec
 					return
 				}
 
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(projectsResourcesListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -97,21 +102,22 @@ var _ = suite("projects/resources/list", func(t *testing.T, when spec.G, it spec
 	})
 })
 
-const projcetsResourcesListOutput = `
+const (
+	projcetsResourcesListOutput = `
 URN                Assigned At             Status
 do:droplet:1       2018-09-28T19:26:37Z    ok
 do:floatingip:1    2018-09-28T19:26:38Z    ok
 `
-const projcetsResourcesListNoHeaderOutput = `
+	projcetsResourcesListNoHeaderOutput = `
 do:droplet:1       2018-09-28T19:26:37Z    ok
 do:floatingip:1    2018-09-28T19:26:38Z    ok
 `
-const projcetsResourcesListFormatOutput = `
+	projcetsResourcesListFormatOutput = `
 URN                Status
 do:droplet:1       ok
 do:floatingip:1    ok
 `
-const projectsResourcesListResponse = `
+	projectsResourcesListResponse = `
 {
   "resources": [
     {
@@ -137,3 +143,4 @@ const projectsResourcesListResponse = `
   }
 }
 `
+)

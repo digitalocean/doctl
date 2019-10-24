@@ -33,23 +33,24 @@ var _ = suite("projects/resources/assign", func(t *testing.T, when spec.G, it sp
 					return
 				}
 
-				if req.Method == "POST" {
-					reqBody, err := ioutil.ReadAll(req.Body)
-					expect.NoError(err)
-
-					request := struct {
-						Resources []string `json:"resources"`
-					}{}
-
-					err = json.Unmarshal(reqBody, &request)
-					expect.NoError(err)
-
-					expect.ElementsMatch(request.Resources, []string{"some-urn-1", "some-urn-2"})
-
-					w.Write([]byte(projectsResourcesAssignResponse))
+				if req.Method != "POST" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
+				reqBody, err := ioutil.ReadAll(req.Body)
+				expect.NoError(err)
+
+				request := struct {
+					Resources []string `json:"resources"`
+				}{}
+
+				err = json.Unmarshal(reqBody, &request)
+				expect.NoError(err)
+
+				expect.ElementsMatch(request.Resources, []string{"some-urn-1", "some-urn-2"})
+
+				w.Write([]byte(projectsResourcesAssignResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -81,13 +82,13 @@ var _ = suite("projects/resources/assign", func(t *testing.T, when spec.G, it sp
 	})
 })
 
-const projcetsResourcesAssignOutput = `
+const (
+	projcetsResourcesAssignOutput = `
 URN           Assigned At             Status
 some-urn-1    2018-09-28T19:26:37Z    assigned
 some-urn-2    2018-09-28T19:26:37Z    assigned
 `
-
-const projectsResourcesAssignResponse = `
+	projectsResourcesAssignResponse = `
 {
   "resources": [
     {
@@ -103,3 +104,4 @@ const projectsResourcesAssignResponse = `
   ]
 }
 `
+)
