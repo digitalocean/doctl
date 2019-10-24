@@ -36,6 +36,11 @@ var _ = suite("compute/image/list-application", func(t *testing.T, when spec.G, 
 					return
 				}
 
+				if req.URL.Query().Get("type") != "application" {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+
 				w.Write([]byte(imageListApplicationResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
