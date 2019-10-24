@@ -26,7 +26,7 @@ var _ = suite("compute/droplet/neighbors", func(t *testing.T, when spec.G, it sp
 	it.Before(func() {
 		expect = require.New(t)
 
-		dir, err := ioutil.TempDir("", "doct-integratio-tests")
+		dir, err := ioutil.TempDir("", "doct-integration-tests")
 		expect.NoError(err)
 
 		configPath = filepath.Join(dir, "config.yaml")
@@ -40,6 +40,11 @@ var _ = suite("compute/droplet/neighbors", func(t *testing.T, when spec.G, it sp
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-extra-token" {
 					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -102,24 +107,24 @@ var _ = suite("compute/droplet/neighbors", func(t *testing.T, when spec.G, it sp
 	})
 })
 
-const dropletNeighborsConfig = `
+const (
+	dropletNeighborsConfig = `
 ---
 access-token: some-extra-token
 `
-
-const dropletNeighborsOutput = `
+	dropletNeighborsOutput = `
 ID      Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region       Image                          Status    Tags    Features    Volumes
 2222                                                          0         0        0       some-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
 1440                                                          0         0        0       some-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
 `
 
-const dropletNeighborsHeadersOutput = `
+	dropletNeighborsHeadersOutput = `
 ID      Memory    VCPUs    Disk    Region
 2222    0         0        0       some-slug
 1440    0         0        0       some-slug
 `
-
-const dropletNeighborsResponse = `{
+	dropletNeighborsResponse = `
+{
   "droplets": [{
     "id": 2222,
     "image": {
@@ -148,3 +153,4 @@ const dropletNeighborsResponse = `{
     "volume_ids": ["some-volume-id"]
   }]
 }`
+)

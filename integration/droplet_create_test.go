@@ -38,6 +38,11 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 					return
 				}
 
+				if req.Method != "POST" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				var err error
 				reqBody, err = ioutil.ReadAll(req.Body)
 				expect.NoError(err)
@@ -165,7 +170,9 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 	})
 })
 
-const dropletCreateResponse = `{
+const (
+	dropletCreateResponse = `
+{
   "droplet": {
     "id": 1111,
     "memory": 12,
@@ -192,16 +199,14 @@ const dropletCreateResponse = `{
 
   }
 }`
-
-const dropletCreateWaitResponse = `
+	dropletCreateWaitResponse = `
 {"droplet": {"id": 777}, "links": {"actions": [{"id":1, "rel":"create", "href":"poll-for-droplet"}]}}
 `
-
-const actionCompletedResponse = `
+	actionCompletedResponse = `
 {"action": "id": 1, "status": "completed"}
 `
-
-const dropletCreateOutput = `
+	dropletCreateOutput = `
 ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          Status    Tags    Features    Volumes
 1111    some-droplet-name    1.2.3.4        7.7.7.7                        12        13       15      some-region-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
 `
+)

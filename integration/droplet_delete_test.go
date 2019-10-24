@@ -30,14 +30,19 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 					return
 				}
 
-				w.Write([]byte(`{"droplets":[{"name":"some-droplet-name", "id": 1337}]}`))
-			case "/v2/droplets/1337":
-				if req.Method != "DELETE" {
-					w.WriteHeader(http.StatusTeapot)
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				w.Write([]byte(`{}`))
+				w.Write([]byte(`{"droplets":[{"name":"some-droplet-name", "id": 1337}]}`))
+			case "/v2/droplets/1337":
+				if req.Method != "DELETE" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.WriteHeader(http.StatusNoContent)
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -76,6 +81,7 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 
 					output, err := cmd.CombinedOutput()
 					expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+					expect.Empty(output)
 				})
 			})
 		}

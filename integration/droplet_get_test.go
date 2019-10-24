@@ -43,6 +43,11 @@ var _ = suite("compute/droplet/get", func(t *testing.T, when spec.G, it spec.S) 
 					return
 				}
 
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(dropletGetResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -114,26 +119,25 @@ var _ = suite("compute/droplet/get", func(t *testing.T, when spec.G, it spec.S) 
 	})
 })
 
-const dropletGetConfig = `
+const (
+	dropletGetConfig = `
 ---
 access-token: special-broken
 `
-
-const dropletGetOutput = `
+	dropletGetOutput = `
 ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          Status    Tags    Features    Volumes
 5555    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
 `
-
-const dropletGetFormatOutput = `
+	dropletGetFormatOutput = `
 ID      Name
 5555    some-droplet-name
 `
 
-const dropletGetTemplateOutput = `
+	dropletGetTemplateOutput = `
 this is magic 5555 can be shown with some-region-slug
 `
-
-const dropletGetResponse = `{
+	dropletGetResponse = `
+{
   "droplet": {
     "id": 5555,
     "name": "some-droplet-name",
@@ -150,3 +154,4 @@ const dropletGetResponse = `{
     "volume_ids": ["some-volume-id"]
   }
 }`
+)

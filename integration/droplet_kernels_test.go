@@ -31,7 +31,12 @@ var _ = suite("compute/droplet/kernels", func(t *testing.T, when spec.G, it spec
 					return
 				}
 
-				w.Write([]byte(`{"kernels": [{"id": 134, "name": "foo", "version": "2.3.0"}]}`))
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(dropletKernelsResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -61,7 +66,12 @@ var _ = suite("compute/droplet/kernels", func(t *testing.T, when spec.G, it spec
 	})
 })
 
-const dropletKernelsOutput = `
+const (
+	dropletKernelsOutput = `
 ID     Name    Version
 134    foo     2.3.0
 `
+	dropletKernelsResponse = `
+{"kernels": [{"id": 134, "name": "foo", "version": "2.3.0"}]}
+`
+)

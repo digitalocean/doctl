@@ -41,6 +41,11 @@ var _ = suite("compute/droplet/tag", func(t *testing.T, when spec.G, it spec.S) 
 					return
 				}
 
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(`{"droplets":[{"name":"some-droplet-name", "id": 1337}]}`))
 			case "/v2/tags/my-tag/resources":
 				body, err := ioutil.ReadAll(req.Body)
@@ -57,7 +62,7 @@ var _ = suite("compute/droplet/tag", func(t *testing.T, when spec.G, it spec.S) 
 						return
 					}
 
-					w.Write([]byte(`{}`))
+					w.WriteHeader(http.StatusNoContent)
 				}
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -95,6 +100,7 @@ var _ = suite("compute/droplet/tag", func(t *testing.T, when spec.G, it spec.S) 
 
 					output, err := cmd.CombinedOutput()
 					expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+					expect.Empty(output)
 				})
 			})
 		}
