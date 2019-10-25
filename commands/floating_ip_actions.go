@@ -45,15 +45,15 @@ func FloatingIPAction() *Command {
 	- The slug for the region where the action occurred.
 `
 	CmdBuilderWithDocs(cmd, RunFloatingIPActionsGet,
-		"get <floating-ip> <action-id>", "get floating-ip action",`Use this command to retrieve the status of a Floating IP action. Outputs the following information:`+flipactionDetail, Writer,
+		"get <floating-ip> <action-id>", "Retrive the status of a Floating IP action",`Use this command to retrieve the status of a Floating IP action. Outputs the following information:`+flipactionDetail, Writer,
 		displayerType(&displayers.Action{}))
 
 	CmdBuilderWithDocs(cmd, RunFloatingIPActionsAssign,
-		"assign <floating-ip> <droplet-id>", "assign a floating IP to a droplet",`Use this command to assign a Floating IP to a Droplet. Set the "droplet_id" attribute to the Droplet's ID.`, Writer,
+		"assign <floating-ip> <droplet-id>", "Assign a Floating IP Address to a Droplet",`Use this command to assign a Floating IP Address to a Droplet. Set the "droplet_id" attribute to the Droplet's ID.`, Writer,
 		displayerType(&displayers.Action{}))
 
 	CmdBuilderWithDocs(cmd, RunFloatingIPActionsUnassign,
-		"unassign <floating-ip>", "unassign a floating IP to a droplet",`Use this command to unassign a Floating IP. The Floating IP will be reserved in the region but not assigned to a Droplet.`, Writer,
+		"unassign <floating-ip>", "Unassign a Floating IP Address from a Droplet",`Use this command to unassign a Floating IP Address. The Floating IP Address will be reserved in the region but not assigned to a Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 
 	return cmd
