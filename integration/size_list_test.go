@@ -30,6 +30,12 @@ var _ = suite("compute/size/list", func(t *testing.T, when spec.G, it spec.S) {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(sizeListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -93,7 +99,9 @@ var _ = suite("compute/size/list", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const sizeListResponse = `{
+const (
+	sizeListResponse = `
+{
   "sizes": [
     {
       "slug": "512mb",
@@ -128,21 +136,19 @@ const sizeListResponse = `{
   }
 }
 `
-
-const sizeListOutput = `
+	sizeListOutput = `
 Slug           Memory    VCPUs    Disk    Price Monthly    Price Hourly
 512mb          512       1        20      5.00             0.007440
 s-1vcpu-1gb    1024      1        25      5.00             0.007440
 `
-
-const sizeListFormatOutput = `
+	sizeListFormatOutput = `
 Slug           Price Monthly
 512mb          5.00
 s-1vcpu-1gb    5.00
 
 `
-
-const sizeListNoHeaderOutput = `
+	sizeListNoHeaderOutput = `
 512mb          512     1    20    5.00    0.007440
 s-1vcpu-1gb    1024    1    25    5.00    0.007440
 `
+)

@@ -77,12 +77,13 @@ var _ = suite("compute/volume/list", func(t *testing.T, when spec.G, it spec.S) 
 	})
 })
 
-const volumeListOutput = `
+const (
+	volumeListOutput = `
 ID                  Name       Size      Region    Filesystem Type    Filesystem Label    Droplet IDs    Tags
 some-volume-id-1    example    10 GiB    nyc1                                             [1]            aninterestingtag
 some-volume-id-2    example    40 GiB    nyc1                                             [2]            adifferenttag
 `
-const volumeListResponse = `
+	volumeListResponse = `
 {
   "volumes": [
     {
@@ -134,3 +135,4 @@ const volumeListResponse = `
   }
 }
 `
+)

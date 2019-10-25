@@ -79,11 +79,12 @@ var _ = suite("compute/volume/get", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
-const volumeGetOutput = `
+const (
+	volumeGetOutput = `
 ID                                      Name       Size      Region    Filesystem Type    Filesystem Label    Droplet IDs    Tags
 506f78a4-e098-11e5-ad9f-000f53306ae1    example    10 GiB    nyc1                                             [1]            aninterestingtag
 `
-const volumeGetResponse = `
+	volumeGetResponse = `
 {
   "volume": {
     "id": "506f78a4-e098-11e5-ad9f-000f53306ae1",
@@ -106,5 +107,5 @@ const volumeGetResponse = `
     "created_at": "2016-03-02T17:00:49Z",
     "tags": ["aninterestingtag"]
   }
-}
-`
+}`
+)
