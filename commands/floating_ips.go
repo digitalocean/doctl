@@ -37,7 +37,8 @@ Floating IPs are bound to a specific region.`,
 		},
 	}
 
-	cmdFloatingIPCreate := CmdBuilderWithDocs(cmd, RunFloatingIPCreate, "create", "create a floating IP", `Use this command to create a new Floating IP Address. 
+	cmdFloatingIPCreate := CmdBuilderWithDocs(cmd, RunFloatingIPCreate, "create", "Create a new Floating IP Address", `Use this command to create a new Floating IP Address.
+
 A Floating IP Address must be either assigned to a Droplet or reserved to a region.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.FloatingIP{}))
 	AddStringFlag(cmdFloatingIPCreate, doctl.ArgRegionSlug, "", "",
@@ -47,13 +48,13 @@ A Floating IP Address must be either assigned to a Droplet or reserved to a regi
 		fmt.Sprintf("ID of the droplet to assign the Floating IP to. (mutually exclusive with %s)",
 			doctl.ArgRegionSlug))
 
-	CmdBuilder(cmd, RunFloatingIPGet, "get <floating-ip>", "Use this command to retrieve detailed information about a Floating IP Address.", Writer,
+	CmdBuilderWithDocs(cmd, RunFloatingIPGet, "get <floating-ip>", "Retrieve information about a Floating IP Address", "Use this command to retrieve detailed information about a Floating IP Address.", Writer,
 		aliasOpt("g"), displayerType(&displayers.FloatingIP{}))
 
-	cmdRunFloatingIPDelete := CmdBuilder(cmd, RunFloatingIPDelete, "delete <floating-ip>", "Use this command to delete a Floating IP address.", Writer, aliasOpt("d", "rm"))
+	cmdRunFloatingIPDelete := CmdBuilderWithDocs(cmd, RunFloatingIPDelete, "delete <floating-ip>", "Permanently delete a Floating IP Address", "Use this command to permanently delete a Floating IP address. This is irreversible.", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunFloatingIPDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force floating IP delete")
 
-	cmdFloatingIPList := CmdBuilder(cmd, RunFloatingIPList, "list", "Use this command to list all the Floating IP addresses on your account.", Writer,
+	cmdFloatingIPList := CmdBuilderWithDocs(cmd, RunFloatingIPList, "list", "List all Floating IP Addresses on your acocunt", "Use this command to list all the Floating IP addresses on your account.", Writer,
 		aliasOpt("ls"), displayerType(&displayers.FloatingIP{}))
 	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "", "Floating IP region")
 
