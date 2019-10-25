@@ -116,6 +116,49 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 			expect.NoError(scanner.Err())
 		})
 	})
+
+	when("all the node-pool flag is passed", func() {
+		it("creates a kube cluster", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"kubernetes",
+				"clusters",
+				"create",
+				"some-cluster-name",
+				"--region", "mars",
+				"--version", "some-kube-version",
+				"--node-pool", "'name=default;auto-scale=true;min-nodes=2;max-nodes=5;count=2'",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+
+			matchers := []func(string){
+				func(s string) { expect.Equal("Notice: cluster is provisioning, waiting for cluster to be running", s) },
+				func(s string) { expect.Equal("Notice: cluster created, fetching credentials", s) },
+				func(s string) { expect.Regexp(`^Notice: adding cluster credentials to kubeconfig file found in.*`, s) },
+				func(s string) { expect.Equal(`Notice: setting current-context to some-context`, s) },
+				func(s string) {
+					expect.Equal("ID                 Name                 Region    Version              Auto Upgrade    Status     Node Pools", s)
+				},
+				func(s string) {
+					expect.Equal("some-cluster-id    some-cluster-name    mars      some-kube-version    false           running    frontend-pool", s)
+				},
+			}
+
+			scanner := bufio.NewScanner(bytes.NewBuffer(output))
+
+			var line int
+			for scanner.Scan() {
+				matcher := matchers[line]
+				matcher(scanner.Text())
+				line++
+			}
+
+			expect.NoError(scanner.Err())
+		})
+	})
 })
 
 const (
