@@ -30,6 +30,12 @@ var _ = suite("compute/snapshot/get", func(t *testing.T, when spec.G, it spec.S)
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(snapshotGetDropletResponse))
 			case "/v2/snapshots/0a343fac-eacf-11e9-b96b-0a58ac144633":
 				auth := req.Header.Get("Authorization")
@@ -37,6 +43,12 @@ var _ = suite("compute/snapshot/get", func(t *testing.T, when spec.G, it spec.S)
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(snapshotGetVolumeResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -139,7 +151,9 @@ var _ = suite("compute/snapshot/get", func(t *testing.T, when spec.G, it spec.S)
 	})
 })
 
-const snapshotGetDropletResponse = `{
+const (
+	snapshotGetDropletResponse = `
+{
   "snapshot": {
     "id": "53344211",
     "name": "ubuntu-s-1vcpu-1gb-nyc1-01-1570651077842",
@@ -155,8 +169,8 @@ const snapshotGetDropletResponse = `{
   }
 }
 `
-
-const snapshotGetVolumeResponse = `{
+	snapshotGetVolumeResponse = `
+{
   "snapshot": {
     "id": "0a343fac-eacf-11e9-b96b-0a58ac144633",
     "name": "volume-nyc1-01-1570651053836",
@@ -172,26 +186,22 @@ const snapshotGetVolumeResponse = `{
   }
 }
 `
-
-const snapshotGetVolumeOutput = `
+	snapshotGetVolumeOutput = `
 ID                                      Name                            Created at              Regions    Resource ID                             Resource Type    Min Disk Size    Size        Tags
 0a343fac-eacf-11e9-b96b-0a58ac144633    volume-nyc1-01-1570651053836    2019-10-09T19:57:36Z    [nyc1]     e2068b37-eace-11e9-85ad-0a58ac14430f    volume           100              0.00 GiB
 `
-
-const snapshotGetDropletOutput = `
+	snapshotGetDropletOutput = `
 ID          Name                                        Created at              Regions    Resource ID    Resource Type    Min Disk Size    Size        Tags
 53344211    ubuntu-s-1vcpu-1gb-nyc1-01-1570651077842    2019-10-09T19:57:59Z    [nyc1]     162347943      droplet          25               1.01 GiB
 `
-
-const snapshotGetFormatOutput = `
+	snapshotGetFormatOutput = `
 ID          Resource Type
 53344211    droplet
 `
-
-const snapshotGetNoHeaderOutput = `
+	snapshotGetNoHeaderOutput = `
 0a343fac-eacf-11e9-b96b-0a58ac144633    volume-nyc1-01-1570651053836    2019-10-09T19:57:36Z    [nyc1]    e2068b37-eace-11e9-85ad-0a58ac14430f    volume    100    0.00 GiB
 `
-
-const snapshotGetFormatNoHeaderOutput = `
+	snapshotGetFormatNoHeaderOutput = `
 53344211
 `
+)

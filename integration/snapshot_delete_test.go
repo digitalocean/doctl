@@ -29,6 +29,11 @@ var _ = suite("compute/snapshot/delete", func(t *testing.T, when spec.G, it spec
 					return
 				}
 
+				if req.Method != "DELETE" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.WriteHeader(http.StatusNoContent)
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -66,7 +71,7 @@ var _ = suite("compute/snapshot/delete", func(t *testing.T, when spec.G, it spec
 
 					output, err := cmd.CombinedOutput()
 					expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-					expect.Equal("", string(output))
+					expect.Empty(output)
 				})
 			})
 		}

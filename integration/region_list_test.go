@@ -30,6 +30,12 @@ var _ = suite("compute/region/list", func(t *testing.T, when spec.G, it spec.S) 
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				if req.Method != "GET" {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(regionListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -93,7 +99,9 @@ var _ = suite("compute/region/list", func(t *testing.T, when spec.G, it spec.S) 
 	})
 })
 
-const regionListResponse = `{
+const (
+	regionListResponse = `
+{
   "regions": [
     {
       "name": "New York 1",
@@ -126,20 +134,18 @@ const regionListResponse = `{
   }
 }
 `
-
-const regionListOutput = `
+	regionListOutput = `
 Slug    Name               Available
 nyc1    New York 1         true
 sfo1    San Francisco 1    true
 `
-
-const regionListFormatOutput = `
+	regionListFormatOutput = `
 Slug
 nyc1
 sfo1
 `
-
-const regionListNoHeaderOutput = `
+	regionListNoHeaderOutput = `
 nyc1    New York 1         true
 sfo1    San Francisco 1    true
 `
+)

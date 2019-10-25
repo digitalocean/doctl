@@ -88,7 +88,9 @@ var _ = suite("compute/volume/snapshot", func(t *testing.T, when spec.G, it spec
 	})
 })
 
-const volumeSnapshotResponse = `{
+const (
+	volumeSnapshotResponse = `
+{
   "snapshot": {
     "id": "8fa70202-873f-11e6-8b68-000f533176b1",
     "name": "big-data-snapshot1475261774",
@@ -105,9 +107,10 @@ const volumeSnapshotResponse = `{
     ]
   }
 }`
-const volumeSnapshotRequest = `{
+	volumeSnapshotRequest = `{
   "volume_id":"my-volume-id",
   "name":"my-snapshot-name",
   "description":"some magical description",
   "tags":["hey"]
 }`
+)

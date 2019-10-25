@@ -92,11 +92,12 @@ var _ = suite("compute/volume/create", func(t *testing.T, when spec.G, it spec.S
 	})
 })
 
-const volumeCreateOutput = `
+const (
+	volumeCreateOutput = `
 ID                   Name         Size        Region    Filesystem Type    Filesystem Label    Droplet IDs    Tags
 some-generated-id    my-volume    4000 GiB    mars1     xfs                some-fs-label       [1 2]          yes,again
 `
-const volumeCreateResponse = `
+	volumeCreateResponse = `
 {
   "volume": {
     "id": "some-generated-id",
@@ -126,7 +127,8 @@ const volumeCreateResponse = `
   }
 }
 `
-const volumeCreateRequest = `{
+	volumeCreateRequest = `
+{
   "region":"mars",
   "name": "my-volume",
   "description":"",
@@ -136,3 +138,4 @@ const volumeCreateRequest = `{
   "filesystem_label":"some-fs-label",
   "tags":["yes","again"]
 }`
+)
