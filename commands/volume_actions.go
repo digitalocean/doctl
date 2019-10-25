@@ -61,21 +61,21 @@ An example would be detaching or attaching a volume from a Droplet.`,
 		},
 	}
 
-	cmdRunVolumeAttach := CmdBuilderWithDocs(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "attach a volume", `Use this command to attach a Block Storage volume to a Droplet. 
+	cmdRunVolumeAttach := CmdBuilderWithDocs(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "Attach a volume to a Droplet", `Use this command to attach a Block Storage volume to a Droplet. 
 
 Each volume may only be attached to a single Droplet. However, up to five volumes may be attached to a Droplet at a time. 
 Pre-formatted volumes will be automatically mounted to Ubuntu, Debian, Fedora, Fedora Atomic, and CentOS Droplets created on or after April 26, 2018 when attached. On older Droplets, additional configuration is required. Visit https://www.digitalocean.com/docs/volumes/how-to/format-and-mount/#mounting-the-filesystems for details`, Writer,
 		aliasOpt("a"))
 	AddBoolFlag(cmdRunVolumeAttach, doctl.ArgCommandWait, "", false, "Wait for volume to attach")
 
-	cmdRunVolumeDetach := CmdBuilderWithDocs(cmd, RunVolumeDetach, "detach <volume-id> <droplet-id>", "detach a volume", `Use this command to detach a Block Storage volume from a Droplet.`, Writer,
+	cmdRunVolumeDetach := CmdBuilderWithDocs(cmd, RunVolumeDetach, "detach <volume-id> <droplet-id>", "Detach a volume from a Droplet", `Use this command to detach a Block Storage volume from a Droplet.`, Writer,
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunVolumeDetach, doctl.ArgCommandWait, "", false, "Wait for volume to detach")
 
 	CmdBuilder(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "detach a volume (deprecated - use detach instead)",
 		Writer)
 
-	cmdRunVolumeResize := CmdBuilderWithDocs(cmd, RunVolumeResize, "resize <volume-id>", "resize a volume",`Use this command to resize a Block Storage volume. 
+	cmdRunVolumeResize := CmdBuilderWithDocs(cmd, RunVolumeResize, "resize <volume-id>", "Resize the disk of a volume",`Use this command to resize a Block Storage volume. 
  
 Volumes may only be resized upwards. The maximum size for a volume is 16TiB.`, Writer,
 		aliasOpt("r"))
