@@ -35,17 +35,17 @@ func Domain() *Command {
 		},
 	}
 
-	cmdDomainCreate := CmdBuilderWithDocs(cmd, RunDomainCreate, "create <domain>", "Add a domain",`Use this command to add a domain to your account.`, Writer,
+	cmdDomainCreate := CmdBuilderWithDocs(cmd, RunDomainCreate, "create <domain>", "Add a domain to your account",`Use this command to add a domain to your account.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Domain{}))
 	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address, creates an initial A record when provided")
 
-	CmdBuilderWithDocs(cmd, RunDomainList, "list", "List domains",`Use this command to retrive a list of domains added to your account.`, Writer,
+	CmdBuilderWithDocs(cmd, RunDomainList, "list", "List all domains on your account",`Use this command to retrive a list of domains added to your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Domain{}))
 
-	CmdBuilderWithDocs(cmd, RunDomainGet, "get <domain>", "Retrive a domain",`Use this command to retrive a specific domain on your account.`, Writer,
+	CmdBuilderWithDocs(cmd, RunDomainGet, "get <domain>", "Retrive information about a domain",`Use this command to retrive a specific domain on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Domain{}))
 
-	cmdRunDomainDelete := CmdBuilderWithDocs(cmd, RunDomainDelete, "delete <domain>", "Delete a domain",`Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))
+	cmdRunDomainDelete := CmdBuilderWithDocs(cmd, RunDomainDelete, "delete <domain>", "Permanently delete a domain from your account",`Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force domain delete")
 
 	cmdRecord := &Command{
@@ -57,7 +57,7 @@ func Domain() *Command {
 	}
 	cmd.AddCommand(cmdRecord)
 
-	CmdBuilderWithDocs(cmdRecord, RunRecordList, "list <domain>", "List DNS records for a domain",`Use this command to list the current DNS records for a domain.`, Writer,
+	CmdBuilderWithDocs(cmdRecord, RunRecordList, "list <domain>", "List the DNS records for a domain",`Use this command to list the current DNS records for a domain.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DomainRecord{}))
 
 	cmdRecordCreate := CmdBuilderWithDocs(cmdRecord, RunRecordCreate, "create <domain>", "Create a DNS record", `Use this command to create DNS records for a domain.`, Writer,
