@@ -110,7 +110,7 @@ With the load-balancer command, you can list, create, or delete load balancers a
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 
 	cmdRunRecordDelete := CmdBuilderWithDocs(cmd, RunLoadBalancerDelete, "delete <id>",
-		"Delete a load balancer", `Use this command to delete a load balancer, specified by ID. This is irreversable.`, Writer, aliasOpt("d", "rm"))
+		"Permanently delete a load balancer", `Use this command to permentantly delete a load balancer, specified by ID. This is irreversable.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Force load balancer delete")
 
