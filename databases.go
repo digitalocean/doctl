@@ -699,11 +699,7 @@ func (svc *DatabasesServiceOp) GetFirewallRules(ctx context.Context, databaseID 
 	if err != nil {
 		return nil, err
 	}
-	resp, err := svc.client.Do(ctx, req, root)
-	if err != nil {
-		return resp, err
-	}
-	return resp, nil
+	return svc.client.Do(ctx, req, root)
 }
 
 // UpdateFirewallRules sets the inbound sources for a given cluster.
@@ -713,9 +709,5 @@ func (svc *DatabasesServiceOp) UpdateFirewallRules(ctx context.Context, database
 	if err != nil {
 		return nil, err
 	}
-	resp, err := svc.client.Do(ctx, req, nil)
-	if err != nil {
-		return resp, err
-	}
-	return resp, nil
+	return svc.client.Do(ctx, req, nil)
 }
