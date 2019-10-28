@@ -8,21 +8,22 @@ import (
 )
 
 const (
-	databaseBasePath        = "/v2/databases"
-	databaseSinglePath      = databaseBasePath + "/%s"
-	databaseResizePath      = databaseBasePath + "/%s/resize"
-	databaseMigratePath     = databaseBasePath + "/%s/migrate"
-	databaseMaintenancePath = databaseBasePath + "/%s/maintenance"
-	databaseBackupsPath     = databaseBasePath + "/%s/backups"
-	databaseUsersPath       = databaseBasePath + "/%s/users"
-	databaseUserPath        = databaseBasePath + "/%s/users/%s"
-	databaseDBPath          = databaseBasePath + "/%s/dbs/%s"
-	databaseDBsPath         = databaseBasePath + "/%s/dbs"
-	databasePoolPath        = databaseBasePath + "/%s/pools/%s"
-	databasePoolsPath       = databaseBasePath + "/%s/pools"
-	databaseReplicaPath     = databaseBasePath + "/%s/replicas/%s"
-	databaseReplicasPath    = databaseBasePath + "/%s/replicas"
-	evictionPolicyPath      = databaseBasePath + "/%s/eviction_policy"
+	databaseBasePath          = "/v2/databases"
+	databaseSinglePath        = databaseBasePath + "/%s"
+	databaseResizePath        = databaseBasePath + "/%s/resize"
+	databaseMigratePath       = databaseBasePath + "/%s/migrate"
+	databaseMaintenancePath   = databaseBasePath + "/%s/maintenance"
+	databaseBackupsPath       = databaseBasePath + "/%s/backups"
+	databaseUsersPath         = databaseBasePath + "/%s/users"
+	databaseUserPath          = databaseBasePath + "/%s/users/%s"
+	databaseDBPath            = databaseBasePath + "/%s/dbs/%s"
+	databaseDBsPath           = databaseBasePath + "/%s/dbs"
+	databasePoolPath          = databaseBasePath + "/%s/pools/%s"
+	databasePoolsPath         = databaseBasePath + "/%s/pools"
+	databaseReplicaPath       = databaseBasePath + "/%s/replicas/%s"
+	databaseReplicasPath      = databaseBasePath + "/%s/replicas"
+	evictionPolicyPath        = databaseBasePath + "/%s/eviction_policy"
+	databaseFirewallRulesPath = databaseBasePath + "/%s/firewall"
 )
 
 // DatabasesService is an interface for interfacing with the databases endpoints
@@ -55,6 +56,8 @@ type DatabasesService interface {
 	DeleteReplica(context.Context, string, string) (*Response, error)
 	GetEvictionPolicy(context.Context, string) (string, *Response, error)
 	SetEvictionPolicy(context.Context, string, string) (*Response, error)
+	GetFirewallRules(context.Context, string) (*Response, error)
+	UpdateFirewallRules(context.Context, string, *DatabaseUpdateFirewallRulesRequest) (*Response, error)
 }
 
 // DatabasesServiceOp handles communication with the Databases related methods
@@ -211,6 +214,20 @@ type DatabaseCreateReplicaRequest struct {
 	Tags               []string `json:"tags,omitempty"`
 }
 
+// DatabaseUpdateFirewallRulesRequest is used to set the firewall rules for a database
+type DatabaseUpdateFirewallRulesRequest struct {
+	Rules []*DatabaseFirewallRule `json:"rules"`
+}
+
+// DatabaseFirewallRule is a rule describing an inbound source to a database
+type DatabaseFirewallRule struct {
+	UUID        string    `json:"uuid"`
+	ClusterUUID string    `json:"cluster_uuid"`
+	Type        string    `json:"type"`
+	Value       string    `json:"value"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type databaseUserRoot struct {
 	User *DatabaseUser `json:"user"`
 }
@@ -257,6 +274,10 @@ type databaseReplicasRoot struct {
 
 type evictionPolicyRoot struct {
 	EvictionPolicy string `json:"eviction_policy"`
+}
+
+type databaseFirewallRuleRoot struct {
+	Rules []*DatabaseFirewallRule `json:"rules"`
 }
 
 func (d Database) URN() string {
@@ -660,6 +681,35 @@ func (svc *DatabasesServiceOp) SetEvictionPolicy(ctx context.Context, databaseID
 	path := fmt.Sprintf(evictionPolicyPath, databaseID)
 	root := &evictionPolicyRoot{EvictionPolicy: policy}
 	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, root)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// GetFirewallRules loads the inbound sources for a given cluster.
+func (svc *DatabasesServiceOp) GetFirewallRules(ctx context.Context, databaseID string) (*Response, error) {
+	path := fmt.Sprintf(databaseFirewallRulesPath, databaseID)
+	root := new(databaseFirewallRuleRoot)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// UpdateFirewallRules sets the inbound sources for a given cluster.
+func (svc *DatabasesServiceOp) UpdateFirewallRules(ctx context.Context, databaseID string, firewallRulesReq *DatabaseUpdateFirewallRulesRequest) (*Response, error) {
+	path := fmt.Sprintf(databaseFirewallRulesPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, firewallRulesReq)
 	if err != nil {
 		return nil, err
 	}
