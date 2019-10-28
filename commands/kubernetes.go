@@ -1127,7 +1127,7 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 
 	// multiple node pools
-	if c.Doit.IsSet(c.NS, doctl.ArgSizeSlug) || c.Doit.IsSet(c.NS, doctl.ArgNodePoolCount) {
+	if c.Doit.IsSet(doctl.ArgSizeSlug) || c.Doit.IsSet(doctl.ArgNodePoolCount) {
 		return fmt.Errorf("flags %q and %q cannot be provided when %q is present", doctl.ArgSizeSlug, doctl.ArgNodePoolCount, doctl.ArgClusterNodePool)
 	}
 
