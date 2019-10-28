@@ -135,7 +135,7 @@ func RunCDNUpdate(c *CmdConfig) error {
 	cs := c.CDNs()
 
 	var item *do.CDN
-	if c.Doit.IsSet(c.NS, doctl.ArgCDNTTL) {
+	if c.Doit.IsSet(doctl.ArgCDNTTL) {
 		ttl, err := c.Doit.GetInt(c.NS, doctl.ArgCDNTTL)
 		if err != nil {
 			return err
@@ -152,7 +152,7 @@ func RunCDNUpdate(c *CmdConfig) error {
 		}
 	}
 
-	if c.Doit.IsSet(c.NS, doctl.ArgCDNDomain) {
+	if c.Doit.IsSet(doctl.ArgCDNDomain) {
 		domain, certID, err := getCDNDomainAndCertID(c)
 		if err != nil {
 			return err

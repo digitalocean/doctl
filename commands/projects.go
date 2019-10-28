@@ -307,7 +307,7 @@ func buildProjectsCreateRequestFromArgs(c *CmdConfig, r *godo.CreateProjectReque
 }
 
 func buildProjectsUpdateRequestFromArgs(c *CmdConfig, r *godo.UpdateProjectRequest) error {
-	if c.Doit.IsSet(c.NS, doctl.ArgProjectName) {
+	if c.Doit.IsSet(doctl.ArgProjectName) {
 		name, err := c.Doit.GetString(c.NS, doctl.ArgProjectName)
 		if err != nil {
 			return err
@@ -315,7 +315,7 @@ func buildProjectsUpdateRequestFromArgs(c *CmdConfig, r *godo.UpdateProjectReque
 		r.Name = name
 	}
 
-	if c.Doit.IsSet(c.NS, doctl.ArgProjectPurpose) {
+	if c.Doit.IsSet(doctl.ArgProjectPurpose) {
 		purpose, err := c.Doit.GetString(c.NS, doctl.ArgProjectPurpose)
 		if err != nil {
 			return err
@@ -323,7 +323,7 @@ func buildProjectsUpdateRequestFromArgs(c *CmdConfig, r *godo.UpdateProjectReque
 		r.Purpose = purpose
 	}
 
-	if c.Doit.IsSet(c.NS, doctl.ArgProjectDescription) {
+	if c.Doit.IsSet(doctl.ArgProjectDescription) {
 		description, err := c.Doit.GetString(c.NS, doctl.ArgProjectDescription)
 		if err != nil {
 			return err
@@ -331,7 +331,7 @@ func buildProjectsUpdateRequestFromArgs(c *CmdConfig, r *godo.UpdateProjectReque
 		r.Description = description
 	}
 
-	if c.Doit.IsSet(c.NS, doctl.ArgProjectEnvironment) {
+	if c.Doit.IsSet(doctl.ArgProjectEnvironment) {
 		environment, err := c.Doit.GetString(c.NS, doctl.ArgProjectEnvironment)
 		if err != nil {
 			return err
@@ -339,7 +339,7 @@ func buildProjectsUpdateRequestFromArgs(c *CmdConfig, r *godo.UpdateProjectReque
 		r.Environment = environment
 	}
 
-	if c.Doit.IsSet(c.NS, doctl.ArgProjectIsDefault) {
+	if c.Doit.IsSet(doctl.ArgProjectIsDefault) {
 		isDefault, err := c.Doit.GetBool(c.NS, doctl.ArgProjectIsDefault)
 		if err != nil {
 			return err

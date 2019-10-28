@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/sclevine/spec"
@@ -47,7 +48,12 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
-				expect.JSONEq(string(reqBody), kubeClustersCreateJSONReq)
+				matchedRequest := kubeClustersCreateJSONReq
+				if strings.Contains(string(reqBody), "some-node-pool-cluster") {
+					matchedRequest = kubeNodePoolCreateJSONReq
+				}
+
+				expect.JSONEq(string(reqBody), matchedRequest)
 
 				w.Write([]byte(kubeClustersCreateResponse))
 			case "/v2/kubernetes/clusters/some-cluster-id":
@@ -75,8 +81,8 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 		}))
 	})
 
-	when("all required flags are passed", func() {
-		it("creates a kube cluster", func() {
+	when("not using node-pool", func() {
+		it("creates a kube cluster with defaults", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -116,6 +122,46 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 			expect.NoError(scanner.Err())
 		})
 	})
+
+	when("using node-pool", func() {
+		it("creates a kube cluster with the node-pool", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"kubernetes",
+				"clusters",
+				"create",
+				"some-node-pool-cluster",
+				"--region", "mars",
+				"--version", "some-kube-version",
+				"--node-pool", "name=default;auto-scale=true;min-nodes=2;max-nodes=5;count=2",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+		})
+
+		when("specifying size as well", func() {
+			it("returns an error", func() {
+				cmd := exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"kubernetes",
+					"clusters",
+					"create",
+					"some-cluster-name",
+					"--region", "mars",
+					"--version", "some-kube-version",
+					"--size", "the-biggest",
+					"--node-pool", "name=default;auto-scale=true;min-nodes=2;max-nodes=5;count=2",
+				)
+
+				output, err := cmd.CombinedOutput()
+				expect.Error(err)
+				expect.Equal(`Error: flags "size" and "count" cannot be provided when "node-pool" is present`, strings.TrimSpace(string(output)))
+			})
+		})
+	})
 })
 
 const (
@@ -144,6 +190,29 @@ const (
       "size": "s-1vcpu-2gb",
       "count": 3,
       "name": "some-cluster-name-default-pool"
+    }
+  ]
+}
+`
+	kubeNodePoolCreateJSONReq = `
+{
+  "name": "some-node-pool-cluster",
+  "region": "mars",
+  "version": "some-kube-version",
+  "auto_upgrade": false,
+  "maintenance_policy": {
+    "day": "any",
+    "duration": "",
+    "start_time": "00:00"
+  },
+  "node_pools": [
+    {
+      "min_nodes": 2,
+      "max_nodes": 5,
+      "count": 2,
+      "auto_scale": true,
+      "name": "default",
+      "size": "s-1vcpu-2gb"
     }
   ]
 }
