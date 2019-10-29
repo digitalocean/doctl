@@ -1,13 +1,12 @@
 package integration
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -83,6 +82,13 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 
 	when("not using node-pool", func() {
 		it("creates a kube cluster with defaults", func() {
+			f, err := ioutil.TempFile("", "fake-kube-config")
+			expect.NoError(err)
+
+			err = f.Close()
+			expect.NoError(err)
+			defer os.Remove(f.Name())
+
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -94,37 +100,25 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				"--version", "some-kube-version",
 			)
 
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("KUBECONFIG=%s", f.Name()),
+			)
+
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-
-			matchers := []func(string){
-				func(s string) { expect.Equal("Notice: cluster is provisioning, waiting for cluster to be running", s) },
-				func(s string) { expect.Equal("Notice: cluster created, fetching credentials", s) },
-				func(s string) { expect.Regexp(`^Notice: adding cluster credentials to kubeconfig file found in.*`, s) },
-				func(s string) { expect.Equal(`Notice: setting current-context to some-context`, s) },
-				func(s string) {
-					expect.Equal("ID                 Name                 Region    Version              Auto Upgrade    Status     Node Pools", s)
-				},
-				func(s string) {
-					expect.Equal("some-cluster-id    some-cluster-name    mars      some-kube-version    false           running    frontend-pool", s)
-				},
-			}
-
-			scanner := bufio.NewScanner(bytes.NewBuffer(output))
-
-			var line int
-			for scanner.Scan() {
-				matcher := matchers[line]
-				matcher(scanner.Text())
-				line++
-			}
-
-			expect.NoError(scanner.Err())
+			expect.Equal(strings.TrimSpace(fmt.Sprintf(kubeClustersCreateOutput, f.Name())), strings.TrimSpace(string(output)))
 		})
 	})
 
 	when("using node-pool", func() {
 		it("creates a kube cluster with the node-pool", func() {
+			f, err := ioutil.TempFile("", "fake-kube-config")
+			expect.NoError(err)
+
+			err = f.Close()
+			expect.NoError(err)
+			defer os.Remove(f.Name())
+
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -137,12 +131,23 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				"--node-pool", "name=default;auto-scale=true;min-nodes=2;max-nodes=5;count=2",
 			)
 
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("KUBECONFIG=%s", f.Name()),
+			)
+
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 		})
 
 		when("specifying size as well", func() {
 			it("returns an error", func() {
+				f, err := ioutil.TempFile("", "fake-kube-config")
+				expect.NoError(err)
+
+				err = f.Close()
+				expect.NoError(err)
+				defer os.Remove(f.Name())
+
 				cmd := exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
@@ -154,6 +159,10 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 					"--version", "some-kube-version",
 					"--size", "the-biggest",
 					"--node-pool", "name=default;auto-scale=true;min-nodes=2;max-nodes=5;count=2",
+				)
+
+				cmd.Env = append(os.Environ(),
+					fmt.Sprintf("KUBECONFIG=%s", f.Name()),
 				)
 
 				output, err := cmd.CombinedOutput()
@@ -173,6 +182,15 @@ const (
     "sizes": [{"name":"size-name", "slug": "some-size-slug"}]
   }
 }
+`
+
+	kubeClustersCreateOutput = `
+Notice: cluster is provisioning, waiting for cluster to be running
+Notice: cluster created, fetching credentials
+Notice: adding cluster credentials to kubeconfig file found in %q
+Notice: setting current-context to some-context
+ID                 Name                 Region    Version              Auto Upgrade    Status     Node Pools
+some-cluster-id    some-cluster-name    mars      some-kube-version    false           running    frontend-pool
 `
 	kubeClustersCreateJSONReq = `
 {
