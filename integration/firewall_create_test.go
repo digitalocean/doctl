@@ -55,19 +55,23 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 
 	when("the minimum required flags are provided", func() {
 		it("creates a firewall", func() {
-			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"compute",
-				"firewall",
-				"create",
-				"--name", "test-firewall",
-				"--inbound-rules", `protocol:tcp,ports:443`,
-			)
+			aliases := []string{"create", "c"}
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(firewallCreateOutput), strings.TrimSpace(string(output)))
+			for _, alias := range aliases {
+				cmd := exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"firewall",
+					alias,
+					"--name", "test-firewall",
+					"--inbound-rules", `protocol:tcp,ports:443`,
+				)
+
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(firewallCreateOutput), strings.TrimSpace(string(output)))
+			}
 		})
 	})
 })
