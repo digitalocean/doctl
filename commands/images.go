@@ -63,8 +63,7 @@ func Images() *Command {
 	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Delete image", Writer)
 	AddBoolFlag(cmdRunImagesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force image delete")
 
-	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create", "Create custom image", Writer)
-	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageName, "", "", "The custom image name", requiredOpt())
+	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create <image-name>", "Create custom image", Writer)
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageExternalURL, "", "", "Custom image retrieval URL", requiredOpt())
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "Region slug identifier", requiredOpt())
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "Unknown", "Custom image distribution")
@@ -261,7 +260,7 @@ func RunImagesCreate(c *CmdConfig) error {
 
 func buildCustomImageRequestFromArgs(c *CmdConfig, r *godo.CustomImageCreateRequest) error {
 	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+		return doctl.NewMissingArgsErr(fmt.Sprintf("%s.%s", c.NS, doctl.ArgImageName))
 	}
 	name := c.Args[0]
 
