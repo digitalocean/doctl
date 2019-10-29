@@ -45,7 +45,7 @@ func Domain() *Command {
 	CmdBuilder(cmd, RunDomainGet, "get <domain>", "get domain", Writer,
 		aliasOpt("g"), displayerType(&displayers.Domain{}))
 
-	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete domain", Writer, aliasOpt("g"))
+	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "delete domain", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force domain delete")
 
 	cmdRecord := &Command{
