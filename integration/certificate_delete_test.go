@@ -14,14 +14,15 @@ import (
 
 var _ = suite("compute/certificate/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect   *require.Assertions
+		cmd      *exec.Cmd
+		baseArgs = []string{"some-cert-id", "--force"}
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/certificates/some-cert-id":
 				auth := req.Header.Get("Authorization")
@@ -45,23 +46,38 @@ var _ = suite("compute/certificate/delete", func(t *testing.T, when spec.G, it s
 				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
+
+		cmd = exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"compute",
+			"certificate",
+		)
 	})
 
-	when("all flags are passed", func() {
-		it("deletes the certificate", func() {
-			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"compute",
-				"certificate",
-				"delete",
-				"some-cert-id",
-				"--force",
-			)
+	when("required flags are passed", func() {
+		cases := []struct {
+			desc    string
+			command string
+		}{
+			{desc: "command is delete", command: "delete"},
+			{desc: "command is rm", command: "rm"},
+			{desc: "command is d", command: "d"},
+		}
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Empty(output)
-		})
+		for _, c := range cases {
+			when(c.desc, func() {
+				command := c.command
+
+				it("deletes the specified load balancer", func() {
+					args := append([]string{command}, baseArgs...)
+					cmd.Args = append(cmd.Args, args...)
+
+					output, err := cmd.CombinedOutput()
+					expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+					expect.Empty(output)
+				})
+			})
+		}
 	})
 })
