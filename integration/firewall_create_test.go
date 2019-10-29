@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -25,11 +26,20 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/firewalls":
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				body, err := ioutil.ReadAll(req.Body)
+				expect.NoError(err)
+				expect.JSONEq(firewallCreateRequestBody, string(body))
 
 				w.Write([]byte(firewallCreateResponse))
 			default:
@@ -52,7 +62,7 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 				"firewall",
 				"create",
 				"--name", "test-firewall",
-				"--inbound-rules", `"protocol:tcp,ports:443"`,
+				"--inbound-rules", `protocol:tcp,ports:443`,
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -62,10 +72,24 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 	})
 })
 
-const firewallCreateOutput = `ID                                      Name             Status       Created At              Inbound Rules              Outbound Rules    Droplet IDs    Tags    Pending Changes
+const (
+	firewallCreateOutput = `
+ID                                      Name             Status       Created At              Inbound Rules              Outbound Rules    Droplet IDs    Tags    Pending Changes
 e4b9c960-d385-4950-84f3-d102162e6be5    test-firewall    succeeded    2019-10-24T20:30:26Z    protocol:tcp,ports:443,`
 
-const firewallCreateResponse = `{
+	firewallCreateRequestBody = `{
+  "name":"test-firewall",
+  "inbound_rules":[{
+	"protocol":"tcp",
+	"ports":"443",
+	"sources":{}
+  }],
+  "outbound_rules":null,
+  "droplet_ids":[],
+  "tags":[]
+}`
+
+	firewallCreateResponse = `{
   "firewall": {
 	"id":"e4b9c960-d385-4950-84f3-d102162e6be5",
 	"name":"test-firewall",
@@ -82,3 +106,4 @@ const firewallCreateResponse = `{
 	"pending_changes":[]
   }
 }`
+)
