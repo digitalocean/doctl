@@ -32,7 +32,7 @@ var (
 			}
 		}
 	}`)
-	projectslastPageLinksJSONBlob = []byte(`{
+	projectsLastPageLinksJSONBlob = []byte(`{
 		"links": {
 			"pages": {
 				"first": "https://api.digitalocean.com/v2/projects?page=1",
@@ -104,7 +104,7 @@ func TestLinks_ParseLast(t *testing.T) {
 }
 
 func TestLinks_ParseProjectsLast(t *testing.T) {
-	links := loadLinksJSON(t, projectslastPageLinksJSONBlob)
+	links := loadLinksJSON(t, projectsLastPageLinksJSONBlob)
 	_, err := links.CurrentPage()
 	if err != nil {
 		t.Fatal(err)
