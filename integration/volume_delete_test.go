@@ -14,18 +14,15 @@ import (
 
 var _ = suite("compute/volume/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect   *require.Assertions
-		cmd      *exec.Cmd
-		baseArgs = []string{
-			"my-volume-id",
-			"--force",
-		}
+		expect *require.Assertions
+		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/volumes/my-volume-id":
 				auth := req.Header.Get("Authorization")
@@ -50,32 +47,25 @@ var _ = suite("compute/volume/delete", func(t *testing.T, when spec.G, it spec.S
 			}
 		}))
 
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"compute",
-			"volume")
 	})
 
-	when("command is delete", func() {
+	when("required flags are passed", func() {
 		it("deletes the volume", func() {
-			args := append([]string{"delete"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Empty(output)
-		})
-	})
-
-	when("command is rm", func() {
-		it("deletes the volume", func() {
-			args := append([]string{"rm"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Empty(output)
+			aliases := []string{"delete", "rm", "d"}
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"volume",
+					alias,
+					"my-volume-id",
+					"--force",
+				)
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Empty(output)
+			}
 		})
 	})
 })

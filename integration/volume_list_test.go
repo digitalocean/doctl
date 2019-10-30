@@ -17,12 +17,13 @@ var _ = suite("compute/volume/list", func(t *testing.T, when spec.G, it spec.S) 
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/volumes":
 				auth := req.Header.Get("Authorization")
@@ -47,32 +48,25 @@ var _ = suite("compute/volume/list", func(t *testing.T, when spec.G, it spec.S) 
 			}
 		}))
 
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"compute",
-			"volume",
-		)
-
 	})
 
-	when("command is list", func() {
+	when("required flags are passed", func() {
 		it("lists all volumes", func() {
-			cmd.Args = append(cmd.Args, []string{"list"}...)
+			aliases := []string{"ls", "list"}
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(volumeListOutput), strings.TrimSpace(string(output)))
-		})
-	})
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"volume",
+					alias,
+				)
 
-	when("command is ls", func() {
-		it("lists all volumes", func() {
-			cmd.Args = append(cmd.Args, []string{"ls"}...)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(volumeListOutput), strings.TrimSpace(string(output)))
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(volumeListOutput), strings.TrimSpace(string(output)))
+			}
 		})
 	})
 })

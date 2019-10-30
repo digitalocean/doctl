@@ -15,15 +15,15 @@ import (
 
 var _ = suite("compute/volume/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect   *require.Assertions
-		cmd      *exec.Cmd
-		baseArgs = []string{"some-volume-id"}
+		expect *require.Assertions
+		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/volumes/some-volume-id":
 				auth := req.Header.Get("Authorization")
@@ -48,33 +48,25 @@ var _ = suite("compute/volume/get", func(t *testing.T, when spec.G, it spec.S) {
 			}
 		}))
 
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"compute",
-			"volume",
-		)
 	})
 
-	when("command is get", func() {
+	when("required flags are passed", func() {
 		it("gets the specified volume", func() {
-			args := append([]string{"get"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
+			aliases := []string{"g", "get"}
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"volume",
+					alias,
+					"some-volume-id",
+				)
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(volumeGetOutput), strings.TrimSpace(string(output)))
-		})
-	})
-
-	when("command is g", func() {
-		it("gets the specified volume", func() {
-			args := append([]string{"g"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(volumeGetOutput), strings.TrimSpace(string(output)))
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(volumeGetOutput), strings.TrimSpace(string(output)))
+			}
 		})
 	})
 })

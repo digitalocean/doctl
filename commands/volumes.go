@@ -51,7 +51,7 @@ func Volume() *Command {
 	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "tags to apply to the volume; comma separate or repeat --tag to add multiple tags at once")
 
 	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "delete a volume", Writer,
-		aliasOpt("rm"))
+		aliasOpt("rm", "d"))
 	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force volume delete")
 
 	CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "get a volume", Writer, aliasOpt("g"),
