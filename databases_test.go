@@ -1183,3 +1183,51 @@ func TestDatabases_GetEvictionPolicy(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, want, got)
 }
+
+func TestDatabases_GetFirewallRules(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/firewall", dbID)
+
+	body := ` {"rules": [{
+		"type": "ip_addr",
+		"value": "192.168.1.1",
+		"uuid": "deadbeef-dead-4aa5-beef-deadbeef347d",
+		"cluster_uuid": "deadbeef-dead-4aa5-beef-deadbeef347d"
+	}]} `
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, body)
+	})
+
+	_, err := client.Databases.GetFirewallRules(ctx, dbID)
+	require.NoError(t, err)
+}
+
+func TestDatabases_UpdateFirewallRules(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/firewall", dbID)
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPut)
+	})
+
+	_, err := client.Databases.UpdateFirewallRules(ctx, dbID, &DatabaseUpdateFirewallRulesRequest{
+		Rules: []*DatabaseFirewallRule{
+			{
+				Type:  "ip_addr",
+				Value: "192.168.1.1",
+				UUID:  "deadbeef-dead-4aa5-beef-deadbeef347d",
+			},
+		},
+	})
+	require.NoError(t, err)
+}
