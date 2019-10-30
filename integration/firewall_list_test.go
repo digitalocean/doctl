@@ -2,7 +2,6 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -14,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/firewall/list", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -32,16 +31,12 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 					return
 				}
 
-				if req.Method != http.MethodPost {
+				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				body, err := ioutil.ReadAll(req.Body)
-				expect.NoError(err)
-				expect.JSONEq(firewallCreateRequestBody, string(body))
-
-				w.Write([]byte(firewallCreateResponse))
+				w.Write([]byte(firewallListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -53,9 +48,9 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 		}))
 	})
 
-	when("the minimum required flags are provided", func() {
-		it("creates a firewall", func() {
-			aliases := []string{"create", "c"}
+	when("all required flags are passed", func() {
+		it("lists firewalls", func() {
+			aliases := []string{"list", "ls"}
 
 			for _, alias := range aliases {
 				cmd := exec.Command(builtBinaryPath,
@@ -64,37 +59,18 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 					"compute",
 					"firewall",
 					alias,
-					"--name", "test-firewall",
-					"--inbound-rules", `protocol:tcp,ports:443`,
 				)
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output from command %s: %s", alias, output))
-				expect.Equal(strings.TrimSpace(firewallCreateOutput), strings.TrimSpace(string(output)))
+				expect.Equal(strings.TrimSpace(firewallListOutput), strings.TrimSpace(string(output)))
 			}
 		})
 	})
 })
 
-const (
-	firewallCreateOutput = `
-ID                                      Name             Status       Created At              Inbound Rules              Outbound Rules    Droplet IDs    Tags    Pending Changes
-e4b9c960-d385-4950-84f3-d102162e6be5    test-firewall    succeeded    2019-10-24T20:30:26Z    protocol:tcp,ports:443,`
-
-	firewallCreateRequestBody = `{
-  "name":"test-firewall",
-  "inbound_rules":[{
-	"protocol":"tcp",
-	"ports":"443",
-	"sources":{}
-  }],
-  "outbound_rules":null,
-  "droplet_ids":[],
-  "tags":[]
-}`
-
-	firewallCreateResponse = `{
-  "firewall": {
+const firewallListResponse = `{
+  "firewalls":[{
 	"id":"e4b9c960-d385-4950-84f3-d102162e6be5",
 	"name":"test-firewall",
 	"status":"succeeded",
@@ -108,6 +84,10 @@ e4b9c960-d385-4950-84f3-d102162e6be5    test-firewall    succeeded    2019-10-24
 	"droplet_ids":[],
 	"tags":[],
 	"pending_changes":[]
-  }
+  }]
 }`
-)
+
+const firewallListOutput = `
+ID                                      Name             Status       Created At              Inbound Rules              Outbound Rules    Droplet IDs    Tags    Pending Changes
+e4b9c960-d385-4950-84f3-d102162e6be5    test-firewall    succeeded    2019-10-24T20:30:26Z    protocol:tcp,ports:443,
+`
