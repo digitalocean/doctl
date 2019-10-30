@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.24.0] - 2019-10-30
+
+- #267 Return []DatabaseFirewallRule in addition to raw response. - @andrewsomething
+
 ## [v1.23.1] - 2019-10-30
 
 - #265 add support for getting/setting firewall rules - @gregmankes
