@@ -98,6 +98,10 @@ func (m *mockKubeconfigProvider) Write(config *clientcmdapi.Config) error {
 	return nil
 }
 
+func (m *mockKubeconfigProvider) ConfigPath() string {
+	return "/some/kube/path"
+}
+
 func testK8sCmdService() *KubernetesCommandService {
 	return &KubernetesCommandService{
 		KubeconfigProvider: &mockKubeconfigProvider{

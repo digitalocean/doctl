@@ -71,7 +71,7 @@ var _ = suite("compute/image/create", func(t *testing.T, when spec.G, it spec.S)
 			"-u", "https://www.example.com",
 			"compute",
 			"image",
-			"create", "test-image",
+			"create",
 		}
 
 		baseErr := `Error: (image.create%s) command is missing required arguments`
@@ -83,15 +83,22 @@ var _ = suite("compute/image/create", func(t *testing.T, when spec.G, it spec.S)
 		}{
 			{
 				"missing all",
-				fmt.Sprintf(baseErr, ".image-url"),
+				fmt.Sprintf(baseErr, ".image-name"),
 				base,
+			},
+			{
+				"missing all flags",
+				fmt.Sprintf(baseErr, ".image-url"),
+				append(base, []string{
+					"ubuntu-18.04-minimal",
+				}...),
 			},
 			{
 				"missing region",
 				fmt.Sprintf(baseErr, ".region"),
 				append(base, []string{
+					"ubuntu-18.04-minimal",
 					"--image-description", "an ubuntu custom minimal image",
-					"--image-name", "ubuntu-18.04-minimal",
 					"--image-url", "http://cloud-images.ubuntu.com/minimal/releases/bionic/release/ubuntu-18.04-minimal-cloudimg-amd64.img",
 				}...),
 			},
@@ -99,8 +106,8 @@ var _ = suite("compute/image/create", func(t *testing.T, when spec.G, it spec.S)
 				"missing image url",
 				fmt.Sprintf(baseErr, ".image-url"),
 				append(base, []string{
+					"ubuntu-18.04-minimal",
 					"--image-description", "an ubuntu custom minimal image",
-					"--image-name", "ubuntu-18.04-minimal",
 					"--region", "nyc3",
 				}...),
 			},

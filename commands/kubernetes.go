@@ -110,6 +110,7 @@ type KubeconfigProvider interface {
 	Remote(kube do.KubernetesService, clusterID string) (*clientcmdapi.Config, error)
 	Local() (*clientcmdapi.Config, error)
 	Write(config *clientcmdapi.Config) error
+	ConfigPath() string
 }
 
 type kubeconfigProvider struct {
@@ -133,6 +134,10 @@ func (p *kubeconfigProvider) Local() (*clientcmdapi.Config, error) {
 // Write either writes to or updates an existing local kubeconfig file.
 func (p *kubeconfigProvider) Write(config *clientcmdapi.Config) error {
 	return clientcmd.ModifyConfig(p.pathOptions, *config, false)
+}
+
+func (p *kubeconfigProvider) ConfigPath() string {
+	return p.pathOptions.GetDefaultFilename()
 }
 
 // KubernetesCommandService is used to execute Kubernetes commands.
@@ -1357,8 +1362,8 @@ func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, remo
 		return err
 	}
 
-	kubectlDefaults := clientcmd.NewDefaultPathOptions()
-	notice("adding cluster credentials to kubeconfig file found in %q", kubectlDefaults.GlobalFile)
+	kubectlDefaults := s.KubeconfigProvider.ConfigPath()
+	notice("adding cluster credentials to kubeconfig file found in %q", kubectlDefaults)
 	if err := mergeKubeconfig(clusterID, remoteKubeconfig, localKubeconfig, setCurrentContext); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
 	}
