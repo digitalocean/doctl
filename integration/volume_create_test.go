@@ -16,23 +16,15 @@ import (
 
 var _ = suite("compute/volume/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect   *require.Assertions
-		cmd      *exec.Cmd
-		baseArgs = []string{
-			"my-volume",
-			"--fs-label", "some-fs-label",
-			"--fs-type", "xfs",
-			"--region", "mars",
-			"--size", "4TiB",
-			"--tag", "yes",
-			"--tag", "again",
-		}
+		expect *require.Assertions
+		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/volumes":
 				auth := req.Header.Get("Authorization")
@@ -62,32 +54,31 @@ var _ = suite("compute/volume/create", func(t *testing.T, when spec.G, it spec.S
 			}
 		}))
 
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"compute",
-			"volume")
 	})
 
-	when("command is create", func() {
+	when("passing almost all the flags", func() {
 		it("creates the volume", func() {
-			args := append([]string{"create"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
+			aliases := []string{"create", "c"}
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"volume",
+					alias,
+					"my-volume",
+					"--fs-label", "some-fs-label",
+					"--fs-type", "xfs",
+					"--region", "mars",
+					"--size", "4TiB",
+					"--tag", "yes",
+					"--tag", "again",
+				)
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(volumeCreateOutput), strings.TrimSpace(string(output)))
-		})
-	})
-
-	when("command is c", func() {
-		it("creates the volume", func() {
-			args := append([]string{"c"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(volumeCreateOutput), strings.TrimSpace(string(output)))
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(volumeCreateOutput), strings.TrimSpace(string(output)))
+			}
 		})
 	})
 })
