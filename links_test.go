@@ -32,6 +32,15 @@ var (
 			}
 		}
 	}`)
+	projectslastPageLinksJSONBlob = []byte(`{
+		"links": {
+			"pages": {
+				"first": "https://api.digitalocean.com/v2/projects?page=1",
+				"prev": "https://api.digitalocean.com/v2/projects?page=2",
+				"last": "https://api.digitalocean.com/v2/projects?page=3"
+			}
+		}
+	}`)
 
 	missingLinksJSONBlob = []byte(`{ }`)
 )
@@ -82,6 +91,20 @@ func TestLinks_ParseMiddle(t *testing.T) {
 
 func TestLinks_ParseLast(t *testing.T) {
 	links := loadLinksJSON(t, lastPageLinksJSONBlob)
+	_, err := links.CurrentPage()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := &Response{Links: &links}
+	checkCurrentPage(t, r, 3)
+	if !links.IsLastPage() {
+		t.Fatalf("expected last page")
+	}
+}
+
+func TestLinks_ParseProjectsLast(t *testing.T) {
+	links := loadLinksJSON(t, projectslastPageLinksJSONBlob)
 	_, err := links.CurrentPage()
 	if err != nil {
 		t.Fatal(err)
