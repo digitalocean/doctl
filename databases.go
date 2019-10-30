@@ -56,7 +56,7 @@ type DatabasesService interface {
 	DeleteReplica(context.Context, string, string) (*Response, error)
 	GetEvictionPolicy(context.Context, string) (string, *Response, error)
 	SetEvictionPolicy(context.Context, string, string) (*Response, error)
-	GetFirewallRules(context.Context, string) (*Response, error)
+	GetFirewallRules(context.Context, string) ([]DatabaseFirewallRule, *Response, error)
 	UpdateFirewallRules(context.Context, string, *DatabaseUpdateFirewallRulesRequest) (*Response, error)
 }
 
@@ -277,7 +277,7 @@ type evictionPolicyRoot struct {
 }
 
 type databaseFirewallRuleRoot struct {
-	Rules []*DatabaseFirewallRule `json:"rules"`
+	Rules []DatabaseFirewallRule `json:"rules"`
 }
 
 func (d Database) URN() string {
@@ -692,14 +692,20 @@ func (svc *DatabasesServiceOp) SetEvictionPolicy(ctx context.Context, databaseID
 }
 
 // GetFirewallRules loads the inbound sources for a given cluster.
-func (svc *DatabasesServiceOp) GetFirewallRules(ctx context.Context, databaseID string) (*Response, error) {
+func (svc *DatabasesServiceOp) GetFirewallRules(ctx context.Context, databaseID string) ([]DatabaseFirewallRule, *Response, error) {
 	path := fmt.Sprintf(databaseFirewallRulesPath, databaseID)
 	root := new(databaseFirewallRuleRoot)
 	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return svc.client.Do(ctx, req, root)
+
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Rules, resp, nil
 }
 
 // UpdateFirewallRules sets the inbound sources for a given cluster.

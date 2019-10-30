@@ -1192,6 +1192,15 @@ func TestDatabases_GetFirewallRules(t *testing.T) {
 
 	path := fmt.Sprintf("/v2/databases/%s/firewall", dbID)
 
+	want := []DatabaseFirewallRule{
+		{
+			Type:        "ip_addr",
+			Value:       "192.168.1.1",
+			UUID:        "deadbeef-dead-4aa5-beef-deadbeef347d",
+			ClusterUUID: "deadbeef-dead-4aa5-beef-deadbeef347d",
+		},
+	}
+
 	body := ` {"rules": [{
 		"type": "ip_addr",
 		"value": "192.168.1.1",
@@ -1204,8 +1213,9 @@ func TestDatabases_GetFirewallRules(t *testing.T) {
 		fmt.Fprint(w, body)
 	})
 
-	_, err := client.Databases.GetFirewallRules(ctx, dbID)
+	got, _, err := client.Databases.GetFirewallRules(ctx, dbID)
 	require.NoError(t, err)
+	require.Equal(t, want, got)
 }
 
 func TestDatabases_UpdateFirewallRules(t *testing.T) {
