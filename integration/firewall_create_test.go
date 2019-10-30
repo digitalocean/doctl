@@ -26,14 +26,14 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/firewalls":
-				if req.Method != http.MethodPost {
-					w.WriteHeader(http.StatusMethodNotAllowed)
-					return
-				}
-
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
@@ -69,7 +69,7 @@ var _ = suite("compute/firewall/create", func(t *testing.T, when spec.G, it spec
 				)
 
 				output, err := cmd.CombinedOutput()
-				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.NoError(err, fmt.Sprintf("received error output from command %s: %s", alias, output))
 				expect.Equal(strings.TrimSpace(firewallCreateOutput), strings.TrimSpace(string(output)))
 			}
 		})

@@ -30,6 +30,12 @@ var _ = suite("compute/firewall/get", func(t *testing.T, when spec.G, it spec.S)
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
 				w.Write([]byte(firewallGetResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
