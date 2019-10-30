@@ -15,15 +15,15 @@ import (
 
 var _ = suite("compute/floating-ip/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect   *require.Assertions
-		cmd      *exec.Cmd
-		baseArgs = []string{"1.1.1.1"}
+		expect *require.Assertions
+		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/floating_ips/1.1.1.1":
 				auth := req.Header.Get("Authorization")
@@ -48,33 +48,26 @@ var _ = suite("compute/floating-ip/get", func(t *testing.T, when spec.G, it spec
 			}
 		}))
 
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"compute",
-			"floating-ip",
-		)
 	})
 
-	when("command is get", func() {
+	when("required flags are passed", func() {
 		it("gets the specified load balancer", func() {
-			args := append([]string{"get"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
+			aliases := []string{"get", "g"}
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPGetOutput), strings.TrimSpace(string(output)))
-		})
-	})
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"floating-ip",
+					alias,
+					"1.1.1.1",
+				)
 
-	when("command is g", func() {
-		it("gets the specified load balancer", func() {
-			args := append([]string{"g"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPGetOutput), strings.TrimSpace(string(output)))
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(floatingIPGetOutput), strings.TrimSpace(string(output)))
+			}
 		})
 	})
 })

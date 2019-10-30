@@ -16,17 +16,15 @@ import (
 
 var _ = suite("compute/floating-ip/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect   *require.Assertions
-		cmd      *exec.Cmd
-		baseArgs = []string{
-			"--droplet-id", "1212",
-		}
+		expect *require.Assertions
+		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/floating_ips":
 				auth := req.Header.Get("Authorization")
@@ -61,32 +59,26 @@ var _ = suite("compute/floating-ip/create", func(t *testing.T, when spec.G, it s
 			}
 		}))
 
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"compute",
-			"floating-ip")
 	})
 
-	when("command is create", func() {
+	when("the minimum flags are provided", func() {
 		it("creates the floating-ip", func() {
-			args := append([]string{"create"}, baseArgs...)
-			cmd.Args = append(cmd.Args, args...)
+			aliases := []string{"create", "c"}
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPCreateOutput), strings.TrimSpace(string(output)))
-		})
-	})
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"floating-ip",
+					alias,
+					"--droplet-id", "1212",
+				)
 
-	when("command is c", func() {
-		it("creates the floating-ip", func() {
-			args := append([]string{"c"}, []string{"--region", "newark"}...)
-			cmd.Args = append(cmd.Args, args...)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPCreateOutput), strings.TrimSpace(string(output)))
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(floatingIPCreateOutput), strings.TrimSpace(string(output)))
+			}
 		})
 	})
 })
