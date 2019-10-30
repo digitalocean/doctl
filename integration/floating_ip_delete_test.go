@@ -14,15 +14,15 @@ import (
 
 var _ = suite("compute/floating-ip/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect   *require.Assertions
-		cmd      *exec.Cmd
-		baseArgs = []string{"1.1.1.1", "-f"}
+		expect *require.Assertions
+		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/floating_ips/1.1.1.1":
 				auth := req.Header.Get("Authorization")
@@ -47,36 +47,26 @@ var _ = suite("compute/floating-ip/delete", func(t *testing.T, when spec.G, it s
 			}
 		}))
 
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"compute",
-			"floating-ip",
-		)
 	})
 
 	when("required flags are passed", func() {
-		cases := []struct {
-			desc    string
-			command string
-		}{
-			{desc: "command is delete", command: "delete"},
-			{desc: "command is d", command: "d"},
-		}
+		it("deletes the specified floating-ip", func() {
+			aliases := []string{"rm", "d", "delete"}
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"floating-ip",
+					alias,
+					"1.1.1.1",
+					"-f",
+				)
 
-		for _, c := range cases {
-			when(c.desc, func() {
-				command := c.command
-
-				it("deletes the specified floating-ip", func() {
-					args := append([]string{command}, baseArgs...)
-					cmd.Args = append(cmd.Args, args...)
-
-					output, err := cmd.CombinedOutput()
-					expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-					expect.Empty(output)
-				})
-			})
-		}
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Empty(output)
+			}
+		})
 	})
 })

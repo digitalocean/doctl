@@ -17,12 +17,13 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
+		server *httptest.Server
 	)
 
 	it.Before(func() {
 		expect = require.New(t)
 
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/floating_ips":
 				auth := req.Header.Get("Authorization")
@@ -47,32 +48,25 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 			}
 		}))
 
-		cmd = exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"compute",
-			"floating-ip",
-		)
-
 	})
 
-	when("command is list", func() {
+	when("required flags are passed", func() {
 		it("lists all floating-ips", func() {
-			cmd.Args = append(cmd.Args, []string{"list"}...)
+			aliases := []string{"list", "ls"}
 
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPListOutput), strings.TrimSpace(string(output)))
-		})
-	})
+			for _, alias := range aliases {
+				cmd = exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"compute",
+					"floating-ip",
+					alias,
+				)
 
-	when("command is ls", func() {
-		it("lists all floating-ips", func() {
-			cmd.Args = append(cmd.Args, []string{"ls"}...)
-
-			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPListOutput), strings.TrimSpace(string(output)))
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(floatingIPListOutput), strings.TrimSpace(string(output)))
+			}
 		})
 	})
 })
