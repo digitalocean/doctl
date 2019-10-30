@@ -8,6 +8,7 @@ import (
 	"net/http/httputil"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/sclevine/spec"
@@ -114,12 +115,17 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+				expect.Equal(strings.TrimSpace(dropletActionOutput), strings.TrimSpace(string(output)))
 			})
 		})
 	}
 })
 
 const (
+	dropletActionOutput = `
+ID          Status         Type              Started At                       Completed At    Resource ID    Resource Type    Region
+36804745    in-progress    enable_backups    2014-11-14 16:30:56 +0000 UTC    <nil>           3164450        droplet          nyc3
+	`
 	dropletActionResponse = `
 {
   "action": {
