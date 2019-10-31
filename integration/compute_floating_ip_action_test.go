@@ -94,7 +94,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 				"floating-ip-action",
 				"get",
 				"77",
-				"66",
+				"--action-id", "66",
 			)
 
 			output, err := cmd.CombinedOutput()

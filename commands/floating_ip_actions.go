@@ -34,9 +34,10 @@ func FloatingIPAction() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunFloatingIPActionsGet,
-		"get <floating-ip> <action-id>", "get floating-ip action", Writer,
+	cmdFloatingIPActionGet := CmdBuilder(cmd, RunFloatingIPActionsGet,
+		"get <floating-ip>", "get floating-ip action", Writer,
 		displayerType(&displayers.Action{}))
+	AddIntFlag(cmdFloatingIPActionGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
 
 	CmdBuilder(cmd, RunFloatingIPActionsAssign,
 		"assign <floating-ip> <droplet-id>", "assign a floating IP to a droplet", Writer,
@@ -51,7 +52,7 @@ func FloatingIPAction() *Command {
 
 // RunFloatingIPActionsGet retrieves an action for a floating IP.
 func RunFloatingIPActionsGet(c *CmdConfig) error {
-	if len(c.Args) != 2 {
+	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
@@ -59,7 +60,7 @@ func RunFloatingIPActionsGet(c *CmdConfig) error {
 
 	fia := c.FloatingIPActions()
 
-	actionID, err := strconv.Atoi(c.Args[1])
+	actionID, err := c.Doit.GetInt(c.NS, doctl.ArgActionID)
 	if err != nil {
 		return err
 	}
