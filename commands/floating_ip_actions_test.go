@@ -16,6 +16,7 @@ package commands
 import (
 	"testing"
 
+	"github.com/digitalocean/doctl"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +30,9 @@ func TestFloatingIPActionsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.floatingIPActions.EXPECT().Get("127.0.0.1", 2).Return(&testAction, nil)
 
-		config.Args = append(config.Args, "127.0.0.1", "2")
+		config.Args = append(config.Args, "127.0.0.1")
+
+		config.Doit.Set(config.NS, doctl.ArgActionID, 2)
 
 		err := RunFloatingIPActionsGet(config)
 		assert.NoError(t, err)
