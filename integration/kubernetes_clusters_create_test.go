@@ -33,14 +33,14 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				if req.Method != "GET" {
+				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
 				w.Write([]byte(kubeClustersCreateOptResponse))
 			case "/v2/kubernetes/clusters":
-				if req.Method != "POST" {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
@@ -56,14 +56,14 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 
 				w.Write([]byte(kubeClustersCreateResponse))
 			case "/v2/kubernetes/clusters/some-cluster-id":
-				if req.Method != "GET" {
+				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
 				w.Write([]byte(kubeClustersWaitResponse))
 			case "/v2/kubernetes/clusters/some-cluster-id/kubeconfig":
-				if req.Method != "GET" {
+				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

@@ -34,7 +34,7 @@ var _ = suite("database/user/create", func(t *testing.T, when spec.G, it spec.S)
 					w.WriteHeader(http.StatusTeapot)
 				}
 
-				if req.Method != "POST" {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

@@ -31,7 +31,7 @@ var _ = suite("compute/certificate/delete", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				if req.Method != "DELETE" {
+				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

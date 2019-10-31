@@ -31,7 +31,7 @@ var _ = suite("compute/certificate/list", func(t *testing.T, when spec.G, it spe
 					return
 				}
 
-				if req.Method != "GET" {
+				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

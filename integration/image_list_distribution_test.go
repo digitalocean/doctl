@@ -31,7 +31,7 @@ var _ = suite("compute/image/list-distribution", func(t *testing.T, when spec.G,
 					return
 				}
 
-				if req.Method != "GET" {
+				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

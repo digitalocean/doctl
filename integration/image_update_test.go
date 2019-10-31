@@ -32,7 +32,7 @@ var _ = suite("compute/image/update", func(t *testing.T, when spec.G, it spec.S)
 					return
 				}
 
-				if req.Method != "PUT" {
+				if req.Method != http.MethodPut {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

@@ -34,7 +34,7 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 					return
 				}
 
-				if req.Method != "PUT" {
+				if req.Method != http.MethodPut {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

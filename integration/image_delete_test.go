@@ -29,7 +29,7 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 					return
 				}
 
-				if req.Method != "DELETE" {
+				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

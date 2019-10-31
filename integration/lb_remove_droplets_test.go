@@ -31,7 +31,7 @@ var _ = suite("compute/load-balancer/remove-droplets", func(t *testing.T, when s
 					return
 				}
 
-				if req.Method != "DELETE" {
+				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

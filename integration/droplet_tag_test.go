@@ -41,7 +41,7 @@ var _ = suite("compute/droplet/tag", func(t *testing.T, when spec.G, it spec.S) 
 					return
 				}
 
-				if req.Method != "GET" {
+				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
@@ -55,7 +55,7 @@ var _ = suite("compute/droplet/tag", func(t *testing.T, when spec.G, it spec.S) 
 				err = json.Unmarshal(body, &tagRequest)
 				expect.NoError(err)
 
-				if req.Method == "POST" || req.Method == "DELETE" {
+				if req.Method == http.MethodPost || req.Method == http.MethodDelete {
 					if tagRequest.Resources[0].ResourceID == "1444" {
 						w.WriteHeader(http.StatusNotFound)
 						w.Write([]byte(`{"message": "tag not found"}`))

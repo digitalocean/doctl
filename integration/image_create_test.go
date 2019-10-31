@@ -30,7 +30,7 @@ var _ = suite("compute/image/create", func(t *testing.T, when spec.G, it spec.S)
 					return
 				}
 
-				if req.Method != "POST" {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
