@@ -15,6 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type request struct {
+	method string
+	body   string
+}
+
 var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
@@ -25,33 +30,29 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 		expect = require.New(t)
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			pathMatch := map[string]string{
-				"/v2/droplets/34/actions":    `{"type":"shutdown"}`,
-				"/v2/droplets/4444/actions":  `{"type":"disable_backups"}`,
-				"/v2/droplets/999/actions":   `{"type":"reboot"}`,
-				"/v2/droplets/48/actions":    `{"name":"best-snapshot","type":"snapshot"}`,
-				"/v2/droplets/112/actions":   `{"name":"yes","type":"rename"}`,
-				"/v2/droplets/383/actions":   `{"image":1234,"type":"restore"}`,
-				"/v2/droplets/11234/actions": `{"type":"power_off"}`,
-				"/v2/droplets/8/actions":     `{"type":"power_cycle"}`,
-				"/v2/droplets/234/actions":   `{"type":"password_reset"}`,
-				"/v2/droplets/591/actions":   `{"type":"enable_private_networking"}`,
-				"/v2/droplets/247/actions":   `{"type":"enable_ipv6"}`,
-				"/v2/droplets/45/actions":    `{"type":"power_on"}`,
-				"/v2/droplets/1111/actions":  `{"kernel":7777,"type":"change_kernel"}`,
-				"/v2/droplets/65/actions":    `{"type":"enable_backups"}`,
-				"/v2/droplets/4743/actions":  `{"image":9999,"type":"rebuild"}`,
-				"/v2/droplets/884/actions":   `{"disk":true,"size":"bigger","type":"resize"}`,
+			pathMatch := map[string]request{
+				"/v2/droplets/34/actions":      {method: http.MethodPost, body: `{"type":"shutdown"}`},
+				"/v2/droplets/4444/actions":    {method: http.MethodPost, body: `{"type":"disable_backups"}`},
+				"/v2/droplets/999/actions":     {method: http.MethodPost, body: `{"type":"reboot"}`},
+				"/v2/droplets/48/actions":      {method: http.MethodPost, body: `{"name":"best-snapshot","type":"snapshot"}`},
+				"/v2/droplets/112/actions":     {method: http.MethodPost, body: `{"name":"yes","type":"rename"}`},
+				"/v2/droplets/383/actions":     {method: http.MethodPost, body: `{"image":1234,"type":"restore"}`},
+				"/v2/droplets/11234/actions":   {method: http.MethodPost, body: `{"type":"power_off"}`},
+				"/v2/droplets/8/actions":       {method: http.MethodPost, body: `{"type":"power_cycle"}`},
+				"/v2/droplets/234/actions":     {method: http.MethodPost, body: `{"type":"password_reset"}`},
+				"/v2/droplets/591/actions":     {method: http.MethodPost, body: `{"type":"enable_private_networking"}`},
+				"/v2/droplets/247/actions":     {method: http.MethodPost, body: `{"type":"enable_ipv6"}`},
+				"/v2/droplets/45/actions":      {method: http.MethodPost, body: `{"type":"power_on"}`},
+				"/v2/droplets/1111/actions":    {method: http.MethodPost, body: `{"kernel":7777,"type":"change_kernel"}`},
+				"/v2/droplets/65/actions":      {method: http.MethodPost, body: `{"type":"enable_backups"}`},
+				"/v2/droplets/4743/actions":    {method: http.MethodPost, body: `{"image":9999,"type":"rebuild"}`},
+				"/v2/droplets/884/actions":     {method: http.MethodPost, body: `{"disk":true,"size":"bigger","type":"resize"}`},
+				"/v2/droplets/789/actions/954": {method: http.MethodGet, body: `{}`},
 			}
 
 			auth := req.Header.Get("Authorization")
 			if auth != "Bearer some-magic-token" {
 				w.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-
-			if req.Method != http.MethodPost {
-				w.WriteHeader(http.StatusMethodNotAllowed)
 				return
 			}
 
@@ -65,10 +66,17 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 				t.Fatalf("received unknown request: %s", dump)
 			}
 
-			reqBody, err := ioutil.ReadAll(req.Body)
-			expect.NoError(err)
+			if req.Method != matchRequest.method {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
 
-			expect.JSONEq(matchRequest, string(reqBody))
+			if matchRequest.body != "{}" {
+				reqBody, err := ioutil.ReadAll(req.Body)
+				expect.NoError(err)
+
+				expect.JSONEq(matchRequest.body, string(reqBody))
+			}
 
 			w.Write([]byte(dropletActionResponse))
 		}))
@@ -100,6 +108,8 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 		{desc: "restore", args: []string{"restore", "383", "--image-id", "1234"}},
 		{desc: "shutdown", args: []string{"shutdown", "34"}},
 		{desc: "snapshot", args: []string{"snapshot", "48", "--snapshot-name", "best-snapshot"}},
+		{desc: "get", args: []string{"get", "789", "--action-id", "954"}},
+		{desc: "g", args: []string{"get", "789", "--action-id", "954"}},
 	}
 
 	for _, c := range cases {
