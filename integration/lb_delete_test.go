@@ -32,7 +32,7 @@ var _ = suite("compute/load-balancer/delete", func(t *testing.T, when spec.G, it
 					return
 				}
 
-				if req.Method != "DELETE" {
+				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

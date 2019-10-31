@@ -43,7 +43,7 @@ var _ = suite("compute/droplet/get", func(t *testing.T, when spec.G, it spec.S) 
 					return
 				}
 
-				if req.Method != "GET" {
+				if req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

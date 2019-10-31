@@ -34,7 +34,7 @@ var _ = suite("compute/certificate/create", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				if req.Method != "POST" {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

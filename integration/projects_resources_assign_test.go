@@ -33,7 +33,7 @@ var _ = suite("projects/resources/assign", func(t *testing.T, when spec.G, it sp
 					return
 				}
 
-				if req.Method != "POST" {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

@@ -37,7 +37,7 @@ var _ = suite("compute/volume/snapshot", func(t *testing.T, when spec.G, it spec
 					return
 				}
 
-				if req.Method != "POST" {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

@@ -34,7 +34,7 @@ var _ = suite("compute/load-balancer/create", func(t *testing.T, when spec.G, it
 					return
 				}
 
-				if req.Method != "POST" {
+				if req.Method != http.MethodPost {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}

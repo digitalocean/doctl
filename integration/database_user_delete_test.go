@@ -30,7 +30,7 @@ var _ = suite("database/user/delete", func(t *testing.T, when spec.G, it spec.S)
 					w.WriteHeader(http.StatusTeapot)
 				}
 
-				if req.Method != "DELETE" {
+				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
