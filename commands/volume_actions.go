@@ -67,9 +67,6 @@ func VolumeAction() *Command {
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunVolumeDetach, doctl.ArgCommandWait, "", false, "Wait for volume to detach")
 
-	CmdBuilder(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "detach a volume (deprecated - use detach instead)",
-		Writer)
-
 	cmdRunVolumeResize := CmdBuilder(cmd, RunVolumeResize, "resize <volume-id>", "resize a volume", Writer,
 		aliasOpt("r"))
 	AddIntFlag(cmdRunVolumeResize, doctl.ArgSizeSlug, "", 0, "New size",
