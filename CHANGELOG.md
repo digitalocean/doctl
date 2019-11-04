@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.24.1] - 2019-11-04
+
+- #264 Update isLast to check p.Next - @aqche
+
 ## [v1.24.0] - 2019-10-30
 
 - #267 Return []DatabaseFirewallRule in addition to raw response. - @andrewsomething
