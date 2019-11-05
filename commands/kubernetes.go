@@ -53,10 +53,10 @@ const (
 
 	workflowDesc = `
 
-A typical workflow is to use 'doctl kubernetes cluster create' to create the cluster on DigitalOcean's infrastructure, then call 'doctl kubernetes cluster kubeconfig' to configure 'kubectl' to connect to the cluster. You are then able to use 'kubectl' to create and manage workloads.`
+A typical workflow is to use ` + "`" + `doctl kubernetes cluster create` + "`" + ` to create the cluster on DigitalOcean's infrastructure, then call ` + "`" + `doctl kubernetes cluster kubeconfig` + "`" + ` to configure ` + "`" + `kubectl` + "`" + ` to connect to the cluster. You are then able to use ` + "`" + `kubectl` + "`" + ` to create and manage workloads.`
 	optionsDesc = `
 
-The commands under 'doctl kubernetes options' retrieve values used while creating clusters, such as the list of regions where cluster creation is supported.`
+The commands under ` + "`" + `doctl kubernetes options` + "`" + ` retrieve values used while creating clusters, such as the list of regions where cluster creation is supported.`
 )
 
 var getCurrentAuthContextFn = defaultGetCurrentAuthContextFn
@@ -102,7 +102,7 @@ func Kubernetes() *Command {
 			Use:     "kubernetes",
 			Aliases: []string{"kube", "k8s", "k"},
 			Short:   "Manages Kubernetes clusters and retrieves configuration options",
-			Long:    `The commands under 'doctl kubernetes' are for managing Kubernetes clusters and viewing configuration options relating to clusters.` + workflowDesc + optionsDesc,
+			Long:    `The commands under ` + "`" + `doctl kubernetes` + "`" + ` are for managing Kubernetes clusters and viewing configuration options relating to clusters.` + workflowDesc + optionsDesc,
 		},
 	}
 
@@ -166,7 +166,7 @@ func kubernetesCluster() *Command {
 			Use:     "cluster",
 			Aliases: []string{"clusters", "c"},
 			Short:   "Manages Kubernetes clusters",
-			Long:    `The commands under 'doctl kubernetes cluster' are for the management of Kubernetes clusters.` + workflowDesc,
+			Long:    `The commands under ` + "`" + `doctl kubernetes cluster` + "`" + ` are for the management of Kubernetes clusters.` + workflowDesc,
 		},
 	}
 
@@ -182,7 +182,7 @@ func kubernetesCluster() *Command {
 - A unique ID for the cluster
 - A human-readable name for the cluster
 - The slug identifier for the region where the Kubernetes cluster is located.
-- The slug identifier for the version of Kubernetes used for the cluster. If set to a minor version (e.g. "1.14"), the latest version within it will be used (e.g. "1.14.6-do.1"); if set to "latest", the latest published version will be used.
+- The slug identifier for the version of Kubernetes used for the cluster. If set to a minor version (e.g. ` + "`" + `1.14` + "`" + `), the latest version within it will be used (e.g. ` + "`" + `1.14.6-do.1` + "`" + `); if set to ` + "`" + `latest` + "`" + `, the latest published version will be used.
 - A boolean value indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window.
 - An object containing a "state" attribute whose value is set to a string indicating the current status of the node. Potential values include "running", "provisioning", and "errored".`
 	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "Retrieve details about a Kubernetes cluster", `
@@ -199,8 +199,10 @@ Retrieves the following details about a Kubernetes cluster: `+clusterDetails+`
 	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterList, "list", "Retrieves the list of Kubernetes clusters for your account", `
 Retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDeatils,
 		Writer, aliasOpt("ls"), displayerType(&displayers.KubernetesClusters{}))
-	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
-		"get available upgrades for a cluster", Writer, aliasOpt("gu"))
+	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
+		"Retrieve a list of available Kubernetes version upgrades", `
+This command returns a list of slugs representing Kubernetes versions you can use with the specified cluster. You can use these values to upgrade your cluster with the ` + "`" + `doct kubernetes cluster upgrade` + "`" + ` command.
+`, Writer, aliasOpt("gu"))
 
 	cmdKubeClusterCreate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
 		defaultKubernetesNodeCount), "create <name>", "Creates a Kubernetes cluster", `
@@ -211,16 +213,16 @@ If no configuration flags are used, a three-node cluster with a single node pool
 After creating a cluster, a configuration context will be added to kubectl and made active so that you can begin managing your new cluster immediately.`,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion,
-		`Cluster region. Possible values: see "doctl kubernetes options regions"`, requiredOpt())
+		"Cluster region. Possible values: see "+ "`" + "doctl kubernetes options regions" + "`", requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest",
-		`Kubernetes version. Possible values: see "doctl kubernetes options versions"`)
+		"Kubernetes version. Possible values: see "+ "`" + "doctl kubernetes options versions" + "`")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
 		"Boolean specifying whether to enable auto-upgrade for the cluster")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of 'k8s' and 'k8s:$K8S_CLUSTER_ID.'")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
-		`Machine size to use when creating nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`). Possible values: see "doctl kubernetes options sizes".`)
+		"Machine size to use when creating nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`). Possible values: see "+ "`" + "doctl kubernetes options sizes" + "`")
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"Number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
@@ -241,11 +243,10 @@ Format: "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
 		"Boolean that specifies whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
+		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: " + "`" + "['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']" + "`")
 
 	cmdKubeClusterUpdate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
 		"Update a Kubernetes cluster's configuration", `
-
 This command updates the specified configuration values for the specified Kubernetes cluster. The cluster must be referred to by its name or ID, which you can retrieve by calling:
 
 	doctl kubernetes cluster list`, Writer, aliasOpt("u"))
@@ -260,21 +261,25 @@ This command updates the specified configuration values for the specified Kubern
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
 		"Boolean specifying whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: ['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']")
+		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: " + "`" + "['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']" + "`")
 
-	cmdKubeClusterUpgrade := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
-		"upgrade <id|name>", "upgrade a cluster to a new version", Writer)
+	cmdKubeClusterUpgrade := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
+		"upgrade <id|name>", "Upgrades a cluster to a new Kubernetes version",`
+
+This command upgrades the specified Kubernetes cluster. By default, this will upgrade the cluster to the latest available release, but you can also specify any version listed for your cluster by ` + "`" + `doctl k8s get-upgrades` + "``" + `. `, Writer)
 	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest",
-		`new cluster version, possible values: see "doctl k8s get-upgrades <cluster>".
+		`The desired Kubernetes version. Possible values: see ` + "`" + `doctl k8s get-upgrades <cluster>` + "`" + `.
 The special value "latest" will select the most recent patch version for your cluster's minor version.
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be "latest".`)
 
-	cmdKubeClusterDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterDelete,
-		"delete <id|name>", "delete a cluster", Writer, aliasOpt("d", "rm"))
+	cmdKubeClusterDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterDelete,
+		"delete <id|name>", "Deletes a Kubernetes cluster", `
+This command deletes the specified Kubernetes cluster and the droplets associated with the cluster. This command does not delete other DigitalOcean resources created during the operation of the cluster, such as Load Balancers and Volumes.
+`,Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false,
-		"force cluster delete")
+		"Boolean indicating whether to delete the cluster without a confirmation prompt")
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgClusterUpdateKubeconfig, "", true,
-		"whether to remove the deleted cluster to your kubeconfig")
+		"Boolean indicating whether to remove the deleted cluster from your kubeconfig")
 
 	return cmd
 }
@@ -285,14 +290,15 @@ func kubernetesKubeconfig() *Command {
 			Use:     "kubeconfig",
 			Aliases: []string{"kubecfg", "k8scfg", "config", "cfg"},
 			Short:   "kubeconfig commands",
-			Long:    "kubeconfig commands are used retrieve a cluster's credentials and manipulate them",
+			Long:    "The commands under" + "`" + "doctl kubernetes cluster kubeconfig" + "`" + "are used to manage a Kubernetes cluster's credentials. The credentials are used as authentication contexts with kubectl, the Kubernetes command-line interface.",
 		},
 	}
 
 	k8sCmdService := kubernetesCommandService()
 
-	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "show a cluster's kubeconfig to standard out", Writer, aliasOpt("p", "g"))
-	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL print a cluster's exec credential", Writer, hiddenCmd())
+	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
+This command prints out the raw YAML for the specified cluster's kubeconfig.	`,Writer, aliasOpt("p", "g"))
+	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL: This private command is run when printing a cluster's exec credential", Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
 	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "save a cluster's credentials to your local kubeconfig", Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
