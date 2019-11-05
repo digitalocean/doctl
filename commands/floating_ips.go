@@ -37,7 +37,7 @@ Floating IPs are bound to a specific region.`,
 		},
 	}
 
-	cmdFloatingIPCreate := CmdBuilderWithDocs(cmd, RunFloatingIPCreate, "create", "Create a new Floating IP Address", `Use this command to create a new Floating IP Address.
+	cmdFloatingIPCreate := CmdBuilderWithDocs(cmd, RunFloatingIPCreate, "create", "Create a new Floating IP Address", `Use this command to create a new Floating IP Address. 
 
 A Floating IP Address must be either assigned to a Droplet or reserved to a region.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.FloatingIP{}))

@@ -29,7 +29,7 @@ func Tags() *Command {
 		Command: &cobra.Command{
 			Use:   "tag",
 			Short: "Provides commands that manage tags",
-			Long:  `The sub-commands of 'doctl compute tag' manage the tags on your account.
+			Long: `The sub-commands of 'doctl compute tag' manage the tags on your account.
 			
 A tag is a label that can be applied to a resource (currently Droplets, Images, 
 Volumes, Volume Snapshots, and Database clusters) in order to better organize or 
@@ -41,7 +41,7 @@ resources attribute with information about resources that have been tagged.`,
 
 	CmdBuilderWithDocs(cmd, RunCmdTagCreate, "create <tag-name>", "Create a tag", `Use this command to create a new tag on your account.`, Writer)
 
-	CmdBuilderWithDocs(cmd, RunCmdTagGet, "get <tag-name>", "Retrieve information about a tag", `Use this command to retrieve a tag, see how many resources are using the tag, and the last item tagged with the current tag.`,Writer,
+	CmdBuilderWithDocs(cmd, RunCmdTagGet, "get <tag-name>", "Retrieve information about a tag", `Use this command to retrieve a tag, see how many resources are using the tag, and the last item tagged with the current tag.`, Writer,
 		displayerType(&displayers.Tag{}))
 
 	CmdBuilderWithDocs(cmd, RunCmdTagList, "list", "List all tags", `Use this command to retrieve a list of all tags on your account.`, Writer,

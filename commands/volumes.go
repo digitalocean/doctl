@@ -42,7 +42,8 @@ Volumes function as raw block devices, meaning they appear to the operating syst
 		aliasOpt("ls"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "", "Volume region")
 
-	cmdVolumeCreate := CmdBuilderWithDocs(cmd, RunVolumeCreate, "create <volume-name>", "Create a Block Storage volume", `Use this command to create a Block Storage volume on your account. 
+	cmdVolumeCreate := CmdBuilderWithDocs(cmd, RunVolumeCreate, "create <volume-name>", "Create a Block Storage volume", `Use this command to create a Block Storage volume on your account.
+
 You can use flags to specify the volume size, region, description, filesystem type, tags, and to create a volume from an existing volume snapshot.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSize, "", "4TiB", "Volume size",
@@ -61,7 +62,7 @@ You can use flags to specify the volume size, region, description, filesystem ty
 	CmdBuilderWithDocs(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing Block Storage volume", `Use this command to show information about a Block Storage volume by ID`, Writer, aliasOpt("g"),
 		displayerType(&displayers.Volume{}))
 
-	cmdRunVolumeSnapshot := CmdBuilderWithDocs(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "Create a Block Storage volume snapshot", `Use this command to create a snapshot of a Block Storage volume by ID. 
+	cmdRunVolumeSnapshot := CmdBuilderWithDocs(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "Create a Block Storage volume snapshot", `Use this command to create a snapshot of a Block Storage volume by ID.
 
 You can use a Block Storage volume snapshot ID as a flag with "doctl volume create" to create a new Block Storage volume with the same data as the volume the snapshot was taken from.`, Writer,
 		aliasOpt("s"), displayerType(&displayers.Volume{}))

@@ -55,7 +55,7 @@ func VolumeAction() *Command {
 		Command: &cobra.Command{
 			Use:   "volume-action",
 			Short: "Provides commands to perform actions on Block Storage volumes",
-			Long:  `Block Storage volume actions are commands that can be given to a DigitalOcean Block Storage volume. 
+			Long: `Block Storage volume actions are commands that can be given to a DigitalOcean Block Storage volume. 
 
 An example would be detaching or attaching a volume from a Droplet.`,
 		},
@@ -75,7 +75,7 @@ Pre-formatted volumes will be automatically mounted to Ubuntu, Debian, Fedora, F
 	CmdBuilder(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "detach a volume (deprecated - use detach instead)",
 		Writer)
 
-	cmdRunVolumeResize := CmdBuilderWithDocs(cmd, RunVolumeResize, "resize <volume-id>", "Resize the disk of a volume",`Use this command to resize a Block Storage volume. 
+	cmdRunVolumeResize := CmdBuilderWithDocs(cmd, RunVolumeResize, "resize <volume-id>", "Resize the disk of a volume", `Use this command to resize a Block Storage volume. 
  
 Volumes may only be resized upwards. The maximum size for a volume is 16TiB.`, Writer,
 		aliasOpt("r"))

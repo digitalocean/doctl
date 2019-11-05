@@ -30,7 +30,7 @@ func Images() *Command {
 		Command: &cobra.Command{
 			Use:   "image",
 			Short: "Provides commands that manage images",
-			Long:  `The sub-commands of 'doctl compute image' manage images.
+			Long: `The sub-commands of 'doctl compute image' manage images.
 A DigitalOcean image can be used to create a Droplet and may come in a number of flavors. Currently, there are five types of images: snapshots, backups, applications, distributions, and custom images.
 
 	- Snapshots provide a full copy of an existing Droplet instance taken on demand.
@@ -57,7 +57,7 @@ A DigitalOcean image can be used to create a Droplet and may come in a number of
 	- A status string indicating the state of a custom image. This may be "NEW", "available", "pending", or "deleted". 
 	- A string containing information about errors that may occur when importing a custom image.
 `
-	cmdImagesList := CmdBuilderWithDocs(cmd, RunImagesList, "list", "List images on your account",`Use this command to list all private images on your account. To list public images, use the "--public" flag. Output is the following information about each image:`+imageDetail, Writer,
+	cmdImagesList := CmdBuilderWithDocs(cmd, RunImagesList, "list", "List images on your account", `Use this command to list all private images on your account. To list public images, use the "--public" flag. Output is the following information about each image:`+imageDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "List public images")
 
@@ -72,18 +72,18 @@ A DigitalOcean image can be used to create a Droplet and may come in a number of
 	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListUser := CmdBuilderWithDocs(cmd, RunImagesListUser,
-		"list-user", "List user-created images",`Use this command to list only user owned private images, such as snapshots or images uploaded to your account, including the following information about each:`+imageDetail, Writer,
+		"list-user", "List user-created images", `Use this command to list only user owned private images, such as snapshots or images uploaded to your account, including the following information about each:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesListUser, doctl.ArgImagePublic, "", false, "List public images")
 
-	CmdBuilderWithDocs(cmd, RunImagesGet, "get <image-id|image-slug>", "Retrive information about an image",`Use this command to get the following information about a specific image, specified by its ID or slug:`+imageDetail ,Writer,
+	CmdBuilderWithDocs(cmd, RunImagesGet, "get <image-id|image-slug>", "Retrive information about an image", `Use this command to get the following information about a specific image, specified by its ID or slug:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
 
 	cmdImagesUpdate := CmdBuilderWithDocs(cmd, RunImagesUpdate, "update <image-id>", "Update an image's name or other information", `Use this command to change an image's name, description, or distribution. Will also output the following:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
 	AddStringFlag(cmdImagesUpdate, doctl.ArgImageName, "", "", "Image name", requiredOpt())
 
-	cmdRunImagesDelete := CmdBuilderWithDocs(cmd, RunImagesDelete, "delete <image-id>", "Permanently delete an image from your account",`Delete a snapshot or custom image. This is irreversible.`, Writer)
+	cmdRunImagesDelete := CmdBuilderWithDocs(cmd, RunImagesDelete, "delete <image-id>", "Permanently delete an image from your account", `Delete a snapshot or custom image. This is irreversible.`, Writer)
 	AddBoolFlag(cmdRunImagesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force image delete")
 
 	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create <image-name>", "Create custom image", Writer)
