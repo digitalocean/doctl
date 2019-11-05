@@ -65,6 +65,7 @@ type Client struct {
 	Firewalls         FirewallsService
 	Projects          ProjectsService
 	Kubernetes        KubernetesService
+	Registry          RegistryService
 	Databases         DatabasesService
 	VPCs              VPCsService
 
@@ -181,6 +182,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.StorageActions = &StorageActionsServiceOp{client: c}
 	c.Tags = &TagsServiceOp{client: c}
 	c.Kubernetes = &KubernetesServiceOp{client: c}
+	c.Registry = &RegistryServiceOp{client: c}
 	c.Databases = &DatabasesServiceOp{client: c}
 	c.VPCs = &VPCsServiceOp{client: c}
 
