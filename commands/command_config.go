@@ -58,6 +58,7 @@ type CmdConfig struct {
 	Projects          func() do.ProjectsService
 	Kubernetes        func() do.KubernetesService
 	Databases         func() do.DatabasesService
+	Registry          func() do.RegistryService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.

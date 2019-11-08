@@ -169,6 +169,7 @@ type tcMocks struct {
 	cdns              *domocks.MockCDNsService
 	projects          *domocks.MockProjectsService
 	kubernetes        *domocks.MockKubernetesService
+	registry          *domocks.MockRegistryService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -199,6 +200,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		projects:          domocks.NewMockProjectsService(ctrl),
 		kubernetes:        domocks.NewMockKubernetesService(ctrl),
 		databases:         domocks.NewMockDatabasesService(ctrl),
+		registry:          domocks.NewMockRegistryService(ctrl),
 	}
 
 	config := &CmdConfig{
@@ -238,6 +240,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Projects:          func() do.ProjectsService { return tm.projects },
 		Kubernetes:        func() do.KubernetesService { return tm.kubernetes },
 		Databases:         func() do.DatabasesService { return tm.databases },
+		Registry:          func() do.RegistryService { return tm.registry },
 	}
 
 	tFn(config, tm)
