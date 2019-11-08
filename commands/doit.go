@@ -134,6 +134,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Databases())
 	DoitCmd.AddCommand(Projects())
 	DoitCmd.AddCommand(Version())
+	DoitCmd.AddCommand(Registry())
 }
 
 func computeCmd() *Command {
