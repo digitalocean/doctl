@@ -138,7 +138,7 @@ func (mr *MockDomainsServiceMockRecorder) DeleteRecord(arg0, arg1 interface{}) *
 }
 
 // EditRecord mocks base method
-func (m *MockDomainsService) EditRecord(arg0 string, arg1 int, arg2 *godo.DomainRecordEditRequest) (*do.DomainRecord, error) {
+func (m *MockDomainsService) EditRecord(arg0 string, arg1 int, arg2 *do.DomainRecordEditRequest) (*do.DomainRecord, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EditRecord", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*do.DomainRecord)
@@ -153,7 +153,7 @@ func (mr *MockDomainsServiceMockRecorder) EditRecord(arg0, arg1, arg2 interface{
 }
 
 // CreateRecord mocks base method
-func (m *MockDomainsService) CreateRecord(arg0 string, arg1 *godo.DomainRecordEditRequest) (*do.DomainRecord, error) {
+func (m *MockDomainsService) CreateRecord(arg0 string, arg1 *do.DomainRecordEditRequest) (*do.DomainRecord, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateRecord", arg0, arg1)
 	ret0, _ := ret[0].(*do.DomainRecord)

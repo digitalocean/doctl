@@ -233,7 +233,7 @@ func RunRecordCreate(c *CmdConfig) error {
 		return err
 	}
 
-	rPort, err := c.Doit.GetInt(c.NS, doctl.ArgRecordPort)
+	rPort, err := c.Doit.GetIntPtr(c.NS, doctl.ArgRecordPort)
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func RunRecordCreate(c *CmdConfig) error {
 		return err
 	}
 
-	drcr := &godo.DomainRecordEditRequest{
+	drcr := &do.DomainRecordEditRequest{
 		Type:     rType,
 		Name:     rName,
 		Data:     rData,
@@ -356,7 +356,7 @@ func RunRecordUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	rPort, err := c.Doit.GetInt(c.NS, doctl.ArgRecordPort)
+	rPort, err := c.Doit.GetIntPtr(c.NS, doctl.ArgRecordPort)
 	if err != nil {
 		return err
 	}
@@ -381,7 +381,7 @@ func RunRecordUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	drcr := &godo.DomainRecordEditRequest{
+	drcr := &do.DomainRecordEditRequest{
 		Type:     rType,
 		Name:     rName,
 		Data:     rData,
