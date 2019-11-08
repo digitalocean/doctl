@@ -6,7 +6,7 @@ github.com/cpuguy83/go-md2man/md2man
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.22.0
+# github.com/digitalocean/godo v1.24.2-0.20191106222530-9ccfbd9c44ff
 github.com/digitalocean/godo
 github.com/digitalocean/godo/util
 # github.com/dustin/go-humanize v1.0.0

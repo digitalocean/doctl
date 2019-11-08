@@ -1,5 +1,19 @@
 # Change Log
 
+## [v1.24.1] - 2019-11-04
+
+- #264 Update isLast to check p.Next - @aqche
+
+## [v1.24.0] - 2019-10-30
+
+- #267 Return []DatabaseFirewallRule in addition to raw response. - @andrewsomething
+
+## [v1.23.1] - 2019-10-30
+
+- #265 add support for getting/setting firewall rules - @gregmankes
+- #262 remove ResolveReference call - @mdanzinger
+- #261 Update CONTRIBUTING.md - @mdanzinger
+
 ## [v1.22.0] - 2019-09-24
 
 - #259 Add Kubernetes GetCredentials method - @snormore
