@@ -21,6 +21,11 @@ import (
 	"github.com/digitalocean/godo"
 )
 
+const (
+	domainRecordsPath = "v2/domains/%s/records"
+	domainRecordPath  = "v2/domains/%s/records/%d"
+)
+
 // Domain wraps a godo Domain.
 type Domain struct {
 	*godo.Domain
@@ -192,7 +197,7 @@ func (ds *domainsService) EditRecord(domain string, id int, drer *DomainRecordEd
 		return nil, godo.NewArgError("editRequest", "cannot be nil")
 	}
 
-	path := fmt.Sprintf("v2/domains/%s/records/%d", domain, id)
+	path := fmt.Sprintf(domainRecordPath, domain, id)
 	req, err := ds.client.NewRequest(context.TODO(), http.MethodPut, path, drer)
 	if err != nil {
 		return nil, err
@@ -213,7 +218,7 @@ func (ds *domainsService) CreateRecord(domain string, drer *DomainRecordEditRequ
 		return nil, godo.NewArgError("createRequest", "cannot be nil")
 	}
 
-	path := fmt.Sprintf("v2/domains/%s/records", domain)
+	path := fmt.Sprintf(domainRecordsPath, domain)
 	req, err := ds.client.NewRequest(context.Background(), http.MethodPost, path, drer)
 	if err != nil {
 		return nil, err
