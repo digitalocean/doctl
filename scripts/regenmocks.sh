@@ -25,6 +25,7 @@ mockgen -source kubernetes.go -package=mocks KubernetesService > mocks/Kubernete
 mockgen -source load_balancers.go -package=mocks LoadBalancersService > mocks/LoadBalancersService.go
 mockgen -source projects.go -package=mocks ProjectsService > mocks/ProjectsService.go
 mockgen -source regions.go -package=mocks RegionsService > mocks/RegionsService.go
+mockgen -source registry.go -package=mocks RegistryService > mocks/RegistryService.go
 mockgen -source snapshots.go -package=mocks SnapshotsService > mocks/SnapshotsService.go
 mockgen -source sizes.go -package=mocks SizesService > mocks/SizesService.go
 mockgen -source sshkeys.go -package=mocks KeysService > mocks/KeysService.go
