@@ -272,4 +272,9 @@ const (
 
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
+
+	// ArgObjectName is the Kubernetes object name
+	ArgObjectName = "name"
+	// ArgObjectNamespace is the Kubernetes object namespace
+	ArgObjectNamespace = "namespace"
 )
