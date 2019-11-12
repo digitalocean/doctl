@@ -14,23 +14,27 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	k8sapiv1 "k8s.io/api/core/v1"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 )
 
 var (
-	testRegistryName = "container-registry"
-	testRegistry     = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
+	testRegistryName      = "container-registry"
+	testRegistry          = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
+	testDockerCredentials = []byte("valid docker config json")
 )
 
 func TestRegistryCommand(t *testing.T) {
 	cmd := Registry()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "get", "delete", "login")
+	assertCommandNames(t, cmd, "create", "get", "delete", "login", "kubernetes-manifest")
 }
 
 func TestRegistryCreate(t *testing.T) {
@@ -61,5 +65,33 @@ func TestRegistryDelete(t *testing.T) {
 
 		err := RunRegistryDelete(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestRegistryKubernetesManifest(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+		tm.registry.EXPECT().DockerCredentials().Return(testDockerCredentials, nil)
+
+		secretNamespace := "secret-namespace"
+		config.Doit.Set(config.NS, doctl.ArgObjectNamespace, secretNamespace)
+
+		var outputBuffer bytes.Buffer
+		config.Out = &outputBuffer
+		err := RunKubernetesManifest(config)
+		assert.NoError(t, err)
+
+		// check the object
+		obj, _, err := k8sscheme.Codecs.UniversalDeserializer().Decode(outputBuffer.Bytes(), nil, nil)
+		assert.NoError(t, err)
+		secret := obj.(*k8sapiv1.Secret)
+
+		assert.Equal(t, "Secret", secret.TypeMeta.Kind)
+		assert.Equal(t, "v1", secret.TypeMeta.APIVersion)
+		assert.Equal(t, k8sapiv1.SecretTypeDockerConfigJson, secret.Type)
+		assert.Equal(t, "registry-"+testRegistry.Name, secret.ObjectMeta.Name)
+		assert.Equal(t, secretNamespace, secret.ObjectMeta.Namespace)
+		assert.Contains(t, secret.Data, ".dockerconfigjson")
+		assert.Equal(t, secret.Data[".dockerconfigjson"], testDockerCredentials)
 	})
 }

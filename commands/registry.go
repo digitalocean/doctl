@@ -25,6 +25,9 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
+	k8sapiv1 "k8s.io/api/core/v1"
+	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 )
 
 type dockerConfig struct {
@@ -52,6 +55,10 @@ func Registry() *Command {
 	AddBoolFlag(cmdRunRegistryDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force registry delete")
 
 	CmdBuilder(cmd, RunRegistryLogin, "login", "log in Docker to the container registry", Writer)
+
+	cmdRunKubernetesManifest := CmdBuilder(cmd, RunKubernetesManifest, "kubernetes-manifest", "create a Kubernetes secret manifest to allow access to the registry", Writer, aliasOpt("k8s"))
+	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectName, "", "", "the secret name to create. defaults to the registry name prefixed with \"registry-\"")
+	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectNamespace, "", "default", "the namespace to hold the secret")
 
 	return cmd
 }
@@ -153,6 +160,60 @@ func RunRegistryLogin(c *CmdConfig) error {
 	fmt.Println("logged in to the registry")
 
 	return nil
+}
+
+// RunKubernetesManifest prints a Kubernetes manifest that provides access to the registry
+func RunKubernetesManifest(c *CmdConfig) error {
+	secretName, err := c.Doit.GetString(c.NS, doctl.ArgObjectName)
+	if err != nil {
+		return err
+	}
+	secretNamespace, err := c.Doit.GetString(c.NS, doctl.ArgObjectNamespace)
+	if err != nil {
+		return err
+	}
+
+	// if no secret name supplied, use the registry name
+	if secretName == "" {
+		reg, err := c.Registry().Get()
+		if err != nil {
+			return err
+		}
+		secretName = reg.Name
+	}
+
+	// fetch docker config
+	dockerConfig, err := c.Registry().DockerCredentials()
+	if err != nil {
+		return err
+	}
+
+	// create the manifest for the secret
+	secret := &k8sapiv1.Secret{
+		TypeMeta: k8smetav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
+		ObjectMeta: k8smetav1.ObjectMeta{
+			Name:      "registry-" + secretName,
+			Namespace: secretNamespace,
+		},
+		Type: k8sapiv1.SecretTypeDockerConfigJson,
+		Data: map[string][]byte{
+			".dockerconfigjson": dockerConfig,
+		},
+	}
+
+	serializer := k8sjson.NewSerializerWithOptions(
+		k8sjson.DefaultMetaFactory, nil, nil,
+		k8sjson.SerializerOptions{
+			Yaml:   true,
+			Pretty: true,
+			Strict: true,
+		},
+	)
+
+	return serializer.Encode(secret, c.Out)
 }
 
 func displayRegistries(c *CmdConfig, registries ...do.Registry) error {
