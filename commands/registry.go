@@ -14,7 +14,11 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"os/exec"
+	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -22,6 +26,12 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
+
+type dockerConfig struct {
+	Auths map[string]struct {
+		Auth string `json:"auth,omitempty"`
+	} `json:"auths"`
+}
 
 // Registry creates the registry command
 func Registry() *Command {
@@ -40,6 +50,8 @@ func Registry() *Command {
 
 	cmdRunRegistryDelete := CmdBuilder(cmd, RunRegistryDelete, "delete", "delete the container registry", Writer, aliasOpt("del"))
 	AddBoolFlag(cmdRunRegistryDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force registry delete")
+
+	CmdBuilder(cmd, RunRegistryLogin, "login", "log in Docker to the container registry", Writer)
 
 	return cmd
 }
@@ -86,6 +98,61 @@ func RunRegistryDelete(c *CmdConfig) error {
 	}
 
 	return c.Registry().Delete()
+}
+
+// DockerConfigProvider allows a user to read from a remote and local Kubeconfig, and write to a
+// local Kubeconfig.
+type DockerConfigProvider interface {
+	ConfigPath() string
+}
+
+// RunRegistryLogin logs in Docker to the registry
+func RunRegistryLogin(c *CmdConfig) error {
+	conf, err := c.Registry().DockerCredentials()
+	if err != nil {
+		return err
+	}
+
+	dc := &dockerConfig{}
+	err = json.Unmarshal(conf, dc)
+	if err != nil {
+		return err
+	}
+
+	// read the login credentials from the docker config
+	for host, conf := range dc.Auths {
+		// decode and split into username + password
+		creds, err := base64.StdEncoding.DecodeString(conf.Auth)
+		if err != nil {
+			return err
+		}
+
+		splitCreds := strings.Split(string(creds), ":")
+		if len(splitCreds) != 2 {
+			return fmt.Errorf("got invalid docker credentials")
+		}
+		user, pass := splitCreds[0], splitCreds[1]
+
+		// log in via the docker cli
+		args := []string{
+			"login", host,
+			"-u", user,
+			"--password-stdin",
+		}
+		cmd := exec.Command("docker", args...)
+		cmd.Stdin = strings.NewReader(pass)
+		cmd.Stdout = c.Out
+		cmd.Stderr = c.Out
+
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	fmt.Println("logged in to the registry")
+
+	return nil
 }
 
 func displayRegistries(c *CmdConfig, registries ...do.Registry) error {

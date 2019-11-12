@@ -30,7 +30,7 @@ var (
 func TestRegistryCommand(t *testing.T) {
 	cmd := Registry()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "get", "delete")
+	assertCommandNames(t, cmd, "create", "get", "delete", "login")
 }
 
 func TestRegistryCreate(t *testing.T) {
