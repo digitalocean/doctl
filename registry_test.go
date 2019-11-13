@@ -80,3 +80,19 @@ func TestRegistry_Delete(t *testing.T) {
 	_, err := client.Registry.Delete(ctx)
 	require.NoError(t, err)
 }
+
+func TestRegistry_DockerCredentials(t *testing.T) {
+	setup()
+	defer teardown()
+
+	want := []byte("this is a valid docker config json")
+
+	mux.HandleFunc("/v2/registry/docker-credentials", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		w.Write(want)
+	})
+	got, _, err := client.Registry.DockerCredentials(ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, want, got.DockerConfigJSON)
+}
