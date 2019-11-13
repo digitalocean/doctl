@@ -18,7 +18,7 @@ type RegistryService interface {
 	Create(context.Context, *RegistryCreateRequest) (*Registry, *Response, error)
 	Get(context.Context) (*Registry, *Response, error)
 	Delete(context.Context) (*Response, error)
-	DockerCredentials(context.Context) (*DockerCredentials, *Response, error)
+	DockerCredentials(context.Context, *RegistryDockerCredentialsRequest) (*DockerCredentials, *Response, error)
 }
 
 var _ RegistryService = &RegistryServiceOp{}
@@ -31,6 +31,12 @@ type RegistryServiceOp struct {
 // RegistryCreateRequest represents a request to create a registry.
 type RegistryCreateRequest struct {
 	Name string `json:"name,omitempty"`
+}
+
+// RegistryDockerCredentialsRequest represents a request to retrieve docker
+// credentials for a registry.
+type RegistryDockerCredentialsRequest struct {
+	ReadWrite bool `json:"read_write"`
 }
 
 // Registry represents a registry.
@@ -91,9 +97,9 @@ type DockerCredentials struct {
 	DockerConfigJSON []byte
 }
 
-// DockerCredentials retrieves a Docker config file with the registry's credentials.
-func (svc *RegistryServiceOp) DockerCredentials(ctx context.Context) (*DockerCredentials, *Response, error) {
-	path := fmt.Sprintf("%s/%s", registryPath, "docker-credentials")
+// DockerCredentials retrieves a Docker config file containing the registry's credentials.
+func (svc *RegistryServiceOp) DockerCredentials(ctx context.Context, request *RegistryDockerCredentialsRequest) (*DockerCredentials, *Response, error) {
+	path := fmt.Sprintf("%s/%s?read_write=%t", registryPath, "docker-credentials", request.ReadWrite)
 
 	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {

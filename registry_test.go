@@ -82,17 +82,38 @@ func TestRegistry_Delete(t *testing.T) {
 }
 
 func TestRegistry_DockerCredentials(t *testing.T) {
-	setup()
-	defer teardown()
+	returnedConfig := "this could be a docker config"
+	tests := []struct {
+		name              string
+		params            *RegistryDockerCredentialsRequest
+		expectedReadWrite string
+	}{
+		{
+			name:              "read-only (default)",
+			params:            &RegistryDockerCredentialsRequest{},
+			expectedReadWrite: "false",
+		},
+		{
+			name:              "read/write",
+			params:            &RegistryDockerCredentialsRequest{ReadWrite: true},
+			expectedReadWrite: "true",
+		},
+	}
 
-	want := []byte("this is a valid docker config json")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			setup()
+			defer teardown()
 
-	mux.HandleFunc("/v2/registry/docker-credentials", func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodGet)
-		w.Write(want)
-	})
-	got, _, err := client.Registry.DockerCredentials(ctx)
+			mux.HandleFunc("/v2/registry/docker-credentials", func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, test.expectedReadWrite, r.URL.Query().Get("read_write"))
+				testMethod(t, r, http.MethodGet)
+				fmt.Fprint(w, returnedConfig)
+			})
 
-	require.NoError(t, err)
-	require.Equal(t, want, got.DockerConfigJSON)
+			got, _, err := client.Registry.DockerCredentials(ctx, test.params)
+			require.NoError(t, err)
+			require.Equal(t, []byte(returnedConfig), got.DockerConfigJSON)
+		})
+	}
 }
