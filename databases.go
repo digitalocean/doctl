@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -25,6 +26,40 @@ const (
 	databaseEvictionPolicyPath = databaseBasePath + "/%s/eviction_policy"
 	databaseSQLModePath        = databaseBasePath + "/%s/sql_mode"
 	databaseFirewallRulesPath  = databaseBasePath + "/%s/firewall"
+)
+
+// SQL Mode constants allow for MySQL-specific SQL flavor configuration.
+const (
+	SQLModeAllowInvalidDates     = "ALLOW_INVALID_DATES"
+	SQLModeANSIQuotes            = "ANSI_QUOTES"
+	SQLModeHighNotPrecedence     = "HIGH_NOT_PRECEDENCE"
+	SQLModeIgnoreSpace           = "IGNORE_SPACE"
+	SQLModeNoAuthCreateUser      = "NO_AUTO_CREATE_USER"
+	SQLModeNoAutoValueOnZero     = "NO_AUTO_VALUE_ON_ZERO"
+	SQLModeNoBackslashEscapes    = "NO_BACKSLASH_ESCAPES"
+	SQLModeNoDirInCreate         = "NO_DIR_IN_CREATE"
+	SQLModeNoEngineSubstitution  = "NO_ENGINE_SUBSTITUTION"
+	SQLModeNoFieldOptions        = "NO_FIELD_OPTIONS"
+	SQLModeNoKeyOptions          = "NO_KEY_OPTIONS"
+	SQLModeNoTableOptions        = "NO_TABLE_OPTIONS"
+	SQLModeNoUnsignedSubtraction = "NO_UNSIGNED_SUBTRACTION"
+	SQLModeNoZeroDate            = "NO_ZERO_DATE"
+	SQLModeNoZeroInDate          = "NO_ZERO_IN_DATE"
+	SQLModeOnlyFullGroupBy       = "ONLY_FULL_GROUP_BY"
+	SQLModePadCharToFullLength   = "PAD_CHAR_TO_FULL_LENGTH"
+	SQLModePipesAsConcat         = "PIPES_AS_CONCAT"
+	SQLModeRealAsFloat           = "REAL_AS_FLOAT"
+	SQLModeStrictAllTables       = "STRICT_ALL_TABLES"
+	SQLModeStrictTransTables     = "STRICT_TRANS_TABLES"
+	SQLModeANSI                  = "ANSI"
+	SQLModeDB2                   = "DB2"
+	SQLModeMaxDB                 = "MAXDB"
+	SQLModeMSSQL                 = "MSSQL"
+	SQLModeMYSQL323              = "MYSQL323"
+	SQLModeMYSQL40               = "MYSQL40"
+	SQLModeOracle                = "ORACLE"
+	SQLModePostgreSQL            = "POSTGRESQL"
+	SQLModeTraditional           = "TRADITIONAL"
 )
 
 // DatabasesService is an interface for interfacing with the databases endpoints
@@ -58,7 +93,7 @@ type DatabasesService interface {
 	GetEvictionPolicy(context.Context, string) (string, *Response, error)
 	SetEvictionPolicy(context.Context, string, string) (*Response, error)
 	GetSQLMode(context.Context, string) (string, *Response, error)
-	SetSQLMode(context.Context, string, string) (*Response, error)
+	SetSQLMode(context.Context, string, ...string) (*Response, error)
 	GetFirewallRules(context.Context, string) ([]DatabaseFirewallRule, *Response, error)
 	UpdateFirewallRules(context.Context, string, *DatabaseUpdateFirewallRulesRequest) (*Response, error)
 }
@@ -715,9 +750,9 @@ func (svc *DatabasesServiceOp) GetSQLMode(ctx context.Context, databaseID string
 }
 
 // SetSQLMode updates the SQL Mode settings for a given MySQL cluster.
-func (svc *DatabasesServiceOp) SetSQLMode(ctx context.Context, databaseID, sqlMode string) (*Response, error) {
+func (svc *DatabasesServiceOp) SetSQLMode(ctx context.Context, databaseID string, sqlModes ...string) (*Response, error) {
 	path := fmt.Sprintf(databaseSQLModePath, databaseID)
-	root := &sqlModeRoot{SQLMode: sqlMode}
+	root := &sqlModeRoot{SQLMode: strings.Join(sqlModes, ",")}
 	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, root)
 	if err != nil {
 		return nil, err

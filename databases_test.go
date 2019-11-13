@@ -1201,6 +1201,23 @@ func TestDatabases_SetSQLMode(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestDatabases_SetSQLMode_Multiple(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/sql_mode", dbID)
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPut)
+		w.Write([]byte(`{ "sql_mode": "ANSI, ANSI_QUOTES" }`))
+	})
+
+	_, err := client.Databases.SetSQLMode(ctx, dbID, SQLModeANSI, SQLModeANSIQuotes)
+	require.NoError(t, err)
+}
+
 func TestDatabases_GetSQLMode(t *testing.T) {
 	setup()
 	defer teardown()
