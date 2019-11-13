@@ -1184,6 +1184,62 @@ func TestDatabases_GetEvictionPolicy(t *testing.T) {
 	require.Equal(t, want, got)
 }
 
+func TestDatabases_SetSQLMode(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/sql_mode", dbID)
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPut)
+		w.Write([]byte(`{ "sql_mode": "ONLY_FULL_GROUP_BY" }`))
+	})
+
+	_, err := client.Databases.SetSQLMode(ctx, dbID, "ONLY_FULL_GROUP_BY")
+	require.NoError(t, err)
+}
+
+func TestDatabases_SetSQLMode_Multiple(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/sql_mode", dbID)
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPut)
+		w.Write([]byte(`{ "sql_mode": "ANSI, ANSI_QUOTES" }`))
+	})
+
+	_, err := client.Databases.SetSQLMode(ctx, dbID, SQLModeANSI, SQLModeANSIQuotes)
+	require.NoError(t, err)
+}
+
+func TestDatabases_GetSQLMode(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	want := "ONLY_FULL_GROUP_BY"
+
+	body := `{ "sql_mode": "ONLY_FULL_GROUP_BY" }`
+
+	path := fmt.Sprintf("/v2/databases/%s/sql_mode", dbID)
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, body)
+	})
+
+	got, _, err := client.Databases.GetSQLMode(ctx, dbID)
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
 func TestDatabases_GetFirewallRules(t *testing.T) {
 	setup()
 	defer teardown()
