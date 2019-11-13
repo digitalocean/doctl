@@ -1,7 +1,9 @@
 package godo
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 )
 
@@ -16,6 +18,7 @@ type RegistryService interface {
 	Create(context.Context, *RegistryCreateRequest) (*Registry, *Response, error)
 	Get(context.Context) (*Registry, *Response, error)
 	Delete(context.Context) (*Response, error)
+	DockerCredentials(context.Context, *RegistryDockerCredentialsRequest) (*DockerCredentials, *Response, error)
 }
 
 var _ RegistryService = &RegistryServiceOp{}
@@ -28,6 +31,12 @@ type RegistryServiceOp struct {
 // RegistryCreateRequest represents a request to create a registry.
 type RegistryCreateRequest struct {
 	Name string `json:"name,omitempty"`
+}
+
+// RegistryDockerCredentialsRequest represents a request to retrieve docker
+// credentials for a registry.
+type RegistryDockerCredentialsRequest struct {
+	ReadWrite bool `json:"read_write"`
 }
 
 // Registry represents a registry.
@@ -79,4 +88,32 @@ func (svc *RegistryServiceOp) Delete(ctx context.Context) (*Response, error) {
 		return resp, err
 	}
 	return resp, nil
+}
+
+// DockerCredentials is the content of a Docker config file
+// that is used by the docker CLI
+// See: https://docs.docker.com/engine/reference/commandline/cli/#configjson-properties
+type DockerCredentials struct {
+	DockerConfigJSON []byte
+}
+
+// DockerCredentials retrieves a Docker config file containing the registry's credentials.
+func (svc *RegistryServiceOp) DockerCredentials(ctx context.Context, request *RegistryDockerCredentialsRequest) (*DockerCredentials, *Response, error) {
+	path := fmt.Sprintf("%s/%s?read_write=%t", registryPath, "docker-credentials", request.ReadWrite)
+
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var buf bytes.Buffer
+	resp, err := svc.client.Do(ctx, req, &buf)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	dc := &DockerCredentials{
+		DockerConfigJSON: buf.Bytes(),
+	}
+	return dc, resp, nil
 }
