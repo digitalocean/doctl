@@ -42,8 +42,8 @@ func Registry() *Command {
 		Command: &cobra.Command{
 			Use:     "registry",
 			Aliases: []string{"reg", "r"},
-			Short:   "registry commands",
-			Long:    "registry is used to access container registry commands",
+			Short:   "[beta] registry commands",
+			Long:    "[beta] registry is used to access container registry commands",
 			Hidden:  true,
 		},
 	}
