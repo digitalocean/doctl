@@ -44,6 +44,7 @@ func Registry() *Command {
 			Aliases: []string{"reg", "r"},
 			Short:   "registry commands",
 			Long:    "registry is used to access container registry commands",
+			Hidden:  true,
 		},
 	}
 
