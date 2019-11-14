@@ -76,31 +76,56 @@ func TestRegistryDelete(t *testing.T) {
 
 func TestRegistryKubernetesManifest(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+		// test cases
+		tcs := []struct {
+			argName, argNamespace           string
+			expectedName, expectedNamespace string
+		}{
+			{
+				argName:           "",
+				argNamespace:      "default",
+				expectedName:      "registry-" + testRegistry.Name,
+				expectedNamespace: "default",
+			},
+			{
+				argName:           "my-registry",
+				argNamespace:      "secret-namespace",
+				expectedName:      "my-registry",
+				expectedNamespace: "secret-namespace",
+			},
+		}
+
+		// mocks shared across both test cases
+		// Get should be called only when a name isn't supplied, to look up the registry's name
+		tm.registry.EXPECT().Get().Return(&testRegistry, nil).Times(1)
+		// DockerCredentials should be called both times to retrieve the credentials
 		tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 			ReadWrite: false,
-		}).Return(testDockerCredentials, nil)
+		}).Return(testDockerCredentials, nil).Times(2)
 
-		secretNamespace := "secret-namespace"
-		config.Doit.Set(config.NS, doctl.ArgObjectNamespace, secretNamespace)
+		// tests
+		for _, tc := range tcs {
+			config.Doit.Set(config.NS, doctl.ArgObjectName, tc.argName)
+			config.Doit.Set(config.NS, doctl.ArgObjectNamespace, tc.argNamespace)
 
-		var outputBuffer bytes.Buffer
-		config.Out = &outputBuffer
-		err := RunKubernetesManifest(config)
-		assert.NoError(t, err)
+			var outputBuffer bytes.Buffer
+			config.Out = &outputBuffer
+			err := RunKubernetesManifest(config)
+			assert.NoError(t, err)
 
-		// check the object
-		obj, _, err := k8sscheme.Codecs.UniversalDeserializer().Decode(outputBuffer.Bytes(), nil, nil)
-		assert.NoError(t, err)
-		secret := obj.(*k8sapiv1.Secret)
+			// check the object
+			obj, _, err := k8sscheme.Codecs.UniversalDeserializer().Decode(outputBuffer.Bytes(), nil, nil)
+			assert.NoError(t, err)
+			secret := obj.(*k8sapiv1.Secret)
 
-		assert.Equal(t, "Secret", secret.TypeMeta.Kind)
-		assert.Equal(t, "v1", secret.TypeMeta.APIVersion)
-		assert.Equal(t, k8sapiv1.SecretTypeDockerConfigJson, secret.Type)
-		assert.Equal(t, "registry-"+testRegistry.Name, secret.ObjectMeta.Name)
-		assert.Equal(t, secretNamespace, secret.ObjectMeta.Namespace)
-		assert.Contains(t, secret.Data, ".dockerconfigjson")
-		assert.Equal(t, secret.Data[".dockerconfigjson"], testDockerCredentials.DockerConfigJSON)
+			assert.Equal(t, "Secret", secret.TypeMeta.Kind)
+			assert.Equal(t, "v1", secret.TypeMeta.APIVersion)
+			assert.Equal(t, k8sapiv1.SecretTypeDockerConfigJson, secret.Type)
+			assert.Equal(t, tc.expectedName, secret.ObjectMeta.Name)
+			assert.Equal(t, tc.expectedNamespace, secret.ObjectMeta.Namespace)
+			assert.Contains(t, secret.Data, ".dockerconfigjson")
+			assert.Equal(t, secret.Data[".dockerconfigjson"], testDockerCredentials.DockerConfigJSON)
+		}
 	})
 }
 
