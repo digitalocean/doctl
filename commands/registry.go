@@ -36,6 +36,8 @@ type dockerConfig struct {
 	} `json:"auths"`
 }
 
+const registryHostname = "registry.digitalocean.com"
+
 // Registry creates the registry command
 func Registry() *Command {
 	cmd := &Command{
@@ -56,6 +58,7 @@ func Registry() *Command {
 	AddBoolFlag(cmdRunRegistryDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force registry delete")
 
 	CmdBuilder(cmd, RunRegistryLogin, "login", "log in Docker to the container registry", Writer)
+	CmdBuilder(cmd, RunRegistryLogout, "logout", "log put Docker from the container registry", Writer)
 
 	cmdRunKubernetesManifest := CmdBuilder(cmd, RunKubernetesManifest, "kubernetes-manifest", "create a Kubernetes secret manifest to allow read/pull access to the registry", Writer, aliasOpt("k8s"))
 	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectName, "", "", "the secret name to create. defaults to the registry name prefixed with \"registry-\"")
@@ -222,6 +225,15 @@ func RunKubernetesManifest(c *CmdConfig) error {
 	)
 
 	return serializer.Encode(secret, c.Out)
+}
+
+// RunRegistryLogout logs Docker out of the registry
+func RunRegistryLogout(c *CmdConfig) error {
+	cmd := execCommand("docker", "logout", registryHostname)
+	cmd.Stdout = c.Out
+	cmd.Stderr = c.Out
+
+	return cmd.Run()
 }
 
 func displayRegistries(c *CmdConfig, registries ...do.Registry) error {
