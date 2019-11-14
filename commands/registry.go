@@ -58,7 +58,7 @@ func Registry() *Command {
 	AddBoolFlag(cmdRunRegistryDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force registry delete")
 
 	CmdBuilder(cmd, RunRegistryLogin, "login", "log in Docker to the container registry", Writer)
-	CmdBuilder(cmd, RunRegistryLogout, "logout", "log put Docker from the container registry", Writer)
+	CmdBuilder(cmd, RunRegistryLogout, "logout", "log out Docker from the container registry", Writer)
 
 	cmdRunKubernetesManifest := CmdBuilder(cmd, RunKubernetesManifest, "kubernetes-manifest", "create a Kubernetes secret manifest to allow read/pull access to the registry", Writer, aliasOpt("k8s"))
 	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectName, "", "", "the secret name to create. defaults to the registry name prefixed with \"registry-\"")
