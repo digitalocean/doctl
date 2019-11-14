@@ -1,5 +1,15 @@
 # Change Log
 
+## [v1.26.0] - 2019-11-13
+
+- #272 dbaas: get and set mysql sql mode - @mikejholly
+
+## [v1.25.0] - 2019-11-13
+
+- #275 registry/docker-credentials: add support for the read/write parameter - @kamaln7
+- #273 implement the registry/docker-credentials endpoint - @kamaln7
+- #271 Add registry resource - @snormore
+
 ## [v1.24.1] - 2019-11-04
 
 - #264 Update isLast to check p.Next - @aqche
