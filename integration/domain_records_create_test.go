@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite.Focus("compute/domain/records/create", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/domain/records/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
