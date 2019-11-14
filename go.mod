@@ -6,7 +6,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/creack/pty v1.1.7
-	github.com/digitalocean/godo v1.24.2-0.20191106222530-9ccfbd9c44ff
+	github.com/digitalocean/godo v1.25.1-0.20191114163902-6c8415f2abff
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/gobwas/glob v0.2.3

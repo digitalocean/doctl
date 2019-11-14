@@ -15,6 +15,9 @@ package commands
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -28,7 +31,10 @@ import (
 var (
 	testRegistryName      = "container-registry"
 	testRegistry          = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
-	testDockerCredentials = []byte("valid docker config json")
+	testDockerCredentials = &godo.DockerCredentials{
+		// the base64 string is "username:password"
+		DockerConfigJSON: []byte(`{"auths":{"hostname":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}`),
+	}
 )
 
 func TestRegistryCommand(t *testing.T) {
@@ -71,7 +77,9 @@ func TestRegistryDelete(t *testing.T) {
 func TestRegistryKubernetesManifest(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
-		tm.registry.EXPECT().DockerCredentials().Return(testDockerCredentials, nil)
+		tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+			ReadWrite: false,
+		}).Return(testDockerCredentials, nil)
 
 		secretNamespace := "secret-namespace"
 		config.Doit.Set(config.NS, doctl.ArgObjectNamespace, secretNamespace)
@@ -94,4 +102,48 @@ func TestRegistryKubernetesManifest(t *testing.T) {
 		assert.Contains(t, secret.Data, ".dockerconfigjson")
 		assert.Equal(t, secret.Data[".dockerconfigjson"], testDockerCredentials)
 	})
+}
+
+func fakeExecCommand(command string, args ...string) *exec.Cmd {
+	cs := []string{"-test.v", "-test.run=TestHelperProcess", "--", command}
+	cs = append(cs, args...)
+	cmd := exec.Command(os.Args[0], cs...)
+	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
+	return cmd
+}
+
+func TestRegistryLogin(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+			ReadWrite: true,
+		}).Return(testDockerCredentials, nil)
+
+		// fake execCommand
+		execCommand = fakeExecCommand
+		defer func() { execCommand = exec.Command }()
+
+		err := RunRegistryLogin(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		t.Log("Called TestHelperProcess() when it's not needed")
+		return
+	}
+
+	// This process is used to fake the "docker" cli command call.
+	// Make sure we receive the correct test credentials
+	// as in `testDockerCredentials`.
+	expectedCommand := []string{"docker", "login", "hostname", "-u", "username", "--password-stdin"}
+	gotCommand := os.Args[4:]
+
+	assert.Equal(t, expectedCommand, gotCommand)
+
+	stdin, err := ioutil.ReadAll(os.Stdin)
+	assert.NoError(t, err)
+
+	gotPassword := string(stdin)
+	assert.Equal(t, "password", gotPassword)
 }
