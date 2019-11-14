@@ -40,7 +40,7 @@ var (
 func TestRegistryCommand(t *testing.T) {
 	cmd := Registry()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "get", "delete", "login", "kubernetes-manifest")
+	assertCommandNames(t, cmd, "create", "get", "delete", "login", "logout", "kubernetes-manifest")
 }
 
 func TestRegistryCreate(t *testing.T) {
@@ -100,16 +100,19 @@ func TestRegistryKubernetesManifest(t *testing.T) {
 		assert.Equal(t, "registry-"+testRegistry.Name, secret.ObjectMeta.Name)
 		assert.Equal(t, secretNamespace, secret.ObjectMeta.Namespace)
 		assert.Contains(t, secret.Data, ".dockerconfigjson")
-		assert.Equal(t, secret.Data[".dockerconfigjson"], testDockerCredentials)
+		assert.Equal(t, secret.Data[".dockerconfigjson"], testDockerCredentials.DockerConfigJSON)
 	})
 }
 
-func fakeExecCommand(command string, args ...string) *exec.Cmd {
-	cs := []string{"-test.v", "-test.run=TestHelperProcess", "--", command}
-	cs = append(cs, args...)
-	cmd := exec.Command(os.Args[0], cs...)
-	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
-	return cmd
+// https://npf.io/2015/06/testing-exec-command/
+func fakeExecCommand(testName string) func(string, ...string) *exec.Cmd {
+	return func(command string, args ...string) *exec.Cmd {
+		cs := []string{"-test.v", "-test.run=TestHelperProcess", "--", testName, command}
+		cs = append(cs, args...)
+		cmd := exec.Command(os.Args[0], cs...)
+		cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
+		return cmd
+	}
 }
 
 func TestRegistryLogin(t *testing.T) {
@@ -119,10 +122,23 @@ func TestRegistryLogin(t *testing.T) {
 		}).Return(testDockerCredentials, nil)
 
 		// fake execCommand
-		execCommand = fakeExecCommand
+		execCommand = fakeExecCommand("login")
 		defer func() { execCommand = exec.Command }()
 
+		config.Out = os.Stderr
 		err := RunRegistryLogin(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRegistryLogout(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// fake execCommand
+		execCommand = fakeExecCommand("logout")
+		defer func() { execCommand = exec.Command }()
+
+		config.Out = os.Stderr
+		err := RunRegistryLogout(config)
 		assert.NoError(t, err)
 	})
 }
@@ -134,16 +150,33 @@ func TestHelperProcess(t *testing.T) {
 	}
 
 	// This process is used to fake the "docker" cli command call.
-	// Make sure we receive the correct test credentials
-	// as in `testDockerCredentials`.
-	expectedCommand := []string{"docker", "login", "hostname", "-u", "username", "--password-stdin"}
-	gotCommand := os.Args[4:]
+	if len(os.Args) < 4 {
+		t.Error("Invalid TestHelperProcess() call. Use fakeExecCommand() to generate the command")
+		return
+	}
 
-	assert.Equal(t, expectedCommand, gotCommand)
+	switch os.Args[4] {
+	case "login":
+		// Make sure we receive the correct test credentials
+		// as in `testDockerCredentials`.
+		expectedCommand := []string{"docker", "login", "hostname", "-u", "username", "--password-stdin"}
+		gotCommand := os.Args[5:]
 
-	stdin, err := ioutil.ReadAll(os.Stdin)
-	assert.NoError(t, err)
+		assert.Equal(t, expectedCommand, gotCommand)
 
-	gotPassword := string(stdin)
-	assert.Equal(t, "password", gotPassword)
+		stdin, err := ioutil.ReadAll(os.Stdin)
+		assert.NoError(t, err)
+
+		gotPassword := string(stdin)
+		assert.Equal(t, "password", gotPassword)
+
+	case "logout":
+		expected := []string{"docker", "logout", registryHostname}
+		got := os.Args[5:]
+
+		assert.Equal(t, expected, got)
+
+	default:
+		t.Error("Unknown test", os.Args[4])
+	}
 }
