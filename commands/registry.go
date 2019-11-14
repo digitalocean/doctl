@@ -188,7 +188,7 @@ func RunKubernetesManifest(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
-		secretName = reg.Name
+		secretName = "registry-" + reg.Name
 	}
 
 	// fetch docker config
@@ -206,7 +206,7 @@ func RunKubernetesManifest(c *CmdConfig) error {
 			APIVersion: "v1",
 		},
 		ObjectMeta: k8smetav1.ObjectMeta{
-			Name:      "registry-" + secretName,
+			Name:      secretName,
 			Namespace: secretNamespace,
 		},
 		Type: k8sapiv1.SecretTypeDockerConfigJson,
