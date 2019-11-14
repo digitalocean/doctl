@@ -79,16 +79,16 @@ func (mr *MockRegistryServiceMockRecorder) Delete() *gomock.Call {
 }
 
 // DockerCredentials mocks base method
-func (m *MockRegistryService) DockerCredentials() ([]byte, error) {
+func (m *MockRegistryService) DockerCredentials(arg0 *godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DockerCredentials")
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "DockerCredentials", arg0)
+	ret0, _ := ret[0].(*godo.DockerCredentials)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DockerCredentials indicates an expected call of DockerCredentials
-func (mr *MockRegistryServiceMockRecorder) DockerCredentials() *gomock.Call {
+func (mr *MockRegistryServiceMockRecorder) DockerCredentials(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DockerCredentials", reflect.TypeOf((*MockRegistryService)(nil).DockerCredentials))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DockerCredentials", reflect.TypeOf((*MockRegistryService)(nil).DockerCredentials), arg0)
 }

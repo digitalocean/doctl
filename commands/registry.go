@@ -57,7 +57,7 @@ func Registry() *Command {
 
 	CmdBuilder(cmd, RunRegistryLogin, "login", "log in Docker to the container registry", Writer)
 
-	cmdRunKubernetesManifest := CmdBuilder(cmd, RunKubernetesManifest, "kubernetes-manifest", "create a Kubernetes secret manifest to allow access to the registry", Writer, aliasOpt("k8s"))
+	cmdRunKubernetesManifest := CmdBuilder(cmd, RunKubernetesManifest, "kubernetes-manifest", "create a Kubernetes secret manifest to allow read/pull access to the registry", Writer, aliasOpt("k8s"))
 	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectName, "", "", "the secret name to create. defaults to the registry name prefixed with \"registry-\"")
 	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectNamespace, "", "default", "the namespace to hold the secret")
 
@@ -114,15 +114,20 @@ type DockerConfigProvider interface {
 	ConfigPath() string
 }
 
+// store execCommand in a variable. Lets us override it while testing
+var execCommand = exec.Command
+
 // RunRegistryLogin logs in Docker to the registry
 func RunRegistryLogin(c *CmdConfig) error {
-	conf, err := c.Registry().DockerCredentials()
+	creds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+		ReadWrite: true,
+	})
 	if err != nil {
 		return err
 	}
 
 	dc := &dockerConfig{}
-	err = json.Unmarshal(conf, dc)
+	err = json.Unmarshal(creds.DockerConfigJSON, dc)
 	if err != nil {
 		return err
 	}
@@ -147,7 +152,7 @@ func RunRegistryLogin(c *CmdConfig) error {
 			"-u", user,
 			"--password-stdin",
 		}
-		cmd := exec.Command("docker", args...)
+		cmd := execCommand("docker", args...)
 		cmd.Stdin = strings.NewReader(pass)
 		cmd.Stdout = c.Out
 		cmd.Stderr = c.Out
@@ -158,12 +163,12 @@ func RunRegistryLogin(c *CmdConfig) error {
 		}
 	}
 
-	fmt.Println("logged in to the registry")
+	fmt.Println("logged docker in to the registry")
 
 	return nil
 }
 
-// RunKubernetesManifest prints a Kubernetes manifest that provides access to the registry
+// RunKubernetesManifest prints a Kubernetes manifest that provides read/pull access to the registry
 func RunKubernetesManifest(c *CmdConfig) error {
 	secretName, err := c.Doit.GetString(c.NS, doctl.ArgObjectName)
 	if err != nil {
@@ -184,7 +189,9 @@ func RunKubernetesManifest(c *CmdConfig) error {
 	}
 
 	// fetch docker config
-	dockerConfig, err := c.Registry().DockerCredentials()
+	dockerCreds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+		ReadWrite: false,
+	})
 	if err != nil {
 		return err
 	}
@@ -201,7 +208,7 @@ func RunKubernetesManifest(c *CmdConfig) error {
 		},
 		Type: k8sapiv1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{
-			".dockerconfigjson": dockerConfig,
+			".dockerconfigjson": dockerCreds.DockerConfigJSON,
 		},
 	}
 

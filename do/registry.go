@@ -29,7 +29,7 @@ type RegistryService interface {
 	Get() (*Registry, error)
 	Create(*godo.RegistryCreateRequest) (*Registry, error)
 	Delete() error
-	DockerCredentials() ([]byte, error)
+	DockerCredentials(*godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error)
 }
 
 type registryService struct {
@@ -70,8 +70,8 @@ func (rs *registryService) Delete() error {
 	return err
 }
 
-func (rs *registryService) DockerCredentials() ([]byte, error) {
-	dockerConfig, _, err := rs.client.Registry.DockerCredentials(rs.ctx)
+func (rs *registryService) DockerCredentials(request *godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error) {
+	dockerConfig, _, err := rs.client.Registry.DockerCredentials(rs.ctx, request)
 	if err != nil {
 		return nil, err
 	}
