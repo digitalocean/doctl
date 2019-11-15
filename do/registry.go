@@ -15,13 +15,21 @@ package do
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/digitalocean/godo"
 )
 
+const registryHostname = "registry.digitalocean.com"
+
 // Registry wraps a godo Project.
 type Registry struct {
 	*godo.Registry
+}
+
+// Endpoint returns the registry endpoint for image tagging
+func (r *Registry) Endpoint() string {
+	return fmt.Sprintf("%s/%s", registryHostname, r.Registry.Name)
 }
 
 // RegistryService is the godo RegistryService interface.
@@ -30,6 +38,7 @@ type RegistryService interface {
 	Create(*godo.RegistryCreateRequest) (*Registry, error)
 	Delete() error
 	DockerCredentials(*godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error)
+	Endpoint() string
 }
 
 type registryService struct {
@@ -77,4 +86,8 @@ func (rs *registryService) DockerCredentials(request *godo.RegistryDockerCredent
 	}
 
 	return dockerConfig, nil
+}
+
+func (rs *registryService) Endpoint() string {
+	return registryHostname
 }

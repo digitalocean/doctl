@@ -32,12 +32,14 @@ func (r *Registry) JSON(out io.Writer) error {
 func (r *Registry) Cols() []string {
 	return []string{
 		"Name",
+		"Endpoint",
 	}
 }
 
 func (r *Registry) ColMap() map[string]string {
 	return map[string]string{
-		"Name": "Name",
+		"Name":     "Name",
+		"Endpoint": "Endpoint",
 	}
 }
 
@@ -46,7 +48,8 @@ func (r *Registry) KV() []map[string]interface{} {
 
 	for _, reg := range r.Registries {
 		m := map[string]interface{}{
-			"Name": reg.Name,
+			"Name":     reg.Name,
+			"Endpoint": reg.Endpoint(),
 		}
 
 		out = append(out, m)
