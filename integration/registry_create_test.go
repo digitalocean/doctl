@@ -84,7 +84,7 @@ const (
 	}
 }`
 	registryCreateOutput = `
-Name
-my-registry
+Name           Endpoint
+my-registry    registry.digitalocean.com/my-registry
 `
 )

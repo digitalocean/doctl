@@ -186,6 +186,7 @@ func TestRegistryLogin(t *testing.T) {
 	}
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registry.EXPECT().Endpoint().Return(do.RegistryHostname)
 		tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 			ReadWrite: true,
 		}).Return(testDockerCredentials, nil)
@@ -210,6 +211,8 @@ func TestRegistryLogout(t *testing.T) {
 	}
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registry.EXPECT().Endpoint().Return(do.RegistryHostname)
+
 		// fake execCommand
 		execCommand = fakeExecCommand("logout")
 		defer func() { execCommand = exec.Command }()
@@ -248,7 +251,7 @@ func TestHelperProcess(t *testing.T) {
 		assert.Equal(t, "password", gotPassword)
 
 	case "logout":
-		expected := []string{"docker", "logout", registryHostname}
+		expected := []string{"docker", "logout", do.RegistryHostname}
 		got := os.Args[5:]
 
 		assert.Equal(t, expected, got)

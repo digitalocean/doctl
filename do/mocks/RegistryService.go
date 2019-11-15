@@ -92,3 +92,17 @@ func (mr *MockRegistryServiceMockRecorder) DockerCredentials(arg0 interface{}) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DockerCredentials", reflect.TypeOf((*MockRegistryService)(nil).DockerCredentials), arg0)
 }
+
+// Endpoint mocks base method
+func (m *MockRegistryService) Endpoint() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Endpoint")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Endpoint indicates an expected call of Endpoint
+func (mr *MockRegistryServiceMockRecorder) Endpoint() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Endpoint", reflect.TypeOf((*MockRegistryService)(nil).Endpoint))
+}
