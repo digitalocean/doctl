@@ -36,8 +36,6 @@ type dockerConfig struct {
 	} `json:"auths"`
 }
 
-const registryHostname = "registry.digitalocean.com"
-
 // Registry creates the registry command
 func Registry() *Command {
 	cmd := &Command{
@@ -121,7 +119,7 @@ func RunRegistryLogin(c *CmdConfig) error {
 		return fmt.Errorf("unable to find the Docker CLI binary. Make sure docker is installed")
 	}
 
-	fmt.Printf("Logging Docker in to %s\n", registryHostname)
+	fmt.Printf("Logging Docker in to %s\n", c.Registry().Endpoint())
 
 	creds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 		ReadWrite: true,
@@ -233,7 +231,7 @@ func RunRegistryLogout(c *CmdConfig) error {
 		return fmt.Errorf("unable to find the Docker CLI binary. Make sure docker is installed")
 	}
 
-	cmd := execCommand("docker", "logout", registryHostname)
+	cmd := execCommand("docker", "logout", c.Registry().Endpoint())
 	cmd.Stdout = c.Out
 	cmd.Stderr = c.Out
 
