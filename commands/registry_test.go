@@ -142,7 +142,7 @@ func fakeExecCommand(testName string) func(string, ...string) *exec.Cmd {
 	}
 }
 
-// this command add a fake "docker" to PATH because the commands look
+// this function adds a fake "docker" to PATH because the commands look
 // for it but the tests fake the call through fakeExecCommand
 // so the cli binary isn't needed at all
 func createFakeDocker() (func(), error) {
@@ -193,8 +193,6 @@ func TestRegistryLogin(t *testing.T) {
 		// fake execCommand
 		execCommand = fakeExecCommand("login")
 		defer func() { execCommand = exec.Command }()
-
-		fmt.Printf("%v\n", os.Environ())
 
 		config.Out = os.Stderr
 		err := RunRegistryLogin(config)
