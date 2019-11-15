@@ -24,6 +24,19 @@ var _ = suite("registry/kubernetes-manifest", func(t *testing.T, when spec.G, it
 			w.Header().Add("content-type", "application/json")
 
 			switch req.URL.Path {
+			case "/v2/registry":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(registryGetResponse))
 			case "/v2/registry/docker-credentials":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
