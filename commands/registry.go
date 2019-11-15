@@ -54,7 +54,7 @@ func Registry() *Command {
 
 	CmdBuilder(cmd, RunRegistryGet, "get", "get the container registry", Writer, aliasOpt("g"), displayerType(&displayers.Registry{}))
 
-	cmdRunRegistryDelete := CmdBuilder(cmd, RunRegistryDelete, "delete", "delete the container registry", Writer, aliasOpt("del"))
+	cmdRunRegistryDelete := CmdBuilder(cmd, RunRegistryDelete, "delete", "delete the container registry", Writer, aliasOpt("d", "del", "rm"))
 	AddBoolFlag(cmdRunRegistryDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force registry delete")
 
 	CmdBuilder(cmd, RunRegistryLogin, "login", "log in Docker to the container registry", Writer)
@@ -122,6 +122,11 @@ var execCommand = exec.Command
 
 // RunRegistryLogin logs in Docker to the registry
 func RunRegistryLogin(c *CmdConfig) error {
+	// check if docker is installed
+	if _, err := exec.LookPath("docker"); err != nil {
+		return fmt.Errorf("unable to find the Docker CLI binary. Make sure docker is installed")
+	}
+
 	creds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 		ReadWrite: true,
 	})
@@ -129,8 +134,8 @@ func RunRegistryLogin(c *CmdConfig) error {
 		return err
 	}
 
-	dc := &dockerConfig{}
-	err = json.Unmarshal(creds.DockerConfigJSON, dc)
+	var dc dockerConfig
+	err = json.Unmarshal(creds.DockerConfigJSON, &dc)
 	if err != nil {
 		return err
 	}
@@ -229,6 +234,11 @@ func RunKubernetesManifest(c *CmdConfig) error {
 
 // RunRegistryLogout logs Docker out of the registry
 func RunRegistryLogout(c *CmdConfig) error {
+	// check if docker is installed
+	if _, err := exec.LookPath("docker"); err != nil {
+		return fmt.Errorf("unable to find the Docker CLI binary. Make sure docker is installed")
+	}
+
 	cmd := execCommand("docker", "logout", registryHostname)
 	cmd.Stdout = c.Out
 	cmd.Stderr = c.Out
