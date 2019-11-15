@@ -111,12 +111,6 @@ func RunRegistryDelete(c *CmdConfig) error {
 	return c.Registry().Delete()
 }
 
-// DockerConfigProvider allows a user to read from a remote and local Kubeconfig, and write to a
-// local Kubeconfig.
-type DockerConfigProvider interface {
-	ConfigPath() string
-}
-
 // store execCommand in a variable. Lets us override it while testing
 var execCommand = exec.Command
 
@@ -126,6 +120,8 @@ func RunRegistryLogin(c *CmdConfig) error {
 	if _, err := exec.LookPath("docker"); err != nil {
 		return fmt.Errorf("unable to find the Docker CLI binary. Make sure docker is installed")
 	}
+
+	fmt.Printf("Logging Docker in to %s\n", registryHostname)
 
 	creds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 		ReadWrite: true,
@@ -170,8 +166,6 @@ func RunRegistryLogin(c *CmdConfig) error {
 			return err
 		}
 	}
-
-	fmt.Println("logged docker in to the registry")
 
 	return nil
 }
