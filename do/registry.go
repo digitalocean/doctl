@@ -20,7 +20,8 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-const registryHostname = "registry.digitalocean.com"
+// RegistryHostname is the hostname for the DO registry
+const RegistryHostname = "registry.digitalocean.com"
 
 // Registry wraps a godo Project.
 type Registry struct {
@@ -29,7 +30,7 @@ type Registry struct {
 
 // Endpoint returns the registry endpoint for image tagging
 func (r *Registry) Endpoint() string {
-	return fmt.Sprintf("%s/%s", registryHostname, r.Registry.Name)
+	return fmt.Sprintf("%s/%s", RegistryHostname, r.Registry.Name)
 }
 
 // RegistryService is the godo RegistryService interface.
@@ -89,5 +90,5 @@ func (rs *registryService) DockerCredentials(request *godo.RegistryDockerCredent
 }
 
 func (rs *registryService) Endpoint() string {
-	return registryHostname
+	return RegistryHostname
 }
