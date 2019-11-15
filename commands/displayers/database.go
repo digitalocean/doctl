@@ -427,3 +427,38 @@ func (db *DatabaseDBs) KV() []map[string]interface{} {
 
 	return out
 }
+
+type DatabaseSQLModes struct {
+	DatabaseSQLModes []string
+}
+
+var _ Displayable = &DatabaseSQLModes{}
+
+func (dsm *DatabaseSQLModes) JSON(out io.Writer) error {
+	return writeJSON(dsm.DatabaseSQLModes, out)
+}
+
+func (dsm *DatabaseSQLModes) Cols() []string {
+	return []string{
+		"Name",
+	}
+}
+
+func (dsm *DatabaseSQLModes) ColMap() map[string]string {
+	return map[string]string{
+		"Name": "Name",
+	}
+}
+
+func (dsm *DatabaseSQLModes) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dsm.DatabaseSQLModes))
+
+	for _, p := range dsm.DatabaseSQLModes {
+		o := map[string]interface{}{
+			"Name": p,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}

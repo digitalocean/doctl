@@ -130,6 +130,21 @@ var (
 		testDBPool,
 	}
 
+	testSQLModes = []string{
+		godo.SQLModeAllowInvalidDates,
+		godo.SQLModeANSIQuotes,
+		godo.SQLModeHighNotPrecedence,
+		godo.SQLModeIgnoreSpace,
+		godo.SQLModeNoAuthCreateUser,
+		godo.SQLModeNoAutoValueOnZero,
+		godo.SQLModeNoBackslashEscapes,
+		godo.SQLModeNoDirInCreate,
+		godo.SQLModeNoEngineSubstitution,
+		godo.SQLModeNoFieldOptions,
+		godo.SQLModeNoKeyOptions,
+		godo.SQLModeNoTableOptions,
+	}
+
 	errTest = errors.New("error")
 )
 
@@ -150,6 +165,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"user",
 		"pool",
 		"db",
+		"sql-mode",
 	)
 }
 
@@ -856,5 +872,56 @@ func TestDatabasesReplicaDelete(t *testing.T) {
 
 		err := RunDatabaseReplicaDelete(config)
 		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseGetSQLModes(t *testing.T) {
+	// Successful
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(testSQLModes, nil)
+
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseGetSQLModes(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(nil, errTest)
+
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseGetSQLModes(config)
+		assert.Error(t, err)
+	})
+}
+
+func TestDatabaseSetSQLModes(t *testing.T) {
+	testSQLModesInterface := []interface{}{}
+	for _, sqlMode := range testSQLModes {
+		testSQLModesInterface = append(testSQLModesInterface, sqlMode)
+	}
+
+	// Successful
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().SetSQLMode(testDBCluster.ID, testSQLModesInterface...).Return(nil)
+
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Args = append(config.Args, testSQLModes...)
+
+		err := RunDatabaseSetSQLModes(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().SetSQLMode(testDBCluster.ID, testSQLModesInterface...).Return(errTest)
+
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Args = append(config.Args, testSQLModes...)
+
+		err := RunDatabaseSetSQLModes(config)
+		assert.Error(t, err)
 	})
 }
