@@ -23,7 +23,7 @@ type Registry struct {
 	Registries []do.Registry
 }
 
-var _ Displayable = &CDN{}
+var _ Displayable = &Registry{}
 
 func (r *Registry) JSON(out io.Writer) error {
 	return writeJSON(r.Registries, out)
@@ -37,7 +37,7 @@ func (r *Registry) Cols() []string {
 
 func (r *Registry) ColMap() map[string]string {
 	return map[string]string{
-		"Name":            "Name",
+		"Name": "Name",
 	}
 }
 
@@ -46,7 +46,7 @@ func (r *Registry) KV() []map[string]interface{} {
 
 	for _, reg := range r.Registries {
 		m := map[string]interface{}{
-			"Name":            reg.Name,
+			"Name": reg.Name,
 		}
 
 		out = append(out, m)

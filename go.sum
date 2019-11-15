@@ -38,6 +38,8 @@ github.com/digitalocean/godo v1.24.2-0.20191106222530-9ccfbd9c44ff h1:/tA+xwBHCw
 github.com/digitalocean/godo v1.24.2-0.20191106222530-9ccfbd9c44ff/go.mod h1:iJnN9rVu6K5LioLxLimlq0uRI+y/eAQjROUmeU/r0hY=
 github.com/digitalocean/godo v1.25.1-0.20191114163902-6c8415f2abff h1:YZIFwRIMMZKoCDHtv0qhXxl4lxKSfXHH7QMiecGYuBE=
 github.com/digitalocean/godo v1.25.1-0.20191114163902-6c8415f2abff/go.mod h1:iJnN9rVu6K5LioLxLimlq0uRI+y/eAQjROUmeU/r0hY=
+github.com/digitalocean/godo v1.26.0 h1:iCGLK0j9rfBOHPgl9XMJnR2f0F8tbB+1Tg/apc7NaQ0=
+github.com/digitalocean/godo v1.26.0/go.mod h1:iJnN9rVu6K5LioLxLimlq0uRI+y/eAQjROUmeU/r0hY=
 github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96/go.mod h1:Qh8CwZgvJUkLughtfhJv5dyTYa91l1fOUCrgjqmcifM=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
