@@ -277,9 +277,9 @@ Then refresh your profile.
 source ~/.profile
 ```
 
-### macOS
+### MacOS
 
-macOS users will have to install the `bash-completion` framework to use the auto-completion feature.
+MacOS users will have to install the `bash-completion` framework to use the auto-completion feature.
 
 ```
 brew install bash-completion
