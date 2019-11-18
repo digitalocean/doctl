@@ -923,9 +923,9 @@ func sqlMode() *Command {
 
 	CmdBuilder(cmd, RunDatabaseGetSQLModes, "get <database-id>",
 		"get sql modes", Writer,
-		displayerType(&displayers.DatabaseSQLModes{}))
+		displayerType(&displayers.DatabaseSQLModes{}), aliasOpt("g"))
 	CmdBuilder(cmd, RunDatabaseSetSQLModes, "set <database-id> <sql-mode-1> ... <sql-mode-n>",
-		"set sql modes", Writer)
+		"set sql modes", Writer, aliasOpt("s"))
 
 	return cmd
 }
