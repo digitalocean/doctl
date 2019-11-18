@@ -62,6 +62,12 @@ const (
 	SQLModeTraditional           = "TRADITIONAL"
 )
 
+// SQL Auth constants allow for MySQL-specific user auth plugins
+const (
+	SQLAuthPluginNative      = "mysql_native_password"
+	SQLAuthPluginCachingSHA2 = "caching_sha2_password"
+)
+
 // DatabasesService is an interface for interfacing with the databases endpoints
 // of the DigitalOcean API.
 // See: https://developers.digitalocean.com/documentation/v2#databases

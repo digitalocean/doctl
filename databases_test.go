@@ -1306,18 +1306,18 @@ func TestDatabases_CreateDatabaseUserWithMySQLSettings(t *testing.T) {
 
 	path := fmt.Sprintf("/v2/databases/%s/users", dbID)
 
-	responseJSON := []byte(`{
+	responseJSON := []byte(fmt.Sprintf(`{
 		"user": {
 			"name": "foo",
 			"mysql_settings": {
-				"auth_plugin": "native"
+				"auth_plugin": "%s"
 			}	
 		}
-	}`)
+	}`, SQLAuthPluginNative))
 	expectedUser := &DatabaseUser{
 		Name: "foo",
 		MySQLSettings: &DatabaseMySQLUserSettings{
-			AuthPlugin: "native",
+			AuthPlugin: SQLAuthPluginNative,
 		},
 	}
 
@@ -1343,21 +1343,21 @@ func TestDatabases_ListDatabaseUsersWithMySQLSettings(t *testing.T) {
 
 	path := fmt.Sprintf("/v2/databases/%s/users", dbID)
 
-	responseJSON := []byte(`{
+	responseJSON := []byte(fmt.Sprintf(`{
 		"users": [
 			{
 				"name": "foo",
 				"mysql_settings": {
-					"auth_plugin": "native"
+					"auth_plugin": "%s"
 				}
 			}
 		]
-	}`)
+	}`, SQLAuthPluginNative))
 	expectedUsers := []DatabaseUser{
 		{
 			Name: "foo",
 			MySQLSettings: &DatabaseMySQLUserSettings{
-				AuthPlugin: "native",
+				AuthPlugin: SQLAuthPluginNative,
 			},
 		},
 	}
@@ -1382,18 +1382,18 @@ func TestDatabases_GetDatabaseUserWithMySQLSettings(t *testing.T) {
 
 	path := fmt.Sprintf("/v2/databases/%s/users/%s", dbID, userID)
 
-	responseJSON := []byte(`{
+	responseJSON := []byte(fmt.Sprintf(`{
 		"user": {
 			"name": "foo",
 			"mysql_settings": {
-				"auth_plugin": "native"
+				"auth_plugin": "%s"
 			}
 		}
-	}`)
+	}`, SQLAuthPluginNative))
 	expectedUser := &DatabaseUser{
 		Name: "foo",
 		MySQLSettings: &DatabaseMySQLUserSettings{
-			AuthPlugin: "native",
+			AuthPlugin: SQLAuthPluginNative,
 		},
 	}
 
