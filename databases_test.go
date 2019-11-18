@@ -1297,3 +1297,113 @@ func TestDatabases_UpdateFirewallRules(t *testing.T) {
 	})
 	require.NoError(t, err)
 }
+
+func TestDatabases_CreateDatabaseUserWithMySQLSettings(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/users", dbID)
+
+	responseJSON := []byte(fmt.Sprintf(`{
+		"user": {
+			"name": "foo",
+			"mysql_settings": {
+				"auth_plugin": "%s"
+			}	
+		}
+	}`, SQLAuthPluginNative))
+	expectedUser := &DatabaseUser{
+		Name: "foo",
+		MySQLSettings: &DatabaseMySQLUserSettings{
+			AuthPlugin: SQLAuthPluginNative,
+		},
+	}
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodPost)
+		w.WriteHeader(http.StatusOK)
+		w.Write(responseJSON)
+	})
+
+	user, _, err := client.Databases.CreateUser(ctx, dbID, &DatabaseCreateUserRequest{
+		Name:          expectedUser.Name,
+		MySQLSettings: expectedUser.MySQLSettings,
+	})
+	require.NoError(t, err)
+	require.Equal(t, expectedUser, user)
+}
+
+func TestDatabases_ListDatabaseUsersWithMySQLSettings(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+
+	path := fmt.Sprintf("/v2/databases/%s/users", dbID)
+
+	responseJSON := []byte(fmt.Sprintf(`{
+		"users": [
+			{
+				"name": "foo",
+				"mysql_settings": {
+					"auth_plugin": "%s"
+				}
+			}
+		]
+	}`, SQLAuthPluginNative))
+	expectedUsers := []DatabaseUser{
+		{
+			Name: "foo",
+			MySQLSettings: &DatabaseMySQLUserSettings{
+				AuthPlugin: SQLAuthPluginNative,
+			},
+		},
+	}
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		w.WriteHeader(http.StatusOK)
+		w.Write(responseJSON)
+	})
+
+	users, _, err := client.Databases.ListUsers(ctx, dbID, &ListOptions{})
+	require.NoError(t, err)
+	require.Equal(t, expectedUsers, users)
+}
+
+func TestDatabases_GetDatabaseUserWithMySQLSettings(t *testing.T) {
+	setup()
+	defer teardown()
+
+	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
+	userID := "d290a0a0-27da-42bd-a4b2-bcecf43b8832"
+
+	path := fmt.Sprintf("/v2/databases/%s/users/%s", dbID, userID)
+
+	responseJSON := []byte(fmt.Sprintf(`{
+		"user": {
+			"name": "foo",
+			"mysql_settings": {
+				"auth_plugin": "%s"
+			}
+		}
+	}`, SQLAuthPluginNative))
+	expectedUser := &DatabaseUser{
+		Name: "foo",
+		MySQLSettings: &DatabaseMySQLUserSettings{
+			AuthPlugin: SQLAuthPluginNative,
+		},
+	}
+
+	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		w.WriteHeader(http.StatusOK)
+		w.Write(responseJSON)
+	})
+
+	user, _, err := client.Databases.GetUser(ctx, dbID, userID)
+	require.NoError(t, err)
+	require.Equal(t, expectedUser, user)
+}
