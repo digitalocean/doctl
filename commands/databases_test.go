@@ -876,7 +876,6 @@ func TestDatabasesReplicaDelete(t *testing.T) {
 }
 
 func TestDatabaseGetSQLModes(t *testing.T) {
-	// Successful
 	t.Run("Success", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(testSQLModes, nil)
@@ -888,7 +887,6 @@ func TestDatabaseGetSQLModes(t *testing.T) {
 		})
 	})
 
-	// Error
 	t.Run("Error", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(nil, errTest)
@@ -907,25 +905,27 @@ func TestDatabaseSetSQLModes(t *testing.T) {
 		testSQLModesInterface = append(testSQLModesInterface, sqlMode)
 	}
 
-	// Successful
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().SetSQLMode(testDBCluster.ID, testSQLModesInterface...).Return(nil)
+	t.Run("Success", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.databases.EXPECT().SetSQLMode(testDBCluster.ID, testSQLModesInterface...).Return(nil)
 
-		config.Args = append(config.Args, testDBCluster.ID)
-		config.Args = append(config.Args, testSQLModes...)
+			config.Args = append(config.Args, testDBCluster.ID)
+			config.Args = append(config.Args, testSQLModes...)
 
-		err := RunDatabaseSetSQLModes(config)
-		assert.NoError(t, err)
+			err := RunDatabaseSetSQLModes(config)
+			assert.NoError(t, err)
+		})
 	})
 
-	// Error
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().SetSQLMode(testDBCluster.ID, testSQLModesInterface...).Return(errTest)
+	t.Run("Error", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.databases.EXPECT().SetSQLMode(testDBCluster.ID, testSQLModesInterface...).Return(errTest)
 
-		config.Args = append(config.Args, testDBCluster.ID)
-		config.Args = append(config.Args, testSQLModes...)
+			config.Args = append(config.Args, testDBCluster.ID)
+			config.Args = append(config.Args, testSQLModes...)
 
-		err := RunDatabaseSetSQLModes(config)
-		assert.Error(t, err)
+			err := RunDatabaseSetSQLModes(config)
+			assert.Error(t, err)
+		})
 	})
 }
