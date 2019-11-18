@@ -877,23 +877,27 @@ func TestDatabasesReplicaDelete(t *testing.T) {
 
 func TestDatabaseGetSQLModes(t *testing.T) {
 	// Successful
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(testSQLModes, nil)
+	t.Run("Success", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(testSQLModes, nil)
 
-		config.Args = append(config.Args, testDBCluster.ID)
+			config.Args = append(config.Args, testDBCluster.ID)
 
-		err := RunDatabaseGetSQLModes(config)
-		assert.NoError(t, err)
+			err := RunDatabaseGetSQLModes(config)
+			assert.NoError(t, err)
+		})
 	})
 
 	// Error
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(nil, errTest)
+	t.Run("Error", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(nil, errTest)
 
-		config.Args = append(config.Args, testDBCluster.ID)
+			config.Args = append(config.Args, testDBCluster.ID)
 
-		err := RunDatabaseGetSQLModes(config)
-		assert.Error(t, err)
+			err := RunDatabaseGetSQLModes(config)
+			assert.Error(t, err)
+		})
 	})
 }
 
