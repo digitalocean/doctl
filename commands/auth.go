@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
 	"syscall"
@@ -28,7 +29,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 // ErrUnknownTerminal signifies an unknown terminal. It is returned when doit
@@ -77,6 +78,7 @@ func Auth() *Command {
 
 	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "initialize configuration", Writer, false)
 	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "writes the auth context permanently to config", Writer, false)
+	cmdBuilderWithInit(cmd, RunAuthRun, "run", "run a command with the current access token in environment", Writer, false)
 	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "lists available auth contexts", Writer, false, aliasOpt("ls"))
 	// The command runner expects that any command named "list" accepts a
 	// format flag, so we include here despite only supporting text output for
@@ -173,6 +175,25 @@ func RunAuthSwitch(c *CmdConfig) error {
 
 	fmt.Printf("Now using context [%s] by default\n", context)
 	return writeConfig()
+}
+
+// RunAuthExec spawns a command with the current access token added to the environment.
+// Useful for running terraform using the current context's access token.
+func RunAuthRun(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return errors.New("must specify a command to run")
+	}
+
+	cmd := exec.Command(c.Args[0], c.Args[1:]...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	newEnvironment := os.Environ()
+	newEnvironment = append(newEnvironment, fmt.Sprintf("DIGITALOCEAN_TOKEN=%s", c.getContextAccessToken()))
+	cmd.Env = newEnvironment
+
+	return cmd.Run()
 }
 
 func writeConfig() error {

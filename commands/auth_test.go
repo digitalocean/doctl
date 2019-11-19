@@ -17,6 +17,8 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"testing"
 
 	"errors"
@@ -30,7 +32,7 @@ import (
 func TestAuthCommand(t *testing.T) {
 	cmd := Auth()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "init", "list", "switch")
+	assertCommandNames(t, cmd, "init", "list", "run", "switch")
 }
 
 func TestAuthInit(t *testing.T) {
@@ -84,6 +86,26 @@ func TestAuthList(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestAuthRun(t *testing.T) {
+	if _, err := os.Stat("/bin/sh"); err != nil {
+		t.Skip("only runs if /bin/sh present")
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = []string{"/bin/sh", "-c", "exit 0"}
+		err := RunAuthRun(config)
+		assert.NoError(t, err)
+
+		config.Args = []string{"/bin/sh", "-c", "exit 3"}
+		err = RunAuthRun(config)
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			assert.Equal(t, 3, exitErr.ExitCode())
+		} else {
+			assert.Fail(t, "expected RunAuthRun to return exec.ExitError")
+		}
+	})
+}
+
 func Test_displayAuthContexts(t *testing.T) {
 	testCases := []struct {
 		Name     string
@@ -107,7 +129,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: doctl.ArgDefaultContext,
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default (current)\ntest\n",
 		},
@@ -117,7 +139,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: "test",
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default\ntest (current)\n",
 		},
@@ -127,7 +149,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: "missing",
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default\ntest\n",
 		},
