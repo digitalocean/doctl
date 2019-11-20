@@ -408,8 +408,11 @@ func databaseUser() *Command {
 	CmdBuilder(cmd, RunDatabaseUserGet, "get <database-id> <user-id>",
 		"get a database user", Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseUsers{}))
-	CmdBuilder(cmd, RunDatabaseUserCreate, "create <database-id> <user-name>",
-		"create a database user", Writer, aliasOpt("c"))
+
+	cmdDatabaseUserCreate := CmdBuilder(cmd, RunDatabaseUserCreate,
+		"create <database-id> <user-name>", "create a database user", Writer, aliasOpt("c"))
+	AddStringFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserAuthMode, "", "",
+		"set auth mode for MySQL users")
 
 	cmdDatabaseUserDelete := CmdBuilder(cmd, RunDatabaseUserDelete,
 		"delete <database-id> <user-id>", "delete database cluster",
@@ -460,8 +463,23 @@ func RunDatabaseUserCreate(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
-	databaseID := c.Args[0]
-	req := &godo.DatabaseCreateUserRequest{Name: c.Args[1]}
+	var (
+		databaseID = c.Args[0]
+		userName   = c.Args[1]
+	)
+
+	req := &godo.DatabaseCreateUserRequest{Name: userName}
+
+	authMode, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseUserAuthMode)
+	if err != nil {
+		return err
+	}
+
+	if authMode != "" {
+		req.MySQLSettings = &godo.DatabaseMySQLUserSettings{
+			AuthPlugin: authMode,
+		}
+	}
 
 	user, err := c.Databases().CreateUser(databaseID, req)
 	if err != nil {

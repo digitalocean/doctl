@@ -161,14 +161,16 @@ func (du *DatabaseUsers) Cols() []string {
 		"Name",
 		"Role",
 		"Password",
+		"MySQL Auth Mode",
 	}
 }
 
 func (du *DatabaseUsers) ColMap() map[string]string {
 	return map[string]string{
-		"Name":     "Name",
-		"Role":     "Role",
-		"Password": "Password",
+		"Name":            "Name",
+		"Role":            "Role",
+		"Password":        "Password",
+		"MySQL Auth Mode": "MySQL Auth Mode",
 	}
 }
 
@@ -176,10 +178,15 @@ func (du *DatabaseUsers) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(du.DatabaseUsers))
 
 	for _, u := range du.DatabaseUsers {
+		var authMode string
+		if u.MySQLSettings != nil && u.MySQLSettings.AuthPlugin != "" {
+			authMode = u.MySQLSettings.AuthPlugin
+		}
 		o := map[string]interface{}{
-			"Role":     u.Role,
-			"Name":     u.Name,
-			"Password": u.Password,
+			"Role":            u.Role,
+			"Name":            u.Name,
+			"Password":        u.Password,
+			"MySQL Auth Mode": authMode,
 		}
 		out = append(out, o)
 	}

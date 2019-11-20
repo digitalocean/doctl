@@ -86,6 +86,25 @@ var _ = suite("database/user/create", func(t *testing.T, when spec.G, it spec.S)
 			expect.Equal(strings.TrimSpace(databaseUserCreateOutput), strings.TrimSpace(string(output)))
 		})
 	})
+
+	when("the auth mode flag is present", func() {
+		it("creates the database user", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"database",
+				"user",
+				"create",
+				"some-database-id",
+				"some-user-name",
+				"--auth-mode", "mysql_native_password",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(databaseUserCreateOutput), strings.TrimSpace(string(output)))
+		})
+	})
 })
 
 const (
