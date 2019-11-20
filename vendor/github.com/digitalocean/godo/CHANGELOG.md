@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.27.0] - 2019-11-18
+
+- #278 add mysql user auth settings for database users - @gregmankes
+
 ## [v1.26.0] - 2019-11-13
 
 - #272 dbaas: get and set mysql sql mode - @mikejholly

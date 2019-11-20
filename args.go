@@ -266,6 +266,8 @@ const (
 	ArgDatabasePoolSize = "size"
 	// ArgDatabasePoolMode is the flag for connection pool mode
 	ArgDatabasePoolMode = "mode"
+	// ArgDatabaseUserAuthMode is a flag for setting the MySQL user auth mode
+	ArgDatabaseUserAuthMode = "auth-mode"
 
 	// ArgPrivateNetworkUUID is the flag for VPC UUID
 	ArgPrivateNetworkUUID = "private-network-uuid"

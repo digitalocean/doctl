@@ -533,6 +533,24 @@ func TestDatabaseUserCreate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Successful call with auth mode set
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.DatabaseCreateUserRequest{
+			Name: testDBUser.Name,
+			MySQLSettings: &godo.DatabaseMySQLUserSettings{
+				AuthPlugin: "mysql_native_password",
+			},
+		}
+
+		tm.databases.EXPECT().CreateUser(testDBCluster.ID, r).Return(&testDBUser, nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseUserAuthMode, "mysql_native_password")
+
+		err := RunDatabaseUserCreate(config)
+		assert.NoError(t, err)
+	})
+
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().CreateUser(

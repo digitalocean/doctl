@@ -62,6 +62,12 @@ const (
 	SQLModeTraditional           = "TRADITIONAL"
 )
 
+// SQL Auth constants allow for MySQL-specific user auth plugins
+const (
+	SQLAuthPluginNative      = "mysql_native_password"
+	SQLAuthPluginCachingSHA2 = "caching_sha2_password"
+)
+
 // DatabasesService is an interface for interfacing with the databases endpoints
 // of the DigitalOcean API.
 // See: https://developers.digitalocean.com/documentation/v2#databases
@@ -143,9 +149,15 @@ type DatabaseConnection struct {
 
 // DatabaseUser represents a user in the database
 type DatabaseUser struct {
-	Name     string `json:"name,omitempty"`
-	Role     string `json:"role,omitempty"`
-	Password string `json:"password,omitempty"`
+	Name          string                     `json:"name,omitempty"`
+	Role          string                     `json:"role,omitempty"`
+	Password      string                     `json:"password,omitempty"`
+	MySQLSettings *DatabaseMySQLUserSettings `json:"mysql_settings,omitempty"`
+}
+
+// DatabaseMySQLUserSettings contains MySQL-specific user settings
+type DatabaseMySQLUserSettings struct {
+	AuthPlugin string `json:"auth_plugin"`
 }
 
 // DatabaseMaintenanceWindow represents the maintenance_window of a database
@@ -235,7 +247,8 @@ type DatabaseCreatePoolRequest struct {
 
 // DatabaseCreateUserRequest is used to create a new database user
 type DatabaseCreateUserRequest struct {
-	Name string `json:"name"`
+	Name          string                     `json:"name"`
+	MySQLSettings *DatabaseMySQLUserSettings `json:"mysql_settings,omitempty"`
 }
 
 // DatabaseCreateDBRequest is used to create a new engine-specific database within the cluster
