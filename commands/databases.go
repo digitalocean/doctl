@@ -411,7 +411,7 @@ func databaseUser() *Command {
 
 	cmdDatabaseUserCreate := CmdBuilder(cmd, RunDatabaseUserCreate,
 		"create <database-id> <user-name>", "create a database user", Writer, aliasOpt("c"))
-	AddStringFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserAuthMode, "", "",
+	AddStringFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserMySQLAuthPlugin, "", "",
 		"set auth mode for MySQL users")
 
 	cmdDatabaseUserDelete := CmdBuilder(cmd, RunDatabaseUserDelete,
@@ -470,7 +470,7 @@ func RunDatabaseUserCreate(c *CmdConfig) error {
 
 	req := &godo.DatabaseCreateUserRequest{Name: userName}
 
-	authMode, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseUserAuthMode)
+	authMode, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseUserMySQLAuthPlugin)
 	if err != nil {
 		return err
 	}

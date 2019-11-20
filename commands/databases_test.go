@@ -545,7 +545,7 @@ func TestDatabaseUserCreate(t *testing.T) {
 		tm.databases.EXPECT().CreateUser(testDBCluster.ID, r).Return(&testDBUser, nil)
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
-		config.Doit.Set(config.NS, doctl.ArgDatabaseUserAuthMode, "mysql_native_password")
+		config.Doit.Set(config.NS, doctl.ArgDatabaseUserMySQLAuthPlugin, "mysql_native_password")
 
 		err := RunDatabaseUserCreate(config)
 		assert.NoError(t, err)
