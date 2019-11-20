@@ -97,7 +97,7 @@ var _ = suite("database/user/create", func(t *testing.T, when spec.G, it spec.S)
 				"create",
 				"some-database-id",
 				"some-user-name",
-				"--auth-mode", "mysql_native_password",
+				"--mysql-auth-plugin", "mysql_native_password",
 			)
 
 			output, err := cmd.CombinedOutput()
