@@ -42,7 +42,7 @@ const (
 	// LoadBalancerResourceType holds the string representing our ResourceType of LoadBalancer.
 	LoadBalancerResourceType ResourceType = "load_balancer"
 	// VolumeSnapshotResourceType holds the string representing our ResourceType for storage Snapshots.
-	VolumeSnapshotResourceType ResourceType = "volumesnapshot"
+	VolumeSnapshotResourceType ResourceType = "volume_snapshot"
 )
 
 // Resource represent a single resource for associating/disassociating with tags
