@@ -49,8 +49,8 @@ Use "doctl [command] --help" for more information about a command.
         - [Logging in to multiple DigitalOcean accounts](#logging-in-to-multiple-digitalocean-accounts)
     - [Configuring Default Values](#configuring-default-values)
     - [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
-        - [Linux](#linux)
-        - [macOS](#macos)
+        - [Linux](#linux-auto-completion)
+        - [macOS](#macos-auto-completion)
     - [Examples](#examples)
     - [Tutorials](#tutorials)
     - [doctl Releases](https://github.com/digitalocean/doctl/releases)
@@ -263,7 +263,7 @@ How you enable auto-completion depends on which operating system you're using. I
 
 `doctl` can generate an auto-completion script with the `doctl completion your_shell_here` command. Valid arguments for the shell are Bash (`bash`) and ZSH (`zsh`). By default, the script will be printed to the command line output.  For more usage examples for the `completion` command, use `doctl completion --help`.
 
-### Linux
+### Linux Auto Completion
 
 The most common way to use the `completion` command is by adding a line to your local profile configuration. At the end of your `~/.profile` file, add this line:
 
@@ -277,9 +277,9 @@ Then refresh your profile.
 source ~/.profile
 ```
 
-### macOS
+### MacOS
 
-macOS users will have to install the `bash-completion` framework to use the auto-completion feature.
+MacOS users will have to install the `bash-completion` framework to use the auto-completion feature.
 
 ```
 brew install bash-completion
