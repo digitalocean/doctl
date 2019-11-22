@@ -85,6 +85,7 @@ type. Use 'pg' for PostgreSQL, 'mysql' for MySQL, or 'redis' for Redis.
 	cmd.AddCommand(databaseUser())
 	cmd.AddCommand(databaseDB())
 	cmd.AddCommand(databasePool())
+	cmd.AddCommand(sqlMode())
 
 	return cmd
 }
@@ -908,4 +909,55 @@ func RunDatabaseReplicaConnectionGet(c *CmdConfig) error {
 func displayDatabaseReplicaConnection(c *CmdConfig, conn do.DatabaseConnection) error {
 	item := &displayers.DatabaseConnection{DatabaseConnection: conn}
 	return c.Display(item)
+}
+
+func sqlMode() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "sql-mode",
+			Aliases: []string{"sm"},
+			Short:   "database sql-mode commands",
+			Long:    "sql-mode is used to access database sql-mode commands",
+		},
+	}
+
+	CmdBuilder(cmd, RunDatabaseGetSQLModes, "get <database-id>",
+		"get sql modes", Writer,
+		displayerType(&displayers.DatabaseSQLModes{}), aliasOpt("g"))
+	CmdBuilder(cmd, RunDatabaseSetSQLModes, "set <database-id> <sql-mode-1> ... <sql-mode-n>",
+		"set sql modes", Writer, aliasOpt("s"))
+
+	return cmd
+}
+
+// RunDatabaseGetSQLModes gets the sql modes set on the database
+func RunDatabaseGetSQLModes(c *CmdConfig) error {
+	if len(c.Args) != 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	sqlModes, err := c.Databases().GetSQLMode(databaseID)
+	if err != nil {
+		return err
+	}
+	return displaySQLModes(c, sqlModes)
+}
+
+func displaySQLModes(c *CmdConfig, sqlModes []string) error {
+	return c.Display(&displayers.DatabaseSQLModes{
+		DatabaseSQLModes: sqlModes,
+	})
+}
+
+// RunDatabaseSetSQLModes sets the sql modes on the database
+func RunDatabaseSetSQLModes(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	sqlModes := c.Args[1:]
+
+	return c.Databases().SetSQLMode(databaseID, sqlModes...)
 }

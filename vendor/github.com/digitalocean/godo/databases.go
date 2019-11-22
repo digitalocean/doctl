@@ -4,25 +4,62 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
 const (
-	databaseBasePath        = "/v2/databases"
-	databaseSinglePath      = databaseBasePath + "/%s"
-	databaseResizePath      = databaseBasePath + "/%s/resize"
-	databaseMigratePath     = databaseBasePath + "/%s/migrate"
-	databaseMaintenancePath = databaseBasePath + "/%s/maintenance"
-	databaseBackupsPath     = databaseBasePath + "/%s/backups"
-	databaseUsersPath       = databaseBasePath + "/%s/users"
-	databaseUserPath        = databaseBasePath + "/%s/users/%s"
-	databaseDBPath          = databaseBasePath + "/%s/dbs/%s"
-	databaseDBsPath         = databaseBasePath + "/%s/dbs"
-	databasePoolPath        = databaseBasePath + "/%s/pools/%s"
-	databasePoolsPath       = databaseBasePath + "/%s/pools"
-	databaseReplicaPath     = databaseBasePath + "/%s/replicas/%s"
-	databaseReplicasPath    = databaseBasePath + "/%s/replicas"
-	evictionPolicyPath      = databaseBasePath + "/%s/eviction_policy"
+	databaseBasePath           = "/v2/databases"
+	databaseSinglePath         = databaseBasePath + "/%s"
+	databaseResizePath         = databaseBasePath + "/%s/resize"
+	databaseMigratePath        = databaseBasePath + "/%s/migrate"
+	databaseMaintenancePath    = databaseBasePath + "/%s/maintenance"
+	databaseBackupsPath        = databaseBasePath + "/%s/backups"
+	databaseUsersPath          = databaseBasePath + "/%s/users"
+	databaseUserPath           = databaseBasePath + "/%s/users/%s"
+	databaseDBPath             = databaseBasePath + "/%s/dbs/%s"
+	databaseDBsPath            = databaseBasePath + "/%s/dbs"
+	databasePoolPath           = databaseBasePath + "/%s/pools/%s"
+	databasePoolsPath          = databaseBasePath + "/%s/pools"
+	databaseReplicaPath        = databaseBasePath + "/%s/replicas/%s"
+	databaseReplicasPath       = databaseBasePath + "/%s/replicas"
+	databaseEvictionPolicyPath = databaseBasePath + "/%s/eviction_policy"
+	databaseSQLModePath        = databaseBasePath + "/%s/sql_mode"
+	databaseFirewallRulesPath  = databaseBasePath + "/%s/firewall"
+)
+
+// SQL Mode constants allow for MySQL-specific SQL flavor configuration.
+const (
+	SQLModeAllowInvalidDates     = "ALLOW_INVALID_DATES"
+	SQLModeANSIQuotes            = "ANSI_QUOTES"
+	SQLModeHighNotPrecedence     = "HIGH_NOT_PRECEDENCE"
+	SQLModeIgnoreSpace           = "IGNORE_SPACE"
+	SQLModeNoAuthCreateUser      = "NO_AUTO_CREATE_USER"
+	SQLModeNoAutoValueOnZero     = "NO_AUTO_VALUE_ON_ZERO"
+	SQLModeNoBackslashEscapes    = "NO_BACKSLASH_ESCAPES"
+	SQLModeNoDirInCreate         = "NO_DIR_IN_CREATE"
+	SQLModeNoEngineSubstitution  = "NO_ENGINE_SUBSTITUTION"
+	SQLModeNoFieldOptions        = "NO_FIELD_OPTIONS"
+	SQLModeNoKeyOptions          = "NO_KEY_OPTIONS"
+	SQLModeNoTableOptions        = "NO_TABLE_OPTIONS"
+	SQLModeNoUnsignedSubtraction = "NO_UNSIGNED_SUBTRACTION"
+	SQLModeNoZeroDate            = "NO_ZERO_DATE"
+	SQLModeNoZeroInDate          = "NO_ZERO_IN_DATE"
+	SQLModeOnlyFullGroupBy       = "ONLY_FULL_GROUP_BY"
+	SQLModePadCharToFullLength   = "PAD_CHAR_TO_FULL_LENGTH"
+	SQLModePipesAsConcat         = "PIPES_AS_CONCAT"
+	SQLModeRealAsFloat           = "REAL_AS_FLOAT"
+	SQLModeStrictAllTables       = "STRICT_ALL_TABLES"
+	SQLModeStrictTransTables     = "STRICT_TRANS_TABLES"
+	SQLModeANSI                  = "ANSI"
+	SQLModeDB2                   = "DB2"
+	SQLModeMaxDB                 = "MAXDB"
+	SQLModeMSSQL                 = "MSSQL"
+	SQLModeMYSQL323              = "MYSQL323"
+	SQLModeMYSQL40               = "MYSQL40"
+	SQLModeOracle                = "ORACLE"
+	SQLModePostgreSQL            = "POSTGRESQL"
+	SQLModeTraditional           = "TRADITIONAL"
 )
 
 // DatabasesService is an interface for interfacing with the databases endpoints
@@ -55,6 +92,10 @@ type DatabasesService interface {
 	DeleteReplica(context.Context, string, string) (*Response, error)
 	GetEvictionPolicy(context.Context, string) (string, *Response, error)
 	SetEvictionPolicy(context.Context, string, string) (*Response, error)
+	GetSQLMode(context.Context, string) (string, *Response, error)
+	SetSQLMode(context.Context, string, ...string) (*Response, error)
+	GetFirewallRules(context.Context, string) ([]DatabaseFirewallRule, *Response, error)
+	UpdateFirewallRules(context.Context, string, *DatabaseUpdateFirewallRulesRequest) (*Response, error)
 }
 
 // DatabasesServiceOp handles communication with the Databases related methods
@@ -211,6 +252,20 @@ type DatabaseCreateReplicaRequest struct {
 	Tags               []string `json:"tags,omitempty"`
 }
 
+// DatabaseUpdateFirewallRulesRequest is used to set the firewall rules for a database
+type DatabaseUpdateFirewallRulesRequest struct {
+	Rules []*DatabaseFirewallRule `json:"rules"`
+}
+
+// DatabaseFirewallRule is a rule describing an inbound source to a database
+type DatabaseFirewallRule struct {
+	UUID        string    `json:"uuid"`
+	ClusterUUID string    `json:"cluster_uuid"`
+	Type        string    `json:"type"`
+	Value       string    `json:"value"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
 type databaseUserRoot struct {
 	User *DatabaseUser `json:"user"`
 }
@@ -259,6 +314,15 @@ type evictionPolicyRoot struct {
 	EvictionPolicy string `json:"eviction_policy"`
 }
 
+type sqlModeRoot struct {
+	SQLMode string `json:"sql_mode"`
+}
+
+type databaseFirewallRuleRoot struct {
+	Rules []DatabaseFirewallRule `json:"rules"`
+}
+
+// URN returns a URN identifier for the database
 func (d Database) URN() string {
 	return ToURN("dbaas", d.ID)
 }
@@ -642,7 +706,7 @@ func (svc *DatabasesServiceOp) DeleteReplica(ctx context.Context, databaseID, na
 
 // GetEvictionPolicy loads the eviction policy for a given Redis cluster.
 func (svc *DatabasesServiceOp) GetEvictionPolicy(ctx context.Context, databaseID string) (string, *Response, error) {
-	path := fmt.Sprintf(evictionPolicyPath, databaseID)
+	path := fmt.Sprintf(databaseEvictionPolicyPath, databaseID)
 	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return "", nil, err
@@ -657,7 +721,7 @@ func (svc *DatabasesServiceOp) GetEvictionPolicy(ctx context.Context, databaseID
 
 // SetEvictionPolicy updates the eviction policy for a given Redis cluster.
 func (svc *DatabasesServiceOp) SetEvictionPolicy(ctx context.Context, databaseID, policy string) (*Response, error) {
-	path := fmt.Sprintf(evictionPolicyPath, databaseID)
+	path := fmt.Sprintf(databaseEvictionPolicyPath, databaseID)
 	root := &evictionPolicyRoot{EvictionPolicy: policy}
 	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, root)
 	if err != nil {
@@ -668,4 +732,61 @@ func (svc *DatabasesServiceOp) SetEvictionPolicy(ctx context.Context, databaseID
 		return resp, err
 	}
 	return resp, nil
+}
+
+// GetSQLMode loads the SQL Mode settings for a given MySQL cluster.
+func (svc *DatabasesServiceOp) GetSQLMode(ctx context.Context, databaseID string) (string, *Response, error) {
+	path := fmt.Sprintf(databaseSQLModePath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return "", nil, err
+	}
+	root := &sqlModeRoot{}
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return "", resp, err
+	}
+	return root.SQLMode, resp, nil
+}
+
+// SetSQLMode updates the SQL Mode settings for a given MySQL cluster.
+func (svc *DatabasesServiceOp) SetSQLMode(ctx context.Context, databaseID string, sqlModes ...string) (*Response, error) {
+	path := fmt.Sprintf(databaseSQLModePath, databaseID)
+	root := &sqlModeRoot{SQLMode: strings.Join(sqlModes, ",")}
+	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, root)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// GetFirewallRules loads the inbound sources for a given cluster.
+func (svc *DatabasesServiceOp) GetFirewallRules(ctx context.Context, databaseID string) ([]DatabaseFirewallRule, *Response, error) {
+	path := fmt.Sprintf(databaseFirewallRulesPath, databaseID)
+	root := new(databaseFirewallRuleRoot)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Rules, resp, nil
+}
+
+// UpdateFirewallRules sets the inbound sources for a given cluster.
+func (svc *DatabasesServiceOp) UpdateFirewallRules(ctx context.Context, databaseID string, firewallRulesReq *DatabaseUpdateFirewallRulesRequest) (*Response, error) {
+	path := fmt.Sprintf(databaseFirewallRulesPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, firewallRulesReq)
+	if err != nil {
+		return nil, err
+	}
+	return svc.client.Do(ctx, req, nil)
 }

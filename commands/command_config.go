@@ -58,6 +58,7 @@ type CmdConfig struct {
 	Projects          func() do.ProjectsService
 	Kubernetes        func() do.KubernetesService
 	Databases         func() do.DatabasesService
+	Registry          func() do.RegistryService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -99,6 +100,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Projects = func() do.ProjectsService { return do.NewProjectsService(godoClient) }
 			c.Kubernetes = func() do.KubernetesService { return do.NewKubernetesService(godoClient) }
 			c.Databases = func() do.DatabasesService { return do.NewDatabasesService(godoClient) }
+			c.Registry = func() do.RegistryService { return do.NewRegistryService(godoClient) }
 
 			return nil
 		},

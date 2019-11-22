@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+	"strings"
 
 	"github.com/digitalocean/godo"
 )
@@ -111,6 +112,9 @@ type DatabasesService interface {
 	CreateReplica(string, *godo.DatabaseCreateReplicaRequest) (*DatabaseReplica, error)
 	DeleteReplica(string, string) error
 	GetReplicaConnection(string, string) (*DatabaseConnection, error)
+
+	GetSQLMode(string) ([]string, error)
+	SetSQLMode(string, ...string) error
 }
 
 type databasesService struct {
@@ -463,4 +467,14 @@ func (ds *databasesService) GetReplicaConnection(databaseID, replicaID string) (
 	return &DatabaseConnection{
 		DatabaseConnection: rep.Connection,
 	}, nil
+}
+
+func (ds *databasesService) GetSQLMode(databaseID string) ([]string, error) {
+	sqlModes, _, err := ds.client.Databases.GetSQLMode(context.TODO(), databaseID)
+	return strings.Split(sqlModes, ","), err
+}
+
+func (ds *databasesService) SetSQLMode(databaseID string, sqlModes ...string) error {
+	_, err := ds.client.Databases.SetSQLMode(context.TODO(), databaseID, sqlModes...)
+	return err
 }
