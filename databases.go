@@ -71,7 +71,7 @@ const (
 // Redis eviction policies supported by the managed Redis product.
 const (
 	EvictionPolicyNoEviction     = "noeviction"
-	EvictionPolicyAllKeysLRU     = "allkeys_lr"
+	EvictionPolicyAllKeysLRU     = "allkeys_lru"
 	EvictionPolicyAllKeysRandom  = "allkeys_random"
 	EvictionPolicyVolatileLRU    = "volatile_lru"
 	EvictionPolicyVolatileRandom = "volatile_random"
