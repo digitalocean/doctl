@@ -23,7 +23,6 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,7 +70,7 @@ func TestDropletBackupList(t *testing.T) {
 
 func TestDropletCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		volumeUUID := uuid.New().String()
+		volumeUUID := "00000000-0000-4000-8000-000000000000"
 		dcr := &godo.DropletCreateRequest{
 			Name:    "droplet",
 			Region:  "dev0",

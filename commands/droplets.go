@@ -27,7 +27,6 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/gobwas/glob"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -415,7 +414,7 @@ func extractVolumes(volumeList []string) []godo.DropletCreateVolume {
 
 	for _, v := range volumeList {
 		var req godo.DropletCreateVolume
-		if _, err := uuid.Parse(v); err == nil {
+		if looksLikeUUID(v) {
 			req.ID = v
 		} else {
 			req.Name = v

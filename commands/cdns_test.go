@@ -20,12 +20,11 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	cdnID     = uuid.New().String()
+	cdnID     = "00000000-0000-4000-8000-000000000000"
 	cdnOrigin = "my-spaces.nyc3.digitaloceanspaces.com"
 
 	testCDN = do.CDN{
@@ -45,7 +44,7 @@ var (
 			Endpoint:      "my-spaces.nyc3.cdn.digitaloceanspaces.com",
 			TTL:           3600,
 			CustomDomain:  "assets.myacmecorp.com",
-			CertificateID: uuid.New().String(),
+			CertificateID: "00000000-0000-4000-8000-000000000000",
 			CreatedAt:     time.Now(),
 		},
 	}
@@ -67,7 +66,7 @@ var (
 			Endpoint:      "my-spaces.nyc3.cdn.digitaloceanspaces.com",
 			TTL:           3600,
 			CustomDomain:  "assets.myacmecorp.com",
-			CertificateID: uuid.New().String(),
+			CertificateID: "00000000-0000-4000-8000-000000000000",
 			CreatedAt:     time.Now(),
 		},
 	}
