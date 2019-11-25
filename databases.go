@@ -68,6 +68,16 @@ const (
 	SQLAuthPluginCachingSHA2 = "caching_sha2_password"
 )
 
+// Redis eviction policies supported by the managed Redis product.
+const (
+	EvictionPolicyNoEviction     = "noeviction"
+	EvictionPolicyAllKeysLRU     = "allkeys_lr"
+	EvictionPolicyAllKeysRandom  = "allkeys_random"
+	EvictionPolicyVolatileLRU    = "volatile_lru"
+	EvictionPolicyVolatileRandom = "volatile_random"
+	EvictionPolicyVolatileTTL    = "volatile_ttl"
+)
+
 // The DatabasesService provides access to the DigitalOcean managed database
 // suite of products through the public API. Customers can create new database
 // clusters, migrate them  between regions, create replicas and interact with
@@ -739,6 +749,9 @@ func (svc *DatabasesServiceOp) GetEvictionPolicy(ctx context.Context, databaseID
 }
 
 // SetEvictionPolicy updates the eviction policy for a given Redis cluster.
+//
+// The valid eviction policies are documented by the exported string constants
+// with the prefix `EvictionPolicy`.
 func (svc *DatabasesServiceOp) SetEvictionPolicy(ctx context.Context, databaseID, policy string) (*Response, error) {
 	path := fmt.Sprintf(databaseEvictionPolicyPath, databaseID)
 	root := &evictionPolicyRoot{EvictionPolicy: policy}
