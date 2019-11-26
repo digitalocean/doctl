@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -207,7 +208,7 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 }
 
 func userAgent() string {
-	return "doctl/" + DoitVersion.String()
+	return fmt.Sprintf("doctl/%s-%s/%s", runtime.GOOS, runtime.GOARCH, DoitVersion.String())
 }
 
 // SSH creates a ssh connection to a host.
