@@ -24,7 +24,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestUserAgent(t *testing.T) {
-	pattern := `doctl\/([0-9]+\.?){3}(-dev)? \(([0-9a-zA-Z ]\w+){2}\)`
+	pattern := `doctl\/([0-9]+\.?){3}(-dev)? \(([\w ]+){2}\)`
 	re := regexp.MustCompile(pattern)
 
 	t.Run("release version", func(t *testing.T) {
