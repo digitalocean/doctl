@@ -208,7 +208,7 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 }
 
 func userAgent() string {
-	return fmt.Sprintf("doctl/%s-%s/%s", runtime.GOOS, runtime.GOARCH, DoitVersion.String())
+	return fmt.Sprintf("doctl/%s (%s %s)", DoitVersion.String(), runtime.GOOS, runtime.GOARCH)
 }
 
 // SSH creates a ssh connection to a host.
