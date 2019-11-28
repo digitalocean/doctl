@@ -244,7 +244,7 @@ Format: `+ "`" +`name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2`+ "`" +
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
 		"Boolean that specifies whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: " + "`" + "day=HH:MM" + "`" + ", where time is in UTC. Day can be: " + "`" + "['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']" + "`")
+		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: " + "`" + "day=HH:MM" + "`" + ", where time is in UTC. Day can be: " + "`" + "any" + "`" + ", " + "`" + "monday" + "`" + ", " + "`" + "tuesday" + "`" + ", " + "`" + "wednesday" + "`" + ", " + "`" + "thursday" + "`" + ", " + "`" + "friday" + "`" + ", " + "`" + "saturday" + "`" + ", " + "`" + "sunday" + "`.")
 
 	cmdKubeClusterUpdate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
 		"Update a Kubernetes cluster's configuration", `
@@ -262,12 +262,12 @@ This command updates the specified configuration values for the specified Kubern
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
 		"Boolean specifying whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: " + "`" + "['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']" + "`")
+		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: " + "`" + "any" + "`" + ", " + "`" + "monday" + "`" + ", " + "`" + "tuesday" + "`" + ", " + "`" + "wednesday" + "`" + ", " + "`" + "thursday" + "`" + ", " + "`" + "friday" + "`" + ", " + "`" + "saturday" + "`" + ", " + "`" + "sunday" + "`.")
 
 	cmdKubeClusterUpgrade := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
 		"upgrade <id|name>", "Upgrades a cluster to a new Kubernetes version",`
 
-This command upgrades the specified Kubernetes cluster. By default, this will upgrade the cluster to the latest available release, but you can also specify any version listed for your cluster by ` + "`" + `doctl k8s get-upgrades` + "``" + `. `, Writer)
+This command upgrades the specified Kubernetes cluster. By default, this will upgrade the cluster to the latest available release, but you can also specify any version listed for your cluster by using `+ "`" + `doctl k8s get-upgrades` + "`" + `.`, Writer)
 	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest",
 		`The desired Kubernetes version. Possible values: see ` + "`" + `doctl k8s get-upgrades <cluster>` + "`" + `.
 The special value ` + "`" + `latest` + "`" + ` will select the most recent patch version for your cluster's minor version.
@@ -275,7 +275,7 @@ For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 
 
 	cmdKubeClusterDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterDelete,
 		"delete <id|name>", "Deletes a Kubernetes cluster", `
-This command deletes the specified Kubernetes cluster and the droplets associated with the cluster. This command does not delete other DigitalOcean resources created during the operation of the cluster, such as Load Balancers and Volumes.
+This command deletes the specified Kubernetes cluster and the Droplets associated with the cluster. This command does not delete other DigitalOcean resources created during the operation of the cluster, such as Load Balancers and Volumes.
 `,Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Boolean indicating whether to delete the cluster without a confirmation prompt")

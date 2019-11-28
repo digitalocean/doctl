@@ -43,7 +43,7 @@ func Databases() *Command {
 			Use:     "databases",
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
-			Long:    `The commands under `+ "`" +`doctl databases`+ "`" +` are for managing your MySQL, Redis, and PostgreSQL databases.`,
+			Long:    `The commands under `+ "`" +`doctl databases`+ "`" +` are for managing your MySQL, Redis, and PostgreSQL database services.`,
 		},
 	}
 
@@ -473,7 +473,7 @@ To retrieve a list of database users for a database, call `+ "`" +`doctl databas
 	CmdBuilderWithDocs(cmd, RunDatabaseUserCreate, "create <database-id> <user-name>",
 		"Creates a database user", `This command creates a user with the username you specify, who will be granted access to the database cluster you specify.
 
-The user will be created with the role set to 'normal', and given an automatically-generated password.
+The user will be created with the role set to `+ "`" +`normal`+ "`" +`, and given an automatically-generated password.
 
 To retrieve a list of your databases and their IDs, call `+ "`" +`doctl databases list`+ "`" +`.`, Writer, aliasOpt("c"))
 
@@ -765,13 +765,13 @@ You can get a list of existing databases that are hosted within a cluster by cal
 			Short: "Display commands for managing individual databases within a cluster",
 			Long: `The subcommands under `+ "`" +`doctl databases db`+ "`" +` are for managing specific databases that are served by a database cluster.
 
-	You can use these commands to create and delete databases within a cluster, or simply get information about them.` + getClusterList,
+You can use these commands to create and delete databases within a cluster, or simply get information about them.` + getClusterList,
 		},
 	}
 
 	CmdBuilderWithDocs(cmd, RunDatabaseDBList, "list <database-id>", "Retrieves list of databases within a cluster", "This command retrieves the names of all databases being hosted in the specified database cluster."+getClusterList, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DatabaseDBs{}))
-	CmdBuilderWithDocs(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "Retrieves the name of a database within a cluster", "This command retrieves name of the specified database hosted in the specified database cluster."+getClusterList+getDBList,
+	CmdBuilderWithDocs(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "Retrieves the name of a database within a cluster", "This command retrieves the name of the specified database hosted in the specified database cluster."+getClusterList+getDBList,
 		Writer, aliasOpt("g"), displayerType(&displayers.DatabaseDBs{}))
 	CmdBuilderWithDocs(cmd, RunDatabaseDBCreate, "create <database-id> <db-name>",
 		"Creates a database within a cluster", "This command creates a database with the specified name in the specified database cluster."+getClusterList, Writer, aliasOpt("c"))
@@ -869,12 +869,12 @@ func databaseReplica() *Command {
 			Short:   "Display commands to manage read-only database replicas",
 			Long: `The subcommands under `+ "`" +`doctl databases replica`+ "`" +` enable the management of read-only replicas associated with a database cluster.
 
-	In addition to primary nodes in a database cluster, you can create up to 2 read-only replica nodes (also referred to as "standby nodes") to maintain high availability.`,
+In addition to primary nodes in a database cluster, you can create up to 2 read-only replica nodes (also referred to as "standby nodes") to maintain high availability.`,
 		},
 	}
 	howToGetReplica := `
 
-This command requires that you pass in the replicas name, which you can retrieve by querying a database ID:
+This command requires that you pass in the replica's name, which you can retrieve by querying a database ID:
 
 	doctl databases replica list ca9f591d-5555-5555-a0ef-1c02d1d1e352`
 	replicaDetails := `
