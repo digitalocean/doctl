@@ -57,9 +57,9 @@ func DropletAction() *Command {
 			Use:     "droplet-action",
 			Aliases: []string{"da"},
 			Short:   "Droplet action commands",
-			Long: `Use the subcommands of 'doctl compute droplet-action' to perform actions on Droplets.
+			Long: `Use the subcommands of `+ "`" +`doctl compute droplet-action`+ "`" +` to perform actions on Droplets.
 
-Droplet actions are tasks that can be executed on a Droplet. These can be things like rebooting, resizing, snapshotting, etc.`,
+Droplet actions are tasks that can be executed on a Droplet, such as rebooting, resizing, or snapshotting a Droplet.`,
 		},
 	}
 
@@ -108,7 +108,7 @@ Droplet actions are tasks that can be executed on a Droplet. These can be things
 	AddBoolFlag(cmdDropletActionPasswordReset, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionEnableIPv6 := CmdBuilderWithDocs(cmd, RunDropletActionEnableIPv6,
-		"enable-ipv6 <droplet-id>", "Enable IPv6 on a Droplet", `Use this command to enable IPv6 networking on a Droplet.`, Writer,
+		"enable-ipv6 <droplet-id>", "Enable IPv6 on a Droplet", `Use this command to enable IPv6 networking on a Droplet. An IPv6 address will be automatically assigned to the Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionEnableIPv6, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 

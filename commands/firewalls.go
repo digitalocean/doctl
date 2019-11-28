@@ -32,26 +32,26 @@ func Firewall() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "firewall",
-			Short: "frovides commands to manage Cloud Firewalls",
-			Long: `The sub-commands of 'doctl compute firewall' manage DigitalOcean Cloud Firewalls.
+			Short: "Display commands to manage Cloud Firewalls",
+			Long: `The sub-commands of `+ "`" +`doctl compute firewall`+ "`" +` manage DigitalOcean Cloud Firewalls.
 
 Cloud Firewalls provide the ability to restrict network access to and from a Droplet allowing you to define which ports will accept inbound or outbound connections. With these commands you can list, create, or delete Cloud Firewalls as well as modify access rules.
 
-A Firewall's 'inbound_rules' and 'outbound_rules' attributes will have arrays of objects as their values. These objects will contain the standard attributes of their associated types which can be found below.
+A Firewall's `+ "`" +`inbound_rules`+ "`" +` and `+ "`" +`outbound_rules`+ "`" +` attributes will have arrays of objects as their values. These objects will contain the standard attributes of their associated types which can be found below.
 
-Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and sources for inbound traffic that will be allowed through the Firewall to the target Droplets. The 'ports' attribute may contain a single port, a range of ports (e.g. "8000-9000"), or "all" to allow traffic on all ports for the specified protocol. The 'sources' attribute will contain an object specifying a whitelist of sources from which traffic will be accepted.`,
+Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and sources for inbound traffic that will be allowed through the Firewall to the target Droplets. The `+ "`" +`ports`+ "`" +` attribute may contain a single port, a range of ports (e.g. `+ "`" +`8000-9000`+ "`" +`), or `+ "`" +`all`+ "`" +` to allow traffic on all ports for the specified protocol. The `+ "`" +`sources`+ "`" +` attribute will contain an object specifying a whitelist of sources from which traffic will be accepted.`,
 		},
 	}
 	fwDetail := `
 
 	- The firewall's ID
 	- The firewal's name
-	- The status of the firewall. This can be "waiting", "succeeded", or "failed".
+	- The status of the firewall. This can be `+ "`" +`waiting`+ "`" +`, `+ "`" +`succeeded`+ "`" +`, or `+ "`" +`failed`+ "`" +`.
 	- The firewall's creation date, in ISO8601 combined date and time format.
-	- Any pending changes to the firewall. These can be "droplet_id", "removing", and "status". 
+	- Any pending changes to the firewall. These can be `+ "`" +`droplet_id`+ "`" +`, `+ "`" +`removing`+ "`" +`, and `+ "`" +`status`+ "`" +`.
 	  When empty, all changes have been successfully applied.
-	- The inbound rules for the firewall. 
-	- The outbound rules for the firewall. 
+	- The inbound rules for the firewall.
+	- The outbound rules for the firewall.
 	- The IDs of Droplets assigned to the firewall.
 	- The tags assigned to the firewall.
 `

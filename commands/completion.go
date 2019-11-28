@@ -22,32 +22,43 @@ import (
 )
 
 const (
-	completionLong = `The 'doctl completion' commands help you configure your shell so
-doctl commands autocomplete when you press the TAB key in your terminal.
+	completionLong = "`" +`doctl completion`+ "`" +` helps you configure your terminal's shell so that doctl commands autocomplete when you press the TAB key.
 
-Before using completion features, you have to source completion code
-from your .profile or .bashrc/.zshrc file. This is done by calling:
+Supported shells:
 
-	source <(doctl completion SHELL)
+- bash
+- zsh`
+	bashLong = `
+Use `+ "`" +`doctl completion bash`+ "`" +` to configure your bash shell so that doctl commands autocomplete when you press the TAB key.
 
-Valid values for SHELL are "bash" or "zsh".
+To review the configuration, run `+ "`" +`doctl completion bash`+ "`" +`.
 
-Bash users can also save the completion code to a file and copy it to:
+To enable the configuration, add the following line to your .profile or .bashrc.
 
-	/etc/bash_completion.d/
+	source <(doctl completion bash)
 
-Notes:
+Note:
 
-- zsh completions requires zsh 5.2 or newer.
-- macOS users have to install bash-completion framework to utilize
-completion features. This can be done using homebrew:
+- macOS users must install the `+ "`" +`bash-completion`+ "`" +` framework to use completion features, which can be done with homebrew:
 
 		brew install bash-completion
 
-	Once installed, you must load bash_completion by adding following
-	line to your .profile or .bashrc/.zshrc:
+	Once installed, edit your .profile or .bashrc file and add the following line:
 
 		source $(brew --prefix)/etc/bash_completion
+`
+	zshLong = `
+Use `+ "`" +`doctl completion zsh`+ "`" +` to configure your zsh shell so that doctl commands autocomplete when you press the TAB key.
+
+To review the configuration, run `+ "`" +`doctl completion zsh`+ "`" +`.
+
+To enable the configuration, add the following line to your .profile or .bashrc.
+
+	source  <(doctl completion zsh)
+
+Note:
+
+- zsh completions requires zsh 5.2 or newer.
 `
 	doctlLicense = `# Copyright 2018 The Doctl Authors All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -59,9 +70,7 @@ completion features. This can be done using homebrew:
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-`
-)
+`)
 
 // Completion creates the completion command
 func Completion() *Command {
@@ -73,8 +82,8 @@ func Completion() *Command {
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "Generates completion code for bash", completionLong, Writer, false)
-	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "Generates completion code for zsh", completionLong, Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "Generates completion code for bash", bashLong, Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "Generates completion code for zsh", zshLong, Writer, false)
 
 	return cmd
 }

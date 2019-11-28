@@ -30,19 +30,19 @@ func Domain() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "domain",
-			Short: "domain commands",
-			Long:  `Use the subcommands of 'doctl compute domain' to manage domains you have purchased from a domain name registrar that you are managing through the DigitalOcean DNS interface.`,
+			Short: "Display commands for domain names and DNS records",
+			Long:  `Use the subcommands of `+ "`" +`doctl compute domain`+ "`" +` to manage domains you have purchased from a domain name registrar that you are managing through the DigitalOcean DNS interface.`,
 		},
 	}
 
 	cmdDomainCreate := CmdBuilderWithDocs(cmd, RunDomainCreate, "create <domain>", "Add a domain to your account", `Use this command to add a domain to your account.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Domain{}))
-	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "IP address, creates an initial A record when provided")
+	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "Creates an A record when an IPv4 address is provided")
 
-	CmdBuilderWithDocs(cmd, RunDomainList, "list", "List all domains on your account", `Use this command to retrive a list of domains added to your account.`, Writer,
+	CmdBuilderWithDocs(cmd, RunDomainList, "list", "List all domains on your account", `Use this command to retrieve a list of domains on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Domain{}))
 
-	CmdBuilderWithDocs(cmd, RunDomainGet, "get <domain>", "Retrive information about a domain", `Use this command to retrive a specific domain on your account.`, Writer,
+	CmdBuilderWithDocs(cmd, RunDomainGet, "get <domain>", "Retrive information about a domain", `Use this command to retrieve information about the specified domain on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Domain{}))
 
 	cmdRunDomainDelete := CmdBuilderWithDocs(cmd, RunDomainDelete, "delete <domain>", "Permanently delete a domain from your account", `Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))
@@ -51,43 +51,43 @@ func Domain() *Command {
 	cmdRecord := &Command{
 		Command: &cobra.Command{
 			Use:   "records",
-			Short: "manage domain DNS",
-			Long:  "Use the subcommands of 'doctl compute domain records' to manage the DNS records for your domains",
+			Short: "Manage DNS records",
+			Long:  `Use the subcommands of `+ "`" +`doctl compute domain records`+ "`" +` to manage the DNS records for your domains.`,
 		},
 	}
 	cmd.AddCommand(cmdRecord)
 
-	CmdBuilderWithDocs(cmdRecord, RunRecordList, "list <domain>", "List the DNS records for a domain", `Use this command to list the current DNS records for a domain.`, Writer,
+	CmdBuilderWithDocs(cmdRecord, RunRecordList, "list <domain>", "List the DNS records for a domain", `Use this command to list the DNS records for a domain.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DomainRecord{}))
 
 	cmdRecordCreate := CmdBuilderWithDocs(cmdRecord, RunRecordCreate, "create <domain>", "Create a DNS record", `Use this command to create DNS records for a domain.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.DomainRecord{}))
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", "Record type")
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "", "Record name")
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "", "Record data")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", "The type of DNS record")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "", "The host name, alias, or service being defined by the record")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "", "Record data; varies depending on record type")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPriority, "", 0, "Record priority")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPort, "", 0, "Record port")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordTTL, "", 1800, "Record TTL")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, "", 0, "Record weight")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "Record flags")
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "Record tag")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPort, "", 0, "The port value for an SRV record")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordTTL, "", 1800, "The record's Time To Live value, in seconds")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, "", 0, "The weight value for an SRV record")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are "+"`"+"issue"+"`"+", "+"`"+"issuewild"+"`"+", or "+"`"+"iodef"+"`")
 
 	cmdRunRecordDelete := CmdBuilderWithDocs(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "Delete a DNS record", `Use this command to delete DNS records for a domain.`, Writer,
 		aliasOpt("d"))
-	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force record delete")
+	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete record without confirmation prompt")
 
 	cmdRecordUpdate := CmdBuilderWithDocs(cmdRecord, RunRecordUpdate, "update <domain>", "Update a DNS record", `Use this command to update or change DNS records for a domain.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.DomainRecord{}))
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, "", 0, "Record ID")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "", "Record type")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordName, "", "", "Record name")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "", "Record data")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "", "The type of DNS record")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordName, "", "", "The host name, alias, or service being defined by the record")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "", "Record data; varies depending on record type")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, "", 0, "Record priority")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, "", 0, "Record port")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 1800, "Record TTL")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "Record weight")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "Record flags")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "Record tag")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, "", 0, "The port value for an SRV record")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 1800, "The record's Time To Live value, in seconds")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "The weight value for an SRV record")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are "+"`"+"issue"+"`"+", "+"`"+"issuewild"+"`"+", or "+"`"+"iodef"+"`")
 
 	return cmd
 }
@@ -143,7 +143,7 @@ func RunDomainGet(c *CmdConfig) error {
 	ds := c.Domains()
 
 	if len(id) < 1 {
-		return errors.New("invalid domain name")
+		return errors.New("Invalid domain name.")
 	}
 
 	d, err := ds.Get(id)
@@ -167,18 +167,18 @@ func RunDomainDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("delete domain") == nil {
+	if force || AskForConfirm("Delete domain?") == nil {
 		ds := c.Domains()
 
 		if len(name) < 1 {
-			return errors.New("invalid domain name")
+			return errors.New("Invalid domain name.")
 		}
 
 		err := ds.Delete(name)
 		return err
 	}
 
-	return fmt.Errorf("operation aborted")
+	return fmt.Errorf("Operation aborted.")
 }
 
 // RunRecordList list records for a domain.
@@ -191,7 +191,7 @@ func RunRecordList(c *CmdConfig) error {
 	ds := c.Domains()
 
 	if len(name) < 1 {
-		return errors.New("domain name is missing")
+		return errors.New("Domain name is missing.")
 	}
 
 	list, err := ds.Records(name)
@@ -271,7 +271,7 @@ func RunRecordCreate(c *CmdConfig) error {
 	}
 
 	if len(drcr.Type) == 0 {
-		return errors.New("record request is missing type")
+		return errors.New("Record request is missing type.")
 	}
 
 	r, err := ds.CreateRecord(name, drcr)
@@ -295,7 +295,7 @@ func RunRecordDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("delete record(s)") == nil {
+	if force || AskForConfirm("Delete record(s)?") == nil {
 		domainName, ids := c.Args[0], c.Args[1:]
 		if len(ids) < 1 {
 			return doctl.NewMissingArgsErr(c.NS)
@@ -306,7 +306,7 @@ func RunRecordDelete(c *CmdConfig) error {
 		for _, i := range ids {
 			id, err := strconv.Atoi(i)
 			if err != nil {
-				return fmt.Errorf("invalid record id %q", i)
+				return fmt.Errorf("Invalid record id %q", i)
 			}
 
 			err = ds.DeleteRecord(domainName, id)
@@ -315,7 +315,7 @@ func RunRecordDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("opertaion aborted")
+		return fmt.Errorf("Opertaion aborted.")
 	}
 
 	return nil

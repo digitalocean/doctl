@@ -29,10 +29,10 @@ func Actions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "action",
-			Short: "Provides commands that retrieve the history resource actions",
-			Long: `The sub-commands of 'doctl compute action' retrieve the history of actions taken on your resources.
+			Short: "Display commands for retrieving resource action history",
+			Long: `The sub-commands of `+ "`" +`doctl compute action`+ "`" +` retrieve the history of actions taken on your resources.
 
-This can be filtered to a specific action. For example, while 'doctl compute action list' will list all of the actions taken on all of the resources in your account, 'doctl compute action get <action-id>' will retrieve details for a specific action.`,
+This can be filtered to a specific action. For example, while `+ "`" +`doctl compute action list`+ "`" +` will list all of the actions taken on all of the resources in your account, `+ "`" +`doctl compute action get <action-id>`+ "`" +` will retrieve details for a specific action.`,
 		},
 	}
 
@@ -61,7 +61,7 @@ This can be filtered to a specific action. For example, while 'doctl compute act
 
 	cmdActionWait := CmdBuilderWithDocs(cmd, RunCmdActionWait, "wait <action-id>", "Blocks thread, returning when an action completes", `Blocks thread, returning when an action completes.
 
-For example, if you find an action when calling 'doctl compute action list' that has a status of 'in-progress', you can note the action ID and call 'doctl compute action wait <action-id>', and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
+For example, if you find an action when calling `+ "`" +`doctl compute action list`+ "`" +` that has a status of `+ "`" +`in-progress`+ "`" +`, you can note the action ID and call `+ "`" +`doctl compute action wait <action-id>`+ "`" +`, and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
 		aliasOpt("w"), displayerType(&displayers.Action{}))
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 

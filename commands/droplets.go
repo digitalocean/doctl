@@ -38,27 +38,27 @@ func Droplet() *Command {
 			Use:     "droplet",
 			Aliases: []string{"d"},
 			Short:   "droplet commands",
-			Long:    `A Droplet is a DigitalOcean virtual machine. Use the subcommands of 'doctl compute droplet' to list, create, or delete Droplets.`,
+			Long:    `A Droplet is a DigitalOcean virtual machine. Use the subcommands of `+ "`" +`doctl compute droplet`+ "`" +` to list, create, or delete Droplets.`,
 		},
 	}
 	dropletDetails := `
 
-	- The Droplet's ID.
-	- The Droplet's Name.
-	- The Droplet's Public IPv4 Address.
-	- The Droplet's Private IPv4 Address.
-	- The Droplet's IPv6 Address.
-	- The memory size of the Droplet in MB.
-	- The number of vCPUs on the Droplet. 
-	- The size of the Droplet's disk in GB.
-	- The region the Droplet is in. 
-	- The image the Droplet was created from.
-	- The status of the Droplet. Can be 'new', 'active', 'off', or 'archive'. 
-	- The tags assigned to the Droplet. 
-	- A list of features enabled for the Droplet. Examples are backups, ipv6, monitoring, private_networking. 
-	- The IDs of Block Storage volumes attached to the Droplet. 
+	- The Droplet's ID
+	- The Droplet's Name
+	- The Droplet's Public IPv4 Address
+	- The Droplet's Private IPv4 Address
+	- The Droplet's IPv6 Address
+	- The memory size of the Droplet in MB
+	- The number of vCPUs on the Droplet
+	- The size of the Droplet's disk in GB
+	- The Droplet's region
+	- The image the Droplet was created from
+	- The status of the Droplet; can be `+ "`" +`new`+ "`" +`, `+ "`" +`active`+ "`" +`, `+ "`" +`off`+ "`" +`, or `+ "`" +`archive`+ "`" +`
+	- The tags assigned to the Droplet
+	- A list of features enabled for the Droplet. Examples are `+ "`" +`backups`+ "`" +`, `+ "`" +`ipv6`+ "`" +`, `+ "`" +`monitoring`+ "`" +`, `+ "`" +`private_networking`+ "`" +`
+	- The IDs of block storage volumes attached to the Droplet
 	`
-	CmdBuilderWithDocs(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Use this command to list actions taken on a Droplet.`, Writer,
+	CmdBuilderWithDocs(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Use this command to list the available actions that can be taken on a Droplet. These can be things like rebooting, resizing, and snapshotting the Droplet.`, Writer,
 		aliasOpt("a"), displayerType(&displayers.Action{}))
 
 	CmdBuilderWithDocs(cmd, RunDropletBackups, "backups <droplet-id>", "list Droplet backups", `Use this command to list Droplet backups.`, Writer,
@@ -66,35 +66,35 @@ func Droplet() *Command {
 
 	cmdDropletCreate := CmdBuilderWithDocs(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", `Use this command to create a new Droplet. Required values are name, region, size, and image.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Droplet{}))
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "SSH Keys or fingerprints")
-	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User data")
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "Embedded SSH keys or fingerprints on the Droplet")
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "Data used to configure the Droplet on first boot")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "User data file")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Wait for droplet to be created")
-	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "Droplet region",
+	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "The region the Droplet will be created in",
 		requiredOpt())
-	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "Droplet size",
+	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug representing the size of the Droplet. Run "+"`"+"doctl compute size list"+"`"+" for a list of valid sizes",
 		requiredOpt())
-	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Backup droplet")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "IPv6 support")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Private networking")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enable private networking for the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Monitoring")
 	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "Droplet image",
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "Tag name")
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "Tag names")
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "Tag names applied to the Droplet")
 
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "Volumes to attach")
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "Block storage volumes attached to the Droplet")
 
 	cmdRunDropletDelete := CmdBuilderWithDocs(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Permanently delete a Droplet", `Use this command to permanently delete a Droplet. This is irreversible.`, Writer,
 		aliasOpt("d", "del", "rm"))
-	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force Droplet delete")
+	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the Droplet without a confirmation prompt")
 	AddStringFlag(cmdRunDropletDelete, doctl.ArgTagName, "", "", "Tag name")
 
 	cmdRunDropletGet := CmdBuilderWithDocs(cmd, RunDropletGet, "get <droplet-id>", "Retrieve information about a Droplet", `Use this command to retrieve information about a Droplet, including:`+dropletDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Droplet{}))
-	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Few sample values:{{.ID}} {{.Name}} {{.Memory}} {{.Region.Name}} {{.Image}} {{.Tags}}")
+	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Sample values: "+"`"+"{{.ID}}"+"`"+", "+"`"+"{{.Name}}"+"`"+", "+"`"+"{{.Memory}}"+"`"+", "+"`"+"{{.Region.Name}}"+"`"+", "+"`"+"{{.Image}}"+"`"+", "+"`"+"{{.Tags}}"+"`")
 
-	CmdBuilderWithDocs(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Use this command to retrive a list of all kernesl available to a Droplet.`, Writer,
+	CmdBuilderWithDocs(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Use this command to retrieve a list of all kernels available to a Droplet.`, Writer,
 		aliasOpt("k"), displayerType(&displayers.Kernel{}))
 
 	cmdRunDropletList := CmdBuilderWithDocs(cmd, RunDropletList, "list [GLOB]", "List Droplets on your account", `Use this command to retrive a list of Droplets, including the following information about each:`+dropletDetails, Writer,

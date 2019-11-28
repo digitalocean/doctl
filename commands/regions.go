@@ -24,7 +24,7 @@ func Region() *Command {
 		Command: &cobra.Command{
 			Use:   "region",
 			Short: "List datacenter regions",
-			Long:  "The subcommands of 'doctl compute region' retrieve information about DigitalOcean datacenter regions.",
+			Long:  `The subcommands of `+ "`" +`doctl compute region`+ "`" +` retrieve information about DigitalOcean datacenter regions.`,
 		},
 	}
 

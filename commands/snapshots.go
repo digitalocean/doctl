@@ -30,7 +30,7 @@ func Snapshot() *Command {
 			Use:     "snapshot",
 			Aliases: []string{"s"},
 			Short:   "Access and manage snapshots",
-			Long:    "The subcommands of 'doctl compute snapshot' allow you to manage and retrieve information about Droplet and block storage volume snapshots.",
+			Long:    `The subcommands of `+ "`" +`doctl compute snapshot`+ "`" +` allow you to manage and retrieve information about Droplet and block storage volume snapshots.`,
 		},
 	}
 
@@ -48,7 +48,7 @@ func Snapshot() *Command {
 	cmdRunSnapshotList := CmdBuilderWithDocs(cmd, RunSnapshotList, "list [glob]",
 		"List Droplet and volume snapshots", "List information about Droplet and block storage volume snapshots, including:"+snapshotDetail,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Snapshot{}))
-	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Filter by resource type (\"droplet\" or \"volume\")")
+	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Filter by resource type (" + "`" + "droplet" + "`" + " or " + "`" + "volume" + "`" + ")")
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Filter by regional availability")
 
 	CmdBuilderWithDocs(cmd, RunSnapshotGet, "get <snapshot-id>...",
@@ -180,7 +180,7 @@ func RunSnapshotDelete(c *CmdConfig) error {
 	ss := c.Snapshots()
 	ids := c.Args
 
-	if force || AskForConfirm("delete snapshot(s)") == nil {
+	if force || AskForConfirm("Delete snapshot(s)?") == nil {
 		for _, id := range ids {
 			err := ss.Delete(id)
 			if err != nil {
@@ -188,7 +188,7 @@ func RunSnapshotDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("operation aborted")
+		return fmt.Errorf("Operation aborted.")
 	}
 	return nil
 }

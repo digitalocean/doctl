@@ -29,13 +29,13 @@ func Images() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "image",
-			Short: "Provides commands that manage images",
-			Long: `The sub-commands of 'doctl compute image' manage images.
+			Short: "Display commands to manage images",
+			Long: `The sub-commands of `+ "`" +`doctl compute image`+ "`" +` manage images.
 A DigitalOcean image can be used to create a Droplet and may come in a number of flavors. Currently, there are five types of images: snapshots, backups, applications, distributions, and custom images.
 
 	- Snapshots provide a full copy of an existing Droplet instance taken on demand.
 	- Backups are similar to snapshots but are created automatically at regular intervals when enabled for a Droplet.
-	- Custom images are Linux-based virtual machine images (raw, qcow2, vhdx, vdi, and vmdk formats are supported) 
+	- Custom images are Linux-based virtual machine images (raw, qcow2, vhdx, vdi, and vmdk formats are supported)
 	  that you may upload for use on DigitalOcean.
 	- Distributions are the public Linux distributions that are available to be used as a base to create Droplets.
 	- Applications, or One-Click Apps, are distributions pre-configured with additional software.`,
@@ -45,19 +45,19 @@ A DigitalOcean image can be used to create a Droplet and may come in a number of
 
 	- The image's ID
 	- The image's name
-	- The type of image. This is either "snapshot", "backup", or "custom".
+	- The type of image. This is either `+ "`" +`snapshot`+ "`" +`, `+ "`" +`backup`+ "`" +`, or `+ "`" +`custom`+ "`" +`.
 	- The distribution of the image. For custom images, this is user defined.
 	- The image's slug. This is a uniquely identifying string that is associated with each of the DigitalOcean-provided public images. These can be used to reference a public image as an alternative to the numeric id.
 	- Whether the image is public or not. An image that is public is available to all accounts. A non-public image is only accessible from your account. This is boolean, true or false.
-	- The region the image is available in. The regions are represented by their identifying slug values. 
-	- The image's creation date, in ISO8601 combined date and time format. 
+	- The region the image is available in. The regions are represented by their identifying slug values.
+	- The image's creation date, in ISO8601 combined date and time format.
 	- The minimum Droplet disk size in GB required for a Droplet to use this image.
 	- The size of the image in GB.
 	- The description of the image. (optional)
-	- A status string indicating the state of a custom image. This may be "NEW", "available", "pending", or "deleted". 
+	- A status string indicating the state of a custom image. This may be `+ "`" +`NEW`+ "`" +`, `+ "`" +`available`+ "`" +`, `+ "`" +`pending`+ "`" +`, or `+ "`" +`deleted`+ "`" +`.
 	- A string containing information about errors that may occur when importing a custom image.
 `
-	cmdImagesList := CmdBuilderWithDocs(cmd, RunImagesList, "list", "List images on your account", `Use this command to list all private images on your account. To list public images, use the "--public" flag. Output is the following information about each image:`+imageDetail, Writer,
+	cmdImagesList := CmdBuilderWithDocs(cmd, RunImagesList, "list", "List images on your account", `Use this command to list all private images on your account. To list public images, use the `+ "`" +`--public`+ "`" +` flag. Output is the following information about each image:`+imageDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "List public images")
 

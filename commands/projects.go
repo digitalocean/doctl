@@ -48,7 +48,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 		Command: &cobra.Command{
 			Use:   "projects",
 			Short: "Manage projects and assign resources to them",
-			Long:  "The subcommands of 'doctl projects' allow you to create, manage, and assign resources to your projects." + projectsDesc,
+			Long:  `The subcommands of `+ "`" +`doctl projects`+ "`" +` allow you to create, manage, and assign resources to your projects.` + projectsDesc,
 		},
 	}
 
@@ -56,7 +56,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 		"List details for for your DigitalOcean projects, including:"+projectDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Project{}))
 	CmdBuilderWithDocs(cmd, RunProjectsGet, "get <id>", "Retrieve details for a specific project",
-		"Display the following details for an existing project specified by its ID (use \"default\" for <id> to retieve your default project):"+projectDetails,
+		"Display the following details for an existing project specified by its ID (use " + "`" + "default" + "`" + " for <id> to retieve your default project):"+projectDetails,
 		Writer, aliasOpt("g"), displayerType(&displayers.Project{}))
 
 	cmdProjectsCreate := CmdBuilderWithDocs(cmd, RunProjectsCreate, "create",
@@ -69,18 +69,18 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectDescription, "", "",
 		"A description of the project")
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectEnvironment, "", "",
-		"The environment in which your project resides. Possible values: \"Development\", \"Staging', or \"Production\"")
+		"The environment in which your project resides. Possible values: " + "`" + "Development" + "`" + ", " + "`" + "Staging" + "`" + ", or " + "`" + "Production" + "`")
 
 	cmdProjectsUpdate := CmdBuilderWithDocs(cmd, RunProjectsUpdate, "update <id>",
 		"Update an existing project",
-		"Update information about an existing project specified by its ID (use \"default\" for <id> to update your default project).",
+		"Update information about an existing project specified by its ID (use " + "`" + "default" + "`" + " for <id> to update your default project).",
 		Writer, aliasOpt("u"), displayerType(&displayers.Project{}))
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectName, "", "", "A name for the project")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectPurpose, "", "", "The project's purpose")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectDescription, "", "",
 		"A description of the project")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectEnvironment, "", "",
-		"The environment in which your project resides. Possible values: \"Development\", \"Staging', or \"Production\"")
+		"The environment in which your project resides. Possible values: " + "`" + "Development" + "`" + ", " + "`" + "Staging" + "`" + ", or " + "`" + "Production" + "`")
 	AddBoolFlag(cmdProjectsUpdate, doctl.ArgProjectIsDefault, "", false,
 		"Set the specified project as your default project")
 
@@ -101,7 +101,7 @@ func ProjectResourcesCmd() *Command {
 		Command: &cobra.Command{
 			Use:   "resources",
 			Short: "Manage resources assigned to a project",
-			Long:  "The subcommands of 'doctl projects resources' allow you to list and assign resources to your projects.",
+			Long:  `The subcommands of `+ "`" +`doctl projects resources`+ "`" +` allow you to list and assign resources to your projects.`,
 		},
 	}
 

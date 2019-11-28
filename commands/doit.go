@@ -70,7 +70,7 @@ func init() {
 	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API endpoint")
 	viper.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
 
-	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
+	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 access token")
 	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup(doctl.ArgAccessToken))
 
 	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "Desired output format [text|json]")
@@ -140,8 +140,8 @@ func computeCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "compute",
-			Short: "Provides commands that manage infrastructure",
-			Long:  `The subcommands under 'doctl compute' are for managing DigitalOcean resources.`,
+			Short: "Display commands that manage infrastructure",
+			Long:  `The subcommands under `+ "`" +`doctl compute`+ "`" +` are for managing DigitalOcean resources.`,
 		},
 	}
 

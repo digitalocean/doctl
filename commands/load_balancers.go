@@ -31,8 +31,8 @@ func LoadBalancer() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "load-balancer",
-			Short: "Provides commands that manage load balancers",
-			Long: `The sub-commands of 'doctl compute volume' manage your Block Storage volumes.
+			Short: "Display commands to manage load balancers",
+			Long: `The sub-commands of `+ "`" +`doctl compute volume`+ "`" +` manage your block storage volumes.
 
 With the load-balancer command, you can list, create, or delete load balancers as well as add or remove Droplets, forwarding rules, and other configuration details.`,
 		},
@@ -42,12 +42,12 @@ With the load-balancer command, you can list, create, or delete load balancers a
 	- The load balancer's ID
 	- The load balancer's Name
 	- The load balancer's IP Address
-	- The current load balancing algorithm in use. Must be either "round_robin" or "least_connections"
-	- The current state of the Load Balancer. This can be "new", "active", or "errored".
+	- The current load balancing algorithm in use. Must be either `+ "`" +`round_robin`+ "`" +` or `+ "`" +`least_connections`+ "`" +`
+	- The current state of the Load Balancer. This can be `+ "`" +`new`+ "`" +`, `+ "`" +`active`+ "`" +`, or `+ "`" +`errored`+ "`" +`.
 	- The load balancer's creation date, in ISO8601 combined date and time format.
-	- The current forwarding rules for the load balancer. See 'doctl compute load-balancer add-forwarding-rules --help' for a list.
-	- The current health_check settings for the load balancer.
-	- The current sticky_sessions settings for the load balancer.
+	- The current forwarding rules for the load balancer. See `+ "`" +`doctl compute load-balancer add-forwarding-rules --help`+ "`" +` for a list.
+	- The current `+ "`" +`health_check`+ "`" +` settings for the load balancer.
+	- The current `+ "`" +`sticky_sessions`+ "`" +` settings for the load balancer.
 	- The datacenter region the load balancer is located in.
 	- The Droplet tag corresponding to the Droplets assigned to the load balancer.
 	- The IDs of the Droplets assigned to the load balancer.
@@ -56,11 +56,11 @@ With the load-balancer command, you can list, create, or delete load balancers a
 `
 	forwardingDetail := `
 
-  - entry_protocol: The entry protocol used for traffic to the load balancer. Possible values are: "http", "https", "http2", or "tcp".
+  - entry_protocol: The entry protocol used for traffic to the load balancer. Possible values are: `+ "`" +`http`+ "`" +`, `+ "`" +`https`+ "`" +`, `+ "`" +`http2`+ "`" +`, or `+ "`" +`tcp`+ "`" +`.
   - entry_port: The entry port used for traffic to the load balancer.
-  - target_protocol: The target protocol used for traffic from the load balancer to the backend Droplets. Possible values are: "http", "https", "http2", or "tcp".
+  - target_protocol: The target protocol used for traffic from the load balancer to the backend Droplets. Possible values are: `+ "`" +`http`+ "`" +`, `+ "`" +`https`+ "`" +`, `+ "`" +`http2`+ "`" +`, or `+ "`" +`tcp`+ "`" +`.
   - target_port: The target port used for traffic from the load balancer to the backend Droplets.
-  - certificate_id: The ID of the TLS certificate used for SSL termination, if enabled. Can be obtained with 'doctl certificate list'
+  - certificate_id: The ID of the TLS certificate used for SSL termination, if enabled. Can be obtained with `+ "`" +`doctl certificate list`+ "`" +`
   - tls_passthrough: Whether SSL passthrough is enabled on the load balancer.
 `
 	CmdBuilderWithDocs(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:"+lbDetail, Writer,
@@ -71,40 +71,40 @@ With the load-balancer command, you can list, create, or delete load balancers a
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "",
 		"load balancer name", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "",
-		"load balancer region location, example value: nyc1", requiredOpt())
+		"load balancer region location, example value: " + "`" + "nyc1" + "`" , requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
-		"round_robin", "load balancing algorithm, possible values: round_robin or least_connections")
+		"round_robin", "load balancing algorithm, possible values: " + "`" + "round_robin" + "`" + " or " + "`" + "least_connections" + "`")
 	AddBoolFlag(cmdRecordCreate, doctl.ArgRedirectHttpToHttps, "", false,
 		"flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddStringFlag(cmdRecordCreate, doctl.ArgTagName, "", "", "droplet tag name")
 	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{},
-		"comma-separated list of droplet IDs, example value: 12,33")
+		"comma-separated list of droplet IDs, example value: " + "`" + "12,33" + "`")
 	AddStringFlag(cmdRecordCreate, doctl.ArgStickySessions, "", "",
-		"comma-separated key:value list, example value: type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
+		"comma-separated key:value list, example value: " + "`" + "type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5" + "`")
 	AddStringFlag(cmdRecordCreate, doctl.ArgHealthCheck, "", "",
-		"comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
+		"comma-separated key:value list, example value: " + "`" + "protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3" + "`")
 	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "",
-		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+		"comma-separated key:value list, example value: " + "`" + "entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306" + "`" + ". Use quoted string of space-separated values for multiple rules")
 
 	cmdRecordUpdate := CmdBuilderWithDocs(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a load balancer, specified by its ID. Note that any attribute that is not provided will be reset to its default value.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerName, "", "",
 		"load balancer name", requiredOpt())
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "",
-		"load balancer region location, example value: nyc1", requiredOpt())
+		"load balancer region location, example value: " + "`" + "nyc1" + "`", requiredOpt())
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "",
-		"round_robin", "load balancing algorithm, possible values: round_robin or least_connections")
+		"round_robin", "load balancing algorithm, possible values: " + "`" + "round_robin" + "`" + " or " + "`" + "least_connections" + "`")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgRedirectHttpToHttps, "", false,
 		"flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgTagName, "", "", "droplet tag name")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{},
-		"comma-separated list of droplet IDs, example value: 12,33")
+		"comma-separated list of droplet IDs, example value: " + "`" + "12,33" + "`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgStickySessions, "", "",
-		"comma-separated key:value list, example value, example value: type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
+		"comma-separated key:value list, example value, example value: " + "`" + "type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5" + "`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgHealthCheck, "", "",
-		"comma-separated key:value list, example value: protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
+		"comma-separated key:value list, example value: " + "`" + "protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3" + "`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "",
-		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+		"comma-separated key:value list, example value: " + "`" + "entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306" + "`" + ". Use quoted string of space-separated values for multiple rules")
 
 	CmdBuilderWithDocs(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
@@ -117,22 +117,22 @@ With the load-balancer command, you can list, create, or delete load balancers a
 	cmdAddDroplets := CmdBuilderWithDocs(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>",
 		"Add Droplets to a load balancer", `Use this command to add Droplets to a load balancer.`, Writer)
 	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{},
-		"comma-separated list of droplet IDs, example valus: 12,33")
+		"comma-separated list of droplet IDs, example value: " + "`" + "12,33" + "`")
 
 	cmdRemoveDroplets := CmdBuilderWithDocs(cmd, RunLoadBalancerRemoveDroplets,
 		"remove-droplets <id>", "Remove Droplets from a load balancer", `Use this command to remove Droplets from a load balancer. This command does not destroy any Droplets.`, Writer)
 	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{},
-		"comma-separated list of droplet IDs, example value: 12,33")
+		"comma-separated list of droplet IDs, example value: " + "`" + "12,33" + "`")
 
 	cmdAddForwardingRules := CmdBuilderWithDocs(cmd, RunLoadBalancerAddForwardingRules,
-		"add-forwarding-rules <id>", "Add forwarding rules to a load balancer", "Use this command to add forwarding rules to a load balancer, specified with the '--forwarding-rules' flag. Valid rules include:"+forwardingDetail, Writer)
+		"add-forwarding-rules <id>", "Add forwarding rules to a load balancer", "Use this command to add forwarding rules to a load balancer, specified with the " + "`" + "--forwarding-rules" + "`" + " flag. Valid rules include:"+forwardingDetail, Writer)
 	AddStringFlag(cmdAddForwardingRules, doctl.ArgForwardingRules, "", "",
-		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+		"comma-separated key:value list, example value: " + "`" + "entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306" + "`" + ". Use quoted string of space-separated values for multiple rules.")
 
 	cmdRemoveForwardingRules := CmdBuilderWithDocs(cmd, RunLoadBalancerRemoveForwardingRules,
-		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the '--forwarding-rules' flag. Valid rules include:"+forwardingDetail, Writer)
+		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the " + "`" + "--forwarding-rules" + "`" + " flag. Valid rules include:"+forwardingDetail, Writer)
 	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "",
-		"comma-separated key:value list, example value: entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306, use quoted string of space-separated values for multiple rules")
+		"comma-separated key:value list, example value: " + "`" + "entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306" + "`" + ". Use quoted string of space-separated values for multiple rules.")
 
 	return cmd
 }
@@ -217,13 +217,13 @@ func RunLoadBalancerDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("delete this load balancer") == nil {
+	if force || AskForConfirm("Delete this load balancer?") == nil {
 		lbs := c.LoadBalancers()
 		if err := lbs.Delete(lbID); err != nil {
 			return err
 		}
 	} else {
-		return fmt.Errorf("operation aborted")
+		return fmt.Errorf("Operation aborted.")
 	}
 
 	return nil

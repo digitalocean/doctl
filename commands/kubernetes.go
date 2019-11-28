@@ -206,36 +206,37 @@ This command returns a list of slugs representing Kubernetes versions you can us
 
 	cmdKubeClusterCreate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
 		defaultKubernetesNodeCount), "create <name>", "Creates a Kubernetes cluster", `
-Creates a Kubernetes cluster given the specified options, using the specified name. Before creating the cluster, you can use "doctl kubernetes options" to see possible values for the various configuration flags.
+Creates a Kubernetes cluster given the specified options, using the specified name. Before creating the cluster, you can use `+ "`" +`doctl kubernetes options`+ "`" +` to see possible values for the various configuration flags.
 
 If no configuration flags are used, a three-node cluster with a single node pool will be created in the nyc1 region, using the latest Kubernetes version.
 
 After creating a cluster, a configuration context will be added to kubectl and made active so that you can begin managing your new cluster immediately.`,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion,
-		"Cluster region. Possible values: see "+ "`" + "doctl kubernetes options regions" + "`", requiredOpt())
+		"Cluster region. Possible values: see " + "`" + "doctl kubernetes options regions" + "`", requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest",
-		"Kubernetes version. Possible values: see "+ "`" + "doctl kubernetes options versions" + "`")
+		"Kubernetes version. Possible values: see " + "`" + "doctl kubernetes options versions" + "`")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
 		"Boolean specifying whether to enable auto-upgrade for the cluster")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
-		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of 'k8s' and 'k8s:$K8S_CLUSTER_ID.'")
+		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of " + "`" + "k8s" + "`" + " and " + "`" + "k8s:$K8S_CLUSTER_ID" + "`" + ".")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
-		"Machine size to use when creating nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`). Possible values: see "+ "`" + "doctl kubernetes options sizes" + "`")
+		"Machine size to use when creating nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`). Possible values: see " + "`" + "doctl kubernetes options sizes" + "`")
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"Number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
 		`Comma-separated list of node pools, defined using semicolon-separated configuration values (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
-Format: "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
-	- name:       Name of the node pool, which must be unique in the cluster
-	- size:       Machine size of the nodes to use. Possible values: see "doctl kubernetes options sizes".
-	- count:      Number of nodes to create.
-	- tag:        Comma-separated list of tags to apply to nodes in the pool
-	- auto-scale: Boolean defining whether to enable cluster auto-scaling on the node pool.
-	- min-nodes:  Maximum number of nodes that can be auto-scaled to.
-	- max-nodes:  Minimum number of nodes that can be auto-scaled to.`)
+Format: `+ "`" +`name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2`+ "`" +` where:
+
+- `+ "`" +`name`+ "`" +`: Name of the node pool, which must be unique in the cluster
+- `+ "`" +`size`+ "`" +`: Machine size of the nodes to use. Possible values: see `+ "`" +`doctl kubernetes options sizes`+ "`" +`.
+- `+ "`" +`count`+ "`" +`: Number of nodes to create.
+- `+ "`" +`tag`+ "`" +`: Comma-separated list of tags to apply to nodes in the pool
+- `+ "`" +`auto-scale`+ "`" +`: Boolean defining whether to enable cluster auto-scaling on the node pool.
+- `+ "`" +`min-nodes`+ "`" +`: Maximum number of nodes that can be auto-scaled to.
+- `+ "`" +`max-nodes`+ "`" +`: Minimum number of nodes that can be auto-scaled to.`)
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
 		"Boolean that specifies whether to add a configuration context for the new cluster to your kubectl")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true,
@@ -243,7 +244,7 @@ Format: "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
 		"Boolean that specifies whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: " + "`" + "['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']" + "`")
+		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: " + "`" + "day=HH:MM" + "`" + ", where time is in UTC. Day can be: " + "`" + "['any', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']" + "`")
 
 	cmdKubeClusterUpdate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
 		"Update a Kubernetes cluster's configuration", `
@@ -269,8 +270,8 @@ This command updates the specified configuration values for the specified Kubern
 This command upgrades the specified Kubernetes cluster. By default, this will upgrade the cluster to the latest available release, but you can also specify any version listed for your cluster by ` + "`" + `doctl k8s get-upgrades` + "``" + `. `, Writer)
 	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest",
 		`The desired Kubernetes version. Possible values: see ` + "`" + `doctl k8s get-upgrades <cluster>` + "`" + `.
-The special value "latest" will select the most recent patch version for your cluster's minor version.
-For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be "latest".`)
+The special value ` + "`" + `latest` + "`" + ` will select the most recent patch version for your cluster's minor version.
+For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be ` + "`" + `latest` + "`" + `.`)
 
 	cmdKubeClusterDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterDelete,
 		"delete <id|name>", "Deletes a Kubernetes cluster", `
@@ -290,7 +291,7 @@ func kubernetesKubeconfig() *Command {
 			Use:     "kubeconfig",
 			Aliases: []string{"kubecfg", "k8scfg", "config", "cfg"},
 			Short:   "kubeconfig commands",
-			Long:    "The commands under" + "`" + "doctl kubernetes cluster kubeconfig" + "`" + "are used to manage a Kubernetes cluster's credentials. The credentials are used as authentication contexts with kubectl, the Kubernetes command-line interface.",
+			Long:    `The commands under` + "`" + `doctl kubernetes cluster kubeconfig` + "`" + `are used to manage a Kubernetes cluster's credentials. The credentials are used as authentication contexts with kubectl, the Kubernetes command-line interface.`,
 		},
 	}
 
@@ -298,11 +299,15 @@ func kubernetesKubeconfig() *Command {
 
 	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
 This command prints out the raw YAML for the specified cluster's kubeconfig.	`,Writer, aliasOpt("p", "g"))
-	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL: This private command is run when printing a cluster's exec credential", Writer, hiddenCmd())
+	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL: This hidden command is for printing a cluster's exec credential", Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
-	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "save a cluster's credentials to your local kubeconfig", Writer, aliasOpt("s"))
+	cmdSaveConfig := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
+This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage your
+		`,Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
-	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "remove a cluster's credentials from your local kubeconfig", Writer, aliasOpt("d", "rm"))
+	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "Remove a cluster's credentials from your local kubeconfig",`
+This command removes the specified cluster's credentials from your local kubeconfig. After running this command, you will not be able to use `+ "`" +`kubectl`+ "`" +` to interact with your cluster.
+`, Writer, aliasOpt("d", "rm"))
 	return cmd
 }
 
@@ -315,8 +320,8 @@ func kubernetesNodePools() *Command {
 		Command: &cobra.Command{
 			Use:     "node-pool",
 			Aliases: []string{"node-pools", "nodepool", "nodepools", "pool", "pools", "np", "p"},
-			Short:   "node pool commands",
-			Long:    "node pool commands are used to act on a cluster's node pools",
+			Short:   "Commands for managing node pools",
+			Long:    `The commands under `+ "`" +`node-pool`+ "`" +` are for performing actions on a Kubernetes cluster's node pools. You can use these commands to create or delete node pools, enable autoscaling for a node pool, and more.`,
 		},
 	}
 

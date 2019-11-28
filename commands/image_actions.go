@@ -29,14 +29,14 @@ func ImageAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "image-action",
-			Short: "Provides commands to perform actions on images",
-			Long:  `The sub-commands of 'doctl compute image-actions' can be used to perform actions on images.`,
+			Short: "Display commands to perform actions on images",
+			Long:  `The sub-commands of `+ "`" +`doctl compute image-actions`+ "`" +` can be used to perform actions on images.`,
 		},
 	}
 	actionDetail := `
 
-	- The unique numeric ID used to identify and reference an image action. 
-	- The status of the image action. This will be either "in-progress", "completed", or "errored".
+	- The unique numeric ID used to identify and reference an image action.
+	- The status of the image action. This will be either `+ "`" +`in-progress`+ "`" +`, `+ "`" +`completed`+ "`" +`, or `+ "`" +`errored`+ "`" +`.
 	- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
 	- A time value given in ISO8601 combined date and time format that represents when the action was completed.
 	- The resource ID, which is a unique identifier for the resource that the action is associated with.
