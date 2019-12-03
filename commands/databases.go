@@ -63,16 +63,16 @@ func Databases() *Command {
 - A connection string for the database cluster
 - The date and time at which the database cluster was created`+databaseListDetails, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
 
-	nodeSizeDetails := "The size of the nodes in the database cluster, e.g. " + "`" + "db-s-1vcpu-1gb`" + "`" + " for a 1 CPU, 1GB node"
+	nodeSizeDetails := "The size of the nodes in the database cluster, e.g. `db-s-1vcpu-1gb`` for a 1 CPU, 1GB node"
 	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
 	cmdDatabaseCreate := CmdBuilderWithDocs(cmd, RunDatabaseCreate, "create <name>", "Creates a database cluster", `This command creates a database cluster with the specified name.
 
 There are a number of flags that customize the configuration, all of which are optional. Without any flags set, a single-node, single-CPU PostgreSQL database cluster will be created.`, Writer,
 		aliasOpt("c"))
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseNumNodes, "", defaultDatabaseNodeCount, nodeNumberDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The region where the database cluster will be created, e.g. " + "`" + "nyc1" + "`" + " or " + "`" + "sfo2" + "`")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The region where the database cluster will be created, e.g. `nyc1` or `sfo2`")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: " + "`" + "pg" + "`" + " for PostgreSQL, " + "`" + "mysql" + "`" + ", and " + "`" + "redis" + "`" + ".")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, and `redis`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 11 for PostgreSQL version 11")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "A UUID to use for private network connections")
 
@@ -111,7 +111,7 @@ You must specify the size of the machines you wish to use as nodes as well as ho
 
 	cmdDatabaseMigrate := CmdBuilderWithDocs(cmd, RunDatabaseMigrate, "migrate <database-id>", "Migrates a database cluster to a new region", `This command migrates the specified database cluster to a new region`, Writer,
 		aliasOpt("m"))
-	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, e.g. " + "`" + "sfo2" + "`" + " or " + "`" + "nyc3" + "`" + ".", requiredOpt())
+	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, e.g. `sfo2` or `nyc3`.", requiredOpt())
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "A UUID to use for private network connections")
 
 	cmd.AddCommand(databaseReplica())

@@ -53,7 +53,7 @@ You can use flags to specify the volume size, region, description, filesystem ty
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSnapshot, "", "", "Volume snapshot; should not be specified with a region")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemType, "", "", "Volume filesystem type (ext4 or xfs)")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "Volume filesystem label")
-	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "tags to apply to the volume; comma separate or repeat "+ "`" +"--tag"+ "`" +" to add multiple tags at once")
+	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "tags to apply to the volume; comma separate or repeat `--tag` to add multiple tags at once")
 
 	cmdRunVolumeDelete := CmdBuilderWithDocs(cmd, RunVolumeDelete, "delete <volume-id>", "Delete a block storage volume", `Use this command to delete a block storage volume by ID, destroying all of its data and removing it from your account.`, Writer,
 		aliasOpt("rm", "d"))
@@ -68,7 +68,7 @@ You can use a block storage volume snapshot ID as a flag with ` + "`" + `doctl v
 		aliasOpt("s"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "Snapshot description")
-	AddStringSliceFlag(cmdRunVolumeSnapshot, doctl.ArgTag, "", []string{}, "tags to apply to the snapshot; comma separate or repeat "+ "`" +"--tag"+ "`" +" to add multiple tags at once")
+	AddStringSliceFlag(cmdRunVolumeSnapshot, doctl.ArgTag, "", []string{}, "tags to apply to the snapshot; comma separate or repeat `--tag` to add multiple tags at once")
 
 	return cmd
 

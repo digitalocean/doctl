@@ -48,7 +48,7 @@ func Snapshot() *Command {
 	cmdRunSnapshotList := CmdBuilderWithDocs(cmd, RunSnapshotList, "list [glob]",
 		"List Droplet and volume snapshots", "List information about Droplet and block storage volume snapshots, including:"+snapshotDetail,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Snapshot{}))
-	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Filter by resource type (" + "`" + "droplet" + "`" + " or " + "`" + "volume" + "`" + ")")
+	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Filter by resource type (`droplet` or `volume`)")
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Filter by regional availability")
 
 	CmdBuilderWithDocs(cmd, RunSnapshotGet, "get <snapshot-id>...",

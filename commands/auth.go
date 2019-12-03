@@ -101,7 +101,7 @@ For details on creating an authentication context, see the help for `+ "`" +`doc
 	// The command runner expects that any command named "list" accepts a
 	// format flag, so we include here despite only supporting text output for
 	// this command.
-	AddStringFlag(cmdAuthList, doctl.ArgFormat, "", "", "Columns for output in a comma-separated list. Possible values: " + "`" + "text" + "`")
+	AddStringFlag(cmdAuthList, doctl.ArgFormat, "", "", "Columns for output in a comma-separated list. Possible values: `text`")
 
 	return cmd
 }
