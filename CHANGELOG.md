@@ -1,5 +1,11 @@
 # Change Log
 
+## [v1.28.0] - 2019-12-04
+
+- #282 Add valid Redis eviction policy constants - @bentranter
+- #281 Remove databases info from top-level godoc string - @bentranter
+- #280 Fix VolumeSnapshotResourceType value volumesnapshot -> volume_snapshot - @aqche
+
 ## [v1.27.0] - 2019-11-18
 
 - #278 add mysql user auth settings for database users - @gregmankes
