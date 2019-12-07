@@ -27,15 +27,47 @@ import (
 )
 
 const (
-	defaultConfigName = "config.yaml" // default name of config file
+	defaultConfigName  = "config.yaml" // default name of config file
+	bashCompletionFunc = `# $1 is the group and resource name and possibly action
+# ex: compute droplet list
+__doctl_get_resource()
+{
+      local doctl_out
+      if doctl_out=$(doctl $1 --format ID --no-header); then
+          COMPREPLY=( $( compgen -W "${doctl_out[*]}" -- "$cur" ) )
+      fi
+}
+
+__doctl_custom_func()
+{
+  case ${last_command} in
+    doctl_compute_droplet_get | doctl_compute_droplet_delete | doctl_compute_droplet_neighbors |\
+    doctl_compute_droplet_tag | doctl_compute_droplet_untag | doctl_compute_droplet_actions |\
+    doctl_compute_droplet_backups | doctl_compute_droplet_kernels | doctl_compute_droplet_snapshots)
+      __doctl_get_resource "compute droplet list"
+      return
+      ;;
+    # TODO: Figure out how to make nesting work for node-pool
+    doctl_kubernetes_cluster_kubeconfig_save | doctl_kubernetes_cluster_kubeconfig_remove |\
+    doctl_kubernetes_cluster_kubeconfig_show | doctl_kubernetes_cluster_get | doctl_kubernetes_cluster_delete |\
+    doctl_kubernetes_cluster_update | doctl_kubernetes_cluster_upgrade)
+      __doctl_get_resource "kubernetes cluster list"
+      return
+      ;;
+    *)
+      ;;
+  esac
+}
+`
 )
 
 var (
 	//DoitCmd is the root level doctl command that all other commands attach to
 	DoitCmd = &Command{ // base command
 		Command: &cobra.Command{
-			Use:   "doctl",
-			Short: "doctl is a command line interface for the DigitalOcean API.",
+			Use:                    "doctl",
+			Short:                  "doctl is a command line interface for the DigitalOcean API.",
+			BashCompletionFunction: bashCompletionFunc,
 		},
 	}
 
