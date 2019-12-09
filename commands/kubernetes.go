@@ -35,6 +35,7 @@ import (
 	"github.com/spf13/viper"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeerrors "k8s.io/apimachinery/pkg/util/errors"
 	clientauthentication "k8s.io/client-go/pkg/apis/clientauthentication/v1beta1"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -128,16 +129,55 @@ func (p *kubeconfigProvider) Remote(kube do.KubernetesService, clusterID string)
 
 // Read reads the kubeconfig from the user's local kubeconfig file.
 func (p *kubeconfigProvider) Local() (*clientcmdapi.Config, error) {
-	return p.pathOptions.GetStartingConfig()
+	config, err := p.pathOptions.GetStartingConfig()
+	if err != nil {
+		if a, ok := err.(kubeerrors.Aggregate); ok {
+			_, isSnap := os.LookupEnv("SNAP")
+
+			for _, err := range a.Errors() {
+				// this should NOT be a contains check but they are formatting the
+				// error without implementing an unwrap (so the original permission
+				// error type is lost.
+				if strings.Contains(err.Error(), "permission denied") && isSnap {
+					warn("Using the doctl Snap? Grant access to the doctl:kube-config plug to use this command with: sudo snap connect doctl:kube-config")
+					return nil, err
+				}
+
+			}
+		}
+
+		return nil, err
+	}
+
+	return config, nil
 }
 
 // Write either writes to or updates an existing local kubeconfig file.
 func (p *kubeconfigProvider) Write(config *clientcmdapi.Config) error {
-	return clientcmd.ModifyConfig(p.pathOptions, *config, false)
+	err := clientcmd.ModifyConfig(p.pathOptions, *config, false)
+	if err != nil {
+		_, ok := os.LookupEnv("SNAP")
+
+		if os.IsPermission(err) && ok {
+			warn("Using the doctl Snap? Grant access to the doctl:kube-config plug to use this command with: sudo snap connect doctl:kube-config")
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func (p *kubeconfigProvider) ConfigPath() string {
-	return p.pathOptions.GetDefaultFilename()
+	path := p.pathOptions.GetDefaultFilename()
+
+	if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
+		if _, ok := os.LookupEnv("SNAP"); ok {
+			warn("Using the doctl Snap? Please create the directory: %q before trying again", filepath.Dir(path))
+		}
+	}
+
+	return path
 }
 
 // KubernetesCommandService is used to execute Kubernetes commands.
@@ -1367,6 +1407,7 @@ func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, remo
 	if err := mergeKubeconfig(clusterID, remoteKubeconfig, localKubeconfig, setCurrentContext); err != nil {
 		return fmt.Errorf("couldn't use the kubeconfig info received, %v", err)
 	}
+
 	return s.KubeconfigProvider.Write(localKubeconfig)
 }
 
