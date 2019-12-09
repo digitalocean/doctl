@@ -139,7 +139,7 @@ func (p *kubeconfigProvider) Local() (*clientcmdapi.Config, error) {
 				// error without implementing an unwrap (so the original permission
 				// error type is lost.
 				if strings.Contains(err.Error(), "permission denied") && isSnap {
-					notice("Using the doctl Snap? Grant access to the doctl:kube-config plug to use this command with: sudo snap connect doctl:kube-config")
+					warn("Using the doctl Snap? Grant access to the doctl:kube-config plug to use this command with: sudo snap connect doctl:kube-config")
 					return nil, err
 				}
 
@@ -159,7 +159,7 @@ func (p *kubeconfigProvider) Write(config *clientcmdapi.Config) error {
 		_, ok := os.LookupEnv("SNAP")
 
 		if os.IsPermission(err) && ok {
-			notice("Using the doctl Snap? Grant access to the doctl:kube-config plug to use this command with: sudo snap connect doctl:kube-config")
+			warn("Using the doctl Snap? Grant access to the doctl:kube-config plug to use this command with: sudo snap connect doctl:kube-config")
 		}
 
 		return err
@@ -173,7 +173,7 @@ func (p *kubeconfigProvider) ConfigPath() string {
 
 	if _, err := os.Stat(filepath.Dir(path)); os.IsNotExist(err) {
 		if _, ok := os.LookupEnv("SNAP"); ok {
-			notice("Using the doctl Snap? Please create the directory: %q before trying again", filepath.Dir(path))
+			warn("Using the doctl Snap? Please create the directory: %q before trying again", filepath.Dir(path))
 		}
 	}
 
