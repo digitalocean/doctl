@@ -35,6 +35,12 @@ var (
 				},
 				"volumes": {
 					"count": 0
+				},
+				"volume_snapshots": {
+					"count": 0
+				},
+				"databases": {
+					"count": 0
 				}
 			}
 		},
@@ -50,6 +56,12 @@ var (
 					"count": 0
 				},
 				"volumes": {
+					"count": 0
+				},
+				"volume_snapshots": {
+					"count": 0
+				},
+				"databases": {
 					"count": 0
 				}
 			}
@@ -84,6 +96,12 @@ var (
 				},
 				"volumes": {
 					"count": 0
+				},
+				"volume_snapshots": {
+					"count": 0
+				},
+				"databases": {
+					"count": 0
 				}
 			}
 		}
@@ -95,7 +113,7 @@ var (
 		"tag": {
 			"name": "testing-1",
 			"resources": {
-				"count": 2,
+				"count": 5,
 				"last_tagged_uri": "https://api.digitalocean.com/v2/droplets/1",
 				"droplets": {
 					"count": 1,
@@ -189,6 +207,14 @@ var (
 				"volumes": {
 					"count": 1,
 					"last_tagged_uri": "https://api.digitalocean.com/v2/volumes/abc"
+				},
+				"volume_snapshots": {
+					"count": 1,
+					"last_tagged_uri": "https://api.digitalocean.com/v2/snapshots/1"
+				},
+				"databases": {
+					"count": 1,
+					"last_tagged_uri": "https://api.digitalocean.com/v2/databases/1"
 				}
 			}
 		}
@@ -211,8 +237,8 @@ func TestTags_List(t *testing.T) {
 	}
 
 	expected := []Tag{
-		{Name: "testing-1", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}, Volumes: &TaggedVolumesResources{Count: 0}}},
-		{Name: "testing-2", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}, Volumes: &TaggedVolumesResources{Count: 0}}},
+		{Name: "testing-1", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}, Volumes: &TaggedVolumesResources{Count: 0}, VolumeSnapshots: &TaggedVolumeSnapshotsResources{Count: 0}, Databases: &TaggedDatabasesResources{Count: 0}}},
+		{Name: "testing-2", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}, Volumes: &TaggedVolumesResources{Count: 0}, VolumeSnapshots: &TaggedVolumeSnapshotsResources{Count: 0}, Databases: &TaggedDatabasesResources{Count: 0}}},
 	}
 	if !reflect.DeepEqual(tags, expected) {
 		t.Errorf("Tags.List returned %+v, expected %+v", tags, expected)
@@ -273,8 +299,8 @@ func TestTags_Get(t *testing.T) {
 		t.Errorf("Tags.Get return an incorrect name, got %+v, expected %+v", tag.Name, "testing-1")
 	}
 
-	if tag.Resources.Count != 2 {
-		t.Errorf("Tags.Get return an incorrect resource count, got %+v, expected %+v", tag.Resources.Count, 2)
+	if tag.Resources.Count != 5 {
+		t.Errorf("Tags.Get return an incorrect resource count, got %+v, expected %+v", tag.Resources.Count, 5)
 	}
 
 	if tag.Resources.LastTaggedURI != "https://api.digitalocean.com/v2/droplets/1" {
@@ -299,6 +325,30 @@ func TestTags_Get(t *testing.T) {
 
 	if tag.Resources.Images.LastTaggedURI != "https://api.digitalocean.com/v2/images/1" {
 		t.Errorf("Tags.Get return an incorrect last tagged droplet uri %+v, expected %+v", tag.Resources.Images.LastTaggedURI, "https://api.digitalocean.com/v2/images/1")
+	}
+
+	if tag.Resources.Volumes.Count != 1 {
+		t.Errorf("Tags.Get return an incorrect volume resource count, got %+v, expected %+v", tag.Resources.Volumes.Count, 1)
+	}
+
+	if tag.Resources.Volumes.LastTaggedURI != "https://api.digitalocean.com/v2/volumes/abc" {
+		t.Errorf("Tags.Get return an incorrect last tagged volume uri %+v, expected %+v", tag.Resources.Volumes.LastTaggedURI, "https://api.digitalocean.com/v2/volumes/abc")
+	}
+
+	if tag.Resources.VolumeSnapshots.Count != 1 {
+		t.Errorf("Tags.Get return an incorrect volume snapshot resource count, got %+v, expected %+v", tag.Resources.VolumeSnapshots.Count, 1)
+	}
+
+	if tag.Resources.VolumeSnapshots.LastTaggedURI != "https://api.digitalocean.com/v2/snapshots/1" {
+		t.Errorf("Tags.Get return an incorrect last tagged volume snapshot uri %+v, expected %+v", tag.Resources.VolumeSnapshots.LastTaggedURI, "https://api.digitalocean.com/v2/snapshots/1")
+	}
+
+	if tag.Resources.Databases.Count != 1 {
+		t.Errorf("Tags.Get return an incorrect database resource count, got %+v, expected %+v", tag.Resources.Databases.Count, 1)
+	}
+
+	if tag.Resources.Databases.LastTaggedURI != "https://api.digitalocean.com/v2/databases/1" {
+		t.Errorf("Tags.Get return an incorrect last tagged database uri %+v, expected %+v", tag.Resources.Databases.LastTaggedURI, "https://api.digitalocean.com/v2/databases/1")
 	}
 }
 
@@ -333,10 +383,12 @@ func TestTags_Create(t *testing.T) {
 	expected := &Tag{
 		Name: "testing-1",
 		Resources: &TaggedResources{
-			Count:    0,
-			Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil},
-			Images:   &TaggedImagesResources{Count: 0},
-			Volumes:  &TaggedVolumesResources{Count: 0},
+			Count:           0,
+			Droplets:        &TaggedDropletsResources{Count: 0, LastTagged: nil},
+			Images:          &TaggedImagesResources{Count: 0},
+			Volumes:         &TaggedVolumesResources{Count: 0},
+			VolumeSnapshots: &TaggedVolumeSnapshotsResources{Count: 0},
+			Databases:       &TaggedDatabasesResources{Count: 0},
 		},
 	}
 	if !reflect.DeepEqual(tag, expected) {
