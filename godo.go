@@ -45,6 +45,7 @@ type Client struct {
 	// Services used for communicating with the API
 	Account           AccountService
 	Actions           ActionsService
+	Balance           BalanceService
 	CDNs              CDNService
 	Domains           DomainsService
 	Droplets          DropletsService
@@ -165,6 +166,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
 	c.Account = &AccountServiceOp{client: c}
 	c.Actions = &ActionsServiceOp{client: c}
+	c.Balance = &BalanceServiceOp{client: c}
 	c.CDNs = &CDNServiceOp{client: c}
 	c.Certificates = &CertificatesServiceOp{client: c}
 	c.Domains = &DomainsServiceOp{client: c}
