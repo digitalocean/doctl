@@ -74,8 +74,8 @@ func (r *Runner) Run() error {
 		_, isSnap := os.LookupEnv("SNAP")
 
 		if os.IsPermission(err) && isSnap {
-			msg := "Using the doctl Snap? Grant access to the ssh-keys interface with this command: sudo snap connect doctl:ssh-keys :ssh-keys"
-			fmt.Fprintf(color.Error, "%s: %s", color.YellowString("Warning"), msg)
+			msg := "Using the doctl Snap? Grant access to the ssh-keys interface with this command: sudo snap connect doctl:ssh-keys"
+			fmt.Fprintf(color.Error, "%s: %s\n", color.YellowString("Warning"), msg)
 			return err
 		}
 
