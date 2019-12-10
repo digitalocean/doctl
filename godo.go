@@ -94,6 +94,9 @@ type Response struct {
 	// request body and not the header.
 	Links *Links
 
+	// Meta describes generic information about the response.
+	Meta *Meta
+
 	// Monitoring URI
 	Monitor string
 

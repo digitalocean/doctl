@@ -58,12 +58,12 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	volumes, _, err := client.Storage.ListVolumes(ctx, nil)
+	volumes, resp, err := client.Storage.ListVolumes(ctx, nil)
 	if err != nil {
 		t.Errorf("Storage.ListVolumes returned error: %v", err)
 	}
 
-	expected := []Volume{
+	expectedVolume := []Volume{
 		{
 			Region:        &Region{Slug: "nyc3"},
 			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
@@ -86,8 +86,15 @@ func TestStorageVolumes_ListStorageVolumes(t *testing.T) {
 			Tags:            []string{},
 		},
 	}
-	if !reflect.DeepEqual(volumes, expected) {
-		t.Errorf("Storage.ListVolumes returned %+v, expected %+v", volumes, expected)
+	if !reflect.DeepEqual(volumes, expectedVolume) {
+		t.Errorf("Storage.ListVolumes returned volumes %+v, expected %+v", volumes, expectedVolume)
+	}
+
+	expectedMeta := &Meta{
+		Total: 28,
+	}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Storage.ListVolumes returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -169,7 +176,7 @@ func TestStorageVolumes_ListVolumesByName(t *testing.T) {
 			}
 		}`
 
-	expected := []Volume{
+	expectedVolumes := []Volume{
 		{
 			Region:        &Region{Slug: "nyc3"},
 			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
@@ -193,13 +200,20 @@ func TestStorageVolumes_ListVolumesByName(t *testing.T) {
 	options := &ListVolumeParams{
 		Name: "myvolume",
 	}
-	volumes, _, err := client.Storage.ListVolumes(ctx, options)
+	volumes, resp, err := client.Storage.ListVolumes(ctx, options)
 	if err != nil {
 		t.Errorf("Storage.ListVolumeByName returned error: %v", err)
 	}
 
-	if !reflect.DeepEqual(volumes, expected) {
-		t.Errorf("Storage.ListVolumeByName returned %+v, expected %+v", volumes, expected)
+	if !reflect.DeepEqual(volumes, expectedVolumes) {
+		t.Errorf("Storage.ListVolumeByName returned volumes %+v, expected %+v", volumes, expectedVolumes)
+	}
+
+	expectedMeta := &Meta{
+		Total: 1,
+	}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Storage.ListVolumeByName returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -229,7 +243,7 @@ func TestStorageVolumes_ListVolumesByRegion(t *testing.T) {
 			}
 		}`
 
-	expected := []Volume{
+	expectedVolumes := []Volume{
 		{
 			Region:        &Region{Slug: "nyc3"},
 			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
@@ -253,13 +267,20 @@ func TestStorageVolumes_ListVolumesByRegion(t *testing.T) {
 	options := &ListVolumeParams{
 		Region: "nyc3",
 	}
-	volumes, _, err := client.Storage.ListVolumes(ctx, options)
+	volumes, resp, err := client.Storage.ListVolumes(ctx, options)
 	if err != nil {
 		t.Errorf("Storage.ListVolumeByName returned error: %v", err)
 	}
 
-	if !reflect.DeepEqual(volumes, expected) {
-		t.Errorf("Storage.ListVolumeByName returned %+v, expected %+v", volumes, expected)
+	if !reflect.DeepEqual(volumes, expectedVolumes) {
+		t.Errorf("Storage.ListVolumeByName returned volumes %+v, expected %+v", volumes, expectedVolumes)
+	}
+
+	expectedMeta := &Meta{
+		Total: 1,
+	}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Storage.ListVolumeByName returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -289,7 +310,7 @@ func TestStorageVolumes_ListVolumesByNameAndRegion(t *testing.T) {
 			}
 		}`
 
-	expected := []Volume{
+	expectedVolumes := []Volume{
 		{
 			Region:        &Region{Slug: "nyc3"},
 			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
@@ -314,13 +335,20 @@ func TestStorageVolumes_ListVolumesByNameAndRegion(t *testing.T) {
 		Region: "nyc3",
 		Name:   "myvolume",
 	}
-	volumes, _, err := client.Storage.ListVolumes(ctx, options)
+	volumes, resp, err := client.Storage.ListVolumes(ctx, options)
 	if err != nil {
 		t.Errorf("Storage.ListVolumeByName returned error: %v", err)
 	}
 
-	if !reflect.DeepEqual(volumes, expected) {
-		t.Errorf("Storage.ListVolumeByName returned %+v, expected %+v", volumes, expected)
+	if !reflect.DeepEqual(volumes, expectedVolumes) {
+		t.Errorf("Storage.ListVolumeByName returned volumes %+v, expected %+v", volumes, expectedVolumes)
+	}
+
+	expectedMeta := &Meta{
+		Total: 1,
+	}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Storage.ListVolumeByName returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -554,12 +582,12 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	volumes, _, err := client.Storage.ListSnapshots(ctx, "98d414c6-295e-4e3a-ac58-eb9456c1e1d1", nil)
+	volumes, resp, err := client.Storage.ListSnapshots(ctx, "98d414c6-295e-4e3a-ac58-eb9456c1e1d1", nil)
 	if err != nil {
 		t.Errorf("Storage.ListSnapshots returned error: %v", err)
 	}
 
-	expected := []Snapshot{
+	expectedSnapshots := []Snapshot{
 		{
 			Regions:       []string{"nyc3"},
 			ID:            "80d414c6-295e-4e3a-ac58-eb9456c1e1d1",
@@ -575,8 +603,15 @@ func TestStorageSnapshots_ListStorageSnapshots(t *testing.T) {
 			Created:       "2012-10-03T15:00:01.05Z",
 		},
 	}
-	if !reflect.DeepEqual(volumes, expected) {
-		t.Errorf("Storage.ListSnapshots returned %+v, expected %+v", volumes, expected)
+	if !reflect.DeepEqual(volumes, expectedSnapshots) {
+		t.Errorf("Storage.ListSnapshots returned snapshots %+v, expected %+v", volumes, expectedSnapshots)
+	}
+
+	expectedMeta := &Meta{
+		Total: 28,
+	}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Storage.ListSnapshots returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
