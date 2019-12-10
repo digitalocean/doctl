@@ -124,16 +124,7 @@ func TestStorageVolumes_Get(t *testing.T) {
 			"filesystem_type": "xfs",
 			"filesystem_label": "my-vol",
 			"tags": ["tag1", "tag2"]
-		},
-		"links": {
-	    "pages": {
-	      "last": "https://api.digitalocean.com/v2/volumes?page=2",
-	      "next": "https://api.digitalocean.com/v2/volumes?page=2"
-	    }
-	  },
-	  "meta": {
-	    "total": 28
-	  }
+		}
 	}`
 
 	mux.HandleFunc("/v2/volumes/80d414c6-295e-4e3a-ac58-eb9456c1e1d1", func(w http.ResponseWriter, r *http.Request) {
@@ -632,16 +623,7 @@ func TestStorageSnapshots_Get(t *testing.T) {
 			"name": "my snapshot",
 			"size_gigabytes": 100,
 			"created_at": "2002-10-02T15:00:00.05Z"
-		},
-		"links": {
-	    "pages": {
-				"last": "https://api.digitalocean.com/v2/volumes/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2",
-				"next": "https://api.digitalocean.com/v2/volumes/98d414c6-295e-4e3a-ac58-eb9456c1e1d1/snapshots?page=2"
-	    }
-	  },
-	  "meta": {
-	    "total": 28
-	  }
+		}
 	}`
 
 	mux.HandleFunc("/v2/snapshots/80d414c6-295e-4e3a-ac58-eb9456c1e1d1", func(w http.ResponseWriter, r *http.Request) {
