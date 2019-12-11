@@ -74,6 +74,7 @@ func testClientServices(t *testing.T, c *Client) {
 	services := []string{
 		"Account",
 		"Actions",
+		"Balance",
 		"CDNs",
 		"Domains",
 		"Droplets",
