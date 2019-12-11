@@ -1,5 +1,9 @@
 # Change Log
 
+## unreleased
+
+- #286 Deserialize meta - @timoreimann
+
 ## [v1.28.0] - 2019-12-04
 
 - #282 Add valid Redis eviction policy constants - @bentranter
