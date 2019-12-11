@@ -14,10 +14,13 @@ limitations under the License.
 package ssh
 
 import (
-	"github.com/digitalocean/doctl/pkg/runner"
+	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
+
+	"github.com/digitalocean/doctl/pkg/runner"
+	"github.com/fatih/color"
 )
 
 // Options is the type used to specify options passed to the SSH command
@@ -66,5 +69,18 @@ func (r *Runner) Run() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 
-	return cmd.Run()
+	err := cmd.Run()
+	if err != nil {
+		_, isSnap := os.LookupEnv("SNAP")
+
+		if os.IsPermission(err) && isSnap {
+			msg := "Using the doctl Snap? Grant access to the ssh-keys interface with this command: sudo snap connect doctl:ssh-keys"
+			fmt.Fprintf(color.Error, "%s: %s\n", color.YellowString("Warning"), msg)
+			return err
+		}
+
+		return err
+	}
+
+	return nil
 }
