@@ -15,7 +15,7 @@ const (
 
 // StorageService is an interface for interfacing with the storage
 // endpoints of the Digital Ocean API.
-// See: https://developers.digitalocean.com/documentation/v2#storage
+// See: https://developers.digitalocean.com/documentation/v2/#block-storage
 type StorageService interface {
 	ListVolumes(context.Context, *ListVolumeParams) ([]Volume, *Response, error)
 	GetVolume(context.Context, string) (*Volume, *Response, error)
