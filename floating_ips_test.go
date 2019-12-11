@@ -14,20 +14,27 @@ func TestFloatingIPs_ListFloatingIPs(t *testing.T) {
 
 	mux.HandleFunc("/v2/floating_ips", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"floating_ips": [{"region":{"slug":"nyc3"},"droplet":{"id":1},"ip":"192.168.0.1"},{"region":{"slug":"nyc3"},"droplet":{"id":2},"ip":"192.168.0.2"}]}`)
+		fmt.Fprint(w, `{"floating_ips": [{"region":{"slug":"nyc3"},"droplet":{"id":1},"ip":"192.168.0.1"},{"region":{"slug":"nyc3"},"droplet":{"id":2},"ip":"192.168.0.2"}],"meta":{"total":2}}`)
 	})
 
-	floatingIPs, _, err := client.FloatingIPs.List(ctx, nil)
+	floatingIPs, resp, err := client.FloatingIPs.List(ctx, nil)
 	if err != nil {
 		t.Errorf("FloatingIPs.List returned error: %v", err)
 	}
 
-	expected := []FloatingIP{
+	expectedFloatingIPs := []FloatingIP{
 		{Region: &Region{Slug: "nyc3"}, Droplet: &Droplet{ID: 1}, IP: "192.168.0.1"},
 		{Region: &Region{Slug: "nyc3"}, Droplet: &Droplet{ID: 2}, IP: "192.168.0.2"},
 	}
-	if !reflect.DeepEqual(floatingIPs, expected) {
-		t.Errorf("FloatingIPs.List returned %+v, expected %+v", floatingIPs, expected)
+	if !reflect.DeepEqual(floatingIPs, expectedFloatingIPs) {
+		t.Errorf("FloatingIPs.List returned floating IPs %+v, expected %+v", floatingIPs, expectedFloatingIPs)
+	}
+
+	expectedMeta := &Meta{
+		Total: 2,
+	}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("FloatingIPs.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

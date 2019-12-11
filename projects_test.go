@@ -14,7 +14,7 @@ func TestProjects_List(t *testing.T) {
 	setup()
 	defer teardown()
 
-	projects := []Project{
+	expectedProjects := []Project{
 		{
 			ID:   "project-1",
 			Name: "project-1",
@@ -27,17 +27,22 @@ func TestProjects_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/projects", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		resp, _ := json.Marshal(projects)
-		fmt.Fprint(w, fmt.Sprintf(`{"projects":%s}`, string(resp)))
+		resp, _ := json.Marshal(expectedProjects)
+		fmt.Fprint(w, fmt.Sprintf(`{"projects":%s, "meta": {"total": 2}}`, string(resp)))
 	})
 
-	resp, _, err := client.Projects.List(ctx, nil)
+	projects, resp, err := client.Projects.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Projects.List returned error: %v", err)
 	}
 
-	if !reflect.DeepEqual(resp, projects) {
-		t.Errorf("Projects.List returned %+v, expected %+v", resp, projects)
+	if !reflect.DeepEqual(projects, expectedProjects) {
+		t.Errorf("Projects.List returned projects %+v, expected %+v", projects, expectedProjects)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Projects.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -315,7 +320,7 @@ func TestProjects_ListResources(t *testing.T) {
 	setup()
 	defer teardown()
 
-	resources := []ProjectResource{
+	expectedResources := []ProjectResource{
 		{
 			URN:        "do:droplet:1",
 			AssignedAt: "2018-09-27 00:00:00",
@@ -334,17 +339,22 @@ func TestProjects_ListResources(t *testing.T) {
 
 	mux.HandleFunc("/v2/projects/project-1/resources", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		resp, _ := json.Marshal(resources)
-		fmt.Fprint(w, fmt.Sprintf(`{"resources":%s}`, string(resp)))
+		resp, _ := json.Marshal(expectedResources)
+		fmt.Fprint(w, fmt.Sprintf(`{"resources":%s, "meta": {"total": 2}}`, string(resp)))
 	})
 
-	resp, _, err := client.Projects.ListResources(ctx, "project-1", nil)
+	resources, resp, err := client.Projects.ListResources(ctx, "project-1", nil)
 	if err != nil {
 		t.Errorf("Projects.List returned error: %v", err)
 	}
 
-	if !reflect.DeepEqual(resp, resources) {
-		t.Errorf("Projects.ListResources returned %+v, expected %+v", resp, resources)
+	if !reflect.DeepEqual(resources, expectedResources) {
+		t.Errorf("Projects.ListResources returned resources %+v, expected %+v", resources, expectedResources)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Projects.ListResources returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

@@ -14,17 +14,34 @@ func TestImages_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/images", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"images": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	images, _, err := client.Images.List(ctx, nil)
+	images, resp, err := client.Images.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Images.List returned error: %v", err)
 	}
 
-	expected := []Image{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(images, expected) {
-		t.Errorf("Images.List returned %+v, expected %+v", images, expected)
+	expectedImages := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(images, expectedImages) {
+		t.Errorf("Images.List returned images %+v, expected %+v", images, expectedImages)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Images.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -39,17 +56,34 @@ func TestImages_ListDistribution(t *testing.T) {
 		if actual != expected {
 			t.Errorf("'type' query = %v, expected %v", actual, expected)
 		}
-		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"images": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	images, _, err := client.Images.ListDistribution(ctx, nil)
+	images, resp, err := client.Images.ListDistribution(ctx, nil)
 	if err != nil {
 		t.Errorf("Images.ListDistribution returned error: %v", err)
 	}
 
-	expected := []Image{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(images, expected) {
-		t.Errorf("Images.ListDistribution returned %+v, expected %+v", images, expected)
+	expectedImages := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(images, expectedImages) {
+		t.Errorf("Images.ListDistribution returned images %+v, expected %+v", images, expectedImages)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Images.ListDistribution returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -64,17 +98,34 @@ func TestImages_ListApplication(t *testing.T) {
 		if actual != expected {
 			t.Errorf("'type' query = %v, expected %v", actual, expected)
 		}
-		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"images": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	images, _, err := client.Images.ListApplication(ctx, nil)
+	images, resp, err := client.Images.ListApplication(ctx, nil)
 	if err != nil {
 		t.Errorf("Images.ListApplication returned error: %v", err)
 	}
 
-	expected := []Image{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(images, expected) {
-		t.Errorf("Images.ListApplication returned %+v, expected %+v", images, expected)
+	expectedImages := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(images, expectedImages) {
+		t.Errorf("Images.ListApplication returned images %+v, expected %+v", images, expectedImages)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Images.ListApplication returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -90,17 +141,34 @@ func TestImages_ListUser(t *testing.T) {
 			t.Errorf("'private' query = %v, expected %v", actual, expected)
 		}
 
-		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"images": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	images, _, err := client.Images.ListUser(ctx, nil)
+	images, resp, err := client.Images.ListUser(ctx, nil)
 	if err != nil {
 		t.Errorf("Images.ListUser returned error: %v", err)
 	}
 
-	expected := []Image{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(images, expected) {
-		t.Errorf("Images.ListUser returned %+v, expected %+v", images, expected)
+	expectedImages := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(images, expectedImages) {
+		t.Errorf("Images.ListUser returned images %+v, expected %+v", images, expectedImages)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Images.ListUser returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -116,17 +184,34 @@ func TestImages_ListByTag(t *testing.T) {
 			t.Errorf("'tag_name' query = %v, expected %v", actual, expected)
 		}
 
-		fmt.Fprint(w, `{"images":[{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"images": [
+				{
+					"id": 1
+				},
+				{
+					"id":2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	images, _, err := client.Images.ListByTag(ctx, "foo", nil)
+	images, resp, err := client.Images.ListByTag(ctx, "foo", nil)
 	if err != nil {
 		t.Errorf("Images.ListByTag returned error: %v", err)
 	}
 
-	expected := []Image{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(images, expected) {
-		t.Errorf("Images.ListByTag returned %+v, expected %+v", images, expected)
+	expectedImages := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(images, expectedImages) {
+		t.Errorf("Images.ListByTag returned images %+v, expected %+v", images, expectedImages)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Images.ListByTag returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

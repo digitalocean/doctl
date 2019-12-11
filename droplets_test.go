@@ -14,17 +14,33 @@ func TestDroplets_ListDroplets(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"droplets": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	droplets, _, err := client.Droplets.List(ctx, nil)
+	droplets, resp, err := client.Droplets.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Droplets.List returned error: %v", err)
 	}
 
-	expected := []Droplet{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(droplets, expected) {
-		t.Errorf("Droplets.List\n got=%#v\nwant=%#v", droplets, expected)
+	expectedDroplets := []Droplet{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(droplets, expectedDroplets) {
+		t.Errorf("Droplets.List\nDroplets: got=%#v\nwant=%#v", droplets, expectedDroplets)
+	}
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Droplets.List\nMeta: got=%#v\nwant=%#v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -38,17 +54,33 @@ func TestDroplets_ListDropletsByTag(t *testing.T) {
 		}
 
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"droplets": [{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"droplets": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	droplets, _, err := client.Droplets.ListByTag(ctx, "testing-1", nil)
+	droplets, resp, err := client.Droplets.ListByTag(ctx, "testing-1", nil)
 	if err != nil {
 		t.Errorf("Droplets.ListByTag returned error: %v", err)
 	}
 
-	expected := []Droplet{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(droplets, expected) {
-		t.Errorf("Droplets.ListByTag returned %+v, expected %+v", droplets, expected)
+	expectedDroplets := []Droplet{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(droplets, expectedDroplets) {
+		t.Errorf("Droplets.ListByTag returned droplets %+v, expected %+v", droplets, expectedDroplets)
+	}
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Droplets.ListByTag returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -354,18 +386,34 @@ func TestDroplets_Kernels(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/12345/kernels", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"kernels": [{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"kernels": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
 	opt := &ListOptions{Page: 2}
-	kernels, _, err := client.Droplets.Kernels(ctx, 12345, opt)
+	kernels, resp, err := client.Droplets.Kernels(ctx, 12345, opt)
 	if err != nil {
 		t.Errorf("Droplets.Kernels returned error: %v", err)
 	}
 
-	expected := []Kernel{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(kernels, expected) {
-		t.Errorf("Droplets.Kernels\n got=%#v\nwant=%#v", kernels, expected)
+	expectedKernels := []Kernel{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(kernels, expectedKernels) {
+		t.Errorf("Droplets.Kernels\nKernels got=%#v\nwant=%#v", kernels, expectedKernels)
+	}
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Droplets.Kernels\nMeta: got=%#v\nwant=%#v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -375,18 +423,34 @@ func TestDroplets_Snapshots(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/12345/snapshots", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"snapshots": [{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"snapshots": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
 	opt := &ListOptions{Page: 2}
-	snapshots, _, err := client.Droplets.Snapshots(ctx, 12345, opt)
+	snapshots, resp, err := client.Droplets.Snapshots(ctx, 12345, opt)
 	if err != nil {
 		t.Errorf("Droplets.Snapshots returned error: %v", err)
 	}
 
-	expected := []Image{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(snapshots, expected) {
-		t.Errorf("Droplets.Snapshots\n got=%#v\nwant=%#v", snapshots, expected)
+	expectedSnapshots := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(snapshots, expectedSnapshots) {
+		t.Errorf("Droplets.Snapshots\nSnapshots got=%#v\nwant=%#v", snapshots, expectedSnapshots)
+	}
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Droplets.Snapshots\nMeta: got=%#v\nwant=%#v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -396,18 +460,34 @@ func TestDroplets_Backups(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/12345/backups", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"backups": [{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"backups": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
 	opt := &ListOptions{Page: 2}
-	backups, _, err := client.Droplets.Backups(ctx, 12345, opt)
+	backups, resp, err := client.Droplets.Backups(ctx, 12345, opt)
 	if err != nil {
 		t.Errorf("Droplets.Backups returned error: %v", err)
 	}
 
-	expected := []Image{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(backups, expected) {
-		t.Errorf("Droplets.Backups\n got=%#v\nwant=%#v", backups, expected)
+	expectedBackups := []Image{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(backups, expectedBackups) {
+		t.Errorf("Droplets.Backups\nBackups got=%#v\nwant=%#v", backups, expectedBackups)
+	}
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Droplets.Backups\nMeta: got=%#v\nwant=%#v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -417,18 +497,34 @@ func TestDroplets_Actions(t *testing.T) {
 
 	mux.HandleFunc("/v2/droplets/12345/actions", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"actions": [{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"actions": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
 	opt := &ListOptions{Page: 2}
-	actions, _, err := client.Droplets.Actions(ctx, 12345, opt)
+	actions, resp, err := client.Droplets.Actions(ctx, 12345, opt)
 	if err != nil {
 		t.Errorf("Droplets.Actions returned error: %v", err)
 	}
 
-	expected := []Action{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(actions, expected) {
-		t.Errorf("Droplets.Actions\n got=%#v\nwant=%#v", actions, expected)
+	expectedActions := []Action{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(actions, expectedActions) {
+		t.Errorf("Droplets.Actions\nActions got=%#v\nwant=%#v", actions, expectedActions)
+	}
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Droplets.Actions\nMeta: got=%#v\nwant=%#v", resp.Meta, expectedMeta)
 	}
 }
 

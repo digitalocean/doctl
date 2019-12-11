@@ -231,17 +231,22 @@ func TestTags_List(t *testing.T) {
 		fmt.Fprint(w, listJSON)
 	})
 
-	tags, _, err := client.Tags.List(ctx, nil)
+	tags, resp, err := client.Tags.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Tags.List returned error: %v", err)
 	}
 
-	expected := []Tag{
+	expectedTags := []Tag{
 		{Name: "testing-1", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}, Volumes: &TaggedVolumesResources{Count: 0}, VolumeSnapshots: &TaggedVolumeSnapshotsResources{Count: 0}, Databases: &TaggedDatabasesResources{Count: 0}}},
 		{Name: "testing-2", Resources: &TaggedResources{Count: 0, Droplets: &TaggedDropletsResources{Count: 0, LastTagged: nil}, Images: &TaggedImagesResources{Count: 0}, Volumes: &TaggedVolumesResources{Count: 0}, VolumeSnapshots: &TaggedVolumeSnapshotsResources{Count: 0}, Databases: &TaggedDatabasesResources{Count: 0}}},
 	}
-	if !reflect.DeepEqual(tags, expected) {
-		t.Errorf("Tags.List returned %+v, expected %+v", tags, expected)
+	if !reflect.DeepEqual(tags, expectedTags) {
+		t.Errorf("Tags.List returned tags %+v, expected %+v", tags, expectedTags)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Tags.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

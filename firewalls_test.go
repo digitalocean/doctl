@@ -500,7 +500,7 @@ func TestFirewalls_List(t *testing.T) {
 		fmt.Fprint(w, firewallListJSONResponse)
 	})
 
-	actualFirewalls, _, err := client.Firewalls.List(ctx, nil)
+	actualFirewalls, resp, err := client.Firewalls.List(ctx, nil)
 
 	if err != nil {
 		t.Errorf("Firewalls.List returned error: %v", err)
@@ -508,7 +508,11 @@ func TestFirewalls_List(t *testing.T) {
 
 	expectedFirewalls := makeExpectedFirewalls()
 	if !reflect.DeepEqual(actualFirewalls, expectedFirewalls) {
-		t.Errorf("Firewalls.List returned %+v, expected %+v", actualFirewalls, expectedFirewalls)
+		t.Errorf("Firewalls.List returned firewalls %+v, expected %+v", actualFirewalls, expectedFirewalls)
+	}
+	expectedMeta := &Meta{Total: 1}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Firewalls.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -521,7 +525,7 @@ func TestFirewalls_ListByDroplet(t *testing.T) {
 		fmt.Fprint(w, firewallListJSONResponse)
 	})
 
-	actualFirewalls, _, err := client.Firewalls.ListByDroplet(ctx, 123, nil)
+	actualFirewalls, resp, err := client.Firewalls.ListByDroplet(ctx, 123, nil)
 
 	if err != nil {
 		t.Errorf("Firewalls.List returned error: %v", err)
@@ -529,7 +533,11 @@ func TestFirewalls_ListByDroplet(t *testing.T) {
 
 	expectedFirewalls := makeExpectedFirewalls()
 	if !reflect.DeepEqual(actualFirewalls, expectedFirewalls) {
-		t.Errorf("Firewalls.List returned %+v, expected %+v", actualFirewalls, expectedFirewalls)
+		t.Errorf("Firewalls.List returned firewalls %+v, expected %+v", actualFirewalls, expectedFirewalls)
+	}
+	expectedMeta := &Meta{Total: 1}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Firewalls.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

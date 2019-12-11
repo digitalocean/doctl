@@ -563,13 +563,13 @@ func TestLoadBalancers_List(t *testing.T) {
 		fmt.Fprint(w, lbListJSONResponse)
 	})
 
-	loadBalancers, _, err := client.LoadBalancers.List(ctx, nil)
+	loadBalancers, resp, err := client.LoadBalancers.List(ctx, nil)
 
 	if err != nil {
 		t.Errorf("LoadBalancers.List returned error: %v", err)
 	}
 
-	expected := []LoadBalancer{
+	expectedLBs := []LoadBalancer{
 		{
 			ID:        "37e6be88-01ec-4ec7-9bc6-a514d4719057",
 			Name:      "example-lb-01",
@@ -611,7 +611,10 @@ func TestLoadBalancers_List(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expected, loadBalancers)
+	assert.Equal(t, expectedLBs, loadBalancers)
+
+	expectedMeta := &Meta{Total: 3}
+	assert.Equal(t, expectedMeta, resp.Meta)
 }
 
 func TestLoadBalancers_List_Pagination(t *testing.T) {

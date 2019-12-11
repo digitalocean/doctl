@@ -32,17 +32,20 @@ func TestCDN_ListCDN(t *testing.T) {
             "ttl": 3600,
             "created_at": "2012-10-03T15:00:01.05Z"
           }
-        ]
+		],
+		"meta": {
+			"total": 2
+		}
       }`,
 		)
 	})
 
-	cdns, _, err := client.CDNs.List(ctx, nil)
+	cdns, resp, err := client.CDNs.List(ctx, nil)
 	if err != nil {
 		t.Errorf("CDNs.List returned error: %v", err)
 	}
 
-	expected := []CDN{
+	expectedCDNs := []CDN{
 		{
 			ID:        "892071a0-bb95-49bc-8021-3afd67a210bf",
 			Origin:    "my-space.nyc3.digitaloceanspaces.com",
@@ -59,8 +62,15 @@ func TestCDN_ListCDN(t *testing.T) {
 		},
 	}
 
-	if !reflect.DeepEqual(cdns, expected) {
-		t.Errorf("CDNs.List returned %+v, expected %+v", cdns, expected)
+	if !reflect.DeepEqual(cdns, expectedCDNs) {
+		t.Errorf("CDNs.List returned CDNs %+v, expected %+v", cdns, expectedCDNs)
+	}
+
+	expectedMeta := &Meta{
+		Total: 2,
+	}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("CDNs.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

@@ -3,6 +3,7 @@ package godo
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
@@ -68,6 +69,9 @@ func TestVPCs_List(t *testing.T) {
 			Next: "http://localhost/v2/vpcs?page=2&per_page=1",
 		},
 	}
+	meta := &Meta{
+		Total: 3,
+	}
 	jsonBlob := `
 {
   "vpcs": [
@@ -89,8 +93,9 @@ func TestVPCs_List(t *testing.T) {
 
 	got, resp, err := svc.List(ctx, nil)
 	require.NoError(t, err)
-	require.Equal(t, want, got)
-	require.Equal(t, resp.Links, links)
+	assert.Equal(t, want, got)
+	assert.Equal(t, resp.Links, links)
+	assert.Equal(t, resp.Meta, meta)
 }
 
 func TestVPCs_Create(t *testing.T) {
