@@ -13,17 +13,34 @@ func TestSizes_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/sizes", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"sizes":[{"slug":"1"},{"slug":"2"}]}`)
+		fmt.Fprint(w, `{
+			"sizes": [
+				{
+					"slug": "1"
+				},
+				{
+					"slug": "2"
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	sizes, _, err := client.Sizes.List(ctx, nil)
+	sizes, resp, err := client.Sizes.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Sizes.List returned error: %v", err)
 	}
 
-	expected := []Size{{Slug: "1"}, {Slug: "2"}}
-	if !reflect.DeepEqual(sizes, expected) {
-		t.Errorf("Sizes.List returned %+v, expected %+v", sizes, expected)
+	expectedSizes := []Size{{Slug: "1"}, {Slug: "2"}}
+	if !reflect.DeepEqual(sizes, expectedSizes) {
+		t.Errorf("Sizes.List returned sizes %+v, expected %+v", sizes, expectedSizes)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Sizes.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

@@ -102,17 +102,31 @@ func TestStorageActions_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/volumes/"+volumeID+"/actions", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprintf(w, `{"actions":[{"status":"in-progress"}]}`)
+		fmt.Fprintf(w, `{
+			"actions": [
+				{
+					"status": "in-progress"
+				}
+			],
+			"meta": {
+				"total": 1
+			}
+		}`)
 	})
 
-	actions, _, err := client.StorageActions.List(ctx, volumeID, nil)
+	actions, resp, err := client.StorageActions.List(ctx, volumeID, nil)
 	if err != nil {
 		t.Errorf("StorageActions.List returned error: %v", err)
 	}
 
-	expected := []Action{{Status: "in-progress"}}
-	if !reflect.DeepEqual(actions, expected) {
-		t.Errorf("StorageActions.List returned %+v, expected %+v", actions, expected)
+	expectedActions := []Action{{Status: "in-progress"}}
+	if !reflect.DeepEqual(actions, expectedActions) {
+		t.Errorf("StorageActions.List returned actions %+v, expected %+v", actions, expectedActions)
+	}
+
+	expectedMeta := &Meta{Total: 1}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("StorageActions.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

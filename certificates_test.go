@@ -57,7 +57,7 @@ var certsJSONResponse = `
   	],
   	"links": {},
   	"meta": {
-    	"total": 1
+		"total": 2
   	}
 }
 `
@@ -103,13 +103,13 @@ func TestCertificates_List(t *testing.T) {
 		fmt.Fprint(w, certsJSONResponse)
 	})
 
-	certificates, _, err := client.Certificates.List(ctx, nil)
+	certificates, resp, err := client.Certificates.List(ctx, nil)
 
 	if err != nil {
 		t.Errorf("Certificates.List returned error: %v", err)
 	}
 
-	expected := []Certificate{
+	expectedCertificates := []Certificate{
 		{
 			ID:              "892071a0-bb95-49bc-8021-3afd67a210bf",
 			Name:            "web-cert-01",
@@ -132,7 +132,12 @@ func TestCertificates_List(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, expected, certificates)
+	assert.Equal(t, expectedCertificates, certificates)
+
+	expectedMeta := &Meta{
+		Total: 2,
+	}
+	assert.Equal(t, expectedMeta, resp.Meta)
 }
 
 func TestCertificates_Create(t *testing.T) {

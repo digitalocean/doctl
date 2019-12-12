@@ -113,6 +113,7 @@ type UntagResourcesRequest struct {
 type tagsRoot struct {
 	Tags  []Tag  `json:"tags"`
 	Links *Links `json:"links"`
+	Meta  *Meta  `json:"meta"`
 }
 
 type tagRoot struct {
@@ -140,6 +141,9 @@ func (s *TagsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Tag, *Res
 	}
 	if l := root.Links; l != nil {
 		resp.Links = l
+	}
+	if m := root.Meta; m != nil {
+		resp.Meta = m
 	}
 
 	return root.Tags, resp, err

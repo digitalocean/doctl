@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
@@ -17,7 +18,7 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 
 	kubeSvc := client.Kubernetes
 
-	want := []*KubernetesCluster{
+	wantClusters := []*KubernetesCluster{
 		&KubernetesCluster{
 			ID:            "8d91899c-0739-4a1a-acc5-deadbeefbb8f",
 			Name:          "blablabla",
@@ -201,7 +202,16 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 			"created_at": "2018-06-15T07:10:23Z",
 			"updated_at": "2018-06-15T07:11:26Z"
 		}
-	]
+	],
+	"links": {
+	    "pages": {
+			"next": "https://api.digitalocean.com/v2/kubernetes/clusters?page=2",
+			"last": "https://api.digitalocean.com/v2/kubernetes/clusters?page=2"
+		}
+	},
+	"meta": {
+	    "total": 2
+	}
 }`
 
 	mux.HandleFunc("/v2/kubernetes/clusters", func(w http.ResponseWriter, r *http.Request) {
@@ -209,9 +219,24 @@ func TestKubernetesClusters_ListClusters(t *testing.T) {
 		fmt.Fprint(w, jBlob)
 	})
 
-	got, _, err := kubeSvc.List(ctx, nil)
+	gotClusters, resp, err := kubeSvc.List(ctx, nil)
 	require.NoError(t, err)
-	require.Equal(t, want, got)
+	assert.Equal(t, wantClusters, gotClusters)
+
+	gotRespLinks := resp.Links
+	wantRespLinks := &Links{
+		Pages: &Pages{
+			Next: "https://api.digitalocean.com/v2/kubernetes/clusters?page=2",
+			Last: "https://api.digitalocean.com/v2/kubernetes/clusters?page=2",
+		},
+	}
+	assert.Equal(t, wantRespLinks, gotRespLinks)
+
+	gotRespMeta := resp.Meta
+	wantRespMeta := &Meta{
+		Total: 2,
+	}
+	assert.Equal(t, wantRespMeta, gotRespMeta)
 }
 
 func TestKubernetesClusters_Get(t *testing.T) {

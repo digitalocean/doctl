@@ -14,17 +14,34 @@ func TestDomains_ListDomains(t *testing.T) {
 
 	mux.HandleFunc("/v2/domains", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"domains": [{"name":"foo.com"},{"name":"bar.com"}]}`)
+		fmt.Fprint(w, `{
+			"domains": [
+				{
+					"name":"foo.com"
+				},
+				{
+					"name":"bar.com"
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	domains, _, err := client.Domains.List(ctx, nil)
+	domains, resp, err := client.Domains.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Domains.List returned error: %v", err)
 	}
 
-	expected := []Domain{{Name: "foo.com"}, {Name: "bar.com"}}
-	if !reflect.DeepEqual(domains, expected) {
-		t.Errorf("Domains.List returned %+v, expected %+v", domains, expected)
+	expectedDomains := []Domain{{Name: "foo.com"}, {Name: "bar.com"}}
+	if !reflect.DeepEqual(domains, expectedDomains) {
+		t.Errorf("Domains.List returned domains %+v, expected %+v", domains, expectedDomains)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Domains.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
@@ -59,6 +76,9 @@ func TestDomains_RetrievePageByNumber(t *testing.T) {
 				"last":"http://example.com/v2/domains/?page=3",
 				"first":"http://example.com/v2/domains/?page=1"
 			}
+		},
+		"meta":{
+			"total":2
 		}
 	}`
 

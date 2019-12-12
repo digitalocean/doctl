@@ -13,18 +13,36 @@ func TestAction_List(t *testing.T) {
 	defer teardown()
 
 	mux.HandleFunc("/v2/actions", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, `{"actions": [{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"actions": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		},
+		`)
 		testMethod(t, r, http.MethodGet)
 	})
 
-	actions, _, err := client.Actions.List(ctx, nil)
+	actions, resp, err := client.Actions.List(ctx, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	expected := []Action{{ID: 1}, {ID: 2}}
-	if len(actions) != len(expected) || actions[0].ID != expected[0].ID || actions[1].ID != expected[1].ID {
-		t.Fatalf("unexpected response")
+	expectedActions := []Action{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(actions, expectedActions) {
+		t.Errorf("Actions.List returned actions %+v, expected %+v", actions, expectedActions)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Actions.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

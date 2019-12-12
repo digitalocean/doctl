@@ -14,17 +14,34 @@ func TestKeys_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/account/keys", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"ssh_keys":[{"id":1},{"id":2}]}`)
+		fmt.Fprint(w, `{
+			"ssh_keys": [
+				{
+					"id": 1
+				},
+				{
+					"id": 2
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	keys, _, err := client.Keys.List(ctx, nil)
+	keys, resp, err := client.Keys.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Keys.List returned error: %v", err)
 	}
 
-	expected := []Key{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(keys, expected) {
-		t.Errorf("Keys.List returned %+v, expected %+v", keys, expected)
+	expectedKeys := []Key{{ID: 1}, {ID: 2}}
+	if !reflect.DeepEqual(keys, expectedKeys) {
+		t.Errorf("Keys.List returned keys %+v, expected %+v", keys, expectedKeys)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Keys.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 

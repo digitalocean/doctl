@@ -13,17 +13,34 @@ func TestRegions_List(t *testing.T) {
 
 	mux.HandleFunc("/v2/regions", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		fmt.Fprint(w, `{"regions":[{"slug":"1"},{"slug":"2"}]}`)
+		fmt.Fprint(w, `{
+			"regions": [
+				{
+					"slug": "1"
+				},
+				{
+					"slug": "2"
+				}
+			],
+			"meta": {
+				"total": 2
+			}
+		}`)
 	})
 
-	regions, _, err := client.Regions.List(ctx, nil)
+	regions, resp, err := client.Regions.List(ctx, nil)
 	if err != nil {
 		t.Errorf("Regions.List returned error: %v", err)
 	}
 
-	expected := []Region{{Slug: "1"}, {Slug: "2"}}
-	if !reflect.DeepEqual(regions, expected) {
-		t.Errorf("Regions.List returned %+v, expected %+v", regions, expected)
+	expectedRegions := []Region{{Slug: "1"}, {Slug: "2"}}
+	if !reflect.DeepEqual(regions, expectedRegions) {
+		t.Errorf("Regions.List returned regions %+v, expected %+v", regions, expectedRegions)
+	}
+
+	expectedMeta := &Meta{Total: 2}
+	if !reflect.DeepEqual(resp.Meta, expectedMeta) {
+		t.Errorf("Regions.List returned meta %+v, expected %+v", resp.Meta, expectedMeta)
 	}
 }
 
