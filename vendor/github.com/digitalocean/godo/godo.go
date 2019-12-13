@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.27.0"
+	libraryVersion = "1.29.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -45,6 +45,7 @@ type Client struct {
 	// Services used for communicating with the API
 	Account           AccountService
 	Actions           ActionsService
+	Balance           BalanceService
 	CDNs              CDNService
 	Domains           DomainsService
 	Droplets          DropletsService
@@ -93,6 +94,9 @@ type Response struct {
 	// Links that were returned with the response. These are parsed from
 	// request body and not the header.
 	Links *Links
+
+	// Meta describes generic information about the response.
+	Meta *Meta
 
 	// Monitoring URI
 	Monitor string
@@ -162,6 +166,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
 	c.Account = &AccountServiceOp{client: c}
 	c.Actions = &ActionsServiceOp{client: c}
+	c.Balance = &BalanceServiceOp{client: c}
 	c.CDNs = &CDNServiceOp{client: c}
 	c.Certificates = &CertificatesServiceOp{client: c}
 	c.Domains = &DomainsServiceOp{client: c}
