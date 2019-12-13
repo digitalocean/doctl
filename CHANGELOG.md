@@ -2,6 +2,8 @@
 
 ## unreleased
 
+## [v1.29.0] - 2019-12-13
+
 - #288 Add Balance Get method - @rbutler
 - #286,#289 Deserialize meta field - @timoreimann
 
