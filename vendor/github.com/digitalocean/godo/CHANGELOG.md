@@ -1,5 +1,18 @@
 # Change Log
 
+## unreleased
+
+## [v1.29.0] - 2019-12-13
+
+- #288 Add Balance Get method - @rbutler
+- #286,#289 Deserialize meta field - @timoreimann
+
+## [v1.28.0] - 2019-12-04
+
+- #282 Add valid Redis eviction policy constants - @bentranter
+- #281 Remove databases info from top-level godoc string - @bentranter
+- #280 Fix VolumeSnapshotResourceType value volumesnapshot -> volume_snapshot - @aqche
+
 ## [v1.27.0] - 2019-11-18
 
 - #278 add mysql user auth settings for database users - @gregmankes

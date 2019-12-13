@@ -68,8 +68,24 @@ const (
 	SQLAuthPluginCachingSHA2 = "caching_sha2_password"
 )
 
-// DatabasesService is an interface for interfacing with the databases endpoints
-// of the DigitalOcean API.
+// Redis eviction policies supported by the managed Redis product.
+const (
+	EvictionPolicyNoEviction     = "noeviction"
+	EvictionPolicyAllKeysLRU     = "allkeys_lru"
+	EvictionPolicyAllKeysRandom  = "allkeys_random"
+	EvictionPolicyVolatileLRU    = "volatile_lru"
+	EvictionPolicyVolatileRandom = "volatile_random"
+	EvictionPolicyVolatileTTL    = "volatile_ttl"
+)
+
+// The DatabasesService provides access to the DigitalOcean managed database
+// suite of products through the public API. Customers can create new database
+// clusters, migrate them  between regions, create replicas and interact with
+// their configurations. Each database service is refered to as a Database. A
+// SQL database service can have multiple databases residing in the system. To
+// help make these entities distinct from Databases in godo, we refer to them
+// here as DatabaseDBs.
+//
 // See: https://developers.digitalocean.com/documentation/v2#databases
 type DatabasesService interface {
 	List(context.Context, *ListOptions) ([]Database, *Response, error)
@@ -733,6 +749,9 @@ func (svc *DatabasesServiceOp) GetEvictionPolicy(ctx context.Context, databaseID
 }
 
 // SetEvictionPolicy updates the eviction policy for a given Redis cluster.
+//
+// The valid eviction policies are documented by the exported string constants
+// with the prefix `EvictionPolicy`.
 func (svc *DatabasesServiceOp) SetEvictionPolicy(ctx context.Context, databaseID, policy string) (*Response, error) {
 	path := fmt.Sprintf(databaseEvictionPolicyPath, databaseID)
 	root := &evictionPolicyRoot{EvictionPolicy: policy}
