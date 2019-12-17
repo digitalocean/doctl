@@ -227,9 +227,15 @@ This will create the necessary directory structure and configuration file to sto
 
 `doctl` allows you to log in to multiple DigitalOcean accounts at the same time and easily switch between them with the use of authentication contexts.
 
-By default, a context named `default` is used. To create a new context, run `doctl auth init --context new-context-name`. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` variable. You will be prompted for your API access token which will be associated with the new context.
+By default, a context named `default` is used. To create a new context, run `doctl auth init --context <new-context-name>`. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` environment variable. You will be prompted for your API access token which will be associated with the new context.
 
-To use a non-default context, pass the context name as described above to any `doctl` command. To set a new default context, run `doctl auth switch`. This command will save the current context to the config file and use it for all commands by default if a context is not specified.
+To use a non-default context, pass the context name to any `doctl` command. For example:
+
+```
+doctl compute droplet list --context <new-context-name>
+```
+
+To set a new default context, run `doctl auth switch --context <new-context-name>`. This command will save the current context to the config file and use it for all commands by default if a context is not specified.
 
 The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` variable are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
 
@@ -238,7 +244,7 @@ The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` variable are acknowledg
 The `doctl` configuration file is used to store your API Access Token as well as the defaults for command flags. If you find yourself using certain flags frequently, you can change their default values to avoid typing them every time. This can be useful when, for example, you want to change the username or port used for SSH.
 
 On OS X, `doctl` saves its configuration as `${HOME}/Library/Application Support/doctl/config.yaml`. The `${HOME}/Library/Application Support/doctl/` directory will be created once you run `doctl auth init`.
- 
+
 On Linux, `doctl` saves its configuration as `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set, or `~/.config/doctl/config.yaml` if it is not. On Windows, the config file location is `%LOCALAPPDATA%/doctl/config/config.yaml`.
 
 The configuration file is automatically created and populated with default properties when you authenticate with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
