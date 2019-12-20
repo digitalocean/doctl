@@ -37,7 +37,7 @@ func Droplet() *Command {
 		Command: &cobra.Command{
 			Use:     "droplet",
 			Aliases: []string{"d"},
-			Short:   "droplet commands",
+			Short:   "Manage virtual manchines (Droplets)",
 			Long:    `A Droplet is a DigitalOcean virtual machine. Use the subcommands of `+ "`" +`doctl compute droplet`+ "`" +` to list, create, or delete Droplets.`,
 		},
 	}
@@ -69,10 +69,10 @@ func Droplet() *Command {
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "Embedded SSH keys or fingerprints on the Droplet")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "Data used to configure the Droplet on first boot")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "User data file")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Wait for droplet to be created")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Wait for Droplet to be created")
 	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "The region the Droplet will be created in",
 		requiredOpt())
-	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug representing the size of the Droplet. Run "+"`"+"doctl compute size list"+"`"+" for a list of valid sizes",
+	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug representing the size of the Droplet. Run `doctl compute size list` for a list of valid sizes",
 		requiredOpt())
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address")
@@ -92,7 +92,7 @@ func Droplet() *Command {
 
 	cmdRunDropletGet := CmdBuilderWithDocs(cmd, RunDropletGet, "get <droplet-id>", "Retrieve information about a Droplet", `Use this command to retrieve information about a Droplet, including:`+dropletDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Droplet{}))
-	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Sample values: "+"`"+"{{.ID}}"+"`"+", "+"`"+"{{.Name}}"+"`"+", "+"`"+"{{.Memory}}"+"`"+", "+"`"+"{{.Region.Name}}"+"`"+", "+"`"+"{{.Image}}"+"`"+", "+"`"+"{{.Tags}}"+"`")
+	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Sample values: `{{.ID}}`, `{{.Name}}`, `{{.Memory}}`, `{{.Region.Name}}`, `{{.Image}}`, `{{.Tags}}`")
 
 	CmdBuilderWithDocs(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Use this command to retrieve a list of all kernels available to a Droplet.`, Writer,
 		aliasOpt("k"), displayerType(&displayers.Kernel{}))
@@ -108,13 +108,12 @@ func Droplet() *Command {
 	CmdBuilderWithDocs(cmd, RunDropletSnapshots, "snapshots <droplet-id>", "List all snapshots for a Droplet", `Use this command to get a list of snapshots created from this Droplet.`, Writer,
 		aliasOpt("s"), displayerType(&displayers.Image{}))
 
-	cmdRunDropletTag := CmdBuilderWithDocs(cmd, RunDropletTag, "tag <droplet-id|droplet-name>", "Add a tag to a Droplet", `Use this command to tag a Droplet. Specify the tag with the --tag-name flag.`, Writer)
-	AddStringFlag(cmdRunDropletTag, doctl.ArgTagName, "", "", "Tag name",
+	cmdRunDropletTag := CmdBuilderWithDocs(cmd, RunDropletTag, "tag <droplet-id|droplet-name>", "Add a tag to a Droplet", "Use this command to tag a Droplet. Specify the tag with the `--tag-name` flag.", Writer)
+	AddStringFlag(cmdRunDropletTag, doctl.ArgTagName, "", "", "Tag name to use; can be a new or existing tag",
 		requiredOpt())
 
-	cmdRunDropletUntag := CmdBuilderWithDocs(cmd, RunDropletUntag, "untag <droplet-id|droplet-name>", "Remove a tag from a Droplet", `Use this command to remove a tag from a Droplet, specified with the --tag-name flag.
-	`, Writer)
-	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "tag names")
+	cmdRunDropletUntag := CmdBuilderWithDocs(cmd, RunDropletUntag, "untag <droplet-id|droplet-name>", "Remove a tag from a Droplet", "Use this command to remove a tag from a Droplet, specified with the `--tag-name` flag.", Writer)
+	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "Tag name to remove from Droplet")
 
 	return cmd
 }
@@ -281,7 +280,7 @@ func RunDropletCreate(c *CmdConfig) error {
 					return
 				}
 				if tag == nil {
-					errs <- fmt.Errorf("Specified Tag must exist")
+					errs <- fmt.Errorf("Specified tag does not exist.")
 					return
 				}
 			}
@@ -480,7 +479,7 @@ func RunDropletDelete(c *CmdConfig) error {
 	if len(c.Args) < 1 && tagName == "" {
 		return doctl.NewMissingArgsErr(c.NS)
 	} else if len(c.Args) > 0 && tagName != "" {
-		return fmt.Errorf("please specify droplets identifiers or a tag name")
+		return fmt.Errorf("Please specify Droplet identifier or a tag name.")
 	} else if tagName != "" {
 		// Collect affected Droplet IDs to show in confirmation message.
 		var affectedIDs string
@@ -489,7 +488,7 @@ func RunDropletDelete(c *CmdConfig) error {
 			return err
 		}
 		if len(list) == 0 {
-			fmt.Fprintf(c.Out, "nothing to delete: no droplets found by \"%s\" tag\n", tagName)
+			fmt.Fprintf(c.Out, "Nothing to delete: no Droplets are using the \"%s\" tag\n", tagName)
 			return nil
 		}
 		ids := make([]string, 0, len(list))
@@ -498,25 +497,25 @@ func RunDropletDelete(c *CmdConfig) error {
 		}
 		affectedIDs = strings.Join(ids, " ")
 
-		if force || AskForConfirm(fmt.Sprintf("delete droplet(s) by \"%s\" tag [affected ID(s): %s]", tagName, affectedIDs)) == nil {
+		if force || AskForConfirm(fmt.Sprintf("Delete droplet(s) by \"%s\" tag? [affected ID(s): %s]", tagName, affectedIDs)) == nil {
 			return ds.DeleteByTag(tagName)
 		}
 		return nil
 	}
 
-	if force || AskForConfirm(fmt.Sprintf("delete %d droplet(s)", len(c.Args))) == nil {
+	if force || AskForConfirm(fmt.Sprintf("Delete %d droplet(s)?", len(c.Args))) == nil {
 
 		fn := func(ids []int) error {
 			for _, id := range ids {
 				if err := ds.Delete(id); err != nil {
-					return fmt.Errorf("unable to delete droplet %d: %v", id, err)
+					return fmt.Errorf("Unable to delete droplet %d: %v", id, err)
 				}
 			}
 			return nil
 		}
 		return matchDroplets(c.Args, ds, fn)
 	}
-	return fmt.Errorf("operation aborted")
+	return fmt.Errorf("Operation aborted.")
 }
 
 type matchDropletsFn func(ids []int) error
@@ -535,7 +534,7 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 	for _, idStr := range ids {
 		count := sum.count[idStr]
 		if count > 1 {
-			return fmt.Errorf("there are %d Droplets with the name %q, please delete by id. [%s]",
+			return fmt.Errorf("There are %d Droplets with the name %q; please provide a specific Droplet ID. [%s]",
 				count, idStr, strings.Join(sum.byName[idStr], ", "))
 		}
 
@@ -543,7 +542,7 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 		if err != nil {
 			id, ok := sum.byID[idStr]
 			if !ok {
-				return fmt.Errorf("droplet with name %q could not be found", idStr)
+				return fmt.Errorf("Droplet with the name %q could not be found.", idStr)
 			}
 
 			matchedMap[id] = true
@@ -583,7 +582,7 @@ func RunDropletGet(c *CmdConfig) error {
 
 	item := &displayers.Droplet{Droplets: do.Droplets{*d}}
 	if getTemplate != "" {
-		t := template.New("get template")
+		t := template.New("Get template")
 		t, err = t.Parse(getTemplate)
 		if err != nil {
 			return err
@@ -630,7 +629,7 @@ func RunDropletList(c *CmdConfig) error {
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
 		if err != nil {
-			return fmt.Errorf("unknown glob %q", globStr)
+			return fmt.Errorf("Unknown glob %q", globStr)
 		}
 
 		matches = append(matches, g)

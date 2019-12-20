@@ -35,9 +35,9 @@ func Firewall() *Command {
 			Short: "Display commands to manage Cloud Firewalls",
 			Long: `The sub-commands of `+ "`" +`doctl compute firewall`+ "`" +` manage DigitalOcean Cloud Firewalls.
 
-Cloud Firewalls provide the ability to restrict network access to and from a Droplet allowing you to define which ports will accept inbound or outbound connections. With these commands you can list, create, or delete Cloud Firewalls as well as modify access rules.
+Cloud Firewalls provide the ability to restrict network access to and from a Droplet, allowing you to define which ports accept inbound or outbound connections. With these commands, you can list, create, or delete Cloud Firewalls, as well as modify access rules.
 
-A Firewall's `+ "`" +`inbound_rules`+ "`" +` and `+ "`" +`outbound_rules`+ "`" +` attributes will have arrays of objects as their values. These objects will contain the standard attributes of their associated types which can be found below.
+A Firewall's `+ "`" +`inbound_rules`+ "`" +` and `+ "`" +`outbound_rules`+ "`" +` attributes contain arrays of objects as their values. These objects contain the standard attributes of their associated types, which can be found below.
 
 Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and sources for inbound traffic that will be allowed through the Firewall to the target Droplets. The `+ "`" +`ports`+ "`" +` attribute may contain a single port, a range of ports (e.g. `+ "`" +`8000-9000`+ "`" +`), or `+ "`" +`all`+ "`" +` to allow traffic on all ports for the specified protocol. The `+ "`" +`sources`+ "`" +` attribute will contain an object specifying a whitelist of sources from which traffic will be accepted.`,
 		},
@@ -45,7 +45,7 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 	fwDetail := `
 
 	- The firewall's ID
-	- The firewal's name
+	- The firewall's name
 	- The status of the firewall. This can be `+ "`" +`waiting`+ "`" +`, `+ "`" +`succeeded`+ "`" +`, or `+ "`" +`failed`+ "`" +`.
 	- The firewall's creation date, in ISO8601 combined date and time format.
 	- Any pending changes to the firewall. These can be `+ "`" +`droplet_id`+ "`" +`, `+ "`" +`removing`+ "`" +`, and `+ "`" +`status`+ "`" +`.
@@ -55,48 +55,53 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 	- The IDs of Droplets assigned to the firewall.
 	- The tags assigned to the firewall.
 `
+	inboundRulesTxt := "A comma-separated key-value list that defines an inbound rule, e.g.: `protocol:tcp,ports:22,droplet_id:123`. Use a quoted string of space-separated values for multiple rules."
+	outboundRulesTxt := "A comma-separate key-value list the defines an outbound rule, e.g.: `protocol:tcp,ports:22,address:0.0.0.0/0`. Use a quoted string of space-separated values for multiple rules."
+	dropletIDRulesTxt := "A comma-separated list of Droplet IDs to place behind the Cloud Firewall, e.g.: `123,456`"
+	tagNameRulesTxt := "A comma-separated list of tag names to apply to the Cloud Firewall, e.g.: `frontend,backend`"
+
 	CmdBuilderWithDocs(cmd, RunFirewallGet, "get <id>", "Retrive information about a Cloud Firewall", `Use this command to get information about an existing Cloud Firewall, including:`+fwDetail, Writer, aliasOpt("g"), displayerType(&displayers.Firewall{}))
 
 	cmdFirewallCreate := CmdBuilderWithDocs(cmd, RunFirewallCreate, "create", "Create a new Cloud Firewall", `Use this command to create a Cloud Firewall. This command must contain at least one inbound or outbound access rule.`, Writer, aliasOpt("c"), displayerType(&displayers.Firewall{}))
-	AddStringFlag(cmdFirewallCreate, doctl.ArgFirewallName, "", "", "firewall name", requiredOpt())
-	AddStringFlag(cmdFirewallCreate, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,droplet_id:1,droplet_id:2,tag:frontend, use quoted string of space-separated values for multiple rules")
-	AddStringFlag(cmdFirewallCreate, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
-	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
-	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
+	AddStringFlag(cmdFirewallCreate, doctl.ArgFirewallName, "", "", "Firewall name", requiredOpt())
+	AddStringFlag(cmdFirewallCreate, doctl.ArgInboundRules, "", "", inboundRulesTxt)
+	AddStringFlag(cmdFirewallCreate, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
+	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
+	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
 
-	cmdFirewallUpdate := CmdBuilderWithDocs(cmd, RunFirewallUpdate, "update <id>", "Update a Cloud Firewall's configuration", `Use this command to update the configuration of an existing Cloud Firewall. The request should contain a full representation of the Firewall including existing attributes. Note that any attributes that are not provided will be reset to their default values.`, Writer, aliasOpt("u"), displayerType(&displayers.Firewall{}))
-	AddStringFlag(cmdFirewallUpdate, doctl.ArgFirewallName, "", "", "firewall name", requiredOpt())
-	AddStringFlag(cmdFirewallUpdate, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,droplet_id:123, use quoted string of space-separated values for multiple rules")
-	AddStringFlag(cmdFirewallUpdate, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
-	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
-	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
+	cmdFirewallUpdate := CmdBuilderWithDocs(cmd, RunFirewallUpdate, "update <id>", "Update a Cloud Firewall's configuration", `Use this command to update the configuration of an existing Cloud Firewall. The request should contain a full representation of the Firewall, including existing attributes. Note: Any attributes that are not provided will be reset to their default values.`, Writer, aliasOpt("u"), displayerType(&displayers.Firewall{}))
+	AddStringFlag(cmdFirewallUpdate, doctl.ArgFirewallName, "", "", "Firewall name", requiredOpt())
+	AddStringFlag(cmdFirewallUpdate, doctl.ArgInboundRules, "", "", inboundRulesTxt)
+	AddStringFlag(cmdFirewallUpdate, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
+	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
+	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
 
 	CmdBuilderWithDocs(cmd, RunFirewallList, "list", "List the Cloud Firewalls on your account", `Use this command to retrieve a list of Cloud Firewalls.`, Writer, aliasOpt("ls"), displayerType(&displayers.Firewall{}))
 
 	CmdBuilderWithDocs(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "", `Use this command to list Cloud Firewalls by the ID of a Droplet assigned to the firewall.`, Writer, displayerType(&displayers.Firewall{}))
 
 	cmdRunRecordDelete := CmdBuilderWithDocs(cmd, RunFirewallDelete, "delete <id>...", "Permanently delete a Cloud Firewall", `Use this command to permanently delete a Cloud Firewall. This is irreversable, but does not delete any Droplets assigned to the Cloud Firewall.`, Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force firewall delete")
+	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete firewall without confirmation prompt")
 
 	cmdAddDroplets := CmdBuilderWithDocs(cmd, RunFirewallAddDroplets, "add-droplets <id>", "Add Droplets to a Cloud Firewall", `Use this command to add Droplets to the Cloud Firewall.`, Writer)
-	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example valus: 123,456")
+	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 
 	cmdRemoveDroplets := CmdBuilderWithDocs(cmd, RunFirewallRemoveDroplets, "remove-droplets <id>", "Remove Droplets from a Cloud Firewall", `Use this command to remove Droplets from a Cloud Firewall.`, Writer)
-	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{}, "comma-separated list of droplet IDs, example value: 123,456")
+	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 
 	cmdAddTags := CmdBuilderWithDocs(cmd, RunFirewallAddTags, "add-tags <id>", "Add tags to a Cloud Firewall", `Use this command to add tags to a Cloud Firewall. This adds all assets using that tag to the firewall`, Writer)
-	AddStringSliceFlag(cmdAddTags, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example valus: frontend,backend")
+	AddStringSliceFlag(cmdAddTags, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
 
 	cmdRemoveTags := CmdBuilderWithDocs(cmd, RunFirewallRemoveTags, "remove-tags <id>", "Remove tags from a Cloud Firewall", `Use this command to remove tags from a Cloud Firewall. This removes all assets using that tag from the firewall.`, Writer)
-	AddStringSliceFlag(cmdRemoveTags, doctl.ArgTagNames, "", []string{}, "comma-separated list of tag names, example value: frontend,backend")
+	AddStringSliceFlag(cmdRemoveTags, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
 
 	cmdAddRules := CmdBuilderWithDocs(cmd, RunFirewallAddRules, "add-rules <id>", "Add inbound or outbound rules to a Cloud Firewall", `Use this command to add inbound or outbound rules to a Cloud Firewall.`, Writer)
-	AddStringFlag(cmdAddRules, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
-	AddStringFlag(cmdAddRules, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
+	AddStringFlag(cmdAddRules, doctl.ArgInboundRules, "", "", inboundRulesTxt)
+	AddStringFlag(cmdAddRules, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 
 	cmdRemoveRules := CmdBuilderWithDocs(cmd, RunFirewallRemoveRules, "remove-rules <id>", "Remove inbound or outbound rules from a Cloud Firewall", `Use this command to remove inbound or outbound rules from a Cloud Firewall.`, Writer)
-	AddStringFlag(cmdRemoveRules, doctl.ArgInboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,load_balancer_uid:lb-uuid, use quoted string of space-separated values for multiple rules")
-	AddStringFlag(cmdRemoveRules, doctl.ArgOutboundRules, "", "", "comma-separated key:value list, example value: protocol:tcp,ports:22,address:0.0.0.0/0, use quoted string of space-separated values for multiple rules")
+	AddStringFlag(cmdRemoveRules, doctl.ArgInboundRules, "", "", inboundRulesTxt)
+	AddStringFlag(cmdRemoveRules, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 
 	return cmd
 }
@@ -201,14 +206,14 @@ func RunFirewallDelete(c *CmdConfig) error {
 	}
 
 	fs := c.Firewalls()
-	if force || AskForConfirm(fmt.Sprintf("delete %d firewall(s)", len(c.Args))) == nil {
+	if force || AskForConfirm(fmt.Sprintf("Delete %d firewall(s)?", len(c.Args))) == nil {
 		for _, id := range c.Args {
 			if err := fs.Delete(id); err != nil {
 				return err
 			}
 		}
 	} else {
-		return fmt.Errorf("operation aborted")
+		return fmt.Errorf("Operation aborted.")
 	}
 
 	return nil

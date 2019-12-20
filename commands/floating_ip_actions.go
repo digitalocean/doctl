@@ -29,7 +29,7 @@ func FloatingIPAction() *Command {
 		Command: &cobra.Command{
 			Use:     "floating-ip-action",
 			Short:   "Display commands to associate floating IP addresses with Droplets",
-			Long:    "Floating IP actions are commands that can be given to a DigitalOcean floating IP.",
+			Long:    "Floating IP actions are commands that are used to manage DigitalOcean floating IP addresses.",
 			Aliases: []string{"fipa"},
 		},
 	}
@@ -49,11 +49,11 @@ func FloatingIPAction() *Command {
 		displayerType(&displayers.Action{}))
 
 	CmdBuilderWithDocs(cmd, RunFloatingIPActionsAssign,
-		"assign <floating-ip> <droplet-id>", "Assign a floating IP Address to a Droplet", `Use this command to assign a floating IP Address to a Droplet. Set the "droplet_id" attribute to the Droplet's ID.`, Writer,
+		"assign <floating-ip> <droplet-id>", "Assign a floating IP address to a Droplet", "Use this command to assign a floating IP address to a Droplet by specifying the `droplet_id`.", Writer,
 		displayerType(&displayers.Action{}))
 
 	CmdBuilderWithDocs(cmd, RunFloatingIPActionsUnassign,
-		"unassign <floating-ip>", "Unassign a floating IP Address from a Droplet", `Use this command to unassign a floating IP Address. The floating IP Address will be reserved in the region but not assigned to a Droplet.`, Writer,
+		"unassign <floating-ip>", "Unassign a floating IP address from a Droplet", `Use this command to unassign a floating IP address from a Droplet. The floating IP address will be reserved in the region but not assigned to a Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 
 	return cmd

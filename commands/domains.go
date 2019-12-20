@@ -70,7 +70,7 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordTTL, "", 1800, "The record's Time To Live value, in seconds")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, "", 0, "The weight value for an SRV record")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are "+"`"+"issue"+"`"+", "+"`"+"issuewild"+"`"+", or "+"`"+"iodef"+"`")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
 
 	cmdRunRecordDelete := CmdBuilderWithDocs(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "Delete a DNS record", `Use this command to delete DNS records for a domain.`, Writer,
 		aliasOpt("d"))
@@ -87,7 +87,7 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 1800, "The record's Time To Live value, in seconds")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "The weight value for an SRV record")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are "+"`"+"issue"+"`"+", "+"`"+"issuewild"+"`"+", or "+"`"+"iodef"+"`")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
 
 	return cmd
 }

@@ -44,7 +44,7 @@ This can be filtered to a specific action. For example, while `+ "`" +`doctl com
 - The Date/Time at which the action started, in RFC3339 format
 - The Date/Time at which the action completed, in RFC3339 format
 - The resource ID of the resource upon which the action was taken
-- The resource type (droplet, backend)
+- The resource type (Droplet, backend)
 - The region in which the action took place (nyc3, sfo2, etc)`
 
 	CmdBuilderWithDocs(cmd, RunCmdActionGet, "get <action-id>", "Retrieves details about a specific action", `Retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,

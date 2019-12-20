@@ -31,8 +31,8 @@ func Tags() *Command {
 			Short: "Display commands to manage tags",
 			Long: `The sub-commands of `+ "`" +`doctl compute tag`+ "`" +` manage the tags on your account.
 
-A tag is a label that can be applied to a resource (currently Droplets, Images,
-Volumes, Volume Snapshots, and Database clusters) in order to better organize or
+A tag is a label that can be applied to a resource (currently Droplets, images,
+volumes, volume snapshots, and database clusters) in order to better organize or
 facilitate the lookups and actions on it.
 
 Tags have two attributes: a user defined name attribute and an embedded
@@ -40,18 +40,18 @@ resources attribute with information about resources that have been tagged.`,
 		},
 	}
 
-	CmdBuilderWithDocs(cmd, RunCmdTagCreate, "create <tag-name>", "Create a tag", `Use this command to create a new tag on your account.`, Writer)
+	CmdBuilderWithDocs(cmd, RunCmdTagCreate, "create <tag-name>", "Create a tag", `Use this command to create a new tag.`, Writer)
 
-	CmdBuilderWithDocs(cmd, RunCmdTagGet, "get <tag-name>", "Retrieve information about a tag", `Use this command to retrieve a tag, see how many resources are using the tag, and the last item tagged with the current tag.`, Writer,
+	CmdBuilderWithDocs(cmd, RunCmdTagGet, "get <tag-name>", "Retrieve information about a tag", `Use this command to retrieve a tag, display a count of how many resources are tagged with it, and show the most recently tagged resource.`, Writer,
 		displayerType(&displayers.Tag{}))
 
-	CmdBuilderWithDocs(cmd, RunCmdTagList, "list", "List all tags", `Use this command to retrieve a list of all tags on your account.`, Writer,
+	CmdBuilderWithDocs(cmd, RunCmdTagList, "list", "List all tags", `Use this command to retrieve a list of all the tags in your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Tag{}))
 
 	cmdRunTagDelete := CmdBuilderWithDocs(cmd, RunCmdTagDelete, "delete <tag-name>...", "Delete a tag", `Use this command to delete a tag.
 
-Deleting a tag also untags all the resources that have previously been tagged by the tag.`, Writer)
-	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force tag delete")
+Deleting a tag also removes the tag from all the resources that had been tagged with it.`, Writer)
+	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete tag without confirmation prompt")
 
 	return cmd
 }
@@ -112,7 +112,7 @@ func RunCmdTagDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("delete tag(s)") == nil {
+	if force || AskForConfirm("Delete tag(s)?") == nil {
 		for id := range c.Args {
 			name := c.Args[id]
 			ts := c.Tags()
@@ -121,7 +121,7 @@ func RunCmdTagDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("operation aborted")
+		return fmt.Errorf("Operation aborted.")
 	}
 
 	return nil

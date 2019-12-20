@@ -30,33 +30,33 @@ func FloatingIP() *Command {
 		Command: &cobra.Command{
 			Use:   "floating-ip",
 			Short: "Display commands to manage floating IP addresses",
-			Long: `The sub-commands of `+ "`" +`doctl compute floating-ip`+ "`" +` manage floating IP Addresses.
+			Long: `The sub-commands of `+ "`" +`doctl compute floating-ip`+ "`" +` manage floating IP addresses.
 Floating IPs are publicly-accessible static IP addresses that can be mapped to one of your Droplets. They can be used to create highly available setups or other configurations requiring movable addresses.
 Floating IPs are bound to a specific region.`,
 			Aliases: []string{"fip"},
 		},
 	}
 
-	cmdFloatingIPCreate := CmdBuilderWithDocs(cmd, RunFloatingIPCreate, "create", "Create a new floating IP Address", `Use this command to create a new floating IP Address.
+	cmdFloatingIPCreate := CmdBuilderWithDocs(cmd, RunFloatingIPCreate, "create", "Create a new floating IP address", `Use this command to create a new floating IP address.
 
-A floating IP Address must be either assigned to a Droplet or reserved to a region.`, Writer,
+A floating IP address must be either assigned to a Droplet or reserved to a region.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.FloatingIP{}))
 	AddStringFlag(cmdFloatingIPCreate, doctl.ArgRegionSlug, "", "",
-		fmt.Sprintf("Region where to create the floating IP. (mutually exclusive with %s)",
+		fmt.Sprintf("Region where to create the floating IP address. (mutually exclusive with `--%s`)",
 			doctl.ArgDropletID))
 	AddIntFlag(cmdFloatingIPCreate, doctl.ArgDropletID, "", 0,
-		fmt.Sprintf("ID of the droplet to assign the floating IP to. (mutually exclusive with %s)",
+		fmt.Sprintf("The ID of the Droplet to assign the floating IP to (mutually exclusive with `--%s`).",
 			doctl.ArgRegionSlug))
 
-	CmdBuilderWithDocs(cmd, RunFloatingIPGet, "get <floating-ip>", "Retrieve information about a floating IP Address", "Use this command to retrieve detailed information about a floating IP Address.", Writer,
+	CmdBuilderWithDocs(cmd, RunFloatingIPGet, "get <floating-ip>", "Retrieve information about a floating IP address", "Use this command to retrieve detailed information about a floating IP address.", Writer,
 		aliasOpt("g"), displayerType(&displayers.FloatingIP{}))
 
-	cmdRunFloatingIPDelete := CmdBuilderWithDocs(cmd, RunFloatingIPDelete, "delete <floating-ip>", "Permanently delete a floating IP Address", "Use this command to permanently delete a floating IP address. This is irreversible.", Writer, aliasOpt("d", "rm"))
+	cmdRunFloatingIPDelete := CmdBuilderWithDocs(cmd, RunFloatingIPDelete, "delete <floating-ip>", "Permanently delete a floating IP address", "Use this command to permanently delete a floating IP address. This is irreversible.", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunFloatingIPDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force floating IP delete")
 
-	cmdFloatingIPList := CmdBuilderWithDocs(cmd, RunFloatingIPList, "list", "List all floating IP Addresses on your acocunt", "Use this command to list all the floating IP addresses on your account.", Writer,
+	cmdFloatingIPList := CmdBuilderWithDocs(cmd, RunFloatingIPList, "list", "List all floating IP addresses on your acocunt", "Use this command to list all the floating IP addresses on your account.", Writer,
 		aliasOpt("ls"), displayerType(&displayers.FloatingIP{}))
-	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "", "Floating IP region")
+	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "", "The region the floating IP address resides in")
 
 	return cmd
 }
@@ -70,11 +70,11 @@ func RunFloatingIPCreate(c *CmdConfig) error {
 	dropletID, _ := c.Doit.GetInt(c.NS, doctl.ArgDropletID)
 
 	if region == "" && dropletID == 0 {
-		return doctl.NewMissingArgsErr("region and droplet id can't both be blank")
+		return doctl.NewMissingArgsErr("Region and Droplet ID can't both be blank.")
 	}
 
 	if region != "" && dropletID != 0 {
-		return fmt.Errorf("specify region or droplet id when creating a floating ip")
+		return fmt.Errorf("Specify region or Droplet ID when creating a floating IP address.")
 	}
 
 	req := &godo.FloatingIPCreateRequest{
@@ -103,7 +103,7 @@ func RunFloatingIPGet(c *CmdConfig) error {
 	ip := c.Args[0]
 
 	if len(ip) < 1 {
-		return errors.New("invalid ip address")
+		return errors.New("Invalid IP address")
 	}
 
 	fip, err := fis.Get(ip)
@@ -128,12 +128,12 @@ func RunFloatingIPDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("delete floating IP") == nil {
+	if force || AskForConfirm("Delete floating IP?") == nil {
 		ip := c.Args[0]
 		return fis.Delete(ip)
 	}
 
-	return fmt.Errorf("operation aborted")
+	return fmt.Errorf("Operation aborted.")
 }
 
 // RunFloatingIPList runs floating IP create.
