@@ -62,7 +62,7 @@ type UnknownSchemeError struct {
 var _ error = &UnknownSchemeError{}
 
 func (use *UnknownSchemeError) Error() string {
-	return "unknown scheme: " + use.Scheme
+	return "Unknown scheme: " + use.Scheme
 }
 
 // Auth creates auth commands for doctl.
@@ -90,7 +90,7 @@ If the `+ "`" +`--context`+ "`" +` flag is not specified, a default authenticati
 If doctl is never initialized, you will need to specify an API token whenever you use a `+ "`" +`doctl`+ "`" +` command via the `+ "`" +`--access-token`+ "`" +` flag.`, Writer, false)
 	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switches between authentication contexts", `This command allow you to switch between authentication contexts, which are tokens you have previously used to initialize doctl, and have given a name.
 
-To see a list of available authentication contexts, call 'doct auth list'.
+To see a list of available authentication contexts, call `+ "`" +`doctl auth list`+ "`" +`.
 
 For details on creating an authentication context, see the help for `+ "`" +`doctl auth init`+ "`" +`.`, Writer, false)
 	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "Lists available authentication contexts", `This command lists available authentication contexts, which are tokens you have previously used to initialize doctl, and have given a name.
@@ -205,12 +205,12 @@ func writeConfig() error {
 
 	b, err := yaml.Marshal(viper.AllSettings())
 	if err != nil {
-		return errors.New("unable to encode configuration to YAML format")
+		return errors.New("Unable to encode configuration to YAML format.")
 	}
 
 	_, err = f.Write(b)
 	if err != nil {
-		return errors.New("unable to write configuration")
+		return errors.New("Unable to write configuration.")
 	}
 
 	return nil
