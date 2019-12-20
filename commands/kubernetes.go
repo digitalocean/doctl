@@ -184,14 +184,14 @@ func kubernetesCluster() *Command {
 - The slug identifier for the region where the Kubernetes cluster is located.
 - The slug identifier for the version of Kubernetes used for the cluster. If set to a minor version (e.g. ` + "`" + `1.14` + "`" + `), the latest version within it will be used (e.g. ` + "`" + `1.14.6-do.1` + "`" + `); if set to ` + "`" + `latest` + "`" + `, the latest published version will be used.
 - A boolean value indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window.
-- An object containing a "state" attribute whose value is set to a string indicating the current status of the node. Potential values include "running", "provisioning", and "errored".`
+- An object containing a "state" attribute whose value is set to a string indicating the current status of the node. Potential values include ` + "`" + `running` + "`" + `, ` + "`" + `provisioning` + "`" + `, and ` + "`" + `errored` + "`" + `.`
 	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "Retrieve details about a Kubernetes cluster", `
 Retrieves the following details about a Kubernetes cluster: `+clusterDetails+`
 - The base URL of the API server on the Kubernetes master node.
 - The public IPv4 address of the Kubernetes master node.
 - The range of IP addresses in the overlay network of the Kubernetes cluster in CIDR notation.
 - The range of assignable IP addresses for services running in the Kubernetes cluster in CIDR notation.
-- An array of tags applied to the Kubernetes cluster. All clusters are automatically tagged "k8s" and "k8s:$K8S_CLUSTER_ID."
+- An array of tags applied to the Kubernetes cluster. All clusters are automatically tagged ` + "`" + `k8s` + "`" + ` and ` + "`" + `k8s:$K8S_CLUSTER_ID` + "`" + `.
 - A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was created.
 - A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was last updated.
 `+nodePoolDeatils,
@@ -288,10 +288,10 @@ This command deletes the specified Kubernetes cluster and the Droplets associate
 func kubernetesKubeconfig() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "kubeconfig",
+			Use: "kubeconfig",
 			Aliases: []string{"kubecfg", "k8scfg", "config", "cfg"},
-			Short:   "kubeconfig commands",
-			Long:    `The commands under` + "`" + `doctl kubernetes cluster kubeconfig` + "`" + `are used to manage a Kubernetes cluster's credentials. The credentials are used as authentication contexts with kubectl, the Kubernetes command-line interface.`,
+			Short: "Commands for managing your local kubeconfig",
+			Long: "The commands under `doctl kubernetes cluster kubeconfig` are used to manage Kubernetes cluster credentials on your local machine. The credentials are used as authentication contexts with `kubectl`, the Kubernetes command-line interface.",
 		},
 	}
 
@@ -304,7 +304,7 @@ This command prints out the raw YAML for the specified cluster's kubeconfig.	`,W
 	cmdSaveConfig := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
 This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage your
 		`,Writer, aliasOpt("s"))
-	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "whether to set the current kubectl context to that of the new cluster")
+	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "Boolean indicating whether to set the current kubectl context to that of the new cluster")
 	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "Remove a cluster's credentials from your local kubeconfig",`
 This command removes the specified cluster's credentials from your local kubeconfig. After running this command, you will not be able to use `+ "`" +`kubectl`+ "`" +` to interact with your cluster.
 `, Writer, aliasOpt("d", "rm"))
@@ -396,9 +396,9 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 
 	cmdKubeNodePoolDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodePoolDelete,
 		"delete <cluster-id|cluster-name> <pool-id|pool-name>",
-		"delete node pool from a cluster", Writer, aliasOpt("d", "rm"))
+		"Delete a node pool", `This command deletes the specified node pool in the specified cluster, which also removes all the nodes inside that pool. This action is irreversable.`,Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
-		false, "force node pool delete")
+		false, "Delete node pool without confirmation prompt")
 
 	cmdKubeNodeDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodeDelete, "delete-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "Delete a node", `
 This command deletes the specified node, located in the specified node pool. By default this deletion will happen gracefully, and Kubernetes will drain the node of any pods before deleting it.
@@ -420,8 +420,8 @@ func kubernetesOptions() *Command {
 		Command: &cobra.Command{
 			Use:     "options",
 			Aliases: []string{"opts", "o"},
-			Short:   "options commands",
-			Long:    "options commands are used to find options for Kubernetes clusters",
+			Short:   "List possible option values for use inside Kubernetes commands",
+			Long:    "The `options` commands are used to enumerate values for use with `doctl`'s Kubernetes commands. This is useful in certain cases where flags only accept input that is from a list of possible values, such as Kubernetes versions, datacenter regions, and machine sizes.",
 		},
 	}
 

@@ -107,10 +107,10 @@ func ProjectResourcesCmd() *Command {
 
 	urnDesc := `
 
-A valid URN has the format: 'do:resource_type:resource_id'. For example:
+A valid URN has the format: `+ "`" +`do:resource_type:resource_id`+ "`" +`. For example:
 
-  - do:droplet:4126873
-  - do:volume:6fc4c277-ea5c-448a-93cd-dd496cfef71f
+  - `+ "`" +`do:droplet:4126873`+ "`" +`
+  - `+ "`" +`do:volume:6fc4c277-ea5c-448a-93cd-dd496cfef71f`+ "`" +`
 `
 
 	CmdBuilderWithDocs(cmd, RunProjectResourcesList, "list <project-id>", "List resources assigned to a project",

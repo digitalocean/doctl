@@ -46,24 +46,25 @@ DigitalOcean allows you to add SSH public keys to the interface so that you can 
 
 	cmdSSHKeysCreate := CmdBuilderWithDocs(cmd, RunKeyCreate, "create <key-name>", "Create a new SSH key on your account", `Use this command to add a new SSH key to your account.
 
-Set the "name" attribute to the name you wish to use and the "public_key" attribute to a string of the full public key you are adding.
-Note that this command will not add an ssh key to any existing Droplets.`, Writer,
+Specify a `+ "`" +`<key-name>`+ "`" +` for the key, and set the `+ "`" +`--public-key`+ "`" +` flag to a string with the contents of the key.
+
+Note that creating a key will not add it to any Droplets.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "", "Key contents", requiredOpt())
 
 	cmdSSHKeysImport := CmdBuilderWithDocs(cmd, RunKeyImport, "import <key-name>", "Import an SSH key from your computer to your account", `Use this command to add a new SSH key to your account, using a local public key file.
 
-Note that this command will not add an ssh key to any existing Droplets`, Writer,
+Note that importing a key to your account will not add it to any Droplets`, Writer,
 		aliasOpt("i"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
 
-	cmdRunKeyDelete := CmdBuilderWithDocs(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "Permanently delete an SSH key from your account", `Use this command to permanently delete an ssh key from your account.
+	cmdRunKeyDelete := CmdBuilderWithDocs(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "Permanently delete an SSH key from your account", `Use this command to permanently delete an SSH key from your account.
 
-Note that this does not delete an ssh key from any Droplets.`, Writer,
+Note that this does not delete an SSH key from any Droplets.`, Writer,
 		aliasOpt("d"))
-	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force ssh key delete")
+	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the key without a confirmation prompt")
 
-	cmdSSHKeysUpdate := CmdBuilderWithDocs(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "Update an SSH key's name", `Use this command to update the name of an ssh key on your account.`, Writer,
+	cmdSSHKeysUpdate := CmdBuilderWithDocs(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "Update an SSH key's name", `Use this command to update the name of an SSH key.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "", "Key name", requiredOpt())
 
@@ -187,12 +188,12 @@ func RunKeyDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	if force || AskForConfirm("delete ssh key") == nil {
+	if force || AskForConfirm("Delete SSH key?") == nil {
 		rawKey := c.Args[0]
 		return ks.Delete(rawKey)
 	}
 
-	return fmt.Errorf("operation aborted")
+	return fmt.Errorf("Operation aborted.")
 }
 
 // RunKeyUpdate updates a key.
