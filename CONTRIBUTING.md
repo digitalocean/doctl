@@ -72,11 +72,27 @@ lets us merge or address your contributions quickly.
 `doctl` has `make` commands for most tooling in the `Makefile`. Run `make`
 or `make help` for a list of available commands with descriptions.
 
+## Documenting
+
+`doctl` commands have two kinds of documentation: the short synopsis, that shows in the command lists, and the long description, that shows in the `--help` message for a specific command. In `commands/*.go` you'll see these two things being defined frequently, often as different arguments in `CmdBuilderWithDocs`. Here are some guidelines to keep in mind when writing these helpful texts:
+
+- Go uses "quotes" for single-line strings and \``backticks`\` for multi-line strings.
+- Programmatic elements, such as command and flag names, should be surrounded by backticks.
+- To feature a backtick inside a multiline string, use this sequence of characters for each backtick:
+
+  ```
+  ` + "`" + `
+  ```
+- It's good practice to create string variables to store text that gets repeated.
+- Flags and short command synopses do not need complete sentences in their descriptions and should not end in punctuation
+- Command abstracts, on the other hand, are considered full-text documentation and should use proper English
+
+
 ### Go environment
 
 The minimal version of Golang for `doctl` is 1.11. `doctl` uses [Go
 modules](https://github.com/golang/go/wiki/Modules) for dependency
-management [with vendoring](https://github.com/golang/go/wiki/Modules#how-do-i-use-vendoring-with-modules-is-vendoring-going-away). 
+management [with vendoring](https://github.com/golang/go/wiki/Modules#how-do-i-use-vendoring-with-modules-is-vendoring-going-away).
 Please run `make vendor` after any dependency modifications.
 
 Be sure to run `go fmt` on your code before submitting a pull request.
@@ -147,7 +163,7 @@ file to see what an integration test typically looks like.
 
 #### `godo` mocks
 
-When you upgrade `godo` you have to re-generate the mocks. 
+When you upgrade `godo` you have to re-generate the mocks.
 
     ```
     make mocks
@@ -168,10 +184,10 @@ triggered when a new tag is pushed to master.
 
 1. Run `make changes` to review the changes since the last
    release. Based on the changes, decide what kind of release you are
-   doing (bugfix, feature or breaking). 
+   doing (bugfix, feature or breaking).
    `doctl` follows [semantic versioning](semver.org), ask if you aren't sure.
 
-1. Tag the release using `BUMP=(bugfix|feature|breaking) make tag`. 
+1. Tag the release using `BUMP=(bugfix|feature|breaking) make tag`.
    (Bugfix, feature and breaking are aliases for semver's patch, minor and major.
    BUMP will also accept `patch`, `minor` and `major`, if you prefer). The command
    assumes you have a remote repository named `origin` pointing to this
@@ -213,18 +229,17 @@ snap manually.
 ##### Prerequisites
 
 * [docker](https://docs.docker.com/install/)
-* a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account. 
+* a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account.
   Post in #it_support to request access.
 
 ### Updating Homebrew
 
-Using the url and sha from the github release, update the 
+Using the url and sha from the github release, update the
 [homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).
-You can use `brew bump-formula-pr doctl`, or 
+You can use `brew bump-formula-pr doctl`, or
 
 1. fork `homebrew-core`
 1. create a branch named `doctl-<version>`
 1. update the url and the sha256 using the values for the archive in the github release
 1. commit your changes
 1. submit a PR to homebrew
-
