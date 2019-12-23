@@ -869,6 +869,12 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 		return err
 	}
 
+	path := cachedExecCredentialPath(clusterID)
+	_, err = os.Stat(path)
+	if err == nil {
+		os.Remove(path)
+	}
+
 	return s.writeOrAddToKubeconfig(clusterID, remoteKubeconfig, setCurrentContext)
 }
 
