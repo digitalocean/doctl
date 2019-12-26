@@ -86,6 +86,9 @@ or `make help` for a list of available commands with descriptions.
 - It's good practice to create string variables to store text that gets repeated.
 - Flags and short command synopses do not need complete sentences in their descriptions and should not end in punctuation
 - Command abstracts, on the other hand, are considered full-text documentation and should use proper English
+- Write short command descriptions from the perspective of the user trying to do something (e.g. "List all database clusters") vs. what the command does (e.g. "This command retrieves a list of all database clusters").
+- Avoid the passive voice ("When a tag is provided, access is granted") and use the active voice ("Entering a tag provides access")
+- Be helpful when users have to enter a input that is from a list of possible values. Give examples, list the possible values inline (if the list is relatively short), or point them to a command that can list the possible values for them.
 
 
 ### Go environment

@@ -32,7 +32,7 @@ func CDN() *Command {
 			Short: "Display commands that manage CDNs",
 			Long: `The subcommands of `+ "`" +`doctl compute cdn`+ "`" +` enable management of Content Delivery Networks (CDNs).
 
-Content hosted in DigitalOcean's object storage solution, Spaces, can optionally be served by our globally distributed CDN. This allows you to deliver content to users based on their geographic location.
+Content hosted in DigitalOcean's object storage solution, Spaces, can optionally be served by our globally distributed Content Delivery Networks (CDNs). This allows you to deliver content to users based on their geographic location.
 
 To use a custom subdomain to access the CDN endpoint, provide the ID of a DigitalOcean-managed TLS certificate and the fully qualified domain name (FQDN) for the custom subdomain.`,
 		},
@@ -40,26 +40,26 @@ To use a custom subdomain to access the CDN endpoint, provide the ID of a Digita
 
 	CDNnotes := `
 
-You can use a custom subdomain you own as an additional endpoint, but it must be secured with SSL. If you've added a domain to your DigitalOcean account, you can use the dashbaord at cloud.digitalocean.com to generate an auto-renewing certificate for your subdomain.
+The "Time To Live" (TTL) is the length of time in seconds that a file is cached by the CDN before being refreshed. If a request to access a file occurs after the TTL has expired, the CDN will deliver the file by requesting it directly from the origin URL, re-cache the file, and reset the TTL.
 
-The "Time To Live" (TTL) is the length of time, in seconds, that a file is cached by the CDN before being refreshed. If a request to access a file occurs after the TTL has expired, the CDN will deliver the file by requesting it directly from the origin URL, re-cache the file, and reset the TTL.`
+The endpoint is automatically generated. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`
 
 	CDNDetails := `
 
 - The ID for the CDN, in UUID format
-- The fully qualified domain name (FQDN) for the origin server which the provides the content for the CDN. This is currently restricted to a Space.
+- The fully qualified domain name (FQDN) for the origin server, which provides the content to the CDN. Currently, only Spaces are supported with CDNs.
 - The fully qualified domain name (FQDN) of the endpoint from which the CDN-backed content is served.
 - The "Time To Live" (TTL) value for cached content, in seconds. The default is 3,600 (one hour).
-- An optional custom subdomain at which the CDN can be accessed
+- An optional custom subdomain when the CDN can be accessed
 - The ID of a DigitalOcean-managed TLS certificate used for SSL when a custom subdomain is provided.
-- The date and time at which the CDN was created, in ISO8601 date/time format`
+- The date and time when the CDN was created, in ISO8601 date/time format`
 	TTLDesc := "The \"Time To Live\" (TTL) value for cached content, in seconds"
-	DomainDesc := "Specifies a custom domain to use with the CDN"
-	CertIDDesc := "Specifies a Certificate ID for the custom domain"
+	DomainDesc := "Specify a custom domain to use with the CDN"
+	CertIDDesc := "Specify a Certificate ID for the custom domain"
 	CmdBuilderWithDocs(cmd, RunCDNList, "list", "List CDNs that have already been created", `Lists the following details for Content Delivery Networks (CDNs) that have already been created:`+CDNDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.CDN{}))
 
-	cmdCDNCreate := CmdBuilderWithDocs(cmd, RunCDNCreate, "create <cdn-origin>", "Creates a CDN", `This command creates a Content Delivery Network (CDN) based on the provided origin server, which provides the content the CDN is delivering.`+CDNnotes, Writer,
+	cmdCDNCreate := CmdBuilderWithDocs(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `TThis command creates a Content Delivery Network (CDN) on the origin server you specify.`+CDNnotes, Writer,
 		aliasOpt("c"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNCreate, doctl.ArgCDNTTL, "", 3600, TTLDesc)
 	AddStringFlag(cmdCDNCreate, doctl.ArgCDNDomain, "", "", DomainDesc)
@@ -67,30 +67,30 @@ The "Time To Live" (TTL) is the length of time, in seconds, that a file is cache
 
 	cmdRunCDNDelete := CmdBuilderWithDocs(cmd, RunCDNDelete, "delete <cdn-id>", "Delete a CDN", `This command deletes the CDN specified by the ID.
 
-If needed, the ID can be retrieved by calling `+ "`" +`doctl compute cdn list`+ "`" +`.`, Writer,
+You can retrieve the ID by calling `+ "`" +`doctl compute cdn list`+ "`" +` if needed.`, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdRunCDNDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the specified CDN without prompting for confirmation")
 
-	CmdBuilderWithDocs(cmd, RunCDNGet, "get <cdn-id>", "Retreives details about a specific CDN", `This command lists the following details for the Content Delivery Network (CDNs) specified by the ID:`+CDNDetails+CDNnotes, Writer, aliasOpt("g"),
+	CmdBuilderWithDocs(cmd, RunCDNGet, "get <cdn-id>", "Retrieve details about a specific CDN", `This command lists the following details for the Content Delivery Network (CDNs) specified by the ID:`+CDNDetails+CDNnotes, Writer, aliasOpt("g"),
 		displayerType(&displayers.CDN{}))
 
-	cmdCDNUpdate := CmdBuilderWithDocs(cmd, RunCDNUpdate, "update <cdn-id>", "Updates the configuration for a CDN", `This command allows you to update the configuration details of an existing Content Delivery Network (CDN).
+	cmdCDNUpdate := CmdBuilderWithDocs(cmd, RunCDNUpdate, "update <cdn-id>", "Update the configuration for a CDN", `This command allows you to update the configuration details of an existing Content Delivery Network (CDN).
 
-Currently, you can only update the custom domain (and its certificate ID) with this command.`, Writer,
+Currently, you can only update the custom domain and its certificate ID with this command.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNUpdate, doctl.ArgCDNTTL, "", 3600, TTLDesc)
 	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNDomain, "", "", DomainDesc)
 	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNCertificateID, "", "", CertIDDesc)
 
-	cmdCDNFlushCache := CmdBuilderWithDocs(cmd, RunCDNFlushCache, "flush <cdn-id>", "Flushes the cache of a CDN", `This command flushes the cash of a Content Delivery Network (CDN). When the cache is flushed, the following events occur:
+	cmdCDNFlushCache := CmdBuilderWithDocs(cmd, RunCDNFlushCache, "flush <cdn-id>", "Flush the cache of a CDN", `This command flushes the cache of a Content Delivery Network (CDN), which:
 
-- All copies of the files in the cache are purged.
-- All files will be re-cached.
-- Until all files are re-cached, any requests for files that hit the CDN endpoint will result in the CDN retrieving it from the origin server
+- purges all copies of the files in the cache
+- re-caches the files
+- retrieves files from the origin server for any requests that hit the CDN endpoint until all the files are re-cached
 
-This can be useful if you need to ensure that a file that was recently changed on the origin server is available immediately via the CDN.
+This is useful when you need to ensure that files which were recently changed on the origin server are immediately available via the CDN.
 
-You can also provide a path to specific files you would like flushed via the `+ "`" +`--files`+ "`" +` flag. A path may be for a single file or may contain a wildcard (*) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.`, Writer,
+To purge specific files, you can use the the `+ "`" +`--files`+ "`" +` flag and supply a path. The path may be for a single file or may contain a wildcard (`+ "`" +`*`+ "`" +`) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.`, Writer,
 		aliasOpt("fc"))
 	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", []string{"*"}, "cdn files")
 

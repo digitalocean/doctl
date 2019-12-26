@@ -41,16 +41,16 @@ This can be filtered to a specific action. For example, while `+ "`" +`doctl com
 - The action ID
 - The action status (pending, completed, etc)
 - The action type (create, destroy, power_cycle, power_off, power_on, backup, migrate, attach_volume, etc)
-- The Date/Time at which the action started, in RFC3339 format
-- The Date/Time at which the action completed, in RFC3339 format
+- The Date/Time when the action started, in RFC3339 format
+- The Date/Time when the action completed, in RFC3339 format
 - The resource ID of the resource upon which the action was taken
 - The resource type (Droplet, backend)
 - The region in which the action took place (nyc3, sfo2, etc)`
 
-	CmdBuilderWithDocs(cmd, RunCmdActionGet, "get <action-id>", "Retrieves details about a specific action", `Retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
+	CmdBuilderWithDocs(cmd, RunCmdActionGet, "get <action-id>", "Retrieve details about a specific action", `This command retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Action{}))
 
-	cmdActionList := CmdBuilderWithDocs(cmd, RunCmdActionList, "list", "Retrieves list of all recent actions taken on your resources", `"Retrieves list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
+	cmdActionList := CmdBuilderWithDocs(cmd, RunCmdActionList, "list", "Retrieve a  list of all recent actions taken on your resources", `This command retrieves a list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Action{}))
 	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", "Action resource type")
 	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", "Action region")
@@ -59,7 +59,7 @@ This can be filtered to a specific action. For example, while `+ "`" +`doctl com
 	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", "Action status")
 	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", "Action type")
 
-	cmdActionWait := CmdBuilderWithDocs(cmd, RunCmdActionWait, "wait <action-id>", "Blocks thread, returning when an action completes", `Blocks thread, returning when an action completes.
+	cmdActionWait := CmdBuilderWithDocs(cmd, RunCmdActionWait, "wait <action-id>", "Block thread until an action completes", `The command blocks the current thread, returning when an action completes.
 
 For example, if you find an action when calling `+ "`" +`doctl compute action list`+ "`" +` that has a status of `+ "`" +`in-progress`+ "`" +`, you can note the action ID and call `+ "`" +`doctl compute action wait <action-id>`+ "`" +`, and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
 		aliasOpt("w"), displayerType(&displayers.Action{}))

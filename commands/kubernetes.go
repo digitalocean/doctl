@@ -186,7 +186,7 @@ func kubernetesCluster() *Command {
 - A boolean value indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window.
 - An object containing a "state" attribute whose value is set to a string indicating the current status of the node. Potential values include ` + "`" + `running` + "`" + `, ` + "`" + `provisioning` + "`" + `, and ` + "`" + `errored` + "`" + `.`
 	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "Retrieve details about a Kubernetes cluster", `
-Retrieves the following details about a Kubernetes cluster: `+clusterDetails+`
+This command retrieves the following details about a Kubernetes cluster: `+clusterDetails+`
 - The base URL of the API server on the Kubernetes master node.
 - The public IPv4 address of the Kubernetes master node.
 - The range of IP addresses in the overlay network of the Kubernetes cluster in CIDR notation.
@@ -196,8 +196,8 @@ Retrieves the following details about a Kubernetes cluster: `+clusterDetails+`
 - A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was last updated.
 `+nodePoolDeatils,
 		Writer, aliasOpt("g"), displayerType(&displayers.KubernetesClusters{}))
-	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterList, "list", "Retrieves the list of Kubernetes clusters for your account", `
-Retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDeatils,
+	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterList, "list", "Retrieve the list of Kubernetes clusters for your account", `
+This command retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDeatils,
 		Writer, aliasOpt("ls"), displayerType(&displayers.KubernetesClusters{}))
 	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
 		"Retrieve a list of available Kubernetes version upgrades", `
@@ -205,7 +205,7 @@ This command returns a list of slugs representing Kubernetes versions you can us
 `, Writer, aliasOpt("gu"))
 
 	cmdKubeClusterCreate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
-		defaultKubernetesNodeCount), "create <name>", "Creates a Kubernetes cluster", `
+		defaultKubernetesNodeCount), "create <name>", "Create a Kubernetes cluster", `
 Creates a Kubernetes cluster given the specified options, using the specified name. Before creating the cluster, you can use `+ "`" +`doctl kubernetes options`+ "`" +` to see possible values for the various configuration flags.
 
 If no configuration flags are used, a three-node cluster with a single node pool will be created in the nyc1 region, using the latest Kubernetes version.
@@ -274,8 +274,8 @@ The special value ` + "`" + `latest` + "`" + ` will select the most recent patch
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be ` + "`" + `latest` + "`" + `.`)
 
 	cmdKubeClusterDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterDelete,
-		"delete <id|name>", "Deletes a Kubernetes cluster", `
-This command deletes the specified Kubernetes cluster and the Droplets associated with the cluster. This command does not delete other DigitalOcean resources created during the operation of the cluster, such as Load Balancers and Volumes.
+		"delete <id|name>", "Delete a Kubernetes cluster", `
+This command deletes the specified Kubernetes cluster and the Droplets associated with the cluster. This command does not delete other DigitalOcean resources created during the operation of the cluster, such as load balancers and volumes.
 `,Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Boolean indicating whether to delete the cluster without a confirmation prompt")

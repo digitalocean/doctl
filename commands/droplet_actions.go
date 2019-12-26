@@ -63,7 +63,7 @@ Droplet actions are tasks that can be executed on a Droplet, such as rebooting, 
 		},
 	}
 
-	cmdDropletActionGet := CmdBuilderWithDocs(cmd, RunDropletActionGet, "get <droplet-id>", "Retrieve a specific Droplet ction", `use this command to retrieve a Droplet action.`, Writer,
+	cmdDropletActionGet := CmdBuilderWithDocs(cmd, RunDropletActionGet, "get <droplet-id>", "Retrieve a specific Droplet action", `Use this command to retrieve a Droplet action.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Action{}))
 	AddIntFlag(cmdDropletActionGet, doctl.ArgActionID, "", 0, "Action ID", requiredOpt())
 
@@ -88,7 +88,7 @@ Droplet actions are tasks that can be executed on a Droplet, such as rebooting, 
 	AddBoolFlag(cmdDropletActionPowerCycle, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionShutdown := CmdBuilderWithDocs(cmd, RunDropletActionShutdown,
-		"shutdown <droplet-id>", "Shutdown a Droplet", `Use this command to shutdown a Droplet.`, Writer,
+		"shutdown <droplet-id>", "Shut down a Droplet", `Use this command to shut down a Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionShutdown, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 

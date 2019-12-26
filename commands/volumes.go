@@ -38,7 +38,7 @@ Volumes function as raw block devices, meaning they appear to the operating syst
 		},
 	}
 
-	cmdRunVolumeList := CmdBuilderWithDocs(cmd, RunVolumeList, "list", "Lists block storage volumes by ID", `Use this command to list all of the block storage volumes on your account.`, Writer,
+	cmdRunVolumeList := CmdBuilderWithDocs(cmd, RunVolumeList, "list", "List block storage volumes by ID", `Use this command to list all of the block storage volumes on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "", "Volume region")
 

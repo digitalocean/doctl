@@ -119,7 +119,7 @@ type Rate struct {
 	// The number of remaining requests the client can make this hour.
 	Remaining int `json:"remaining"`
 
-	// The time at which the current rate limit will reset.
+	// The time when the current rate limit will reset.
 	Reset Timestamp `json:"reset"`
 }
 

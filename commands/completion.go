@@ -77,13 +77,13 @@ func Completion() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "completion",
-			Short: "Modifies shell so doctl commands autocomplete with TAB",
+			Short: "Modify your shell so doctl commands autocomplete with TAB",
 			Long:  completionLong,
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "Generates completion code for bash", bashLong, Writer, false)
-	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "Generates completion code for zsh", zshLong, Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionBash, "bash", "Generate completion code for bash", bashLong, Writer, false)
+	cmdBuilderWithInit(cmd, RunCompletionZsh, "zsh", "Generate completion code for zsh", zshLong, Writer, false)
 
 	return cmd
 }

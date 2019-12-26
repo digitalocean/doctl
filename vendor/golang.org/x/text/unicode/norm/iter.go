@@ -101,7 +101,7 @@ func (i *Iter) returnSlice(a, b int) []byte {
 	return i.rb.src.bytes[a:b]
 }
 
-// Pos returns the byte position at which the next call to Next will commence processing.
+// Pos returns the byte position when the next call to Next will commence processing.
 func (i *Iter) Pos() int {
 	return i.p
 }

@@ -47,10 +47,10 @@ Once a certificate has been stored, it is assigned a unique certificate ID that 
 - The certificate type ('custom' or 'lets_encrypt')
 - The certificate state ('pending', 'verified', or 'error')`
 
-	CmdBuilderWithDocs(cmd, RunCertificateGet, "get <id>", "Retreives details about a certificate", `This command retrieves the following details about a certificate:`+certDetails, Writer,
+	CmdBuilderWithDocs(cmd, RunCertificateGet, "get <id>", "Retrieve details about a certificate", `This command retrieves the following details about a certificate:`+certDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Certificate{}))
 	cmdCertificateCreate := CmdBuilderWithDocs(cmd, RunCertificateCreate, "create",
-		"Creates a new certificate", `This command allows you to create a certificate. There are two supported certificate types: Let's Encrypt certificates, and custom certificates.
+		"Create a new certificate", `This command allows you to create a certificate. There are two supported certificate types: Let's Encrypt certificates, and custom certificates.
 
 Let's Encrypt certificates are free and will be auto-renewed and managed for you by DigitalOcean.
 
@@ -74,11 +74,11 @@ To upload a custom certificate, you'll need to provide a certificate name, the p
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "",
 		"Certificate type [custom|lets_encrypt]")
 
-	CmdBuilderWithDocs(cmd, RunCertificateList, "list", "Retrieves list of the account's stored certificates", `This command retrieves a list of all certificates associated with the account. The following details are shown for each certificate:`+certDetails, Writer,
+	CmdBuilderWithDocs(cmd, RunCertificateList, "list", "Retrieve list of the account's stored certificates", `This command retrieves a list of all certificates associated with the account. The following details are shown for each certificate:`+certDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Certificate{}))
 
 	cmdCertificateDelete := CmdBuilderWithDocs(cmd, RunCertificateDelete, "delete <id>",
-		"Deletes the specified certificate", `This command deletes the specified certificate.
+		"Delete the specified certificate", `This command deletes the specified certificate.
 
 Use `+ "`" +`doctl compute certificate list`+ "`" +` to see all available certificates associated with your account.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdCertificateDelete, doctl.ArgForce, doctl.ArgShortForce, false,

@@ -41,7 +41,7 @@ DigitalOcean allows you to add SSH public keys to the interface so that you can 
 	CmdBuilderWithDocs(cmd, RunKeyList, "list", "List all SSH keys on your account", `Use this command to list the id, fingerprint, public_key, and name of all SSH keys on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Key{}))
 
-	CmdBuilderWithDocs(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "Retrive information about an SSH key on your account", `Use this command to get the id, fingerprint, public_key, and name of a specific SSH key on your account.`, Writer,
+	CmdBuilderWithDocs(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "Retrieve information about an SSH key on your account", `Use this command to get the id, fingerprint, public_key, and name of a specific SSH key on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Key{}))
 
 	cmdSSHKeysCreate := CmdBuilderWithDocs(cmd, RunKeyCreate, "create <key-name>", "Create a new SSH key on your account", `Use this command to add a new SSH key to your account.

@@ -37,8 +37,8 @@ func Snapshot() *Command {
 	snapshotDetail := `
 
   - The snapshot's ID
-  - The snapshot's Name
-  - The date and time at which the snapshot was created
+  - The snapshot's name
+  - The date and time when the snapshot was created
   - The slugs of the datacenter regions in which the snapshot is available
   - The type of resource the snapshot was made from, Droplet or volume, and its ID
   - The minimum size in GB required for a Droplet or volume to use this snapshot
@@ -56,7 +56,7 @@ func Snapshot() *Command {
 		Writer, aliasOpt("g"), displayerType(&displayers.Snapshot{}))
 
 	cmdRunSnapshotDelete := CmdBuilderWithDocs(cmd, RunSnapshotDelete, "delete <snapshot-id>...",
-		"Delete a Droplet or volume snapshot", "Delete a Droplet or volume snapshot by specifying its ID.",
+		"Delete a snapshot of a Droplet or volume", "Delete a snapshot of a Droplet or volume by specifying its ID.",
 		Writer, aliasOpt("d"), displayerType(&displayers.Snapshot{}))
 	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the snapshot without confirmation")
 

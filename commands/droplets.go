@@ -37,14 +37,14 @@ func Droplet() *Command {
 		Command: &cobra.Command{
 			Use:     "droplet",
 			Aliases: []string{"d"},
-			Short:   "Manage virtual manchines (Droplets)",
+			Short:   "Manage virtual machines (Droplets)",
 			Long:    `A Droplet is a DigitalOcean virtual machine. Use the subcommands of `+ "`" +`doctl compute droplet`+ "`" +` to list, create, or delete Droplets.`,
 		},
 	}
 	dropletDetails := `
 
 	- The Droplet's ID
-	- The Droplet's Name
+	- The Droplet's name
 	- The Droplet's Public IPv4 Address
 	- The Droplet's Private IPv4 Address
 	- The Droplet's IPv6 Address
@@ -61,7 +61,7 @@ func Droplet() *Command {
 	CmdBuilderWithDocs(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Use this command to list the available actions that can be taken on a Droplet. These can be things like rebooting, resizing, and snapshotting the Droplet.`, Writer,
 		aliasOpt("a"), displayerType(&displayers.Action{}))
 
-	CmdBuilderWithDocs(cmd, RunDropletBackups, "backups <droplet-id>", "list Droplet backups", `Use this command to list Droplet backups.`, Writer,
+	CmdBuilderWithDocs(cmd, RunDropletBackups, "backups <droplet-id>", "List Droplet backups", `Use this command to list Droplet backups.`, Writer,
 		aliasOpt("b"), displayerType(&displayers.Image{}))
 
 	cmdDropletCreate := CmdBuilderWithDocs(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", `Use this command to create a new Droplet. Required values are name, region, size, and image.`, Writer,

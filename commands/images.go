@@ -76,7 +76,7 @@ A DigitalOcean image can be used to create a Droplet and may come in a number of
 		displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesListUser, doctl.ArgImagePublic, "", false, "List public images")
 
-	CmdBuilderWithDocs(cmd, RunImagesGet, "get <image-id|image-slug>", "Retrive information about an image", `Use this command to get the following information about a specific image, specified by its ID or slug:`+imageDetail, Writer,
+	CmdBuilderWithDocs(cmd, RunImagesGet, "get <image-id|image-slug>", "Retrieve information about an image", `Use this command to get the following information about a specific image, specified by its ID or slug:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
 
 	cmdImagesUpdate := CmdBuilderWithDocs(cmd, RunImagesUpdate, "update <image-id>", "Update an image's name or other information", `Use this command to change an image's name, description, or distribution. Will also output the following:`+imageDetail, Writer,

@@ -145,7 +145,7 @@ func (s *connectionState) readPacket(r *bufio.Reader) ([]byte, error) {
 
 		case msgDisconnect:
 			// Transform a disconnect message into an
-			// error. Since this is lowest level at which
+			// error. Since this is lowest level when
 			// we interpret message types, doing it here
 			// ensures that we don't have to handle it
 			// elsewhere.

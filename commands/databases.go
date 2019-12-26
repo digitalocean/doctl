@@ -58,14 +58,14 @@ func Databases() *Command {
 - The current status of the database cluster (e.g. `+ "`" +`online`+ "`" +`)
 - The size of the machine running the database instance (e.g. `+ "`" +`db-s-1vcpu-1gb`+ "`" +`)`
 
-	CmdBuilderWithDocs(cmd, RunDatabaseList, "list", "Lists your database clusters", `This command lists the database clusters associated with your account. The following details are provided:`+clusterDetails, Writer, aliasOpt("ls"), displayerType(&displayers.Databases{}))
+	CmdBuilderWithDocs(cmd, RunDatabaseList, "list", "List your database clusters", `This command lists the database clusters associated with your account. The following details are provided:`+clusterDetails, Writer, aliasOpt("ls"), displayerType(&displayers.Databases{}))
 	CmdBuilderWithDocs(cmd, RunDatabaseGet, "get <database-id>", "Get details for a database cluster", `This command retrieves the following details about the specified database cluster: `+clusterDetails+`
 - A connection string for the database cluster
-- The date and time at which the database cluster was created`+databaseListDetails, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
+- The date and time when the database cluster was created`+databaseListDetails, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
 
 	nodeSizeDetails := "The size of the nodes in the database cluster, e.g. `db-s-1vcpu-1gb`` for a 1 CPU, 1GB node"
 	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
-	cmdDatabaseCreate := CmdBuilderWithDocs(cmd, RunDatabaseCreate, "create <name>", "Creates a database cluster", `This command creates a database cluster with the specified name.
+	cmdDatabaseCreate := CmdBuilderWithDocs(cmd, RunDatabaseCreate, "create <name>", "Create a database cluster", `This command creates a database cluster with the specified name.
 
 There are a number of flags that customize the configuration, all of which are optional. Without any flags set, a single-node, single-CPU PostgreSQL database cluster will be created.`, Writer,
 		aliasOpt("c"))
@@ -76,13 +76,13 @@ There are a number of flags that customize the configuration, all of which are o
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 11 for PostgreSQL version 11")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "A UUID to use for private network connections")
 
-	cmdDatabaseDelete := CmdBuilderWithDocs(cmd, RunDatabaseDelete, "delete <database-id>", "Deletes a database cluster", `This command deletes the database cluster with the given ID.
+	cmdDatabaseDelete := CmdBuilderWithDocs(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
 
 To retrieve a list of your database clusters and their IDs, call `+ "`" +`doctl databases list`+ "`" +`.`, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the database cluster without a confirmation prompt")
 
-	CmdBuilderWithDocs(cmd, RunDatabaseConnectionGet, "connection <database-id>", "Retrieves connection details for a database cluster", `This command retrieves the following connection details for a database cluster:
+	CmdBuilderWithDocs(cmd, RunDatabaseConnectionGet, "connection <database-id>", "Retrieve connection details for a database cluster", `This command retrieves the following connection details for a database cluster:
 
 - The connection string for the database cluster
 - The default database name
@@ -95,12 +95,12 @@ To retrieve a list of your database clusters and their IDs, call `+ "`" +`doctl 
 While these connection details will work, you may wish to use different connection details, such as the private hostname, a custom username, or a different database.`, Writer,
 		aliasOpt("conn"), displayerType(&displayers.DatabaseConnection{}))
 
-	CmdBuilderWithDocs(cmd, RunDatabaseBackupsList, "backups <database-id>", "list database cluster backups", `This command retrieves a list of backups created for the specified database cluster.
+	CmdBuilderWithDocs(cmd, RunDatabaseBackupsList, "backups <database-id>", "List database cluster backups", `This command retrieves a list of backups created for the specified database cluster.
 
 The list contains the size in GB, and the date and time the backup was taken.`, Writer,
 		aliasOpt("bu"), displayerType(&displayers.DatabaseBackups{}))
 
-	cmdDatabaseResize := CmdBuilderWithDocs(cmd, RunDatabaseResize, "resize <database-id>", "Resizes a database cluster", `This command resizes the specified database cluster.
+	cmdDatabaseResize := CmdBuilderWithDocs(cmd, RunDatabaseResize, "resize <database-id>", "Resize a database cluster", `This command resizes the specified database cluster.
 
 You must specify the size of the machines you wish to use as nodes as well as how many nodes you would like. For example:
 
@@ -109,7 +109,7 @@ You must specify the size of the machines you wish to use as nodes as well as ho
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())
 
-	cmdDatabaseMigrate := CmdBuilderWithDocs(cmd, RunDatabaseMigrate, "migrate <database-id>", "Migrates a database cluster to a new region", `This command migrates the specified database cluster to a new region`, Writer,
+	cmdDatabaseMigrate := CmdBuilderWithDocs(cmd, RunDatabaseMigrate, "migrate <database-id>", "Migrate a database cluster to a new region", `This command migrates the specified database cluster to a new region`, Writer,
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, e.g. `sfo2` or `nyc3`.", requiredOpt())
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "A UUID to use for private network connections")
@@ -359,10 +359,10 @@ Maintenance windows are hour-long blocks of time during which DigitalOcean perfo
 	}
 
 	CmdBuilderWithDocs(cmd, RunDatabaseMaintenanceGet, "get <database-id>",
-		"Retrieves details about a database cluster's maintenance windows", `This command retrieves the following information on currently-scheduled maintenance windows for the specified database cluster:
+		"Retrieve details about a database cluster's maintenance windows", `This command retrieves the following information on currently-scheduled maintenance windows for the specified database cluster:
 
 - The day of the week the maintenance window occurs
-- The hour in UTC at which maintenance updates will be applied, in 24 hour format (e.g. "16:00")
+- The hour in UTC when maintenance updates will be applied, in 24 hour format (e.g. "16:00")
 - A boolean representing whether maintence updates are currently pending
 
 To see a list of your databases and their IDs, run `+ "`" +`doctl databases list`+ "`" +`.`, Writer, aliasOpt("g"),
@@ -381,7 +381,7 @@ To see a list of your databases and their IDs, run `+ "`" +`doctl databases list
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceDay, "", "",
 		"The day of the week the maintenance window occurs (e.g. 'tuesday')", requiredOpt())
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceHour, "", "",
-		"The hour in UTC at which maintenance updates will be applied, in 24 hour format (e.g. '16:00')", requiredOpt())
+		"The hour in UTC when maintenance updates will be applied, in 24 hour format (e.g. '16:00')", requiredOpt())
 
 	return cmd
 }
@@ -463,22 +463,22 @@ Database user accounts are scoped to one database cluster, to which they have fu
 Primary user accounts are created by DigitalOcean at database cluster creation time and can't be deleted. Normal user accounts are created by you. Both have administrative privileges on the database cluster.
 
 To retrieve a list of your databases and their IDs, call `+ "`" +`doctl databases list`+ "`" +`.`
-	CmdBuilderWithDocs(cmd, RunDatabaseUserList, "list <database-id>", "Retrieves list of database users",
+	CmdBuilderWithDocs(cmd, RunDatabaseUserList, "list <database-id>", "Retrieve list of database users",
 		`This command retrieves a list of users for the specified database with the following details:`+userDetailsDesc, Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseUsers{}))
 	CmdBuilderWithDocs(cmd, RunDatabaseUserGet, "get <database-id> <user-name>",
-		"Retrieves details about a database user", `This command retrieves the following details about the specified user:`+userDetailsDesc+`
+		"Retrieve details about a database user", `This command retrieves the following details about the specified user:`+userDetailsDesc+`
 
 To retrieve a list of database users for a database, call `+ "`" +`doctl databases user list <database-id>`+ "`" +`.`, Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseUsers{}))
 	CmdBuilderWithDocs(cmd, RunDatabaseUserCreate, "create <database-id> <user-name>",
-		"Creates a database user", `This command creates a user with the username you specify, who will be granted access to the database cluster you specify.
+		"Create a database user", `This command creates a user with the username you specify, who will be granted access to the database cluster you specify.
 
 The user will be created with the role set to `+ "`" +`normal`+ "`" +`, and given an automatically-generated password.
 
 To retrieve a list of your databases and their IDs, call `+ "`" +`doctl databases list`+ "`" +`.`, Writer, aliasOpt("c"))
 
 	cmdDatabaseUserDelete := CmdBuilderWithDocs(cmd, RunDatabaseUserDelete,
-		"delete <database-id> <user-id>", "Deletes a database user", `This command deletes the user with the username you specify, whose account was given access to the database cluster you specify.
+		"delete <database-id> <user-id>", "Delete a database user", `This command deletes the user with the username you specify, whose account was given access to the database cluster you specify.
 
 To retrieve a list of your databases and their IDs, call `+ "`" +`doctl databases list`+ "`" +`.`, Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseUserDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the user without a confirmation prompt")
@@ -599,13 +599,13 @@ You can get a list of existing connection pools by calling:
 You can get a list of existing database clusters and their IDs by calling:
 
 	doctl databases list`
-	CmdBuilderWithDocs(cmd, RunDatabasePoolList, "list <database-id>", "Lists connection pools for a database cluster", `This command lists the existing connection pools for the specified database. The following information will be returned:`+connectionPoolDetails,
+	CmdBuilderWithDocs(cmd, RunDatabasePoolList, "list <database-id>", "List connection pools for a database cluster", `This command lists the existing connection pools for the specified database. The following information will be returned:`+connectionPoolDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.DatabasePools{}))
 	CmdBuilderWithDocs(cmd, RunDatabasePoolGet, "get <database-id> <pool-name>",
-		"Retrieves information about a database connection pool", `This command retrieves the following information about the specified connection pool for the specified database cluster:`+connectionPoolDetails+getPoolDetails, Writer, aliasOpt("g"),
+		"Retrieve information about a database connection pool", `This command retrieves the following information about the specified connection pool for the specified database cluster:`+connectionPoolDetails+getPoolDetails, Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabasePools{}))
 	cmdDatabasePoolCreate := CmdBuilderWithDocs(cmd, RunDatabasePoolCreate,
-		"create <database-id> <pool-name>", "Creates a connection pool for a database", `This command creates a connection pool for the specified database cluster and gives it the specified name.
+		"create <database-id> <pool-name>", "Create a connection pool for a database", `This command creates a connection pool for the specified database cluster and gives it the specified name.
 
 You must also use flags to specify the target database, pool size, and database user's username that will be used for the pool. An example call would be:
 
@@ -616,12 +616,12 @@ The pool size is the minimum number of connections the pool can handle. The maxi
 There’s no perfect formula to determine how large your pool should be, but there are a few good guidelines to keep in mind:
 
 - A large pool will stress your database at similar levels as that number of clients would alone.
-- A pool that’s much smaller than the number of clients communicating with the database can act as a bottleneck, reducing the rate at which your database receives and responds to transactions.
+- A pool that’s much smaller than the number of clients communicating with the database can act as a bottleneck, reducing the rate when your database receives and responds to transactions.
 
 We recommend starting with a pool size of about half your available connections and adjusting later based on performance. If you see slow query responses, check the CPU usage on the database’s Overview tab. We recommend decreasing your pool size if CPU usage is high, and increasing your pool size if it’s low.`+getPoolDetails, Writer,
 		aliasOpt("c"))
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolMode, "",
-		"transaction", "The pool mode for the connection pool, e.g. 'session', 'transaction', and 'statement'")
+		"transaction", "The pool mode for the connection pool, e.g. `session`, `transaction`, and `statement`")
 	AddIntFlag(cmdDatabasePoolCreate, doctl.ArgSizeSlug, "", 0, "pool size",
 		requiredOpt())
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolUserName, "", "",
@@ -630,7 +630,7 @@ We recommend starting with a pool size of about half your available connections 
 		"The name of the specific database within the database cluster", requiredOpt())
 
 	cmdDatabasePoolDelete := CmdBuilderWithDocs(cmd, RunDatabasePoolDelete,
-		"delete <database-id> <pool-name>", "Deletes a connection pool for a database", `This command deletes the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
+		"delete <database-id> <pool-name>", "Delete a connection pool for a database", `This command deletes the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabasePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "Delete connection pool without confirmation prompt")
@@ -769,15 +769,15 @@ You can use these commands to create and delete databases within a cluster, or s
 		},
 	}
 
-	CmdBuilderWithDocs(cmd, RunDatabaseDBList, "list <database-id>", "Retrieves list of databases within a cluster", "This command retrieves the names of all databases being hosted in the specified database cluster."+getClusterList, Writer,
+	CmdBuilderWithDocs(cmd, RunDatabaseDBList, "list <database-id>", "Retrieve a list of databases within a cluster", "This command retrieves the names of all databases being hosted in the specified database cluster."+getClusterList, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DatabaseDBs{}))
-	CmdBuilderWithDocs(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "Retrieves the name of a database within a cluster", "This command retrieves the name of the specified database hosted in the specified database cluster."+getClusterList+getDBList,
+	CmdBuilderWithDocs(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "Retrieve the name of a database within a cluster", "This command retrieves the name of the specified database hosted in the specified database cluster."+getClusterList+getDBList,
 		Writer, aliasOpt("g"), displayerType(&displayers.DatabaseDBs{}))
 	CmdBuilderWithDocs(cmd, RunDatabaseDBCreate, "create <database-id> <db-name>",
-		"Creates a database within a cluster", "This command creates a database with the specified name in the specified database cluster."+getClusterList, Writer, aliasOpt("c"))
+		"Create a database within a cluster", "This command creates a database with the specified name in the specified database cluster."+getClusterList, Writer, aliasOpt("c"))
 
 	cmdDatabaseDBDelete := CmdBuilderWithDocs(cmd, RunDatabaseDBDelete,
-		"delete <database-id> <db-name>", "Deletes the specified database from the cluster", "This command deletes the specified database from the specified database cluster."+getClusterList+getDBList, Writer, aliasOpt("rm"))
+		"delete <database-id> <db-name>", "Delete the specified database from the cluster", "This command deletes the specified database from the specified database cluster."+getClusterList+getDBList, Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDBDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "Delete the database without a confirmation prompt")
 
@@ -883,10 +883,10 @@ This command requires that you pass in the replica's name, which you can retriev
 - The region where the database cluster is located (e.g. `+ "`" +`nyc3`+ "`" +`, `+ "`" +`sfo2`+ "`" +`)
 - The status of the replica (possible values are `+ "`" +`forking`+ "`" +` and `+ "`" +`active`+ "`" +`)
 `
-	CmdBuilderWithDocs(cmd, RunDatabaseReplicaList, "list <database-id>", "Retrieves list of read-only database replicas", `Lists the following details for read-only replicas for the specified database cluster.`+replicaDetails+databaseListDetails,
+	CmdBuilderWithDocs(cmd, RunDatabaseReplicaList, "list <database-id>", "Retrieve list of read-only database replicas", `Lists the following details for read-only replicas for the specified database cluster.`+replicaDetails+databaseListDetails,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.DatabaseReplicas{}))
-	CmdBuilderWithDocs(cmd, RunDatabaseReplicaGet, "get <database-id> <replica-name>", "Retrieves information about a read-only database replica",
+	CmdBuilderWithDocs(cmd, RunDatabaseReplicaGet, "get <database-id> <replica-name>", "Retrieve information about a read-only database replica",
 		`Gets the following details for the specified read-only replica for the specified database cluster:
 
 - The name of the replica
@@ -898,7 +898,7 @@ This command requires that you pass in the replica's name, which you can retriev
 		displayerType(&displayers.DatabaseReplicas{}))
 
 	cmdDatabaseReplicaCreate := CmdBuilderWithDocs(cmd, RunDatabaseReplicaCreate,
-		"create <database-id> <replica-name>", "Create a read-only database replica", `Creates a read-only database replica for the specified database cluster, giving it the specified name.`+databaseListDetails,
+		"create <database-id> <replica-name>", "Create a read-only database replica", `This command creates a read-only database replica for the specified database cluster, giving it the specified name.`+databaseListDetails,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgRegionSlug, "",
 		defaultDatabaseRegion, "Specifies the region (e.g. nyc3, sfo2) in which to create the replica")
@@ -909,15 +909,15 @@ This command requires that you pass in the replica's name, which you can retriev
 
 	cmdDatabaseReplicaDelete := CmdBuilderWithDocs(cmd, RunDatabaseReplicaDelete,
 		"delete <database-id> <replica-name>", "Delete a read-only database replica",
-		`Deletes the specified read-only replica for the specified database cluster.`+howToGetReplica+databaseListDetails,
+		`Delete the specified read-only replica for the specified database cluster.`+howToGetReplica+databaseListDetails,
 		Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseReplicaDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "Deletes the replica without a confirmation prompt")
 
 	CmdBuilderWithDocs(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-id> <replica-name>",
-		"Retrieves information for connecting to a read-only database replica",
-		`Retrieves information for connecting to the specified read-only database replica in the specified database cluster`+howToGetReplica+databaseListDetails, Writer, aliasOpt("conn"))
+		"Retrieve information for connecting to a read-only database replica",
+		`This command retrieves information for connecting to the specified read-only database replica in the specified database cluster`+howToGetReplica+databaseListDetails, Writer, aliasOpt("conn"))
 
 	return cmd
 }

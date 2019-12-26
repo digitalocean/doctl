@@ -40,8 +40,8 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
   - The project's specified purpose
   - The project's environment (Development, Staging, or Production)
   - A boolean indicating whether it is you default project
-  - The date and time at which the project was created
-  - The date and time at which the project was last updated
+  - The date and time when the project was created
+  - The date and time when the project was last updated
 `
 
 	cmd := &Command{

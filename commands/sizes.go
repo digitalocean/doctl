@@ -28,9 +28,9 @@ func Size() *Command {
 		},
 	}
 
-	sizeDesc := `List information about the available Droplet sizes including: their slug identifier, included RAM, VCPU count, disk size, and pricing details.
+	sizeDesc := `List the slug identifier, RAM, VCPU count, disk size, and pricing details for each Droplet size.
 
-The slugs displayed by this command are unique identifiers for Droplet size and should be used to specify the type of Droplet in other commands.
+Use the slugs displayed by this command to specify the type of Droplet in other commands.
 `
 	CmdBuilderWithDocs(cmd, RunSizeList, "list", "List available Droplet sizes", sizeDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Size{}))

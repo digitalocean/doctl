@@ -345,7 +345,7 @@ var (
 type chain struct {
 	link []link
 	err  error
-	// errStart is the index at which the error occurred plus 1. Processing
+	// errStart is the index when the error occurred plus 1. Processing
 	// errStart at this level at the next call to Transform. As long as
 	// errStart > 0, chain will not consume any more source bytes.
 	errStart int

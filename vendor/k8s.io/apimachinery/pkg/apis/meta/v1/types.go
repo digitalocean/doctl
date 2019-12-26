@@ -175,7 +175,7 @@ type ObjectMeta struct {
 	// +optional
 	CreationTimestamp Time `json:"creationTimestamp,omitempty" protobuf:"bytes,8,opt,name=creationTimestamp"`
 
-	// DeletionTimestamp is RFC 3339 date and time at which this resource will be deleted. This
+	// DeletionTimestamp is RFC 3339 date and time when this resource will be deleted. This
 	// field is set by the server when a graceful deletion is requested by the user, and is not
 	// directly settable by a client. The resource is expected to be deleted (no longer visible
 	// from resource lists, and not reachable by name) after the time in this field, once the
