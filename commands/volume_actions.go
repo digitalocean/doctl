@@ -55,16 +55,15 @@ func VolumeAction() *Command {
 		Command: &cobra.Command{
 			Use:   "volume-action",
 			Short: "Display commands to perform actions on a volume",
-			Long: `Block storage volume actions are commands that can be given to a DigitalOcean block storage volume.
-
-An example would be detaching or attaching a volume from a Droplet.`,
+			Long: `Block storage volume action commands allow you to attach, detach, and resize existing volumes.`,
 		},
 	}
 
 	cmdRunVolumeAttach := CmdBuilderWithDocs(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "Attach a volume to a Droplet", `Use this command to attach a block storage volume to a Droplet.
 
-Each volume may only be attached to a single Droplet. However, up to five volumes may be attached to a Droplet at a time.
-Pre-formatted volumes will be automatically mounted to Ubuntu, Debian, Fedora, Fedora Atomic, and CentOS Droplets created on or after April 26, 2018 when attached. On older Droplets, additional configuration is required. Visit https://www.digitalocean.com/docs/volumes/how-to/format-and-mount/#mounting-the-filesystems for details`, Writer,
+Each volume can be attached to only one Droplet at a time. However, up to five volumes may be attached to a single Droplet.
+
+When you attach a pre-formatted volume to Ubuntu, Debian, Fedora, Fedora Atomic, and CentOS Droplets created on or after April 26, 2018, the volume will be automatically mounted. On older Droplets, additional configuration is required. Visit https://www.digitalocean.com/docs/volumes/how-to/format-and-mount/#mounting-the-filesystems for details`, Writer,
 		aliasOpt("a"))
 	AddBoolFlag(cmdRunVolumeAttach, doctl.ArgCommandWait, "", false, "Wait for volume to attach")
 
@@ -72,7 +71,7 @@ Pre-formatted volumes will be automatically mounted to Ubuntu, Debian, Fedora, F
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunVolumeDetach, doctl.ArgCommandWait, "", false, "Wait for volume to detach")
 
-	CmdBuilder(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "detach a volume (deprecated - use detach instead)",
+	CmdBuilderWithDocs(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "(Deprecated) Detach a volume. Use `detach` instead.","This command detaches a volume. This command is deprecated. Use `doctl compute volume-action detach` instead.",
 		Writer)
 
 	cmdRunVolumeResize := CmdBuilderWithDocs(cmd, RunVolumeResize, "resize <volume-id>", "Resize the disk of a volume", `Use this command to resize a block storage volume.

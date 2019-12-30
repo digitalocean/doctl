@@ -33,8 +33,9 @@ func Volume() *Command {
 			Short: "Display commands to manage block storage volumes",
 			Long: `The sub-commands of `+ "`" +`doctl compute volume`+ "`" +` manage your block storage volumes.
 
-Block storage volumes provide expanded storage capacity for your Droplets and can be moved between Droplets within a specific region.
-Volumes function as raw block devices, meaning they appear to the operating system as locally attached storage which can be formatted using any filesystem supported by the OS. They may be created in sizes from 1GiB to 16TiB.`,
+Block storage volumes provide expanded storage capacity for your Droplets, ranging in size from 1GiB to 16TiB.
+
+Volumes function as raw block devices, meaning they appear to the operating system as locally attached storage which can be formatted using any filesystem supported by the OS. They can be moved between Droplets located in the same region as the volume.`,
 		},
 	}
 
@@ -53,13 +54,13 @@ You can use flags to specify the volume size, region, description, filesystem ty
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSnapshot, "", "", "Volume snapshot; should not be specified with a region")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemType, "", "", "Volume filesystem type (ext4 or xfs)")
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "Volume filesystem label")
-	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "tags to apply to the volume; comma separate or repeat `--tag` to add multiple tags at once")
+	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "Tags to apply to the volume; comma separate or repeat `--tag` to add multiple tags at once")
 
 	cmdRunVolumeDelete := CmdBuilderWithDocs(cmd, RunVolumeDelete, "delete <volume-id>", "Delete a block storage volume", `Use this command to delete a block storage volume by ID, destroying all of its data and removing it from your account.`, Writer,
 		aliasOpt("rm", "d"))
 	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force volume delete")
 
-	CmdBuilderWithDocs(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing block storage volume", `Use this command to show information about a block storage volume by ID`, Writer, aliasOpt("g"),
+	CmdBuilderWithDocs(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing block storage volume", `Use this command to retrieve information about a block storage volume using its ID.`, Writer, aliasOpt("g"),
 		displayerType(&displayers.Volume{}))
 
 	cmdRunVolumeSnapshot := CmdBuilderWithDocs(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "Create a block storage volume snapshot", `Use this command to create a snapshot of a block storage volume by ID.
@@ -68,7 +69,7 @@ You can use a block storage volume snapshot ID as a flag with ` + "`" + `doctl v
 		aliasOpt("s"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "Snapshot description")
-	AddStringSliceFlag(cmdRunVolumeSnapshot, doctl.ArgTag, "", []string{}, "tags to apply to the snapshot; comma separate or repeat `--tag` to add multiple tags at once")
+	AddStringSliceFlag(cmdRunVolumeSnapshot, doctl.ArgTag, "", []string{}, "Tags to apply to the snapshot; comma separate or repeat `--tag` to add multiple tags at once")
 
 	return cmd
 
@@ -88,7 +89,7 @@ func RunVolumeList(c *CmdConfig) error {
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
 		if err != nil {
-			return fmt.Errorf("unknown glob %q", globStr)
+			return fmt.Errorf("Unknown glob %q", globStr)
 		}
 
 		matches = append(matches, g)

@@ -40,9 +40,7 @@ To use a custom subdomain to access the CDN endpoint, provide the ID of a Digita
 
 	CDNnotes := `
 
-The "Time To Live" (TTL) is the length of time in seconds that a file is cached by the CDN before being refreshed. If a request to access a file occurs after the TTL has expired, the CDN will deliver the file by requesting it directly from the origin URL, re-cache the file, and reset the TTL.
-
-The endpoint is automatically generated. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`
+The Time To Live (TTL) value is the length of time in seconds that a file is cached by the CDN before being refreshed. If a request to access a file occurs after the TTL has expired, the CDN will deliver the file by requesting it directly from the origin URL, re-caching the file, and resetting the TTL.`
 
 	CDNDetails := `
 
@@ -59,7 +57,7 @@ The endpoint is automatically generated. You can also use a custom subdomain you
 	CmdBuilderWithDocs(cmd, RunCDNList, "list", "List CDNs that have already been created", `Lists the following details for Content Delivery Networks (CDNs) that have already been created:`+CDNDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.CDN{}))
 
-	cmdCDNCreate := CmdBuilderWithDocs(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `TThis command creates a Content Delivery Network (CDN) on the origin server you specify.`+CDNnotes, Writer,
+	cmdCDNCreate := CmdBuilderWithDocs(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `This command creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`+CDNnotes, Writer,
 		aliasOpt("c"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNCreate, doctl.ArgCDNTTL, "", 3600, TTLDesc)
 	AddStringFlag(cmdCDNCreate, doctl.ArgCDNDomain, "", "", DomainDesc)

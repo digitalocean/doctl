@@ -71,7 +71,7 @@ func Auth() *Command {
 		Command: &cobra.Command{
 			Use:   "auth",
 			Short: "Display commands for authenticating doctl with an account",
-			Long: `The `+ "`" +`doctl auth`+ "`" +` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the cloud dashboard at https://cloud.digitalocean.com/account/api/token.
+			Long: `The `+ "`" +`doctl auth`+ "`" +` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/token.
 
 If you work with a just one account, you can call `+ "`" +`doctl auth init`+ "`" +` and supply the token when prompted. This creates an authentication context named `+ "`" +`default`+ "`" +`.
 

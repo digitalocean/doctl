@@ -39,8 +39,8 @@ This can be filtered to a specific action. For example, while `+ "`" +`doctl com
 	actionDetails := `
 
 - The action ID
-- The action status (pending, completed, etc)
-- The action type (create, destroy, power_cycle, power_off, power_on, backup, migrate, attach_volume, etc)
+- The action status (`+ "`" +`pending`+ "`" +`, `+ "`" +`completed`+ "`" +`, etc)
+- The action type (`+ "`" +`create`+ "`" +`, `+ "`" +`destroy`+ "`" +`, `+ "`" +`power_cycle`+ "`" +`, `+ "`" +`power_off`+ "`" +`, `+ "`" +`power_on`+ "`" +`, `+ "`" +`backup`+ "`" +`, `+ "`" +`migrate`+ "`" +`, `+ "`" +`attach_volume`+ "`" +`, etc)
 - The Date/Time when the action started, in RFC3339 format
 - The Date/Time when the action completed, in RFC3339 format
 - The resource ID of the resource upon which the action was taken
