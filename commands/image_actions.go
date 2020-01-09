@@ -35,14 +35,14 @@ func ImageAction() *Command {
 	}
 	actionDetail := `
 
-	- The unique numeric ID used to identify and reference an image action.
-	- The status of the image action. This will be either `+ "`" +`in-progress`+ "`" +`, `+ "`" +`completed`+ "`" +`, or `+ "`" +`errored`+ "`" +`.
-	- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
-	- A time value given in ISO8601 combined date and time format that represents when the action was completed.
-	- The resource ID, which is a unique identifier for the resource that the action is associated with.
-	- The type of resource that the action is associated with.
-	- The region where the action occurred.
-	- The slug for the region where the action occurred.
+- The unique numeric ID used to identify and reference an image action.
+- The status of the image action. This will be either `+ "`" +`in-progress`+ "`" +`, `+ "`" +`completed`+ "`" +`, or `+ "`" +`errored`+ "`" +`.
+- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
+- A time value given in ISO8601 combined date and time format that represents when the action was completed.
+- The resource ID, which is a unique identifier for the resource that the action is associated with.
+- The type of resource that the action is associated with.
+- The region where the action occurred.
+- The slug for the region where the action occurred.
 `
 	cmdImageActionsGet := CmdBuilderWithDocs(cmd, RunImageActionsGet,
 		"get <image-id>", "Retrieve the status of an image action", `Use this command to retrieve the status of an image action, inlcuding the following details:`+actionDetail, Writer,
@@ -110,7 +110,7 @@ func RunImageActionsTransfer(c *CmdConfig) error {
 
 	a, err := ias.Transfer(id, req)
 	if err != nil {
-		checkErr(fmt.Errorf("could not transfer image: %v", err))
+		checkErr(fmt.Errorf("Could not transfer image: %v", err))
 	}
 
 	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
