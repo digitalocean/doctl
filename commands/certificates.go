@@ -44,8 +44,8 @@ Once a certificate has been stored, it is assigned a unique certificate ID that 
 - The SHA-1 fingerprint of the certificate
 - The certificate's expiration date given in ISO8601 date/time format
 - The certificate's creation date given in ISO8601 date/time format
-- The certificate type ('custom' or 'lets_encrypt')
-- The certificate state ('pending', 'verified', or 'error')`
+- The certificate type (`+ "`" +`custom`+ "`" +` or `+ "`" +`lets_encrypt`+ "`" +`)
+- The certificate state (`+ "`" +`pending`+ "`" +`, `+ "`" +`verified`+ "`" +`, or `+ "`" +`error`+ "`" +`)`
 
 	CmdBuilderWithDocs(cmd, RunCertificateGet, "get <id>", "Retrieve details about a certificate", `This command retrieves the following details about a certificate:`+certDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Certificate{}))
