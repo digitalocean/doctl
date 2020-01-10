@@ -30,7 +30,7 @@ func CDN() *Command {
 		Command: &cobra.Command{
 			Use:   "cdn",
 			Short: "Display commands that manage CDNs",
-			Long: `The subcommands of `+ "`" +`doctl compute cdn`+ "`" +` enable management of Content Delivery Networks (CDNs).
+			Long: `The subcommands of ` + "`" + `doctl compute cdn` + "`" + ` enable management of Content Delivery Networks (CDNs).
 
 Content hosted in DigitalOcean's object storage solution, Spaces, can optionally be served by our globally distributed Content Delivery Networks (CDNs). This allows you to deliver content to users based on their geographic location.
 
@@ -65,7 +65,7 @@ The Time To Live (TTL) value is the length of time in seconds that a file is cac
 
 	cmdRunCDNDelete := CmdBuilderWithDocs(cmd, RunCDNDelete, "delete <cdn-id>", "Delete a CDN", `This command deletes the CDN specified by the ID.
 
-You can retrieve the ID by calling `+ "`" +`doctl compute cdn list`+ "`" +` if needed.`, Writer,
+You can retrieve the ID by calling `+"`"+`doctl compute cdn list`+"`"+` if needed.`, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdRunCDNDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the specified CDN without prompting for confirmation")
 
@@ -88,7 +88,7 @@ Currently, you can only update the custom domain and its certificate ID with thi
 
 This is useful when you need to ensure that files which were recently changed on the origin server are immediately available via the CDN.
 
-To purge specific files, you can use the the `+ "`" +`--files`+ "`" +` flag and supply a path. The path may be for a single file or may contain a wildcard (`+ "`" +`*`+ "`" +`) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.`, Writer,
+To purge specific files, you can use the the `+"`"+`--files`+"`"+` flag and supply a path. The path may be for a single file or may contain a wildcard (`+"`"+`*`+"`"+`) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.`, Writer,
 		aliasOpt("fc"))
 	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", []string{"*"}, "cdn files")
 

@@ -30,7 +30,7 @@ func FloatingIP() *Command {
 		Command: &cobra.Command{
 			Use:   "floating-ip",
 			Short: "Display commands to manage floating IP addresses",
-			Long: `The sub-commands of `+ "`" +`doctl compute floating-ip`+ "`" +` manage floating IP addresses.
+			Long: `The sub-commands of ` + "`" + `doctl compute floating-ip` + "`" + ` manage floating IP addresses.
 Floating IPs are publicly-accessible static IP addresses that can be mapped to one of your Droplets. They can be used to create highly available setups or other configurations requiring movable addresses.
 Floating IPs are bound to a specific region.`,
 			Aliases: []string{"fip"},

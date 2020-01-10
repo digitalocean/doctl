@@ -48,7 +48,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 		Command: &cobra.Command{
 			Use:   "projects",
 			Short: "Manage projects and assign resources to them",
-			Long:  `The subcommands of `+ "`" +`doctl projects`+ "`" +` allow you to create, manage, and assign resources to your projects.` + projectsDesc,
+			Long:  `The subcommands of ` + "`" + `doctl projects` + "`" + ` allow you to create, manage, and assign resources to your projects.` + projectsDesc,
 		},
 	}
 
@@ -101,16 +101,16 @@ func ProjectResourcesCmd() *Command {
 		Command: &cobra.Command{
 			Use:   "resources",
 			Short: "Manage resources assigned to a project",
-			Long:  `The subcommands of `+ "`" +`doctl projects resources`+ "`" +` allow you to list and assign resources to your projects.`,
+			Long:  `The subcommands of ` + "`" + `doctl projects resources` + "`" + ` allow you to list and assign resources to your projects.`,
 		},
 	}
 
 	urnDesc := `
 
-A valid URN has the format: `+ "`" +`do:resource_type:resource_id`+ "`" +`. For example:
+A valid URN has the format: ` + "`" + `do:resource_type:resource_id` + "`" + `. For example:
 
-  - `+ "`" +`do:droplet:4126873`+ "`" +`
-  - `+ "`" +`do:volume:6fc4c277-ea5c-448a-93cd-dd496cfef71f`+ "`" +`
+  - ` + "`" + `do:droplet:4126873` + "`" + `
+  - ` + "`" + `do:volume:6fc4c277-ea5c-448a-93cd-dd496cfef71f` + "`" + `
 `
 
 	CmdBuilderWithDocs(cmd, RunProjectResourcesList, "list <project-id>", "List resources assigned to a project",

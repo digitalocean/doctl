@@ -30,7 +30,7 @@ func Snapshot() *Command {
 			Use:     "snapshot",
 			Aliases: []string{"s"},
 			Short:   "Access and manage snapshots",
-			Long:    `The subcommands of `+ "`" +`doctl compute snapshot`+ "`" +` allow you to manage and retrieve information about Droplet and block storage volume snapshots.`,
+			Long:    `The subcommands of ` + "`" + `doctl compute snapshot` + "`" + ` allow you to manage and retrieve information about Droplet and block storage volume snapshots.`,
 		},
 	}
 

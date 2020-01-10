@@ -7,12 +7,14 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../"
 < "$DIR/dockerfiles/Dockerfile.snap" docker build -t doctl-snap-base -
 
 cat <<INSTRUCTIONS
-Next, test local/doctl-snap-base
+Next,
 
-1. make _build_snap
-2. test the resulting snap
+1. tag the image you just built
+  - docker tag doctl-snap-base sammytheshark/doctl-snap-base
+2. make _build_snap
+3. test the resulting snap
   a. install resulting snap locally, e.g., sudo snap install doctl_vX.XX.XXX*.snap --dangerous
-  b. wire up your snap: 
+  b. wire up your snap:
      - sudo snap connect doctl:doctl-config
      - sudo snap connect doctl:kube-config
   c. take it for a spin
@@ -25,9 +27,9 @@ to get your version.
 
 1. login to dockerhub as sammytheshark (credentials in LastPass)
    docker login -u sammytheshark -p <from LastPass>
-2. docker rename local/doctl-snap-base sammytheshark/doctl-snap-base:1.31.2-automate-snap-image-b1582d49-pre
-3. docker push sammytheshark/doctl-snap-base:1.31.2-automate-snap-image-b1582d49-pre
-4. docker rename sammytheshark/doctl-snap-base:1.31.2-automate-snap-image-b1582d49-pre sammytheshark/doctl-snap-base:latest
+2. docker tag doctl-snap-base sammytheshark/doctl-snap-base:<version>-<sha>-pre
+3. docker push sammytheshark/doctl-snap-base:<version>-<sha>-pre
+4. docker rename sammytheshark/doctl-snap-base:<version>-<sha>-pre sammytheshark/doctl-snap-base:latest
 5. docker push sammytheshark/doctl-snap-base:latest
 
 submit your PR and merge. But wait! You aren't done yet!

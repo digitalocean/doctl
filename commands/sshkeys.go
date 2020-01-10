@@ -32,7 +32,7 @@ func SSHKeys() *Command {
 			Use:     "ssh-key",
 			Aliases: []string{"k"},
 			Short:   "Display commands to manage SSH keys on your account",
-			Long: `The sub-commands of `+ "`" +`doctl compute ssh-key`+ "`" +` manage the SSH keys on your account.
+			Long: `The sub-commands of ` + "`" + `doctl compute ssh-key` + "`" + ` manage the SSH keys on your account.
 
 DigitalOcean allows you to add SSH public keys to the interface so that you can embed your public key into a Droplet at the time of creation. Only the public key is required to take advantage of this functionality. Note that this command does not add, delete, or otherwise modify any ssh keys that may be on existing Droplets.`,
 		},
@@ -46,7 +46,7 @@ DigitalOcean allows you to add SSH public keys to the interface so that you can 
 
 	cmdSSHKeysCreate := CmdBuilderWithDocs(cmd, RunKeyCreate, "create <key-name>", "Create a new SSH key on your account", `Use this command to add a new SSH key to your account.
 
-Specify a `+ "`" +`<key-name>`+ "`" +` for the key, and set the `+ "`" +`--public-key`+ "`" +` flag to a string with the contents of the key.
+Specify a `+"`"+`<key-name>`+"`"+` for the key, and set the `+"`"+`--public-key`+"`"+` flag to a string with the contents of the key.
 
 Note that creating a key will not add it to any Droplets.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Key{}))

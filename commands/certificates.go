@@ -31,7 +31,7 @@ func Certificate() *Command {
 		Command: &cobra.Command{
 			Use:   "certificate",
 			Short: "Display commands that manage SSL certificates and private keys",
-			Long: `The subcommands of `+ "`" +`doctl compute certificate`+ "`" +` allow you to store and manage your SSL certificates, private keys, and certificate paths.
+			Long: `The subcommands of ` + "`" + `doctl compute certificate` + "`" + ` allow you to store and manage your SSL certificates, private keys, and certificate paths.
 
 Once a certificate has been stored, it is assigned a unique certificate ID that can be referenced in your doctl and API workflows.`,
 		},
@@ -44,8 +44,8 @@ Once a certificate has been stored, it is assigned a unique certificate ID that 
 - The SHA-1 fingerprint of the certificate
 - The certificate's expiration date given in ISO8601 date/time format
 - The certificate's creation date given in ISO8601 date/time format
-- The certificate type (`+ "`" +`custom`+ "`" +` or `+ "`" +`lets_encrypt`+ "`" +`)
-- The certificate state (`+ "`" +`pending`+ "`" +`, `+ "`" +`verified`+ "`" +`, or `+ "`" +`error`+ "`" +`)`
+- The certificate type (` + "`" + `custom` + "`" + ` or ` + "`" + `lets_encrypt` + "`" + `)
+- The certificate state (` + "`" + `pending` + "`" + `, ` + "`" + `verified` + "`" + `, or ` + "`" + `error` + "`" + `)`
 
 	CmdBuilderWithDocs(cmd, RunCertificateGet, "get <id>", "Retrieve details about a certificate", `This command retrieves the following details about a certificate:`+certDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Certificate{}))
@@ -54,7 +54,7 @@ Once a certificate has been stored, it is assigned a unique certificate ID that 
 
 Let's Encrypt certificates are free and will be auto-renewed and managed for you by DigitalOcean.
 
-To create a Let's Encrypt certificate, you'll need to add the domain(s) to your account at cloud.digitalocean.com, or via `+ "`" +`doctl compute domain create`+ "`" +`, then provide a certificate name and a comma-separated list of the domain names you'd like to associate with the certificate:
+To create a Let's Encrypt certificate, you'll need to add the domain(s) to your account at cloud.digitalocean.com, or via `+"`"+`doctl compute domain create`+"`"+`, then provide a certificate name and a comma-separated list of the domain names you'd like to associate with the certificate:
 
 	doctl compute certificate create --type lets_encrypt --name mycert --dns-names example.org
 
@@ -80,7 +80,7 @@ To upload a custom certificate, you'll need to provide a certificate name, the p
 	cmdCertificateDelete := CmdBuilderWithDocs(cmd, RunCertificateDelete, "delete <id>",
 		"Delete the specified certificate", `This command deletes the specified certificate.
 
-Use `+ "`" +`doctl compute certificate list`+ "`" +` to see all available certificates associated with your account.`, Writer, aliasOpt("d", "rm"))
+Use `+"`"+`doctl compute certificate list`+"`"+` to see all available certificates associated with your account.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdCertificateDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the certificate without a comfirmation prompt")
 

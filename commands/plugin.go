@@ -28,10 +28,12 @@ import (
 func Plugin() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "plugin",
-			Short:   "plugin commands",
-			Long:    "plugin is used to access plugin commands",
-			Aliases: []string{"p"},
+			Use:        "plugin",
+			Short:      "plugin commands",
+			Long:       "plugin is used to access plugin commands",
+			Aliases:    []string{"p"},
+			Hidden:     true,
+			Deprecated: "this command will be removed in a future version of doctl",
 		},
 	}
 

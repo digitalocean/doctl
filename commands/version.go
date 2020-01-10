@@ -27,7 +27,7 @@ func Version() *Command {
 		Command: &cobra.Command{
 			Use:   "version",
 			Short: "Show the current version",
-			Long: "The `doctl version` command displays the version of the doctl software.",
+			Long:  "The `doctl version` command displays the version of the doctl software.",
 			Run: func(cmd *cobra.Command, args []string) {
 				if doctl.Build != "" {
 					doctl.DoitVersion.Build = doctl.Build

@@ -128,12 +128,14 @@ func Execute() {
 func addCommands() {
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Auth())
+	DoitCmd.AddCommand(Balance())
 	DoitCmd.AddCommand(Completion())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Kubernetes())
 	DoitCmd.AddCommand(Databases())
 	DoitCmd.AddCommand(Projects())
 	DoitCmd.AddCommand(Version())
+	DoitCmd.AddCommand(Registry())
 }
 
 func computeCmd() *Command {
@@ -141,7 +143,7 @@ func computeCmd() *Command {
 		Command: &cobra.Command{
 			Use:   "compute",
 			Short: "Display commands that manage infrastructure",
-			Long:  `The subcommands under `+ "`" +`doctl compute`+ "`" +` are for managing DigitalOcean resources.`,
+			Long:  `The subcommands under ` + "`" + `doctl compute` + "`" + ` are for managing DigitalOcean resources.`,
 		},
 	}
 

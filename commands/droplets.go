@@ -27,7 +27,6 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/gobwas/glob"
-	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +37,7 @@ func Droplet() *Command {
 			Use:     "droplet",
 			Aliases: []string{"d"},
 			Short:   "Manage virtual machines (Droplets)",
-			Long:    `A Droplet is a DigitalOcean virtual machine. Use the subcommands of `+ "`" +`doctl compute droplet`+ "`" +` to list, create, or delete Droplets.`,
+			Long:    `A Droplet is a DigitalOcean virtual machine. Use the subcommands of ` + "`" + `doctl compute droplet` + "`" + ` to list, create, or delete Droplets.`,
 		},
 	}
 	dropletDetails := `
@@ -53,9 +52,9 @@ func Droplet() *Command {
 	- The size of the Droplet's disk in GB
 	- The Droplet's region
 	- The image the Droplet was created from
-	- The status of the Droplet; can be `+ "`" +`new`+ "`" +`, `+ "`" +`active`+ "`" +`, `+ "`" +`off`+ "`" +`, or `+ "`" +`archive`+ "`" +`
+	- The status of the Droplet; can be ` + "`" + `new` + "`" + `, ` + "`" + `active` + "`" + `, ` + "`" + `off` + "`" + `, or ` + "`" + `archive` + "`" + `
 	- The tags assigned to the Droplet
-	- A list of features enabled for the Droplet. Examples are `+ "`" +`backups`+ "`" +`, `+ "`" +`ipv6`+ "`" +`, `+ "`" +`monitoring`+ "`" +`, `+ "`" +`private_networking`+ "`" +`
+	- A list of features enabled for the Droplet. Examples are ` + "`" + `backups` + "`" + `, ` + "`" + `ipv6` + "`" + `, ` + "`" + `monitoring` + "`" + `, ` + "`" + `private_networking` + "`" + `
 	- The IDs of block storage volumes attached to the Droplet
 	`
 	CmdBuilderWithDocs(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Use this command to list the available actions that can be taken on a Droplet. These can be things like rebooting, resizing, and snapshotting the Droplet.`, Writer,
@@ -431,7 +430,7 @@ func extractVolumes(volumeList []string) []godo.DropletCreateVolume {
 
 	for _, v := range volumeList {
 		var req godo.DropletCreateVolume
-		if _, err := uuid.Parse(v); err == nil {
+		if looksLikeUUID(v) {
 			req.ID = v
 		} else {
 			req.Name = v

@@ -57,7 +57,7 @@ func DropletAction() *Command {
 			Use:     "droplet-action",
 			Aliases: []string{"da"},
 			Short:   "Droplet action commands",
-			Long: `Use the subcommands of `+ "`" +`doctl compute droplet-action`+ "`" +` to perform actions on Droplets.
+			Long: `Use the subcommands of ` + "`" + `doctl compute droplet-action` + "`" + ` to perform actions on Droplets.
 
 Droplet actions are tasks that can be executed on a Droplet, such as rebooting, resizing, or snapshotting a Droplet.`,
 		},

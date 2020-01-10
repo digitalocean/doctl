@@ -31,7 +31,7 @@ func Domain() *Command {
 		Command: &cobra.Command{
 			Use:   "domain",
 			Short: "Display commands for domain names and DNS records",
-			Long:  `Use the subcommands of `+ "`" +`doctl compute domain`+ "`" +` to manage domains you have purchased from a domain name registrar that you are managing through the DigitalOcean DNS interface.`,
+			Long:  `Use the subcommands of ` + "`" + `doctl compute domain` + "`" + ` to manage domains you have purchased from a domain name registrar that you are managing through the DigitalOcean DNS interface.`,
 		},
 	}
 
@@ -52,7 +52,7 @@ func Domain() *Command {
 		Command: &cobra.Command{
 			Use:   "records",
 			Short: "Manage DNS records",
-			Long:  `Use the subcommands of `+ "`" +`doctl compute domain records`+ "`" +` to manage the DNS records for your domains.`,
+			Long:  `Use the subcommands of ` + "`" + `doctl compute domain records` + "`" + ` to manage the DNS records for your domains.`,
 		},
 	}
 	cmd.AddCommand(cmdRecord)
@@ -233,7 +233,7 @@ func RunRecordCreate(c *CmdConfig) error {
 		return err
 	}
 
-	rPort, err := c.Doit.GetInt(c.NS, doctl.ArgRecordPort)
+	rPort, err := c.Doit.GetIntPtr(c.NS, doctl.ArgRecordPort)
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func RunRecordCreate(c *CmdConfig) error {
 		return err
 	}
 
-	drcr := &godo.DomainRecordEditRequest{
+	drcr := &do.DomainRecordEditRequest{
 		Type:     rType,
 		Name:     rName,
 		Data:     rData,
@@ -356,7 +356,7 @@ func RunRecordUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	rPort, err := c.Doit.GetInt(c.NS, doctl.ArgRecordPort)
+	rPort, err := c.Doit.GetIntPtr(c.NS, doctl.ArgRecordPort)
 	if err != nil {
 		return err
 	}
@@ -381,7 +381,7 @@ func RunRecordUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	drcr := &godo.DomainRecordEditRequest{
+	drcr := &do.DomainRecordEditRequest{
 		Type:     rType,
 		Name:     rName,
 		Data:     rData,

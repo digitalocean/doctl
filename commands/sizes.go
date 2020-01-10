@@ -24,7 +24,7 @@ func Size() *Command {
 		Command: &cobra.Command{
 			Use:   "size",
 			Short: "List available Droplet sizes",
-			Long:  `The subcommands of `+ "`" +`doctl compute size`+ "`" +` retrieve information about Droplet sizes.`,
+			Long:  `The subcommands of ` + "`" + `doctl compute size` + "`" + ` retrieve information about Droplet sizes.`,
 		},
 	}
 

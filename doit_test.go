@@ -15,9 +15,8 @@ package doctl
 
 import (
 	"os"
+	"regexp"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
@@ -25,14 +24,26 @@ func TestMain(m *testing.M) {
 }
 
 func TestUserAgent(t *testing.T) {
-	dv := DoitVersion
-	defer func() {
+	pattern := `doctl\/([0-9]+\.?){3}(-dev)? \(([\w ]+){2}\)`
+	re := regexp.MustCompile(pattern)
+
+	t.Run("release version", func(t *testing.T) {
+		dv := DoitVersion
+		DoitVersion = Version{Major: 0, Minor: 1, Patch: 2}
+
+		ua := userAgent()
+		if !re.MatchString(ua) {
+			t.Errorf("expected %s to match %s", ua, pattern)
+		}
 		DoitVersion = dv
-	}()
+	})
 
-	DoitVersion = Version{Major: 0, Minor: 1, Patch: 2}
-
-	assert.Equal(t, "doctl/0.1.2", userAgent())
+	t.Run("dev version", func(t *testing.T) {
+		ua := userAgent()
+		if !re.MatchString(ua) {
+			t.Errorf("expected %s to match %s", ua, pattern)
+		}
+	})
 }
 
 func TestVersion(t *testing.T) {

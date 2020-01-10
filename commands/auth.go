@@ -71,11 +71,11 @@ func Auth() *Command {
 		Command: &cobra.Command{
 			Use:   "auth",
 			Short: "Display commands for authenticating doctl with an account",
-			Long: `The `+ "`" +`doctl auth`+ "`" +` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/token.
+			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/token.
 
-If you work with a just one account, you can call `+ "`" +`doctl auth init`+ "`" +` and supply the token when prompted. This creates an authentication context named `+ "`" +`default`+ "`" +`.
+If you work with a just one account, you can call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
 
-To switch between multiple DigitalOcean accounts, including team accounts, you can create named contexts by using `+ "`" +`doctl auth init --context <name>`+ "`" +`, then providing a token when prompted. This saves the token under the name you provide. To switch between accounts, use `+ "`" +`doctl auth switch --context <name>`+ "`" +`.`,
+To switch between multiple DigitalOcean accounts, including team accounts, you can create named contexts by using ` + "`" + `doctl auth init --context <name>` + "`" + `, then providing a token when prompted. This saves the token under the name you provide. To switch between accounts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.`,
 		},
 	}
 
@@ -83,21 +83,21 @@ To switch between multiple DigitalOcean accounts, including team accounts, you c
 
 You will need an API token, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/token.
 
-You can provide a name to this initialization via the `+ "`" +`--context`+ "`" +` flag, and then it will be saved as an "authentication context". Authentication contexts are accessible via `+ "`" +`doctl auth switch`+ "`" +`, which re-initializes doctl, or by providing the `+ "`" +`--context`+ "`" +` flag when using any doctl command (to specify that auth context for just one command). This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
+You can provide a name to this initialization via the `+"`"+`--context`+"`"+` flag, and then it will be saved as an "authentication context". Authentication contexts are accessible via `+"`"+`doctl auth switch`+"`"+`, which re-initializes doctl, or by providing the `+"`"+`--context`+"`"+` flag when using any doctl command (to specify that auth context for just one command). This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
 
-If the `+ "`" +`--context`+ "`" +` flag is not specified, a default authentication context will be created during initialization.
+If the `+"`"+`--context`+"`"+` flag is not specified, a default authentication context will be created during initialization.
 
-If doctl is never initialized, you will need to specify an API token whenever you use a `+ "`" +`doctl`+ "`" +` command via the `+ "`" +`--access-token`+ "`" +` flag.`, Writer, false)
+If doctl is never initialized, you will need to specify an API token whenever you use a `+"`"+`doctl`+"`"+` command via the `+"`"+`--access-token`+"`"+` flag.`, Writer, false)
 	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switches between authentication contexts", `This command allows you to switch between accounts with authentication contexts you've already created.
 
-To see a list of available authentication contexts, call `+ "`" +`doctl auth list`+ "`" +`.
+To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
-For details on creating an authentication context, see the help for `+ "`" +`doctl auth init`+ "`" +`.`, Writer, false)
-	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "List available authentication contexts", `List named authentication contexts that you created with `+ "`" +`doctl auth init`+ "`" +`.
+For details on creating an authentication context, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "List available authentication contexts", `List named authentication contexts that you created with `+"`"+`doctl auth init`+"`"+`.
 
-To switch between the contexts use `+ "`" +`doctl switch <name>`+ "`" +`, where `+ "`" +`<name>`+ "`" +` is one of the contexts listed.
+To switch between the contexts use `+"`"+`doctl switch <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts listed.
 
-To create new contexts, see the help for `+ "`" +`doctl auth init`+ "`" +`.`, Writer, false, aliasOpt("ls"))
+To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false, aliasOpt("ls"))
 	// The command runner expects that any command named "list" accepts a
 	// format flag, so we include here despite only supporting text output for
 	// this command.

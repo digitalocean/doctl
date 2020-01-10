@@ -10,6 +10,7 @@ GO111MODULE=off go get -u github.com/golang/mock/mockgen
 
 mockgen -source account.go -package=mocks AccountService > mocks/AccountService.go
 mockgen -source actions.go -package=mocks ActionService > mocks/ActionService.go
+mockgen -source balance.go -package=mocks BalanceService > mocks/BalanceService.go
 mockgen -source cdns.go -package=mocks CDNsService > mocks/CDNsService.go
 mockgen -source certificates.go -package=mocks CertificateSservice > mocks/CertificatesService.go
 mockgen -source databases.go -package=mocks DatabasesService > mocks/DatabasesService.go
@@ -25,6 +26,7 @@ mockgen -source kubernetes.go -package=mocks KubernetesService > mocks/Kubernete
 mockgen -source load_balancers.go -package=mocks LoadBalancersService > mocks/LoadBalancersService.go
 mockgen -source projects.go -package=mocks ProjectsService > mocks/ProjectsService.go
 mockgen -source regions.go -package=mocks RegionsService > mocks/RegionsService.go
+mockgen -source registry.go -package=mocks RegistryService > mocks/RegistryService.go
 mockgen -source snapshots.go -package=mocks SnapshotsService > mocks/SnapshotsService.go
 mockgen -source sizes.go -package=mocks SizesService > mocks/SizesService.go
 mockgen -source sshkeys.go -package=mocks KeysService > mocks/KeysService.go

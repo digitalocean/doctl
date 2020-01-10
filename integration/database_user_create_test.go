@@ -86,6 +86,26 @@ var _ = suite("database/user/create", func(t *testing.T, when spec.G, it spec.S)
 			expect.Equal(strings.TrimSpace(databaseUserCreateOutput), strings.TrimSpace(string(output)))
 		})
 	})
+
+	when("the auth mode flag is present", func() {
+		it("creates the database user", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"database",
+				"user",
+				"create",
+				"some-database-id",
+				"some-user-name",
+				"--mysql-auth-plugin", "mysql_native_password",
+			)
+
+			output, err := cmd.CombinedOutput()
+			t.Log(string(output))
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(databaseUserCreateOutput), strings.TrimSpace(string(output)))
+		})
+	})
 })
 
 const (
@@ -98,7 +118,8 @@ some-user-name    normal    jge5lfxtzhx42iff
   "user": {
     "name": "{{.Name}}",
     "role": "normal",
-    "password": "jge5lfxtzhx42iff"
+    "password": "jge5lfxtzhx42iff",
+    "mysql_settings": { "auth_plugin": "mysql_native_password" }
   }
 }
 `

@@ -266,10 +266,17 @@ const (
 	ArgDatabasePoolSize = "size"
 	// ArgDatabasePoolMode is the flag for connection pool mode
 	ArgDatabasePoolMode = "mode"
+	// ArgDatabaseUserMySQLAuthPlugin is a flag for setting the MySQL user auth plugin
+	ArgDatabaseUserMySQLAuthPlugin = "mysql-auth-plugin"
 
 	// ArgPrivateNetworkUUID is the flag for VPC UUID
 	ArgPrivateNetworkUUID = "private-network-uuid"
 
 	// ArgForce forces confirmation on actions
 	ArgForce = "force"
+
+	// ArgObjectName is the Kubernetes object name
+	ArgObjectName = "name"
+	// ArgObjectNamespace is the Kubernetes object namespace
+	ArgObjectNamespace = "namespace"
 )

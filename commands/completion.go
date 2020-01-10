@@ -22,16 +22,16 @@ import (
 )
 
 const (
-	completionLong = "`" +`doctl completion`+ "`" +` helps you configure your terminal's shell so that doctl commands autocomplete when you press the TAB key.
+	completionLong = "`" + `doctl completion` + "`" + ` helps you configure your terminal's shell so that doctl commands autocomplete when you press the TAB key.
 
 Supported shells:
 
 - bash
 - zsh`
 	bashLong = `
-Use `+ "`" +`doctl completion bash`+ "`" +` to configure your bash shell so that doctl commands autocomplete when you press the TAB key.
+Use ` + "`" + `doctl completion bash` + "`" + ` to configure your bash shell so that doctl commands autocomplete when you press the TAB key.
 
-To review the configuration, run `+ "`" +`doctl completion bash`+ "`" +`.
+To review the configuration, run ` + "`" + `doctl completion bash` + "`" + `.
 
 To enable the configuration, add the following line to your .profile or .bashrc.
 
@@ -39,7 +39,7 @@ To enable the configuration, add the following line to your .profile or .bashrc.
 
 Note:
 
-- macOS users must install the `+ "`" +`bash-completion`+ "`" +` framework to use completion features, which can be done with homebrew:
+- macOS users must install the ` + "`" + `bash-completion` + "`" + ` framework to use completion features, which can be done with homebrew:
 
 		brew install bash-completion
 
@@ -48,9 +48,9 @@ Note:
 		source $(brew --prefix)/etc/bash_completion
 `
 	zshLong = `
-Use `+ "`" +`doctl completion zsh`+ "`" +` to configure your zsh shell so that doctl commands autocomplete when you press the TAB key.
+Use ` + "`" + `doctl completion zsh` + "`" + ` to configure your zsh shell so that doctl commands autocomplete when you press the TAB key.
 
-To review the configuration, run `+ "`" +`doctl completion zsh`+ "`" +`.
+To review the configuration, run ` + "`" + `doctl completion zsh` + "`" + `.
 
 To enable the configuration, add the following line to your .profile or .bashrc.
 
@@ -70,7 +70,8 @@ Note:
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-`)
+`
+)
 
 // Completion creates the completion command
 func Completion() *Command {

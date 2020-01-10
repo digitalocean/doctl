@@ -130,6 +130,21 @@ var (
 		testDBPool,
 	}
 
+	testSQLModes = []string{
+		godo.SQLModeAllowInvalidDates,
+		godo.SQLModeANSIQuotes,
+		godo.SQLModeHighNotPrecedence,
+		godo.SQLModeIgnoreSpace,
+		godo.SQLModeNoAuthCreateUser,
+		godo.SQLModeNoAutoValueOnZero,
+		godo.SQLModeNoBackslashEscapes,
+		godo.SQLModeNoDirInCreate,
+		godo.SQLModeNoEngineSubstitution,
+		godo.SQLModeNoFieldOptions,
+		godo.SQLModeNoKeyOptions,
+		godo.SQLModeNoTableOptions,
+	}
+
 	errTest = errors.New("error")
 )
 
@@ -150,6 +165,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"user",
 		"pool",
 		"db",
+		"sql-mode",
 	)
 }
 
@@ -517,6 +533,24 @@ func TestDatabaseUserCreate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Successful call with auth mode set
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.DatabaseCreateUserRequest{
+			Name: testDBUser.Name,
+			MySQLSettings: &godo.DatabaseMySQLUserSettings{
+				AuthPlugin: "mysql_native_password",
+			},
+		}
+
+		tm.databases.EXPECT().CreateUser(testDBCluster.ID, r).Return(&testDBUser, nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseUserMySQLAuthPlugin, "mysql_native_password")
+
+		err := RunDatabaseUserCreate(config)
+		assert.NoError(t, err)
+	})
+
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().CreateUser(
@@ -856,5 +890,60 @@ func TestDatabasesReplicaDelete(t *testing.T) {
 
 		err := RunDatabaseReplicaDelete(config)
 		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseGetSQLModes(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(testSQLModes, nil)
+
+			config.Args = append(config.Args, testDBCluster.ID)
+
+			err := RunDatabaseGetSQLModes(config)
+			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.databases.EXPECT().GetSQLMode(testDBCluster.ID).Return(nil, errTest)
+
+			config.Args = append(config.Args, testDBCluster.ID)
+
+			err := RunDatabaseGetSQLModes(config)
+			assert.Error(t, err)
+		})
+	})
+}
+
+func TestDatabaseSetSQLModes(t *testing.T) {
+	testSQLModesInterface := []interface{}{}
+	for _, sqlMode := range testSQLModes {
+		testSQLModesInterface = append(testSQLModesInterface, sqlMode)
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.databases.EXPECT().SetSQLMode(testDBCluster.ID, testSQLModesInterface...).Return(nil)
+
+			config.Args = append(config.Args, testDBCluster.ID)
+			config.Args = append(config.Args, testSQLModes...)
+
+			err := RunDatabaseSetSQLModes(config)
+			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.databases.EXPECT().SetSQLMode(testDBCluster.ID, testSQLModesInterface...).Return(errTest)
+
+			config.Args = append(config.Args, testDBCluster.ID)
+			config.Args = append(config.Args, testSQLModes...)
+
+			err := RunDatabaseSetSQLModes(config)
+			assert.Error(t, err)
+		})
 	})
 }

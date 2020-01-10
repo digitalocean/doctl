@@ -32,7 +32,7 @@ func LoadBalancer() *Command {
 		Command: &cobra.Command{
 			Use:   "load-balancer",
 			Short: "Display commands to manage load balancers",
-			Long: `The sub-commands of `+ "`" +`doctl compute volume`+ "`" +` manage your load balancers.
+			Long: `The sub-commands of ` + "`" + `doctl compute volume` + "`" + ` manage your load balancers.
 
 With the load-balancer command, you can list, create, or delete load balancers, and manage their configuration details.`,
 		},
@@ -43,12 +43,12 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 - The load balancer's name
 - The load balancer's IP address
 - The load balancer's traffic algorithm. Must
-  be either `+ "`" +`round_robin`+ "`" +` or `+ "`" +`least_connections`+ "`" +`
-- The current state of the load balancer. This can be `+ "`" +`new`+ "`" +`, `+ "`" +`active`+ "`" +`, or `+ "`" +`errored`+ "`" +`.
+  be either ` + "`" + `round_robin` + "`" + ` or ` + "`" + `least_connections` + "`" + `
+- The current state of the load balancer. This can be ` + "`" + `new` + "`" + `, ` + "`" + `active` + "`" + `, or ` + "`" + `errored` + "`" + `.
 - The load balancer's creation date, in ISO8601 combined date and time format.
-- The load balancer's forwarding rules. See `+ "`" +`doctl compute load-balancer add-forwarding-rules --help`+ "`" +` for a list.
-- The `+ "`" +`health_check`+ "`" +` settings for the load balancer.
-- The `+ "`" +`sticky_sessions`+ "`" +` settings for the load balancer.
+- The load balancer's forwarding rules. See ` + "`" + `doctl compute load-balancer add-forwarding-rules --help` + "`" + ` for a list.
+- The ` + "`" + `health_check` + "`" + ` settings for the load balancer.
+- The ` + "`" + `sticky_sessions` + "`" + ` settings for the load balancer.
 - The datacenter region the load balancer is located in.
 - The Droplet tag corresponding to the Droplets assigned to the load balancer.
 - The IDs of the Droplets assigned to the load balancer.
@@ -57,12 +57,12 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 `
 	forwardingDetail := `
 
-- `+ "`" +`entry_protocol`+ "`" +`: The entry protocol used for traffic to the load balancer. Possible values are: `+ "`" +`http`+ "`" +`, `+ "`" +`https`+ "`" +`, `+ "`" +`http2`+ "`" +`, or `+ "`" +`tcp`+ "`" +`.
-- `+ "`" +`entry_port`+ "`" +`: The entry port used for incoming traffic to the load balancer.
-- `+ "`" +`target_protocol`+ "`" +`: The target protocol used for traffic from the load balancer to the backend Droplets. Possible values are: `+ "`" +`http`+ "`" +`, `+ "`" +`https`+ "`" +`, `+ "`" +`http2`+ "`" +`, or `+ "`" +`tcp`+ "`" +`.
-- `+ "`" +`target_port`+ "`" +`: The target port used to send traffic from the load balancer to the backend Droplets.
-- `+ "`" +`certificate_id`+ "`" +`: The ID of the TLS certificate used for SSL termination, if enabled. Can be obtained with `+ "`" +`doctl certificate list`+ "`" +`
-- `+ "`" +`tls_passthrough`+ "`" +`: Whether SSL passthrough is enabled on the load balancer.
+- ` + "`" + `entry_protocol` + "`" + `: The entry protocol used for traffic to the load balancer. Possible values are: ` + "`" + `http` + "`" + `, ` + "`" + `https` + "`" + `, ` + "`" + `http2` + "`" + `, or ` + "`" + `tcp` + "`" + `.
+- ` + "`" + `entry_port` + "`" + `: The entry port used for incoming traffic to the load balancer.
+- ` + "`" + `target_protocol` + "`" + `: The target protocol used for traffic from the load balancer to the backend Droplets. Possible values are: ` + "`" + `http` + "`" + `, ` + "`" + `https` + "`" + `, ` + "`" + `http2` + "`" + `, or ` + "`" + `tcp` + "`" + `.
+- ` + "`" + `target_port` + "`" + `: The target port used to send traffic from the load balancer to the backend Droplets.
+- ` + "`" + `certificate_id` + "`" + `: The ID of the TLS certificate used for SSL termination, if enabled. Can be obtained with ` + "`" + `doctl certificate list` + "`" + `
+- ` + "`" + `tls_passthrough` + "`" + `: Whether SSL passthrough is enabled on the load balancer.
 `
 	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, e.g.: `entry_protocol:tcp, entry_port:3306, target_protocol:tcp, target_port:3306`. Use a quoted string of space-separated values for multiple rules"
 	CmdBuilderWithDocs(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:"+lbDetail, Writer,
@@ -73,7 +73,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "",
-		"The load balancer's region, e.g.: `nyc1`" , requiredOpt())
+		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "The algorithm to use when traffic is distributed across your Droplets; possible values: `round_robin` or `least_connections`")
 	AddBoolFlag(cmdRecordCreate, doctl.ArgRedirectHttpToHttps, "", false,
@@ -131,7 +131,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 
 	cmdRemoveForwardingRules := CmdBuilderWithDocs(cmd, RunLoadBalancerRemoveForwardingRules,
 		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:"+forwardingDetail, Writer)
-	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "",forwardingRulesTxt)
+	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 
 	return cmd
 }

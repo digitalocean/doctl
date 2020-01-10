@@ -30,7 +30,7 @@ func Images() *Command {
 		Command: &cobra.Command{
 			Use:   "image",
 			Short: "Display commands to manage images",
-			Long: `The sub-commands of `+ "`" +`doctl compute image`+ "`" +` manage images. A DigitalOcean image can be used to create a Droplet.
+			Long: `The sub-commands of ` + "`" + `doctl compute image` + "`" + ` manage images. A DigitalOcean image can be used to create a Droplet.
 
 Currently, there are five types of images: snapshots, backups, custom images, distributions, and One-Click Apps.
 
@@ -45,7 +45,7 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 
 - The image's ID
 - The image's name
-- The type of image. This is either `+ "`" +`snapshot`+ "`" +`, `+ "`" +`backup`+ "`" +`, or `+ "`" +`custom`+ "`" +`.
+- The type of image. This is either ` + "`" + `snapshot` + "`" + `, ` + "`" + `backup` + "`" + `, or ` + "`" + `custom` + "`" + `.
 - The distribution of the image. For custom images, this is user defined.
 - The image's slug. This is a uniquely identifying string that is associated with each of the DigitalOcean-provided public images. These can be used to reference a public image as an alternative to the numeric id.
 - Whether the image is public or not. An image that is public is available to all accounts. A non-public image is only accessible from your account. This is boolean, true or false.
@@ -54,10 +54,10 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 - The minimum Droplet disk size in GB required for a Droplet to use this image.
 - The size of the image in GB.
 - The description of the image. (optional)
-- A status string indicating the state of a custom image. This may be `+ "`" +`NEW`+ "`" +`, `+ "`" +`available`+ "`" +`, `+ "`" +`pending`+ "`" +`, or `+ "`" +`deleted`+ "`" +`.
+- A status string indicating the state of a custom image. This may be ` + "`" + `NEW` + "`" + `, ` + "`" + `available` + "`" + `, ` + "`" + `pending` + "`" + `, or ` + "`" + `deleted` + "`" + `.
 - A string containing information about errors that may occur when importing a custom image.
 `
-	cmdImagesList := CmdBuilderWithDocs(cmd, RunImagesList, "list", "List images on your account", `Use this command to list all private images on your account. To list public images, use the `+ "`" +`--public`+ "`" +` flag. This command returns the following information about each image:`+imageDetail, Writer,
+	cmdImagesList := CmdBuilderWithDocs(cmd, RunImagesList, "list", "List images on your account", `Use this command to list all private images on your account. To list public images, use the `+"`"+`--public`+"`"+` flag. This command returns the following information about each image:`+imageDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "List public images")
 
@@ -86,7 +86,7 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 	cmdRunImagesDelete := CmdBuilderWithDocs(cmd, RunImagesDelete, "delete <image-id>", "Permanently delete an image from your account", `This command deletes the specified image from your account. This is irreversible.`, Writer)
 	AddBoolFlag(cmdRunImagesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force image delete")
 
-	cmdRunImagesCreate := CmdBuilderWithDocs(cmd, RunImagesCreate, "create <image-name>", "Create custom image",`This command creates an image in your DigitalOcean account. You can specify a URL for the image contents, the region at which to store the image, and image metadata.`, Writer)
+	cmdRunImagesCreate := CmdBuilderWithDocs(cmd, RunImagesCreate, "create <image-name>", "Create custom image", `This command creates an image in your DigitalOcean account. You can specify a URL for the image contents, the region at which to store the image, and image metadata.`, Writer)
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageExternalURL, "", "", "Custom image retrieval URL", requiredOpt())
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "Region slug identifier", requiredOpt())
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "Unknown", "Custom image distribution")

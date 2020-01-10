@@ -31,7 +31,7 @@ func Volume() *Command {
 		Command: &cobra.Command{
 			Use:   "volume",
 			Short: "Display commands to manage block storage volumes",
-			Long: `The sub-commands of `+ "`" +`doctl compute volume`+ "`" +` manage your block storage volumes.
+			Long: `The sub-commands of ` + "`" + `doctl compute volume` + "`" + ` manage your block storage volumes.
 
 Block storage volumes provide expanded storage capacity for your Droplets, ranging in size from 1GiB to 16TiB.
 
@@ -65,7 +65,7 @@ You can use flags to specify the volume size, region, description, filesystem ty
 
 	cmdRunVolumeSnapshot := CmdBuilderWithDocs(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "Create a block storage volume snapshot", `Use this command to create a snapshot of a block storage volume by ID.
 
-You can use a block storage volume snapshot ID as a flag with ` + "`" + `doctl volume create` + "`" + ` to create a new block storage volume with the same data as the volume the snapshot was taken from.`, Writer,
+You can use a block storage volume snapshot ID as a flag with `+"`"+`doctl volume create`+"`"+` to create a new block storage volume with the same data as the volume the snapshot was taken from.`, Writer,
 		aliasOpt("s"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
 	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "Snapshot description")

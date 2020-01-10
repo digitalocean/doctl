@@ -30,17 +30,17 @@ func Actions() *Command {
 		Command: &cobra.Command{
 			Use:   "action",
 			Short: "Display commands for retrieving resource action history",
-			Long: `The sub-commands of `+ "`" +`doctl compute action`+ "`" +` retrieve the history of actions taken on your resources.
+			Long: `The sub-commands of ` + "`" + `doctl compute action` + "`" + ` retrieve the history of actions taken on your resources.
 
-This can be filtered to a specific action. For example, while `+ "`" +`doctl compute action list`+ "`" +` will list all of the actions taken on all of the resources in your account, `+ "`" +`doctl compute action get <action-id>`+ "`" +` will retrieve details for a specific action.`,
+This can be filtered to a specific action. For example, while ` + "`" + `doctl compute action list` + "`" + ` will list all of the actions taken on all of the resources in your account, ` + "`" + `doctl compute action get <action-id>` + "`" + ` will retrieve details for a specific action.`,
 		},
 	}
 
 	actionDetails := `
 
 - The action ID
-- The action status (`+ "`" +`pending`+ "`" +`, `+ "`" +`completed`+ "`" +`, etc)
-- The action type (`+ "`" +`create`+ "`" +`, `+ "`" +`destroy`+ "`" +`, `+ "`" +`power_cycle`+ "`" +`, `+ "`" +`power_off`+ "`" +`, `+ "`" +`power_on`+ "`" +`, `+ "`" +`backup`+ "`" +`, `+ "`" +`migrate`+ "`" +`, `+ "`" +`attach_volume`+ "`" +`, etc)
+- The action status (` + "`" + `pending` + "`" + `, ` + "`" + `completed` + "`" + `, etc)
+- The action type (` + "`" + `create` + "`" + `, ` + "`" + `destroy` + "`" + `, ` + "`" + `power_cycle` + "`" + `, ` + "`" + `power_off` + "`" + `, ` + "`" + `power_on` + "`" + `, ` + "`" + `backup` + "`" + `, ` + "`" + `migrate` + "`" + `, ` + "`" + `attach_volume` + "`" + `, etc)
 - The Date/Time when the action started, in RFC3339 format
 - The Date/Time when the action completed, in RFC3339 format
 - The resource ID of the resource upon which the action was taken
@@ -61,7 +61,7 @@ This can be filtered to a specific action. For example, while `+ "`" +`doctl com
 
 	cmdActionWait := CmdBuilderWithDocs(cmd, RunCmdActionWait, "wait <action-id>", "Block thread until an action completes", `The command blocks the current thread, returning when an action completes.
 
-For example, if you find an action when calling `+ "`" +`doctl compute action list`+ "`" +` that has a status of `+ "`" +`in-progress`+ "`" +`, you can note the action ID and call `+ "`" +`doctl compute action wait <action-id>`+ "`" +`, and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
+For example, if you find an action when calling `+"`"+`doctl compute action list`+"`"+` that has a status of `+"`"+`in-progress`+"`"+`, you can note the action ID and call `+"`"+`doctl compute action wait <action-id>`+"`"+`, and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
 		aliasOpt("w"), displayerType(&displayers.Action{}))
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 

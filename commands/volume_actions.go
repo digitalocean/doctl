@@ -55,7 +55,7 @@ func VolumeAction() *Command {
 		Command: &cobra.Command{
 			Use:   "volume-action",
 			Short: "Display commands to perform actions on a volume",
-			Long: `Block storage volume action commands allow you to attach, detach, and resize existing volumes.`,
+			Long:  `Block storage volume action commands allow you to attach, detach, and resize existing volumes.`,
 		},
 	}
 
@@ -71,7 +71,7 @@ When you attach a pre-formatted volume to Ubuntu, Debian, Fedora, Fedora Atomic,
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunVolumeDetach, doctl.ArgCommandWait, "", false, "Wait for volume to detach")
 
-	CmdBuilderWithDocs(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "(Deprecated) Detach a volume. Use `detach` instead.","This command detaches a volume. This command is deprecated. Use `doctl compute volume-action detach` instead.",
+	CmdBuilderWithDocs(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "(Deprecated) Detach a volume. Use `detach` instead.", "This command detaches a volume. This command is deprecated. Use `doctl compute volume-action detach` instead.",
 		Writer)
 
 	cmdRunVolumeResize := CmdBuilderWithDocs(cmd, RunVolumeResize, "resize <volume-id>", "Resize the disk of a volume", `Use this command to resize a block storage volume.

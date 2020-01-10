@@ -49,8 +49,8 @@ Use "doctl [command] --help" for more information about a command.
         - [Logging in to multiple DigitalOcean accounts](#logging-in-to-multiple-digitalocean-accounts)
     - [Configuring Default Values](#configuring-default-values)
     - [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
-        - [Linux](#linux)
-        - [macOS](#macos)
+        - [Linux](#linux-auto-completion)
+        - [macOS](#macos-auto-completion)
     - [Examples](#examples)
     - [Tutorials](#tutorials)
     - [doctl Releases](https://github.com/digitalocean/doctl/releases)
@@ -227,9 +227,15 @@ This will create the necessary directory structure and configuration file to sto
 
 `doctl` allows you to log in to multiple DigitalOcean accounts at the same time and easily switch between them with the use of authentication contexts.
 
-By default, a context named `default` is used. To create a new context, run `doctl auth init --context new-context-name`. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` variable. You will be prompted for your API access token which will be associated with the new context.
+By default, a context named `default` is used. To create a new context, run `doctl auth init --context <new-context-name>`. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` environment variable. You will be prompted for your API access token which will be associated with the new context.
 
-To use a non-default context, pass the context name as described above to any `doctl` command. To set a new default context, run `doctl auth switch`. This command will save the current context to the config file and use it for all commands by default if a context is not specified.
+To use a non-default context, pass the context name to any `doctl` command. For example:
+
+```
+doctl compute droplet list --context <new-context-name>
+```
+
+To set a new default context, run `doctl auth switch --context <new-context-name>`. This command will save the current context to the config file and use it for all commands by default if a context is not specified.
 
 The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` variable are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
 
@@ -263,7 +269,7 @@ How you enable auto-completion depends on which operating system you're using. I
 
 `doctl` can generate an auto-completion script with the `doctl completion your_shell_here` command. Valid arguments for the shell are Bash (`bash`) and ZSH (`zsh`). By default, the script will be printed to the command line output.  For more usage examples for the `completion` command, use `doctl completion --help`.
 
-### Linux
+### Linux Auto Completion
 
 The most common way to use the `completion` command is by adding a line to your local profile configuration. At the end of your `~/.profile` file, add this line:
 
@@ -277,9 +283,9 @@ Then refresh your profile.
 source ~/.profile
 ```
 
-### macOS
+### MacOS
 
-macOS users will have to install the `bash-completion` framework to use the auto-completion feature.
+MacOS users will have to install the `bash-completion` framework to use the auto-completion feature.
 
 ```
 brew install bash-completion

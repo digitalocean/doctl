@@ -91,7 +91,7 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 
 	if cols := c.fmtCols; cols != nil {
 		formatHelp := fmt.Sprintf("Columns for output in a comma-separated list. Possible values: `%s`",
-			strings.Join(cols, "`" + ", " + "`"))
+			strings.Join(cols, "`"+", "+"`"))
 		AddStringFlag(c, doctl.ArgFormat, "", "", formatHelp)
 		AddBoolFlag(c, doctl.ArgNoHeader, "", false, "Return raw data with no headers")
 	}

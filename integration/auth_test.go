@@ -212,4 +212,33 @@ context: default
 			expect.NoError(err)
 		})
 	})
+
+	when("the DIGITALOCEAN_CONTEXT variable is set", func() {
+		it("uses that context for commands", func() {
+			var testConfigBytes = []byte(`access-token: first-token
+auth-contexts:
+  next: second-token
+context: default
+`)
+
+			tmpDir, err := ioutil.TempDir("", "")
+			expect.NoError(err)
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"auth",
+				"list",
+				"--config", testConfig,
+			)
+			cmd.Env = os.Environ()
+			cmd.Env = append(cmd.Env, "DIGITALOCEAN_CONTEXT=next")
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, string(output))
+
+			expect.Contains(string(output), "next (current)")
+		})
+	})
 })

@@ -430,3 +430,37 @@ func (mr *MockDatabasesServiceMockRecorder) GetReplicaConnection(arg0, arg1 inte
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplicaConnection", reflect.TypeOf((*MockDatabasesService)(nil).GetReplicaConnection), arg0, arg1)
 }
+
+// GetSQLMode mocks base method
+func (m *MockDatabasesService) GetSQLMode(arg0 string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSQLMode", arg0)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSQLMode indicates an expected call of GetSQLMode
+func (mr *MockDatabasesServiceMockRecorder) GetSQLMode(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSQLMode", reflect.TypeOf((*MockDatabasesService)(nil).GetSQLMode), arg0)
+}
+
+// SetSQLMode mocks base method
+func (m *MockDatabasesService) SetSQLMode(arg0 string, arg1 ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SetSQLMode", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetSQLMode indicates an expected call of SetSQLMode
+func (mr *MockDatabasesServiceMockRecorder) SetSQLMode(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSQLMode", reflect.TypeOf((*MockDatabasesService)(nil).SetSQLMode), varargs...)
+}
