@@ -46,7 +46,7 @@ func Domain() *Command {
 		aliasOpt("g"), displayerType(&displayers.Domain{}))
 
 	cmdRunDomainDelete := CmdBuilderWithDocs(cmd, RunDomainDelete, "delete <domain>", "Permanently delete a domain from your account", `Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force domain delete")
+	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete domain without confirmation prompt")
 
 	cmdRecord := &Command{
 		Command: &cobra.Command{
