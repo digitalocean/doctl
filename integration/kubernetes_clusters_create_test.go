@@ -185,10 +185,10 @@ const (
 `
 
 	kubeClustersCreateOutput = `
-Notice: cluster is provisioning, waiting for cluster to be running
-Notice: cluster created, fetching credentials
-Notice: adding cluster credentials to kubeconfig file found in %q
-Notice: setting current-context to some-context
+Notice: Cluster is provisioning, waiting for cluster to be running
+Notice: Cluster created, fetching credentials
+Notice: Adding cluster credentials to kubeconfig file found in %q
+Notice: Setting current-context to some-context
 ID                 Name                 Region    Version              Auto Upgrade    Status     Node Pools
 some-cluster-id    some-cluster-name    mars      some-kube-version    false           running    frontend-pool
 `

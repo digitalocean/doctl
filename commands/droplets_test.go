@@ -222,7 +222,7 @@ func TestDropletDeleteByTag_DropletsMissing(t *testing.T) {
 
 		err := RunDropletDelete(config)
 		assert.NoError(t, err)
-		assert.Contains(t, buf.String(), "nothing to delete")
+		assert.Contains(t, buf.String(), "Nothing to delete")
 	})
 }
 
