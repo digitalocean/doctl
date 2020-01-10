@@ -23,7 +23,7 @@ func Time(then time.Time) string {
 	return RelTime(then, time.Now(), "ago", "from now")
 }
 
-// A RelTimeMagnitude struct contains a relative time point when
+// A RelTimeMagnitude struct contains a relative time point at which
 // the relative format of time will switch to a new format string.  A
 // slice of these in ascending order by their "D" field is passed to
 // CustomRelTime to format durations.
