@@ -521,6 +521,19 @@ func TestKubernetesDelete(t *testing.T) {
 		err := testK8sCmdService().RunKubernetesClusterDelete(config)
 		assert.NoError(t, err)
 	})
+	// multiple clusters
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		id2 := "ce69d914-ae08-4c91-8a4b-383f58b47e6f"
+
+		tm.kubernetes.EXPECT().Delete(testCluster.ID).Return(nil)
+		tm.kubernetes.EXPECT().Delete(id2).Return(nil)
+
+		config.Args = append(config.Args, testCluster.ID, id2)
+		config.Doit.Set(config.NS, doctl.ArgForce, "true")
+
+		err := testK8sCmdService().RunKubernetesClusterDelete(config)
+		assert.NoError(t, err)
+	})
 }
 
 func TestKubernetesNodePool_Get(t *testing.T) {
