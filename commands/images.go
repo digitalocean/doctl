@@ -67,7 +67,7 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 	AddBoolFlag(cmdImagesListDistribution, doctl.ArgImagePublic, "", true, "List public images")
 
 	cmdImagesListApplication := CmdBuilderWithDocs(cmd, RunImagesListApplication,
-		"list-application", "List avaialble One-Click Apps", `Use this command to list all public One-Click Apps that are currently available on the DigitalOcean Marketplace. This command returns the following information about each image:`+imageDetail, Writer,
+		"list-application", "List available One-Click Apps", `Use this command to list all public One-Click Apps that are currently available on the DigitalOcean Marketplace. This command returns the following information about each image:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
 	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, "", true, "List public images")
 

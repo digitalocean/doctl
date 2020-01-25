@@ -30,7 +30,7 @@ func Domain() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "domain",
-			Short: "Display commands for domain names and DNS records",
+			Short: "Display commands that manage domains",
 			Long:  `Use the subcommands of ` + "`" + `doctl compute domain` + "`" + ` to manage domains you have purchased from a domain name registrar that you are managing through the DigitalOcean DNS interface.`,
 		},
 	}
@@ -42,7 +42,7 @@ func Domain() *Command {
 	CmdBuilderWithDocs(cmd, RunDomainList, "list", "List all domains on your account", `Use this command to retrieve a list of domains on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Domain{}))
 
-	CmdBuilderWithDocs(cmd, RunDomainGet, "get <domain>", "Retrive information about a domain", `Use this command to retrieve information about the specified domain on your account.`, Writer,
+	CmdBuilderWithDocs(cmd, RunDomainGet, "get <domain>", "Retrieve information about a domain", `Use this command to retrieve information about the specified domain on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Domain{}))
 
 	cmdRunDomainDelete := CmdBuilderWithDocs(cmd, RunDomainDelete, "delete <domain>", "Permanently delete a domain from your account", `Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))

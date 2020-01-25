@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// retriveUserInput is a function that can retrive user input in form of string. By default,
+// retrieveUserInput is a function that can retrieve user input in form of string. By default,
 // it will prompt the user. In test, you can replace this with code that returns the appropriate response.
 var retrieveUserInput = func(message string) (string, error) {
 	return readUserInput(os.Stdin, message)

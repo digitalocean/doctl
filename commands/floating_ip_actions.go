@@ -45,7 +45,7 @@ func FloatingIPAction() *Command {
 	- The slug for the region where the action occurred.
 `
 	CmdBuilderWithDocs(cmd, RunFloatingIPActionsGet,
-		"get <floating-ip> <action-id>", "Retrive the status of a floating IP action", `Use this command to retrieve the status of a floating IP action. Outputs the following information:`+flipactionDetail, Writer,
+		"get <floating-ip> <action-id>", "Retrieve the status of a floating IP action", `Use this command to retrieve the status of a floating IP action. Outputs the following information:`+flipactionDetail, Writer,
 		displayerType(&displayers.Action{}))
 
 	CmdBuilderWithDocs(cmd, RunFloatingIPActionsAssign,

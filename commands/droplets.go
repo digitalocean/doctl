@@ -96,7 +96,7 @@ func Droplet() *Command {
 	CmdBuilderWithDocs(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Use this command to retrieve a list of all kernels available to a Droplet.`, Writer,
 		aliasOpt("k"), displayerType(&displayers.Kernel{}))
 
-	cmdRunDropletList := CmdBuilderWithDocs(cmd, RunDropletList, "list [GLOB]", "List Droplets on your account", `Use this command to retrive a list of Droplets, including the following information about each:`+dropletDetails, Writer,
+	cmdRunDropletList := CmdBuilderWithDocs(cmd, RunDropletList, "list [GLOB]", "List Droplets on your account", `Use this command to retrieve a list of Droplets, including the following information about each:`+dropletDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Droplet{}))
 	AddStringFlag(cmdRunDropletList, doctl.ArgRegionSlug, "", "", "Droplet region")
 	AddStringFlag(cmdRunDropletList, doctl.ArgTagName, "", "", "Tag name")

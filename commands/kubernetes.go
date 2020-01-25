@@ -102,7 +102,7 @@ func Kubernetes() *Command {
 		Command: &cobra.Command{
 			Use:     "kubernetes",
 			Aliases: []string{"kube", "k8s", "k"},
-			Short:   "Manages Kubernetes clusters and retrieves configuration options",
+			Short:   "Displays comamnds to manage Kubernetes clusters and configurations",
 			Long:    `The commands under ` + "`" + `doctl kubernetes` + "`" + ` are for managing Kubernetes clusters and viewing configuration options relating to clusters.` + workflowDesc + optionsDesc,
 		},
 	}
@@ -205,7 +205,7 @@ func kubernetesCluster() *Command {
 		Command: &cobra.Command{
 			Use:     "cluster",
 			Aliases: []string{"clusters", "c"},
-			Short:   "Manages Kubernetes clusters",
+			Short:   "Display commands for managing Kubernetes clusters",
 			Long:    `The commands under ` + "`" + `doctl kubernetes cluster` + "`" + ` are for the management of Kubernetes clusters.` + workflowDesc,
 		},
 	}
@@ -330,7 +330,7 @@ func kubernetesKubeconfig() *Command {
 		Command: &cobra.Command{
 			Use:     "kubeconfig",
 			Aliases: []string{"kubecfg", "k8scfg", "config", "cfg"},
-			Short:   "Commands for managing your local kubeconfig",
+			Short:   "Display commands for managing your local kubeconfig",
 			Long:    "The commands under `doctl kubernetes cluster kubeconfig` are used to manage Kubernetes cluster credentials on your local machine. The credentials are used as authentication contexts with `kubectl`, the Kubernetes command-line interface.",
 		},
 	}
@@ -360,7 +360,7 @@ func kubernetesNodePools() *Command {
 		Command: &cobra.Command{
 			Use:     "node-pool",
 			Aliases: []string{"node-pools", "nodepool", "nodepools", "pool", "pools", "np", "p"},
-			Short:   "Commands for managing node pools",
+			Short:   "Display commands for managing node pools",
 			Long:    `The commands under ` + "`" + `node-pool` + "`" + ` are for performing actions on a Kubernetes cluster's node pools. You can use these commands to create or delete node pools, enable autoscaling for a node pool, and more.`,
 		},
 	}

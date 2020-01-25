@@ -60,7 +60,7 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 	dropletIDRulesTxt := "A comma-separated list of Droplet IDs to place behind the cloud firewall, e.g.: `123,456`"
 	tagNameRulesTxt := "A comma-separated list of tag names to apply to the cloud firewall, e.g.: `frontend,backend`"
 
-	CmdBuilderWithDocs(cmd, RunFirewallGet, "get <id>", "Retrive information about a cloud firewall", `Use this command to get information about an existing cloud firewall, including:`+fwDetail, Writer, aliasOpt("g"), displayerType(&displayers.Firewall{}))
+	CmdBuilderWithDocs(cmd, RunFirewallGet, "get <id>", "Retrieve information about a cloud firewall", `Use this command to get information about an existing cloud firewall, including:`+fwDetail, Writer, aliasOpt("g"), displayerType(&displayers.Firewall{}))
 
 	cmdFirewallCreate := CmdBuilderWithDocs(cmd, RunFirewallCreate, "create", "Create a new cloud firewall", `Use this command to create a cloud firewall. This command must contain at least one inbound or outbound access rule.`, Writer, aliasOpt("c"), displayerType(&displayers.Firewall{}))
 	AddStringFlag(cmdFirewallCreate, doctl.ArgFirewallName, "", "", "Firewall name", requiredOpt())

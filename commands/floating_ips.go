@@ -54,7 +54,7 @@ A floating IP address must be either assigned to a Droplet or reserved to a regi
 	cmdRunFloatingIPDelete := CmdBuilderWithDocs(cmd, RunFloatingIPDelete, "delete <floating-ip>", "Permanently delete a floating IP address", "Use this command to permanently delete a floating IP address. This is irreversible.", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunFloatingIPDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force floating IP delete")
 
-	cmdFloatingIPList := CmdBuilderWithDocs(cmd, RunFloatingIPList, "list", "List all floating IP addresses on your acocunt", "Use this command to list all the floating IP addresses on your account.", Writer,
+	cmdFloatingIPList := CmdBuilderWithDocs(cmd, RunFloatingIPList, "list", "List all floating IP addresses on your account", "Use this command to list all the floating IP addresses on your account.", Writer,
 		aliasOpt("ls"), displayerType(&displayers.FloatingIP{}))
 	AddStringFlag(cmdFloatingIPList, doctl.ArgRegionSlug, "", "", "The region the floating IP address resides in")
 
