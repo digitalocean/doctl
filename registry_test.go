@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -13,8 +14,11 @@ func TestRegistry_Create(t *testing.T) {
 	setup()
 	defer teardown()
 
+	createdAt, err := time.Parse(time.RFC3339, "2020-01-24T20:24:31Z")
+	require.NoError(t, err)
 	want := &Registry{
-		Name: "foo",
+		Name:      "foo",
+		CreatedAt: createdAt,
 	}
 
 	createRequest := &RegistryCreateRequest{
@@ -24,7 +28,8 @@ func TestRegistry_Create(t *testing.T) {
 	createResponseJSON := `
 {
 	"registry": {
-		"name": "foo"
+		"name": "foo",
+        "created_at": "2020-01-24T20:24:31Z"
 	}
 }`
 
