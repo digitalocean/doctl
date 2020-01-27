@@ -314,8 +314,8 @@ The special value `+"`"+`latest`+"`"+` will select the most recent patch version
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be `+"`"+`latest`+"`"+`.`)
 
 	cmdKubeClusterDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterDelete,
-		"delete <id|name>", "Delete a Kubernetes cluster", `
-This command deletes the specified Kubernetes cluster and the Droplets associated with the cluster. This command does not delete other DigitalOcean resources created during the operation of the cluster, such as load balancers and volumes.
+		"delete <id|name>...", "Delete Kubernetes clusters", `
+This command deletes the specified Kubernetes clusters and the Droplets associated with them. This command does not delete other DigitalOcean resources created during the operation of the clusters, such as load balancers and volumes.
 `, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Boolean indicating whether to delete the cluster without a confirmation prompt")
@@ -735,14 +735,10 @@ func latestVersionForUpgrade(clusterVersionSlug string, versions []do.Kubernetes
 
 // RunKubernetesClusterDelete deletes a Kubernetes cluster
 func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) error {
-	if len(c.Args) != 1 {
+	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	update, err := c.Doit.GetBool(c.NS, doctl.ArgClusterUpdateKubeconfig)
-	if err != nil {
-		return err
-	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -752,29 +748,37 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 		return err
 	}
 
-	if force || AskForConfirm("Delete this Kubernetes cluster?") == nil {
-		// continue
-	} else {
-		return fmt.Errorf("Operation aborted.")
-	}
 	kube := c.Kubernetes()
 
-	var kubeconfig []byte
-	if update {
-		// get the cluster's kubeconfig before issuing the delete, so that we can
-		// cleanup the entry from the local file
-		kubeconfig, err = kube.GetKubeConfig(clusterID)
+	for _, cluster := range c.Args {
+		clusterID, err := clusterIDize(c.Kubernetes(), cluster)
 		if err != nil {
-			warn("Couldn't get credentials for cluster. It will not be remove from your kubeconfig.")
+			return err
 		}
-	}
-	if err := kube.Delete(clusterID); err != nil {
-		return err
-	}
-	if kubeconfig != nil {
-		notice("Cluster deleted, removing credentials")
-		if err := removeFromKubeconfig(kubeconfig); err != nil {
-			warn("Cluster was deleted, but we couldn't remove it from your local kubeconfig. Try doing it manually.")
+
+		if force || AskForConfirm("Delete this Kubernetes cluster") == nil {
+			// continue
+		} else {
+			return fmt.Errorf("Operation aborted")
+		}
+
+		var kubeconfig []byte
+		if update {
+			// get the cluster's kubeconfig before issuing the delete, so that we can
+			// cleanup the entry from the local file
+			kubeconfig, err = kube.GetKubeConfig(clusterID)
+			if err != nil {
+				warn("Couldn't get credentials for cluster. It will not be remove from your kubeconfig.")
+			}
+		}
+		if err := kube.Delete(clusterID); err != nil {
+			return err
+		}
+		if kubeconfig != nil {
+			notice("Cluster deleted, removing credentials")
+			if err := removeFromKubeconfig(kubeconfig); err != nil {
+				warn("Cluster was deleted, but we couldn't remove it from your local kubeconfig. Try doing it manually.")
+			}
 		}
 	}
 
