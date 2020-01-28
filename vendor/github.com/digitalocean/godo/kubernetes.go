@@ -84,24 +84,26 @@ type KubernetesClusterUpgradeRequest struct {
 // KubernetesNodePoolCreateRequest represents a request to create a node pool for a
 // Kubernetes cluster.
 type KubernetesNodePoolCreateRequest struct {
-	Name      string   `json:"name,omitempty"`
-	Size      string   `json:"size,omitempty"`
-	Count     int      `json:"count,omitempty"`
-	Tags      []string `json:"tags,omitempty"`
-	AutoScale bool     `json:"auto_scale,omitempty"`
-	MinNodes  int      `json:"min_nodes,omitempty"`
-	MaxNodes  int      `json:"max_nodes,omitempty"`
+	Name      string            `json:"name,omitempty"`
+	Size      string            `json:"size,omitempty"`
+	Count     int               `json:"count,omitempty"`
+	Tags      []string          `json:"tags,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
+	AutoScale bool              `json:"auto_scale,omitempty"`
+	MinNodes  int               `json:"min_nodes,omitempty"`
+	MaxNodes  int               `json:"max_nodes,omitempty"`
 }
 
 // KubernetesNodePoolUpdateRequest represents a request to update a node pool in a
 // Kubernetes cluster.
 type KubernetesNodePoolUpdateRequest struct {
-	Name      string   `json:"name,omitempty"`
-	Count     *int     `json:"count,omitempty"`
-	Tags      []string `json:"tags,omitempty"`
-	AutoScale *bool    `json:"auto_scale,omitempty"`
-	MinNodes  *int     `json:"min_nodes,omitempty"`
-	MaxNodes  *int     `json:"max_nodes,omitempty"`
+	Name      string            `json:"name,omitempty"`
+	Count     *int              `json:"count,omitempty"`
+	Tags      []string          `json:"tags,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
+	AutoScale *bool             `json:"auto_scale,omitempty"`
+	MinNodes  *int              `json:"min_nodes,omitempty"`
+	MaxNodes  *int              `json:"max_nodes,omitempty"`
 }
 
 // KubernetesNodePoolRecycleNodesRequest is DEPRECATED please use DeleteNode
@@ -297,14 +299,15 @@ type KubernetesClusterStatus struct {
 
 // KubernetesNodePool represents a node pool in a Kubernetes cluster.
 type KubernetesNodePool struct {
-	ID        string   `json:"id,omitempty"`
-	Name      string   `json:"name,omitempty"`
-	Size      string   `json:"size,omitempty"`
-	Count     int      `json:"count,omitempty"`
-	Tags      []string `json:"tags,omitempty"`
-	AutoScale bool     `json:"auto_scale,omitempty"`
-	MinNodes  int      `json:"min_nodes,omitempty"`
-	MaxNodes  int      `json:"max_nodes,omitempty"`
+	ID        string            `json:"id,omitempty"`
+	Name      string            `json:"name,omitempty"`
+	Size      string            `json:"size,omitempty"`
+	Count     int               `json:"count,omitempty"`
+	Tags      []string          `json:"tags,omitempty"`
+	Labels    map[string]string `json:"labels,omitempty"`
+	AutoScale bool              `json:"auto_scale,omitempty"`
+	MinNodes  int               `json:"min_nodes,omitempty"`
+	MaxNodes  int               `json:"max_nodes,omitempty"`
 
 	Nodes []*KubernetesNode `json:"nodes,omitempty"`
 }
