@@ -235,11 +235,12 @@ func kubernetesCluster() *Command {
 		"number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
 		`cluster node pools, can be repeated to create multiple node pools at once (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
-format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2" where:
+format is in the form "name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2" where:
 	- name:       name of the node pool, must be unique in the cluster
 	- size:       size for the nodes in the node pool, possible values: see "doctl k8s options sizes".
 	- count:      number of nodes in the node pool.
-	- tag:        tags to apply to the node pool, repeat to add multiple tags at once.
+	- tag:        tag to apply to the node pool; repeat to add multiple tags at once.
+	- label:      label in key=value notation; repeat to add multiple labels at once.
 	- auto-scale: whether to enable auto-scaling on the node pool.
 	- min-nodes:  maximum number of nodes that can be auto-scaled to.
 	- max-nodes:  minimum number of nodes that can be auto-scaled to.`)
@@ -338,7 +339,9 @@ func kubernetesNodePools() *Command {
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0,
 		"count of nodes in the node pool", requiredOpt())
 	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", nil,
-		"tags to apply to the node pool, repeat to add multiple tags at once")
+		"tag to apply to the node pool, repeat to add multiple tags at once. Omitted tags will be removed from the node pool if the flag is specified.")
+	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgKubernetesLabel, "", nil,
+		"label in key=value notation to apply to the node pool, repeat to add multiple labels at once. Omitted labels will be removed from the node pool if the flag is specified.")
 	AddBoolFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolAutoScale, "", false,
 		"enable auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMinNodes, "", 0,
@@ -353,7 +356,9 @@ func kubernetesNodePools() *Command {
 	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", 0,
 		"count of nodes in the node pool")
 	AddStringSliceFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", nil,
-		"tags to apply to the node pool, repeat to add multiple tags at once")
+		"tag to apply to the node pool, repeat to add multiple tags at once. Omitted tags will be removed from the node pool if the flag is specified.")
+	AddStringSliceFlag(cmdKubeNodePoolUpdate, doctl.ArgKubernetesLabel, "", nil,
+		"label in key=value notation to apply to the node pool, repeat to add multiple labels at once. Omitted labels will be removed from the node pool if the flag is specified.")
 	AddBoolFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolAutoScale, "", false,
 		"enable auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolMinNodes, "", 0,
@@ -1268,9 +1273,10 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 		kvSeparator  = "="
 	)
 	out := &godo.KubernetesNodePoolCreateRequest{
-		Name:  defaultName,
-		Size:  defaultSize,
-		Count: defaultCount,
+		Name:   defaultName,
+		Size:   defaultSize,
+		Count:  defaultCount,
+		Labels: map[string]string{},
 	}
 	for _, arg := range strings.Split(nodePool, argSeparator) {
 		kvs := strings.SplitN(arg, kvSeparator, 2)
@@ -1292,6 +1298,14 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 			out.Count = int(count)
 		case "tag":
 			out.Tags = append(out.Tags, value)
+		case "label":
+			labelParts := strings.SplitN(value, "=", 2)
+			if len(labelParts) < 2 {
+				return nil, fmt.Errorf("a node pool label component must be of the form `label-key=label-value`, got %q", value)
+			}
+			labelKey := labelParts[0]
+			labelValue := labelParts[1]
+			out.Labels[labelKey] = labelValue
 		case "auto-scale":
 			autoScale, err := strconv.ParseBool(value)
 			if err != nil {
@@ -1345,6 +1359,12 @@ func buildNodePoolCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.Tags = tags
 
+	labels, err := c.Doit.GetStringMapString(c.NS, doctl.ArgKubernetesLabel)
+	if err != nil {
+		return err
+	}
+	r.Labels = labels
+
 	autoScale, err := c.Doit.GetBool(c.NS, doctl.ArgNodePoolAutoScale)
 	if err != nil {
 		return err
@@ -1384,6 +1404,12 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 		return err
 	}
 	r.Tags = tags
+
+	labels, err := c.Doit.GetStringMapString(c.NS, doctl.ArgKubernetesLabel)
+	if err != nil {
+		return err
+	}
+	r.Labels = labels
 
 	autoScale, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgNodePoolAutoScale)
 	if err != nil {

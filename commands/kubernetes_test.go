@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -36,12 +37,13 @@ var (
 
 	testNodePool = do.KubernetesNodePool{
 		KubernetesNodePool: &godo.KubernetesNodePool{
-			ID:    "ede2c0d6-41e3-479e-ba60-ad9712272324",
-			Name:  "antoine_s_pool",
-			Size:  "c8",
-			Count: 3,
-			Tags:  []string{"hello", "bye"},
-			Nodes: testNodes,
+			ID:     "ede2c0d6-41e3-479e-ba60-ad9712272324",
+			Name:   "antoine_s_pool",
+			Size:   "c8",
+			Count:  3,
+			Tags:   []string{"hello", "bye"},
+			Labels: map[string]string{},
+			Nodes:  testNodes,
 		},
 	}
 
@@ -323,6 +325,15 @@ func TestKubernetesList(t *testing.T) {
 
 func TestKubernetesCreate(t *testing.T) {
 	testNodePool := testNodePool
+	testNodePool.Labels = map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
+	var inputLabels []string
+	for key, val := range testNodePool.Labels {
+		inputLabels = append(inputLabels, fmt.Sprintf("%s=%s", key, val))
+	}
+	sort.Strings(inputLabels)
 	testNodePool.AutoScale = true
 	testNodePool.MinNodes = 1
 	testNodePool.MaxNodes = 10
@@ -339,15 +350,17 @@ func TestKubernetesCreate(t *testing.T) {
 					Size:      testNodePool.Size,
 					Count:     testNodePool.Count,
 					Tags:      testNodePool.Tags,
+					Labels:    testNodePool.Labels,
 					AutoScale: testNodePool.AutoScale,
 					MinNodes:  testNodePool.MinNodes,
 					MaxNodes:  testNodePool.MaxNodes,
 				},
 				{
-					Name:  testNodePool.Name + "2",
-					Size:  testNodePool.Size,
-					Count: testNodePool.Count,
-					Tags:  testNodePool.Tags,
+					Name:   testNodePool.Name + "2",
+					Size:   testNodePool.Size,
+					Count:  testNodePool.Count,
+					Tags:   testNodePool.Tags,
+					Labels: map[string]string{},
 				},
 			},
 			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
@@ -365,9 +378,9 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgClusterNodePool, []string{
-			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s;auto-scale=%v;min-nodes=%d;max-nodes=%d",
+			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s;label=%s;label=%s;auto-scale=%v;min-nodes=%d;max-nodes=%d",
 				testNodePool.Name+"1", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
-				testNodePool.AutoScale, testNodePool.MinNodes, testNodePool.MaxNodes,
+				inputLabels[0], inputLabels[1], testNodePool.AutoScale, testNodePool.MinNodes, testNodePool.MaxNodes,
 			),
 			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s",
 				testNodePool.Name+"2", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
@@ -618,6 +631,10 @@ func TestKubernetesNodePool_List(t *testing.T) {
 
 func TestKubernetesNodePool_Create(t *testing.T) {
 	testNodePool := testNodePool
+	testNodePool.Labels = map[string]string{
+		"key1": "value1",
+		"key2": "value2",
+	}
 	testNodePool.AutoScale = true
 	testNodePool.MinNodes = 1
 	testNodePool.MaxNodes = 10
@@ -629,6 +646,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 			Size:      testNodePool.Size,
 			Count:     testNodePool.Count,
 			Tags:      testNodePool.Tags,
+			Labels:    testNodePool.Labels,
 			AutoScale: testNodePool.AutoScale,
 			MinNodes:  testNodePool.MinNodes,
 			MaxNodes:  testNodePool.MaxNodes,
@@ -641,6 +659,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testNodePool.Size)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesLabel, testNodePool.Labels)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolAutoScale, testNodePool.AutoScale)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolMinNodes, testNodePool.MinNodes)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolMaxNodes, testNodePool.MaxNodes)
@@ -655,6 +674,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 			Size:      testNodePool.Size,
 			Count:     testNodePool.Count,
 			Tags:      testNodePool.Tags,
+			Labels:    testNodePool.Labels,
 			AutoScale: testNodePool.AutoScale,
 			MinNodes:  testNodePool.MinNodes,
 			MaxNodes:  testNodePool.MaxNodes,
@@ -668,6 +688,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testNodePool.Size)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesLabel, testNodePool.Labels)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolAutoScale, testNodePool.AutoScale)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolMinNodes, testNodePool.MinNodes)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolMaxNodes, testNodePool.MaxNodes)
@@ -677,110 +698,137 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 	})
 }
 
+func createTestNodePoolUpdateRequest() godo.KubernetesNodePoolUpdateRequest {
+	return godo.KubernetesNodePoolUpdateRequest{
+		Name:   testNodePool.Name,
+		Count:  &testNodePool.Count,
+		Tags:   testNodePool.Tags,
+		Labels: map[string]string{},
+	}
+}
+
 func TestKubernetesNodePool_Update(t *testing.T) {
-	// by cluster ID
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		r := godo.KubernetesNodePoolUpdateRequest{
-			Name:  testNodePool.Name,
-			Count: &testNodePool.Count,
-			Tags:  testNodePool.Tags,
-		}
-		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+	t.Run("by cluster ID", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			r := createTestNodePoolUpdateRequest()
 
-		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
+			tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
-		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
-		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+			config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 
-		err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
-		assert.NoError(t, err)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
+			config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+
+			err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
+			assert.NoError(t, err)
+		})
 	})
-	// by cluster name, pool ID
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		r := godo.KubernetesNodePoolUpdateRequest{
-			Name:  testNodePool.Name,
-			Count: &testNodePool.Count,
-			Tags:  testNodePool.Tags,
-		}
-		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
-		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+	t.Run("by cluster name and pool ID", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			r := createTestNodePoolUpdateRequest()
 
-		config.Args = append(config.Args, testCluster.Name, testNodePool.ID)
+			tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+			tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
-		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
-		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+			config.Args = append(config.Args, testCluster.Name, testNodePool.ID)
 
-		err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
-		assert.NoError(t, err)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
+			config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+
+			err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
+			assert.NoError(t, err)
+		})
 	})
-	// by cluster ID, pool name
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		r := godo.KubernetesNodePoolUpdateRequest{
-			Name:  testNodePool.Name,
-			Count: &testNodePool.Count,
-			Tags:  testNodePool.Tags,
-		}
-		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
-		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
-		config.Args = append(config.Args, testCluster.ID, testNodePool.Name)
+	t.Run("by cluster ID and pool name", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			r := createTestNodePoolUpdateRequest()
 
-		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
-		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+			tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
+			tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
-		err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
-		assert.NoError(t, err)
+			config.Args = append(config.Args, testCluster.ID, testNodePool.Name)
+
+			config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
+			config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+
+			err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
+			assert.NoError(t, err)
+		})
 	})
-	// by cluster name, pool name
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		r := godo.KubernetesNodePoolUpdateRequest{
-			Name:  testNodePool.Name,
-			Count: &testNodePool.Count,
-			Tags:  testNodePool.Tags,
-		}
-		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
-		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
-		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
-		config.Args = append(config.Args, testCluster.Name, testNodePool.Name)
+	t.Run("by cluster name and pool name", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			r := createTestNodePoolUpdateRequest()
 
-		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
-		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+			tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+			tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(testNodePools, nil)
+			tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
-		err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
-		assert.NoError(t, err)
+			config.Args = append(config.Args, testCluster.Name, testNodePool.Name)
+
+			config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
+			config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+
+			err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
+			assert.NoError(t, err)
+		})
 	})
-	// with autoscale config
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		testNodePool := testNodePool
-		testNodePool.AutoScale = true
-		testNodePool.MinNodes = 1
-		testNodePool.MaxNodes = 10
-		r := godo.KubernetesNodePoolUpdateRequest{
-			Name:      testNodePool.Name,
-			Count:     &testNodePool.Count,
-			Tags:      testNodePool.Tags,
-			AutoScale: &testNodePool.AutoScale,
-			MinNodes:  &testNodePool.MinNodes,
-			MaxNodes:  &testNodePool.MaxNodes,
-		}
-		tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
 
-		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
+	t.Run("with autoscale config", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			testNodePool := testNodePool
+			testNodePool.AutoScale = true
+			testNodePool.MinNodes = 1
+			testNodePool.MaxNodes = 10
 
-		config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
-		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
-		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
-		config.Doit.Set(config.NS, doctl.ArgNodePoolAutoScale, testNodePool.AutoScale)
-		config.Doit.Set(config.NS, doctl.ArgNodePoolMinNodes, testNodePool.MinNodes)
-		config.Doit.Set(config.NS, doctl.ArgNodePoolMaxNodes, testNodePool.MaxNodes)
+			r := createTestNodePoolUpdateRequest()
+			r.AutoScale = &testNodePool.AutoScale
+			r.MinNodes = &testNodePool.MinNodes
+			r.MaxNodes = &testNodePool.MaxNodes
 
-		err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
-		assert.NoError(t, err)
+			tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+
+			config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
+
+			config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
+			config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolAutoScale, testNodePool.AutoScale)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolMinNodes, testNodePool.MinNodes)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolMaxNodes, testNodePool.MaxNodes)
+
+			err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
+			assert.NoError(t, err)
+		})
+	})
+	t.Run("with labels", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			testNodePool := testNodePool
+			testNodePool.Labels = map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			}
+
+			r := createTestNodePoolUpdateRequest()
+			r.Labels = testNodePool.Labels
+
+			tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+
+			config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
+
+			config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
+			config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+			config.Doit.Set(config.NS, doctl.ArgKubernetesLabel, testNodePool.Labels)
+
+			err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
+			assert.NoError(t, err)
+		})
 	})
 }
 

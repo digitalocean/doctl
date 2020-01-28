@@ -234,6 +234,17 @@ func AddStringSliceFlag(cmd *Command, name, shorthand string, def []string, desc
 	}
 }
 
+// AddStringMapStringFlag adds a map of strings by strings flag to a command.
+func AddStringMapStringFlag(cmd *Command, name, shorthand string, def map[string]string, desc string, opts ...flagOpt) {
+	fn := flagName(cmd, name)
+	cmd.Flags().StringToStringP(name, shorthand, def, desc)
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
+}
+
 func flagName(cmd *Command, name string) string {
 	if cmd.Parent() != nil {
 		return fmt.Sprintf("%s.%s.%s", cmd.Parent().Name(), cmd.Name(), name)
