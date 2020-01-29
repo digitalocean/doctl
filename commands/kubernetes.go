@@ -337,7 +337,7 @@ func kubernetesNodePools() *Command {
 		"size of nodes in the node pool (see `doctl k8s options sizes`)", requiredOpt())
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0,
 		"count of nodes in the node pool", requiredOpt())
-	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", "",
+	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", nil,
 		"tags to apply to the node pool, repeat to add multiple tags at once")
 	AddBoolFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolAutoScale, "", false,
 		"enable auto-scaling on the node pool")
@@ -352,7 +352,7 @@ func kubernetesNodePools() *Command {
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "node pool name")
 	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", 0,
 		"count of nodes in the node pool")
-	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", "",
+	AddStringSliceFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", nil,
 		"tags to apply to the node pool, repeat to add multiple tags at once")
 	AddBoolFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolAutoScale, "", false,
 		"enable auto-scaling on the node pool")
