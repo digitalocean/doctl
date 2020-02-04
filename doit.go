@@ -162,6 +162,7 @@ type Config interface {
 	GetInt(ns, key string) (int, error)
 	GetIntPtr(ns, key string) (*int, error)
 	GetStringSlice(ns, key string) ([]string, error)
+	GetStringMapString(ns, key string) (map[string]string, error)
 }
 
 // LiveConfig is an implementation of Config for live values.
@@ -319,6 +320,34 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	return out, nil
 }
 
+// GetStringMapString returns a config value as a string to string map.
+func (c *LiveConfig) GetStringMapString(ns, key string) (map[string]string, error) {
+	nskey := nskey(ns, key)
+
+	if isRequired(nskey) && !c.IsSet(key) {
+		return nil, NewMissingArgsErr(nskey)
+	}
+
+	// We cannot call viper.GetStringMapString because it does not handle
+	// pflag's StringToStringP properly:
+	// https://github.com/spf13/viper/issues/608
+	// Re-implement the necessary pieces on our own instead.
+
+	vals := map[string]string{}
+	items := viper.GetStringSlice(nskey)
+	for _, item := range items {
+		parts := strings.SplitN(item, "=", 2)
+		if len(parts) < 2 {
+			return nil, fmt.Errorf("item %q does not adhere to form: key=value", item)
+		}
+		labelKey := parts[0]
+		labelValue := parts[1]
+		vals[labelKey] = labelValue
+	}
+
+	return vals, nil
+}
+
 func nskey(ns, key string) string {
 	return fmt.Sprintf("%s.%s", ns, key)
 }
@@ -403,6 +432,14 @@ func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
 	return c.v.GetStringSlice(nskey), nil
 }
 
+// GetStringToStringMap returns the string-to-string value for the key in the
+// given namespace. Because this is a mock implementation, and error will never
+// be returned.
+func (c *TestConfig) GetStringMapString(ns, key string) (map[string]string, error) {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	return c.v.GetStringMapString(nskey), nil
+}
+
 // GetBool returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBool(ns, key string) (bool, error) {
@@ -421,7 +458,7 @@ func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
 	return &val, nil
 }
 
-// This is needed because an empty StringSlice flag returns `["[]"]`
+// This is needed because an empty StringSlice flag returns `"[]"`
 func emptyStringSlice(s []string) bool {
 	return len(s) == 1 && s[0] == "[]"
 }

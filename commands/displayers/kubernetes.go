@@ -131,18 +131,20 @@ func (nodePools *KubernetesNodePools) Cols() []string {
 		"Size",
 		"Count",
 		"Tags",
+		"Labels",
 		"Nodes",
 	}
 }
 
 func (nodePools *KubernetesNodePools) ColMap() map[string]string {
 	return map[string]string{
-		"ID":    "ID",
-		"Name":  "Name",
-		"Size":  "Size",
-		"Count": "Count",
-		"Tags":  "Tags",
-		"Nodes": "Nodes",
+		"ID":     "ID",
+		"Name":   "Name",
+		"Size":   "Size",
+		"Count":  "Count",
+		"Tags":   "Tags",
+		"Labels": "Labels",
+		"Nodes":  "Nodes",
 	}
 }
 
@@ -157,12 +159,13 @@ func (nodePools *KubernetesNodePools) KV() []map[string]interface{} {
 		}
 
 		o := map[string]interface{}{
-			"ID":    nodePools.ID,
-			"Name":  nodePools.Name,
-			"Size":  nodePools.Size,
-			"Count": nodePools.Count,
-			"Tags":  tags,
-			"Nodes": nodes,
+			"ID":     nodePools.ID,
+			"Name":   nodePools.Name,
+			"Size":   nodePools.Size,
+			"Count":  nodePools.Count,
+			"Tags":   tags,
+			"Labels": nodePools.Labels,
+			"Nodes":  nodes,
 		}
 		out = append(out, o)
 	}
