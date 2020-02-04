@@ -1,6 +1,9 @@
 # Change Log
 
-## unreleased
+## [v1.30.0] - 2020-02-03
+
+- #295 registry: support the created_at field - @adamwg
+- #293 doks: node pool labels - @snormore
 
 ## [v1.29.0] - 2019-12-13
 
