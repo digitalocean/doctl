@@ -68,6 +68,8 @@ const (
 	ArgDropletIDs = "droplet-ids"
 	// ArgKernelID is a ekrnel id argument.
 	ArgKernelID = "kernel-id"
+	// ArgKubernetesLabel is a Kubernetes label argument.
+	ArgKubernetesLabel = "label"
 	// ArgImage is an image argument.
 	ArgImage = "image"
 	// ArgImageID is an image id argument.

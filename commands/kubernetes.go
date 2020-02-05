@@ -268,15 +268,17 @@ After creating a cluster, a configuration context will be added to kubectl and m
 		"Number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
 		`Comma-separated list of node pools, defined using semicolon-separated configuration values (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
-Format: `+"`"+`name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2`+"`"+` where:
+Format: `+"`"+`name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2`+"`"+` where:
 
 - `+"`"+`name`+"`"+`: Name of the node pool, which must be unique in the cluster
 - `+"`"+`size`+"`"+`: Machine size of the nodes to use. Possible values: see `+"`"+`doctl kubernetes options sizes`+"`"+`.
 - `+"`"+`count`+"`"+`: Number of nodes to create.
 - `+"`"+`tag`+"`"+`: Comma-separated list of tags to apply to nodes in the pool
+- `+"`"+`label`+"`"+`: Label in key=value notation; repeat to add multiple labels at once.
 - `+"`"+`auto-scale`+"`"+`: Boolean defining whether to enable cluster auto-scaling on the node pool.
 - `+"`"+`min-nodes`+"`"+`: Maximum number of nodes that can be auto-scaled to.
 - `+"`"+`max-nodes`+"`"+`: Minimum number of nodes that can be auto-scaled to.`)
+
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
 		"Boolean that specifies whether to add a configuration context for the new cluster to your kubectl")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgCommandWait, "", true,
@@ -405,8 +407,10 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 		"Size of the nodes in the node pool (To see possible values: call `doctl kubernetes options sizes`)", requiredOpt())
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0,
 		"The size of (number of nodes in) the node pool", requiredOpt())
-	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", "",
-		"Tag to apply to the node pool; you can supply multiple `--tag` arguments to specify additional tags")
+	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", nil,
+		"Tag to apply to the node pool; you can supply multiple `--tag` arguments to specify additional tags. Omitted tags will be removed from the node pool if the flag is specified.")
+	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgKubernetesLabel, "", nil,
+		"Label in key=value notation to apply to the node pool, repeat to add multiple labels at once. Omitted labels will be removed from the node pool if the flag is specified.")
 	AddBoolFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolAutoScale, "", false,
 		"Boolean indicating whether to enable auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMinNodes, "", 0,
@@ -420,8 +424,10 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "Name of the node pool")
 	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolCount, "", 0,
 		"The size of (number of nodes in) the node pool")
-	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", "",
-		"Tag to apply to the node pool; you can supply multiple `--tag` arguments to specify additional tags")
+	AddStringSliceFlag(cmdKubeNodePoolUpdate, doctl.ArgTag, "", nil,
+		"Tag to apply to the node pool; you can supply multiple `--tag` arguments to specify additional tags. Omitted tags will be removed from the node pool if the flag is specified.")
+	AddStringSliceFlag(cmdKubeNodePoolUpdate, doctl.ArgKubernetesLabel, "", nil,
+		"Label in key=value notation to apply to the node pool, repeat to add multiple labels at once. Omitted labels will be removed from the node pool if the flag is specified.")
 	AddBoolFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolAutoScale, "", false,
 		"Boolean indicating whether to enable auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolMinNodes, "", 0,
@@ -1340,9 +1346,10 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 		kvSeparator  = "="
 	)
 	out := &godo.KubernetesNodePoolCreateRequest{
-		Name:  defaultName,
-		Size:  defaultSize,
-		Count: defaultCount,
+		Name:   defaultName,
+		Size:   defaultSize,
+		Count:  defaultCount,
+		Labels: map[string]string{},
 	}
 	for _, arg := range strings.Split(nodePool, argSeparator) {
 		kvs := strings.SplitN(arg, kvSeparator, 2)
@@ -1364,6 +1371,14 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 			out.Count = int(count)
 		case "tag":
 			out.Tags = append(out.Tags, value)
+		case "label":
+			labelParts := strings.SplitN(value, "=", 2)
+			if len(labelParts) < 2 {
+				return nil, fmt.Errorf("a node pool label component must be of the form `label-key=label-value`, got %q", value)
+			}
+			labelKey := labelParts[0]
+			labelValue := labelParts[1]
+			out.Labels[labelKey] = labelValue
 		case "auto-scale":
 			autoScale, err := strconv.ParseBool(value)
 			if err != nil {
@@ -1417,6 +1432,12 @@ func buildNodePoolCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.Tags = tags
 
+	labels, err := c.Doit.GetStringMapString(c.NS, doctl.ArgKubernetesLabel)
+	if err != nil {
+		return err
+	}
+	r.Labels = labels
+
 	autoScale, err := c.Doit.GetBool(c.NS, doctl.ArgNodePoolAutoScale)
 	if err != nil {
 		return err
@@ -1456,6 +1477,12 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 		return err
 	}
 	r.Tags = tags
+
+	labels, err := c.Doit.GetStringMapString(c.NS, doctl.ArgKubernetesLabel)
+	if err != nil {
+		return err
+	}
+	r.Labels = labels
 
 	autoScale, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgNodePoolAutoScale)
 	if err != nil {
