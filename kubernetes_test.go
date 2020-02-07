@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 )
@@ -429,6 +430,41 @@ func TestKubernetesClusters_GetCredentials(t *testing.T) {
 }`
 	mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/credentials", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
+		if len(r.URL.Query()) > 0 {
+			t.Error("Request should not have Url params")
+		}
+		fmt.Fprint(w, jBlob)
+	})
+	got, _, err := kubeSvc.GetCredentials(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d", &KubernetesClusterCredentialsGetRequest{})
+	require.NoError(t, err)
+	require.Equal(t, want, got)
+}
+
+func TestKubernetesClusters_GetCredentials_WithExpirySeconds(t *testing.T) {
+	setup()
+	defer teardown()
+
+	kubeSvc := client.Kubernetes
+	timestamp, err := time.Parse(time.RFC3339, "2014-11-12T11:45:26.371Z")
+	require.NoError(t, err)
+	want := &KubernetesClusterCredentials{
+		Token:     "secret",
+		ExpiresAt: timestamp,
+	}
+	jBlob := `
+{
+	"token": "secret",
+	"expires_at": "2014-11-12T11:45:26.371Z"
+}`
+	mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/credentials", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		expirySeconds, ok := r.URL.Query()["expiry_seconds"]
+		if !ok {
+			t.Error("Url param 'expiry_seconds' is missing")
+		}
+		if len(expirySeconds) != 1 || expirySeconds[0] != "3600" {
+			t.Error("incorrect expiry_seconds value, should be 3600")
+		}
 		fmt.Fprint(w, jBlob)
 	})
 	got, _, err := kubeSvc.GetCredentials(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d", &KubernetesClusterCredentialsGetRequest{
