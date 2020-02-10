@@ -542,12 +542,12 @@ func TestDatabases_ResetUserAuth(t *testing.T) {
 	body := `
 {
   "user": {
-    "name": "name",
-    "role": "foo",
-    "password": "pass",
-	"mysql_settings": {
-		"auth_plugin": "caching_sha2_password"
-	}
+     "name": "name",
+     "role": "foo",
+     "password": "pass",
+     "mysql_settings": {
+       "auth_plugin": "caching_sha2_password"
+     }
   }
 }
 `
