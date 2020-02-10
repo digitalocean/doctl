@@ -33,3 +33,5 @@ require (
 	k8s.io/client-go v0.0.0-20191016110837-54936ba21026
 	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a // indirect
 )
+
+replace github.com/stretchr/objx => github.com/stretchr/objx v0.2.0
