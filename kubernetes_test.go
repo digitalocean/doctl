@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -430,9 +429,7 @@ func TestKubernetesClusters_GetCredentials(t *testing.T) {
 }`
 	mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/credentials", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
-		if len(r.URL.Query()) > 0 {
-			t.Error("Request should not have Url params")
-		}
+		assert.Empty(t, r.URL.Query())
 		fmt.Fprint(w, jBlob)
 	})
 	got, _, err := kubeSvc.GetCredentials(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d", &KubernetesClusterCredentialsGetRequest{})
@@ -459,12 +456,9 @@ func TestKubernetesClusters_GetCredentials_WithExpirySeconds(t *testing.T) {
 	mux.HandleFunc("/v2/kubernetes/clusters/deadbeef-dead-4aa5-beef-deadbeef347d/credentials", func(w http.ResponseWriter, r *http.Request) {
 		testMethod(t, r, http.MethodGet)
 		expirySeconds, ok := r.URL.Query()["expiry_seconds"]
-		if !ok {
-			t.Error("Url param 'expiry_seconds' is missing")
-		}
-		if len(expirySeconds) != 1 || expirySeconds[0] != "3600" {
-			t.Error("incorrect expiry_seconds value, should be 3600")
-		}
+		assert.True(t, ok)
+		assert.Len(t, expirySeconds, 1)
+		assert.Contains(t, expirySeconds, "3600")
 		fmt.Fprint(w, jBlob)
 	})
 	got, _, err := kubeSvc.GetCredentials(ctx, "deadbeef-dead-4aa5-beef-deadbeef347d", &KubernetesClusterCredentialsGetRequest{
