@@ -533,45 +533,6 @@ func TestDatabases_DeleteUser(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDatabases_ResetUserAuth(t *testing.T) {
-	setup()
-	defer teardown()
-	dbID := "deadbeef-dead-4aa5-beef-deadbeef347d"
-	path := fmt.Sprintf("/v2/databases/%s/users/user/reset_auth", dbID)
-
-	body := `
-{
-  "user": {
-     "name": "name",
-     "role": "foo",
-     "password": "pass",
-     "mysql_settings": {
-       "auth_plugin": "caching_sha2_password"
-     }
-  }
-}
-`
-	mux.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		testMethod(t, r, http.MethodPost)
-		fmt.Fprint(w, body)
-	})
-
-	want := &DatabaseUser{
-		Name:          "name",
-		Role:          "foo",
-		Password:      "pass",
-		MySQLSettings: &DatabaseMySQLUserSettings{AuthPlugin: SQLAuthPluginCachingSHA2},
-	}
-
-	got, _, err := client.Databases.ResetUserAuth(ctx, dbID, "user", &DatabaseResetUserAuthRequest{
-		MySQLSettings: &DatabaseMySQLUserSettings{
-			AuthPlugin: SQLAuthPluginCachingSHA2,
-		}})
-
-	require.NoError(t, err)
-	require.Equal(t, want, got)
-}
-
 func TestDatabases_ListDBs(t *testing.T) {
 	setup()
 	defer teardown()
