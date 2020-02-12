@@ -17,7 +17,6 @@ const (
 	databaseBackupsPath        = databaseBasePath + "/%s/backups"
 	databaseUsersPath          = databaseBasePath + "/%s/users"
 	databaseUserPath           = databaseBasePath + "/%s/users/%s"
-	databaseResetUserAuthPath  = databaseUserPath + "/reset_auth"
 	databaseDBPath             = databaseBasePath + "/%s/dbs/%s"
 	databaseDBsPath            = databaseBasePath + "/%s/dbs"
 	databasePoolPath           = databaseBasePath + "/%s/pools/%s"
@@ -101,7 +100,6 @@ type DatabasesService interface {
 	ListUsers(context.Context, string, *ListOptions) ([]DatabaseUser, *Response, error)
 	CreateUser(context.Context, string, *DatabaseCreateUserRequest) (*DatabaseUser, *Response, error)
 	DeleteUser(context.Context, string, string) (*Response, error)
-	ResetUserAuth(context.Context, string, string, *DatabaseResetUserAuthRequest) (*DatabaseUser, *Response, error)
 	ListDBs(context.Context, string, *ListOptions) ([]DatabaseDB, *Response, error)
 	CreateDB(context.Context, string, *DatabaseCreateDBRequest) (*DatabaseDB, *Response, error)
 	GetDB(context.Context, string, string) (*DatabaseDB, *Response, error)
@@ -266,11 +264,6 @@ type DatabaseCreatePoolRequest struct {
 // DatabaseCreateUserRequest is used to create a new database user
 type DatabaseCreateUserRequest struct {
 	Name          string                     `json:"name"`
-	MySQLSettings *DatabaseMySQLUserSettings `json:"mysql_settings,omitempty"`
-}
-
-// DatabaseResetUserAuth request is used to reset a users DB auth
-type DatabaseResetUserAuthRequest struct {
 	MySQLSettings *DatabaseMySQLUserSettings `json:"mysql_settings,omitempty"`
 }
 
@@ -526,20 +519,6 @@ func (svc *DatabasesServiceOp) ListUsers(ctx context.Context, databaseID string,
 func (svc *DatabasesServiceOp) CreateUser(ctx context.Context, databaseID string, createUser *DatabaseCreateUserRequest) (*DatabaseUser, *Response, error) {
 	path := fmt.Sprintf(databaseUsersPath, databaseID)
 	req, err := svc.client.NewRequest(ctx, http.MethodPost, path, createUser)
-	if err != nil {
-		return nil, nil, err
-	}
-	root := new(databaseUserRoot)
-	resp, err := svc.client.Do(ctx, req, root)
-	if err != nil {
-		return nil, resp, err
-	}
-	return root.User, resp, nil
-}
-
-func (svc *DatabasesServiceOp) ResetUserAuth(ctx context.Context, databaseID, userID string, resetAuth *DatabaseResetUserAuthRequest) (*DatabaseUser, *Response, error) {
-	path := fmt.Sprintf(databaseResetUserAuthPath, databaseID, userID)
-	req, err := svc.client.NewRequest(ctx, http.MethodPost, path, resetAuth)
 	if err != nil {
 		return nil, nil, err
 	}
