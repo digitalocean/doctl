@@ -3,7 +3,6 @@ module github.com/digitalocean/doctl
 go 1.13
 
 require (
-	github.com/Azure/go-autorest v11.1.2+incompatible // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/creack/pty v1.1.7
