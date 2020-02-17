@@ -24,12 +24,11 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20191028164358-195ce5e7f934 // indirect
 	gopkg.in/yaml.v2 v2.2.4
-	k8s.io/api v0.0.0-20191112020540-7f9008e52f64
-	k8s.io/apimachinery v0.0.0-20191111054156-6eb29fdf75dc
-	k8s.io/client-go v0.0.0-20191016110837-54936ba21026
-	k8s.io/utils v0.0.0-20190607212802-c55fbcfc754a // indirect
+	k8s.io/api v0.17.0
+	k8s.io/apimachinery v0.17.0
+	k8s.io/client-go v0.17.0
 )
