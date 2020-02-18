@@ -51,6 +51,9 @@ Use "doctl [command] --help" for more information about a command.
     - [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
         - [Linux](#linux-auto-completion)
         - [macOS](#macos-auto-completion)
+    - [Uninstalling `doctl`](#uninstalling-doctl)
+      - [Using a Package Manager](#using-a-package-manager)
+        - [macOS](#macos-uninstall)
     - [Examples](#examples)
     - [Tutorials](#tutorials)
     - [doctl Releases](https://github.com/digitalocean/doctl/releases)
@@ -303,6 +306,25 @@ Then refresh your profile using the appropriate command for bash configurations 
 source ~/.profile
 source ~/.bashrc
 source ~/.zshrc
+```
+
+
+## Uninstalling `doctl`
+
+### Using a Package Manager
+
+#### MacOS Uninstall
+
+Use [Homebrew](https://brew.sh/) to uninstall all current and previous versions of the `doctl` formula on macOS:
+
+```
+brew uninstall -f doctl
+```
+
+To completely remove configuration, also remove the following directory:
+
+```
+rm -rf $HOME/Library/Application Support/doctl
 ```
 
 
