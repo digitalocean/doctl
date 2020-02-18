@@ -33,3 +33,4 @@ mockgen -source sshkeys.go -package=mocks KeysService > mocks/KeysService.go
 mockgen -source tags.go -package=mocks TagsService > mocks/TagsService.go
 mockgen -source volume_actions.go -package=mocks VolumeActionsService > mocks/VolumeActionsService.go
 mockgen -source volumes.go -package=mocks VolumesService > mocks/VolumesService.go
+mockgen -source ../pkg/runner/runner.go -package=mocks Runner > mocks/Runner.go
