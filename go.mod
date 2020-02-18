@@ -32,3 +32,5 @@ require (
 	k8s.io/apimachinery v0.17.0
 	k8s.io/client-go v0.17.0
 )
+
+replace github.com/stretchr/objx => github.com/stretchr/objx v0.2.0
