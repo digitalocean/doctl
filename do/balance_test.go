@@ -11,64 +11,70 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package do
+package do_test
 
 import (
+	"context"
+	"reflect"
 	"testing"
 
-	"context"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-type GoDoBalanceService struct {
-	mock.Mock
+// MockBalanceService is a mock of BalanceService interface
+type MockBalanceService struct {
+	ctrl     *gomock.Controller
+	recorder *MockBalanceServiceMockRecorder
 }
 
-// Get provides a mock function with given fields: _a0
-func (_m *GoDoBalanceService) Get(_a0 context.Context) (*godo.Balance, *godo.Response, error) {
-	ret := _m.Called(_a0)
-
-	var r0 *godo.Balance
-	if rf, ok := ret.Get(0).(func(context.Context) *godo.Balance); ok {
-		r0 = rf(_a0)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*godo.Balance)
-		}
-	}
-
-	var r1 *godo.Response
-	if rf, ok := ret.Get(1).(func(context.Context) *godo.Response); ok {
-		r1 = rf(_a0)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*godo.Response)
-		}
-	}
-
-	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context) error); ok {
-		r2 = rf(_a0)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
+// MockBalanceServiceMockRecorder is the mock recorder for MockBalanceService
+type MockBalanceServiceMockRecorder struct {
+	mock *MockBalanceService
 }
 
+// NewMockBalanceService creates a new mock instance
+func NewMockBalanceService(ctrl *gomock.Controller) *MockBalanceService {
+	mock := &MockBalanceService{ctrl: ctrl}
+	mock.recorder = &MockBalanceServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockBalanceService) EXPECT() *MockBalanceServiceMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method
+func (m *MockBalanceService) Get(arg0 context.Context) (*godo.Balance, *godo.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*godo.Balance)
+	ret1, _ := ret[1].(*godo.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// Get indicates an expected call of Get
+func (mr *MockBalanceServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBalanceService)(nil).Get), arg0)
+}
 func TestBalanceServiceGet(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	gBalanceSvc := &GoDoBalanceService{}
+	gBalanceSvc := NewMockBalanceService(ctrl)
 
 	gBalance := &godo.Balance{AccountBalance: "12.34"}
-	gBalanceSvc.On("Get", context.TODO()).Return(gBalance, nil, nil)
+	gBalanceSvc.EXPECT().Get(context.TODO()).Return(gBalance, nil, nil)
 
 	client := &godo.Client{
 		Balance: gBalanceSvc,
 	}
-	as := NewBalanceService(client)
+	as := do.NewBalanceService(client)
 
 	balance, err := as.Get()
 	assert.NoError(t, err)
