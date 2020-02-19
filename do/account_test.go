@@ -11,64 +11,71 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package do
+package do_test
 
 import (
+	"context"
+	"reflect"
 	"testing"
 
-	"context"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
-type GoDoAccountService struct {
-	mock.Mock
+// MockAccountService is a mock of AccountService interface
+type MockAccountService struct {
+	ctrl     *gomock.Controller
+	recorder *MockAccountServiceMockRecorder
 }
 
-// Get provides a mock function with given fields: _a0
-func (_m *GoDoAccountService) Get(_a0 context.Context) (*godo.Account, *godo.Response, error) {
-	ret := _m.Called(_a0)
+// MockAccountServiceMockRecorder is the mock recorder for MockAccountService
+type MockAccountServiceMockRecorder struct {
+	mock *MockAccountService
+}
 
-	var r0 *godo.Account
-	if rf, ok := ret.Get(0).(func(context.Context) *godo.Account); ok {
-		r0 = rf(_a0)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*godo.Account)
-		}
-	}
+// NewMockAccountService creates a new mock instance
+func NewMockAccountService(ctrl *gomock.Controller) *MockAccountService {
+	mock := &MockAccountService{ctrl: ctrl}
+	mock.recorder = &MockAccountServiceMockRecorder{mock}
+	return mock
+}
 
-	var r1 *godo.Response
-	if rf, ok := ret.Get(1).(func(context.Context) *godo.Response); ok {
-		r1 = rf(_a0)
-	} else {
-		if ret.Get(1) != nil {
-			r1 = ret.Get(1).(*godo.Response)
-		}
-	}
+// EXPECT returns an object that allows the caller to indicate expected use
+func (m *MockAccountService) EXPECT() *MockAccountServiceMockRecorder {
+	return m.recorder
+}
 
-	var r2 error
-	if rf, ok := ret.Get(2).(func(context.Context) error); ok {
-		r2 = rf(_a0)
-	} else {
-		r2 = ret.Error(2)
-	}
+// Get mocks base method
+func (m *MockAccountService) Get(arg0 context.Context) (*godo.Account, *godo.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*godo.Account)
+	ret1, _ := ret[1].(*godo.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
 
-	return r0, r1, r2
+// Get indicates an expected call of Get
+func (mr *MockAccountServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAccountService)(nil).Get), arg0)
 }
 
 func TestAccountServiceGet(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	gAccountSvc := &GoDoAccountService{}
+	gAccountSvc := NewMockAccountService(ctrl)
 
 	gAccount := &godo.Account{UUID: "uuid"}
-	gAccountSvc.On("Get", context.TODO()).Return(gAccount, nil, nil)
+	gAccountSvc.EXPECT().Get(context.TODO()).Return(gAccount, nil, nil)
 
 	client := &godo.Client{
 		Account: gAccountSvc,
 	}
-	as := NewAccountService(client)
+	as := do.NewAccountService(client)
 
 	account, err := as.Get()
 	assert.NoError(t, err)
