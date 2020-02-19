@@ -161,7 +161,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			ptmx.Close()
 
 			expect.Contains(buf.String(), "Validating token... invalid token")
-			expect.Contains(buf.String(), fmt.Sprintf("unable to use supplied token to access API: GET %s/v2/account: 401", server.URL))
+			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v2/account: 401", server.URL))
 		})
 	})
 

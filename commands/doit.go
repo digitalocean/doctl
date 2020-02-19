@@ -35,7 +35,7 @@ var (
 	DoitCmd = &Command{ // base command
 		Command: &cobra.Command{
 			Use:   "doctl",
-			Short: "doctl is a command line interface for the DigitalOcean API.",
+			Short: "doctl is a command line interface (CLI) for the DigitalOcean API.",
 		},
 	}
 
@@ -64,21 +64,21 @@ func init() {
 
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
-		filepath.Join(configHome(), defaultConfigName), "config file")
+		filepath.Join(configHome(), defaultConfigName), "Specify a custom config file")
 	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
 
-	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API V2 endpoint")
+	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API endpoint")
 	viper.BindPFlag("api-url", rootPFlagSet.Lookup("api-url"))
 
-	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 Access Token")
+	rootPFlagSet.StringVarP(&Token, doctl.ArgAccessToken, "t", "", "API V2 access token")
 	viper.BindPFlag(doctl.ArgAccessToken, rootPFlagSet.Lookup(doctl.ArgAccessToken))
 
-	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "output format [text|json]")
+	rootPFlagSet.StringVarP(&Output, doctl.ArgOutput, "o", "text", "Desired output format [text|json]")
 	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
 
-	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "authentication context")
-	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "trace api access")
-	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "verbose output")
+	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "Specify a custom authentication context name")
+	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "Show a log of network activity while performing a command")
+	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "Enable verbose output")
 
 	addCommands()
 
@@ -99,7 +99,7 @@ func initConfig() {
 
 	if _, err := os.Stat(cfgFile); err == nil {
 		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalln("reading initialization failed:", err)
+			log.Fatalln("Reading initialization failed:", err)
 		}
 	}
 }
@@ -142,8 +142,8 @@ func computeCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "compute",
-			Short: "compute commands",
-			Long:  "compute commands are for controlling and managing infrastructure",
+			Short: "Display commands that manage infrastructure",
+			Long:  `The subcommands under ` + "`" + `doctl compute` + "`" + ` are for managing DigitalOcean resources.`,
 		},
 	}
 

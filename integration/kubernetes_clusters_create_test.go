@@ -167,7 +167,7 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 
 				output, err := cmd.CombinedOutput()
 				expect.Error(err)
-				expect.Equal(`Error: flags "size" and "count" cannot be provided when "node-pool" is present`, strings.TrimSpace(string(output)))
+				expect.Equal(`Error: Flags "size" and "count" cannot be provided when "node-pool" is present`, strings.TrimSpace(string(output)))
 			})
 		})
 	})
@@ -185,10 +185,10 @@ const (
 `
 
 	kubeClustersCreateOutput = `
-Notice: cluster is provisioning, waiting for cluster to be running
-Notice: cluster created, fetching credentials
-Notice: adding cluster credentials to kubeconfig file found in %q
-Notice: setting current-context to some-context
+Notice: Cluster is provisioning, waiting for cluster to be running
+Notice: Cluster created, fetching credentials
+Notice: Adding cluster credentials to kubeconfig file found in %q
+Notice: Setting current-context to some-context
 ID                 Name                 Region    Version              Auto Upgrade    Status     Node Pools
 some-cluster-id    some-cluster-name    mars      some-kube-version    false           running    frontend-pool
 `

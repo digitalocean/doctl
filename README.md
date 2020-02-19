@@ -19,7 +19,7 @@ Available Commands:
   version     show the current version
 
 Flags:
-  -t, --access-token string   API V2 Access Token
+  -t, --access-token string   API V2 access token
   -u, --api-url string        Override default API V2 endpoint
   -c, --config string         config file (default is $HOME/.config/doctl/config.yaml)
       --context string        authentication context name

@@ -31,30 +31,40 @@ func SSHKeys() *Command {
 		Command: &cobra.Command{
 			Use:     "ssh-key",
 			Aliases: []string{"k"},
-			Short:   "sshkey commands",
-			Long:    "sshkey is used to access ssh key commands",
+			Short:   "Display commands to manage SSH keys on your account",
+			Long: `The sub-commands of ` + "`" + `doctl compute ssh-key` + "`" + ` manage the SSH keys on your account.
+
+DigitalOcean allows you to add SSH public keys to the interface so that you can embed your public key into a Droplet at the time of creation. Only the public key is required to take advantage of this functionality. Note that this command does not add, delete, or otherwise modify any ssh keys that may be on existing Droplets.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunKeyList, "list", "list ssh keys", Writer,
+	CmdBuilderWithDocs(cmd, RunKeyList, "list", "List all SSH keys on your account", `Use this command to list the id, fingerprint, public_key, and name of all SSH keys on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Key{}))
 
-	CmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "get ssh key", Writer,
+	CmdBuilderWithDocs(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "Retrieve information about an SSH key on your account", `Use this command to get the id, fingerprint, public_key, and name of a specific SSH key on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Key{}))
 
-	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "create ssh key", Writer,
+	cmdSSHKeysCreate := CmdBuilderWithDocs(cmd, RunKeyCreate, "create <key-name>", "Create a new SSH key on your account", `Use this command to add a new SSH key to your account.
+
+Specify a `+"`"+`<key-name>`+"`"+` for the key, and set the `+"`"+`--public-key`+"`"+` flag to a string with the contents of the key.
+
+Note that creating a key will not add it to any Droplets.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "", "Key contents", requiredOpt())
 
-	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "import ssh key", Writer,
+	cmdSSHKeysImport := CmdBuilderWithDocs(cmd, RunKeyImport, "import <key-name>", "Import an SSH key from your computer to your account", `Use this command to add a new SSH key to your account, using a local public key file.
+
+Note that importing a key to your account will not add it to any Droplets`, Writer,
 		aliasOpt("i"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
 
-	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "delete ssh key", Writer,
-		aliasOpt("d"))
-	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force ssh key delete")
+	cmdRunKeyDelete := CmdBuilderWithDocs(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "Permanently delete an SSH key from your account", `Use this command to permanently delete an SSH key from your account.
 
-	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "update ssh key", Writer,
+Note that this does not delete an SSH key from any Droplets.`, Writer,
+		aliasOpt("d"))
+	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the key without a confirmation prompt")
+
+	cmdSSHKeysUpdate := CmdBuilderWithDocs(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "Update an SSH key's name", `Use this command to update the name of an SSH key.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "", "Key name", requiredOpt())
 
@@ -178,12 +188,12 @@ func RunKeyDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	if force || AskForConfirm("delete ssh key") == nil {
+	if force || AskForConfirm("Delete SSH key?") == nil {
 		rawKey := c.Args[0]
 		return ks.Delete(rawKey)
 	}
 
-	return fmt.Errorf("operation aborted")
+	return fmt.Errorf("Operation aborted.")
 }
 
 // RunKeyUpdate updates a key.

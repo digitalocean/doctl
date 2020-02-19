@@ -107,7 +107,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: doctl.ArgDefaultContext,
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default (current)\ntest\n",
 		},
@@ -117,7 +117,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: "test",
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default\ntest (current)\n",
 		},
@@ -127,7 +127,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Context: "missing",
 			Contexts: map[string]interface{}{
 				doctl.ArgDefaultContext: true,
-				"test":    true,
+				"test":                  true,
 			},
 			Expected: "default\ntest\n",
 		},

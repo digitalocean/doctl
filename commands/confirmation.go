@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// retriveUserInput is a function that can retrive user input in form of string. By default,
+// retrieveUserInput is a function that can retrieve user input in form of string. By default,
 // it will prompt the user. In test, you can replace this with code that returns the appropriate response.
 var retrieveUserInput = func(message string) (string, error) {
 	return readUserInput(os.Stdin, message)
@@ -34,11 +34,11 @@ func readUserInput(in io.Reader, message string) (string, error) {
 func AskForConfirm(message string) error {
 	answer, err := retrieveUserInput(message)
 	if err != nil {
-		return fmt.Errorf("unable to parse users input: %s", err)
+		return fmt.Errorf("Unable to parse users input: %s", err)
 	}
 
 	if answer != "y" && answer != "ye" && answer != "yes" {
-		return fmt.Errorf("invalid user input")
+		return fmt.Errorf("Invalid user input")
 	}
 
 	return nil

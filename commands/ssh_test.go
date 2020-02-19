@@ -62,7 +62,7 @@ func TestSSH_UnknownDroplet(t *testing.T) {
 		config.Args = append(config.Args, "missing")
 
 		err := RunSSH(config)
-		assert.EqualError(t, err, "could not find droplet")
+		assert.EqualError(t, err, "Could not find Droplet")
 	})
 }
 
@@ -73,7 +73,7 @@ func TestSSH_DropletWithNoPublic(t *testing.T) {
 		config.Args = append(config.Args, testPrivateDroplet.Name)
 
 		err := RunSSH(config)
-		assert.EqualError(t, err, "could not find droplet address")
+		assert.EqualError(t, err, "Could not find Droplet address")
 	})
 }
 

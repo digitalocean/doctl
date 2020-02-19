@@ -28,22 +28,32 @@ func FloatingIPAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "floating-ip-action",
-			Short:   "floating IP action commands",
-			Long:    "floating IP action commands",
+			Short:   "Display commands to associate floating IP addresses with Droplets",
+			Long:    "Floating IP actions are commands that are used to manage DigitalOcean floating IP addresses.",
 			Aliases: []string{"fipa"},
 		},
 	}
+	flipactionDetail := `
 
-	CmdBuilder(cmd, RunFloatingIPActionsGet,
-		"get <floating-ip> <action-id>", "get floating-ip action", Writer,
+	- The unique numeric ID used to identify and reference a floating IP action.
+	- The status of the floating IP action. This will be either "in-progress", "completed", or "errored".
+	- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
+	- A time value given in ISO8601 combined date and time format that represents when the action was completed.
+	- The resource ID, which is a unique identifier for the resource that the action is associated with.
+	- The type of resource that the action is associated with.
+	- The region where the action occurred.
+	- The slug for the region where the action occurred.
+`
+	CmdBuilderWithDocs(cmd, RunFloatingIPActionsGet,
+		"get <floating-ip> <action-id>", "Retrieve the status of a floating IP action", `Use this command to retrieve the status of a floating IP action. Outputs the following information:`+flipactionDetail, Writer,
 		displayerType(&displayers.Action{}))
 
-	CmdBuilder(cmd, RunFloatingIPActionsAssign,
-		"assign <floating-ip> <droplet-id>", "assign a floating IP to a droplet", Writer,
+	CmdBuilderWithDocs(cmd, RunFloatingIPActionsAssign,
+		"assign <floating-ip> <droplet-id>", "Assign a floating IP address to a Droplet", "Use this command to assign a floating IP address to a Droplet by specifying the `droplet_id`.", Writer,
 		displayerType(&displayers.Action{}))
 
-	CmdBuilder(cmd, RunFloatingIPActionsUnassign,
-		"unassign <floating-ip>", "unassign a floating IP to a droplet", Writer,
+	CmdBuilderWithDocs(cmd, RunFloatingIPActionsUnassign,
+		"unassign <floating-ip>", "Unassign a floating IP address from a Droplet", `Use this command to unassign a floating IP address from a Droplet. The floating IP address will be reserved in the region but not assigned to a Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 
 	return cmd
