@@ -14,11 +14,15 @@ limitations under the License.
 package commands
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -130,7 +134,7 @@ var testInvoiceSummary = &do.InvoiceSummary{
 func TestInvoicesCommand(t *testing.T) {
 	invoicesCmd := Invoices()
 	assert.NotNil(t, invoicesCmd)
-	assertCommandNames(t, invoicesCmd, "get", "list", "summary")
+	assertCommandNames(t, invoicesCmd, "get", "list", "summary", "csv", "pdf")
 }
 
 func TestInvoicesGet(t *testing.T) {
@@ -162,4 +166,58 @@ func TestInvoicesSummary(t *testing.T) {
 		err := RunInvoicesSummary(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestInvoicesGetPDF(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		path := os.TempDir()
+		content := []byte("pdf response")
+		fileUUID := uuid.New().String()
+
+		tm.invoices.EXPECT().GetPDF("example-invoice-uuid").Return(content, nil)
+		fpath := filepath.Join(path, fileUUID)
+
+		config.Args = append(config.Args, "example-invoice-uuid", fpath)
+
+		err := RunInvoicesGetPDF(config)
+		assert.NoError(t, err)
+
+		// Assert the file exists
+		result, err := ioutil.ReadFile(fpath)
+		assert.NoError(t, err)
+		assert.Equal(t, content, result)
+
+		os.Remove(fpath)
+	})
+}
+
+func TestInvoicesGetCSV(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		path := os.TempDir()
+		content := []byte("csv response")
+		fileUUID := uuid.New().String()
+
+		tm.invoices.EXPECT().GetCSV("example-invoice-uuid").Return(content, nil)
+		fpath := filepath.Join(path, fileUUID)
+
+		config.Args = append(config.Args, "example-invoice-uuid", fpath)
+
+		err := RunInvoicesGetCSV(config)
+		assert.NoError(t, err)
+
+		// Assert the file exists
+		result, err := ioutil.ReadFile(fpath)
+		assert.NoError(t, err)
+		assert.Equal(t, content, result)
+
+		os.Remove(fpath)
+	})
+}
+
+func TestOutputFileArg(t *testing.T) {
+	result := getOutputFileArg("pdf", []string{"invoice-uuid"})
+	assert.Equal(t, "invoice.pdf", result)
+
+	result = getOutputFileArg("pdf", []string{"invoice-uuid", "target.any"})
+	assert.Equal(t, "target.any", result)
 }

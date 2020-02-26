@@ -44,6 +44,8 @@ type InvoicesService interface {
 	Get(string) (*Invoice, error)
 	List() (*InvoiceList, error)
 	GetSummary(string) (*InvoiceSummary, error)
+	GetPDF(string) ([]byte, error)
+	GetCSV(string) ([]byte, error)
 }
 
 type invoicesService struct {
@@ -130,4 +132,22 @@ func (is *invoicesService) GetSummary(uuid string) (*InvoiceSummary, error) {
 	}
 
 	return &InvoiceSummary{InvoiceSummary: summary}, nil
+}
+
+func (is *invoicesService) GetPDF(uuid string) ([]byte, error) {
+	pdf, _, err := is.client.Invoices.GetPDF(context.Background(), uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return pdf, nil
+}
+
+func (is *invoicesService) GetCSV(uuid string) ([]byte, error) {
+	csv, _, err := is.client.Invoices.GetCSV(context.Background(), uuid)
+	if err != nil {
+		return nil, err
+	}
+
+	return csv, nil
 }

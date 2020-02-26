@@ -14,8 +14,11 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/digitalocean/doctl/commands/displayers"
+	"fmt"
+	"io/ioutil"
+
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/spf13/cobra"
 )
 
@@ -38,15 +41,29 @@ func Invoices() *Command {
 	CmdBuilder(cmd, RunInvoicesSummary, "summary <invoice-uuid>", "get a summary of an invoice", Writer,
 		aliasOpt("s"), displayerType(&displayers.Invoice{}))
 
+	CmdBuilder(cmd, RunInvoicesGetPDF, "pdf <invoice-uuid> <output-file.pdf>", "get a pdf of an invoice", Writer,
+		aliasOpt("p"))
+
+	CmdBuilder(cmd, RunInvoicesGetCSV, "csv <invoice-uuid> <output-file.csv>", "get a csv of an invoice", Writer,
+		aliasOpt("c"))
+
 	return cmd
 }
 
 func getInvoiceUUIDArg(ns string, args []string) (string, error) {
-	if len(args) != 1 {
+	if len(args) < 1 {
 		return "", doctl.NewMissingArgsErr(ns)
 	}
 
 	return args[0], nil
+}
+
+func getOutputFileArg(ext string, args []string) string {
+	if len(args) != 2 {
+		return fmt.Sprintf("invoice.%s", ext)
+	}
+
+	return args[1]
 }
 
 // RunInvoicesGet runs invoice get.
@@ -87,4 +104,48 @@ func RunInvoicesSummary(c *CmdConfig) error {
 	}
 
 	return c.Display(&displayers.InvoiceSummary{InvoiceSummary: summary})
+}
+
+// RunInvoicesGetPDF runs an invoice get pdf.
+func RunInvoicesGetPDF(c *CmdConfig) error {
+	uuid, err := getInvoiceUUIDArg(c.NS, c.Args)
+	if err != nil {
+		return err
+	}
+
+	pdf, err := c.Invoices().GetPDF(uuid)
+	if err != nil {
+		return err
+	}
+
+	outputFile := getOutputFileArg("pdf", c.Args)
+
+	err = ioutil.WriteFile(outputFile, pdf, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RunInvoicesGetCSV runs an invoice get csv.
+func RunInvoicesGetCSV(c *CmdConfig) error {
+	uuid, err := getInvoiceUUIDArg(c.NS, c.Args)
+	if err != nil {
+		return err
+	}
+
+	csv, err := c.Invoices().GetCSV(uuid)
+	if err != nil {
+		return err
+	}
+
+	outputFile := getOutputFileArg("csv", c.Args)
+
+	err = ioutil.WriteFile(outputFile, csv, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

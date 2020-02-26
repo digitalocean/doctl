@@ -33,9 +33,9 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 GOARCH = amd64
-ifneq ($(UNAME_P), x86_64)
-  GOARCH = 386
-endif
+#ifneq ($(UNAME_P), x86_64)
+  #GOARCH = 386
+#endif
 
 .PHONY: _build
 _build:
