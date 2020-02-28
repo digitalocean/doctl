@@ -2,6 +2,7 @@
 
 ## unreleased
 
+- #305 invoices: GetPDF and GetCSV methods - @rbutler
 - #301 invoices: Get, Summary, and List methods - @rbutler
 
 ## [v1.30.0] - 2020-02-03

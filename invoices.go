@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -14,6 +15,8 @@ const invoicesBasePath = "v2/customers/my/invoices"
 // See: https://developers.digitalocean.com/documentation/v2/#invoices
 type InvoicesService interface {
 	Get(context.Context, string, *ListOptions) (*Invoice, *Response, error)
+	GetPDF(context.Context, string) ([]byte, *Response, error)
+	GetCSV(context.Context, string) ([]byte, *Response, error)
 	List(context.Context, *ListOptions) (*InvoiceList, *Response, error)
 	GetSummary(context.Context, string) (*InvoiceSummary, *Response, error)
 }
@@ -183,4 +186,40 @@ func (s *InvoicesServiceOp) GetSummary(ctx context.Context, invoiceUUID string) 
 	}
 
 	return root, resp, err
+}
+
+// Get the pdf for an Invoice
+func (s *InvoicesServiceOp) GetPDF(ctx context.Context, invoiceUUID string) ([]byte, *Response, error) {
+	path := fmt.Sprintf("%s/%s/pdf", invoicesBasePath, invoiceUUID)
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var root bytes.Buffer
+	resp, err := s.client.Do(ctx, req, &root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Bytes(), resp, err
+}
+
+// Get the csv for an Invoice
+func (s *InvoicesServiceOp) GetCSV(ctx context.Context, invoiceUUID string) ([]byte, *Response, error) {
+	path := fmt.Sprintf("%s/%s/csv", invoicesBasePath, invoiceUUID)
+
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var root bytes.Buffer
+	resp, err := s.client.Do(ctx, req, &root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Bytes(), resp, err
 }
