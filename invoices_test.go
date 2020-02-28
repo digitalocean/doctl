@@ -1,6 +1,7 @@
 package godo
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -267,5 +268,45 @@ func TestInvoices_GetSummary(t *testing.T) {
 	}
 	if !reflect.DeepEqual(invoiceSummaryResponse, &expectedSummary) {
 		t.Errorf("Invoices.GetSummary\nInvoiceSummary: got=%#v\nwant=%#v", invoiceSummaryResponse, &expectedSummary)
+	}
+}
+
+func TestInvoices_GetPDF(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/customers/my/invoices/example-invoice-uuid/pdf", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, `some pdf content`)
+	})
+
+	invoicePDFResponse, _, err := client.Invoices.GetPDF(ctx, "example-invoice-uuid")
+	if err != nil {
+		t.Errorf("Invoices.GetPDF returned error: %v", err)
+	}
+
+	expected := []byte("some pdf content")
+	if !bytes.Equal(invoicePDFResponse, expected) {
+		t.Errorf("Invoices.GetPDF\n got=%#v\nwant=%#v", invoicePDFResponse, expected)
+	}
+}
+
+func TestInvoices_GetCSV(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc("/v2/customers/my/invoices/example-invoice-uuid/csv", func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		fmt.Fprint(w, `some csv content`)
+	})
+
+	invoiceCSVResponse, _, err := client.Invoices.GetCSV(ctx, "example-invoice-uuid")
+	if err != nil {
+		t.Errorf("Invoices.GetCSV returned error: %v", err)
+	}
+
+	expected := []byte("some csv content")
+	if !bytes.Equal(invoiceCSVResponse, expected) {
+		t.Errorf("Invoices.GetCSV\n got=%#v\nwant=%#v", invoiceCSVResponse, expected)
 	}
 }
