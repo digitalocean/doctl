@@ -123,6 +123,11 @@ func TestNewClient(t *testing.T) {
 	testClientDefaults(t, c)
 }
 
+func TestNewFromToken(t *testing.T) {
+	c := NewFromToken("my-token")
+	testClientDefaults(t, c)
+}
+
 func TestNew(t *testing.T) {
 	c, err := New(nil)
 
