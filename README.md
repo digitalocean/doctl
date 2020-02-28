@@ -248,7 +248,7 @@ The `doctl` configuration file is used to store your API Access Token as well as
 
 On OS X, `doctl` saves its configuration as `${HOME}/Library/Application Support/doctl/config.yaml`. The `${HOME}/Library/Application Support/doctl/` directory will be created once you run `doctl auth init`.
 
-On Linux, `doctl` saves its configuration as `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set, or `~/.config/doctl/config.yaml` if it is not. On Windows, the config file location is `%LOCALAPPDATA%/doctl/config/config.yaml`.
+On Linux, `doctl` saves its configuration as `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set, or `~/.config/doctl/config.yaml` if it is not. On Windows, the config file location is `%APPDATA%\doctl\config.yaml`.
 
 The configuration file is automatically created and populated with default properties when you authenticate with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
 
