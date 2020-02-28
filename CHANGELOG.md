@@ -2,6 +2,8 @@
 
 ## unreleased
 
+## [v1.31.0] - 2020-02-28
+
 - #305 invoices: GetPDF and GetCSV methods - @rbutler
 - #304 Add NewFromToken convenience method to init client - @bentranter
 - #301 invoices: Get, Summary, and List methods - @rbutler
