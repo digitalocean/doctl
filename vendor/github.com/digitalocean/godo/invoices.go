@@ -188,7 +188,7 @@ func (s *InvoicesServiceOp) GetSummary(ctx context.Context, invoiceUUID string) 
 	return root, resp, err
 }
 
-// Get a the pdf for an Invoice
+// Get the pdf for an Invoice
 func (s *InvoicesServiceOp) GetPDF(ctx context.Context, invoiceUUID string) ([]byte, *Response, error) {
 	path := fmt.Sprintf("%s/%s/pdf", invoicesBasePath, invoiceUUID)
 
@@ -206,7 +206,7 @@ func (s *InvoicesServiceOp) GetPDF(ctx context.Context, invoiceUUID string) ([]b
 	return root.Bytes(), resp, err
 }
 
-// Get a the csv for an Invoice
+// Get the csv for an Invoice
 func (s *InvoicesServiceOp) GetCSV(ctx context.Context, invoiceUUID string) ([]byte, *Response, error) {
 	path := fmt.Sprintf("%s/%s/csv", invoicesBasePath, invoiceUUID)
 

@@ -6,7 +6,7 @@ github.com/cpuguy83/go-md2man/md2man
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.30.0 => ../godo
+# github.com/digitalocean/godo v1.31.0
 github.com/digitalocean/godo
 github.com/digitalocean/godo/util
 # github.com/dustin/go-humanize v1.0.0
@@ -35,6 +35,8 @@ github.com/golang/protobuf/proto
 github.com/google/go-querystring/query
 # github.com/google/gofuzz v1.0.0
 github.com/google/gofuzz
+# github.com/google/uuid v1.1.1
+github.com/google/uuid
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -91,8 +93,6 @@ github.com/spf13/jwalterweatherman
 github.com/spf13/pflag
 # github.com/spf13/viper v1.4.0
 github.com/spf13/viper
-# github.com/stretchr/objx v0.1.1 => github.com/stretchr/objx v0.2.0
-github.com/stretchr/objx
 # github.com/stretchr/testify v1.4.0
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
