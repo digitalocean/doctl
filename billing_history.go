@@ -46,8 +46,7 @@ func (b BillingHistory) String() string {
 
 // List the Billing History for a customer
 func (s *BillingHistoryServiceOp) List(ctx context.Context, opt *ListOptions) (*BillingHistory, *Response, error) {
-	path := billingHistoryBasePath
-	path, err := addOptions(path, opt)
+	path, err := addOptions(billingHistoryBasePath, opt)
 	if err != nil {
 		return nil, nil, err
 	}
