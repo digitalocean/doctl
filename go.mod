@@ -6,11 +6,12 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/creack/pty v1.1.7
-	github.com/digitalocean/godo v1.30.0
+	github.com/digitalocean/godo v1.31.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/gobwas/glob v0.2.3
 	github.com/golang/mock v1.4.0
+	github.com/google/uuid v1.1.1
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
