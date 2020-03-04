@@ -1,6 +1,7 @@
 # Change Log
 
 ## unreleased
+- #300 Add reset database user auth method - @zbarahal-do
 
 ## {v1.32.0] -2020-03-04
 
