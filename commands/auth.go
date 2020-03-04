@@ -62,7 +62,7 @@ type UnknownSchemeError struct {
 var _ error = &UnknownSchemeError{}
 
 func (use *UnknownSchemeError) Error() string {
-	return "unknown scheme: " + use.Scheme
+	return "Unknown scheme: " + use.Scheme
 }
 
 // Auth creates auth commands for doctl.
@@ -70,18 +70,38 @@ func Auth() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "auth",
-			Short: "auth commands",
-			Long:  "auth is used to access auth commands",
+			Short: "Display commands for authenticating doctl with an account",
+			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/token.
+
+If you work with a just one account, you can call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
+
+To switch between multiple DigitalOcean accounts, including team accounts, you can create named contexts by using ` + "`" + `doctl auth init --context <name>` + "`" + `, then providing a token when prompted. This saves the token under the name you provide. To switch between accounts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.`,
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "initialize configuration", Writer, false)
-	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "writes the auth context permanently to config", Writer, false)
-	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "lists available auth contexts", Writer, false, aliasOpt("ls"))
+	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "Initialize doctl to use a specific account", `This command allows you to initialize doctl with a token that allows it to query and manage your account details and resources.
+
+You will need an API token, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/token.
+
+You can provide a name to this initialization via the `+"`"+`--context`+"`"+` flag, and then it will be saved as an "authentication context". Authentication contexts are accessible via `+"`"+`doctl auth switch`+"`"+`, which re-initializes doctl, or by providing the `+"`"+`--context`+"`"+` flag when using any doctl command (to specify that auth context for just one command). This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
+
+If the `+"`"+`--context`+"`"+` flag is not specified, a default authentication context will be created during initialization.
+
+If doctl is never initialized, you will need to specify an API token whenever you use a `+"`"+`doctl`+"`"+` command via the `+"`"+`--access-token`+"`"+` flag.`, Writer, false)
+	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switches between authentication contexts", `This command allows you to switch between accounts with authentication contexts you've already created.
+
+To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
+
+For details on creating an authentication context, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "List available authentication contexts", `List named authentication contexts that you created with `+"`"+`doctl auth init`+"`"+`.
+
+To switch between the contexts use `+"`"+`doctl switch <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts listed.
+
+To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false, aliasOpt("ls"))
 	// The command runner expects that any command named "list" accepts a
 	// format flag, so we include here despite only supporting text output for
 	// this command.
-	AddStringFlag(cmdAuthList, doctl.ArgFormat, "", "", "Columns for output in a comma separated list. Possible values: text")
+	AddStringFlag(cmdAuthList, doctl.ArgFormat, "", "", "Columns for output in a comma-separated list. Possible values: `text`")
 
 	return cmd
 }
@@ -95,7 +115,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 		if token == "" {
 			in, err := retrieveUserTokenFunc()
 			if err != nil {
-				return fmt.Errorf("unable to read DigitalOcean access token: %s", err)
+				return fmt.Errorf("Unable to read DigitalOcean access token: %s", err)
 			}
 			token = strings.TrimSpace(in)
 		} else {
@@ -110,13 +130,13 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 		// need to initial the godo client since we've changed the configuration.
 		if err := c.initServices(c); err != nil {
-			return fmt.Errorf("unable to initialize DigitalOcean API client with new token: %s", err)
+			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
 		}
 
 		if _, err := c.Account().Get(); err != nil {
 			fmt.Fprintln(c.Out, "invalid token")
 			fmt.Fprintln(c.Out)
-			return fmt.Errorf("unable to use supplied token to access API: %s", err)
+			return fmt.Errorf("Unable to use supplied token to access API: %s", err)
 		}
 
 		fmt.Fprintln(c.Out, "OK")
@@ -185,12 +205,12 @@ func writeConfig() error {
 
 	b, err := yaml.Marshal(viper.AllSettings())
 	if err != nil {
-		return errors.New("unable to encode configuration to YAML format")
+		return errors.New("Unable to encode configuration to YAML format.")
 	}
 
 	_, err = f.Write(b)
 	if err != nil {
-		return errors.New("unable to write configuration")
+		return errors.New("Unable to write configuration.")
 	}
 
 	return nil

@@ -23,15 +23,29 @@ func Account() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "account",
-			Short: "account commands",
-			Long:  "account is used to access account commands",
+			Short: "Display commands that retrieve account details",
+			Long: `The subcommands of ` + "`" + `doctl account` + "`" + ` retreive information about DigitalOcean accounts.
+
+For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile details, and ` + "`" + `doctl account ratelimit` + "`" + ` retrieves API usage details.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunAccountGet, "get", "get account", Writer,
+	CmdBuilderWithDocs(cmd, RunAccountGet, "get", "Retrieve account profile details", `Retrieve the following details from your account profile:
+
+- Email address
+- Account Droplet limit
+- Email verification status
+- Account status (active or disabled)
+- UUID for the account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Account{}))
 
-	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "get API rate limits", Writer,
+	CmdBuilderWithDocs(cmd, RunAccountRateLimit, "ratelimit", "Retrieve your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
+
+- The current limit on your account for API calls (5,000 per hour per OAuth token)
+- The number of API calls you have made in the last hour
+- When the API call count is due to reset to zero, which happens hourly
+
+Note that these details are per OAuth token and are tied to the token you used when calling `+"`"+`doctl auth init`+"`"+` at setup time.`, Writer,
 		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))
 
 	return cmd

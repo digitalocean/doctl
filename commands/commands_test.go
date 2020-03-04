@@ -157,6 +157,7 @@ type tcMocks struct {
 	regions           *domocks.MockRegionsService
 	images            *domocks.MockImagesService
 	imageActions      *domocks.MockImageActionsService
+	invoices          *domocks.MockInvoicesService
 	floatingIPs       *domocks.MockFloatingIPsService
 	floatingIPActions *domocks.MockFloatingIPActionsService
 	domains           *domocks.MockDomainsService
@@ -171,6 +172,7 @@ type tcMocks struct {
 	projects          *domocks.MockProjectsService
 	kubernetes        *domocks.MockKubernetesService
 	registry          *domocks.MockRegistryService
+	sshRunner         *domocks.MockRunner
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -186,6 +188,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		regions:           domocks.NewMockRegionsService(ctrl),
 		images:            domocks.NewMockImagesService(ctrl),
 		imageActions:      domocks.NewMockImageActionsService(ctrl),
+		invoices:          domocks.NewMockInvoicesService(ctrl),
 		floatingIPs:       domocks.NewMockFloatingIPsService(ctrl),
 		floatingIPActions: domocks.NewMockFloatingIPActionsService(ctrl),
 		droplets:          domocks.NewMockDropletsService(ctrl),
@@ -203,6 +206,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		kubernetes:        domocks.NewMockKubernetesService(ctrl),
 		databases:         domocks.NewMockDatabasesService(ctrl),
 		registry:          domocks.NewMockRegistryService(ctrl),
+		sshRunner:         domocks.NewMockRunner(ctrl),
 	}
 
 	config := &CmdConfig{
@@ -232,6 +236,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Actions:           func() do.ActionsService { return tm.actions },
 		Account:           func() do.AccountService { return tm.account },
 		Balance:           func() do.BalanceService { return tm.balance },
+		Invoices:          func() do.InvoicesService { return tm.invoices },
 		Tags:              func() do.TagsService { return tm.tags },
 		Volumes:           func() do.VolumesService { return tm.volumes },
 		VolumeActions:     func() do.VolumeActionsService { return tm.volumeActions },

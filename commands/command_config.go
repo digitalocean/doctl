@@ -49,6 +49,7 @@ type CmdConfig struct {
 	Actions           func() do.ActionsService
 	Account           func() do.AccountService
 	Balance           func() do.BalanceService
+	Invoices          func() do.InvoicesService
 	Tags              func() do.TagsService
 	Volumes           func() do.VolumesService
 	VolumeActions     func() do.VolumeActionsService
@@ -75,7 +76,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			accessToken := c.getContextAccessToken()
 			godoClient, err := c.Doit.GetGodoClient(Trace, accessToken)
 			if err != nil {
-				return fmt.Errorf("unable to initialize DigitalOcean api client: %s", err)
+				return fmt.Errorf("Unable to initialize DigitalOcean API client: %s", err)
 			}
 
 			c.Keys = func() do.KeysService { return do.NewKeysService(godoClient) }
@@ -91,6 +92,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
 			c.Balance = func() do.BalanceService { return do.NewBalanceService(godoClient) }
+			c.Invoices = func() do.InvoicesService { return do.NewInvoicesService(godoClient) }
 			c.Tags = func() do.TagsService { return do.NewTagsService(godoClient) }
 			c.Volumes = func() do.VolumesService { return do.NewVolumesService(godoClient) }
 			c.VolumeActions = func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) }

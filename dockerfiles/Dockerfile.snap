@@ -33,7 +33,8 @@ RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/sna
 FROM ubuntu:xenial
 COPY --from=builder /snap /snap
 
-RUN apt update && \
+RUN apt clean && \
+	apt update && \
         apt dist-upgrade --yes && \
         apt install --yes \
         sudo locales \

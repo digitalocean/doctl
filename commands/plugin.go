@@ -29,7 +29,7 @@ func Plugin() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:        "plugin",
-			Short:      "plugin commands",
+			Short:      "Display commands to manage plugins",
 			Long:       "plugin is used to access plugin commands",
 			Aliases:    []string{"p"},
 			Hidden:     true,

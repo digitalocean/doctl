@@ -19,7 +19,7 @@ Available Commands:
   version     show the current version
 
 Flags:
-  -t, --access-token string   API V2 Access Token
+  -t, --access-token string   API V2 access token
   -u, --api-url string        Override default API V2 endpoint
   -c, --config string         config file (default is $HOME/.config/doctl/config.yaml)
       --context string        authentication context name
@@ -51,6 +51,9 @@ Use "doctl [command] --help" for more information about a command.
     - [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
         - [Linux](#linux-auto-completion)
         - [macOS](#macos-auto-completion)
+    - [Uninstalling `doctl`](#uninstalling-doctl)
+      - [Using a Package Manager](#using-a-package-manager)
+        - [macOS](#macos-uninstall)
     - [Examples](#examples)
     - [Tutorials](#tutorials)
     - [doctl Releases](https://github.com/digitalocean/doctl/releases)
@@ -245,7 +248,7 @@ The `doctl` configuration file is used to store your API Access Token as well as
 
 On OS X, `doctl` saves its configuration as `${HOME}/Library/Application Support/doctl/config.yaml`. The `${HOME}/Library/Application Support/doctl/` directory will be created once you run `doctl auth init`.
 
-On Linux, `doctl` saves its configuration as `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set, or `~/.config/doctl/config.yaml` if it is not. On Windows, the config file location is `%LOCALAPPDATA%/doctl/config/config.yaml`.
+On Linux, `doctl` saves its configuration as `${XDG_CONFIG_HOME}/doctl/config.yaml` if the `${XDG_CONFIG_HOME}` environmental variable is set, or `~/.config/doctl/config.yaml` if it is not. On Windows, the config file location is `%APPDATA%\doctl\config.yaml`.
 
 The configuration file is automatically created and populated with default properties when you authenticate with `doctl` for the first time. The typical format for a property is `category.command.sub-command.flag: value`. For example, the property for the `force` flag with tag deletion is `tag.delete.force`.
 
@@ -303,6 +306,25 @@ Then refresh your profile using the appropriate command for bash configurations 
 source ~/.profile
 source ~/.bashrc
 source ~/.zshrc
+```
+
+
+## Uninstalling `doctl`
+
+### Using a Package Manager
+
+#### MacOS Uninstall
+
+Use [Homebrew](https://brew.sh/) to uninstall all current and previous versions of the `doctl` formula on macOS:
+
+```
+brew uninstall -f doctl
+```
+
+To completely remove configuration, also remove the following directory:
+
+```
+rm -rf $HOME/Library/Application Support/doctl
 ```
 
 

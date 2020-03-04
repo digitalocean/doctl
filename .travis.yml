@@ -7,7 +7,7 @@ notifications:
     rooms:
       secure: NR3+H9V0/RAIS98iRqcpoDe9u8d9xMnNVT5EhwRgIiEqtONUUlHWVQaJ0ZS+fzQPHlErhAflGYSLg4L6CStF3UQoojlG6l46d9FQ3WiKFa2YAUtyoOXnOUj8AMPtjfJXwgHDxnOKcZ7RpQWg0uFMG7J8z2I3Mtm0B2MlLmwBa1jPzUkfQDKAjD1h0new7+KoRCaEQLWJA5T/nnyL4gtwjB7lBcr04SDTw91DE/mniT9Jr38UXv8MwOURmm/p5nvlG1blTopLjMWE6F2sOBj4kaDkkizcxUseRsyhu+rFPEFo9X1rPg1gxXW9lKL1JV9JFO29aHe1ZN6T0mSCraYUgqa3UaN3NiYVep/wye8KpMxJ6AiqpGvWP6ABAojlEiQkbKNvklhzKpnqwSQxm8K/mzK8kqOUMzQfEEVdUife5e0SdIk67zeCzu4PZLBJIj661XQzM4zJRy0FgmxyPKWrA8e8RimSzaT1geea96jvCwmG1VfJz+DRV2WFUwg9YIh9Xvb20q0yodvGczZU7AA0AIrePHXntFkjfRB7jQ8RFGwrVL3UqKLo6t2hforrbV0ll1EVRPZ3uUYY/tfYE2z/GNL10dcnzjlW+WYTg3ZA/6GtnsCT6GpaeKUxF9GvOEzQDIG2BwHFfQYTPuXIdFOFqKrMkdz4V+Ak/wviNBD3xrU=
     on_pull_requests: false
-    os_success: change
+    on_success: change
     on_failure: always
 
 jobs:
@@ -37,6 +37,7 @@ jobs:
   - stage: deploy
     if: type=push
     script: echo "running goreleaser"
+    os: linux
     dist: bionic
     go: 1.13.x
     services: docker
@@ -47,7 +48,7 @@ jobs:
     deploy:
     - provider: script
       script: ./scripts/release_travis.sh
-      skip_cleanup: true
+      cleanup: false
       on:
         tags: true
         repo: digitalocean/doctl
@@ -58,13 +59,14 @@ jobs:
     - make _build_snap
     dist: bionic
     go: 1.13.x
+    os: linux
     services: docker
     env: CACHE_NAME=DEPLOY_STABLE_SNAP
     deploy:
     - provider: snap
       channel: stable
       snap: doctl_v*.snap
-      skip_cleanup: true
+      cleanup: false
       on:
         tags: true
         repo: digitalocean/doctl
@@ -74,6 +76,7 @@ jobs:
     - echo "building snap"
     - make _build_snap
     dist: bionic
+    os: linux
     go: 1.13.x
     services: docker
     env: CACHE_NAME=DEPLOY_CANDIDATE_SNAP
@@ -81,7 +84,7 @@ jobs:
     - provider: snap
       channel: candidate
       snap: doctl_v*.snap
-      skip_cleanup: true
+      cleanup: false
       on:
         repo: digitalocean/doctl
 

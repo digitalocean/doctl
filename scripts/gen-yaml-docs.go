@@ -44,7 +44,9 @@ func main() {
 	}
 }
 
+// Iterate through commands in commands/*.go and run Cobra's GenYaml function.
 func writeDocs(cmd *cobra.Command, dir string) error {
+	// Exit if there's an error
 	for _, c := range cmd.Commands() {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
@@ -53,7 +55,7 @@ func writeDocs(cmd *cobra.Command, dir string) error {
 			return err
 		}
 	}
-
+	// Set filename to doctl_namespace_command.yaml, and create file
 	basename := strings.Replace(cmd.CommandPath(), " ", "_", -1) + ".yaml"
 	filename := filepath.Join(dir, basename)
 	f, err := os.Create(filename)
@@ -62,13 +64,16 @@ func writeDocs(cmd *cobra.Command, dir string) error {
 	}
 	defer f.Close()
 
+	// Call Cobra's GenYaml command, passing in the created file
 	doc.GenYaml(cmd, f)
+	// Append usage information to the standard YAML output
 	usage := fmt.Sprintf("usage: %s\n", cmd.UseLine())
-	aliases := fmt.Sprintf("aliases: %s\n", cmd.NameAndAliases())
+	// Append alias information to the standard YAML output
+	aliases := fmt.Sprintf("aliases: %s\n", strings.Join(cmd.Aliases, ", "))
+
 	lines := usage + aliases
 	if _, err := f.WriteString(lines); err != nil {
 		return err
 	}
-
 	return nil
 }
