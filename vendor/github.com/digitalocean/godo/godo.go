@@ -14,10 +14,11 @@ import (
 	"time"
 
 	"github.com/google/go-querystring/query"
+	"golang.org/x/oauth2"
 )
 
 const (
-	libraryVersion = "1.30.0"
+	libraryVersion = "1.32.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -52,6 +53,7 @@ type Client struct {
 	DropletActions    DropletActionsService
 	Images            ImagesService
 	ImageActions      ImageActionsService
+	Invoices          InvoicesService
 	Keys              KeysService
 	Regions           RegionsService
 	Sizes             SizesService
@@ -155,6 +157,17 @@ func addOptions(s string, opt interface{}) (string, error) {
 	return origURL.String(), nil
 }
 
+// NewFromToken returns a new DigitalOcean API client with the given API
+// token.
+func NewFromToken(token string) *Client {
+	ctx := context.Background()
+
+	config := &oauth2.Config{}
+	ts := config.TokenSource(ctx, &oauth2.Token{AccessToken: token})
+
+	return NewClient(oauth2.NewClient(ctx, ts))
+}
+
 // NewClient returns a new DigitalOcean API client.
 func NewClient(httpClient *http.Client) *Client {
 	if httpClient == nil {
@@ -177,6 +190,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.FloatingIPActions = &FloatingIPActionsServiceOp{client: c}
 	c.Images = &ImagesServiceOp{client: c}
 	c.ImageActions = &ImageActionsServiceOp{client: c}
+	c.Invoices = &InvoicesServiceOp{client: c}
 	c.Keys = &KeysServiceOp{client: c}
 	c.LoadBalancers = &LoadBalancersServiceOp{client: c}
 	c.Projects = &ProjectsServiceOp{client: c}
@@ -197,7 +211,7 @@ func NewClient(httpClient *http.Client) *Client {
 // ClientOpt are options for New.
 type ClientOpt func(*Client) error
 
-// New returns a new DIgitalOcean API client instance.
+// New returns a new DigitalOcean API client instance.
 func New(httpClient *http.Client, opts ...ClientOpt) (*Client, error) {
 	c := NewClient(httpClient)
 	for _, opt := range opts {
