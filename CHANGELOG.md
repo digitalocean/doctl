@@ -2,9 +2,11 @@
 
 ## unreleased
 
-## [v1.32.0] -2020-03-04
+- #310 Add BillingHistory service and List endpoint - @rbutler
 
-- #300 Add reset database user auth method - @zbarahal-do
+## [v1.32.0] - 2020-03-04
+
+- #311 Add reset database user auth method - @zbarahal-do
 
 ## [v1.31.0] - 2020-02-28
 
