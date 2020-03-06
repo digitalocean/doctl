@@ -303,7 +303,7 @@ func (ds *databasesService) DeleteUser(databaseID, userName string) error {
 	return err
 }
 
-func (ds *databasesService) ResetUserAUth(databaseID, userID string, req *godo.DatabaseResetUserAuthRequest) (*DatbaaseUser, error) {
+func (ds *databasesService) ResetUserAuth(databaseID, userID string, req *godo.DatabaseResetUserAuthRequest) (*DatabaseUser, error) {
 	u, _, err := ds.client.Databases.ResetUserAuth(context.TODO(), databaseID, userID, req)
 	if err != nil {
 		return nil, err
