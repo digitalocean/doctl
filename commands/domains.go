@@ -31,7 +31,7 @@ func Domain() *Command {
 		Command: &cobra.Command{
 			Use:   "domain",
 			Short: "Display commands that manage domains",
-			Long:  `Use the subcommands of ` + "`" + `doctl compute domain` + "`" + ` to manage domains you have purchased from a domain name registrar that you are managing through the DigitalOcean DNS interface.`,
+			Long:  "Use the subcommands of `doctl compute domain` to manage domains you have purchased from a domain name registrar that you are managing through the DigitalOcean DNS interface.",
 		},
 	}
 
@@ -52,7 +52,7 @@ func Domain() *Command {
 		Command: &cobra.Command{
 			Use:   "records",
 			Short: "Manage DNS records",
-			Long:  `Use the subcommands of ` + "`" + `doctl compute domain records` + "`" + ` to manage the DNS records for your domains.`,
+			Long:  "Use the subcommands of `doctl compute domain records` to manage the DNS records for your domains.",
 		},
 	}
 	cmd.AddCommand(cmdRecord)
