@@ -103,7 +103,7 @@ func Kubernetes() *Command {
 			Use:     "kubernetes",
 			Aliases: []string{"kube", "k8s", "k"},
 			Short:   "Displays comamnds to manage Kubernetes clusters and configurations",
-			Long:    `The commands under ` + "`" + `doctl kubernetes` + "`" + ` are for managing Kubernetes clusters and viewing configuration options relating to clusters.` + workflowDesc + optionsDesc,
+			Long:    "The commands under `doctl kubernetes` are for managing Kubernetes clusters and viewing configuration options relating to clusters." + workflowDesc + optionsDesc,
 		},
 	}
 
@@ -206,7 +206,7 @@ func kubernetesCluster() *Command {
 			Use:     "cluster",
 			Aliases: []string{"clusters", "c"},
 			Short:   "Display commands for managing Kubernetes clusters",
-			Long:    `The commands under ` + "`" + `doctl kubernetes cluster` + "`" + ` are for the management of Kubernetes clusters.` + workflowDesc,
+			Long:    "The commands under `doctl kubernetes cluster` are for the management of Kubernetes clusters." + workflowDesc,
 		},
 	}
 
@@ -363,7 +363,7 @@ func kubernetesNodePools() *Command {
 			Use:     "node-pool",
 			Aliases: []string{"node-pools", "nodepool", "nodepools", "pool", "pools", "np", "p"},
 			Short:   "Display commands for managing node pools",
-			Long:    `The commands under ` + "`" + `node-pool` + "`" + ` are for performing actions on a Kubernetes cluster's node pools. You can use these commands to create or delete node pools, enable autoscaling for a node pool, and more.`,
+			Long:    "The commands under `node-pool` are for performing actions on a Kubernetes cluster's node pools. You can use these commands to create or delete node pools, enable autoscaling for a node pool, and more.",
 		},
 	}
 
