@@ -23,13 +23,22 @@ func Balance() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "balance",
-			Short: "balance commands",
-			Long:  "balance is used to access balance commands",
+			Short: "Display commands for retrieving your account balance",
+			Long:  "The subcommands of `doctl balance` retrieve information about your account balance.",
 		},
 	}
 
-	CmdBuilder(cmd, RunBalanceGet, "get", "get balance", Writer,
-		aliasOpt("g"), displayerType(&displayers.Balance{}))
+	getBalanceDesc := `This command retrieves the following details about you account balance:
+
+- Your month-to-date balance as of the generated at time including your account
+  balance and month-to-date usage.
+- Your current balance as of your most recent billing activity.
+- The amount used in the current billing period as of the generated at time.
+- The time at which balances were most recently generated.
+`
+
+	CmdBuilderWithDocs(cmd, RunBalanceGet, "get", "Retrieve your account balance",
+		getBalanceDesc, Writer, aliasOpt("g"), displayerType(&displayers.Balance{}))
 
 	return cmd
 }
