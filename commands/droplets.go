@@ -205,6 +205,9 @@ func RunDropletCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if len(tagName) > 0 {
+		tagNames = append(tagNames, tagName)
+	}
 
 	sshKeys := extractSSHKeys(keys)
 
@@ -247,7 +250,6 @@ func RunDropletCreate(c *CmdConfig) error {
 	}
 
 	ds := c.Droplets()
-	ts := c.Tags()
 
 	var wg sync.WaitGroup
 	var createdList do.Droplets
@@ -272,36 +274,10 @@ func RunDropletCreate(c *CmdConfig) error {
 		go func() {
 			defer wg.Done()
 
-			if tagName != "" {
-				tag, err := ts.Get(tagName)
-				if err != nil {
-					errs <- err
-					return
-				}
-				if tag == nil {
-					errs <- fmt.Errorf("Specified tag does not exist.")
-					return
-				}
-			}
-
 			d, err := ds.Create(dcr, wait)
 			if err != nil {
 				errs <- err
 				return
-			}
-
-			if tagName != "" {
-				trr := &godo.TagResourcesRequest{
-					Resources: []godo.Resource{
-						{ID: strconv.Itoa(d.ID), Type: godo.DropletResourceType},
-					},
-				}
-
-				err := ts.TagResources(tagName, trr)
-				if err != nil {
-					errs <- err
-				}
-
 			}
 
 			createdList = append(createdList, *d)

@@ -106,16 +106,18 @@ func TestDropletCreate(t *testing.T) {
 
 func TestDropletCreateWithTag(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		dcr := &godo.DropletCreateRequest{Name: "droplet", Region: "dev0", Size: "1gb", Image: godo.DropletCreateImage{ID: 0, Slug: "image"}, SSHKeys: []godo.DropletCreateSSHKey{}, Backups: false, IPv6: false, PrivateNetworking: false, UserData: "#cloud-config"}
+		dcr := &godo.DropletCreateRequest{
+			Name:              "droplet",
+			Region:            "dev0",
+			Size:              "1gb",
+			Image:             godo.DropletCreateImage{ID: 0, Slug: "image"},
+			SSHKeys:           []godo.DropletCreateSSHKey{},
+			Backups:           false,
+			IPv6:              false,
+			PrivateNetworking: false,
+			UserData:          "#cloud-config",
+			Tags:              []string{"my-tag"}}
 		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
-		tm.tags.EXPECT().Get("my-tag").Return(&testTag, nil)
-
-		trr := &godo.TagResourcesRequest{
-			Resources: []godo.Resource{
-				{ID: "1", Type: godo.DropletResourceType},
-			},
-		}
-		tm.tags.EXPECT().TagResources("my-tag", trr).Return(nil)
 
 		config.Args = append(config.Args, "droplet")
 
