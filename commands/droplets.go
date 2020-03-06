@@ -37,7 +37,7 @@ func Droplet() *Command {
 			Use:     "droplet",
 			Aliases: []string{"d"},
 			Short:   "Manage virtual machines (Droplets)",
-			Long:    `A Droplet is a DigitalOcean virtual machine. Use the subcommands of ` + "`" + `doctl compute droplet` + "`" + ` to list, create, or delete Droplets.`,
+			Long:    "A Droplet is a DigitalOcean virtual machine. Use the subcommands of `doctl compute droplet` to list, create, or delete Droplets.",
 		},
 	}
 	dropletDetails := `

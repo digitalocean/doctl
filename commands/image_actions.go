@@ -30,7 +30,7 @@ func ImageAction() *Command {
 		Command: &cobra.Command{
 			Use:   "image-action",
 			Short: "Display commands to perform actions on images",
-			Long:  `The sub-commands of ` + "`" + `doctl compute image-actions` + "`" + ` can be used to perform actions on images.`,
+			Long:  "The sub-commands of `doctl compute image-actions` can be used to perform actions on images.",
 		},
 	}
 	actionDetail := `
