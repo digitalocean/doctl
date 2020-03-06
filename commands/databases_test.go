@@ -184,6 +184,7 @@ func TestDatabaseUserCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"list",
 		"get",
+		"reset",
 		"create",
 		"delete",
 	)
@@ -573,9 +574,9 @@ func TestDatabaseResetUserAuth(t *testing.T) {
 
 	// Successful call
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().CreateUser(testDBCluster.ID, testDBUser.Name, r).Return(&testDBUser, nil)
+		tm.databases.EXPECT().ResetUserAuth(testDBCluster.ID, testDBUser.Name, r).Return(&testDBUser, nil)
 
-		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name, godo.SQLAuthPluginCachingSHA2)
 
 		err := RunDatabaseUserResetAuth(config)
 		assert.NoError(t, err)
@@ -583,12 +584,13 @@ func TestDatabaseResetUserAuth(t *testing.T) {
 
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().CreateUser(
+		tm.databases.EXPECT().ResetUserAuth(
 			testDBCluster.ID,
+			testDBUser.Name,
 			gomock.AssignableToTypeOf(&godo.DatabaseResetUserAuthRequest{}),
 		).Return(nil, errTest)
 
-		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name, godo.SQLAuthPluginNative)
 		err := RunDatabaseUserResetAuth(config)
 		assert.EqualError(t, err, "error")
 	})
