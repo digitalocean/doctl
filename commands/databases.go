@@ -43,7 +43,7 @@ func Databases() *Command {
 			Use:     "databases",
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
-			Long:    `The commands under ` + "`" + `doctl databases` + "`" + ` are for managing your MySQL, Redis, and PostgreSQL database services.`,
+			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, and PostgreSQL database services.",
 		},
 	}
 
@@ -1074,16 +1074,21 @@ func sqlMode() *Command {
 		Command: &cobra.Command{
 			Use:     "sql-mode",
 			Aliases: []string{"sm"},
-			Short:   "database sql-mode commands",
-			Long:    "sql-mode is used to access database sql-mode commands",
+			Short:   "Display commands to configure a MySQL database cluster's SQL modes",
+			Long:    "The subcommands of `doctl databases sql-mode` are used to view and configure a MySQL database cluster's global SQL modes.",
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseGetSQLModes, "get <database-id>",
-		"get sql modes", Writer,
+	getSqlModeDesc := "This command displays the the configured SQL modes for the specified MySQL database cluster."
+	CmdBuilderWithDocs(cmd, RunDatabaseGetSQLModes, "get <database-id>",
+		"Get a MySQL database cluster's SQL modes", getSqlModeDesc, Writer,
 		displayerType(&displayers.DatabaseSQLModes{}), aliasOpt("g"))
-	CmdBuilder(cmd, RunDatabaseSetSQLModes, "set <database-id> <sql-mode-1> ... <sql-mode-n>",
-		"set sql modes", Writer, aliasOpt("s"))
+	setSqlModeDesc := `This command configures the SQL modes for the specified MySQL database cluster. The SQL modes should be provided as a space separated list. 
+
+This will replace the existing SQL mode configuration completely. Include all of the current values when adding a new one.
+`
+	CmdBuilderWithDocs(cmd, RunDatabaseSetSQLModes, "set <database-id> <sql-mode-1> ... <sql-mode-n>",
+		"Set a MySQL database cluster's SQL modes", setSqlModeDesc, Writer, aliasOpt("s"))
 
 	return cmd
 }
