@@ -55,7 +55,7 @@ func VolumeAction() *Command {
 		Command: &cobra.Command{
 			Use:   "volume-action",
 			Short: "Display commands to perform actions on a volume",
-			Long:  `Block storage volume action commands allow you to attach, detach, and resize existing volumes.`,
+			Long:  "Block storage volume action commands allow you to attach, detach, and resize existing volumes.",
 		},
 	}
 
