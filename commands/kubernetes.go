@@ -341,7 +341,8 @@ func kubernetesKubeconfig() *Command {
 
 	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
 This command prints out the raw YAML for the specified cluster's kubeconfig.	`, Writer, aliasOpt("p", "g"))
-	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", "INTERNAL: This hidden command is for printing a cluster's exec credential", Writer, hiddenCmd())
+	execCredDesc := "INTERNAL: This hidden command is for printing a cluster's exec credential"
+	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", execCredDesc, execCredDesc, Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
 	cmdSaveConfig := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
 This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage your
@@ -435,8 +436,9 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolMaxNodes, "", 0,
 		"Maximum number of nodes in the node pool when autoscaling is enabled")
 
+	recycleDesc := "DEPRECATED: Use `replace-node`. Recycle nodes in a node pool"
 	cmdKubeNodePoolRecycle := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolRecycle,
-		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", "DEPRECATED: Use `replace-node`. Recycle nodes in a node pool", Writer, aliasOpt("r"), hiddenCmd())
+		"recycle <cluster-id|cluster-name> <pool-id|pool-name>", recycleDesc, recycleDesc, Writer, aliasOpt("r"), hiddenCmd())
 	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "",
 		"ID or name of the nodes in the node pool to recycle")
 
@@ -473,12 +475,15 @@ func kubernetesOptions() *Command {
 
 	k8sCmdService := kubernetesCommandService()
 
+	k8sVersionDesc := "List Kubernetes versions that can be used with DigitalOcean clusters"
 	CmdBuilder(cmd, k8sCmdService.RunKubeOptionsListVersion, "versions",
-		"List Kubernetes versions that can be used with DigitalOcean clusters", Writer, aliasOpt("v"))
+		k8sVersionDesc, k8sVersionDesc, Writer, aliasOpt("v"))
+	k8sRegionsDesc := "List regions that support DigitalOcean Kubernetes clusters"
 	CmdBuilder(cmd, k8sCmdService.RunKubeOptionsListRegion, "regions",
-		"List regions that support DigitalOcean Kubernetes clusters", Writer, aliasOpt("r"))
+		k8sRegionsDesc, k8sRegionsDesc, Writer, aliasOpt("r"))
+	k8sSizesDesc := "List machine sizes that can be used in a DigitalOcean Kubernetes cluster"
 	CmdBuilder(cmd, k8sCmdService.RunKubeOptionsListNodeSizes, "sizes",
-		"List machine sizes that can be used in a DigitalOcean Kubernetes cluster", Writer, aliasOpt("s"))
+		k8sSizesDesc, k8sSizesDesc, Writer, aliasOpt("s"))
 	return cmd
 }
 
