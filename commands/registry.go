@@ -42,25 +42,46 @@ func Registry() *Command {
 		Command: &cobra.Command{
 			Use:     "registry",
 			Aliases: []string{"reg", "r"},
-			Short:   "[beta] registry commands",
-			Long:    "[beta] registry is used to access container registry commands",
+			Short:   "[Beta] Display commands for working with container registries",
+			Long:    "[Beta] The subcommands of `doctl registry` create, manage, and allow access to your private container registry.",
 			Hidden:  true,
 		},
 	}
 
-	CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>", "create container registry", Writer)
+	createRegDesc := "This command creates a new private container registry with the provided name."
+	CmdBuilderWithDocs(cmd, RunRegistryCreate, "create <registry-name>",
+		"Create a private container registry", createRegDesc, Writer)
 
-	CmdBuilder(cmd, RunRegistryGet, "get", "get the container registry", Writer, aliasOpt("g"), displayerType(&displayers.Registry{}))
+	getRegDesc := "This command retrieves details about a private container registry including its name and the endpoint used to access it."
+	CmdBuilderWithDocs(cmd, RunRegistryGet, "get", "Retrieve details about a container registry",
+		getRegDesc, Writer, aliasOpt("g"), displayerType(&displayers.Registry{}))
 
-	cmdRunRegistryDelete := CmdBuilder(cmd, RunRegistryDelete, "delete", "delete the container registry", Writer, aliasOpt("d", "del", "rm"))
+	deleteRegDesc := "This command permanently deletes a private container registry and all of its contents."
+	cmdRunRegistryDelete := CmdBuilderWithDocs(cmd, RunRegistryDelete, "delete",
+		"Delete a container registry", deleteRegDesc, Writer, aliasOpt("d", "del", "rm"))
 	AddBoolFlag(cmdRunRegistryDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force registry delete")
 
-	CmdBuilder(cmd, RunRegistryLogin, "login", "log in Docker to the container registry", Writer)
-	CmdBuilder(cmd, RunRegistryLogout, "logout", "log out Docker from the container registry", Writer)
+	loginRegDesc := "This command logs in Docker so that pull and push commands to your private container registry will be authenticated."
+	CmdBuilderWithDocs(cmd, RunRegistryLogin, "login", "Log in Docker to a container registry",
+		loginRegDesc, Writer)
 
-	cmdRunKubernetesManifest := CmdBuilder(cmd, RunKubernetesManifest, "kubernetes-manifest", "create a Kubernetes secret manifest to allow read/pull access to the registry", Writer, aliasOpt("k8s"))
-	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectName, "", "", "the secret name to create. defaults to the registry name prefixed with \"registry-\"")
-	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectNamespace, "", "default", "the namespace to hold the secret")
+	logoutRegDesc := "This command logs Docker out of the private container registry, revoking access to it."
+	CmdBuilderWithDocs(cmd, RunRegistryLogout, "logout", "Log out Docker from a container registry",
+		logoutRegDesc, Writer)
+
+	kubeManifestDesc := `This command outputs a YAML-formated Kubernetes secret manifest that can be used to grant a Kubernetes cluster pull access to your private container registry.
+
+Redirect the command's output to a file to save the manifest for later use or pipe it directly to kubectl to create the secret in your cluster:
+
+    doctl registry kubernetes-manifest | kubectl apply -f -
+`
+	cmdRunKubernetesManifest := CmdBuilderWithDocs(cmd, RunKubernetesManifest, "kubernetes-manifest",
+		"Generate a Kubernetes secret manifest for a registry",
+		kubeManifestDesc, Writer, aliasOpt("k8s"))
+	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectName, "", "",
+		"The secret name to create. Defaults to the registry name prefixed with \"registry-\"")
+	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectNamespace, "",
+		"default", "The Kubernetes namespace to hold the secret")
 
 	return cmd
 }
