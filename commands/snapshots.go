@@ -45,17 +45,17 @@ func Snapshot() *Command {
   - The compressed, billable size of the snapshot
 `
 
-	cmdRunSnapshotList := CmdBuilderWithDocs(cmd, RunSnapshotList, "list [glob]",
+	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [glob]",
 		"List Droplet and volume snapshots", "List information about Droplet and block storage volume snapshots, including:"+snapshotDetail,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Snapshot{}))
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Filter by resource type (`droplet` or `volume`)")
 	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Filter by regional availability")
 
-	CmdBuilderWithDocs(cmd, RunSnapshotGet, "get <snapshot-id>...",
+	CmdBuilder(cmd, RunSnapshotGet, "get <snapshot-id>...",
 		"Retrieve a Droplet or volume snapshot", "Retrieve information about a Droplet or block storage volume snapshot, including:"+snapshotDetail,
 		Writer, aliasOpt("g"), displayerType(&displayers.Snapshot{}))
 
-	cmdRunSnapshotDelete := CmdBuilderWithDocs(cmd, RunSnapshotDelete, "delete <snapshot-id>...",
+	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id>...",
 		"Delete a snapshot of a Droplet or volume", "Delete a snapshot of a Droplet or volume by specifying its ID.",
 		Writer, aliasOpt("d"), displayerType(&displayers.Snapshot{}))
 	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the snapshot without confirmation")

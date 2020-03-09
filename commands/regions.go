@@ -32,7 +32,7 @@ func Region() *Command {
 
 Use the slugs displayed by this command to specify regions in other commands.
 `
-	CmdBuilderWithDocs(cmd, RunRegionList, "list", "List datacenter regions", regionDesc,
+	CmdBuilder(cmd, RunRegionList, "list", "List datacenter regions", regionDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Region{}))
 
 	return cmd

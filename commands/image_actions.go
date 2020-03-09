@@ -44,12 +44,12 @@ func ImageAction() *Command {
 - The region where the action occurred.
 - The slug for the region where the action occurred.
 `
-	cmdImageActionsGet := CmdBuilderWithDocs(cmd, RunImageActionsGet,
+	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,
 		"get <image-id>", "Retrieve the status of an image action", `Use this command to retrieve the status of an image action, inlcuding the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdImageActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
 
-	cmdImageActionsTransfer := CmdBuilderWithDocs(cmd, RunImageActionsTransfer,
+	cmdImageActionsTransfer := CmdBuilder(cmd, RunImageActionsTransfer,
 		"transfer <image-id>", "Transfer an image to another datacenter region", `Use this command to transfer an image to a different datacenter region. Also outputs the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "", "region", requiredOpt())

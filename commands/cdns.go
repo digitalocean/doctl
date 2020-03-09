@@ -54,25 +54,25 @@ The Time To Live (TTL) value is the length of time in seconds that a file is cac
 	TTLDesc := "The \"Time To Live\" (TTL) value for cached content, in seconds"
 	DomainDesc := "Specify a custom domain to use with the CDN"
 	CertIDDesc := "Specify a Certificate ID for the custom domain"
-	CmdBuilderWithDocs(cmd, RunCDNList, "list", "List CDNs that have already been created", `Lists the following details for Content Delivery Networks (CDNs) that have already been created:`+CDNDetails, Writer,
+	CmdBuilder(cmd, RunCDNList, "list", "List CDNs that have already been created", `Lists the following details for Content Delivery Networks (CDNs) that have already been created:`+CDNDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.CDN{}))
 
-	cmdCDNCreate := CmdBuilderWithDocs(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `This command creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`+CDNnotes, Writer,
+	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `This command creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`+CDNnotes, Writer,
 		aliasOpt("c"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNCreate, doctl.ArgCDNTTL, "", 3600, TTLDesc)
 	AddStringFlag(cmdCDNCreate, doctl.ArgCDNDomain, "", "", DomainDesc)
 	AddStringFlag(cmdCDNCreate, doctl.ArgCDNCertificateID, "", "", CertIDDesc)
 
-	cmdRunCDNDelete := CmdBuilderWithDocs(cmd, RunCDNDelete, "delete <cdn-id>", "Delete a CDN", `This command deletes the CDN specified by the ID.
+	cmdRunCDNDelete := CmdBuilder(cmd, RunCDNDelete, "delete <cdn-id>", "Delete a CDN", `This command deletes the CDN specified by the ID.
 
 You can retrieve the ID by calling `+"`"+`doctl compute cdn list`+"`"+` if needed.`, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdRunCDNDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the specified CDN without prompting for confirmation")
 
-	CmdBuilderWithDocs(cmd, RunCDNGet, "get <cdn-id>", "Retrieve details about a specific CDN", `This command lists the following details for the Content Delivery Network (CDNs) specified by the ID:`+CDNDetails+CDNnotes, Writer, aliasOpt("g"),
+	CmdBuilder(cmd, RunCDNGet, "get <cdn-id>", "Retrieve details about a specific CDN", `This command lists the following details for the Content Delivery Network (CDNs) specified by the ID:`+CDNDetails+CDNnotes, Writer, aliasOpt("g"),
 		displayerType(&displayers.CDN{}))
 
-	cmdCDNUpdate := CmdBuilderWithDocs(cmd, RunCDNUpdate, "update <cdn-id>", "Update the configuration for a CDN", `This command allows you to update the configuration details of an existing Content Delivery Network (CDN).
+	cmdCDNUpdate := CmdBuilder(cmd, RunCDNUpdate, "update <cdn-id>", "Update the configuration for a CDN", `This command allows you to update the configuration details of an existing Content Delivery Network (CDN).
 
 Currently, you can only update the custom domain and its certificate ID with this command.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.CDN{}))
@@ -80,7 +80,7 @@ Currently, you can only update the custom domain and its certificate ID with thi
 	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNDomain, "", "", DomainDesc)
 	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNCertificateID, "", "", CertIDDesc)
 
-	cmdCDNFlushCache := CmdBuilderWithDocs(cmd, RunCDNFlushCache, "flush <cdn-id>", "Flush the cache of a CDN", `This command flushes the cache of a Content Delivery Network (CDN), which:
+	cmdCDNFlushCache := CmdBuilder(cmd, RunCDNFlushCache, "flush <cdn-id>", "Flush the cache of a CDN", `This command flushes the cache of a Content Delivery Network (CDN), which:
 
 - purges all copies of the files in the cache
 - re-caches the files

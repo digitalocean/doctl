@@ -35,11 +35,11 @@ func Invoices() *Command {
 	getInvoiceDesc := `This command retrieves a detailed list of all the items on a specific invoice.
 
 Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
-	CmdBuilderWithDocs(cmd, RunInvoicesGet, "get <invoice-uuid>", "Retrieve a list of all the items on an invoice",
+	CmdBuilder(cmd, RunInvoicesGet, "get <invoice-uuid>", "Retrieve a list of all the items on an invoice",
 		getInvoiceDesc, Writer, aliasOpt("g"), displayerType(&displayers.Invoice{}))
 
 	listInvoiceDesc := "This command lists all of the invoices on your account including the UUID, amount in USD, and time period for each."
-	CmdBuilderWithDocs(cmd, RunInvoicesList, "list", "List all of the invoices for your account",
+	CmdBuilder(cmd, RunInvoicesList, "list", "List all of the invoices for your account",
 		listInvoiceDesc, Writer, aliasOpt("ls"), displayerType(&displayers.Invoice{}))
 
 	invoiceSummaryDesc := `This command retrieves a summary of a specific invoice including the following details:
@@ -56,19 +56,19 @@ Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the
 - The amount of any credits or other adjustments contributing to the invoice
 
 Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
-	CmdBuilderWithDocs(cmd, RunInvoicesSummary, "summary <invoice-uuid>", "Get a summary of an invoice",
+	CmdBuilder(cmd, RunInvoicesSummary, "summary <invoice-uuid>", "Get a summary of an invoice",
 		invoiceSummaryDesc, Writer, aliasOpt("s"), displayerType(&displayers.Invoice{}))
 
 	pdfInoviceDesc := `This command downloads a PDF summary of a specific invoice to the provided location on the local file system.
 
 Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
-	CmdBuilderWithDocs(cmd, RunInvoicesGetPDF, "pdf <invoice-uuid> <output-file.pdf>", "Download a PDF file of an invoice",
+	CmdBuilder(cmd, RunInvoicesGetPDF, "pdf <invoice-uuid> <output-file.pdf>", "Download a PDF file of an invoice",
 		pdfInoviceDesc, Writer, aliasOpt("p"))
 
 	csvInoviceDesc := `This command downloads a CSV formated file for a specific invoice to the provided location on the local file system.
 
 Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
-	CmdBuilderWithDocs(cmd, RunInvoicesGetCSV, "csv <invoice-uuid> <output-file.csv>", "Download a CSV file of an invoice",
+	CmdBuilder(cmd, RunInvoicesGetCSV, "csv <invoice-uuid> <output-file.csv>", "Download a CSV file of an invoice",
 		csvInoviceDesc, Writer, aliasOpt("c"))
 
 	return cmd

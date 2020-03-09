@@ -65,10 +65,10 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 - ` + "`" + `tls_passthrough` + "`" + `: Whether SSL passthrough is enabled on the load balancer.
 `
 	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, e.g.: `entry_protocol:tcp, entry_port:3306, target_protocol:tcp, target_port:3306`. Use a quoted string of space-separated values for multiple rules"
-	CmdBuilderWithDocs(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:"+lbDetail, Writer,
+	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:"+lbDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
-	cmdRecordCreate := CmdBuilderWithDocs(cmd, RunLoadBalancerCreate, "create",
+	cmdRecordCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
 		"Create a new load balancer", "Use this command to create a new load balancer on your account. Valid forwarding rules are:"+forwardingDetail, Writer, aliasOpt("c"))
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
@@ -88,7 +88,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "",
 		forwardingRulesTxt)
 
-	cmdRecordUpdate := CmdBuilderWithDocs(cmd, RunLoadBalancerUpdate, "update <id>",
+	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
@@ -107,29 +107,29 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http, port:80, path:/index.html, check_interval_seconds:10, response_timeout_seconds:5, healthy_threshold:5, unhealthy_threshold:3`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 
-	CmdBuilderWithDocs(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:"+lbDetail, Writer,
+	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 
-	cmdRunRecordDelete := CmdBuilderWithDocs(cmd, RunLoadBalancerDelete, "delete <id>",
+	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>",
 		"Permanently delete a load balancer", `Use this command to permanently delete the speicified load balancer. This is irreversable.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the load balancer without a confirmation prompt")
 
-	cmdAddDroplets := CmdBuilderWithDocs(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>",
+	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>",
 		"Add Droplets to a load balancer", `Use this command to add Droplets to a load balancer.`, Writer)
 	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of IDs of Droplet to add to the load balancer, example value: `12,33`")
 
-	cmdRemoveDroplets := CmdBuilderWithDocs(cmd, RunLoadBalancerRemoveDroplets,
+	cmdRemoveDroplets := CmdBuilder(cmd, RunLoadBalancerRemoveDroplets,
 		"remove-droplets <id>", "Remove Droplets from a load balancer", `Use this command to remove Droplets from a load balancer. This command does not destroy any Droplets.`, Writer)
 	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of IDs of Droplets to remove from the load balancer, example value: `12,33`")
 
-	cmdAddForwardingRules := CmdBuilderWithDocs(cmd, RunLoadBalancerAddForwardingRules,
+	cmdAddForwardingRules := CmdBuilder(cmd, RunLoadBalancerAddForwardingRules,
 		"add-forwarding-rules <id>", "Add forwarding rules to a load balancer", "Use this command to add forwarding rules to a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:"+forwardingDetail, Writer)
 	AddStringFlag(cmdAddForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 
-	cmdRemoveForwardingRules := CmdBuilderWithDocs(cmd, RunLoadBalancerRemoveForwardingRules,
+	cmdRemoveForwardingRules := CmdBuilder(cmd, RunLoadBalancerRemoveForwardingRules,
 		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:"+forwardingDetail, Writer)
 	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 

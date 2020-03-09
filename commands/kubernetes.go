@@ -225,7 +225,7 @@ func kubernetesCluster() *Command {
 - The slug identifier for the version of Kubernetes used for the cluster. If set to a minor version (e.g. ` + "`" + `1.14` + "`" + `), the latest version within it will be used (e.g. ` + "`" + `1.14.6-do.1` + "`" + `); if set to ` + "`" + `latest` + "`" + `, the latest published version will be used.
 - A boolean value indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window.
 - An object containing a "state" attribute whose value is set to a string indicating the current status of the node. Potential values include ` + "`" + `running` + "`" + `, ` + "`" + `provisioning` + "`" + `, and ` + "`" + `errored` + "`" + `.`
-	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "Retrieve details about a Kubernetes cluster", `
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "Retrieve details about a Kubernetes cluster", `
 This command retrieves the following details about a Kubernetes cluster: `+clusterDetails+`
 - The base URL of the API server on the Kubernetes master node.
 - The public IPv4 address of the Kubernetes master node.
@@ -236,15 +236,15 @@ This command retrieves the following details about a Kubernetes cluster: `+clust
 - A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was last updated.
 `+nodePoolDeatils,
 		Writer, aliasOpt("g"), displayerType(&displayers.KubernetesClusters{}))
-	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterList, "list", "Retrieve the list of Kubernetes clusters for your account", `
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterList, "list", "Retrieve the list of Kubernetes clusters for your account", `
 This command retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDeatils,
 		Writer, aliasOpt("ls"), displayerType(&displayers.KubernetesClusters{}))
-	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
 		"Retrieve a list of available Kubernetes version upgrades", `
 This command returns a list of slugs representing Kubernetes versions you can use with the specified cluster. You can use these values to upgrade your cluster with the `+"`"+`doctl kubernetes cluster upgrade`+"`"+` command.
 `, Writer, aliasOpt("gu"))
 
-	cmdKubeClusterCreate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
+	cmdKubeClusterCreate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
 		defaultKubernetesNodeCount), "create <name>", "Create a Kubernetes cluster", `
 Creates a Kubernetes cluster given the specified options, using the specified name. Before creating the cluster, you can use `+"`"+`doctl kubernetes options`+"`"+` to see possible values for the various configuration flags.
 
@@ -288,7 +288,7 @@ Format: `+"`"+`name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
 		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: `day=HH:MM`, where time is in UTC. Day can be: `any`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday"+"`.")
 
-	cmdKubeClusterUpdate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
+	cmdKubeClusterUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
 		"Update a Kubernetes cluster's configuration", `
 This command updates the specified configuration values for the specified Kubernetes cluster. The cluster must be referred to by its name or ID, which you can retrieve by calling:
 
@@ -306,7 +306,7 @@ This command updates the specified configuration values for the specified Kubern
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00",
 		"Sets the beginning of the four hour maintenance window for the cluster. Syntax is in the format: 'day=HH:MM', where time is in UTC. Day can be: `any`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday"+"`.")
 
-	cmdKubeClusterUpgrade := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
+	cmdKubeClusterUpgrade := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
 		"upgrade <id|name>", "Upgrades a cluster to a new Kubernetes version", `
 
 This command upgrades the specified Kubernetes cluster. By default, this will upgrade the cluster to the latest available release, but you can also specify any version listed for your cluster by using `+"`"+`doctl k8s get-upgrades`+"`"+`.`, Writer)
@@ -315,7 +315,7 @@ This command upgrades the specified Kubernetes cluster. By default, this will up
 The special value `+"`"+`latest`+"`"+` will select the most recent patch version for your cluster's minor version.
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be `+"`"+`latest`+"`"+`.`)
 
-	cmdKubeClusterDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesClusterDelete,
+	cmdKubeClusterDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterDelete,
 		"delete <id|name>...", "Delete Kubernetes clusters", `
 This command deletes the specified Kubernetes clusters and the Droplets associated with them. This command does not delete other DigitalOcean resources created during the operation of the clusters, such as load balancers and volumes.
 `, Writer, aliasOpt("d", "rm"))
@@ -339,16 +339,16 @@ func kubernetesKubeconfig() *Command {
 
 	k8sCmdService := kubernetesCommandService()
 
-	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
 This command prints out the raw YAML for the specified cluster's kubeconfig.	`, Writer, aliasOpt("p", "g"))
 	execCredDesc := "INTERNAL: This hidden command is for printing a cluster's exec credential"
 	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", execCredDesc, execCredDesc, Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
-	cmdSaveConfig := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
+	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
 This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage your
 		`, Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "Boolean indicating whether to set the current kubectl context to that of the new cluster")
-	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "Remove a cluster's credentials from your local kubeconfig", `
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "Remove a cluster's credentials from your local kubeconfig", `
 This command removes the specified cluster's credentials from your local kubeconfig. After running this command, you will not be able to use `+"`"+`kubectl`+"`"+` to interact with your cluster.
 `, Writer, aliasOpt("d", "rm"))
 	return cmd
@@ -370,7 +370,7 @@ func kubernetesNodePools() *Command {
 
 	k8sCmdService := kubernetesCommandService()
 
-	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>",
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolGet, "get <cluster-id|cluster-name> <pool-id|pool-name>",
 		"Retrieve information about a cluster's node pool", `
 This command retrieves information about the specified node pool in the specified cluster, including:
 
@@ -383,7 +383,7 @@ This command retrieves information about the specified node pool in the specifie
 Specifying `+"`"+`--output=json`+"`"+` when calling this command will produce extra information about the individual nodes in the response, such as their IDs, status, creation time, and update time.
 `, Writer, aliasOpt("g"),
 		displayerType(&displayers.KubernetesNodePools{}))
-	CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodePoolList, "list <cluster-id|cluster-name>",
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolList, "list <cluster-id|cluster-name>",
 		"List a cluster's node pools", `
 This command retrieves information about the specified cluster's node pools, including:
 
@@ -397,7 +397,7 @@ Specifying `+"`"+`--output=json`+"`"+` when calling this command will produce ex
 		`, Writer, aliasOpt("ls"),
 		displayerType(&displayers.KubernetesNodePools{}))
 
-	cmdKubeNodePoolCreate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodePoolCreate,
+	cmdKubeNodePoolCreate := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolCreate,
 		"create <cluster-id|cluster-name>", "Create a new node pool for a cluster", `
 This command creates a new node pool for the specified cluster. At a minimum, you'll need to specify the size of the nodes, and the number of nodes to place in the pool. You can also specify that you'd like to enable autoscaling and set minimum and maximum node poll sizes.
 		`,
@@ -419,7 +419,7 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMaxNodes, "", 0,
 		"Maximum number of nodes in the node pool when autoscaling is enabled")
 
-	cmdKubeNodePoolUpdate := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodePoolUpdate,
+	cmdKubeNodePoolUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolUpdate,
 		"update <cluster-id|cluster-name> <pool-id|pool-name>",
 		"Update an existing node pool in a cluster", "This command updates the specified node pool in the specified cluster. You can update any value for which there is a flag.", Writer, aliasOpt("u"))
 	AddStringFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolName, "", "", "Name of the node pool")
@@ -442,19 +442,19 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 	AddStringFlag(cmdKubeNodePoolRecycle, doctl.ArgNodePoolNodeIDs, "", "",
 		"ID or name of the nodes in the node pool to recycle")
 
-	cmdKubeNodePoolDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodePoolDelete,
+	cmdKubeNodePoolDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolDelete,
 		"delete <cluster-id|cluster-name> <pool-id|pool-name>",
 		"Delete a node pool", `This command deletes the specified node pool in the specified cluster, which also removes all the nodes inside that pool. This action is irreversable.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "Delete node pool without confirmation prompt")
 
-	cmdKubeNodeDelete := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodeDelete, "delete-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "Delete a node", `
+	cmdKubeNodeDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodeDelete, "delete-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "Delete a node", `
 This command deletes the specified node, located in the specified node pool. By default this deletion will happen gracefully, and Kubernetes will drain the node of any pods before deleting it.
 		`, Writer)
 	AddBoolFlag(cmdKubeNodeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the node without a confirmation prompt")
 	AddBoolFlag(cmdKubeNodeDelete, "skip-drain", "", false, "Skip draining the node before deletion")
 
-	cmdKubeNodeReplace := CmdBuilderWithDocs(cmd, k8sCmdService.RunKubernetesNodeReplace, "replace-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "Replace node with a new one", `
+	cmdKubeNodeReplace := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodeReplace, "replace-node <cluster-id|cluster-name> <pool-id|pool-name> <node-id>", "Replace node with a new one", `
 This command deletes the specified node in the specified node pool, and then creates a new node in its place. This is useful if you suspect a node has entered an undesired state. By default the deletion will happen gracefully, and Kubernetes will drain the node of any pods before deleting it.
 		`, Writer)
 	AddBoolFlag(cmdKubeNodeReplace, doctl.ArgForce, doctl.ArgShortForce, false, "Replace node without confirmation prompt")
