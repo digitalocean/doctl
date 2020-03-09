@@ -53,7 +53,7 @@ func Registry() *Command {
 		"Create a private container registry", createRegDesc, Writer)
 
 	getRegDesc := "This command retrieves details about a private container registry including its name and the endpoint used to access it."
-	CmdBuilderWithDocs(cmd, RunRegistryGet, "get", "Retrieve information about a container registry",
+	CmdBuilderWithDocs(cmd, RunRegistryGet, "get", "Retrieve details about a container registry",
 		getRegDesc, Writer, aliasOpt("g"), displayerType(&displayers.Registry{}))
 
 	deleteRegDesc := "This command permanently deletes a private container registry and all of its contents."
@@ -61,17 +61,17 @@ func Registry() *Command {
 		"Delete a container registry", deleteRegDesc, Writer, aliasOpt("d", "del", "rm"))
 	AddBoolFlag(cmdRunRegistryDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force registry delete")
 
-	loginRegDesc := "This command logs into Docker so that pull and push commands to your private container registry will be authenticated."
+	loginRegDesc := "This command logs in Docker so that pull and push commands to your private container registry will be authenticated."
 	CmdBuilderWithDocs(cmd, RunRegistryLogin, "login", "Log in Docker to a container registry",
 		loginRegDesc, Writer)
 
-	logoutRegDesc := "This command logs out of Docker, revoking access to your private container registry."
+	logoutRegDesc := "This command logs Docker out of the private container registry, revoking access to it."
 	CmdBuilderWithDocs(cmd, RunRegistryLogout, "logout", "Log out Docker from a container registry",
 		logoutRegDesc, Writer)
 
-	kubeManifestDesc := `This command outputs a YAML-formated Kubernetes secret manifest that can be used to grant a Kubernetes cluster access to your private container registry.
+	kubeManifestDesc := `This command outputs a YAML-formated Kubernetes secret manifest that can be used to grant a Kubernetes cluster pull access to your private container registry.
 
-Redirect the command's output to a file to save the manifest for latter use or pipe it directly to kubectl to create the secret in your cluster:
+Redirect the command's output to a file to save the manifest for later use or pipe it directly to kubectl to create the secret in your cluster:
 
     doctl registry kubernetes-manifest | kubectl apply -f -
 `
