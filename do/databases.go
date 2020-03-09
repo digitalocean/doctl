@@ -96,6 +96,7 @@ type DatabasesService interface {
 	ListUsers(string) (DatabaseUsers, error)
 	CreateUser(string, *godo.DatabaseCreateUserRequest) (*DatabaseUser, error)
 	DeleteUser(string, string) error
+	ResetUserAuth(string, string, *godo.DatabaseResetUserAuthRequest) (*DatabaseUser, error)
 
 	ListDBs(string) (DatabaseDBs, error)
 	CreateDB(string, *godo.DatabaseCreateDBRequest) (*DatabaseDB, error)
@@ -300,6 +301,14 @@ func (ds *databasesService) DeleteUser(databaseID, userName string) error {
 	_, err := ds.client.Databases.DeleteUser(context.TODO(), databaseID, userName)
 
 	return err
+}
+
+func (ds *databasesService) ResetUserAuth(databaseID, userID string, req *godo.DatabaseResetUserAuthRequest) (*DatabaseUser, error) {
+	u, _, err := ds.client.Databases.ResetUserAuth(context.TODO(), databaseID, userID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &DatabaseUser{DatabaseUser: u}, nil
 }
 
 func (ds *databasesService) ListDBs(databaseID string) (DatabaseDBs, error) {

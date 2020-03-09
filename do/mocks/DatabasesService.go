@@ -239,6 +239,21 @@ func (mr *MockDatabasesServiceMockRecorder) DeleteUser(arg0, arg1 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockDatabasesService)(nil).DeleteUser), arg0, arg1)
 }
 
+// ResetUserAuth mocks base method
+func (m *MockDatabasesService) ResetUserAuth(arg0, arg1 string, arg2 *godo.DatabaseResetUserAuthRequest) (*do.DatabaseUser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResetUserAuth", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*do.DatabaseUser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResetUserAuth indicates an expected call of ResetUserAuth
+func (mr *MockDatabasesServiceMockRecorder) ResetUserAuth(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetUserAuth", reflect.TypeOf((*MockDatabasesService)(nil).ResetUserAuth), arg0, arg1, arg2)
+}
+
 // ListDBs mocks base method
 func (m *MockDatabasesService) ListDBs(arg0 string) (do.DatabaseDBs, error) {
 	m.ctrl.T.Helper()
