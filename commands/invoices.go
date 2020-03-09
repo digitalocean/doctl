@@ -27,25 +27,49 @@ func Invoices() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "invoice",
-			Short: "invoice commands",
-			Long:  "invoice is used to access invoice commands",
+			Short: "Display commands for retrieving invoices for your account",
+			Long:  "The subcommands of `doctl invoice` retrieve details about invoices for your account.",
 		},
 	}
 
-	CmdBuilder(cmd, RunInvoicesGet, "get <invoice-uuid>", "get paginated invoice items of an invoice", Writer,
-		aliasOpt("g"), displayerType(&displayers.Invoice{}))
+	getInvoiceDesc := `This command retrieves a detailed list of all the items on a specific invoice.
 
-	CmdBuilder(cmd, RunInvoicesList, "list", "list invoices", Writer,
-		aliasOpt("ls"), displayerType(&displayers.Invoice{}))
+Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
+	CmdBuilderWithDocs(cmd, RunInvoicesGet, "get <invoice-uuid>", "Retrieve a list of all the items on an invoice",
+		getInvoiceDesc, Writer, aliasOpt("g"), displayerType(&displayers.Invoice{}))
 
-	CmdBuilder(cmd, RunInvoicesSummary, "summary <invoice-uuid>", "get a summary of an invoice", Writer,
-		aliasOpt("s"), displayerType(&displayers.Invoice{}))
+	listInvoiceDesc := "This command lists all of the invoices on your account including the UUID, amount in USD, and time period for each."
+	CmdBuilderWithDocs(cmd, RunInvoicesList, "list", "List all of the invoices for your account",
+		listInvoiceDesc, Writer, aliasOpt("ls"), displayerType(&displayers.Invoice{}))
 
-	CmdBuilder(cmd, RunInvoicesGetPDF, "pdf <invoice-uuid> <output-file.pdf>", "get a pdf of an invoice", Writer,
-		aliasOpt("p"))
+	invoiceSummaryDesc := `This command retrieves a summary of a specific invoice including the following details:
 
-	CmdBuilder(cmd, RunInvoicesGetCSV, "csv <invoice-uuid> <output-file.csv>", "get a csv of an invoice", Writer,
-		aliasOpt("c"))
+- The invoice's UUID
+- The year and month of the billing period
+- The total amount of the invoice, in USD
+- The name of the user associated with the invoice
+- The company associated with the invoice
+- The email address associated with the invoice
+- The amount of product usage charges contributing to the invoice
+- The amount of overage charges contributing to the invoice (e.g. bandwidth)
+- The amount of taxes contributing to the invoice
+- The amount of any credits or other adjustments contributing to the invoice
+
+Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
+	CmdBuilderWithDocs(cmd, RunInvoicesSummary, "summary <invoice-uuid>", "Get a summary of an invoice",
+		invoiceSummaryDesc, Writer, aliasOpt("s"), displayerType(&displayers.Invoice{}))
+
+	pdfInoviceDesc := `This command downloads a PDF summary of a specific invoice to the provided location on the local file system.
+
+Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
+	CmdBuilderWithDocs(cmd, RunInvoicesGetPDF, "pdf <invoice-uuid> <output-file.pdf>", "Download a PDF file of an invoice",
+		pdfInoviceDesc, Writer, aliasOpt("p"))
+
+	csvInoviceDesc := `This command downloads a CSV formated file for a specific invoice to the provided location on the local file system.
+
+Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
+	CmdBuilderWithDocs(cmd, RunInvoicesGetCSV, "csv <invoice-uuid> <output-file.csv>", "Download a CSV file of an invoice",
+		csvInoviceDesc, Writer, aliasOpt("c"))
 
 	return cmd
 }
