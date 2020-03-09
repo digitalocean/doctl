@@ -47,15 +47,7 @@ func (c *Command) ChildCommands() []*Command {
 }
 
 // CmdBuilder builds a new command.
-func CmdBuilder(parent *Command, cr CmdRunner, cliText, desc string, out io.Writer, options ...cmdOption) *Command {
-	return cmdBuilderWithInit(parent, cr, cliText, desc, desc, out, true, options...)
-}
-
-// CmdBuilderWithDocs builds a new command with custom long descriptions.
-// This was introduced to transition away from the current CmdBuilder
-// implementation incrementally. When all commands are built using this
-// function, CmdBuilderWithDocs should replace it.
-func CmdBuilderWithDocs(parent *Command, cr CmdRunner, cliText, shortdesc string, longdesc string, out io.Writer, options ...cmdOption) *Command {
+func CmdBuilder(parent *Command, cr CmdRunner, cliText, shortdesc string, longdesc string, out io.Writer, options ...cmdOption) *Command {
 	return cmdBuilderWithInit(parent, cr, cliText, shortdesc, longdesc, out, true, options...)
 }
 
