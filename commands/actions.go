@@ -47,10 +47,10 @@ This can be filtered to a specific action. For example, while ` + "`" + `doctl c
 - The resource type (Droplet, backend)
 - The region in which the action took place (nyc3, sfo2, etc)`
 
-	CmdBuilderWithDocs(cmd, RunCmdActionGet, "get <action-id>", "Retrieve details about a specific action", `This command retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
+	CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "Retrieve details about a specific action", `This command retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Action{}))
 
-	cmdActionList := CmdBuilderWithDocs(cmd, RunCmdActionList, "list", "Retrieve a  list of all recent actions taken on your resources", `This command retrieves a list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
+	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "Retrieve a  list of all recent actions taken on your resources", `This command retrieves a list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Action{}))
 	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", "Action resource type")
 	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", "Action region")
@@ -59,7 +59,7 @@ This can be filtered to a specific action. For example, while ` + "`" + `doctl c
 	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", "Action status")
 	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", "Action type")
 
-	cmdActionWait := CmdBuilderWithDocs(cmd, RunCmdActionWait, "wait <action-id>", "Block thread until an action completes", `The command blocks the current thread, returning when an action completes.
+	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "Block thread until an action completes", `The command blocks the current thread, returning when an action completes.
 
 For example, if you find an action when calling `+"`"+`doctl compute action list`+"`"+` that has a status of `+"`"+`in-progress`+"`"+`, you can note the action ID and call `+"`"+`doctl compute action wait <action-id>`+"`"+`, and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
 		aliasOpt("w"), displayerType(&displayers.Action{}))

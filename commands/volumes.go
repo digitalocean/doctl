@@ -39,11 +39,11 @@ Volumes function as raw block devices, meaning they appear to the operating syst
 		},
 	}
 
-	cmdRunVolumeList := CmdBuilderWithDocs(cmd, RunVolumeList, "list", "List block storage volumes by ID", `Use this command to list all of the block storage volumes on your account.`, Writer,
+	cmdRunVolumeList := CmdBuilder(cmd, RunVolumeList, "list", "List block storage volumes by ID", `Use this command to list all of the block storage volumes on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "", "Volume region")
 
-	cmdVolumeCreate := CmdBuilderWithDocs(cmd, RunVolumeCreate, "create <volume-name>", "Create a block storage volume", `Use this command to create a block storage volume on your account.
+	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create <volume-name>", "Create a block storage volume", `Use this command to create a block storage volume on your account.
 
 You can use flags to specify the volume size, region, description, filesystem type, tags, and to create a volume from an existing volume snapshot.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Volume{}))
@@ -56,14 +56,14 @@ You can use flags to specify the volume size, region, description, filesystem ty
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "Volume filesystem label")
 	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "Tags to apply to the volume; comma separate or repeat `--tag` to add multiple tags at once")
 
-	cmdRunVolumeDelete := CmdBuilderWithDocs(cmd, RunVolumeDelete, "delete <volume-id>", "Delete a block storage volume", `Use this command to delete a block storage volume by ID, destroying all of its data and removing it from your account.`, Writer,
+	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "Delete a block storage volume", `Use this command to delete a block storage volume by ID, destroying all of its data and removing it from your account.`, Writer,
 		aliasOpt("rm", "d"))
 	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force volume delete")
 
-	CmdBuilderWithDocs(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing block storage volume", `Use this command to retrieve information about a block storage volume using its ID.`, Writer, aliasOpt("g"),
+	CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing block storage volume", `Use this command to retrieve information about a block storage volume using its ID.`, Writer, aliasOpt("g"),
 		displayerType(&displayers.Volume{}))
 
-	cmdRunVolumeSnapshot := CmdBuilderWithDocs(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "Create a block storage volume snapshot", `Use this command to create a snapshot of a block storage volume by ID.
+	cmdRunVolumeSnapshot := CmdBuilder(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "Create a block storage volume snapshot", `Use this command to create a snapshot of a block storage volume by ID.
 
 You can use a block storage volume snapshot ID as a flag with `+"`"+`doctl volume create`+"`"+` to create a new block storage volume with the same data as the volume the snapshot was taken from.`, Writer,
 		aliasOpt("s"), displayerType(&displayers.Volume{}))

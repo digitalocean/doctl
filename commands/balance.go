@@ -37,7 +37,7 @@ func Balance() *Command {
 - The time at which balances were most recently generated.
 `
 
-	CmdBuilderWithDocs(cmd, RunBalanceGet, "get", "Retrieve your account balance",
+	CmdBuilder(cmd, RunBalanceGet, "get", "Retrieve your account balance",
 		getBalanceDesc, Writer, aliasOpt("g"), displayerType(&displayers.Balance{}))
 
 	return cmd

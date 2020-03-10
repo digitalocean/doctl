@@ -32,7 +32,7 @@ func Size() *Command {
 
 Use the slugs displayed by this command to specify the type of Droplet in other commands.
 `
-	CmdBuilderWithDocs(cmd, RunSizeList, "list", "List available Droplet sizes", sizeDesc,
+	CmdBuilder(cmd, RunSizeList, "list", "List available Droplet sizes", sizeDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Size{}))
 
 	return cmd

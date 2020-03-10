@@ -52,14 +52,14 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 		},
 	}
 
-	CmdBuilderWithDocs(cmd, RunProjectsList, "list", "List existing projects",
+	CmdBuilder(cmd, RunProjectsList, "list", "List existing projects",
 		"List details for for your DigitalOcean projects, including:"+projectDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Project{}))
-	CmdBuilderWithDocs(cmd, RunProjectsGet, "get <id>", "Retrieve details for a specific project",
+	CmdBuilder(cmd, RunProjectsGet, "get <id>", "Retrieve details for a specific project",
 		"Display the following details for an existing project specified by its ID (use `default` for <id> to retieve your default project):"+projectDetails,
 		Writer, aliasOpt("g"), displayerType(&displayers.Project{}))
 
-	cmdProjectsCreate := CmdBuilderWithDocs(cmd, RunProjectsCreate, "create",
+	cmdProjectsCreate := CmdBuilder(cmd, RunProjectsCreate, "create",
 		"Create a new project", "Create a new project to organize your resources specifying its name and purpose."+projectsDesc,
 		Writer, aliasOpt("c"), displayerType(&displayers.Project{}))
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectName, "", "",
@@ -71,7 +71,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectEnvironment, "", "",
 		"The environment in which your project resides. Possible values: `Development`, `Staging`, or `Production`")
 
-	cmdProjectsUpdate := CmdBuilderWithDocs(cmd, RunProjectsUpdate, "update <id>",
+	cmdProjectsUpdate := CmdBuilder(cmd, RunProjectsUpdate, "update <id>",
 		"Update an existing project",
 		"Update information about an existing project specified by its ID (use `default` for <id> to update your default project).",
 		Writer, aliasOpt("u"), displayerType(&displayers.Project{}))
@@ -84,7 +84,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 	AddBoolFlag(cmdProjectsUpdate, doctl.ArgProjectIsDefault, "", false,
 		"Set the specified project as your default project")
 
-	cmdProjectsDelete := CmdBuilderWithDocs(cmd, RunProjectsDelete, "delete <id> [<id> ...]",
+	cmdProjectsDelete := CmdBuilder(cmd, RunProjectsDelete, "delete <id> [<id> ...]",
 		"Delete the specified project", "Delete a project by specifying its ID. To be deleted, a project must not have any resources assigned to it.",
 		Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdProjectsDelete, doctl.ArgForce, doctl.ArgShortForce, false,
@@ -113,14 +113,14 @@ A valid URN has the format: ` + "`" + `do:resource_type:resource_id` + "`" + `. 
   - ` + "`" + `do:volume:6fc4c277-ea5c-448a-93cd-dd496cfef71f` + "`" + `
 `
 
-	CmdBuilderWithDocs(cmd, RunProjectResourcesList, "list <project-id>", "List resources assigned to a project",
+	CmdBuilder(cmd, RunProjectResourcesList, "list <project-id>", "List resources assigned to a project",
 		"List all of the resources assigned to the specified project displaying their uniform resource names (\"URNs\").",
 		Writer, aliasOpt("ls"), displayerType(&displayers.ProjectResource{}))
-	CmdBuilderWithDocs(cmd, RunProjectResourcesGet, "get <urn>", "Retrieve a resource by its URN",
+	CmdBuilder(cmd, RunProjectResourcesGet, "get <urn>", "Retrieve a resource by its URN",
 		"Retrieve information about a resource by specifying its uniform resource name (\"URN\"). Currently, ony Droplets, floating IPs, load balancers, domains, and volumes are supported."+urnDesc,
 		Writer, aliasOpt("g"), displayerType(&displayers.ProjectResource{}))
 
-	cmdProjectResourcesAssign := CmdBuilderWithDocs(cmd, RunProjectResourcesAssign,
+	cmdProjectResourcesAssign := CmdBuilder(cmd, RunProjectResourcesAssign,
 		"assign <project-id> --resource=<urn> [--resource=<urn> ...]",
 		"Assign one or more resources to a project",
 		"Assign one or more resources to a project by specifying the resource's uniform resource name (\"URN\")."+urnDesc,

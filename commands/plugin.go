@@ -33,14 +33,14 @@ func Plugin() *Command {
 			Long:       "plugin is used to access plugin commands",
 			Aliases:    []string{"p"},
 			Hidden:     true,
-			Deprecated: "this command will be removed in a future version of doctl",
+			Deprecated: "This command will be removed in a future version of doctl",
 		},
 	}
 
-	CmdBuilder(cmd, RunPluginList, "list", "list plugins", Writer,
+	CmdBuilder(cmd, RunPluginList, "list", "List plugins", "List plugins", Writer,
 		aliasOpt("ls"))
 
-	CmdBuilder(cmd, RunPluginRun, "run", "run plugin", Writer)
+	CmdBuilder(cmd, RunPluginRun, "run", "Run a plugin", "Run a plugin", Writer)
 
 	return cmd
 }

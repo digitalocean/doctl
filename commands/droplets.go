@@ -57,13 +57,13 @@ func Droplet() *Command {
 	- A list of features enabled for the Droplet. Examples are ` + "`" + `backups` + "`" + `, ` + "`" + `ipv6` + "`" + `, ` + "`" + `monitoring` + "`" + `, ` + "`" + `private_networking` + "`" + `
 	- The IDs of block storage volumes attached to the Droplet
 	`
-	CmdBuilderWithDocs(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Use this command to list the available actions that can be taken on a Droplet. These can be things like rebooting, resizing, and snapshotting the Droplet.`, Writer,
+	CmdBuilder(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Use this command to list the available actions that can be taken on a Droplet. These can be things like rebooting, resizing, and snapshotting the Droplet.`, Writer,
 		aliasOpt("a"), displayerType(&displayers.Action{}))
 
-	CmdBuilderWithDocs(cmd, RunDropletBackups, "backups <droplet-id>", "List Droplet backups", `Use this command to list Droplet backups.`, Writer,
+	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "List Droplet backups", `Use this command to list Droplet backups.`, Writer,
 		aliasOpt("b"), displayerType(&displayers.Image{}))
 
-	cmdDropletCreate := CmdBuilderWithDocs(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", `Use this command to create a new Droplet. Required values are name, region, size, and image.`, Writer,
+	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", `Use this command to create a new Droplet. Required values are name, region, size, and image.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Droplet{}))
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "Embedded SSH keys or fingerprints on the Droplet")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "Data used to configure the Droplet on first boot")
@@ -84,34 +84,34 @@ func Droplet() *Command {
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "Block storage volumes attached to the Droplet")
 
-	cmdRunDropletDelete := CmdBuilderWithDocs(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Permanently delete a Droplet", `Use this command to permanently delete a Droplet. This is irreversible.`, Writer,
+	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Permanently delete a Droplet", `Use this command to permanently delete a Droplet. This is irreversible.`, Writer,
 		aliasOpt("d", "del", "rm"))
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the Droplet without a confirmation prompt")
 	AddStringFlag(cmdRunDropletDelete, doctl.ArgTagName, "", "", "Tag name")
 
-	cmdRunDropletGet := CmdBuilderWithDocs(cmd, RunDropletGet, "get <droplet-id>", "Retrieve information about a Droplet", `Use this command to retrieve information about a Droplet, including:`+dropletDetails, Writer,
+	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id>", "Retrieve information about a Droplet", `Use this command to retrieve information about a Droplet, including:`+dropletDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Droplet{}))
 	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Sample values: `{{.ID}}`, `{{.Name}}`, `{{.Memory}}`, `{{.Region.Name}}`, `{{.Image}}`, `{{.Tags}}`")
 
-	CmdBuilderWithDocs(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Use this command to retrieve a list of all kernels available to a Droplet.`, Writer,
+	CmdBuilder(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Use this command to retrieve a list of all kernels available to a Droplet.`, Writer,
 		aliasOpt("k"), displayerType(&displayers.Kernel{}))
 
-	cmdRunDropletList := CmdBuilderWithDocs(cmd, RunDropletList, "list [GLOB]", "List Droplets on your account", `Use this command to retrieve a list of Droplets, including the following information about each:`+dropletDetails, Writer,
+	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "List Droplets on your account", `Use this command to retrieve a list of Droplets, including the following information about each:`+dropletDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Droplet{}))
 	AddStringFlag(cmdRunDropletList, doctl.ArgRegionSlug, "", "", "Droplet region")
 	AddStringFlag(cmdRunDropletList, doctl.ArgTagName, "", "", "Tag name")
 
-	CmdBuilderWithDocs(cmd, RunDropletNeighbors, "neighbors <droplet-id>", "List a Droplet's neighbors on your account", `Use this command to get a list of your Droplets that are on the same physical hardware, including the following details:`+dropletDetails, Writer,
+	CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet-id>", "List a Droplet's neighbors on your account", `Use this command to get a list of your Droplets that are on the same physical hardware, including the following details:`+dropletDetails, Writer,
 		aliasOpt("n"), displayerType(&displayers.Droplet{}))
 
-	CmdBuilderWithDocs(cmd, RunDropletSnapshots, "snapshots <droplet-id>", "List all snapshots for a Droplet", `Use this command to get a list of snapshots created from this Droplet.`, Writer,
+	CmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet-id>", "List all snapshots for a Droplet", `Use this command to get a list of snapshots created from this Droplet.`, Writer,
 		aliasOpt("s"), displayerType(&displayers.Image{}))
 
-	cmdRunDropletTag := CmdBuilderWithDocs(cmd, RunDropletTag, "tag <droplet-id|droplet-name>", "Add a tag to a Droplet", "Use this command to tag a Droplet. Specify the tag with the `--tag-name` flag.", Writer)
+	cmdRunDropletTag := CmdBuilder(cmd, RunDropletTag, "tag <droplet-id|droplet-name>", "Add a tag to a Droplet", "Use this command to tag a Droplet. Specify the tag with the `--tag-name` flag.", Writer)
 	AddStringFlag(cmdRunDropletTag, doctl.ArgTagName, "", "", "Tag name to use; can be a new or existing tag",
 		requiredOpt())
 
-	cmdRunDropletUntag := CmdBuilderWithDocs(cmd, RunDropletUntag, "untag <droplet-id|droplet-name>", "Remove a tag from a Droplet", "Use this command to remove a tag from a Droplet, specified with the `--tag-name` flag.", Writer)
+	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet-id|droplet-name>", "Remove a tag from a Droplet", "Use this command to remove a tag from a Droplet, specified with the `--tag-name` flag.", Writer)
 	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "Tag name to remove from Droplet")
 
 	return cmd

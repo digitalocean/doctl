@@ -59,7 +59,7 @@ func VolumeAction() *Command {
 		},
 	}
 
-	cmdRunVolumeAttach := CmdBuilderWithDocs(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "Attach a volume to a Droplet", `Use this command to attach a block storage volume to a Droplet.
+	cmdRunVolumeAttach := CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "Attach a volume to a Droplet", `Use this command to attach a block storage volume to a Droplet.
 
 Each volume can be attached to only one Droplet at a time. However, up to five volumes may be attached to a single Droplet.
 
@@ -67,14 +67,14 @@ When you attach a pre-formatted volume to Ubuntu, Debian, Fedora, Fedora Atomic,
 		aliasOpt("a"))
 	AddBoolFlag(cmdRunVolumeAttach, doctl.ArgCommandWait, "", false, "Wait for volume to attach")
 
-	cmdRunVolumeDetach := CmdBuilderWithDocs(cmd, RunVolumeDetach, "detach <volume-id> <droplet-id>", "Detach a volume from a Droplet", `Use this command to detach a block storage volume from a Droplet.`, Writer,
+	cmdRunVolumeDetach := CmdBuilder(cmd, RunVolumeDetach, "detach <volume-id> <droplet-id>", "Detach a volume from a Droplet", `Use this command to detach a block storage volume from a Droplet.`, Writer,
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunVolumeDetach, doctl.ArgCommandWait, "", false, "Wait for volume to detach")
 
-	CmdBuilderWithDocs(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "(Deprecated) Detach a volume. Use `detach` instead.", "This command detaches a volume. This command is deprecated. Use `doctl compute volume-action detach` instead.",
+	CmdBuilder(cmd, RunVolumeDetach, "detach-by-droplet-id <volume-id> <droplet-id>", "(Deprecated) Detach a volume. Use `detach` instead.", "This command detaches a volume. This command is deprecated. Use `doctl compute volume-action detach` instead.",
 		Writer)
 
-	cmdRunVolumeResize := CmdBuilderWithDocs(cmd, RunVolumeResize, "resize <volume-id>", "Resize the disk of a volume", `Use this command to resize a block storage volume.
+	cmdRunVolumeResize := CmdBuilder(cmd, RunVolumeResize, "resize <volume-id>", "Resize the disk of a volume", `Use this command to resize a block storage volume.
 
 Volumes may only be resized upwards. The maximum size for a volume is 16TiB.`, Writer,
 		aliasOpt("r"))

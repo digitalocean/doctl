@@ -35,17 +35,17 @@ func Domain() *Command {
 		},
 	}
 
-	cmdDomainCreate := CmdBuilderWithDocs(cmd, RunDomainCreate, "create <domain>", "Add a domain to your account", `Use this command to add a domain to your account.`, Writer,
+	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "Add a domain to your account", `Use this command to add a domain to your account.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Domain{}))
 	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "Creates an A record when an IPv4 address is provided")
 
-	CmdBuilderWithDocs(cmd, RunDomainList, "list", "List all domains on your account", `Use this command to retrieve a list of domains on your account.`, Writer,
+	CmdBuilder(cmd, RunDomainList, "list", "List all domains on your account", `Use this command to retrieve a list of domains on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Domain{}))
 
-	CmdBuilderWithDocs(cmd, RunDomainGet, "get <domain>", "Retrieve information about a domain", `Use this command to retrieve information about the specified domain on your account.`, Writer,
+	CmdBuilder(cmd, RunDomainGet, "get <domain>", "Retrieve information about a domain", `Use this command to retrieve information about the specified domain on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Domain{}))
 
-	cmdRunDomainDelete := CmdBuilderWithDocs(cmd, RunDomainDelete, "delete <domain>", "Permanently delete a domain from your account", `Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))
+	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "Permanently delete a domain from your account", `Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete domain without confirmation prompt")
 
 	cmdRecord := &Command{
@@ -57,10 +57,10 @@ func Domain() *Command {
 	}
 	cmd.AddCommand(cmdRecord)
 
-	CmdBuilderWithDocs(cmdRecord, RunRecordList, "list <domain>", "List the DNS records for a domain", `Use this command to list the DNS records for a domain.`, Writer,
+	CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "List the DNS records for a domain", `Use this command to list the DNS records for a domain.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DomainRecord{}))
 
-	cmdRecordCreate := CmdBuilderWithDocs(cmdRecord, RunRecordCreate, "create <domain>", "Create a DNS record", `Use this command to create DNS records for a domain.`, Writer,
+	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "Create a DNS record", `Use this command to create DNS records for a domain.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.DomainRecord{}))
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", "The type of DNS record")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "", "The host name, alias, or service being defined by the record")
@@ -72,11 +72,11 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
 
-	cmdRunRecordDelete := CmdBuilderWithDocs(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "Delete a DNS record", `Use this command to delete DNS records for a domain.`, Writer,
+	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "Delete a DNS record", `Use this command to delete DNS records for a domain.`, Writer,
 		aliasOpt("d"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete record without confirmation prompt")
 
-	cmdRecordUpdate := CmdBuilderWithDocs(cmdRecord, RunRecordUpdate, "update <domain>", "Update a DNS record", `Use this command to update or change DNS records for a domain.`, Writer,
+	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "Update a DNS record", `Use this command to update or change DNS records for a domain.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.DomainRecord{}))
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, "", 0, "Record ID")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "", "The type of DNS record")

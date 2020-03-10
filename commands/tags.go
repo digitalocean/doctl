@@ -40,15 +40,15 @@ resources attribute with information about resources that have been tagged.`,
 		},
 	}
 
-	CmdBuilderWithDocs(cmd, RunCmdTagCreate, "create <tag-name>", "Create a tag", `Use this command to create a new tag.`, Writer)
+	CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "Create a tag", `Use this command to create a new tag.`, Writer)
 
-	CmdBuilderWithDocs(cmd, RunCmdTagGet, "get <tag-name>", "Retrieve information about a tag", `Use this command to retrieve a tag, display a count of how many resources are tagged with it, and show the most recently tagged resource.`, Writer,
+	CmdBuilder(cmd, RunCmdTagGet, "get <tag-name>", "Retrieve information about a tag", `Use this command to retrieve a tag, display a count of how many resources are tagged with it, and show the most recently tagged resource.`, Writer,
 		displayerType(&displayers.Tag{}))
 
-	CmdBuilderWithDocs(cmd, RunCmdTagList, "list", "List all tags", `Use this command to retrieve a list of all the tags in your account.`, Writer,
+	CmdBuilder(cmd, RunCmdTagList, "list", "List all tags", `Use this command to retrieve a list of all the tags in your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Tag{}))
 
-	cmdRunTagDelete := CmdBuilderWithDocs(cmd, RunCmdTagDelete, "delete <tag-name>...", "Delete a tag", `Use this command to delete a tag.
+	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>...", "Delete a tag", `Use this command to delete a tag.
 
 Deleting a tag also removes the tag from all the resources that had been tagged with it.`, Writer)
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete tag without confirmation prompt")

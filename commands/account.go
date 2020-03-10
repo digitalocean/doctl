@@ -30,7 +30,7 @@ For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile d
 		},
 	}
 
-	CmdBuilderWithDocs(cmd, RunAccountGet, "get", "Retrieve account profile details", `Retrieve the following details from your account profile:
+	CmdBuilder(cmd, RunAccountGet, "get", "Retrieve account profile details", `Retrieve the following details from your account profile:
 
 - Email address
 - Account Droplet limit
@@ -39,7 +39,7 @@ For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile d
 - UUID for the account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Account{}))
 
-	CmdBuilderWithDocs(cmd, RunAccountRateLimit, "ratelimit", "Retrieve your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
+	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieve your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
 
 - The current limit on your account for API calls (5,000 per hour per OAuth token)
 - The number of API calls you have made in the last hour

@@ -43,7 +43,7 @@ func SSH(parent *Command) *Command {
 You may specify the user to login with by passing the `+"`"+`--%s`+"`"+` flag. To access the Droplet on a non-default port, use the `+"`"+`--%s`+"`"+` flag. By default, the connection will be made to the Droplet's public IP address. In order access it using its private IP address, use the `+"`"+`--%s`+"`"+` flag.
 `, doctl.ArgSSHUser, doctl.ArgsSSHPort, doctl.ArgsSSHPrivateIP)
 
-	cmdSSH := CmdBuilderWithDocs(parent, RunSSH, "ssh <droplet-id|name>", "Access a Droplet using SSH", sshDesc, Writer)
+	cmdSSH := CmdBuilder(parent, RunSSH, "ssh <droplet-id|name>", "Access a Droplet using SSH", sshDesc, Writer)
 	AddStringFlag(cmdSSH, doctl.ArgSSHUser, "", "root", "SSH user for connection")
 	AddStringFlag(cmdSSH, doctl.ArgsSSHKeyPath, "", path, "Path to SSH private key")
 	AddIntFlag(cmdSSH, doctl.ArgsSSHPort, "", 22, "The remote port sshd is running on")
