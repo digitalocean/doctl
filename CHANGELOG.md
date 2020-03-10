@@ -13,6 +13,7 @@
 - #305 invoices: GetPDF and GetCSV methods - @rbutler
 - #304 Add NewFromToken convenience method to init client - @bentranter
 - #301 invoices: Get, Summary, and List methods - @rbutler
+- #299 Fix param expiry_seconds for kubernetes.GetCredentials request - @velp
 
 ## [v1.30.0] - 2020-02-03
 
