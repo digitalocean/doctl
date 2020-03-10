@@ -481,8 +481,8 @@ To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases 
 	AddStringFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserMySQLAuthPlugin, "", "",
 		"set auth mode for MySQL users")
 
-	CmdBuilder(cmd, RunDatabaseUserResetAuth, "reset the mysql auth for <database-id> <user-name> <new-auth-mode>",
-		"Resets a users MySQL auth plugin", "This command resets the MySQL auth plugin for a given user. It will return the new user credentials. Valid auth plugin values are 'caching_sha2_password' and 'mysql_native_password'", Writer, aliasOpt("rs"))
+	CmdBuilder(cmd, RunDatabaseUserResetAuth, "reset <database-id> <user-name> <new-auth-mode>",
+		"Resets a user's MySQL auth plugin", "This command resets the MySQL auth plugin for a given user. It will return the new user credentials. Valid auth plugin values are `caching_sha2_password` and `mysql_native_password`", Writer, aliasOpt("rs"))
 
 	cmdDatabaseUserDelete := CmdBuilder(cmd, RunDatabaseUserDelete,
 		"delete <database-id> <user-id>", "Delete a database user", `This command deletes the user with the username you specify, whose account was given access to the database cluster you specify.
