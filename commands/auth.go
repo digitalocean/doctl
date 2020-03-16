@@ -45,7 +45,8 @@ func retrieveUserTokenFromCommandLine() (string, error) {
 		return "", ErrUnknownTerminal
 	}
 
-	fmt.Print("DigitalOcean access token: ")
+	fmt.Print("Please authenticate doctl for use with your DigitalOcean account. You can generate a token in the control panel at https://cloud.digitalocean.com/account/api/token\n\n")
+	fmt.Print("Enter your access token: ")
 	passwdBytes, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return "", err
