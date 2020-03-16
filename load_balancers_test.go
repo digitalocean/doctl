@@ -829,9 +829,10 @@ func TestLoadBalancers_AsRequest(t *testing.T) {
 		Region: &Region{
 			Slug: "lon1",
 		},
-		RedirectHttpToHttps: true,
-		EnableProxyProtocol: true,
-		VPCUUID:             "880b7f98-f062-404d-b33c-458d545696f6",
+		RedirectHttpToHttps:    true,
+		EnableProxyProtocol:    true,
+		EnableBackendKeepalive: true,
+		VPCUUID:                "880b7f98-f062-404d-b33c-458d545696f6",
 	}
 	lb.DropletIDs = make([]int, 1, 2)
 	lb.DropletIDs[0] = 12345
@@ -867,10 +868,11 @@ func TestLoadBalancers_AsRequest(t *testing.T) {
 			CookieName:       "nomnom",
 			CookieTtlSeconds: 32,
 		},
-		DropletIDs:          []int{12345},
-		RedirectHttpToHttps: true,
-		EnableProxyProtocol: true,
-		VPCUUID:             "880b7f98-f062-404d-b33c-458d545696f6",
+		DropletIDs:             []int{12345},
+		RedirectHttpToHttps:    true,
+		EnableProxyProtocol:    true,
+		EnableBackendKeepalive: true,
+		VPCUUID:                "880b7f98-f062-404d-b33c-458d545696f6",
 	}
 
 	r := lb.AsRequest()
