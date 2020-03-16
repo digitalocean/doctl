@@ -47,7 +47,7 @@ import (
 )
 
 func main() {
-    client := NewFromToken("my-digitalocean-api-token")
+    client := godo.NewFromToken("my-digitalocean-api-token")
 }
 ```
 
