@@ -51,6 +51,8 @@ func main() {
 }
 ```
 
+If you need to provide a `context.Context` to your new client, you should use [`godo.NewClient`](https://godoc.org/github.com/digitalocean/godo#NewClient) to manually construct a client instead.
+
 ## Examples
 
 
