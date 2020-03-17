@@ -21,20 +21,21 @@ build_local_snap() {
 }
 
 build_pre() {
-  version="$(ORIGIN=${ORIGIN:-origin} SNAP_IMAGE=true "$DIR/scripts/version.sh")"
+  version="$(ORIGIN=${ORIGIN} SNAP_IMAGE=true "$DIR/scripts/version.sh")"
   prerelease="sammytheshark/${REPO_NAME}:${version}"
 
   docker tag "$REPO_NAME" "$prerelease" && \
-    docker push "$prerelease" && \
-    docker rename "$prerelease" "$SAMMY_LATEST" && \
+    docker push "$prerelease"
+
+  docker tag "$REPO_NAME" "$SAMMY_LATEST" && \
     docker push "$SAMMY_LATEST"
 }
 
 build_finalize() {
-  version=$("ORIGIN=${ORIGIN} $DIR/scripts/version.sh" -s)
+  version=$(ORIGIN="${ORIGIN}" "$DIR/scripts/version.sh" -s)
   release="sammytheshark/${REPO_NAME}:$version"
 
-  docker rename "$SAMMY_LATEST" "$release" && \
+  docker tag "$SAMMY_LATEST" "$release" && \
     docker push "$release"
 }
 
