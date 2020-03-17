@@ -15,6 +15,7 @@ Options:
 
   -h, --help   Show this help information.
   -s, --short  major.minor.patch only
+  -i, --image  snap image version
   -b, --branch branch only
   -c, --commit commit only
 "
@@ -37,12 +38,23 @@ commit() {
   fi
 }
 
+image() {
+  echo "$(semver)-$(commit)-pre"
+}
+
 ORIGIN=${ORIGIN:-origin}
 set +e
 git fetch --tags "${ORIGIN}" &>/dev/null
 set -e
 
 if [[ "$#" -eq 0 ]]; then
+
+  SNAP_IMAGE=${SNAP_IMAGE:-false}
+  if [[ "${SNAP_IMAGE}" != 'false' ]]; then
+    image
+    exit 0
+  fi
+
   version=$(semver)
 
   br=$(branch)
@@ -70,6 +82,10 @@ case "$1" in
 
   "-s"|"--short")
     version=$(semver)
+    ;;
+
+  "-i"|"--image")
+    version=$(image)
     ;;
 
   *)

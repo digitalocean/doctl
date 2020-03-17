@@ -1,14 +1,31 @@
 # Note to maintainers: after you make changes to this file, please run `make snap_image`.
+#  The script will gives instructions to complete the update once it finishes. Be patient, it
+#  takes a long time to run.
+#
+# For help with the technical aspects of this Dockerfile, see
+#   https://snapcraft.io/docs/t/creating-docker-images-for-snapcraft/11739
+#   https://raw.githubusercontent.com/snapcore/snapcraft/master/docker/stable.Dockerfile
+# and https://forum.snapcraft.io/. Note that the snapcraft forum does not appear to be indexed
+# effectively (at all?) by google.
+#
+# See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/
+#  for guidance on the style of this Dockerfile
 FROM ubuntu:xenial as builder
 
-RUN apt update && \
-        apt dist-upgrade --yes && \
-        apt install --yes curl jq squashfs-tools
+RUN apt-get update && apt-get install --yes \
+        curl \
+        jq \
+        squashfs-tools
 
-# Grab the core snap from the stable channel and unpack it in the proper place
+# Grab the core snap (for backwards compatibility) from the stable channel and unpack it in the proper place
 RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/core' | jq '.download_url' -r) --output core.snap && \
         mkdir -p /snap/core && \
         unsquashfs -d /snap/core/current core.snap
+
+# Grab the core18 snap (which snapcraft uses as a base) from the stable channel and unpack it in the proper place.
+RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/core18' | jq '.download_url' -r) --output core18.snap && \
+        mkdir -p /snap/core18 && \
+        unsquashfs -d /snap/core18/current core18.snap
 
 # Grab the snapcraft snap from the stable channel and unpack it in the proper place
 RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/snapcraft?channel=stable' | jq '.download_url' -r) --output snapcraft.snap && \
@@ -33,13 +50,29 @@ RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/sna
 FROM ubuntu:xenial
 COPY --from=builder /snap /snap
 
-RUN apt clean && \
-	apt update && \
-        apt dist-upgrade --yes && \
-        apt install --yes \
-        sudo locales \
-        gcc git && \
-        locale-gen en_US.UTF-8
+# The first set (build-essential through xz-utils) would otherwise be installed later
+RUN apt-get clean && apt-get update && apt-get install --yes \
+        build-essential \
+	bzip2 \
+	dpkg-dev \
+	fakeroot \
+	g++ g++-5 \
+	golang-1.6-go golang-1.6-race-detector-runtime golang-1.6-src golang-go golang-race-detector-runtime golang-src \
+	libalgorithm-diff-perl libalgorithm-diff-xs-perl libalgorithm-merge-perl libdpkg-perl \
+	libfakeroot libfile-fcntllock-perl libglib2.0-0 libglib2.0-data libicu55 libstdc++-5-dev libxml2 \
+	make \
+	pkg-config \
+	sgml-base \
+	shared-mime-info \
+	xdg-user-dirs \
+	xml-core \
+	xz-utils \
+        sudo \
+	locales \
+        gcc \
+	git && \
+        locale-gen en_US.UTF-8 && \
+        rm -rf /var/lib/apt/lists/*
 
 # Set the proper environment
 ENV LANG en_US.UTF-8

@@ -104,6 +104,28 @@ snap_image:
 	@echo ""
 	@scripts/snap_image.sh
 
+.PHONY: _snap_image_version
+_snap_image_version:
+	@ORIGIN=${ORIGIN} SNAP_IMAGE=true scripts/version.sh
+
+.PHONY: build_local_snap
+build_local_snap:
+	@echo "==> build local snap using local image tagged doctl-snap-base"
+	@echo ""
+	@BUILD=local_snap scripts/snap_image.sh
+
+.PHONY: prerelease_snap_image
+prerelease_snap_image:
+	@echo "==> tag doctl-snap-base as a prerelease and push to dockerhub as latest"
+	@echo ""
+	@BUILD=pre scripts/snap_image.sh
+
+.PHONY: finalize_snap_image
+finalize_snap_image:
+	@echo "==> tag latest with most recent doctl version push to dockerhub"
+	@echo ""
+	@ORIGIN=${ORIGIN} BUILD=finalize scripts/snap_image.sh
+
 CHANNEL ?= stable
 
 .PHONY: _build_snap
@@ -112,7 +134,7 @@ _build_snap:
 
 .PHONY: snap
 snap:
-	@echo "=> publish snap (normally done by travis)"
+	@echo "==> publish snap (normally done by travis)"
 	@echo ""
 	@CHANNEL=${CHANNEL} scripts/snap.sh
 
@@ -182,13 +204,13 @@ _tag_and_release: tag
 
 .PHONY: release
 release:
-	@echo "=> release (most recent tag, normally done by travis)"
+	@echo "==> release (most recent tag, normally done by travis)"
 	@echo ""
 	@$(MAKE) _release
 
 .PHONY: docs
 docs:
-	@echo "=> Generate YAML documentation in ${DOCS_OUT}"
+	@echo "==> Generate YAML documentation in ${DOCS_OUT}"
 	@echo ""
 	@mkdir -p ${DOCS_OUT}
 	@DOCS_OUT=${DOCS_OUT} go run scripts/gen-yaml-docs.go
