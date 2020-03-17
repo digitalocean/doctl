@@ -66,7 +66,7 @@ jobs:
     - provider: snap
       channel: stable
       snap: doctl_v*.snap
-      cleanup: false
+      skip_cleanup: true
       on:
         tags: true
         repo: digitalocean/doctl
@@ -84,7 +84,7 @@ jobs:
     - provider: snap
       channel: candidate
       snap: doctl_v*.snap
-      cleanup: false
+      skip_cleanup: true
       on:
         repo: digitalocean/doctl
 
