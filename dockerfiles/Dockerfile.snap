@@ -12,9 +12,7 @@
 #  for guidance on the style of this Dockerfile
 FROM ubuntu:xenial as builder
 
-# We can afford to be broad here as we only select what we need in the next step, although it
-# is more brittle
-RUN apt-get update && apt-get dist-upgrade --yes && apt-get install --yes \
+RUN apt-get update && apt-get install --yes \
         curl \
         jq \
         squashfs-tools
@@ -52,9 +50,27 @@ RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/sna
 FROM ubuntu:xenial
 COPY --from=builder /snap /snap
 
-RUN apt-get clean && apt-get update && apt-get dist-upgrade --yes && apt-get install --yes \
-        sudo locales \
-        gcc git && \
+# The first set (build-essential through xz-utils) would otherwise be installed later
+RUN apt-get clean && apt-get update && apt-get install --yes \
+        build-essential \
+	bzip2 \
+	dpkg-dev \
+	fakeroot \
+	g++ g++-5 \
+	golang-1.6-go golang-1.6-race-detector-runtime golang-1.6-src golang-go golang-race-detector-runtime golang-src \
+	libalgorithm-diff-perl libalgorithm-diff-xs-perl libalgorithm-merge-perl libdpkg-perl \
+	libfakeroot libfile-fcntllock-perl libglib2.0-0 libglib2.0-data libicu55 libstdc++-5-dev libxml2 \
+	make \
+	pkg-config \
+	sgml-base \
+	shared-mime-info \
+	xdg-user-dirs \
+	xml-core \
+	xz-utils \
+        sudo \
+	locales \
+        gcc \
+	git && \
         locale-gen en_US.UTF-8 && \
         rm -rf /var/lib/apt/lists/*
 

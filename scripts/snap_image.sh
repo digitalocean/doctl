@@ -16,6 +16,7 @@ repo_missing() {
 
 build_local_snap() {
   docker tag "$REPO_NAME" "sammytheshark/$REPO_NAME"
+  cd "$DIR" && sudo make clean
   make _build_snap
 }
 
