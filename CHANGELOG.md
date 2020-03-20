@@ -3,6 +3,7 @@
 ## unreleased
 
 - #310 Add BillingHistory service and List endpoint - @rbutler
+- #316 load balancers: add new enable_backend_keepalive field - @anitgandhi
 
 ## [v1.32.0] - 2020-03-04
 
