@@ -225,6 +225,8 @@ const (
 	ArgLoadBalancerAlgorithm = "algorithm"
 	// ArgRedirectHttpToHttps is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
 	ArgRedirectHttpToHttps = "redirect-http-to-https"
+	// ArgEnableProxyProtocol is a flag that indicates whether PROXY protocol should be enabled on the load balancer.
+	ArgEnableProxyProtocol = "enable-proxy-protocol"
 	// ArgStickySessions is a list of sticky sessions settings for the load balancer.
 	ArgStickySessions = "sticky-sessions"
 	// ArgHealthCheck is a list of health check settings for the load balancer.
