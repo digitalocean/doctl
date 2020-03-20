@@ -370,18 +370,18 @@ complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool r
 
 # Completions for the 'doctl kubernetes cluster node-pool update' command
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l auto-scale -d "Boolean indicating whether to enable auto-scaling on the node pool"
-complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l count   -d "Size of (number of nodes in) the node pool"
+complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l count      -d "Size of (number of nodes in) the node pool"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l label      -d "Label in key=value notation to apply to the node pool"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l max-nodes  -d "Maximum number of nodes in the node pool when autoscaling is enabled"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l min-nodes  -d "Minimum number of nodes in the node pool when autoscaling is enabled"
-complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l name    -d "Name of the node pool"
-complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l size    -d "Size of the nodes in the node pool"
+complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l name       -d "Name of the node pool"
+complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l size       -d "Size of the nodes in the node pool"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster node-pool update' -l tag        -d "Tag to apply to the node pool"
 
 # Completions for the 'doctl kubernetes cluster update' command
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l auto-upgrade           -d "Boolean specifying whether to enable auto-upgrade for the cluster"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l cluster-name           -d "Specifies a new cluster name"
-complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l maintenance-window any -d "Sets the beginning of the four hour maintenance window for the cluster"
+complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l maintenance-window     -d "Sets the beginning of the four hour maintenance window for the cluster"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l set-current-context    -d "Boolean specifying whether to set the current kubectl context"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l tag strings            -d "A comma-separated list of tags to apply to the cluster"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l update-kubeconfig      -d "Boolean specifying whether to update the cluster"
@@ -404,8 +404,8 @@ complete -c doctl -n '__fish_seen_subcommand_from projects' -a update    -d "Upd
 
 # Completions for the 'doctl projects create' command
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -l description -d "Dscription of the project"
-complete -c doctl -n '__fish_seen_subcommand_from projects create' -l environment -d "Environment in which your project resides. 
-complete -c doctl -n '__fish_seen_subcommand_from projects create' -l format      -d "Columns for output in a comma-separated list. 
+complete -c doctl -n '__fish_seen_subcommand_from projects create' -l environment -d "Environment in which your project resides."
+complete -c doctl -n '__fish_seen_subcommand_from projects create' -l format      -d "Columns for output in a comma-separated list." 
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -rl name       -d "Name for the project"
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -rl no-header  -d "Return raw data with no headers"
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -rl purpose    -d "Project's purpose"
@@ -438,12 +438,12 @@ complete -c doctl -n '__fish_seen_subcommand_from projects resources list' -l fo
 complete -c doctl -n '__fish_seen_subcommand_from projects resources list' -l no-header -d "Return raw data with no headers"
 
 # Completions for the 'doctl projects update' command
-complete -c doctl -n '__fish_seen_subcommand_from projects update' -l description -d "Dscription of the project"
-complete -c doctl -n '__fish_seen_subcommand_from projects update' -l environment -d "Environment in which your project resides.
-complete -c doctl -n '__fish_seen_subcommand_from projects update' -l format      -d "Columns for output in a comma-separated list. 
+complete -c doctl -n '__fish_seen_subcommand_from projects update' -l description -d "Description of the project"
+complete -c doctl -n '__fish_seen_subcommand_from projects update' -l environment -d "Environment in which your project resides."
+complete -c doctl -n '__fish_seen_subcommand_from projects update' -l format      -d "Columns for output in a comma-separated list."
 complete -c doctl -n '__fish_seen_subcommand_from projects update' -rl name       -d "Name for the project"
 complete -c doctl -n '__fish_seen_subcommand_from projects update' -l no-header   -d "Return raw data with no headers"
-complete -c doctl -n '__fish_seen_subcommand_from projects update' -rl purpose    -d "Project's purpose"
+complete -c doctl -n '__fish_seen_subcommand_from projects update' -rl purpose    -d "Project's purpose"	
 `
 	_, err := buf.Write([]byte(fishCompletion))
 	if err != nil {
