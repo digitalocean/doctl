@@ -28,12 +28,12 @@ func Balance() *Command {
 		},
 	}
 
-	getBalanceDesc := `This command retrieves the following details about you account balance:
+	getBalanceDesc := `This command retrieves the following details about your account balance:
 
-- Your month-to-date balance as of the generated at time including your account
+- Your month-to-date balance including your account
   balance and month-to-date usage.
 - Your current balance as of your most recent billing activity.
-- The amount used in the current billing period as of the generated at time.
+- Your usage in the current billing period.
 - The time at which balances were most recently generated.
 `
 

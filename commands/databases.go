@@ -482,7 +482,7 @@ To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases 
 		"set auth mode for MySQL users")
 
 	CmdBuilder(cmd, RunDatabaseUserResetAuth, "reset <database-id> <user-name> <new-auth-mode>",
-		"Resets a user's MySQL auth plugin", "This command resets the MySQL auth plugin for a given user. It will return the new user credentials. Valid auth plugin values are `caching_sha2_password` and `mysql_native_password`", Writer, aliasOpt("rs"))
+		"Resets a user's MySQL auth plugin", "This command resets the MySQL auth plugin for a given user. It will return the new user credentials. Valid values for `<new-auth-mode>` are `caching_sha2_password` and `mysql_native_password`.", Writer, aliasOpt("rs"))
 
 	cmdDatabaseUserDelete := CmdBuilder(cmd, RunDatabaseUserDelete,
 		"delete <database-id> <user-id>", "Delete a database user", `This command deletes the user with the username you specify, whose account was given access to the database cluster you specify.
