@@ -383,7 +383,7 @@ complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l 
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l cluster-name           -d "Specifies a new cluster name"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l maintenance-window     -d "Sets the beginning of the four hour maintenance window for the cluster"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l set-current-context    -d "Boolean specifying whether to set the current kubectl context"
-complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l tag strings            -d "A comma-separated list of tags to apply to the cluster"
+complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l tag                    -d "A comma-separated list of tags to apply to the cluster"
 complete -c doctl -n '__fish_seen_subcommand_from kubernetes cluster update' -l update-kubeconfig      -d "Boolean specifying whether to update the cluster"
 
 # Completions for the 'doctl kubernetes cluster upgrade' command
