@@ -227,6 +227,8 @@ const (
 	ArgRedirectHttpToHttps = "redirect-http-to-https"
 	// ArgEnableProxyProtocol is a flag that indicates whether PROXY protocol should be enabled on the load balancer.
 	ArgEnableProxyProtocol = "enable-proxy-protocol"
+	// ArgEnableBackendKeepalive is a flag that indicates whether keepalive connections should be enabled to target droplets from the load balancer.
+	ArgEnableBackendKeepalive = "enable-backend-keepalive"
 	// ArgStickySessions is a list of sticky sessions settings for the load balancer.
 	ArgStickySessions = "sticky-sessions"
 	// ArgHealthCheck is a list of health check settings for the load balancer.

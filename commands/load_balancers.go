@@ -80,6 +80,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"Redirects HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddBoolFlag(cmdRecordCreate, doctl.ArgEnableProxyProtocol, "", false,
 		"enable proxy protocol")
+		AddBoolFlag(cmdRecordCreate, doctl.ArgEnableBackendKeepalive, "", false,
+		"enable keepalive connections to backend target droplets")
 	AddStringFlag(cmdRecordCreate, doctl.ArgTagName, "", "", "droplet tag name")
 	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of Droplet IDs to add to the load balancer, e.g.: `12,33`")
@@ -102,6 +104,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"Flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgEnableProxyProtocol, "", false,
 		"enable proxy protocol")
+		AddBoolFlag(cmdRecordUpdate, doctl.ArgEnableBackendKeepalive, "", false,
+		"enable keepalive connections to backend target droplets")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgTagName, "", "", "Assigns Droplets with the specified tag to the load balancer")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of Droplet IDs, e.g.: `215,378`")
@@ -412,6 +416,12 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		return err
 	}
 	r.EnableProxyProtocol = enableProxyProtocol
+
+	enableBackendKeepalive, err := c.Doit.GetBool(c.NS, doctl.ArgEnableBackendKeepalive)
+	if err != nil {
+		return err
+	}
+	r.EnableBackendKeepalive = enableBackendKeepalive
 
 	dropletIDsList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDropletIDs)
 	if err != nil {

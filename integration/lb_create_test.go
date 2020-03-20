@@ -68,6 +68,7 @@ var _ = suite("compute/load-balancer/create", func(t *testing.T, when spec.G, it
 			"--region", "venus",
 			"--redirect-http-to-https",
 			"--enable-proxy-protocol",
+			"--enable-backend-keepalive",
 			"--tag-name", "magic-lb",
 		}
 	})
@@ -131,7 +132,8 @@ ID                                      IP    Name             Status    Created
       3164445
     ],
     "redirect_http_to_https": true,
-    "enable_proxy_protocol": true
+	"enable_proxy_protocol": true,
+	"enable_backend_keepalive": true
   }
 }`
 	lbCreateRequest = `
@@ -144,6 +146,7 @@ ID                                      IP    Name             Status    Created
   "droplet_ids":[22,66],
   "tag":"magic-lb",
   "redirect_http_to_https":true,
-  "enable_proxy_protocol":true
+  "enable_proxy_protocol":true,
+  "enable_backend_keepalive":true
 }`
 )
