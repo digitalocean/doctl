@@ -11,30 +11,30 @@ import (
 	reflect "reflect"
 )
 
-// MockProjectsService is a mock of ProjectsService interface
+// MockProjectsService is a mock of ProjectsService interface.
 type MockProjectsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockProjectsServiceMockRecorder
 }
 
-// MockProjectsServiceMockRecorder is the mock recorder for MockProjectsService
+// MockProjectsServiceMockRecorder is the mock recorder for MockProjectsService.
 type MockProjectsServiceMockRecorder struct {
 	mock *MockProjectsService
 }
 
-// NewMockProjectsService creates a new mock instance
+// NewMockProjectsService creates a new mock instance.
 func NewMockProjectsService(ctrl *gomock.Controller) *MockProjectsService {
 	mock := &MockProjectsService{ctrl: ctrl}
 	mock.recorder = &MockProjectsServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockProjectsService) EXPECT() *MockProjectsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockProjectsService) List() (do.Projects, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -43,13 +43,13 @@ func (m *MockProjectsService) List() (do.Projects, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockProjectsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockProjectsService)(nil).List))
 }
 
-// GetDefault mocks base method
+// GetDefault mocks base method.
 func (m *MockProjectsService) GetDefault() (*do.Project, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDefault")
@@ -58,13 +58,13 @@ func (m *MockProjectsService) GetDefault() (*do.Project, error) {
 	return ret0, ret1
 }
 
-// GetDefault indicates an expected call of GetDefault
+// GetDefault indicates an expected call of GetDefault.
 func (mr *MockProjectsServiceMockRecorder) GetDefault() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefault", reflect.TypeOf((*MockProjectsService)(nil).GetDefault))
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockProjectsService) Get(projectUUID string) (*do.Project, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", projectUUID)
@@ -73,13 +73,13 @@ func (m *MockProjectsService) Get(projectUUID string) (*do.Project, error) {
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockProjectsServiceMockRecorder) Get(projectUUID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockProjectsService)(nil).Get), projectUUID)
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockProjectsService) Create(arg0 *godo.CreateProjectRequest) (*do.Project, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0)
@@ -88,13 +88,13 @@ func (m *MockProjectsService) Create(arg0 *godo.CreateProjectRequest) (*do.Proje
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockProjectsServiceMockRecorder) Create(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockProjectsService)(nil).Create), arg0)
 }
 
-// Update mocks base method
+// Update mocks base method.
 func (m *MockProjectsService) Update(projectUUID string, req *godo.UpdateProjectRequest) (*do.Project, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", projectUUID, req)
@@ -103,13 +103,13 @@ func (m *MockProjectsService) Update(projectUUID string, req *godo.UpdateProject
 	return ret0, ret1
 }
 
-// Update indicates an expected call of Update
+// Update indicates an expected call of Update.
 func (mr *MockProjectsServiceMockRecorder) Update(projectUUID, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockProjectsService)(nil).Update), projectUUID, req)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockProjectsService) Delete(projectUUID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", projectUUID)
@@ -117,13 +117,13 @@ func (m *MockProjectsService) Delete(projectUUID string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockProjectsServiceMockRecorder) Delete(projectUUID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockProjectsService)(nil).Delete), projectUUID)
 }
 
-// ListResources mocks base method
+// ListResources mocks base method.
 func (m *MockProjectsService) ListResources(projectUUID string) (do.ProjectResources, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListResources", projectUUID)
@@ -132,13 +132,13 @@ func (m *MockProjectsService) ListResources(projectUUID string) (do.ProjectResou
 	return ret0, ret1
 }
 
-// ListResources indicates an expected call of ListResources
+// ListResources indicates an expected call of ListResources.
 func (mr *MockProjectsServiceMockRecorder) ListResources(projectUUID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListResources", reflect.TypeOf((*MockProjectsService)(nil).ListResources), projectUUID)
 }
 
-// AssignResources mocks base method
+// AssignResources mocks base method.
 func (m *MockProjectsService) AssignResources(projectUUID string, resources []string) (do.ProjectResources, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AssignResources", projectUUID, resources)
@@ -147,7 +147,7 @@ func (m *MockProjectsService) AssignResources(projectUUID string, resources []st
 	return ret0, ret1
 }
 
-// AssignResources indicates an expected call of AssignResources
+// AssignResources indicates an expected call of AssignResources.
 func (mr *MockProjectsServiceMockRecorder) AssignResources(projectUUID, resources interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AssignResources", reflect.TypeOf((*MockProjectsService)(nil).AssignResources), projectUUID, resources)

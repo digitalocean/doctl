@@ -11,30 +11,30 @@ import (
 	reflect "reflect"
 )
 
-// MockDomainsService is a mock of DomainsService interface
+// MockDomainsService is a mock of DomainsService interface.
 type MockDomainsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockDomainsServiceMockRecorder
 }
 
-// MockDomainsServiceMockRecorder is the mock recorder for MockDomainsService
+// MockDomainsServiceMockRecorder is the mock recorder for MockDomainsService.
 type MockDomainsServiceMockRecorder struct {
 	mock *MockDomainsService
 }
 
-// NewMockDomainsService creates a new mock instance
+// NewMockDomainsService creates a new mock instance.
 func NewMockDomainsService(ctrl *gomock.Controller) *MockDomainsService {
 	mock := &MockDomainsService{ctrl: ctrl}
 	mock.recorder = &MockDomainsServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDomainsService) EXPECT() *MockDomainsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockDomainsService) List() (do.Domains, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -43,13 +43,13 @@ func (m *MockDomainsService) List() (do.Domains, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockDomainsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDomainsService)(nil).List))
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockDomainsService) Get(arg0 string) (*do.Domain, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
@@ -58,13 +58,13 @@ func (m *MockDomainsService) Get(arg0 string) (*do.Domain, error) {
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockDomainsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDomainsService)(nil).Get), arg0)
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockDomainsService) Create(arg0 *godo.DomainCreateRequest) (*do.Domain, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0)
@@ -73,13 +73,13 @@ func (m *MockDomainsService) Create(arg0 *godo.DomainCreateRequest) (*do.Domain,
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockDomainsServiceMockRecorder) Create(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDomainsService)(nil).Create), arg0)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockDomainsService) Delete(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0)
@@ -87,13 +87,13 @@ func (m *MockDomainsService) Delete(arg0 string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockDomainsServiceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDomainsService)(nil).Delete), arg0)
 }
 
-// Records mocks base method
+// Records mocks base method.
 func (m *MockDomainsService) Records(arg0 string) (do.DomainRecords, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Records", arg0)
@@ -102,13 +102,13 @@ func (m *MockDomainsService) Records(arg0 string) (do.DomainRecords, error) {
 	return ret0, ret1
 }
 
-// Records indicates an expected call of Records
+// Records indicates an expected call of Records.
 func (mr *MockDomainsServiceMockRecorder) Records(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Records", reflect.TypeOf((*MockDomainsService)(nil).Records), arg0)
 }
 
-// Record mocks base method
+// Record mocks base method.
 func (m *MockDomainsService) Record(arg0 string, arg1 int) (*do.DomainRecord, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Record", arg0, arg1)
@@ -117,13 +117,13 @@ func (m *MockDomainsService) Record(arg0 string, arg1 int) (*do.DomainRecord, er
 	return ret0, ret1
 }
 
-// Record indicates an expected call of Record
+// Record indicates an expected call of Record.
 func (mr *MockDomainsServiceMockRecorder) Record(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Record", reflect.TypeOf((*MockDomainsService)(nil).Record), arg0, arg1)
 }
 
-// DeleteRecord mocks base method
+// DeleteRecord mocks base method.
 func (m *MockDomainsService) DeleteRecord(arg0 string, arg1 int) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteRecord", arg0, arg1)
@@ -131,13 +131,13 @@ func (m *MockDomainsService) DeleteRecord(arg0 string, arg1 int) error {
 	return ret0
 }
 
-// DeleteRecord indicates an expected call of DeleteRecord
+// DeleteRecord indicates an expected call of DeleteRecord.
 func (mr *MockDomainsServiceMockRecorder) DeleteRecord(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRecord", reflect.TypeOf((*MockDomainsService)(nil).DeleteRecord), arg0, arg1)
 }
 
-// EditRecord mocks base method
+// EditRecord mocks base method.
 func (m *MockDomainsService) EditRecord(arg0 string, arg1 int, arg2 *do.DomainRecordEditRequest) (*do.DomainRecord, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EditRecord", arg0, arg1, arg2)
@@ -146,13 +146,13 @@ func (m *MockDomainsService) EditRecord(arg0 string, arg1 int, arg2 *do.DomainRe
 	return ret0, ret1
 }
 
-// EditRecord indicates an expected call of EditRecord
+// EditRecord indicates an expected call of EditRecord.
 func (mr *MockDomainsServiceMockRecorder) EditRecord(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditRecord", reflect.TypeOf((*MockDomainsService)(nil).EditRecord), arg0, arg1, arg2)
 }
 
-// CreateRecord mocks base method
+// CreateRecord mocks base method.
 func (m *MockDomainsService) CreateRecord(arg0 string, arg1 *do.DomainRecordEditRequest) (*do.DomainRecord, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateRecord", arg0, arg1)
@@ -161,7 +161,7 @@ func (m *MockDomainsService) CreateRecord(arg0 string, arg1 *do.DomainRecordEdit
 	return ret0, ret1
 }
 
-// CreateRecord indicates an expected call of CreateRecord
+// CreateRecord indicates an expected call of CreateRecord.
 func (mr *MockDomainsServiceMockRecorder) CreateRecord(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecord", reflect.TypeOf((*MockDomainsService)(nil).CreateRecord), arg0, arg1)

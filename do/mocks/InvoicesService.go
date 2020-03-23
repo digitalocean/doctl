@@ -10,30 +10,30 @@ import (
 	reflect "reflect"
 )
 
-// MockInvoicesService is a mock of InvoicesService interface
+// MockInvoicesService is a mock of InvoicesService interface.
 type MockInvoicesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockInvoicesServiceMockRecorder
 }
 
-// MockInvoicesServiceMockRecorder is the mock recorder for MockInvoicesService
+// MockInvoicesServiceMockRecorder is the mock recorder for MockInvoicesService.
 type MockInvoicesServiceMockRecorder struct {
 	mock *MockInvoicesService
 }
 
-// NewMockInvoicesService creates a new mock instance
+// NewMockInvoicesService creates a new mock instance.
 func NewMockInvoicesService(ctrl *gomock.Controller) *MockInvoicesService {
 	mock := &MockInvoicesService{ctrl: ctrl}
 	mock.recorder = &MockInvoicesServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockInvoicesService) EXPECT() *MockInvoicesServiceMockRecorder {
 	return m.recorder
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockInvoicesService) Get(arg0 string) (*do.Invoice, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
@@ -42,13 +42,13 @@ func (m *MockInvoicesService) Get(arg0 string) (*do.Invoice, error) {
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockInvoicesServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInvoicesService)(nil).Get), arg0)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockInvoicesService) List() (*do.InvoiceList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -57,13 +57,13 @@ func (m *MockInvoicesService) List() (*do.InvoiceList, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockInvoicesServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInvoicesService)(nil).List))
 }
 
-// GetSummary mocks base method
+// GetSummary mocks base method.
 func (m *MockInvoicesService) GetSummary(arg0 string) (*do.InvoiceSummary, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSummary", arg0)
@@ -72,13 +72,13 @@ func (m *MockInvoicesService) GetSummary(arg0 string) (*do.InvoiceSummary, error
 	return ret0, ret1
 }
 
-// GetSummary indicates an expected call of GetSummary
+// GetSummary indicates an expected call of GetSummary.
 func (mr *MockInvoicesServiceMockRecorder) GetSummary(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSummary", reflect.TypeOf((*MockInvoicesService)(nil).GetSummary), arg0)
 }
 
-// GetPDF mocks base method
+// GetPDF mocks base method.
 func (m *MockInvoicesService) GetPDF(arg0 string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPDF", arg0)
@@ -87,13 +87,13 @@ func (m *MockInvoicesService) GetPDF(arg0 string) ([]byte, error) {
 	return ret0, ret1
 }
 
-// GetPDF indicates an expected call of GetPDF
+// GetPDF indicates an expected call of GetPDF.
 func (mr *MockInvoicesServiceMockRecorder) GetPDF(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPDF", reflect.TypeOf((*MockInvoicesService)(nil).GetPDF), arg0)
 }
 
-// GetCSV mocks base method
+// GetCSV mocks base method.
 func (m *MockInvoicesService) GetCSV(arg0 string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCSV", arg0)
@@ -102,7 +102,7 @@ func (m *MockInvoicesService) GetCSV(arg0 string) ([]byte, error) {
 	return ret0, ret1
 }
 
-// GetCSV indicates an expected call of GetCSV
+// GetCSV indicates an expected call of GetCSV.
 func (mr *MockInvoicesServiceMockRecorder) GetCSV(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCSV", reflect.TypeOf((*MockInvoicesService)(nil).GetCSV), arg0)

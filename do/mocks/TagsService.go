@@ -11,30 +11,30 @@ import (
 	reflect "reflect"
 )
 
-// MockTagsService is a mock of TagsService interface
+// MockTagsService is a mock of TagsService interface.
 type MockTagsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockTagsServiceMockRecorder
 }
 
-// MockTagsServiceMockRecorder is the mock recorder for MockTagsService
+// MockTagsServiceMockRecorder is the mock recorder for MockTagsService.
 type MockTagsServiceMockRecorder struct {
 	mock *MockTagsService
 }
 
-// NewMockTagsService creates a new mock instance
+// NewMockTagsService creates a new mock instance.
 func NewMockTagsService(ctrl *gomock.Controller) *MockTagsService {
 	mock := &MockTagsService{ctrl: ctrl}
 	mock.recorder = &MockTagsServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTagsService) EXPECT() *MockTagsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockTagsService) List() (do.Tags, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -43,13 +43,13 @@ func (m *MockTagsService) List() (do.Tags, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockTagsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTagsService)(nil).List))
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockTagsService) Get(arg0 string) (*do.Tag, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
@@ -58,13 +58,13 @@ func (m *MockTagsService) Get(arg0 string) (*do.Tag, error) {
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockTagsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTagsService)(nil).Get), arg0)
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockTagsService) Create(arg0 *godo.TagCreateRequest) (*do.Tag, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0)
@@ -73,13 +73,13 @@ func (m *MockTagsService) Create(arg0 *godo.TagCreateRequest) (*do.Tag, error) {
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockTagsServiceMockRecorder) Create(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockTagsService)(nil).Create), arg0)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockTagsService) Delete(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0)
@@ -87,13 +87,13 @@ func (m *MockTagsService) Delete(arg0 string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockTagsServiceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTagsService)(nil).Delete), arg0)
 }
 
-// TagResources mocks base method
+// TagResources mocks base method.
 func (m *MockTagsService) TagResources(arg0 string, arg1 *godo.TagResourcesRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "TagResources", arg0, arg1)
@@ -101,13 +101,13 @@ func (m *MockTagsService) TagResources(arg0 string, arg1 *godo.TagResourcesReque
 	return ret0
 }
 
-// TagResources indicates an expected call of TagResources
+// TagResources indicates an expected call of TagResources.
 func (mr *MockTagsServiceMockRecorder) TagResources(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TagResources", reflect.TypeOf((*MockTagsService)(nil).TagResources), arg0, arg1)
 }
 
-// UntagResources mocks base method
+// UntagResources mocks base method.
 func (m *MockTagsService) UntagResources(arg0 string, arg1 *godo.UntagResourcesRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UntagResources", arg0, arg1)
@@ -115,7 +115,7 @@ func (m *MockTagsService) UntagResources(arg0 string, arg1 *godo.UntagResourcesR
 	return ret0
 }
 
-// UntagResources indicates an expected call of UntagResources
+// UntagResources indicates an expected call of UntagResources.
 func (mr *MockTagsServiceMockRecorder) UntagResources(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UntagResources", reflect.TypeOf((*MockTagsService)(nil).UntagResources), arg0, arg1)

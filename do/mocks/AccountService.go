@@ -10,30 +10,30 @@ import (
 	reflect "reflect"
 )
 
-// MockAccountService is a mock of AccountService interface
+// MockAccountService is a mock of AccountService interface.
 type MockAccountService struct {
 	ctrl     *gomock.Controller
 	recorder *MockAccountServiceMockRecorder
 }
 
-// MockAccountServiceMockRecorder is the mock recorder for MockAccountService
+// MockAccountServiceMockRecorder is the mock recorder for MockAccountService.
 type MockAccountServiceMockRecorder struct {
 	mock *MockAccountService
 }
 
-// NewMockAccountService creates a new mock instance
+// NewMockAccountService creates a new mock instance.
 func NewMockAccountService(ctrl *gomock.Controller) *MockAccountService {
 	mock := &MockAccountService{ctrl: ctrl}
 	mock.recorder = &MockAccountServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockAccountService) EXPECT() *MockAccountServiceMockRecorder {
 	return m.recorder
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockAccountService) Get() (*do.Account, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get")
@@ -42,13 +42,13 @@ func (m *MockAccountService) Get() (*do.Account, error) {
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockAccountServiceMockRecorder) Get() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAccountService)(nil).Get))
 }
 
-// RateLimit mocks base method
+// RateLimit mocks base method.
 func (m *MockAccountService) RateLimit() (*do.RateLimit, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RateLimit")
@@ -57,7 +57,7 @@ func (m *MockAccountService) RateLimit() (*do.RateLimit, error) {
 	return ret0, ret1
 }
 
-// RateLimit indicates an expected call of RateLimit
+// RateLimit indicates an expected call of RateLimit.
 func (mr *MockAccountServiceMockRecorder) RateLimit() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RateLimit", reflect.TypeOf((*MockAccountService)(nil).RateLimit))

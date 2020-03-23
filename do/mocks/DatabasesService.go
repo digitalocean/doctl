@@ -11,30 +11,30 @@ import (
 	reflect "reflect"
 )
 
-// MockDatabasesService is a mock of DatabasesService interface
+// MockDatabasesService is a mock of DatabasesService interface.
 type MockDatabasesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockDatabasesServiceMockRecorder
 }
 
-// MockDatabasesServiceMockRecorder is the mock recorder for MockDatabasesService
+// MockDatabasesServiceMockRecorder is the mock recorder for MockDatabasesService.
 type MockDatabasesServiceMockRecorder struct {
 	mock *MockDatabasesService
 }
 
-// NewMockDatabasesService creates a new mock instance
+// NewMockDatabasesService creates a new mock instance.
 func NewMockDatabasesService(ctrl *gomock.Controller) *MockDatabasesService {
 	mock := &MockDatabasesService{ctrl: ctrl}
 	mock.recorder = &MockDatabasesServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDatabasesService) EXPECT() *MockDatabasesServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockDatabasesService) List() (do.Databases, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -43,13 +43,13 @@ func (m *MockDatabasesService) List() (do.Databases, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockDatabasesServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDatabasesService)(nil).List))
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockDatabasesService) Get(arg0 string) (*do.Database, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
@@ -58,13 +58,13 @@ func (m *MockDatabasesService) Get(arg0 string) (*do.Database, error) {
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockDatabasesServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDatabasesService)(nil).Get), arg0)
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockDatabasesService) Create(arg0 *godo.DatabaseCreateRequest) (*do.Database, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", arg0)
@@ -73,13 +73,13 @@ func (m *MockDatabasesService) Create(arg0 *godo.DatabaseCreateRequest) (*do.Dat
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockDatabasesServiceMockRecorder) Create(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDatabasesService)(nil).Create), arg0)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockDatabasesService) Delete(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0)
@@ -87,13 +87,13 @@ func (m *MockDatabasesService) Delete(arg0 string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockDatabasesServiceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDatabasesService)(nil).Delete), arg0)
 }
 
-// GetConnection mocks base method
+// GetConnection mocks base method.
 func (m *MockDatabasesService) GetConnection(arg0 string) (*do.DatabaseConnection, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetConnection", arg0)
@@ -102,13 +102,13 @@ func (m *MockDatabasesService) GetConnection(arg0 string) (*do.DatabaseConnectio
 	return ret0, ret1
 }
 
-// GetConnection indicates an expected call of GetConnection
+// GetConnection indicates an expected call of GetConnection.
 func (mr *MockDatabasesServiceMockRecorder) GetConnection(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnection", reflect.TypeOf((*MockDatabasesService)(nil).GetConnection), arg0)
 }
 
-// ListBackups mocks base method
+// ListBackups mocks base method.
 func (m *MockDatabasesService) ListBackups(arg0 string) (do.DatabaseBackups, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListBackups", arg0)
@@ -117,13 +117,13 @@ func (m *MockDatabasesService) ListBackups(arg0 string) (do.DatabaseBackups, err
 	return ret0, ret1
 }
 
-// ListBackups indicates an expected call of ListBackups
+// ListBackups indicates an expected call of ListBackups.
 func (mr *MockDatabasesServiceMockRecorder) ListBackups(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBackups", reflect.TypeOf((*MockDatabasesService)(nil).ListBackups), arg0)
 }
 
-// Resize mocks base method
+// Resize mocks base method.
 func (m *MockDatabasesService) Resize(arg0 string, arg1 *godo.DatabaseResizeRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resize", arg0, arg1)
@@ -131,13 +131,13 @@ func (m *MockDatabasesService) Resize(arg0 string, arg1 *godo.DatabaseResizeRequ
 	return ret0
 }
 
-// Resize indicates an expected call of Resize
+// Resize indicates an expected call of Resize.
 func (mr *MockDatabasesServiceMockRecorder) Resize(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resize", reflect.TypeOf((*MockDatabasesService)(nil).Resize), arg0, arg1)
 }
 
-// Migrate mocks base method
+// Migrate mocks base method.
 func (m *MockDatabasesService) Migrate(arg0 string, arg1 *godo.DatabaseMigrateRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Migrate", arg0, arg1)
@@ -145,13 +145,13 @@ func (m *MockDatabasesService) Migrate(arg0 string, arg1 *godo.DatabaseMigrateRe
 	return ret0
 }
 
-// Migrate indicates an expected call of Migrate
+// Migrate indicates an expected call of Migrate.
 func (mr *MockDatabasesServiceMockRecorder) Migrate(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockDatabasesService)(nil).Migrate), arg0, arg1)
 }
 
-// GetMaintenance mocks base method
+// GetMaintenance mocks base method.
 func (m *MockDatabasesService) GetMaintenance(arg0 string) (*do.DatabaseMaintenanceWindow, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMaintenance", arg0)
@@ -160,13 +160,13 @@ func (m *MockDatabasesService) GetMaintenance(arg0 string) (*do.DatabaseMaintena
 	return ret0, ret1
 }
 
-// GetMaintenance indicates an expected call of GetMaintenance
+// GetMaintenance indicates an expected call of GetMaintenance.
 func (mr *MockDatabasesServiceMockRecorder) GetMaintenance(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintenance", reflect.TypeOf((*MockDatabasesService)(nil).GetMaintenance), arg0)
 }
 
-// UpdateMaintenance mocks base method
+// UpdateMaintenance mocks base method.
 func (m *MockDatabasesService) UpdateMaintenance(arg0 string, arg1 *godo.DatabaseUpdateMaintenanceRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateMaintenance", arg0, arg1)
@@ -174,13 +174,13 @@ func (m *MockDatabasesService) UpdateMaintenance(arg0 string, arg1 *godo.Databas
 	return ret0
 }
 
-// UpdateMaintenance indicates an expected call of UpdateMaintenance
+// UpdateMaintenance indicates an expected call of UpdateMaintenance.
 func (mr *MockDatabasesServiceMockRecorder) UpdateMaintenance(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMaintenance", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMaintenance), arg0, arg1)
 }
 
-// GetUser mocks base method
+// GetUser mocks base method.
 func (m *MockDatabasesService) GetUser(arg0, arg1 string) (*do.DatabaseUser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUser", arg0, arg1)
@@ -189,13 +189,13 @@ func (m *MockDatabasesService) GetUser(arg0, arg1 string) (*do.DatabaseUser, err
 	return ret0, ret1
 }
 
-// GetUser indicates an expected call of GetUser
+// GetUser indicates an expected call of GetUser.
 func (mr *MockDatabasesServiceMockRecorder) GetUser(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockDatabasesService)(nil).GetUser), arg0, arg1)
 }
 
-// ListUsers mocks base method
+// ListUsers mocks base method.
 func (m *MockDatabasesService) ListUsers(arg0 string) (do.DatabaseUsers, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListUsers", arg0)
@@ -204,13 +204,13 @@ func (m *MockDatabasesService) ListUsers(arg0 string) (do.DatabaseUsers, error) 
 	return ret0, ret1
 }
 
-// ListUsers indicates an expected call of ListUsers
+// ListUsers indicates an expected call of ListUsers.
 func (mr *MockDatabasesServiceMockRecorder) ListUsers(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUsers", reflect.TypeOf((*MockDatabasesService)(nil).ListUsers), arg0)
 }
 
-// CreateUser mocks base method
+// CreateUser mocks base method.
 func (m *MockDatabasesService) CreateUser(arg0 string, arg1 *godo.DatabaseCreateUserRequest) (*do.DatabaseUser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateUser", arg0, arg1)
@@ -219,13 +219,13 @@ func (m *MockDatabasesService) CreateUser(arg0 string, arg1 *godo.DatabaseCreate
 	return ret0, ret1
 }
 
-// CreateUser indicates an expected call of CreateUser
+// CreateUser indicates an expected call of CreateUser.
 func (mr *MockDatabasesServiceMockRecorder) CreateUser(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockDatabasesService)(nil).CreateUser), arg0, arg1)
 }
 
-// DeleteUser mocks base method
+// DeleteUser mocks base method.
 func (m *MockDatabasesService) DeleteUser(arg0, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteUser", arg0, arg1)
@@ -233,13 +233,13 @@ func (m *MockDatabasesService) DeleteUser(arg0, arg1 string) error {
 	return ret0
 }
 
-// DeleteUser indicates an expected call of DeleteUser
+// DeleteUser indicates an expected call of DeleteUser.
 func (mr *MockDatabasesServiceMockRecorder) DeleteUser(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUser", reflect.TypeOf((*MockDatabasesService)(nil).DeleteUser), arg0, arg1)
 }
 
-// ResetUserAuth mocks base method
+// ResetUserAuth mocks base method.
 func (m *MockDatabasesService) ResetUserAuth(arg0, arg1 string, arg2 *godo.DatabaseResetUserAuthRequest) (*do.DatabaseUser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ResetUserAuth", arg0, arg1, arg2)
@@ -248,13 +248,13 @@ func (m *MockDatabasesService) ResetUserAuth(arg0, arg1 string, arg2 *godo.Datab
 	return ret0, ret1
 }
 
-// ResetUserAuth indicates an expected call of ResetUserAuth
+// ResetUserAuth indicates an expected call of ResetUserAuth.
 func (mr *MockDatabasesServiceMockRecorder) ResetUserAuth(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResetUserAuth", reflect.TypeOf((*MockDatabasesService)(nil).ResetUserAuth), arg0, arg1, arg2)
 }
 
-// ListDBs mocks base method
+// ListDBs mocks base method.
 func (m *MockDatabasesService) ListDBs(arg0 string) (do.DatabaseDBs, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDBs", arg0)
@@ -263,13 +263,13 @@ func (m *MockDatabasesService) ListDBs(arg0 string) (do.DatabaseDBs, error) {
 	return ret0, ret1
 }
 
-// ListDBs indicates an expected call of ListDBs
+// ListDBs indicates an expected call of ListDBs.
 func (mr *MockDatabasesServiceMockRecorder) ListDBs(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDBs", reflect.TypeOf((*MockDatabasesService)(nil).ListDBs), arg0)
 }
 
-// CreateDB mocks base method
+// CreateDB mocks base method.
 func (m *MockDatabasesService) CreateDB(arg0 string, arg1 *godo.DatabaseCreateDBRequest) (*do.DatabaseDB, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateDB", arg0, arg1)
@@ -278,13 +278,13 @@ func (m *MockDatabasesService) CreateDB(arg0 string, arg1 *godo.DatabaseCreateDB
 	return ret0, ret1
 }
 
-// CreateDB indicates an expected call of CreateDB
+// CreateDB indicates an expected call of CreateDB.
 func (mr *MockDatabasesServiceMockRecorder) CreateDB(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDB", reflect.TypeOf((*MockDatabasesService)(nil).CreateDB), arg0, arg1)
 }
 
-// GetDB mocks base method
+// GetDB mocks base method.
 func (m *MockDatabasesService) GetDB(arg0, arg1 string) (*do.DatabaseDB, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDB", arg0, arg1)
@@ -293,13 +293,13 @@ func (m *MockDatabasesService) GetDB(arg0, arg1 string) (*do.DatabaseDB, error) 
 	return ret0, ret1
 }
 
-// GetDB indicates an expected call of GetDB
+// GetDB indicates an expected call of GetDB.
 func (mr *MockDatabasesServiceMockRecorder) GetDB(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDB", reflect.TypeOf((*MockDatabasesService)(nil).GetDB), arg0, arg1)
 }
 
-// DeleteDB mocks base method
+// DeleteDB mocks base method.
 func (m *MockDatabasesService) DeleteDB(arg0, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteDB", arg0, arg1)
@@ -307,13 +307,13 @@ func (m *MockDatabasesService) DeleteDB(arg0, arg1 string) error {
 	return ret0
 }
 
-// DeleteDB indicates an expected call of DeleteDB
+// DeleteDB indicates an expected call of DeleteDB.
 func (mr *MockDatabasesServiceMockRecorder) DeleteDB(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDB", reflect.TypeOf((*MockDatabasesService)(nil).DeleteDB), arg0, arg1)
 }
 
-// ListPools mocks base method
+// ListPools mocks base method.
 func (m *MockDatabasesService) ListPools(arg0 string) (do.DatabasePools, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListPools", arg0)
@@ -322,13 +322,13 @@ func (m *MockDatabasesService) ListPools(arg0 string) (do.DatabasePools, error) 
 	return ret0, ret1
 }
 
-// ListPools indicates an expected call of ListPools
+// ListPools indicates an expected call of ListPools.
 func (mr *MockDatabasesServiceMockRecorder) ListPools(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPools", reflect.TypeOf((*MockDatabasesService)(nil).ListPools), arg0)
 }
 
-// CreatePool mocks base method
+// CreatePool mocks base method.
 func (m *MockDatabasesService) CreatePool(arg0 string, arg1 *godo.DatabaseCreatePoolRequest) (*do.DatabasePool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreatePool", arg0, arg1)
@@ -337,13 +337,13 @@ func (m *MockDatabasesService) CreatePool(arg0 string, arg1 *godo.DatabaseCreate
 	return ret0, ret1
 }
 
-// CreatePool indicates an expected call of CreatePool
+// CreatePool indicates an expected call of CreatePool.
 func (mr *MockDatabasesServiceMockRecorder) CreatePool(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePool", reflect.TypeOf((*MockDatabasesService)(nil).CreatePool), arg0, arg1)
 }
 
-// GetPool mocks base method
+// GetPool mocks base method.
 func (m *MockDatabasesService) GetPool(arg0, arg1 string) (*do.DatabasePool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPool", arg0, arg1)
@@ -352,13 +352,13 @@ func (m *MockDatabasesService) GetPool(arg0, arg1 string) (*do.DatabasePool, err
 	return ret0, ret1
 }
 
-// GetPool indicates an expected call of GetPool
+// GetPool indicates an expected call of GetPool.
 func (mr *MockDatabasesServiceMockRecorder) GetPool(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPool", reflect.TypeOf((*MockDatabasesService)(nil).GetPool), arg0, arg1)
 }
 
-// DeletePool mocks base method
+// DeletePool mocks base method.
 func (m *MockDatabasesService) DeletePool(arg0, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeletePool", arg0, arg1)
@@ -366,13 +366,13 @@ func (m *MockDatabasesService) DeletePool(arg0, arg1 string) error {
 	return ret0
 }
 
-// DeletePool indicates an expected call of DeletePool
+// DeletePool indicates an expected call of DeletePool.
 func (mr *MockDatabasesServiceMockRecorder) DeletePool(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePool", reflect.TypeOf((*MockDatabasesService)(nil).DeletePool), arg0, arg1)
 }
 
-// GetReplica mocks base method
+// GetReplica mocks base method.
 func (m *MockDatabasesService) GetReplica(arg0, arg1 string) (*do.DatabaseReplica, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetReplica", arg0, arg1)
@@ -381,13 +381,13 @@ func (m *MockDatabasesService) GetReplica(arg0, arg1 string) (*do.DatabaseReplic
 	return ret0, ret1
 }
 
-// GetReplica indicates an expected call of GetReplica
+// GetReplica indicates an expected call of GetReplica.
 func (mr *MockDatabasesServiceMockRecorder) GetReplica(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplica", reflect.TypeOf((*MockDatabasesService)(nil).GetReplica), arg0, arg1)
 }
 
-// ListReplicas mocks base method
+// ListReplicas mocks base method.
 func (m *MockDatabasesService) ListReplicas(arg0 string) (do.DatabaseReplicas, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListReplicas", arg0)
@@ -396,13 +396,13 @@ func (m *MockDatabasesService) ListReplicas(arg0 string) (do.DatabaseReplicas, e
 	return ret0, ret1
 }
 
-// ListReplicas indicates an expected call of ListReplicas
+// ListReplicas indicates an expected call of ListReplicas.
 func (mr *MockDatabasesServiceMockRecorder) ListReplicas(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListReplicas", reflect.TypeOf((*MockDatabasesService)(nil).ListReplicas), arg0)
 }
 
-// CreateReplica mocks base method
+// CreateReplica mocks base method.
 func (m *MockDatabasesService) CreateReplica(arg0 string, arg1 *godo.DatabaseCreateReplicaRequest) (*do.DatabaseReplica, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateReplica", arg0, arg1)
@@ -411,13 +411,13 @@ func (m *MockDatabasesService) CreateReplica(arg0 string, arg1 *godo.DatabaseCre
 	return ret0, ret1
 }
 
-// CreateReplica indicates an expected call of CreateReplica
+// CreateReplica indicates an expected call of CreateReplica.
 func (mr *MockDatabasesServiceMockRecorder) CreateReplica(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateReplica", reflect.TypeOf((*MockDatabasesService)(nil).CreateReplica), arg0, arg1)
 }
 
-// DeleteReplica mocks base method
+// DeleteReplica mocks base method.
 func (m *MockDatabasesService) DeleteReplica(arg0, arg1 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteReplica", arg0, arg1)
@@ -425,13 +425,13 @@ func (m *MockDatabasesService) DeleteReplica(arg0, arg1 string) error {
 	return ret0
 }
 
-// DeleteReplica indicates an expected call of DeleteReplica
+// DeleteReplica indicates an expected call of DeleteReplica.
 func (mr *MockDatabasesServiceMockRecorder) DeleteReplica(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteReplica", reflect.TypeOf((*MockDatabasesService)(nil).DeleteReplica), arg0, arg1)
 }
 
-// GetReplicaConnection mocks base method
+// GetReplicaConnection mocks base method.
 func (m *MockDatabasesService) GetReplicaConnection(arg0, arg1 string) (*do.DatabaseConnection, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetReplicaConnection", arg0, arg1)
@@ -440,13 +440,13 @@ func (m *MockDatabasesService) GetReplicaConnection(arg0, arg1 string) (*do.Data
 	return ret0, ret1
 }
 
-// GetReplicaConnection indicates an expected call of GetReplicaConnection
+// GetReplicaConnection indicates an expected call of GetReplicaConnection.
 func (mr *MockDatabasesServiceMockRecorder) GetReplicaConnection(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReplicaConnection", reflect.TypeOf((*MockDatabasesService)(nil).GetReplicaConnection), arg0, arg1)
 }
 
-// GetSQLMode mocks base method
+// GetSQLMode mocks base method.
 func (m *MockDatabasesService) GetSQLMode(arg0 string) ([]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSQLMode", arg0)
@@ -455,13 +455,13 @@ func (m *MockDatabasesService) GetSQLMode(arg0 string) ([]string, error) {
 	return ret0, ret1
 }
 
-// GetSQLMode indicates an expected call of GetSQLMode
+// GetSQLMode indicates an expected call of GetSQLMode.
 func (mr *MockDatabasesServiceMockRecorder) GetSQLMode(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSQLMode", reflect.TypeOf((*MockDatabasesService)(nil).GetSQLMode), arg0)
 }
 
-// SetSQLMode mocks base method
+// SetSQLMode mocks base method.
 func (m *MockDatabasesService) SetSQLMode(arg0 string, arg1 ...string) error {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
@@ -473,7 +473,7 @@ func (m *MockDatabasesService) SetSQLMode(arg0 string, arg1 ...string) error {
 	return ret0
 }
 
-// SetSQLMode indicates an expected call of SetSQLMode
+// SetSQLMode indicates an expected call of SetSQLMode.
 func (mr *MockDatabasesServiceMockRecorder) SetSQLMode(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)

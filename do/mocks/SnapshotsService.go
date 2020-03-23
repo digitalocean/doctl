@@ -10,30 +10,30 @@ import (
 	reflect "reflect"
 )
 
-// MockSnapshotsService is a mock of SnapshotsService interface
+// MockSnapshotsService is a mock of SnapshotsService interface.
 type MockSnapshotsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockSnapshotsServiceMockRecorder
 }
 
-// MockSnapshotsServiceMockRecorder is the mock recorder for MockSnapshotsService
+// MockSnapshotsServiceMockRecorder is the mock recorder for MockSnapshotsService.
 type MockSnapshotsServiceMockRecorder struct {
 	mock *MockSnapshotsService
 }
 
-// NewMockSnapshotsService creates a new mock instance
+// NewMockSnapshotsService creates a new mock instance.
 func NewMockSnapshotsService(ctrl *gomock.Controller) *MockSnapshotsService {
 	mock := &MockSnapshotsService{ctrl: ctrl}
 	mock.recorder = &MockSnapshotsServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSnapshotsService) EXPECT() *MockSnapshotsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockSnapshotsService) List() (do.Snapshots, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -42,13 +42,13 @@ func (m *MockSnapshotsService) List() (do.Snapshots, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockSnapshotsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSnapshotsService)(nil).List))
 }
 
-// ListVolume mocks base method
+// ListVolume mocks base method.
 func (m *MockSnapshotsService) ListVolume() (do.Snapshots, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListVolume")
@@ -57,13 +57,13 @@ func (m *MockSnapshotsService) ListVolume() (do.Snapshots, error) {
 	return ret0, ret1
 }
 
-// ListVolume indicates an expected call of ListVolume
+// ListVolume indicates an expected call of ListVolume.
 func (mr *MockSnapshotsServiceMockRecorder) ListVolume() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVolume", reflect.TypeOf((*MockSnapshotsService)(nil).ListVolume))
 }
 
-// ListDroplet mocks base method
+// ListDroplet mocks base method.
 func (m *MockSnapshotsService) ListDroplet() (do.Snapshots, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDroplet")
@@ -72,13 +72,13 @@ func (m *MockSnapshotsService) ListDroplet() (do.Snapshots, error) {
 	return ret0, ret1
 }
 
-// ListDroplet indicates an expected call of ListDroplet
+// ListDroplet indicates an expected call of ListDroplet.
 func (mr *MockSnapshotsServiceMockRecorder) ListDroplet() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDroplet", reflect.TypeOf((*MockSnapshotsService)(nil).ListDroplet))
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockSnapshotsService) Get(arg0 string) (*do.Snapshot, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
@@ -87,13 +87,13 @@ func (m *MockSnapshotsService) Get(arg0 string) (*do.Snapshot, error) {
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockSnapshotsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSnapshotsService)(nil).Get), arg0)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockSnapshotsService) Delete(arg0 string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0)
@@ -101,7 +101,7 @@ func (m *MockSnapshotsService) Delete(arg0 string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockSnapshotsServiceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSnapshotsService)(nil).Delete), arg0)
