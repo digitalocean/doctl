@@ -10,30 +10,30 @@ import (
 	reflect "reflect"
 )
 
-// MockDropletActionsService is a mock of DropletActionsService interface
+// MockDropletActionsService is a mock of DropletActionsService interface.
 type MockDropletActionsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockDropletActionsServiceMockRecorder
 }
 
-// MockDropletActionsServiceMockRecorder is the mock recorder for MockDropletActionsService
+// MockDropletActionsServiceMockRecorder is the mock recorder for MockDropletActionsService.
 type MockDropletActionsServiceMockRecorder struct {
 	mock *MockDropletActionsService
 }
 
-// NewMockDropletActionsService creates a new mock instance
+// NewMockDropletActionsService creates a new mock instance.
 func NewMockDropletActionsService(ctrl *gomock.Controller) *MockDropletActionsService {
 	mock := &MockDropletActionsService{ctrl: ctrl}
 	mock.recorder = &MockDropletActionsServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockDropletActionsService) EXPECT() *MockDropletActionsServiceMockRecorder {
 	return m.recorder
 }
 
-// Shutdown mocks base method
+// Shutdown mocks base method.
 func (m *MockDropletActionsService) Shutdown(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Shutdown", arg0)
@@ -42,13 +42,13 @@ func (m *MockDropletActionsService) Shutdown(arg0 int) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// Shutdown indicates an expected call of Shutdown
+// Shutdown indicates an expected call of Shutdown.
 func (mr *MockDropletActionsServiceMockRecorder) Shutdown(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Shutdown", reflect.TypeOf((*MockDropletActionsService)(nil).Shutdown), arg0)
 }
 
-// ShutdownByTag mocks base method
+// ShutdownByTag mocks base method.
 func (m *MockDropletActionsService) ShutdownByTag(arg0 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ShutdownByTag", arg0)
@@ -57,13 +57,13 @@ func (m *MockDropletActionsService) ShutdownByTag(arg0 string) (do.Actions, erro
 	return ret0, ret1
 }
 
-// ShutdownByTag indicates an expected call of ShutdownByTag
+// ShutdownByTag indicates an expected call of ShutdownByTag.
 func (mr *MockDropletActionsServiceMockRecorder) ShutdownByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShutdownByTag", reflect.TypeOf((*MockDropletActionsService)(nil).ShutdownByTag), arg0)
 }
 
-// PowerOff mocks base method
+// PowerOff mocks base method.
 func (m *MockDropletActionsService) PowerOff(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PowerOff", arg0)
@@ -72,13 +72,13 @@ func (m *MockDropletActionsService) PowerOff(arg0 int) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// PowerOff indicates an expected call of PowerOff
+// PowerOff indicates an expected call of PowerOff.
 func (mr *MockDropletActionsServiceMockRecorder) PowerOff(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PowerOff", reflect.TypeOf((*MockDropletActionsService)(nil).PowerOff), arg0)
 }
 
-// PowerOffByTag mocks base method
+// PowerOffByTag mocks base method.
 func (m *MockDropletActionsService) PowerOffByTag(arg0 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PowerOffByTag", arg0)
@@ -87,13 +87,13 @@ func (m *MockDropletActionsService) PowerOffByTag(arg0 string) (do.Actions, erro
 	return ret0, ret1
 }
 
-// PowerOffByTag indicates an expected call of PowerOffByTag
+// PowerOffByTag indicates an expected call of PowerOffByTag.
 func (mr *MockDropletActionsServiceMockRecorder) PowerOffByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PowerOffByTag", reflect.TypeOf((*MockDropletActionsService)(nil).PowerOffByTag), arg0)
 }
 
-// PowerOn mocks base method
+// PowerOn mocks base method.
 func (m *MockDropletActionsService) PowerOn(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PowerOn", arg0)
@@ -102,13 +102,13 @@ func (m *MockDropletActionsService) PowerOn(arg0 int) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// PowerOn indicates an expected call of PowerOn
+// PowerOn indicates an expected call of PowerOn.
 func (mr *MockDropletActionsServiceMockRecorder) PowerOn(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PowerOn", reflect.TypeOf((*MockDropletActionsService)(nil).PowerOn), arg0)
 }
 
-// PowerOnByTag mocks base method
+// PowerOnByTag mocks base method.
 func (m *MockDropletActionsService) PowerOnByTag(arg0 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PowerOnByTag", arg0)
@@ -117,13 +117,13 @@ func (m *MockDropletActionsService) PowerOnByTag(arg0 string) (do.Actions, error
 	return ret0, ret1
 }
 
-// PowerOnByTag indicates an expected call of PowerOnByTag
+// PowerOnByTag indicates an expected call of PowerOnByTag.
 func (mr *MockDropletActionsServiceMockRecorder) PowerOnByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PowerOnByTag", reflect.TypeOf((*MockDropletActionsService)(nil).PowerOnByTag), arg0)
 }
 
-// PowerCycle mocks base method
+// PowerCycle mocks base method.
 func (m *MockDropletActionsService) PowerCycle(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PowerCycle", arg0)
@@ -132,13 +132,13 @@ func (m *MockDropletActionsService) PowerCycle(arg0 int) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// PowerCycle indicates an expected call of PowerCycle
+// PowerCycle indicates an expected call of PowerCycle.
 func (mr *MockDropletActionsServiceMockRecorder) PowerCycle(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PowerCycle", reflect.TypeOf((*MockDropletActionsService)(nil).PowerCycle), arg0)
 }
 
-// PowerCycleByTag mocks base method
+// PowerCycleByTag mocks base method.
 func (m *MockDropletActionsService) PowerCycleByTag(arg0 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PowerCycleByTag", arg0)
@@ -147,13 +147,13 @@ func (m *MockDropletActionsService) PowerCycleByTag(arg0 string) (do.Actions, er
 	return ret0, ret1
 }
 
-// PowerCycleByTag indicates an expected call of PowerCycleByTag
+// PowerCycleByTag indicates an expected call of PowerCycleByTag.
 func (mr *MockDropletActionsServiceMockRecorder) PowerCycleByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PowerCycleByTag", reflect.TypeOf((*MockDropletActionsService)(nil).PowerCycleByTag), arg0)
 }
 
-// Reboot mocks base method
+// Reboot mocks base method.
 func (m *MockDropletActionsService) Reboot(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Reboot", arg0)
@@ -162,13 +162,13 @@ func (m *MockDropletActionsService) Reboot(arg0 int) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// Reboot indicates an expected call of Reboot
+// Reboot indicates an expected call of Reboot.
 func (mr *MockDropletActionsServiceMockRecorder) Reboot(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reboot", reflect.TypeOf((*MockDropletActionsService)(nil).Reboot), arg0)
 }
 
-// Restore mocks base method
+// Restore mocks base method.
 func (m *MockDropletActionsService) Restore(arg0, arg1 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Restore", arg0, arg1)
@@ -177,13 +177,13 @@ func (m *MockDropletActionsService) Restore(arg0, arg1 int) (*do.Action, error) 
 	return ret0, ret1
 }
 
-// Restore indicates an expected call of Restore
+// Restore indicates an expected call of Restore.
 func (mr *MockDropletActionsServiceMockRecorder) Restore(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockDropletActionsService)(nil).Restore), arg0, arg1)
 }
 
-// Resize mocks base method
+// Resize mocks base method.
 func (m *MockDropletActionsService) Resize(arg0 int, arg1 string, arg2 bool) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Resize", arg0, arg1, arg2)
@@ -192,13 +192,13 @@ func (m *MockDropletActionsService) Resize(arg0 int, arg1 string, arg2 bool) (*d
 	return ret0, ret1
 }
 
-// Resize indicates an expected call of Resize
+// Resize indicates an expected call of Resize.
 func (mr *MockDropletActionsServiceMockRecorder) Resize(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Resize", reflect.TypeOf((*MockDropletActionsService)(nil).Resize), arg0, arg1, arg2)
 }
 
-// Rename mocks base method
+// Rename mocks base method.
 func (m *MockDropletActionsService) Rename(arg0 int, arg1 string) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Rename", arg0, arg1)
@@ -207,13 +207,13 @@ func (m *MockDropletActionsService) Rename(arg0 int, arg1 string) (*do.Action, e
 	return ret0, ret1
 }
 
-// Rename indicates an expected call of Rename
+// Rename indicates an expected call of Rename.
 func (mr *MockDropletActionsServiceMockRecorder) Rename(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Rename", reflect.TypeOf((*MockDropletActionsService)(nil).Rename), arg0, arg1)
 }
 
-// Snapshot mocks base method
+// Snapshot mocks base method.
 func (m *MockDropletActionsService) Snapshot(arg0 int, arg1 string) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Snapshot", arg0, arg1)
@@ -222,13 +222,13 @@ func (m *MockDropletActionsService) Snapshot(arg0 int, arg1 string) (*do.Action,
 	return ret0, ret1
 }
 
-// Snapshot indicates an expected call of Snapshot
+// Snapshot indicates an expected call of Snapshot.
 func (mr *MockDropletActionsServiceMockRecorder) Snapshot(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockDropletActionsService)(nil).Snapshot), arg0, arg1)
 }
 
-// SnapshotByTag mocks base method
+// SnapshotByTag mocks base method.
 func (m *MockDropletActionsService) SnapshotByTag(arg0, arg1 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SnapshotByTag", arg0, arg1)
@@ -237,13 +237,13 @@ func (m *MockDropletActionsService) SnapshotByTag(arg0, arg1 string) (do.Actions
 	return ret0, ret1
 }
 
-// SnapshotByTag indicates an expected call of SnapshotByTag
+// SnapshotByTag indicates an expected call of SnapshotByTag.
 func (mr *MockDropletActionsServiceMockRecorder) SnapshotByTag(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SnapshotByTag", reflect.TypeOf((*MockDropletActionsService)(nil).SnapshotByTag), arg0, arg1)
 }
 
-// EnableBackups mocks base method
+// EnableBackups mocks base method.
 func (m *MockDropletActionsService) EnableBackups(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnableBackups", arg0)
@@ -252,13 +252,13 @@ func (m *MockDropletActionsService) EnableBackups(arg0 int) (*do.Action, error) 
 	return ret0, ret1
 }
 
-// EnableBackups indicates an expected call of EnableBackups
+// EnableBackups indicates an expected call of EnableBackups.
 func (mr *MockDropletActionsServiceMockRecorder) EnableBackups(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableBackups", reflect.TypeOf((*MockDropletActionsService)(nil).EnableBackups), arg0)
 }
 
-// EnableBackupsByTag mocks base method
+// EnableBackupsByTag mocks base method.
 func (m *MockDropletActionsService) EnableBackupsByTag(arg0 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnableBackupsByTag", arg0)
@@ -267,13 +267,13 @@ func (m *MockDropletActionsService) EnableBackupsByTag(arg0 string) (do.Actions,
 	return ret0, ret1
 }
 
-// EnableBackupsByTag indicates an expected call of EnableBackupsByTag
+// EnableBackupsByTag indicates an expected call of EnableBackupsByTag.
 func (mr *MockDropletActionsServiceMockRecorder) EnableBackupsByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableBackupsByTag", reflect.TypeOf((*MockDropletActionsService)(nil).EnableBackupsByTag), arg0)
 }
 
-// DisableBackups mocks base method
+// DisableBackups mocks base method.
 func (m *MockDropletActionsService) DisableBackups(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DisableBackups", arg0)
@@ -282,13 +282,13 @@ func (m *MockDropletActionsService) DisableBackups(arg0 int) (*do.Action, error)
 	return ret0, ret1
 }
 
-// DisableBackups indicates an expected call of DisableBackups
+// DisableBackups indicates an expected call of DisableBackups.
 func (mr *MockDropletActionsServiceMockRecorder) DisableBackups(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableBackups", reflect.TypeOf((*MockDropletActionsService)(nil).DisableBackups), arg0)
 }
 
-// DisableBackupsByTag mocks base method
+// DisableBackupsByTag mocks base method.
 func (m *MockDropletActionsService) DisableBackupsByTag(arg0 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DisableBackupsByTag", arg0)
@@ -297,13 +297,13 @@ func (m *MockDropletActionsService) DisableBackupsByTag(arg0 string) (do.Actions
 	return ret0, ret1
 }
 
-// DisableBackupsByTag indicates an expected call of DisableBackupsByTag
+// DisableBackupsByTag indicates an expected call of DisableBackupsByTag.
 func (mr *MockDropletActionsServiceMockRecorder) DisableBackupsByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableBackupsByTag", reflect.TypeOf((*MockDropletActionsService)(nil).DisableBackupsByTag), arg0)
 }
 
-// PasswordReset mocks base method
+// PasswordReset mocks base method.
 func (m *MockDropletActionsService) PasswordReset(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PasswordReset", arg0)
@@ -312,13 +312,13 @@ func (m *MockDropletActionsService) PasswordReset(arg0 int) (*do.Action, error) 
 	return ret0, ret1
 }
 
-// PasswordReset indicates an expected call of PasswordReset
+// PasswordReset indicates an expected call of PasswordReset.
 func (mr *MockDropletActionsServiceMockRecorder) PasswordReset(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PasswordReset", reflect.TypeOf((*MockDropletActionsService)(nil).PasswordReset), arg0)
 }
 
-// RebuildByImageID mocks base method
+// RebuildByImageID mocks base method.
 func (m *MockDropletActionsService) RebuildByImageID(arg0, arg1 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RebuildByImageID", arg0, arg1)
@@ -327,13 +327,13 @@ func (m *MockDropletActionsService) RebuildByImageID(arg0, arg1 int) (*do.Action
 	return ret0, ret1
 }
 
-// RebuildByImageID indicates an expected call of RebuildByImageID
+// RebuildByImageID indicates an expected call of RebuildByImageID.
 func (mr *MockDropletActionsServiceMockRecorder) RebuildByImageID(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebuildByImageID", reflect.TypeOf((*MockDropletActionsService)(nil).RebuildByImageID), arg0, arg1)
 }
 
-// RebuildByImageSlug mocks base method
+// RebuildByImageSlug mocks base method.
 func (m *MockDropletActionsService) RebuildByImageSlug(arg0 int, arg1 string) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RebuildByImageSlug", arg0, arg1)
@@ -342,13 +342,13 @@ func (m *MockDropletActionsService) RebuildByImageSlug(arg0 int, arg1 string) (*
 	return ret0, ret1
 }
 
-// RebuildByImageSlug indicates an expected call of RebuildByImageSlug
+// RebuildByImageSlug indicates an expected call of RebuildByImageSlug.
 func (mr *MockDropletActionsServiceMockRecorder) RebuildByImageSlug(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RebuildByImageSlug", reflect.TypeOf((*MockDropletActionsService)(nil).RebuildByImageSlug), arg0, arg1)
 }
 
-// ChangeKernel mocks base method
+// ChangeKernel mocks base method.
 func (m *MockDropletActionsService) ChangeKernel(arg0, arg1 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ChangeKernel", arg0, arg1)
@@ -357,13 +357,13 @@ func (m *MockDropletActionsService) ChangeKernel(arg0, arg1 int) (*do.Action, er
 	return ret0, ret1
 }
 
-// ChangeKernel indicates an expected call of ChangeKernel
+// ChangeKernel indicates an expected call of ChangeKernel.
 func (mr *MockDropletActionsServiceMockRecorder) ChangeKernel(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeKernel", reflect.TypeOf((*MockDropletActionsService)(nil).ChangeKernel), arg0, arg1)
 }
 
-// EnableIPv6 mocks base method
+// EnableIPv6 mocks base method.
 func (m *MockDropletActionsService) EnableIPv6(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnableIPv6", arg0)
@@ -372,13 +372,13 @@ func (m *MockDropletActionsService) EnableIPv6(arg0 int) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// EnableIPv6 indicates an expected call of EnableIPv6
+// EnableIPv6 indicates an expected call of EnableIPv6.
 func (mr *MockDropletActionsServiceMockRecorder) EnableIPv6(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableIPv6", reflect.TypeOf((*MockDropletActionsService)(nil).EnableIPv6), arg0)
 }
 
-// EnableIPv6ByTag mocks base method
+// EnableIPv6ByTag mocks base method.
 func (m *MockDropletActionsService) EnableIPv6ByTag(arg0 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnableIPv6ByTag", arg0)
@@ -387,13 +387,13 @@ func (m *MockDropletActionsService) EnableIPv6ByTag(arg0 string) (do.Actions, er
 	return ret0, ret1
 }
 
-// EnableIPv6ByTag indicates an expected call of EnableIPv6ByTag
+// EnableIPv6ByTag indicates an expected call of EnableIPv6ByTag.
 func (mr *MockDropletActionsServiceMockRecorder) EnableIPv6ByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableIPv6ByTag", reflect.TypeOf((*MockDropletActionsService)(nil).EnableIPv6ByTag), arg0)
 }
 
-// EnablePrivateNetworking mocks base method
+// EnablePrivateNetworking mocks base method.
 func (m *MockDropletActionsService) EnablePrivateNetworking(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnablePrivateNetworking", arg0)
@@ -402,13 +402,13 @@ func (m *MockDropletActionsService) EnablePrivateNetworking(arg0 int) (*do.Actio
 	return ret0, ret1
 }
 
-// EnablePrivateNetworking indicates an expected call of EnablePrivateNetworking
+// EnablePrivateNetworking indicates an expected call of EnablePrivateNetworking.
 func (mr *MockDropletActionsServiceMockRecorder) EnablePrivateNetworking(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnablePrivateNetworking", reflect.TypeOf((*MockDropletActionsService)(nil).EnablePrivateNetworking), arg0)
 }
 
-// EnablePrivateNetworkingByTag mocks base method
+// EnablePrivateNetworkingByTag mocks base method.
 func (m *MockDropletActionsService) EnablePrivateNetworkingByTag(arg0 string) (do.Actions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EnablePrivateNetworkingByTag", arg0)
@@ -417,13 +417,13 @@ func (m *MockDropletActionsService) EnablePrivateNetworkingByTag(arg0 string) (d
 	return ret0, ret1
 }
 
-// EnablePrivateNetworkingByTag indicates an expected call of EnablePrivateNetworkingByTag
+// EnablePrivateNetworkingByTag indicates an expected call of EnablePrivateNetworkingByTag.
 func (mr *MockDropletActionsServiceMockRecorder) EnablePrivateNetworkingByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnablePrivateNetworkingByTag", reflect.TypeOf((*MockDropletActionsService)(nil).EnablePrivateNetworkingByTag), arg0)
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockDropletActionsService) Get(arg0, arg1 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1)
@@ -432,13 +432,13 @@ func (m *MockDropletActionsService) Get(arg0, arg1 int) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockDropletActionsServiceMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDropletActionsService)(nil).Get), arg0, arg1)
 }
 
-// GetByURI mocks base method
+// GetByURI mocks base method.
 func (m *MockDropletActionsService) GetByURI(arg0 string) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByURI", arg0)
@@ -447,7 +447,7 @@ func (m *MockDropletActionsService) GetByURI(arg0 string) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// GetByURI indicates an expected call of GetByURI
+// GetByURI indicates an expected call of GetByURI.
 func (mr *MockDropletActionsServiceMockRecorder) GetByURI(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByURI", reflect.TypeOf((*MockDropletActionsService)(nil).GetByURI), arg0)

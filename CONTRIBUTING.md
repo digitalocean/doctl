@@ -93,7 +93,7 @@ or `make help` for a list of available commands with descriptions.
 
 ### Go environment
 
-The minimal version of Golang for `doctl` is 1.11. `doctl` uses [Go
+The minimal version of Golang for `doctl` is 1.13. `doctl` uses [Go
 modules](https://github.com/golang/go/wiki/Modules) for dependency
 management [with vendoring](https://github.com/golang/go/wiki/Modules#how-do-i-use-vendoring-with-modules-is-vendoring-going-away).
 Please run `make vendor` after any dependency modifications.
@@ -102,7 +102,7 @@ Be sure to run `go fmt` on your code before submitting a pull request.
 
 ### Docker
 
-You can create a local Docker container via `make docker_build`.
+You can build doctl in a local Docker container via `make docker_build`.
 
 ### Testing
 
@@ -180,8 +180,8 @@ to do so. Travis also runs shellcheck.
 
 ## Releasing
 
-`doctl` releases are orchestrated by [Travis CI](https://docs.travis-ci.com/user/deployment/),
-triggered when a new tag is pushed to master.
+To cut a release, push a new tag (versioning discussed below). The actual release is orchestrated 
+by [Travis CI](https://docs.travis-ci.com/user/deployment/).
 
 ### Tagging a release
 
@@ -197,9 +197,11 @@ triggered when a new tag is pushed to master.
    repository. If you'd prefer to specify a different remote repository, you can
    do so by setting `ORIGIN=(preferred remote name)`.
 
-### Oops! Something went wrong! What now?
+The new tag triggers the release.
 
-In case of an issue with the travis deployments:
+### If a release fails
+
+If part of a release fails, you can run the target for that part of the release yourself.
 
 #### Github Releases & Dockerhub
 
@@ -234,6 +236,15 @@ snap manually.
 * [docker](https://docs.docker.com/install/)
 * a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account.
   Post in #it_support to request access.
+
+##### Building a new snap base image
+
+Occasionally, the snap build will break. When it does, it usually means that you need to update
+the custom base image we use to build the snap. The Dockerfile for that image lives in 
+[dockerfiles/Dockerfile.snap](https://github.com/digitalocean/doctl/blob/master/dockerfiles/Dockerfile.snap).
+The header of the Dockerfile has hints for updating the image, as well as instructions for building
+the image using `make snap_image`. Once you've built the image, the snap_image target will provide
+instructions for next steps.
 
 ### Updating Homebrew
 

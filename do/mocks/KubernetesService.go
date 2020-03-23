@@ -11,30 +11,30 @@ import (
 	reflect "reflect"
 )
 
-// MockKubernetesService is a mock of KubernetesService interface
+// MockKubernetesService is a mock of KubernetesService interface.
 type MockKubernetesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockKubernetesServiceMockRecorder
 }
 
-// MockKubernetesServiceMockRecorder is the mock recorder for MockKubernetesService
+// MockKubernetesServiceMockRecorder is the mock recorder for MockKubernetesService.
 type MockKubernetesServiceMockRecorder struct {
 	mock *MockKubernetesService
 }
 
-// NewMockKubernetesService creates a new mock instance
+// NewMockKubernetesService creates a new mock instance.
 func NewMockKubernetesService(ctrl *gomock.Controller) *MockKubernetesService {
 	mock := &MockKubernetesService{ctrl: ctrl}
 	mock.recorder = &MockKubernetesServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockKubernetesService) EXPECT() *MockKubernetesServiceMockRecorder {
 	return m.recorder
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockKubernetesService) Get(clusterID string) (*do.KubernetesCluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", clusterID)
@@ -43,13 +43,13 @@ func (m *MockKubernetesService) Get(clusterID string) (*do.KubernetesCluster, er
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockKubernetesServiceMockRecorder) Get(clusterID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockKubernetesService)(nil).Get), clusterID)
 }
 
-// GetKubeConfig mocks base method
+// GetKubeConfig mocks base method.
 func (m *MockKubernetesService) GetKubeConfig(clusterID string) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetKubeConfig", clusterID)
@@ -58,13 +58,13 @@ func (m *MockKubernetesService) GetKubeConfig(clusterID string) ([]byte, error) 
 	return ret0, ret1
 }
 
-// GetKubeConfig indicates an expected call of GetKubeConfig
+// GetKubeConfig indicates an expected call of GetKubeConfig.
 func (mr *MockKubernetesServiceMockRecorder) GetKubeConfig(clusterID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKubeConfig", reflect.TypeOf((*MockKubernetesService)(nil).GetKubeConfig), clusterID)
 }
 
-// GetCredentials mocks base method
+// GetCredentials mocks base method.
 func (m *MockKubernetesService) GetCredentials(clusterID string) (*do.KubernetesClusterCredentials, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCredentials", clusterID)
@@ -73,13 +73,13 @@ func (m *MockKubernetesService) GetCredentials(clusterID string) (*do.Kubernetes
 	return ret0, ret1
 }
 
-// GetCredentials indicates an expected call of GetCredentials
+// GetCredentials indicates an expected call of GetCredentials.
 func (mr *MockKubernetesServiceMockRecorder) GetCredentials(clusterID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCredentials", reflect.TypeOf((*MockKubernetesService)(nil).GetCredentials), clusterID)
 }
 
-// GetUpgrades mocks base method
+// GetUpgrades mocks base method.
 func (m *MockKubernetesService) GetUpgrades(clusterID string) (do.KubernetesVersions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUpgrades", clusterID)
@@ -88,13 +88,13 @@ func (m *MockKubernetesService) GetUpgrades(clusterID string) (do.KubernetesVers
 	return ret0, ret1
 }
 
-// GetUpgrades indicates an expected call of GetUpgrades
+// GetUpgrades indicates an expected call of GetUpgrades.
 func (mr *MockKubernetesServiceMockRecorder) GetUpgrades(clusterID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUpgrades", reflect.TypeOf((*MockKubernetesService)(nil).GetUpgrades), clusterID)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockKubernetesService) List() (do.KubernetesClusters, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -103,13 +103,13 @@ func (m *MockKubernetesService) List() (do.KubernetesClusters, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockKubernetesServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockKubernetesService)(nil).List))
 }
 
-// Create mocks base method
+// Create mocks base method.
 func (m *MockKubernetesService) Create(create *godo.KubernetesClusterCreateRequest) (*do.KubernetesCluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", create)
@@ -118,13 +118,13 @@ func (m *MockKubernetesService) Create(create *godo.KubernetesClusterCreateReque
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create
+// Create indicates an expected call of Create.
 func (mr *MockKubernetesServiceMockRecorder) Create(create interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockKubernetesService)(nil).Create), create)
 }
 
-// Update mocks base method
+// Update mocks base method.
 func (m *MockKubernetesService) Update(clusterID string, update *godo.KubernetesClusterUpdateRequest) (*do.KubernetesCluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Update", clusterID, update)
@@ -133,13 +133,13 @@ func (m *MockKubernetesService) Update(clusterID string, update *godo.Kubernetes
 	return ret0, ret1
 }
 
-// Update indicates an expected call of Update
+// Update indicates an expected call of Update.
 func (mr *MockKubernetesServiceMockRecorder) Update(clusterID, update interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockKubernetesService)(nil).Update), clusterID, update)
 }
 
-// Upgrade mocks base method
+// Upgrade mocks base method.
 func (m *MockKubernetesService) Upgrade(clusterID, versionSlug string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Upgrade", clusterID, versionSlug)
@@ -147,13 +147,13 @@ func (m *MockKubernetesService) Upgrade(clusterID, versionSlug string) error {
 	return ret0
 }
 
-// Upgrade indicates an expected call of Upgrade
+// Upgrade indicates an expected call of Upgrade.
 func (mr *MockKubernetesServiceMockRecorder) Upgrade(clusterID, versionSlug interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upgrade", reflect.TypeOf((*MockKubernetesService)(nil).Upgrade), clusterID, versionSlug)
 }
 
-// Delete mocks base method
+// Delete mocks base method.
 func (m *MockKubernetesService) Delete(clusterID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", clusterID)
@@ -161,13 +161,13 @@ func (m *MockKubernetesService) Delete(clusterID string) error {
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
+// Delete indicates an expected call of Delete.
 func (mr *MockKubernetesServiceMockRecorder) Delete(clusterID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockKubernetesService)(nil).Delete), clusterID)
 }
 
-// CreateNodePool mocks base method
+// CreateNodePool mocks base method.
 func (m *MockKubernetesService) CreateNodePool(clusterID string, req *godo.KubernetesNodePoolCreateRequest) (*do.KubernetesNodePool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateNodePool", clusterID, req)
@@ -176,13 +176,13 @@ func (m *MockKubernetesService) CreateNodePool(clusterID string, req *godo.Kuber
 	return ret0, ret1
 }
 
-// CreateNodePool indicates an expected call of CreateNodePool
+// CreateNodePool indicates an expected call of CreateNodePool.
 func (mr *MockKubernetesServiceMockRecorder) CreateNodePool(clusterID, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNodePool", reflect.TypeOf((*MockKubernetesService)(nil).CreateNodePool), clusterID, req)
 }
 
-// GetNodePool mocks base method
+// GetNodePool mocks base method.
 func (m *MockKubernetesService) GetNodePool(clusterID, poolID string) (*do.KubernetesNodePool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNodePool", clusterID, poolID)
@@ -191,13 +191,13 @@ func (m *MockKubernetesService) GetNodePool(clusterID, poolID string) (*do.Kuber
 	return ret0, ret1
 }
 
-// GetNodePool indicates an expected call of GetNodePool
+// GetNodePool indicates an expected call of GetNodePool.
 func (mr *MockKubernetesServiceMockRecorder) GetNodePool(clusterID, poolID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodePool", reflect.TypeOf((*MockKubernetesService)(nil).GetNodePool), clusterID, poolID)
 }
 
-// ListNodePools mocks base method
+// ListNodePools mocks base method.
 func (m *MockKubernetesService) ListNodePools(clusterID string) (do.KubernetesNodePools, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListNodePools", clusterID)
@@ -206,13 +206,13 @@ func (m *MockKubernetesService) ListNodePools(clusterID string) (do.KubernetesNo
 	return ret0, ret1
 }
 
-// ListNodePools indicates an expected call of ListNodePools
+// ListNodePools indicates an expected call of ListNodePools.
 func (mr *MockKubernetesServiceMockRecorder) ListNodePools(clusterID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNodePools", reflect.TypeOf((*MockKubernetesService)(nil).ListNodePools), clusterID)
 }
 
-// UpdateNodePool mocks base method
+// UpdateNodePool mocks base method.
 func (m *MockKubernetesService) UpdateNodePool(clusterID, poolID string, req *godo.KubernetesNodePoolUpdateRequest) (*do.KubernetesNodePool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateNodePool", clusterID, poolID, req)
@@ -221,13 +221,13 @@ func (m *MockKubernetesService) UpdateNodePool(clusterID, poolID string, req *go
 	return ret0, ret1
 }
 
-// UpdateNodePool indicates an expected call of UpdateNodePool
+// UpdateNodePool indicates an expected call of UpdateNodePool.
 func (mr *MockKubernetesServiceMockRecorder) UpdateNodePool(clusterID, poolID, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNodePool", reflect.TypeOf((*MockKubernetesService)(nil).UpdateNodePool), clusterID, poolID, req)
 }
 
-// RecycleNodePoolNodes mocks base method
+// RecycleNodePoolNodes mocks base method.
 func (m *MockKubernetesService) RecycleNodePoolNodes(clusterID, poolID string, req *godo.KubernetesNodePoolRecycleNodesRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecycleNodePoolNodes", clusterID, poolID, req)
@@ -235,13 +235,13 @@ func (m *MockKubernetesService) RecycleNodePoolNodes(clusterID, poolID string, r
 	return ret0
 }
 
-// RecycleNodePoolNodes indicates an expected call of RecycleNodePoolNodes
+// RecycleNodePoolNodes indicates an expected call of RecycleNodePoolNodes.
 func (mr *MockKubernetesServiceMockRecorder) RecycleNodePoolNodes(clusterID, poolID, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecycleNodePoolNodes", reflect.TypeOf((*MockKubernetesService)(nil).RecycleNodePoolNodes), clusterID, poolID, req)
 }
 
-// DeleteNodePool mocks base method
+// DeleteNodePool mocks base method.
 func (m *MockKubernetesService) DeleteNodePool(clusterID, poolID string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteNodePool", clusterID, poolID)
@@ -249,13 +249,13 @@ func (m *MockKubernetesService) DeleteNodePool(clusterID, poolID string) error {
 	return ret0
 }
 
-// DeleteNodePool indicates an expected call of DeleteNodePool
+// DeleteNodePool indicates an expected call of DeleteNodePool.
 func (mr *MockKubernetesServiceMockRecorder) DeleteNodePool(clusterID, poolID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNodePool", reflect.TypeOf((*MockKubernetesService)(nil).DeleteNodePool), clusterID, poolID)
 }
 
-// DeleteNode mocks base method
+// DeleteNode mocks base method.
 func (m *MockKubernetesService) DeleteNode(clusterID, poolID, nodeID string, req *godo.KubernetesNodeDeleteRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteNode", clusterID, poolID, nodeID, req)
@@ -263,13 +263,13 @@ func (m *MockKubernetesService) DeleteNode(clusterID, poolID, nodeID string, req
 	return ret0
 }
 
-// DeleteNode indicates an expected call of DeleteNode
+// DeleteNode indicates an expected call of DeleteNode.
 func (mr *MockKubernetesServiceMockRecorder) DeleteNode(clusterID, poolID, nodeID, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNode", reflect.TypeOf((*MockKubernetesService)(nil).DeleteNode), clusterID, poolID, nodeID, req)
 }
 
-// GetVersions mocks base method
+// GetVersions mocks base method.
 func (m *MockKubernetesService) GetVersions() (do.KubernetesVersions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetVersions")
@@ -278,13 +278,13 @@ func (m *MockKubernetesService) GetVersions() (do.KubernetesVersions, error) {
 	return ret0, ret1
 }
 
-// GetVersions indicates an expected call of GetVersions
+// GetVersions indicates an expected call of GetVersions.
 func (mr *MockKubernetesServiceMockRecorder) GetVersions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersions", reflect.TypeOf((*MockKubernetesService)(nil).GetVersions))
 }
 
-// GetRegions mocks base method
+// GetRegions mocks base method.
 func (m *MockKubernetesService) GetRegions() (do.KubernetesRegions, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRegions")
@@ -293,13 +293,13 @@ func (m *MockKubernetesService) GetRegions() (do.KubernetesRegions, error) {
 	return ret0, ret1
 }
 
-// GetRegions indicates an expected call of GetRegions
+// GetRegions indicates an expected call of GetRegions.
 func (mr *MockKubernetesServiceMockRecorder) GetRegions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegions", reflect.TypeOf((*MockKubernetesService)(nil).GetRegions))
 }
 
-// GetNodeSizes mocks base method
+// GetNodeSizes mocks base method.
 func (m *MockKubernetesService) GetNodeSizes() (do.KubernetesNodeSizes, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNodeSizes")
@@ -308,7 +308,7 @@ func (m *MockKubernetesService) GetNodeSizes() (do.KubernetesNodeSizes, error) {
 	return ret0, ret1
 }
 
-// GetNodeSizes indicates an expected call of GetNodeSizes
+// GetNodeSizes indicates an expected call of GetNodeSizes.
 func (mr *MockKubernetesServiceMockRecorder) GetNodeSizes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeSizes", reflect.TypeOf((*MockKubernetesService)(nil).GetNodeSizes))

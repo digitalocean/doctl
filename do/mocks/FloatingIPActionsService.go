@@ -11,30 +11,30 @@ import (
 	reflect "reflect"
 )
 
-// MockFloatingIPActionsService is a mock of FloatingIPActionsService interface
+// MockFloatingIPActionsService is a mock of FloatingIPActionsService interface.
 type MockFloatingIPActionsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockFloatingIPActionsServiceMockRecorder
 }
 
-// MockFloatingIPActionsServiceMockRecorder is the mock recorder for MockFloatingIPActionsService
+// MockFloatingIPActionsServiceMockRecorder is the mock recorder for MockFloatingIPActionsService.
 type MockFloatingIPActionsServiceMockRecorder struct {
 	mock *MockFloatingIPActionsService
 }
 
-// NewMockFloatingIPActionsService creates a new mock instance
+// NewMockFloatingIPActionsService creates a new mock instance.
 func NewMockFloatingIPActionsService(ctrl *gomock.Controller) *MockFloatingIPActionsService {
 	mock := &MockFloatingIPActionsService{ctrl: ctrl}
 	mock.recorder = &MockFloatingIPActionsServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockFloatingIPActionsService) EXPECT() *MockFloatingIPActionsServiceMockRecorder {
 	return m.recorder
 }
 
-// Assign mocks base method
+// Assign mocks base method.
 func (m *MockFloatingIPActionsService) Assign(ip string, dropletID int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Assign", ip, dropletID)
@@ -43,13 +43,13 @@ func (m *MockFloatingIPActionsService) Assign(ip string, dropletID int) (*do.Act
 	return ret0, ret1
 }
 
-// Assign indicates an expected call of Assign
+// Assign indicates an expected call of Assign.
 func (mr *MockFloatingIPActionsServiceMockRecorder) Assign(ip, dropletID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockFloatingIPActionsService)(nil).Assign), ip, dropletID)
 }
 
-// Unassign mocks base method
+// Unassign mocks base method.
 func (m *MockFloatingIPActionsService) Unassign(ip string) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Unassign", ip)
@@ -58,13 +58,13 @@ func (m *MockFloatingIPActionsService) Unassign(ip string) (*do.Action, error) {
 	return ret0, ret1
 }
 
-// Unassign indicates an expected call of Unassign
+// Unassign indicates an expected call of Unassign.
 func (mr *MockFloatingIPActionsServiceMockRecorder) Unassign(ip interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unassign", reflect.TypeOf((*MockFloatingIPActionsService)(nil).Unassign), ip)
 }
 
-// Get mocks base method
+// Get mocks base method.
 func (m *MockFloatingIPActionsService) Get(ip string, actionID int) (*do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ip, actionID)
@@ -73,13 +73,13 @@ func (m *MockFloatingIPActionsService) Get(ip string, actionID int) (*do.Action,
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get
+// Get indicates an expected call of Get.
 func (mr *MockFloatingIPActionsServiceMockRecorder) Get(ip, actionID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockFloatingIPActionsService)(nil).Get), ip, actionID)
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockFloatingIPActionsService) List(ip string, opt *godo.ListOptions) ([]do.Action, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ip, opt)
@@ -88,7 +88,7 @@ func (m *MockFloatingIPActionsService) List(ip string, opt *godo.ListOptions) ([
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockFloatingIPActionsServiceMockRecorder) List(ip, opt interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockFloatingIPActionsService)(nil).List), ip, opt)

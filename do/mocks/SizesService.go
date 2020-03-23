@@ -10,30 +10,30 @@ import (
 	reflect "reflect"
 )
 
-// MockSizesService is a mock of SizesService interface
+// MockSizesService is a mock of SizesService interface.
 type MockSizesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockSizesServiceMockRecorder
 }
 
-// MockSizesServiceMockRecorder is the mock recorder for MockSizesService
+// MockSizesServiceMockRecorder is the mock recorder for MockSizesService.
 type MockSizesServiceMockRecorder struct {
 	mock *MockSizesService
 }
 
-// NewMockSizesService creates a new mock instance
+// NewMockSizesService creates a new mock instance.
 func NewMockSizesService(ctrl *gomock.Controller) *MockSizesService {
 	mock := &MockSizesService{ctrl: ctrl}
 	mock.recorder = &MockSizesServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockSizesService) EXPECT() *MockSizesServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockSizesService) List() (do.Sizes, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -42,7 +42,7 @@ func (m *MockSizesService) List() (do.Sizes, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockSizesServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockSizesService)(nil).List))
