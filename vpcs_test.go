@@ -3,26 +3,32 @@ package godo
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var vTestObj = &VPC{
-	ID:         "880b7f98-f062-404d-b33c-458d545696f6",
-	Name:       "my-new-vpc",
-	RegionSlug: "s2r7",
-	CreatedAt:  time.Date(2019, 2, 4, 21, 48, 40, 995304079, time.UTC),
-	Default:    false,
+	ID:          "880b7f98-f062-404d-b33c-458d545696f6",
+	URN:         "do:vpc:880b7f98-f062-404d-b33c-458d545696f6",
+	Name:        "my-new-vpc",
+	Description: "vpc description",
+	IPRange:     "10.122.0.0/20",
+	RegionSlug:  "s2r7",
+	CreatedAt:   time.Date(2019, 2, 4, 21, 48, 40, 995304079, time.UTC),
+	Default:     false,
 }
 
 var vTestJSON = `
     {
       "id":"880b7f98-f062-404d-b33c-458d545696f6",
+      "urn":"do:vpc:880b7f98-f062-404d-b33c-458d545696f6",
       "name":"my-new-vpc",
+      "description":"vpc description",
+      "ip_range":"10.122.0.0/20",
       "region":"s2r7",
       "created_at":"2019-02-04T21:48:40.995304079Z",
       "default":false
@@ -142,7 +148,8 @@ func TestVPCs_Update(t *testing.T) {
 	want := vTestObj
 	id := "880b7f98-f062-404d-b33c-458d545696f6"
 	req := &VPCUpdateRequest{
-		Name: "my-new-vpc",
+		Name:        "my-new-vpc",
+		Description: "vpc description",
 	}
 	jsonBlob := `
 {
@@ -173,7 +180,8 @@ func TestVPCs_Set(t *testing.T) {
 	defer teardown()
 
 	type setRequest struct {
-		Name string `json:"name"`
+		Name        string `json:"name"`
+		Description string `json:"description"`
 	}
 
 	svc := client.VPCs
@@ -181,7 +189,11 @@ func TestVPCs_Set(t *testing.T) {
 	want := vTestObj
 	id := "880b7f98-f062-404d-b33c-458d545696f6"
 	name := "my-new-vpc"
-	req := &setRequest{Name: name}
+	desc := "vpc description"
+	req := &setRequest{
+		Name:        name,
+		Description: desc,
+	}
 	jsonBlob := `
 {
   "vpc":
@@ -201,7 +213,7 @@ func TestVPCs_Set(t *testing.T) {
 		fmt.Fprint(w, jsonBlob)
 	})
 
-	got, _, err := svc.Set(ctx, id, VPCSetName(name))
+	got, _, err := svc.Set(ctx, id, VPCSetName(name), VPCSetDescription(desc))
 	require.NoError(t, err)
 	require.Equal(t, want, got)
 }
