@@ -72,7 +72,7 @@ func Auth() *Command {
 		Command: &cobra.Command{
 			Use:   "auth",
 			Short: "Display commands for authenticating doctl with an account",
-			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/token.
+			Long: `The ` + "`" + `doctl auth` + "`" + ` commands allow you to authenticate doctl for use with your DigitalOcean account using tokens that you generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
 If you work with a just one account, you can call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
 
@@ -82,7 +82,7 @@ To switch between multiple DigitalOcean accounts, including team accounts, you c
 
 	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "Initialize doctl to use a specific account", `This command allows you to initialize doctl with a token that allows it to query and manage your account details and resources.
 
-You will need an API token, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/token.
+You will need an API token, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
 You can provide a name to this initialization via the `+"`"+`--context`+"`"+` flag, and then it will be saved as an "authentication context". Authentication contexts are accessible via `+"`"+`doctl auth switch`+"`"+`, which re-initializes doctl, or by providing the `+"`"+`--context`+"`"+` flag when using any doctl command (to specify that auth context for just one command). This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
 
