@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  go-pipeline:
+    name: test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v2
+
+    - name: go1.11 test
+      uses: shoukoo/golang-pipeline/go1.11/test@master
+
+    - name: go1.12 test
+      uses: shoukoo/golang-pipeline/go1.12/test@master
+
+    - name: go1.13 test
+      uses: shoukoo/golang-pipeline/go1.13/test@master
