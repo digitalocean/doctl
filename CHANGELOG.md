@@ -2,6 +2,10 @@
 
 ## unreleased
 
+## [v1.34.0] - 2020-03-30
+
+- #320 Add VPC v3 attributes - @viola
+
 ## [v1.33.1] - 2020-03-23
 
 - #318 upgrade github.com/stretchr/objx past 0.1.1 - @hilary
