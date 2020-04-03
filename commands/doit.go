@@ -137,6 +137,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Projects())
 	DoitCmd.AddCommand(Version())
 	DoitCmd.AddCommand(Registry())
+	DoitCmd.AddCommand(VPCs())
 }
 
 func computeCmd() *Command {

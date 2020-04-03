@@ -285,4 +285,11 @@ const (
 	ArgObjectName = "name"
 	// ArgObjectNamespace is the Kubernetes object namespace
 	ArgObjectNamespace = "namespace"
+
+	// ArgVPCName is a name of the VPC.
+	ArgVPCName = "name"
+	// ArgVPCDescription is a VPC description.
+	ArgVPCDescription = "description"
+	// ArgVPCIPRange is a VPC range of IP addresses in CIDR notation.
+	ArgVPCIPRange = "ip-range"
 )
