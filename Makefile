@@ -25,7 +25,7 @@ OUT_D = $(shell echo $${OUT_D:-$(my_d)/builds})
 DOCS_OUT = $(shell echo $${DOCS_OUT:-$(my_d)/builds/docs/yaml})
 
 UNAME_S := $(shell uname -s)
-UNAME_P := $(shell uname -p)
+UNAME_M := $(shell uname -m)
 
 GOOS = linux
 ifeq ($(UNAME_S),Darwin)
@@ -33,7 +33,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 GOARCH = amd64
-ifneq ($(UNAME_P), x86_64)
+ifneq ($(UNAME_M), x86_64)
   GOARCH = 386
 endif
 
