@@ -1,5 +1,20 @@
-# doctl [![Build Status](https://travis-ci.org/digitalocean/doctl.svg?branch=master)](https://travis-ci.org/digitalocean/doctl) [![GoDoc](https://godoc.org/github.com/digitalocean/doctl?status.svg)](https://godoc.org/github.com/digitalocean/doctl) [![Go Report Card](https://goreportcard.com/badge/github.com/digitalocean/doctl)](https://goreportcard.com/report/github.com/digitalocean/doctl)
+<h1 align="center">doctl</h1>
 
+<p align="center">
+  <img width="200" height="170" src="https://api-engineering.nyc3.cdn.digitaloceanspaces.com/doctl-mascot.png" alt="The doctl mascot." />
+</p>
+
+<p align="center">
+  <a href="https://travis-ci.org/digitalocean/doctl">
+    <img src="https://travis-ci.org/digitalocean/doctl.svg?branch=master" alt="Build Status" />
+  </a>
+  <a href="https://godoc.org/github.com/digitalocean/doctl">
+    <img src="https://godoc.org/github.com/digitalocean/doctl?status.svg" alt="GoDoc" />
+  </a>
+  <a href="https://goreportcard.com/report/github.com/digitalocean/doctl">
+    <img src="https://goreportcard.com/badge/github.com/digitalocean/doctl" alt="Go Report Card" />
+  </a>
+</p>
 
 ```
 doctl is a command line interface for the DigitalOcean API.
