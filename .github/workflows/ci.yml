@@ -23,3 +23,9 @@ jobs:
 
     - name: go1.13 test
       uses: shoukoo/golang-pipeline/go1.13/test@master
+
+    # Support for go1.14 is waiting on
+    # https://github.com/shoukoo/golang-pipeline/pull/7
+    #
+    # - name: go1.14 test
+    #   uses: shoukoo/golang-pipeline/go1.14/test@master
