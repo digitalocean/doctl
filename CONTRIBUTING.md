@@ -93,7 +93,7 @@ or `make help` for a list of available commands with descriptions.
 
 ### Go environment
 
-The minimal version of Golang for `doctl` is 1.13. `doctl` uses [Go
+The minimal version of Golang for `doctl` is 1.14. `doctl` uses [Go
 modules](https://github.com/golang/go/wiki/Modules) for dependency
 management [with vendoring](https://github.com/golang/go/wiki/Modules#how-do-i-use-vendoring-with-modules-is-vendoring-going-away).
 Please run `make vendor` after any dependency modifications.
@@ -180,7 +180,7 @@ to do so. Travis also runs shellcheck.
 
 ## Releasing
 
-To cut a release, push a new tag (versioning discussed below). The actual release is orchestrated 
+To cut a release, push a new tag (versioning discussed below). The actual release is orchestrated
 by [Travis CI](https://docs.travis-ci.com/user/deployment/).
 
 ### Tagging a release
@@ -240,7 +240,7 @@ snap manually.
 ##### Building a new snap base image
 
 Occasionally, the snap build will break. When it does, it usually means that you need to update
-the custom base image we use to build the snap. The Dockerfile for that image lives in 
+the custom base image we use to build the snap. The Dockerfile for that image lives in
 [dockerfiles/Dockerfile.snap](https://github.com/digitalocean/doctl/blob/master/dockerfiles/Dockerfile.snap).
 The header of the Dockerfile has hints for updating the image, as well as instructions for building
 the image using `make snap_image`. Once you've built the image, the snap_image target will provide
