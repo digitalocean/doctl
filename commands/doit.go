@@ -129,6 +129,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(Balance())
+	DoitCmd.AddCommand(BillingHistory())
 	DoitCmd.AddCommand(Invoices())
 	DoitCmd.AddCommand(Completion())
 	DoitCmd.AddCommand(computeCmd())
@@ -137,6 +138,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Projects())
 	DoitCmd.AddCommand(Version())
 	DoitCmd.AddCommand(Registry())
+	DoitCmd.AddCommand(VPCs())
 }
 
 func computeCmd() *Command {

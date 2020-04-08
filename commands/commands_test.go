@@ -149,6 +149,7 @@ type tcMocks struct {
 	account           *domocks.MockAccountService
 	actions           *domocks.MockActionsService
 	balance           *domocks.MockBalanceService
+	billingHistory    *domocks.MockBillingHistoryService
 	databases         *domocks.MockDatabasesService
 	dropletActions    *domocks.MockDropletActionsService
 	droplets          *domocks.MockDropletsService
@@ -173,6 +174,7 @@ type tcMocks struct {
 	kubernetes        *domocks.MockKubernetesService
 	registry          *domocks.MockRegistryService
 	sshRunner         *domocks.MockRunner
+	vpcs              *domocks.MockVPCsService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -183,6 +185,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		account:           domocks.NewMockAccountService(ctrl),
 		actions:           domocks.NewMockActionsService(ctrl),
 		balance:           domocks.NewMockBalanceService(ctrl),
+		billingHistory:    domocks.NewMockBillingHistoryService(ctrl),
 		keys:              domocks.NewMockKeysService(ctrl),
 		sizes:             domocks.NewMockSizesService(ctrl),
 		regions:           domocks.NewMockRegionsService(ctrl),
@@ -207,6 +210,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		databases:         domocks.NewMockDatabasesService(ctrl),
 		registry:          domocks.NewMockRegistryService(ctrl),
 		sshRunner:         domocks.NewMockRunner(ctrl),
+		vpcs:              domocks.NewMockVPCsService(ctrl),
 	}
 
 	config := &CmdConfig{
@@ -236,6 +240,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Actions:           func() do.ActionsService { return tm.actions },
 		Account:           func() do.AccountService { return tm.account },
 		Balance:           func() do.BalanceService { return tm.balance },
+		BillingHistory:    func() do.BillingHistoryService { return tm.billingHistory },
 		Invoices:          func() do.InvoicesService { return tm.invoices },
 		Tags:              func() do.TagsService { return tm.tags },
 		Volumes:           func() do.VolumesService { return tm.volumes },
@@ -249,6 +254,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Kubernetes:        func() do.KubernetesService { return tm.kubernetes },
 		Databases:         func() do.DatabasesService { return tm.databases },
 		Registry:          func() do.RegistryService { return tm.registry },
+		VPCs:              func() do.VPCsService { return tm.vpcs },
 	}
 
 	tFn(config, tm)

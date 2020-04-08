@@ -49,6 +49,7 @@ type CmdConfig struct {
 	Actions           func() do.ActionsService
 	Account           func() do.AccountService
 	Balance           func() do.BalanceService
+	BillingHistory    func() do.BillingHistoryService
 	Invoices          func() do.InvoicesService
 	Tags              func() do.TagsService
 	Volumes           func() do.VolumesService
@@ -61,6 +62,7 @@ type CmdConfig struct {
 	Kubernetes        func() do.KubernetesService
 	Databases         func() do.DatabasesService
 	Registry          func() do.RegistryService
+	VPCs              func() do.VPCsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -92,6 +94,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
 			c.Balance = func() do.BalanceService { return do.NewBalanceService(godoClient) }
+			c.BillingHistory = func() do.BillingHistoryService { return do.NewBillingHistoryService(godoClient) }
 			c.Invoices = func() do.InvoicesService { return do.NewInvoicesService(godoClient) }
 			c.Tags = func() do.TagsService { return do.NewTagsService(godoClient) }
 			c.Volumes = func() do.VolumesService { return do.NewVolumesService(godoClient) }
@@ -105,6 +108,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Kubernetes = func() do.KubernetesService { return do.NewKubernetesService(godoClient) }
 			c.Databases = func() do.DatabasesService { return do.NewDatabasesService(godoClient) }
 			c.Registry = func() do.RegistryService { return do.NewRegistryService(godoClient) }
+			c.VPCs = func() do.VPCsService { return do.NewVPCsService(godoClient) }
 
 			return nil
 		},
