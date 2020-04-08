@@ -144,6 +144,15 @@ mocks:
 	@echo ""
 	@scripts/regenmocks.sh
 
+.PHONY: _upgrade_godo
+_upgrade_godo:
+	go get -u github.com/digitalocean/godo
+
+.PHONY: upgrade_godo
+upgrade_godo: _upgrade_godo vendor mocks
+	@echo "==> upgrade the godo version"
+	@echo ""
+
 .PHONY: vendor
 vendor:
 	@echo "==> vendor dependencies"
