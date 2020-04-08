@@ -36,15 +36,16 @@ With the vpcs command, you can list, create, or delete VPCs, and manage their co
 	}
 
 	vpcDetail := `
-	- The VPC's ID
-	- The uniform resource name (URN) for the VPC
-	- The VPC's name
-	- The VPC's description
-	- The range of IP addresses in the VPC in CIDR notation
-	- The datacenter region slug the VPC is located in
-	- The VPC's default boolean value indicating whether or not the VPC is the default one for the region
-	- The VPC's creation date, in ISO8601 combined date and time format
-	`
+
+- The VPC's ID
+- The uniform resource name (URN) for the VPC
+- The VPC's name
+- The VPC's description
+- The range of IP addresses in the VPC in CIDR notation
+- The datacenter region slug the VPC is located in
+- The VPC's default boolean value indicating whether or not the VPC is the default one for the region
+- The VPC's creation date, in ISO8601 combined date and time format
+`
 
 	CmdBuilder(cmd, RunVPCGet, "get <id>", "Retrieve a VPC", "Use this command to retrieve information about a VPC, including:"+vpcDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.VPC{}))

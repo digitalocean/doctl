@@ -23,18 +23,18 @@ func BillingHistory() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "billing-history",
-			Short:   "billing history commands",
-			Long:    "billing-history is used to access billing history commands",
+			Short:   "Display commands for retrieving your billing history",
+			Long:    "The subcommands of `doctl billing-history` are used to access the billing history for your DigitalOcean account.",
 			Aliases: []string{"bh"},
 		},
 	}
 	listBillingHistoryDesc := `This command retrieves the following details for each event in your billing history:
-- The date of the event.
-- The type of billing event.
-- A description of the event.
-- The amount of the event in USD.
-- The invoice ID associated with the event, if applicable.
-- The invoice UUID associated with the event, if applicable.
+- The date of the event
+- The type of billing event
+- A description of the event
+- The amount of the event in USD
+- The invoice ID associated with the event, if applicable
+- The invoice UUID associated with the event, if applicable
 
 `
 
