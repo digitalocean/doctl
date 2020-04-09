@@ -166,11 +166,11 @@ file to see what an integration test typically looks like.
 
 #### `godo` mocks
 
-When you upgrade `godo` you have to re-generate the mocks.
+To upgrade `godo`, run `make upgrade_godo`. This will:
 
-    ```
-    make mocks
-    ```
+* Get the latest release of `godo`, and update the go.mod and go.sum files accordingly.
+* Tidy and vendor the modules that `doctl` depends on.
+* Run `mockgen` to regenerate the mocks we use in the unit test suite.
 
 #### Build Scripts
 

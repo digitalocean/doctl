@@ -10,30 +10,30 @@ import (
 	reflect "reflect"
 )
 
-// MockBillingHistoryService is a mock of BillingHistoryService interface
+// MockBillingHistoryService is a mock of BillingHistoryService interface.
 type MockBillingHistoryService struct {
 	ctrl     *gomock.Controller
 	recorder *MockBillingHistoryServiceMockRecorder
 }
 
-// MockBillingHistoryServiceMockRecorder is the mock recorder for MockBillingHistoryService
+// MockBillingHistoryServiceMockRecorder is the mock recorder for MockBillingHistoryService.
 type MockBillingHistoryServiceMockRecorder struct {
 	mock *MockBillingHistoryService
 }
 
-// NewMockBillingHistoryService creates a new mock instance
+// NewMockBillingHistoryService creates a new mock instance.
 func NewMockBillingHistoryService(ctrl *gomock.Controller) *MockBillingHistoryService {
 	mock := &MockBillingHistoryService{ctrl: ctrl}
 	mock.recorder = &MockBillingHistoryServiceMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockBillingHistoryService) EXPECT() *MockBillingHistoryServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method
+// List mocks base method.
 func (m *MockBillingHistoryService) List() (*do.BillingHistory, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List")
@@ -42,7 +42,7 @@ func (m *MockBillingHistoryService) List() (*do.BillingHistory, error) {
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
+// List indicates an expected call of List.
 func (mr *MockBillingHistoryServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBillingHistoryService)(nil).List))
