@@ -471,19 +471,27 @@ func RunDropletDelete(c *CmdConfig) error {
 			ids = append(ids, strconv.Itoa(droplet.ID))
 		}
 		affectedIDs = strings.Join(ids, " ")
+		resourceType := "Droplet"
+		if len(list) > 1 {
+			resourceType = "Droplets"
+		}
 
-		if force || AskForConfirm(fmt.Sprintf("Delete droplet(s) by \"%s\" tag? [affected ID(s): %s]", tagName, affectedIDs)) == nil {
+		if force || AskForConfirm(fmt.Sprintf("delete %d %s tagged \"%s\"? [affected %s: %s]", len(list), resourceType, tagName, resourceType, affectedIDs)) == nil {
 			return ds.DeleteByTag(tagName)
 		}
-		return nil
+		return fmt.Errorf("Operation aborted.")
 	}
 
-	if force || AskForConfirm(fmt.Sprintf("Delete %d droplet(s)?", len(c.Args))) == nil {
+	resourceType := "Droplet"
+	if len(c.Args) > 1 {
+		resourceType = "Droplets"
+	}
+	if force || AskForConfirm(fmt.Sprintf("delete %d %s?", len(c.Args), resourceType)) == nil {
 
 		fn := func(ids []int) error {
 			for _, id := range ids {
 				if err := ds.Delete(id); err != nil {
-					return fmt.Errorf("Unable to delete droplet %d: %v", id, err)
+					return fmt.Errorf("Unable to delete Droplet %d: %v", id, err)
 				}
 			}
 			return nil
