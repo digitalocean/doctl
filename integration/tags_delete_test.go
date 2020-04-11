@@ -146,6 +146,6 @@ var _ = suite("compute/tags/delete", func(t *testing.T, when spec.G, it spec.S) 
 })
 
 const (
-	tagDelOutput      = "Warning: Are you sure you want to delete 1 tag? (y/N) ? Error: Operation aborted."
+	tagDelOutput      = "Warning: Are you sure you want to delete this tag? (y/N) ? Error: Operation aborted."
 	multiTagDelOutput = "Warning: Are you sure you want to delete 2 tags? (y/N) ? Error: Operation aborted."
 )

@@ -134,6 +134,6 @@ var _ = suite("compute/firewall/delete", func(t *testing.T, when spec.G, it spec
 })
 
 const (
-	fwDelOutput      = "Warning: Are you sure you want to delete 1 firewall? (y/N) ? Error: Operation aborted."
+	fwDelOutput      = "Warning: Are you sure you want to delete this firewall? (y/N) ? Error: Operation aborted."
 	multiFwDelOutput = "Warning: Are you sure you want to delete 2 firewalls? (y/N) ? Error: Operation aborted."
 )

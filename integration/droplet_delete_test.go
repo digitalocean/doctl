@@ -206,7 +206,7 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 })
 
 const (
-	dropletDelOutput         = "Warning: Are you sure you want to delete 1 Droplet? (y/N) ? Error: Operation aborted."
+	dropletDelOutput         = "Warning: Are you sure you want to delete this Droplet? (y/N) ? Error: Operation aborted."
 	multiDropletDelOutput    = "Warning: Are you sure you want to delete 2 Droplets? (y/N) ? Error: Operation aborted."
 	tagDropletDelOutput      = `Warning: Are you sure you want to delete 1 Droplet tagged "one"? [affected Droplet: 1337] (y/N) ? Error: Operation aborted.`
 	tagMultiDropletDelOutput = `Warning: Are you sure you want to delete 2 Droplets tagged "two"? [affected Droplets: 1337 7331] (y/N) ? Error: Operation aborted.`

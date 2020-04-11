@@ -48,10 +48,12 @@ func AskForConfirm(message string) error {
 // one or multiple resources and then sends it through to AskForConfirm to
 // parses and verifies user input.
 func AskForConfirmDelete(resourceType string, count int) error {
+	message := fmt.Sprintf("delete this %s?", resourceType)
 	if count > 1 {
 		resourceType = resourceType + "s"
+		message = fmt.Sprintf("delete %d %s?", count, resourceType)
 	}
-	message := fmt.Sprintf("delete %d %s?", count, resourceType)
+
 	err := AskForConfirm(message)
 	if err != nil {
 		return err

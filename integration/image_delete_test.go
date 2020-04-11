@@ -134,6 +134,6 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 })
 
 const (
-	imageDelOutput      = "Warning: Are you sure you want to delete 1 image? (y/N) ? Error: Operation aborted."
+	imageDelOutput      = "Warning: Are you sure you want to delete this image? (y/N) ? Error: Operation aborted."
 	multiImageDelOutput = "Warning: Are you sure you want to delete 2 images? (y/N) ? Error: Operation aborted."
 )

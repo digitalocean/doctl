@@ -154,6 +154,6 @@ var _ = suite("compute/domain/records/delete", func(t *testing.T, when spec.G, i
 })
 
 const (
-	domainRecDelOutput      = "Warning: Are you sure you want to delete 1 domain record? (y/N) ? Error: Operation aborted."
+	domainRecDelOutput      = "Warning: Are you sure you want to delete this domain record? (y/N) ? Error: Operation aborted."
 	multiDomainRecDelOutput = "Warning: Are you sure you want to delete 2 domain records? (y/N) ? Error: Operation aborted."
 )
