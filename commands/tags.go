@@ -112,7 +112,7 @@ func RunCmdTagDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete tag(s)?") == nil {
+	if force || AskForConfirmDelete("tag", len(c.Args)) == nil {
 		for id := range c.Args {
 			name := c.Args[id]
 			ts := c.Tags()
