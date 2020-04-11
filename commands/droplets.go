@@ -482,11 +482,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		return fmt.Errorf("Operation aborted.")
 	}
 
-	resourceType := "Droplet"
-	if len(c.Args) > 1 {
-		resourceType = "Droplets"
-	}
-	if force || AskForConfirm(fmt.Sprintf("delete %d %s?", len(c.Args), resourceType)) == nil {
+	if force || AskForConfirmDelete("Droplet", len(c.Args)) == nil {
 
 		fn := func(ids []int) error {
 			for _, id := range ids {
