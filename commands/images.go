@@ -244,7 +244,7 @@ func RunImagesDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete image(s)?") == nil {
+	if force || AskForConfirmDelete("image", len(c.Args)) == nil {
 
 		for _, el := range c.Args {
 			id, err := strconv.Atoi(el)
