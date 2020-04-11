@@ -206,7 +206,7 @@ func RunFirewallDelete(c *CmdConfig) error {
 	}
 
 	fs := c.Firewalls()
-	if force || AskForConfirm(fmt.Sprintf("Delete %d firewall(s)?", len(c.Args))) == nil {
+	if force || AskForConfirmDelete("firewall", len(c.Args)) == nil {
 		for _, id := range c.Args {
 			if err := fs.Delete(id); err != nil {
 				return err
