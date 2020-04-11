@@ -215,7 +215,7 @@ func RunVolumeDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete volume?") == nil {
+	if force || AskForConfirmDelete("volume", 1) == nil {
 		id := c.Args[0]
 		return c.Volumes().DeleteVolume(id)
 	}

@@ -128,7 +128,7 @@ func RunFloatingIPDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete floating IP?") == nil {
+	if force || AskForConfirmDelete("floating IP", 1) == nil {
 		ip := c.Args[0]
 		return fis.Delete(ip)
 	}

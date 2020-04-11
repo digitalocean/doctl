@@ -203,7 +203,7 @@ func RunCertificateDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete this certificate?") == nil {
+	if force || AskForConfirmDelete("certificate", 1) == nil {
 		cs := c.Certificates()
 		if err := cs.Delete(cID); err != nil {
 			return err

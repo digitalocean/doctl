@@ -185,7 +185,7 @@ func RunVPCDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete this VPC?") == nil {
+	if force || AskForConfirmDelete("VPC", 1) == nil {
 		vpcs := c.VPCs()
 		if err := vpcs.Delete(vpcUUID); err != nil {
 			return err

@@ -167,7 +167,7 @@ func RunDomainDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete domain?") == nil {
+	if force || AskForConfirmDelete("domain", 1) == nil {
 		ds := c.Domains()
 
 		if len(name) < 1 {
