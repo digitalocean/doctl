@@ -87,7 +87,7 @@ test_unit:
 test_integration:
 	@echo "==> run integration tests"
 	@echo ""
-	go test -v -count=1 -mod=vendor ./integration
+	go test -v -mod=vendor ./integration
 
 .PHONY: test
 test: test_unit test_integration
