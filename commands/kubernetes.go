@@ -767,7 +767,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 			return err
 		}
 
-		if force || AskForConfirm("Delete this Kubernetes cluster") == nil {
+		if force || AskForConfirmDelete("Kubernetes cluster", 1) == nil {
 			// continue
 		} else {
 			return fmt.Errorf("Operation aborted")
@@ -1112,7 +1112,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolDelete(c *CmdConfig) err
 	if err != nil {
 		return err
 	}
-	if force || AskForConfirm("Delete this Kubernetes node pool?") == nil {
+	if force || AskForConfirmDelete("Kubernetes node pool", 1) == nil {
 		kube := c.Kubernetes()
 		if err := kube.DeleteNodePool(clusterID, poolID); err != nil {
 			return err
@@ -1152,9 +1152,9 @@ func kubernetesNodeDelete(replace bool, c *CmdConfig) error {
 		return err
 	}
 
-	msg := "Delete this Kubernetes node?"
+	msg := "delete this Kubernetes node?"
 	if replace {
-		msg = "Replace this Kubernetes node?"
+		msg = "replace this Kubernetes node?"
 	}
 
 	if !(force || AskForConfirm(msg) == nil) {

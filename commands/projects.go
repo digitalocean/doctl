@@ -208,11 +208,7 @@ func RunProjectsDelete(c *CmdConfig) error {
 	}
 
 	ps := c.Projects()
-	var suffix string
-	if len(c.Args) != 1 {
-		suffix = "s"
-	}
-	if force || AskForConfirm(fmt.Sprintf("delete %d project%s", len(c.Args), suffix)) == nil {
+	if force || AskForConfirmDelete("project", len(c.Args)) == nil {
 		for _, id := range c.Args {
 			if err := ps.Delete(id); err != nil {
 				return err

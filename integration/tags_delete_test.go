@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -13,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/tags/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -21,9 +22,10 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 
 	it.Before(func() {
 		expect = require.New(t)
+
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/images/1111":
+			case "/v2/tags/foo":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -35,8 +37,13 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 					return
 				}
 
+				reqBody, err := ioutil.ReadAll(req.Body)
+				expect.NoError(err)
+				expect.Empty(string(reqBody))
+
 				w.WriteHeader(http.StatusNoContent)
-			case "/v2/images/2222":
+
+			case "/v2/tags/bar":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -48,7 +55,12 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 					return
 				}
 
+				reqBody, err := ioutil.ReadAll(req.Body)
+				expect.NoError(err)
+				expect.Empty(string(reqBody))
+
 				w.WriteHeader(http.StatusNoContent)
+
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -60,80 +72,80 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 		}))
 	})
 
-	when("all the required flags are passed", func() {
-		it("deletes the image", func() {
+	when("all required flags are passed", func() {
+		it("deletes the right tag", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"image",
+				"tag",
 				"delete",
-				"1111",
+				"foo",
 				"--force",
 			)
 
 			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received unexpected error: %s", output))
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Empty(output)
 		})
 	})
 
-	when("multiple images are provided and all the required flags are passed", func() {
-		it("deletes the images", func() {
+	when("multiple tags are provided and all required flags are passed", func() {
+		it("deletes the right tagss", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"image",
+				"tag",
 				"delete",
-				"1111",
-				"2222",
+				"foo",
+				"bar",
 				"--force",
 			)
 
 			output, err := cmd.CombinedOutput()
-			expect.NoError(err, fmt.Sprintf("received unexpected error: %s", output))
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Empty(output)
 		})
 	})
 
-	when("deleting one image without force flag", func() {
+	when("deleting one tag without force flag", func() {
 		it("correctly promts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"image",
+				"tag",
 				"delete",
-				"1111",
+				"foo",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(imageDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(tagDelOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
-	when("deleting two images without force flag", func() {
+	when("deleting two tags without force flag", func() {
 		it("correctly promts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"image",
+				"tag",
 				"delete",
-				"1111",
-				"2222",
+				"foo",
+				"bar",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(multiImageDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(multiTagDelOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
 
 const (
-	imageDelOutput      = "Warning: Are you sure you want to delete this image? (y/N) ? Error: Operation aborted."
-	multiImageDelOutput = "Warning: Are you sure you want to delete 2 images? (y/N) ? Error: Operation aborted."
+	tagDelOutput      = "Warning: Are you sure you want to delete this tag? (y/N) ? Error: Operation aborted."
+	multiTagDelOutput = "Warning: Are you sure you want to delete 2 tags? (y/N) ? Error: Operation aborted."
 )

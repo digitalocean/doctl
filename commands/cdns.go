@@ -242,7 +242,7 @@ func RunCDNDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete CDN?") == nil {
+	if force || AskForConfirmDelete("CDN", 1) == nil {
 		id := c.Args[0]
 		return c.CDNs().Delete(id)
 	}

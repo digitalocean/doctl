@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/firewall/delete", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -23,7 +23,7 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 		expect = require.New(t)
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/images/1111":
+			case "/v2/firewalls/e4b9c960-d385-4950-84f3-d102162e6be5":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -36,7 +36,7 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 				}
 
 				w.WriteHeader(http.StatusNoContent)
-			case "/v2/images/2222":
+			case "/v2/firewalls/aaa-bbb-ccc-ddd-eee":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -61,14 +61,14 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 	})
 
 	when("all the required flags are passed", func() {
-		it("deletes the image", func() {
+		it("deletes the firewall", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"image",
+				"firewall",
 				"delete",
-				"1111",
+				"e4b9c960-d385-4950-84f3-d102162e6be5",
 				"--force",
 			)
 
@@ -78,16 +78,16 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 		})
 	})
 
-	when("multiple images are provided and all the required flags are passed", func() {
-		it("deletes the images", func() {
+	when("multiple firewalls are provided and all the required flags are passed", func() {
+		it("deletes the firewalls", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"image",
+				"firewall",
 				"delete",
-				"1111",
-				"2222",
+				"e4b9c960-d385-4950-84f3-d102162e6be5",
+				"aaa-bbb-ccc-ddd-eee",
 				"--force",
 			)
 
@@ -97,43 +97,43 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 		})
 	})
 
-	when("deleting one image without force flag", func() {
+	when("deleting one firewall without force flag", func() {
 		it("correctly promts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"image",
+				"firewall",
 				"delete",
-				"1111",
+				"e4b9c960-d385-4950-84f3-d102162e6be5",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(imageDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(fwDelOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
-	when("deleting two images without force flag", func() {
+	when("deleting two firewalls without force flag", func() {
 		it("correctly promts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"image",
+				"firewall",
 				"delete",
-				"1111",
-				"2222",
+				"e4b9c960-d385-4950-84f3-d102162e6be5",
+				"aaa-bbb-ccc-ddd-eee",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(multiImageDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(multiFwDelOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
 
 const (
-	imageDelOutput      = "Warning: Are you sure you want to delete this image? (y/N) ? Error: Operation aborted."
-	multiImageDelOutput = "Warning: Are you sure you want to delete 2 images? (y/N) ? Error: Operation aborted."
+	fwDelOutput      = "Warning: Are you sure you want to delete this firewall? (y/N) ? Error: Operation aborted."
+	multiFwDelOutput = "Warning: Are you sure you want to delete 2 firewalls? (y/N) ? Error: Operation aborted."
 )

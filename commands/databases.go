@@ -223,7 +223,7 @@ func RunDatabaseDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete this database cluster?") == nil {
+	if force || AskForConfirmDelete("database cluster", 1) == nil {
 		id := c.Args[0]
 		return c.Databases().Delete(id)
 	}
@@ -595,7 +595,7 @@ func RunDatabaseUserDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete this database user?") == nil {
+	if force || AskForConfirmDelete("database user", 1) == nil {
 		databaseID := c.Args[0]
 		userID := c.Args[1]
 		return c.Databases().DeleteUser(databaseID, userID)
@@ -780,7 +780,7 @@ func RunDatabasePoolDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete this database pool?") == nil {
+	if force || AskForConfirmDelete("database pool", 1) == nil {
 		databaseID := c.Args[0]
 		poolID := c.Args[1]
 		return c.Databases().DeletePool(databaseID, poolID)
@@ -893,7 +893,7 @@ func RunDatabaseDBDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete this database?") == nil {
+	if force || AskForConfirmDelete("database", 1) == nil {
 		databaseID := c.Args[0]
 		dbID := c.Args[1]
 		return c.Databases().DeleteDB(databaseID, dbID)
@@ -1058,7 +1058,7 @@ func RunDatabaseReplicaDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete this database replica?") == nil {
+	if force || AskForConfirmDelete("database replica", 1) == nil {
 		databaseID := c.Args[0]
 		replicaID := c.Args[1]
 		return c.Databases().DeleteReplica(databaseID, replicaID)

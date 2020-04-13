@@ -188,7 +188,7 @@ func RunKeyDelete(c *CmdConfig) error {
 		return nil
 	}
 
-	if force || AskForConfirm("Delete SSH key?") == nil {
+	if force || AskForConfirmDelete("SSH key", 1) == nil {
 		rawKey := c.Args[0]
 		return ks.Delete(rawKey)
 	}

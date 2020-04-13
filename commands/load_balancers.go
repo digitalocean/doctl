@@ -80,7 +80,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"Redirects HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddBoolFlag(cmdRecordCreate, doctl.ArgEnableProxyProtocol, "", false,
 		"enable proxy protocol")
-		AddBoolFlag(cmdRecordCreate, doctl.ArgEnableBackendKeepalive, "", false,
+	AddBoolFlag(cmdRecordCreate, doctl.ArgEnableBackendKeepalive, "", false,
 		"enable keepalive connections to backend target droplets")
 	AddStringFlag(cmdRecordCreate, doctl.ArgTagName, "", "", "droplet tag name")
 	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{},
@@ -104,7 +104,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"Flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgEnableProxyProtocol, "", false,
 		"enable proxy protocol")
-		AddBoolFlag(cmdRecordUpdate, doctl.ArgEnableBackendKeepalive, "", false,
+	AddBoolFlag(cmdRecordUpdate, doctl.ArgEnableBackendKeepalive, "", false,
 		"enable keepalive connections to backend target droplets")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgTagName, "", "", "Assigns Droplets with the specified tag to the load balancer")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{},
@@ -224,7 +224,7 @@ func RunLoadBalancerDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete this load balancer?") == nil {
+	if force || AskForConfirmDelete("load balancer", 1) == nil {
 		lbs := c.LoadBalancers()
 		if err := lbs.Delete(lbID); err != nil {
 			return err

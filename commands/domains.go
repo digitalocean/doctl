@@ -167,7 +167,7 @@ func RunDomainDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete domain?") == nil {
+	if force || AskForConfirmDelete("domain", 1) == nil {
 		ds := c.Domains()
 
 		if len(name) < 1 {
@@ -295,12 +295,12 @@ func RunRecordDelete(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirm("Delete record(s)?") == nil {
-		domainName, ids := c.Args[0], c.Args[1:]
-		if len(ids) < 1 {
-			return doctl.NewMissingArgsErr(c.NS)
-		}
+	domainName, ids := c.Args[0], c.Args[1:]
+	if len(ids) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
 
+	if force || AskForConfirmDelete("domain record", len(ids)) == nil {
 		ds := c.Domains()
 
 		for _, i := range ids {
@@ -315,7 +315,7 @@ func RunRecordDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("Opertaion aborted.")
+		return fmt.Errorf("Operation aborted.")
 	}
 
 	return nil
