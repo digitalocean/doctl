@@ -68,7 +68,7 @@ func TestRegistryCommand(t *testing.T) {
 func TestRepositoryCommand(t *testing.T) {
 	cmd := Repository()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "list", "list-tags")
+	assertCommandNames(t, cmd, "list", "list-tags", "delete-manifest", "delete-tag")
 }
 
 func TestRegistryCreate(t *testing.T) {
@@ -122,6 +122,50 @@ func TestRepositoryListTags(t *testing.T) {
 		config.Args = append(config.Args, testRepositoryTag.Repository)
 
 		err := RunListRepositoryTags(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRepositoryDeleteTag(t *testing.T) {
+	extraTag := "extra-tag"
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+		tm.registry.EXPECT().DeleteTag(
+			testRepositoryTag.RegistryName,
+			testRepositoryTag.Repository,
+			testRepositoryTag.Tag,
+		).Return(nil)
+		tm.registry.EXPECT().DeleteTag(
+			testRepositoryTag.RegistryName,
+			testRepositoryTag.Repository,
+			extraTag,
+		).Return(nil)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		config.Args = append(config.Args, testRepositoryTag.Repository, testRepositoryTag.Tag, extraTag)
+
+		err := RunRepositoryDeleteTag(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestRepositoryDeleteManifest(t *testing.T) {
+	extraDigest := "sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270"
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+		tm.registry.EXPECT().DeleteManifest(
+			testRepositoryTag.RegistryName,
+			testRepositoryTag.Repository,
+			testRepositoryTag.ManifestDigest,
+		).Return(nil)
+		tm.registry.EXPECT().DeleteManifest(
+			testRepositoryTag.RegistryName,
+			testRepositoryTag.Repository,
+			extraDigest,
+		).Return(nil)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+		config.Args = append(config.Args, testRepositoryTag.Repository, testRepositoryTag.ManifestDigest, extraDigest)
+
+		err := RunRepositoryDeleteManifest(config)
 		assert.NoError(t, err)
 	})
 }

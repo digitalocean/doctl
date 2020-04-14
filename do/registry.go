@@ -51,6 +51,8 @@ type RegistryService interface {
 	DockerCredentials(*godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error)
 	ListRepositoryTags(string, string) ([]RepositoryTag, error)
 	ListRepositories(string) ([]Repository, error)
+	DeleteTag(string, string, string) error
+	DeleteManifest(string, string, string) error
 	Endpoint() string
 }
 
@@ -157,6 +159,16 @@ func (rs *registryService) ListRepositoryTags(registry, repository string) ([]Re
 	}
 
 	return list, nil
+}
+
+func (rs *registryService) DeleteTag(registry, repository, tag string) error {
+	_, err := rs.client.Registry.DeleteTag(rs.ctx, registry, repository, tag)
+	return err
+}
+
+func (rs *registryService) DeleteManifest(registry, repository, digest string) error {
+	_, err := rs.client.Registry.DeleteManifest(rs.ctx, registry, repository, digest)
+	return err
 }
 
 func (rs *registryService) Endpoint() string {

@@ -129,6 +129,30 @@ func Repository() *Command {
 		Writer, aliasOpt("lt"), displayerType(&displayers.RepositoryTag{}),
 	)
 
+	deleteTagDesc := "This command permanently deletes one or more repository tags."
+	cmdRunRepositoryDeleteTag := CmdBuilder(
+		cmd,
+		RunRepositoryDeleteTag,
+		"delete-tag <repository> <tag>...",
+		"Delete one or more container repository tags",
+		deleteTagDesc,
+		Writer,
+		aliasOpt("dt"),
+	)
+	AddBoolFlag(cmdRunRepositoryDeleteTag, doctl.ArgForce, doctl.ArgShortForce, false, "Force tag deletion")
+
+	deleteManifestDesc := "This command permanently deletes one or more repository manifests by digest."
+	cmdRunRepositoryDeleteManifest := CmdBuilder(
+		cmd,
+		RunRepositoryDeleteManifest,
+		"delete-manifest <repository> <manifest-digest>...",
+		"Delete one or more container repository manifests by digest",
+		deleteManifestDesc,
+		Writer,
+		aliasOpt("dm"),
+	)
+	AddBoolFlag(cmdRunRepositoryDeleteManifest, doctl.ArgForce, doctl.ArgShortForce, false, "Force manifest deletion")
+
 	return cmd
 }
 
@@ -339,6 +363,70 @@ func RunListRepositoryTags(c *CmdConfig) error {
 	}
 
 	return displayRepositoryTags(c, tags...)
+}
+
+// RunRepositoryDeleteTag deletes one or more repository tags
+func RunRepositoryDeleteTag(c *CmdConfig) error {
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	registry, err := c.Registry().Get()
+	if err != nil {
+		return fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	repository := c.Args[0]
+	tags := c.Args[1:]
+
+	if !force && AskForConfirm(fmt.Sprintf("delete %d repository tag(s)", len(tags))) != nil {
+		return fmt.Errorf("operation aborted")
+	}
+
+	for _, tag := range tags {
+		if err := c.Registry().DeleteTag(registry.Name, repository, tag); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// RunRepositoryDeleteManifest deletes one or more repository manifests by digest
+func RunRepositoryDeleteManifest(c *CmdConfig) error {
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	registry, err := c.Registry().Get()
+	if err != nil {
+		return fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	repository := c.Args[0]
+	digests := c.Args[1:]
+
+	if !force && AskForConfirm(fmt.Sprintf("delete %d repository manifest(s) by digest (including associated tags)", len(digests))) != nil {
+		return fmt.Errorf("operation aborted")
+	}
+
+	for _, digest := range digests {
+		if err := c.Registry().DeleteManifest(registry.Name, repository, digest); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func displayRegistries(c *CmdConfig, registries ...do.Registry) error {
