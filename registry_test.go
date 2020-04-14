@@ -7,18 +7,31 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	testRegistry       = "test-registry"
+	testRepository     = "test-repository"
+	testTag            = "test-tag"
+	testDigest         = "sha256:e692418e4cbaf90ca69d05a66403747baa33ee08806650b51fab815ad7fc331f"
+	testCompressedSize = 2789669
+	testSize           = 5843968
+)
+
+var (
+	testTime       = time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC)
+	testTimeString = testTime.Format(time.RFC3339)
 )
 
 func TestRegistry_Create(t *testing.T) {
 	setup()
 	defer teardown()
 
-	createdAt, err := time.Parse(time.RFC3339, "2020-01-24T20:24:31Z")
-	require.NoError(t, err)
 	want := &Registry{
-		Name:      "foo",
-		CreatedAt: createdAt,
+		Name:      testRegistry,
+		CreatedAt: testTime,
 	}
 
 	createRequest := &RegistryCreateRequest{
@@ -28,8 +41,8 @@ func TestRegistry_Create(t *testing.T) {
 	createResponseJSON := `
 {
 	"registry": {
-		"name": "foo",
-        "created_at": "2020-01-24T20:24:31Z"
+		"name": "` + testRegistry + `",
+        "created_at": "` + testTimeString + `"
 	}
 }`
 
@@ -55,13 +68,13 @@ func TestRegistry_Get(t *testing.T) {
 	defer teardown()
 
 	want := &Registry{
-		Name: "foo",
+		Name: testRegistry,
 	}
 
 	getResponseJSON := `
 {
 	"registry": {
-		"name": "foo"
+		"name": "` + testRegistry + `"
 	}
 }`
 
@@ -121,4 +134,138 @@ func TestRegistry_DockerCredentials(t *testing.T) {
 			require.Equal(t, []byte(returnedConfig), got.DockerConfigJSON)
 		})
 	}
+}
+
+func TestRepository_List(t *testing.T) {
+	setup()
+	defer teardown()
+
+	wantRepositories := []*Repository{
+		{
+			RegistryName: testRegistry,
+			Name:         testRepository,
+			LatestTag: &RepositoryTag{
+				RegistryName:        testRegistry,
+				Repository:          testRepository,
+				Tag:                 testTag,
+				ManifestDigest:      testDigest,
+				CompressedSizeBytes: testCompressedSize,
+				SizeBytes:           testSize,
+				UpdatedAt:           testTime,
+			},
+		},
+	}
+	getResponseJSON := `{
+	"repositories": [
+		{
+			"registry_name": "` + testRegistry + `",
+			"name": "` + testRepository + `",
+			"latest_tag": {
+				"registry_name": "` + testRegistry + `",
+				"repository": "` + testRepository + `",
+				"tag": "` + testTag + `",
+				"manifest_digest": "` + testDigest + `",
+				"compressed_size_bytes": ` + fmt.Sprintf("%d", testCompressedSize) + `,
+				"size_bytes": ` + fmt.Sprintf("%d", testSize) + `,
+				"updated_at": "` + testTimeString + `"
+			}
+		}
+	],
+	"links": {
+	    "pages": {
+			"next": "https://api.digitalocean.com/v2/registry/` + testRegistry + `/repositories?page=2",
+			"last": "https://api.digitalocean.com/v2/registry/` + testRegistry + `/repositories?page=2"
+		}
+	},
+	"meta": {
+	    "total": 2
+	}
+}`
+
+	mux.HandleFunc(fmt.Sprintf("/v2/registry/%s/repositories", testRegistry), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		testFormValues(t, r, map[string]string{"page": "1", "per_page": "1"})
+		fmt.Fprint(w, getResponseJSON)
+	})
+	got, response, err := client.Registry.ListRepositories(ctx, testRegistry, &ListOptions{Page: 1, PerPage: 1})
+	require.NoError(t, err)
+	require.Equal(t, wantRepositories, got)
+
+	gotRespLinks := response.Links
+	wantRespLinks := &Links{
+		Pages: &Pages{
+			Next: fmt.Sprintf("https://api.digitalocean.com/v2/registry/%s/repositories?page=2", testRegistry),
+			Last: fmt.Sprintf("https://api.digitalocean.com/v2/registry/%s/repositories?page=2", testRegistry),
+		},
+	}
+	assert.Equal(t, wantRespLinks, gotRespLinks)
+
+	gotRespMeta := response.Meta
+	wantRespMeta := &Meta{
+		Total: 2,
+	}
+	assert.Equal(t, wantRespMeta, gotRespMeta)
+}
+
+func TestRepository_ListTags(t *testing.T) {
+	setup()
+	defer teardown()
+
+	wantTags := []*RepositoryTag{
+		{
+			RegistryName:        testRegistry,
+			Repository:          testRepository,
+			Tag:                 testTag,
+			ManifestDigest:      testDigest,
+			CompressedSizeBytes: testCompressedSize,
+			SizeBytes:           testSize,
+			UpdatedAt:           testTime,
+		},
+	}
+	getResponseJSON := `{
+	"tags": [
+		{
+			"registry_name": "` + testRegistry + `",
+			"repository": "` + testRepository + `",
+			"tag": "` + testTag + `",
+			"manifest_digest": "` + testDigest + `",
+			"compressed_size_bytes": ` + fmt.Sprintf("%d", testCompressedSize) + `,
+			"size_bytes": ` + fmt.Sprintf("%d", testSize) + `,
+			"updated_at": "` + testTimeString + `"
+		}
+	],
+	"links": {
+	    "pages": {
+			"next": "https://api.digitalocean.com/v2/registry/` + testRegistry + `/repositories/` + testRepository + `/tags?page=2",
+			"last": "https://api.digitalocean.com/v2/registry/` + testRegistry + `/repositories/` + testRepository + `/tags?page=2"
+		}
+	},
+	"meta": {
+	    "total": 2
+	}
+}`
+
+	mux.HandleFunc(fmt.Sprintf("/v2/registry/%s/repositories/%s/tags", testRegistry, testRepository), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodGet)
+		testFormValues(t, r, map[string]string{"page": "1", "per_page": "1"})
+		fmt.Fprint(w, getResponseJSON)
+	})
+	got, response, err := client.Registry.ListRepositoryTags(ctx, testRegistry, testRepository, &ListOptions{Page: 1, PerPage: 1})
+	require.NoError(t, err)
+	require.Equal(t, wantTags, got)
+
+	gotRespLinks := response.Links
+	wantRespLinks := &Links{
+		Pages: &Pages{
+			Next: fmt.Sprintf("https://api.digitalocean.com/v2/registry/%s/repositories/%s/tags?page=2", testRegistry, testRepository),
+			Last: fmt.Sprintf("https://api.digitalocean.com/v2/registry/%s/repositories/%s/tags?page=2", testRegistry, testRepository),
+		},
+	}
+	assert.Equal(t, wantRespLinks, gotRespLinks)
+
+	gotRespMeta := response.Meta
+	wantRespMeta := &Meta{
+		Total: 2,
+	}
+	assert.Equal(t, wantRespMeta, gotRespMeta)
 }
