@@ -269,3 +269,27 @@ func TestRepository_ListTags(t *testing.T) {
 	}
 	assert.Equal(t, wantRespMeta, gotRespMeta)
 }
+
+func TestRegistry_DeleteTag(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc(fmt.Sprintf("/v2/registry/%s/repositories/%s/tags/%s", testRegistry, testRepository, testTag), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodDelete)
+	})
+
+	_, err := client.Registry.DeleteTag(ctx, testRegistry, testRepository, testTag)
+	require.NoError(t, err)
+}
+
+func TestRegistry_DeleteManifest(t *testing.T) {
+	setup()
+	defer teardown()
+
+	mux.HandleFunc(fmt.Sprintf("/v2/registry/%s/repositories/%s/digests/%s", testRegistry, testRepository, testDigest), func(w http.ResponseWriter, r *http.Request) {
+		testMethod(t, r, http.MethodDelete)
+	})
+
+	_, err := client.Registry.DeleteManifest(ctx, testRegistry, testRepository, testDigest)
+	require.NoError(t, err)
+}
