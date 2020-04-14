@@ -48,6 +48,8 @@ func Registry() *Command {
 		},
 	}
 
+	cmd.AddCommand(Repository())
+
 	createRegDesc := "This command creates a new private container registry with the provided name."
 	CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>",
 		"Create a private container registry", createRegDesc, Writer)
@@ -86,7 +88,51 @@ Redirect the command's output to a file to save the manifest for later use or pi
 	return cmd
 }
 
-// Registry
+// Repository creates the repository sub-command
+func Repository() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "repository",
+			Aliases: []string{"repo", "r"},
+			Short:   "[Beta] Display commands for working with repositories in a container registry",
+			Long:    "[Beta] The subcommands of `doctl registry repository` help you command actions related to a repository.",
+			Hidden:  true,
+		},
+	}
+
+	listRepositoriesDesc := `
+	This command retrieves information about repositories in a registry, including:
+	- The repository name
+	- The latest tag of the repository
+	- The compressed size for the latest tag
+	- The manifest digest for the latest tag
+	- The last updated timestamp
+	`
+	CmdBuilder(
+		cmd,
+		RunListRepositories, "list",
+		"List repositories for a container registry", listRepositoriesDesc,
+		Writer, aliasOpt("ls"), displayerType(&displayers.Repository{}),
+	)
+
+	listRepositoryTagsDesc := `
+	This command retrieves information about tags in a repository, including:
+	- The tag name
+	- The compressed size 
+	- The manifest digest 
+	- The last updated timestamp
+	`
+	CmdBuilder(
+		cmd,
+		RunListRepositoryTags, "list-tags <repository>",
+		"List tags for a repository in a container registry", listRepositoryTagsDesc,
+		Writer, aliasOpt("lt"), displayerType(&displayers.RepositoryTag{}),
+	)
+
+	return cmd
+}
+
+// Registry Run Commands
 
 // RunRegistryCreate creates a registry
 func RunRegistryCreate(c *CmdConfig) error {
@@ -259,9 +305,59 @@ func RunRegistryLogout(c *CmdConfig) error {
 	return cmd.Run()
 }
 
+// Repository Run Commands
+
+// RunListRepositories lists repositories for the registry
+func RunListRepositories(c *CmdConfig) error {
+	registry, err := c.Registry().Get()
+	if err != nil {
+		return fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	repositories, err := c.Registry().ListRepositories(registry.Name)
+	if err != nil {
+		return err
+	}
+
+	return displayRepositories(c, repositories...)
+}
+
+// RunListRepositoryTags lists tags for the repository in a registry
+func RunListRepositoryTags(c *CmdConfig) error {
+	if len(c.Args) != 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	registry, err := c.Registry().Get()
+	if err != nil {
+		return fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	tags, err := c.Registry().ListRepositoryTags(registry.Name, c.Args[0])
+	if err != nil {
+		return err
+	}
+
+	return displayRepositoryTags(c, tags...)
+}
+
 func displayRegistries(c *CmdConfig, registries ...do.Registry) error {
 	item := &displayers.Registry{
 		Registries: registries,
+	}
+	return c.Display(item)
+}
+
+func displayRepositories(c *CmdConfig, repositories ...do.Repository) error {
+	item := &displayers.Repository{
+		Repositories: repositories,
+	}
+	return c.Display(item)
+}
+
+func displayRepositoryTags(c *CmdConfig, tags ...do.RepositoryTag) error {
+	item := &displayers.RepositoryTag{
+		Tags: tags,
 	}
 	return c.Display(item)
 }
