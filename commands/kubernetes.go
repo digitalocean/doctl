@@ -102,7 +102,7 @@ func Kubernetes() *Command {
 		Command: &cobra.Command{
 			Use:     "kubernetes",
 			Aliases: []string{"kube", "k8s", "k"},
-			Short:   "Displays comamnds to manage Kubernetes clusters and configurations",
+			Short:   "Displays commands to manage Kubernetes clusters and configurations",
 			Long:    "The commands under `doctl kubernetes` are for managing Kubernetes clusters and viewing configuration options relating to clusters." + workflowDesc + optionsDesc,
 		},
 	}
