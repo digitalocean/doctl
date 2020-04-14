@@ -92,7 +92,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 }
 
 func fetchPage(gen Generator, page int) ([]interface{}, error) {
-	opt := &godo.ListOptions{Page: page, PerPage: 200}
+	opt := &godo.ListOptions{Page: page, PerPage: perPage}
 	items, _, err := gen(opt)
 	return items, err
 }
