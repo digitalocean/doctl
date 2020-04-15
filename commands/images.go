@@ -110,6 +110,10 @@ func RunImagesList(c *CmdConfig) error {
 		return err
 	}
 
+	if !public && len(list) < 1 {
+		notice("Listing private images. Use '--public' to include all images.")
+	}
+
 	item := &displayers.Image{Images: list}
 	return c.Display(item)
 }
