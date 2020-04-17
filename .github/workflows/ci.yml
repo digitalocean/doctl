@@ -16,10 +16,13 @@ jobs:
       uses: actions/checkout@v2
 
     - name: go1.11 test
-      uses: shoukoo/golang-pipeline/go1.11/test@master
+      uses: digitalocean/golang-pipeline/go1.11/test@master
 
     - name: go1.12 test
-      uses: shoukoo/golang-pipeline/go1.12/test@master
+      uses: digitalocean/golang-pipeline/go1.12/test@master
 
     - name: go1.13 test
-      uses: shoukoo/golang-pipeline/go1.13/test@master
+      uses: digitalocean/golang-pipeline/go1.13/test@master
+
+    - name: go1.14 test
+      uses: digitalocean/golang-pipeline/go1.14/test@master
