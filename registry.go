@@ -57,6 +57,7 @@ type Repository struct {
 	RegistryName string         `json:"registry_name,omitempty"`
 	Name         string         `json:"name,omitempty"`
 	LatestTag    *RepositoryTag `json:"latest_tag,omitempty"`
+	TagCount     uint64         `json:"tag_count,omitempty"`
 }
 
 // RepositoryTag represents a repository tag
