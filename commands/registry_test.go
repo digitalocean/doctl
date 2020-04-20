@@ -50,6 +50,7 @@ var (
 		Repository: &godo.Repository{
 			RegistryName: testRegistryName,
 			Name:         testRegistryName,
+			TagCount:     5,
 			LatestTag:    testRepositoryTag.RepositoryTag,
 		},
 	}

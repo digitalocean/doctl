@@ -72,6 +72,7 @@ func (r *Repository) Cols() []string {
 	return []string{
 		"Name",
 		"LatestTag",
+		"TagCount",
 		"UpdatedAt",
 	}
 }
@@ -80,6 +81,7 @@ func (r *Repository) ColMap() map[string]string {
 	return map[string]string{
 		"Name":      "Name",
 		"LatestTag": "Latest Tag",
+		"TagCount":  "Tag Count",
 		"UpdatedAt": "Updated At",
 	}
 }
@@ -91,6 +93,7 @@ func (r *Repository) KV() []map[string]interface{} {
 		m := map[string]interface{}{
 			"Name":      reg.Name,
 			"LatestTag": reg.LatestTag.Tag,
+			"TagCount":  reg.TagCount,
 			"UpdatedAt": reg.LatestTag.UpdatedAt,
 		}
 

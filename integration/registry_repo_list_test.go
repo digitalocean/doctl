@@ -80,14 +80,15 @@ var _ = suite("registry/repository/list", func(t *testing.T, when spec.G, it spe
 
 var (
 	repositoryListOutput = `
-Name       Latest Tag    Updated At
-my-repo    my-tag        2020-04-01 00:00:00 +0000 UTC 
+Name       Latest Tag    Tag Count    Updated At
+my-repo    my-tag        3            2020-04-01 00:00:00 +0000 UTC 
 `
 	repositoryListResponse = `{
 		"repositories": [
 			{
 				"registry_name": "my-registry",
 				"name": "my-repo",
+				"tag_count": 3,
 				"latest_tag": {
 					"registry_name": "my-registry",
 					"repository": "my-repo",
