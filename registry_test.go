@@ -144,6 +144,7 @@ func TestRepository_List(t *testing.T) {
 		{
 			RegistryName: testRegistry,
 			Name:         testRepository,
+			TagCount:     1,
 			LatestTag: &RepositoryTag{
 				RegistryName:        testRegistry,
 				Repository:          testRepository,
@@ -160,6 +161,7 @@ func TestRepository_List(t *testing.T) {
 		{
 			"registry_name": "` + testRegistry + `",
 			"name": "` + testRepository + `",
+			"tag_count": 1,
 			"latest_tag": {
 				"registry_name": "` + testRegistry + `",
 				"repository": "` + testRepository + `",
