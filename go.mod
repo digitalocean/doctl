@@ -6,12 +6,12 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/creack/pty v1.1.7
-	github.com/digitalocean/godo v1.34.0
+	github.com/digitalocean/godo v1.35.1
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/gobwas/glob v0.2.3
 	github.com/golang/mock v1.4.0
-	github.com/golang/protobuf v1.3.5 // indirect
+	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
@@ -26,10 +26,8 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20190820162420-60c769a6c586
-	golang.org/x/net v0.0.0-20200324143707-d3edc9973b7e // indirect
+	golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
@@ -37,3 +35,5 @@ require (
 )
 
 replace github.com/stretchr/objx => github.com/stretchr/objx v0.2.0
+
+replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
