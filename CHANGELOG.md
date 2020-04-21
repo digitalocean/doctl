@@ -4,7 +4,7 @@
 
 ## [v1.35.1] - 2020-04-21
 
-= #328 Update vulnerable x/crypto dependency - @bentranter
+- #328 Update vulnerable x/crypto dependency - @bentranter
 
 ## [v1.35.0] - 2020-04-20
 
