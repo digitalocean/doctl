@@ -262,7 +262,7 @@ After creating a cluster, a configuration context will be added to kubectl and m
 		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
-		"Machine size to use when creating nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`). Possible values: see `doctl kubernetes options sizes`")
+		"Machine size to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Possible values: see `doctl kubernetes options sizes`")
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"Number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
