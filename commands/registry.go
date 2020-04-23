@@ -388,10 +388,15 @@ func RunRepositoryDeleteTag(c *CmdConfig) error {
 		return fmt.Errorf("operation aborted")
 	}
 
+	var errors []string
 	for _, tag := range tags {
 		if err := c.Registry().DeleteTag(registry.Name, repository, tag); err != nil {
-			return err
+			errors = append(errors, err.Error())
 		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to delete all repository tags: \n%s", strings.Join(errors, "\n"))
 	}
 
 	return nil
@@ -420,10 +425,15 @@ func RunRepositoryDeleteManifest(c *CmdConfig) error {
 		return fmt.Errorf("operation aborted")
 	}
 
+	var errors []string
 	for _, digest := range digests {
 		if err := c.Registry().DeleteManifest(registry.Name, repository, digest); err != nil {
-			return err
+			errors = append(errors, err.Error())
 		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to delete all repository manifests: \n%s", strings.Join(errors, "\n"))
 	}
 
 	return nil

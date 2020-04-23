@@ -15,6 +15,7 @@ package commands
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 	k8sapiv1 "k8s.io/api/core/v1"
@@ -128,47 +130,198 @@ func TestRepositoryListTags(t *testing.T) {
 }
 
 func TestRepositoryDeleteTag(t *testing.T) {
-	extraTag := "extra-tag"
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
-		tm.registry.EXPECT().DeleteTag(
-			testRepositoryTag.RegistryName,
-			testRepositoryTag.Repository,
-			testRepositoryTag.Tag,
-		).Return(nil)
-		tm.registry.EXPECT().DeleteTag(
-			testRepositoryTag.RegistryName,
-			testRepositoryTag.Repository,
-			extraTag,
-		).Return(nil)
-		config.Doit.Set(config.NS, doctl.ArgForce, true)
-		config.Args = append(config.Args, testRepositoryTag.Repository, testRepositoryTag.Tag, extraTag)
+	tests := []struct {
+		name        string
+		args        []string
+		expect      func(m *mocks.MockRegistryService)
+		expectedErr string
+	}{
+		{
+			name: "no deletion arguments",
+			args: []string{
+				testRepositoryTag.Repository,
+			},
+			expectedErr: "(test) command is missing required arguments",
+		},
+		{
+			name: "one tag, successful",
+			args: []string{
+				testRepositoryTag.Repository,
+				testRepositoryTag.Tag,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Get().Return(&testRegistry, nil)
+				m.EXPECT().DeleteTag(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					testRepositoryTag.Tag,
+				).Return(nil)
+			},
+		},
+		{
+			name: "multiple tags, successful",
+			args: []string{
+				testRepositoryTag.Repository,
+				testRepositoryTag.Tag,
+				"extra-tag",
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Get().Return(&testRegistry, nil)
+				m.EXPECT().DeleteTag(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					testRepositoryTag.Tag,
+				).Return(nil)
+				m.EXPECT().DeleteTag(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					"extra-tag",
+				).Return(nil)
+			},
+		},
+		{
+			name: "multiple tags, partial failure",
+			args: []string{
+				testRepositoryTag.Repository,
+				"fail-tag",
+				testRepositoryTag.Tag,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Get().Return(&testRegistry, nil)
+				m.EXPECT().DeleteTag(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					"fail-tag",
+				).Return(errors.New("oops"))
+				m.EXPECT().DeleteTag(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					testRepositoryTag.Tag,
+				).Return(nil)
+			},
+			expectedErr: "failed to delete all repository tags: \noops",
+		},
+	}
 
-		err := RunRepositoryDeleteTag(config)
-		assert.NoError(t, err)
-	})
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.expect != nil {
+					test.expect(tm.registry)
+				}
+
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				config.Args = append(config.Args, test.args...)
+
+				err := RunRepositoryDeleteTag(config)
+				if test.expectedErr == "" {
+					assert.NoError(t, err)
+				} else {
+					assert.Error(t, err)
+					assert.Equal(t, test.expectedErr, err.Error())
+				}
+			})
+		})
+	}
 }
 
 func TestRepositoryDeleteManifest(t *testing.T) {
 	extraDigest := "sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270"
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
-		tm.registry.EXPECT().DeleteManifest(
-			testRepositoryTag.RegistryName,
-			testRepositoryTag.Repository,
-			testRepositoryTag.ManifestDigest,
-		).Return(nil)
-		tm.registry.EXPECT().DeleteManifest(
-			testRepositoryTag.RegistryName,
-			testRepositoryTag.Repository,
-			extraDigest,
-		).Return(nil)
-		config.Doit.Set(config.NS, doctl.ArgForce, true)
-		config.Args = append(config.Args, testRepositoryTag.Repository, testRepositoryTag.ManifestDigest, extraDigest)
+	tests := []struct {
+		name        string
+		args        []string
+		expect      func(m *mocks.MockRegistryService)
+		expectedErr string
+	}{
+		{
+			name: "no deletion arguments",
+			args: []string{
+				testRepositoryTag.Repository,
+			},
+			expectedErr: "(test) command is missing required arguments",
+		},
+		{
+			name: "one digest, successful",
+			args: []string{
+				testRepositoryTag.Repository,
+				testRepositoryTag.ManifestDigest,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Get().Return(&testRegistry, nil)
+				m.EXPECT().DeleteManifest(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					testRepositoryTag.ManifestDigest,
+				).Return(nil)
+			},
+		},
+		{
+			name: "multiple digests, successful",
+			args: []string{
+				testRepositoryTag.Repository,
+				testRepositoryTag.ManifestDigest,
+				extraDigest,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Get().Return(&testRegistry, nil)
+				m.EXPECT().DeleteManifest(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					testRepositoryTag.ManifestDigest,
+				).Return(nil)
+				m.EXPECT().DeleteManifest(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					extraDigest,
+				).Return(nil)
+			},
+		},
+		{
+			name: "multiple digests, partial failure",
+			args: []string{
+				testRepositoryTag.Repository,
+				"fail-digest",
+				testRepositoryTag.ManifestDigest,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Get().Return(&testRegistry, nil)
+				m.EXPECT().DeleteManifest(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					"fail-digest",
+				).Return(errors.New("oops"))
+				m.EXPECT().DeleteManifest(
+					testRepositoryTag.RegistryName,
+					testRepositoryTag.Repository,
+					testRepositoryTag.ManifestDigest,
+				).Return(nil)
+			},
+			expectedErr: "failed to delete all repository manifests: \noops",
+		},
+	}
 
-		err := RunRepositoryDeleteManifest(config)
-		assert.NoError(t, err)
-	})
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.expect != nil {
+					test.expect(tm.registry)
+				}
+
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
+				config.Args = append(config.Args, test.args...)
+
+				err := RunRepositoryDeleteManifest(config)
+				if test.expectedErr == "" {
+					assert.NoError(t, err)
+				} else {
+					assert.Error(t, err)
+					assert.Equal(t, test.expectedErr, err.Error())
+				}
+			})
+		})
+	}
 }
 
 func TestRegistryKubernetesManifest(t *testing.T) {
