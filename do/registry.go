@@ -23,9 +23,19 @@ import (
 // RegistryHostname is the hostname for the DO registry
 const RegistryHostname = "registry.digitalocean.com"
 
-// Registry wraps a godo Project.
+// Registry wraps a godo Registry.
 type Registry struct {
 	*godo.Registry
+}
+
+// Repository wraps a godo Repository
+type Repository struct {
+	*godo.Repository
+}
+
+// RepositoryTag wraps a godo RepositoryTag
+type RepositoryTag struct {
+	*godo.RepositoryTag
 }
 
 // Endpoint returns the registry endpoint for image tagging
@@ -39,6 +49,10 @@ type RegistryService interface {
 	Create(*godo.RegistryCreateRequest) (*Registry, error)
 	Delete() error
 	DockerCredentials(*godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error)
+	ListRepositoryTags(string, string) ([]RepositoryTag, error)
+	ListRepositories(string) ([]Repository, error)
+	DeleteTag(string, string, string) error
+	DeleteManifest(string, string, string) error
 	Endpoint() string
 }
 
@@ -87,6 +101,74 @@ func (rs *registryService) DockerCredentials(request *godo.RegistryDockerCredent
 	}
 
 	return dockerConfig, nil
+}
+
+func (rs *registryService) ListRepositories(registry string) ([]Repository, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := rs.client.Registry.ListRepositories(rs.ctx, registry, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]Repository, len(si))
+	for i := range si {
+		a := si[i].(*godo.Repository)
+		list[i] = Repository{Repository: a}
+	}
+
+	return list, nil
+}
+
+func (rs *registryService) ListRepositoryTags(registry, repository string) ([]RepositoryTag, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := rs.client.Registry.ListRepositoryTags(rs.ctx, registry, repository, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]RepositoryTag, len(si))
+	for i := range si {
+		a := si[i].(*godo.RepositoryTag)
+		list[i] = RepositoryTag{RepositoryTag: a}
+	}
+
+	return list, nil
+}
+
+func (rs *registryService) DeleteTag(registry, repository, tag string) error {
+	_, err := rs.client.Registry.DeleteTag(rs.ctx, registry, repository, tag)
+	return err
+}
+
+func (rs *registryService) DeleteManifest(registry, repository, digest string) error {
+	_, err := rs.client.Registry.DeleteManifest(rs.ctx, registry, repository, digest)
+	return err
 }
 
 func (rs *registryService) Endpoint() string {
