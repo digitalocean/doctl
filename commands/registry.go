@@ -42,8 +42,9 @@ func Registry() *Command {
 		Command: &cobra.Command{
 			Use:     "registry",
 			Aliases: []string{"reg", "r"},
-			Short:   "[EA] Display commands for working with container registries",
-			Long:    "[EA] The subcommands of `doctl registry` create, manage, and allow access to your private container registry.",
+			Short:   "[Beta] Display commands for working with container registries",
+			Long:    "[Beta] The subcommands of `doctl registry` create, manage, and allow access to your private container registry.",
+			Hidden:  true,
 		},
 	}
 
@@ -93,8 +94,9 @@ func Repository() *Command {
 		Command: &cobra.Command{
 			Use:     "repository",
 			Aliases: []string{"repo", "r"},
-			Short:   "[EA] Display commands for working with repositories in a container registry",
-			Long:    "[EA] The subcommands of `doctl registry repository` help you command actions related to a repository.",
+			Short:   "[Beta] Display commands for working with repositories in a container registry",
+			Long:    "[Beta] The subcommands of `doctl registry repository` help you command actions related to a repository.",
+			Hidden:  true,
 		},
 	}
 
