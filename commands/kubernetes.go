@@ -262,13 +262,13 @@ After creating a cluster, a configuration context will be added to kubectl and m
 		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
-		"Machine size to use when creating nodes in the default node pool (incompatible with --`+doctl.ArgClusterNodePool+`). Possible values: see `doctl kubernetes options sizes`")
+		"Machine size to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Possible values: see `doctl kubernetes options sizes`")
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"Number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
-		`Comma-separated list of node pools, defined using semicolon-separated configuration values (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
-Format: `+"`"+`name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2`+"`"+` where:
+		`Comma-separated list of node pools, defined using semicolon-separated configuration values and surrounded by quotes (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
+Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2"`+"`"+` where:
 
 - `+"`"+`name`+"`"+`: Name of the node pool, which must be unique in the cluster
 - `+"`"+`size`+"`"+`: Machine size of the nodes to use. Possible values: see `+"`"+`doctl kubernetes options sizes`+"`"+`.
@@ -276,8 +276,8 @@ Format: `+"`"+`name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key
 - `+"`"+`tag`+"`"+`: Comma-separated list of tags to apply to nodes in the pool
 - `+"`"+`label`+"`"+`: Label in key=value notation; repeat to add multiple labels at once.
 - `+"`"+`auto-scale`+"`"+`: Boolean defining whether to enable cluster auto-scaling on the node pool.
-- `+"`"+`min-nodes`+"`"+`: Maximum number of nodes that can be auto-scaled to.
-- `+"`"+`max-nodes`+"`"+`: Minimum number of nodes that can be auto-scaled to.`)
+- `+"`"+`min-nodes`+"`"+`: Minimum number of nodes that can be auto-scaled to.
+- `+"`"+`max-nodes`+"`"+`: Maximum number of nodes that can be auto-scaled to.`)
 
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
 		"Boolean that specifies whether to add a configuration context for the new cluster to your kubectl")

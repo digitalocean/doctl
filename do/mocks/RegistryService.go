@@ -93,6 +93,64 @@ func (mr *MockRegistryServiceMockRecorder) DockerCredentials(arg0 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DockerCredentials", reflect.TypeOf((*MockRegistryService)(nil).DockerCredentials), arg0)
 }
 
+// ListRepositoryTags mocks base method.
+func (m *MockRegistryService) ListRepositoryTags(arg0, arg1 string) ([]do.RepositoryTag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRepositoryTags", arg0, arg1)
+	ret0, _ := ret[0].([]do.RepositoryTag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositoryTags indicates an expected call of ListRepositoryTags.
+func (mr *MockRegistryServiceMockRecorder) ListRepositoryTags(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoryTags", reflect.TypeOf((*MockRegistryService)(nil).ListRepositoryTags), arg0, arg1)
+}
+
+// ListRepositories mocks base method.
+func (m *MockRegistryService) ListRepositories(arg0 string) ([]do.Repository, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRepositories", arg0)
+	ret0, _ := ret[0].([]do.Repository)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositories indicates an expected call of ListRepositories.
+func (mr *MockRegistryServiceMockRecorder) ListRepositories(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositories", reflect.TypeOf((*MockRegistryService)(nil).ListRepositories), arg0)
+}
+
+// DeleteTag mocks base method.
+func (m *MockRegistryService) DeleteTag(arg0, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTag", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTag indicates an expected call of DeleteTag.
+func (mr *MockRegistryServiceMockRecorder) DeleteTag(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTag", reflect.TypeOf((*MockRegistryService)(nil).DeleteTag), arg0, arg1, arg2)
+}
+
+// DeleteManifest mocks base method.
+func (m *MockRegistryService) DeleteManifest(arg0, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteManifest", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteManifest indicates an expected call of DeleteManifest.
+func (mr *MockRegistryServiceMockRecorder) DeleteManifest(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManifest", reflect.TypeOf((*MockRegistryService)(nil).DeleteManifest), arg0, arg1, arg2)
+}
+
 // Endpoint mocks base method.
 func (m *MockRegistryService) Endpoint() string {
 	m.ctrl.T.Helper()

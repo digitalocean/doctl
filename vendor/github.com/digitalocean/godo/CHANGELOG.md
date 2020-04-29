@@ -2,6 +2,16 @@
 
 ## unreleased
 
+## [v1.35.1] - 2020-04-21
+
+- #328 Update vulnerable x/crypto dependency - @bentranter
+
+## [v1.35.0] - 2020-04-20
+
+- #326 Add TagCount field to registry/Repository - @nicktate
+- #325 Add DOCR EA routes - @nicktate
+- #324 Upgrade godo to Go 1.14 - @bentranter
+
 ## [v1.34.0] - 2020-03-30
 
 - #320 Add VPC v3 attributes - @viola
