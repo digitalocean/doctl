@@ -65,7 +65,7 @@ var (
 func TestRegistryCommand(t *testing.T) {
 	cmd := Registry()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "get", "delete", "login", "logout", "kubernetes-manifest", "repository")
+	assertCommandNames(t, cmd, "create", "get", "delete", "login", "logout", "kubernetes-manifest", "repository", "docker-config")
 }
 
 func TestRepositoryCommand(t *testing.T) {
@@ -103,6 +103,43 @@ func TestRegistryDelete(t *testing.T) {
 		err := RunRegistryDelete(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestDockerConfig(t *testing.T) {
+	tests := []struct {
+		name      string
+		readWrite bool
+	}{
+		{
+			name:      "read-only",
+			readWrite: false,
+		},
+		{
+			name:      "read-write",
+			readWrite: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+					ReadWrite: test.readWrite,
+				}).Return(testDockerCredentials, nil)
+
+				config.Doit.Set(config.NS, doctl.ArgReadWrite, test.readWrite)
+
+				var output bytes.Buffer
+				config.Out = &output
+
+				err := RunDockerConfig(config)
+				assert.NoError(t, err)
+
+				expectedOutput := append(testDockerCredentials.DockerConfigJSON, '\n')
+				assert.Equal(t, expectedOutput, output.Bytes())
+			})
+		})
+	}
 }
 
 func TestRepositoryList(t *testing.T) {
