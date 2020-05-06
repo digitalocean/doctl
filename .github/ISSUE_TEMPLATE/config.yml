@@ -1,0 +1,7 @@
+contact_links:
+  - name: DigitalOcean Community Q&A
+    url: https://www.digitalocean.com/community/questions
+    about: Ask general questions about DigitalOcean products and services
+  - name: DigitalOcean Support
+    url: https://www.digitalocean.com/support/
+    about: Use DigitalOcean Support for issues specific to your account
