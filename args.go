@@ -292,4 +292,7 @@ const (
 	ArgVPCDescription = "description"
 	// ArgVPCIPRange is a VPC range of IP addresses in CIDR notation.
 	ArgVPCIPRange = "ip-range"
+
+	// ArgReadWrite indicates a generated token should be read/write.
+	ArgReadWrite = "read-write"
 )

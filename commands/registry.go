@@ -70,7 +70,7 @@ func Registry() *Command {
 	CmdBuilder(cmd, RunRegistryLogout, "logout", "Log out Docker from a container registry",
 		logoutRegDesc, Writer)
 
-	kubeManifestDesc := `This command outputs a YAML-formated Kubernetes secret manifest that can be used to grant a Kubernetes cluster pull access to your private container registry.
+	kubeManifestDesc := `This command outputs a YAML-formatted Kubernetes secret manifest that can be used to grant a Kubernetes cluster pull access to your private container registry.
 
 Redirect the command's output to a file to save the manifest for later use or pipe it directly to kubectl to create the secret in your cluster:
 
@@ -83,6 +83,16 @@ Redirect the command's output to a file to save the manifest for later use or pi
 		"The secret name to create. Defaults to the registry name prefixed with \"registry-\"")
 	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectNamespace, "",
 		"default", "The Kubernetes namespace to hold the secret")
+
+	dockerConfigDesc := `This command outputs a JSON-formatted Docker configuration that can be used to configure a Docker client to authenticate with your private container registry. This configuration is useful for configuring third-party tools that need access to your registry. For configuring your local Docker client use "doctl registry login" instead, as it will preserve the configuration of any other registries you have authenticated to.
+
+By default this command generates read-only credentials. Use the --read-write flag to generate credentials that can push. The configuration produced by this command contains a DigitalOcean API token that can be used to access your account, so be sure to keep it secret.`
+
+	cmdRunDockerConfig := CmdBuilder(cmd, RunDockerConfig, "docker-config",
+		"Generate a docker auth configuration for a registry",
+		dockerConfigDesc, Writer, aliasOpt("config"))
+	AddBoolFlag(cmdRunDockerConfig, doctl.ArgReadWrite, "", false,
+		"Generate credentials that can push to your registry")
 
 	return cmd
 }
@@ -311,6 +321,25 @@ func RunKubernetesManifest(c *CmdConfig) error {
 	)
 
 	return serializer.Encode(secret, c.Out)
+}
+
+// RunDockerConfig generates credentials and prints a Docker config that can be
+// used to authenticate a Docker client with the registry.
+func RunDockerConfig(c *CmdConfig) error {
+	readWrite, err := c.Doit.GetBool(c.NS, doctl.ArgReadWrite)
+	if err != nil {
+		return err
+	}
+
+	dockerCreds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+		ReadWrite: readWrite,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Out.Write(append(dockerCreds.DockerConfigJSON, '\n'))
+	return err
 }
 
 // RunRegistryLogout logs Docker out of the registry
