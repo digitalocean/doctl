@@ -11,11 +11,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	registryDockerCredentialsReadOnlyResponse  = "read-only-config"
+	registryDockerCredentialsReadWriteResponse = "read-write-config"
+)
+
 var _ = suite("registry/docker-config", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect          *require.Assertions
-		server          *httptest.Server
-		expectReadWrite bool
+		expect *require.Assertions
+		server *httptest.Server
 	)
 
 	it.Before(func() {
@@ -51,13 +55,12 @@ var _ = suite("registry/docker-config", func(t *testing.T, when spec.G, it spec.
 				}
 
 				readWriteParam := req.URL.Query().Get("read_write")
-				if expectReadWrite {
-					expect.Contains([]string{"true", "1"}, readWriteParam)
+				if readWriteParam == "true" || readWriteParam == "1" {
+					w.Write([]byte(registryDockerCredentialsReadWriteResponse))
 				} else {
-					expect.Contains([]string{"false", "", "0"}, readWriteParam)
+					w.Write([]byte(registryDockerCredentialsReadOnlyResponse))
 				}
 
-				w.Write([]byte(registryDockerCredentialsResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -70,8 +73,6 @@ var _ = suite("registry/docker-config", func(t *testing.T, when spec.G, it spec.
 	})
 
 	it("prints the returned read-only docker config", func() {
-		expectReadWrite = false
-
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
@@ -82,12 +83,10 @@ var _ = suite("registry/docker-config", func(t *testing.T, when spec.G, it spec.
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Equal(registryDockerCredentialsResponse+"\n", string(output))
+		expect.Equal(registryDockerCredentialsReadOnlyResponse+"\n", string(output))
 	})
 
 	it("prints the returned read-write docker config", func() {
-		expectReadWrite = true
-
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
@@ -99,6 +98,6 @@ var _ = suite("registry/docker-config", func(t *testing.T, when spec.G, it spec.
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Equal(registryDockerCredentialsResponse+"\n", string(output))
+		expect.Equal(registryDockerCredentialsReadWriteResponse+"\n", string(output))
 	})
 })
