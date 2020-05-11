@@ -21,6 +21,7 @@ jobs:
     env: CACHE_NAME=BIONIC_1.14
 
   - name: "Testing: MacOS, go 1.14"
+    before_install: ulimit -n 1024
     script: make test
     os: osx
     go: 1.14.x
