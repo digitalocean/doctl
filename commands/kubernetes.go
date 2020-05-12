@@ -256,6 +256,8 @@ After creating a cluster, a configuration context will be added to kubectl and m
 		"Cluster region. Possible values: see `doctl kubernetes options regions`", requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest",
 		"Kubernetes version. Possible values: see `doctl kubernetes options versions`")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVPCUUID, "", "",
+		"Kubernetes UUID. Must be the UUID of a valid VPC in the same region specified for the cluster.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
 		"Boolean specifying whether to enable auto-upgrade for the cluster")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
@@ -1212,6 +1214,13 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		return err
 	}
 	r.RegionSlug = region
+
+	vpcUUID, err := c.Doit.GetString(c.NS, doctl.ArgClusterVPCUUID)
+	if err != nil {
+		return err
+	}
+	// empty "" is fine, the default region VPC will be resolved
+	r.VPCUUID = vpcUUID
 
 	version, err := getVersionOrLatest(c)
 	if err != nil {

@@ -38,6 +38,8 @@ const (
 	ArgClusterName = "cluster-name"
 	// ArgClusterVersionSlug is a cluster version argument.
 	ArgClusterVersionSlug = "version"
+	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
+	ArgClusterVPCUUID = "vpc-uuid"
 	// ArgClusterNodePool are a cluster's node pools arguments.
 	ArgClusterNodePool = "node-pool"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.

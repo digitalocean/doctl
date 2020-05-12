@@ -369,7 +369,6 @@ func TestKubernetesCreate(t *testing.T) {
 			},
 			AutoUpgrade: true,
 		}
-		//
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
 		config.Args = append(config.Args, testCluster.Name)
@@ -388,7 +387,16 @@ func TestKubernetesCreate(t *testing.T) {
 		})
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
 
+		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
+		assert.NoError(t, err)
+
+		// Test with vpc-uuid specified
+		config.Doit.Set(config.NS, doctl.ArgClusterVPCUUID, "vpc-uuid")
+		r.VPCUUID = "vpc-uuid"
+		testCluster.VPCUUID = "vpc-uuid"
+		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
+		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
 	})
 }
