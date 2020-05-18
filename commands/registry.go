@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -24,6 +25,8 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	dockerconf "github.com/docker/cli/cli/config"
+	configtypes "github.com/docker/cli/cli/config/types"
 	"github.com/spf13/cobra"
 	k8sapiv1 "k8s.io/api/core/v1"
 	k8smetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -213,11 +216,6 @@ var execCommand = exec.Command
 
 // RunRegistryLogin logs in Docker to the registry
 func RunRegistryLogin(c *CmdConfig) error {
-	// check if docker is installed
-	if _, err := exec.LookPath("docker"); err != nil {
-		return fmt.Errorf("unable to find the Docker CLI binary. Make sure docker is installed")
-	}
-
 	fmt.Printf("Logging Docker in to %s\n", c.Registry().Endpoint())
 
 	creds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
@@ -247,21 +245,20 @@ func RunRegistryLogin(c *CmdConfig) error {
 		}
 		user, pass := splitCreds[0], splitCreds[1]
 
-		// log in via the docker cli
-		args := []string{
-			"login", host,
-			"-u", user,
-			"--password-stdin",
+		authconfig := configtypes.AuthConfig{
+			Username:      user,
+			Password:      pass,
+			ServerAddress: host,
 		}
-		cmd := execCommand("docker", args...)
-		cmd.Stdin = strings.NewReader(pass)
-		cmd.Stdout = c.Out
-		cmd.Stderr = c.Out
 
-		err = cmd.Run()
+		cf := dockerconf.LoadDefaultConfigFile(os.Stderr)
+		dockerCreds := cf.GetCredentialsStore(authconfig.ServerAddress)
+		err = dockerCreds.Store(authconfig)
 		if err != nil {
 			return err
 		}
+
+		cf.Save()
 	}
 
 	return nil
