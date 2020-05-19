@@ -341,16 +341,17 @@ func RunDockerConfig(c *CmdConfig) error {
 
 // RunRegistryLogout logs Docker out of the registry
 func RunRegistryLogout(c *CmdConfig) error {
-	// check if docker is installed
-	if _, err := exec.LookPath("docker"); err != nil {
-		return fmt.Errorf("unable to find the Docker CLI binary. Make sure docker is installed")
+	server := c.Registry().Endpoint()
+	fmt.Printf("Removing login credentials for %s\n", server)
+
+	cf := dockerconf.LoadDefaultConfigFile(os.Stderr)
+	dockerCreds := cf.GetCredentialsStore(server)
+	err := dockerCreds.Erase(server)
+	if err != nil {
+		return err
 	}
 
-	cmd := execCommand("docker", "logout", c.Registry().Endpoint())
-	cmd.Stdout = c.Out
-	cmd.Stderr = c.Out
-
-	return cmd.Run()
+	return nil
 }
 
 // Repository Run Commands
