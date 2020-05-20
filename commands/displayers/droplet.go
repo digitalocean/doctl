@@ -42,7 +42,7 @@ func (d *Droplet) ColMap() map[string]string {
 	return map[string]string{
 		"ID": "ID", "Name": "Name", "PublicIPv4": "Public IPv4", "PrivateIPv4": "Private IPv4", "PublicIPv6": "Public IPv6",
 		"Memory": "Memory", "VCPUs": "VCPUs", "Disk": "Disk",
-		"Region": "Region", "Image": "Image", "VPCUUID": "VPCUUID", "Status": "Status",
+		"Region": "Region", "Image": "Image", "VPCUUID": "VPC UUID", "Status": "Status",
 		"Tags": "Tags", "Features": "Features", "Volumes": "Volumes",
 		"SizeSlug": "Size Slug",
 	}
