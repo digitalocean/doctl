@@ -113,9 +113,9 @@ const (
 access-token: some-extra-token
 `
 	dropletNeighborsOutput = `
-ID      Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region       Image                          Status    Tags    Features    Volumes
-2222                                                          0         0        0       some-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
-1440                                                          0         0        0       some-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
+ID      Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region       Image                          VPC UUID    Status    Tags    Features    Volumes
+2222                                                          0         0        0       some-slug    some-distro some-image-name                active    yes     remotes     some-volume-id
+1440                                                          0         0        0       some-slug    some-distro some-image-name                active    yes     remotes     some-volume-id
 `
 
 	dropletNeighborsHeadersOutput = `

@@ -188,8 +188,8 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 
 const (
 	projectsResourcesGetDropletOutput = `
-ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          Status    Tags    Features    Volumes
-5555    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
+ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          VPC UUID    Status    Tags    Features    Volumes
+5555    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name                active    yes     remotes     some-volume-id
 `
 	projectsResourcesGetFloatingIPOutput = `
 IP             Region    Droplet ID    Droplet Name

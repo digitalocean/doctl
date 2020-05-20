@@ -87,6 +87,7 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 				"--image", "a-test-image",
 				"--region", "a-test-region",
 				"--size", "a-test-size",
+				"--vpc-uuid", "00000000-0000-4000-8000-000000000000",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -94,10 +95,11 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 			expect.Equal(strings.TrimSpace(dropletCreateOutput), strings.TrimSpace(string(output)))
 
 			request := &struct {
-				Name   string
-				Image  string
-				Region string
-				Size   string
+				Name    string
+				Image   string
+				Region  string
+				Size    string
+				VPCUUID string `json:"vpc_uuid"`
 			}{}
 
 			err = json.Unmarshal(reqBody, request)
@@ -107,6 +109,7 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 			expect.Equal("a-test-image", request.Image)
 			expect.Equal("a-test-region", request.Region)
 			expect.Equal("a-test-size", request.Size)
+			expect.Equal("00000000-0000-4000-8000-000000000000", request.VPCUUID)
 		})
 	})
 
@@ -192,7 +195,8 @@ const (
     "region": {
       "slug": "some-region-slug"
     },
-    "status": "active",
+	"status": "active",
+	"vpc_uuid": "00000000-0000-4000-8000-000000000000",
     "tags": ["yes"],
     "features": ["remotes"],
     "volume_ids": ["some-volume-id"]
@@ -206,7 +210,7 @@ const (
 {"action": "id": 1, "status": "completed"}
 `
 	dropletCreateOutput = `
-ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          Status    Tags    Features    Volumes
-1111    some-droplet-name    1.2.3.4        7.7.7.7                        12        13       15      some-region-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
+ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          VPC UUID                                Status    Tags    Features    Volumes
+1111    some-droplet-name    1.2.3.4        7.7.7.7                        12        13       15      some-region-slug    some-distro some-image-name    00000000-0000-4000-8000-000000000000    active    yes     remotes     some-volume-id
 `
 )
