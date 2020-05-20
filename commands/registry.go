@@ -267,6 +267,12 @@ func RunRegistryLogin(c *CmdConfig) error {
 		dockerCreds := cf.GetCredentialsStore(authconfig.ServerAddress)
 		err = dockerCreds.Store(authconfig)
 		if err != nil {
+			_, isSnap := os.LookupEnv("SNAP")
+			if os.IsPermission(err) && isSnap {
+				warn("Using the doctl Snap? Grant access to the doctl:docker-config plug to use this command with: sudo snap connect doctl:docker-config")
+				return err
+			}
+
 			return err
 		}
 
@@ -368,6 +374,12 @@ func RunRegistryLogout(c *CmdConfig) error {
 	dockerCreds := cf.GetCredentialsStore(server)
 	err := dockerCreds.Erase(server)
 	if err != nil {
+		_, isSnap := os.LookupEnv("SNAP")
+		if os.IsPermission(err) && isSnap {
+			warn("Using the doctl Snap? Grant access to the doctl:docker-config plug to use this command with: sudo snap connect doctl:docker-config")
+			return err
+		}
+
 		return err
 	}
 

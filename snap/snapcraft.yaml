@@ -54,8 +54,6 @@ parts:
 plugs:
   docker-config:
     interface: personal-files
-    read:
-      - $HOME/.docker/config.json
     write:
       - $HOME/.docker
   doctl-config:
