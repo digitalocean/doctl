@@ -71,6 +71,7 @@ func TestDropletBackupList(t *testing.T) {
 func TestDropletCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		volumeUUID := "00000000-0000-4000-8000-000000000000"
+		vpcUUID := "00000000-0000-4000-8000-000000000000"
 		dcr := &godo.DropletCreateRequest{
 			Name:    "droplet",
 			Region:  "dev0",
@@ -85,6 +86,7 @@ func TestDropletCreate(t *testing.T) {
 			IPv6:              false,
 			PrivateNetworking: false,
 			Monitoring:        false,
+			VPCUUID:           vpcUUID,
 			UserData:          "#cloud-config",
 			Tags:              []string{"one", "two"},
 		}
@@ -96,6 +98,7 @@ func TestDropletCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
 		config.Doit.Set(config.NS, doctl.ArgImage, "image")
 		config.Doit.Set(config.NS, doctl.ArgUserData, "#cloud-config")
+		config.Doit.Set(config.NS, doctl.ArgVPCUUID, vpcUUID)
 		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{"test-volume", volumeUUID})
 		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"one", "two"})
 

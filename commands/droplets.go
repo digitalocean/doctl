@@ -80,6 +80,7 @@ func Droplet() *Command {
 	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "Droplet image",
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "Tag name")
+	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the Droplet in")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "Tag names applied to the Droplet")
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "Block storage volumes attached to the Droplet")
@@ -201,6 +202,11 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	vpcUUID, err := c.Doit.GetString(c.NS, doctl.ArgVPCUUID)
+	if err != nil {
+		return err
+	}
+
 	tagNames, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
 	if err != nil {
 		return err
@@ -267,6 +273,7 @@ func RunDropletCreate(c *CmdConfig) error {
 			Monitoring:        monitoring,
 			SSHKeys:           sshKeys,
 			UserData:          userData,
+			VPCUUID:           vpcUUID,
 			Tags:              tagNames,
 		}
 
