@@ -16,11 +16,7 @@ package commands
 import (
 	"bytes"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -416,69 +412,12 @@ func TestRegistryKubernetesManifest(t *testing.T) {
 	})
 }
 
-// https://npf.io/2015/06/testing-exec-command/
-func fakeExecCommand(testName string) func(string, ...string) *exec.Cmd {
-	return func(command string, args ...string) *exec.Cmd {
-		cs := []string{"-test.v", "-test.run=TestHelperProcess", "--", testName, command}
-		cs = append(cs, args...)
-		cmd := exec.Command(os.Args[0], cs...)
-		cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
-		return cmd
-	}
-}
-
-// this function adds a fake "docker" to PATH because the commands look
-// for it but the tests fake the call through fakeExecCommand
-// so the cli binary isn't needed at all
-func createFakeDocker() (func(), error) {
-	// get the original PATH and create a temp dir
-	originalPath := os.Getenv("PATH")
-	tempDir, err := ioutil.TempDir("", "docker")
-	if err != nil {
-		return func() {}, err
-	}
-
-	// define this here so we can return it
-	// in different places
-	fnCleanUp := func() {
-		os.Setenv("PATH", originalPath)
-		os.RemoveAll(tempDir)
-	}
-
-	// create a fake executable
-	f, err := os.Create(filepath.Join(tempDir, "docker"))
-	if err != nil {
-		return fnCleanUp, err
-	}
-	defer f.Close()
-	f.Chmod(0777)
-
-	// add the temp dir to PATH
-	newPath := fmt.Sprintf("%s%c%s", tempDir, os.PathListSeparator, originalPath)
-	err = os.Setenv("PATH", newPath)
-
-	// return a function to clean up
-	return fnCleanUp, err
-}
-
 func TestRegistryLogin(t *testing.T) {
-	// create a fake docker executable in PATH so the test doesn't fail
-	// if Docker isn't installed
-	removeFakeDocker, err := createFakeDocker()
-	defer removeFakeDocker() // clean up even if there is an error
-	if err != nil {
-		t.Logf("couldn't create temp dir to hold the fake docker cli binary: %v", err)
-	}
-
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.registry.EXPECT().Endpoint().Return(do.RegistryHostname)
 		tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 			ReadWrite: true,
 		}).Return(testDockerCredentials, nil)
-
-		// fake execCommand
-		execCommand = fakeExecCommand("login")
-		defer func() { execCommand = exec.Command }()
 
 		config.Out = os.Stderr
 		err := RunRegistryLogin(config)
@@ -487,61 +426,11 @@ func TestRegistryLogin(t *testing.T) {
 }
 
 func TestRegistryLogout(t *testing.T) {
-	// create a fake docker executable in PATH so the test doesn't fail
-	// if Docker isn't installed
-	removeFakeDocker, err := createFakeDocker()
-	defer removeFakeDocker() // clean up even if there is an error
-	if err != nil {
-		t.Logf("couldn't create temp dir to hold the fake docker cli binary: %v", err)
-	}
-
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.registry.EXPECT().Endpoint().Return(do.RegistryHostname)
-
-		// fake execCommand
-		execCommand = fakeExecCommand("logout")
-		defer func() { execCommand = exec.Command }()
 
 		config.Out = os.Stderr
 		err := RunRegistryLogout(config)
 		assert.NoError(t, err)
 	})
-}
-
-func TestHelperProcess(t *testing.T) {
-	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
-		t.Log("Called TestHelperProcess() when it's not needed")
-		return
-	}
-
-	// This process is used to fake the "docker" cli command call.
-	if len(os.Args) < 4 {
-		t.Error("Invalid TestHelperProcess() call. Use fakeExecCommand() to generate the command")
-		return
-	}
-
-	switch os.Args[4] {
-	case "login":
-		// Make sure we receive the correct test credentials
-		// as in `testDockerCredentials`.
-		expectedCommand := []string{"docker", "login", "hostname", "-u", "username", "--password-stdin"}
-		gotCommand := os.Args[5:]
-
-		assert.Equal(t, expectedCommand, gotCommand)
-
-		stdin, err := ioutil.ReadAll(os.Stdin)
-		assert.NoError(t, err)
-
-		gotPassword := string(stdin)
-		assert.Equal(t, "password", gotPassword)
-
-	case "logout":
-		expected := []string{"docker", "logout", do.RegistryHostname}
-		got := os.Args[5:]
-
-		assert.Equal(t, expected, got)
-
-	default:
-		t.Error("Unknown test", os.Args[4])
-	}
 }
