@@ -103,27 +103,64 @@ func TestRegistryDelete(t *testing.T) {
 
 func TestDockerConfig(t *testing.T) {
 	tests := []struct {
-		name      string
-		readWrite bool
+		name          string
+		readWrite     bool
+		expirySeconds int
+		expect        func(m *mocks.MockRegistryService)
 	}{
 		{
-			name:      "read-only",
-			readWrite: false,
+			name:          "read-only-no-expiry",
+			readWrite:     false,
+			expirySeconds: 0,
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+					ReadWrite: false,
+				}).Return(testDockerCredentials, nil)
+			},
 		},
 		{
-			name:      "read-write",
-			readWrite: true,
+			name:          "read-write-no-expiry",
+			readWrite:     true,
+			expirySeconds: 0,
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+					ReadWrite: true,
+				}).Return(testDockerCredentials, nil)
+			},
+		},
+		{
+			name:          "read-only-with-expiry",
+			readWrite:     false,
+			expirySeconds: 3600,
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+					ReadWrite:     false,
+					ExpirySeconds: godo.Int(3600),
+				}).Return(testDockerCredentials, nil)
+			},
+		},
+		{
+			name:          "read-write-with-expiry",
+			readWrite:     true,
+			expirySeconds: 3600,
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+					ReadWrite:     true,
+					ExpirySeconds: godo.Int(3600),
+				}).Return(testDockerCredentials, nil)
+			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
-					ReadWrite: test.readWrite,
-				}).Return(testDockerCredentials, nil)
+				if test.expect != nil {
+					test.expect(tm.registry)
+				}
 
 				config.Doit.Set(config.NS, doctl.ArgReadWrite, test.readWrite)
+				config.Doit.Set(config.NS, doctl.ArgRegistryExpirySeconds, test.expirySeconds)
 
 				var output bytes.Buffer
 				config.Out = &output
@@ -413,16 +450,49 @@ func TestRegistryKubernetesManifest(t *testing.T) {
 }
 
 func TestRegistryLogin(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.registry.EXPECT().Endpoint().Return(do.RegistryHostname)
-		tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
-			ReadWrite: true,
-		}).Return(testDockerCredentials, nil)
+	tests := []struct {
+		name          string
+		expirySeconds int
+		expect        func(m *mocks.MockRegistryService)
+	}{
+		{
+			name:          "no-expiry",
+			expirySeconds: 0,
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Endpoint().Return(do.RegistryHostname)
+				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+					ReadWrite: true,
+				}).Return(testDockerCredentials, nil)
+			},
+		},
+		{
+			name:          "with-expiry",
+			expirySeconds: 3600,
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Endpoint().Return(do.RegistryHostname)
+				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+					ReadWrite:     true,
+					ExpirySeconds: godo.Int(3600),
+				}).Return(testDockerCredentials, nil)
+			},
+		},
+	}
 
-		config.Out = os.Stderr
-		err := RunRegistryLogin(config)
-		assert.NoError(t, err)
-	})
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.expect != nil {
+					test.expect(tm.registry)
+				}
+
+				config.Doit.Set(config.NS, doctl.ArgRegistryExpirySeconds, test.expirySeconds)
+
+				config.Out = os.Stderr
+				err := RunRegistryLogin(config)
+				assert.NoError(t, err)
+			})
+		})
+	}
 }
 
 func TestRegistryLogout(t *testing.T) {

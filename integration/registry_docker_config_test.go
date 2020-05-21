@@ -55,10 +55,17 @@ var _ = suite("registry/docker-config", func(t *testing.T, when spec.G, it spec.
 				}
 
 				readWriteParam := req.URL.Query().Get("read_write")
+				expiryParam := req.URL.Query().Get("expiry_seconds")
 				if readWriteParam == "true" || readWriteParam == "1" {
 					w.Write([]byte(registryDockerCredentialsReadWriteResponse))
 				} else {
-					w.Write([]byte(registryDockerCredentialsReadOnlyResponse))
+					if expiryParam == "3600" {
+						w.Write([]byte(registryDockerCredentialsExpiryResponse))
+					} else if expiryParam == "" {
+						w.Write([]byte(registryDockerCredentialsReadOnlyResponse))
+					} else {
+						t.Fatalf("received unknown value: %s", expiryParam)
+					}
 				}
 
 			default:
@@ -72,32 +79,54 @@ var _ = suite("registry/docker-config", func(t *testing.T, when spec.G, it spec.
 		}))
 	})
 
-	it("prints the returned read-only docker config", func() {
-		cmd := exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"registry",
-			"docker-config",
-		)
+	when("all required flags are passed", func() {
+		it("prints the returned read-only docker config", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"registry",
+				"docker-config",
+			)
 
-		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
 
-		expect.Equal(registryDockerCredentialsReadOnlyResponse+"\n", string(output))
+			expect.Equal(registryDockerCredentialsReadOnlyResponse+"\n", string(output))
+		})
 	})
 
-	it("prints the returned read-write docker config", func() {
-		cmd := exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"registry",
-			"docker-config",
-			"--read-write",
-		)
+	when("read-write flag is passed", func() {
+		it("prints the returned read-write docker config", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"registry",
+				"docker-config",
+				"--read-write",
+			)
 
-		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
 
-		expect.Equal(registryDockerCredentialsReadWriteResponse+"\n", string(output))
+			expect.Equal(registryDockerCredentialsReadWriteResponse+"\n", string(output))
+		})
+	})
+
+	when("expiry-seconds flag is passed", func() {
+		it("add the correct query paramater", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"registry",
+				"docker-config",
+				"--expiry-seconds",
+				"3600",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			expect.Equal(registryDockerCredentialsExpiryResponse+"\n", string(output))
+		})
 	})
 })
