@@ -6,7 +6,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/creack/pty v1.1.7
-	github.com/digitalocean/godo v1.35.1
+	github.com/digitalocean/godo v1.36.0
 	github.com/docker/cli v0.0.0-20200511172450-ab108430b268
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200429205700-c3b3aedfa4ad+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
