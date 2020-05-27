@@ -14,8 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/spf13/cobra"
@@ -33,7 +31,7 @@ With the 1-click command, you can list 1-Click applications.`,
 	}
 
 	cmdOneClickList := CmdBuilder(cmd, RunOneClickList, "list", "Retrieve a list of 1-Click applications", "Use this command to retrieve a list of 1-Click applications. You can narrow it by type, current types: kubernetes, droplet", Writer,
-		aliasOpt(""), displayerType(&displayers.VPC{}))
+		aliasOpt(""), displayerType(&displayers.OneClick{}))
 
 	AddStringFlag(cmdOneClickList, doctl.ArgOneClickType, "", "", "The 1-Click type. Valid types are one of the following: kubernetes, droplet")
 
@@ -53,8 +51,7 @@ func RunOneClickList(c *CmdConfig) error {
 		return err
 	}
 
-	fmt.Println(oneClickList)
-	// item := &displayers.VPC{VPCs: do.VPCs{*vpc}}
-	// return c.Display(item)
-	return nil
+	items := &displayers.OneClick{OneClicks: oneClickList}
+
+	return c.Display(items)
 }
