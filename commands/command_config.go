@@ -63,6 +63,7 @@ type CmdConfig struct {
 	Databases         func() do.DatabasesService
 	Registry          func() do.RegistryService
 	VPCs              func() do.VPCsService
+	OneClicks         func() do.OneClickService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
