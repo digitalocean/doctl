@@ -24,14 +24,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// // VPC wraps a godo VPC.
-// type VPC struct {
-// 	*godo.VPC
-// }
-
-// // VPCs is a slice of VPC.
-// type VPCs []VPC
-
 // OneClickService is the godo VPCsService interface.
 type OneClickService interface {
 	List(string) (OneClicks, error)
@@ -50,6 +42,17 @@ type OneClick struct {
 // OneClicks is a set of OneClick structs
 type OneClicks []OneClick
 
+// OneClickResp is the struct representing the json payload for a 1-click
+type OneClickResp struct {
+	Slug string `json:"slug"`
+	Type string `json:"type"`
+}
+
+// OneClicksResp is a struct representing the json payload for a list of 1-clicks
+type OneClicksResp struct {
+	List []OneClickResp `json:"1_click"`
+}
+
 // NewOneClickService builds an instance of OneClickService.
 func NewOneClickService(client *http.Client) OneClickService {
 	ocs := &oneClickService{
@@ -57,15 +60,6 @@ func NewOneClickService(client *http.Client) OneClickService {
 	}
 
 	return ocs
-}
-
-type OneClickResp struct {
-	Slug string `json:"slug"`
-	Type string `json:"type"`
-}
-
-type OneClicksResp struct {
-	List []OneClickResp `json:"1_click"`
 }
 
 func (ocs *oneClickService) List(oneClickType string) (OneClicks, error) {
