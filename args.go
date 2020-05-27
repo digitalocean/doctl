@@ -299,4 +299,6 @@ const (
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
+	// ArgRegistryExpirySeconds indicates the length of time the token will be valid in seconds.
+	ArgRegistryExpirySeconds = "expiry-seconds"
 )

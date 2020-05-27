@@ -47,7 +47,14 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
-				w.Write([]byte(registryDockerCredentialsResponse))
+				expiryParam := req.URL.Query().Get("expiry_seconds")
+				if expiryParam == "3600" {
+					w.Write([]byte(registryDockerCredentialsExpiryResponse))
+				} else if expiryParam == "" {
+					w.Write([]byte(registryDockerCredentialsResponse))
+				} else {
+					t.Fatalf("received unknown value: %s", expiryParam)
+				}
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -59,34 +66,75 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 		}))
 	})
 
-	it("writes a docker config.json file", func() {
-		tmpDir, err := ioutil.TempDir("", "")
-		expect.NoError(err)
+	when("all required flags are passed", func() {
+		it("writes a docker config.json file", func() {
+			tmpDir, err := ioutil.TempDir("", "")
+			expect.NoError(err)
 
-		config := filepath.Join(tmpDir, "config.json")
+			config := filepath.Join(tmpDir, "config.json")
 
-		cmd := exec.Command(builtBinaryPath,
-			"-t", "some-magic-token",
-			"-u", server.URL,
-			"registry",
-			"login",
-		)
-		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, fmt.Sprintf("DOCKER_CONFIG=%s", tmpDir))
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"registry",
+				"login",
+			)
+			cmd.Env = os.Environ()
+			cmd.Env = append(cmd.Env, fmt.Sprintf("DOCKER_CONFIG=%s", tmpDir))
 
-		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
 
-		fileBytes, err := ioutil.ReadFile(config)
-		expect.NoError(err)
+			fileBytes, err := ioutil.ReadFile(config)
+			expect.NoError(err)
 
-		var dc dockerConfig
-		err = json.Unmarshal(fileBytes, &dc)
-		expect.NoError(err)
+			var dc dockerConfig
+			err = json.Unmarshal(fileBytes, &dc)
+			expect.NoError(err)
 
-		expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
-		for host, _ := range dc.Auths {
-			expect.Equal("registry.digitalocean.com", host)
-		}
+			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
+			for host, _ := range dc.Auths {
+				expect.Equal("registry.digitalocean.com", host)
+			}
+		})
+	})
+
+	when("expiry-seconds flag is passed", func() {
+		it("add the correct query paramater", func() {
+			tmpDir, err := ioutil.TempDir("", "")
+			expect.NoError(err)
+
+			config := filepath.Join(tmpDir, "config.json")
+
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"registry",
+				"login",
+				"--expiry-seconds",
+				"3600",
+			)
+			cmd.Env = os.Environ()
+			cmd.Env = append(cmd.Env, fmt.Sprintf("DOCKER_CONFIG=%s", tmpDir))
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(config)
+			expect.NoError(err)
+
+			var dc dockerConfig
+			err = json.Unmarshal(fileBytes, &dc)
+			expect.NoError(err)
+
+			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
+			for host, _ := range dc.Auths {
+				expect.Equal("expiring.registry.com", host)
+			}
+		})
 	})
 })
+
+const (
+	registryDockerCredentialsExpiryResponse = `{"auths":{"expiring.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
+)
