@@ -68,6 +68,7 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 			"--name", "hello",
 			"--region", "the-best-region",
 			"--tag-name", "some-tag",
+			"--vpc-uuid", "00000000-0000-4000-8000-000000000000",
 		}
 	})
 
@@ -109,6 +110,7 @@ const (
     "health_check":{},
     "sticky_sessions":{},
     "droplet_ids":[1,2,3,4],
-    "tag":"some-tag"
+    "tag":"some-tag",
+    "vpc_uuid": "00000000-0000-4000-8000-000000000000"
 }`
 )
