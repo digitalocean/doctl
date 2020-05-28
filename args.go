@@ -38,6 +38,8 @@ const (
 	ArgClusterName = "cluster-name"
 	// ArgClusterVersionSlug is a cluster version argument.
 	ArgClusterVersionSlug = "version"
+	// ArgVPCUUID is a VPC UUID argument.
+	ArgVPCUUID = "vpc-uuid"
 	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
 	ArgClusterVPCUUID = "vpc-uuid"
 	// ArgClusterNodePool are a cluster's node pools arguments.
@@ -297,4 +299,6 @@ const (
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
+	// ArgRegistryExpirySeconds indicates the length of time the token will be valid in seconds.
+	ArgRegistryExpirySeconds = "expiry-seconds"
 )

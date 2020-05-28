@@ -66,8 +66,10 @@ func Registry() *Command {
 	AddBoolFlag(cmdRunRegistryDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force registry delete")
 
 	loginRegDesc := "This command logs in Docker so that pull and push commands to your private container registry will be authenticated."
-	CmdBuilder(cmd, RunRegistryLogin, "login", "Log in Docker to a container registry",
+	cmdRegistryLogin := CmdBuilder(cmd, RunRegistryLogin, "login", "Log in Docker to a container registry",
 		loginRegDesc, Writer)
+	AddIntFlag(cmdRegistryLogin, doctl.ArgRegistryExpirySeconds, "", 0,
+		"The length of time the registry credentials will be valid for in seconds. By default, the credentials do not expire.")
 
 	logoutRegDesc := "This command logs Docker out of the private container registry, revoking access to it."
 	CmdBuilder(cmd, RunRegistryLogout, "logout", "Log out Docker from a container registry",
@@ -96,6 +98,8 @@ By default this command generates read-only credentials. Use the --read-write fl
 		dockerConfigDesc, Writer, aliasOpt("config"))
 	AddBoolFlag(cmdRunDockerConfig, doctl.ArgReadWrite, "", false,
 		"Generate credentials that can push to your registry")
+	AddIntFlag(cmdRunDockerConfig, doctl.ArgRegistryExpirySeconds, "", 0,
+		"The length of time the registry credentials will be valid for in seconds. By default, the credentials do not expire.")
 
 	return cmd
 }
@@ -216,11 +220,19 @@ var execCommand = exec.Command
 
 // RunRegistryLogin logs in Docker to the registry
 func RunRegistryLogin(c *CmdConfig) error {
-	fmt.Printf("Logging Docker in to %s\n", c.Registry().Endpoint())
-
-	creds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgRegistryExpirySeconds)
+	if err != nil {
+		return err
+	}
+	regCredReq := godo.RegistryDockerCredentialsRequest{
 		ReadWrite: true,
-	})
+	}
+	if expirySeconds != 0 {
+		regCredReq.ExpirySeconds = godo.Int(expirySeconds)
+	}
+
+	fmt.Printf("Logging Docker in to %s\n", c.Registry().Endpoint())
+	creds, err := c.Registry().DockerCredentials(&regCredReq)
 	if err != nil {
 		return err
 	}
@@ -327,10 +339,18 @@ func RunDockerConfig(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-
-	dockerCreds, err := c.Registry().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgRegistryExpirySeconds)
+	if err != nil {
+		return err
+	}
+	regCredReq := godo.RegistryDockerCredentialsRequest{
 		ReadWrite: readWrite,
-	})
+	}
+	if expirySeconds != 0 {
+		regCredReq.ExpirySeconds = godo.Int(expirySeconds)
+	}
+
+	dockerCreds, err := c.Registry().DockerCredentials(&regCredReq)
 	if err != nil {
 		return err
 	}

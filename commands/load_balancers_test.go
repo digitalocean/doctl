@@ -80,6 +80,7 @@ func TestLoadBalancerCreateWithMalformedForwardingRulesArgs(t *testing.T) {
 
 func TestLoadBalancerCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		vpcUUID := "00000000-0000-4000-8000-000000000000"
 		r := godo.LoadBalancerRequest{
 			Name:       "lb-name",
 			Region:     "nyc1",
@@ -104,11 +105,13 @@ func TestLoadBalancerCreate(t *testing.T) {
 					TlsPassthrough: true,
 				},
 			},
+			VPCUUID: vpcUUID,
 		}
 		tm.loadBalancers.EXPECT().Create(&r).Return(&testLoadBalancer, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
+		config.Doit.Set(config.NS, doctl.ArgVPCUUID, vpcUUID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
 		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:none")
 		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,check_interval_seconds:4,response_timeout_seconds:23,healthy_threshold:5,unhealthy_threshold:10")

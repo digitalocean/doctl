@@ -164,16 +164,16 @@ const (
 }`
 
 	dropletListOutput = `
-ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          Status    Tags    Features    Volumes
-1111    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name    active    yes     remotes     some-volume-id
+ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region              Image                          VPC UUID    Status    Tags    Features    Volumes
+1111    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name                active    yes     remotes     some-volume-id
 `
 
 	dropletListRegionOutput = `
-ID      Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region       Image                          Status    Tags    Features    Volumes
-1440                                                          0         0        0       my-region    some-distro some-image-name    active    yes     remotes     some-volume-id
+ID      Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region       Image                          VPC UUID    Status    Tags    Features    Volumes
+1440                                                          0         0        0       my-region    some-distro some-image-name                active    yes     remotes     some-volume-id
 `
 
 	dropletListEmptyOutput = `
-ID    Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region    Image    Status    Tags    Features    Volumes
+ID    Name    Public IPv4    Private IPv4    Public IPv6    Memory    VCPUs    Disk    Region    Image    VPC UUID    Status    Tags    Features    Volumes
 `
 )
