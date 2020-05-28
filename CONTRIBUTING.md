@@ -67,6 +67,11 @@ lets us merge or address your contributions quickly.
    the issue tracker clean. The issue is still indexed and available for
    future viewers, or can be re-opened if necessary.
 
+## Pull Requests
+
+Pull requests must always be opened from a fork of `doctl`, even if you have
+commit rights to the repository.
+
 ## Developing
 
 `doctl` has `make` commands for most tooling in the `Makefile`. Run `make`
