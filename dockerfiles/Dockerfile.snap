@@ -10,7 +10,7 @@
 #
 # See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/
 #  for guidance on the style of this Dockerfile
-FROM ubuntu:xenial as builder
+FROM ubuntu:focal as builder
 
 RUN apt-get update && apt-get install --yes \
         curl \
@@ -27,8 +27,13 @@ RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/sna
         mkdir -p /snap/core18 && \
         unsquashfs -d /snap/core18/current core18.snap
 
-# Grab the snapcraft snap from the stable channel and unpack it in the proper place
-RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/snapcraft?channel=stable' | jq '.download_url' -r) --output snapcraft.snap && \
+# Grab the core20 snap from the stable channel and unpack it in the proper place.
+RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/core20' | jq '.download_url' -r) --output core20.snap && \
+        mkdir -p /snap/core20 && \
+        unsquashfs -d /snap/core20/current core20.snap
+
+# Grab the snapcraft snap from the candidate channel and unpack it in the proper place
+RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/snapcraft?channel=candidate' | jq '.download_url' -r) --output snapcraft.snap && \
         mkdir -p /snap/snapcraft && \
         unsquashfs -d /snap/snapcraft/current snapcraft.snap
 
@@ -47,32 +52,18 @@ RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/sna
         cd /snap/bin && \
         ln -s /snap/go/current/bin/go
 
-FROM ubuntu:xenial
+FROM ubuntu:focal
 COPY --from=builder /snap /snap
 
-# The first set (build-essential through xz-utils) would otherwise be installed later
+# Install Snap build-time dependencies & generate locale
+ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get clean && apt-get update && apt-get install --yes \
-        build-essential \
-	bzip2 \
-	dpkg-dev \
-	fakeroot \
-	g++ g++-5 \
-	golang-1.6-go golang-1.6-race-detector-runtime golang-1.6-src golang-go golang-race-detector-runtime golang-src \
-	libalgorithm-diff-perl libalgorithm-diff-xs-perl libalgorithm-merge-perl libdpkg-perl \
-	libfakeroot libfile-fcntllock-perl libglib2.0-0 libglib2.0-data libicu55 libstdc++-5-dev libxml2 \
-	make \
-	pkg-config \
-	sgml-base \
-	shared-mime-info \
-	xdg-user-dirs \
-	xml-core \
-	xz-utils \
-        sudo \
-	locales \
-        gcc \
-	git && \
-        locale-gen en_US.UTF-8 && \
-        rm -rf /var/lib/apt/lists/*
+	build-essential \
+	golang-go \
+	git \
+	locales && \
+	locale-gen en_US.UTF-8 && \
+	rm -rf /var/lib/apt/lists/*
 
 # Set the proper environment
 ENV LANG en_US.UTF-8
