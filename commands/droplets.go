@@ -63,27 +63,32 @@ func Droplet() *Command {
 	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "List Droplet backups", `Use this command to list Droplet backups.`, Writer,
 		aliasOpt("b"), displayerType(&displayers.Image{}))
 
-	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", `Use this command to create a new Droplet. Required values are name, region, size, and image.`, Writer,
+	dropletCreateLongDesc := `Use this command to create a new Droplet. Required values are name, region, size, and image. For example, to create an Ubuntu 20.04 with 1 vCPU and 1 GB of RAM in the NYC1 datacenter region, run:
+
+	doctl compute droplet create --image ubuntu-20-04-x64 --size s-1vcpu-1gb --region nyc1 example.com
+`
+
+	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", dropletCreateLongDesc, Writer,
 		aliasOpt("c"), displayerType(&displayers.Droplet{}))
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "Embedded SSH keys or fingerprints on the Droplet")
-	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "Data used to configure the Droplet on first boot")
-	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "User data file")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Wait for Droplet to be created")
-	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "The region the Droplet will be created in",
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "A list of SSH key fingerprints or IDs of the SSH keys to embed in the Droplet's root account upon creation")
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User-data to configure the Droplet on first boot")
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "The path to a file containing user-data to configure the Droplet on first boot")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Wait for Droplet creation to complete before returning")
+	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A slug indicating the region where the Droplet will be created (e.g. `nyc1`). Run `doctl compute region list` for a list of valid regions.",
 		requiredOpt())
-	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug representing the size of the Droplet. Run `doctl compute size list` for a list of valid sizes",
+	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug indicating the size of the Droplet (e.g. `s-1vcpu-1gb`). Run `doctl compute size list` for a list of valid sizes.",
 		requiredOpt())
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enable private networking for the Droplet")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Monitoring")
-	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "Droplet image",
+	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enables private networking for the Droplet by provisioning it inside of your account's default VPC for the region")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Install the DigitalOcean agent for additional monitoring")
+	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "An ID or slug indicating the image the Droplet will be based-on (e.g. `ubuntu-20-04-x64`). Use the commands under `doctl compute image` to find additional images.",
 		requiredOpt())
-	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "Tag name")
-	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the Droplet in")
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "Tag names applied to the Droplet")
+	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "A tag name to be applied to the Droplet")
+	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of a non-default VPC to create the Droplet in")
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to be applied to the Droplet")
 
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "Block storage volumes attached to the Droplet")
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "A list of block storage volume IDs to attach to the Droplet")
 
 	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Permanently delete a Droplet", `Use this command to permanently delete a Droplet. This is irreversible.`, Writer,
 		aliasOpt("d", "del", "rm"))
