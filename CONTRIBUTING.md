@@ -70,7 +70,7 @@ lets us merge or address your contributions quickly.
 ## Pull Requests
 
 Pull requests must always be opened from a fork of `doctl`, even if you have
-commit rights to the repository.
+commit rights to the repository so that all contributors follow the same process.
 
 ## Developing
 
