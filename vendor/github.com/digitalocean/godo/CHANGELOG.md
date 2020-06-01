@@ -1,5 +1,10 @@
 # Change Log
 
+## [v1.37.0] - 2020-06-01
+
+- #336 registry: URL encode repository names when building URLs. @adamwg
+- #335 Add 1-click service and request. @scottcrawford03
+
 ## [v1.36.0] - 2020-05-12
 
 - #331 Expose expiry_seconds for Registry.DockerCredentials. @andrewsomething

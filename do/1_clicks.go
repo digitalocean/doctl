@@ -14,14 +14,9 @@ limitations under the License.
 package do
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
 
-	"github.com/pkg/errors"
+	"github.com/digitalocean/godo"
 )
 
 // OneClickService is the godo VPCsService interface.
@@ -29,32 +24,22 @@ type OneClickService interface {
 	List(string) (OneClicks, error)
 }
 
+var _ OneClickService = &oneClickService{}
+
 type oneClickService struct {
-	Client *http.Client
+	Client *godo.Client
 }
 
-// OneClick represents the structre of a 1-click
+// OneClick represents the structure of a 1-click
 type OneClick struct {
-	Slug string
-	Type string
+	*godo.OneClick
 }
 
 // OneClicks is a set of OneClick structs
 type OneClicks []OneClick
 
-// OneClickResp is the struct representing the json payload for a 1-click
-type OneClickResp struct {
-	Slug string `json:"slug"`
-	Type string `json:"type"`
-}
-
-// OneClicksResp is a struct representing the json payload for a list of 1-clicks
-type OneClicksResp struct {
-	List []OneClickResp `json:"1_click"`
-}
-
 // NewOneClickService builds an instance of OneClickService.
-func NewOneClickService(client *http.Client) OneClickService {
+func NewOneClickService(client *godo.Client) OneClickService {
 	ocs := &oneClickService{
 		Client: client,
 	}
@@ -63,50 +48,29 @@ func NewOneClickService(client *http.Client) OneClickService {
 }
 
 func (ocs *oneClickService) List(oneClickType string) (OneClicks, error) {
-	url := fmt.Sprintf("%s/v2/1-click?type=%s", "https://api.digitalocean.com", oneClickType)
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "creating request for 1-click")
-	}
-
-	req = req.WithContext(context.Background())
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := ocs.Client.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "request 1-click list")
-	}
-
-	body := bytes.NewBuffer(nil)
-	_, err = io.Copy(body, resp.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading 1-click list from response")
-	}
-
-	err = resp.Body.Close()
-	if err != nil {
-		return nil, errors.Wrap(err, "closing 1-click response")
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("received non 200 response")
-	}
-
-	oneClicksResp := &OneClicksResp{}
-	err = json.Unmarshal(body.Bytes(), oneClicksResp)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable to unmarshal body")
-	}
-
-	list := OneClicks{}
-	for _, ocr := range oneClicksResp.List {
-		oc := OneClick{
-			Slug: ocr.Slug,
-			Type: ocr.Type,
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := ocs.Client.OneClick.List(context.TODO(), oneClickType)
+		if err != nil {
+			return nil, nil, err
 		}
 
-		list = append(list, oc)
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]OneClick, len(si))
+	for i := range si {
+		a := si[i].(*godo.OneClick)
+		list[i] = OneClick{OneClick: a}
 	}
 
 	return list, nil

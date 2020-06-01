@@ -16,7 +16,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -111,7 +110,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Databases = func() do.DatabasesService { return do.NewDatabasesService(godoClient) }
 			c.Registry = func() do.RegistryService { return do.NewRegistryService(godoClient) }
 			c.VPCs = func() do.VPCsService { return do.NewVPCsService(godoClient) }
-			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(&http.Client{}) }
+			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(godoClient) }
 
 			return nil
 		},

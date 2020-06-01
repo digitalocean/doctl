@@ -25,7 +25,7 @@ var _ = suite("1-click/list", func(t *testing.T, when spec.G, it spec.S) {
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/1-click":
+			case "/v2/1-clicks":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -79,20 +79,20 @@ var _ = suite("1-click/list", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	oneClickListOutput = `
-SLUG                                    TYPE
-monitoring                              kubernetes
-docker                                  droplet
+SLUG               TYPE
+discourse-18-04    droplet
+django-18-04       droplet
 `
 	oneClickResp = `
 {
-  "list": [
+  "1_clicks": [
     {
-      "slug": "monitoring",
-      "type": "kubernetes",
+      "slug": "discourse-18-04",
+      "type": "droplet"
     },
     {
-      "slug": "docker",
-      "type": "droplet",
+      "slug": "django-18-04",
+      "type": "droplet"
     }
   ]
 }
