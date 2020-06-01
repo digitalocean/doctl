@@ -4,14 +4,17 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var (
 	testOneClick = do.OneClick{
-		Slug: "test-slug",
-		Type: "droplet",
+		OneClick: &godo.OneClick{
+			Slug: "test-slug",
+			Type: "droplet",
+		},
 	}
 
 	testOneClickList = do.OneClicks{
