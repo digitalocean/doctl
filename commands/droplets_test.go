@@ -38,6 +38,17 @@ var (
 		Regions: []string{"test0"},
 	}}
 	testImageList = do.Images{testImage, testImageSecondary}
+
+	testDropletOneClick = do.OneClick{
+		OneClick: &godo.OneClick{
+			Slug: "test-slug",
+			Type: "droplet",
+		},
+	}
+
+	testDropletOneClickList = do.OneClicks{
+		testOneClick,
+	}
 )
 
 func TestDropletCommand(t *testing.T) {
@@ -482,4 +493,12 @@ func Test_extractSSHKey(t *testing.T) {
 		got := extractSSHKeys(c.in)
 		assert.Equal(t, c.expected, got)
 	}
+}
+
+func TestDropletOneClickListNoType(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.oneClick.EXPECT().List("droplet").Return(testDropletOneClickList, nil)
+		err := RunDropletOneClickList(config)
+		assert.NoError(t, err)
+	})
 }

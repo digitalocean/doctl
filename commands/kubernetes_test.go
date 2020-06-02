@@ -1117,7 +1117,7 @@ func Test_looksLikeUUID(t *testing.T) {
 
 func TestK8sOneClickListNoType(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.oneClick.EXPECT().List("kubernetes").Return(testOneClickList, nil)
+		tm.oneClick.EXPECT().List("kubernetes").Return(testK8sOneClickList, nil)
 		err := RunKubernetesOneClickList(config)
 		assert.NoError(t, err)
 	})
