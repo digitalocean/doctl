@@ -36,4 +36,5 @@ mockgen -source tags.go -package=mocks TagsService > mocks/TagsService.go
 mockgen -source volume_actions.go -package=mocks VolumeActionsService > mocks/VolumeActionsService.go
 mockgen -source volumes.go -package=mocks VolumesService > mocks/VolumesService.go
 mockgen -source vpcs.go -package=mocks VPCsService > mocks/VPCsService.go
+mockgen -source 1_clicks.go -package=mocks OneClickService > mocks/OneClickService.go
 mockgen -source ../pkg/runner/runner.go -package=mocks Runner > mocks/Runner.go

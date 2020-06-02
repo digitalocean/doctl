@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.36.0"
+	libraryVersion = "1.37.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -72,6 +72,7 @@ type Client struct {
 	Registry          RegistryService
 	Databases         DatabasesService
 	VPCs              VPCsService
+	OneClick          OneClickService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -211,6 +212,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Registry = &RegistryServiceOp{client: c}
 	c.Databases = &DatabasesServiceOp{client: c}
 	c.VPCs = &VPCsServiceOp{client: c}
+	c.OneClick = &OneClickServiceOp{client: c}
 
 	return c
 }

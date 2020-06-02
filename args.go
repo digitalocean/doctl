@@ -301,4 +301,9 @@ const (
 	ArgReadWrite = "read-write"
 	// ArgRegistryExpirySeconds indicates the length of time the token will be valid in seconds.
 	ArgRegistryExpirySeconds = "expiry-seconds"
+
+	// 1-Click Args
+
+	// ArgOneClickType is the type of 1-Click
+	ArgOneClickType = "type"
 )
