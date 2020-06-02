@@ -120,6 +120,8 @@ func Droplet() *Command {
 	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet-id|droplet-name>", "Remove a tag from a Droplet", "Use this command to remove a tag from a Droplet, specified with the `--tag-name` flag.", Writer)
 	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "Tag name to remove from Droplet")
 
+	cmd.AddCommand(dropletOneClicks())
+
 	return cmd
 }
 
@@ -734,4 +736,33 @@ func buildDropletSummary(ds do.DropletsService) (*dropletSummary, error) {
 	}
 
 	return &sum, nil
+}
+
+// kubernetesOneClicks creates the 1-click command.
+func dropletOneClicks() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "1-click",
+			Short: "Display commands that pertain to droplet 1-click applications",
+			Long:  "The commands under `doctl kubernetes 1-click` are for interacting with DigitalOcean Droplet 1-Click applications.",
+		},
+	}
+
+	CmdBuilder(cmd, RunDropletOneClickList, "list", "Retrieve a list of Droplet 1-Click applications", "Use this command to retrieve a list of Droplet 1-Click applications.", Writer,
+		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
+
+	return cmd
+}
+
+// RunDropletOneClickList retrieves a list of 1-clicks for Droplets.
+func RunDropletOneClickList(c *CmdConfig) error {
+	oneClicks := c.OneClicks()
+	oneClickList, err := oneClicks.List("droplet")
+	if err != nil {
+		return err
+	}
+
+	items := &displayers.OneClick{OneClicks: oneClickList}
+
+	return c.Display(items)
 }
