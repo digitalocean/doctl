@@ -175,6 +175,7 @@ type tcMocks struct {
 	registry          *domocks.MockRegistryService
 	sshRunner         *domocks.MockRunner
 	vpcs              *domocks.MockVPCsService
+	oneClick          *domocks.MockOneClickService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -211,6 +212,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		registry:          domocks.NewMockRegistryService(ctrl),
 		sshRunner:         domocks.NewMockRunner(ctrl),
 		vpcs:              domocks.NewMockVPCsService(ctrl),
+		oneClick:          domocks.NewMockOneClickService(ctrl),
 	}
 
 	config := &CmdConfig{
@@ -255,6 +257,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Databases:         func() do.DatabasesService { return tm.databases },
 		Registry:          func() do.RegistryService { return tm.registry },
 		VPCs:              func() do.VPCsService { return tm.vpcs },
+		OneClicks:         func() do.OneClickService { return tm.oneClick },
 	}
 
 	tFn(config, tm)
