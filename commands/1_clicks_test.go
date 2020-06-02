@@ -28,9 +28,9 @@ func TestOneClickCommand(t *testing.T) {
 	assertCommandNames(t, cmd, "list")
 }
 
-func TesOneClickListNoType(t *testing.T) {
+func TestOneClickListNoType(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.oneClick.EXPECT().List("").Return(testOneClickList)
+		tm.oneClick.EXPECT().List("").Return(testOneClickList, nil)
 		err := RunOneClickList(config)
 		assert.NoError(t, err)
 	})

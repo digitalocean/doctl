@@ -80,6 +80,17 @@ var (
 		},
 		AuthInfos: make(map[string]*clientcmdapi.AuthInfo),
 	}
+
+	testK8sOneClick = do.OneClick{
+		OneClick: &godo.OneClick{
+			Slug: "test-slug",
+			Type: "droplet",
+		},
+	}
+
+	testK8sOneClickList = do.OneClicks{
+		testOneClick,
+	}
 )
 
 type mockKubeconfigProvider struct {
@@ -118,6 +129,7 @@ func TestKubernetesCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"cluster",
 		"options",
+		"1-click",
 	)
 }
 
@@ -1101,4 +1113,12 @@ func Test_looksLikeUUID(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestK8sOneClickListNoType(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.oneClick.EXPECT().List("kubernetes").Return(testOneClickList, nil)
+		err := RunKubernetesOneClickList(config)
+		assert.NoError(t, err)
+	})
 }

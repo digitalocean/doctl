@@ -109,6 +109,8 @@ func Kubernetes() *Command {
 
 	cmd.AddCommand(kubernetesCluster())
 	cmd.AddCommand(kubernetesOptions())
+	cmd.AddCommand(kubernetesOneClicks())
+
 	return cmd
 }
 
@@ -463,6 +465,35 @@ This command deletes the specified node in the specified node pool, and then cre
 	AddBoolFlag(cmdKubeNodeReplace, "skip-drain", "", false, "Skip draining the node before replacement")
 
 	return cmd
+}
+
+// kubernetesOneClicks creates the 1-click command.
+func kubernetesOneClicks() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "1-click",
+			Short: "Display commands that pertain to kubernetes 1-click applications",
+			Long:  "The commands under `doctl kubernetes 1-click` are for interacting with DigitalOcean Kubernetes 1-Click applications.",
+		},
+	}
+
+	CmdBuilder(cmd, RunKubernetesOneClickList, "list", "Retrieve a list of Kubernetes 1-Click applications", "Use this command to retrieve a list of Kubernetes 1-Click applications.", Writer,
+		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
+
+	return cmd
+}
+
+// RunKubernetesOneClickList retrieves a list of 1-clicks for kubernetes.
+func RunKubernetesOneClickList(c *CmdConfig) error {
+	oneClicks := c.OneClicks()
+	oneClickList, err := oneClicks.List("kubernetes")
+	if err != nil {
+		return err
+	}
+
+	items := &displayers.OneClick{OneClicks: oneClickList}
+
+	return c.Display(items)
 }
 
 func kubernetesOptions() *Command {
