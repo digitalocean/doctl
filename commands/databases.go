@@ -74,7 +74,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, and `redis`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 11 for PostgreSQL version 11")
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "A UUID to use for private network connections")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
 
@@ -112,7 +112,7 @@ You must specify the size of the machines you wish to use as nodes as well as ho
 	cmdDatabaseMigrate := CmdBuilder(cmd, RunDatabaseMigrate, "migrate <database-id>", "Migrate a database cluster to a new region", `This command migrates the specified database cluster to a new region`, Writer,
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, e.g. `sfo2` or `nyc3`.", requiredOpt())
-	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "A UUID to use for private network connections")
+	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
 
 	cmd.AddCommand(databaseReplica())
 	cmd.AddCommand(databaseMaintenanceWindow())
@@ -951,7 +951,7 @@ This command requires that you pass in the replica's name, which you can retriev
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgSizeSlug, "",
 		defaultDatabaseNodeSize, "Specifies the machine size for the replica (e.g. db-s-1vcpu-1gb). Must be the same or equal to the original.")
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgPrivateNetworkUUID, "",
-		"", "Specifies a private network UUID for the replica")
+		"", "The UUID of a VPC to create the replica in; the default VPC for the region will be used if excluded")
 
 	cmdDatabaseReplicaDelete := CmdBuilder(cmd, RunDatabaseReplicaDelete,
 		"delete <database-id> <replica-name>", "Delete a read-only database replica",
