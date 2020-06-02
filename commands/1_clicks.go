@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Doctl Authors All rights reserved.
+Copyright 2020 The Doctl Authors All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -25,8 +25,7 @@ func OneClicks() *Command {
 		Command: &cobra.Command{
 			Use:   "1-click",
 			Short: "Display commands that pertain to 1-click applications",
-			Long: `The commands under ` + "`" + `doctl 1-click` + "`" + ` are for interacting with DigitalOcean 1-Click applications.
-With the 1-click command, you can list 1-Click applications.`,
+			Long:  "The commands under `doctl 1-click` are for interacting with DigitalOcean 1-Click applications.",
 		},
 	}
 
