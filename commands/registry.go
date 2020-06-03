@@ -269,7 +269,7 @@ func RunRegistryLogin(c *CmdConfig) error {
 		if err != nil {
 			_, isSnap := os.LookupEnv("SNAP")
 			if os.IsPermission(err) && isSnap {
-				warn("Using the doctl Snap? Grant access to the doctl:docker-config plug to use this command with: sudo snap connect doctl:docker-config")
+				warn("Using the doctl Snap? Grant access to the doctl:dot-docker plug to use this command with: sudo snap connect doctl:dot-docker")
 				return err
 			}
 
@@ -376,7 +376,7 @@ func RunRegistryLogout(c *CmdConfig) error {
 	if err != nil {
 		_, isSnap := os.LookupEnv("SNAP")
 		if os.IsPermission(err) && isSnap {
-			warn("Using the doctl Snap? Grant access to the doctl:docker-config plug to use this command with: sudo snap connect doctl:docker-config")
+			warn("Using the doctl Snap? Grant access to the doctl:dot-docker plug to use this command with: sudo snap connect doctl:dot-docker")
 			return err
 		}
 
