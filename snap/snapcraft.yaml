@@ -1,7 +1,12 @@
 name: doctl
 version: git
-summary: A command line tool for DigitalOcean services
-description: doctl is a command line tool for DigitalOcean services using the API.
+summary: The official DigitalOcean command line interface
+description: |
+  doctl allows you to interact with the DigitalOcean API via the command line.
+  It supports most functionality found in the control panel. You can create,
+  configure, and destroy DigitalOcean resources like Droplets, Kubernetes
+  clusters, firewalls, load balancers, database clusters, domains, and more.
+license: Apache-2.0
 
 base: core20
 grade: stable
