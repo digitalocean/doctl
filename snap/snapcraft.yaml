@@ -13,7 +13,6 @@ grade: stable
 confinement: strict
 
 build-packages:
-  - gcc
   - git
 
 parts:
