@@ -32,8 +32,8 @@ RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/sna
         mkdir -p /snap/core20 && \
         unsquashfs -d /snap/core20/current core20.snap
 
-# Grab the snapcraft snap from the candidate channel and unpack it in the proper place
-RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/snapcraft?channel=candidate' | jq '.download_url' -r) --output snapcraft.snap && \
+# Grab the snapcraft snap from the stable channel and unpack it in the proper place
+RUN curl -L $(curl -H 'X-Ubuntu-Series: 16' 'https://api.snapcraft.io/api/v1/snaps/details/snapcraft?channel=stable' | jq '.download_url' -r) --output snapcraft.snap && \
         mkdir -p /snap/snapcraft && \
         unsquashfs -d /snap/snapcraft/current snapcraft.snap
 
