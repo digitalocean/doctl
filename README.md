@@ -114,6 +114,14 @@ Using `doctl compute ssh` requires the core [ssh-keys interface](https://docs.sn
 
     sudo snap connect doctl:ssh-keys :ssh-keys
 
+##### Use with Docker
+
+Using `doctl registry login` requires the `dot-docker` personal-files connection for `doctl`:
+
+    sudo snap connect doctl:dot-docker
+
+This allows `doctl` to add DigitalOcean container registry credentials to your Docker configuration file.
+
 #### Arch Linux
 
 Arch users not using a package manager can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
