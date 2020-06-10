@@ -193,7 +193,7 @@ by [Travis CI](https://docs.travis-ci.com/user/deployment/).
 1. Run `make changes` to review the changes since the last
    release. Based on the changes, decide what kind of release you are
    doing (bugfix, feature or breaking).
-   `doctl` follows [semantic versioning](semver.org), ask if you aren't sure.
+   `doctl` follows [semantic versioning](https://semver.org), ask if you aren't sure.
 
 1. Tag the release using `BUMP=(bugfix|feature|breaking) make tag`.
    (Bugfix, feature and breaking are aliases for semver's patch, minor and major.
