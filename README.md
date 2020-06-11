@@ -17,31 +17,37 @@
 </p>
 
 ```
-doctl is a command line interface for the DigitalOcean API.
+doctl is a command line interface (CLI) for the DigitalOcean API.
 
 Usage:
   doctl [command]
 
 Available Commands:
-  account     account commands
-  auth        auth commands
-  completion  completion commands
-  compute     compute commands
-  databases   database commands
-  help        Help about any command
-  kubernetes  kubernetes commands
-  projects    projects commands
-  version     show the current version
+  1-click         Display commands that pertain to 1-click applications
+  account         Display commands that retrieve account details
+  auth            Display commands for authenticating doctl with an account
+  balance         Display commands for retrieving your account balance
+  billing-history Display commands for retrieving your billing history
+  completion      Modify your shell so doctl commands autocomplete with TAB
+  compute         Display commands that manage infrastructure
+  databases       Display commands that manage databases
+  help            Help about any command
+  invoice         Display commands for retrieving invoices for your account
+  kubernetes      Displays commands to manage Kubernetes clusters and configurations
+  projects        Manage projects and assign resources to them
+  registry        [EA] Display commands for working with container registries
+  version         Show the current version
+  vpcs            Display commands that manage VPCs
 
 Flags:
   -t, --access-token string   API V2 access token
-  -u, --api-url string        Override default API V2 endpoint
-  -c, --config string         config file (default is $HOME/.config/doctl/config.yaml)
-      --context string        authentication context name
+  -u, --api-url string        Override default API endpoint
+  -c, --config string         Specify a custom config file (default "$HOME/.config/doctl/config.yaml")
+      --context string        Specify a custom authentication context name
   -h, --help                  help for doctl
-  -o, --output string         output format [text|json] (default "text")
-      --trace                 trace api access
-  -v, --verbose               verbose output
+  -o, --output string         Desired output format [text|json] (default "text")
+      --trace                 Show a log of network activity while performing a command
+  -v, --verbose               Enable verbose output
 
 Use "doctl [command] --help" for more information about a command.
 ```
