@@ -16,6 +16,7 @@ package displayers
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/digitalocean/doctl/do"
@@ -51,6 +52,7 @@ func (d *Droplet) ColMap() map[string]string {
 func (d *Droplet) KV() []map[string]interface{} {
 	out := []map[string]interface{}{}
 	for _, d := range d.Droplets {
+		sort.Strings(d.Tags)
 		tags := strings.Join(d.Tags, ",")
 		image := fmt.Sprintf("%s %s", d.Image.Distribution, d.Image.Name)
 		ip, _ := d.PublicIPv4()
