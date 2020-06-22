@@ -132,7 +132,11 @@ This allows `doctl` to add DigitalOcean container registry credentials to your D
 
 #### Arch Linux
 
-Arch users not using a package manager can install from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
+`doctl` is available in the official Arch Linux repository:
+
+    sudo pacman -S doctl
+
+As an alternative you can install it from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
 
 #### Nix supported OS
 
