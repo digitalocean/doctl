@@ -3,26 +3,27 @@ module github.com/digitalocean/doctl
 go 1.14
 
 require (
+	github.com/Microsoft/hcsshim v0.8.9 // indirect
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/creack/pty v1.1.7
 	github.com/digitalocean/godo v1.38.0
-	github.com/docker/cli v0.0.0-20200511172450-ab108430b268
-	github.com/docker/docker v17.12.0-ce-rc1.0.20200429205700-c3b3aedfa4ad+incompatible // indirect
+	github.com/docker/cli v0.0.0-20200622130859-87db43814b48
+	github.com/docker/docker v17.12.0-ce-rc1.0.20200531234253-77e06fda0c94+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0
 	github.com/gobwas/glob v0.2.3
-	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/mock v1.4.0
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/imdario/mergo v0.3.6 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/natefinch/pie v0.0.0-20170715172608-9a0d72014007
+	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/sclevine/spec v1.3.0
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
@@ -33,6 +34,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/protobuf v1.24.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8
