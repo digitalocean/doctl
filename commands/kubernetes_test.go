@@ -410,84 +410,6 @@ func TestKubernetesCreate(t *testing.T) {
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
-	})
-}
-
-func TestKubernetesCreateOneClicks(t *testing.T) {
-	testNodePool := testNodePool
-	testNodePool.Labels = map[string]string{
-		"key1": "value1",
-		"key2": "value2",
-	}
-	var inputLabels []string
-	for key, val := range testNodePool.Labels {
-		inputLabels = append(inputLabels, fmt.Sprintf("%s=%s", key, val))
-	}
-	sort.Strings(inputLabels)
-	testNodePool.AutoScale = true
-	testNodePool.MinNodes = 1
-	testNodePool.MaxNodes = 10
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		r := godo.KubernetesClusterCreateRequest{
-			Name:        testCluster.Name,
-			RegionSlug:  testCluster.RegionSlug,
-			VersionSlug: testCluster.VersionSlug,
-			Tags:        testCluster.Tags,
-			NodePools: []*godo.KubernetesNodePoolCreateRequest{
-				{
-					Name:      testNodePool.Name + "1",
-					Size:      testNodePool.Size,
-					Count:     testNodePool.Count,
-					Tags:      testNodePool.Tags,
-					Labels:    testNodePool.Labels,
-					AutoScale: testNodePool.AutoScale,
-					MinNodes:  testNodePool.MinNodes,
-					MaxNodes:  testNodePool.MaxNodes,
-				},
-				{
-					Name:   testNodePool.Name + "2",
-					Size:   testNodePool.Size,
-					Count:  testNodePool.Count,
-					Tags:   testNodePool.Tags,
-					Labels: map[string]string{},
-				},
-			},
-			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
-				StartTime: "00:00",
-				Day:       godo.KubernetesMaintenanceDayAny,
-			},
-			AutoUpgrade: true,
-		}
-		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
-
-		config.Args = append(config.Args, testCluster.Name)
-		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testCluster.RegionSlug)
-		config.Doit.Set(config.NS, doctl.ArgClusterVersionSlug, testCluster.VersionSlug)
-		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
-		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
-		config.Doit.Set(config.NS, doctl.ArgClusterNodePool, []string{
-			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s;label=%s;label=%s;auto-scale=%v;min-nodes=%d;max-nodes=%d",
-				testNodePool.Name+"1", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
-				inputLabels[0], inputLabels[1], testNodePool.AutoScale, testNodePool.MinNodes, testNodePool.MaxNodes,
-			),
-			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s",
-				testNodePool.Name+"2", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
-			),
-		})
-		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
-
-		// Test with no vpc-uuid specified
-		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
-		assert.NoError(t, err)
-
-		// Test with vpc-uuid specified
-		config.Doit.Set(config.NS, doctl.ArgClusterVPCUUID, "vpc-uuid")
-		r.VPCUUID = "vpc-uuid"
-		testCluster.VPCUUID = "vpc-uuid"
-		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
-		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
-		assert.NoError(t, err)
 
 		// Test with 1-clicks specified
 		config.Doit.Set(config.NS, doctl.ArgOneClicks, []string{"slug1","slug2"})
@@ -495,7 +417,6 @@ func TestKubernetesCreateOneClicks(t *testing.T) {
 		tm.oneClick.EXPECT().InstallKubernetes(testCluster.ID, []string{"slug1", "slug2"})
 		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
-
 	})
 }
 
