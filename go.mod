@@ -6,7 +6,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/creack/pty v1.1.7
-	github.com/digitalocean/godo v1.37.0
+	github.com/digitalocean/godo v1.38.0
 	github.com/docker/cli v0.0.0-20200511172450-ab108430b268
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200429205700-c3b3aedfa4ad+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
@@ -31,7 +31,7 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
 	golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
-	golang.org/x/net v0.0.0-20200528225125-3c3fba18258b // indirect
+	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/protobuf v1.24.0 // indirect

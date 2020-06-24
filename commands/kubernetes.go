@@ -267,6 +267,7 @@ After creating a cluster, a configuration context will be added to kubectl and m
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
 		"Machine size to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Possible values: see `doctl kubernetes options sizes`")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks,"", nil, "Comma-separated list of 1-Click Applications to install on the kubernetes cluster. To see a list of 1-Click Applications available run doctl kubernetes 1-click list")	
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"Number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
@@ -612,6 +613,20 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			notice("Cluster created, fetching credentials")
 			s.tryUpdateKubeconfig(kube, cluster.ID, clusterName, setCurrentContext)
 		}
+
+		oneClickApps, err := c.Doit.GetStringSlice(c.NS, doctl.ArgOneClicks) 
+		if err != nil {
+			return err
+		}
+		if len(oneClickApps) > 0 {
+			oneClicks := c.OneClicks()
+			messageResponse, err := oneClicks.InstallKubernetes(cluster.ID, oneClickApps)
+			if err != nil {
+				warn("Failed to kick off 1-Click Application(s) install")
+			} else {
+			notice(messageResponse)
+			}
+		} 
 
 		return displayClusters(c, true, *cluster)
 	}

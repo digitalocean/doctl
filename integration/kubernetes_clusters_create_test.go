@@ -69,6 +69,13 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				}
 
 				w.Write([]byte(kubeClustersConfigResponse))
+			case "/v2/1-clicks/kubernetes":
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(oneClickResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -98,6 +105,7 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				"some-cluster-name",
 				"--region", "mars",
 				"--version", "some-kube-version",
+				"--1-clicks", "slug1",
 			)
 
 			cmd.Env = append(os.Environ(),
@@ -189,6 +197,7 @@ Notice: Cluster is provisioning, waiting for cluster to be running
 Notice: Cluster created, fetching credentials
 Notice: Adding cluster credentials to kubeconfig file found in %q
 Notice: Setting current-context to some-context
+Notice: Some response message
 ID                 Name                 Region    Version              Auto Upgrade    Status     Node Pools
 some-cluster-id    some-cluster-name    mars      some-kube-version    false           running    frontend-pool
 `
@@ -283,4 +292,10 @@ contexts:
   name: some-context
 current-context: some-context
 `
+	oneClickResponse = `
+{
+	"message": "Some response message"
+}
+`
 )
+
