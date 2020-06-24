@@ -24,9 +24,12 @@ require (
 	github.com/mattn/go-isatty v0.0.4 // indirect
 	github.com/natefinch/pie v0.0.0-20170715172608-9a0d72014007
 	github.com/opencontainers/image-spec v1.0.1 // indirect
+	github.com/opencontainers/runc v1.0.0-rc90 // indirect
 	github.com/pelletier/go-toml v1.6.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sclevine/spec v1.3.0
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
+	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.4.0
@@ -34,9 +37,10 @@ require (
 	golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
 	golang.org/x/net v0.0.0-20200602114024-627f9648deb9 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sys v0.0.0-20200622214017-ed371f2e16b4 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
-	google.golang.org/protobuf v1.24.0 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools/v3 v3.0.2 // indirect
 	k8s.io/api v0.17.0
