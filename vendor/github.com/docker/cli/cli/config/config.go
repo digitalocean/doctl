@@ -113,11 +113,15 @@ func Load(configDir string) (*configfile.ConfigFile, error) {
 	}
 
 	// Can't find latest config file so check for the old one
-	confFile := filepath.Join(homedir.Get(), oldConfigfile)
-	if _, err := os.Stat(confFile); err != nil {
-		return configFile, nil //missing file is not an error
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return configFile, errors.Wrap(err, oldConfigfile)
 	}
-	file, err := os.Open(confFile)
+	filename = filepath.Join(homedir, oldConfigfile)
+	if _, err := os.Stat(filename); err != nil {
+		return configFile, nil // missing file is not an error
+	}
+	file, err := os.Open(filename)
 	if err != nil {
 		return configFile, errors.Wrap(err, filename)
 	}
