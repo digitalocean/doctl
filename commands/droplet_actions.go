@@ -134,7 +134,7 @@ In order to resize a Droplet, it must first be powered off.`
 		"resize <droplet-id>", "Resize a Droplet", dropletResizeDesc, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, "", false, "Resize disk")
-	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "New size")
+	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "New size", requiredOpt())
 	AddBoolFlag(cmdDropletActionResize, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionRebuild := CmdBuilder(cmd, RunDropletActionRebuild,
