@@ -133,8 +133,8 @@ In order to resize a Droplet, it must first be powered off.`
 	cmdDropletActionResize := CmdBuilder(cmd, RunDropletActionResize,
 		"resize <droplet-id>", "Resize a Droplet", dropletResizeDesc, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, "", false, "Resize disk")
-	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "New size", requiredOpt())
+	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, "", false, "Resize the Droplet's disk size in addition to its RAM and CPU.")
+	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "A slug indicating the new size for the Droplet (e.g. `s-2vcpu-2gb`). Run `doctl compute size list` for a list of valid sizes.", requiredOpt())
 	AddBoolFlag(cmdDropletActionResize, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionRebuild := CmdBuilder(cmd, RunDropletActionRebuild,
