@@ -81,7 +81,6 @@ See the [full reference documentation](https://www.digitalocean.com/docs/apis-cl
     - [Tutorials](#tutorials)
     - [doctl Releases](https://github.com/digitalocean/doctl/releases)
 
-
 ## Installing `doctl`
 
 ### Using a Package Manager (Preferred)
