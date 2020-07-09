@@ -304,6 +304,9 @@ const (
 
 	// 1-Click Args
 
+	// ArgOneClicks is the flag to pass in 1-click application slugs
+	ArgOneClicks = "1-clicks"
+
 	// ArgOneClickType is the type of 1-Click
 	ArgOneClickType = "type"
 )

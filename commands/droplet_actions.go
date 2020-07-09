@@ -123,11 +123,18 @@ Droplet actions are tasks that can be executed on a Droplet, such as rebooting, 
 	AddIntFlag(cmdDropletActionRestore, doctl.ArgImageID, "", 0, "Image ID", requiredOpt())
 	AddBoolFlag(cmdDropletActionRestore, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
+	dropletResizeDesc := `Use this command to resize a Droplet to a different plan.
+
+By default, this command will only increase or decrease the CPU and RAM of the Droplet, not its disk size. This can be reversed.
+
+To also increase the Droplet's disk size, pass the ` + "`--resize-disk`" + ` flag. This is a permanent change and cannot be reversed as a Droplet's disk size cannot be decreased.
+
+In order to resize a Droplet, it must first be powered off.`
 	cmdDropletActionResize := CmdBuilder(cmd, RunDropletActionResize,
-		"resize <droplet-id>", "Resize a Droplet", `Use this command to increase a Droplet's disk size. A Droplet's disk size cannot be reduced.`, Writer,
+		"resize <droplet-id>", "Resize a Droplet", dropletResizeDesc, Writer,
 		displayerType(&displayers.Action{}))
-	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, "", false, "Resize disk")
-	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "New size")
+	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, "", false, "Resize the Droplet's disk size in addition to its RAM and CPU.")
+	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "A slug indicating the new size for the Droplet (e.g. `s-2vcpu-2gb`). Run `doctl compute size list` for a list of valid sizes.", requiredOpt())
 	AddBoolFlag(cmdDropletActionResize, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 
 	cmdDropletActionRebuild := CmdBuilder(cmd, RunDropletActionRebuild,
