@@ -13,6 +13,8 @@
         - [Docker](#docker)
         - [Testing](#testing)
             - [Writing Tests](#writing-tests)
+              - [Unit tests](#unit-tests)
+              - [Integration tests](#integration-tests)
             - [`godo` mocks](#godo-mocks)
             - [Build Scripts](#build-scripts)
     - [Releasing](#releasing)
@@ -119,6 +121,8 @@ on github.
 In doctl, we have two kinds of tests: unit tests and integration tests. Both are run with Go's
 built-in `go test` tool.
 
+##### Unit tests
+
 Unit tests live in the `_test.go` files. The bulk of these tests live in the `commands` package,
 and exist to ensure that a CLI command produces an expected output. For each unit test, we
 typically rely on an accompanying mocked API call. These mocks are generated via `gomock`, and
@@ -154,6 +158,8 @@ Writing a unit test for a new command typically looks like this,
         })
     }
     ```
+
+##### Integration tests
 
 Integration tests live under the top-level `integration` directory. These tests exist to ensure
 that an invocation of a command though this CLI produces the expected output. These tests use a
