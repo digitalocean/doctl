@@ -64,6 +64,7 @@ type CmdConfig struct {
 	Registry          func() do.RegistryService
 	VPCs              func() do.VPCsService
 	OneClicks         func() do.OneClickService
+	Apps              func() do.AppsService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -111,6 +112,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Registry = func() do.RegistryService { return do.NewRegistryService(godoClient) }
 			c.VPCs = func() do.VPCsService { return do.NewVPCsService(godoClient) }
 			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(godoClient) }
+			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
 
 			return nil
 		},
