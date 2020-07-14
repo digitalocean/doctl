@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.39.0] - 2020-07-14
+
+- #345, #346 Add app platform support [beta] - @nanzhong
+
 ## [v1.38.0] - 2020-06-18
 
 - #341 Install 1-click applications on a Kubernetes cluster - @keladhruv

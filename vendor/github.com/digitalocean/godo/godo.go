@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.38.0"
+	libraryVersion = "1.39.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -46,6 +46,7 @@ type Client struct {
 	// Services used for communicating with the API
 	Account           AccountService
 	Actions           ActionsService
+	Apps              AppsService
 	Balance           BalanceService
 	BillingHistory    BillingHistoryService
 	CDNs              CDNService
@@ -186,6 +187,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
 	c.Account = &AccountServiceOp{client: c}
 	c.Actions = &ActionsServiceOp{client: c}
+	c.Apps = &AppsServiceOp{client: c}
 	c.Balance = &BalanceServiceOp{client: c}
 	c.BillingHistory = &BillingHistoryServiceOp{client: c}
 	c.CDNs = &CDNServiceOp{client: c}
