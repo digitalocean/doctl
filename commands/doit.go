@@ -127,6 +127,7 @@ func Execute() {
 // AddCommands adds sub commands to the base command.
 func addCommands() {
 	DoitCmd.AddCommand(Account())
+	DoitCmd.AddCommand(Apps())
 	DoitCmd.AddCommand(Auth())
 	DoitCmd.AddCommand(Balance())
 	DoitCmd.AddCommand(BillingHistory())
