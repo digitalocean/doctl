@@ -168,7 +168,7 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
-	specFile, err := os.Open(specPath)
+	specFile, err := os.Open(specPath) // guardrails-disable-line
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("Failed to open app spec: %s does not exist", specPath)
@@ -233,7 +233,7 @@ func RunAppsUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	specFile, err := os.Open(specPath)
+	specFile, err := os.Open(specPath) // guardrails-disable-line
 	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("Failed to open app spec: %s does not exist", specPath)
