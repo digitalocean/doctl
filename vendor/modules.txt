@@ -18,7 +18,7 @@ github.com/cpuguy83/go-md2man/md2man
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.38.0
+# github.com/digitalocean/godo v1.39.0
 ## explicit
 github.com/digitalocean/godo
 github.com/digitalocean/godo/util
@@ -162,7 +162,7 @@ github.com/spf13/viper
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a => golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
+# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 => golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
 ## explicit
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
@@ -174,7 +174,7 @@ golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/net v0.0.0-20200602114024-627f9648deb9
+# golang.org/x/net v0.0.0-20200707034311-ab3426394381
 ## explicit
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp

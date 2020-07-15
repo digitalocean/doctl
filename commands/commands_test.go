@@ -148,6 +148,7 @@ type testFn func(c *CmdConfig, tm *tcMocks)
 type tcMocks struct {
 	account           *domocks.MockAccountService
 	actions           *domocks.MockActionsService
+	apps              *domocks.MockAppsService
 	balance           *domocks.MockBalanceService
 	billingHistory    *domocks.MockBillingHistoryService
 	databases         *domocks.MockDatabasesService
@@ -185,6 +186,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	tm := &tcMocks{
 		account:           domocks.NewMockAccountService(ctrl),
 		actions:           domocks.NewMockActionsService(ctrl),
+		apps:              domocks.NewMockAppsService(ctrl),
 		balance:           domocks.NewMockBalanceService(ctrl),
 		billingHistory:    domocks.NewMockBillingHistoryService(ctrl),
 		keys:              domocks.NewMockKeysService(ctrl),
@@ -258,6 +260,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Registry:          func() do.RegistryService { return tm.registry },
 		VPCs:              func() do.VPCsService { return tm.vpcs },
 		OneClicks:         func() do.OneClickService { return tm.oneClick },
+		Apps:              func() do.AppsService { return tm.apps },
 	}
 
 	tFn(config, tm)
