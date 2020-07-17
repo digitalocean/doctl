@@ -1,5 +1,14 @@
 # Change Log
 
+## [v1.41.0] - 2020-07-17
+
+- #355 kubernetes: Add support for surge upgrades - @varshavaradarajan
+
+## [v1.40.0] - 2020-07-16
+
+- #347 Make Rate limits thread safe - @roidelapluie
+- #353 Reuse TCP connection - @itsksaurabh
+
 ## [v1.39.0] - 2020-07-14
 
 - #345, #346 Add app platform support [beta] - @nanzhong
