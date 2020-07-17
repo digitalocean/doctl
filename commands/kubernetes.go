@@ -262,6 +262,8 @@ After creating a cluster, a configuration context will be added to kubectl and m
 		"Kubernetes UUID. Must be the UUID of a valid VPC in the same region specified for the cluster.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
 		"Boolean specifying whether to enable auto-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", false,
+		"Boolean specifying whether to enable surge-upgrade for the cluster")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -304,6 +306,8 @@ This command updates the specified configuration values for the specified Kubern
 		"A comma-separated list of tags to apply to the cluster. Existing user-provided tags will be removed from the cluster if they are not specified.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgAutoUpgrade, "", false,
 		"Boolean specifying whether to enable auto-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSurgeUpgrade, "", false,
+		"Boolean specifying whether to enable surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Boolean specifying whether to update the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
@@ -1280,6 +1284,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.AutoUpgrade = autoUpgrade
 
+	surgeUpgrade, err := c.Doit.GetBool(c.NS, doctl.ArgSurgeUpgrade)
+	if err != nil {
+		return err
+	}
+	r.SurgeUpgrade = surgeUpgrade
+
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
@@ -1357,6 +1367,12 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.AutoUpgrade = autoUpgrade
+
+	surgeUpgrade, err := c.Doit.GetBool(c.NS, doctl.ArgSurgeUpgrade)
+	if err != nil {
+		return err
+	}
+	r.SurgeUpgrade = surgeUpgrade
 
 	return nil
 }
