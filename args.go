@@ -66,6 +66,8 @@ const (
 	ArgMaintenanceWindow = "maintenance-window"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
+	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
+	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
