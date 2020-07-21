@@ -64,6 +64,7 @@ var testInvoicesGet = &do.Invoice{
 				StartTime:        time.Date(2018, 6, 20, 8, 44, 38, 0, time.UTC),
 				EndTime:          time.Date(2018, 6, 21, 8, 44, 38, 0, time.UTC),
 				ProjectName:      "My project",
+				Category:         "iaas",
 			},
 			{
 				Product:          "Load Balancers",
@@ -77,6 +78,7 @@ var testInvoicesGet = &do.Invoice{
 				StartTime:        time.Date(2018, 6, 20, 8, 44, 38, 0, time.UTC),
 				EndTime:          time.Date(2018, 6, 21, 8, 44, 38, 0, time.UTC),
 				ProjectName:      "My Second Project",
+				Category:         "paas",
 			},
 		},
 	},
