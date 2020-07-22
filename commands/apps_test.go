@@ -311,9 +311,9 @@ func Test_parseAppSpec(t *testing.T) {
 		StaticSites: []godo.AppStaticSiteSpec{
 			{
 				Name: "static",
-				GitHub: godo.GitHubSourceSpec{
-					Repo:   "digitalocean/sample-gatsby",
-					Branch: "master",
+				Git: godo.GitSourceSpec{
+					RepoCloneURL: "git@github.com:digitalocean/sample-gatsby.git",
+					Branch:       "master",
 				},
 				Routes: []godo.AppRouteSpec{
 					{Path: "/static"},
@@ -337,8 +337,8 @@ func Test_parseAppSpec(t *testing.T) {
   "static_sites": [
     {
       "name": "static",
-      "github": {
-        "repo": "digitalocean/sample-gatsby",
+      "git": {
+        "repo_clone_url": "git@github.com:digitalocean/sample-gatsby.git",
         "branch": "master"
       },
       "routes": [
@@ -362,8 +362,8 @@ services:
     branch: master
 static_sites:
 - name: static
-  github:
-    repo: digitalocean/sample-gatsby
+  git:
+    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
     branch: master
   routes:
   - path: /static
