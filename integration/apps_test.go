@@ -537,6 +537,7 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 				}
 
 				assert.Equal(t, "RUN", req.URL.Query().Get("type"))
+				assert.Equal(t, "true", req.URL.Query().Get("follow"))
 
 				json.NewEncoder(w).Encode(&godo.AppLogs{LiveURL: logsURL})
 			case "/fake-logs":
@@ -562,6 +563,8 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 			testAppUUID,
 			testDeploymentUUID,
 			"service",
+			"--type=run",
+			"-f",
 		)
 
 		output, err := cmd.CombinedOutput()

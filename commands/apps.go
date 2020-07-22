@@ -158,6 +158,7 @@ Three types of logs are supported and can be configured with --`+doctl.ArgAppLog
 		aliasOpt("l"),
 	)
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "The type of logs.")
+	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Follow logs as they are emitted.")
 
 	return cmd
 }
@@ -349,8 +350,12 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	default:
 		return fmt.Errorf("Invalid log type %s", logTypeStr)
 	}
+	logFollow, err := c.Doit.GetBool(c.NS, doctl.ArgAppLogFollow)
+	if err != nil {
+		return err
+	}
 
-	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType)
+	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow)
 	if err != nil {
 		return err
 	}

@@ -36,8 +36,10 @@ const (
 	ArgActionType = "action-type"
 	// ArgAppSpec is a path to an app spec.
 	ArgAppSpec = "spec"
-	// ArgAppLogType the type of log..
+	// ArgAppLogType the type of log.
 	ArgAppLogType = "type"
+	// ArgAppLogFollow follow logs.
+	ArgAppLogFollow = "follow"
 	// ArgClusterName is a cluster name argument.
 	ArgClusterName = "cluster-name"
 	// ArgClusterVersionSlug is a cluster version argument.

@@ -31,7 +31,7 @@ type AppsService interface {
 	GetDeployment(appID, deploymentID string) (*godo.Deployment, error)
 	ListDeployments(appID string) ([]*godo.Deployment, error)
 
-	GetLogs(appID, deploymentID, component string, logType godo.AppLogType) (*godo.AppLogs, error)
+	GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool) (*godo.AppLogs, error)
 }
 
 type appsService struct {
@@ -110,8 +110,8 @@ func (s *appsService) ListDeployments(appID string) ([]*godo.Deployment, error) 
 	return deployments, nil
 }
 
-func (s *appsService) GetLogs(appID, deploymentID, component string, logType godo.AppLogType) (*godo.AppLogs, error) {
-	logs, _, err := s.client.Apps.GetLogs(s.ctx, appID, deploymentID, component, logType)
+func (s *appsService) GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool) (*godo.AppLogs, error) {
+	logs, _, err := s.client.Apps.GetLogs(s.ctx, appID, deploymentID, component, logType, follow)
 	if err != nil {
 		return nil, err
 	}
