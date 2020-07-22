@@ -35,7 +35,7 @@ func Apps() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "apps",
-			Aliases: []string{"a"},
+			Aliases: []string{"app", "a"},
 			Short:   "[Beta] Display commands for working with apps",
 			Long:    "[Beta] The subcommands of `doctl app` manage your apps.",
 			Hidden:  true,
