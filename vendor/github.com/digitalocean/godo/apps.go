@@ -36,7 +36,7 @@ type AppsService interface {
 	ListDeployments(ctx context.Context, appID string, opts *ListOptions) ([]*Deployment, *Response, error)
 	CreateDeployment(ctx context.Context, appID string) (*Deployment, *Response, error)
 
-	GetLogs(ctx context.Context, appID, deploymentID, component string, logType AppLogType) (*AppLogs, *Response, error)
+	GetLogs(ctx context.Context, appID, deploymentID, component string, logType AppLogType, follow bool) (*AppLogs, *Response, error)
 }
 
 // App represents an app.
@@ -263,8 +263,8 @@ func (s *AppsServiceOp) CreateDeployment(ctx context.Context, appID string) (*De
 }
 
 // GetLogs retrieves app logs.
-func (s *AppsServiceOp) GetLogs(ctx context.Context, appID, deploymentID, component string, logType AppLogType) (*AppLogs, *Response, error) {
-	url := fmt.Sprintf("%s/%s/deployments/%s/components/%s/logs?type=%s", appsBasePath, appID, deploymentID, component, logType)
+func (s *AppsServiceOp) GetLogs(ctx context.Context, appID, deploymentID, component string, logType AppLogType, follow bool) (*AppLogs, *Response, error) {
+	url := fmt.Sprintf("%s/%s/deployments/%s/components/%s/logs?type=%s&follow=%t", appsBasePath, appID, deploymentID, component, logType, follow)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, nil, err
