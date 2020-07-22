@@ -27,7 +27,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 // Apps creates the apps command.
@@ -158,6 +158,7 @@ Three types of logs are supported and can be configured with --`+doctl.ArgAppLog
 		aliasOpt("l"),
 	)
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "The type of logs.")
+	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Follow logs as they are emitted.")
 
 	return cmd
 }
@@ -349,8 +350,12 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	default:
 		return fmt.Errorf("Invalid log type %s", logTypeStr)
 	}
+	logFollow, err := c.Doit.GetBool(c.NS, doctl.ArgAppLogFollow)
+	if err != nil {
+		return err
+	}
 
-	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType)
+	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow)
 	if err != nil {
 		return err
 	}
@@ -379,13 +384,13 @@ func RunAppsGetLogs(c *CmdConfig) error {
 }
 
 func parseAppSpec(spec []byte) (*godo.AppSpec, error) {
-	var appSpec godo.AppSpec
-	err := json.Unmarshal(spec, &appSpec)
-	if err == nil {
-		return &appSpec, nil
+	jsonSpec, err := yaml.YAMLToJSON(spec)
+	if err != nil {
+		return nil, err
 	}
 
-	err = yaml.Unmarshal(spec, &appSpec)
+	var appSpec godo.AppSpec
+	err = json.Unmarshal(jsonSpec, &appSpec)
 	if err == nil {
 		return &appSpec, nil
 	}

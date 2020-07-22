@@ -10,6 +10,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -284,13 +285,95 @@ func TestRunAppsGetLogs(t *testing.T) {
 
 	for typeStr, logType := range types {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=..."}, nil)
+			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=..."}, nil)
 
 			config.Args = append(config.Args, appID, deploymentID, component)
 			config.Doit.Set(config.NS, doctl.ArgAppLogType, typeStr)
+			config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
 
 			err := RunAppsGetLogs(config)
 			require.NoError(t, err)
 		})
 	}
+}
+
+func Test_parseAppSpec(t *testing.T) {
+	expectedSpec := &godo.AppSpec{
+		Name: "test",
+		Services: []godo.AppServiceSpec{
+			{
+				Name: "web",
+				GitHub: godo.GitHubSourceSpec{
+					Repo:   "digitalocean/sample-golang",
+					Branch: "master",
+				},
+			},
+		},
+		StaticSites: []godo.AppStaticSiteSpec{
+			{
+				Name: "static",
+				Git: godo.GitSourceSpec{
+					RepoCloneURL: "git@github.com:digitalocean/sample-gatsby.git",
+					Branch:       "master",
+				},
+				Routes: []godo.AppRouteSpec{
+					{Path: "/static"},
+				},
+			},
+		},
+	}
+
+	t.Run("json", func(t *testing.T) {
+		spec, err := parseAppSpec([]byte(`{
+  "name": "test",
+  "services": [
+    {
+      "name": "web",
+      "github": {
+        "repo": "digitalocean/sample-golang",
+        "branch": "master"
+      }
+    }
+  ],
+  "static_sites": [
+    {
+      "name": "static",
+      "git": {
+        "repo_clone_url": "git@github.com:digitalocean/sample-gatsby.git",
+        "branch": "master"
+      },
+      "routes": [
+        {
+          "path": "/static"
+        }
+      ]
+    }
+  ]
+}`))
+		require.NoError(t, err)
+		assert.Equal(t, expectedSpec, spec)
+	})
+	t.Run("yaml", func(t *testing.T) {
+		spec, err := parseAppSpec([]byte(`
+name: test
+services:
+- name: web
+  github:
+    repo: digitalocean/sample-golang
+    branch: master
+static_sites:
+- name: static
+  git:
+    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
+    branch: master
+  routes:
+  - path: /static
+`))
+		require.NoError(t, err)
+		assert.Equal(t, expectedSpec, spec)
+	})
+	t.Run("invalid", func(t *testing.T) {
+		_, err := parseAppSpec([]byte("invalid spec"))
+		require.Error(t, err)
+	})
 }

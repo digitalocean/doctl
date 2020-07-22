@@ -153,16 +153,16 @@ func (mr *MockAppsServiceMockRecorder) ListDeployments(appID interface{}) *gomoc
 }
 
 // GetLogs mocks base method.
-func (m *MockAppsService) GetLogs(appID, deploymentID, component string, logType godo.AppLogType) (*godo.AppLogs, error) {
+func (m *MockAppsService) GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool) (*godo.AppLogs, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLogs", appID, deploymentID, component, logType)
+	ret := m.ctrl.Call(m, "GetLogs", appID, deploymentID, component, logType, follow)
 	ret0, _ := ret[0].(*godo.AppLogs)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLogs indicates an expected call of GetLogs.
-func (mr *MockAppsServiceMockRecorder) GetLogs(appID, deploymentID, component, logType interface{}) *gomock.Call {
+func (mr *MockAppsServiceMockRecorder) GetLogs(appID, deploymentID, component, logType, follow interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockAppsService)(nil).GetLogs), appID, deploymentID, component, logType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockAppsService)(nil).GetLogs), appID, deploymentID, component, logType, follow)
 }
