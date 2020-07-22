@@ -27,7 +27,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 // Apps creates the apps command.
@@ -379,13 +379,13 @@ func RunAppsGetLogs(c *CmdConfig) error {
 }
 
 func parseAppSpec(spec []byte) (*godo.AppSpec, error) {
-	var appSpec godo.AppSpec
-	err := json.Unmarshal(spec, &appSpec)
-	if err == nil {
-		return &appSpec, nil
+	jsonSpec, err := yaml.YAMLToJSON(spec)
+	if err != nil {
+		return nil, err
 	}
 
-	err = yaml.Unmarshal(spec, &appSpec)
+	var appSpec godo.AppSpec
+	err = json.Unmarshal(jsonSpec, &appSpec)
 	if err == nil {
 		return &appSpec, nil
 	}

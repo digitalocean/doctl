@@ -10,6 +10,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -293,4 +294,85 @@ func TestRunAppsGetLogs(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func Test_parseAppSpec(t *testing.T) {
+	expectedSpec := &godo.AppSpec{
+		Name: "test",
+		Services: []godo.AppServiceSpec{
+			{
+				Name: "web",
+				GitHub: godo.GitHubSourceSpec{
+					Repo:   "digitalocean/sample-golang",
+					Branch: "master",
+				},
+			},
+		},
+		StaticSites: []godo.AppStaticSiteSpec{
+			{
+				Name: "static",
+				GitHub: godo.GitHubSourceSpec{
+					Repo:   "digitalocean/sample-gatsby",
+					Branch: "master",
+				},
+				Routes: []godo.AppRouteSpec{
+					{Path: "/static"},
+				},
+			},
+		},
+	}
+
+	t.Run("json", func(t *testing.T) {
+		spec, err := parseAppSpec([]byte(`{
+  "name": "test",
+  "services": [
+    {
+      "name": "web",
+      "github": {
+        "repo": "digitalocean/sample-golang",
+        "branch": "master"
+      }
+    }
+  ],
+  "static_sites": [
+    {
+      "name": "static",
+      "github": {
+        "repo": "digitalocean/sample-gatsby",
+        "branch": "master"
+      },
+      "routes": [
+        {
+          "path": "/static"
+        }
+      ]
+    }
+  ]
+}`))
+		require.NoError(t, err)
+		assert.Equal(t, expectedSpec, spec)
+	})
+	t.Run("yaml", func(t *testing.T) {
+		spec, err := parseAppSpec([]byte(`
+name: test
+services:
+- name: web
+  github:
+    repo: digitalocean/sample-golang
+    branch: master
+static_sites:
+- name: static
+  github:
+    repo: digitalocean/sample-gatsby
+    branch: master
+  routes:
+  - path: /static
+`))
+		require.NoError(t, err)
+		assert.Equal(t, expectedSpec, spec)
+	})
+	t.Run("invalid", func(t *testing.T) {
+		_, err := parseAppSpec([]byte("invalid spec"))
+		require.Error(t, err)
+	})
 }
