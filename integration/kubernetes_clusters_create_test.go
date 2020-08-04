@@ -207,6 +207,7 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "region": "mars",
   "version": "some-kube-version",
   "auto_upgrade": false,
+  "surge_upgrade": false,
   "maintenance_policy": {
     "day": "any",
     "duration": "",
@@ -227,6 +228,7 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "region": "mars",
   "version": "some-kube-version",
   "auto_upgrade": false,
+  "surge_upgrade": false,
   "maintenance_policy": {
     "day": "any",
     "duration": "",

@@ -34,6 +34,12 @@ const (
 	ArgActionStatus = "status"
 	// ArgActionType is an action type argument.
 	ArgActionType = "action-type"
+	// ArgAppSpec is a path to an app spec.
+	ArgAppSpec = "spec"
+	// ArgAppLogType the type of log.
+	ArgAppLogType = "type"
+	// ArgAppLogFollow follow logs.
+	ArgAppLogFollow = "follow"
 	// ArgClusterName is a cluster name argument.
 	ArgClusterName = "cluster-name"
 	// ArgClusterVersionSlug is a cluster version argument.
@@ -62,6 +68,8 @@ const (
 	ArgMaintenanceWindow = "maintenance-window"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
+	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
+	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.

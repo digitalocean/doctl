@@ -32,7 +32,7 @@ func (i *Invoice) JSON(out io.Writer) error {
 
 func (i *Invoice) Cols() []string {
 	return []string{
-		"ResourceID", "ResourceUUID", "Product", "Description", "GroupDescription", "Amount", "Duration", "DurationUnit", "StartTime", "EndTime", "ProjectName",
+		"ResourceID", "ResourceUUID", "Product", "Description", "GroupDescription", "Amount", "Duration", "DurationUnit", "StartTime", "EndTime", "ProjectName", "Category",
 	}
 }
 
@@ -49,6 +49,7 @@ func (i *Invoice) ColMap() map[string]string {
 		"StartTime":        "Start Time",
 		"EndTime":          "End Time",
 		"ProjectName":      "Project Name",
+		"Category":         "Category",
 	}
 }
 
@@ -67,6 +68,7 @@ func (i *Invoice) KV() []map[string]interface{} {
 			"StartTime":        ii.StartTime.Format(time.RFC3339),
 			"EndTime":          ii.EndTime.Format(time.RFC3339),
 			"ProjectName":      ii.ProjectName,
+			"Category":         ii.Category,
 		}
 		out = append(out, x)
 	}
