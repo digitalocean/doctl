@@ -152,6 +152,7 @@ func TestRunAppsDelete(t *testing.T) {
 		tm.apps.EXPECT().Delete(app.ID).Times(1).Return(nil)
 
 		config.Args = append(config.Args, app.ID)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		err := RunAppsDelete(config)
 		require.NoError(t, err)
