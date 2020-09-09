@@ -52,7 +52,7 @@ func Apps() *Command {
 		aliasOpt("c"),
 		displayerType(&displayers.Apps{}),
 	)
-	AddStringFlag(create, doctl.ArgAppSpec, "", "", "Path to an app spec in json or yaml format.", requiredOpt())
+	AddStringFlag(create, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format.", requiredOpt())
 
 	CmdBuilder(
 		cmd,
@@ -90,7 +90,7 @@ Only basic information is included with the text output format. For complete app
 		aliasOpt("u"),
 		displayerType(&displayers.Apps{}),
 	)
-	AddStringFlag(update, doctl.ArgAppSpec, "", "", "Path to an app spec in json or yaml format.", requiredOpt())
+	AddStringFlag(update, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format.", requiredOpt())
 
 	deleteApp := CmdBuilder(
 		cmd,
@@ -161,6 +161,8 @@ Three types of logs are supported and can be configured with --`+doctl.ArgAppLog
 	AddStringFlag(logs, doctl.ArgAppDeployment, "", "", "The deployment ID. Defaults to current deployment.")
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "The type of logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Follow logs as they are emitted.")
+
+	cmd.AddCommand(appsSpec())
 
 	return cmd
 }
@@ -420,5 +422,114 @@ func parseAppSpec(spec []byte) (*godo.AppSpec, error) {
 		return &appSpec, nil
 	}
 
-	return nil, errors.New("Failed to parse app spec: not in json or yaml format")
+	return nil, errors.New("Failed to parse app spec: not in JSON or YAML format")
+}
+
+func appsSpec() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "spec",
+			Short: "Display commands for working with app specs",
+			Long:  "The subcommands of `doctl app spec` manage your app specs.",
+		},
+	}
+
+	getCmd := CmdBuilder(cmd, RunAppsSpecGet, "get <app id>", "Retrieve an application's spec", `Use this command to retrieve the latest spec of an app.
+	
+Optionally, pass a deployment ID to get the spec of that specific deployment.`, Writer)
+	AddStringFlag(getCmd, doctl.ArgDeploymentID, "", "", "optional: a deployment ID")
+	AddStringFlag(getCmd, doctl.ArgFormat, "", "yaml", `the format to output the spec as; either "yaml" or "json"`)
+
+	CmdBuilder(cmd, RunAppsSpecValidate(os.Stdin), "validate <spec file>", "Validate an application spec", `Use this command to check whether a given app spec (YAML or JSON) is valid.
+	
+You may pass - as the filename to read from stdin.`, Writer)
+
+	return cmd
+}
+
+// RunAppsSpecGet gets the spec for an app
+func RunAppsSpecGet(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	appID := c.Args[0]
+	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgDeploymentID)
+	if err != nil {
+		return err
+	}
+
+	format, err := c.Doit.GetString(c.NS, doctl.ArgFormat)
+	if err != nil {
+		return err
+	}
+
+	var spec *godo.AppSpec
+	if deploymentID == "" {
+		app, err := c.Apps().Get(appID)
+		if err != nil {
+			return err
+		}
+		spec = app.Spec
+	} else {
+		deployment, err := c.Apps().GetDeployment(appID, deploymentID)
+		if err != nil {
+			return err
+		}
+		spec = deployment.Spec
+	}
+
+	switch format {
+	case "json":
+		e := json.NewEncoder(c.Out)
+		e.SetIndent("", "  ")
+		return e.Encode(spec)
+	case "yaml":
+		yaml, err := yaml.Marshal(spec)
+		if err != nil {
+			return fmt.Errorf("marshaling the spec as yaml: %v", err)
+		}
+		_, err = c.Out.Write(yaml)
+		return err
+	default:
+		return fmt.Errorf("invalid spec format %q, must be one of: json, yaml", format)
+	}
+}
+
+// RunAppsSpecValidate validates an app spec file
+func RunAppsSpecValidate(stdin io.Reader) func(c *CmdConfig) error {
+	return func(c *CmdConfig) error {
+		if len(c.Args) < 1 {
+			return doctl.NewMissingArgsErr(c.NS)
+		}
+
+		specPath := c.Args[0]
+		var spec io.Reader
+		if specPath == "-" {
+			spec = stdin
+		} else {
+			specFile, err := os.Open(specPath) // guardrails-disable-line
+			if err != nil {
+				if os.IsNotExist(err) {
+					return fmt.Errorf("Failed to open app spec: %s does not exist", specPath)
+				}
+				return fmt.Errorf("Failed to open app spec: %w", err)
+			}
+			defer specFile.Close()
+			spec = specFile
+		}
+
+		specBytes, err := ioutil.ReadAll(spec)
+		if err != nil {
+			return fmt.Errorf("Failed to read app spec: %w", err)
+		}
+
+		_, err = parseAppSpec(specBytes)
+		if err != nil {
+			return err
+		}
+
+		c.Out.Write([]byte("The spec is valid.\n"))
+		return nil
+	}
 }

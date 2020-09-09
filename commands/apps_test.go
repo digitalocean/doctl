@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -27,6 +28,7 @@ func TestAppsCommand(t *testing.T) {
 		"get-deployment",
 		"list-deployments",
 		"logs",
+		"spec",
 	)
 }
 
@@ -299,6 +301,50 @@ func TestRunAppsGetLogs(t *testing.T) {
 	}
 }
 
+const (
+	validJSONSpec = `{
+	"name": "test",
+	"services": [
+		{
+			"name": "web",
+			"github": {
+				"repo": "digitalocean/sample-golang",
+				"branch": "master"
+			}
+		}
+	],
+	"static_sites": [
+		{
+			"name": "static",
+			"git": {
+				"repo_clone_url": "git@github.com:digitalocean/sample-gatsby.git",
+				"branch": "master"
+			},
+			"routes": [
+				{
+				"path": "/static"
+				}
+			]
+		}
+	]
+}`
+	validYAMLSpec = `
+name: test
+services:
+- name: web
+  github:
+    repo: digitalocean/sample-golang
+    branch: master
+static_sites:
+- name: static
+  git:
+    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
+    branch: master
+  routes:
+  - path: /static
+`
+)
+
 func Test_parseAppSpec(t *testing.T) {
 	expectedSpec := &godo.AppSpec{
 		Name: "test",
@@ -326,56 +372,159 @@ func Test_parseAppSpec(t *testing.T) {
 	}
 
 	t.Run("json", func(t *testing.T) {
-		spec, err := parseAppSpec([]byte(`{
-  "name": "test",
-  "services": [
-    {
-      "name": "web",
-      "github": {
-        "repo": "digitalocean/sample-golang",
-        "branch": "master"
-      }
-    }
-  ],
-  "static_sites": [
-    {
-      "name": "static",
-      "git": {
-        "repo_clone_url": "git@github.com:digitalocean/sample-gatsby.git",
-        "branch": "master"
-      },
-      "routes": [
-        {
-          "path": "/static"
-        }
-      ]
-    }
-  ]
-}`))
+		spec, err := parseAppSpec([]byte(validJSONSpec))
 		require.NoError(t, err)
 		assert.Equal(t, expectedSpec, spec)
 	})
 	t.Run("yaml", func(t *testing.T) {
-		spec, err := parseAppSpec([]byte(`
-name: test
-services:
-- name: web
-  github:
-    repo: digitalocean/sample-golang
-    branch: master
-static_sites:
-- name: static
-  git:
-    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
-    branch: master
-  routes:
-  - path: /static
-`))
+		spec, err := parseAppSpec([]byte(validYAMLSpec))
 		require.NoError(t, err)
 		assert.Equal(t, expectedSpec, spec)
 	})
 	t.Run("invalid", func(t *testing.T) {
 		_, err := parseAppSpec([]byte("invalid spec"))
 		require.Error(t, err)
+	})
+}
+
+func TestRunAppSpecValidate(t *testing.T) {
+	validYAMLSpec := ``
+
+	tcs := []struct {
+		name   string
+		testFn testFn
+	}{
+		{
+			name: "stdin yaml",
+			testFn: func(config *CmdConfig, tm *tcMocks) {
+				config.Args = append(config.Args, "-")
+
+				err := RunAppsSpecValidate(bytes.NewBufferString(validYAMLSpec))(config)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "stdin json",
+			testFn: func(config *CmdConfig, tm *tcMocks) {
+				config.Args = append(config.Args, "-")
+
+				err := RunAppsSpecValidate(bytes.NewBufferString(validJSONSpec))(config)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "file yaml",
+			testFn: func(config *CmdConfig, tm *tcMocks) {
+				file, err := ioutil.TempFile("", "doctl-test")
+				require.NoError(t, err)
+				defer func() {
+					_ = os.Remove(file.Name())
+				}()
+				config.Args = append(config.Args, file.Name())
+
+				_, err = file.WriteString(validYAMLSpec)
+				require.NoError(t, err)
+
+				err = RunAppsSpecValidate(nil)(config)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "stdin invalid",
+			testFn: func(config *CmdConfig, tm *tcMocks) {
+				config.Args = append(config.Args, "-")
+
+				err := RunAppsSpecValidate(bytes.NewBufferString("hello"))(config)
+				require.Error(t, err)
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, tc.testFn)
+		})
+	}
+}
+
+func TestRunAppSpecGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		app := &godo.App{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+		}
+
+		tm.apps.EXPECT().Get(app.ID).Times(2).Return(app, nil)
+
+		t.Run("yaml", func(t *testing.T) {
+			var buf bytes.Buffer
+			config.Doit.Set(config.NS, doctl.ArgFormat, "yaml")
+			config.Args = append(config.Args, app.ID)
+			config.Out = &buf
+
+			err := RunAppsSpecGet(config)
+			require.NoError(t, err)
+			require.Equal(t, `name: test
+services:
+- git: {}
+  github:
+    branch: master
+    repo: digitalocean/doctl
+  name: service
+`, buf.String())
+		})
+
+		t.Run("json", func(t *testing.T) {
+			var buf bytes.Buffer
+			config.Doit.Set(config.NS, doctl.ArgFormat, "json")
+			config.Args = append(config.Args, app.ID)
+			config.Out = &buf
+
+			err := RunAppsSpecGet(config)
+			require.NoError(t, err)
+			require.Equal(t, `{
+  "services": [
+    {
+      "name": "service",
+      "git": {},
+      "github": {
+        "repo": "digitalocean/doctl",
+        "branch": "master"
+      }
+    }
+  ],
+  "name": "test"
+}
+`, buf.String())
+		})
+	})
+
+	t.Run("with-deployment", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			appID := uuid.New().String()
+			deployment := &godo.Deployment{
+				ID:   uuid.New().String(),
+				Spec: &testAppSpec,
+			}
+
+			tm.apps.EXPECT().GetDeployment(appID, deployment.ID).Times(1).Return(deployment, nil)
+
+			var buf bytes.Buffer
+			config.Doit.Set(config.NS, doctl.ArgFormat, "yaml")
+			config.Doit.Set(config.NS, doctl.ArgDeploymentID, deployment.ID)
+			config.Args = append(config.Args, appID)
+			config.Out = &buf
+
+			err := RunAppsSpecGet(config)
+			require.NoError(t, err)
+			require.Equal(t, `name: test
+services:
+- git: {}
+  github:
+    branch: master
+    repo: digitalocean/doctl
+  name: service
+`, buf.String())
+		})
 	})
 }
