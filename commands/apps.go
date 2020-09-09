@@ -92,7 +92,7 @@ Only basic information is included with the text output format. For complete app
 	)
 	AddStringFlag(update, doctl.ArgAppSpec, "", "", "Path to an app spec in json or yaml format.", requiredOpt())
 
-	CmdBuilder(
+	deleteApp := CmdBuilder(
 		cmd,
 		RunAppsDelete,
 		"delete <app id>",
@@ -103,6 +103,7 @@ This permanently deletes the app and all its associated deployments.`,
 		Writer,
 		aliasOpt("d"),
 	)
+	AddBoolFlag(deleteApp, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the App without a confirmation prompt")
 
 	CmdBuilder(
 		cmd,
@@ -270,7 +271,16 @@ func RunAppsDelete(c *CmdConfig) error {
 	}
 	id := c.Args[0]
 
-	err := c.Apps().Delete(id)
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if !force && AskForConfirmDelete("App", 1) != nil {
+		return fmt.Errorf("Operation aborted.")
+	}
+
+	err = c.Apps().Delete(id)
 	if err != nil {
 		return err
 	}

@@ -7,11 +7,15 @@ import ()
 
 // AppDatabaseSpec struct for AppDatabaseSpec
 type AppDatabaseSpec struct {
-	Name     string                `json:"name"`
-	Engine   AppDatabaseSpecEngine `json:"engine,omitempty"`
-	Version  string                `json:"version,omitempty"`
-	Size     string                `json:"size,omitempty"`
-	NumNodes int64                 `json:"num_nodes,omitempty"`
+	Name        string                `json:"name"`
+	Engine      AppDatabaseSpecEngine `json:"engine,omitempty"`
+	Version     string                `json:"version,omitempty"`
+	Size        string                `json:"size,omitempty"`
+	NumNodes    int64                 `json:"num_nodes,omitempty"`
+	Production  bool                  `json:"production,omitempty"`
+	ClusterName string                `json:"cluster_name,omitempty"`
+	DbName      string                `json:"db_name,omitempty"`
+	DbUser      string                `json:"db_user,omitempty"`
 }
 
 // AppDatabaseSpecEngine the model 'AppDatabaseSpecEngine'
@@ -27,62 +31,107 @@ const (
 
 // AppDomainSpec struct for AppDomainSpec
 type AppDomainSpec struct {
-	Domain string `json:"domain"`
+	Domain string            `json:"domain"`
+	Type   AppDomainSpecType `json:"type,omitempty"`
 }
 
-// AppRouteSpec struct for AppRouteSpec
-type AppRouteSpec struct {
-	Path string `json:"path,omitempty"`
-}
+// AppDomainSpecType the model 'AppDomainSpecType'
+type AppDomainSpecType string
 
-// AppServiceSpec struct for AppServiceSpec
-type AppServiceSpec struct {
+// List of AppDomainSpecType
+const (
+	APPDOMAINSPECTYPE_UNSPECIFIED AppDomainSpecType = "UNSPECIFIED"
+	APPDOMAINSPECTYPE_DEFAULT     AppDomainSpecType = "DEFAULT"
+	APPDOMAINSPECTYPE_PRIMARY     AppDomainSpecType = "PRIMARY"
+	APPDOMAINSPECTYPE_ALIAS       AppDomainSpecType = "ALIAS"
+)
+
+// AppJobSpec struct for AppJobSpec
+type AppJobSpec struct {
 	Name             string                  `json:"name"`
 	RunCommand       string                  `json:"run_command,omitempty"`
 	BuildCommand     string                  `json:"build_command,omitempty"`
-	HTTPPort         int64                   `json:"http_port,omitempty"`
 	DockerfilePath   string                  `json:"dockerfile_path,omitempty"`
 	Git              GitSourceSpec           `json:"git,omitempty"`
 	GitHub           GitHubSourceSpec        `json:"github,omitempty"`
 	Envs             []AppVariableDefinition `json:"envs,omitempty"`
 	InstanceSizeSlug string                  `json:"instance_size_slug,omitempty"`
 	InstanceCount    int64                   `json:"instance_count,omitempty"`
-	Routes           []AppRouteSpec          `json:"routes,omitempty"`
 	SourceDir        string                  `json:"source_dir,omitempty"`
 	EnvironmentSlug  string                  `json:"environment_slug,omitempty"`
 }
 
-// AppSpec struct for AppSpec
+// AppRouteSpec AppRouteSpec describes a criteria for routing HTTP traffic to the component.
+type AppRouteSpec struct {
+	// Path specifies an route by HTTP path prefix. Paths must start with / and must be unique within the app.
+	Path string `json:"path,omitempty"`
+}
+
+// AppServiceSpec struct for AppServiceSpec
+type AppServiceSpec struct {
+	Name             string                    `json:"name"`
+	RunCommand       string                    `json:"run_command,omitempty"`
+	BuildCommand     string                    `json:"build_command,omitempty"`
+	HTTPPort         int64                     `json:"http_port,omitempty"`
+	DockerfilePath   string                    `json:"dockerfile_path,omitempty"`
+	Git              GitSourceSpec             `json:"git,omitempty"`
+	GitHub           GitHubSourceSpec          `json:"github,omitempty"`
+	Envs             []AppVariableDefinition   `json:"envs,omitempty"`
+	InstanceSizeSlug string                    `json:"instance_size_slug,omitempty"`
+	InstanceCount    int64                     `json:"instance_count,omitempty"`
+	Routes           []AppRouteSpec            `json:"routes,omitempty"`
+	SourceDir        string                    `json:"source_dir,omitempty"`
+	EnvironmentSlug  string                    `json:"environment_slug,omitempty"`
+	HealthCheck      AppServiceSpecHealthCheck `json:"health_check,omitempty"`
+}
+
+// AppServiceSpecHealthCheck struct for AppServiceSpecHealthCheck
+type AppServiceSpecHealthCheck struct {
+	// Path is the route path used for the HTTP health check ping.
+	Path string `json:"path,omitempty"`
+}
+
+// AppSpec AppSpec declares the desired configuration of an application.
 type AppSpec struct {
-	Services    []AppServiceSpec    `json:"services,omitempty"`
+	// Services describe workloads which expose an HTTP service.
+	Services []AppServiceSpec `json:"services,omitempty"`
+	// Static sites describe content which can be rendered to static web assets.
 	StaticSites []AppStaticSiteSpec `json:"static_sites,omitempty"`
-	Databases   []AppDatabaseSpec   `json:"databases,omitempty"`
-	Workers     []AppWorkerSpec     `json:"workers,omitempty"`
-	Region      string              `json:"region,omitempty"`
-	Name        string              `json:"name"`
-	Domains     []AppDomainSpec     `json:"domains,omitempty"`
+	// Databases provide database instances which can provide persistence to workloads within the application.
+	Databases []AppDatabaseSpec `json:"databases,omitempty"`
+	// Workers describe workloads which do not expose HTTP routes publicly.
+	Workers []AppWorkerSpec `json:"workers,omitempty"`
+	Region  string          `json:"region,omitempty"`
+	Name    string          `json:"name"`
+	// Domains provides a set of hostnames where the application will be available.
+	Domains []AppDomainSpec `json:"domains,omitempty"`
+	// Jobs describe one-time or recurring workloads which do not expose HTTP routes publicly.
+	Jobs []AppJobSpec `json:"jobs,omitempty"`
 }
 
 // AppStaticSiteSpec struct for AppStaticSiteSpec
 type AppStaticSiteSpec struct {
 	Name            string                  `json:"name"`
+	DockerfilePath  string                  `json:"dockerfile_path,omitempty"`
 	BuildCommand    string                  `json:"build_command,omitempty"`
 	Git             GitSourceSpec           `json:"git,omitempty"`
 	GitHub          GitHubSourceSpec        `json:"github,omitempty"`
 	Envs            []AppVariableDefinition `json:"envs,omitempty"`
 	Routes          []AppRouteSpec          `json:"routes,omitempty"`
 	SourceDir       string                  `json:"source_dir,omitempty"`
+	OutputDir       string                  `json:"output_dir,omitempty"`
 	EnvironmentSlug string                  `json:"environment_slug,omitempty"`
+	IndexDocument   string                  `json:"index_document,omitempty"`
+	ErrorDocument   string                  `json:"error_document,omitempty"`
 }
 
 // AppVariableDefinition struct for AppVariableDefinition
 type AppVariableDefinition struct {
 	Value string        `json:"value,omitempty"`
 	Scope VariableScope `json:"scope,omitempty"`
-	// POSIX allows a broader env var definition, but we restrict to what is allowed by bash. http://git.savannah.gnu.org/cgit/bash.git/tree/general.h?h=bash-5.0#n124 Based on the POSIX spec and some casting to unsigned char in bash code I think this is restricted to ASCII (not unicode).
-	Key            string       `json:"key"`
-	Type           VariableType `json:"type,omitempty"`
-	EncryptedValue string       `json:"encrypted_value,omitempty"`
+	//
+	Key  string       `json:"key"`
+	Type VariableType `json:"type,omitempty"`
 }
 
 // AppWorkerSpec struct for AppWorkerSpec
