@@ -347,6 +347,62 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 	})
 })
 
+var _ = suite("apps/delete", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Add("content-type", "application/json")
+
+			switch req.URL.Path {
+			case "/v2/apps/" + testAppUUID:
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodDelete {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				json.NewEncoder(w).Encode(struct {
+					ID string `json:"id"`
+				}{testAppUUID})
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	it("deletes an app", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps",
+			"delete",
+			testAppUUID,
+			"--force",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expect.Equal("Notice: App deleted", strings.TrimSpace(string(output)))
+	})
+})
+
 var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
