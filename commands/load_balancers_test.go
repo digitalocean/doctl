@@ -17,6 +17,7 @@ var (
 			Region: &godo.Region{
 				Slug: "nyc1",
 			},
+			SizeSlug:       "lb-small",
 			StickySessions: &godo.StickySessions{},
 			HealthCheck:    &godo.HealthCheck{},
 		}}
@@ -84,6 +85,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 		r := godo.LoadBalancerRequest{
 			Name:       "lb-name",
 			Region:     "nyc1",
+			SizeSlug:   "lb-small",
 			DropletIDs: []int{1, 2},
 			StickySessions: &godo.StickySessions{
 				Type: "none",
@@ -110,6 +112,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 		tm.loadBalancers.EXPECT().Create(&r).Return(&testLoadBalancer, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "lb-small")
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
 		config.Doit.Set(config.NS, doctl.ArgVPCUUID, vpcUUID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
@@ -156,6 +159,7 @@ func TestLoadBalancerUpdate(t *testing.T) {
 
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "")
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
 		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
