@@ -5,9 +5,10 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	godo "github.com/digitalocean/godo"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockAppsService is a mock of AppsService interface.
