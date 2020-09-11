@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.46.0] - 2020-10-05
+
+- #373 load balancers: add LB size field, currently in closed beta - @anitgandhi
+
 ## [v1.45.0] - 2020-09-25
 
 **Note**: This release contains breaking changes to App Platform features currently in closed beta.
