@@ -147,7 +147,7 @@ Only basic information is included with the text output format. For complete app
 	logs := CmdBuilder(
 		cmd,
 		RunAppsGetLogs,
-		"logs <app id> <component name (default 'web')>",
+		"logs <app id> <component name (defaults to all components)>",
 		"Get logs",
 		`Get component logs for a deployment of an app.
 
