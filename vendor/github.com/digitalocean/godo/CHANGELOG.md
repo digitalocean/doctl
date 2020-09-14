@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.44.0] - 2020-09-08
+
+- #364 apps: support aggregate deployment logs - @kamaln7
+
 ## [v1.43.0] - 2020-09-08
 
 - #362 update apps types - @kamaln7
