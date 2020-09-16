@@ -38,6 +38,8 @@ const (
 	ArgAppSpec = "spec"
 	// ArgAppLogType the type of log.
 	ArgAppLogType = "type"
+	// ArgAppDeployment is the deployment ID.
+	ArgAppDeployment = "deployment"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
 	// ArgClusterName is a cluster name argument.

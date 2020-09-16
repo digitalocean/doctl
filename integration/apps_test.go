@@ -580,7 +580,20 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 			w.Header().Add("content-type", "application/json")
 
 			switch req.URL.Path {
-			case "/v2/apps/" + testAppUUID + "/deployments/" + testDeploymentUUID + "/components/service/logs":
+			case "/v2/apps/" + testAppUUID:
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				json.NewEncoder(w).Encode(testAppResponse)
+			case "/v2/apps/" + testAppUUID + "/deployments/" + testDeploymentUUID + "/logs":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -594,6 +607,7 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 
 				assert.Equal(t, "RUN", req.URL.Query().Get("type"))
 				assert.Equal(t, "true", req.URL.Query().Get("follow"))
+				assert.Equal(t, "service", req.URL.Query().Get("component_name"))
 
 				json.NewEncoder(w).Encode(&godo.AppLogs{LiveURL: logsURL})
 			case "/fake-logs":
@@ -610,15 +624,15 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 		logsURL = fmt.Sprintf("%s/fake-logs", server.URL)
 	})
 
-	it("gets an app deployment", func() {
+	it("gets an app's logs", func() {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
 			"apps",
 			"logs",
 			testAppUUID,
-			testDeploymentUUID,
 			"service",
+			"--deployment="+testDeploymentUUID,
 			"--type=run",
 			"-f",
 		)

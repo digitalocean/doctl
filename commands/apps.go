@@ -147,7 +147,7 @@ Only basic information is included with the text output format. For complete app
 	logs := CmdBuilder(
 		cmd,
 		RunAppsGetLogs,
-		"logs <app id> <deployment id> <component name>",
+		"logs <app id> <component name (defaults to all components)>",
 		"Get logs",
 		`Get component logs for a deployment of an app.
 
@@ -158,6 +158,7 @@ Three types of logs are supported and can be configured with --`+doctl.ArgAppLog
 		Writer,
 		aliasOpt("l"),
 	)
+	AddStringFlag(logs, doctl.ArgAppDeployment, "", "", "The deployment ID. Defaults to current deployment.")
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "The type of logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Follow logs as they are emitted.")
 
@@ -338,12 +339,26 @@ func RunAppsListDeployments(c *CmdConfig) error {
 
 // RunAppsGetLogs gets app logs for a given component.
 func RunAppsGetLogs(c *CmdConfig) error {
-	if len(c.Args) < 3 {
+	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	appID := c.Args[0]
-	deploymentID := c.Args[1]
-	component := c.Args[2]
+	var component string
+	if len(c.Args) >= 2 {
+		component = c.Args[1]
+	}
+
+	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
+	if err != nil {
+		return err
+	}
+	if deploymentID == "" {
+		app, err := c.Apps().Get(appID)
+		if err != nil {
+			return err
+		}
+		deploymentID = app.ActiveDeployment.ID
+	}
 
 	logTypeStr, err := c.Doit.GetString(c.NS, doctl.ArgAppLogType)
 	if err != nil {

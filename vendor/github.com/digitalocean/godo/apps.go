@@ -271,7 +271,11 @@ func (s *AppsServiceOp) CreateDeployment(ctx context.Context, appID string) (*De
 
 // GetLogs retrieves app logs.
 func (s *AppsServiceOp) GetLogs(ctx context.Context, appID, deploymentID, component string, logType AppLogType, follow bool) (*AppLogs, *Response, error) {
-	url := fmt.Sprintf("%s/%s/deployments/%s/components/%s/logs?type=%s&follow=%t", appsBasePath, appID, deploymentID, component, logType, follow)
+	url := fmt.Sprintf("%s/%s/deployments/%s/logs?type=%s&follow=%t", appsBasePath, appID, deploymentID, logType, follow)
+	if component != "" {
+		url = fmt.Sprintf("%s&component_name=%s", url, component)
+	}
+
 	req, err := s.client.NewRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, nil, err
