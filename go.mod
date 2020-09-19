@@ -22,6 +22,7 @@ require (
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
+	github.com/mitchellh/copystructure v1.0.0
 	github.com/natefinch/pie v0.0.0-20170715172608-9a0d72014007
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v1.0.0-rc90 // indirect
