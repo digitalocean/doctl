@@ -319,9 +319,4 @@ const (
 
 	// ArgOneClickType is the type of 1-Click
 	ArgOneClickType = "type"
-
-	// App Platform Args
-
-	// ArgDeploymentID is a deployment ID
-	ArgDeploymentID = "deployment-id"
 )

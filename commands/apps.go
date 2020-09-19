@@ -15,7 +15,6 @@ package commands
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -422,7 +421,7 @@ func parseAppSpec(spec []byte) (*godo.AppSpec, error) {
 		return &appSpec, nil
 	}
 
-	return nil, errors.New("Failed to parse app spec: not in JSON or YAML format")
+	return nil, fmt.Errorf("Failed to parse app spec: %v", err)
 }
 
 func appsSpec() *Command {
@@ -437,7 +436,7 @@ func appsSpec() *Command {
 	getCmd := CmdBuilder(cmd, RunAppsSpecGet, "get <app id>", "Retrieve an application's spec", `Use this command to retrieve the latest spec of an app.
 	
 Optionally, pass a deployment ID to get the spec of that specific deployment.`, Writer)
-	AddStringFlag(getCmd, doctl.ArgDeploymentID, "", "", "optional: a deployment ID")
+	AddStringFlag(getCmd, doctl.ArgAppDeployment, "", "", "optional: a deployment ID")
 	AddStringFlag(getCmd, doctl.ArgFormat, "", "yaml", `the format to output the spec as; either "yaml" or "json"`)
 
 	CmdBuilder(cmd, RunAppsSpecValidate(os.Stdin), "validate <spec file>", "Validate an application spec", `Use this command to check whether a given app spec (YAML or JSON) is valid.
@@ -454,7 +453,7 @@ func RunAppsSpecGet(c *CmdConfig) error {
 	}
 
 	appID := c.Args[0]
-	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgDeploymentID)
+	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
 	if err != nil {
 		return err
 	}

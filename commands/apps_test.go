@@ -470,6 +470,7 @@ services:
   github:
     branch: master
     repo: digitalocean/doctl
+  health_check: {}
   name: service
 `, buf.String())
 		})
@@ -490,7 +491,8 @@ services:
       "github": {
         "repo": "digitalocean/doctl",
         "branch": "master"
-      }
+      },
+      "health_check": {}
     }
   ],
   "name": "test"
@@ -511,7 +513,7 @@ services:
 
 			var buf bytes.Buffer
 			config.Doit.Set(config.NS, doctl.ArgFormat, "yaml")
-			config.Doit.Set(config.NS, doctl.ArgDeploymentID, deployment.ID)
+			config.Doit.Set(config.NS, doctl.ArgAppDeployment, deployment.ID)
 			config.Args = append(config.Args, appID)
 			config.Out = &buf
 
@@ -523,6 +525,7 @@ services:
   github:
     branch: master
     repo: digitalocean/doctl
+  health_check: {}
   name: service
 `, buf.String())
 		})
