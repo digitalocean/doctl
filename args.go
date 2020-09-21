@@ -84,6 +84,8 @@ const (
 	ArgKernelID = "kernel-id"
 	// ArgKubernetesLabel is a Kubernetes label argument.
 	ArgKubernetesLabel = "label"
+	// ArgKubernetesTaint is a Kubernetes taint argument.
+	ArgKubernetesTaint = "taint"
 	// ArgImage is an image argument.
 	ArgImage = "image"
 	// ArgImageID is an image id argument.

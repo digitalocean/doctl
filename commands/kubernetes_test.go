@@ -43,6 +43,7 @@ var (
 			Count:  3,
 			Tags:   []string{"hello", "bye"},
 			Labels: map[string]string{},
+			Taints: []godo.Taint{},
 			Nodes:  testNodes,
 		},
 	}
@@ -337,6 +338,7 @@ func TestKubernetesList(t *testing.T) {
 
 func TestKubernetesCreate(t *testing.T) {
 	testNodePool := testNodePool
+
 	testNodePool.Labels = map[string]string{
 		"key1": "value1",
 		"key2": "value2",
@@ -346,6 +348,24 @@ func TestKubernetesCreate(t *testing.T) {
 		inputLabels = append(inputLabels, fmt.Sprintf("%s=%s", key, val))
 	}
 	sort.Strings(inputLabels)
+
+	testNodePool.Taints = []godo.Taint{
+		{
+			Key:    "key1",
+			Value:  "value1",
+			Effect: "NoSchedule",
+		},
+		{
+			Key:    "key2",
+			Value:  "value2",
+			Effect: "NoExecute",
+		},
+	}
+	var inputTaints []string
+	for _, taint := range testNodePool.Taints {
+		inputTaints = append(inputTaints, taint.String())
+	}
+
 	testNodePool.AutoScale = true
 	testNodePool.MinNodes = 1
 	testNodePool.MaxNodes = 10
@@ -363,6 +383,7 @@ func TestKubernetesCreate(t *testing.T) {
 					Count:     testNodePool.Count,
 					Tags:      testNodePool.Tags,
 					Labels:    testNodePool.Labels,
+					Taints:    testNodePool.Taints,
 					AutoScale: testNodePool.AutoScale,
 					MinNodes:  testNodePool.MinNodes,
 					MaxNodes:  testNodePool.MaxNodes,
@@ -373,6 +394,7 @@ func TestKubernetesCreate(t *testing.T) {
 					Count:  testNodePool.Count,
 					Tags:   testNodePool.Tags,
 					Labels: map[string]string{},
+					Taints: []godo.Taint{},
 				},
 			},
 			MaintenancePolicy: &godo.KubernetesMaintenancePolicy{
@@ -389,9 +411,9 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgClusterNodePool, []string{
-			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s;label=%s;label=%s;auto-scale=%v;min-nodes=%d;max-nodes=%d",
+			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s;label=%s;label=%s;taint=%s;taint=%s;auto-scale=%v;min-nodes=%d;max-nodes=%d",
 				testNodePool.Name+"1", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
-				inputLabels[0], inputLabels[1], testNodePool.AutoScale, testNodePool.MinNodes, testNodePool.MaxNodes,
+				inputLabels[0], inputLabels[1], inputTaints[0], inputTaints[1], testNodePool.AutoScale, testNodePool.MinNodes, testNodePool.MaxNodes,
 			),
 			fmt.Sprintf("name=%s;size=%s;count=%d;tag=%s;tag=%s",
 				testNodePool.Name+"2", testNodePool.Size, testNodePool.Count, testNodePool.Tags[0], testNodePool.Tags[1],
@@ -662,6 +684,18 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		"key1": "value1",
 		"key2": "value2",
 	}
+	testNodePool.Taints = []godo.Taint{
+		{
+			Key:    "key1",
+			Value:  "value1",
+			Effect: "NoSchedule",
+		},
+		{
+			Key:    "key2",
+			Value:  "value2",
+			Effect: "NoExecute",
+		},
+	}
 	testNodePool.AutoScale = true
 	testNodePool.MinNodes = 1
 	testNodePool.MaxNodes = 10
@@ -674,6 +708,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 			Count:     testNodePool.Count,
 			Tags:      testNodePool.Tags,
 			Labels:    testNodePool.Labels,
+			Taints:    testNodePool.Taints,
 			AutoScale: testNodePool.AutoScale,
 			MinNodes:  testNodePool.MinNodes,
 			MaxNodes:  testNodePool.MaxNodes,
@@ -687,6 +722,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesLabel, testNodePool.Labels)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesTaint, taintsToSlice(testNodePool.Taints))
 		config.Doit.Set(config.NS, doctl.ArgNodePoolAutoScale, testNodePool.AutoScale)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolMinNodes, testNodePool.MinNodes)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolMaxNodes, testNodePool.MaxNodes)
@@ -702,6 +738,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 			Count:     testNodePool.Count,
 			Tags:      testNodePool.Tags,
 			Labels:    testNodePool.Labels,
+			Taints:    testNodePool.Taints,
 			AutoScale: testNodePool.AutoScale,
 			MinNodes:  testNodePool.MinNodes,
 			MaxNodes:  testNodePool.MaxNodes,
@@ -716,6 +753,7 @@ func TestKubernetesNodePool_Create(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 		config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 		config.Doit.Set(config.NS, doctl.ArgKubernetesLabel, testNodePool.Labels)
+		config.Doit.Set(config.NS, doctl.ArgKubernetesTaint, taintsToSlice(testNodePool.Taints))
 		config.Doit.Set(config.NS, doctl.ArgNodePoolAutoScale, testNodePool.AutoScale)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolMinNodes, testNodePool.MinNodes)
 		config.Doit.Set(config.NS, doctl.ArgNodePoolMaxNodes, testNodePool.MaxNodes)
@@ -731,6 +769,7 @@ func createTestNodePoolUpdateRequest() godo.KubernetesNodePoolUpdateRequest {
 		Count:  &testNodePool.Count,
 		Tags:   testNodePool.Tags,
 		Labels: map[string]string{},
+		Taints: nil,
 	}
 }
 
@@ -852,6 +891,38 @@ func TestKubernetesNodePool_Update(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
 			config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
 			config.Doit.Set(config.NS, doctl.ArgKubernetesLabel, testNodePool.Labels)
+
+			err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
+			assert.NoError(t, err)
+		})
+	})
+	t.Run("with taints", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			testNodePool := testNodePool
+			testNodePool.Taints = []godo.Taint{
+				{
+					Key:    "key1",
+					Value:  "value1",
+					Effect: "NoSchedule",
+				},
+				{
+					Key:    "key2",
+					Value:  "value2",
+					Effect: "NoExecute",
+				},
+			}
+
+			r := createTestNodePoolUpdateRequest()
+			r.Taints = &testNodePool.Taints
+
+			tm.kubernetes.EXPECT().UpdateNodePool(testCluster.ID, testNodePool.ID, &r).Return(&testNodePool, nil)
+
+			config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
+
+			config.Doit.Set(config.NS, doctl.ArgNodePoolName, testNodePool.Name)
+			config.Doit.Set(config.NS, doctl.ArgNodePoolCount, testNodePool.Count)
+			config.Doit.Set(config.NS, doctl.ArgTag, testNodePool.Tags)
+			config.Doit.Set(config.NS, doctl.ArgKubernetesTaint, taintsToSlice(testNodePool.Taints))
 
 			err := testK8sCmdService().RunKubernetesNodePoolUpdate(config)
 			assert.NoError(t, err)
@@ -1128,4 +1199,90 @@ func TestK8sOneClickListNoType(t *testing.T) {
 		err := RunKubernetesOneClickList(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestParseTaints(t *testing.T) {
+	const colonSepErrSubstring = "does not have a single colon separator"
+	const TooManyEqualSignsErrSubstring = "must not consist of more than one equal sign"
+
+	tests := []struct {
+		name             string
+		taints           []string
+		wantErrSubstring string
+		wantTaints       []godo.Taint
+	}{
+		{
+			name:             "empty taint",
+			taints:           []string{""},
+			wantErrSubstring: colonSepErrSubstring,
+		},
+		{
+			name:             "no colon separator",
+			taints:           []string{"key=value"},
+			wantErrSubstring: colonSepErrSubstring,
+		},
+		{
+			name:             "too many equal signs",
+			taints:           []string{"key=value=foo:NoSchedule"},
+			wantErrSubstring: TooManyEqualSignsErrSubstring,
+		},
+		{
+			name:   "taint with value",
+			taints: []string{"key=value:NoSchedule"},
+			wantTaints: []godo.Taint{
+				{
+					Key:    "key",
+					Value:  "value",
+					Effect: "NoSchedule",
+				},
+			},
+		},
+		{
+			name:   "taint without value",
+			taints: []string{"key:NoSchedule"},
+			wantTaints: []godo.Taint{
+				{
+					Key:    "key",
+					Value:  "",
+					Effect: "NoSchedule",
+				},
+			},
+		},
+		{
+			name:   "multiple taints",
+			taints: []string{"key:NoSchedule", "key=value:NoExecute"},
+			wantTaints: []godo.Taint{
+				{
+					Key:    "key",
+					Value:  "",
+					Effect: "NoSchedule",
+				},
+				{
+					Key:    "key",
+					Value:  "value",
+					Effect: "NoExecute",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			taints, err := parseTaints(tt.taints)
+			if tt.wantErrSubstring != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.wantErrSubstring)
+			} else {
+				assert.Equal(t, tt.wantTaints, taints)
+			}
+		})
+	}
+}
+
+func taintsToSlice(taints []godo.Taint) []string {
+	res := make([]string, 0, len(taints))
+	for _, taint := range taints {
+		res = append(res, taint.String())
+	}
+	return res
 }
