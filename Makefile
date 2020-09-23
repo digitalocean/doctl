@@ -53,6 +53,11 @@ build: _build
 	@mv $(OUT_D)/doctl_$(GOOS)_$(GOARCH) $(OUT_D)/doctl
 	@echo "installed as $(OUT_D)/doctl"
 
+.PHONY: native
+native: build
+	@echo ""
+	@echo "==> The 'native' target is deprecated. Use 'make build'"
+
 .PHONY: _build_linux_amd64
 _build_linux_amd64: GOOS = linux
 _build_linux_amd64: GOARCH = amd64
