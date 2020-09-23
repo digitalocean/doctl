@@ -1,20 +1,35 @@
-# docker build -t doctl_local --build-arg DOCTL_VERSION=1.23.1 .
-#
-# This Dockerfile exists so casual uses of `docker build` and `docker run` do something sane.
-# We don't recommend using it: If you want to develop in docker, please use `make docker_build`
-# instead.
+# Step 1: Build
+FROM golang:1.14-alpine AS build
 
-FROM alpine:3.8
+ARG GOARCH=amd64
+ENV OUT_D /out
 
-ARG DOCTL_VERSION
-ENV DOCTL_VERSION=$DOCTL_VERSION
+RUN mkdir -p /out
+RUN mkdir -p /go/src/github.com/digitalocean/doctl
+ADD . /go/src/github.com/digitalocean/doctl/
 
-RUN apk add --no-cache curl
+RUN  apk add --update  --no-cache \
+     bash \
+     coreutils \
+     git \
+     libc6-compat \
+     make
 
-RUN mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
+RUN cd /go/src/github.com/digitalocean/doctl && \
+    make native GOARCH=$GOARCH
+
+# Step 2: App
+FROM alpine:3.12
+
+RUN apk add --update --no-cache \
+        ca-certificates \
+        libc6-compat \
+        openssh
 
 WORKDIR /app
+COPY --from=build /out/doctl /app/doctl
 
-RUN curl -L https://github.com/digitalocean/doctl/releases/download/v${DOCTL_VERSION}/doctl-${DOCTL_VERSION}-linux-amd64.tar.gz  | tar xz
+RUN adduser -D user
+USER user:user
 
-ENTRYPOINT ["./doctl"]
+ENTRYPOINT ["/app/doctl"]

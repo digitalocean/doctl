@@ -58,20 +58,18 @@ _build_linux_amd64: GOOS = linux
 _build_linux_amd64: GOARCH = amd64
 _build_linux_amd64: _build
 
-.PHONY: _base_docker_cntr
-_base_docker_cntr:
-	@docker build -f Dockerfile.build . -t doctl_builder
-
 .PHONY: docker_build
-docker_build: _base_docker_cntr
+docker_build:
 	@echo "==> build doctl in local docker container"
 	@echo ""
 	@mkdir -p $(OUT_D)
-	@docker build -f Dockerfile.cntr . -t doctl_local
+	@docker build -f Dockerfile \
+		--build-arg GOARCH=$(GOARCH) \
+		. -t doctl_local
 	@docker run --rm \
 		-v $(OUT_D):/copy \
-		-it --entrypoint /usr/bin/rsync \
-		doctl_local -av /app/ /copy/
+		-it --entrypoint /bin/cp \
+		doctl_local /app/doctl /copy/
 	@docker run --rm \
 		-v $(OUT_D):/copy \
 		-it --entrypoint /bin/chown \
