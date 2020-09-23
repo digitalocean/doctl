@@ -16,7 +16,7 @@ RUN  apk add --update  --no-cache \
      make
 
 RUN cd /go/src/github.com/digitalocean/doctl && \
-    make native GOARCH=$GOARCH
+    make build GOARCH=$GOARCH
 
 # Step 2: App
 FROM alpine:3.12

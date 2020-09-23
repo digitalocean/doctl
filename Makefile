@@ -46,8 +46,8 @@ _build:
 	@OUT_D=${OUT_D} GOOS=${GOOS} GOARCH=${GOARCH} scripts/_build.sh
 	@echo "built $(OUT_D)/doctl_$(GOOS)_$(GOARCH)"
 
-.PHONY: native
-native: _build
+.PHONY: build
+build: _build
 	@echo "==> build local version"
 	@echo ""
 	@mv $(OUT_D)/doctl_$(GOOS)_$(GOARCH) $(OUT_D)/doctl
