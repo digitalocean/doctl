@@ -32,9 +32,11 @@ ifeq ($(UNAME_S),Darwin)
   GOOS = darwin
 endif
 
-GOARCH = amd64
-ifneq ($(UNAME_M), x86_64)
-  GOARCH = 386
+ifeq ($(GOARCH),)
+  GOARCH = amd64
+  ifneq ($(UNAME_M), x86_64)
+    GOARCH = 386
+  endif
 endif
 
 .PHONY: _build
