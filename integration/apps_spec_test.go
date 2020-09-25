@@ -86,11 +86,9 @@ var _ = suite("apps/spec/get", func(t *testing.T, when spec.G, it spec.S) {
 
 		expectedOutput := `name: test
 services:
-- git: {}
-  github:
+- github:
     branch: master
     repo: digitalocean/doctl
-  health_check: {}
   name: service`
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
@@ -109,11 +107,9 @@ services:
 
 		expectedOutput := `name: test
 services:
-- git: {}
-  github:
+- github:
     branch: new-branch
     repo: digitalocean/doctl
-  health_check: {}
   name: service`
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
@@ -164,15 +160,16 @@ var _ = suite("apps/spec/validate", func(t *testing.T, when spec.G, it spec.S) {
 		)
 		testSpec := `name: test
 services:
-  github: 
+  name: service
+  github:
     repo: digitalocean/doctl
-  name: service`
+`
 		cmd.Stdin = strings.NewReader(testSpec)
 
 		output, err := cmd.CombinedOutput()
 		expect.Equal("exit status 1", err.Error())
 
-		expectedOutput := "Error: Failed to parse app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []godo.AppServiceSpec"
+		expectedOutput := "Error: Failed to parse app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []*godo.AppServiceSpec"
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 })

@@ -34,10 +34,10 @@ func TestAppsCommand(t *testing.T) {
 
 var testAppSpec = godo.AppSpec{
 	Name: "test",
-	Services: []godo.AppServiceSpec{
+	Services: []*godo.AppServiceSpec{
 		{
 			Name: "service",
-			GitHub: godo.GitHubSourceSpec{
+			GitHub: &godo.GitHubSourceSpec{
 				Repo:   "digitalocean/doctl",
 				Branch: "master",
 			},
@@ -182,7 +182,6 @@ func TestRunAppsCreateDeployment(t *testing.T) {
 				Steps: []*godo.DeploymentProgressStep{{
 					Name:      "name",
 					Status:    "pending",
-					Attempts:  0,
 					StartedAt: time.Now(),
 				}},
 			},
@@ -220,7 +219,6 @@ func TestRunAppsGetDeployment(t *testing.T) {
 				Steps: []*godo.DeploymentProgressStep{{
 					Name:      "name",
 					Status:    "pending",
-					Attempts:  0,
 					StartedAt: time.Now(),
 				}},
 			},
@@ -258,7 +256,6 @@ func TestRunAppsListDeployments(t *testing.T) {
 				Steps: []*godo.DeploymentProgressStep{{
 					Name:      "name",
 					Status:    "pending",
-					Attempts:  0,
 					StartedAt: time.Now(),
 				}},
 			},
@@ -348,23 +345,23 @@ static_sites:
 func Test_parseAppSpec(t *testing.T) {
 	expectedSpec := &godo.AppSpec{
 		Name: "test",
-		Services: []godo.AppServiceSpec{
+		Services: []*godo.AppServiceSpec{
 			{
 				Name: "web",
-				GitHub: godo.GitHubSourceSpec{
+				GitHub: &godo.GitHubSourceSpec{
 					Repo:   "digitalocean/sample-golang",
 					Branch: "master",
 				},
 			},
 		},
-		StaticSites: []godo.AppStaticSiteSpec{
+		StaticSites: []*godo.AppStaticSiteSpec{
 			{
 				Name: "static",
-				Git: godo.GitSourceSpec{
+				Git: &godo.GitSourceSpec{
 					RepoCloneURL: "git@github.com:digitalocean/sample-gatsby.git",
 					Branch:       "master",
 				},
-				Routes: []godo.AppRouteSpec{
+				Routes: []*godo.AppRouteSpec{
 					{Path: "/static"},
 				},
 			},
@@ -466,11 +463,9 @@ func TestRunAppSpecGet(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, `name: test
 services:
-- git: {}
-  github:
+- github:
     branch: master
     repo: digitalocean/doctl
-  health_check: {}
   name: service
 `, buf.String())
 		})
@@ -484,18 +479,16 @@ services:
 			err := RunAppsSpecGet(config)
 			require.NoError(t, err)
 			require.Equal(t, `{
+  "name": "test",
   "services": [
     {
       "name": "service",
-      "git": {},
       "github": {
         "repo": "digitalocean/doctl",
         "branch": "master"
-      },
-      "health_check": {}
+      }
     }
-  ],
-  "name": "test"
+  ]
 }
 `, buf.String())
 		})
@@ -521,11 +514,9 @@ services:
 			require.NoError(t, err)
 			require.Equal(t, `name: test
 services:
-- git: {}
-  github:
+- github:
     branch: master
     repo: digitalocean/doctl
-  health_check: {}
   name: service
 `, buf.String())
 		})

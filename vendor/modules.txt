@@ -18,7 +18,7 @@ github.com/cpuguy83/go-md2man/md2man
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.44.0
+# github.com/digitalocean/godo v1.45.0
 ## explicit
 github.com/digitalocean/godo
 github.com/digitalocean/godo/util
