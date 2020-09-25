@@ -23,10 +23,10 @@ var (
 	testAppTime = time.Unix(1, 0).UTC()
 	testAppSpec = godo.AppSpec{
 		Name: "test",
-		Services: []godo.AppServiceSpec{
+		Services: []*godo.AppServiceSpec{
 			{
 				Name: "service",
-				GitHub: godo.GitHubSourceSpec{
+				GitHub: &godo.GitHubSourceSpec{
 					Repo:   "digitalocean/doctl",
 					Branch: "master",
 				},
@@ -52,7 +52,6 @@ var (
 			Steps: []*godo.DeploymentProgressStep{{
 				Name:      "name",
 				Status:    "pending",
-				Attempts:  0,
 				StartedAt: testAppTime,
 			}},
 		},
