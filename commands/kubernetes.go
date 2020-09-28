@@ -269,19 +269,20 @@ After creating a cluster, a configuration context will be added to kubectl and m
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
 		"Machine size to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Possible values: see `doctl kubernetes options sizes`")
-	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks,"", nil, "Comma-separated list of 1-Click Applications to install on the kubernetes cluster. To see a list of 1-Click Applications available run doctl kubernetes 1-click list")	
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks, "", nil, "Comma-separated list of 1-Click Applications to install on the kubernetes cluster. To see a list of 1-Click Applications available run doctl kubernetes 1-click list")
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"Number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
 		`Comma-separated list of node pools, defined using semicolon-separated configuration values and surrounded by quotes (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`)
-Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2"`+"`"+` where:
+Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2;taint=key1=value1:NoSchedule;taint=key2:NoExecute"`+"`"+` where:
 
 - `+"`"+`name`+"`"+`: Name of the node pool, which must be unique in the cluster
 - `+"`"+`size`+"`"+`: Machine size of the nodes to use. Possible values: see `+"`"+`doctl kubernetes options sizes`+"`"+`.
 - `+"`"+`count`+"`"+`: Number of nodes to create.
 - `+"`"+`tag`+"`"+`: Comma-separated list of tags to apply to nodes in the pool
 - `+"`"+`label`+"`"+`: Label in key=value notation; repeat to add multiple labels at once.
+- `+"`"+`taint`+"`"+`: Taint in key[=value]:effect notation; repeat to add multiple taints at once.
 - `+"`"+`auto-scale`+"`"+`: Boolean defining whether to enable cluster auto-scaling on the node pool.
 - `+"`"+`min-nodes`+"`"+`: Minimum number of nodes that can be auto-scaled to.
 - `+"`"+`max-nodes`+"`"+`: Maximum number of nodes that can be auto-scaled to.`)
@@ -418,9 +419,11 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0,
 		"The size of (number of nodes in) the node pool", requiredOpt())
 	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", nil,
-		"Tag to apply to the node pool; you can supply multiple `--tag` arguments to specify additional tags. Omitted tags will be removed from the node pool if the flag is specified.")
+		"Tag to apply to the node pool; repeat to specify additional tags. An existing tag is removed from the node pool if it is not specified by any flag.")
 	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgKubernetesLabel, "", nil,
-		"Label in key=value notation to apply to the node pool, repeat to add multiple labels at once. Omitted labels will be removed from the node pool if the flag is specified.")
+		"Label in key=value notation to apply to the node pool; repeat to specify additional labels. An existing label is removed from the node pool if it is not specified by any flag.")
+	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgKubernetesTaint, "", nil,
+		"Taint in key[=value:]effect notation to apply to the node pool; repeat to specify additional taints. Set to the empty string \"\" to clear all taints. An existing taint is removed from the node pool if it is not specified by any flag.")
 	AddBoolFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolAutoScale, "", false,
 		"Boolean indicating whether to enable auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMinNodes, "", 0,
@@ -438,6 +441,8 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 		"Tag to apply to the node pool; you can supply multiple `--tag` arguments to specify additional tags. Omitted tags will be removed from the node pool if the flag is specified.")
 	AddStringSliceFlag(cmdKubeNodePoolUpdate, doctl.ArgKubernetesLabel, "", nil,
 		"Label in key=value notation to apply to the node pool, repeat to add multiple labels at once. Omitted labels will be removed from the node pool if the flag is specified.")
+	AddStringSliceFlag(cmdKubeNodePoolUpdate, doctl.ArgKubernetesTaint, "", nil,
+		"Taint in key[=value:]effect notation to apply to the node pool, repeat to add multiple taints at once. Omitted taints will be removed from the node pool if the flag is specified.")
 	AddBoolFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolAutoScale, "", false,
 		"Boolean indicating whether to enable auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolUpdate, doctl.ArgNodePoolMinNodes, "", 0,
@@ -1426,6 +1431,7 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 		Size:   defaultSize,
 		Count:  defaultCount,
 		Labels: map[string]string{},
+		Taints: []godo.Taint{},
 	}
 	for _, arg := range strings.Split(nodePool, argSeparator) {
 		kvs := strings.SplitN(arg, kvSeparator, 2)
@@ -1455,6 +1461,12 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 			labelKey := labelParts[0]
 			labelValue := labelParts[1]
 			out.Labels[labelKey] = labelValue
+		case "taint":
+			taint, err := parseTaint(value)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse taint: %s", err)
+			}
+			out.Taints = append(out.Taints, taint)
 		case "auto-scale":
 			autoScale, err := strconv.ParseBool(value)
 			if err != nil {
@@ -1514,6 +1526,16 @@ func buildNodePoolCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.Labels = labels
 
+	rawTaints, err := c.Doit.GetStringSlice(c.NS, doctl.ArgKubernetesTaint)
+	if err != nil {
+		return err
+	}
+	taints, err := parseTaints(rawTaints)
+	if err != nil {
+		return fmt.Errorf("failed to parse taints: %s", err)
+	}
+	r.Taints = taints
+
 	autoScale, err := c.Doit.GetBool(c.NS, doctl.ArgNodePoolAutoScale)
 	if err != nil {
 		return err
@@ -1559,6 +1581,21 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 		return err
 	}
 	r.Labels = labels
+
+	// Check if the taints flag is set so that we can distinguish between not
+	// setting any taints, setting the empty taint (which equals clearing all
+	// taints), and setting one or more non-empty taints.
+	if c.Doit.IsSet(doctl.ArgKubernetesTaint) {
+		rawTaints, err := c.Doit.GetStringSlice(c.NS, doctl.ArgKubernetesTaint)
+		if err != nil {
+			return err
+		}
+		taints, err := parseTaints(rawTaints)
+		if err != nil {
+			return fmt.Errorf("failed to parse taints: %s", err)
+		}
+		r.Taints = &taints
+	}
 
 	autoScale, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgNodePoolAutoScale)
 	if err != nil {
@@ -2031,6 +2068,45 @@ func versionMaxBy(versions []do.KubernetesVersion, selector func(do.KubernetesVe
 func versionSortBy(versions []do.KubernetesVersion, less func(i, j do.KubernetesVersion) bool) []do.KubernetesVersion {
 	sort.Slice(versions, func(i, j int) bool { return less(versions[i], versions[j]) })
 	return versions
+}
+
+func parseTaints(rawTaints []string) ([]godo.Taint, error) {
+	taints := make([]godo.Taint, 0, len(rawTaints))
+	for _, rawTaint := range rawTaints {
+		taint, err := parseTaint(rawTaint)
+		if err != nil {
+			return nil, err
+		}
+
+		taints = append(taints, taint)
+	}
+
+	return taints, nil
+}
+
+func parseTaint(rawTaint string) (godo.Taint, error) {
+	var key, value, effect string
+
+	parts := strings.Split(rawTaint, ":")
+	if len(parts) != 2 {
+		return godo.Taint{}, fmt.Errorf("taint %q does not have a single colon separator", rawTaint)
+	}
+
+	keyValueParts := strings.Split(parts[0], "=")
+	if len(keyValueParts) > 2 {
+		return godo.Taint{}, fmt.Errorf("key/value part in taint %q must not consist of more than one equal sign", rawTaint)
+	}
+	key = keyValueParts[0]
+	if len(keyValueParts) == 2 {
+		value = keyValueParts[1]
+	}
+	effect = parts[1]
+
+	return godo.Taint{
+		Key:    key,
+		Value:  value,
+		Effect: effect,
+	}, nil
 }
 
 func boolPtr(val bool) *bool {
