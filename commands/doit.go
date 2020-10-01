@@ -36,6 +36,15 @@ var (
 		Command: &cobra.Command{
 			Use:   "doctl",
 			Short: "doctl is a command line interface (CLI) for the DigitalOcean API.",
+			PersistentPreRun: func(cmd *cobra.Command, args []string) {
+				defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
+				cfgFile := viper.GetString("config")
+				if cfgFile != defaultCfgFile {
+					return
+				}
+
+				configHome()
+			},
 		},
 	}
 
@@ -64,7 +73,7 @@ func init() {
 
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
-		filepath.Join(configHome(), defaultConfigName), "Specify a custom config file")
+		filepath.Join(defaultConfigHome(), defaultConfigName), "Specify a custom config file")
 	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
 
 	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API endpoint")
@@ -106,14 +115,18 @@ func initConfig() {
 
 // in case we ever want to change this, or let folks configure it...
 func configHome() string {
-	cfgDir, err := os.UserConfigDir()
-	checkErr(err)
-
-	ch := filepath.Join(cfgDir, "doctl")
-	err = os.MkdirAll(ch, 0755)
+	ch := defaultConfigHome()
+	err := os.MkdirAll(ch, 0755)
 	checkErr(err)
 
 	return ch
+}
+
+func defaultConfigHome() string {
+	cfgDir, err := os.UserConfigDir()
+	checkErr(err)
+
+	return filepath.Join(cfgDir, "doctl")
 }
 
 // Execute executes the current command using DoitCmd.
