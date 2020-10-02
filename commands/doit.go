@@ -36,15 +36,6 @@ var (
 		Command: &cobra.Command{
 			Use:   "doctl",
 			Short: "doctl is a command line interface (CLI) for the DigitalOcean API.",
-			PersistentPreRun: func(cmd *cobra.Command, args []string) {
-				defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
-				cfgFile := viper.GetString("config")
-				if cfgFile != defaultCfgFile {
-					return
-				}
-
-				configHome()
-			},
 		},
 	}
 
@@ -108,25 +99,25 @@ func initConfig() {
 
 	if _, err := os.Stat(cfgFile); err == nil {
 		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalln("Reading initialization failed:", err)
+			log.Fatalln("Config initialization failed:", err)
 		}
 	}
 }
 
 // in case we ever want to change this, or let folks configure it...
+func defaultConfigHome() string {
+	cfgDir, err := os.UserConfigDir()
+	checkErr(err)
+
+	return filepath.Join(cfgDir, "doctl")
+}
+
 func configHome() string {
 	ch := defaultConfigHome()
 	err := os.MkdirAll(ch, 0755)
 	checkErr(err)
 
 	return ch
-}
-
-func defaultConfigHome() string {
-	cfgDir, err := os.UserConfigDir()
-	checkErr(err)
-
-	return filepath.Join(cfgDir, "doctl")
 }
 
 // Execute executes the current command using DoitCmd.
