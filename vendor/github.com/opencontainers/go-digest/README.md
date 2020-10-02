@@ -66,7 +66,7 @@ out when using this package.
     This may seem inconvenient but it allows you replace the hash 
     implementations with others, such as https://github.com/stevvooe/resumable.
  
-2. Even though `digest.Digest` may be assemable as a string, _always_ 
+2. Even though `digest.Digest` may be acceptable as a string, _always_ 
     verify your input with `digest.Parse` or use `Digest.Validate`
     when accepting untrusted input. While there are measures to 
     avoid common problems, this will ensure you have valid digests

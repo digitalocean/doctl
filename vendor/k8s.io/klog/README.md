@@ -34,7 +34,7 @@ How to use klog
 - For more logging conventions (See [Logging Conventions](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-instrumentation/logging.md))
 
 ### Coexisting with glog
-This package can be used side by side with glog. [This example](examples/coexist_glog/coexist_glog.go) shows how to initialize and syncronize flags from the global `flag.CommandLine` FlagSet. In addition, the example makes use of stderr as combined output by setting `alsologtostderr` (or `logtostderr`) to `true`.
+This package can be used side by side with glog. [This example](examples/coexist_glog/coexist_glog.go) shows how to initialize and synchronize flags from the global `flag.CommandLine` FlagSet. In addition, the example makes use of stderr as combined output by setting `alsologtostderr` (or `logtostderr`) to `true`.
 
 ## Community, discussion, contribution, and support
 

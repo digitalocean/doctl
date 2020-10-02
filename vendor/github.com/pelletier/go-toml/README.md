@@ -18,7 +18,7 @@ Go-toml provides the following features for using data parsed from TOML document
 
 * Load TOML documents from files and string data
 * Easily navigate TOML structure using Tree
-* Mashaling and unmarshaling to and from data structures
+* Marshaling and unmarshaling to and from data structures
 * Line & column position data for all parsed elements
 * [Query support similar to JSON-Path](query/)
 * Syntax errors contain line and column numbers
@@ -109,7 +109,7 @@ Go-toml provides two handy command line tools:
 
 ### Docker image
 
-Those tools are also availble as a Docker image from
+Those tools are also available as a Docker image from
 [dockerhub](https://hub.docker.com/r/pelletier/go-toml). For example, to
 use `tomljson`:
 

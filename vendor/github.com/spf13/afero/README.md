@@ -322,7 +322,7 @@ layer into the overlay. Subsequent reads will be pulled from the overlay
 directly permitting the request is within the cache duration of when it was
 created in the overlay.
 
-If the base filesystem is writeable, any changes to files will be
+If the base filesystem is writable, any changes to files will be
 done first to the base, then to the overlay layer. Write calls to open file
 handles like `Write()` or `Truncate()` to the overlay first.
 
@@ -345,7 +345,7 @@ ufs := afero.NewCacheOnReadFs(base, layer, 100 * time.Second)
 ### CopyOnWriteFs()
 
 The CopyOnWriteFs is a read only base file system with a potentially
-writeable layer on top.
+writable layer on top.
 
 Read operations will first look in the overlay and if not found there, will
 serve the file from the base.
