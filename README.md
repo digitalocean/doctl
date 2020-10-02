@@ -33,7 +33,7 @@ Available Commands:
   databases       Display commands that manage databases
   help            Help with any command
   invoice         Display commands for retrieving invoices for your account
-  Kubernetes      Displays commands to manage Kubernetes clusters and configurations
+  kubernetes      Displays commands to manage Kubernetes clusters and configurations
   projects        Manage projects and assign resources to them
   registry        [EA] Display commands for working with container registries
   version         Show the current version
