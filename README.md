@@ -17,7 +17,7 @@
 </p>
 
 ```
-doctl is a command line interface (CLI) for the DigitalOcean API.
+doctl is a command-line interface (CLI) for the DigitalOcean API.
 
 Usage:
   doctl [command]
@@ -31,9 +31,9 @@ Available Commands:
   completion      Modify your shell so doctl commands autocomplete with TAB
   compute         Display commands that manage infrastructure
   databases       Display commands that manage databases
-  help            Help about any command
+  help            Help with any command
   invoice         Display commands for retrieving invoices for your account
-  kubernetes      Displays commands to manage Kubernetes clusters and configurations
+  Kubernetes      Displays commands to manage Kubernetes clusters and configurations
   projects        Manage projects and assign resources to them
   registry        [EA] Display commands for working with container registries
   version         Show the current version
@@ -136,7 +136,7 @@ This allows `doctl` to add DigitalOcean container registry credentials to your D
 
     sudo pacman -S doctl
 
-As an alternative you can install it from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
+As an alternative, you can install it from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
 
 #### Nix supported OS
 
@@ -150,7 +150,7 @@ version.
 
 Containers for each release are available under the `digitalocean`
 organization on [Docker Hub](https://hub.docker.com/r/digitalocean/doctl).
-Links to the containers are available in the github releases.
+Links to the containers are available in the GitHub releases.
 
 ### Downloading a Release from GitHub
 
@@ -158,7 +158,7 @@ Visit the [Releases
 page](https://github.com/digitalocean/doctl/releases) for the
 [`doctl` GitHub project](https://github.com/digitalocean/doctl), and find the
 appropriate archive for your operating system and architecture.
-Download the archive from from your browser or copy its URL and
+Download the archive from your browser or copy its URL and
 retrieve it to your home directory with `wget` or `curl`.
 
 For example, with `wget`:
@@ -237,7 +237,7 @@ stable.
 
 ## Authenticating with DigitalOcean
 
-In order to use `doctl`, you need to authenticate with DigitalOcean by providing an access token, which can be created from the [Applications & API](https://cloud.digitalocean.com/account/api/tokens) section of the Control Panel. You can learn how to generate a token by following the [DigitalOcean API guide](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2).
+To use `doctl`, you need to authenticate with DigitalOcean by providing an access token, which can be created from the [Applications & API](https://cloud.digitalocean.com/account/api/tokens) section of the Control Panel. You can learn how to generate a token by following the [DigitalOcean API guide](https://www.digitalocean.com/community/tutorials/how-to-use-the-digitalocean-api-v2).
 
 Docker users will have to use the `DIGITALOCEAN_ACCESS_TOKEN` environmental variable to authenticate, as explained in the Installation section of this document.
 
@@ -261,7 +261,7 @@ Validating token: OK
 
 This will create the necessary directory structure and configuration file to store your credentials.
 
-### Logging in to multiple DigitalOcean accounts
+### Logging into multiple DigitalOcean accounts
 
 `doctl` allows you to log in to multiple DigitalOcean accounts at the same time and easily switch between them with the use of authentication contexts.
 
@@ -323,19 +323,19 @@ source ~/.profile
 
 ### MacOS
 
-MacOS users will have to install the `bash-completion` framework to use the auto-completion feature.
+macOS users will have to install the `bash-completion` framework to use the auto-completion feature.
 
 ```
 brew install bash-completion
 ```
 
-After it's installed, load `bash_completion` by adding following line to your `.profile` or `.bashrc`/`.zshrc` file.
+After it's installed, load `bash_completion` by adding the following line to your `.profile` or `.bashrc`/`.zshrc` file.
 
 ```
 source $(brew --prefix)/etc/bash_completion
 ```
 
-Then refresh your profile using the appropriate command for bash configurations file.
+Then refresh your profile using the appropriate command for the bash configurations file.
 
 ```
 source ~/.profile
@@ -356,7 +356,7 @@ Use [Homebrew](https://brew.sh/) to uninstall all current and previous versions 
 brew uninstall -f doctl
 ```
 
-To completely remove configuration, also remove the following directory:
+To completely remove the configuration, also remove the following directory:
 
 ```
 rm -rf $HOME/Library/Application Support/doctl
