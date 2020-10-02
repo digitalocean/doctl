@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"syscall"
@@ -217,8 +218,17 @@ func writeConfig() error {
 	return nil
 }
 
+// defaultConfigFileWriter returns a writer to a newly created config.yaml file in the default config home.
+// When using the default config file path the default config home directory will be created; Otherwise
+// the custom config home directory must exist and be writable to the user issuing the auth command.
 func defaultConfigFileWriter() (io.WriteCloser, error) {
 	cfgFile := viper.GetString("config")
+
+	defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
+	if cfgFile == defaultCfgFile {
+		configHome()
+	}
+
 	f, err := os.Create(cfgFile)
 	if err != nil {
 		return nil, err

@@ -64,7 +64,7 @@ func init() {
 
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
-		filepath.Join(configHome(), defaultConfigName), "Specify a custom config file")
+		filepath.Join(defaultConfigHome(), defaultConfigName), "Specify a custom config file")
 	viper.BindPFlag("config", rootPFlagSet.Lookup("config"))
 
 	rootPFlagSet.StringVarP(&APIURL, "api-url", "u", "", "Override default API endpoint")
@@ -99,18 +99,22 @@ func initConfig() {
 
 	if _, err := os.Stat(cfgFile); err == nil {
 		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalln("Reading initialization failed:", err)
+			log.Fatalln("Config initialization failed:", err)
 		}
 	}
 }
 
 // in case we ever want to change this, or let folks configure it...
-func configHome() string {
+func defaultConfigHome() string {
 	cfgDir, err := os.UserConfigDir()
 	checkErr(err)
 
-	ch := filepath.Join(cfgDir, "doctl")
-	err = os.MkdirAll(ch, 0755)
+	return filepath.Join(cfgDir, "doctl")
+}
+
+func configHome() string {
+	ch := defaultConfigHome()
+	err := os.MkdirAll(ch, 0755)
 	checkErr(err)
 
 	return ch

@@ -365,7 +365,7 @@ This command removes the specified cluster's credentials from your local kubecon
 }
 
 func kubeconfigCachePath() string {
-	return filepath.Join(configHome(), "cache", "exec-credential")
+	return filepath.Join(defaultConfigHome(), "cache", "exec-credential")
 }
 
 func kubernetesNodePools() *Command {
@@ -623,7 +623,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			s.tryUpdateKubeconfig(kube, cluster.ID, clusterName, setCurrentContext)
 		}
 
-		oneClickApps, err := c.Doit.GetStringSlice(c.NS, doctl.ArgOneClicks) 
+		oneClickApps, err := c.Doit.GetStringSlice(c.NS, doctl.ArgOneClicks)
 		if err != nil {
 			return err
 		}
@@ -633,9 +633,9 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			if err != nil {
 				warn("Failed to kick off 1-Click Application(s) install")
 			} else {
-			notice(messageResponse)
+				notice(messageResponse)
 			}
-		} 
+		}
 
 		return displayClusters(c, true, *cluster)
 	}
