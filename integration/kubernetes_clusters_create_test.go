@@ -300,4 +300,3 @@ current-context: some-context
 }
 `
 )
-

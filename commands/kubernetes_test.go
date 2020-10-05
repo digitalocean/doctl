@@ -72,7 +72,7 @@ var (
 		APIVersion:     "v1",
 		CurrentContext: "test-context",
 		Contexts: map[string]*clientcmdapi.Context{
-			"test-context": &clientcmdapi.Context{
+			"test-context": {
 				Cluster: "test-cluster",
 			},
 		},
@@ -434,7 +434,7 @@ func TestKubernetesCreate(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Test with 1-clicks specified
-		config.Doit.Set(config.NS, doctl.ArgOneClicks, []string{"slug1","slug2"})
+		config.Doit.Set(config.NS, doctl.ArgOneClicks, []string{"slug1", "slug2"})
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 		tm.oneClick.EXPECT().InstallKubernetes(testCluster.ID, []string{"slug1", "slug2"})
 		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
