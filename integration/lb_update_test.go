@@ -67,6 +67,7 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 			"--droplet-ids", "1,2,3,4",
 			"--name", "hello",
 			"--region", "the-best-region",
+			"--size", "lb-small",
 			"--tag-name", "some-tag",
 			"--vpc-uuid", "00000000-0000-4000-8000-000000000000",
 		}
@@ -106,7 +107,8 @@ const (
 {
     "name":"hello",
     "algorithm":"round_robin",
-    "region":"the-best-region",
+	"region":"the-best-region",
+	"size":"lb-small",
     "health_check":{},
     "sticky_sessions":{},
     "droplet_ids":[1,2,3,4],

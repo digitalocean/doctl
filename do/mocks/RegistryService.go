@@ -5,10 +5,11 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	do "github.com/digitalocean/doctl/do"
 	godo "github.com/digitalocean/godo"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockRegistryService is a mock of RegistryService interface.

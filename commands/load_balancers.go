@@ -74,6 +74,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "",
 		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
+	AddStringFlag(cmdRecordCreate, doctl.ArgSizeSlug, "", "lb-small",
+		"The load balancer's size, e.g.: `lb-small`", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "The algorithm to use when traffic is distributed across your Droplets; possible values: `round_robin` or `least_connections`")
@@ -99,6 +101,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "",
 		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
+	AddStringFlag(cmdRecordUpdate, doctl.ArgSizeSlug, "", "",
+		"The load balancer's size, e.g.: `lb-small`", requiredOpt())
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "The algorithm to use when traffic is distributed across your Droplets; possible values: `round_robin` or `least_connections`")
@@ -394,6 +398,12 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		return err
 	}
 	r.Region = region
+
+	size, err := c.Doit.GetString(c.NS, doctl.ArgSizeSlug)
+	if err != nil {
+		return err
+	}
+	r.SizeSlug = size
 
 	algorithm, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerAlgorithm)
 	if err != nil {

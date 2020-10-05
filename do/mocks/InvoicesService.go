@@ -5,9 +5,10 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	do "github.com/digitalocean/doctl/do"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockInvoicesService is a mock of InvoicesService interface.

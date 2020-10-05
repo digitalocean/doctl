@@ -80,9 +80,9 @@ var _ = suite("compute/load-balancer/list", func(t *testing.T, when spec.G, it s
 
 const (
 	lbListOutput = `
-ID        IP                 Name             Status    Created At              Algorithm      Region    VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                   Forwarding Rules
-lb-one    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    round_robin    venus3    00000000-0000-4000-8000-000000000000           3164444        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false
-lb-two    104.131.188.204    example-lb-02    new       2017-02-01T20:44:58Z    round_robin    mars1     00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false
+ID        IP                 Name             Status    Created At              Algorithm      Region    Size         VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                   Forwarding Rules
+lb-one    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    round_robin    venus3    lb-small     00000000-0000-4000-8000-000000000000           3164444        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false
+lb-two    104.131.188.204    example-lb-02    new       2017-02-01T20:44:58Z    round_robin    mars1     lb-medium    00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false
 `
 	lbListResponse = `
 {
@@ -116,6 +116,7 @@ lb-two    104.131.188.204    example-lb-02    new       2017-02-01T20:44:58Z    
       "sticky_sessions": {
         "type": "none"
       },
+      "size": "lb-small",
       "region": {
         "name": "Venus",
         "slug": "venus3",
@@ -158,6 +159,7 @@ lb-two    104.131.188.204    example-lb-02    new       2017-02-01T20:44:58Z    
       "sticky_sessions": {
         "type": "none"
       },
+      "size": "lb-medium",
       "region": {
         "name": "Mars",
         "slug": "mars1",

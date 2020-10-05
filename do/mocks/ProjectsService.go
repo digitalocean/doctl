@@ -5,10 +5,11 @@
 package mocks
 
 import (
+	reflect "reflect"
+
 	do "github.com/digitalocean/doctl/do"
 	godo "github.com/digitalocean/godo"
 	gomock "github.com/golang/mock/gomock"
-	reflect "reflect"
 )
 
 // MockProjectsService is a mock of ProjectsService interface.
