@@ -239,8 +239,8 @@ const (
 	ArgLoadBalancerName = "name"
 	// ArgLoadBalancerAlgorithm is a load balancing algorithm.
 	ArgLoadBalancerAlgorithm = "algorithm"
-	// ArgRedirectHttpToHttps is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
-	ArgRedirectHttpToHttps = "redirect-http-to-https"
+	// ArgRedirectHTTPToHTTPS is a flag that indicates whether HTTP requests to the load balancer on port 80 should be redirected to HTTPS on port 443.
+	ArgRedirectHTTPToHTTPS = "redirect-http-to-https"
 	// ArgEnableProxyProtocol is a flag that indicates whether PROXY protocol should be enabled on the load balancer.
 	ArgEnableProxyProtocol = "enable-proxy-protocol"
 	// ArgEnableBackendKeepalive is a flag that indicates whether keepalive connections should be enabled to target droplets from the load balancer.
