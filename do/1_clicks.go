@@ -22,7 +22,7 @@ import (
 // OneClickService is the godo OneClickService interface.
 type OneClickService interface {
 	List(string) (OneClicks, error)
-	InstallKubernetes(string, []string)(string, error)
+	InstallKubernetes(string, []string) (string, error)
 }
 
 var _ OneClickService = &oneClickService{}
@@ -77,16 +77,16 @@ func (ocs *oneClickService) List(oneClickType string) (OneClicks, error) {
 	return list, nil
 }
 
-func (ocs *oneClickService) InstallKubernetes(clusterUUID string, slugs []string)(string, error){
-	installReq := &godo.InstallKubernetesAppsRequest {
-		Slugs: slugs,
+func (ocs *oneClickService) InstallKubernetes(clusterUUID string, slugs []string) (string, error) {
+	installReq := &godo.InstallKubernetesAppsRequest{
+		Slugs:       slugs,
 		ClusterUUID: clusterUUID,
-	  }
+	}
 
 	responseMessage, _, err := ocs.Client.OneClick.InstallKubernetes(context.TODO(), installReq)
 	if err != nil {
 		return "", err
 	}
-	
-	return responseMessage.Message , nil
+
+	return responseMessage.Message, nil
 }

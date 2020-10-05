@@ -93,7 +93,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			expect.NoError(err)
 
 			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
-			for host, _ := range dc.Auths {
+			for host := range dc.Auths {
 				expect.Equal("registry.digitalocean.com", host)
 			}
 		})
@@ -128,7 +128,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			expect.NoError(err)
 
 			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
-			for host, _ := range dc.Auths {
+			for host := range dc.Auths {
 				expect.Equal("expiring.registry.com", host)
 			}
 		})

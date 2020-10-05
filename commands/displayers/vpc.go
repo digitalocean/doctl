@@ -64,7 +64,7 @@ func (v *VPC) KV() []map[string]interface{} {
 			"URN":         v.URN,
 			"Name":        v.Name,
 			"Description": v.Description,
-			"IPRange":    v.IPRange,
+			"IPRange":     v.IPRange,
 			"Created":     v.CreatedAt,
 			"Region":      v.RegionSlug,
 			"Default":     v.Default,
