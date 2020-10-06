@@ -79,7 +79,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "The algorithm to use when traffic is distributed across your Droplets; possible values: `round_robin` or `least_connections`")
-	AddBoolFlag(cmdRecordCreate, doctl.ArgRedirectHttpToHttps, "", false,
+	AddBoolFlag(cmdRecordCreate, doctl.ArgRedirectHTTPToHTTPS, "", false,
 		"Redirects HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddBoolFlag(cmdRecordCreate, doctl.ArgEnableProxyProtocol, "", false,
 		"enable proxy protocol")
@@ -106,7 +106,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "The algorithm to use when traffic is distributed across your Droplets; possible values: `round_robin` or `least_connections`")
-	AddBoolFlag(cmdRecordUpdate, doctl.ArgRedirectHttpToHttps, "", false,
+	AddBoolFlag(cmdRecordUpdate, doctl.ArgRedirectHTTPToHTTPS, "", false,
 		"Flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgEnableProxyProtocol, "", false,
 		"enable proxy protocol")
@@ -423,7 +423,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 	r.VPCUUID = vpcUUID
 
-	redirectHTTPToHTTPS, err := c.Doit.GetBool(c.NS, doctl.ArgRedirectHttpToHttps)
+	redirectHTTPToHTTPS, err := c.Doit.GetBool(c.NS, doctl.ArgRedirectHTTPToHTTPS)
 	if err != nil {
 		return err
 	}
