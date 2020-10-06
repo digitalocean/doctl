@@ -82,7 +82,7 @@ To upload a custom certificate, you'll need to provide a certificate name, the p
 
 Use `+"`"+`doctl compute certificate list`+"`"+` to see all available certificates associated with your account.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdCertificateDelete, doctl.ArgForce, doctl.ArgShortForce, false,
-		"Delete the certificate without a comfirmation prompt")
+		"Delete the certificate without a confirmation prompt")
 
 	return cmd
 }

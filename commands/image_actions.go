@@ -45,7 +45,7 @@ func ImageAction() *Command {
 - The slug for the region where the action occurred.
 `
 	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,
-		"get <image-id>", "Retrieve the status of an image action", `Use this command to retrieve the status of an image action, inlcuding the following details:`+actionDetail, Writer,
+		"get <image-id>", "Retrieve the status of an image action", `Use this command to retrieve the status of an image action, including the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdImageActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
 

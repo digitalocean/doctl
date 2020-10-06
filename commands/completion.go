@@ -162,7 +162,7 @@ complete -c doctl -n '__fish_seen_subcommand_from account get' -l no-header -d "
 complete -c doctl -n '__fish_seen_subcommand_from account ratelimit' -l format    -d "Columns for output"
 complete -c doctl -n '__fish_seen_subcommand_from account ratelimit' -l no-header -d "Return raw data with no headers"
 
-# Completions for the 'doctl auth' commmand
+# Completions for the 'doctl auth' command
 complete -c doctl -n '__fish_seen_subcommand_from auth' -a init   -d "Initialize doctl"
 complete -c doctl -n '__fish_seen_subcommand_from auth' -a list   -d "List available authentication context"
 complete -c doctl -n '__fish_seen_subcommand_from auth' -a switch -d "Switches between authentication contexts"
