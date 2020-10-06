@@ -37,7 +37,6 @@ func Apps() *Command {
 			Aliases: []string{"app", "a"},
 			Short:   "Display commands for working with apps",
 			Long:    "The subcommands of `doctl app` manage your App Platform apps.",
-			Hidden:  true,
 		},
 	}
 
