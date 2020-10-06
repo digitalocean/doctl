@@ -35,9 +35,8 @@ func Apps() *Command {
 		Command: &cobra.Command{
 			Use:     "apps",
 			Aliases: []string{"app", "a"},
-			Short:   "[Beta] Display commands for working with apps",
-			Long:    "[Beta] The subcommands of `doctl app` manage your apps.",
-			Hidden:  true,
+			Short:   "Display commands for working with apps",
+			Long:    "The subcommands of `doctl app` manage your App Platform apps.",
 		},
 	}
 
@@ -51,7 +50,7 @@ func Apps() *Command {
 		aliasOpt("c"),
 		displayerType(&displayers.Apps{}),
 	)
-	AddStringFlag(create, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format.", requiredOpt())
+	AddStringFlag(create, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec", requiredOpt())
 
 	CmdBuilder(
 		cmd,
@@ -60,7 +59,7 @@ func Apps() *Command {
 		"Get an app",
 		`Get an app with the provided id.
 
-Only basic information is included with the text output format. For complete app details including its spec, use the json format.`,
+Only basic information is included with the text output format. For complete app details including its app spec, use the JSON format.`,
 		Writer,
 		aliasOpt("g"),
 		displayerType(&displayers.Apps{}),
@@ -73,7 +72,7 @@ Only basic information is included with the text output format. For complete app
 		"List all apps",
 		`List all apps.
 
-Only basic information is included with the text output format. For complete app details including specs, use the json format.`,
+Only basic information is included with the text output format. For complete app details including the app specs, use the JSON format.`,
 		Writer,
 		aliasOpt("ls"),
 		displayerType(&displayers.Apps{}),
@@ -84,7 +83,7 @@ Only basic information is included with the text output format. For complete app
 		RunAppsUpdate,
 		"update <app id>",
 		"Update an app",
-		`Update the app with the provided id with the given app spec.`,
+		`Update the specified app with the given app spec. For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec`,
 		Writer,
 		aliasOpt("u"),
 		displayerType(&displayers.Apps{}),
@@ -111,7 +110,7 @@ This permanently deletes the app and all its associated deployments.`,
 		"Create a deployment",
 		`Create a deployment for an app.
 
-The deployment will be created using the current app spec.`,
+The deployment will be created using the provided app spec.  For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec`,
 		Writer,
 		aliasOpt("cd"),
 		displayerType(&displayers.Deployments{}),
@@ -124,7 +123,7 @@ The deployment will be created using the current app spec.`,
 		"Get a deployment",
 		`Get a deployment for an app.
 
-Only basic information is included with the text output format. For complete app details including its spec, use the json format.`,
+Only basic information is included with the text output format. For complete app details including its app specs, use the JSON format.`,
 		Writer,
 		aliasOpt("gd"),
 		displayerType(&displayers.Deployments{}),
@@ -137,7 +136,7 @@ Only basic information is included with the text output format. For complete app
 		"List all deployments",
 		`List all deployments for an app.
 
-Only basic information is included with the text output format. For complete app details including specs, use the json format.`,
+Only basic information is included with the text output format. For complete app details including the app specs, use the JSON format.`,
 		Writer,
 		aliasOpt("lsd"),
 		displayerType(&displayers.Deployments{}),
@@ -434,13 +433,13 @@ func appsSpec() *Command {
 	}
 
 	getCmd := CmdBuilder(cmd, RunAppsSpecGet, "get <app id>", "Retrieve an application's spec", `Use this command to retrieve the latest spec of an app.
-	
+
 Optionally, pass a deployment ID to get the spec of that specific deployment.`, Writer)
 	AddStringFlag(getCmd, doctl.ArgAppDeployment, "", "", "optional: a deployment ID")
 	AddStringFlag(getCmd, doctl.ArgFormat, "", "yaml", `the format to output the spec as; either "yaml" or "json"`)
 
 	CmdBuilder(cmd, RunAppsSpecValidate(os.Stdin), "validate <spec file>", "Validate an application spec", `Use this command to check whether a given app spec (YAML or JSON) is valid.
-	
+
 You may pass - as the filename to read from stdin.`, Writer)
 
 	return cmd

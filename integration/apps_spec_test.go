@@ -143,6 +143,8 @@ var _ = suite("apps/spec/validate", func(t *testing.T, when spec.G, it spec.S) {
 			"apps", "spec", "validate", "-",
 		)
 		byt, err := json.Marshal(testAppSpec)
+		expect.NoError(err)
+
 		cmd.Stdin = bytes.NewReader(byt)
 
 		output, err := cmd.CombinedOutput()
