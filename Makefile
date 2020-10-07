@@ -32,9 +32,11 @@ ifeq ($(UNAME_S),Darwin)
   GOOS = darwin
 endif
 
-GOARCH = amd64
-ifneq ($(UNAME_M), x86_64)
-  GOARCH = 386
+ifeq ($(GOARCH),)
+  GOARCH = amd64
+  ifneq ($(UNAME_M), x86_64)
+    GOARCH = 386
+  endif
 endif
 
 .PHONY: _build
@@ -44,32 +46,35 @@ _build:
 	@OUT_D=${OUT_D} GOOS=${GOOS} GOARCH=${GOARCH} scripts/_build.sh
 	@echo "built $(OUT_D)/doctl_$(GOOS)_$(GOARCH)"
 
-.PHONY: native
-native: _build
+.PHONY: build
+build: _build
 	@echo "==> build local version"
 	@echo ""
 	@mv $(OUT_D)/doctl_$(GOOS)_$(GOARCH) $(OUT_D)/doctl
 	@echo "installed as $(OUT_D)/doctl"
+
+.PHONY: native
+native: build
+	@echo ""
+	@echo "==> The 'native' target is deprecated. Use 'make build'"
 
 .PHONY: _build_linux_amd64
 _build_linux_amd64: GOOS = linux
 _build_linux_amd64: GOARCH = amd64
 _build_linux_amd64: _build
 
-.PHONY: _base_docker_cntr
-_base_docker_cntr:
-	@docker build -f Dockerfile.build . -t doctl_builder
-
 .PHONY: docker_build
-docker_build: _base_docker_cntr
+docker_build:
 	@echo "==> build doctl in local docker container"
 	@echo ""
 	@mkdir -p $(OUT_D)
-	@docker build -f Dockerfile.cntr . -t doctl_local
+	@docker build -f Dockerfile \
+		--build-arg GOARCH=$(GOARCH) \
+		. -t doctl_local
 	@docker run --rm \
 		-v $(OUT_D):/copy \
-		-it --entrypoint /usr/bin/rsync \
-		doctl_local -av /app/ /copy/
+		-it --entrypoint /bin/cp \
+		doctl_local /app/doctl /copy/
 	@docker run --rm \
 		-v $(OUT_D):/copy \
 		-it --entrypoint /bin/chown \
