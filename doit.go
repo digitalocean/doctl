@@ -47,8 +47,25 @@ type Version struct {
 }
 
 var (
-	// Build, Major, Minor, Patch and Label are set at build time
-	Build, Major, Minor, Patch, Label string
+	// Build is set at build time. It defines the git SHA for the current
+	// build.
+	Build string
+
+	// Major is set at build time. It defines the major semantic version of
+	// doctl.
+	Major string
+
+	// Minor is set at build time. It defines the minor semantic version of
+	// doctl.
+	Minor string
+
+	// Patch is set at build time. It defines the patch semantic version of
+	// doctl.
+	Patch string
+
+	// Label is set at build time. It defines the string that comes after the
+	// version of doctl, ie, the "dev" in v1.0.0-dev.
+	Label string
 
 	// DoitVersion is doctl's version.
 	DoitVersion Version
@@ -229,6 +246,7 @@ func (c *LiveConfig) Set(ns, key string, val interface{}) {
 	viper.Set(nskey(ns, key), val)
 }
 
+// IsSet checks if a config is set
 func (c *LiveConfig) IsSet(key string) bool {
 	matches := regexp.MustCompile("\b*--([a-z-_]+)").FindAllStringSubmatch(strings.Join(os.Args, " "), -1)
 	if len(matches) == 0 {
@@ -432,7 +450,7 @@ func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
 	return c.v.GetStringSlice(nskey), nil
 }
 
-// GetStringToStringMap returns the string-to-string value for the key in the
+// GetStringMapString returns the string-to-string value for the key in the
 // given namespace. Because this is a mock implementation, and error will never
 // be returned.
 func (c *TestConfig) GetStringMapString(ns, key string) (map[string]string, error) {
