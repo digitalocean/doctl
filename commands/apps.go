@@ -357,7 +357,13 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
-		deploymentID = app.ActiveDeployment.ID
+		if app.ActiveDeployment != nil {
+			deploymentID = app.ActiveDeployment.ID
+		} else if app.InProgressDeployment != nil {
+			deploymentID = app.InProgressDeployment.ID
+		} else {
+			return fmt.Errorf("unable to retrieve logs; no deployment found for app %s", appID)
+		}
 	}
 
 	logTypeStr, err := c.Doit.GetString(c.NS, doctl.ArgAppLogType)
