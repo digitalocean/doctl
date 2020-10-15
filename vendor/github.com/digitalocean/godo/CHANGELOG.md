@@ -1,5 +1,14 @@
 # Change Log
 
+## [v1.47.0] - 2020-10-14
+
+- #384 kubernetes - add registry related doks apis - @varshavaradarajan
+- #385 Fixed some typo in apps.gen.go and databases.go file - @devil-cyber
+- #382 Add GetKubeConfigWithExpiry (#334) - @ivanlemeshev
+- #381 Fix golint issues #377 - @sidsbrmnn
+- #380 refactor: Cyclomatic complexity issue - @DonRenando
+- #379 Run gofmt to fix some issues in codebase - @mycodeself
+
 ## [v1.46.0] - 2020-10-05
 
 - #373 load balancers: add LB size field, currently in closed beta - @anitgandhi

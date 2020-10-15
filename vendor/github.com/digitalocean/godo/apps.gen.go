@@ -150,7 +150,7 @@ type AppServiceSpecHealthCheck struct {
 type AppSpec struct {
 	// The name of the app. Must be unique across all  in the same account.
 	Name string `json:"name"`
-	// Workloads which expose publicy-accessible HTTP services.
+	// Workloads which expose publicly-accessible HTTP services.
 	Services []*AppServiceSpec `json:"services,omitempty"`
 	// Content which can be rendered to static web assets.
 	StaticSites []*AppStaticSiteSpec `json:"static_sites,omitempty"`
@@ -196,7 +196,7 @@ type AppVariableDefinition struct {
 	// The name
 	Key string `json:"key"`
 	// The value. If the type is SECRET, the value will be encrypted on first submission. On following submissions, the encrypted value must be used.
-	Value string        `json:"value,omitempty"`
+	Value string           `json:"value,omitempty"`
 	Scope AppVariableScope `json:"scope,omitempty"`
 	Type  AppVariableType  `json:"type,omitempty"`
 }
@@ -265,11 +265,11 @@ const (
 
 // DeploymentProgress struct for DeploymentProgress
 type DeploymentProgress struct {
-	PendingSteps int32           `json:"pending_steps,omitempty"`
-	RunningSteps int32           `json:"running_steps,omitempty"`
-	SuccessSteps int32           `json:"success_steps,omitempty"`
-	ErrorSteps   int32           `json:"error_steps,omitempty"`
-	TotalSteps   int32           `json:"total_steps,omitempty"`
+	PendingSteps int32                     `json:"pending_steps,omitempty"`
+	RunningSteps int32                     `json:"running_steps,omitempty"`
+	SuccessSteps int32                     `json:"success_steps,omitempty"`
+	ErrorSteps   int32                     `json:"error_steps,omitempty"`
+	TotalSteps   int32                     `json:"total_steps,omitempty"`
 	Steps        []*DeploymentProgressStep `json:"steps,omitempty"`
 	SummarySteps []*DeploymentProgressStep `json:"summary_steps,omitempty"`
 }
@@ -307,13 +307,13 @@ type GitSourceSpec struct {
 
 // DeploymentProgressStep struct for DeploymentProgressStep
 type DeploymentProgressStep struct {
-	Name          string             `json:"name,omitempty"`
-	Status        DeploymentProgressStepStatus `json:"status,omitempty"`
-	Steps         []*DeploymentProgressStep    `json:"steps,omitempty"`
-	StartedAt     time.Time          `json:"started_at,omitempty"`
-	EndedAt       time.Time          `json:"ended_at,omitempty"`
-	Reason        *DeploymentProgressStepReason        `json:"reason,omitempty"`
-	ComponentName string             `json:"component_name,omitempty"`
+	Name          string                        `json:"name,omitempty"`
+	Status        DeploymentProgressStepStatus  `json:"status,omitempty"`
+	Steps         []*DeploymentProgressStep     `json:"steps,omitempty"`
+	StartedAt     time.Time                     `json:"started_at,omitempty"`
+	EndedAt       time.Time                     `json:"ended_at,omitempty"`
+	Reason        *DeploymentProgressStepReason `json:"reason,omitempty"`
+	ComponentName string                        `json:"component_name,omitempty"`
 	// The base of a human-readable description of the step intended to be combined with the component name for presentation. For example:  message_base = \"Building service\" component_name = \"api\"
 	MessageBase string `json:"message_base,omitempty"`
 }
