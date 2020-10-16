@@ -1,5 +1,10 @@
 # Change Log
 
+## [v1.48.0] - 2020-10-16
+
+- #388 - @varshavaradarajan - kubernetes - change docr integration api routes
+- #386 - @snormore - apps: pull in recent updates to jobs and domains
+
 ## [v1.47.0] - 2020-10-14
 
 - #384 kubernetes - add registry related doks apis - @varshavaradarajan

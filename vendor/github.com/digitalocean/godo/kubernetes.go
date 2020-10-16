@@ -774,7 +774,7 @@ func (svc *KubernetesServiceOp) GetOptions(ctx context.Context) (*KubernetesOpti
 
 // AddRegistry integrates docr registry with all the specified clusters
 func (svc *KubernetesServiceOp) AddRegistry(ctx context.Context, req *KubernetesClusterRegistryRequest) (*Response, error) {
-	path := fmt.Sprintf("%s/registry", kubernetesClustersPath)
+	path := fmt.Sprintf("%s/registry", kubernetesBasePath)
 	request, err := svc.client.NewRequest(ctx, http.MethodPost, path, req)
 	if err != nil {
 		return nil, err
@@ -788,7 +788,7 @@ func (svc *KubernetesServiceOp) AddRegistry(ctx context.Context, req *Kubernetes
 
 // RemoveRegistry removes docr registry support for all the specified clusters
 func (svc *KubernetesServiceOp) RemoveRegistry(ctx context.Context, req *KubernetesClusterRegistryRequest) (*Response, error) {
-	path := fmt.Sprintf("%s/registry", kubernetesClustersPath)
+	path := fmt.Sprintf("%s/registry", kubernetesBasePath)
 	request, err := svc.client.NewRequest(ctx, http.MethodDelete, path, req)
 	if err != nil {
 		return nil, err
