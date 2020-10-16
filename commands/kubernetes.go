@@ -349,15 +349,20 @@ func kubernetesKubeconfig() *Command {
 
 	k8sCmdService := kubernetesCommandService()
 
-	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
+	cmdShowConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
 This command prints out the raw YAML for the specified cluster's kubeconfig.	`, Writer, aliasOpt("p", "g"))
+	AddIntFlag(cmdShowConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
+		"The length of time the cluster credentials will be valid for in seconds. By default, the credentials expire after seven days.")
+
 	execCredDesc := "INTERNAL: This hidden command is for printing a cluster's exec credential"
 	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", execCredDesc, execCredDesc, Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
+
 	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
 This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage your
 		`, Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "Boolean indicating whether to set the current kubectl context to that of the new cluster")
+
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "Remove a cluster's credentials from your local kubeconfig", `
 This command removes the specified cluster's credentials from your local kubeconfig. After running this command, you will not be able to use `+"`"+`kubectl`+"`"+` to interact with your cluster.
 `, Writer, aliasOpt("d", "rm"))
@@ -860,15 +865,31 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigShow(c *CmdConfig) err
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
+	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgKubeConfigExpirySeconds)
+	if err != nil {
+		return err
+	}
+
 	kube := c.Kubernetes()
 	clusterID, err := clusterIDize(kube, c.Args[0])
 	if err != nil {
 		return err
 	}
-	kubeconfig, err := kube.GetKubeConfig(clusterID)
-	if err != nil {
-		return err
+
+	var kubeconfig []byte
+	switch {
+	case expirySeconds > 0:
+		kubeconfig, err = kube.GetKubeConfigWithExpiry(clusterID, int64(expirySeconds))
+		if err != nil {
+			return err
+		}
+	default:
+		kubeconfig, err = kube.GetKubeConfig(clusterID)
+		if err != nil {
+			return err
+		}
 	}
+
 	_, err = c.Out.Write(kubeconfig)
 	return err
 }

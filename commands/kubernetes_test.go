@@ -319,6 +319,16 @@ func TestKubernetesKubeconfigShow(t *testing.T) {
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		kubeconfig := []byte(`i'm some yaml`)
+		expirySeconds := int64(60)
+		tm.kubernetes.EXPECT().GetKubeConfigWithExpiry(testCluster.ID, expirySeconds).Return(kubeconfig, nil)
+		config.Args = append(config.Args, testCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgKubeConfigExpirySeconds, expirySeconds)
+		err := testK8sCmdService().RunKubernetesKubeconfigShow(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		kubeconfig := []byte(`i'm some yaml`)
 		// it'll see that no UUID is given and do a List call to find the cluster
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID).Return(kubeconfig, nil)
