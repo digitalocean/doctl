@@ -1,7 +1,7 @@
-# github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5
+# github.com/Microsoft/go-winio v0.4.15-0.20200908182639-5b44b70ab3ab
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
-# github.com/Microsoft/hcsshim v0.8.9
+# github.com/Microsoft/hcsshim v0.8.10
 ## explicit
 github.com/Microsoft/hcsshim/osversion
 # github.com/blang/semver v3.5.1+incompatible
@@ -130,7 +130,6 @@ github.com/opencontainers/runc/libcontainer/user
 ## explicit
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
-## explicit
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
@@ -191,7 +190,7 @@ golang.org/x/net/idna
 ## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sys v0.0.0-20200622214017-ed371f2e16b4
+# golang.org/x/sys v0.0.0-20201017003518-b09fb700fbb7
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
