@@ -131,17 +131,13 @@ type kubeconfigProvider struct {
 func (p *kubeconfigProvider) Remote(kube do.KubernetesService, clusterID string, expirySeconds int) (*clientcmdapi.Config, error) {
 	var kubeconfig []byte
 	var err error
-	switch {
-	case expirySeconds > 0:
+	if expirySeconds > 0 {
 		kubeconfig, err = kube.GetKubeConfigWithExpiry(clusterID, int64(expirySeconds))
-		if err != nil {
-			return nil, err
-		}
-	default:
+	} else {
 		kubeconfig, err = kube.GetKubeConfig(clusterID)
-		if err != nil {
-			return nil, err
-		}
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	return clientcmd.Load(kubeconfig)
@@ -890,17 +886,13 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigShow(c *CmdConfig) err
 	}
 
 	var kubeconfig []byte
-	switch {
-	case expirySeconds > 0:
+	if expirySeconds > 0 {
 		kubeconfig, err = kube.GetKubeConfigWithExpiry(clusterID, int64(expirySeconds))
-		if err != nil {
-			return err
-		}
-	default:
+	} else {
 		kubeconfig, err = kube.GetKubeConfig(clusterID)
-		if err != nil {
-			return err
-		}
+	}
+	if err != nil {
+		return err
 	}
 
 	_, err = c.Out.Write(kubeconfig)
