@@ -218,6 +218,9 @@ func kubernetesCluster() *Command {
 
 	cmd.AddCommand(kubernetesNodePools())
 
+	cmd.AddCommand(kubernetesRegistryIntegration())
+
+
 	nodePoolDeatils := `- A list of node pools available inside the cluster`
 	clusterDetails := `
 
@@ -473,6 +476,37 @@ This command deletes the specified node in the specified node pool, and then cre
 		`, Writer)
 	AddBoolFlag(cmdKubeNodeReplace, doctl.ArgForce, doctl.ArgShortForce, false, "Replace node without confirmation prompt")
 	AddBoolFlag(cmdKubeNodeReplace, "skip-drain", "", false, "Skip draining the node before replacement")
+
+	return cmd
+}
+
+func kubernetesRegistryIntegration() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "registry",
+			Aliases: []string{"reg"},
+			Short:   "Display commands for integrating clusters with docr",
+			Long:    "The commands under `registry` are for managing DOCR integration with Kubernetes clusters. You can use these commands to add or remove registry from one or more clusters.",
+		},
+	}
+
+	k8sCmdService := kubernetesCommandService()
+
+	cmdRegistryAdd := CmdBuilder(cmd, k8sCmdService.RunKubernetesRegistryAdd,
+		"add", "Add registry for clusters", `
+This command add registries to the specified cluster(s).`,
+		Writer, aliasOpt("a"))
+
+	AddStringSliceFlag(cmdRegistryAdd, doctl.ArgClusterUUID, "", nil,
+		"uuid of cluster to add registry for; repeat to specify additional clusters.")
+
+	cmdRegistryRemove := CmdBuilder(cmd, k8sCmdService.RunKubernetesRegistryRemove,
+		"remove", "Add registry for clusters", `
+This command add registries to the specified cluster(s).`,
+		Writer, aliasOpt("rm"))
+
+	AddStringSliceFlag(cmdRegistryRemove, doctl.ArgClusterUUID, "", nil,
+		"uuid of cluster to remove registry from; repeat to specify additional clusters.")
 
 	return cmd
 }
@@ -1263,6 +1297,26 @@ func (s *KubernetesCommandService) RunKubeOptionsListNodeSizes(c *CmdConfig) err
 	return c.Display(item)
 }
 
+func (s *KubernetesCommandService) RunKubernetesRegistryAdd(c *CmdConfig) error {
+	r := new(godo.KubernetesClusterRegistryRequest)
+	if err := buildClusterRegistryRequestFromArgs(c, r); err != nil {
+		return err
+	}
+
+	kube := c.Kubernetes()
+	return kube.AddRegistry(r)
+}
+
+func (s *KubernetesCommandService) RunKubernetesRegistryRemove(c *CmdConfig) error {
+	r := new(godo.KubernetesClusterRegistryRequest)
+	if err := buildClusterRegistryRequestFromArgs(c, r); err != nil {
+		return err
+	}
+
+	kube := c.Kubernetes()
+	return kube.RemoveRegistry(r)
+}
+
 func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCreateRequest, defaultNodeSize string, defaultNodeCount int) error {
 	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	if err != nil {
@@ -1554,6 +1608,15 @@ func buildNodePoolCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	}
 	r.MaxNodes = maxNodes
 
+	return nil
+}
+
+func buildClusterRegistryRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterRegistryRequest) error {
+	uuids, err := c.Doit.GetStringSlice(c.NS, doctl.ArgClusterUUID)
+	if err != nil {
+		return err
+	}
+	r.ClusterUUIDs = uuids
 	return nil
 }
 
