@@ -147,6 +147,7 @@ func TestKubernetesClusterCommand(t *testing.T) {
 		"upgrade",
 		"delete",
 		"node-pool",
+		"registry",
 	)
 }
 
@@ -1067,6 +1068,28 @@ func TestKubernetesLatestVersions(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestKubernetes_DOCRIntegration(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.KubernetesClusterRegistryRequest{ClusterUUIDs: []string{testCluster.ID}}
+		tm.kubernetes.EXPECT().AddRegistry(r).Return(nil)
+		// we use testCluster.ID because that represents the uuid of the cluster
+		config.Args = append(config.Args, testCluster.ID)
+
+		err := testK8sCmdService().RunKubernetesRegistryAdd(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.KubernetesClusterRegistryRequest{ClusterUUIDs: []string{testCluster.ID}}
+		tm.kubernetes.EXPECT().RemoveRegistry(r).Return(nil)
+		// we use testCluster.ID because that represents the uuid of the cluster
+		config.Args = append(config.Args, testCluster.ID)
+
+		err := testK8sCmdService().RunKubernetesRegistryRemove(config)
+		assert.NoError(t, err)
+	})
 }
 
 type nilCluster struct {
