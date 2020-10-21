@@ -43,9 +43,9 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools/v3 v3.0.2 // indirect
-	k8s.io/api v0.17.0
-	k8s.io/apimachinery v0.17.0
-	k8s.io/client-go v0.17.0
+	k8s.io/api v0.17.13
+	k8s.io/apimachinery v0.17.13
+	k8s.io/client-go v0.17.13
 	sigs.k8s.io/yaml v1.2.0
 )
 

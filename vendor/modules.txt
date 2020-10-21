@@ -7,8 +7,6 @@ github.com/Microsoft/hcsshim/osversion
 # github.com/blang/semver v3.5.1+incompatible
 ## explicit
 github.com/blang/semver
-# github.com/containerd/cgroups v0.0.0-20200824123100-0b889c03f102
-## explicit
 # github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb
 ## explicit
 github.com/containerd/continuity/pathdriver
@@ -60,13 +58,9 @@ github.com/gobwas/glob/syntax/ast
 github.com/gobwas/glob/syntax/lexer
 github.com/gobwas/glob/util/runes
 github.com/gobwas/glob/util/strings
-# github.com/godbus/dbus v0.0.0-20190422162347-ade71ed3457e
-## explicit
 # github.com/gogo/protobuf v1.3.1
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys
-# github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
-## explicit
 # github.com/golang/mock v1.4.0
 ## explicit
 github.com/golang/mock/gomock
@@ -80,8 +74,6 @@ github.com/google/gofuzz
 # github.com/google/uuid v1.1.1
 ## explicit
 github.com/google/uuid
-# github.com/hashicorp/golang-lru v0.5.4
-## explicit
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -136,7 +128,6 @@ github.com/opencontainers/runc/libcontainer/user
 ## explicit
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
-## explicit
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
@@ -173,8 +164,6 @@ github.com/spf13/viper
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# go.opencensus.io v0.22.5
-## explicit
 # golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 => golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
 ## explicit
 golang.org/x/crypto/blowfish
@@ -257,7 +246,7 @@ gopkg.in/inf.v0
 gopkg.in/yaml.v2
 # gotest.tools/v3 v3.0.2
 ## explicit
-# k8s.io/api v0.17.0
+# k8s.io/api v0.17.13
 ## explicit
 k8s.io/api/admissionregistration/v1
 k8s.io/api/admissionregistration/v1beta1
@@ -299,7 +288,7 @@ k8s.io/api/settings/v1alpha1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apimachinery v0.17.0
+# k8s.io/apimachinery v0.17.13
 ## explicit
 k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/api/resource
@@ -334,7 +323,7 @@ k8s.io/apimachinery/pkg/util/yaml
 k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/client-go v0.17.0
+# k8s.io/client-go v0.17.13
 ## explicit
 k8s.io/client-go/kubernetes/scheme
 k8s.io/client-go/pkg/apis/clientauthentication
@@ -360,6 +349,8 @@ k8s.io/client-go/util/keyutil
 k8s.io/klog
 # k8s.io/utils v0.0.0-20191114184206-e782cd3c129f
 k8s.io/utils/integer
+# sigs.k8s.io/structured-merge-diff v0.0.0-20190525122527-15d366b2352e
+## explicit
 # sigs.k8s.io/yaml v1.2.0
 ## explicit
 sigs.k8s.io/yaml
