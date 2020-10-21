@@ -78,7 +78,7 @@ When you attach a pre-formatted volume to Ubuntu, Debian, Fedora, Fedora Atomic,
 
 Volumes may only be resized upwards. The maximum size for a volume is 16TiB.`, Writer,
 		aliasOpt("r"))
-	AddIntFlag(cmdRunVolumeResize, doctl.ArgSizeSlug, "", 0, "New size",
+	AddIntFlag(cmdRunVolumeResize, doctl.ArgSizeSlug, "", 0, "New size in GiB",
 		requiredOpt())
 	AddStringFlag(cmdRunVolumeResize, doctl.ArgRegionSlug, "", "", "Volume region",
 		requiredOpt())
