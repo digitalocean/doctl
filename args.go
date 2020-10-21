@@ -54,8 +54,6 @@ const (
 	ArgClusterNodePool = "node-pool"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
 	ArgClusterUpdateKubeconfig = "update-kubeconfig"
-	// ArgClusterUUID is an array of cluster uuids
-	ArgClusterUUID = "cluster-uuid"
 	// ArgNodePoolName is a cluster's node pool name argument.
 	ArgNodePoolName = "name"
 	// ArgNodePoolCount is a cluster's node pool count argument.

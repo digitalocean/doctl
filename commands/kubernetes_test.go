@@ -1075,7 +1075,7 @@ func TestKubernetes_DOCRIntegration(t *testing.T) {
 		r := &godo.KubernetesClusterRegistryRequest{ClusterUUIDs: []string{testCluster.ID}}
 		tm.kubernetes.EXPECT().AddRegistry(r).Return(nil)
 		// we use testCluster.ID because that represents the uuid of the cluster
-		config.Doit.Set(config.NS, doctl.ArgClusterUUID, testCluster.ID)
+		config.Args = append(config.Args, testCluster.ID)
 
 		err := testK8sCmdService().RunKubernetesRegistryAdd(config)
 		assert.NoError(t, err)
@@ -1085,7 +1085,7 @@ func TestKubernetes_DOCRIntegration(t *testing.T) {
 		r := &godo.KubernetesClusterRegistryRequest{ClusterUUIDs: []string{testCluster.ID}}
 		tm.kubernetes.EXPECT().RemoveRegistry(r).Return(nil)
 		// we use testCluster.ID because that represents the uuid of the cluster
-		config.Doit.Set(config.NS, doctl.ArgClusterUUID, testCluster.ID)
+		config.Args = append(config.Args, testCluster.ID)
 
 		err := testK8sCmdService().RunKubernetesRegistryRemove(config)
 		assert.NoError(t, err)
