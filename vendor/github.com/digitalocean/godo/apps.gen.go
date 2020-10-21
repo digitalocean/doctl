@@ -142,6 +142,8 @@ type AppServiceSpec struct {
 	Routes      []*AppRouteSpec            `json:"routes,omitempty"`
 	HealthCheck *AppServiceSpecHealthCheck `json:"health_check,omitempty"`
 	CORS        *AppCORSPolicy             `json:"cors,omitempty"`
+	// The ports on which this service will listen for internal traffic.
+	InternalPorts []int64 `json:"internal_ports,omitempty"`
 }
 
 // AppServiceSpecHealthCheck struct for AppServiceSpecHealthCheck
@@ -242,7 +244,7 @@ type AppWorkerSpec struct {
 
 // AppCORSPolicy struct for AppCORSPolicy
 type AppCORSPolicy struct {
-	// The set of CORS allowed origins.
+	// The set of allowed CORS origins.
 	AllowOrigins []*AppStringMatch `json:"allow_origins,omitempty"`
 }
 
@@ -347,9 +349,9 @@ type AppInstanceSizeCPUType string
 
 // List of AppInstanceSizeCPUType
 const (
-	InstanceSizeCPUType_Unspecified AppInstanceSizeCPUType = "UNSPECIFIED"
-	InstanceSizeCPUType_Shared      AppInstanceSizeCPUType = "SHARED"
-	InstanceSizeCPUType_Dedicated   AppInstanceSizeCPUType = "DEDICATED"
+	AppInstanceSizeCPUType_Unspecified AppInstanceSizeCPUType = "UNSPECIFIED"
+	AppInstanceSizeCPUType_Shared      AppInstanceSizeCPUType = "SHARED"
+	AppInstanceSizeCPUType_Dedicated   AppInstanceSizeCPUType = "DEDICATED"
 )
 
 // DeploymentProgressStep struct for DeploymentProgressStep
@@ -402,8 +404,7 @@ type AppStringMatch struct {
 	Exact string `json:"exact,omitempty"`
 	// Prefix-based match. Only 1 of `exact`, `prefix`, or `regex` must be set.
 	Prefix string `json:"prefix,omitempty"`
-	// RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax). Only 1 of `exact`, `prefix`, or `regex` must be set.
-	Regex string `json:"regex,omitempty"`
+	Regex  string `json:"regex,omitempty"`
 }
 
 // AppTier struct for AppTier

@@ -36,6 +36,14 @@ type AppsService interface {
 	CreateDeployment(ctx context.Context, appID string) (*Deployment, *Response, error)
 
 	GetLogs(ctx context.Context, appID, deploymentID, component string, logType AppLogType, follow bool) (*AppLogs, *Response, error)
+
+	ListRegions(ctx context.Context) ([]*AppRegion, *Response, error)
+
+	ListTiers(ctx context.Context) ([]*AppTier, *Response, error)
+	GetTier(ctx context.Context, slug string) (*AppTier, *Response, error)
+
+	ListInstanceSizes(ctx context.Context) ([]*AppInstanceSize, *Response, error)
+	GetInstanceSize(ctx context.Context, slug string) (*AppInstanceSize, *Response, error)
 }
 
 // AppLogs represent app logs.
@@ -68,6 +76,26 @@ type deploymentRoot struct {
 
 type deploymentsRoot struct {
 	Deployments []*Deployment `json:"deployments"`
+}
+
+type appTierRoot struct {
+	Tier *AppTier `json:"tier"`
+}
+
+type appTiersRoot struct {
+	Tiers []*AppTier `json:"tiers"`
+}
+
+type instanceSizeRoot struct {
+	InstanceSize *AppInstanceSize `json:"instance_size"`
+}
+
+type instanceSizesRoot struct {
+	InstanceSizes []*AppInstanceSize `json:"instance_sizes"`
+}
+
+type appRegionsRoot struct {
+	Regions []*AppRegion `json:"regions"`
 }
 
 // AppsServiceOp handles communication with Apps methods of the DigitalOcean API.
@@ -213,4 +241,79 @@ func (s *AppsServiceOp) GetLogs(ctx context.Context, appID, deploymentID, compon
 		return nil, resp, err
 	}
 	return logs, resp, nil
+}
+
+// ListRegions lists all regions supported by App Platform.
+func (s *AppsServiceOp) ListRegions(ctx context.Context) ([]*AppRegion, *Response, error) {
+	path := fmt.Sprintf("%s/regions", appsBasePath)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(appRegionsRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Regions, resp, nil
+}
+
+// ListTiers lists available app tiers.
+func (s *AppsServiceOp) ListTiers(ctx context.Context) ([]*AppTier, *Response, error) {
+	path := fmt.Sprintf("%s/tiers", appsBasePath)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(appTiersRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Tiers, resp, nil
+}
+
+// GetTier retrieves information about a specific app tier.
+func (s *AppsServiceOp) GetTier(ctx context.Context, slug string) (*AppTier, *Response, error) {
+	path := fmt.Sprintf("%s/tiers/%s", appsBasePath, slug)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(appTierRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Tier, resp, nil
+}
+
+// ListInstanceSizes lists available instance sizes for service, worker, and job components.
+func (s *AppsServiceOp) ListInstanceSizes(ctx context.Context) ([]*AppInstanceSize, *Response, error) {
+	path := fmt.Sprintf("%s/tiers/instance_sizes", appsBasePath)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(instanceSizesRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.InstanceSizes, resp, nil
+}
+
+// GetInstanceSize retreives information about a specific instance size for service, worker, and job components.
+func (s *AppsServiceOp) GetInstanceSize(ctx context.Context, slug string) (*AppInstanceSize, *Response, error) {
+	path := fmt.Sprintf("%s/tiers/instance_sizes/%s", appsBasePath, slug)
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(instanceSizeRoot)
+	resp, err := s.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.InstanceSize, resp, nil
 }

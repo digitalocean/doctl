@@ -1,5 +1,10 @@
 # Change Log
 
+## [v1.49.0] - 2020-10-21
+
+- #383 - @kamaln7 - apps: add ListRegions, Get/ListTiers, Get/ListInstanceSizes
+- #390 - @snormore - apps: add service spec internal_ports
+
 ## [v1.48.0] - 2020-10-16
 
 - #388 - @varshavaradarajan - kubernetes - change docr integration api routes
