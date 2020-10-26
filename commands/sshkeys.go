@@ -99,7 +99,7 @@ func RunKeyGet(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.Key{Keys: do.SSHKeys{*k}}
+	item := &displayers.KeyGet{Keys: do.SSHKeys{*k}}
 	return c.Display(item)
 }
 
