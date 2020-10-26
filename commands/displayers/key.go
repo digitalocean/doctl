@@ -31,13 +31,13 @@ func (ke *Key) JSON(out io.Writer) error {
 
 func (ke *Key) Cols() []string {
 	return []string{
-		"ID", "Name", "FingerPrint",
+		"ID", "Name", "FingerPrint", "PublicKey",
 	}
 }
 
 func (ke *Key) ColMap() map[string]string {
 	return map[string]string{
-		"ID": "ID", "Name": "Name", "FingerPrint": "FingerPrint",
+		"ID": "ID", "Name": "Name", "FingerPrint": "FingerPrint", "PublicKey": "Public Key",
 	}
 }
 
@@ -46,7 +46,7 @@ func (ke *Key) KV() []map[string]interface{} {
 
 	for _, k := range ke.Keys {
 		o := map[string]interface{}{
-			"ID": k.ID, "Name": k.Name, "FingerPrint": k.Fingerprint,
+			"ID": k.ID, "Name": k.Name, "FingerPrint": k.Fingerprint, "PublicKey": k.PublicKey,
 		}
 
 		out = append(out, o)
