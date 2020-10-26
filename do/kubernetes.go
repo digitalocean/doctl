@@ -89,6 +89,8 @@ type KubernetesService interface {
 	GetVersions() (KubernetesVersions, error)
 	GetRegions() (KubernetesRegions, error)
 	GetNodeSizes() (KubernetesNodeSizes, error)
+	AddRegistry(req *godo.KubernetesClusterRegistryRequest) error
+	RemoveRegistry(req *godo.KubernetesClusterRegistryRequest) error
 }
 
 var _ KubernetesService = &kubernetesClusterService{}
@@ -320,4 +322,14 @@ func (k8s *kubernetesClusterService) GetNodeSizes() (KubernetesNodeSizes, error)
 		list = append(list, KubernetesNodeSize{KubernetesNodeSize: item})
 	}
 	return list, err
+}
+
+func (k8s *kubernetesClusterService) AddRegistry(req *godo.KubernetesClusterRegistryRequest) error {
+	_, err := k8s.client.AddRegistry(context.TODO(), req)
+	return err
+}
+
+func (k8s *kubernetesClusterService) RemoveRegistry(req *godo.KubernetesClusterRegistryRequest) error {
+	_, err := k8s.client.RemoveRegistry(context.TODO(), req)
+	return err
 }

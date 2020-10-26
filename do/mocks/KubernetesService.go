@@ -329,3 +329,31 @@ func (mr *MockKubernetesServiceMockRecorder) GetNodeSizes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNodeSizes", reflect.TypeOf((*MockKubernetesService)(nil).GetNodeSizes))
 }
+
+// AddRegistry mocks base method.
+func (m *MockKubernetesService) AddRegistry(req *godo.KubernetesClusterRegistryRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddRegistry", req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddRegistry indicates an expected call of AddRegistry.
+func (mr *MockKubernetesServiceMockRecorder) AddRegistry(req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRegistry", reflect.TypeOf((*MockKubernetesService)(nil).AddRegistry), req)
+}
+
+// RemoveRegistry mocks base method.
+func (m *MockKubernetesService) RemoveRegistry(req *godo.KubernetesClusterRegistryRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveRegistry", req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveRegistry indicates an expected call of RemoveRegistry.
+func (mr *MockKubernetesServiceMockRecorder) RemoveRegistry(req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveRegistry", reflect.TypeOf((*MockKubernetesService)(nil).RemoveRegistry), req)
+}
