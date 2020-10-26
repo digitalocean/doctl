@@ -51,6 +51,7 @@ func Registry() *Command {
 	}
 
 	cmd.AddCommand(Repository())
+	cmd.AddCommand(GarbageCollection())
 
 	createRegDesc := "This command creates a new private container registry with the provided name."
 	CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>",
@@ -165,6 +166,74 @@ func Repository() *Command {
 		aliasOpt("dm"),
 	)
 	AddBoolFlag(cmdRunRepositoryDeleteManifest, doctl.ArgForce, doctl.ArgShortForce, false, "Force manifest deletion")
+
+	return cmd
+}
+
+// GarbageCollection creates the garbage-collection subcommand
+func GarbageCollection() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "garbage-collection",
+			Aliases: []string{"gc", "g"},
+			Short:   "Display commands for working with garbage collection for a container registry",
+			Long:    "The subcommands of `doctl registry garbage-collection` help you command actions related to garbage collecting unreferenced blobs for a specified registry.",
+		},
+	}
+
+	runStartGarbageCollectionDesc := "This command starts a garbage collection on a container registry. There can be only one active garbage collection at a time for a given registry."
+	_ = CmdBuilder(
+		cmd,
+		RunStartGarbageCollection,
+		"start",
+		"Start garbage collection for a container registry",
+		runStartGarbageCollectionDesc,
+		Writer,
+		aliasOpt("s"),
+	)
+
+	gcInfoIncluded := `
+  - UUID
+  - Status
+  - Registry Name
+  - Created At
+  - Updated At
+  - Blobs Deleted
+  - Freed Bytes
+`
+
+	runGetGarbageCollectionDesc := "This command retrieves a container registry's currently-active garbage collection, if any active garbage collection exists. Information included about the registry includes:" + gcInfoIncluded
+	_ = CmdBuilder(
+		cmd,
+		RunGetGarbageCollection,
+		"get-active",
+		"Retrieve information about the currently-active garbage collection.",
+		runGetGarbageCollectionDesc,
+		Writer,
+		aliasOpt("ga", "g"),
+	)
+
+	runListGarbageCollectionsDesc := "This command retrieves a list of past garbage collections for a given garbage collection. Information about each garbage collection includes:" + gcInfoIncluded
+	_ = CmdBuilder(
+		cmd,
+		RunListGarbageCollections,
+		"list",
+		"Retrieve information about list of past collections",
+		runListGarbageCollectionsDesc,
+		Writer,
+		aliasOpt("ls", "l"),
+	)
+
+	runCancelGarbageCollectionDesc := "This command cancels a registry's currently-active garbage collection."
+	_ = CmdBuilder(
+		cmd,
+		RunCancelGarbageCollection,
+		"cancel",
+		"Cancel the currently-active garbage collection",
+		runCancelGarbageCollectionDesc,
+		Writer,
+		aliasOpt("c"),
+	)
 
 	return cmd
 }
@@ -513,4 +582,30 @@ func displayRepositoryTags(c *CmdConfig, tags ...do.RepositoryTag) error {
 		Tags: tags,
 	}
 	return c.Display(item)
+}
+
+// Garbage Collection run commands
+
+// RunStartGarbageCollection starts a garbage collection for the specified
+// registry.
+func RunStartGarbageCollection(c *CmdConfig) error {
+	return nil
+}
+
+// RunGetGarbageCollection gets the specified registry's currently-active
+// garbage collection.
+func RunGetGarbageCollection(c *CmdConfig) error {
+	return nil
+}
+
+// RunListGarbageCollections gets the specified registry's currently-active
+// garbage collection.
+func RunListGarbageCollections(c *CmdConfig) error {
+	return nil
+}
+
+// RunCancelGarbageCollection gets the specified registry's currently-active
+// garbage collection.
+func RunCancelGarbageCollection(c *CmdConfig) error {
+	return nil
 }
