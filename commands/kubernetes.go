@@ -117,7 +117,7 @@ func Kubernetes() *Command {
 // KubeconfigProvider allows a user to read from a remote and local Kubeconfig, and write to a
 // local Kubeconfig.
 type KubeconfigProvider interface {
-	Remote(kube do.KubernetesService, clusterID string) (*clientcmdapi.Config, error)
+	Remote(kube do.KubernetesService, clusterID string, expirySeconds int) (*clientcmdapi.Config, error)
 	Local() (*clientcmdapi.Config, error)
 	Write(config *clientcmdapi.Config) error
 	ConfigPath() string
@@ -128,11 +128,18 @@ type kubeconfigProvider struct {
 }
 
 // Remote returns the kubeconfig for the cluster with the given ID from DOKS.
-func (p *kubeconfigProvider) Remote(kube do.KubernetesService, clusterID string) (*clientcmdapi.Config, error) {
-	kubeconfig, err := kube.GetKubeConfig(clusterID)
+func (p *kubeconfigProvider) Remote(kube do.KubernetesService, clusterID string, expirySeconds int) (*clientcmdapi.Config, error) {
+	var kubeconfig []byte
+	var err error
+	if expirySeconds > 0 {
+		kubeconfig, err = kube.GetKubeConfigWithExpiry(clusterID, int64(expirySeconds))
+	} else {
+		kubeconfig, err = kube.GetKubeConfig(clusterID)
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	return clientcmd.Load(kubeconfig)
 }
 
@@ -352,15 +359,22 @@ func kubernetesKubeconfig() *Command {
 
 	k8sCmdService := kubernetesCommandService()
 
-	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
+	cmdShowConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigShow, "show <cluster-id|cluster-name>", "Show a Kubernetes cluster's kubeconfig YAML", `
 This command prints out the raw YAML for the specified cluster's kubeconfig.	`, Writer, aliasOpt("p", "g"))
+	AddIntFlag(cmdShowConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
+		"The length of time the cluster credentials will be valid for in seconds. By default, the credentials expire after seven days.")
+
 	execCredDesc := "INTERNAL: This hidden command is for printing a cluster's exec credential"
 	cmdExecCredential := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigExecCredential, "exec-credential <cluster-id>", execCredDesc, execCredDesc, Writer, hiddenCmd())
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
+
 	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
 This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage your
 		`, Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "Boolean indicating whether to set the current kubectl context to that of the new cluster")
+	AddIntFlag(cmdSaveConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
+		"The length of time the cluster credentials will be valid for in seconds. By default, the credentials are automatically renewed as needed.")
+
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "Remove a cluster's credentials from your local kubeconfig", `
 This command removes the specified cluster's credentials from your local kubeconfig. After running this command, you will not be able to use `+"`"+`kubectl`+"`"+` to interact with your cluster.
 `, Writer, aliasOpt("d", "rm"))
@@ -715,7 +729,7 @@ func (s *KubernetesCommandService) tryUpdateKubeconfig(kube do.KubernetesService
 	ctx, cancel := context.WithTimeout(context.TODO(), timeoutFetchingKubeconfig)
 	defer cancel()
 	for {
-		remoteConfig, err = s.KubeconfigProvider.Remote(kube, clusterID)
+		remoteConfig, err = s.KubeconfigProvider.Remote(kube, clusterID, 0)
 		if err != nil {
 			select {
 			case <-ctx.Done():
@@ -727,7 +741,7 @@ func (s *KubernetesCommandService) tryUpdateKubeconfig(kube do.KubernetesService
 			break
 		}
 	}
-	if err := s.writeOrAddToKubeconfig(clusterID, remoteConfig, setCurrentContext); err != nil {
+	if err := s.writeOrAddToKubeconfig(clusterID, remoteConfig, setCurrentContext, 0); err != nil {
 		warn("Couldn't write cluster credentials: %v", err)
 	}
 }
@@ -888,15 +902,27 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigShow(c *CmdConfig) err
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
+	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgKubeConfigExpirySeconds)
+	if err != nil {
+		return err
+	}
+
 	kube := c.Kubernetes()
 	clusterID, err := clusterIDize(kube, c.Args[0])
 	if err != nil {
 		return err
 	}
-	kubeconfig, err := kube.GetKubeConfig(clusterID)
+
+	var kubeconfig []byte
+	if expirySeconds > 0 {
+		kubeconfig, err = kube.GetKubeConfigWithExpiry(clusterID, int64(expirySeconds))
+	} else {
+		kubeconfig, err = kube.GetKubeConfig(clusterID)
+	}
 	if err != nil {
 		return err
 	}
+
 	_, err = c.Out.Write(kubeconfig)
 	return err
 }
@@ -1025,13 +1051,18 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 	if len(c.Args) != 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
+	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgKubeConfigExpirySeconds)
+	if err != nil {
+		return err
+	}
+
 	kube := c.Kubernetes()
 	clusterID, err := clusterIDize(kube, c.Args[0])
 	if err != nil {
 		return err
 	}
 
-	remoteKubeconfig, err := s.KubeconfigProvider.Remote(kube, clusterID)
+	remoteKubeconfig, err := s.KubeconfigProvider.Remote(kube, clusterID, expirySeconds)
 	if err != nil {
 		return err
 	}
@@ -1047,7 +1078,7 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 		os.Remove(path)
 	}
 
-	return s.writeOrAddToKubeconfig(clusterID, remoteKubeconfig, setCurrentContext)
+	return s.writeOrAddToKubeconfig(clusterID, remoteKubeconfig, setCurrentContext, expirySeconds)
 }
 
 // RunKubernetesKubeconfigRemove retrieves an existing kubernetes config and removes it from your local kubeconfig.
@@ -1684,7 +1715,7 @@ func buildNodePoolUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesNodePool
 	return nil
 }
 
-func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, remoteKubeconfig *clientcmdapi.Config, setCurrentContext bool) error {
+func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, remoteKubeconfig *clientcmdapi.Config, setCurrentContext bool, expirySeconds int) error {
 	localKubeconfig, err := s.KubeconfigProvider.Local()
 	if err != nil {
 		return err
@@ -1692,7 +1723,7 @@ func (s *KubernetesCommandService) writeOrAddToKubeconfig(clusterID string, remo
 
 	kubectlDefaults := s.KubeconfigProvider.ConfigPath()
 	notice("Adding cluster credentials to kubeconfig file found in %q", kubectlDefaults)
-	if err := mergeKubeconfig(clusterID, remoteKubeconfig, localKubeconfig, setCurrentContext); err != nil {
+	if err := mergeKubeconfig(clusterID, remoteKubeconfig, localKubeconfig, setCurrentContext, expirySeconds); err != nil {
 		return fmt.Errorf("Couldn't use the kubeconfig info received, %v", err)
 	}
 
@@ -1719,7 +1750,7 @@ func removeFromKubeconfig(kubeconfig []byte) error {
 // mergeKubeconfig merges a remote cluster's config file with a local config file,
 // assuming that the current context in the remote config file points to the
 // cluster details to add to the local config.
-func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCurrentContext bool) error {
+func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCurrentContext bool, expirySeconds int) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
 		// this is a bug in the backend, we received incomplete/non-sensical data
@@ -1743,21 +1774,30 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 		local.CurrentContext = remote.CurrentContext
 	}
 
-	// configure kubectl to call doctl to retrieve credentials
-	local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
-		Exec: &clientcmdapi.ExecConfig{
-			APIVersion: clientauthentication.SchemeGroupVersion.String(),
-			Command:    doctl.CommandName(),
-			Args: []string{
-				"kubernetes",
-				"cluster",
-				"kubeconfig",
-				"exec-credential",
-				"--version=v1beta1",
-				"--context=" + getCurrentAuthContextFn(),
-				clusterID,
+	switch {
+	case expirySeconds > 0:
+		// When expirySeconds is passed, token based auth should be used as
+		// credentials should expire and not be renewed automatically
+		local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
+			Token: remote.AuthInfos[remoteCtx.AuthInfo].Token,
+		}
+	default:
+		// Configure kubectl to call doctl to renew credentials automatically
+		local.AuthInfos[remoteCtx.AuthInfo] = &clientcmdapi.AuthInfo{
+			Exec: &clientcmdapi.ExecConfig{
+				APIVersion: clientauthentication.SchemeGroupVersion.String(),
+				Command:    doctl.CommandName(),
+				Args: []string{
+					"kubernetes",
+					"cluster",
+					"kubeconfig",
+					"exec-credential",
+					"--version=v1beta1",
+					"--context=" + getCurrentAuthContextFn(),
+					clusterID,
+				},
 			},
-		},
+		}
 	}
 
 	return nil

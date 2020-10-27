@@ -86,6 +86,8 @@ const (
 	ArgKubernetesLabel = "label"
 	// ArgKubernetesTaint is a Kubernetes taint argument.
 	ArgKubernetesTaint = "taint"
+	// ArgKubeConfigExpirySeconds indicates the length of time the token in a kubeconfig will be valid in seconds.
+	ArgKubeConfigExpirySeconds = "expiry-seconds"
 	// ArgImage is an image argument.
 	ArgImage = "image"
 	// ArgImageID is an image id argument.
