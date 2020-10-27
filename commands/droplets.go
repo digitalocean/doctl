@@ -557,58 +557,30 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 // RunDropletGet returns a droplet.
 func RunDropletGet(c *CmdConfig) error {
 
-	id, err := getDropletIDArg(c.NS, c.Args)
-	if err != nil {
-		// Try to find Droplet by name
-		if len(c.Args) < 1 {
-			return doctl.NewMissingArgsErr(c.NS)
-		}
-		ds := c.Droplets()
-		fn := func(ids []int) error {
-			var matches []int
-			for _, id := range ids {
-				d, err := ds.Get(id)
-				if err != nil {
-					return fmt.Errorf("Unable to get Droplet %d: %v", id, err)
-				}
-				if d.Name == c.Args[0] {
-					matches = append(matches, d.ID)
-				}
-			}
-			if len(matches) == 1 {
-				id = matches[0]
-			}
-			return nil
-		}
-
-		err := matchDroplets(c.Args, ds, fn)
-		if err != nil {
-			return err
-		}
-	}
-
-	getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)
-	if err != nil {
-		return err
-	}
-
 	ds := c.Droplets()
+	fn := func(ids []int) error {
+		for _, id := range ids {
+			d, err := ds.Get(id)
+			if err != nil {
+				return err
+			}
 
-	d, err := ds.Get(id)
-	if err != nil {
-		return err
-	}
-
-	item := &displayers.Droplet{Droplets: do.Droplets{*d}}
-	if getTemplate != "" {
-		t := template.New("Get template")
-		t, err = t.Parse(getTemplate)
-		if err != nil {
-			return err
+			item := &displayers.Droplet{Droplets: do.Droplets{*d}}
+			getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)
+			if getTemplate != "" {
+				t := template.New("Get template")
+				t, err = t.Parse(getTemplate)
+				if err != nil {
+					return err
+				}
+				return t.Execute(c.Out, d)
+			}
+			return c.Display(item)
 		}
-		return t.Execute(c.Out, d)
+		return nil
 	}
-	return c.Display(item)
+	return matchDroplets(c.Args, ds, fn)
+
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
