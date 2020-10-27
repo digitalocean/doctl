@@ -38,6 +38,11 @@ type RepositoryTag struct {
 	*godo.RepositoryTag
 }
 
+// GarbageCollection wraps a godo GarbageCollection
+type GarbageCollection struct {
+	*godo.GarbageCollection
+}
+
 // Endpoint returns the registry endpoint for image tagging
 func (r *Registry) Endpoint() string {
 	return fmt.Sprintf("%s/%s", RegistryHostname, r.Registry.Name)
@@ -54,6 +59,10 @@ type RegistryService interface {
 	DeleteTag(string, string, string) error
 	DeleteManifest(string, string, string) error
 	Endpoint() string
+	StartGarbageCollection(string) (*GarbageCollection, error)
+	GetGarbageCollection(string) (*GarbageCollection, error)
+	ListGarbageCollections(string) ([]GarbageCollection, error)
+	CancelGarbageCollection(string, string) (*GarbageCollection, error)
 }
 
 type registryService struct {
@@ -169,6 +178,65 @@ func (rs *registryService) DeleteTag(registry, repository, tag string) error {
 func (rs *registryService) DeleteManifest(registry, repository, digest string) error {
 	_, err := rs.client.Registry.DeleteManifest(rs.ctx, registry, repository, digest)
 	return err
+}
+
+func (rs *registryService) StartGarbageCollection(registry string) (*GarbageCollection, error) {
+	gc, _, err := rs.client.Registry.StartGarbageCollection(rs.ctx, registry)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GarbageCollection{gc}, nil
+}
+
+func (rs *registryService) GetGarbageCollection(registry string) (*GarbageCollection, error) {
+	gc, _, err := rs.client.Registry.GetGarbageCollection(rs.ctx, registry)
+	if err != nil {
+		return nil, err
+	}
+
+	return &GarbageCollection{gc}, nil
+}
+
+func (rs *registryService) ListGarbageCollections(registry string) ([]GarbageCollection, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := rs.client.Registry.ListGarbageCollections(rs.ctx, registry, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]GarbageCollection, len(si))
+	for i := range si {
+		a := si[i].(*godo.GarbageCollection)
+		list[i] = GarbageCollection{a}
+	}
+
+	return list, err
+}
+
+func (rs *registryService) CancelGarbageCollection(registry, garbageCollection string) (*GarbageCollection, error) {
+	gc, _, err := rs.client.Registry.UpdateGarbageCollection(rs.ctx, registry,
+		garbageCollection, &godo.UpdateGarbageCollectionRequest{
+			Cancel: true,
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return &GarbageCollection{gc}, nil
 }
 
 func (rs *registryService) Endpoint() string {

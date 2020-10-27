@@ -147,3 +147,55 @@ func (r *RepositoryTag) KV() []map[string]interface{} {
 
 	return out
 }
+
+type GarbageCollection struct {
+	GarbageCollections []do.GarbageCollection
+}
+
+var _ Displayable = &GarbageCollection{}
+
+func (g *GarbageCollection) JSON(out io.Writer) error {
+	return writeJSON(g.GarbageCollections, out)
+}
+
+func (g *GarbageCollection) Cols() []string {
+	return []string{
+		"UUID",
+		"RegistryName",
+		"Status",
+		"CreatedAt",
+		"UpdatedAt",
+		"BlobsDeleted",
+		"FreedBytes",
+	}
+}
+
+func (g *GarbageCollection) ColMap() map[string]string {
+	return map[string]string{
+		"UUID":         "UUID",
+		"RegistryName": "Registry Name",
+		"Status":       "Status",
+		"CreatedAt":    "Created At",
+		"UpdatedAt":    "Updated At",
+		"BlobsDeleted": "Blobs Deleted",
+		"FreedBytes":   "Bytes Freed",
+	}
+}
+
+func (g *GarbageCollection) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, gc := range g.GarbageCollections {
+		out = append(out, map[string]interface{}{
+			"UUID":         gc.UUID,
+			"RegistryName": gc.RegistryName,
+			"Status":       gc.Status,
+			"CreatedAt":    gc.CreatedAt,
+			"UpdatedAt":    gc.UpdatedAt,
+			"BlobsDeleted": gc.BlobsDeleted,
+			"FreedBytes":   gc.FreedBytes,
+		})
+	}
+
+	return out
+}

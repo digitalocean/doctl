@@ -589,23 +589,111 @@ func displayRepositoryTags(c *CmdConfig, tags ...do.RepositoryTag) error {
 // RunStartGarbageCollection starts a garbage collection for the specified
 // registry.
 func RunStartGarbageCollection(c *CmdConfig) error {
-	return nil
+	var registry *do.Registry
+	// we anticipate supporting multiple registries in the future by allowing the
+	// user to specify a registry argument on the command line but defaulting to
+	// the default registry returned by c.Registry().Get()
+	if len(c.Args) != 1 {
+		var err error
+		registry, err = c.Registry().Get()
+		if err != nil {
+			return fmt.Errorf("failed to get registry: %w", err)
+		}
+	}
+
+	gc, err := c.Registry().StartGarbageCollection(registry.Name)
+	if err != nil {
+		return err
+	}
+
+	return displayGarbageCollections(c, *gc)
 }
 
 // RunGetGarbageCollection gets the specified registry's currently-active
 // garbage collection.
 func RunGetGarbageCollection(c *CmdConfig) error {
-	return nil
+	var registry *do.Registry
+	// we anticipate supporting multiple registries in the future by allowing the
+	// user to specify a registry argument on the command line but defaulting to
+	// the default registry returned by c.Registry().Get()
+	if len(c.Args) != 1 {
+		var err error
+		registry, err = c.Registry().Get()
+		if err != nil {
+			return fmt.Errorf("failed to get registry: %w", err)
+		}
+	}
+
+	gc, err := c.Registry().GetGarbageCollection(registry.Name)
+	if err != nil {
+		return err
+	}
+
+	return displayGarbageCollections(c, *gc)
 }
 
 // RunListGarbageCollections gets the specified registry's currently-active
 // garbage collection.
 func RunListGarbageCollections(c *CmdConfig) error {
-	return nil
+	var registry *do.Registry
+	// we anticipate supporting multiple registries in the future by allowing the
+	// user to specify a registry argument on the command line but defaulting to
+	// the default registry returned by c.Registry().Get()
+	if len(c.Args) != 1 {
+		var err error
+		registry, err = c.Registry().Get()
+		if err != nil {
+			return fmt.Errorf("failed to get registry: %w", err)
+		}
+	}
+
+	gcs, err := c.Registry().ListGarbageCollections(registry.Name)
+	if err != nil {
+		return err
+	}
+
+	return displayGarbageCollections(c, gcs...)
 }
 
 // RunCancelGarbageCollection gets the specified registry's currently-active
 // garbage collection.
 func RunCancelGarbageCollection(c *CmdConfig) error {
+	var (
+		registryName string
+		gcUUID       string
+	)
+
+	if len(c.Args) == 1 { // <gc-uuid>
+		gcUUID = c.Args[0]
+	} else if len(c.Args) == 2 { // <registry-name> <gc-uuid>
+		registryName = c.Args[0]
+		gcUUID = c.Args[1]
+	} else {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	// we anticipate supporting multiple registries in the future by allowing the
+	// user to specify a registry argument on the command line but defaulting to
+	// the default registry returned by c.Registry().Get()
+	if registryName == "" {
+		registry, err := c.Registry().Get()
+		if err != nil {
+			return fmt.Errorf("failed to get registry: %w", err)
+		}
+		registryName = registry.Name
+	}
+
+	_, err := c.Registry().CancelGarbageCollection(registryName, gcUUID)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func displayGarbageCollections(c *CmdConfig, garbageCollections ...do.GarbageCollection) error {
+	item := &displayers.GarbageCollection{
+		GarbageCollections: garbageCollections,
+	}
+	return c.Display(item)
 }
