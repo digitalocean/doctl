@@ -575,6 +575,9 @@ func RunDropletGet(c *CmdConfig) error {
 					matches = append(matches, d.ID)
 				}
 			}
+			if len(matches) == 1 {
+				id = matches[0]
+			}
 			return nil
 		}
 
