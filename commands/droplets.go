@@ -556,9 +556,29 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 
 // RunDropletGet returns a droplet.
 func RunDropletGet(c *CmdConfig) error {
+
 	id, err := getDropletIDArg(c.NS, c.Args)
 	if err != nil {
-		id, err = getDropletByName(c.Droplets(), c.NS, c.Args)
+		// Try to find Droplet by name
+		if len(c.Args) < 1 {
+			return doctl.NewMissingArgsErr(c.NS)
+		}
+		ds := c.Droplets()
+		fn := func(ids []int) error {
+			var matches []int
+			for _, id := range ids {
+				d, err := ds.Get(id)
+				if err != nil {
+					return fmt.Errorf("Unable to get Droplet %d: %v", id, err)
+				}
+				if d.Name == c.Args[0] {
+					matches = append(matches, d.ID)
+				}
+			}
+			return nil
+		}
+
+		err := matchDroplets(c.Args, ds, fn)
 		if err != nil {
 			return err
 		}
@@ -712,35 +732,7 @@ func getDropletIDArg(ns string, args []string) (int, error) {
 		return 0, doctl.NewMissingArgsErr(ns)
 	}
 
-	id, err := strconv.Atoi(args[0])
-	return id, err
-}
-
-func getDropletByName(ds do.DropletsService, ns string, args []string) (int, error) {
-	if len(args) != 1 {
-		return 0, doctl.NewMissingArgsErr(ns)
-	}
-
-	var matches []int
-
-	list, err := ds.List()
-	if err != nil {
-		return -1, err
-	}
-
-	for _, d := range list {
-		if d.Name == args[0] {
-			matches = append(matches, d.ID)
-		}
-	}
-
-	if len(matches) == 0 {
-		return 0, fmt.Errorf("Droplet with the name %q could not be found.", args[0])
-	} else if len(matches) == 1 {
-		return matches[0], nil
-	} else {
-		return 0, fmt.Errorf("Multiple Droplets with the name %q found.", args[0])
-	}
+	return strconv.Atoi(args[0])
 }
 
 type dropletSummary struct {
