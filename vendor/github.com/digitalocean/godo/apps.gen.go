@@ -62,7 +62,8 @@ type AppDomainSpec struct {
 	Domain string            `json:"domain"`
 	Type   AppDomainSpecType `json:"type,omitempty"`
 	// Whether the domain includes all sub-domains, in addition to the given domain.
-	Wildcard bool `json:"wildcard,omitempty"`
+	Wildcard bool   `json:"wildcard,omitempty"`
+	Zone     string `json:"zone,omitempty"`
 }
 
 // AppDomainSpecType  - DEFAULT: The default .ondigitalocean.app domain assigned to this app.  - PRIMARY: The primary domain for this app. This is the domain that is displayed as the default in the control panel, used in bindable environment variables, and any other places that reference an app's live URL. Only one domain may be set as primary.  - ALIAS: A non-primary domain.
@@ -100,14 +101,15 @@ type AppJobSpec struct {
 	Kind             AppJobSpecKind `json:"kind,omitempty"`
 }
 
-// AppJobSpecKind  - UNSPECIFIED: Default job type, will auto-complete to POST_DEPLOY kind.  - PRE_DEPLOY: Indicates a job that runs before an app deployment.  - POST_DEPLOY: Indicates a job that runs after an app deployment.
+// AppJobSpecKind  - UNSPECIFIED: Default job type, will auto-complete to POST_DEPLOY kind.  - PRE_DEPLOY: Indicates a job that runs before an app deployment.  - POST_DEPLOY: Indicates a job that runs after an app deployment.  - FAILED_DEPLOY: Indicates a job that runs after a component fails to deploy.
 type AppJobSpecKind string
 
 // List of AppJobSpecKind
 const (
-	AppJobSpecKind_Unspecified AppJobSpecKind = "UNSPECIFIED"
-	AppJobSpecKind_PreDeploy   AppJobSpecKind = "PRE_DEPLOY"
-	AppJobSpecKind_PostDeploy  AppJobSpecKind = "POST_DEPLOY"
+	AppJobSpecKind_Unspecified  AppJobSpecKind = "UNSPECIFIED"
+	AppJobSpecKind_PreDeploy    AppJobSpecKind = "PRE_DEPLOY"
+	AppJobSpecKind_PostDeploy   AppJobSpecKind = "POST_DEPLOY"
+	AppJobSpecKind_FailedDeploy AppJobSpecKind = "FAILED_DEPLOY"
 )
 
 // AppRouteSpec struct for AppRouteSpec
@@ -207,6 +209,8 @@ type AppStaticSiteSpec struct {
 	// A list of HTTP routes that should be routed to this component.
 	Routes []*AppRouteSpec `json:"routes,omitempty"`
 	CORS   *AppCORSPolicy  `json:"cors,omitempty"`
+	// The name of the document to use as the fallback for any requests to documents that are not found when serving this static site. Only 1 of `catchall_document` or `error_document` can be set.
+	CatchallDocument string `json:"catchall_document,omitempty"`
 }
 
 // AppVariableDefinition struct for AppVariableDefinition

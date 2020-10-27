@@ -79,22 +79,69 @@ func TestVPCCreate(t *testing.T) {
 }
 
 func TestVPCUpdate(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		vpcUUID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
-		r := godo.VPCUpdateRequest{
-			Name:        "vpc-name-update",
-			Description: "vpc description updated",
-		}
+	tests := []struct {
+		desc            string
+		setup           func(*CmdConfig)
+		expectedVPCId   string
+		expectedRequest *godo.VPCUpdateRequest
+	}{
+		{
+			desc: "update vpc name",
+			setup: func(in *CmdConfig) {
+				in.Args = append(in.Args, "vpc-uuid")
+				in.Doit.Set(in.NS, doctl.ArgVPCName, "update-vpc-name-test")
 
-		tm.vpcs.EXPECT().Update(vpcUUID, &r).Return(&testVPC, nil)
+			},
+			expectedVPCId: "vpc-uuid",
+			expectedRequest: &godo.VPCUpdateRequest{
+				Name: "update-vpc-name-test",
+			},
+		},
 
-		config.Args = append(config.Args, vpcUUID)
-		config.Doit.Set(config.NS, doctl.ArgVPCName, "vpc-name-update")
-		config.Doit.Set(config.NS, doctl.ArgVPCDescription, "vpc description updated")
+		{
+			desc: "update vpc name and description",
+			setup: func(in *CmdConfig) {
+				in.Args = append(in.Args, "vpc-uuid")
+				in.Doit.Set(in.NS, doctl.ArgVPCName, "update-vpc-name-test")
+				in.Doit.Set(in.NS, doctl.ArgVPCDescription, "i am a new desc")
 
-		err := RunVPCUpdate(config)
-		assert.NoError(t, err)
-	})
+			},
+			expectedVPCId: "vpc-uuid",
+			expectedRequest: &godo.VPCUpdateRequest{
+				Name:        "update-vpc-name-test",
+				Description: "i am a new desc",
+			},
+		},
+
+		{
+			desc: "update vpc name and description and set to default",
+			setup: func(in *CmdConfig) {
+				in.Args = append(in.Args, "vpc-uuid")
+				in.Doit.Set(in.NS, doctl.ArgVPCName, "update-vpc-name-test")
+				in.Doit.Set(in.NS, doctl.ArgVPCDescription, "i am a new desc")
+				in.Doit.Set(in.NS, doctl.ArgVPCDefault, true)
+			},
+			expectedVPCId: "vpc-uuid",
+			expectedRequest: &godo.VPCUpdateRequest{
+				Name:        "update-vpc-name-test",
+				Description: "i am a new desc",
+				Default:     boolPtr(true),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			if tt.setup != nil {
+				tt.setup(config)
+			}
+
+			tm.vpcs.EXPECT().Update(tt.expectedVPCId, tt.expectedRequest).Return(&testVPC, nil)
+			err := RunVPCUpdate(config)
+
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestVPCUpdatefNoID(t *testing.T) {
