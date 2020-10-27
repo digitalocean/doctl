@@ -61,7 +61,7 @@ var (
 func TestRegistryCommand(t *testing.T) {
 	cmd := Registry()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "get", "delete", "login", "logout", "kubernetes-manifest", "repository", "docker-config")
+	assertCommandNames(t, cmd, "create", "get", "delete", "login", "logout", "kubernetes-manifest", "repository", "docker-config", "garbage-collection")
 }
 
 func TestRepositoryCommand(t *testing.T) {
