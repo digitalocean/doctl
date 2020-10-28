@@ -95,7 +95,7 @@ func Droplet() *Command {
 	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the Droplet without a confirmation prompt")
 	AddStringFlag(cmdRunDropletDelete, doctl.ArgTagName, "", "", "Tag name")
 
-	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id>", "Retrieve information about a Droplet", `Use this command to retrieve information about a Droplet, including:`+dropletDetails, Writer,
+	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id|droplet-name>", "Retrieve information about a Droplet", `Use this command to retrieve information about a Droplet, including:`+dropletDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Droplet{}))
 	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Sample values: `{{.ID}}`, `{{.Name}}`, `{{.Memory}}`, `{{.Region.Name}}`, `{{.Image}}`, `{{.Tags}}`")
 
@@ -556,9 +556,8 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 
 // RunDropletGet returns a droplet.
 func RunDropletGet(c *CmdConfig) error {
-	id, err := getDropletIDArg(c.NS, c.Args)
-	if err != nil {
-		return err
+	if len(c.Args) != 1 {
+		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)
@@ -567,22 +566,29 @@ func RunDropletGet(c *CmdConfig) error {
 	}
 
 	ds := c.Droplets()
+	fn := func(ids []int) error {
+		for _, id := range ids {
+			d, err := ds.Get(id)
+			if err != nil {
+				return err
+			}
 
-	d, err := ds.Get(id)
-	if err != nil {
-		return err
-	}
+			item := &displayers.Droplet{Droplets: do.Droplets{*d}}
 
-	item := &displayers.Droplet{Droplets: do.Droplets{*d}}
-	if getTemplate != "" {
-		t := template.New("Get template")
-		t, err = t.Parse(getTemplate)
-		if err != nil {
-			return err
+			if getTemplate != "" {
+				t := template.New("Get template")
+				t, err = t.Parse(getTemplate)
+				if err != nil {
+					return err
+				}
+				return t.Execute(c.Out, d)
+			}
+			return c.Display(item)
 		}
-		return t.Execute(c.Out, d)
+		return nil
 	}
-	return c.Display(item)
+	return matchDroplets(c.Args, ds, fn)
+
 }
 
 // RunDropletKernels returns a list of available kernels for a droplet.
