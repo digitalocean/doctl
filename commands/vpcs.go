@@ -15,6 +15,7 @@ package commands
 
 import (
 	"fmt"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -65,6 +66,8 @@ With the vpcs command, you can list, create, or delete VPCs, and manage their co
 		"The VPC's name", requiredOpt())
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCDescription, "", "",
 		"The VPC's description")
+	AddBoolFlag(cmdRecordUpdate, doctl.ArgVPCDefault, "", false,
+		"The VPC's default state")
 
 	CmdBuilder(cmd, RunVPCList, "list", "List VPCs", "Use this command to get a list of the VPCs on your account, including the following information for each:"+vpcDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.VPC{}))
@@ -162,6 +165,15 @@ func RunVPCUpdate(c *CmdConfig) error {
 		return err
 	}
 	r.Description = desc
+
+	def, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgVPCDefault)
+	if err != nil {
+		return err
+	}
+
+	if def != nil {
+		r.Default = boolPtr(true)
+	}
 
 	vpcs := c.VPCs()
 	vpc, err := vpcs.Update(vpcUUID, r)

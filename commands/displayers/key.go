@@ -19,6 +19,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 )
 
+// Key is used to display the SSH Key results from a `list` operation.
 type Key struct {
 	Keys do.SSHKeys
 }
@@ -47,6 +48,45 @@ func (ke *Key) KV() []map[string]interface{} {
 	for _, k := range ke.Keys {
 		o := map[string]interface{}{
 			"ID": k.ID, "Name": k.Name, "FingerPrint": k.Fingerprint,
+		}
+
+		out = append(out, o)
+	}
+
+	return out
+}
+
+// KeyGet is used to display the SSH Key results from a `get` operation. This
+// separate displayer is required in order to include the public key in this
+// operation.
+type KeyGet struct {
+	Keys do.SSHKeys
+}
+
+var _ Displayable = &KeyGet{}
+
+func (ke *KeyGet) JSON(out io.Writer) error {
+	return writeJSON(ke.Keys, out)
+}
+
+func (ke *KeyGet) Cols() []string {
+	return []string{
+		"ID", "Name", "FingerPrint", "PublicKey",
+	}
+}
+
+func (ke *KeyGet) ColMap() map[string]string {
+	return map[string]string{
+		"ID": "ID", "Name": "Name", "FingerPrint": "FingerPrint", "PublicKey": "Public Key",
+	}
+}
+
+func (ke *KeyGet) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, k := range ke.Keys {
+		o := map[string]interface{}{
+			"ID": k.ID, "Name": k.Name, "FingerPrint": k.Fingerprint, "PublicKey": k.PublicKey,
 		}
 
 		out = append(out, o)
