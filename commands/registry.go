@@ -177,7 +177,7 @@ func GarbageCollection() *Command {
 			Use:     "garbage-collection",
 			Aliases: []string{"gc", "g"},
 			Short:   "Display commands for garbage collection for a container registry",
-			Long:    "The subcommands of `doctl registry garbage-collection` help you command actions related to garbage collecting unreferenced blobs for a specified registry.",
+			Long:    "The subcommands of `doctl registry garbage-collection` start a garbage collection, retrieve or cancel a currently-active garbage collection or list past garbage collections for a specified registry.",
 		},
 	}
 
