@@ -16,6 +16,7 @@ package commands
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -30,10 +31,11 @@ import (
 )
 
 var (
-	testRegistryName  = "container-registry"
-	testRegistry      = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
-	testRepoName      = "test-repository"
-	testRepositoryTag = do.RepositoryTag{
+	testRegistryName    = "container-registry"
+	invalidRegistryName = "invalid-container-registry"
+	testRegistry        = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
+	testRepoName        = "test-repository"
+	testRepositoryTag   = do.RepositoryTag{
 		RepositoryTag: &godo.RepositoryTag{
 			RegistryName:        testRegistryName,
 			Repository:          testRepoName,
@@ -55,6 +57,23 @@ var (
 	testDockerCredentials = &godo.DockerCredentials{
 		// the base64 string is "username:password"
 		DockerConfigJSON: []byte(`{"auths":{"hostname":{"auth":"dXNlcm5hbWU6cGFzc3dvcmQ="}}}`),
+	}
+	testGCBlobsDeleted    = uint64(42)
+	testGCFreedBytes      = uint64(666)
+	testGCStatus          = "requested"
+	testGCUUID            = "gc-uuid"
+	invalidGCUUID         = "invalid-gc-uuid"
+	testTime              = time.Date(2020, 4, 1, 0, 0, 0, 0, time.UTC)
+	testGarbageCollection = &do.GarbageCollection{
+		&godo.GarbageCollection{
+			UUID:         testGCUUID,
+			RegistryName: testRegistryName,
+			Status:       testGCStatus,
+			CreatedAt:    testTime,
+			UpdatedAt:    testTime,
+			BlobsDeleted: testGCBlobsDeleted,
+			FreedBytes:   testGCFreedBytes,
+		},
 	}
 )
 
@@ -509,4 +528,303 @@ func TestRegistryLogout(t *testing.T) {
 		err := RunRegistryLogout(config)
 		assert.NoError(t, err)
 	})
+}
+
+func TestGarbageCollectionStart(t *testing.T) {
+	tests := []struct {
+		name      string
+		extraArgs []string
+
+		expect      func(m *mocks.MockRegistryService)
+		expectError error
+	}{
+		{
+			name: "without registry name arg",
+		},
+		{
+			name: "with registry name arg",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().StartGarbageCollection(testRegistry.Name).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			name: "fail with invalid registry name arg",
+			extraArgs: []string{
+				invalidRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().StartGarbageCollection(invalidRegistryName).Return(nil, fmt.Errorf("meow"))
+			},
+			expectError: fmt.Errorf("meow"),
+		},
+		{
+			name: "fail with too many args",
+			extraArgs: []string{
+				invalidRegistryName,
+				testGCUUID,
+			},
+			expect:      func(m *mocks.MockRegistryService) {},
+			expectError: fmt.Errorf("(test) command contains unsupported arguments"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.expect != nil {
+					test.expect(tm.registry)
+				} else {
+					tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+					tm.registry.EXPECT().StartGarbageCollection(testRegistry.Name).Return(testGarbageCollection, nil)
+				}
+
+				if test.extraArgs != nil {
+					config.Args = append(config.Args, test.extraArgs...)
+				}
+
+				err := RunStartGarbageCollection(config)
+
+				if test.expectError != nil {
+					assert.Error(t, err)
+					assert.Equal(t, test.expectError.Error(), err.Error())
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
+func TestGarbageCollectionGetActive(t *testing.T) {
+	tests := []struct {
+		name        string
+		extraArgs   []string
+		expect      func(m *mocks.MockRegistryService)
+		expectError error
+	}{
+		{
+			name: "without registry name arg",
+		},
+		{
+			name: "with registry name arg",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().GetGarbageCollection(testRegistry.Name).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			name: "fail with invalid registry name arg",
+			extraArgs: []string{
+				invalidRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().GetGarbageCollection(invalidRegistryName).Return(nil, fmt.Errorf("meow"))
+			},
+			expectError: fmt.Errorf("meow"),
+		},
+		{
+			name: "fail with too many args",
+			extraArgs: []string{
+				invalidRegistryName,
+				testRegistryName,
+			},
+			expect:      func(m *mocks.MockRegistryService) {},
+			expectError: fmt.Errorf("(test) command contains unsupported arguments"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.expect != nil {
+					test.expect(tm.registry)
+				} else {
+					tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+					tm.registry.EXPECT().GetGarbageCollection(testRegistry.Name).Return(testGarbageCollection, nil)
+				}
+
+				if test.extraArgs != nil {
+					config.Args = append(config.Args, test.extraArgs...)
+				}
+
+				err := RunGetGarbageCollection(config)
+
+				if test.expectError != nil {
+					assert.Error(t, err)
+					assert.Equal(t, test.expectError.Error(), err.Error())
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
+func TestGarbageCollectionList(t *testing.T) {
+	tests := []struct {
+		name      string
+		extraArgs []string
+
+		expect      func(m *mocks.MockRegistryService)
+		expectError error
+	}{
+		{
+			name: "without registry name arg",
+		},
+		{
+			name: "with registry name arg",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().ListGarbageCollections(testRegistry.Name).Return([]do.GarbageCollection{*testGarbageCollection}, nil)
+			},
+		},
+		{
+			name: "fail with invalid registry name arg",
+			extraArgs: []string{
+				invalidRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().ListGarbageCollections(invalidRegistryName).Return(nil, fmt.Errorf("meow"))
+			},
+			expectError: fmt.Errorf("meow"),
+		},
+		{
+			name: "fail with too many args",
+			extraArgs: []string{
+				invalidRegistryName,
+				testGCUUID,
+			},
+			expect:      func(m *mocks.MockRegistryService) {},
+			expectError: fmt.Errorf("(test) command contains unsupported arguments"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				if test.expect != nil {
+					test.expect(tm.registry)
+				} else {
+					tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+					tm.registry.EXPECT().ListGarbageCollections(testRegistry.Name).Return([]do.GarbageCollection{*testGarbageCollection}, nil)
+				}
+
+				if test.extraArgs != nil {
+					config.Args = append(config.Args, test.extraArgs...)
+				}
+
+				err := RunListGarbageCollections(config)
+
+				if test.expectError != nil {
+					assert.Error(t, err)
+					assert.Equal(t, test.expectError.Error(), err.Error())
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
+func TestGarbageCollectionUpdate(t *testing.T) {
+	tests := []struct {
+		name        string
+		extraArgs   []string
+		expect      func(m *mocks.MockRegistryService)
+		expectError error
+	}{
+		{
+			name: "with gc uuid arg",
+			extraArgs: []string{
+				testGCUUID,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Get().Return(&testRegistry, nil)
+				m.EXPECT().CancelGarbageCollection(testRegistry.Name, testGCUUID).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			name: "with registry name and gc uuid arg",
+			extraArgs: []string{
+				testRegistryName,
+				testGCUUID,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().CancelGarbageCollection(testRegistryName, testGCUUID).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			name: "fail with invalid registry name arg",
+			extraArgs: []string{
+				invalidRegistryName,
+				testGCUUID,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().CancelGarbageCollection(invalidRegistryName, testGCUUID).Return(nil, fmt.Errorf("meow"))
+			},
+			expectError: fmt.Errorf("meow"),
+		},
+		{
+			name: "fail with invalid gc uuid arg and valid registry name arg",
+			extraArgs: []string{
+				testRegistryName,
+				invalidGCUUID,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().CancelGarbageCollection(testRegistryName, invalidGCUUID).Return(nil, fmt.Errorf("meow"))
+			},
+			expectError: fmt.Errorf("meow"),
+		},
+		{
+			name: "fail with invalid gc uuid arg",
+			extraArgs: []string{
+				invalidGCUUID,
+			},
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Get().Return(&testRegistry, nil)
+				m.EXPECT().CancelGarbageCollection(testRegistryName, invalidGCUUID).Return(nil, fmt.Errorf("meow"))
+			},
+			expectError: fmt.Errorf("meow"),
+		},
+		{
+			name: "fail with too many args",
+			extraArgs: []string{
+				invalidRegistryName,
+				testGCUUID,
+				testGCUUID,
+			},
+			expect:      func(m *mocks.MockRegistryService) {},
+			expectError: fmt.Errorf("(test) command contains unsupported arguments"),
+		},
+		{
+			name:        "fail with no args",
+			extraArgs:   []string{},
+			expect:      func(m *mocks.MockRegistryService) {},
+			expectError: fmt.Errorf("(test) command is missing required arguments"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				test.expect(tm.registry)
+
+				if test.extraArgs != nil {
+					config.Args = append(config.Args, test.extraArgs...)
+				}
+
+				err := RunCancelGarbageCollection(config)
+
+				if test.expectError != nil {
+					assert.Error(t, err)
+					assert.Equal(t, test.expectError.Error(), err.Error())
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		})
+	}
 }
