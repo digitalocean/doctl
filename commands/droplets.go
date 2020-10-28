@@ -556,6 +556,14 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 
 // RunDropletGet returns a droplet.
 func RunDropletGet(c *CmdConfig) error {
+	if len(c.Args) != 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)
+	if err != nil {
+		return err
+	}
 
 	ds := c.Droplets()
 	fn := func(ids []int) error {
@@ -566,7 +574,7 @@ func RunDropletGet(c *CmdConfig) error {
 			}
 
 			item := &displayers.Droplet{Droplets: do.Droplets{*d}}
-			getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)
+
 			if getTemplate != "" {
 				t := template.New("Get template")
 				t, err = t.Parse(getTemplate)
