@@ -203,7 +203,7 @@ func GarbageCollection() *Command {
   - Freed Bytes
 `
 
-	runGetGarbageCollectionDesc := "This command retrieves a container registry's currently-active garbage collection, if any active garbage collection exists. Information included about the registry includes:" + gcInfoIncluded
+	runGetGarbageCollectionDesc := "This command retrieves the currently-active garbage collection for a container registry, if any active garbage collection exists. Information included about the registry includes:" + gcInfoIncluded
 	CmdBuilder(
 		cmd,
 		RunGetGarbageCollection,
