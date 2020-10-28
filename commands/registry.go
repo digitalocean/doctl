@@ -232,7 +232,7 @@ func GarbageCollection() *Command {
 		cmd,
 		RunCancelGarbageCollection,
 		"cancel",
-		"Cancel the currently-active garbage collection",
+		"Cancel the currently-active garbage collection for a container registry",
 		runCancelGarbageCollectionDesc,
 		Writer,
 		aliasOpt("c"),
