@@ -592,19 +592,24 @@ func displayRepositoryTags(c *CmdConfig, tags ...do.RepositoryTag) error {
 // RunStartGarbageCollection starts a garbage collection for the specified
 // registry.
 func RunStartGarbageCollection(c *CmdConfig) error {
-	var registry *do.Registry
+	var registryName string
 	// we anticipate supporting multiple registries in the future by allowing the
 	// user to specify a registry argument on the command line but defaulting to
 	// the default registry returned by c.Registry().Get()
-	if len(c.Args) != 1 {
+	if len(c.Args) == 0 {
 		var err error
-		registry, err = c.Registry().Get()
+		registry, err := c.Registry().Get()
 		if err != nil {
 			return fmt.Errorf("failed to get registry: %w", err)
 		}
+		registryName = registry.Name
+	} else if len(c.Args) == 1 {
+		registryName = c.Args[0]
+	} else {
+		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
-	gc, err := c.Registry().StartGarbageCollection(registry.Name)
+	gc, err := c.Registry().StartGarbageCollection(registryName)
 	if err != nil {
 		return err
 	}
@@ -615,19 +620,24 @@ func RunStartGarbageCollection(c *CmdConfig) error {
 // RunGetGarbageCollection gets the specified registry's currently-active
 // garbage collection.
 func RunGetGarbageCollection(c *CmdConfig) error {
-	var registry *do.Registry
+	var registryName string
 	// we anticipate supporting multiple registries in the future by allowing the
 	// user to specify a registry argument on the command line but defaulting to
 	// the default registry returned by c.Registry().Get()
-	if len(c.Args) != 1 {
+	if len(c.Args) == 0 {
 		var err error
-		registry, err = c.Registry().Get()
+		registry, err := c.Registry().Get()
 		if err != nil {
 			return fmt.Errorf("failed to get registry: %w", err)
 		}
+		registryName = registry.Name
+	} else if len(c.Args) == 1 {
+		registryName = c.Args[0]
+	} else {
+		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
-	gc, err := c.Registry().GetGarbageCollection(registry.Name)
+	gc, err := c.Registry().GetGarbageCollection(registryName)
 	if err != nil {
 		return err
 	}
@@ -638,19 +648,24 @@ func RunGetGarbageCollection(c *CmdConfig) error {
 // RunListGarbageCollections gets the specified registry's currently-active
 // garbage collection.
 func RunListGarbageCollections(c *CmdConfig) error {
-	var registry *do.Registry
+	var registryName string
 	// we anticipate supporting multiple registries in the future by allowing the
 	// user to specify a registry argument on the command line but defaulting to
 	// the default registry returned by c.Registry().Get()
-	if len(c.Args) != 1 {
+	if len(c.Args) == 0 {
 		var err error
-		registry, err = c.Registry().Get()
+		registry, err := c.Registry().Get()
 		if err != nil {
 			return fmt.Errorf("failed to get registry: %w", err)
 		}
+		registryName = registry.Name
+	} else if len(c.Args) == 1 {
+		registryName = c.Args[0]
+	} else {
+		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
-	gcs, err := c.Registry().ListGarbageCollections(registry.Name)
+	gcs, err := c.Registry().ListGarbageCollections(registryName)
 	if err != nil {
 		return err
 	}
@@ -666,13 +681,15 @@ func RunCancelGarbageCollection(c *CmdConfig) error {
 		gcUUID       string
 	)
 
-	if len(c.Args) == 1 { // <gc-uuid>
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	} else if len(c.Args) == 1 { // <gc-uuid>
 		gcUUID = c.Args[0]
 	} else if len(c.Args) == 2 { // <registry-name> <gc-uuid>
 		registryName = c.Args[0]
 		gcUUID = c.Args[1]
 	} else {
-		return doctl.NewMissingArgsErr(c.NS)
+		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
 	// we anticipate supporting multiple registries in the future by allowing the
