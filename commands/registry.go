@@ -208,7 +208,7 @@ func GarbageCollection() *Command {
 		cmd,
 		RunGetGarbageCollection,
 		"get-active",
-		"Retrieve information about the currently-active garbage collection.",
+		"Retrieve information about the currently-active garbage collection for a container registry",
 		runGetGarbageCollectionDesc,
 		Writer,
 		aliasOpt("ga", "g"),
