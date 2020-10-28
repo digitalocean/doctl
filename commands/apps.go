@@ -160,7 +160,18 @@ Three types of logs are supported and can be configured with --`+doctl.ArgAppLog
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "The type of logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Follow logs as they are emitted.")
 
+	CmdBuilder(
+		cmd,
+		RunAppsListRegions,
+		"list-regions",
+		"List App Platform regions",
+		`List all regions supported by App Platform including details about their current availability.`,
+		Writer,
+		displayerType(&displayers.AppRegions{}),
+	)
+
 	cmd.AddCommand(appsSpec())
+	// cmd.AddCommand(appsTiers())
 
 	return cmd
 }
@@ -215,7 +226,7 @@ func RunAppsGet(c *CmdConfig) error {
 	return c.Display(displayers.Apps{app})
 }
 
-// RunAppsGet lists all apps.
+// RunAppsList lists all apps.
 func RunAppsList(c *CmdConfig) error {
 	apps, err := c.Apps().List()
 	if err != nil {
@@ -536,4 +547,14 @@ func RunAppsSpecValidate(stdin io.Reader) func(c *CmdConfig) error {
 		c.Out.Write([]byte("The spec is valid.\n"))
 		return nil
 	}
+}
+
+// RunAppsListRegions lists all app platform regions.
+func RunAppsListRegions(c *CmdConfig) error {
+	regions, err := c.Apps().ListRegions()
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.AppRegions(regions))
 }

@@ -121,3 +121,54 @@ func (d Deployments) JSON(w io.Writer) error {
 	e.SetIndent("", "  ")
 	return e.Encode(d)
 }
+
+type AppRegions []*godo.AppRegion
+
+var _ Displayable = (*AppRegions)(nil)
+
+func (r AppRegions) Cols() []string {
+	return []string{
+		"Slug",
+		"Label",
+		"Continent",
+		"DataCenters",
+		"Disabled",
+		"Reason",
+		"Default",
+	}
+}
+
+func (r AppRegions) ColMap() map[string]string {
+	return map[string]string{
+		"Slug":        "Region",
+		"Label":       "Label",
+		"Continent":   "Continent",
+		"DataCenters": "Data Centers",
+		"Disabled":    "Is Disabled?",
+		"Reason":      "Reason (if disabled)",
+		"Default":     "Is Default?",
+	}
+}
+
+func (r AppRegions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, len(r))
+
+	for i, region := range r {
+		out[i] = map[string]interface{}{
+			"Slug":        region.Slug,
+			"Label":       region.Label,
+			"Continent":   region.Continent,
+			"DataCenters": region.DataCenters,
+			"Disabled":    region.Disabled,
+			"Reason":      region.Reason,
+			"Default":     region.Default,
+		}
+	}
+	return out
+}
+
+func (r AppRegions) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(r)
+}

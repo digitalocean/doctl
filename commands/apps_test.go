@@ -27,6 +27,7 @@ func TestAppsCommand(t *testing.T) {
 		"create-deployment",
 		"get-deployment",
 		"list-deployments",
+		"list-regions",
 		"logs",
 		"spec",
 	)
@@ -520,5 +521,23 @@ services:
   name: service
 `, buf.String())
 		})
+	})
+}
+
+func TestRunAppsListRegions(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		regions := []*godo.AppRegion{{
+			Slug:        "ams",
+			Label:       "Amsterdam",
+			Flag:        "netherlands",
+			Continent:   "Europe",
+			DataCenters: []string{"ams3"},
+			Default:     true,
+		}}
+
+		tm.apps.EXPECT().ListRegions().Times(1).Return(regions, nil)
+
+		err := RunAppsListRegions(config)
+		require.NoError(t, err)
 	})
 }

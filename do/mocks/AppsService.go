@@ -167,3 +167,78 @@ func (mr *MockAppsServiceMockRecorder) GetLogs(appID, deploymentID, component, l
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockAppsService)(nil).GetLogs), appID, deploymentID, component, logType, follow)
 }
+
+// ListRegions mocks base method.
+func (m *MockAppsService) ListRegions() ([]*godo.AppRegion, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRegions")
+	ret0, _ := ret[0].([]*godo.AppRegion)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRegions indicates an expected call of ListRegions.
+func (mr *MockAppsServiceMockRecorder) ListRegions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRegions", reflect.TypeOf((*MockAppsService)(nil).ListRegions))
+}
+
+// ListTiers mocks base method.
+func (m *MockAppsService) ListTiers() ([]*godo.AppTier, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTiers")
+	ret0, _ := ret[0].([]*godo.AppTier)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTiers indicates an expected call of ListTiers.
+func (mr *MockAppsServiceMockRecorder) ListTiers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTiers", reflect.TypeOf((*MockAppsService)(nil).ListTiers))
+}
+
+// GetTier mocks base method.
+func (m *MockAppsService) GetTier(slug string) (*godo.AppTier, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTier", slug)
+	ret0, _ := ret[0].(*godo.AppTier)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTier indicates an expected call of GetTier.
+func (mr *MockAppsServiceMockRecorder) GetTier(slug interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTier", reflect.TypeOf((*MockAppsService)(nil).GetTier), slug)
+}
+
+// ListInstanceSizes mocks base method.
+func (m *MockAppsService) ListInstanceSizes() ([]*godo.AppInstanceSize, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListInstanceSizes")
+	ret0, _ := ret[0].([]*godo.AppInstanceSize)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListInstanceSizes indicates an expected call of ListInstanceSizes.
+func (mr *MockAppsServiceMockRecorder) ListInstanceSizes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstanceSizes", reflect.TypeOf((*MockAppsService)(nil).ListInstanceSizes))
+}
+
+// GetInstanceSize mocks base method.
+func (m *MockAppsService) GetInstanceSize(slug string) (*godo.AppInstanceSize, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstanceSize", slug)
+	ret0, _ := ret[0].(*godo.AppInstanceSize)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstanceSize indicates an expected call of GetInstanceSize.
+func (mr *MockAppsServiceMockRecorder) GetInstanceSize(slug interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceSize", reflect.TypeOf((*MockAppsService)(nil).GetInstanceSize), slug)
+}
