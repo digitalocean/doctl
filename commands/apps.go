@@ -171,7 +171,7 @@ Three types of logs are supported and can be configured with --`+doctl.ArgAppLog
 	)
 
 	cmd.AddCommand(appsSpec())
-	// cmd.AddCommand(appsTiers())
+	cmd.AddCommand(appsTier())
 
 	return cmd
 }
@@ -557,4 +557,88 @@ func RunAppsListRegions(c *CmdConfig) error {
 	}
 
 	return c.Display(displayers.AppRegions(regions))
+}
+
+func appsTier() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "tier",
+			Short: "Display commands for working with app tiers",
+			Long:  "The subcommands of `doctl app tier` retrieve information about app tiers.",
+		},
+	}
+
+	CmdBuilder(cmd, RunAppsTierList, "list", "List all app tiers", `Use this command to list all the available app tiers.`, Writer)
+	CmdBuilder(cmd, RunAppsTierGet, "get <tier slug>", "Retrieve an app tier", `Use this command to retrieve information about a specific app tier.`, Writer)
+
+	cmd.AddCommand(appsTierInstanceSize())
+	
+	return cmd
+}
+
+// RunAppsTierList lists all app tiers.
+func RunAppsTierList(c *CmdConfig) error {
+	tiers, err := c.Apps().ListTiers()
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.AppTiers(tiers))
+}
+
+// RunAppsTierGet gets an app tier.
+func RunAppsTierGet(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	slug := c.Args[0]
+
+	tier, err := c.Apps().GetTier(slug)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.AppTiers([]*godo.AppTier{tier}))
+}
+
+func appsTierInstanceSize() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "instance-size",
+			Short: "Display commands for working with app instance sizes",
+			Long:  "The subcommands of `doctl app tier instance-size` retrieve information about app instance sizes.",
+		},
+	}
+
+	CmdBuilder(cmd, RunAppsTierInstanceSizeList, "list", "List all app instance sizes", `Use this command to list all the available app instance sizes.`, Writer)
+	CmdBuilder(cmd, RunAppsTierInstanceSizeGet, "get <instance size slug>", "Retrieve an app instance size", `Use this command to retrieve information about a specific app instance size.`, Writer)
+
+	return cmd
+}
+
+// RunAppsTierInstanceSizeList lists all app tiers.
+func RunAppsTierInstanceSizeList(c *CmdConfig) error {
+	instanceSizes, err := c.Apps().ListInstanceSizes()
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.AppInstanceSizes(instanceSizes))
+}
+
+// RunAppsTierInstanceSizeGet gets an app tier.
+func RunAppsTierInstanceSizeGet(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	slug := c.Args[0]
+
+	instanceSize, err := c.Apps().GetInstanceSize(slug)
+	if err != nil {
+		return err
+	}
+
+	return c.Display(displayers.AppInstanceSizes([]*godo.AppInstanceSize{instanceSize}))
 }

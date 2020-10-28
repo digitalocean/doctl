@@ -30,21 +30,44 @@ func TestAppsCommand(t *testing.T) {
 		"list-regions",
 		"logs",
 		"spec",
+		"tier",
 	)
 }
 
-var testAppSpec = godo.AppSpec{
-	Name: "test",
-	Services: []*godo.AppServiceSpec{
-		{
-			Name: "service",
-			GitHub: &godo.GitHubSourceSpec{
-				Repo:   "digitalocean/doctl",
-				Branch: "master",
+var (
+	testAppSpec = godo.AppSpec{
+		Name: "test",
+		Services: []*godo.AppServiceSpec{
+			{
+				Name: "service",
+				GitHub: &godo.GitHubSourceSpec{
+					Repo:   "digitalocean/doctl",
+					Branch: "master",
+				},
 			},
 		},
-	},
-}
+	}
+
+	testAppTier = &godo.AppTier{
+		Name:                 "Test",
+		Slug:                 "test",
+		EgressBandwidthBytes: "10240",
+		BuildSeconds:         "3000",
+	}
+
+	testAppInstanceSize = &godo.AppInstanceSize{
+		Name:            "Basic XXS",
+		Slug:            "basic-xxs",
+		CPUType:         godo.AppInstanceSizeCPUType_Dedicated,
+		CPUs:            "1",
+		MemoryBytes:     "536870912",
+		USDPerMonth:     "5",
+		USDPerSecond:    "0.0000018896447",
+		TierSlug:        "basic",
+		TierUpgradeTo:   "professional-xs",
+		TierDowngradeTo: "basic-xxxs",
+	}
+)
 
 func TestRunAppsCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -538,6 +561,48 @@ func TestRunAppsListRegions(t *testing.T) {
 		tm.apps.EXPECT().ListRegions().Times(1).Return(regions, nil)
 
 		err := RunAppsListRegions(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsTierList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tiers := []*godo.AppTier{testAppTier}
+
+		tm.apps.EXPECT().ListTiers().Times(1).Return(tiers, nil)
+
+		err := RunAppsTierList(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsTierGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.apps.EXPECT().GetTier(testAppTier.Slug).Times(1).Return(testAppTier, nil)
+
+		config.Args = append(config.Args, testAppTier.Slug)
+		err := RunAppsTierGet(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsTierInstanceSizeList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		instanceSizes := []*godo.AppInstanceSize{testAppInstanceSize}
+
+		tm.apps.EXPECT().ListInstanceSizes().Times(1).Return(instanceSizes, nil)
+
+		err := RunAppsTierInstanceSizeList(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsTierInstanceSizeGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.apps.EXPECT().GetInstanceSize(testAppInstanceSize.Slug).Times(1).Return(testAppInstanceSize, nil)
+
+		config.Args = append(config.Args, testAppInstanceSize.Slug)
+		err := RunAppsTierInstanceSizeGet(config)
 		require.NoError(t, err)
 	})
 }
