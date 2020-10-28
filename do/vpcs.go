@@ -33,6 +33,7 @@ type VPCsService interface {
 	List() (VPCs, error)
 	Create(vpcr *godo.VPCCreateRequest) (*VPC, error)
 	Update(vpcUUID string, vpcr *godo.VPCUpdateRequest) (*VPC, error)
+	PartialUpdate(vpcUUID string, options ...godo.VPCSetField) (*VPC, error)
 	Delete(vpcUUID string) error
 }
 
@@ -98,6 +99,15 @@ func (v *vpcsService) Create(vpcr *godo.VPCCreateRequest) (*VPC, error) {
 
 func (v *vpcsService) Update(vpcUUID string, vpcr *godo.VPCUpdateRequest) (*VPC, error) {
 	vpc, _, err := v.client.VPCs.Update(context.TODO(), vpcUUID, vpcr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &VPC{VPC: vpc}, nil
+}
+
+func (v *vpcsService) PartialUpdate(vpcUUID string, options ...godo.VPCSetField) (*VPC, error) {
+	vpc, _, err := v.client.VPCs.Set(context.TODO(), vpcUUID, options...)
 	if err != nil {
 		return nil, err
 	}

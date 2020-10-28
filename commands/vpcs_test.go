@@ -83,7 +83,7 @@ func TestVPCUpdate(t *testing.T) {
 		desc            string
 		setup           func(*CmdConfig)
 		expectedVPCId   string
-		expectedRequest *godo.VPCUpdateRequest
+		expectedRequest []godo.VPCSetField
 	}{
 		{
 			desc: "update vpc name",
@@ -93,8 +93,8 @@ func TestVPCUpdate(t *testing.T) {
 
 			},
 			expectedVPCId: "vpc-uuid",
-			expectedRequest: &godo.VPCUpdateRequest{
-				Name: "update-vpc-name-test",
+			expectedRequest: []godo.VPCSetField{
+				godo.VPCSetName("update-vpc-name-test"),
 			},
 		},
 
@@ -107,9 +107,9 @@ func TestVPCUpdate(t *testing.T) {
 
 			},
 			expectedVPCId: "vpc-uuid",
-			expectedRequest: &godo.VPCUpdateRequest{
-				Name:        "update-vpc-name-test",
-				Description: "i am a new desc",
+			expectedRequest: []godo.VPCSetField{
+				godo.VPCSetName("update-vpc-name-test"),
+				godo.VPCSetDescription("i am a new desc"),
 			},
 		},
 
@@ -122,10 +122,22 @@ func TestVPCUpdate(t *testing.T) {
 				in.Doit.Set(in.NS, doctl.ArgVPCDefault, true)
 			},
 			expectedVPCId: "vpc-uuid",
-			expectedRequest: &godo.VPCUpdateRequest{
-				Name:        "update-vpc-name-test",
-				Description: "i am a new desc",
-				Default:     boolPtr(true),
+			expectedRequest: []godo.VPCSetField{
+				godo.VPCSetName("update-vpc-name-test"),
+				godo.VPCSetDescription("i am a new desc"),
+				godo.VPCSetDefault(),
+			},
+		},
+
+		{
+			desc: "update only default",
+			setup: func(in *CmdConfig) {
+				in.Args = append(in.Args, "vpc-uuid")
+				in.Doit.Set(in.NS, doctl.ArgVPCDefault, true)
+			},
+			expectedVPCId: "vpc-uuid",
+			expectedRequest: []godo.VPCSetField{
+				godo.VPCSetDefault(),
 			},
 		},
 	}
@@ -136,7 +148,7 @@ func TestVPCUpdate(t *testing.T) {
 				tt.setup(config)
 			}
 
-			tm.vpcs.EXPECT().Update(tt.expectedVPCId, tt.expectedRequest).Return(&testVPC, nil)
+			tm.vpcs.EXPECT().PartialUpdate(tt.expectedVPCId, tt.expectedRequest).Return(&testVPC, nil)
 			err := RunVPCUpdate(config)
 
 			assert.NoError(t, err)

@@ -95,6 +95,26 @@ func (mr *MockVPCsServiceMockRecorder) Update(vpcUUID, vpcr interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockVPCsService)(nil).Update), vpcUUID, vpcr)
 }
 
+// PartialUpdate mocks base method.
+func (m *MockVPCsService) PartialUpdate(vpcUUID string, options ...godo.VPCSetField) (*do.VPC, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{vpcUUID}
+	for _, a := range options {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "PartialUpdate", varargs...)
+	ret0, _ := ret[0].(*do.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PartialUpdate indicates an expected call of PartialUpdate.
+func (mr *MockVPCsServiceMockRecorder) PartialUpdate(vpcUUID interface{}, options ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{vpcUUID}, options...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartialUpdate", reflect.TypeOf((*MockVPCsService)(nil).PartialUpdate), varargs...)
+}
+
 // Delete mocks base method.
 func (m *MockVPCsService) Delete(vpcUUID string) error {
 	m.ctrl.T.Helper()
