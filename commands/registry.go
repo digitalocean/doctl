@@ -227,7 +227,7 @@ func GarbageCollection() *Command {
 		displayerType(&displayers.GarbageCollection{}),
 	)
 
-	runCancelGarbageCollectionDesc := "This command cancels a registry's currently-active garbage collection."
+	runCancelGarbageCollectionDesc := "This command cancels the currently-active garbage collection for a container registry."
 	CmdBuilder(
 		cmd,
 		RunCancelGarbageCollection,
