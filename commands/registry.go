@@ -220,7 +220,7 @@ func GarbageCollection() *Command {
 		cmd,
 		RunListGarbageCollections,
 		"list",
-		"Retrieve information about list of past collections",
+		"Retrieve information about past garbage collections for a container registry",
 		runListGarbageCollectionsDesc,
 		Writer,
 		aliasOpt("ls", "l"),
