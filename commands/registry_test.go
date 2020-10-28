@@ -70,6 +70,12 @@ func TestRepositoryCommand(t *testing.T) {
 	assertCommandNames(t, cmd, "list", "list-tags", "delete-manifest", "delete-tag")
 }
 
+func TestGarbageCollectionCommand(t *testing.T) {
+	cmd := GarbageCollection()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "get-active", "start", "cancel", "list")
+}
+
 func TestRegistryCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		rcr := godo.RegistryCreateRequest{Name: testRegistryName}

@@ -182,7 +182,7 @@ func GarbageCollection() *Command {
 	}
 
 	runStartGarbageCollectionDesc := "This command starts a garbage collection on a container registry. There can be only one active garbage collection at a time for a given registry."
-	_ = CmdBuilder(
+	CmdBuilder(
 		cmd,
 		RunStartGarbageCollection,
 		"start",
@@ -190,6 +190,7 @@ func GarbageCollection() *Command {
 		runStartGarbageCollectionDesc,
 		Writer,
 		aliasOpt("s"),
+		displayerType(&displayers.GarbageCollection{}),
 	)
 
 	gcInfoIncluded := `
@@ -203,7 +204,7 @@ func GarbageCollection() *Command {
 `
 
 	runGetGarbageCollectionDesc := "This command retrieves a container registry's currently-active garbage collection, if any active garbage collection exists. Information included about the registry includes:" + gcInfoIncluded
-	_ = CmdBuilder(
+	CmdBuilder(
 		cmd,
 		RunGetGarbageCollection,
 		"get-active",
@@ -211,10 +212,11 @@ func GarbageCollection() *Command {
 		runGetGarbageCollectionDesc,
 		Writer,
 		aliasOpt("ga", "g"),
+		displayerType(&displayers.GarbageCollection{}),
 	)
 
 	runListGarbageCollectionsDesc := "This command retrieves a list of past garbage collections for a given garbage collection. Information about each garbage collection includes:" + gcInfoIncluded
-	_ = CmdBuilder(
+	CmdBuilder(
 		cmd,
 		RunListGarbageCollections,
 		"list",
@@ -222,10 +224,11 @@ func GarbageCollection() *Command {
 		runListGarbageCollectionsDesc,
 		Writer,
 		aliasOpt("ls", "l"),
+		displayerType(&displayers.GarbageCollection{}),
 	)
 
 	runCancelGarbageCollectionDesc := "This command cancels a registry's currently-active garbage collection."
-	_ = CmdBuilder(
+	CmdBuilder(
 		cmd,
 		RunCancelGarbageCollection,
 		"cancel",
