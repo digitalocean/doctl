@@ -215,7 +215,7 @@ func GarbageCollection() *Command {
 		displayerType(&displayers.GarbageCollection{}),
 	)
 
-	runListGarbageCollectionsDesc := "This command retrieves a list of past garbage collections for a given garbage collection. Information about each garbage collection includes:" + gcInfoIncluded
+	runListGarbageCollectionsDesc := "This command retrieves a list of past garbage collections for a registry. Information about each garbage collection includes:" + gcInfoIncluded
 	CmdBuilder(
 		cmd,
 		RunListGarbageCollections,
