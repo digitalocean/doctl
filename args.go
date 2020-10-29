@@ -86,6 +86,8 @@ const (
 	ArgKubernetesLabel = "label"
 	// ArgKubernetesTaint is a Kubernetes taint argument.
 	ArgKubernetesTaint = "taint"
+	// ArgKubeConfigExpirySeconds indicates the length of time the token in a kubeconfig will be valid in seconds.
+	ArgKubeConfigExpirySeconds = "expiry-seconds"
 	// ArgImage is an image argument.
 	ArgImage = "image"
 	// ArgImageID is an image id argument.
@@ -306,6 +308,8 @@ const (
 	ArgVPCName = "name"
 	// ArgVPCDescription is a VPC description.
 	ArgVPCDescription = "description"
+	// ArgVPCDefault is the VPC default argument, to update a specific VPC to the default VPC.
+	ArgVPCDefault = "default"
 	// ArgVPCIPRange is a VPC range of IP addresses in CIDR notation.
 	ArgVPCIPRange = "ip-range"
 

@@ -115,14 +115,13 @@ func Repository() *Command {
 		},
 	}
 
-	listRepositoriesDesc := `
-	This command retrieves information about repositories in a registry, including:
-	- The repository name
-	- The latest tag of the repository
-	- The compressed size for the latest tag
-	- The manifest digest for the latest tag
-	- The last updated timestamp
-	`
+	listRepositoriesDesc := `This command retrieves information about repositories in a registry, including:
+  - The repository name
+  - The latest tag of the repository
+  - The compressed size for the latest tag
+  - The manifest digest for the latest tag
+  - The last updated timestamp
+`
 	CmdBuilder(
 		cmd,
 		RunListRepositories, "list",
@@ -130,13 +129,12 @@ func Repository() *Command {
 		Writer, aliasOpt("ls"), displayerType(&displayers.Repository{}),
 	)
 
-	listRepositoryTagsDesc := `
-	This command retrieves information about tags in a repository, including:
-	- The tag name
-	- The compressed size 
-	- The manifest digest 
-	- The last updated timestamp
-	`
+	listRepositoryTagsDesc := `This command retrieves information about tags in a repository, including:
+  - The tag name
+  - The compressed size
+  - The manifest digest
+  - The last updated timestamp
+`
 	CmdBuilder(
 		cmd,
 		RunListRepositoryTags, "list-tags <repository>",

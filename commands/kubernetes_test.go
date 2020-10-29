@@ -98,7 +98,7 @@ type mockKubeconfigProvider struct {
 	local, remote, written clientcmdapi.Config
 }
 
-func (m *mockKubeconfigProvider) Remote(_ do.KubernetesService, _ string) (*clientcmdapi.Config, error) {
+func (m *mockKubeconfigProvider) Remote(_ do.KubernetesService, _ string, _ int) (*clientcmdapi.Config, error) {
 	return &m.local, nil
 }
 
@@ -269,6 +269,19 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 	// save the remote kubeconfig locally
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Args = append(config.Args, testCluster.ID)
+		k8sCmdService := testK8sCmdService()
+		err := k8sCmdService.RunKubernetesKubeconfigSave(config)
+		assert.NoError(t, err)
+
+		provider := k8sCmdService.KubeconfigProvider.(*mockKubeconfigProvider)
+		assert.Equal(t, provider.remote, provider.written)
+		assert.Contains(t, provider.written.AuthInfos[""].Exec.Command, "commands.test")
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		expirySeconds := int64(60)
+		config.Args = append(config.Args, testCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgKubeConfigExpirySeconds, expirySeconds)
 
 		k8sCmdService := testK8sCmdService()
 		err := k8sCmdService.RunKubernetesKubeconfigSave(config)
@@ -276,6 +289,8 @@ func TestKubernetesKubeconfigSave(t *testing.T) {
 
 		provider := k8sCmdService.KubeconfigProvider.(*mockKubeconfigProvider)
 		assert.Equal(t, provider.remote, provider.written)
+		assert.Equal(t, provider.remote.AuthInfos[""].Token, provider.written.AuthInfos[""].Token)
+		assert.Nil(t, provider.written.AuthInfos[""].Exec)
 	})
 
 	// save the remote kubeconfig locally, verifying that the provided auth
@@ -314,6 +329,16 @@ func TestKubernetesKubeconfigShow(t *testing.T) {
 		kubeconfig := []byte(`i'm some yaml`)
 		tm.kubernetes.EXPECT().GetKubeConfig(testCluster.ID).Return(kubeconfig, nil)
 		config.Args = append(config.Args, testCluster.ID)
+		err := testK8sCmdService().RunKubernetesKubeconfigShow(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		kubeconfig := []byte(`i'm some yaml`)
+		expirySeconds := int64(60)
+		tm.kubernetes.EXPECT().GetKubeConfigWithExpiry(testCluster.ID, expirySeconds).Return(kubeconfig, nil)
+		config.Args = append(config.Args, testCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgKubeConfigExpirySeconds, expirySeconds)
 		err := testK8sCmdService().RunKubernetesKubeconfigShow(config)
 		assert.NoError(t, err)
 	})
