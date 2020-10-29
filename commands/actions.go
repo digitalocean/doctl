@@ -189,8 +189,9 @@ func isZeroTime(t time.Time) bool {
 
 // RunCmdActionGet runs action get.
 func RunCmdActionGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	id, err := strconv.Atoi(c.Args[0])
@@ -209,8 +210,9 @@ func RunCmdActionGet(c *CmdConfig) error {
 
 // RunCmdActionWait waits for an action to complete or error.
 func RunCmdActionWait(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	id, err := strconv.Atoi(c.Args[0])

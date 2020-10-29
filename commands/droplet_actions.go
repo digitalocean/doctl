@@ -167,8 +167,9 @@ In order to resize a Droplet, it must first be powered off.`
 // RunDropletActionGet returns a droplet action by id.
 func RunDropletActionGet(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		dropletID, err := strconv.Atoi(c.Args[0])
 		if err != nil {
@@ -190,8 +191,9 @@ func RunDropletActionGet(c *CmdConfig) error {
 // RunDropletActionEnableBackups disables backups for a droplet.
 func RunDropletActionEnableBackups(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 		if err != nil {
@@ -208,8 +210,9 @@ func RunDropletActionEnableBackups(c *CmdConfig) error {
 // RunDropletActionDisableBackups disables backups for a droplet.
 func RunDropletActionDisableBackups(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 		if err != nil {
@@ -226,8 +229,9 @@ func RunDropletActionDisableBackups(c *CmdConfig) error {
 // RunDropletActionReboot reboots a droplet.
 func RunDropletActionReboot(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 		if err != nil {
@@ -244,8 +248,9 @@ func RunDropletActionReboot(c *CmdConfig) error {
 // RunDropletActionPowerCycle power cycles a droplet.
 func RunDropletActionPowerCycle(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -263,8 +268,9 @@ func RunDropletActionPowerCycle(c *CmdConfig) error {
 // RunDropletActionShutdown shuts a droplet down.
 func RunDropletActionShutdown(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 		if err != nil {
@@ -281,8 +287,9 @@ func RunDropletActionShutdown(c *CmdConfig) error {
 // RunDropletActionPowerOff turns droplet power off.
 func RunDropletActionPowerOff(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -300,8 +307,9 @@ func RunDropletActionPowerOff(c *CmdConfig) error {
 // RunDropletActionPowerOn turns droplet power on.
 func RunDropletActionPowerOn(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -319,8 +327,9 @@ func RunDropletActionPowerOn(c *CmdConfig) error {
 // RunDropletActionPasswordReset resets the droplet root password.
 func RunDropletActionPasswordReset(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -338,8 +347,9 @@ func RunDropletActionPasswordReset(c *CmdConfig) error {
 // RunDropletActionEnableIPv6 enables IPv6 for a droplet.
 func RunDropletActionEnableIPv6(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -357,8 +367,9 @@ func RunDropletActionEnableIPv6(c *CmdConfig) error {
 // RunDropletActionEnablePrivateNetworking enables private networking for a droplet.
 func RunDropletActionEnablePrivateNetworking(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -376,8 +387,9 @@ func RunDropletActionEnablePrivateNetworking(c *CmdConfig) error {
 // RunDropletActionRestore restores a droplet using an image id.
 func RunDropletActionRestore(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -401,8 +413,9 @@ func RunDropletActionRestore(c *CmdConfig) error {
 // optionally expands the disk.
 func RunDropletActionResize(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -430,8 +443,9 @@ func RunDropletActionResize(c *CmdConfig) error {
 // RunDropletActionRebuild rebuilds a droplet using an image id or slug.
 func RunDropletActionRebuild(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -459,8 +473,9 @@ func RunDropletActionRebuild(c *CmdConfig) error {
 // RunDropletActionRename renames a droplet.
 func RunDropletActionRename(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -483,8 +498,9 @@ func RunDropletActionRename(c *CmdConfig) error {
 // RunDropletActionChangeKernel changes the kernel for a droplet.
 func RunDropletActionChangeKernel(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 
@@ -507,8 +523,9 @@ func RunDropletActionChangeKernel(c *CmdConfig) error {
 // RunDropletActionSnapshot creates a snapshot for a droplet.
 func RunDropletActionSnapshot(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
 		id, err := strconv.Atoi(c.Args[0])
 

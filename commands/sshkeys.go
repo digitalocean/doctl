@@ -88,8 +88,9 @@ func RunKeyList(c *CmdConfig) error {
 func RunKeyGet(c *CmdConfig) error {
 	ks := c.Keys()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	rawKey := c.Args[0]
@@ -107,8 +108,9 @@ func RunKeyGet(c *CmdConfig) error {
 func RunKeyCreate(c *CmdConfig) error {
 	ks := c.Keys()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	name := c.Args[0]
@@ -136,8 +138,9 @@ func RunKeyCreate(c *CmdConfig) error {
 func RunKeyImport(c *CmdConfig) error {
 	ks := c.Keys()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	keyPath, err := c.Doit.GetString(c.NS, doctl.ArgKeyPublicKeyFile)
@@ -179,8 +182,9 @@ func RunKeyImport(c *CmdConfig) error {
 func RunKeyDelete(c *CmdConfig) error {
 	ks := c.Keys()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
@@ -200,8 +204,9 @@ func RunKeyDelete(c *CmdConfig) error {
 func RunKeyUpdate(c *CmdConfig) error {
 	ks := c.Keys()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	rawKey := c.Args[0]

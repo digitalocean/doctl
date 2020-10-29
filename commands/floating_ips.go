@@ -96,8 +96,9 @@ func RunFloatingIPCreate(c *CmdConfig) error {
 func RunFloatingIPGet(c *CmdConfig) error {
 	fis := c.FloatingIPs()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	ip := c.Args[0]
@@ -119,8 +120,9 @@ func RunFloatingIPGet(c *CmdConfig) error {
 func RunFloatingIPDelete(c *CmdConfig) error {
 	fis := c.FloatingIPs()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)

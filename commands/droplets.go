@@ -556,8 +556,9 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 
 // RunDropletGet returns a droplet.
 func RunDropletGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)

@@ -94,8 +94,9 @@ func Domain() *Command {
 
 // RunDomainCreate runs domain create.
 func RunDomainCreate(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	domainName := c.Args[0]
 
@@ -135,8 +136,9 @@ func RunDomainList(c *CmdConfig) error {
 
 // RunDomainGet retrieves a domain by name.
 func RunDomainGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	id := c.Args[0]
 
@@ -157,8 +159,9 @@ func RunDomainGet(c *CmdConfig) error {
 
 // RunDomainDelete deletes a domain by name.
 func RunDomainDelete(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	name := c.Args[0]
 
@@ -183,8 +186,9 @@ func RunDomainDelete(c *CmdConfig) error {
 
 // RunRecordList list records for a domain.
 func RunRecordList(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	name := c.Args[0]
 
@@ -206,8 +210,9 @@ func RunRecordList(c *CmdConfig) error {
 
 // RunRecordCreate creates a domain record.
 func RunRecordCreate(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	name := c.Args[0]
 
@@ -324,8 +329,9 @@ func RunRecordDelete(c *CmdConfig) error {
 
 // RunRecordUpdate updates a domain record.
 func RunRecordUpdate(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	domainName := c.Args[0]
 

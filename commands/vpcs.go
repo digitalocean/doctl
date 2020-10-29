@@ -82,8 +82,9 @@ With the vpcs command, you can list, create, or delete VPCs, and manage their co
 
 // RunVPCGet retrieves an existing VPC by its identifier.
 func RunVPCGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	vpcUUID := c.Args[0]
 
@@ -187,8 +188,9 @@ func RunVPCUpdate(c *CmdConfig) error {
 
 // RunVPCDelete deletes a VPC by its identifier.
 func RunVPCDelete(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	vpcUUID := c.Args[0]
 

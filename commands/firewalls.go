@@ -108,8 +108,9 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 
 // RunFirewallGet retrieves an existing Firewall by its identifier.
 func RunFirewallGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	id := c.Args[0]
 
@@ -176,8 +177,9 @@ func RunFirewallList(c *CmdConfig) error {
 
 // RunFirewallListByDroplet lists Firewalls for a given Droplet.
 func RunFirewallListByDroplet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	dID, err := strconv.Atoi(c.Args[0])
 	if err != nil {
@@ -221,8 +223,9 @@ func RunFirewallDelete(c *CmdConfig) error {
 
 // RunFirewallAddDroplets adds droplets to a Firewall.
 func RunFirewallAddDroplets(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	fID := c.Args[0]
 
@@ -241,8 +244,9 @@ func RunFirewallAddDroplets(c *CmdConfig) error {
 
 // RunFirewallRemoveDroplets removes droplets from a Firewall.
 func RunFirewallRemoveDroplets(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	fID := c.Args[0]
 
@@ -261,8 +265,9 @@ func RunFirewallRemoveDroplets(c *CmdConfig) error {
 
 // RunFirewallAddTags adds tags to a Firewall.
 func RunFirewallAddTags(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	fID := c.Args[0]
 
@@ -276,8 +281,9 @@ func RunFirewallAddTags(c *CmdConfig) error {
 
 // RunFirewallRemoveTags removes tags from a Firewall.
 func RunFirewallRemoveTags(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	fID := c.Args[0]
 
@@ -291,8 +297,9 @@ func RunFirewallRemoveTags(c *CmdConfig) error {
 
 // RunFirewallAddRules adds rules to a Firewall.
 func RunFirewallAddRules(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	fID := c.Args[0]
 
@@ -306,8 +313,9 @@ func RunFirewallAddRules(c *CmdConfig) error {
 
 // RunFirewallRemoveRules removes rules from a Firewall.
 func RunFirewallRemoveRules(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	fID := c.Args[0]
 

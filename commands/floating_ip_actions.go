@@ -109,8 +109,9 @@ func RunFloatingIPActionsAssign(c *CmdConfig) error {
 
 // RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
 func RunFloatingIPActionsUnassign(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	ip := c.Args[0]

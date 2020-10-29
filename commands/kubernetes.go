@@ -227,7 +227,6 @@ func kubernetesCluster() *Command {
 
 	cmd.AddCommand(kubernetesRegistryIntegration())
 
-
 	nodePoolDeatils := `- A list of node pools available inside the cluster`
 	clusterDetails := `
 
@@ -576,8 +575,9 @@ func kubernetesOptions() *Command {
 
 // RunKubernetesClusterGet retrieves an existing kubernetes cluster by its identifier.
 func (s *KubernetesCommandService) RunKubernetesClusterGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	clusterIDorName := c.Args[0]
 
@@ -601,8 +601,9 @@ func (s *KubernetesCommandService) RunKubernetesClusterList(c *CmdConfig) error 
 
 // RunKubernetesClusterGetUpgrades retrieves available upgrade versions for a cluster.
 func (s *KubernetesCommandService) RunKubernetesClusterGetUpgrades(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	clusterIDorName := c.Args[0]
 	clusterID, err := clusterIDize(c.Kubernetes(), clusterIDorName)
@@ -624,8 +625,9 @@ func (s *KubernetesCommandService) RunKubernetesClusterGetUpgrades(c *CmdConfig)
 // RunKubernetesClusterCreate creates a new kubernetes with a given configuration.
 func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize string, defaultNodeCount int) func(*CmdConfig) error {
 	return func(c *CmdConfig) error {
-		if len(c.Args) != 1 {
-			return doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return err
 		}
 		clusterName := c.Args[0]
 		r := &godo.KubernetesClusterCreateRequest{Name: clusterName}
@@ -899,8 +901,9 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 
 // RunKubernetesKubeconfigShow retrieves an existing kubernetes config and prints it.
 func (s *KubernetesCommandService) RunKubernetesKubeconfigShow(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgKubeConfigExpirySeconds)
 	if err != nil {
@@ -990,8 +993,9 @@ func cacheExecCredential(id string, execCredential *clientauthentication.ExecCre
 
 // RunKubernetesKubeconfigExecCredential displays the exec credential. It is for internal use only.
 func (s *KubernetesCommandService) RunKubernetesKubeconfigExecCredential(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	version, err := c.Doit.GetString(c.NS, doctl.ArgVersion)
@@ -1048,8 +1052,9 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigExecCredential(c *CmdC
 
 // RunKubernetesKubeconfigSave retrieves an existing kubernetes config and saves it to your local kubeconfig.
 func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgKubeConfigExpirySeconds)
 	if err != nil {
@@ -1083,8 +1088,9 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 
 // RunKubernetesKubeconfigRemove retrieves an existing kubernetes config and removes it from your local kubeconfig.
 func (s *KubernetesCommandService) RunKubernetesKubeconfigRemove(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	kube := c.Kubernetes()
 	clusterID, err := clusterIDize(kube, c.Args[0])
@@ -1119,8 +1125,9 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolGet(c *CmdConfig) error 
 
 // RunKubernetesNodePoolList lists cluster node pool.
 func (s *KubernetesCommandService) RunKubernetesNodePoolList(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
 	if err != nil {
@@ -1137,8 +1144,9 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolList(c *CmdConfig) error
 
 // RunKubernetesNodePoolCreate creates a new cluster node pool with a given configuration.
 func (s *KubernetesCommandService) RunKubernetesNodePoolCreate(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
 	if err != nil {

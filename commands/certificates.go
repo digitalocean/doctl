@@ -89,8 +89,9 @@ Use `+"`"+`doctl compute certificate list`+"`"+` to see all available certificat
 
 // RunCertificateGet retrieves an existing certificate by its identifier.
 func RunCertificateGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	cID := c.Args[0]
 
@@ -193,8 +194,9 @@ func RunCertificateList(c *CmdConfig) error {
 
 // RunCertificateDelete deletes a certificate by its identifier.
 func RunCertificateDelete(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	cID := c.Args[0]
 

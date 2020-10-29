@@ -58,8 +58,9 @@ Deleting a tag also removes the tag from all the resources that had been tagged 
 
 // RunCmdTagCreate runs tag create.
 func RunCmdTagCreate(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	name := c.Args[0]
@@ -76,8 +77,9 @@ func RunCmdTagCreate(c *CmdConfig) error {
 
 // RunCmdTagGet runs tag get.
 func RunCmdTagGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	name := c.Args[0]

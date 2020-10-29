@@ -145,8 +145,9 @@ func RunProjectsList(c *CmdConfig) error {
 // RunProjectsGet retrieves an existing Project by its identifier. Use "default"
 // as an identifier to retrieve your default project.
 func RunProjectsGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	id := c.Args[0]
 
@@ -177,8 +178,9 @@ func RunProjectsCreate(c *CmdConfig) error {
 
 // RunProjectsUpdate updates an existing Project with a given configuration.
 func RunProjectsUpdate(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	id := c.Args[0]
 
@@ -223,8 +225,9 @@ func RunProjectsDelete(c *CmdConfig) error {
 
 // RunProjectResourcesList lists the Projects.
 func RunProjectResourcesList(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	id := c.Args[0]
 
@@ -239,8 +242,9 @@ func RunProjectResourcesList(c *CmdConfig) error {
 
 // RunProjectResourcesGet retrieves a Project Resource.
 func RunProjectResourcesGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	urn := c.Args[0]
 
@@ -268,8 +272,9 @@ func RunProjectResourcesGet(c *CmdConfig) error {
 
 // RunProjectResourcesAssign assigns a Project Resource.
 func RunProjectResourcesAssign(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	projectUUID := c.Args[0]
 
