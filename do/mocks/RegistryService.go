@@ -165,3 +165,63 @@ func (mr *MockRegistryServiceMockRecorder) Endpoint() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Endpoint", reflect.TypeOf((*MockRegistryService)(nil).Endpoint))
 }
+
+// StartGarbageCollection mocks base method.
+func (m *MockRegistryService) StartGarbageCollection(arg0 string) (*do.GarbageCollection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartGarbageCollection", arg0)
+	ret0, _ := ret[0].(*do.GarbageCollection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartGarbageCollection indicates an expected call of StartGarbageCollection.
+func (mr *MockRegistryServiceMockRecorder) StartGarbageCollection(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).StartGarbageCollection), arg0)
+}
+
+// GetGarbageCollection mocks base method.
+func (m *MockRegistryService) GetGarbageCollection(arg0 string) (*do.GarbageCollection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGarbageCollection", arg0)
+	ret0, _ := ret[0].(*do.GarbageCollection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGarbageCollection indicates an expected call of GetGarbageCollection.
+func (mr *MockRegistryServiceMockRecorder) GetGarbageCollection(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).GetGarbageCollection), arg0)
+}
+
+// ListGarbageCollections mocks base method.
+func (m *MockRegistryService) ListGarbageCollections(arg0 string) ([]do.GarbageCollection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListGarbageCollections", arg0)
+	ret0, _ := ret[0].([]do.GarbageCollection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListGarbageCollections indicates an expected call of ListGarbageCollections.
+func (mr *MockRegistryServiceMockRecorder) ListGarbageCollections(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGarbageCollections", reflect.TypeOf((*MockRegistryService)(nil).ListGarbageCollections), arg0)
+}
+
+// CancelGarbageCollection mocks base method.
+func (m *MockRegistryService) CancelGarbageCollection(arg0, arg1 string) (*do.GarbageCollection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CancelGarbageCollection", arg0, arg1)
+	ret0, _ := ret[0].(*do.GarbageCollection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CancelGarbageCollection indicates an expected call of CancelGarbageCollection.
+func (mr *MockRegistryServiceMockRecorder) CancelGarbageCollection(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).CancelGarbageCollection), arg0, arg1)
+}

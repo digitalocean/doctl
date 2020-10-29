@@ -51,6 +51,7 @@ func Registry() *Command {
 	}
 
 	cmd.AddCommand(Repository())
+	cmd.AddCommand(GarbageCollection())
 
 	createRegDesc := "This command creates a new private container registry with the provided name."
 	CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>",
@@ -165,6 +166,77 @@ func Repository() *Command {
 		aliasOpt("dm"),
 	)
 	AddBoolFlag(cmdRunRepositoryDeleteManifest, doctl.ArgForce, doctl.ArgShortForce, false, "Force manifest deletion")
+
+	return cmd
+}
+
+// GarbageCollection creates the garbage-collection subcommand
+func GarbageCollection() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "garbage-collection",
+			Aliases: []string{"gc", "g"},
+			Short:   "Display commands for garbage collection for a container registry",
+			Long:    "The subcommands of `doctl registry garbage-collection` start a garbage collection, retrieve or cancel a currently-active garbage collection or list past garbage collections for a specified registry.",
+		},
+	}
+
+	runStartGarbageCollectionDesc := "This command starts a garbage collection on a container registry. There can be only one active garbage collection at a time for a given registry."
+	CmdBuilder(
+		cmd,
+		RunStartGarbageCollection,
+		"start",
+		"Start garbage collection for a container registry",
+		runStartGarbageCollectionDesc,
+		Writer,
+		aliasOpt("s"),
+		displayerType(&displayers.GarbageCollection{}),
+	)
+
+	gcInfoIncluded := `
+  - UUID
+  - Status
+  - Registry Name
+  - Created At
+  - Updated At
+  - Blobs Deleted
+  - Freed Bytes
+`
+
+	runGetGarbageCollectionDesc := "This command retrieves the currently-active garbage collection for a container registry, if any active garbage collection exists. Information included about the registry includes:" + gcInfoIncluded
+	CmdBuilder(
+		cmd,
+		RunGetGarbageCollection,
+		"get-active",
+		"Retrieve information about the currently-active garbage collection for a container registry",
+		runGetGarbageCollectionDesc,
+		Writer,
+		aliasOpt("ga", "g"),
+		displayerType(&displayers.GarbageCollection{}),
+	)
+
+	runListGarbageCollectionsDesc := "This command retrieves a list of past garbage collections for a registry. Information about each garbage collection includes:" + gcInfoIncluded
+	CmdBuilder(
+		cmd,
+		RunListGarbageCollections,
+		"list",
+		"Retrieve information about past garbage collections for a container registry",
+		runListGarbageCollectionsDesc,
+		Writer,
+		aliasOpt("ls", "l"),
+		displayerType(&displayers.GarbageCollection{}),
+	)
+
+	runCancelGarbageCollectionDesc := "This command cancels the currently-active garbage collection for a container registry."
+	CmdBuilder(
+		cmd,
+		RunCancelGarbageCollection,
+		"cancel",
+		"Cancel the currently-active garbage collection for a container registry",
+		runCancelGarbageCollectionDesc,
+		Writer,
+		aliasOpt("c"),
+	)
 
 	return cmd
 }
@@ -511,6 +583,137 @@ func displayRepositories(c *CmdConfig, repositories ...do.Repository) error {
 func displayRepositoryTags(c *CmdConfig, tags ...do.RepositoryTag) error {
 	item := &displayers.RepositoryTag{
 		Tags: tags,
+	}
+	return c.Display(item)
+}
+
+// Garbage Collection run commands
+
+// RunStartGarbageCollection starts a garbage collection for the specified
+// registry.
+func RunStartGarbageCollection(c *CmdConfig) error {
+	var registryName string
+	// we anticipate supporting multiple registries in the future by allowing the
+	// user to specify a registry argument on the command line but defaulting to
+	// the default registry returned by c.Registry().Get()
+	if len(c.Args) == 0 {
+		var err error
+		registry, err := c.Registry().Get()
+		if err != nil {
+			return fmt.Errorf("failed to get registry: %w", err)
+		}
+		registryName = registry.Name
+	} else if len(c.Args) == 1 {
+		registryName = c.Args[0]
+	} else {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+
+	gc, err := c.Registry().StartGarbageCollection(registryName)
+	if err != nil {
+		return err
+	}
+
+	return displayGarbageCollections(c, *gc)
+}
+
+// RunGetGarbageCollection gets the specified registry's currently-active
+// garbage collection.
+func RunGetGarbageCollection(c *CmdConfig) error {
+	var registryName string
+	// we anticipate supporting multiple registries in the future by allowing the
+	// user to specify a registry argument on the command line but defaulting to
+	// the default registry returned by c.Registry().Get()
+	if len(c.Args) == 0 {
+		var err error
+		registry, err := c.Registry().Get()
+		if err != nil {
+			return fmt.Errorf("failed to get registry: %w", err)
+		}
+		registryName = registry.Name
+	} else if len(c.Args) == 1 {
+		registryName = c.Args[0]
+	} else {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+
+	gc, err := c.Registry().GetGarbageCollection(registryName)
+	if err != nil {
+		return err
+	}
+
+	return displayGarbageCollections(c, *gc)
+}
+
+// RunListGarbageCollections gets the specified registry's currently-active
+// garbage collection.
+func RunListGarbageCollections(c *CmdConfig) error {
+	var registryName string
+	// we anticipate supporting multiple registries in the future by allowing the
+	// user to specify a registry argument on the command line but defaulting to
+	// the default registry returned by c.Registry().Get()
+	if len(c.Args) == 0 {
+		var err error
+		registry, err := c.Registry().Get()
+		if err != nil {
+			return fmt.Errorf("failed to get registry: %w", err)
+		}
+		registryName = registry.Name
+	} else if len(c.Args) == 1 {
+		registryName = c.Args[0]
+	} else {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+
+	gcs, err := c.Registry().ListGarbageCollections(registryName)
+	if err != nil {
+		return err
+	}
+
+	return displayGarbageCollections(c, gcs...)
+}
+
+// RunCancelGarbageCollection gets the specified registry's currently-active
+// garbage collection.
+func RunCancelGarbageCollection(c *CmdConfig) error {
+	var (
+		registryName string
+		gcUUID       string
+	)
+
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	} else if len(c.Args) == 1 { // <gc-uuid>
+		gcUUID = c.Args[0]
+	} else if len(c.Args) == 2 { // <registry-name> <gc-uuid>
+		registryName = c.Args[0]
+		gcUUID = c.Args[1]
+	} else {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+
+	// we anticipate supporting multiple registries in the future by allowing the
+	// user to specify a registry argument on the command line but defaulting to
+	// the default registry returned by c.Registry().Get()
+	if registryName == "" {
+		registry, err := c.Registry().Get()
+		if err != nil {
+			return fmt.Errorf("failed to get registry: %w", err)
+		}
+		registryName = registry.Name
+	}
+
+	_, err := c.Registry().CancelGarbageCollection(registryName, gcUUID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func displayGarbageCollections(c *CmdConfig, garbageCollections ...do.GarbageCollection) error {
+	item := &displayers.GarbageCollection{
+		GarbageCollections: garbageCollections,
 	}
 	return c.Display(item)
 }
