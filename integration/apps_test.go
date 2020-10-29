@@ -86,10 +86,24 @@ var (
 	}{
 		Deployments: []*godo.Deployment{testDeployment},
 	}
+	testRegionsResponse = struct {
+		Regions []*godo.AppRegion `json:"regions"`
+	}{
+		Regions: []*godo.AppRegion{{
+			Slug:        "ams",
+			Label:       "Amsterdam",
+			Flag:        "netherlands",
+			Continent:   "Europe",
+			DataCenters: []string{"ams3"},
+			Default:     true,
+		}},
+	}
 	testAppsOutput = `ID                                      Spec Name    Default Ingress    Active Deployment ID                    In Progress Deployment ID    Created At                       Updated At
 93a37175-f520-4a12-a7ad-26e63491dbf4    test                            f4e37431-a0f4-458f-8f9f-5c9a61d8562f                                 1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
 	testDeploymentsOutput = `ID                                      Cause     Progress    Created At                       Updated At
 f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
+	testRegionsOutput = `Region    Label        Continent    Data Centers    Is Disabled?    Reason (if disabled)    Is Default?
+ams       Amsterdam    Europe       [ams3]          false                                   true`
 )
 
 var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
@@ -640,6 +654,59 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 		expect.NoError(err)
 
 		expectedOutput := "fake logs"
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+})
+
+var _ = suite("apps/list-regions", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Add("content-type", "application/json")
+
+			switch req.URL.Path {
+			case "/v2/apps/regions":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				json.NewEncoder(w).Encode(testRegionsResponse)
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	it("lists regions", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps",
+			"list-regions",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := testRegionsOutput
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 })
