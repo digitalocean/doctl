@@ -1,13 +1,13 @@
 module github.com/digitalocean/doctl
 
-go 1.14
+go 1.15
 
 require (
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
-	github.com/creack/pty v1.1.7
+	github.com/creack/pty v1.1.11
 	github.com/digitalocean/godo v1.50.0
 	github.com/docker/cli v0.0.0-20200622130859-87db43814b48
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200531234253-77e06fda0c94+incompatible // indirect
