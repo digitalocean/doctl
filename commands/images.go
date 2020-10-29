@@ -177,14 +177,14 @@ func RunImagesListUser(c *CmdConfig) error {
 func RunImagesGet(c *CmdConfig) error {
 	is := c.Images()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	rawID := c.Args[0]
 
 	var i *do.Image
-	var err error
 
 	if id, cerr := strconv.Atoi(rawID); cerr == nil {
 		i, err = is.GetByID(id)
@@ -208,8 +208,9 @@ func RunImagesGet(c *CmdConfig) error {
 func RunImagesUpdate(c *CmdConfig) error {
 	is := c.Images()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	id, err := strconv.Atoi(c.Args[0])

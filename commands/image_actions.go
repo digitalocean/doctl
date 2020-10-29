@@ -62,8 +62,9 @@ func ImageAction() *Command {
 func RunImageActionsGet(c *CmdConfig) error {
 	ias := c.ImageActions()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	imageID, err := strconv.Atoi(c.Args[0])
@@ -89,8 +90,9 @@ func RunImageActionsGet(c *CmdConfig) error {
 func RunImageActionsTransfer(c *CmdConfig) error {
 	ias := c.ImageActions()
 
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	id, err := strconv.Atoi(c.Args[0])

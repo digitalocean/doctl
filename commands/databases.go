@@ -1110,7 +1110,7 @@ func sqlMode() *Command {
 	CmdBuilder(cmd, RunDatabaseGetSQLModes, "get <database-id>",
 		"Get a MySQL database cluster's SQL modes", getSqlModeDesc, Writer,
 		displayerType(&displayers.DatabaseSQLModes{}), aliasOpt("g"))
-	setSqlModeDesc := `This command configures the SQL modes for the specified MySQL database cluster. The SQL modes should be provided as a space separated list. 
+	setSqlModeDesc := `This command configures the SQL modes for the specified MySQL database cluster. The SQL modes should be provided as a space separated list.
 
 This will replace the existing SQL mode configuration completely. Include all of the current values when adding a new one.
 `
@@ -1122,8 +1122,9 @@ This will replace the existing SQL mode configuration completely. Include all of
 
 // RunDatabaseGetSQLModes gets the sql modes set on the database
 func RunDatabaseGetSQLModes(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	databaseID := c.Args[0]

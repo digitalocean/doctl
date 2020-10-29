@@ -126,10 +126,10 @@ func RunVolumeDetach(c *CmdConfig) error {
 // RunVolumeResize resizes a volume
 func RunVolumeResize(c *CmdConfig) error {
 	fn := func(das do.VolumeActionsService) (*do.Action, error) {
-		if len(c.Args) != 1 {
-			return nil, doctl.NewMissingArgsErr(c.NS)
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
 		}
-
 		volumeID := c.Args[0]
 
 		size, err := c.Doit.GetInt(c.NS, doctl.ArgSizeSlug)

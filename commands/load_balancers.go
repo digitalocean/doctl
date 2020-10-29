@@ -152,8 +152,9 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 
 // RunLoadBalancerGet retrieves an existing load balancer by its identifier.
 func RunLoadBalancerGet(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	id := c.Args[0]
 
@@ -220,8 +221,9 @@ func RunLoadBalancerUpdate(c *CmdConfig) error {
 
 // RunLoadBalancerDelete deletes a load balancer by its identifier.
 func RunLoadBalancerDelete(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	lbID := c.Args[0]
 
@@ -244,8 +246,9 @@ func RunLoadBalancerDelete(c *CmdConfig) error {
 
 // RunLoadBalancerAddDroplets adds droplets to a load balancer.
 func RunLoadBalancerAddDroplets(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	lbID := c.Args[0]
 
@@ -264,8 +267,9 @@ func RunLoadBalancerAddDroplets(c *CmdConfig) error {
 
 // RunLoadBalancerRemoveDroplets removes droplets from a load balancer.
 func RunLoadBalancerRemoveDroplets(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	lbID := c.Args[0]
 
@@ -284,8 +288,9 @@ func RunLoadBalancerRemoveDroplets(c *CmdConfig) error {
 
 // RunLoadBalancerAddForwardingRules adds forwarding rules to a load balancer.
 func RunLoadBalancerAddForwardingRules(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	lbID := c.Args[0]
 
@@ -304,8 +309,9 @@ func RunLoadBalancerAddForwardingRules(c *CmdConfig) error {
 
 // RunLoadBalancerRemoveForwardingRules removes forwarding rules from a load balancer.
 func RunLoadBalancerRemoveForwardingRules(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	lbID := c.Args[0]
 

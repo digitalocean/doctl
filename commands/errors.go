@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/digitalocean/doctl"
 	"github.com/fatih/color"
 	"github.com/shiena/ansicolor"
 	"github.com/spf13/viper"
@@ -68,6 +69,17 @@ func checkErr(err error) {
 	}
 
 	errAction()
+}
+
+func ensureOneArg(c *CmdConfig) error {
+	switch count := len(c.Args); {
+	case count == 0:
+		return doctl.NewMissingArgsErr(c.NS)
+	case count > 1:
+		return doctl.NewTooManyArgsErr(c.NS)
+	default:
+		return nil
+	}
 }
 
 func warn(msg string, args ...interface{}) {

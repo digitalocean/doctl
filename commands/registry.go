@@ -245,8 +245,9 @@ func GarbageCollection() *Command {
 
 // RunRegistryCreate creates a registry
 func RunRegistryCreate(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	name := c.Args[0]
@@ -475,8 +476,9 @@ func RunListRepositories(c *CmdConfig) error {
 
 // RunListRepositoryTags lists tags for the repository in a registry
 func RunListRepositoryTags(c *CmdConfig) error {
-	if len(c.Args) != 1 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	registry, err := c.Registry().Get()
