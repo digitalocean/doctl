@@ -271,7 +271,7 @@ After creating a cluster, a configuration context will be added to kubectl and m
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVPCUUID, "", "",
 		"Kubernetes UUID. Must be the UUID of a valid VPC in the same region specified for the cluster.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
-		"Boolean specifying whether to enable auto-upgrade for the cluster")
+		"A boolean flag indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window (default false). To enable automatic upgrade, supply --auto-upgrade(=true).")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", false,
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
@@ -316,7 +316,7 @@ This command updates the specified configuration values for the specified Kubern
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgTag, "", nil,
 		"A comma-separated list of tags to apply to the cluster. Existing user-provided tags will be removed from the cluster if they are not specified.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgAutoUpgrade, "", false,
-		"Boolean specifying whether to enable auto-upgrade for the cluster")
+		"A boolean flag indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window (default false). To enable automatic upgrade, supply --auto-upgrade(=true).")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSurgeUpgrade, "", false,
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
