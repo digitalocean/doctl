@@ -63,7 +63,7 @@ With the vpcs command, you can list, create, or delete VPCs, and manage their co
 	cmdRecordUpdate := CmdBuilder(cmd, RunVPCUpdate, "update <id>",
 		"Update a VPC's configuration", `Use this command to update the configuration of a specified VPC.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCName, "", "",
-		"The VPC's name", requiredOpt())
+		"The VPC's name")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCDescription, "", "",
 		"The VPC's description")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgVPCDefault, "", false,
@@ -154,18 +154,25 @@ func RunVPCUpdate(c *CmdConfig) error {
 	}
 	vpcUUID := c.Args[0]
 
-	r := new(godo.VPCUpdateRequest)
-	name, err := c.Doit.GetString(c.NS, doctl.ArgVPCName)
-	if err != nil {
-		return err
-	}
-	r.Name = name
+	options := make([]godo.VPCSetField, 0)
 
-	desc, err := c.Doit.GetString(c.NS, doctl.ArgVPCDescription)
-	if err != nil {
-		return err
+	if c.Doit.IsSet(doctl.ArgVPCName) {
+		name, err := c.Doit.GetString(c.NS, doctl.ArgVPCName)
+		if err != nil {
+			return err
+		}
+
+		options = append(options, godo.VPCSetName(name))
 	}
-	r.Description = desc
+
+	if c.Doit.IsSet(doctl.ArgVPCDescription) {
+		name, err := c.Doit.GetString(c.NS, doctl.ArgVPCDescription)
+		if err != nil {
+			return err
+		}
+
+		options = append(options, godo.VPCSetDescription(name))
+	}
 
 	def, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgVPCDefault)
 	if err != nil {
@@ -173,11 +180,12 @@ func RunVPCUpdate(c *CmdConfig) error {
 	}
 
 	if def != nil {
-		r.Default = boolPtr(true)
+		options = append(options, godo.VPCSetDefault())
 	}
 
 	vpcs := c.VPCs()
-	vpc, err := vpcs.Update(vpcUUID, r)
+
+	vpc, err := vpcs.PartialUpdate(vpcUUID, options...)
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,7 @@ var _ = suite("vpcs/update", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
-				if req.Method != http.MethodPut {
+				if req.Method != http.MethodPatch {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
