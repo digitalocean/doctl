@@ -43,6 +43,9 @@ func (rec *recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	rec.req <- string(reqBytes)
 
 	resp, rerr := rec.wrap.RoundTrip(req)
+	if rerr != nil {
+		return nil, rerr
+	}
 
 	respBytes, err := httputil.DumpResponse(resp, true)
 	if err != nil {
@@ -50,5 +53,5 @@ func (rec *recorder) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 	rec.resp <- string(respBytes)
 
-	return resp, rerr
+	return resp, nil
 }
