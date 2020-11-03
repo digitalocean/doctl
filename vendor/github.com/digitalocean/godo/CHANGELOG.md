@@ -1,5 +1,11 @@
 # Change Log
 
+## [v1.51.0] - 2020-11-02
+
+- #405 - @adamwg - registry: Support subscription options
+- #398 - @reeseconor - Add support for caching dependencies between GitHub Action runs
+- #404 - @andrewsomething - CONTRIBUTING.md: Suggest using github-changelog-generator.
+
 ## [v1.50.0] - 2020-10-26
 
 - #400 - @waynr - registry: add garbage collection support
