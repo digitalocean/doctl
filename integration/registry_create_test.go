@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -15,8 +16,9 @@ import (
 
 var _ = suite("registry/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect           *require.Assertions
+		server           *httptest.Server
+		expectedTierSlug string
 	)
 
 	it.Before(func() {
@@ -41,7 +43,8 @@ var _ = suite("registry/create", func(t *testing.T, when spec.G, it spec.S) {
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
-				expect.JSONEq(registryCreateRequest, string(reqBody))
+				expectedJSON := fmt.Sprintf(registryCreateRequest, expectedTierSlug)
+				expect.JSONEq(expectedJSON, string(reqBody))
 				w.WriteHeader(http.StatusCreated)
 				w.Write([]byte(registryCreateResponse))
 			default:
@@ -63,6 +66,24 @@ var _ = suite("registry/create", func(t *testing.T, when spec.G, it spec.S) {
 			"create",
 			"my-registry",
 		)
+		expectedTierSlug = "basic"
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expect.Equal(strings.TrimSpace(registryGetOutput), strings.TrimSpace(string(output)))
+	})
+
+	it("creates a registry with subscription tier specified", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"registry",
+			"create",
+			"my-registry",
+			"--subscription-tier", "starter",
+		)
+		expectedTierSlug = "starter"
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
@@ -74,7 +95,14 @@ var _ = suite("registry/create", func(t *testing.T, when spec.G, it spec.S) {
 const (
 	registryCreateRequest = `
 {
-	"name": "my-registry"
+	"name": "my-registry",
+	"subscription_tier_slug": "%s"
+}
+`
+	registryCreateRequestWithTier = `
+{
+	"name": "my-registry",
+	"subscription_tier_slug": "basic"
 }
 `
 	registryCreateResponse = `

@@ -317,6 +317,8 @@ const (
 	ArgReadWrite = "read-write"
 	// ArgRegistryExpirySeconds indicates the length of time the token will be valid in seconds.
 	ArgRegistryExpirySeconds = "expiry-seconds"
+	// ArgSubscriptionTier is a subscription tier slug.
+	ArgSubscriptionTier = "subscription-tier"
 
 	// 1-Click Args
 

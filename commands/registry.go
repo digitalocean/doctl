@@ -55,8 +55,10 @@ func Registry() *Command {
 	cmd.AddCommand(RegistryOptions())
 
 	createRegDesc := "This command creates a new private container registry with the provided name."
-	CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>",
+	cmdRunRegistryCreate := CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>",
 		"Create a private container registry", createRegDesc, Writer)
+	AddStringFlag(cmdRunRegistryCreate, doctl.ArgSubscriptionTier, "", "basic",
+		"Subscription tier for the new registry. Possible values: see `doctl registry options subscription-tiers`", requiredOpt())
 
 	getRegDesc := "This command retrieves details about a private container registry including its name and the endpoint used to access it."
 	CmdBuilder(cmd, RunRegistryGet, "get", "Retrieve details about a container registry",
@@ -269,9 +271,17 @@ func RunRegistryCreate(c *CmdConfig) error {
 	}
 
 	name := c.Args[0]
+	subscriptionTier, err := c.Doit.GetString(c.NS, doctl.ArgSubscriptionTier)
+	if err != nil {
+		return err
+	}
+
 	rs := c.Registry()
 
-	rcr := &godo.RegistryCreateRequest{Name: name}
+	rcr := &godo.RegistryCreateRequest{
+		Name:                 name,
+		SubscriptionTierSlug: subscriptionTier,
+	}
 	r, err := rs.Create(rcr)
 	if err != nil {
 		return err
