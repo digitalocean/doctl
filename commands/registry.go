@@ -52,6 +52,7 @@ func Registry() *Command {
 
 	cmd.AddCommand(Repository())
 	cmd.AddCommand(GarbageCollection())
+	cmd.AddCommand(RegistryOptions())
 
 	createRegDesc := "This command creates a new private container registry with the provided name."
 	CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>",
@@ -237,6 +238,23 @@ func GarbageCollection() *Command {
 		Writer,
 		aliasOpt("c"),
 	)
+
+	return cmd
+}
+
+// RegistryOptions creates the registry options subcommand
+func RegistryOptions() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use: "options",
+			Aliases: []string{"opts", "o"},
+			Short: "List available container registry options",
+			Long: "This command lists options available when creating or updating a container registry.",
+		},
+	}
+
+	tiersDesc := "List available container registry subscription tiers"
+	CmdBuilder(cmd, RunRegistryOptionsTiers, "subscription-tiers", tiersDesc, tiersDesc, Writer, aliasOpt("tiers"))
 
 	return cmd
 }
@@ -716,6 +734,18 @@ func RunCancelGarbageCollection(c *CmdConfig) error {
 func displayGarbageCollections(c *CmdConfig, garbageCollections ...do.GarbageCollection) error {
 	item := &displayers.GarbageCollection{
 		GarbageCollections: garbageCollections,
+	}
+	return c.Display(item)
+}
+
+func RunRegistryOptionsTiers(c *CmdConfig) error {
+	tiers, err := c.Registry().GetSubscriptionTiers()
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.RegistrySubscriptionTiers{
+		SubscriptionTiers: tiers,
 	}
 	return c.Display(item)
 }

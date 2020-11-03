@@ -14,6 +14,7 @@ limitations under the License.
 package displayers
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/digitalocean/doctl/do"
@@ -194,6 +195,62 @@ func (g *GarbageCollection) KV() []map[string]interface{} {
 			"UpdatedAt":    gc.UpdatedAt,
 			"BlobsDeleted": gc.BlobsDeleted,
 			"FreedBytes":   gc.FreedBytes,
+		})
+	}
+
+	return out
+}
+
+type RegistrySubscriptionTiers struct {
+	SubscriptionTiers []do.RegistrySubscriptionTier
+}
+
+func (t *RegistrySubscriptionTiers) JSON(out io.Writer) error {
+	return writeJSON(t, out)
+}
+
+func (t *RegistrySubscriptionTiers) Cols() []string {
+	return []string{
+		"Name",
+		"Slug",
+		"IncludedRepositories",
+		"IncludedStorageBytes",
+		"AllowStorageOverage",
+		"IncludedBandwidthBytes",
+		"MonthlyPriceInCents",
+		"Eligible",
+		"EligibilityReasons",
+	}
+}
+
+func (t *RegistrySubscriptionTiers) ColMap() map[string]string {
+	return map[string]string{
+		"Name":                   "Name",
+		"Slug":                   "Slug",
+		"IncludedRepositories":   "Included Repositories",
+		"IncludedStorageBytes":   "Included Storage",
+		"AllowStorageOverage":    "Storage Overage Allowed",
+		"IncludedBandwidthBytes": "Included Bandwidth",
+		"MonthlyPriceInCents":    "Monthly Price",
+		"Eligible":               "Eligible?",
+		"EligibilityReasons":     "Not Eligible Because",
+	}
+}
+
+func (t *RegistrySubscriptionTiers) KV() []map[string]interface{} {
+	out := []map[string]interface{}{}
+
+	for _, tier := range t.SubscriptionTiers {
+		out = append(out, map[string]interface{}{
+			"Name":                   tier.Name,
+			"Slug":                   tier.Slug,
+			"IncludedRepositories":   tier.IncludedRepositories,
+			"IncludedStorageBytes":   BytesToHumanReadibleUnit(tier.IncludedStorageBytes),
+			"AllowStorageOverage":    tier.AllowStorageOverage,
+			"IncludedBandwidthBytes": BytesToHumanReadibleUnit(tier.IncludedBandwidthBytes),
+			"MonthlyPriceInCents":    fmt.Sprintf("$%d", tier.MonthlyPriceInCents / 100),
+			"Eligible":               tier.Eligible,
+			"EligibilityReasons":     tier.EligibilityReasons,
 		})
 	}
 

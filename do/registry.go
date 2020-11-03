@@ -43,6 +43,11 @@ type GarbageCollection struct {
 	*godo.GarbageCollection
 }
 
+// RegistrySubscriptionTier wraps a godo RegistrySubscriptionTier
+type RegistrySubscriptionTier struct {
+	*godo.RegistrySubscriptionTier
+}
+
 // Endpoint returns the registry endpoint for image tagging
 func (r *Registry) Endpoint() string {
 	return fmt.Sprintf("%s/%s", RegistryHostname, r.Registry.Name)
@@ -63,6 +68,7 @@ type RegistryService interface {
 	GetGarbageCollection(string) (*GarbageCollection, error)
 	ListGarbageCollections(string) ([]GarbageCollection, error)
 	CancelGarbageCollection(string, string) (*GarbageCollection, error)
+	GetSubscriptionTiers() ([]RegistrySubscriptionTier, error)
 }
 
 type registryService struct {
@@ -241,4 +247,18 @@ func (rs *registryService) CancelGarbageCollection(registry, garbageCollection s
 
 func (rs *registryService) Endpoint() string {
 	return RegistryHostname
+}
+
+func (rs *registryService) GetSubscriptionTiers() ([]RegistrySubscriptionTier, error) {
+	opts, _, err := rs.client.Registry.GetOptions(rs.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]RegistrySubscriptionTier, len(opts.SubscriptionTiers))
+	for i, tier := range opts.SubscriptionTiers {
+		ret[i] = RegistrySubscriptionTier{tier}
+	}
+
+	return ret, nil
 }
