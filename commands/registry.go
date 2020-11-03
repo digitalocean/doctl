@@ -52,10 +52,13 @@ func Registry() *Command {
 
 	cmd.AddCommand(Repository())
 	cmd.AddCommand(GarbageCollection())
+	cmd.AddCommand(RegistryOptions())
 
 	createRegDesc := "This command creates a new private container registry with the provided name."
-	CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>",
+	cmdRunRegistryCreate := CmdBuilder(cmd, RunRegistryCreate, "create <registry-name>",
 		"Create a private container registry", createRegDesc, Writer)
+	AddStringFlag(cmdRunRegistryCreate, doctl.ArgSubscriptionTier, "", "basic",
+		"Subscription tier for the new registry. Possible values: see `doctl registry options subscription-tiers`", requiredOpt())
 
 	getRegDesc := "This command retrieves details about a private container registry including its name and the endpoint used to access it."
 	CmdBuilder(cmd, RunRegistryGet, "get", "Retrieve details about a container registry",
@@ -241,6 +244,23 @@ func GarbageCollection() *Command {
 	return cmd
 }
 
+// RegistryOptions creates the registry options subcommand
+func RegistryOptions() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use: "options",
+			Aliases: []string{"opts", "o"},
+			Short: "List available container registry options",
+			Long: "This command lists options available when creating or updating a container registry.",
+		},
+	}
+
+	tiersDesc := "List available container registry subscription tiers"
+	CmdBuilder(cmd, RunRegistryOptionsTiers, "subscription-tiers", tiersDesc, tiersDesc, Writer, aliasOpt("tiers"))
+
+	return cmd
+}
+
 // Registry Run Commands
 
 // RunRegistryCreate creates a registry
@@ -251,9 +271,17 @@ func RunRegistryCreate(c *CmdConfig) error {
 	}
 
 	name := c.Args[0]
+	subscriptionTier, err := c.Doit.GetString(c.NS, doctl.ArgSubscriptionTier)
+	if err != nil {
+		return err
+	}
+
 	rs := c.Registry()
 
-	rcr := &godo.RegistryCreateRequest{Name: name}
+	rcr := &godo.RegistryCreateRequest{
+		Name:                 name,
+		SubscriptionTierSlug: subscriptionTier,
+	}
 	r, err := rs.Create(rcr)
 	if err != nil {
 		return err
@@ -716,6 +744,18 @@ func RunCancelGarbageCollection(c *CmdConfig) error {
 func displayGarbageCollections(c *CmdConfig, garbageCollections ...do.GarbageCollection) error {
 	item := &displayers.GarbageCollection{
 		GarbageCollections: garbageCollections,
+	}
+	return c.Display(item)
+}
+
+func RunRegistryOptionsTiers(c *CmdConfig) error {
+	tiers, err := c.Registry().GetSubscriptionTiers()
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.RegistrySubscriptionTiers{
+		SubscriptionTiers: tiers,
 	}
 	return c.Display(item)
 }

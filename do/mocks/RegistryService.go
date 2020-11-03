@@ -225,3 +225,18 @@ func (mr *MockRegistryServiceMockRecorder) CancelGarbageCollection(arg0, arg1 in
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).CancelGarbageCollection), arg0, arg1)
 }
+
+// GetSubscriptionTiers mocks base method.
+func (m *MockRegistryService) GetSubscriptionTiers() ([]do.RegistrySubscriptionTier, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSubscriptionTiers")
+	ret0, _ := ret[0].([]do.RegistrySubscriptionTier)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSubscriptionTiers indicates an expected call of GetSubscriptionTiers.
+func (mr *MockRegistryServiceMockRecorder) GetSubscriptionTiers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionTiers", reflect.TypeOf((*MockRegistryService)(nil).GetSubscriptionTiers))
+}

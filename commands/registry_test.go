@@ -31,11 +31,12 @@ import (
 )
 
 var (
-	testRegistryName    = "container-registry"
-	invalidRegistryName = "invalid-container-registry"
-	testRegistry        = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
-	testRepoName        = "test-repository"
-	testRepositoryTag   = do.RepositoryTag{
+	testRegistryName     = "container-registry"
+	testSubscriptionTier = "basic"
+	invalidRegistryName  = "invalid-container-registry"
+	testRegistry         = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
+	testRepoName         = "test-repository"
+	testRepositoryTag    = do.RepositoryTag{
 		RepositoryTag: &godo.RepositoryTag{
 			RegistryName:        testRegistryName,
 			Repository:          testRepoName,
@@ -80,7 +81,7 @@ var (
 func TestRegistryCommand(t *testing.T) {
 	cmd := Registry()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "get", "delete", "login", "logout", "kubernetes-manifest", "repository", "docker-config", "garbage-collection")
+	assertCommandNames(t, cmd, "create", "get", "delete", "login", "logout", "options", "kubernetes-manifest", "repository", "docker-config", "garbage-collection")
 }
 
 func TestRepositoryCommand(t *testing.T) {
@@ -97,9 +98,13 @@ func TestGarbageCollectionCommand(t *testing.T) {
 
 func TestRegistryCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		rcr := godo.RegistryCreateRequest{Name: testRegistryName}
+		rcr := godo.RegistryCreateRequest{
+			Name:                 testRegistryName,
+			SubscriptionTierSlug: testSubscriptionTier,
+		}
 		tm.registry.EXPECT().Create(&rcr).Return(&testRegistry, nil)
 		config.Args = append(config.Args, testRegistryName)
+		config.Doit.Set(config.NS, doctl.ArgSubscriptionTier, "basic")
 
 		err := RunRegistryCreate(config)
 		assert.NoError(t, err)
