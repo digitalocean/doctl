@@ -238,8 +238,8 @@ func kubernetesCluster() *Command {
 - An object containing a "state" attribute whose value is set to a string indicating the current status of the node. Potential values include ` + "`" + `running` + "`" + `, ` + "`" + `provisioning` + "`" + `, and ` + "`" + `errored` + "`" + `.`
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGet, "get <id|name>", "Retrieve details about a Kubernetes cluster", `
 This command retrieves the following details about a Kubernetes cluster: `+clusterDetails+`
-- The base URL of the API server on the Kubernetes master node.
-- The public IPv4 address of the Kubernetes master node.
+- The base URL of the cluster's Kubernetes API server.
+- The public IPv4 address of the cluster's Kubernetes API server.
 - The range of IP addresses in the overlay network of the Kubernetes cluster in CIDR notation.
 - The range of assignable IP addresses for services running in the Kubernetes cluster in CIDR notation.
 - An array of tags applied to the Kubernetes cluster. All clusters are automatically tagged `+"`"+`k8s`+"`"+` and `+"`"+`k8s:$K8S_CLUSTER_ID`+"`"+`.
