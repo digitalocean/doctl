@@ -103,7 +103,7 @@ This permanently deletes the app and all its associated deployments.`,
 	)
 	AddBoolFlag(deleteApp, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the App without a confirmation prompt")
 
-	CmdBuilder(
+	deploymentCreate := CmdBuilder(
 		cmd,
 		RunAppsCreateDeployment,
 		"create-deployment <app id>",
@@ -115,6 +115,7 @@ The deployment will be created using the provided app spec.  For more informatio
 		aliasOpt("cd"),
 		displayerType(&displayers.Deployments{}),
 	)
+	AddBoolFlag(deploymentCreate, doctl.ArgAppForceRebuild, "", false, "Force a re-build even if a previous build is eligible for reuse")
 
 	CmdBuilder(
 		cmd,
@@ -307,8 +308,12 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	appID := c.Args[0]
+	forceRebuild, err := c.Doit.GetBool(c.NS, doctl.ArgAppForceRebuild)
+	if err != nil {
+		return err
+	}
 
-	deployment, err := c.Apps().CreateDeployment(appID)
+	deployment, err := c.Apps().CreateDeployment(appID, forceRebuild)
 	if err != nil {
 		return err
 	}
@@ -572,7 +577,7 @@ func appsTier() *Command {
 	CmdBuilder(cmd, RunAppsTierGet, "get <tier slug>", "Retrieve an app tier", `Use this command to retrieve information about a specific app tier.`, Writer)
 
 	cmd.AddCommand(appsTierInstanceSize())
-	
+
 	return cmd
 }
 
