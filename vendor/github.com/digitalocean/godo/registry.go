@@ -34,6 +34,7 @@ type RegistryService interface {
 	UpdateGarbageCollection(context.Context, string, string, *UpdateGarbageCollectionRequest) (*GarbageCollection, *Response, error)
 	GetOptions(context.Context) (*RegistryOptions, *Response, error)
 	GetSubscription(context.Context) (*RegistrySubscription, *Response, error)
+	UpdateSubscription(context.Context, *RegistrySubscriptionUpdateRequest) (*RegistrySubscription, *Response, error)
 }
 
 var _ RegistryService = &RegistryServiceOp{}
@@ -157,6 +158,12 @@ type RegistrySubscription struct {
 
 type registrySubscriptionRoot struct {
 	Subscription *RegistrySubscription `json:"subscription"`
+}
+
+// RegistrySubscriptionUpdateRequest represents a request to update the
+// subscription plan for a registry.
+type RegistrySubscriptionUpdateRequest struct {
+	TierSlug string `json:"tier_slug"`
 }
 
 // Get retrieves the details of a Registry.
@@ -432,6 +439,21 @@ func (svc *RegistryServiceOp) GetOptions(ctx context.Context) (*RegistryOptions,
 func (svc *RegistryServiceOp) GetSubscription(ctx context.Context) (*RegistrySubscription, *Response, error) {
 	path := fmt.Sprintf("%s/subscription", registryPath)
 	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(registrySubscriptionRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Subscription, resp, nil
+}
+
+// UpdateSubscription updates the user's registry subscription.
+func (svc *RegistryServiceOp) UpdateSubscription(ctx context.Context, request *RegistrySubscriptionUpdateRequest) (*RegistrySubscription, *Response, error) {
+	path := fmt.Sprintf("%s/subscription", registryPath)
+	req, err := svc.client.NewRequest(ctx, http.MethodPost, path, request)
 	if err != nil {
 		return nil, nil, err
 	}
