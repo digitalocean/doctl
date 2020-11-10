@@ -109,18 +109,18 @@ func (mr *MockAppsServiceMockRecorder) Delete(appID interface{}) *gomock.Call {
 }
 
 // CreateDeployment mocks base method.
-func (m *MockAppsService) CreateDeployment(appID string) (*godo.Deployment, error) {
+func (m *MockAppsService) CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateDeployment", appID)
+	ret := m.ctrl.Call(m, "CreateDeployment", appID, forceRebuild)
 	ret0, _ := ret[0].(*godo.Deployment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateDeployment indicates an expected call of CreateDeployment.
-func (mr *MockAppsServiceMockRecorder) CreateDeployment(appID interface{}) *gomock.Call {
+func (mr *MockAppsServiceMockRecorder) CreateDeployment(appID, forceRebuild interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDeployment", reflect.TypeOf((*MockAppsService)(nil).CreateDeployment), appID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDeployment", reflect.TypeOf((*MockAppsService)(nil).CreateDeployment), appID, forceRebuild)
 }
 
 // GetDeployment mocks base method.

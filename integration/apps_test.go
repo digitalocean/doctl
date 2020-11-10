@@ -441,6 +441,14 @@ var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.
 					return
 				}
 
+				var r godo.DeploymentCreateRequest
+				err := json.NewDecoder(req.Body).Decode(&r)
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				assert.Equal(t, true, r.ForceBuild)
+
 				json.NewEncoder(w).Encode(testDeploymentResponse)
 			default:
 				dump, err := httputil.DumpRequest(req, true)
@@ -459,6 +467,7 @@ var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.
 			"-u", server.URL,
 			"apps",
 			"create-deployment",
+			"--force-rebuild",
 			testAppUUID,
 		)
 

@@ -213,9 +213,10 @@ func TestRunAppsCreateDeployment(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}
 
-		tm.apps.EXPECT().CreateDeployment(appID).Times(1).Return(deployment, nil)
+		tm.apps.EXPECT().CreateDeployment(appID, true).Times(1).Return(deployment, nil)
 
 		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgAppForceRebuild, true)
 
 		err := RunAppsCreateDeployment(config)
 		require.NoError(t, err)

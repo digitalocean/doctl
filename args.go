@@ -42,6 +42,8 @@ const (
 	ArgAppDeployment = "deployment"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
+	// ArgAppForceRebuild forces a deployment rebuild
+	ArgAppForceRebuild = "force-rebuild"
 	// ArgClusterName is a cluster name argument.
 	ArgClusterName = "cluster-name"
 	// ArgClusterVersionSlug is a cluster version argument.

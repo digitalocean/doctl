@@ -27,7 +27,7 @@ type AppsService interface {
 	Update(appID string, req *godo.AppUpdateRequest) (*godo.App, error)
 	Delete(appID string) error
 
-	CreateDeployment(appID string) (*godo.Deployment, error)
+	CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error)
 	GetDeployment(appID, deploymentID string) (*godo.Deployment, error)
 	ListDeployments(appID string) ([]*godo.Deployment, error)
 
@@ -94,8 +94,10 @@ func (s *appsService) Delete(appID string) error {
 	return err
 }
 
-func (s *appsService) CreateDeployment(appID string) (*godo.Deployment, error) {
-	deployment, _, err := s.client.Apps.CreateDeployment(s.ctx, appID)
+func (s *appsService) CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error) {
+	deployment, _, err := s.client.Apps.CreateDeployment(s.ctx, appID, &godo.DeploymentCreateRequest{
+		ForceBuild: forceRebuild,
+	})
 	if err != nil {
 		return nil, err
 	}

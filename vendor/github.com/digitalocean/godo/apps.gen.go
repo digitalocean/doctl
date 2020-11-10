@@ -83,6 +83,7 @@ type AppJobSpec struct {
 	Name   string            `json:"name"`
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GitHub *GitHubSourceSpec `json:"github,omitempty"`
+	Image  *ImageSourceSpec  `json:"image,omitempty"`
 	// The path to the Dockerfile relative to the root of the repo. If set, it will be used to build this component. Otherwise, App Platform will attempt to build it using buildpacks.
 	DockerfilePath string `json:"dockerfile_path,omitempty"`
 	// An optional build command to run while building this component from source.
@@ -124,6 +125,7 @@ type AppServiceSpec struct {
 	Name   string            `json:"name"`
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GitHub *GitHubSourceSpec `json:"github,omitempty"`
+	Image  *ImageSourceSpec  `json:"image,omitempty"`
 	// The path to the Dockerfile relative to the root of the repo. If set, it will be used to build this component. Otherwise, App Platform will attempt to build it using buildpacks.
 	DockerfilePath string `json:"dockerfile_path,omitempty"`
 	// An optional build command to run while building this component from source.
@@ -229,6 +231,7 @@ type AppWorkerSpec struct {
 	Name   string            `json:"name"`
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GitHub *GitHubSourceSpec `json:"github,omitempty"`
+	Image  *ImageSourceSpec  `json:"image,omitempty"`
 	// The path to the Dockerfile relative to the root of the repo. If set, it will be used to build this component. Otherwise, App Platform will attempt to build it using buildpacks.
 	DockerfilePath string `json:"dockerfile_path,omitempty"`
 	// An optional build command to run while building this component from source.
@@ -333,6 +336,26 @@ type GitSourceSpec struct {
 	RepoCloneURL string `json:"repo_clone_url,omitempty"`
 	Branch       string `json:"branch,omitempty"`
 }
+
+// ImageSourceSpec struct for ImageSourceSpec
+type ImageSourceSpec struct {
+	RegistryType ImageSourceSpecRegistryType `json:"registry_type,omitempty"`
+	// The registry name. Must be left empty for the `DOCR` registry type.
+	Registry string `json:"registry,omitempty"`
+	// The repository name.
+	Repository string `json:"repository,omitempty"`
+	// The repository tag. Defaults to `latest` if not provided.
+	Tag string `json:"tag,omitempty"`
+}
+
+// ImageSourceSpecRegistryType  - UNSPECIFIED: Represents an unspecified registry type.  - DOCR: The DigitalOcean container registry type.
+type ImageSourceSpecRegistryType string
+
+// List of ImageSourceSpecRegistryType
+const (
+	ImageSourceSpecRegistryType_Unspecified ImageSourceSpecRegistryType = "UNSPECIFIED"
+	ImageSourceSpecRegistryType_DOCR        ImageSourceSpecRegistryType = "DOCR"
+)
 
 // AppInstanceSize struct for AppInstanceSize
 type AppInstanceSize struct {

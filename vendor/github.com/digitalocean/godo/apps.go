@@ -33,7 +33,7 @@ type AppsService interface {
 
 	GetDeployment(ctx context.Context, appID, deploymentID string) (*Deployment, *Response, error)
 	ListDeployments(ctx context.Context, appID string, opts *ListOptions) ([]*Deployment, *Response, error)
-	CreateDeployment(ctx context.Context, appID string) (*Deployment, *Response, error)
+	CreateDeployment(ctx context.Context, appID string, create ...*DeploymentCreateRequest) (*Deployment, *Response, error)
 
 	GetLogs(ctx context.Context, appID, deploymentID, component string, logType AppLogType, follow bool) (*AppLogs, *Response, error)
 
@@ -60,6 +60,11 @@ type AppCreateRequest struct {
 // AppUpdateRequest represents a request to update an app.
 type AppUpdateRequest struct {
 	Spec *AppSpec `json:"spec"`
+}
+
+// DeploymentCreateRequest represents a request to create a deployment.
+type DeploymentCreateRequest struct {
+	ForceBuild bool `json:"force_build"`
 }
 
 type appRoot struct {
@@ -210,9 +215,15 @@ func (s *AppsServiceOp) ListDeployments(ctx context.Context, appID string, opts 
 }
 
 // CreateDeployment creates an app deployment.
-func (s *AppsServiceOp) CreateDeployment(ctx context.Context, appID string) (*Deployment, *Response, error) {
+func (s *AppsServiceOp) CreateDeployment(ctx context.Context, appID string, create ...*DeploymentCreateRequest) (*Deployment, *Response, error) {
 	path := fmt.Sprintf("%s/%s/deployments", appsBasePath, appID)
-	req, err := s.client.NewRequest(ctx, http.MethodPost, path, nil)
+
+	var createReq *DeploymentCreateRequest
+	for _, c := range create {
+		createReq = c
+	}
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, createReq)
 	if err != nil {
 		return nil, nil, err
 	}
