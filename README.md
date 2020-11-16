@@ -305,7 +305,7 @@ Save and close the file. The next time you use `doctl`, the new default values y
 
 How you enable auto-completion depends on which operating system you're using. If you installed `doctl` via Homebrew, auto-completion is activated automatically, though you may need to configure your local environment to enable it.
 
-`doctl` can generate an auto-completion script with the `doctl completion your_shell_here` command. Valid arguments for the shell are Bash (`bash`) and ZSH (`zsh`). By default, the script will be printed to the command line output.  For more usage examples for the `completion` command, use `doctl completion --help`.
+`doctl` can generate an auto-completion script with the `doctl completion your_shell_here` command. Valid arguments for the shell are Bash (`bash`), ZSH (`zsh`), and fish(`fish`). By default, the script will be printed to the command line output.  For more usage examples for the `completion` command, use `doctl completion --help`.
 
 ### Linux Auto Completion
 
