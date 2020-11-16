@@ -405,7 +405,7 @@ complete -c doctl -n '__fish_seen_subcommand_from projects' -a update    -d "Upd
 # Completions for the 'doctl projects create' command
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -l description -d "Dscription of the project"
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -l environment -d "Environment in which your project resides."
-complete -c doctl -n '__fish_seen_subcommand_from projects create' -l format      -d "Columns for output in a comma-separated list." 
+complete -c doctl -n '__fish_seen_subcommand_from projects create' -l format      -d "Columns for output in a comma-separated list."
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -rl name       -d "Name for the project"
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -rl no-header  -d "Return raw data with no headers"
 complete -c doctl -n '__fish_seen_subcommand_from projects create' -rl purpose    -d "Project's purpose"
@@ -443,7 +443,7 @@ complete -c doctl -n '__fish_seen_subcommand_from projects update' -l environmen
 complete -c doctl -n '__fish_seen_subcommand_from projects update' -l format      -d "Columns for output in a comma-separated list."
 complete -c doctl -n '__fish_seen_subcommand_from projects update' -rl name       -d "Name for the project"
 complete -c doctl -n '__fish_seen_subcommand_from projects update' -l no-header   -d "Return raw data with no headers"
-complete -c doctl -n '__fish_seen_subcommand_from projects update' -rl purpose    -d "Project's purpose"	
+complete -c doctl -n '__fish_seen_subcommand_from projects update' -rl purpose    -d "Project's purpose"
 `
 	_, err := buf.Write([]byte(fishCompletion))
 	if err != nil {
@@ -585,7 +585,8 @@ autoload -U +X bashcompinit && bashcompinit
 # use word boundary patterns for BSD or GNU sed
 LWORD='[[:<:]]'
 RWORD='[[:>:]]'
-if sed --help 2>&1 | grep -q GNU; then
+SEDHELP=$(sed --help 2>&1)
+if echo ${SEDHELP} | grep -q GNU || echo ${SEDHELP} | grep -q BusyBox; then
 	LWORD='\<'
 	RWORD='\>'
 fi
