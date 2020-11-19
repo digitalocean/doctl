@@ -27,8 +27,8 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-    - name: Format
-      run: if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then exit 1; fi
+    - name: Ensure code is formatted with gofmt
+      run: make gofmt_check
       if: matrix.os == 'ubuntu-latest'
     - name: Run shellcheck
       run: make shellcheck

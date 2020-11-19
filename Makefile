@@ -27,6 +27,8 @@ DOCS_OUT = $(shell echo $${DOCS_OUT:-$(my_d)/builds/docs/yaml})
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 
+GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+
 GOOS = linux
 ifeq ($(UNAME_S),Darwin)
   GOOS = darwin
@@ -102,6 +104,12 @@ shellcheck:
 	@echo "==> analyze shell scripts"
 	@echo ""
 	@scripts/shell_check.sh
+
+.PHONY: gofmt_check
+gofmt_check:
+	@echo "==> ensure code adheres to gofmt (with vendor directory excluded)"
+	@echo ""
+	@gofmt -l ${GOFILES_NOVENDOR} | read && exit 1 || true
 
 .PHONY: snap_image
 snap_image:

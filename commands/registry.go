@@ -248,10 +248,10 @@ func GarbageCollection() *Command {
 func RegistryOptions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use: "options",
+			Use:     "options",
 			Aliases: []string{"opts", "o"},
-			Short: "List available container registry options",
-			Long: "This command lists options available when creating or updating a container registry.",
+			Short:   "List available container registry options",
+			Long:    "This command lists options available when creating or updating a container registry.",
 		},
 	}
 

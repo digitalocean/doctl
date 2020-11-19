@@ -248,7 +248,7 @@ func (t *RegistrySubscriptionTiers) KV() []map[string]interface{} {
 			"IncludedStorageBytes":   BytesToHumanReadibleUnit(tier.IncludedStorageBytes),
 			"AllowStorageOverage":    tier.AllowStorageOverage,
 			"IncludedBandwidthBytes": BytesToHumanReadibleUnit(tier.IncludedBandwidthBytes),
-			"MonthlyPriceInCents":    fmt.Sprintf("$%d", tier.MonthlyPriceInCents / 100),
+			"MonthlyPriceInCents":    fmt.Sprintf("$%d", tier.MonthlyPriceInCents/100),
 			"Eligible":               tier.Eligible,
 			"EligibilityReasons":     tier.EligibilityReasons,
 		})
