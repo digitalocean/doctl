@@ -12,29 +12,6 @@ notifications:
 
 jobs:
   include:
-  - name: "Testing: Bionic, go 1.15"
-    script:
-    - make shellcheck
-    - make test
-    dist: bionic
-    go: 1.15.x
-    env: CACHE_NAME=BIONIC_1.15
-
-  - name: "Testing: MacOS, go 1.15"
-    before_install: ulimit -n 1024
-    script: make test
-    os: osx
-    go: 1.15.x
-    env: CACHE_NAME=MACOS_1.15
-
-  - name: "Testing: Windows, go 1.15"
-    before_install:
-      - choco install make
-    script: make test
-    os: windows
-    go: 1.15.x
-    env: CACHE_NAME=WINDOWS_1.15
-
   - stage: deploy
     if: type=push
     script: echo "running goreleaser"
