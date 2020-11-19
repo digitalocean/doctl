@@ -30,8 +30,9 @@ jobs:
     - name: Ensure code is formatted with gofmt
       run: make gofmt_check
       if: matrix.os == 'ubuntu-latest'
-    - name: Run shellcheck
-      run: make shellcheck
+    - name: Install and run shellcheck
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get install shellcheck && make shellcheck
     - name: Run unit tests
       run: make test_unit
     - name: Run integration tests
