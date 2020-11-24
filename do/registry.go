@@ -64,7 +64,7 @@ type RegistryService interface {
 	DeleteTag(string, string, string) error
 	DeleteManifest(string, string, string) error
 	Endpoint() string
-	StartGarbageCollection(string) (*GarbageCollection, error)
+	StartGarbageCollection(string, *godo.StartGarbageCollectionRequest) (*GarbageCollection, error)
 	GetGarbageCollection(string) (*GarbageCollection, error)
 	ListGarbageCollections(string) ([]GarbageCollection, error)
 	CancelGarbageCollection(string, string) (*GarbageCollection, error)
@@ -186,8 +186,8 @@ func (rs *registryService) DeleteManifest(registry, repository, digest string) e
 	return err
 }
 
-func (rs *registryService) StartGarbageCollection(registry string) (*GarbageCollection, error) {
-	gc, _, err := rs.client.Registry.StartGarbageCollection(rs.ctx, registry)
+func (rs *registryService) StartGarbageCollection(registry string, gcRequest *godo.StartGarbageCollectionRequest) (*GarbageCollection, error) {
+	gc, _, err := rs.client.Registry.StartGarbageCollection(rs.ctx, registry, gcRequest)
 	if err != nil {
 		return nil, err
 	}

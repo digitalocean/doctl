@@ -185,7 +185,7 @@ func GarbageCollection() *Command {
 	}
 
 	runStartGarbageCollectionDesc := "This command starts a garbage collection on a container registry. There can be only one active garbage collection at a time for a given registry."
-	CmdBuilder(
+	cmdStartGarbageCollection := CmdBuilder(
 		cmd,
 		RunStartGarbageCollection,
 		"start",
@@ -195,6 +195,10 @@ func GarbageCollection() *Command {
 		aliasOpt("s"),
 		displayerType(&displayers.GarbageCollection{}),
 	)
+	AddBoolFlag(cmdStartGarbageCollection, doctl.ArgGCIncludeUntaggedManifests, "", false,
+		"Include untagged manifests in garbage collection.")
+	AddBoolFlag(cmdStartGarbageCollection, doctl.ArgGCExcludeUnreferencedBlobs, "", false,
+		"Exclude unreferenced blobs from garbage collection.")
 
 	gcInfoIncluded := `
   - UUID
@@ -639,7 +643,28 @@ func RunStartGarbageCollection(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
-	gc, err := c.Registry().StartGarbageCollection(registryName)
+	includeUntaggedManifests, err := c.Doit.GetBool(c.NS, doctl.ArgGCIncludeUntaggedManifests)
+	if err != nil {
+		return err
+	}
+
+	excludeUnreferencedBlobs, err := c.Doit.GetBool(c.NS, doctl.ArgGCExcludeUnreferencedBlobs)
+	if err != nil {
+		return err
+	}
+
+	gcStartRequest := &godo.StartGarbageCollectionRequest{}
+	if includeUntaggedManifests && !excludeUnreferencedBlobs {
+		gcStartRequest.Type = godo.GCTypeUntaggedManifestsAndUnreferencedBlobs
+	} else if includeUntaggedManifests && excludeUnreferencedBlobs {
+		gcStartRequest.Type = godo.GCTypeUntaggedManifestsOnly
+	} else if !includeUntaggedManifests && !excludeUnreferencedBlobs {
+		gcStartRequest.Type = godo.GCTypeUnreferencedBlobsOnly
+	} else {
+		return fmt.Errorf("incompatible combination of include-untagged-manifests and exclude-unreferenced-blobs flags")
+	}
+
+	gc, err := c.Registry().StartGarbageCollection(registryName, gcStartRequest)
 	if err != nil {
 		return err
 	}

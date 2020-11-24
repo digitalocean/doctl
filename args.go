@@ -321,6 +321,12 @@ const (
 	ArgRegistryExpirySeconds = "expiry-seconds"
 	// ArgSubscriptionTier is a subscription tier slug.
 	ArgSubscriptionTier = "subscription-tier"
+	// ArgGCIncludeUntaggedManifests indicates that a garbage collection should delete
+	// all untagged manifests.
+	ArgGCIncludeUntaggedManifests = "include-untagged-manifests"
+	// ArgGCExcludeUnreferencedBlobs indicates that a garbage collection should
+	// not delete unreferenced blobs.
+	ArgGCExcludeUnreferencedBlobs = "exclude-unreferenced-blobs"
 
 	// 1-Click Args
 

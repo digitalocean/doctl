@@ -536,11 +536,14 @@ func TestRegistryLogout(t *testing.T) {
 }
 
 func TestGarbageCollectionStart(t *testing.T) {
+	defaultStartGCRequest := &godo.StartGarbageCollectionRequest{
+		Type: godo.GCTypeUnreferencedBlobsOnly,
+	}
 	tests := []struct {
 		name      string
 		extraArgs []string
 
-		expect      func(m *mocks.MockRegistryService)
+		expect      func(m *mocks.MockRegistryService, config *CmdConfig)
 		expectError error
 	}{
 		{
@@ -551,17 +554,54 @@ func TestGarbageCollectionStart(t *testing.T) {
 			extraArgs: []string{
 				testRegistryName,
 			},
-			expect: func(m *mocks.MockRegistryService) {
-				m.EXPECT().StartGarbageCollection(testRegistry.Name).Return(testGarbageCollection, nil)
+			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				m.EXPECT().StartGarbageCollection(testRegistry.Name, defaultStartGCRequest).Return(testGarbageCollection, nil)
 			},
+		},
+		{
+			name: "include untagged manifests",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgGCIncludeUntaggedManifests, true)
+				config.Doit.Set(config.NS, doctl.ArgGCExcludeUnreferencedBlobs, false)
+				m.EXPECT().StartGarbageCollection(testRegistry.Name, &godo.StartGarbageCollectionRequest{
+					Type: godo.GCTypeUntaggedManifestsAndUnreferencedBlobs,
+				}).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			name: "include untagged manifests, exclude unreferenced blobs",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgGCIncludeUntaggedManifests, true)
+				config.Doit.Set(config.NS, doctl.ArgGCExcludeUnreferencedBlobs, true)
+				m.EXPECT().StartGarbageCollection(testRegistry.Name, &godo.StartGarbageCollectionRequest{
+					Type: godo.GCTypeUntaggedManifestsOnly,
+				}).Return(testGarbageCollection, nil)
+			},
+		},
+		{
+			name: "fail with invalid combination of gc targets",
+			extraArgs: []string{
+				invalidRegistryName,
+			},
+			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgGCIncludeUntaggedManifests, false)
+				config.Doit.Set(config.NS, doctl.ArgGCExcludeUnreferencedBlobs, true)
+			},
+			expectError: fmt.Errorf("incompatible combination of include-untagged-manifests and exclude-unreferenced-blobs flags"),
 		},
 		{
 			name: "fail with invalid registry name arg",
 			extraArgs: []string{
 				invalidRegistryName,
 			},
-			expect: func(m *mocks.MockRegistryService) {
-				m.EXPECT().StartGarbageCollection(invalidRegistryName).Return(nil, fmt.Errorf("meow"))
+			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				m.EXPECT().StartGarbageCollection(invalidRegistryName, defaultStartGCRequest).Return(nil, fmt.Errorf("meow"))
 			},
 			expectError: fmt.Errorf("meow"),
 		},
@@ -571,7 +611,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				invalidRegistryName,
 				testGCUUID,
 			},
-			expect:      func(m *mocks.MockRegistryService) {},
+			expect:      func(m *mocks.MockRegistryService, config *CmdConfig) {},
 			expectError: fmt.Errorf("(test) command contains unsupported arguments"),
 		},
 	}
@@ -579,10 +619,10 @@ func TestGarbageCollectionStart(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				if test.expect != nil {
-					test.expect(tm.registry)
+					test.expect(tm.registry, config)
 				} else {
 					tm.registry.EXPECT().Get().Return(&testRegistry, nil)
-					tm.registry.EXPECT().StartGarbageCollection(testRegistry.Name).Return(testGarbageCollection, nil)
+					tm.registry.EXPECT().StartGarbageCollection(testRegistry.Name, defaultStartGCRequest).Return(testGarbageCollection, nil)
 				}
 
 				if test.extraArgs != nil {
