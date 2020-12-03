@@ -2,14 +2,21 @@ package displayers
 
 import "fmt"
 
-const (
-	baseUnit = 1000
-	units    = "kMGTPE"
-)
+// BytesToHumanReadibleUnit converts byte input to a human-readable
+// form using the largest notation possible in decimal base.
+func BytesToHumanReadibleUnit(bytes uint64) string {
+	return bytesToHumanReadibleUnit(bytes, 1000, []string{"K", "M", "G", "T", "P", "E"})
+}
+
+// BytesToHumanReadibleUnitBinary converts byte input to a human-readable
+// form using the largest notation possible in binary base.
+func BytesToHumanReadibleUnitBinary(bytes uint64) string {
+	return bytesToHumanReadibleUnit(bytes, 1024, []string{"Ki", "Mi", "Gi", "Ti", "Pi", "Ei"})
+}
 
 // BytesToHumanReadibleUnit converts byte input to a human-readable
 // form using the largest notation possible.
-func BytesToHumanReadibleUnit(bytes uint64) string {
+func bytesToHumanReadibleUnit(bytes uint64, baseUnit uint64, units []string) string {
 	if bytes < baseUnit {
 		return fmt.Sprintf("%d B", bytes)
 	}
@@ -19,5 +26,5 @@ func BytesToHumanReadibleUnit(bytes uint64) string {
 		div *= baseUnit
 		exp++
 	}
-	return fmt.Sprintf("%.2f %cB", float64(bytes)/float64(div), units[exp])
+	return fmt.Sprintf("%.2f %sB", float64(bytes)/float64(div), units[exp])
 }
