@@ -30,7 +30,7 @@ var (
 	}{[]*godo.AppTier{testAppTier}}
 
 	testAppTierOutput = `Name    Slug    Egress Bandwidth    Build Seconds
-Test    test    10.24 kB            3000`
+Test    test    10.00 KiB           3000`
 
 	testAppInstanceSize = &godo.AppInstanceSize{
 		Name:            "Basic XXS",
@@ -52,8 +52,8 @@ Test    test    10.24 kB            3000`
 		InstanceSizes []*godo.AppInstanceSize `json:"instance_sizes"`
 	}{[]*godo.AppInstanceSize{testAppInstanceSize}}
 
-	testAppInstanceSizeOutput = `Name         Slug         CPUs           Memory       $/month    $/second     Tier     Tier Downgrade/Upgrade Path
-Basic XXS    basic-xxs    1 dedicated    536.87 MB    5          0.0000019    basic    basic-xxxs <- basic-xxs -> professional-xs`
+	testAppInstanceSizeOutput = `Name         Slug         CPUs           Memory        $/month    $/second     Tier     Tier Downgrade/Upgrade Path
+Basic XXS    basic-xxs    1 dedicated    512.00 MiB    5          0.0000019    basic    basic-xxxs <- basic-xxs -> professional-xs`
 )
 
 var _ = suite("apps/tier/get", func(t *testing.T, when spec.G, it spec.S) {

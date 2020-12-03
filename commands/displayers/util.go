@@ -5,7 +5,7 @@ import "fmt"
 // BytesToHumanReadibleUnit converts byte input to a human-readable
 // form using the largest notation possible in decimal base.
 func BytesToHumanReadibleUnit(bytes uint64) string {
-	return bytesToHumanReadibleUnit(bytes, 1000, []string{"K", "M", "G", "T", "P", "E"})
+	return bytesToHumanReadibleUnit(bytes, 1000, []string{"k", "M", "G", "T", "P", "E"})
 }
 
 // BytesToHumanReadibleUnitBinary converts byte input to a human-readable
