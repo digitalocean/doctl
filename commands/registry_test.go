@@ -555,6 +555,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				testRegistryName,
 			},
 			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				m.EXPECT().StartGarbageCollection(testRegistry.Name, defaultStartGCRequest).Return(testGarbageCollection, nil)
 			},
 		},
@@ -564,6 +565,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				testRegistryName,
 			},
 			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				config.Doit.Set(config.NS, doctl.ArgGCIncludeUntaggedManifests, true)
 				config.Doit.Set(config.NS, doctl.ArgGCExcludeUnreferencedBlobs, false)
 				m.EXPECT().StartGarbageCollection(testRegistry.Name, &godo.StartGarbageCollectionRequest{
@@ -577,6 +579,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				testRegistryName,
 			},
 			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				config.Doit.Set(config.NS, doctl.ArgGCIncludeUntaggedManifests, true)
 				config.Doit.Set(config.NS, doctl.ArgGCExcludeUnreferencedBlobs, true)
 				m.EXPECT().StartGarbageCollection(testRegistry.Name, &godo.StartGarbageCollectionRequest{
@@ -590,6 +593,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				invalidRegistryName,
 			},
 			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				config.Doit.Set(config.NS, doctl.ArgGCIncludeUntaggedManifests, false)
 				config.Doit.Set(config.NS, doctl.ArgGCExcludeUnreferencedBlobs, true)
 			},
@@ -601,6 +605,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				invalidRegistryName,
 			},
 			expect: func(m *mocks.MockRegistryService, config *CmdConfig) {
+				config.Doit.Set(config.NS, doctl.ArgForce, true)
 				m.EXPECT().StartGarbageCollection(invalidRegistryName, defaultStartGCRequest).Return(nil, fmt.Errorf("meow"))
 			},
 			expectError: fmt.Errorf("meow"),
@@ -614,6 +619,14 @@ func TestGarbageCollectionStart(t *testing.T) {
 			expect:      func(m *mocks.MockRegistryService, config *CmdConfig) {},
 			expectError: fmt.Errorf("(test) command contains unsupported arguments"),
 		},
+		{
+			name: "prompt to confirm without --force argument",
+			extraArgs: []string{
+				testRegistryName,
+			},
+			expect:      func(m *mocks.MockRegistryService, config *CmdConfig) {},
+			expectError: fmt.Errorf("Operation aborted."),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -621,6 +634,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				if test.expect != nil {
 					test.expect(tm.registry, config)
 				} else {
+					config.Doit.Set(config.NS, doctl.ArgForce, true)
 					tm.registry.EXPECT().Get().Return(&testRegistry, nil)
 					tm.registry.EXPECT().StartGarbageCollection(testRegistry.Name, defaultStartGCRequest).Return(testGarbageCollection, nil)
 				}

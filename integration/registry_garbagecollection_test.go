@@ -157,7 +157,7 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 			"-u", server.URL,
 			"registry",
 			"garbage-collection",
-			"start",
+			"start", "--force",
 		)
 		output, err := cmd.CombinedOutput()
 		expect.Equal(strings.TrimSpace(gcGetOutput), strings.TrimSpace(string(output)))

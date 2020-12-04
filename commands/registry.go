@@ -199,6 +199,7 @@ func GarbageCollection() *Command {
 		"Include untagged manifests in garbage collection.")
 	AddBoolFlag(cmdStartGarbageCollection, doctl.ArgGCExcludeUnreferencedBlobs, "", false,
 		"Exclude unreferenced blobs from garbage collection.")
+	AddBoolFlag(cmdStartGarbageCollection, doctl.ArgForce, doctl.ArgShortForce, false, "Run garbage collection without confirmation prompt")
 
 	gcInfoIncluded := `
   - UUID
@@ -662,6 +663,17 @@ func RunStartGarbageCollection(c *CmdConfig) error {
 		gcStartRequest.Type = godo.GCTypeUnreferencedBlobsOnly
 	} else {
 		return fmt.Errorf("incompatible combination of include-untagged-manifests and exclude-unreferenced-blobs flags")
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	msg := "run garbage collection -- this will put your registry in read-only mode until it finishes"
+
+	if !force && AskForConfirm(msg) != nil {
+		return fmt.Errorf("Operation aborted.")
 	}
 
 	gc, err := c.Registry().StartGarbageCollection(registryName, gcStartRequest)
