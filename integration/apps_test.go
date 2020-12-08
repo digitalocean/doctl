@@ -820,3 +820,102 @@ var _ = suite("apps/list-regions", func(t *testing.T, when spec.G, it spec.S) {
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 })
+
+var _ = suite("apps/propose", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Add("content-type", "application/json")
+
+			switch req.URL.Path {
+			case "/v2/apps/propose":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				var r godo.AppProposeRequest
+				err := json.NewDecoder(req.Body).Decode(&r)
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				assert.Equal(t, testAppUUID, r.AppID)
+				assert.Equal(t, &testAppSpec, r.Spec)
+
+				json.NewEncoder(w).Encode(&godo.AppProposeResponse{
+					AppIsStatic:        true,
+					AppNameAvailable:   false,
+					AppNameSuggestion:  "new-name",
+					AppCost:            5,
+					AppTierUpgradeCost: 10,
+					ExistingStaticApps: "2",
+					MaxFreeStaticApps:  "3",
+				})
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	it("prints info about the proposed app", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps", "propose",
+			"--spec", "-",
+			"--app", testAppUUID,
+		)
+		byt, err := json.Marshal(testAppSpec)
+		expect.NoError(err)
+
+		cmd.Stdin = bytes.NewReader(byt)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := `App Name Available?    Suggested App Name    Is Static?    Free Static Site Usage    $/month    $/month on higher tier    $/month on lower tier
+no                     new-name              yes           2 of 3                    5.00       10.00                     n/a`
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+
+	it("fails on invalid specs", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps", "propose",
+			"--spec", "-",
+			"--app", "wrong-id", // this shouldn't reach the HTTP server
+		)
+		testSpec := `name: test
+services:
+  name: service
+  github:
+    repo: digitalocean/doctl
+`
+		cmd.Stdin = strings.NewReader(testSpec)
+
+		output, err := cmd.CombinedOutput()
+		expect.Equal("exit status 1", err.Error())
+
+		expectedOutput := "Error: parsing app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []*godo.AppServiceSpec"
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+})
