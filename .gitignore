@@ -8,6 +8,8 @@ project.json
 dist
 public
 docs/content
+*.swo
+cmd/builds/main
 
 _vendor-*
 
