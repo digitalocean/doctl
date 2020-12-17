@@ -278,7 +278,7 @@ func RunDropletActionShutdown(c *CmdConfig) error {
 		}
 		id, err := contextualAtoi(c.Args[0], dropletIDResource)
 		if err != nil {
-			return nil, fmt.Errorf("Could not convert args into integer")
+			return nil, err
 		}
 
 		a, err := das.Shutdown(id)
@@ -463,7 +463,7 @@ func RunDropletActionRebuild(c *CmdConfig) error {
 		}
 
 		var a *do.Action
-		if i, aerr := strconv.Atoi(image); aerr == nil {
+		if i, aerr := contextualAtoi(image, dropletIDResource); aerr == nil {
 			a, err = das.RebuildByImageID(id, i)
 		} else {
 			a, err = das.RebuildByImageSlug(id, image)
@@ -549,7 +549,7 @@ func RunDropletActionSnapshot(c *CmdConfig) error {
 	return performAction(c, fn)
 }
 
-// contextualAtoi
+// contextualAtoi cleans the error output of Atoi calls
 func contextualAtoi(s, resource string) (int, error) {
 	n, err := strconv.Atoi(s)
 	if err == nil {
@@ -557,7 +557,6 @@ func contextualAtoi(s, resource string) (int, error) {
 	}
 	if _, ok := err.(*strconv.NumError); ok {
 		return 0, fmt.Errorf(`expected %s to be a postive integer, got "%s"`, resource, s)
-	} else {
-		return 0, err
 	}
+	return 0, err
 }

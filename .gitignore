@@ -8,6 +8,7 @@ project.json
 dist
 public
 docs/content
+*.swp
 *.swo
 cmd/builds/main
 
