@@ -45,5 +45,3 @@ require (
 )
 
 replace github.com/stretchr/objx => github.com/stretchr/objx v0.2.0
-
-replace golang.org/x/crypto => golang.org/x/crypto v0.0.0-20200420201142-3c4aac89819a
