@@ -18,7 +18,7 @@ import (
 	"strconv"
 )
 
-// contextualAtoi cleans the error output of Atoi calls
+// ContextualAtoi cleans the error output of Atoi calls
 func ContextualAtoi(s, resource string) (int, error) {
 	n, err := strconv.Atoi(s)
 	if err == nil {
