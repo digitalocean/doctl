@@ -22,6 +22,9 @@ import (
 func ContextualAtoi(s, resource string) (int, error) {
 	n, err := strconv.Atoi(s)
 	if err == nil {
+		if n < 0 {
+		    return 0, fmt.Errorf("expected %d to be a postive integer", n)
+		}
 		return n, nil
 	}
 	if _, ok := err.(*strconv.NumError); ok {
