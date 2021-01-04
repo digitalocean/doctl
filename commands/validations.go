@@ -28,7 +28,7 @@ func ContextualAtoi(s, resource string) (int, error) {
 		return n, nil
 	}
 	if _, ok := err.(*strconv.NumError); ok {
-		return 0, fmt.Errorf(`expected %s to be a postive integer, got "%s"`, resource, s)
+		return 0, fmt.Errorf(`expected %s to be a positive integer, got "%s"`, resource, s)
 	}
 	return 0, err
 }
