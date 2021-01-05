@@ -40,7 +40,7 @@ func TestDropletActionsChangeKernel(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionChangeKernel(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -57,7 +57,7 @@ func TestDropletActionsEnableBackups(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionEnableBackups(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -74,7 +74,7 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionDisableBackups(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -91,7 +91,7 @@ func TestDropletActionsEnableIPv6(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionEnableIPv6(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -108,7 +108,7 @@ func TestDropletActionsEnablePrivateNetworking(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionEnablePrivateNetworking(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -127,7 +127,7 @@ func TestDropletActionsGet(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionGet(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -144,7 +144,7 @@ func TestDropletActionsPasswordReset(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionPasswordReset(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -161,7 +161,7 @@ func TestDropletActionsPowerCycle(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionPowerCycle(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -178,7 +178,7 @@ func TestDropletActionsPowerOff(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionPowerOff(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -195,7 +195,7 @@ func TestDropletActionsPowerOn(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionPowerOn(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -212,7 +212,7 @@ func TestDropletActionsReboot(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionReboot(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -231,7 +231,7 @@ func TestDropletActionsRebuildByImageID(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionRebuild(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -250,7 +250,7 @@ func TestDropletActionsRebuildByImageSlug(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionRebuild(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -269,7 +269,7 @@ func TestDropletActionsRename(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionRename(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -289,7 +289,7 @@ func TestDropletActionsResize(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionResize(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -308,7 +308,7 @@ func TestDropletActionsRestore(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionRestore(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -325,7 +325,7 @@ func TestDropletActionsShutdown(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionShutdown(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
 
@@ -344,6 +344,6 @@ func TestDropletActionsSnapshot(t *testing.T) {
 		config.Args = append(config.Args, "my-test-id")
 
 		err := RunDropletActionSnapshot(config)
-		assert.EqualError(t, err, `expected <droplet-id> to be a postive integer, got "my-test-id"`)
+		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
 	})
 }
