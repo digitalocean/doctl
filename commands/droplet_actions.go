@@ -14,13 +14,14 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
+)
+
+const (
+	dropletIDResource = "<droplet-id>"
 )
 
 type actionFn func(das do.DropletActionsService) (*do.Action, error)
@@ -171,7 +172,7 @@ func RunDropletActionGet(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		dropletID, err := strconv.Atoi(c.Args[0])
+		dropletID, err := ContextualAtoi(c.Args[0], dropletIDResource)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +196,7 @@ func RunDropletActionEnableBackups(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 		if err != nil {
 			return nil, err
 		}
@@ -214,7 +215,7 @@ func RunDropletActionDisableBackups(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 		if err != nil {
 			return nil, err
 		}
@@ -233,7 +234,7 @@ func RunDropletActionReboot(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 		if err != nil {
 			return nil, err
 		}
@@ -252,7 +253,7 @@ func RunDropletActionPowerCycle(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -272,9 +273,9 @@ func RunDropletActionShutdown(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 		if err != nil {
-			return nil, fmt.Errorf("Could not convert args into integer")
+			return nil, err
 		}
 
 		a, err := das.Shutdown(id)
@@ -291,7 +292,7 @@ func RunDropletActionPowerOff(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -311,7 +312,7 @@ func RunDropletActionPowerOn(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -331,7 +332,7 @@ func RunDropletActionPasswordReset(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -351,7 +352,7 @@ func RunDropletActionEnableIPv6(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -371,7 +372,7 @@ func RunDropletActionEnablePrivateNetworking(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -391,7 +392,7 @@ func RunDropletActionRestore(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -417,7 +418,7 @@ func RunDropletActionResize(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -447,7 +448,7 @@ func RunDropletActionRebuild(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -459,7 +460,7 @@ func RunDropletActionRebuild(c *CmdConfig) error {
 		}
 
 		var a *do.Action
-		if i, aerr := strconv.Atoi(image); aerr == nil {
+		if i, aerr := ContextualAtoi(image, dropletIDResource); aerr == nil {
 			a, err = das.RebuildByImageID(id, i)
 		} else {
 			a, err = das.RebuildByImageSlug(id, image)
@@ -477,7 +478,7 @@ func RunDropletActionRename(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -502,7 +503,7 @@ func RunDropletActionChangeKernel(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
@@ -527,7 +528,7 @@ func RunDropletActionSnapshot(c *CmdConfig) error {
 		if err != nil {
 			return nil, err
 		}
-		id, err := strconv.Atoi(c.Args[0])
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 
 		if err != nil {
 			return nil, err
