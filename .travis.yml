@@ -49,7 +49,7 @@ jobs:
         tags: true
         repo: digitalocean/doctl
 
-  - if: branch=master and type=push
+  - if: branch=main and type=push
     script:
     - echo "building snap"
     - make _build_snap

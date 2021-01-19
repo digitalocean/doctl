@@ -10,7 +10,7 @@ public
 docs/content
 *.swp
 *.swo
-cmd/builds/main
+cmd/doctl/doctl
 
 _vendor-*
 

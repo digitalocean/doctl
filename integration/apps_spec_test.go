@@ -87,7 +87,7 @@ var _ = suite("apps/spec/get", func(t *testing.T, when spec.G, it spec.S) {
 		expectedOutput := `name: test
 services:
 - github:
-    branch: master
+    branch: main
     repo: digitalocean/doctl
   name: service`
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
