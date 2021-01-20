@@ -260,7 +260,7 @@ instructions for next steps.
 ### Updating Homebrew
 
 Using the url and sha from the github release, update the
-[homebrew formula](https://github.com/Homebrew/homebrew-core/blob/main/Formula/doctl.rb).
+[homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).
 You can use `brew bump-formula-pr doctl`, or
 
 1. fork `homebrew-core`
