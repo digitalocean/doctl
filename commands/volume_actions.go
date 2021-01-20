@@ -166,12 +166,13 @@ func RunVolumeResize(c *CmdConfig) error {
 
 // RunVolumeActionsGet returns a Volume Action
 func RunVolumeActionsGet(c *CmdConfig) error {
-	if len(c.Args) != 2 {
-		return doctl.NewMissingArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 
 	volumeID := c.Args[0]
-	actionID, err := strconv.Atoi(c.Args[1])
+	actionID, err := c.Doit.GetInt(c.NS, doctl.ArgActionID)
 	if err != nil {
 		return err
 

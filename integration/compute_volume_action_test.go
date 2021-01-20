@@ -167,6 +167,7 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 				"volume-action",
 				"get",
 				"1213",
+				"--action-id",
 				"22",
 			)
 
