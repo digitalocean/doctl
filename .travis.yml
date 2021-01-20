@@ -32,6 +32,8 @@ jobs:
         repo: digitalocean/doctl
 
   - if: type=push
+    before_script:
+    - echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
     script:
     - echo "building snap"
     - make _build_snap
@@ -50,6 +52,8 @@ jobs:
         repo: digitalocean/doctl
 
   - if: branch=main and type=push
+    before_script:
+    - echo "$DOCKER_PASSWORD" | docker login --username sammytheshark --password-stdin
     script:
     - echo "building snap"
     - make _build_snap
