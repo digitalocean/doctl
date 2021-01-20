@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://travis-ci.org/digitalocean/doctl">
-    <img src="https://travis-ci.org/digitalocean/doctl.svg?branch=master" alt="Build Status" />
+    <img src="https://travis-ci.org/digitalocean/doctl.svg?branch=main" alt="Build Status" />
   </a>
   <a href="https://godoc.org/github.com/digitalocean/doctl">
     <img src="https://godoc.org/github.com/digitalocean/doctl?status.svg" alt="GoDoc" />
@@ -203,7 +203,7 @@ Windows users can follow [How to: Add Tool Locations to the PATH Environment Var
 If you have
 [Docker](https://www.digitalocean.com/community/tutorials/how-to-install-and-use-docker-on-ubuntu-16-04)
 configured, you can build a local Docker image using `doctl`'s
-[Dockerfile](https://github.com/digitalocean/doctl/blob/master/Dockerfile)
+[Dockerfile](https://github.com/digitalocean/doctl/blob/main/Dockerfile)
 and run `doctl` within a container.
 
 ```

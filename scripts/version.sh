@@ -27,7 +27,7 @@ semver() {
 branch() {
   local branch
   branch=$(git rev-parse --abbrev-ref HEAD)
-  if [[ $branch != 'master' && $branch != HEAD ]]; then
+  if [[ $branch != 'main' && $branch != HEAD ]]; then
     echo "${branch}"
   fi
 }
