@@ -252,7 +252,7 @@ snap manually.
 
 Occasionally, the snap build will break. When it does, it usually means that you need to update
 the custom base image we use to build the snap. The Dockerfile for that image lives in
-[dockerfiles/Dockerfile.snap](https://github.com/digitalocean/doctl/blob/master/dockerfiles/Dockerfile.snap).
+[dockerfiles/Dockerfile.snap](https://github.com/digitalocean/doctl/blob/main/dockerfiles/Dockerfile.snap).
 The header of the Dockerfile has hints for updating the image, as well as instructions for building
 the image using `make snap_image`. Once you've built the image, the snap_image target will provide
 instructions for next steps.
@@ -260,7 +260,7 @@ instructions for next steps.
 ### Updating Homebrew
 
 Using the url and sha from the github release, update the
-[homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).
+[homebrew formula](https://github.com/Homebrew/homebrew-core/blob/main/Formula/doctl.rb).
 You can use `brew bump-formula-pr doctl`, or
 
 1. fork `homebrew-core`
