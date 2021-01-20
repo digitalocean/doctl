@@ -79,6 +79,19 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 				expect.JSONEq(`{"droplet_id":14,"type":"detach"}`, string(reqBody))
 
 				w.Write([]byte(volumeActionResponse))
+			case "/v2/volumes/1213/actions/22":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(volumeActionResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -137,6 +150,24 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 				"1",
 				"--region", "moonbase",
 				"--size", "100",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(volumeActionOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("command is get", func() {
+		it("Retrieve the status of the particular volume action", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"volume-action",
+				"get",
+				"1213",
+				"22",
 			)
 
 			output, err := cmd.CombinedOutput()

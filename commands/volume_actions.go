@@ -59,6 +59,22 @@ func VolumeAction() *Command {
 		},
 	}
 
+	actionDetail := `
+
+	- The unique numeric ID used to identify and reference a volume action.
+	- The status of the volume action. This will be either ` + "`" + `in-progress` + "`" + `, ` + "`" + `completed` + "`" + `, or ` + "`" + `errored` + "`" + `.
+	- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
+	- A time value given in ISO8601 combined date and time format that represents when the action was completed.
+	- The resource ID, which is a unique identifier for the resource that the action is associated with.
+	- The type of resource that the action is associated with.
+	- The region where the action occurred.
+	- The slug for the region where the action occurred.
+	`
+
+	cmdVolumeActionsGet := CmdBuilder(cmd, RunVolumeActionsGet, "get <image-id>", "Retrieve the status of an image action", `Use this command to retrieve the status of an image action, including the following details:`+actionDetail, Writer,
+		displayerType(&displayers.Action{}))
+	AddIntFlag(cmdVolumeActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
+
 	cmdRunVolumeAttach := CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "Attach a volume to a Droplet", `Use this command to attach a block storage volume to a Droplet.
 
 Each volume can be attached to only one Droplet at a time. However, up to five volumes may be attached to a single Droplet.
@@ -146,4 +162,27 @@ func RunVolumeResize(c *CmdConfig) error {
 		return a, err
 	}
 	return performVolumeAction(c, fn)
+}
+
+// RunVolumeActionsGet returns a Volume Action
+func RunVolumeActionsGet(c *CmdConfig) error {
+	if len(c.Args) != 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	volumeID := c.Args[0]
+	actionID, err := strconv.Atoi(c.Args[1])
+	if err != nil {
+		return err
+
+	}
+
+	vas := c.VolumeActions()
+	volumeA, err := vas.Get(volumeID, actionID)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.Action{Actions: do.Actions{*volumeA}}
+	return c.Display(item)
 }
