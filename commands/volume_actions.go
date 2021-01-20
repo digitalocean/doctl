@@ -71,7 +71,7 @@ func VolumeAction() *Command {
 	- The slug for the region where the action occurred.
 	`
 
-	cmdVolumeActionsGet := CmdBuilder(cmd, RunVolumeActionsGet, "get <volume-action-id>", "Retrieve the status of an volume action", `Use this command to retrieve the status of an volume action, including the following details:`+actionDetail, Writer,
+	cmdVolumeActionsGet := CmdBuilder(cmd, RunVolumeActionsGet, "get <volume-id>", "Retrieve the status of a volume action", `Use this command to retrieve the status of an volume action, including the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdVolumeActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
 
