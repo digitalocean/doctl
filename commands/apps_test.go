@@ -42,7 +42,7 @@ var (
 				Name: "service",
 				GitHub: &godo.GitHubSourceSpec{
 					Repo:   "digitalocean/doctl",
-					Branch: "master",
+					Branch: "main",
 				},
 			},
 		},
@@ -331,7 +331,7 @@ const (
 			"name": "web",
 			"github": {
 				"repo": "digitalocean/sample-golang",
-				"branch": "master"
+				"branch": "main"
 			}
 		}
 	],
@@ -340,7 +340,7 @@ const (
 			"name": "static",
 			"git": {
 				"repo_clone_url": "git@github.com:digitalocean/sample-gatsby.git",
-				"branch": "master"
+				"branch": "main"
 			},
 			"routes": [
 				{
@@ -356,12 +356,12 @@ services:
 - name: web
   github:
     repo: digitalocean/sample-golang
-    branch: master
+    branch: main
 static_sites:
 - name: static
   git:
     repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
-    branch: master
+    branch: main
   routes:
   - path: /static
 `
@@ -375,7 +375,7 @@ func Test_parseAppSpec(t *testing.T) {
 				Name: "web",
 				GitHub: &godo.GitHubSourceSpec{
 					Repo:   "digitalocean/sample-golang",
-					Branch: "master",
+					Branch: "main",
 				},
 			},
 		},
@@ -384,7 +384,7 @@ func Test_parseAppSpec(t *testing.T) {
 				Name: "static",
 				Git: &godo.GitSourceSpec{
 					RepoCloneURL: "git@github.com:digitalocean/sample-gatsby.git",
-					Branch:       "master",
+					Branch:       "main",
 				},
 				Routes: []*godo.AppRouteSpec{
 					{Path: "/static"},
@@ -489,7 +489,7 @@ func TestRunAppSpecGet(t *testing.T) {
 			require.Equal(t, `name: test
 services:
 - github:
-    branch: master
+    branch: main
     repo: digitalocean/doctl
   name: service
 `, buf.String())
@@ -510,7 +510,7 @@ services:
       "name": "service",
       "github": {
         "repo": "digitalocean/doctl",
-        "branch": "master"
+        "branch": "main"
       }
     }
   ]
@@ -540,7 +540,7 @@ services:
 			require.Equal(t, `name: test
 services:
 - github:
-    branch: master
+    branch: main
     repo: digitalocean/doctl
   name: service
 `, buf.String())
