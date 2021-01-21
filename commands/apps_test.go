@@ -365,6 +365,22 @@ static_sites:
   routes:
   - path: /static
 `
+	unknownFieldSpec = `
+name: test
+bugField: bad
+services:
+- name: web
+  github:
+    repo: digitalocean/sample-golang
+    branch: main
+static_sites:
+- name: static
+  git:
+    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
+    branch: main
+  routes:
+  - path: /static
+`
 )
 
 func Test_parseAppSpec(t *testing.T) {
@@ -405,6 +421,10 @@ func Test_parseAppSpec(t *testing.T) {
 	})
 	t.Run("invalid", func(t *testing.T) {
 		_, err := parseAppSpec([]byte("invalid spec"))
+		require.Error(t, err)
+	})
+	t.Run("unknown fields", func(t *testing.T) {
+		_, err := parseAppSpec([]byte(unknownFieldSpec))
 		require.Error(t, err)
 	})
 }

@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -436,13 +437,15 @@ func parseAppSpec(spec []byte) (*godo.AppSpec, error) {
 		return nil, err
 	}
 
+	dec := json.NewDecoder(bytes.NewReader(jsonSpec))
+	dec.DisallowUnknownFields()
+
 	var appSpec godo.AppSpec
-	err = json.Unmarshal(jsonSpec, &appSpec)
-	if err == nil {
-		return &appSpec, nil
+	if err := dec.Decode(&appSpec); err != nil {
+		return nil, fmt.Errorf("Failed to parse app spec: %v", err)
 	}
 
-	return nil, fmt.Errorf("Failed to parse app spec: %v", err)
+	return &appSpec, nil
 }
 
 func appsSpec() *Command {
