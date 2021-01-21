@@ -1,5 +1,11 @@
 # Change Log
 
+## [v1.57.0] - 2021-01-15
+
+- #429 - @varshavaradarajan - kubernetes: support optional cascading deletes for clusters
+- #430 - @jonfriesen - apps: updates apps.gen.go for gitlab addition
+- #431 - @nicktate - apps: update proto to support dockerhub registry type
+
 ## [v1.56.0] - 2021-01-08
 
 - #422 - @kamaln7 - apps: add ProposeApp method
