@@ -170,7 +170,6 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 			expect.Equal(strings.TrimSpace(volumeActionOutput), strings.TrimSpace(string(output)))
 		})
 	})
-
 	when("command is list", func() {
 		it("Retrieve a list of actions taken on a volume", func() {
 			cmd := exec.Command(builtBinaryPath,
@@ -187,7 +186,6 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 			expect.Equal(strings.TrimSpace(volumeActionOutput), strings.TrimSpace(string(output)))
 		})
 	})
-
 	when("command is get", func() {
 		it("Retrieve the status of the particular volume action", func() {
 			cmd := exec.Command(builtBinaryPath,

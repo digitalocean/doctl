@@ -28,7 +28,7 @@ var (
 				Name: "service",
 				GitHub: &godo.GitHubSourceSpec{
 					Repo:   "digitalocean/doctl",
-					Branch: "master",
+					Branch: "main",
 				},
 			},
 		},

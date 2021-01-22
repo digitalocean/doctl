@@ -84,6 +84,7 @@ type AppJobSpec struct {
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GitHub *GitHubSourceSpec `json:"github,omitempty"`
 	Image  *ImageSourceSpec  `json:"image,omitempty"`
+	GitLab *GitLabSourceSpec `json:"gitlab,omitempty"`
 	// The path to the Dockerfile relative to the root of the repo. If set, it will be used to build this component. Otherwise, App Platform will attempt to build it using buildpacks.
 	DockerfilePath string `json:"dockerfile_path,omitempty"`
 	// An optional build command to run while building this component from source.
@@ -126,6 +127,7 @@ type AppServiceSpec struct {
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GitHub *GitHubSourceSpec `json:"github,omitempty"`
 	Image  *ImageSourceSpec  `json:"image,omitempty"`
+	GitLab *GitLabSourceSpec `json:"gitlab,omitempty"`
 	// The path to the Dockerfile relative to the root of the repo. If set, it will be used to build this component. Otherwise, App Platform will attempt to build it using buildpacks.
 	DockerfilePath string `json:"dockerfile_path,omitempty"`
 	// An optional build command to run while building this component from source.
@@ -195,6 +197,7 @@ type AppStaticSiteSpec struct {
 	Name   string            `json:"name"`
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GitHub *GitHubSourceSpec `json:"github,omitempty"`
+	GitLab *GitLabSourceSpec `json:"gitlab,omitempty"`
 	// The path to the Dockerfile relative to the root of the repo. If set, it will be used to build this component. Otherwise, App Platform will attempt to build it using buildpacks.
 	DockerfilePath string `json:"dockerfile_path,omitempty"`
 	// An optional build command to run while building this component from source.
@@ -234,6 +237,7 @@ type AppWorkerSpec struct {
 	Git    *GitSourceSpec    `json:"git,omitempty"`
 	GitHub *GitHubSourceSpec `json:"github,omitempty"`
 	Image  *ImageSourceSpec  `json:"image,omitempty"`
+	GitLab *GitLabSourceSpec `json:"gitlab,omitempty"`
 	// The path to the Dockerfile relative to the root of the repo. If set, it will be used to build this component. Otherwise, App Platform will attempt to build it using buildpacks.
 	DockerfilePath string `json:"dockerfile_path,omitempty"`
 	// An optional build command to run while building this component from source.
@@ -417,6 +421,13 @@ type GitHubSourceSpec struct {
 	DeployOnPush bool   `json:"deploy_on_push,omitempty"`
 }
 
+// GitLabSourceSpec struct for GitLabSourceSpec
+type GitLabSourceSpec struct {
+	Repo         string `json:"repo,omitempty"`
+	Branch       string `json:"branch,omitempty"`
+	DeployOnPush bool   `json:"deploy_on_push,omitempty"`
+}
+
 // GitSourceSpec struct for GitSourceSpec
 type GitSourceSpec struct {
 	RepoCloneURL string `json:"repo_clone_url,omitempty"`
@@ -426,7 +437,7 @@ type GitSourceSpec struct {
 // ImageSourceSpec struct for ImageSourceSpec
 type ImageSourceSpec struct {
 	RegistryType ImageSourceSpecRegistryType `json:"registry_type,omitempty"`
-	// The registry name. Must be left empty for the `DOCR` registry type.
+	// The registry name. Must be left empty for the `DOCR` registry type. Required for the `DOCKER_HUB` registry type.
 	Registry string `json:"registry,omitempty"`
 	// The repository name.
 	Repository string `json:"repository,omitempty"`
@@ -434,13 +445,14 @@ type ImageSourceSpec struct {
 	Tag string `json:"tag,omitempty"`
 }
 
-// ImageSourceSpecRegistryType  - UNSPECIFIED: Represents an unspecified registry type.  - DOCR: The DigitalOcean container registry type.
+// ImageSourceSpecRegistryType  - DOCR: The DigitalOcean container registry type.  - DOCKER_HUB: The DockerHub container registry type.
 type ImageSourceSpecRegistryType string
 
 // List of ImageSourceSpecRegistryType
 const (
 	ImageSourceSpecRegistryType_Unspecified ImageSourceSpecRegistryType = "UNSPECIFIED"
 	ImageSourceSpecRegistryType_DOCR        ImageSourceSpecRegistryType = "DOCR"
+	ImageSourceSpecRegistryType_DockerHub   ImageSourceSpecRegistryType = "DOCKER_HUB"
 )
 
 // AppInstanceSize struct for AppInstanceSize
