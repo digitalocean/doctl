@@ -24,7 +24,7 @@ import (
 func TestVolumeActionCommand(t *testing.T) {
 	cmd := VolumeAction()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "attach", "detach", "detach-by-droplet-id", "resize", "get")
+	assertCommandNames(t, cmd, "attach", "detach", "detach-by-droplet-id", "resize", "get", "list")
 }
 
 func TestVolumeActionsAttach(t *testing.T) {

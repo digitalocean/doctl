@@ -92,6 +92,19 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 				}
 
 				w.Write([]byte(volumeActionResponse))
+			case "/v2/volumes/1213/actions":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(volumeActionResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -150,6 +163,23 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 				"1",
 				"--region", "moonbase",
 				"--size", "100",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(volumeActionOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("command is list", func() {
+		it("Retrieve a list of actions taken on a volume", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"volume-action",
+				"list",
+				"1213",
 			)
 
 			output, err := cmd.CombinedOutput()

@@ -8,7 +8,6 @@ import (
 	reflect "reflect"
 
 	do "github.com/digitalocean/doctl/do"
-	godo "github.com/digitalocean/godo"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -81,9 +80,9 @@ func (mr *MockVolumeActionsServiceMockRecorder) Get(arg0, arg1 interface{}) *gom
 }
 
 // List mocks base method.
-func (m *MockVolumeActionsService) List(arg0 string, arg1 *godo.ListOptions) ([]do.Action, error) {
+func (m *MockVolumeActionsService) List(arg0 string) ([]do.Action, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", arg0)
 	ret0, _ := ret[0].([]do.Action)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
