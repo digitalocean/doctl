@@ -26,7 +26,7 @@ func TestVolumeActionCommand(t *testing.T) {
 	assert.NotNil(t, cmd)
 
 	assertCommandNames(t, cmd, "attach", "detach", "detach-by-droplet-id", "resize", "get", "list")
-
+}
 func TestVolumeActionsAttach(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.volumeActions.EXPECT().Attach(testVolume.ID, testDroplet.ID).Return(&testAction, nil)
