@@ -176,6 +176,14 @@ func TestKubernetesOptionsCommand(t *testing.T) {
 	)
 }
 
+func TestKubernetesOneClickCommand(t *testing.T) {
+	cmd := kubernetesOneClicks()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd,
+		"install",
+		"list",
+	)
+}
 func TestKubernetesGet(t *testing.T) {
 	// by ID
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
