@@ -104,7 +104,7 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 					return
 				}
 
-				w.Write([]byte(volumeActionResponse))
+				w.Write([]byte(volumeActionsResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -233,5 +233,27 @@ ID          Status         Type             Started At                       Com
     "region_slug": "nyc1"
   }
 }
+`
+
+	volumeActionsResponse = `
+	{
+		"actions": [{
+		  "id": 68212773,
+		  "status": "in-progress",
+		  "type": "detach_volume",
+		  "started_at": "2015-10-15T17:46:15Z",
+		  "completed_at": null,
+		  "resource_id": null,
+		  "resource_type": "backend",
+		  "region": {
+			"name": "New York 1",
+			"slug": "nyc1",
+			"sizes": [ "s-32vcpu-192gb" ],
+			"features": [ "metadata" ],
+			"available": true
+		  },
+		  "region_slug": "nyc1"
+		}]
+	  }
 `
 )
