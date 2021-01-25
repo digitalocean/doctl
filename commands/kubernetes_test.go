@@ -184,6 +184,7 @@ func TestKubernetesOneClickCommand(t *testing.T) {
 		"list",
 	)
 }
+
 func TestKubernetesGet(t *testing.T) {
 	// by ID
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
