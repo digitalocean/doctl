@@ -560,7 +560,7 @@ func RunKubernetesOneClickInstall(c *CmdConfig) error {
 		return err
 	}
 
-	OneClickInstall, err := oneClicks.InstallKubernetes(c.Args[0], oneClickSlice)
+	oneClickInstall, err := oneClicks.InstallKubernetes(c.Args[0], oneClickSlice)
 	if err != nil {
 		return err
 	}
