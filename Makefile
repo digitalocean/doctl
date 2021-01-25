@@ -109,7 +109,10 @@ shellcheck:
 gofmt_check:
 	@echo "==> ensure code adheres to gofmt (with vendor directory excluded)"
 	@echo ""
-	@gofmt -l ${GOFILES_NOVENDOR} | read && exit 1 || true
+	@GOFMT=$$(gofmt -l ${GOFILES_NOVENDOR}); \
+	if [ -n "$${GOFMT}" ]; then \
+		echo "gofmt checking failed:\n"; echo "$${GOFMT} \n"; exit 1; \
+	fi
 
 .PHONY: snap_image
 snap_image:
