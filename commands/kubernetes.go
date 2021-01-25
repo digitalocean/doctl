@@ -565,7 +565,7 @@ func RunKubernetesOneClickInstall(c *CmdConfig) error {
 		return err
 	}
 
-	notice(OneClickInstall)
+	notice(oneClickInstall)
 	return nil
 }
 
