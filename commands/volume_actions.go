@@ -71,9 +71,12 @@ func VolumeAction() *Command {
 	- The slug for the region where the action occurred.
 	`
 
-	cmdVolumeActionsGet := CmdBuilder(cmd, RunVolumeActionsGet, "get <volume-id>", "Retrieve the status of a volume action", `Use this command to retrieve the status of an volume action, including the following details:`+actionDetail, Writer,
+	cmdVolumeActionsGet := CmdBuilder(cmd, RunVolumeActionsGet, "get <volume-id>", "Retrieve the status of a volume action", `Use this command to retrieve the status of a volume action, including the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdVolumeActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
+
+	CmdBuilder(cmd, RunVolumeActionsList, "list <volume-id>", "Retrieve a list of actions taken on a volume", `This command retrieves a list of actions taken on a volume. The following details are provided:`+actionDetail, Writer,
+		aliasOpt("ls"), displayerType(&displayers.Action{}))
 
 	cmdRunVolumeAttach := CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "Attach a volume to a Droplet", `Use this command to attach a block storage volume to a Droplet.
 
@@ -186,4 +189,22 @@ func RunVolumeActionsGet(c *CmdConfig) error {
 
 	item := &displayers.Action{Actions: do.Actions{*volumeA}}
 	return c.Display(item)
+}
+
+// RunVolumeActionsGet returns a Volume Action
+func RunVolumeActionsList(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+
+	volumeID := c.Args[0]
+	vList, err := c.VolumeActions().List(volumeID)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.Action{Actions: vList}
+	return c.Display(item)
+
 }

@@ -92,6 +92,19 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 				}
 
 				w.Write([]byte(volumeActionResponse))
+			case "/v2/volumes/1213/actions":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(volumeActionsResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -157,7 +170,22 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 			expect.Equal(strings.TrimSpace(volumeActionOutput), strings.TrimSpace(string(output)))
 		})
 	})
+	when("command is list", func() {
+		it("Retrieve a list of actions taken on a volume", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"volume-action",
+				"list",
+				"1213",
+			)
 
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(volumeActionOutput), strings.TrimSpace(string(output)))
+		})
+	})
 	when("command is get", func() {
 		it("Retrieve the status of the particular volume action", func() {
 			cmd := exec.Command(builtBinaryPath,
@@ -203,5 +231,27 @@ ID          Status         Type             Started At                       Com
     "region_slug": "nyc1"
   }
 }
+`
+
+	volumeActionsResponse = `
+	{
+		"actions": [{
+		  "id": 68212773,
+		  "status": "in-progress",
+		  "type": "detach_volume",
+		  "started_at": "2015-10-15T17:46:15Z",
+		  "completed_at": null,
+		  "resource_id": null,
+		  "resource_type": "backend",
+		  "region": {
+			"name": "New York 1",
+			"slug": "nyc1",
+			"sizes": [ "s-32vcpu-192gb" ],
+			"features": [ "metadata" ],
+			"available": true
+		  },
+		  "region_slug": "nyc1"
+		}]
+	  }
 `
 )

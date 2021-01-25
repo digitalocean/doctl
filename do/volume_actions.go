@@ -11,7 +11,7 @@ type VolumeActionsService interface {
 	Attach(string, int) (*Action, error)
 	Detach(string, int) (*Action, error)
 	Get(string, int) (*Action, error)
-	List(string, *godo.ListOptions) ([]Action, error)
+	List(string) ([]Action, error)
 	Resize(string, int, string) (*Action, error)
 }
 
@@ -54,7 +54,7 @@ func (vas *volumeActionsService) Get(volumeID string, actionID int) (*Action, er
 	return vas.handleActionResponse(a, err)
 }
 
-func (vas *volumeActionsService) List(volumeID string, opt *godo.ListOptions) ([]Action, error) {
+func (vas *volumeActionsService) List(volumeID string) ([]Action, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := vas.client.StorageActions.List(context.TODO(), volumeID, opt)
 		if err != nil {
