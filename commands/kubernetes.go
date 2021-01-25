@@ -531,7 +531,7 @@ func kubernetesOneClicks() *Command {
 	CmdBuilder(cmd, RunKubernetesOneClickList, "list", "Retrieve a list of Kubernetes 1-Click applications", "Use this command to retrieve a list of Kubernetes 1-Click applications.", Writer,
 		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
 	cmdKubeOneClickInstall := CmdBuilder(cmd, RunKubernetesOneClickInstall, "install <cluster-id>", "Install 1-click apps on a Kubernetes cluster", "Use this command to install 1-click apps on a Kubernetes cluster using the flag --1-clicks.", Writer, aliasOpt("in"), displayerType(&displayers.OneClick{}))
-	AddStringSliceFlag(cmdKubeOneClickInstall, doctl.ArgOneClicks, "", nil, "1-clicks to be installed on a Kuberentes cluster. Multiple 1-clicks can be added at once. Example: --1-clicks moon,loki,netdata")
+	AddStringSliceFlag(cmdKubeOneClickInstall, doctl.ArgOneClicks, "", nil, "1-clicks to be installed on a Kubernetes cluster. Multiple 1-clicks can be added at once. Example: --1-clicks moon,loki,netdata")
 	return cmd
 }
 
