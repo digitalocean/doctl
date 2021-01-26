@@ -178,6 +178,24 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				expect.Equal(`Error: Flags "size" and "count" cannot be provided when "node-pool" is present`, strings.TrimSpace(string(output)))
 			})
 		})
+
+		when("installing a one click on an existing k8s cluster", func() {
+			it("displays the notice as expected", func() {
+				cmd := exec.Command(builtBinaryPath,
+					"-t", "some-magic-token",
+					"-u", server.URL,
+					"kubernetes",
+					"1-click",
+					"install",
+					"12345",
+					"--1-clicks",
+					"moon",
+				)
+				output, err := cmd.CombinedOutput()
+				expect.NoError(err)
+				expect.Equal(`Notice: Some response message`, strings.TrimSpace(string(output)))
+			})
+		})
 	})
 })
 

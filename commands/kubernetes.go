@@ -530,7 +530,8 @@ func kubernetesOneClicks() *Command {
 
 	CmdBuilder(cmd, RunKubernetesOneClickList, "list", "Retrieve a list of Kubernetes 1-Click applications", "Use this command to retrieve a list of Kubernetes 1-Click applications.", Writer,
 		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
-
+	cmdKubeOneClickInstall := CmdBuilder(cmd, RunKubernetesOneClickInstall, "install <cluster-id>", "Install 1-click apps on a Kubernetes cluster", "Use this command to install 1-click apps on a Kubernetes cluster using the flag --1-clicks.", Writer, aliasOpt("in"), displayerType(&displayers.OneClick{}))
+	AddStringSliceFlag(cmdKubeOneClickInstall, doctl.ArgOneClicks, "", nil, "1-clicks to be installed on a Kubernetes cluster. Multiple 1-clicks can be added at once. Example: --1-clicks moon,loki,netdata")
 	return cmd
 }
 
@@ -545,6 +546,27 @@ func RunKubernetesOneClickList(c *CmdConfig) error {
 	items := &displayers.OneClick{OneClicks: oneClickList}
 
 	return c.Display(items)
+}
+
+// RunKubernetesOneClickInstall installs 1-click apps on a kubernetes cluster.
+func RunKubernetesOneClickInstall(c *CmdConfig) error {
+	oneClicks := c.OneClicks()
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	oneClickSlice, err := c.Doit.GetStringSlice(c.NS, doctl.ArgOneClicks)
+	if err != nil {
+		return err
+	}
+
+	oneClickInstall, err := oneClicks.InstallKubernetes(c.Args[0], oneClickSlice)
+	if err != nil {
+		return err
+	}
+
+	notice(oneClickInstall)
+	return nil
 }
 
 func kubernetesOptions() *Command {
