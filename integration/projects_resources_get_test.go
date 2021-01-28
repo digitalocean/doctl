@@ -89,6 +89,19 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 				}
 
 				w.Write([]byte(projectsResourcesGetVolumeResponse))
+			case "/v2/kubernetes/1111":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(projectKubernetesClusterGetResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -184,6 +197,24 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 			expect.Equal(strings.TrimSpace(projectsResourcesGetVolumeOutput), strings.TrimSpace(string(output)))
 		})
 	})
+
+	when("passing a kubernetes urn", func() {
+		it("gets that resource for the project", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"projects",
+				"resources",
+				"get",
+				"do:kubernetes:1111",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(projectsResourcesGetKubernetesOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
 })
 
 const (
@@ -289,6 +320,25 @@ ID                                      Name       Size      Region    Filesyste
     "size_gigabytes": 10,
     "created_at": "2016-03-02T17:00:49Z",
     "tags": [ "aninterestingtag" ]
+  }
+}
+`
+	projectKubernetesClusterGetOutput = `
+ID      Name                    Region                Version         Auto Upgrade    Status     Endpoint  IPv4            Cluster Subnet  Service Subnet    Tags   Created At                       Updated At                       Node Pools
+5555    some-kubernetes-name    some-region-slug      1.20.version    false           running              192.0.2.255                                       yes    2021-01-26 00:49:59 +0000 UTC    2021-01-28 05:12:11 +0000 UTC    test-get-cluster
+`
+	projectKubernetesClusterGetResponse = `
+{
+  "kubernetes": {
+    "id": 5555,
+    "name": "some-kubernetes-name",
+    "region": {
+      "slug": "some-region-slug"
+    },
+	"version": "1.20.version",
+	"auto_upgrade": "false",
+    "tags": ["yes"],
+    "node_pools": ["test-get-cluster"]
   }
 }
 `
