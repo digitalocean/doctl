@@ -29,6 +29,9 @@ var (
 		{
 			ProjectResource: &godo.ProjectResource{URN: "do:floatingip:1.2.3.4"},
 		},
+		{
+			ProjectResource: &godo.ProjectResource{URN: "do:kubernetes:1234"}
+		},
 	}
 	testProjectResourcesListSingle = do.ProjectResources{
 		{
