@@ -216,6 +216,10 @@ const (
 	ArgVolumeFilesystemLabel = "fs-label"
 	// ArgVolumeList is the IDs of many volumes.
 	ArgVolumeList = "volumes"
+	// ArgVolumeSnapshotList is the IDs of many volume snapshots.
+	ArgVolumeSnapshotList = "snapshots"
+	// ArgLoadBalancerList is the IDs of many load balancers.
+	ArgLoadBalancerList = "load-balancers"
 
 	// ArgCDNTTL is a cdn ttl argument
 	ArgCDNTTL = "ttl"
@@ -335,4 +339,7 @@ const (
 
 	// ArgOneClickType is the type of 1-Click
 	ArgOneClickType = "type"
+
+	//ArgDangerous indicates whether to delete the cluster and all it's associated resources
+	ArgDangerous = "dangerous"
 )

@@ -73,11 +73,11 @@ func defaultGetCurrentAuthContextFn() string {
 }
 
 func errNoClusterByName(name string) error {
-	return fmt.Errorf("No cluster goes by the name %q", name)
+	return fmt.Errorf("no cluster goes by the name %q", name)
 }
 
 func errAmbigousClusterName(name string, ids []string) error {
-	return fmt.Errorf("Many clusters go by the name %q, they have the following IDs: %v", name, ids)
+	return fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", name, ids)
 }
 
 func errNoPoolByName(name string) error {
@@ -335,13 +335,37 @@ The special value `+"`"+`latest`+"`"+` will select the most recent patch version
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, 1.12.3 will be `+"`"+`latest`+"`"+`.`)
 
 	cmdKubeClusterDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterDelete,
-		"delete <id|name>...", "Delete Kubernetes clusters", `
-This command deletes the specified Kubernetes clusters and the Droplets associated with them. This command does not delete other DigitalOcean resources created during the operation of the clusters, such as load balancers and volumes.
+		"delete <id|name>...", "Delete Kubernetes clusters ", `
+This command deletes the specified Kubernetes clusters and the Droplets associated with them. To delete all other DigitalOcean resources created during the operation of the clusters, such as load balancers, volumes or volume snapshots, use the --dangerous flag.
 `, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Boolean indicating whether to delete the cluster without a confirmation prompt")
 	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgClusterUpdateKubeconfig, "", true,
 		"Boolean indicating whether to remove the deleted cluster from your kubeconfig")
+	AddBoolFlag(cmdKubeClusterDelete, doctl.ArgDangerous, "", false,
+		"Boolean indicating whether to delete the cluster's associated resources like load balancers, volumes and volume snapshots")
+
+	cmdKubeClusterDeleteSelective := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterDeleteSelective,
+		"delete-selective <id|name>", "Delete a Kubernetes cluster and selectively delete resources associated with it", `
+This command deletes the specified Kubernetes cluster and droplets associated with it. It also deletes the specified associated resources. The associated resources supported for selective deletion are load balancers, volumes and volume snapshots.
+`, Writer, aliasOpt("ds"))
+	AddBoolFlag(cmdKubeClusterDeleteSelective, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Boolean indicating whether to delete the cluster without a confirmation prompt")
+	AddBoolFlag(cmdKubeClusterDeleteSelective, doctl.ArgClusterUpdateKubeconfig, "", true,
+		"Boolean indicating whether to remove the deleted cluster from your kubeconfig")
+	AddStringSliceFlag(cmdKubeClusterDeleteSelective, doctl.ArgVolumeList, "", nil,
+		"Comma-separated list of volume IDs or names for deletion")
+	AddStringSliceFlag(cmdKubeClusterDeleteSelective, doctl.ArgVolumeSnapshotList, "", nil,
+		"Comma-separated list of volume snapshot IDs or names for deletion")
+	AddStringSliceFlag(cmdKubeClusterDeleteSelective, doctl.ArgLoadBalancerList, "", nil,
+		"Comma-separated list of load balancer IDs or names for deletion")
+
+	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterListAssociatedResources, "list-associated-resources <id|name>", "Retrieve DigitalOcean resources associated with a Kubernetes cluster", `
+This command retrieves the following details:
+- Volume IDs for volumes created by the DigitalOcean CSI driver
+- Volume snapshot IDs for volume snapshots created by the DigitalOcean CSI driver.
+- Load balancer IDs for load balancers managed by the Kubernetes cluster.`,
+		Writer, aliasOpt("ar"), displayerType(&displayers.KubernetesAssociatedResources{}))
 
 	return cmd
 }
@@ -628,7 +652,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterGetUpgrades(c *CmdConfig)
 		return err
 	}
 	clusterIDorName := c.Args[0]
-	clusterID, err := clusterIDize(c.Kubernetes(), clusterIDorName)
+	clusterID, err := clusterIDize(c, clusterIDorName)
 	if err != nil {
 		return err
 	}
@@ -721,7 +745,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterUpdate(c *CmdConfig) erro
 		return err
 	}
 	clusterIDorName := c.Args[0]
-	clusterID, err := clusterIDize(c.Kubernetes(), clusterIDorName)
+	clusterID, err := clusterIDize(c, clusterIDorName)
 	if err != nil {
 		return err
 	}
@@ -775,7 +799,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterUpgrade(c *CmdConfig) err
 	if len(c.Args) == 0 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -882,10 +906,15 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 		return err
 	}
 
+	dangerous, err := c.Doit.GetBool(c.NS, doctl.ArgDangerous)
+	if err != nil {
+		return err
+	}
+
 	kube := c.Kubernetes()
 
 	for _, cluster := range c.Args {
-		clusterID, err := clusterIDize(c.Kubernetes(), cluster)
+		clusterID, err := clusterIDize(c, cluster)
 		if err != nil {
 			return err
 		}
@@ -905,9 +934,16 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 				warn("Couldn't get credentials for cluster. It will not be remove from your kubeconfig.")
 			}
 		}
-		if err := kube.Delete(clusterID); err != nil {
+
+		if dangerous {
+			err = kube.DeleteDangerous(clusterID)
+		} else {
+			err = kube.Delete(clusterID)
+		}
+		if err != nil {
 			return err
 		}
+
 		if kubeconfig != nil {
 			notice("Cluster deleted, removing credentials")
 			if err := removeFromKubeconfig(kubeconfig); err != nil {
@@ -917,6 +953,125 @@ func (s *KubernetesCommandService) RunKubernetesClusterDelete(c *CmdConfig) erro
 	}
 
 	return nil
+}
+
+func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	clusterIDorName := c.Args[0]
+
+	clusterID, err := clusterIDize(c, clusterIDorName)
+	if err != nil {
+		return err
+	}
+
+	update, err := c.Doit.GetBool(c.NS, doctl.ArgClusterUpdateKubeconfig)
+	if err != nil {
+		return err
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	volumes, err := c.Doit.GetStringSlice(c.NS, doctl.ArgVolumeList)
+	if err != nil {
+		return err
+	}
+
+	volSnapshots, err := c.Doit.GetStringSlice(c.NS, doctl.ArgVolumeSnapshotList)
+	if err != nil {
+		return err
+	}
+
+	loadBalancers, err := c.Doit.GetStringSlice(c.NS, doctl.ArgLoadBalancerList)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("Kubernetes cluster", 1) == nil {
+		// continue
+	} else {
+		return fmt.Errorf("Operation aborted")
+	}
+
+	kube := c.Kubernetes()
+
+	var kubeconfig []byte
+	if update {
+		// get the cluster's kubeconfig before issuing the delete, so that we can
+		// cleanup the entry from the local file
+		kubeconfig, err = kube.GetKubeConfig(clusterID)
+		if err != nil {
+			warn("Couldn't get credentials for cluster. It will not be remove from your kubeconfig.")
+		}
+	}
+
+	var volIDs, snapshotIDs, lbIDs []string
+	for _, v := range volumes {
+		volumeID, err := iDize(c, v, "volume")
+		if err != nil {
+			return err
+		}
+		volIDs = append(volIDs, volumeID)
+	}
+	for _, s := range volSnapshots {
+		snapID, err := iDize(c, s, "volume_snapshot")
+		if err != nil {
+			return err
+		}
+		snapshotIDs = append(snapshotIDs, snapID)
+	}
+	for _, l := range loadBalancers {
+		lbID, err := iDize(c, l, "load_balancer")
+		if err != nil {
+			return err
+		}
+		lbIDs = append(lbIDs, lbID)
+	}
+
+	r := new(godo.KubernetesClusterDeleteSelectiveRequest)
+	r.Volumes = volIDs
+	r.VolumeSnapshots = snapshotIDs
+	r.LoadBalancers = lbIDs
+
+	err = kube.DeleteSelective(clusterID, r)
+	if err != nil {
+		return err
+	}
+
+	if kubeconfig != nil {
+		notice("Cluster deleted, removing credentials")
+		if err := removeFromKubeconfig(kubeconfig); err != nil {
+			warn("Cluster was deleted, but we couldn't remove it from your local kubeconfig. Try doing it manually.")
+		}
+	}
+	return nil
+}
+
+// RunKubernetesClusterListAssociatedResources lists a Kubernetes cluster's associated resources
+func (s *KubernetesCommandService) RunKubernetesClusterListAssociatedResources(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	clusterIDorName := c.Args[0]
+
+	clusterID, err := clusterIDize(c, clusterIDorName)
+	if err != nil {
+		return err
+	}
+
+	kube := c.Kubernetes()
+	resources, err := kube.ListAssociatedResourcesForDeletion(clusterID)
+	if err != nil {
+		return err
+	}
+
+	return displayAssociatedResources(c, resources)
 }
 
 // Kubeconfig
@@ -933,7 +1088,7 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigShow(c *CmdConfig) err
 	}
 
 	kube := c.Kubernetes()
-	clusterID, err := clusterIDize(kube, c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1084,7 +1239,7 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 	}
 
 	kube := c.Kubernetes()
-	clusterID, err := clusterIDize(kube, c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1115,7 +1270,7 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigRemove(c *CmdConfig) e
 		return err
 	}
 	kube := c.Kubernetes()
-	clusterID, err := clusterIDize(kube, c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1134,7 +1289,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolGet(c *CmdConfig) error 
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1151,7 +1306,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolList(c *CmdConfig) error
 	if err != nil {
 		return err
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1170,7 +1325,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolCreate(c *CmdConfig) err
 	if err != nil {
 		return err
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1194,7 +1349,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolUpdate(c *CmdConfig) err
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1222,7 +1377,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolRecycle(c *CmdConfig) er
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1245,7 +1400,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolDelete(c *CmdConfig) err
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1283,7 +1438,7 @@ func kubernetesNodeDelete(replace bool, c *CmdConfig) error {
 	if len(c.Args) != 3 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	clusterID, err := clusterIDize(c.Kubernetes(), c.Args[0])
+	clusterID, err := clusterIDize(c, c.Args[0])
 	if err != nil {
 		return err
 	}
@@ -1358,7 +1513,7 @@ func (s *KubernetesCommandService) RunKubernetesRegistryAdd(c *CmdConfig) error 
 	}
 	var clusterUUIDs []string
 	for _, arg := range c.Args {
-		clusterID, err := clusterIDize(c.Kubernetes(), arg)
+		clusterID, err := clusterIDize(c, arg)
 		if err != nil {
 			return err
 		}
@@ -1377,7 +1532,7 @@ func (s *KubernetesCommandService) RunKubernetesRegistryRemove(c *CmdConfig) err
 	}
 	var clusterUUIDs []string
 	for _, arg := range c.Args {
-		clusterID, err := clusterIDize(c.Kubernetes(), arg)
+		clusterID, err := clusterIDize(c, arg)
 		if err != nil {
 			return err
 		}
@@ -1903,6 +2058,11 @@ func displayNodePools(c *CmdConfig, nodePools ...do.KubernetesNodePool) error {
 	return c.Display(item)
 }
 
+func displayAssociatedResources(c *CmdConfig, ar *do.KubernetesAssociatedResources) error {
+	item := &displayers.KubernetesAssociatedResources{KubernetesAssociatedResources: ar}
+	return c.Display(item)
+}
+
 // clusterByIDorName attempts to find a cluster by ID or by name if the argument isn't an ID. If multiple
 // clusters have the same name, then an error with the cluster IDs matching this name is returned.
 func clusterByIDorName(kube do.KubernetesService, idOrName string) (*do.KubernetesCluster, error) {
@@ -1941,26 +2101,72 @@ func clusterByIDorName(kube do.KubernetesService, idOrName string) (*do.Kubernet
 // clusterIDize attempts to make a cluster ID/name string be a cluster ID.
 // use this as opposed to `clusterByIDorName` if you just care about getting
 // a cluster ID and don't need the cluster object itself
-func clusterIDize(kube do.KubernetesService, idOrName string) (string, error) {
-	if looksLikeUUID(idOrName) {
-		return idOrName, nil
-	}
-	clusters, err := kube.List()
-	if err != nil {
-		return "", err
+func clusterIDize(c *CmdConfig, idOrName string) (string, error) {
+	return iDize(c, idOrName, "cluster")
+}
+
+// iDize attempts to make a resource ID/name string be a resource ID.
+// use this if you just care about getting a resource ID and don't need the object itself
+func iDize(c *CmdConfig, resourceIDOrName string, resType string) (string, error) {
+	if looksLikeUUID(resourceIDOrName) {
+		return resourceIDOrName, nil
 	}
 	var ids []string
-	for _, c := range clusters {
-		if c.Name == idOrName {
-			id := c.ID
-			ids = append(ids, id)
+
+	switch resType {
+	case "volume":
+		volumes, err := c.Volumes().List()
+		if err != nil {
+			return "", err
+		}
+
+		for _, v := range volumes {
+			if v.Name == resourceIDOrName {
+				id := v.ID
+				ids = append(ids, id)
+			}
+		}
+	case "volume_snapshot":
+		volSnapshots, err := c.Snapshots().ListVolume()
+		if err != nil {
+			return "", err
+		}
+
+		for _, v := range volSnapshots {
+			if v.Name == resourceIDOrName {
+				id := v.ID
+				ids = append(ids, id)
+			}
+		}
+	case "load_balancer":
+		loadBalancers, err := c.LoadBalancers().List()
+		if err != nil {
+			return "", err
+		}
+		for _, l := range loadBalancers {
+			if l.Name == resourceIDOrName {
+				id := l.ID
+				ids = append(ids, id)
+			}
+		}
+	case "cluster":
+		clusters, err := c.Kubernetes().List()
+		if err != nil {
+			return "", err
+		}
+		for _, c := range clusters {
+			if c.Name == resourceIDOrName {
+				id := c.ID
+				ids = append(ids, id)
+			}
 		}
 	}
+
 	switch {
 	case len(ids) == 0:
-		return "", errNoClusterByName(idOrName)
+		return "", fmt.Errorf("no %s goes by the name %q", resType, resourceIDOrName)
 	case len(ids) > 1:
-		return "", errAmbigousClusterName(idOrName, ids)
+		return "", fmt.Errorf("many %ss go by the name %q, they have the following IDs: %v", resType, resourceIDOrName, ids)
 	default:
 		if len(ids) != 1 {
 			panic("The default case should always have len(ids) == 1.")

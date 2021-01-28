@@ -8,6 +8,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -82,15 +83,51 @@ var (
 		AuthInfos: make(map[string]*clientcmdapi.AuthInfo),
 	}
 
-	testK8sOneClick = do.OneClick{
-		OneClick: &godo.OneClick{
-			Slug: "test-slug",
-			Type: "droplet",
+	testK8sOneClickList = do.OneClicks{
+		testOneClick,
+	}
+
+	testAssociatedResources = do.KubernetesAssociatedResources{
+		KubernetesAssociatedResources: &godo.KubernetesAssociatedResources{
+			Volumes:         []string{"1422"},
+			VolumeSnapshots: []string{"3536"},
+			LoadBalancers:   []string{"7574"},
+		},
+	}
+	volumeID   = uuid.New()
+	snapshotID = uuid.New()
+	lbID       = uuid.New()
+
+	testVolumes = []do.Volume{
+		{
+			Volume: &godo.Volume{
+				ID:            volumeID.String(),
+				Name:          "vol-1",
+				SizeGigaBytes: 4,
+			},
 		},
 	}
 
-	testK8sOneClickList = do.OneClicks{
-		testOneClick,
+	testSnapshots = do.Snapshots{
+		{
+			Snapshot: &godo.Snapshot{
+				ID:            snapshotID.String(),
+				Name:          "snap-1",
+				SizeGigaBytes: 3,
+				ResourceType:  "volume",
+				ResourceID:    volumeID.String(),
+			},
+		},
+	}
+
+	testLoadBalancers = do.LoadBalancers{
+		{
+			LoadBalancer: &godo.LoadBalancer{
+				ID:   lbID.String(),
+				Name: "lb-1",
+				IP:   "10.12.1.3",
+			},
+		},
 	}
 )
 
@@ -148,6 +185,8 @@ func TestKubernetesClusterCommand(t *testing.T) {
 		"delete",
 		"node-pool",
 		"registry",
+		"delete-selective",
+		"list-associated-resources",
 	)
 }
 
@@ -630,6 +669,122 @@ func TestKubernetesDelete(t *testing.T) {
 
 		err := testK8sCmdService().RunKubernetesClusterDelete(config)
 		assert.NoError(t, err)
+	})
+	// dangerous delete
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		id2 := "ce69d914-ae08-4c91-8a4b-383f58b47e6f"
+
+		tm.kubernetes.EXPECT().DeleteDangerous(testCluster.ID).Return(nil)
+		tm.kubernetes.EXPECT().DeleteDangerous(id2).Return(nil)
+
+		config.Args = append(config.Args, testCluster.ID, id2)
+		config.Doit.Set(config.NS, doctl.ArgForce, "true")
+		config.Doit.Set(config.NS, doctl.ArgDangerous, "true")
+
+		err := testK8sCmdService().RunKubernetesClusterDelete(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestKubernetesDeleteSelective(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// should'nt call `DeleteNodePool` so we don't set any expectations
+		config.Doit.Set(config.NS, doctl.ArgForce, "false")
+		config.Args = append(config.Args, testCluster.ID)
+
+		err := testK8sCmdService().RunKubernetesClusterDeleteSelective(config)
+		assert.Error(t, err, "should have been challenged before deletion")
+	})
+	// by id
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.KubernetesClusterDeleteSelectiveRequest{
+			Volumes:         []string{volumeID.String()},
+			VolumeSnapshots: []string{snapshotID.String()},
+			LoadBalancers:   []string{lbID.String()},
+		}
+		tm.kubernetes.EXPECT().DeleteSelective(testCluster.ID, r).Return(nil)
+
+		config.Args = append(config.Args, testCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgForce, "true")
+		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{volumeID.String()})
+		config.Doit.Set(config.NS, doctl.ArgVolumeSnapshotList, []string{snapshotID.String()})
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerList, []string{lbID.String()})
+
+		err := testK8sCmdService().RunKubernetesClusterDeleteSelective(config)
+		assert.NoError(t, err)
+	})
+	// by name
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.KubernetesClusterDeleteSelectiveRequest{
+			Volumes:         []string{volumeID.String()},
+			VolumeSnapshots: []string{snapshotID.String()},
+			LoadBalancers:   []string{lbID.String()},
+		}
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.volumes.EXPECT().List().Return(testVolumes, nil)
+		tm.snapshots.EXPECT().ListVolume().Return(testSnapshots, nil)
+		tm.loadBalancers.EXPECT().List().Return(testLoadBalancers, nil)
+		tm.kubernetes.EXPECT().DeleteSelective(testCluster.ID, r).Return(nil)
+
+		config.Args = append(config.Args, testCluster.Name)
+		config.Doit.Set(config.NS, doctl.ArgForce, "true")
+		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{"vol-1"})
+		config.Doit.Set(config.NS, doctl.ArgVolumeSnapshotList, []string{"snap-1"})
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerList, []string{"lb-1"})
+
+		err := testK8sCmdService().RunKubernetesClusterDeleteSelective(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestKubernetesListAssociatedResources(t *testing.T) {
+	// by ID
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.kubernetes.EXPECT().ListAssociatedResourcesForDeletion(testCluster.ID).Return(&testAssociatedResources, nil)
+		config.Args = append(config.Args, testCluster.ID)
+		err := testK8sCmdService().RunKubernetesClusterListAssociatedResources(config)
+		assert.NoError(t, err)
+	})
+
+	// by name
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// it'll see that no UUID is given and do a List call to find the cluster
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().ListAssociatedResourcesForDeletion(testCluster.ID).Return(&testAssociatedResources, nil)
+		config.Args = append(config.Args, testCluster.Name)
+		err := testK8sCmdService().RunKubernetesClusterListAssociatedResources(config)
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		name := "not a cluster"
+		// it'll see that no UUID is given and do a List call to find the cluster
+		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		config.Args = append(config.Args, name)
+		err := testK8sCmdService().RunKubernetesClusterListAssociatedResources(config)
+		assert.EqualError(t, err, errNoClusterByName(name).Error())
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		name := testCluster.Name
+		testClusterWithSameName := do.KubernetesCluster{
+			KubernetesCluster: &godo.KubernetesCluster{
+				ID:          "cde2c0d6-41e3-479e-ba60-ad9712272322",
+				Name:        name,
+				RegionSlug:  "sfo2",
+				VersionSlug: "",
+				NodePools: []*godo.KubernetesNodePool{
+					testNodePool.KubernetesNodePool,
+				},
+			},
+		}
+
+		clustersWithDups := append(testClusterList, testClusterWithSameName)
+		// it'll see that no UUID is given and do a List call to find the cluster
+		tm.kubernetes.EXPECT().List().Return(clustersWithDups, nil)
+		config.Args = append(config.Args, name)
+		err := testK8sCmdService().RunKubernetesClusterListAssociatedResources(config)
+		assert.EqualError(t, err, errAmbigousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
 	})
 }
 
