@@ -266,7 +266,8 @@ func RunProjectResourcesGet(c *CmdConfig) error {
 	case "volume":
 		return RunVolumeGet(c)
 	case "kubernetes":
-		return RunKubernetesClusterGet(c)
+		k8sCmdService := kubernetesCommandService()
+		return k8sCmdService.RunKubernetesClusterGet(c)
 	default:
 		return fmt.Errorf("%q is an invalid resource type, consult the documentation", parts[1])
 	}
