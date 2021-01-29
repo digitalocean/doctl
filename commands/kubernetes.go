@@ -1010,23 +1010,28 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		}
 	}
 
+	cluster, err := kube.Get(clusterID)
+	if err != nil {
+		return err
+	}
+
 	var volIDs, snapshotIDs, lbIDs []string
 	for _, v := range volumes {
-		volumeID, err := iDize(c, v, "volume")
+		volumeID, err := iDize(c, v, "volume", cluster.RegionSlug)
 		if err != nil {
 			return err
 		}
 		volIDs = append(volIDs, volumeID)
 	}
 	for _, s := range volSnapshots {
-		snapID, err := iDize(c, s, "volume_snapshot")
+		snapID, err := iDize(c, s, "volume_snapshot", cluster.RegionSlug)
 		if err != nil {
 			return err
 		}
 		snapshotIDs = append(snapshotIDs, snapID)
 	}
 	for _, l := range loadBalancers {
-		lbID, err := iDize(c, l, "load_balancer")
+		lbID, err := iDize(c, l, "load_balancer", "")
 		if err != nil {
 			return err
 		}
@@ -2102,12 +2107,12 @@ func clusterByIDorName(kube do.KubernetesService, idOrName string) (*do.Kubernet
 // use this as opposed to `clusterByIDorName` if you just care about getting
 // a cluster ID and don't need the cluster object itself
 func clusterIDize(c *CmdConfig, idOrName string) (string, error) {
-	return iDize(c, idOrName, "cluster")
+	return iDize(c, idOrName, "cluster", "")
 }
 
 // iDize attempts to make a resource ID/name string be a resource ID.
 // use this if you just care about getting a resource ID and don't need the object itself
-func iDize(c *CmdConfig, resourceIDOrName string, resType string) (string, error) {
+func iDize(c *CmdConfig, resourceIDOrName string, resType string, regionSlug string) (string, error) {
 	if looksLikeUUID(resourceIDOrName) {
 		return resourceIDOrName, nil
 	}
@@ -2121,7 +2126,7 @@ func iDize(c *CmdConfig, resourceIDOrName string, resType string) (string, error
 		}
 
 		for _, v := range volumes {
-			if v.Name == resourceIDOrName {
+			if v.Name == resourceIDOrName && v.Region.Slug == regionSlug {
 				id := v.ID
 				ids = append(ids, id)
 			}
@@ -2133,7 +2138,7 @@ func iDize(c *CmdConfig, resourceIDOrName string, resType string) (string, error
 		}
 
 		for _, v := range volSnapshots {
-			if v.Name == resourceIDOrName {
+			if v.Name == resourceIDOrName && contains(v.Regions, regionSlug) {
 				id := v.ID
 				ids = append(ids, id)
 			}
@@ -2173,6 +2178,15 @@ func iDize(c *CmdConfig, resourceIDOrName string, resType string) (string, error
 		}
 		return ids[0], nil
 	}
+}
+
+func contains(regions []string, region string) bool {
+	for _, r := range regions {
+		if r == region {
+			return true
+		}
+	}
+	return false
 }
 
 // poolByIDorName attempts to find a pool by ID or by name if the argument isn't an ID. If multiple

@@ -104,6 +104,9 @@ var (
 				ID:            volumeID.String(),
 				Name:          "vol-1",
 				SizeGigaBytes: 4,
+				Region: &godo.Region{
+					Slug: testCluster.RegionSlug,
+				},
 			},
 		},
 	}
@@ -116,6 +119,7 @@ var (
 				SizeGigaBytes: 3,
 				ResourceType:  "volume",
 				ResourceID:    volumeID.String(),
+				Regions:       []string{testCluster.RegionSlug},
 			},
 		},
 	}
@@ -702,6 +706,7 @@ func TestKubernetesDeleteSelective(t *testing.T) {
 			VolumeSnapshots: []string{snapshotID.String()},
 			LoadBalancers:   []string{lbID.String()},
 		}
+		tm.kubernetes.EXPECT().Get(testCluster.ID).Return(&testCluster, nil)
 		tm.kubernetes.EXPECT().DeleteSelective(testCluster.ID, r).Return(nil)
 
 		config.Args = append(config.Args, testCluster.ID)
@@ -721,6 +726,7 @@ func TestKubernetesDeleteSelective(t *testing.T) {
 			LoadBalancers:   []string{lbID.String()},
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
+		tm.kubernetes.EXPECT().Get(testCluster.ID).Return(&testCluster, nil)
 		tm.volumes.EXPECT().List().Return(testVolumes, nil)
 		tm.snapshots.EXPECT().ListVolume().Return(testSnapshots, nil)
 		tm.loadBalancers.EXPECT().List().Return(testLoadBalancers, nil)
