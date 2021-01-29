@@ -64,6 +64,11 @@ type KubernetesNodeSize struct {
 	*godo.KubernetesNodeSize
 }
 
+// KubernetesAssociatedResources wraps a godo KubernetesAssociatedResources
+type KubernetesAssociatedResources struct {
+	*godo.KubernetesAssociatedResources
+}
+
 // KubernetesService is the godo KubernetesService interface.
 type KubernetesService interface {
 	Get(clusterID string) (*KubernetesCluster, error)
@@ -72,10 +77,13 @@ type KubernetesService interface {
 	GetCredentials(clusterID string) (*KubernetesClusterCredentials, error)
 	GetUpgrades(clusterID string) (KubernetesVersions, error)
 	List() (KubernetesClusters, error)
+	ListAssociatedResourcesForDeletion(clusterID string) (*KubernetesAssociatedResources, error)
 	Create(create *godo.KubernetesClusterCreateRequest) (*KubernetesCluster, error)
 	Update(clusterID string, update *godo.KubernetesClusterUpdateRequest) (*KubernetesCluster, error)
 	Upgrade(clusterID string, versionSlug string) error
 	Delete(clusterID string) error
+	DeleteDangerous(clusterID string) error
+	DeleteSelective(clusterID string, deleteReq *godo.KubernetesClusterDeleteSelectiveRequest) error
 
 	CreateNodePool(clusterID string, req *godo.KubernetesNodePoolCreateRequest) (*KubernetesNodePool, error)
 	GetNodePool(clusterID, poolID string) (*KubernetesNodePool, error)
@@ -189,6 +197,14 @@ func (k8s *kubernetesClusterService) List() (KubernetesClusters, error) {
 	return list, nil
 }
 
+func (k8s *kubernetesClusterService) ListAssociatedResourcesForDeletion(clusterID string) (*KubernetesAssociatedResources, error) {
+	ar, _, err := k8s.client.ListAssociatedResourcesForDeletion(context.TODO(), clusterID)
+	if err != nil {
+		return nil, err
+	}
+	return &KubernetesAssociatedResources{ar}, nil
+}
+
 func (k8s *kubernetesClusterService) Create(create *godo.KubernetesClusterCreateRequest) (*KubernetesCluster, error) {
 	cluster, _, err := k8s.client.Create(context.TODO(), create)
 	if err != nil {
@@ -216,6 +232,16 @@ func (k8s *kubernetesClusterService) Upgrade(clusterID string, versionSlug strin
 
 func (k8s *kubernetesClusterService) Delete(clusterID string) error {
 	_, err := k8s.client.Delete(context.TODO(), clusterID)
+	return err
+}
+
+func (k8s *kubernetesClusterService) DeleteDangerous(clusterID string) error {
+	_, err := k8s.client.DeleteDangerous(context.TODO(), clusterID)
+	return err
+}
+
+func (k8s *kubernetesClusterService) DeleteSelective(clusterID string, req *godo.KubernetesClusterDeleteSelectiveRequest) error {
+	_, err := k8s.client.DeleteSelective(context.TODO(), clusterID, req)
 	return err
 }
 

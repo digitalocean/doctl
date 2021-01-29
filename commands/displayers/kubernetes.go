@@ -292,3 +292,40 @@ func (nodeSizes *KubernetesNodeSizes) KV() []map[string]interface{} {
 
 	return out
 }
+
+type KubernetesAssociatedResources struct {
+	KubernetesAssociatedResources *do.KubernetesAssociatedResources
+}
+
+var _ Displayable = &KubernetesAssociatedResources{}
+
+func (ar *KubernetesAssociatedResources) JSON(out io.Writer) error {
+	return writeJSON(ar.KubernetesAssociatedResources, out)
+}
+
+func (ar *KubernetesAssociatedResources) Cols() []string {
+	return []string{
+		"Volumes",
+		"VolumeSnapshots",
+		"LoadBalancers",
+	}
+}
+
+func (ar *KubernetesAssociatedResources) ColMap() map[string]string {
+	return map[string]string{
+		"Volumes":         "Volumes",
+		"VolumeSnapshots": "Volume Snapshots",
+		"LoadBalancers":   "Load Balancers",
+	}
+}
+
+func (ar *KubernetesAssociatedResources) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, 1)
+	o := map[string]interface{}{
+		"Volumes":         ar.KubernetesAssociatedResources.Volumes,
+		"VolumeSnapshots": ar.KubernetesAssociatedResources.VolumeSnapshots,
+		"LoadBalancers":   ar.KubernetesAssociatedResources.LoadBalancers,
+	}
+	out = append(out, o)
+	return out
+}
