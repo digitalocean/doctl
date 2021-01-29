@@ -101,7 +101,7 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 					return
 				}
 
-				w.Write([]byte(projectKubernetesClusterGetResponse))
+				w.Write([]byte(projectResourcesGetKubernetesResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -323,11 +323,11 @@ ID                                      Name       Size      Region    Filesyste
   }
 }
 `
-	projectKubernetesClusterGetOutput = `
+	projectResourcesGetKubernetesOutput = `
 ID      Name                    Region                Version         Auto Upgrade    Status     Endpoint  IPv4            Cluster Subnet  Service Subnet    Tags   Created At                       Updated At                       Node Pools
 5555    some-kubernetes-name    some-region-slug      1.20.version    false           running              192.0.2.255                                       yes    2021-01-26 00:49:59 +0000 UTC    2021-01-28 05:12:11 +0000 UTC    test-get-cluster
 `
-	projectKubernetesClusterGetResponse = `
+	projectResourcesGetKubernetesResponse = `
 {
   "kubernetes": {
     "id": 5555,
