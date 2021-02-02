@@ -462,3 +462,51 @@ func (dsm *DatabaseSQLModes) KV() []map[string]interface{} {
 
 	return out
 }
+
+type DatabaseFirewallRules struct {
+	DatabaseFirewallRules do.DatabaseFirewallRules
+}
+
+var _ Displayable = &DatabaseFirewallRules{}
+
+func (dr *DatabaseFirewallRules) JSON(out io.Writer) error {
+	return writeJSON(dr.DatabaseFirewallRules, out)
+}
+
+func (dr *DatabaseFirewallRules) Cols() []string {
+	return []string{
+		"UUID",
+		"ClusterUUID",
+		"Type",
+		"Value",
+		"Created",
+	}
+}
+
+func (dr *DatabaseFirewallRules) ColMap() map[string]string {
+
+	return map[string]string{
+		"UUID":        "UUID",
+		"ClusterUUID": "ClusterUUID",
+		"Type":        "Type",
+		"Value":       "Value",
+		"Created":     "Created At",
+	}
+}
+
+func (dr *DatabaseFirewallRules) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dr.DatabaseFirewallRules))
+
+	for _, r := range dr.DatabaseFirewallRules {
+		o := map[string]interface{}{
+			"UUID":        r.UUID,
+			"ClusterUUID": r.ClusterUUID,
+			"Type":        r.Type,
+			"Value":       r.Value,
+			"Created":     r.CreatedAt,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
