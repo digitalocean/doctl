@@ -132,13 +132,13 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("command is add", func() {
-		it("add a database cluster's firewall rules", func() {
+		it("add a database cluster's firewall rule", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"databases",
 				"firewalls",
-				"add",
+				"append",
 				"d168d635-1c88-4616-b9b4-793b7c573927",
 				"--rule", "tag:new-firewall-tag",
 			)

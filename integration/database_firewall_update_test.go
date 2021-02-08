@@ -57,7 +57,7 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 				"-u", server.URL,
 				"databases",
 				"firewalls",
-				"update",
+				"replace",
 				"d168d635-1c88-4616-b9b4-793b7c573927",
 				"--rule", "ip_addr:192.168.1.1",
 			)

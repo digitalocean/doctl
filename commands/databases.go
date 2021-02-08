@@ -1168,10 +1168,10 @@ func databaseFirewalls() *Command {
 	firewallRuleDetails := `
 This command lists the following details for each firewall rule in a given database:
 
-	- The UUID of the firewall rule
+	- The UUID of the firewall rule.
 	- The Cluster UUID for the database cluster to which the rule is applied.
-	- The Type of resource that the firewall rule allows to access the database cluster. The possible values are: "droplet", "k8s", "ip_addr", or "tag"
-	- The Value is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster.
+	- The Type of resource that the firewall rule allows to access the database cluster. The possible values are: "droplet", "k8s", "ip_addr", or "tag".
+	- The Value, which is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster.
 	- The Time value given in ISO8601 combined date and time format that represents when the firewall rule was created.
 	`
 	databaseFirewallRuleDetails := `
@@ -1193,18 +1193,18 @@ This command also requires a --rule flag. You can pass in multiple --rule flags.
 
 For example:
 	
-	doctl databases firewalls update d1234-1c12-1234-b123-12345c4789 --rule tag:backend --rule ip_addr:0.0.0.0
+	doctl databases firewalls replace d1234-1c12-1234-b123-12345c4789 --rule tag:backend --rule ip_addr:0.0.0.0
 
 	or
 
-	databases firewalls update d1234-1c12-1234-b123-12345c4789 --rule tag:backend,ip_addr:0.0.0.0
+	databases firewalls replace d1234-1c12-1234-b123-12345c4789 --rule tag:backend,ip_addr:0.0.0.0
 
 This would replace the firewall rules for database of id d1234-1c12-1234-b123-12345c4789 with the two rules passed above (tag:backend, ip_addr:0.0.0.0)
 	`
 
 	databaseFirewallAddDetails :=
 		`
-Use this command to append a new rule to the existing firewall rules of a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
+Use this command to append a single rule to the existing firewall rules of a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
 
 	doctl databases list
 
@@ -1214,13 +1214,13 @@ This command also requires a --rule flag. Each rule passed in to the --rule flag
 
 For example:
 
-	doctl databases firewalls add d1234-1c12-1234-b123-12345c4789 --rule tag:backend
+	doctl databases firewalls append d1234-1c12-1234-b123-12345c4789 --rule tag:backend
 
 This would append the firewall rule "tag:backend" for database of id d1234-1c12-1234-b123-12345c4789`
 
 	databaseFirewallRemoveDetails :=
 		`
-Use this command to remove an existing rule from the list of firewall rules for a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
+Use this command to remove an existing, single rule from the list of firewall rules for a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
 
 	doctl databases list
 
@@ -1238,11 +1238,11 @@ This would remove the firewall rule of uuid 12345d-1234-123d-123x-123eee456e for
 	CmdBuilder(cmd, RunDatabaseFirewallRulesList, "list <database-id>", "Retrieve a list of firewall rules for a given database", firewallRuleDetails+databaseFirewallRuleDetails,
 		Writer, aliasOpt("ls"))
 
-	cmdDatabaseFirewallUpdate := CmdBuilder(cmd, RunDatabaseFirewallRulesUpdate, "update <db-id> --rules type:value [--rule type:value]", "Update the firewall rules for a given database. The rules passed in to the --rules flag will replace the firewall rules previously assigned to the database,", databaseFirewallUpdateDetails,
-		Writer, aliasOpt("u"))
+	cmdDatabaseFirewallUpdate := CmdBuilder(cmd, RunDatabaseFirewallRulesUpdate, "replace <db-id> --rules type:value [--rule type:value]", "Replaces the firewall rules for a given database. The rules passed in to the --rules flag will replace the firewall rules previously assigned to the database,", databaseFirewallUpdateDetails,
+		Writer, aliasOpt("r"))
 	AddStringSliceFlag(cmdDatabaseFirewallUpdate, doctl.ArgDatabaseFirewallRule, "", []string{}, databaseFirewallRulesTxt, requiredOpt())
 
-	cmdDatabaseFirewallCreate := CmdBuilder(cmd, RunDatabaseFirewallRulesCreate, "add <db-id> --rule type:value", "Add a database firewall rule to a given database", databaseFirewallAddDetails,
+	cmdDatabaseFirewallCreate := CmdBuilder(cmd, RunDatabaseFirewallRulesCreate, "append <db-id> --rule type:value", "Add a database firewall rule to a given database", databaseFirewallAddDetails,
 		Writer, aliasOpt("a"))
 	AddStringFlag(cmdDatabaseFirewallCreate, doctl.ArgDatabaseFirewallRule, "", "", "", requiredOpt())
 

@@ -16,18 +16,68 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func (ms *mockServer) Remove(t *testing.T, w http.ResponseWriter, r *http.Request) {
+	if !ms.auth(w, r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	v := map[string][]*godo.DatabaseFirewallRule{
+		"rules": make([]*godo.DatabaseFirewallRule, 0),
+	}
+	if err := json.NewDecoder(r.Body).Decode(&v); err != nil {
+		t.Fatalf("%+v", err)
+	}
+
+	// We're assuming the PUT request will only include the type
+	// and value, so we generate the UUID to make it more like the
+	// actual implementation.
+	rules, ok := v["rules"]
+	if !ok {
+		t.Fatalf("expected rules to be present")
+	}
+
+	for _, rule := range rules {
+		rule.UUID = "cdb689c2-56e6-48e6-869d-306c85af178d"
+		rule.CreatedAt = ms.timestamp
+	}
+
+	// The backend will always replace all firewall rules, so we do the same
+	// in the mock implementation.
+	// ms.rules will now only have the rule that was not removed.
+	ms.rules = rules
+	w.WriteHeader(http.StatusNoContent)
+}
+
 var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
 	)
 
-	mockResponses := []*godo.DatabaseFirewallRule{
-		{
-			UUID:        "cdb689c2-56e6-48e6-869d-306c85af178d",
-			ClusterUUID: "d168d635-1c88-4616-b9b4-793b7c573927",
-			Type:        "tag",
-			Value:       "oldFirewall",
+	ts, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", "2021-02-08 11:35:47.630889 -0500 EST")
+	if err != nil {
+		t.Fatalf("%+v parsing time", err)
+	}
+
+	ms := &mockServer{
+		timestamp: ts,
+		// ms.rules had two rules to begin with.
+		rules: []*godo.DatabaseFirewallRule{
+			{
+				UUID:        "cdb689c2-56e6-48e6-869d-306c85af178d",
+				ClusterUUID: "d168d635-1c88-4616-b9b4-793b7c573927",
+				Type:        "tag",
+				Value:       "new-firewall-tag",
+				CreatedAt:   ts,
+			},
+			{
+				UUID:        "cdb689c2-56e6-48e6-869d-306c85af178g",
+				ClusterUUID: "d168d635-1c88-4616-b9b4-793b7c573927",
+				Type:        "tag",
+				Value:       "old-firewall-tag",
+				CreatedAt:   ts,
+			},
 		},
 	}
 
@@ -37,47 +87,12 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/databases/d168d635-1c88-4616-b9b4-793b7c573927/firewall":
-				auth := req.Header.Get("Authorization")
-				if auth != "Bearer some-magic-token" {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
 				switch req.Method {
 				case http.MethodGet:
-					data, err := json.Marshal(map[string]interface{}{
-						"rules": mockResponses,
-					})
-					if err != nil {
-						t.Fatalf("%+v", err)
-					}
-
-					w.Write(data)
+					ms.Get(t, w, req)
 
 				case http.MethodPut:
-					v := map[string][]*godo.DatabaseFirewallRule{
-						"rules": make([]*godo.DatabaseFirewallRule, 0),
-					}
-					if err := json.NewDecoder(req.Body).Decode(&v); err != nil {
-						t.Fatalf("%+v", err)
-					}
-
-					// We're assuming the PUT request will only include the type
-					// and value, so we generate the UUID to make it more like the
-					// actual implementation.
-					rules, ok := v["rules"]
-					if !ok {
-						t.Fatalf("expected rules to be present")
-					}
-
-					for _, rule := range rules {
-						rule.UUID = "cdb689c2-56e6-48e6-869d-306c85af178d"
-						rule.CreatedAt = time.Now()
-
-						mockResponses = append(mockResponses, rule)
-					}
-
-					w.WriteHeader(http.StatusNoContent)
-					return
+					ms.Remove(t, w, req)
 
 				default:
 					w.WriteHeader(http.StatusMethodNotAllowed)
@@ -95,7 +110,7 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("command is remove", func() {
-		it("remove a database cluster's firewall rules", func() {
+		it("remove a database cluster's firewall rule", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -103,18 +118,19 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 				"firewalls",
 				"remove",
 				"d168d635-1c88-4616-b9b4-793b7c573927",
-				"--uuid", "cdb689c2-56e6-48e6-869d-306c85af178d",
+				"--uuid", "cdb689c2-56e6-48e6-869d-306c85af178g",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(databasesRemoveFirewallRuleOutput), strings.TrimSpace(string(output)))
-			expected := strings.TrimSpace(databasesRemoveFirewallRuleOutput)
-			actual := strings.TrimSpace(string(output))
 
-			if expected != actual {
-				t.Errorf("expected\n\n%s\n\nbut got\n\n%s\n\n", expected, actual)
-			}
+			expected := strings.TrimSpace(string(output))
+			actual := strings.TrimSpace(databasesRemoveFirewallRuleOutput)
+
+			expect.Equal(expected, actual)
+
+			fmt.Println(expected)
+			fmt.Println(actual)
 		})
 	})
 
@@ -122,6 +138,6 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	databasesRemoveFirewallRuleOutput = `
-UUID                                    ClusterUUID                             Type    Value          Created At
-cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     oldFirewall    0001-01-01 00:00:00 +0000 UTC`
+UUID                                    ClusterUUID                             Type    Value               Created At
+cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     new-firewall-tag    2021-02-08 11:35:47.630889 -0500 EST`
 )
