@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/digitalocean/godo"
 	"github.com/sclevine/spec"
@@ -39,7 +38,6 @@ func (ms *mockServer) Remove(t *testing.T, w http.ResponseWriter, r *http.Reques
 
 	for _, rule := range rules {
 		rule.UUID = "cdb689c2-56e6-48e6-869d-306c85af178d"
-		rule.CreatedAt = ms.timestamp
 	}
 
 	// The backend will always replace all firewall rules, so we do the same
@@ -49,19 +47,13 @@ func (ms *mockServer) Remove(t *testing.T, w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
-var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite.Focus("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
 	)
 
-	ts, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", "2021-02-08 11:35:47.630889 -0500 EST")
-	if err != nil {
-		t.Fatalf("%+v parsing time", err)
-	}
-
 	ms := &mockServer{
-		timestamp: ts,
 		// ms.rules had two rules to begin with.
 		rules: []*godo.DatabaseFirewallRule{
 			{
@@ -69,14 +61,12 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 				ClusterUUID: "d168d635-1c88-4616-b9b4-793b7c573927",
 				Type:        "tag",
 				Value:       "new-firewall-tag",
-				CreatedAt:   ts,
 			},
 			{
 				UUID:        "cdb689c2-56e6-48e6-869d-306c85af178g",
 				ClusterUUID: "d168d635-1c88-4616-b9b4-793b7c573927",
 				Type:        "tag",
 				Value:       "old-firewall-tag",
-				CreatedAt:   ts,
 			},
 		},
 	}
@@ -138,6 +128,6 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	databasesRemoveFirewallRuleOutput = `
-UUID                                    ClusterUUID                             Type    Value               Created At
-cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     new-firewall-tag    2021-02-08 11:35:47.630889 -0500 EST`
+UUID                                    ClusterUUID                             Type    Value
+cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     new-firewall-tag`
 )

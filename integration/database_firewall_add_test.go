@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/digitalocean/godo"
 	"github.com/sclevine/spec"
@@ -19,8 +18,7 @@ import (
 // mockServer is a mock database firewall server that imitates the real
 // implementation.
 type mockServer struct {
-	timestamp time.Time
-	rules     []*godo.DatabaseFirewallRule
+	rules []*godo.DatabaseFirewallRule
 }
 
 func (ms *mockServer) auth(w http.ResponseWriter, r *http.Request) bool {
@@ -70,7 +68,6 @@ func (ms *mockServer) Put(t *testing.T, w http.ResponseWriter, r *http.Request) 
 
 	for _, rule := range rules {
 		rule.UUID = "cdb689c2-56e6-48e6-869d-306c85af178d"
-		rule.CreatedAt = ms.timestamp
 	}
 
 	// The backend will always replace all firewall rules, so we do the same
@@ -85,20 +82,13 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 		server *httptest.Server
 	)
 
-	ts, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", "2021-02-08 11:35:47.630889 -0500 EST")
-	if err != nil {
-		t.Fatalf("%+v parsing time", err)
-	}
-
 	ms := &mockServer{
-		timestamp: ts,
 		rules: []*godo.DatabaseFirewallRule{
 			{
 				UUID:        "cdb689c2-56e6-48e6-869d-306c85af178d",
 				ClusterUUID: "d168d635-1c88-4616-b9b4-793b7c573927",
 				Type:        "tag",
 				Value:       "old-firewall-tag",
-				CreatedAt:   ts,
 			},
 		},
 	}
@@ -160,8 +150,8 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	databasesAddFirewallRuleOutput = `
-UUID                                    ClusterUUID                             Type    Value               Created At
-cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     new-firewall-tag    2021-02-08 11:35:47.630889 -0500 EST
-cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     old-firewall-tag    2021-02-08 11:35:47.630889 -0500 EST
+UUID                                    ClusterUUID                             Type    Value
+cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     new-firewall-tag
+cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    tag     old-firewall-tag
 `
 )

@@ -80,8 +80,8 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 const (
 	databasesUpdateFirewallUpdateRequest = `{"rules": [{"type": "ip_addr","value": "192.168.1.1"}]}`
 	databasesUpdateFirewallRuleOutput    = `
-UUID                                    ClusterUUID                             Type       Value          Created At
-82ebbbd4-437c-4e11-bfd2-644ccb555de0    d168d635-1c88-4616-b9b4-793b7c573927    ip_addr    192.168.1.1    2021-01-29 19:59:35 +0000 UTC`
+UUID                                    ClusterUUID                             Type       Value
+82ebbbd4-437c-4e11-bfd2-644ccb555de0    d168d635-1c88-4616-b9b4-793b7c573927    ip_addr    192.168.1.1`
 	databasesUpdateFirewallRuleResponse = `{
 		"rules":[
 		   {

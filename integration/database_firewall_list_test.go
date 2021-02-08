@@ -69,8 +69,8 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	databasesFirewallRuleOutput = `
-UUID                                    ClusterUUID                             Type       Value            Created At
-cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    ip_addr    107.13.36.145    2021-01-27 20:34:12 +0000 UTC
+UUID                                    ClusterUUID                             Type       Value
+cdb689c2-56e6-48e6-869d-306c85af178d    d168d635-1c88-4616-b9b4-793b7c573927    ip_addr    107.13.36.145
 `
 	databasesListFirewallRuleResponse = `
 	{

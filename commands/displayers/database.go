@@ -479,7 +479,6 @@ func (dr *DatabaseFirewallRules) Cols() []string {
 		"ClusterUUID",
 		"Type",
 		"Value",
-		"Created",
 	}
 }
 
@@ -490,7 +489,6 @@ func (dr *DatabaseFirewallRules) ColMap() map[string]string {
 		"ClusterUUID": "ClusterUUID",
 		"Type":        "Type",
 		"Value":       "Value",
-		"Created":     "Created At",
 	}
 }
 
@@ -503,7 +501,6 @@ func (dr *DatabaseFirewallRules) KV() []map[string]interface{} {
 			"ClusterUUID": r.ClusterUUID,
 			"Type":        r.Type,
 			"Value":       r.Value,
-			"Created":     r.CreatedAt,
 		}
 		out = append(out, o)
 	}
