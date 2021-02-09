@@ -120,7 +120,6 @@ type DatabasesService interface {
 	SetSQLMode(context.Context, string, ...string) (*Response, error)
 	GetFirewallRules(context.Context, string) ([]DatabaseFirewallRule, *Response, error)
 	UpdateFirewallRules(context.Context, string, *DatabaseUpdateFirewallRulesRequest) (*Response, error)
-	PatchFirewallRules(ctx context.Context, databaseID string, firewallRulesReq *DatabasePatchFirewallRulesRequest) (*Response, error)
 }
 
 // DatabasesServiceOp handles communication with the Databases related methods
@@ -291,26 +290,7 @@ type DatabaseCreateReplicaRequest struct {
 
 // DatabaseUpdateFirewallRulesRequest is used to set the firewall rules for a database
 type DatabaseUpdateFirewallRulesRequest struct {
-	Rules []*DatabaseUpdateFirewallRule `json:"rules"`
-}
-
-// DatabaseUpdateFirewallRule is used to set the firewall rules for a database
-type DatabaseUpdateFirewallRule struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
-}
-
-// DatabasePatchFirewallRule is used to set the firewall rules for a database
-type DatabasePatchFirewallRule struct {
-	Type        string `json:"type"`
-	Value       string `json:"value"`
-	UUID        string `json:"uuid"`
-	ClusterUUID string `json:"cluster_uuid"`
-}
-
-// DatabasePatchFirewallRulesRequest is used to set the firewall rules for a database
-type DatabasePatchFirewallRulesRequest struct {
-	Rules []*DatabasePatchFirewallRule `json:"rules"`
+	Rules []*DatabaseFirewallRule `json:"rules"`
 }
 
 // DatabaseFirewallRule is a rule describing an inbound source to a database
@@ -857,16 +837,6 @@ func (svc *DatabasesServiceOp) GetFirewallRules(ctx context.Context, databaseID 
 
 // UpdateFirewallRules sets the inbound sources for a given cluster.
 func (svc *DatabasesServiceOp) UpdateFirewallRules(ctx context.Context, databaseID string, firewallRulesReq *DatabaseUpdateFirewallRulesRequest) (*Response, error) {
-	path := fmt.Sprintf(databaseFirewallRulesPath, databaseID)
-	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, firewallRulesReq)
-	if err != nil {
-		return nil, err
-	}
-	return svc.client.Do(ctx, req, nil)
-}
-
-// PatchFirewallRules used to add and remove a specific database rule.
-func (svc *DatabasesServiceOp) PatchFirewallRules(ctx context.Context, databaseID string, firewallRulesReq *DatabasePatchFirewallRulesRequest) (*Response, error) {
 	path := fmt.Sprintf(databaseFirewallRulesPath, databaseID)
 	req, err := svc.client.NewRequest(ctx, http.MethodPut, path, firewallRulesReq)
 	if err != nil {

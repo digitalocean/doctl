@@ -1337,14 +1337,14 @@ func buildDatabaseUpdateFirewallRulesRequestFromArgs(c *CmdConfig) (*godo.Databa
 }
 
 // extractFirewallRules will ingest the --rules arguments into a list of DatabaseFirewallRule objects.
-func extractFirewallRules(rulesStringList []string) (rules []*godo.DatabaseUpdateFirewallRule, err error) {
+func extractFirewallRules(rulesStringList []string) (rules []*godo.DatabaseFirewallRule, err error) {
 	for _, rule := range rulesStringList {
 		pair := strings.SplitN(rule, ":", 2)
 		if len(pair) != 2 {
 			return nil, fmt.Errorf("Unexpected input value [%v], must be a key:value pair", pair)
 		}
 
-		firewallRule := new(godo.DatabaseUpdateFirewallRule)
+		firewallRule := new(godo.DatabaseFirewallRule)
 		firewallRule.Type = pair[0]
 		firewallRule.Value = pair[1]
 
@@ -1377,10 +1377,10 @@ func RunDatabaseFirewallRulesCreate(c *CmdConfig) error {
 	}
 
 	// Slice will house old rules and new rule
-	allRules := []*godo.DatabasePatchFirewallRule{}
+	allRules := []*godo.DatabaseFirewallRule{}
 
 	// Adding new rule to slice.
-	allRules = append(allRules, &godo.DatabasePatchFirewallRule{
+	allRules = append(allRules, &godo.DatabaseFirewallRule{
 		Type:        pair[0],
 		Value:       pair[1],
 		ClusterUUID: databaseID,
@@ -1396,7 +1396,7 @@ func RunDatabaseFirewallRulesCreate(c *CmdConfig) error {
 	// Add old rules to allRules slice.
 	for _, rule := range oldRules {
 
-		firewallRule := new(godo.DatabasePatchFirewallRule)
+		firewallRule := new(godo.DatabaseFirewallRule)
 		firewallRule.Type = rule.Type
 		firewallRule.Value = rule.Value
 		firewallRule.ClusterUUID = rule.ClusterUUID
@@ -1406,7 +1406,7 @@ func RunDatabaseFirewallRulesCreate(c *CmdConfig) error {
 	}
 
 	// Run update firewall rules with old rules + new rule
-	if err := c.Databases().PatchFirewallRules(databaseID, &godo.DatabasePatchFirewallRulesRequest{
+	if err := c.Databases().UpdateFirewallRules(databaseID, &godo.DatabaseUpdateFirewallRulesRequest{
 		Rules: allRules,
 	}); err != nil {
 		return err
@@ -1437,12 +1437,12 @@ func RunDatabaseFirewallRulesRemove(c *CmdConfig) error {
 	}
 
 	// Create a slice of database firewall rules containing only the new rule.
-	firewallRules := []*godo.DatabasePatchFirewallRule{}
+	firewallRules := []*godo.DatabaseFirewallRule{}
 
 	// only append rules that do not match the firewall rule with uuid to be removed.
 	for _, rule := range rules {
 		if rule.UUID != firewallRuleUUIDArg {
-			firewallRules = append(firewallRules, &godo.DatabasePatchFirewallRule{
+			firewallRules = append(firewallRules, &godo.DatabaseFirewallRule{
 				UUID:        rule.UUID,
 				ClusterUUID: rule.ClusterUUID,
 				Type:        rule.Type,
@@ -1451,7 +1451,7 @@ func RunDatabaseFirewallRulesRemove(c *CmdConfig) error {
 		}
 	}
 
-	if err := c.Databases().PatchFirewallRules(databaseID, &godo.DatabasePatchFirewallRulesRequest{
+	if err := c.Databases().UpdateFirewallRules(databaseID, &godo.DatabaseUpdateFirewallRulesRequest{
 		Rules: firewallRules,
 	}); err != nil {
 		return err
