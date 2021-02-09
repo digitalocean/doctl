@@ -1242,12 +1242,12 @@ This would remove the firewall rule of uuid 12345d-1234-123d-123x-123eee456e for
 		Writer, aliasOpt("r"))
 	AddStringSliceFlag(cmdDatabaseFirewallUpdate, doctl.ArgDatabaseFirewallRule, "", []string{}, databaseFirewallRulesTxt, requiredOpt())
 
-	cmdDatabaseFirewallCreate := CmdBuilder(cmd, RunDatabaseFirewallRulesCreate, "append <db-id> --rule type:value", "Add a database firewall rule to a given database", databaseFirewallAddDetails,
+	cmdDatabaseFirewallCreate := CmdBuilder(cmd, RunDatabaseFirewallRulesAppend, "append <db-id> --rule type:value", "Add a database firewall rule to a given database", databaseFirewallAddDetails,
 		Writer, aliasOpt("a"))
 	AddStringFlag(cmdDatabaseFirewallCreate, doctl.ArgDatabaseFirewallRule, "", "", "", requiredOpt())
 
 	cmdDatabaseFirewallRemove := CmdBuilder(cmd, RunDatabaseFirewallRulesRemove, "remove <firerule-uuid>", "Remove a firewall rule for a given database", databaseFirewallRemoveDetails,
-		Writer, aliasOpt("r"))
+		Writer, aliasOpt("rm"))
 	AddStringFlag(cmdDatabaseFirewallRemove, doctl.ArgDatabaseFirewallRuleUUID, "", "", "", requiredOpt())
 
 	return cmd
@@ -1355,11 +1355,11 @@ func extractFirewallRules(rulesStringList []string) (rules []*godo.DatabaseFirew
 
 }
 
-// RunDatabaseFirewallRulesCreate creates a firewall rule for a database cluster.
+// RunDatabaseFirewallRulesAppend creates a firewall rule for a database cluster.
 //
 // Any new rules will be appended to the existing rules. If you want to replace
 // rules, use RunDatabaseFirewallRulesUpdate.
-func RunDatabaseFirewallRulesCreate(c *CmdConfig) error {
+func RunDatabaseFirewallRulesAppend(c *CmdConfig) error {
 	err := firewallRulesArgumentCheck(c)
 	if err != nil {
 		return err
