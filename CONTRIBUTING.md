@@ -196,6 +196,10 @@ by [Travis CI](https://docs.travis-ci.com/user/deployment/).
 
 ### Tagging a release
 
+##### Prerequisites
+
+* [github-changelog-generator](https://github.com/digitalocean/github-changelog-generator)
+
 1. Run `make changes` to review the changes since the last
    release. Based on the changes, decide what kind of release you are
    doing (bugfix, feature or breaking).
