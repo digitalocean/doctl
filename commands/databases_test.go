@@ -159,6 +159,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"connection",
 		"migrate",
 		"resize",
+		"firewalls",
 		"backups",
 		"replica",
 		"maintenance-window",

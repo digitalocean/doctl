@@ -78,6 +78,14 @@ type DatabaseMaintenanceWindow struct {
 	*godo.DatabaseMaintenanceWindow
 }
 
+// DatabaseFirewallRule is a wrapper for godo.DatabaseFirewallRule
+type DatabaseFirewallRule struct {
+	*godo.DatabaseFirewallRule
+}
+
+// DatabaseFirewallRules is a slice of DatabaseFirewallRule
+type DatabaseFirewallRules []DatabaseFirewallRule
+
 // DatabasesService is an interface for interacting with DigitalOcean's Database API
 type DatabasesService interface {
 	List() (Databases, error)
@@ -116,6 +124,9 @@ type DatabasesService interface {
 
 	GetSQLMode(string) ([]string, error)
 	SetSQLMode(string, ...string) error
+
+	GetFirewallRules(string) (DatabaseFirewallRules, error)
+	UpdateFirewallRules(databaseID string, req *godo.DatabaseUpdateFirewallRulesRequest) error
 }
 
 type databasesService struct {
@@ -485,5 +496,39 @@ func (ds *databasesService) GetSQLMode(databaseID string) ([]string, error) {
 
 func (ds *databasesService) SetSQLMode(databaseID string, sqlModes ...string) error {
 	_, err := ds.client.Databases.SetSQLMode(context.TODO(), databaseID, sqlModes...)
+	return err
+}
+
+func (ds *databasesService) GetFirewallRules(databaseID string) (DatabaseFirewallRules, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := ds.client.Databases.GetFirewallRules(context.TODO(), databaseID)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(DatabaseFirewallRules, len(si))
+	for i := range si {
+		r := si[i].(godo.DatabaseFirewallRule)
+		list[i] = DatabaseFirewallRule{DatabaseFirewallRule: &r}
+	}
+	return list, nil
+}
+
+func (ds *databasesService) UpdateFirewallRules(databaseID string, req *godo.DatabaseUpdateFirewallRulesRequest) error {
+	_, err := ds.client.Databases.UpdateFirewallRules(context.TODO(), databaseID, req)
+
 	return err
 }

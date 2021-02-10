@@ -342,4 +342,10 @@ const (
 
 	//ArgDangerous indicates whether to delete the cluster and all it's associated resources
 	ArgDangerous = "dangerous"
+
+	// ArgDatabaseFirewallRule the firewall rules.
+	ArgDatabaseFirewallRule = "rule"
+
+	// ArgDatabaseFirewallRuleUUID is the UUID for the firewall rules.
+	ArgDatabaseFirewallRuleUUID = "uuid"
 )

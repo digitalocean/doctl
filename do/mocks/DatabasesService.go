@@ -480,3 +480,32 @@ func (mr *MockDatabasesServiceMockRecorder) SetSQLMode(arg0 interface{}, arg1 ..
 	varargs := append([]interface{}{arg0}, arg1...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSQLMode", reflect.TypeOf((*MockDatabasesService)(nil).SetSQLMode), varargs...)
 }
+
+// GetFirewallRules mocks base method.
+func (m *MockDatabasesService) GetFirewallRules(arg0 string) (do.DatabaseFirewallRules, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFirewallRules", arg0)
+	ret0, _ := ret[0].(do.DatabaseFirewallRules)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFirewallRules indicates an expected call of GetFirewallRules.
+func (mr *MockDatabasesServiceMockRecorder) GetFirewallRules(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFirewallRules", reflect.TypeOf((*MockDatabasesService)(nil).GetFirewallRules), arg0)
+}
+
+// UpdateFirewallRules mocks base method.
+func (m *MockDatabasesService) UpdateFirewallRules(databaseID string, req *godo.DatabaseUpdateFirewallRulesRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateFirewallRules", databaseID, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateFirewallRules indicates an expected call of UpdateFirewallRules.
+func (mr *MockDatabasesServiceMockRecorder) UpdateFirewallRules(databaseID, req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFirewallRules", reflect.TypeOf((*MockDatabasesService)(nil).UpdateFirewallRules), databaseID, req)
+}
