@@ -271,7 +271,7 @@ After creating a cluster, a configuration context will be added to kubectl and m
 		"Kubernetes UUID. Must be the UUID of a valid VPC in the same region specified for the cluster.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
 		"A boolean flag indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window (default false). To enable automatic upgrade, supply --auto-upgrade(=true).")
-	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", false,
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
