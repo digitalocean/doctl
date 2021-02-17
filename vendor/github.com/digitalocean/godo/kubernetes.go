@@ -462,7 +462,7 @@ type KubernetesAssociatedResources struct {
 	LoadBalancers   []*AssociatedResource `json:"load_balancers"`
 }
 
-// AssociatedResource is the object to represent a cluster associated resource's Id and Name.
+// AssociatedResource is the object to represent a Kubernetes cluster associated resource's Id and Name.
 type AssociatedResource struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
