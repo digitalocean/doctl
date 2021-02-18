@@ -111,7 +111,7 @@ This permanently deletes the app and all its associated deployments.`,
 		"Create a deployment",
 		`Create a deployment for an app.
 
-The deployment will be created using the provided app spec.  For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec`,
+Creating an app deployment will pull the latest changes from your repository and schedule a new deployment for your app.`,
 		Writer,
 		aliasOpt("cd"),
 		displayerType(&displayers.Deployments{}),
