@@ -17,6 +17,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.1.2
+	github.com/gorilla/websocket v1.4.0
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
