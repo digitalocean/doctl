@@ -19,8 +19,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"runtime"
@@ -28,6 +30,7 @@ import (
 	"strings"
 
 	"github.com/blang/semver"
+	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
@@ -171,6 +174,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 type Config interface {
 	GetGodoClient(trace bool, accessToken string) (*godo.Client, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
 	Set(ns, key string, val interface{})
 	IsSet(key string) bool
 	GetString(ns, key string) (string, error)
@@ -239,6 +243,11 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 		AgentForwarding: opts[ArgsSSHAgentForwarding].(bool),
 		Command:         opts[ArgSSHCommand].(string),
 	}
+}
+
+// Listen creates a websocket connection
+func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
+	return listen.NewListener(url, token, schemaFunc, out)
 }
 
 // Set sets a config key.
@@ -377,6 +386,7 @@ func isRequired(key string) bool {
 // TestConfig is an implementation of Config for testing.
 type TestConfig struct {
 	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	ListenFn func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
 	v        *viper.Viper
 	IsSetMap map[string]bool
 }
@@ -388,6 +398,9 @@ func NewTestConfig() *TestConfig {
 	return &TestConfig{
 		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
 			return &MockRunner{}
+		},
+		ListenFn: func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
+			return &MockListener{}
 		},
 		v:        viper.New(),
 		IsSetMap: make(map[string]bool),
@@ -403,6 +416,11 @@ func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 // SSH returns a mock SSH runner.
 func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
 	return c.SSHFn(user, host, keyPath, port, opts)
+}
+
+// Listen returns a mock websocket listener
+func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
+	return c.ListenFn(url, token, schemaFunc, out)
 }
 
 // Set sets a config key.
