@@ -89,9 +89,24 @@ var (
 
 	testAssociatedResources = do.KubernetesAssociatedResources{
 		KubernetesAssociatedResources: &godo.KubernetesAssociatedResources{
-			Volumes:         []&godo.AssociatedResource{id: "1422", name: "vol-1"},
-			VolumeSnapshots: []&godo.AssociatedResource{id: "3536", name: "snap-1"},
-			LoadBalancers:   []&godo.AssociatedResource{id: "7574", name: "lb-1"},
+			Volumes: []*godo.AssociatedResource{
+				{
+					ID:   "1422",
+					Name: "vol-1",
+				},
+			},
+			VolumeSnapshots: []*godo.AssociatedResource{
+				{
+					ID:   "3536",
+					Name: "snap-1",
+				},
+			},
+			LoadBalancers: []*godo.AssociatedResource{
+				{
+					ID:   "7574",
+					Name: "lb-1",
+				},
+			},
 		},
 	}
 	volumeID   = uuid.New()
