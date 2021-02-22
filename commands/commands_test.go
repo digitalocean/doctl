@@ -177,6 +177,7 @@ type tcMocks struct {
 	sshRunner         *domocks.MockRunner
 	vpcs              *domocks.MockVPCsService
 	oneClick          *domocks.MockOneClickService
+	listen            *domocks.MockListenerService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -215,6 +216,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		sshRunner:         domocks.NewMockRunner(ctrl),
 		vpcs:              domocks.NewMockVPCsService(ctrl),
 		oneClick:          domocks.NewMockOneClickService(ctrl),
+		listen:            domocks.NewMockListenerService(ctrl),
 	}
 
 	config := &CmdConfig{
