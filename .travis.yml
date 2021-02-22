@@ -69,3 +69,4 @@ jobs:
       skip_cleanup: true
       on:
         repo: digitalocean/doctl
+        branch: main
