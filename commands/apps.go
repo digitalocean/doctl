@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -111,7 +112,7 @@ This permanently deletes the app and all its associated deployments.`,
 		"Create a deployment",
 		`Create a deployment for an app.
 
-The deployment will be created using the provided app spec.  For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec`,
+Creating an app deployment will pull the latest changes from your repository and schedule a new deployment for your app.`,
 		Writer,
 		aliasOpt("cd"),
 		displayerType(&displayers.Deployments{}),
@@ -409,13 +410,31 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	}
 
 	if logs.LiveURL != "" {
-		resp, err := http.Get(logs.LiveURL)
+		url, err := url.Parse(logs.LiveURL)
 		if err != nil {
 			return err
 		}
-		defer resp.Body.Close()
 
-		io.Copy(c.Out, resp.Body)
+		schemaFunc := func(message []byte) (io.Reader, error) {
+			data := struct {
+				Data string `json:"data"`
+			}{}
+			err = json.Unmarshal(message, &data)
+			if err != nil {
+				return nil, err
+			}
+			r := strings.NewReader(data.Data)
+
+			return r, nil
+		}
+
+		token := url.Query().Get("token")
+		url.Scheme = "wss"
+		listener := c.Doit.Listen(url, token, schemaFunc, c.Out)
+		err = listener.Start()
+		if err != nil {
+			return err
+		}
 	} else if len(logs.HistoricURLs) > 0 {
 		resp, err := http.Get(logs.HistoricURLs[0])
 		if err != nil {

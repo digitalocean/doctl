@@ -75,6 +75,9 @@ github.com/google/gofuzz
 # github.com/google/uuid v1.1.2
 ## explicit
 github.com/google/uuid
+# github.com/gorilla/websocket v1.4.1
+## explicit
+github.com/gorilla/websocket
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast

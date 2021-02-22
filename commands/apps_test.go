@@ -3,12 +3,15 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -310,7 +313,15 @@ func TestRunAppsGetLogs(t *testing.T) {
 
 	for typeStr, logType := range types {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=..."}, nil)
+			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+			tm.listen.EXPECT().Start().Times(1).Return(nil)
+
+			tc := config.Doit.(*doctl.TestConfig)
+			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
+				assert.Equal(t, token, "aa-bb-11-cc-33")
+				assert.Equal(t, url.String(), "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33")
+				return tm.listen
+			}
 
 			config.Args = append(config.Args, appID, component)
 			config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
