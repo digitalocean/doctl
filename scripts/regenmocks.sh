@@ -39,3 +39,4 @@ mockgen -source volumes.go -package=mocks VolumesService > mocks/VolumesService.
 mockgen -source vpcs.go -package=mocks VPCsService > mocks/VPCsService.go
 mockgen -source 1_clicks.go -package=mocks OneClickService > mocks/OneClickService.go
 mockgen -source ../pkg/runner/runner.go -package=mocks Runner > mocks/Runner.go
+mockgen -source ../pkg/listen/listen.go -package=mocks Listen > mocks/Listen.go

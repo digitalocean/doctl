@@ -13,7 +13,10 @@ limitations under the License.
 
 package doctl
 
-import "github.com/digitalocean/doctl/pkg/runner"
+import (
+	"github.com/digitalocean/doctl/pkg/listen"
+	"github.com/digitalocean/doctl/pkg/runner"
+)
 
 // MockRunner is an implemenation of Runner for mocking.
 type MockRunner struct {
@@ -25,4 +28,21 @@ var _ runner.Runner = &MockRunner{}
 // Run mock runs things.
 func (tr *MockRunner) Run() error {
 	return tr.Err
+}
+
+// MockListener is an implementation of ListenerService for mocking.
+type MockListener struct {
+	Err error
+}
+
+var _ listen.ListenerService = &MockListener{}
+
+// Start mocks ListenerService.Start
+func (tr *MockListener) Start() error {
+	return tr.Err
+}
+
+// Stop mocks ListenerService.Stop
+func (tr *MockListener) Stop() {
+	return
 }
