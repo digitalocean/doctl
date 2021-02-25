@@ -94,6 +94,7 @@ func TestFirewallUpdate(t *testing.T) {
 					PortRange: "8080",
 					Destinations: &godo.Destinations{
 						LoadBalancerUIDs: []string{"lb-uuid"},
+						KubernetesIDs:    []string{"doks-01"},
 						Tags:             []string{"new-droplets"},
 					},
 				},
@@ -113,7 +114,7 @@ func TestFirewallUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgFirewallName, "firewall")
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1"})
 		config.Doit.Set(config.NS, doctl.ArgInboundRules, "protocol:tcp,ports:8000-9000,address:127.0.0.0")
-		config.Doit.Set(config.NS, doctl.ArgOutboundRules, "protocol:tcp,ports:8080,load_balancer_uid:lb-uuid,tag:new-droplets protocol:tcp,ports:80,address:192.168.0.0")
+		config.Doit.Set(config.NS, doctl.ArgOutboundRules, "protocol:tcp,ports:8080,load_balancer_uid:lb-uuid,kubernetes_id:doks-01,tag:new-droplets protocol:tcp,ports:80,address:192.168.0.0")
 
 		err := RunFirewallUpdate(config)
 		assert.NoError(t, err)
@@ -224,8 +225,9 @@ func TestFirewallAddRules(t *testing.T) {
 				Protocol:  "tcp",
 				PortRange: "8080",
 				Sources: &godo.Sources{
-					Tags:       []string{"backend"},
-					DropletIDs: []int{1, 2, 3},
+					Tags:          []string{"backend"},
+					DropletIDs:    []int{1, 2, 3},
+					KubernetesIDs: []string{"doks-01"},
 				},
 			},
 		}
@@ -235,6 +237,7 @@ func TestFirewallAddRules(t *testing.T) {
 				PortRange: "22",
 				Destinations: &godo.Destinations{
 					LoadBalancerUIDs: []string{"lb-uuid"},
+					KubernetesIDs:    []string{"doks-02"},
 				},
 			},
 		}
@@ -246,8 +249,8 @@ func TestFirewallAddRules(t *testing.T) {
 		tm.firewalls.EXPECT().AddRules(fID, firewallRulesRequest).Return(nil)
 
 		config.Args = append(config.Args, fID)
-		config.Doit.Set(config.NS, doctl.ArgInboundRules, "protocol:tcp,ports:80,address:127.0.0.0,address:0.0.0.0/0,address:2604:A880:0002:00D0:0000:0000:32F1:E001 protocol:tcp,ports:8080,tag:backend,droplet_id:1,droplet_id:2,droplet_id:3")
-		config.Doit.Set(config.NS, doctl.ArgOutboundRules, "protocol:tcp,ports:22,load_balancer_uid:lb-uuid")
+		config.Doit.Set(config.NS, doctl.ArgInboundRules, "protocol:tcp,ports:80,address:127.0.0.0,address:0.0.0.0/0,address:2604:A880:0002:00D0:0000:0000:32F1:E001 protocol:tcp,ports:8080,tag:backend,droplet_id:1,droplet_id:2,droplet_id:3,kubernetes_id:doks-01")
+		config.Doit.Set(config.NS, doctl.ArgOutboundRules, "protocol:tcp,ports:22,load_balancer_uid:lb-uuid,kubernetes_id:doks-02")
 
 		err := RunFirewallAddRules(config)
 		assert.NoError(t, err)
