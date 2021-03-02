@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/Microsoft/hcsshim v0.8.10 // indirect
+	github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6 // indirect
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
@@ -17,7 +18,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.1.2
-	github.com/gorilla/websocket v1.4.1
+	github.com/gorilla/websocket v1.4.2
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/magiconair/properties v1.8.1 // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
@@ -30,18 +31,21 @@ require (
 	github.com/sclevine/spec v1.3.0
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644
 	github.com/sirupsen/logrus v1.7.0 // indirect
-	github.com/spf13/cobra v0.0.3
+	github.com/spf13/cobra v1.1.1
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
+	github.com/ugorji/go v1.1.4 // indirect
+	github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77 // indirect
 	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	gotest.tools/v3 v3.0.2 // indirect
-	k8s.io/api v0.20.0
-	k8s.io/apimachinery v0.20.0
-	k8s.io/client-go v0.20.0
+	k8s.io/api v0.20.4
+	k8s.io/apimachinery v0.20.4
+	k8s.io/client-go v0.20.4
+	k8s.io/kubectl v0.20.4
 	sigs.k8s.io/yaml v1.2.0
 )
 
