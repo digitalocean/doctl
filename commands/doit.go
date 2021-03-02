@@ -129,25 +129,6 @@ func Execute() {
 	}
 }
 
-// createGroup creates a template.CommandGroup for the listed command names.
-// It then removes those from the map. If the requested command is not there,
-// it panics.
-func createGroup(commands map[string]*cobra.Command, msg string, commandNames ...string) templates.CommandGroup {
-	g := templates.CommandGroup{
-		Message: msg,
-	}
-	for _, name := range commandNames {
-		cmd, ok := commands[name]
-		if !ok {
-			panic("unknown command: " + name)
-		}
-		g.Commands = append(g.Commands, cmd)
-		delete(commands, name)
-	}
-
-	return g
-}
-
 // AddCommands adds sub commands to the base command.
 func addCommands() {
 
