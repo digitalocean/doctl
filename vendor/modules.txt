@@ -9,16 +9,12 @@ github.com/Microsoft/go-winio/pkg/guid
 # github.com/Microsoft/hcsshim v0.8.10
 ## explicit
 github.com/Microsoft/hcsshim/osversion
-# github.com/armon/consul-api v0.0.0-20180202201655-eb2c6b5be1b6
-## explicit
 # github.com/blang/semver v3.5.1+incompatible
 ## explicit
 github.com/blang/semver
 # github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb
 ## explicit
 github.com/containerd/continuity/pathdriver
-# github.com/cpuguy83/go-md2man v1.0.10
-## explicit
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/creack/pty v1.1.11
@@ -108,10 +104,8 @@ github.com/inconshreveable/mousetrap
 # github.com/json-iterator/go v1.1.10
 github.com/json-iterator/go
 # github.com/magiconair/properties v1.8.1
-## explicit
 github.com/magiconair/properties
 # github.com/mattn/go-colorable v0.0.9
-## explicit
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.4
 ## explicit
@@ -190,10 +184,6 @@ github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
-# github.com/ugorji/go v1.1.4
-## explicit
-# github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77
-## explicit
 # golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
 ## explicit
 golang.org/x/crypto/blowfish
@@ -277,8 +267,6 @@ gopkg.in/ini.v1
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3
-# gotest.tools/v3 v3.0.2
-## explicit
 # k8s.io/api v0.20.4
 ## explicit
 k8s.io/api/admissionregistration/v1
