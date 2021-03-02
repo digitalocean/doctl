@@ -156,7 +156,7 @@ func addCommands() {
 			},
 		},
 		{
-			Message: "Manage DigitalOcean Billing:",
+			Message: "View DigitalOcean Billing:",
 			Commands: []*cobra.Command{
 				Balance().Command,
 				BillingHistory().Command,
