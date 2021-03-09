@@ -47,7 +47,7 @@ func (ms *mockServer) Remove(t *testing.T, w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNoContent)
 }
 
-var _ = suite.Focus("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
