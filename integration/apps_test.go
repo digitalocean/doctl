@@ -1,8 +1,8 @@
 package integration
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/digitalocean/godo"
+	"github.com/gorilla/websocket"
 	"github.com/sclevine/spec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -590,8 +591,10 @@ var _ = suite("apps/list-deployments", func(t *testing.T, when spec.G, it spec.S
 
 var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect   *require.Assertions
+		server   *httptest.Server
+		wsServer *httptest.Server
+		upgrader = websocket.Upgrader{}
 	)
 
 	it.Before(func() {
@@ -632,8 +635,6 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 				assert.Equal(t, "service", req.URL.Query().Get("component_name"))
 
 				json.NewEncoder(w).Encode(&godo.AppLogs{LiveURL: logsURL})
-			case "/fake-logs":
-				w.Write([]byte("fake logs"))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -643,7 +644,36 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 				t.Fatalf("received unknown request: %s", dump)
 			}
 		}))
-		logsURL = fmt.Sprintf("%s/fake-logs", server.URL)
+		wsServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			c, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				expect.NoError(err)
+			}
+
+			defer c.Close()
+			i := 0
+			finish := 5
+			for {
+				i++
+				data := struct {
+					Data string `json:"data"`
+				}{
+					Data: "fake logs\n",
+				}
+				buf := new(bytes.Buffer)
+				json.NewEncoder(buf).Encode(data)
+
+				err = c.WriteMessage(websocket.TextMessage, buf.Bytes())
+				if err != nil {
+					require.NoError(t, err)
+				}
+
+				if i == finish {
+					break
+				}
+			}
+		}))
+		logsURL = wsServer.URL
 	})
 
 	it("gets an app's logs", func() {
@@ -662,7 +692,7 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expectedOutput := "fake logs"
+		expectedOutput := "fake logs\nfake logs\nfake logs\nfake logs\nfake logs"
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 })
