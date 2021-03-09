@@ -429,7 +429,13 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		}
 
 		token := url.Query().Get("token")
-		url.Scheme = "wss"
+		switch url.Scheme {
+		case "http":
+			url.Scheme = "ws"
+		default:
+			url.Scheme = "wss"
+		}
+
 		listener := c.Doit.Listen(url, token, schemaFunc, c.Out)
 		err = listener.Start()
 		if err != nil {

@@ -32,6 +32,8 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 				if req.Method == http.MethodPut {
 					reqBody, err := ioutil.ReadAll(req.Body)
 					expect.NoError(err)
+					t.Log(string(reqBody))
+					t.Log(databasesUpdateFirewallUpdateRequest)
 					expect.JSONEq(databasesUpdateFirewallUpdateRequest, string(reqBody))
 					w.Write([]byte(databasesUpdateFirewallRuleResponse))
 				} else if req.Method == http.MethodGet {
@@ -78,7 +80,7 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 })
 
 const (
-	databasesUpdateFirewallUpdateRequest = `{"rules": [{"type": "ip_addr","value": "192.168.1.1"}]}`
+	databasesUpdateFirewallUpdateRequest = `{"rules":[{"uuid":"","cluster_uuid":"","type":"ip_addr","value":"192.168.1.1","created_at":"0001-01-01T00:00:00Z"}]}`
 	databasesUpdateFirewallRuleOutput    = `
 UUID                                    ClusterUUID                             Type       Value
 82ebbbd4-437c-4e11-bfd2-644ccb555de0    d168d635-1c88-4616-b9b4-793b7c573927    ip_addr    192.168.1.1`
