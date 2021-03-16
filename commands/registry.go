@@ -39,6 +39,10 @@ type dockerConfig struct {
 	} `json:"auths"`
 }
 
+// DOSecretOperatorAnnotation is the annotation key so that dosecret operator can do it's magic
+// and help users pull private images automatically in their DOKS clusters
+const DOSecretOperatorAnnotation = "digitalocean.com/dosecret-identifier"
+
 // Registry creates the registry command
 func Registry() *Command {
 	cmd := &Command{
@@ -81,17 +85,19 @@ func Registry() *Command {
 
 	kubeManifestDesc := `This command outputs a YAML-formatted Kubernetes secret manifest that can be used to grant a Kubernetes cluster pull access to your private container registry.
 
+By default, the secret manifest will be applied to all the namespaces for the Kubernetes cluster using the DOSecret operator. The DOSecret operator is available on clusters running version 1.15.12-do.2 or greater. For older clusters or to restrict the secret to a specific namespace, use the --namespace flag.
+
 Redirect the command's output to a file to save the manifest for later use or pipe it directly to kubectl to create the secret in your cluster:
 
     doctl registry kubernetes-manifest | kubectl apply -f -
 `
 	cmdRunKubernetesManifest := CmdBuilder(cmd, RunKubernetesManifest, "kubernetes-manifest",
-		"Generate a Kubernetes secret manifest for a registry",
+		"Generate a Kubernetes secret manifest for a registry.",
 		kubeManifestDesc, Writer, aliasOpt("k8s"))
 	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectName, "", "",
 		"The secret name to create. Defaults to the registry name prefixed with \"registry-\"")
 	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectNamespace, "",
-		"default", "The Kubernetes namespace to hold the secret")
+		"kube-system", "The Kubernetes namespace to hold the secret")
 
 	dockerConfigDesc := `This command outputs a JSON-formatted Docker configuration that can be used to configure a Docker client to authenticate with your private container registry. This configuration is useful for configuring third-party tools that need access to your registry. For configuring your local Docker client use "doctl registry login" instead, as it will preserve the configuration of any other registries you have authenticated to.
 
@@ -413,6 +419,11 @@ func RunKubernetesManifest(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	annotations := map[string]string{}
+
+	if secretNamespace == k8smetav1.NamespaceSystem {
+		annotations[DOSecretOperatorAnnotation] = secretName
+	}
 
 	// create the manifest for the secret
 	secret := &k8sapiv1.Secret{
@@ -421,8 +432,9 @@ func RunKubernetesManifest(c *CmdConfig) error {
 			APIVersion: "v1",
 		},
 		ObjectMeta: k8smetav1.ObjectMeta{
-			Name:      secretName,
-			Namespace: secretNamespace,
+			Name:        secretName,
+			Namespace:   secretNamespace,
+			Annotations: annotations,
 		},
 		Type: k8sapiv1.SecretTypeDockerConfigJson,
 		Data: map[string][]byte{

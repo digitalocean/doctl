@@ -89,7 +89,9 @@ kind: Secret
 metadata:
   creationTimestamp: null
   name: registry-my-registry
-  namespace: default
+  annotations:
+    digitalocean.com/dosecret-identifier: "registry-my-registry"
+  namespace: kube-system
 type: kubernetes.io/dockerconfigjson
 `
 )

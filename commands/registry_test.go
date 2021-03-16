@@ -430,6 +430,7 @@ func TestRegistryKubernetesManifest(t *testing.T) {
 		tcs := []struct {
 			argName, argNamespace           string
 			expectedName, expectedNamespace string
+			expectedAnnotations             map[string]string
 		}{
 			{
 				argName:           "",
@@ -443,6 +444,15 @@ func TestRegistryKubernetesManifest(t *testing.T) {
 				expectedName:      "my-registry",
 				expectedNamespace: "secret-namespace",
 			},
+			{
+				argName:           "my-registry",
+				argNamespace:      "kube-system",
+				expectedName:      "my-registry",
+				expectedNamespace: "kube-system",
+				expectedAnnotations: map[string]string{
+					DOSecretOperatorAnnotation: "my-registry",
+				},
+			},
 		}
 
 		// mocks shared across both test cases
@@ -451,7 +461,7 @@ func TestRegistryKubernetesManifest(t *testing.T) {
 		// DockerCredentials should be called both times to retrieve the credentials
 		tm.registry.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 			ReadWrite: false,
-		}).Return(testDockerCredentials, nil).Times(2)
+		}).Return(testDockerCredentials, nil).Times(len(tcs))
 
 		// tests
 		for _, tc := range tcs {
@@ -475,6 +485,7 @@ func TestRegistryKubernetesManifest(t *testing.T) {
 			assert.Equal(t, tc.expectedNamespace, secret.ObjectMeta.Namespace)
 			assert.Contains(t, secret.Data, ".dockerconfigjson")
 			assert.Equal(t, secret.Data[".dockerconfigjson"], testDockerCredentials.DockerConfigJSON)
+			assert.Equal(t, tc.expectedAnnotations, secret.Annotations)
 		}
 	})
 }
