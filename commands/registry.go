@@ -85,12 +85,14 @@ func Registry() *Command {
 
 	kubeManifestDesc := `This command outputs a YAML-formatted Kubernetes secret manifest that can be used to grant a Kubernetes cluster pull access to your private container registry.
 
+By default, the secret manifest will be applied to all the namespaces for the Kubernetes cluster using the DOSecret operator. The DOSecret operator is available on clusters running version 1.15.12-do.2 or greater. For older clusters or to restrict the secret to a specific namespace, use the --namespace flag.
+
 Redirect the command's output to a file to save the manifest for later use or pipe it directly to kubectl to create the secret in your cluster:
 
     doctl registry kubernetes-manifest | kubectl apply -f -
 `
 	cmdRunKubernetesManifest := CmdBuilder(cmd, RunKubernetesManifest, "kubernetes-manifest",
-		"Generate a Kubernetes secret manifest for a registry. By default, the secret manifest will be applied to all the namespaces for the Kubernetes cluster using the DOSecret operator. The DOSecret operator is available on clusters running version 1.15.12-do.2 or greater. For older clusters or to restrict the secret to a specific namespace, use the --namespace flag.",
+		"Generate a Kubernetes secret manifest for a registry.",
 		kubeManifestDesc, Writer, aliasOpt("k8s"))
 	AddStringFlag(cmdRunKubernetesManifest, doctl.ArgObjectName, "", "",
 		"The secret name to create. Defaults to the registry name prefixed with \"registry-\"")
