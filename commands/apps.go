@@ -23,9 +23,11 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
@@ -118,6 +120,8 @@ Creating an app deployment will pull the latest changes from your repository and
 		displayerType(&displayers.Deployments{}),
 	)
 	AddBoolFlag(deploymentCreate, doctl.ArgAppForceRebuild, "", false, "Force a re-build even if a previous build is eligible for reuse")
+	AddBoolFlag(deploymentCreate, doctl.ArgCommandWait, "", true,
+		"Boolean that specifies whether to wait for apps deployment to complete before returning control to the terminal")
 
 	CmdBuilder(
 		cmd,
@@ -315,13 +319,71 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 		return err
 	}
 
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
 	deployment, err := c.Apps().CreateDeployment(appID, forceRebuild)
 	if err != nil {
 		return err
 	}
+
+	if wait {
+		apps := c.Apps()
+		notice("App deplpyment is provisioning, waiting for cluster to be running")
+		deployment, err = waitForAppDeploymentRunning(apps, appID, deployment.ID)
+		if err != nil {
+			warn("App deplpyment couldn't enter `running` state: %v", err)
+		}
+	}
+
 	notice("Deployment created")
 
 	return c.Display(displayers.Deployments{deployment})
+}
+
+// waitForAppDeploymentRunning waits for a app deployment to be running.
+func waitForAppDeploymentRunning(apps do.AppsService, appID string, deploymentID string) (*godo.Deployment, error) {
+	failCount := 0
+	printNewLineSet := false
+	for i := 0; ; i++ {
+		if i != 0 {
+			fmt.Fprint(os.Stderr, ".")
+			if !printNewLineSet {
+				printNewLineSet = true
+				defer fmt.Fprintln(os.Stderr)
+			}
+		}
+
+		deployment, err := apps.GetDeployment(appID, deploymentID)
+		if err == nil {
+			failCount = 0
+		} else {
+			// Allow for transient API failures
+			failCount++
+			if failCount >= maxAPIFailures {
+				return nil, err
+			}
+		}
+
+		if deployment == nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// TODO
+		switch deployment.Phase {
+		case godo.DeploymentPhase_Building:
+			time.Sleep(5 * time.Second)
+		case godo.DeploymentPhase_Active:
+			fallthrough
+		case godo.DeploymentPhase_Error:
+			return nil, nil
+		default:
+			return nil, nil
+		}
+	}
 }
 
 // RunAppsGetDeployment gets a deployment for an app.
