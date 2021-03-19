@@ -120,7 +120,7 @@ Creating an app deployment will pull the latest changes from your repository and
 		displayerType(&displayers.Deployments{}),
 	)
 	AddBoolFlag(deploymentCreate, doctl.ArgAppForceRebuild, "", false, "Force a re-build even if a previous build is eligible for reuse")
-	AddBoolFlag(deploymentCreate, doctl.ArgCommandWait, "", true,
+	AddBoolFlag(deploymentCreate, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for apps deployment to complete before returning control to the terminal")
 
 	CmdBuilder(
@@ -331,10 +331,11 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 
 	if wait {
 		apps := c.Apps()
-		notice("App deplpyment is provisioning, waiting for cluster to be running")
+		notice("App deplpyment is in progress, waiting for deployment to be running")
 		deployment, err = waitForAppDeploymentRunning(apps, appID, deployment.ID)
 		if err != nil {
 			warn("App deplpyment couldn't enter `running` state: %v", err)
+			return c.Display(displayers.Deployments{deployment})
 		}
 	}
 
@@ -372,16 +373,28 @@ func waitForAppDeploymentRunning(apps do.AppsService, appID string, deploymentID
 			continue
 		}
 
-		// TODO
 		switch deployment.Phase {
-		case godo.DeploymentPhase_Building:
-			time.Sleep(5 * time.Second)
-		case godo.DeploymentPhase_Active:
+		case godo.DeploymentPhase_PendingBuild:
 			fallthrough
+		case godo.DeploymentPhase_PendingDeploy:
+			fallthrough
+		case godo.DeploymentPhase_Building:
+			fallthrough
+		case godo.DeploymentPhase_Deploying:
+			time.Sleep(5 * time.Second)
+
+		case godo.DeploymentPhase_Active:
+			return deployment, nil
+
 		case godo.DeploymentPhase_Error:
-			return nil, nil
+			fallthrough
+		case godo.DeploymentPhase_Canceled:
+			fallthrough
+		case godo.DeploymentPhase_Unknown:
+			return deployment, fmt.Errorf("phase: [%s]", deployment.Phase)
+
 		default:
-			return nil, nil
+			return deployment, fmt.Errorf("Unknown phase: [%s]", deployment.Phase)
 		}
 	}
 }
