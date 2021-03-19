@@ -43,6 +43,7 @@ var (
 			SourceCommitHash: "commit",
 		}},
 		Cause: "Manual",
+		Phase: godo.DeploymentPhase_PendingDeploy,
 		Progress: &godo.DeploymentProgress{
 			PendingSteps: 1,
 			RunningSteps: 0,
@@ -53,6 +54,31 @@ var (
 			Steps: []*godo.DeploymentProgressStep{{
 				Name:      "name",
 				Status:    "pending",
+				StartedAt: testAppTime,
+			}},
+		},
+		CreatedAt: testAppTime,
+		UpdatedAt: testAppTime,
+	}
+	testDeploymentActive = &godo.Deployment{
+		ID:   testDeploymentUUID,
+		Spec: &testAppSpec,
+		Services: []*godo.DeploymentService{{
+			Name:             "service",
+			SourceCommitHash: "commit",
+		}},
+		Cause: "Manual",
+		Phase: godo.DeploymentPhase_Active,
+		Progress: &godo.DeploymentProgress{
+			PendingSteps: 0,
+			RunningSteps: 0,
+			SuccessSteps: 1,
+			ErrorSteps:   0,
+			TotalSteps:   1,
+
+			Steps: []*godo.DeploymentProgressStep{{
+				Name:      "name",
+				Status:    "done",
 				StartedAt: testAppTime,
 			}},
 		},
@@ -82,6 +108,11 @@ var (
 	}{
 		Deployment: testDeployment,
 	}
+	testDeploymentActiveResponse = struct {
+		Deployment *godo.Deployment `json:"deployment"`
+	}{
+		Deployment: testDeploymentActive,
+	}
 	testDeploymentsResponse = struct {
 		Deployments []*godo.Deployment `json:"deployments"`
 	}{
@@ -103,6 +134,8 @@ var (
 93a37175-f520-4a12-a7ad-26e63491dbf4    test                            f4e37431-a0f4-458f-8f9f-5c9a61d8562f                                 1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
 	testDeploymentsOutput = `ID                                      Cause     Progress    Created At                       Updated At
 f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
+	testActiveDeploymentOutput = `ID                                      Cause     Progress    Created At                       Updated At
+f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    1/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
 	testRegionsOutput = `Region    Label        Continent    Data Centers    Is Disabled?    Reason (if disabled)    Is Default?
 ams       Amsterdam    Europe       [ams3]          false                                   true`
 )
@@ -419,8 +452,9 @@ var _ = suite("apps/delete", func(t *testing.T, when spec.G, it spec.S) {
 
 var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect          *require.Assertions
+		server          *httptest.Server
+		deploymentCount int
 	)
 
 	it.Before(func() {
@@ -448,9 +482,27 @@ var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.
 					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
-				assert.Equal(t, true, r.ForceBuild)
 
 				json.NewEncoder(w).Encode(testDeploymentResponse)
+			case "/v2/apps/" + testAppUUID + "/deployments/" + testDeploymentUUID:
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				if deploymentCount > 0 {
+					json.NewEncoder(w).Encode(testDeploymentActiveResponse)
+				} else {
+					json.NewEncoder(w).Encode(testDeploymentResponse)
+					deploymentCount++
+				}
+
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -477,6 +529,25 @@ var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.
 
 		expectedOutput := "Notice: Deployment created\n" + testDeploymentsOutput
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+
+	when("the wait flag is passed", func() {
+		it("creates an app deployment and polls for status", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"apps",
+				"create-deployment",
+				"--wait",
+				testAppUUID,
+			)
+
+			output, _ := cmd.CombinedOutput()
+			//expect.NoError(err)
+
+			expectedOutput := "Notice: App deplpyment is in progress, waiting for deployment to be running\n.\nNotice: Deployment created\n" + testActiveDeploymentOutput
+			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+		})
 	})
 })
 
