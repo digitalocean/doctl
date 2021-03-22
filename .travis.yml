@@ -17,7 +17,7 @@ jobs:
     script: echo "running goreleaser"
     os: linux
     dist: bionic
-    go: 1.15.x
+    go: 1.16.x
     services: docker
     env: CACHE_NAME=DEPLOY_GORELEASER
     before_deploy:
@@ -38,7 +38,7 @@ jobs:
     - echo "building snap"
     - make _build_snap
     dist: bionic
-    go: 1.15.x
+    go: 1.16.x
     os: linux
     services: docker
     env: CACHE_NAME=DEPLOY_STABLE_SNAP
@@ -59,7 +59,7 @@ jobs:
     - make _build_snap
     dist: bionic
     os: linux
-    go: 1.15.x
+    go: 1.16.x
     services: docker
     env: CACHE_NAME=DEPLOY_CANDIDATE_SNAP
     deploy:
