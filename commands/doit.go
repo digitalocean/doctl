@@ -24,6 +24,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"k8s.io/kubectl/pkg/util/templates"
 )
 
 const (
@@ -130,21 +131,41 @@ func Execute() {
 
 // AddCommands adds sub commands to the base command.
 func addCommands() {
-	DoitCmd.AddCommand(Account())
-	DoitCmd.AddCommand(Apps())
-	DoitCmd.AddCommand(Auth())
-	DoitCmd.AddCommand(Balance())
-	DoitCmd.AddCommand(BillingHistory())
-	DoitCmd.AddCommand(Invoices())
-	DoitCmd.AddCommand(Completion())
-	DoitCmd.AddCommand(computeCmd())
-	DoitCmd.AddCommand(Kubernetes())
-	DoitCmd.AddCommand(Databases())
-	DoitCmd.AddCommand(Projects())
-	DoitCmd.AddCommand(Version())
-	DoitCmd.AddCommand(Registry())
-	DoitCmd.AddCommand(VPCs())
-	DoitCmd.AddCommand(OneClicks())
+
+	commandGroups := templates.CommandGroups{
+		{
+			Message: "Manage DigitalOcean resources:",
+			Commands: []*cobra.Command{
+				Account().Command,
+				computeCmd().Command,
+				Databases().Command,
+				Kubernetes().Command,
+				Projects().Command,
+				Apps().Command,
+				Registry().Command,
+				VPCs().Command,
+				OneClicks().Command,
+			},
+		},
+		{
+			Message: "Configure doctl:",
+			Commands: []*cobra.Command{
+				Auth().Command,
+				Completion().Command,
+				Version().Command,
+			},
+		},
+		{
+			Message: "View DigitalOcean Billing:",
+			Commands: []*cobra.Command{
+				Balance().Command,
+				BillingHistory().Command,
+				Invoices().Command,
+			},
+		},
+	}
+	commandGroups.Add(DoitCmd.Command)
+	templates.ActsAsRootCommand(DoitCmd.Command, []string{"options"}, commandGroups...)
 }
 
 func computeCmd() *Command {
