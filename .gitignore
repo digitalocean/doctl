@@ -3,6 +3,7 @@
 builds
 doit
 .vscode
+.idea/
 project.json
 .cover
 dist
