@@ -324,21 +324,58 @@ ID                                      Name       Size      Region    Filesyste
 }
 `
 	projectsResourcesGetKubernetesOutput = `
-ID      Name                    Region                Version         Auto Upgrade    Status     Endpoint  IPv4            Cluster Subnet  Service Subnet    Tags   Created At                       Updated At                       Node Pools
-5555    some-kubernetes-name    some-region-slug      1.20.version    false           running              192.0.2.255                                       yes    2021-01-26 00:49:59 +0000 UTC    2021-01-28 05:12:11 +0000 UTC    test-get-cluster
+ID      Name                    Region    Version        Auto Upgrade    Status          Endpoint  IPv4            Cluster Subnet  Service Subnet    Tags   Created At                       Updated At                       Node Pools
+5555    some-kubernetes-name    nyc1      1.19.3-do.3    false           provisioning              192.0.2.255                                       yes    2021-01-29 16:02:02 +0000 UTC    2021-01-29 16:02:02 +0000 UTC    test-get-cluster
 `
 	projectsResourcesGetKubernetesResponse = `
 {
-  "kubernetes": {
-    "id": 5555,
+  "kubernetes_cluster": {
+    "uuid": 5555,
     "name": "some-kubernetes-name",
-    "region": {
-      "slug": "some-region-slug"
-    },
-	"version": "1.20.version",
+    "region_slug": "nyc1",
+	"version_slug": "1.19.3-do.3",
 	"auto_upgrade": "false",
-    "tags": ["yes"],
-    "node_pools": ["test-get-cluster"]
+	"node_pools": [
+		{
+		"uuid": "5556",
+		"name": "pool-test",
+		"version_slug": "1.19.3-do.3",
+		"droplet_size": "s-2vcpu-4gb",
+		"count": 3,
+		"node_statuses": [
+			"provisioning",
+			"provisioning",
+			"provisioning"
+		],
+		"status": {
+			"state": "provisioning"
+		},
+		"tags": [
+			{
+			"name": "k8s"
+			},
+			{
+			"name": "k8s:5555"
+			},
+			{
+			"name": "k8s:worker"
+			}
+		]
+		}
+	],
+	"tags": [
+      {
+        "name": "k8s"
+	  },
+	],
+	"status": {
+	  "state": "provisioning",
+	  "message": "provisioning",
+	  "pending_event": true
+	},
+	"pending": true,
+	"ready": false,
+	"created_at": "2021-01-29T16:02:02Z"
   }
 }
 `
