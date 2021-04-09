@@ -74,11 +74,32 @@ func (s *appsService) Get(appID string) (*godo.App, error) {
 }
 
 func (s *appsService) List() ([]*godo.App, error) {
-	apps, _, err := s.client.Apps.List(s.ctx, nil)
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := s.client.Apps.List(s.ctx, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, 0, len(list))
+		for _, item := range list {
+			si = append(si, item)
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
-	return apps, nil
+
+	list := make([]*godo.App, 0, len(si))
+	for _, item := range si {
+		a := item.(*godo.App)
+		list = append(list, a)
+	}
+
+	return list, nil
 }
 
 func (s *appsService) Update(appID string, req *godo.AppUpdateRequest) (*godo.App, error) {
@@ -113,11 +134,32 @@ func (s *appsService) GetDeployment(appID, deploymentID string) (*godo.Deploymen
 }
 
 func (s *appsService) ListDeployments(appID string) ([]*godo.Deployment, error) {
-	deployments, _, err := s.client.Apps.ListDeployments(s.ctx, appID, nil)
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := s.client.Apps.ListDeployments(s.ctx, appID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, 0, len(list))
+		for _, item := range list {
+			si = append(si, item)
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
 	}
-	return deployments, nil
+
+	list := make([]*godo.Deployment, 0, len(si))
+	for _, item := range si {
+		d := item.(*godo.Deployment)
+		list = append(list, d)
+	}
+
+	return list, nil
 }
 
 func (s *appsService) GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool) (*godo.AppLogs, error) {
