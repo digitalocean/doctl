@@ -34,6 +34,8 @@ const (
 	ArgActionStatus = "status"
 	// ArgActionType is an action type argument.
 	ArgActionType = "action-type"
+	// ArgApp is the app ID.
+	ArgApp = "app"
 	// ArgAppSpec is a path to an app spec.
 	ArgAppSpec = "spec"
 	// ArgAppLogType the type of log.
@@ -140,6 +142,8 @@ const (
 	ArgRecordTag = "record-tag"
 	// ArgRegionSlug is a region slug argument.
 	ArgRegionSlug = "region"
+	// ArgSchemaOnly is a schema only argument.
+	ArgSchemaOnly = "schema-only"
 	// ArgSizeSlug is a size slug argument.
 	ArgSizeSlug = "size"
 	// ArgsSSHKeyPath is a ssh argument.

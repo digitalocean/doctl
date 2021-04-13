@@ -284,3 +284,88 @@ func (is AppInstanceSizes) JSON(w io.Writer) error {
 	e.SetIndent("", "  ")
 	return e.Encode(is)
 }
+
+type AppProposeResponse struct {
+	Res *godo.AppProposeResponse
+}
+
+var _ Displayable = (*AppProposeResponse)(nil)
+
+func (r AppProposeResponse) Cols() []string {
+	cols := []string{
+		"AppNameAvailable",
+	}
+
+	if r.Res.AppNameSuggestion != "" {
+		cols = append(cols, "AppNameSuggestion")
+	}
+
+	cols = append(cols, []string{
+		"AppIsStatic",
+		"StaticApps",
+		"AppCost",
+		"AppTierUpgradeCost",
+		"AppTierDowngradeCost",
+	}...)
+
+	return cols
+}
+
+func (r AppProposeResponse) ColMap() map[string]string {
+	return map[string]string{
+		"AppNameAvailable":     "App Name Available?",
+		"AppNameSuggestion":    "Suggested App Name",
+		"AppIsStatic":          "Is Static?",
+		"StaticApps":           "Static App Usage",
+		"AppCost":              "$/month",
+		"AppTierUpgradeCost":   "$/month on higher tier",
+		"AppTierDowngradeCost": "$/month on lower tier",
+	}
+}
+
+func (r AppProposeResponse) KV() []map[string]interface{} {
+	existingStatic, _ := strconv.ParseInt(r.Res.ExistingStaticApps, 10, 64)
+	maxFreeStatic, _ := strconv.ParseInt(r.Res.MaxFreeStaticApps, 10, 64)
+	var paidStatic int64
+	freeStatic := existingStatic
+	if existingStatic > maxFreeStatic {
+		paidStatic = existingStatic - maxFreeStatic
+		freeStatic = maxFreeStatic
+	}
+
+	staticApps := fmt.Sprintf("%d of %d free", freeStatic, maxFreeStatic)
+	if paidStatic > 0 {
+		staticApps = fmt.Sprintf("%s, %d paid", staticApps, paidStatic)
+	}
+
+	downgradeCost := "n/a"
+	upgradeCost := "n/a"
+
+	if r.Res.AppTierDowngradeCost > 0 {
+		downgradeCost = fmt.Sprintf("%0.2f", r.Res.AppTierDowngradeCost)
+	}
+	if r.Res.AppTierUpgradeCost > 0 {
+		upgradeCost = fmt.Sprintf("%0.2f", r.Res.AppTierUpgradeCost)
+	}
+
+	out := map[string]interface{}{
+		"AppNameAvailable":     boolToYesNo(r.Res.AppNameAvailable),
+		"AppIsStatic":          boolToYesNo(r.Res.AppIsStatic),
+		"StaticApps":           staticApps,
+		"AppCost":              fmt.Sprintf("%0.2f", r.Res.AppCost),
+		"AppTierUpgradeCost":   upgradeCost,
+		"AppTierDowngradeCost": downgradeCost,
+	}
+
+	if r.Res.AppNameSuggestion != "" {
+		out["AppNameSuggestion"] = r.Res.AppNameSuggestion
+	}
+
+	return []map[string]interface{}{out}
+}
+
+func (r AppProposeResponse) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(r.Res)
+}

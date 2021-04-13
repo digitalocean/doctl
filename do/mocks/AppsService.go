@@ -108,6 +108,21 @@ func (mr *MockAppsServiceMockRecorder) Delete(appID interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAppsService)(nil).Delete), appID)
 }
 
+// Propose mocks base method.
+func (m *MockAppsService) Propose(req *godo.AppProposeRequest) (*godo.AppProposeResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Propose", req)
+	ret0, _ := ret[0].(*godo.AppProposeResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Propose indicates an expected call of Propose.
+func (mr *MockAppsServiceMockRecorder) Propose(req interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Propose", reflect.TypeOf((*MockAppsService)(nil).Propose), req)
+}
+
 // CreateDeployment mocks base method.
 func (m *MockAppsService) CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error) {
 	m.ctrl.T.Helper()

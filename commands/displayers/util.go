@@ -28,3 +28,11 @@ func bytesToHumanReadibleUnit(bytes uint64, baseUnit uint64, units []string) str
 	}
 	return fmt.Sprintf("%.2f %sB", float64(bytes)/float64(div), units[exp])
 }
+
+func boolToYesNo(b bool) string {
+	if b {
+		return "yes"
+	}
+
+	return "no"
+}

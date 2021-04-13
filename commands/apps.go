@@ -40,7 +40,7 @@ func Apps() *Command {
 			Use:     "apps",
 			Aliases: []string{"app", "a"},
 			Short:   "Display commands for working with apps",
-			Long:    "The subcommands of `doctl app` manage your App Platform apps.",
+			Long:    "The subcommands of `doctl app` manage your App Platform apps. For documentation on app specs used by multiple commands, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec.",
 		},
 	}
 
@@ -54,7 +54,7 @@ func Apps() *Command {
 		aliasOpt("c"),
 		displayerType(&displayers.Apps{}),
 	)
-	AddStringFlag(create, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec", requiredOpt())
+	AddStringFlag(create, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 
 	CmdBuilder(
 		cmd,
@@ -92,7 +92,7 @@ Only basic information is included with the text output format. For complete app
 		aliasOpt("u"),
 		displayerType(&displayers.Apps{}),
 	)
-	AddStringFlag(update, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format.", requiredOpt())
+	AddStringFlag(update, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 
 	deleteApp := CmdBuilder(
 		cmd,
@@ -177,6 +177,21 @@ Three types of logs are supported and can be configured with --`+doctl.ArgAppLog
 		displayerType(&displayers.AppRegions{}),
 	)
 
+	propose := CmdBuilder(
+		cmd,
+		RunAppsPropose,
+		"propose",
+		"Propose an app spec",
+		`Reviews and validates an app specification for a new or existing app. The request returns some information about the proposed app, including app cost and upgrade cost. If an existing app ID is specified, the app spec is treated as a proposed update to the existing app.
+
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the JSON format.`,
+		Writer,
+		aliasOpt("c"),
+		displayerType(&displayers.Apps{}),
+	)
+	AddStringFlag(propose, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec", requiredOpt())
+	AddStringFlag(propose, doctl.ArgApp, "", "", "An optional existing app ID. If specified, the app spec will be treated as a proposed update to the existing app.")
+
 	cmd.AddCommand(appsSpec())
 	cmd.AddCommand(appsTier())
 
@@ -190,21 +205,7 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
-	specFile, err := os.Open(specPath) // guardrails-disable-line
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("Failed to open app spec: %s does not exist", specPath)
-		}
-		return fmt.Errorf("Failed to open app spec: %w", err)
-	}
-	defer specFile.Close()
-
-	specBytes, err := ioutil.ReadAll(specFile)
-	if err != nil {
-		return fmt.Errorf("Failed to read app spec: %w", err)
-	}
-
-	appSpec, err := parseAppSpec(specBytes)
+	appSpec, err := readAppSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
@@ -255,21 +256,7 @@ func RunAppsUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	specFile, err := os.Open(specPath) // guardrails-disable-line
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("Failed to open app spec: %s does not exist", specPath)
-		}
-		return fmt.Errorf("Failed to open app spec: %w", err)
-	}
-	defer specFile.Close()
-
-	specBytes, err := ioutil.ReadAll(specFile)
-	if err != nil {
-		return fmt.Errorf("Failed to read app spec: %w", err)
-	}
-
-	appSpec, err := parseAppSpec(specBytes)
+	appSpec, err := readAppSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
@@ -531,6 +518,65 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	return nil
 }
 
+// RunAppsPropose proposes an app spec
+func RunAppsPropose(c *CmdConfig) error {
+	appID, err := c.Doit.GetString(c.NS, doctl.ArgApp)
+	if err != nil {
+		return err
+	}
+
+	specPath, err := c.Doit.GetString(c.NS, doctl.ArgAppSpec)
+	if err != nil {
+		return err
+	}
+
+	appSpec, err := readAppSpec(os.Stdin, specPath)
+	if err != nil {
+		return err
+	}
+
+	res, err := c.Apps().Propose(&godo.AppProposeRequest{
+		Spec:  appSpec,
+		AppID: appID,
+	})
+
+	if err != nil {
+		// most likely an invalid app spec. The error message would start with "error validating app spec"
+		return err
+	}
+
+	return c.Display(displayers.AppProposeResponse{Res: res})
+}
+
+func readAppSpec(stdin io.Reader, path string) (*godo.AppSpec, error) {
+	var spec io.Reader
+	if path == "-" {
+		spec = stdin
+	} else {
+		specFile, err := os.Open(path) // guardrails-disable-line
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("opening app spec: %s does not exist", path)
+			}
+			return nil, fmt.Errorf("opening app spec: %w", err)
+		}
+		defer specFile.Close()
+		spec = specFile
+	}
+
+	byt, err := ioutil.ReadAll(spec)
+	if err != nil {
+		return nil, fmt.Errorf("reading app spec: %w", err)
+	}
+
+	s, err := parseAppSpec(byt)
+	if err != nil {
+		return nil, fmt.Errorf("parsing app spec: %w", err)
+	}
+
+	return s, nil
+}
+
 func parseAppSpec(spec []byte) (*godo.AppSpec, error) {
 	jsonSpec, err := yaml.YAMLToJSON(spec)
 	if err != nil {
@@ -542,7 +588,7 @@ func parseAppSpec(spec []byte) (*godo.AppSpec, error) {
 
 	var appSpec godo.AppSpec
 	if err := dec.Decode(&appSpec); err != nil {
-		return nil, fmt.Errorf("Failed to parse app spec: %v", err)
+		return nil, err
 	}
 
 	return &appSpec, nil
@@ -561,11 +607,12 @@ func appsSpec() *Command {
 
 Optionally, pass a deployment ID to get the spec of that specific deployment.`, Writer)
 	AddStringFlag(getCmd, doctl.ArgAppDeployment, "", "", "optional: a deployment ID")
-	AddStringFlag(getCmd, doctl.ArgFormat, "", "yaml", `the format to output the spec as; either "yaml" or "json"`)
+	AddStringFlag(getCmd, doctl.ArgFormat, "", "yaml", `the format to output the spec in; either "yaml" or "json"`)
 
-	CmdBuilder(cmd, RunAppsSpecValidate(os.Stdin), "validate <spec file>", "Validate an application spec", `Use this command to check whether a given app spec (YAML or JSON) is valid.
+	validateCmd := CmdBuilder(cmd, RunAppsSpecValidate, "validate <spec file>", "Validate an application spec", `Use this command to check whether a given app spec (YAML or JSON) is valid.
 
 You may pass - as the filename to read from stdin.`, Writer)
+	AddBoolFlag(validateCmd, doctl.ArgSchemaOnly, "", false, "Only validate the spec schema and not the correctness of the spec.")
 
 	return cmd
 }
@@ -620,41 +667,45 @@ func RunAppsSpecGet(c *CmdConfig) error {
 }
 
 // RunAppsSpecValidate validates an app spec file
-func RunAppsSpecValidate(stdin io.Reader) func(c *CmdConfig) error {
-	return func(c *CmdConfig) error {
-		if len(c.Args) < 1 {
-			return doctl.NewMissingArgsErr(c.NS)
-		}
-
-		specPath := c.Args[0]
-		var spec io.Reader
-		if specPath == "-" {
-			spec = stdin
-		} else {
-			specFile, err := os.Open(specPath) // guardrails-disable-line
-			if err != nil {
-				if os.IsNotExist(err) {
-					return fmt.Errorf("Failed to open app spec: %s does not exist", specPath)
-				}
-				return fmt.Errorf("Failed to open app spec: %w", err)
-			}
-			defer specFile.Close()
-			spec = specFile
-		}
-
-		specBytes, err := ioutil.ReadAll(spec)
-		if err != nil {
-			return fmt.Errorf("Failed to read app spec: %w", err)
-		}
-
-		_, err = parseAppSpec(specBytes)
-		if err != nil {
-			return err
-		}
-
-		c.Out.Write([]byte("The spec is valid.\n"))
-		return nil
+func RunAppsSpecValidate(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
 	}
+
+	specPath := c.Args[0]
+	appSpec, err := readAppSpec(os.Stdin, specPath)
+	if err != nil {
+		return err
+	}
+
+	schemaOnly, err := c.Doit.GetBool(c.NS, doctl.ArgSchemaOnly)
+	if err != nil {
+		return err
+	}
+
+	if schemaOnly {
+		ymlSpec, err := yaml.Marshal(appSpec)
+		if err != nil {
+			return fmt.Errorf("marshaling the spec as yaml: %v", err)
+		}
+		_, err = c.Out.Write(ymlSpec)
+		return err
+	}
+
+	res, err := c.Apps().Propose(&godo.AppProposeRequest{
+		Spec: appSpec,
+	})
+	if err != nil {
+		// most likely an invalid app spec. The error message would start with "error validating app spec"
+		return err
+	}
+
+	ymlSpec, err := yaml.Marshal(res.Spec)
+	if err != nil {
+		return fmt.Errorf("marshaling the spec as yaml: %v", err)
+	}
+	_, err = c.Out.Write(ymlSpec)
+	return err
 }
 
 // RunAppsListRegions lists all app platform regions.

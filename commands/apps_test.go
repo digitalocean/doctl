@@ -32,6 +32,7 @@ func TestAppsCommand(t *testing.T) {
 		"list-deployments",
 		"list-regions",
 		"logs",
+		"propose",
 		"spec",
 		"tier",
 	)
@@ -426,18 +427,17 @@ const (
 		}
 	]
 }`
-	validYAMLSpec = `
-name: test
+	validYAMLSpec = `name: test
 services:
-- name: web
-  github:
+- github:
+    branch: main
     repo: digitalocean/sample-golang
-    branch: main
+  name: web
 static_sites:
-- name: static
-  git:
-    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
+- git:
     branch: main
+    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
+  name: static
   routes:
   - path: /static
 `
@@ -459,31 +459,33 @@ static_sites:
 `
 )
 
+var validAppSpec = &godo.AppSpec{
+	Name: "test",
+	Services: []*godo.AppServiceSpec{
+		{
+			Name: "web",
+			GitHub: &godo.GitHubSourceSpec{
+				Repo:   "digitalocean/sample-golang",
+				Branch: "main",
+			},
+		},
+	},
+	StaticSites: []*godo.AppStaticSiteSpec{
+		{
+			Name: "static",
+			Git: &godo.GitSourceSpec{
+				RepoCloneURL: "git@github.com:digitalocean/sample-gatsby.git",
+				Branch:       "main",
+			},
+			Routes: []*godo.AppRouteSpec{
+				{Path: "/static"},
+			},
+		},
+	},
+}
+
 func Test_parseAppSpec(t *testing.T) {
-	expectedSpec := &godo.AppSpec{
-		Name: "test",
-		Services: []*godo.AppServiceSpec{
-			{
-				Name: "web",
-				GitHub: &godo.GitHubSourceSpec{
-					Repo:   "digitalocean/sample-golang",
-					Branch: "main",
-				},
-			},
-		},
-		StaticSites: []*godo.AppStaticSiteSpec{
-			{
-				Name: "static",
-				Git: &godo.GitSourceSpec{
-					RepoCloneURL: "git@github.com:digitalocean/sample-gatsby.git",
-					Branch:       "main",
-				},
-				Routes: []*godo.AppRouteSpec{
-					{Path: "/static"},
-				},
-			},
-		},
-	}
+	expectedSpec := validAppSpec
 
 	t.Run("json", func(t *testing.T) {
 		spec, err := parseAppSpec([]byte(validJSONSpec))
@@ -505,62 +507,118 @@ func Test_parseAppSpec(t *testing.T) {
 	})
 }
 
-func TestRunAppSpecValidate(t *testing.T) {
-	validYAMLSpec := ``
-
+func Test_readAppSpec(t *testing.T) {
 	tcs := []struct {
-		name   string
-		testFn testFn
+		name  string
+		setup func(t *testing.T) (path string, stdin io.Reader)
+
+		wantSpec *godo.AppSpec
+		wantErr  error
 	}{
 		{
-			name: "stdin yaml",
-			testFn: func(config *CmdConfig, tm *tcMocks) {
-				config.Args = append(config.Args, "-")
-
-				err := RunAppsSpecValidate(bytes.NewBufferString(validYAMLSpec))(config)
-				require.NoError(t, err)
+			name: "stdin",
+			setup: func(t *testing.T) (string, io.Reader) {
+				return "-", bytes.NewBufferString(validYAMLSpec)
 			},
-		},
-		{
-			name: "stdin json",
-			testFn: func(config *CmdConfig, tm *tcMocks) {
-				config.Args = append(config.Args, "-")
-
-				err := RunAppsSpecValidate(bytes.NewBufferString(validJSONSpec))(config)
-				require.NoError(t, err)
-			},
+			wantSpec: validAppSpec,
 		},
 		{
 			name: "file yaml",
-			testFn: func(config *CmdConfig, tm *tcMocks) {
-				file, err := ioutil.TempFile("", "doctl-test")
-				require.NoError(t, err)
-				defer func() {
-					_ = os.Remove(file.Name())
-				}()
-				config.Args = append(config.Args, file.Name())
-
-				_, err = file.WriteString(validYAMLSpec)
-				require.NoError(t, err)
-
-				err = RunAppsSpecValidate(nil)(config)
-				require.NoError(t, err)
+			setup: func(t *testing.T) (string, io.Reader) {
+				return testTempFile(t, []byte(validJSONSpec)), nil
 			},
-		},
-		{
-			name: "stdin invalid",
-			testFn: func(config *CmdConfig, tm *tcMocks) {
-				config.Args = append(config.Args, "-")
-
-				err := RunAppsSpecValidate(bytes.NewBufferString("hello"))(config)
-				require.Error(t, err)
-			},
+			wantSpec: validAppSpec,
 		},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			withTestClient(t, tc.testFn)
+			path, stdin := tc.setup(t)
+			spec, err := readAppSpec(stdin, path)
+			if tc.wantErr != nil {
+				require.Equal(t, tc.wantErr, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			assert.Equal(t, tc.wantSpec, spec)
+		})
+	}
+}
+
+func testTempFile(t *testing.T, data []byte) string {
+	t.Helper()
+	file := t.TempDir() + "/file"
+	err := ioutil.WriteFile(file, data, 0644)
+	require.NoError(t, err, "writing temp file")
+	return file
+}
+
+func TestRunAppSpecValidate(t *testing.T) {
+	tcs := []struct {
+		name       string
+		spec       string
+		schemaOnly bool
+		mock       func(tm *tcMocks)
+
+		wantError string
+		wantOut   string
+	}{
+		{
+			name:       "valid yaml",
+			spec:       validYAMLSpec,
+			schemaOnly: true,
+			wantOut:    validYAMLSpec,
+		},
+		{
+			name:       "valid json",
+			spec:       validJSONSpec,
+			schemaOnly: true,
+			wantOut:    validYAMLSpec,
+		},
+		{
+			name: "valid json with ProposeApp req",
+			spec: validJSONSpec,
+			mock: func(tm *tcMocks) {
+				tm.apps.EXPECT().Propose(&godo.AppProposeRequest{
+					Spec: validAppSpec,
+				}).Return(&godo.AppProposeResponse{
+					Spec: &godo.AppSpec{
+						Name: "validated-spec",
+					},
+				}, nil)
+			},
+			wantOut: "name: validated-spec\n",
+		},
+		{
+			name:       "invalid",
+			spec:       "hello",
+			schemaOnly: true,
+			wantError:  "parsing app spec: json: cannot unmarshal string into Go value of type godo.AppSpec",
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.Args = append(config.Args, testTempFile(t, []byte(tc.spec)))
+				config.Doit.Set(config.NS, doctl.ArgSchemaOnly, tc.schemaOnly)
+				var buf bytes.Buffer
+				config.Out = &buf
+
+				if tc.mock != nil {
+					tc.mock(tm)
+				}
+
+				err := RunAppsSpecValidate(config)
+				if tc.wantError != "" {
+					require.Equal(t, tc.wantError, err.Error())
+					return
+				}
+
+				require.NoError(t, err)
+				assert.Equal(t, tc.wantOut, buf.String())
+			})
 		})
 	}
 }

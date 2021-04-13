@@ -820,3 +820,137 @@ var _ = suite("apps/list-regions", func(t *testing.T, when spec.G, it spec.S) {
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 })
+
+var _ = suite("apps/propose", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	testAppUUID2 := "93a37175-f520-0000-0000-26e63491dbf4"
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Add("content-type", "application/json")
+
+			switch req.URL.Path {
+			case "/v2/apps/propose":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				var r godo.AppProposeRequest
+				err := json.NewDecoder(req.Body).Decode(&r)
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				assert.Equal(t, &testAppSpec, r.Spec)
+
+				switch r.AppID {
+				case testAppUUID:
+					json.NewEncoder(w).Encode(&godo.AppProposeResponse{
+						AppIsStatic:        true,
+						AppNameAvailable:   false,
+						AppNameSuggestion:  "new-name",
+						AppCost:            5,
+						AppTierUpgradeCost: 10,
+						MaxFreeStaticApps:  "3",
+					})
+				case testAppUUID2:
+					json.NewEncoder(w).Encode(&godo.AppProposeResponse{
+						AppIsStatic:          true,
+						AppNameAvailable:     true,
+						AppCost:              20,
+						AppTierDowngradeCost: 15,
+						ExistingStaticApps:   "5",
+						MaxFreeStaticApps:    "3",
+					})
+				default:
+					t.Errorf("unexpected app uuid %s", r.AppID)
+				}
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	it("prints info about the proposed app", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps", "propose",
+			"--spec", "-",
+			"--app", testAppUUID,
+		)
+		byt, err := json.Marshal(testAppSpec)
+		expect.NoError(err)
+
+		cmd.Stdin = bytes.NewReader(byt)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := `App Name Available?    Suggested App Name    Is Static?    Static App Usage    $/month    $/month on higher tier    $/month on lower tier
+no                     new-name              yes           0 of 3 free         5.00       10.00                     n/a`
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+
+	it("prints info about the proposed app with paid static apps", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps", "propose",
+			"--spec", "-",
+			"--app", testAppUUID2,
+		)
+		byt, err := json.Marshal(testAppSpec)
+		expect.NoError(err)
+
+		cmd.Stdin = bytes.NewReader(byt)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := `App Name Available?    Is Static?    Static App Usage       $/month    $/month on higher tier    $/month on lower tier
+yes                    yes           3 of 3 free, 2 paid    20.00      n/a                       15.00`
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+
+	it("fails on invalid specs", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps", "propose",
+			"--spec", "-",
+			"--app", "wrong-id", // this shouldn't reach the HTTP server
+		)
+		testSpec := `name: test
+services:
+  name: service
+  github:
+    repo: digitalocean/doctl
+`
+		cmd.Stdin = strings.NewReader(testSpec)
+
+		output, err := cmd.CombinedOutput()
+		expect.Equal("exit status 1", err.Error())
+
+		expectedOutput := "Error: parsing app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []*godo.AppServiceSpec"
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+})
