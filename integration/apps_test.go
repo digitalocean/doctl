@@ -827,6 +827,8 @@ var _ = suite("apps/propose", func(t *testing.T, when spec.G, it spec.S) {
 		server *httptest.Server
 	)
 
+	testAppUUID2 := "93a37175-f520-0000-0000-26e63491dbf4"
+
 	it.Before(func() {
 		expect = require.New(t)
 
@@ -852,18 +854,30 @@ var _ = suite("apps/propose", func(t *testing.T, when spec.G, it spec.S) {
 					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
-				assert.Equal(t, testAppUUID, r.AppID)
 				assert.Equal(t, &testAppSpec, r.Spec)
 
-				json.NewEncoder(w).Encode(&godo.AppProposeResponse{
-					AppIsStatic:        true,
-					AppNameAvailable:   false,
-					AppNameSuggestion:  "new-name",
-					AppCost:            5,
-					AppTierUpgradeCost: 10,
-					ExistingStaticApps: "2",
-					MaxFreeStaticApps:  "3",
-				})
+				switch r.AppID {
+				case testAppUUID:
+					json.NewEncoder(w).Encode(&godo.AppProposeResponse{
+						AppIsStatic:        true,
+						AppNameAvailable:   false,
+						AppNameSuggestion:  "new-name",
+						AppCost:            5,
+						AppTierUpgradeCost: 10,
+						MaxFreeStaticApps:  "3",
+					})
+				case testAppUUID2:
+					json.NewEncoder(w).Encode(&godo.AppProposeResponse{
+						AppIsStatic:          true,
+						AppNameAvailable:     true,
+						AppCost:              20,
+						AppTierDowngradeCost: 15,
+						ExistingStaticApps:   "5",
+						MaxFreeStaticApps:    "3",
+					})
+				default:
+					t.Errorf("unexpected app uuid %s", r.AppID)
+				}
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -891,8 +905,29 @@ var _ = suite("apps/propose", func(t *testing.T, when spec.G, it spec.S) {
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expectedOutput := `App Name Available?    Suggested App Name    Is Static?    Free Static Site Usage    $/month    $/month on higher tier    $/month on lower tier
-no                     new-name              yes           2 of 3                    5.00       10.00                     n/a`
+		expectedOutput := `App Name Available?    Suggested App Name    Is Static?    Static App Usage    $/month    $/month on higher tier    $/month on lower tier
+no                     new-name              yes           0 of 3 free         5.00       10.00                     n/a`
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+
+	it("prints info about the proposed app with paid static apps", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps", "propose",
+			"--spec", "-",
+			"--app", testAppUUID2,
+		)
+		byt, err := json.Marshal(testAppSpec)
+		expect.NoError(err)
+
+		cmd.Stdin = bytes.NewReader(byt)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := `App Name Available?    Is Static?    Static App Usage       $/month    $/month on higher tier    $/month on lower tier
+yes                    yes           3 of 3 free, 2 paid    20.00      n/a                       15.00`
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 

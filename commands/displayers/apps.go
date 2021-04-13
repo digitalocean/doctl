@@ -302,7 +302,7 @@ func (r AppProposeResponse) Cols() []string {
 
 	cols = append(cols, []string{
 		"AppIsStatic",
-		"StaticSites",
+		"StaticApps",
 		"AppCost",
 		"AppTierUpgradeCost",
 		"AppTierDowngradeCost",
@@ -316,7 +316,7 @@ func (r AppProposeResponse) ColMap() map[string]string {
 		"AppNameAvailable":     "App Name Available?",
 		"AppNameSuggestion":    "Suggested App Name",
 		"AppIsStatic":          "Is Static?",
-		"StaticSites":          "Free Static Site Usage",
+		"StaticApps":           "Static App Usage",
 		"AppCost":              "$/month",
 		"AppTierUpgradeCost":   "$/month on higher tier",
 		"AppTierDowngradeCost": "$/month on lower tier",
@@ -324,7 +324,20 @@ func (r AppProposeResponse) ColMap() map[string]string {
 }
 
 func (r AppProposeResponse) KV() []map[string]interface{} {
-	staticSites := fmt.Sprintf("%s of %s", r.Res.ExistingStaticApps, r.Res.MaxFreeStaticApps)
+	existingStatic, _ := strconv.ParseInt(r.Res.ExistingStaticApps, 10, 64)
+	maxFreeStatic, _ := strconv.ParseInt(r.Res.MaxFreeStaticApps, 10, 64)
+	var paidStatic int64
+	freeStatic := existingStatic
+	if existingStatic > maxFreeStatic {
+		paidStatic = existingStatic - maxFreeStatic
+		freeStatic = maxFreeStatic
+	}
+
+	staticApps := fmt.Sprintf("%d of %d free", freeStatic, maxFreeStatic)
+	if paidStatic > 0 {
+		staticApps = fmt.Sprintf("%s, %d paid", staticApps, paidStatic)
+	}
+
 	downgradeCost := "n/a"
 	upgradeCost := "n/a"
 
@@ -338,7 +351,7 @@ func (r AppProposeResponse) KV() []map[string]interface{} {
 	out := map[string]interface{}{
 		"AppNameAvailable":     boolToYesNo(r.Res.AppNameAvailable),
 		"AppIsStatic":          boolToYesNo(r.Res.AppIsStatic),
-		"StaticSites":          staticSites,
+		"StaticApps":           staticApps,
 		"AppCost":              fmt.Sprintf("%0.2f", r.Res.AppCost),
 		"AppTierUpgradeCost":   upgradeCost,
 		"AppTierDowngradeCost": downgradeCost,
