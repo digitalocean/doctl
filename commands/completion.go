@@ -62,13 +62,13 @@ Note:
 - zsh completions requires zsh 5.2 or newer.
 `
 	fishLong = `
-Use ` + "`" + `doctl completion fish` + "`" + ` to configure your zsh shell so that doctl commands autocomplete when you press the TAB key.
+Use ` + "`" + `doctl completion fish` + "`" + ` to configure your fish shell so that doctl commands autocomplete when you press the TAB key.
 
 To review the configuration, run ` + "`" + `doctl completion fish` + "`" + `.
 
-To enable the configuration, add the following line to your .profile or .bashrc.
+To enable the configuration, add the following line to your config.fish.
 
-	source  <(doctl completion fish)
+	source (doctl completion fish|psub)
 `
 
 	doctlLicense = `# Copyright 2018 The Doctl Authors All rights reserved.
