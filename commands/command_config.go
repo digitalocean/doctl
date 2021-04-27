@@ -33,6 +33,7 @@ type CmdConfig struct {
 	initServices          func(*CmdConfig) error
 	getContextAccessToken func() string
 	setContextAccessToken func(string)
+	removeContext         func(string) error
 
 	// services
 	Keys              func() do.KeysService
@@ -151,6 +152,22 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 
 				viper.Set("auth-contexts", contexts)
 			}
+		},
+
+		removeContext: func(context string) error {
+			contexts := viper.GetStringMapString("auth-contexts")
+
+			_, ok := contexts[context]
+
+			if !ok {
+				return fmt.Errorf("Context not found")
+			}
+
+			delete(contexts, context)
+
+			viper.Set("auth-contexts", contexts)
+
+			return nil
 		},
 	}
 

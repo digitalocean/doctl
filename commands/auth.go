@@ -77,7 +77,9 @@ func Auth() *Command {
 
 If you work with a just one account, you can call ` + "`" + `doctl auth init` + "`" + ` and supply the token when prompted. This creates an authentication context named ` + "`" + `default` + "`" + `.
 
-To switch between multiple DigitalOcean accounts, including team accounts, you can create named contexts by using ` + "`" + `doctl auth init --context <name>` + "`" + `, then providing a token when prompted. This saves the token under the name you provide. To switch between accounts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.`,
+To switch between multiple DigitalOcean accounts, including team accounts, you can create named contexts by using ` + "`" + `doctl auth init --context <name>` + "`" + `, then providing a token when prompted. This saves the token under the name you provide. To switch between accounts, use ` + "`" + `doctl auth switch --context <name>` + "`" + `.,
+
+To remove accounts from the configuration file, you can run ` + "`" + `doctl auth remove --context <name>` + "`" + `. This removes the token under the name you provide.`,
 		},
 	}
 
@@ -91,6 +93,11 @@ If the `+"`"+`--context`+"`"+` flag is not specified, a default authentication c
 
 If doctl is never initialized, you will need to specify an API token whenever you use a `+"`"+`doctl`+"`"+` command via the `+"`"+`--access-token`+"`"+` flag.`, Writer, false)
 	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switches between authentication contexts", `This command allows you to switch between accounts with authentication contexts you've already created.
+
+To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
+
+For details on creating an authentication context, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+	cmdBuilderWithInit(cmd, RunAuthRemove, "remove", "Remove authentication contexts ", `This command allows you to remove authentication contexts you've already created.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
@@ -146,6 +153,25 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 		return writeConfig()
 	}
+}
+
+// RunAuthRemove remove available auth contexts from the user's doctl config.
+func RunAuthRemove(c *CmdConfig) error {
+	context := Context
+
+	if context == "" {
+		return fmt.Errorf("You must provide a context name")
+	}
+
+	err := c.removeContext(context)
+
+	if err != nil {
+		return fmt.Errorf("Context not found")
+	}
+
+	fmt.Println("Context deleted successfully")
+
+	return writeConfig()
 }
 
 // RunAuthList lists all available auth contexts from the user's doctl config.
