@@ -54,32 +54,31 @@ Use "doctl [command] --help" for more information about a command.
 
 See the [full reference documentation](https://www.digitalocean.com/docs/apis-clis/doctl/reference/) for information about each available command.
 
-- [doctl](#doctl---)
-    - [Installing `doctl`](#installing-doctl)
-        - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)
-            - [MacOS](#macos)
-            - [Snap supported OS](#snap-supported-os)
-                - [Use with `kubectl`](#use-with-kubectl)
-                - [Using `doctl compute ssh`](#using-doctl-compute-ssh)
-            - [Arch Linux](#arch-linux)
-            - [Nix supported OS](#nix-supported-os)
-        - [Docker Hub](#docker-hub)
-        - [Downloading a Release from GitHub](#downloading-a-release-from-github)
-        - [Building with Docker](#building-with-docker)
-        - [Building the Development Version from Source](#building-the-development-version-from-source)
-            - [Dependencies](#dependencies)
-    - [Authenticating with DigitalOcean](#authenticating-with-digitalocean)
-        - [Logging in to multiple DigitalOcean accounts](#logging-in-to-multiple-digitalocean-accounts)
-    - [Configuring Default Values](#configuring-default-values)
-    - [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
-        - [Linux](#linux-auto-completion)
-        - [macOS](#macos-auto-completion)
-    - [Uninstalling `doctl`](#uninstalling-doctl)
-      - [Using a Package Manager](#using-a-package-manager)
-        - [macOS](#macos-uninstall)
-    - [Examples](#examples)
-    - [Tutorials](#tutorials)
-    - [doctl Releases](https://github.com/digitalocean/doctl/releases)
+- [Installing `doctl`](#installing-doctl)
+  - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)
+    - [MacOS](#macos)
+    - [Snap supported OS](#snap-supported-os)
+      - [Use with `kubectl`](#use-with-kubectl)
+      - [Using `doctl compute ssh`](#using-doctl-compute-ssh)
+      - [Use with Docker](#use-with-docker)
+    - [Arch Linux](#arch-linux)
+    - [Nix supported OS](#nix-supported-os)
+  - [Docker Hub](#docker-hub)
+  - [Downloading a Release from GitHub](#downloading-a-release-from-github)
+  - [Building with Docker](#building-with-docker)
+  - [Building the Development Version from Source](#building-the-development-version-from-source)
+  - [Dependencies](#dependencies)
+- [Authenticating with DigitalOcean](#authenticating-with-digitalocean)
+  - [Logging into multiple DigitalOcean accounts](#logging-into-multiple-digitalocean-accounts)
+- [Configuring Default Values](#configuring-default-values)
+- [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
+  - [Linux Auto Completion](#linux-auto-completion)
+  - [MacOS](#macos-1)
+- [Uninstalling `doctl`](#uninstalling-doctl)
+  - [Using a Package Manager](#using-a-package-manager)
+    - [MacOS Uninstall](#macos-uninstall)
+- [Examples](#examples)
+- [Tutorials](#tutorials)
 
 
 ## Installing `doctl`
@@ -359,7 +358,7 @@ brew uninstall -f doctl
 To completely remove the configuration, also remove the following directory:
 
 ```
-rm -rf $HOME/Library/Application Support/doctl
+rm -rf "$HOME/Library/Application Support/doctl"
 ```
 
 
