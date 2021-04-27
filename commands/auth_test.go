@@ -30,7 +30,7 @@ import (
 func TestAuthCommand(t *testing.T) {
 	cmd := Auth()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "init", "list", "switch")
+	assertCommandNames(t, cmd, "init", "list", "remove", "switch")
 }
 
 func TestAuthInit(t *testing.T) {
