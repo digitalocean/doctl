@@ -484,7 +484,7 @@ To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases 
 		"set auth mode for MySQL users")
 
 	CmdBuilder(cmd, RunDatabaseUserResetAuth, "reset <database-id> <user-name> <new-auth-mode>",
-		"Resets a user's MySQL auth plugin", "This command resets the MySQL auth plugin for a given user. It will return the new user credentials. Valid values for `<new-auth-mode>` are `caching_sha2_password` and `mysql_native_password`.", Writer, aliasOpt("rs"))
+		"Resets a user's auth", "This command resets the auth password or the MySQL auth plugin for a given user. It will return the new user credentials. When resetting MySQL auth, valid values for `<new-auth-mode>` are `caching_sha2_password` and `mysql_native_password`.", Writer, aliasOpt("rs"))
 
 	cmdDatabaseUserDelete := CmdBuilder(cmd, RunDatabaseUserDelete,
 		"delete <database-id> <user-id>", "Delete a database user", `This command deletes the user with the username you specify, whose account was given access to the database cluster you specify.
@@ -563,21 +563,36 @@ func RunDatabaseUserCreate(c *CmdConfig) error {
 }
 
 func RunDatabaseUserResetAuth(c *CmdConfig) error {
-	if len(c.Args) < 3 {
+	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	var (
 		databaseID = c.Args[0]
 		userName   = c.Args[1]
-		authMode   = c.Args[2]
 	)
 
-	req := &godo.DatabaseResetUserAuthRequest{
-		MySQLSettings: &godo.DatabaseMySQLUserSettings{
-			AuthPlugin: authMode,
-		},
+	database, err := c.Databases().Get(databaseID)
+
+	if err != nil {
+		return err
 	}
+
+	var req *godo.DatabaseResetUserAuthRequest
+	if strings.ToLower(database.EngineSlug) == "mysql" {
+		if len(c.Args) < 3 {
+			return doctl.NewMissingArgsErr(c.NS)
+		}
+		authMode := c.Args[2]
+		req = &godo.DatabaseResetUserAuthRequest{
+			MySQLSettings: &godo.DatabaseMySQLUserSettings{
+				AuthPlugin: authMode,
+			},
+		}
+	} else {
+		req = &godo.DatabaseResetUserAuthRequest{}
+	}
+
 	user, err := c.Databases().ResetUserAuth(databaseID, userName, req)
 	if err != nil {
 		return err
