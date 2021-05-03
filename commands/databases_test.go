@@ -567,14 +567,23 @@ func TestDatabaseUserCreate(t *testing.T) {
 }
 
 func TestDatabaseResetUserAuth(t *testing.T) {
-	r := &godo.DatabaseResetUserAuthRequest{
-		MySQLSettings: &godo.DatabaseMySQLUserSettings{
-			AuthPlugin: godo.SQLAuthPluginCachingSHA2,
-		},
-	}
-
-	// Successful call
+	// Successful mysql call
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.DatabaseResetUserAuthRequest{
+			MySQLSettings: &godo.DatabaseMySQLUserSettings{
+				AuthPlugin: godo.SQLAuthPluginCachingSHA2,
+			},
+		}
+
+		var mysqlTestDb godo.Database
+		mysqlTestDb = *testDBCluster.Database
+		mysqlTestDb.EngineSlug = "mysql"
+
+		mysqlTestDbCluster := do.Database{
+			Database: &mysqlTestDb,
+		}
+
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&mysqlTestDbCluster, nil)
 		tm.databases.EXPECT().ResetUserAuth(testDBCluster.ID, testDBUser.Name, r).Return(&testDBUser, nil)
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name, godo.SQLAuthPluginCachingSHA2)
@@ -583,8 +592,21 @@ func TestDatabaseResetUserAuth(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Successful pg call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.DatabaseResetUserAuthRequest{}
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
+		tm.databases.EXPECT().ResetUserAuth(testDBCluster.ID, testDBUser.Name, r).Return(&testDBUser, nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+
+		err := RunDatabaseUserResetAuth(config)
+		assert.NoError(t, err)
+	})
+
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
 		tm.databases.EXPECT().ResetUserAuth(
 			testDBCluster.ID,
 			testDBUser.Name,
