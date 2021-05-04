@@ -68,7 +68,7 @@ context: default
 
 			fileBytes, err := ioutil.ReadFile(testConfig)
 			expect.NoError(err)
-			expect.NotContains(string(fileBytes), "context: second")
+			expect.NotContains(string(fileBytes), "second-token")
 		})
 	})
 })
