@@ -299,7 +299,7 @@ Save and close the file. The next time you use `doctl`, the new default values y
 
 ### Environment variables
 
-In addition to specifying configuration using `config.yaml` file or program arguments, it is also possible to override values just for the give session with environment variables:
+In addition to specifying configuration using `config.yaml` file or program arguments, it is also possible to override values just for the given session with environment variables:
 
 ```
 # Use instead of --context argument
