@@ -71,6 +71,7 @@ See the [full reference documentation](https://www.digitalocean.com/docs/apis-cl
 - [Authenticating with DigitalOcean](#authenticating-with-digitalocean)
   - [Logging into multiple DigitalOcean accounts](#logging-into-multiple-digitalocean-accounts)
 - [Configuring Default Values](#configuring-default-values)
+  - [Environment Variables](#environment-variables)
 - [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
   - [Linux Auto Completion](#linux-auto-completion)
   - [MacOS](#macos-1)
@@ -295,6 +296,20 @@ compute.ssh.ssh-user: sammy
 ```
 
 Save and close the file. The next time you use `doctl`, the new default values you set will be in effect. In this example, that means that it will SSH as the **sammy** user (instead of the default **root** user) next time you log into a Droplet.
+
+### Environment variables
+
+In addition to specifying configuration using `config.yaml` file or program arguments, it is also possible to override values just for the give session with environment variables:
+
+```
+# Use instead of --context argument
+DIGITALOCEAN_CONTEXT=my-context doctl auth list
+```
+
+```
+# Use instead of --access-token argument
+DIGITALOCEAN_ACCESS_TOKEN=my-do-token doctl
+```
 
 ## Enabling Shell Auto-Completion
 
