@@ -445,7 +445,7 @@ func extractOutboundRules(s string) (rules []godo.OutboundRule, err error) {
 func extractRule(ruleStr string, sd string) (map[string]interface{}, error) {
 	rule := map[string]interface{}{}
 	var dropletIDs []int
-	var addresses, lbUIDs, tags []string
+	var addresses, lbUIDs, k8sIDs, tags []string
 
 	kvs := strings.Split(ruleStr, ",")
 	for _, v := range kvs {
@@ -465,6 +465,8 @@ func extractRule(ruleStr string, sd string) (map[string]interface{}, error) {
 			dropletIDs = append(dropletIDs, i)
 		case "load_balancer_uid":
 			lbUIDs = append(lbUIDs, pair[1])
+		case "kubernetes_id":
+			k8sIDs = append(k8sIDs, pair[1])
 		case "tag":
 			tags = append(tags, pair[1])
 		default:
@@ -476,6 +478,7 @@ func extractRule(ruleStr string, sd string) (map[string]interface{}, error) {
 		"addresses":          addresses,
 		"droplet_ids":        dropletIDs,
 		"load_balancer_uids": lbUIDs,
+		"kubernetes_ids":     k8sIDs,
 		"tags":               tags,
 	}
 

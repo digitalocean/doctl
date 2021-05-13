@@ -109,7 +109,7 @@ IP             Region    Droplet ID    Droplet Name
 }
 `
 	floatingIPCreateRequest = `
-{"region":"","droplet_id":1212}
+{"droplet_id":1212}
 `
 	floatingIPRegionCreateRequest = `
 {"region":"newark"}
