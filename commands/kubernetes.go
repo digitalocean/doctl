@@ -1721,6 +1721,9 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 		Taints: []godo.Taint{},
 	}
 	for _, arg := range strings.Split(nodePool, argSeparator) {
+		if arg == "" {
+			continue
+		}
 		kvs := strings.SplitN(arg, kvSeparator, 2)
 		if len(kvs) < 2 {
 			return nil, fmt.Errorf("A node pool string argument must be of the form `key=value`. Provided KVs: %v", kvs)
