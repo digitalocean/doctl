@@ -151,6 +151,8 @@ f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         1970-01-01 00:00:0
 f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    1/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
 	testRegionsOutput = `Region    Label        Continent    Data Centers    Is Disabled?    Reason (if disabled)    Is Default?
 ams       Amsterdam    Europe       [ams3]          false                                   true`
+	testAppsOutputUpdate = `ID                                      Spec Name    Default Ingress    Active Deployment ID    In Progress Deployment ID               Created At                       Updated At
+93a37175-f520-4a12-a7ad-26e63491dbf4    test                                                    f4e37431-a0f4-458f-8f9f-5c9a61d8562f    1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
 )
 
 var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
@@ -405,8 +407,10 @@ var _ = suite("apps/list", func(t *testing.T, when spec.G, it spec.S) {
 
 var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect          *require.Assertions
+		server          *httptest.Server
+		getAppCounter   int
+		deploymentCount int
 	)
 
 	it.Before(func() {
@@ -423,20 +427,49 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
-				if req.Method != http.MethodPut {
+				if req.Method != http.MethodPut && req.Method != http.MethodGet {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				var r godo.AppUpdateRequest
-				err := json.NewDecoder(req.Body).Decode(&r)
-				if err != nil {
-					w.WriteHeader(http.StatusBadRequest)
+				if req.Method == http.MethodPut {
+					var r godo.AppUpdateRequest
+					err := json.NewDecoder(req.Body).Decode(&r)
+					if err != nil {
+						w.WriteHeader(http.StatusBadRequest)
+						return
+					}
+					assert.Equal(t, testAppSpec, *r.Spec)
+
+					json.NewEncoder(w).Encode(testAppResponse)
+				}
+
+				if req.Method == http.MethodGet {
+					if getAppCounter > 0 {
+						json.NewEncoder(w).Encode(testAppResponse)
+					} else {
+						json.NewEncoder(w).Encode(testAppResponseInProgress)
+						getAppCounter++
+					}
+				}
+			case "/v2/apps/" + testAppUUID + "/deployments/" + testDeploymentUUID:
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
-				assert.Equal(t, testAppSpec, *r.Spec)
 
-				json.NewEncoder(w).Encode(testAppResponse)
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				if deploymentCount > 0 {
+					json.NewEncoder(w).Encode(testDeploymentActiveResponse)
+				} else {
+					json.NewEncoder(w).Encode(testDeploymentResponse)
+					deploymentCount++
+				}
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -475,6 +508,38 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 		expectedOutput := "Notice: App updated\n" + testAppsOutput
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
+
+	when("the wait flag is passed", func() {
+		it("updates an app and polls for status", func() {
+			specFile, err := ioutil.TempFile("", "spec")
+			require.NoError(t, err)
+			defer func() {
+				os.Remove(specFile.Name())
+				specFile.Close()
+			}()
+
+			err = json.NewEncoder(specFile).Encode(&testAppSpec)
+			require.NoError(t, err)
+
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"apps",
+				"update",
+				testAppUUID,
+				"--spec",
+				specFile.Name(),
+				"--wait",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			expectedOutput := "Notice: App update is in progress, waiting for app to be running\n..\nNotice: App updated\n" + testAppsOutput
+			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+		})
+	})
+
 })
 
 var _ = suite("apps/delete", func(t *testing.T, when spec.G, it spec.S) {

@@ -16,7 +16,6 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -96,6 +95,8 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.Apps{}),
 	)
 	AddStringFlag(update, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
+	AddBoolFlag(update, doctl.ArgCommandWait, "", false,
+		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
 
 	deleteApp := CmdBuilder(
 		cmd,
@@ -226,10 +227,12 @@ func RunAppsCreate(c *CmdConfig) error {
 	if wait {
 		apps := c.Apps()
 		notice("App creation is in progress, waiting for app to be running")
-		app, err = waitForAppCreateRunning(apps, app.ID)
+		err := waitForActiveDeployment(apps, app.ID, "")
 		if err != nil {
 			warn("App deployment couldn't enter `running` state: %v", err)
 			return c.Display(displayers.Apps{app})
+		} else {
+			app, _ = c.Apps().Get(app.ID)
 		}
 	}
 
@@ -284,6 +287,24 @@ func RunAppsUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		apps := c.Apps()
+		notice("App update is in progress, waiting for app to be running")
+		err := waitForActiveDeployment(apps, app.ID, "")
+		if err != nil {
+			warn("App deployment couldn't enter `running` state: %v", err)
+			return c.Display(displayers.Apps{app})
+		} else {
+			app, _ = c.Apps().Get(app.ID)
+		}
+	}
+
 	notice("App updated")
 
 	return c.Display(displayers.Apps{app})
@@ -338,10 +359,12 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 	if wait {
 		apps := c.Apps()
 		notice("App deplpyment is in progress, waiting for deployment to be running")
-		deployment, err = waitForAppDeploymentRunning(apps, appID, deployment.ID)
+		err := waitForActiveDeployment(apps, appID, deployment.ID)
 		if err != nil {
 			warn("App deployment couldn't enter `running` state: %v", err)
 			return c.Display(displayers.Deployments{deployment})
+		} else {
+			deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
 		}
 	}
 
@@ -350,69 +373,11 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 	return c.Display(displayers.Deployments{deployment})
 }
 
-// waitForAppDeploymentRunning waits for a app deployment to be running.
-func waitForAppDeploymentRunning(apps do.AppsService, appID string, deploymentID string) (*godo.Deployment, error) {
-	failCount := 0
-	printNewLineSet := false
-	for i := 0; ; i++ {
-		if i != 0 {
-			fmt.Fprint(os.Stderr, ".")
-			if !printNewLineSet {
-				printNewLineSet = true
-				defer fmt.Fprintln(os.Stderr)
-			}
-		}
-
-		deployment, err := apps.GetDeployment(appID, deploymentID)
-		if err == nil {
-			failCount = 0
-		} else {
-			// Allow for transient API failures
-			failCount++
-			if failCount >= maxAPIFailures {
-				return nil, err
-			}
-		}
-
-		if deployment == nil {
-			time.Sleep(1 * time.Second)
-			continue
-		}
-
-		switch deployment.Phase {
-		case godo.DeploymentPhase_PendingBuild:
-			fallthrough
-		case godo.DeploymentPhase_PendingDeploy:
-			fallthrough
-		case godo.DeploymentPhase_Building:
-			fallthrough
-		case godo.DeploymentPhase_Deploying:
-			time.Sleep(5 * time.Second)
-
-		case godo.DeploymentPhase_Active:
-			return deployment, nil
-
-		case godo.DeploymentPhase_Error:
-			fallthrough
-		case godo.DeploymentPhase_Canceled:
-			fallthrough
-		case godo.DeploymentPhase_Unknown:
-			return deployment, fmt.Errorf("phase: [%s]", deployment.Phase)
-
-		default:
-			return deployment, fmt.Errorf("Unknown phase: [%s]", deployment.Phase)
-		}
-	}
-}
-
-// waitForAppCreateRunning waits for a app to be running.
-func waitForAppCreateRunning(apps do.AppsService, appID string) (*godo.App, error) {
+func waitForActiveDeployment(apps do.AppsService, appID string, deploymentID string) error {
 	tickerInterval := 10 //10s
 	timeout := 1800      //1800s, 30min
 	n := 0
 	printNewLineSet := false
-	var deploymentID string
-	var app *godo.App
 
 	ticker := time.NewTicker(time.Duration(tickerInterval) * time.Second)
 	for range ticker.C {
@@ -432,7 +397,7 @@ func waitForAppCreateRunning(apps do.AppsService, appID string) (*godo.App, erro
 		if deploymentID == "" {
 			app, err := apps.Get(appID)
 			if err != nil {
-				return nil, fmt.Errorf("Error trying to read app deployment state: " + err.Error())
+				return fmt.Errorf(("Error trying to read app deployment state: " + err.Error()))
 			}
 
 			if app.InProgressDeployment != nil {
@@ -442,29 +407,23 @@ func waitForAppCreateRunning(apps do.AppsService, appID string) (*godo.App, erro
 			deployment, err := apps.GetDeployment(appID, deploymentID)
 			if err != nil {
 				ticker.Stop()
-				return nil, errors.New("Error trying to read app deployment state: " + err.Error())
+				return fmt.Errorf(fmt.Sprintf("Error trying to read app deployment state: " + err.Error()))
 			}
 
 			allSuccessful := deployment.Progress.SuccessSteps == deployment.Progress.TotalSteps
 			if allSuccessful {
 				ticker.Stop()
-				app, _ = apps.Get(appID)
-				return app, nil
+				return nil
 			}
 
 			if deployment.Progress.ErrorSteps > 0 {
 				ticker.Stop()
-				return nil, fmt.Errorf(fmt.Sprintf("error deploying app (%s) (deployment ID: %s):\n%s", appID, deployment.ID, godo.Stringify(deployment.Progress)))
+				return fmt.Errorf(fmt.Sprintf("error deploying app (%s) (deployment ID: %s):\n%s", appID, deployment.ID, godo.Stringify(deployment.Progress)))
 			}
-
-			// log.Printf("[DEBUG] Waiting for app (%s) deployment (%s) to become active. Phase: %s (%d/%d)",
-			// 	appID, deployment.ID, deployment.Phase, deployment.Progress.SuccessSteps, deployment.Progress.TotalSteps)
 		}
-
 		n++
 	}
-
-	return nil, fmt.Errorf(fmt.Sprintf("timeout waiting to app (%s) deployment", appID))
+	return fmt.Errorf(fmt.Sprintf("timeout waiting to app (%s) deployment", appID))
 }
 
 // RunAppsGetDeployment gets a deployment for an app.
