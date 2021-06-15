@@ -373,20 +373,14 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 	return c.Display(displayers.Deployments{deployment})
 }
 
+// waitForActiveDeployment determines if a deployment is active by checking the number of successful deployment steps.
 func waitForActiveDeployment(apps do.AppsService, appID string, deploymentID string) error {
-	tickerInterval := 10 //10s
-	timeout := 1800      //1800s, 30min
-	n := 0
+	const maxAttempts = 10 * 6 * 30
+	attempts := 0
 	printNewLineSet := false
 
-	ticker := time.NewTicker(time.Duration(tickerInterval) * time.Second)
-	for range ticker.C {
-		if n*tickerInterval > timeout {
-			ticker.Stop()
-			break
-		}
-
-		if n != 0 {
+	for i := 0; i < maxAttempts; i++ {
+		if attempts != 0 {
 			fmt.Fprint(os.Stderr, ".")
 			if !printNewLineSet {
 				printNewLineSet = true
@@ -406,22 +400,20 @@ func waitForActiveDeployment(apps do.AppsService, appID string, deploymentID str
 		} else {
 			deployment, err := apps.GetDeployment(appID, deploymentID)
 			if err != nil {
-				ticker.Stop()
 				return fmt.Errorf(fmt.Sprintf("Error trying to read app deployment state: " + err.Error()))
 			}
 
 			allSuccessful := deployment.Progress.SuccessSteps == deployment.Progress.TotalSteps
 			if allSuccessful {
-				ticker.Stop()
 				return nil
 			}
 
 			if deployment.Progress.ErrorSteps > 0 {
-				ticker.Stop()
 				return fmt.Errorf(fmt.Sprintf("error deploying app (%s) (deployment ID: %s):\n%s", appID, deployment.ID, godo.Stringify(deployment.Progress)))
 			}
 		}
-		n++
+		attempts++
+		time.Sleep(10 * time.Second)
 	}
 	return fmt.Errorf(fmt.Sprintf("timeout waiting to app (%s) deployment", appID))
 }
