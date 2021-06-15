@@ -1,0 +1,15 @@
+{
+        "name": "updatesample-golang",
+        "services": [{
+                "name": "updateweb2",
+                "git": {
+                        "repo_clone_url": "https://github.com/digitalocean/sample-golang.git",
+                        "branch": "main"
+                },
+                "run_command": "bin/sample-golang",
+                "environment_slug": "go",
+                "instance_size_slug": "basic-xxs",
+                "instance_count": 1
+        }],
+        "region": "ams"
+}
