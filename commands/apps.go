@@ -374,7 +374,7 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 }
 
 func waitForActiveDeployment(apps do.AppsService, appID string, deploymentID string) error {
-	const maxAttempts = 10 * 6 * 30
+	const maxAttempts = 1800
 	attempts := 0
 	printNewLineSet := false
 
