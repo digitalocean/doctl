@@ -267,7 +267,7 @@ func TestRunAppsCreateDeploymentWithWait(t *testing.T) {
 			Progress: &godo.DeploymentProgress{
 				PendingSteps: 1,
 				RunningSteps: 0,
-				SuccessSteps: 0,
+				SuccessSteps: 1,
 				ErrorSteps:   0,
 				TotalSteps:   1,
 
@@ -282,7 +282,7 @@ func TestRunAppsCreateDeploymentWithWait(t *testing.T) {
 		}
 
 		tm.apps.EXPECT().CreateDeployment(appID, false).Times(1).Return(deployment, nil)
-		tm.apps.EXPECT().GetDeployment(appID, deployment.ID).Times(1).Return(activeDeployment, nil)
+		tm.apps.EXPECT().GetDeployment(appID, deployment.ID).Times(2).Return(activeDeployment, nil)
 
 		config.Args = append(config.Args, appID)
 		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
