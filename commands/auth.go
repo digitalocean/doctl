@@ -217,6 +217,13 @@ func RunAuthSwitch(c *CmdConfig) error {
 		context = viper.GetString("context")
 	}
 
+	// The two lines below aren't required for doctl specific functionality,
+	// but somehow magically fixes an issue
+	// (https://github.com/digitalocean/doctl/issues/996) where auth-contexts
+	// are mangled when running this command.
+	contexts := viper.GetStringMapString("auth-contexts")
+	viper.Set("auth-contexts", contexts)
+
 	viper.Set("context", context)
 
 	fmt.Printf("Now using context [%s] by default\n", context)
