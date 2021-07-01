@@ -52,6 +52,26 @@ context: default
 		})
 	})
 
+	when("default context is provided", func() {
+		it("allows you to remove that context", func() {
+			removeContext := "default"
+
+			cmd := exec.Command(builtBinaryPath,
+				"auth",
+				"remove",
+				"--config", testConfig,
+				"--context",
+				removeContext,
+			)
+			_, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+			expect.NotContains(string(fileBytes), "first-token")
+		})
+	})
+
 	when("a valid context is provided", func() {
 		it("allows you to remove that context", func() {
 			removeContext := "second"

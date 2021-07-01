@@ -155,6 +155,11 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		},
 
 		removeContext: func(context string) error {
+			if context == "default" {
+				viper.Set("access-token", "")
+				return nil
+			}
+
 			contexts := viper.GetStringMapString("auth-contexts")
 
 			_, ok := contexts[context]
