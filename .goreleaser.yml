@@ -30,6 +30,10 @@ archives:
   files: [a-workaround-to-include-only-the-binary*]
   wrap_in_directory: false
 
+source:
+  enabled: true
+  name_template: 'doctl-{{ .Version }}-source'
+
 checksum:
   name_template: "doctl-{{ .Version }}-checksums.sha256"
 
