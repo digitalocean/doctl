@@ -213,6 +213,37 @@ context: default
 		})
 	})
 
+	when("switching contexts containing a period", func() {
+		it("does not mangle that context", func() {
+			var testConfigBytes = []byte(`access-token: first-token
+auth-contexts:
+  test@example.com: second-token
+context: default
+`)
+
+			tmpDir, err := ioutil.TempDir("", "")
+			expect.NoError(err)
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"auth",
+				"switch",
+				"--config", testConfig,
+			)
+			_, err = cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+			expect.Contains(string(fileBytes), "test@example.com: second-token")
+
+			err = os.Remove(testConfig)
+			expect.NoError(err)
+		})
+	})
+
 	when("the DIGITALOCEAN_CONTEXT variable is set", func() {
 		it("uses that context for commands", func() {
 			var testConfigBytes = []byte(`access-token: first-token
