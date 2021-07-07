@@ -379,7 +379,7 @@ func TestRunAppsGetLogs(t *testing.T) {
 
 	for typeStr, logType := range types {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true, 1).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
 			tm.listen.EXPECT().Start().Times(1).Return(nil)
 
 			tc := config.Doit.(*doctl.TestConfig)
@@ -393,6 +393,7 @@ func TestRunAppsGetLogs(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
 			config.Doit.Set(config.NS, doctl.ArgAppLogType, typeStr)
 			config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
+			config.Doit.Set(config.NS, doctl.ArgAppLogTail, 1)
 
 			err := RunAppsGetLogs(config)
 			require.NoError(t, err)

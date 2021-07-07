@@ -1,5 +1,13 @@
 # Change Log
 
+## [v1.63.0] - 2021-07-06
+
+- #458 - @ZachEddy - apps: Add tail_lines query parameter to GetLogs function
+
+## [v1.62.0] - 2021-06-07
+
+- #454 - @house-lee - add with_droplet_agent option to create requests
+
 ## [v1.61.0] - 2021-05-12
 
 - #452 - @caiofilipini - Add support for DOKS clusters as peers in Firewall rules

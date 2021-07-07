@@ -170,6 +170,7 @@ Three types of logs are supported and can be configured with --`+doctl.ArgAppLog
 	AddStringFlag(logs, doctl.ArgAppDeployment, "", "", "The deployment ID. Defaults to current deployment.")
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "The type of logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Follow logs as they are emitted.")
+	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Number of lines to show from the end of the log.")
 
 	CmdBuilder(
 		cmd,
@@ -496,8 +497,12 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	logTail, err := c.Doit.GetInt(c.NS, doctl.ArgAppLogTail)
+	if err != nil {
+		return err
+	}
 
-	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow)
+	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow, logTail)
 	if err != nil {
 		return err
 	}

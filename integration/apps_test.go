@@ -879,6 +879,7 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 			"service",
 			"--deployment="+testDeploymentUUID,
 			"--type=run",
+			"--tail=1",
 			"-f",
 		)
 
