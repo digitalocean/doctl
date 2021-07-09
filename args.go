@@ -44,6 +44,8 @@ const (
 	ArgAppDeployment = "deployment"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
+	// ArgAppLogTail tail logs.
+	ArgAppLogTail = "tail"
 	// ArgAppForceRebuild forces a deployment rebuild
 	ArgAppForceRebuild = "force-rebuild"
 	// ArgClusterName is a cluster name argument.
