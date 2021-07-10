@@ -63,8 +63,7 @@ plugs:
   kube-config:
     interface: personal-files
     write:
-      - $HOME/.kube/config
-      - $HOME/.kube/config.lock
+      - $HOME/.kube/
 
 apps:
   doctl:
