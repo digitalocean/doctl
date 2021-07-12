@@ -186,10 +186,6 @@ clean:
 _install_github_release_notes:
 	@GO111MODULE=off go get -u github.com/digitalocean/github-changelog-generator
 
-.PHONY: _changelog
-_changelog: _install_github_release_notes
-	@scripts/changelog.sh
-
 .PHONY: changes
 changes: _install_github_release_notes
 	@echo "==> list merged PRs since last release"

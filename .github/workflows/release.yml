@@ -1,0 +1,38 @@
+name: tagged-release
+
+on:
+  push:
+    tags:
+      - 'v[1-9].[0-9]+.[0-9]+'
+
+jobs:
+  release:
+    name: 'Tagged Release'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          # https://github.com/marketplace/actions/goreleaser-action#usage
+          # note the fetch-depth: 0 input in Checkout step. It is required for
+          # the changelog to work correctly
+          fetch-depth: 0
+      - name: Install Go
+        uses: actions/setup-go@v2
+      - name: Restore cache
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          SNAP_TOKEN: ${{ secrets.SNAP_TOKEN }}
