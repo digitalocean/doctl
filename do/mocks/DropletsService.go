@@ -35,49 +35,34 @@ func (m *MockDropletsService) EXPECT() *MockDropletsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockDropletsService) List() (do.Droplets, error) {
+// Actions mocks base method.
+func (m *MockDropletsService) Actions(arg0 int) (do.Actions, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].(do.Droplets)
+	ret := m.ctrl.Call(m, "Actions", arg0)
+	ret0, _ := ret[0].(do.Actions)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// List indicates an expected call of List.
-func (mr *MockDropletsServiceMockRecorder) List() *gomock.Call {
+// Actions indicates an expected call of Actions.
+func (mr *MockDropletsServiceMockRecorder) Actions(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDropletsService)(nil).List))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Actions", reflect.TypeOf((*MockDropletsService)(nil).Actions), arg0)
 }
 
-// ListByTag mocks base method.
-func (m *MockDropletsService) ListByTag(arg0 string) (do.Droplets, error) {
+// Backups mocks base method.
+func (m *MockDropletsService) Backups(arg0 int) (do.Images, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTag", arg0)
-	ret0, _ := ret[0].(do.Droplets)
+	ret := m.ctrl.Call(m, "Backups", arg0)
+	ret0, _ := ret[0].(do.Images)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListByTag indicates an expected call of ListByTag.
-func (mr *MockDropletsServiceMockRecorder) ListByTag(arg0 interface{}) *gomock.Call {
+// Backups indicates an expected call of Backups.
+func (mr *MockDropletsServiceMockRecorder) Backups(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTag", reflect.TypeOf((*MockDropletsService)(nil).ListByTag), arg0)
-}
-
-// Get mocks base method.
-func (m *MockDropletsService) Get(arg0 int) (*do.Droplet, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0)
-	ret0, _ := ret[0].(*do.Droplet)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get.
-func (mr *MockDropletsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDropletsService)(nil).Get), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Backups", reflect.TypeOf((*MockDropletsService)(nil).Backups), arg0)
 }
 
 // Create mocks base method.
@@ -138,6 +123,21 @@ func (mr *MockDropletsServiceMockRecorder) DeleteByTag(arg0 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByTag", reflect.TypeOf((*MockDropletsService)(nil).DeleteByTag), arg0)
 }
 
+// Get mocks base method.
+func (m *MockDropletsService) Get(arg0 int) (*do.Droplet, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*do.Droplet)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockDropletsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDropletsService)(nil).Get), arg0)
+}
+
 // Kernels mocks base method.
 func (m *MockDropletsService) Kernels(arg0 int) (do.Kernels, error) {
 	m.ctrl.T.Helper()
@@ -153,49 +153,34 @@ func (mr *MockDropletsServiceMockRecorder) Kernels(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kernels", reflect.TypeOf((*MockDropletsService)(nil).Kernels), arg0)
 }
 
-// Snapshots mocks base method.
-func (m *MockDropletsService) Snapshots(arg0 int) (do.Images, error) {
+// List mocks base method.
+func (m *MockDropletsService) List() (do.Droplets, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Snapshots", arg0)
-	ret0, _ := ret[0].(do.Images)
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].(do.Droplets)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Snapshots indicates an expected call of Snapshots.
-func (mr *MockDropletsServiceMockRecorder) Snapshots(arg0 interface{}) *gomock.Call {
+// List indicates an expected call of List.
+func (mr *MockDropletsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshots", reflect.TypeOf((*MockDropletsService)(nil).Snapshots), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDropletsService)(nil).List))
 }
 
-// Backups mocks base method.
-func (m *MockDropletsService) Backups(arg0 int) (do.Images, error) {
+// ListByTag mocks base method.
+func (m *MockDropletsService) ListByTag(arg0 string) (do.Droplets, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Backups", arg0)
-	ret0, _ := ret[0].(do.Images)
+	ret := m.ctrl.Call(m, "ListByTag", arg0)
+	ret0, _ := ret[0].(do.Droplets)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Backups indicates an expected call of Backups.
-func (mr *MockDropletsServiceMockRecorder) Backups(arg0 interface{}) *gomock.Call {
+// ListByTag indicates an expected call of ListByTag.
+func (mr *MockDropletsServiceMockRecorder) ListByTag(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Backups", reflect.TypeOf((*MockDropletsService)(nil).Backups), arg0)
-}
-
-// Actions mocks base method.
-func (m *MockDropletsService) Actions(arg0 int) (do.Actions, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Actions", arg0)
-	ret0, _ := ret[0].(do.Actions)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Actions indicates an expected call of Actions.
-func (mr *MockDropletsServiceMockRecorder) Actions(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Actions", reflect.TypeOf((*MockDropletsService)(nil).Actions), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTag", reflect.TypeOf((*MockDropletsService)(nil).ListByTag), arg0)
 }
 
 // Neighbors mocks base method.
@@ -211,4 +196,19 @@ func (m *MockDropletsService) Neighbors(arg0 int) (do.Droplets, error) {
 func (mr *MockDropletsServiceMockRecorder) Neighbors(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Neighbors", reflect.TypeOf((*MockDropletsService)(nil).Neighbors), arg0)
+}
+
+// Snapshots mocks base method.
+func (m *MockDropletsService) Snapshots(arg0 int) (do.Images, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Snapshots", arg0)
+	ret0, _ := ret[0].(do.Images)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Snapshots indicates an expected call of Snapshots.
+func (mr *MockDropletsServiceMockRecorder) Snapshots(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshots", reflect.TypeOf((*MockDropletsService)(nil).Snapshots), arg0)
 }

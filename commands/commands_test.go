@@ -178,6 +178,7 @@ type tcMocks struct {
 	vpcs              *domocks.MockVPCsService
 	oneClick          *domocks.MockOneClickService
 	listen            *domocks.MockListenerService
+	monitoring        *domocks.MockMonitoringService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -217,6 +218,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		vpcs:              domocks.NewMockVPCsService(ctrl),
 		oneClick:          domocks.NewMockOneClickService(ctrl),
 		listen:            domocks.NewMockListenerService(ctrl),
+		monitoring:        domocks.NewMockMonitoringService(ctrl),
 	}
 
 	config := &CmdConfig{
@@ -263,6 +265,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		VPCs:              func() do.VPCsService { return tm.vpcs },
 		OneClicks:         func() do.OneClickService { return tm.oneClick },
 		Apps:              func() do.AppsService { return tm.apps },
+		Monitoring:        func() do.MonitoringService { return tm.monitoring },
 	}
 
 	tFn(config, tm)

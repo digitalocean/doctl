@@ -49,34 +49,19 @@ func (mr *MockInvoicesServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInvoicesService)(nil).Get), arg0)
 }
 
-// List mocks base method.
-func (m *MockInvoicesService) List() (*do.InvoiceList, error) {
+// GetCSV mocks base method.
+func (m *MockInvoicesService) GetCSV(arg0 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].(*do.InvoiceList)
+	ret := m.ctrl.Call(m, "GetCSV", arg0)
+	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// List indicates an expected call of List.
-func (mr *MockInvoicesServiceMockRecorder) List() *gomock.Call {
+// GetCSV indicates an expected call of GetCSV.
+func (mr *MockInvoicesServiceMockRecorder) GetCSV(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInvoicesService)(nil).List))
-}
-
-// GetSummary mocks base method.
-func (m *MockInvoicesService) GetSummary(arg0 string) (*do.InvoiceSummary, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSummary", arg0)
-	ret0, _ := ret[0].(*do.InvoiceSummary)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetSummary indicates an expected call of GetSummary.
-func (mr *MockInvoicesServiceMockRecorder) GetSummary(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSummary", reflect.TypeOf((*MockInvoicesService)(nil).GetSummary), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCSV", reflect.TypeOf((*MockInvoicesService)(nil).GetCSV), arg0)
 }
 
 // GetPDF mocks base method.
@@ -94,17 +79,32 @@ func (mr *MockInvoicesServiceMockRecorder) GetPDF(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPDF", reflect.TypeOf((*MockInvoicesService)(nil).GetPDF), arg0)
 }
 
-// GetCSV mocks base method.
-func (m *MockInvoicesService) GetCSV(arg0 string) ([]byte, error) {
+// GetSummary mocks base method.
+func (m *MockInvoicesService) GetSummary(arg0 string) (*do.InvoiceSummary, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetCSV", arg0)
-	ret0, _ := ret[0].([]byte)
+	ret := m.ctrl.Call(m, "GetSummary", arg0)
+	ret0, _ := ret[0].(*do.InvoiceSummary)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetCSV indicates an expected call of GetCSV.
-func (mr *MockInvoicesServiceMockRecorder) GetCSV(arg0 interface{}) *gomock.Call {
+// GetSummary indicates an expected call of GetSummary.
+func (mr *MockInvoicesServiceMockRecorder) GetSummary(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCSV", reflect.TypeOf((*MockInvoicesService)(nil).GetCSV), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSummary", reflect.TypeOf((*MockInvoicesService)(nil).GetSummary), arg0)
+}
+
+// List mocks base method.
+func (m *MockInvoicesService) List() (*do.InvoiceList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].(*do.InvoiceList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockInvoicesServiceMockRecorder) List() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInvoicesService)(nil).List))
 }

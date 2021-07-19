@@ -34,21 +34,6 @@ func (m *MockActionsService) EXPECT() *MockActionsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockActionsService) List() (do.Actions, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].(do.Actions)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockActionsServiceMockRecorder) List() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionsService)(nil).List))
-}
-
 // Get mocks base method.
 func (m *MockActionsService) Get(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
@@ -62,4 +47,19 @@ func (m *MockActionsService) Get(arg0 int) (*do.Action, error) {
 func (mr *MockActionsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockActionsService)(nil).Get), arg0)
+}
+
+// List mocks base method.
+func (m *MockActionsService) List() (do.Actions, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].(do.Actions)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockActionsServiceMockRecorder) List() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockActionsService)(nil).List))
 }
