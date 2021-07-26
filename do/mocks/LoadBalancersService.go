@@ -35,6 +35,73 @@ func (m *MockLoadBalancersService) EXPECT() *MockLoadBalancersServiceMockRecorde
 	return m.recorder
 }
 
+// AddDroplets mocks base method.
+func (m *MockLoadBalancersService) AddDroplets(lbID string, dIDs ...int) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{lbID}
+	for _, a := range dIDs {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddDroplets", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddDroplets indicates an expected call of AddDroplets.
+func (mr *MockLoadBalancersServiceMockRecorder) AddDroplets(lbID interface{}, dIDs ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{lbID}, dIDs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDroplets", reflect.TypeOf((*MockLoadBalancersService)(nil).AddDroplets), varargs...)
+}
+
+// AddForwardingRules mocks base method.
+func (m *MockLoadBalancersService) AddForwardingRules(lbID string, rules ...godo.ForwardingRule) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{lbID}
+	for _, a := range rules {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "AddForwardingRules", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddForwardingRules indicates an expected call of AddForwardingRules.
+func (mr *MockLoadBalancersServiceMockRecorder) AddForwardingRules(lbID interface{}, rules ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{lbID}, rules...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddForwardingRules", reflect.TypeOf((*MockLoadBalancersService)(nil).AddForwardingRules), varargs...)
+}
+
+// Create mocks base method.
+func (m *MockLoadBalancersService) Create(lbr *godo.LoadBalancerRequest) (*do.LoadBalancer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", lbr)
+	ret0, _ := ret[0].(*do.LoadBalancer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockLoadBalancersServiceMockRecorder) Create(lbr interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockLoadBalancersService)(nil).Create), lbr)
+}
+
+// Delete mocks base method.
+func (m *MockLoadBalancersService) Delete(lbID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", lbID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockLoadBalancersServiceMockRecorder) Delete(lbID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockLoadBalancersService)(nil).Delete), lbID)
+}
+
 // Get mocks base method.
 func (m *MockLoadBalancersService) Get(lbID string) (*do.LoadBalancer, error) {
 	m.ctrl.T.Helper()
@@ -65,69 +132,6 @@ func (mr *MockLoadBalancersServiceMockRecorder) List() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockLoadBalancersService)(nil).List))
 }
 
-// Create mocks base method.
-func (m *MockLoadBalancersService) Create(lbr *godo.LoadBalancerRequest) (*do.LoadBalancer, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", lbr)
-	ret0, _ := ret[0].(*do.LoadBalancer)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Create indicates an expected call of Create.
-func (mr *MockLoadBalancersServiceMockRecorder) Create(lbr interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockLoadBalancersService)(nil).Create), lbr)
-}
-
-// Update mocks base method.
-func (m *MockLoadBalancersService) Update(lbID string, lbr *godo.LoadBalancerRequest) (*do.LoadBalancer, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", lbID, lbr)
-	ret0, _ := ret[0].(*do.LoadBalancer)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Update indicates an expected call of Update.
-func (mr *MockLoadBalancersServiceMockRecorder) Update(lbID, lbr interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockLoadBalancersService)(nil).Update), lbID, lbr)
-}
-
-// Delete mocks base method.
-func (m *MockLoadBalancersService) Delete(lbID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", lbID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockLoadBalancersServiceMockRecorder) Delete(lbID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockLoadBalancersService)(nil).Delete), lbID)
-}
-
-// AddDroplets mocks base method.
-func (m *MockLoadBalancersService) AddDroplets(lbID string, dIDs ...int) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{lbID}
-	for _, a := range dIDs {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "AddDroplets", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddDroplets indicates an expected call of AddDroplets.
-func (mr *MockLoadBalancersServiceMockRecorder) AddDroplets(lbID interface{}, dIDs ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{lbID}, dIDs...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDroplets", reflect.TypeOf((*MockLoadBalancersService)(nil).AddDroplets), varargs...)
-}
-
 // RemoveDroplets mocks base method.
 func (m *MockLoadBalancersService) RemoveDroplets(lbID string, dIDs ...int) error {
 	m.ctrl.T.Helper()
@@ -147,25 +151,6 @@ func (mr *MockLoadBalancersServiceMockRecorder) RemoveDroplets(lbID interface{},
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveDroplets", reflect.TypeOf((*MockLoadBalancersService)(nil).RemoveDroplets), varargs...)
 }
 
-// AddForwardingRules mocks base method.
-func (m *MockLoadBalancersService) AddForwardingRules(lbID string, rules ...godo.ForwardingRule) error {
-	m.ctrl.T.Helper()
-	varargs := []interface{}{lbID}
-	for _, a := range rules {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "AddForwardingRules", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddForwardingRules indicates an expected call of AddForwardingRules.
-func (mr *MockLoadBalancersServiceMockRecorder) AddForwardingRules(lbID interface{}, rules ...interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{lbID}, rules...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddForwardingRules", reflect.TypeOf((*MockLoadBalancersService)(nil).AddForwardingRules), varargs...)
-}
-
 // RemoveForwardingRules mocks base method.
 func (m *MockLoadBalancersService) RemoveForwardingRules(lbID string, rules ...godo.ForwardingRule) error {
 	m.ctrl.T.Helper()
@@ -183,4 +168,19 @@ func (mr *MockLoadBalancersServiceMockRecorder) RemoveForwardingRules(lbID inter
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{lbID}, rules...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveForwardingRules", reflect.TypeOf((*MockLoadBalancersService)(nil).RemoveForwardingRules), varargs...)
+}
+
+// Update mocks base method.
+func (m *MockLoadBalancersService) Update(lbID string, lbr *godo.LoadBalancerRequest) (*do.LoadBalancer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Update", lbID, lbr)
+	ret0, _ := ret[0].(*do.LoadBalancer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Update indicates an expected call of Update.
+func (mr *MockLoadBalancersServiceMockRecorder) Update(lbID, lbr interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockLoadBalancersService)(nil).Update), lbID, lbr)
 }

@@ -35,36 +35,6 @@ func (m *MockFloatingIPsService) EXPECT() *MockFloatingIPsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockFloatingIPsService) List() (do.FloatingIPs, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].(do.FloatingIPs)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockFloatingIPsServiceMockRecorder) List() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockFloatingIPsService)(nil).List))
-}
-
-// Get mocks base method.
-func (m *MockFloatingIPsService) Get(ip string) (*do.FloatingIP, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ip)
-	ret0, _ := ret[0].(*do.FloatingIP)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get.
-func (mr *MockFloatingIPsServiceMockRecorder) Get(ip interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockFloatingIPsService)(nil).Get), ip)
-}
-
 // Create mocks base method.
 func (m *MockFloatingIPsService) Create(ficr *godo.FloatingIPCreateRequest) (*do.FloatingIP, error) {
 	m.ctrl.T.Helper()
@@ -92,4 +62,34 @@ func (m *MockFloatingIPsService) Delete(ip string) error {
 func (mr *MockFloatingIPsServiceMockRecorder) Delete(ip interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockFloatingIPsService)(nil).Delete), ip)
+}
+
+// Get mocks base method.
+func (m *MockFloatingIPsService) Get(ip string) (*do.FloatingIP, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ip)
+	ret0, _ := ret[0].(*do.FloatingIP)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockFloatingIPsServiceMockRecorder) Get(ip interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockFloatingIPsService)(nil).Get), ip)
+}
+
+// List mocks base method.
+func (m *MockFloatingIPsService) List() (do.FloatingIPs, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].(do.FloatingIPs)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockFloatingIPsServiceMockRecorder) List() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockFloatingIPsService)(nil).List))
 }

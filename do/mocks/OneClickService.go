@@ -34,21 +34,6 @@ func (m *MockOneClickService) EXPECT() *MockOneClickServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockOneClickService) List(arg0 string) (do.OneClicks, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0)
-	ret0, _ := ret[0].(do.OneClicks)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockOneClickServiceMockRecorder) List(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockOneClickService)(nil).List), arg0)
-}
-
 // InstallKubernetes mocks base method.
 func (m *MockOneClickService) InstallKubernetes(arg0 string, arg1 []string) (string, error) {
 	m.ctrl.T.Helper()
@@ -62,4 +47,19 @@ func (m *MockOneClickService) InstallKubernetes(arg0 string, arg1 []string) (str
 func (mr *MockOneClickServiceMockRecorder) InstallKubernetes(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallKubernetes", reflect.TypeOf((*MockOneClickService)(nil).InstallKubernetes), arg0, arg1)
+}
+
+// List mocks base method.
+func (m *MockOneClickService) List(arg0 string) (do.OneClicks, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0)
+	ret0, _ := ret[0].(do.OneClicks)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockOneClickServiceMockRecorder) List(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockOneClickService)(nil).List), arg0)
 }
