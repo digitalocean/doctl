@@ -6,8 +6,8 @@ on:
       - 'v[1-9].[0-9]+.[0-9]+'
 
 jobs:
-  release:
-    name: 'Tagged Release'
+  github-release:
+    name: 'GitHub Release'
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
@@ -34,5 +34,25 @@ jobs:
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  snapcraft-stable:
+    name: 'Snapcraft Stable'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Buld snap
+        id: build
+        run: |
+          make _build_snap && \
+          find doctl_v*.snap -print -exec echo ::set-output name=snap::{} \;
+
+      - uses: snapcore/action-publish@v1
+        with:
+          store_login: ${{ secrets.SNAP_TOKEN }}
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable
+        env:
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-          SNAP_TOKEN: ${{ secrets.SNAP_TOKEN }}
+          SNAP_TOKEN: ${{ secrets.STORE_LOGIN }}
