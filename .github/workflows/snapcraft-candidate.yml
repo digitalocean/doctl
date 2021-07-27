@@ -30,5 +30,3 @@ jobs:
           store_login: ${{ secrets.SNAP_TOKEN }}
           snap: ${{ steps.build.outputs.snap }}
           release: candidate
-        env:
-          SNAP_TOKEN: ${{ secrets.STORE_LOGIN }}
