@@ -392,7 +392,7 @@ This command prints out the raw YAML for the specified cluster's kubeconfig.	`, 
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
 
 	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
-This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage your
+This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage the specified cluster.
 		`, Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "Boolean indicating whether to set the current kubectl context to that of the new cluster")
 	AddIntFlag(cmdSaveConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
