@@ -502,3 +502,58 @@ func TestDropletOneClickListNoType(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestDropletCreateWithAgent(t *testing.T) {
+	boolF := false
+	boolT := true
+	tests := []struct {
+		name  string
+		agent *bool
+	}{
+		{
+			name:  "with droplet-agent true",
+			agent: &boolT,
+		},
+		{
+			name:  "with droplet-agent false",
+			agent: &boolF,
+		},
+		{
+			name:  "with droplet-agent unset",
+			agent: &boolF,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				dcr := &godo.DropletCreateRequest{
+					Name:              "droplet",
+					Region:            "nyc3",
+					Size:              "s-1gb-1vcpu",
+					Image:             godo.DropletCreateImage{ID: 0, Slug: "image"},
+					SSHKeys:           []godo.DropletCreateSSHKey{},
+					Backups:           false,
+					IPv6:              false,
+					PrivateNetworking: false,
+				}
+				if tt.agent != nil {
+					dcr.WithDropletAgent = tt.agent
+				}
+
+				tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+
+				config.Args = append(config.Args, "droplet")
+				config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc3")
+				config.Doit.Set(config.NS, doctl.ArgSizeSlug, "s-1gb-1vcpu")
+				config.Doit.Set(config.NS, doctl.ArgImage, "image")
+				if tt.agent != nil {
+					config.Doit.Set(config.NS, doctl.ArgDropletAgent, tt.agent)
+				}
+
+				err := RunDropletCreate(config)
+				assert.NoError(t, err)
+			})
+		})
+	}
+}
