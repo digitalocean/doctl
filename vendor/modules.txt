@@ -141,7 +141,7 @@ github.com/opencontainers/go-digest
 ## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.0-rc90
+# github.com/opencontainers/runc v1.0.0-rc95
 ## explicit
 github.com/opencontainers/runc/libcontainer/user
 # github.com/pelletier/go-toml v1.9.3
