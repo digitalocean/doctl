@@ -66,6 +66,7 @@ type CmdConfig struct {
 	VPCs              func() do.VPCsService
 	OneClicks         func() do.OneClickService
 	Apps              func() do.AppsService
+	Monitoring        func() do.MonitoringService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -114,6 +115,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.VPCs = func() do.VPCsService { return do.NewVPCsService(godoClient) }
 			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(godoClient) }
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
+			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
 
 			return nil
 		},

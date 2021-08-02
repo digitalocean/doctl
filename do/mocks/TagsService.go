@@ -35,36 +35,6 @@ func (m *MockTagsService) EXPECT() *MockTagsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockTagsService) List() (do.Tags, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].(do.Tags)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockTagsServiceMockRecorder) List() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTagsService)(nil).List))
-}
-
-// Get mocks base method.
-func (m *MockTagsService) Get(arg0 string) (*do.Tag, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0)
-	ret0, _ := ret[0].(*do.Tag)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get.
-func (mr *MockTagsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTagsService)(nil).Get), arg0)
-}
-
 // Create mocks base method.
 func (m *MockTagsService) Create(arg0 *godo.TagCreateRequest) (*do.Tag, error) {
 	m.ctrl.T.Helper()
@@ -92,6 +62,36 @@ func (m *MockTagsService) Delete(arg0 string) error {
 func (mr *MockTagsServiceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockTagsService)(nil).Delete), arg0)
+}
+
+// Get mocks base method.
+func (m *MockTagsService) Get(arg0 string) (*do.Tag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*do.Tag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockTagsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockTagsService)(nil).Get), arg0)
+}
+
+// List mocks base method.
+func (m *MockTagsService) List() (do.Tags, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].(do.Tags)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockTagsServiceMockRecorder) List() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockTagsService)(nil).List))
 }
 
 // TagResources mocks base method.

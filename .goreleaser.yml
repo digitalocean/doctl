@@ -50,4 +50,4 @@ release:
     name: doctl
 
 changelog:
-  skip: true
+  skip: false

@@ -1,0 +1,35 @@
+name: snapcraft-candidate
+# Builds and publishes the package to the candidate channel on merge to main.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-publish:
+    name: 'Snapcraft: Candidate Release'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          # fetch-depth: 0 fetches all history for all branches and tags
+          fetch-depth: 0
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Buld snap
+        id: build
+        run: |
+          make _build_snap && \
+          find doctl_v*.snap -print -exec echo ::set-output name=snap::{} \;
+
+      - uses: snapcore/action-publish@v1
+        with:
+          store_login: ${{ secrets.SNAP_TOKEN }}
+          snap: ${{ steps.build.outputs.snap }}
+          release: candidate

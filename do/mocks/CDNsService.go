@@ -35,19 +35,47 @@ func (m *MockCDNsService) EXPECT() *MockCDNsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockCDNsService) List() ([]do.CDN, error) {
+// Create mocks base method.
+func (m *MockCDNsService) Create(arg0 *godo.CDNCreateRequest) (*do.CDN, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].([]do.CDN)
+	ret := m.ctrl.Call(m, "Create", arg0)
+	ret0, _ := ret[0].(*do.CDN)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// List indicates an expected call of List.
-func (mr *MockCDNsServiceMockRecorder) List() *gomock.Call {
+// Create indicates an expected call of Create.
+func (mr *MockCDNsServiceMockRecorder) Create(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCDNsService)(nil).List))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCDNsService)(nil).Create), arg0)
+}
+
+// Delete mocks base method.
+func (m *MockCDNsService) Delete(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockCDNsServiceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCDNsService)(nil).Delete), arg0)
+}
+
+// FlushCache mocks base method.
+func (m *MockCDNsService) FlushCache(arg0 string, arg1 *godo.CDNFlushCacheRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FlushCache", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FlushCache indicates an expected call of FlushCache.
+func (mr *MockCDNsServiceMockRecorder) FlushCache(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushCache", reflect.TypeOf((*MockCDNsService)(nil).FlushCache), arg0, arg1)
 }
 
 // Get mocks base method.
@@ -65,34 +93,19 @@ func (mr *MockCDNsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockCDNsService)(nil).Get), arg0)
 }
 
-// Create mocks base method.
-func (m *MockCDNsService) Create(arg0 *godo.CDNCreateRequest) (*do.CDN, error) {
+// List mocks base method.
+func (m *MockCDNsService) List() ([]do.CDN, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0)
-	ret0, _ := ret[0].(*do.CDN)
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].([]do.CDN)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create.
-func (mr *MockCDNsServiceMockRecorder) Create(arg0 interface{}) *gomock.Call {
+// List indicates an expected call of List.
+func (mr *MockCDNsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCDNsService)(nil).Create), arg0)
-}
-
-// UpdateTTL mocks base method.
-func (m *MockCDNsService) UpdateTTL(arg0 string, arg1 *godo.CDNUpdateTTLRequest) (*do.CDN, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateTTL", arg0, arg1)
-	ret0, _ := ret[0].(*do.CDN)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// UpdateTTL indicates an expected call of UpdateTTL.
-func (mr *MockCDNsServiceMockRecorder) UpdateTTL(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTTL", reflect.TypeOf((*MockCDNsService)(nil).UpdateTTL), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCDNsService)(nil).List))
 }
 
 // UpdateCustomDomain mocks base method.
@@ -110,30 +123,17 @@ func (mr *MockCDNsServiceMockRecorder) UpdateCustomDomain(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCustomDomain", reflect.TypeOf((*MockCDNsService)(nil).UpdateCustomDomain), arg0, arg1)
 }
 
-// FlushCache mocks base method.
-func (m *MockCDNsService) FlushCache(arg0 string, arg1 *godo.CDNFlushCacheRequest) error {
+// UpdateTTL mocks base method.
+func (m *MockCDNsService) UpdateTTL(arg0 string, arg1 *godo.CDNUpdateTTLRequest) (*do.CDN, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FlushCache", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "UpdateTTL", arg0, arg1)
+	ret0, _ := ret[0].(*do.CDN)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// FlushCache indicates an expected call of FlushCache.
-func (mr *MockCDNsServiceMockRecorder) FlushCache(arg0, arg1 interface{}) *gomock.Call {
+// UpdateTTL indicates an expected call of UpdateTTL.
+func (mr *MockCDNsServiceMockRecorder) UpdateTTL(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FlushCache", reflect.TypeOf((*MockCDNsService)(nil).FlushCache), arg0, arg1)
-}
-
-// Delete mocks base method.
-func (m *MockCDNsService) Delete(arg0 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockCDNsServiceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockCDNsService)(nil).Delete), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTTL", reflect.TypeOf((*MockCDNsService)(nil).UpdateTTL), arg0, arg1)
 }

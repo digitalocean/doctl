@@ -35,19 +35,19 @@ func (m *MockVolumesService) EXPECT() *MockVolumesServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockVolumesService) List() ([]do.Volume, error) {
+// CreateSnapshot mocks base method.
+func (m *MockVolumesService) CreateSnapshot(arg0 *godo.SnapshotCreateRequest) (*do.Snapshot, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].([]do.Volume)
+	ret := m.ctrl.Call(m, "CreateSnapshot", arg0)
+	ret0, _ := ret[0].(*do.Snapshot)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// List indicates an expected call of List.
-func (mr *MockVolumesServiceMockRecorder) List() *gomock.Call {
+// CreateSnapshot indicates an expected call of CreateSnapshot.
+func (mr *MockVolumesServiceMockRecorder) CreateSnapshot(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVolumesService)(nil).List))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSnapshot", reflect.TypeOf((*MockVolumesService)(nil).CreateSnapshot), arg0)
 }
 
 // CreateVolume mocks base method.
@@ -63,6 +63,20 @@ func (m *MockVolumesService) CreateVolume(arg0 *godo.VolumeCreateRequest) (*do.V
 func (mr *MockVolumesServiceMockRecorder) CreateVolume(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVolume", reflect.TypeOf((*MockVolumesService)(nil).CreateVolume), arg0)
+}
+
+// DeleteSnapshot mocks base method.
+func (m *MockVolumesService) DeleteSnapshot(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSnapshot", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSnapshot indicates an expected call of DeleteSnapshot.
+func (mr *MockVolumesServiceMockRecorder) DeleteSnapshot(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSnapshot", reflect.TypeOf((*MockVolumesService)(nil).DeleteSnapshot), arg0)
 }
 
 // DeleteVolume mocks base method.
@@ -94,21 +108,6 @@ func (mr *MockVolumesServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVolumesService)(nil).Get), arg0)
 }
 
-// CreateSnapshot mocks base method.
-func (m *MockVolumesService) CreateSnapshot(arg0 *godo.SnapshotCreateRequest) (*do.Snapshot, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateSnapshot", arg0)
-	ret0, _ := ret[0].(*do.Snapshot)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateSnapshot indicates an expected call of CreateSnapshot.
-func (mr *MockVolumesServiceMockRecorder) CreateSnapshot(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSnapshot", reflect.TypeOf((*MockVolumesService)(nil).CreateSnapshot), arg0)
-}
-
 // GetSnapshot mocks base method.
 func (m *MockVolumesService) GetSnapshot(arg0 string) (*do.Snapshot, error) {
 	m.ctrl.T.Helper()
@@ -124,18 +123,19 @@ func (mr *MockVolumesServiceMockRecorder) GetSnapshot(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSnapshot", reflect.TypeOf((*MockVolumesService)(nil).GetSnapshot), arg0)
 }
 
-// DeleteSnapshot mocks base method.
-func (m *MockVolumesService) DeleteSnapshot(arg0 string) error {
+// List mocks base method.
+func (m *MockVolumesService) List() ([]do.Volume, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteSnapshot", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].([]do.Volume)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// DeleteSnapshot indicates an expected call of DeleteSnapshot.
-func (mr *MockVolumesServiceMockRecorder) DeleteSnapshot(arg0 interface{}) *gomock.Call {
+// List indicates an expected call of List.
+func (mr *MockVolumesServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSnapshot", reflect.TypeOf((*MockVolumesService)(nil).DeleteSnapshot), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVolumesService)(nil).List))
 }
 
 // ListSnapshots mocks base method.

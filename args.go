@@ -354,4 +354,39 @@ const (
 
 	// ArgDatabaseFirewallRuleUUID is the UUID for the firewall rules.
 	ArgDatabaseFirewallRuleUUID = "uuid"
+
+	// Monitoring Args
+
+	// ArgAlertPolicyDescription is the flag to pass in the alert policy description.
+	ArgAlertPolicyDescription = "description"
+
+	// ArgAlertPolicyType is the alert policy type.
+	ArgAlertPolicyType = "type"
+
+	// ArgAlertPolicyValue is the alert policy value.
+	ArgAlertPolicyValue = "value"
+
+	// ArgAlertPolicyWindow is the alert policy window.
+	ArgAlertPolicyWindow = "window"
+
+	// ArgAlertPolicyTags is the alert policy tags.
+	ArgAlertPolicyTags = "tags"
+
+	// ArgAlertPolicyEntities is the alert policy entities.
+	ArgAlertPolicyEntities = "entities"
+
+	// ArgAlertPolicyEnabled is whether the alert policy is enabled.
+	ArgAlertPolicyEnabled = "enabled"
+
+	// ArgAlertPolicyCompare is the alert policy comparator.
+	ArgAlertPolicyCompare = "compare"
+
+	// ArgAlertPolicyEmails are the emails to send alerts to.
+	ArgAlertPolicyEmails = "emails"
+
+	// ArgAlertPolicySlackChannels are the slack channels to send alerts to.
+	ArgAlertPolicySlackChannels = "slack-channels"
+
+	// ArgAlertPolicySlackURLs are the slack URLs to send alerts to.
+	ArgAlertPolicySlackURLs = "slack-urls"
 )

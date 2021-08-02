@@ -145,6 +145,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Registry())
 	DoitCmd.AddCommand(VPCs())
 	DoitCmd.AddCommand(OneClicks())
+	DoitCmd.AddCommand(Monitoring())
 }
 
 func computeCmd() *Command {
