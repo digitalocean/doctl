@@ -1185,7 +1185,7 @@ This command lists the following details for each firewall rule in a given datab
 
 	- The UUID of the firewall rule.
 	- The Cluster UUID for the database cluster to which the rule is applied.
-	- The Type of resource that the firewall rule allows to access the database cluster. The possible values are: "droplet", "k8s", "ip_addr", or "tag".
+	- The Type of resource that the firewall rule allows to access the database cluster. The possible values are: "droplet", "k8s", "ip_addr", "tag", or "app".
 	- The Value, which is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster.
 	- The Time value given in ISO8601 combined date and time format that represents when the firewall rule was created.
 	`
@@ -1203,7 +1203,7 @@ Use this command to replace the firewall rules of a given database. This command
 	doctl databases list 
 	
 This command also requires a --rule flag. You can pass in multiple --rule flags. Each rule passed in to the --rule flag must be of format type:value
-	- "type" is the type of resource that the firewall rule allows to access the database cluster. The possible values for type are:  "droplet", "k8s", "ip_addr", or "tag"
+	- "type" is the type of resource that the firewall rule allows to access the database cluster. The possible values for type are:  "droplet", "k8s", "ip_addr", "tag", or "app"
 	- "value" is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster
 
 For example:
@@ -1224,7 +1224,7 @@ Use this command to append a single rule to the existing firewall rules of a giv
 	doctl databases list
 
 This command also requires a --rule flag. Each rule passed in to the --rule flag must be of format type:value
-	- "type" is the type of resource that the firewall rule allows to access the database cluster. The possible values for type are:  "droplet", "k8s", "ip_addr", or "tag"
+	- "type" is the type of resource that the firewall rule allows to access the database cluster. The possible values for type are:  "droplet", "k8s", "ip_addr", "tag", or "app"
 	- "value" is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster
 
 For example:
