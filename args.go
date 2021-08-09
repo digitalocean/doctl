@@ -122,6 +122,8 @@ const (
 	ArgPrivateNetworking = "enable-private-networking"
 	// ArgMonitoring is an enable monitoring argument.
 	ArgMonitoring = "enable-monitoring"
+	// ArgDropletAgent is an argument for enabling/disbling the Droplet agent.
+	ArgDropletAgent = "droplet-agent"
 	// ArgRecordData is a record data argument.
 	ArgRecordData = "record-data"
 	// ArgRecordID is a record id argument.
