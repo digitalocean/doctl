@@ -41,6 +41,9 @@ type AppsService interface {
 
 	ListInstanceSizes() ([]*godo.AppInstanceSize, error)
 	GetInstanceSize(slug string) (*godo.AppInstanceSize, error)
+
+	ListAlerts(appID string) ([]*godo.AppAlert, error)
+	UpdateAlertDestinations(appID, alertID string, update *godo.AlertDestinationUpdateRequest) (*godo.AppAlert, error)
 }
 
 type appsService struct {
@@ -217,4 +220,20 @@ func (s *appsService) GetInstanceSize(slug string) (*godo.AppInstanceSize, error
 		return nil, err
 	}
 	return instanceSize, nil
+}
+
+func (s *appsService) ListAlerts(appID string) ([]*godo.AppAlert, error) {
+	alerts, _, err := s.client.Apps.ListAlerts(s.ctx, appID)
+	if err != nil {
+		return nil, err
+	}
+	return alerts, nil
+}
+
+func (s *appsService) UpdateAlertDestinations(appID, alertID string, update *godo.AlertDestinationUpdateRequest) (*godo.AppAlert, error) {
+	alert, _, err := s.client.Apps.UpdateAlertDestinations(s.ctx, appID, alertID, update)
+	if err != nil {
+		return nil, err
+	}
+	return alert, nil
 }

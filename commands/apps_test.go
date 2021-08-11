@@ -35,6 +35,8 @@ func TestAppsCommand(t *testing.T) {
 		"propose",
 		"spec",
 		"tier",
+		"list-alerts",
+		"update-alert-destinations",
 	)
 }
 
@@ -70,6 +72,46 @@ var (
 		TierSlug:        "basic",
 		TierUpgradeTo:   "professional-xs",
 		TierDowngradeTo: "basic-xxxs",
+	}
+
+	testAlerts = []*godo.AppAlert{
+		{
+			ID: "c586fc0d-e8e2-4c50-9bf6-6c0a6b2ed2a7",
+			Spec: &godo.AppAlertSpec{
+				Rule: godo.AppAlertSpecRule_DeploymentFailed,
+			},
+			Emails: []string{"test@example.com", "test2@example.com"},
+			SlackWebhooks: []*godo.AppAlertSlackWebhook{
+				{
+					URL:     "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+					Channel: "channel name",
+				},
+			},
+		},
+	}
+
+	testAlert = godo.AppAlert{
+		ID: "c586fc0d-e8e2-4c50-9bf6-6c0a6b2ed2a7",
+		Spec: &godo.AppAlertSpec{
+			Rule: godo.AppAlertSpecRule_DeploymentFailed,
+		},
+		Emails: []string{"test@example.com", "test2@example.com"},
+		SlackWebhooks: []*godo.AppAlertSlackWebhook{
+			{
+				URL:     "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+				Channel: "channel name",
+			},
+		},
+	}
+
+	testAlertUpdate = godo.AlertDestinationUpdateRequest{
+		Emails: []string{"test@example.com", "test2@example.com"},
+		SlackWebhooks: []*godo.AppAlertSlackWebhook{
+			{
+				URL:     "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+				Channel: "channel name",
+			},
+		},
 	}
 )
 
@@ -759,6 +801,38 @@ func TestRunAppsTierInstanceSizeGet(t *testing.T) {
 
 		config.Args = append(config.Args, testAppInstanceSize.Slug)
 		err := RunAppsTierInstanceSizeGet(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsListAlerts(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		tm.apps.EXPECT().ListAlerts(appID).Times(1).Return(testAlerts, nil)
+
+		config.Args = append(config.Args, appID)
+		err := RunAppListAlerts(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsUpdateAlertDestinations(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		destinationsFile, err := ioutil.TempFile("", "dest")
+		require.NoError(t, err)
+		defer func() {
+			os.Remove(destinationsFile.Name())
+			destinationsFile.Close()
+		}()
+
+		err = json.NewEncoder(destinationsFile).Encode(&testAlertUpdate)
+		require.NoError(t, err)
+		appID := uuid.New().String()
+		tm.apps.EXPECT().UpdateAlertDestinations(appID, testAlert.ID, &testAlertUpdate).Times(1).Return(&testAlert, nil)
+
+		config.Args = append(config.Args, appID, testAlert.ID)
+		config.Doit.Set(config.NS, doctl.ArgAppAlertDestinations, destinationsFile.Name())
+		err = RunAppUpdateAlertDestinations(config)
 		require.NoError(t, err)
 	})
 }

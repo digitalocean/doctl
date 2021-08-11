@@ -168,6 +168,21 @@ func (mr *MockAppsServiceMockRecorder) List() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAppsService)(nil).List))
 }
 
+// ListAlerts mocks base method.
+func (m *MockAppsService) ListAlerts(appID string) ([]*godo.AppAlert, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAlerts", appID)
+	ret0, _ := ret[0].([]*godo.AppAlert)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAlerts indicates an expected call of ListAlerts.
+func (mr *MockAppsServiceMockRecorder) ListAlerts(appID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAlerts", reflect.TypeOf((*MockAppsService)(nil).ListAlerts), appID)
+}
+
 // ListDeployments mocks base method.
 func (m *MockAppsService) ListDeployments(appID string) ([]*godo.Deployment, error) {
 	m.ctrl.T.Helper()
@@ -256,4 +271,19 @@ func (m *MockAppsService) Update(appID string, req *godo.AppUpdateRequest) (*god
 func (mr *MockAppsServiceMockRecorder) Update(appID, req interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockAppsService)(nil).Update), appID, req)
+}
+
+// UpdateAlertDestinations mocks base method.
+func (m *MockAppsService) UpdateAlertDestinations(appID, alertID string, update *godo.AlertDestinationUpdateRequest) (*godo.AppAlert, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAlertDestinations", appID, alertID, update)
+	ret0, _ := ret[0].(*godo.AppAlert)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAlertDestinations indicates an expected call of UpdateAlertDestinations.
+func (mr *MockAppsServiceMockRecorder) UpdateAlertDestinations(appID, alertID, update interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAlertDestinations", reflect.TypeOf((*MockAppsService)(nil).UpdateAlertDestinations), appID, alertID, update)
 }
