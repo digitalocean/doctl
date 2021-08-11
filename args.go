@@ -48,6 +48,8 @@ const (
 	ArgAppLogTail = "tail"
 	// ArgAppForceRebuild forces a deployment rebuild
 	ArgAppForceRebuild = "force-rebuild"
+	// ArgAppAlertDestinations is a path to an app alert destination file.
+	ArgAppAlertDestinations = "app-alert-destinations"
 	// ArgClusterName is a cluster name argument.
 	ArgClusterName = "cluster-name"
 	// ArgClusterVersionSlug is a cluster version argument.

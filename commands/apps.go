@@ -197,6 +197,29 @@ Only basic information is included with the text output format. For complete app
 	AddStringFlag(propose, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec", requiredOpt())
 	AddStringFlag(propose, doctl.ArgApp, "", "", "An optional existing app ID. If specified, the app spec will be treated as a proposed update to the existing app.")
 
+	CmdBuilder(
+		cmd,
+		RunAppListAlerts,
+		"list-alerts <app id>",
+		"List alerts on an app",
+		`List all alerts associated to an app and its components`,
+		Writer,
+		aliasOpt("la"),
+		displayerType(&displayers.AppAlerts{}),
+	)
+
+	updateAlertDestinations := CmdBuilder(
+		cmd,
+		RunAppUpdateAlertDestinations,
+		"update-alert-destinations <app id> <alert id>",
+		"Update alert destinations",
+		`Update alert destinations`,
+		Writer,
+		aliasOpt("uad"),
+		displayerType(&displayers.AppAlerts{}),
+	)
+	AddStringFlag(updateAlertDestinations, doctl.ArgAppAlertDestinations, "", "", "Path to an alert destinations file in JSON or YAML format.")
+
 	cmd.AddCommand(appsSpec())
 	cmd.AddCommand(appsTier())
 
@@ -836,4 +859,89 @@ func RunAppsTierInstanceSizeGet(c *CmdConfig) error {
 	}
 
 	return c.Display(displayers.AppInstanceSizes([]*godo.AppInstanceSize{instanceSize}))
+}
+
+// RunAppListAlerts gets configured alerts on an app
+func RunAppListAlerts(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	appID := c.Args[0]
+
+	alerts, err := c.Apps().ListAlerts(appID)
+	if err != nil {
+		return err
+	}
+	return c.Display(displayers.AppAlerts(alerts))
+}
+
+func RunAppUpdateAlertDestinations(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	appID := c.Args[0]
+	alertID := c.Args[1]
+
+	alertDestinationsPath, err := c.Doit.GetString(c.NS, doctl.ArgAppAlertDestinations)
+	if err != nil {
+		return err
+	}
+	update, err := readAppAlertDestination(os.Stdin, alertDestinationsPath)
+	if err != nil {
+		return err
+	}
+
+	alert, err := c.Apps().UpdateAlertDestinations(appID, alertID, update)
+	if err != nil {
+		return err
+	}
+	return c.Display(displayers.AppAlerts([]*godo.AppAlert{alert}))
+}
+
+func readAppAlertDestination(stdin io.Reader, path string) (*godo.AlertDestinationUpdateRequest, error) {
+	var alertDestinations io.Reader
+	if path == "-" {
+		alertDestinations = stdin
+	} else {
+		alertDestinationsFile, err := os.Open(path) // guardrails-disable-line
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("opening app alert destinations: %s does not exist", path)
+			}
+			return nil, fmt.Errorf("opening app alert destinations: %w", err)
+		}
+		defer alertDestinationsFile.Close()
+		alertDestinations = alertDestinationsFile
+	}
+
+	byt, err := ioutil.ReadAll(alertDestinations)
+	if err != nil {
+		return nil, fmt.Errorf("reading app alert destinations: %w", err)
+	}
+
+	s, err := parseAppAlert(byt)
+	if err != nil {
+		return nil, fmt.Errorf("parsing app alert destinations: %w", err)
+	}
+
+	return s, nil
+}
+
+func parseAppAlert(destinations []byte) (*godo.AlertDestinationUpdateRequest, error) {
+	jsonAlertDestinations, err := yaml.YAMLToJSON(destinations)
+	if err != nil {
+		return nil, err
+	}
+
+	dec := json.NewDecoder(bytes.NewReader(jsonAlertDestinations))
+	dec.DisallowUnknownFields()
+
+	var alertDestinations godo.AlertDestinationUpdateRequest
+	if err := dec.Decode(&alertDestinations); err != nil {
+		return nil, err
+	}
+
+	return &alertDestinations, nil
 }
