@@ -65,7 +65,7 @@ func Droplet() *Command {
 
 	dropletCreateLongDesc := `Use this command to create a new Droplet. Required values are name, region, size, and image. For example, to create an Ubuntu 20.04 with 1 vCPU and 1 GB of RAM in the NYC1 datacenter region, run:
 
-	doctl compute droplet create --image ubuntu-20-04-x64 --size s-1vcpu-1gb --region nyc1 example.com
+	doctl compute droplet create --image ubuntu-20-04-x64 --size s-1vcpu-1gb --region nyc1 example.com --wait --droplet-agent=false
 `
 
 	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", dropletCreateLongDesc, Writer,
@@ -87,7 +87,7 @@ func Droplet() *Command {
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "A tag name to be applied to the Droplet")
 	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of a non-default VPC to create the Droplet in")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to be applied to the Droplet")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "By default, the agent is installed on new Droplets but installation errors are ignored. Set to `false` to prevent installation. Set `true` to make installation errors fatal.")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "By default, the agent is installed on new Droplets but installation errors are ignored. Set to --droplet-agent=false to prevent installation. Set `true` to make installation errors fatal.")
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "A list of block storage volume IDs to attach to the Droplet")
 
