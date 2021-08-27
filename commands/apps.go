@@ -382,7 +382,7 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 
 	if wait {
 		apps := c.Apps()
-		notice("App deplpyment is in progress, waiting for deployment to be running")
+		notice("App deployment is in progress, waiting for deployment to be running")
 		err := waitForActiveDeployment(apps, appID, deployment.ID)
 		if err != nil {
 			warn("App deployment couldn't enter `running` state: %v", err)
