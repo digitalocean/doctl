@@ -667,7 +667,7 @@ var _ = suite("apps/create-deployment", func(t *testing.T, when spec.G, it spec.
 			output, _ := cmd.CombinedOutput()
 			//expect.NoError(err)
 
-			expectedOutput := "Notice: App deplpyment is in progress, waiting for deployment to be running\n.\nNotice: Deployment created\n" + testActiveDeploymentOutput
+			expectedOutput := "Notice: App deployment is in progress, waiting for deployment to be running\n.\nNotice: Deployment created\n" + testActiveDeploymentOutput
 			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 		})
 	})
