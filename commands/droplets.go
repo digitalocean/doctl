@@ -760,8 +760,8 @@ func dropletOneClicks() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "1-click",
-			Short: "Display commands that pertain to droplet 1-click applications",
-			Long:  "The commands under `doctl kubernetes 1-click` are for interacting with DigitalOcean Droplet 1-Click applications.",
+			Short: "Display commands that pertain to Droplet 1-click applications",
+			Long:  "The commands under `doctl compute droplet 1-click` are for interacting with DigitalOcean Droplet 1-Click applications.",
 		},
 	}
 
