@@ -371,7 +371,6 @@ func RunRecordUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(rTTL)
 
 	rWeight, err := c.Doit.GetInt(c.NS, doctl.ArgRecordWeight)
 	if err != nil {
