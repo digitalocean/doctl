@@ -198,7 +198,7 @@ func (ds *domainsService) EditRecord(domain string, id int, drer *DomainRecordEd
 	}
 
 	path := fmt.Sprintf(domainRecordPath, domain, id)
-	req, err := ds.client.NewRequest(context.TODO(), http.MethodPut, path, drer)
+	req, err := ds.client.NewRequest(context.TODO(), http.MethodPatch, path, drer)
 	if err != nil {
 		return nil, err
 	}

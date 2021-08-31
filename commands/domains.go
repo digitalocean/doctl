@@ -84,7 +84,7 @@ func Domain() *Command {
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "", "Record data; varies depending on record type")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, "", 0, "Record priority")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, "", 0, "The port value for an SRV record")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 1800, "The record's Time To Live value, in seconds")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 0, "The record's Time To Live value, in seconds")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "The weight value for an SRV record")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
@@ -371,6 +371,7 @@ func RunRecordUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(rTTL)
 
 	rWeight, err := c.Doit.GetInt(c.NS, doctl.ArgRecordWeight)
 	if err != nil {
