@@ -87,7 +87,7 @@ func Droplet() *Command {
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "A tag name to be applied to the Droplet")
 	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of a non-default VPC to create the Droplet in")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to be applied to the Droplet")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "By default, the agent is installed on new Droplets but installation errors are ignored. Set to `false` to prevent installation. Set `true` to make installation errors fatal.")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "By default, the agent is installed on new Droplets but installation errors are ignored. Set --droplet-agent=false to prevent installation. Set `true` to make installation errors fatal.")
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "A list of block storage volume IDs to attach to the Droplet")
 
@@ -760,8 +760,8 @@ func dropletOneClicks() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "1-click",
-			Short: "Display commands that pertain to droplet 1-click applications",
-			Long:  "The commands under `doctl kubernetes 1-click` are for interacting with DigitalOcean Droplet 1-Click applications.",
+			Short: "Display commands that pertain to Droplet 1-click applications",
+			Long:  "The commands under `doctl compute droplet 1-click` are for interacting with DigitalOcean Droplet 1-Click applications.",
 		},
 	}
 
