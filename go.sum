@@ -102,8 +102,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
-github.com/digitalocean/godo v1.65.0 h1:3SywGJBC18HaYtPQF+T36jYzXBi+a6eIMonSjDll7TA=
-github.com/digitalocean/godo v1.65.0/go.mod h1:p7dOjjtSBqCTUksqtA5Fd3uaKs9kyTq2xcz76ulEJRU=
+github.com/digitalocean/godo v1.67.0 h1:MksZlZl7i3nzrczgNXhzky8FODerHKL76JmpencjEyM=
+github.com/digitalocean/godo v1.67.0/go.mod h1:epPuOzTOOJujNo0nduDj2D5O1zu8cSpp9R+DdN0W9I0=
 github.com/docker/cli v0.0.0-20200622130859-87db43814b48 h1:AC8qbhi/SjYf4iN2W3jSsofZGHWPjG8pjf5P143KUM8=
 github.com/docker/cli v0.0.0-20200622130859-87db43814b48/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/docker v17.12.0-ce-rc1.0.20200531234253-77e06fda0c94+incompatible h1:PmGHHCZ43l6h8aZIi+Xa+z1SWe4dFImd5EK3TNp1jlo=

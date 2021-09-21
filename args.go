@@ -152,6 +152,8 @@ const (
 	ArgSchemaOnly = "schema-only"
 	// ArgSizeSlug is a size slug argument.
 	ArgSizeSlug = "size"
+	// ArgSizeUnit is a size unit argument.
+	ArgSizeUnit = "size-unit"
 	// ArgsSSHKeyPath is a ssh argument.
 	ArgsSSHKeyPath = "ssh-key-path"
 	// ArgSSHKeys is a ssh key argument.
