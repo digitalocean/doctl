@@ -422,8 +422,9 @@ type KubernetesOptions struct {
 
 // KubernetesVersion is a DigitalOcean Kubernetes release.
 type KubernetesVersion struct {
-	Slug              string `json:"slug,omitempty"`
-	KubernetesVersion string `json:"kubernetes_version,omitempty"`
+	Slug              string   `json:"slug,omitempty"`
+	KubernetesVersion string   `json:"kubernetes_version,omitempty"`
+	SupportedFeatures []string `json:"supported_features,omitempty"`
 }
 
 // KubernetesNodeSize is a node sizes supported for Kubernetes clusters.

@@ -42,6 +42,7 @@ func (lb *LoadBalancer) Cols() []string {
 		"Algorithm",
 		"Region",
 		"Size",
+		"SizeUnit",
 		"VPCUUID",
 		"Tag",
 		"DropletIDs",
@@ -62,6 +63,7 @@ func (lb *LoadBalancer) ColMap() map[string]string {
 		"Algorithm":           "Algorithm",
 		"Region":              "Region",
 		"Size":                "Size",
+		"SizeUnit":            "Size Unit",
 		"VPCUUID":             "VPC UUID",
 		"Tag":                 "Tag",
 		"DropletIDs":          "Droplet IDs",
@@ -89,7 +91,6 @@ func (lb *LoadBalancer) KV() []map[string]interface{} {
 			"Created":             l.Created,
 			"Algorithm":           l.Algorithm,
 			"Region":              l.Region.Slug,
-			"Size":                l.SizeSlug,
 			"VPCUUID":             l.VPCUUID,
 			"Tag":                 l.Tag,
 			"DropletIDs":          strings.Trim(strings.Replace(fmt.Sprint(l.DropletIDs), " ", ",", -1), "[]"),
@@ -97,6 +98,12 @@ func (lb *LoadBalancer) KV() []map[string]interface{} {
 			"StickySessions":      prettyPrintStruct(l.StickySessions),
 			"HealthCheck":         prettyPrintStruct(l.HealthCheck),
 			"ForwardingRules":     strings.Join(forwardingRules, " "),
+		}
+		if l.SizeSlug != "" {
+			o["Size"] = l.SizeSlug
+		}
+		if l.SizeUnit > 0 {
+			o["SizeUnit"] = l.SizeUnit
 		}
 		out = append(out, o)
 	}

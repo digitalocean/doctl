@@ -64,7 +64,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 - ` + "`" + `certificate_id` + "`" + `: The ID of the TLS certificate used for SSL termination, if enabled. Can be obtained with ` + "`" + `doctl certificate list` + "`" + `
 - ` + "`" + `tls_passthrough` + "`" + `: Whether SSL passthrough is enabled on the load balancer.
 `
-	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, e.g.: `entry_protocol:tcp, entry_port:3306, target_protocol:tcp, target_port:3306`. Use a quoted string of space-separated values for multiple rules"
+	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, e.g.: `entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306`."
 	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:"+lbDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
@@ -74,8 +74,10 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "",
 		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
-	AddStringFlag(cmdRecordCreate, doctl.ArgSizeSlug, "", "lb-small",
-		"The load balancer's size, e.g.: `lb-small`", requiredOpt())
+	AddStringFlag(cmdRecordCreate, doctl.ArgSizeSlug, "", "",
+		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
+	AddIntFlag(cmdRecordCreate, doctl.ArgSizeUnit, "", 0,
+		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
 	AddStringFlag(cmdRecordCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "The algorithm to use when traffic is distributed across your Droplets; possible values: `round_robin` or `least_connections`")
@@ -91,7 +93,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordCreate, doctl.ArgStickySessions, "", "",
 		"A comma-separated list of key-value pairs representing a list of active sessions, e.g.: `type:cookies, cookie_name:DO-LB, cookie_ttl_seconds:5`")
 	AddStringFlag(cmdRecordCreate, doctl.ArgHealthCheck, "", "",
-		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http, port:80, path:/index.html, check_interval_seconds:10, response_timeout_seconds:5, healthy_threshold:5, unhealthy_threshold:3`")
+		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3`")
 	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "",
 		forwardingRulesTxt)
 
@@ -102,7 +104,9 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "",
 		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
 	AddStringFlag(cmdRecordUpdate, doctl.ArgSizeSlug, "", "",
-		"The load balancer's size, e.g.: `lb-small`", requiredOpt())
+		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
+	AddIntFlag(cmdRecordUpdate, doctl.ArgSizeUnit, "", 0,
+		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "The algorithm to use when traffic is distributed across your Droplets; possible values: `round_robin` or `least_connections`")
@@ -410,6 +414,12 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		return err
 	}
 	r.SizeSlug = size
+
+	sizeUnit, err := c.Doit.GetInt(c.NS, doctl.ArgSizeUnit)
+	if err != nil {
+		return err
+	}
+	r.SizeUnit = uint32(sizeUnit)
 
 	algorithm, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerAlgorithm)
 	if err != nil {
