@@ -72,7 +72,7 @@ type domainRecordsRoot struct {
 
 // DomainRecord represents a DigitalOcean DomainRecord
 type DomainRecord struct {
-	ID       int    `json:"id,float64,omitempty"`
+	ID       int    `json:"id,omitempty"`
 	Type     string `json:"type,omitempty"`
 	Name     string `json:"name,omitempty"`
 	Data     string `json:"data,omitempty"`
