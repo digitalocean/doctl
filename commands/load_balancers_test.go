@@ -132,6 +132,7 @@ func TestLoadBalancerUpdate(t *testing.T) {
 			Name:       "lb-name",
 			Region:     "nyc1",
 			DropletIDs: []int{1, 2},
+			SizeUnit:   4,
 			StickySessions: &godo.StickySessions{
 				Type:             "cookies",
 				CookieName:       "DO-LB",
@@ -160,6 +161,7 @@ func TestLoadBalancerUpdate(t *testing.T) {
 		config.Args = append(config.Args, lbID)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "")
+		config.Doit.Set(config.NS, doctl.ArgSizeUnit, 4)
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
 		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
