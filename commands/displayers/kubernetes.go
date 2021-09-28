@@ -190,6 +190,7 @@ func (versions *KubernetesVersions) Cols() []string {
 	return []string{
 		"Slug",
 		"KubernetesVersion",
+		"SupportedFeatures",
 	}
 }
 
@@ -197,6 +198,7 @@ func (versions *KubernetesVersions) ColMap() map[string]string {
 	return map[string]string{
 		"Slug":              "Slug",
 		"KubernetesVersion": "Kubernetes Version",
+		"SupportedFeatures": "Supported Features",
 	}
 }
 
@@ -208,6 +210,7 @@ func (versions *KubernetesVersions) KV() []map[string]interface{} {
 		o := map[string]interface{}{
 			"Slug":              version.KubernetesVersion.Slug,
 			"KubernetesVersion": version.KubernetesVersion.KubernetesVersion,
+			"SupportedFeatures": strings.Join(version.KubernetesVersion.SupportedFeatures, ", "),
 		}
 		out = append(out, o)
 	}
