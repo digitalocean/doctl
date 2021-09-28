@@ -273,6 +273,8 @@ After creating a cluster, a configuration context will be added to kubectl and m
 		"A boolean flag indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window (default false). To enable automatic upgrade, supply --auto-upgrade(=true).")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
+		"A boolean flag indicating whether the cluster will be configured with a highly-available control plane (default false). To enable the HA control plane, supply --ha(=true).")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -320,6 +322,8 @@ This command updates the specified configuration values for the specified Kubern
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Boolean specifying whether to update the cluster in your kubeconfig")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
+		"Boolean specifying whether to enable the highly-available control plane for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
 		"Boolean specifying whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00",
@@ -1582,6 +1586,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.SurgeUpgrade = surgeUpgrade
 
+	ha, err := c.Doit.GetBool(c.NS, doctl.ArgHA)
+	if err != nil {
+		return err
+	}
+	r.HA = ha
+
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
@@ -1665,6 +1675,12 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.SurgeUpgrade = surgeUpgrade
+
+	ha, err := c.Doit.GetBool(c.NS, doctl.ArgHA)
+	if err != nil {
+		return err
+	}
+	r.HA = ha
 
 	return nil
 }

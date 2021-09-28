@@ -8,7 +8,7 @@ require (
 	github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
 	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.67.0
+	github.com/digitalocean/godo v1.68.0
 	github.com/docker/cli v0.0.0-20200622130859-87db43814b48
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200531234253-77e06fda0c94+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.3 // indirect
@@ -32,7 +32,7 @@ require (
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f
-	golang.org/x/net v0.0.0-20210927181540-4e4d966f7476 // indirect
+	golang.org/x/net v0.0.0-20210929161516-d455829e376d // indirect
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

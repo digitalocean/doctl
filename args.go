@@ -78,6 +78,8 @@ const (
 	ArgMaintenanceWindow = "maintenance-window"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
+	// ArgHA is a cluster's highly available control plane argument.
+	ArgHA = "ha"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandWait is a wait for a resource to be created argument.

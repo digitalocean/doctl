@@ -226,6 +226,7 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "version": "some-kube-version",
   "auto_upgrade": false,
   "surge_upgrade": true,
+  "ha": false,
   "maintenance_policy": {
     "day": "any",
     "duration": "",
@@ -247,6 +248,7 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "version": "some-kube-version",
   "auto_upgrade": false,
   "surge_upgrade": true,
+  "ha": false,
   "maintenance_policy": {
     "day": "any",
     "duration": "",
