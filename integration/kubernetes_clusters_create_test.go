@@ -137,6 +137,7 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				"--region", "mars",
 				"--version", "some-kube-version",
 				"--node-pool", "name=default;auto-scale=true;min-nodes=2;max-nodes=5;count=2",
+				"--ha",
 			)
 
 			cmd.Env = append(os.Environ(),
