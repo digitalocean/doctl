@@ -106,6 +106,7 @@ var _ = suite("kubernetes/clusters/create", func(t *testing.T, when spec.G, it s
 				"--region", "mars",
 				"--version", "some-kube-version",
 				"--1-clicks", "slug1",
+				"--ha",
 			)
 
 			cmd.Env = append(os.Environ(),
@@ -227,7 +228,7 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "version": "some-kube-version",
   "auto_upgrade": false,
   "surge_upgrade": true,
-  "ha": false,
+  "ha": true,
   "maintenance_policy": {
     "day": "any",
     "duration": "",
@@ -249,7 +250,7 @@ some-cluster-id    some-cluster-name    mars      some-kube-version    false    
   "version": "some-kube-version",
   "auto_upgrade": false,
   "surge_upgrade": true,
-  "ha": false,
+  "ha": true,
   "maintenance_policy": {
     "day": "any",
     "duration": "",
