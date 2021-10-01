@@ -699,6 +699,9 @@ func (t *Transport) newClientConn(c net.Conn, singleUse bool) (*ClientConn, erro
 	cc.bw = bufio.NewWriter(stickyErrWriter{c, &cc.werr})
 	cc.br = bufio.NewReader(c)
 	cc.fr = NewFramer(cc.bw, cc.br)
+	if t.CountError != nil {
+		cc.fr.countError = t.CountError
+	}
 	cc.fr.ReadMetaHeaders = hpack.NewDecoder(initialHeaderTableSize, nil)
 	cc.fr.MaxHeaderListSize = t.maxHeaderListSize()
 
@@ -2609,7 +2612,7 @@ func (rl *clientConnReadLoop) processResetStream(f *RSTStreamFrame) error {
 	cc := rl.cc
 	cs := cc.streamByID(f.StreamID, true)
 	if cs == nil {
-		// TODO: return error if server tries to RST_STEAM an idle stream
+		// TODO: return error if server tries to RST_STREAM an idle stream
 		return nil
 	}
 	if cc.isDoNotReuseAndIdle() {
