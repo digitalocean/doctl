@@ -316,8 +316,10 @@ func RunAppsUpdate(c *CmdConfig) error {
 	exists := true
 	if create {
 		_, err := c.Apps().Get(id)
-		if strings.Contains(err.Error(), "400") {
-			exists = false
+		if err != nil {
+			if strings.Contains(err.Error(), "400") {
+				exists = false
+			}
 		}
 	}
 

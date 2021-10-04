@@ -515,7 +515,7 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 	when("the create flag is passed", func() {
-		it("updates an app if not exists", func() {
+		it("creates an app if not exists", func() {
 			specFile, err := ioutil.TempFile("", "spec")
 			require.NoError(t, err)
 			defer func() {
