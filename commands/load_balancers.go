@@ -87,6 +87,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"enable proxy protocol")
 	AddBoolFlag(cmdRecordCreate, doctl.ArgEnableBackendKeepalive, "", false,
 		"enable keepalive connections to backend target droplets")
+	AddBoolFlag(cmdRecordCreate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
+		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
 	AddStringFlag(cmdRecordCreate, doctl.ArgTagName, "", "", "droplet tag name")
 	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of Droplet IDs to add to the load balancer, e.g.: `12,33`")
@@ -124,12 +126,14 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordUpdate, doctl.ArgHealthCheck, "", "",
 		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http, port:80, path:/index.html, check_interval_seconds:10, response_timeout_seconds:5, healthy_threshold:5, unhealthy_threshold:3`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
+	AddBoolFlag(cmdRecordUpdate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
+		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>",
-		"Permanently delete a load balancer", `Use this command to permanently delete the speicified load balancer. This is irreversable.`, Writer, aliasOpt("d", "rm"))
+		"Permanently delete a load balancer", `Use this command to permanently delete the specified load balancer. This is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the load balancer without a confirmation prompt")
 
@@ -456,6 +460,12 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		return err
 	}
 	r.EnableBackendKeepalive = enableBackendKeepalive
+
+	disableLetsEncryptDNSRecords, err := c.Doit.GetBool(c.NS, doctl.ArgDisableLetsEncryptDNSRecords)
+	if err != nil {
+		return err
+	}
+	r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
 
 	dropletIDsList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDropletIDs)
 	if err != nil {
