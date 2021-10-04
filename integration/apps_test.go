@@ -514,6 +514,32 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 		})
 	})
+	when("the create flag is passed", func() {
+		it("updates an app if not exists", func() {
+			specFile, err := ioutil.TempFile("", "spec")
+			require.NoError(t, err)
+			defer func() {
+				os.Remove(specFile.Name())
+				specFile.Close()
+			}()
+			err = json.NewEncoder(specFile).Encode(&testAppSpec)
+			require.NoError(t, err)
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"apps",
+				"update",
+				testAppUUID,
+				"--spec",
+				specFile.Name(),
+				"--create",
+			)
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expectedOutput := "Notice: App updated\n" + testAppsOutput
+			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+		})
+	})
 })
 
 var _ = suite("apps/delete", func(t *testing.T, when spec.G, it spec.S) {
