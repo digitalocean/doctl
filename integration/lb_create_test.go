@@ -72,6 +72,7 @@ var _ = suite("compute/load-balancer/create", func(t *testing.T, when spec.G, it
 			"--enable-backend-keepalive",
 			"--tag-name", "magic-lb",
 			"--vpc-uuid", "00000000-0000-4000-8000-000000000000",
+			"--disable-lets-encrypt-dns-records",
 		}
 	})
 
@@ -100,8 +101,8 @@ var _ = suite("compute/load-balancer/create", func(t *testing.T, when spec.G, it
 
 const (
 	lbCreateOutput = `
-ID                                      IP    Name             Status    Created At              Algorithm      Region    Size        Size Unit    VPC UUID                                Tag    Droplet IDs        SSL     Sticky Sessions                                Health Check                                                                                                            Forwarding Rules
-4de7ac8b-495b-4884-9a69-1050c6793cd6          example-lb-01    new       2017-02-01T22:22:58Z    round_robin    nyc3      lb-small    <nil>        00000000-0000-4000-8000-000000000000           3164444,3164445    true    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0
+ID                                      IP    Name             Status    Created At              Algorithm      Region    Size        Size Unit    VPC UUID                                Tag    Droplet IDs        SSL     Sticky Sessions                                Health Check                                                                                                            Forwarding Rules    Disable Lets Encrypt DNS Records
+4de7ac8b-495b-4884-9a69-1050c6793cd6          example-lb-01    new       2017-02-01T22:22:58Z    round_robin    nyc3      lb-small    <nil>        00000000-0000-4000-8000-000000000000           3164444,3164445    true    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0                        true
 `
 	lbCreateResponse = `
 {
@@ -137,6 +138,7 @@ ID                                      IP    Name             Status    Created
     ],
     "redirect_http_to_https": true,
     "enable_proxy_protocol": true,
+	"disable_lets_encrypt_dns_records": true,
     "enable_backend_keepalive": true
   }
 }`
@@ -153,6 +155,7 @@ ID                                      IP    Name             Status    Created
   "redirect_http_to_https":true,
   "enable_proxy_protocol":true,
   "enable_backend_keepalive":true,
+  "disable_lets_encrypt_dns_records": true,
   "vpc_uuid": "00000000-0000-4000-8000-000000000000"
 }`
 )
