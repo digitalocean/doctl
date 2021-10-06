@@ -282,6 +282,33 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 		})
 	})
+	// This actually does not test the `upsert` flag.
+	// TODO: create a proper test for the `upsert` flag.
+	when("the upsert flag is passed", func() {
+		it("creates an app or updates if already exists", func() {
+			specFile, err := ioutil.TempFile("", "spec")
+			require.NoError(t, err)
+			defer func() {
+				os.Remove(specFile.Name())
+				specFile.Close()
+			}()
+			err = json.NewEncoder(specFile).Encode(&testAppSpec)
+			require.NoError(t, err)
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"apps",
+				"create",
+				"--spec",
+				specFile.Name(),
+				"--upsert",
+			)
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expectedOutput := "Notice: App created\n" + testAppsOutput
+			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+		})
+	})
 })
 
 var _ = suite("apps/get", func(t *testing.T, when spec.G, it spec.S) {
