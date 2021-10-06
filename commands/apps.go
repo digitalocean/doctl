@@ -57,6 +57,7 @@ func Apps() *Command {
 	AddStringFlag(create, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
+	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if already exists")
 
 	CmdBuilder(
 		cmd,
@@ -97,7 +98,6 @@ Only basic information is included with the text output format. For complete app
 	AddStringFlag(update, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(update, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
-	AddBoolFlag(update, "create", "", false, "Boolean that specifies whether to create the app if not exists")
 
 	deleteApp := CmdBuilder(
 		cmd,
@@ -239,9 +239,36 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
-	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
+	upsert, err := c.Doit.GetBool(c.NS, doctl.ArgCommandUpsert)
 	if err != nil {
 		return err
+	}
+
+	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
+	if err != nil {
+		if upsert {
+			if errorCodeIs(err, http.StatusConflict) {
+				// parse app ID
+				notice("App already exists, updating")
+
+				apps, err := c.Apps().List()
+				if err != nil {
+					return err
+				}
+
+				id, err := getIDByName(apps, appSpec.Name)
+				if err != nil {
+					return err
+				}
+
+				app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			return err
+		}
 	}
 
 	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
@@ -308,34 +335,9 @@ func RunAppsUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	create, err := c.Doit.GetBool(c.NS, "create")
+	app, err := c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
 	if err != nil {
 		return err
-	}
-
-	exists := true
-	if create {
-		_, err := c.Apps().Get(id)
-		if err != nil {
-			if strings.Contains(err.Error(), "400") {
-				exists = false
-			}
-		}
-	}
-
-	var app *godo.App
-	if exists {
-		app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
-		if err != nil {
-			return err
-		}
-	} else {
-		notice("App %s was not existing, creating new app", id)
-
-		app, err = c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
-		if err != nil {
-			return err
-		}
 	}
 
 	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
@@ -345,13 +347,7 @@ func RunAppsUpdate(c *CmdConfig) error {
 
 	if wait {
 		apps := c.Apps()
-
-		if exists {
-			notice("App update is in progress, waiting for app to be running")
-		} else {
-			notice("App creation is in progress, waiting for app to be running")
-		}
-
+		notice("App update is in progress, waiting for app to be running")
 		err := waitForActiveDeployment(apps, app.ID, "")
 		if err != nil {
 			warn("App deployment couldn't enter `running` state: %v", err)
@@ -361,11 +357,7 @@ func RunAppsUpdate(c *CmdConfig) error {
 		}
 	}
 
-	if exists {
-		notice("App updated")
-	} else {
-		notice("App created")
-	}
+	notice("App updated")
 
 	return c.Display(displayers.Apps{app})
 }
@@ -980,4 +972,23 @@ func parseAppAlert(destinations []byte) (*godo.AlertDestinationUpdateRequest, er
 	}
 
 	return &alertDestinations, nil
+}
+
+// This error validation probably should exist inside godo repo
+func errorCodeIs(err error, code int) bool {
+	if strings.Contains(err.Error(), fmt.Sprintf("%d", code)) {
+		return true
+	}
+
+	return false
+}
+
+func getIDByName(apps []*godo.App, name string) (string, error) {
+	for _, app := range apps {
+		if app.Spec.Name == name {
+			return app.ID, nil
+		}
+	}
+
+	return "", fmt.Errorf("app does not exist")
 }

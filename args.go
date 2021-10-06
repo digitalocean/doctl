@@ -82,6 +82,8 @@ const (
 	ArgHA = "ha"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
+	// ArgCommandUpsert is a upsert for a resource to be created or updated argument.
+	ArgCommandUpsert = "upsert"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
