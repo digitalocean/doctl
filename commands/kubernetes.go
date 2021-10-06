@@ -322,8 +322,6 @@ This command updates the specified configuration values for the specified Kubern
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Boolean specifying whether to update the cluster in your kubeconfig")
-	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
-		"Boolean specifying whether to enable the highly-available control plane for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
 		"Boolean specifying whether to set the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgMaintenanceWindow, "", "any=00:00",
@@ -1675,12 +1673,6 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.SurgeUpgrade = surgeUpgrade
-
-	ha, err := c.Doit.GetBool(c.NS, doctl.ArgHA)
-	if err != nil {
-		return err
-	}
-	r.HA = ha
 
 	return nil
 }

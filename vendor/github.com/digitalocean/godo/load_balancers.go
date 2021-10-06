@@ -34,21 +34,22 @@ type LoadBalancer struct {
 	// SizeSlug is mutually exclusive with SizeUnit. Only one should be specified
 	SizeSlug string `json:"size,omitempty"`
 	// SizeUnit is mutually exclusive with SizeSlug. Only one should be specified
-	SizeUnit               uint32           `json:"size_unit,omitempty"`
-	Algorithm              string           `json:"algorithm,omitempty"`
-	Status                 string           `json:"status,omitempty"`
-	Created                string           `json:"created_at,omitempty"`
-	ForwardingRules        []ForwardingRule `json:"forwarding_rules,omitempty"`
-	HealthCheck            *HealthCheck     `json:"health_check,omitempty"`
-	StickySessions         *StickySessions  `json:"sticky_sessions,omitempty"`
-	Region                 *Region          `json:"region,omitempty"`
-	DropletIDs             []int            `json:"droplet_ids,omitempty"`
-	Tag                    string           `json:"tag,omitempty"`
-	Tags                   []string         `json:"tags,omitempty"`
-	RedirectHttpToHttps    bool             `json:"redirect_http_to_https,omitempty"`
-	EnableProxyProtocol    bool             `json:"enable_proxy_protocol,omitempty"`
-	EnableBackendKeepalive bool             `json:"enable_backend_keepalive,omitempty"`
-	VPCUUID                string           `json:"vpc_uuid,omitempty"`
+	SizeUnit                     uint32           `json:"size_unit,omitempty"`
+	Algorithm                    string           `json:"algorithm,omitempty"`
+	Status                       string           `json:"status,omitempty"`
+	Created                      string           `json:"created_at,omitempty"`
+	ForwardingRules              []ForwardingRule `json:"forwarding_rules,omitempty"`
+	HealthCheck                  *HealthCheck     `json:"health_check,omitempty"`
+	StickySessions               *StickySessions  `json:"sticky_sessions,omitempty"`
+	Region                       *Region          `json:"region,omitempty"`
+	DropletIDs                   []int            `json:"droplet_ids,omitempty"`
+	Tag                          string           `json:"tag,omitempty"`
+	Tags                         []string         `json:"tags,omitempty"`
+	RedirectHttpToHttps          bool             `json:"redirect_http_to_https,omitempty"`
+	EnableProxyProtocol          bool             `json:"enable_proxy_protocol,omitempty"`
+	EnableBackendKeepalive       bool             `json:"enable_backend_keepalive,omitempty"`
+	VPCUUID                      string           `json:"vpc_uuid,omitempty"`
+	DisableLetsEncryptDNSRecords *bool            `json:"disable_lets_encrypt_dns_records,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancer.
@@ -65,18 +66,23 @@ func (l LoadBalancer) URN() string {
 // Modifying the returned LoadBalancerRequest will not modify the original LoadBalancer.
 func (l LoadBalancer) AsRequest() *LoadBalancerRequest {
 	r := LoadBalancerRequest{
-		Name:                   l.Name,
-		Algorithm:              l.Algorithm,
-		SizeSlug:               l.SizeSlug,
-		SizeUnit:               l.SizeUnit,
-		ForwardingRules:        append([]ForwardingRule(nil), l.ForwardingRules...),
-		DropletIDs:             append([]int(nil), l.DropletIDs...),
-		Tag:                    l.Tag,
-		RedirectHttpToHttps:    l.RedirectHttpToHttps,
-		EnableProxyProtocol:    l.EnableProxyProtocol,
-		EnableBackendKeepalive: l.EnableBackendKeepalive,
-		HealthCheck:            l.HealthCheck,
-		VPCUUID:                l.VPCUUID,
+		Name:                         l.Name,
+		Algorithm:                    l.Algorithm,
+		SizeSlug:                     l.SizeSlug,
+		SizeUnit:                     l.SizeUnit,
+		ForwardingRules:              append([]ForwardingRule(nil), l.ForwardingRules...),
+		DropletIDs:                   append([]int(nil), l.DropletIDs...),
+		Tag:                          l.Tag,
+		RedirectHttpToHttps:          l.RedirectHttpToHttps,
+		EnableProxyProtocol:          l.EnableProxyProtocol,
+		EnableBackendKeepalive:       l.EnableBackendKeepalive,
+		HealthCheck:                  l.HealthCheck,
+		VPCUUID:                      l.VPCUUID,
+		DisableLetsEncryptDNSRecords: l.DisableLetsEncryptDNSRecords,
+	}
+
+	if l.DisableLetsEncryptDNSRecords != nil {
+		*r.DisableLetsEncryptDNSRecords = *l.DisableLetsEncryptDNSRecords
 	}
 
 	if l.HealthCheck != nil {
@@ -144,17 +150,18 @@ type LoadBalancerRequest struct {
 	// SizeSlug is mutually exclusive with SizeUnit. Only one should be specified
 	SizeSlug string `json:"size,omitempty"`
 	// SizeUnit is mutually exclusive with SizeSlug. Only one should be specified
-	SizeUnit               uint32           `json:"size_unit,omitempty"`
-	ForwardingRules        []ForwardingRule `json:"forwarding_rules,omitempty"`
-	HealthCheck            *HealthCheck     `json:"health_check,omitempty"`
-	StickySessions         *StickySessions  `json:"sticky_sessions,omitempty"`
-	DropletIDs             []int            `json:"droplet_ids,omitempty"`
-	Tag                    string           `json:"tag,omitempty"`
-	Tags                   []string         `json:"tags,omitempty"`
-	RedirectHttpToHttps    bool             `json:"redirect_http_to_https,omitempty"`
-	EnableProxyProtocol    bool             `json:"enable_proxy_protocol,omitempty"`
-	EnableBackendKeepalive bool             `json:"enable_backend_keepalive,omitempty"`
-	VPCUUID                string           `json:"vpc_uuid,omitempty"`
+	SizeUnit                     uint32           `json:"size_unit,omitempty"`
+	ForwardingRules              []ForwardingRule `json:"forwarding_rules,omitempty"`
+	HealthCheck                  *HealthCheck     `json:"health_check,omitempty"`
+	StickySessions               *StickySessions  `json:"sticky_sessions,omitempty"`
+	DropletIDs                   []int            `json:"droplet_ids,omitempty"`
+	Tag                          string           `json:"tag,omitempty"`
+	Tags                         []string         `json:"tags,omitempty"`
+	RedirectHttpToHttps          bool             `json:"redirect_http_to_https,omitempty"`
+	EnableProxyProtocol          bool             `json:"enable_proxy_protocol,omitempty"`
+	EnableBackendKeepalive       bool             `json:"enable_backend_keepalive,omitempty"`
+	VPCUUID                      string           `json:"vpc_uuid,omitempty"`
+	DisableLetsEncryptDNSRecords *bool            `json:"disable_lets_encrypt_dns_records,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancerRequest.

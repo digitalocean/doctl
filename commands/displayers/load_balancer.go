@@ -50,27 +50,29 @@ func (lb *LoadBalancer) Cols() []string {
 		"StickySessions",
 		"HealthCheck",
 		"ForwardingRules",
+		"DisableLetsEncryptDNSRecords",
 	}
 }
 
 func (lb *LoadBalancer) ColMap() map[string]string {
 	return map[string]string{
-		"ID":                  "ID",
-		"IP":                  "IP",
-		"Name":                "Name",
-		"Status":              "Status",
-		"Created":             "Created At",
-		"Algorithm":           "Algorithm",
-		"Region":              "Region",
-		"Size":                "Size",
-		"SizeUnit":            "Size Unit",
-		"VPCUUID":             "VPC UUID",
-		"Tag":                 "Tag",
-		"DropletIDs":          "Droplet IDs",
-		"RedirectHttpToHttps": "SSL",
-		"StickySessions":      "Sticky Sessions",
-		"HealthCheck":         "Health Check",
-		"ForwardingRules":     "Forwarding Rules",
+		"ID":                           "ID",
+		"IP":                           "IP",
+		"Name":                         "Name",
+		"Status":                       "Status",
+		"Created":                      "Created At",
+		"Algorithm":                    "Algorithm",
+		"Region":                       "Region",
+		"Size":                         "Size",
+		"SizeUnit":                     "Size Unit",
+		"VPCUUID":                      "VPC UUID",
+		"Tag":                          "Tag",
+		"DropletIDs":                   "Droplet IDs",
+		"RedirectHttpToHttps":          "SSL",
+		"StickySessions":               "Sticky Sessions",
+		"HealthCheck":                  "Health Check",
+		"ForwardingRules":              "Forwarding Rules",
+		"DisableLetsEncryptDNSRecords": "Disable Lets Encrypt DNS Records",
 	}
 }
 
@@ -84,20 +86,21 @@ func (lb *LoadBalancer) KV() []map[string]interface{} {
 		}
 
 		o := map[string]interface{}{
-			"ID":                  l.ID,
-			"IP":                  l.IP,
-			"Name":                l.Name,
-			"Status":              l.Status,
-			"Created":             l.Created,
-			"Algorithm":           l.Algorithm,
-			"Region":              l.Region.Slug,
-			"VPCUUID":             l.VPCUUID,
-			"Tag":                 l.Tag,
-			"DropletIDs":          strings.Trim(strings.Replace(fmt.Sprint(l.DropletIDs), " ", ",", -1), "[]"),
-			"RedirectHttpToHttps": l.RedirectHttpToHttps,
-			"StickySessions":      prettyPrintStruct(l.StickySessions),
-			"HealthCheck":         prettyPrintStruct(l.HealthCheck),
-			"ForwardingRules":     strings.Join(forwardingRules, " "),
+			"ID":                           l.ID,
+			"IP":                           l.IP,
+			"Name":                         l.Name,
+			"Status":                       l.Status,
+			"Created":                      l.Created,
+			"Algorithm":                    l.Algorithm,
+			"Region":                       l.Region.Slug,
+			"VPCUUID":                      l.VPCUUID,
+			"Tag":                          l.Tag,
+			"DropletIDs":                   strings.Trim(strings.Replace(fmt.Sprint(l.DropletIDs), " ", ",", -1), "[]"),
+			"RedirectHttpToHttps":          l.RedirectHttpToHttps,
+			"StickySessions":               prettyPrintStruct(l.StickySessions),
+			"HealthCheck":                  prettyPrintStruct(l.HealthCheck),
+			"ForwardingRules":              strings.Join(forwardingRules, " "),
+			"DisableLetsEncryptDNSRecords": toBool(l.DisableLetsEncryptDNSRecords),
 		}
 		if l.SizeSlug != "" {
 			o["Size"] = l.SizeSlug
@@ -109,6 +112,13 @@ func (lb *LoadBalancer) KV() []map[string]interface{} {
 	}
 
 	return out
+}
+
+func toBool(b *bool) bool {
+	if b == nil {
+		return false
+	}
+	return *b
 }
 
 func prettyPrintStruct(obj interface{}) string {

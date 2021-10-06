@@ -267,6 +267,8 @@ const (
 	ArgRedirectHTTPToHTTPS = "redirect-http-to-https"
 	// ArgEnableProxyProtocol is a flag that indicates whether PROXY protocol should be enabled on the load balancer.
 	ArgEnableProxyProtocol = "enable-proxy-protocol"
+	// ArgDisableLetsEncryptDNSRecords is a flag that when set will disable the creation of DNS records pointing to the load balancer IP from the apex domain in the cert.
+	ArgDisableLetsEncryptDNSRecords = "disable-lets-encrypt-dns-records"
 	// ArgEnableBackendKeepalive is a flag that indicates whether keepalive connections should be enabled to target droplets from the load balancer.
 	ArgEnableBackendKeepalive = "enable-backend-keepalive"
 	// ArgStickySessions is a list of sticky sessions settings for the load balancer.

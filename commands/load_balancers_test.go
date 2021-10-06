@@ -109,6 +109,8 @@ func TestLoadBalancerCreate(t *testing.T) {
 			},
 			VPCUUID: vpcUUID,
 		}
+		disableLetsEncryptDNSRecords := true
+		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
 		tm.loadBalancers.EXPECT().Create(&r).Return(&testLoadBalancer, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
@@ -119,6 +121,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:none")
 		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,check_interval_seconds:4,response_timeout_seconds:23,healthy_threshold:5,unhealthy_threshold:10")
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306,tls_passthrough:true")
+		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
 
 		err := RunLoadBalancerCreate(config)
 		assert.NoError(t, err)
@@ -155,7 +158,8 @@ func TestLoadBalancerUpdate(t *testing.T) {
 				},
 			},
 		}
-
+		disableLetsEncryptDNSRecords := true
+		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
 		tm.loadBalancers.EXPECT().Update(lbID, &r).Return(&testLoadBalancer, nil)
 
 		config.Args = append(config.Args, lbID)
@@ -167,6 +171,7 @@ func TestLoadBalancerUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
 		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,check_interval_seconds:4,response_timeout_seconds:23,healthy_threshold:5,unhealthy_threshold:10")
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80")
+		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
 
 		err := RunLoadBalancerUpdate(config)
 		assert.NoError(t, err)
