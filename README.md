@@ -62,6 +62,7 @@ See the [full reference documentation](https://www.digitalocean.com/docs/apis-cl
       - [Using `doctl compute ssh`](#using-doctl-compute-ssh)
       - [Use with Docker](#use-with-docker)
     - [Arch Linux](#arch-linux)
+    - [Fedora](#fedora)
     - [Nix supported OS](#nix-supported-os)
   - [Docker Hub](#docker-hub)
   - [Downloading a Release from GitHub](#downloading-a-release-from-github)
@@ -137,6 +138,12 @@ This allows `doctl` to add DigitalOcean container registry credentials to your D
     sudo pacman -S doctl
 
 As an alternative, you can install it from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
+
+#### Fedora
+
+`doctl` is available in the official Fedora repository:
+
+    sudo dnf install doctl
 
 #### Nix supported OS
 
