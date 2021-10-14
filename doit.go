@@ -502,7 +502,7 @@ func emptyStringSlice(s []string) bool {
 // CommandName returns the name by which doctl was invoked
 func CommandName() string {
 	name, ok := os.LookupEnv("SNAP_NAME")
-	if !ok {
+	if !ok || name != "doctl" {
 		return os.Args[0]
 	}
 	return name
