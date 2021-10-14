@@ -117,3 +117,39 @@ type stubLatestRelease struct {
 func (slr stubLatestRelease) LatestVersion() (string, error) {
 	return slr.version, nil
 }
+
+func TestCommandName(t *testing.T) {
+	t.Run("snap name set to goland", func(t *testing.T) {
+		const snapName = "goland"
+
+		if err := os.Setenv("SNAP_NAME", snapName); err != nil {
+			t.Errorf("failed to set environment variable: %#v", err)
+		}
+
+		// When run under `go test`, os.Args[0] will be different every time,
+		// so only check that the Snap name is not "goland".
+		if actual := CommandName(); actual == snapName {
+			t.Errorf("expected name not to equal %s, got %s", snapName, actual)
+		}
+
+		if err := os.Unsetenv("SNAP_NAME"); err != nil {
+			t.Errorf("failed to unset environment variable: %#v", err)
+		}
+	})
+
+	t.Run("snap name set to doctl", func(t *testing.T) {
+		const expected = "doctl"
+
+		if err := os.Setenv("SNAP_NAME", "doctl"); err != nil {
+			t.Errorf("failed to set environment variable: %#v", err)
+		}
+
+		if actual := CommandName(); actual != expected {
+			t.Errorf("got %s, want %s", actual, expected)
+		}
+
+		if err := os.Unsetenv("SNAP_NAME"); err != nil {
+			t.Errorf("failed to unset environment variable: %#v", err)
+		}
+	})
+}
