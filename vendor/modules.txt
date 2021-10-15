@@ -11,9 +11,8 @@ github.com/blang/semver
 # github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb
 ## explicit; go 1.11
 github.com/containerd/continuity/pathdriver
-# github.com/cpuguy83/go-md2man v1.0.10
-## explicit
 # github.com/cpuguy83/go-md2man/v2 v2.0.0
+## explicit; go 1.12
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/creack/pty v1.1.11
 ## explicit; go 1.13
@@ -155,14 +154,9 @@ github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 ## explicit
 github.com/pmezard/go-difflib/difflib
-<<<<<<< HEAD
-# github.com/russross/blackfriday v1.5.2
-## explicit
-github.com/russross/blackfriday
-=======
 # github.com/russross/blackfriday/v2 v2.0.1
+## explicit
 github.com/russross/blackfriday/v2
->>>>>>> 85ae99fc (Upgrades Cobra dependency)
 # github.com/sclevine/spec v1.3.0
 ## explicit
 github.com/sclevine/spec
@@ -171,6 +165,7 @@ github.com/sclevine/spec/report
 ## explicit
 github.com/shiena/ansicolor
 # github.com/shurcooL/sanitized_anchor_name v1.0.0
+## explicit
 github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.7.0
 ## explicit; go 1.13
@@ -183,7 +178,7 @@ github.com/spf13/afero/mem
 ## explicit
 github.com/spf13/cast
 # github.com/spf13/cobra v1.2.1
-## explicit
+## explicit; go 1.14
 github.com/spf13/cobra
 github.com/spf13/cobra/doc
 # github.com/spf13/jwalterweatherman v1.1.0
