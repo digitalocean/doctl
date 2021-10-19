@@ -57,7 +57,7 @@ func Apps() *Command {
 	AddStringFlag(create, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
-	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if already exists")
+	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
 
 	CmdBuilder(
 		cmd,
