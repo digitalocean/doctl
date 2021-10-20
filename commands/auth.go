@@ -272,3 +272,14 @@ func defaultConfigFileWriter() (io.WriteCloser, error) {
 
 	return f, nil
 }
+
+func getAuthContextList() []string {
+	contexts := []string{"default"}
+	cfgContexts := viper.GetStringMap("auth-contexts")
+
+	for k := range cfgContexts {
+		contexts = append(contexts, k)
+	}
+
+	return contexts
+}
