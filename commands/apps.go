@@ -57,6 +57,7 @@ func Apps() *Command {
 	AddStringFlag(create, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
+	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
 
 	CmdBuilder(
 		cmd,
@@ -238,9 +239,36 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
-	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
+	upsert, err := c.Doit.GetBool(c.NS, doctl.ArgCommandUpsert)
 	if err != nil {
 		return err
+	}
+
+	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
+	if err != nil {
+		if upsert {
+			if err.(*godo.ErrorResponse).Response.StatusCode == 409 {
+				// parse app ID
+				notice("App already exists, updating")
+
+				apps, err := c.Apps().List()
+				if err != nil {
+					return err
+				}
+
+				id, err := getIDByName(apps, appSpec.Name)
+				if err != nil {
+					return err
+				}
+
+				app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
+				if err != nil {
+					return err
+				}
+			}
+		} else {
+			return err
+		}
 	}
 
 	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
@@ -944,4 +972,14 @@ func parseAppAlert(destinations []byte) (*godo.AlertDestinationUpdateRequest, er
 	}
 
 	return &alertDestinations, nil
+}
+
+func getIDByName(apps []*godo.App, name string) (string, error) {
+	for _, app := range apps {
+		if app.Spec.Name == name {
+			return app.ID, nil
+		}
+	}
+
+	return "", fmt.Errorf("app not found")
 }

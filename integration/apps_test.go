@@ -282,6 +282,133 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 		})
 	})
+	when("the upsert flag is passed", func() {
+		it("creates an app or updates if already exists", func() {
+			specFile, err := ioutil.TempFile("", "spec")
+			require.NoError(t, err)
+			defer func() {
+				os.Remove(specFile.Name())
+				specFile.Close()
+			}()
+			err = json.NewEncoder(specFile).Encode(&testAppSpec)
+			require.NoError(t, err)
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"apps",
+				"create",
+				"--upsert",
+				"--spec",
+				specFile.Name(),
+			)
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+			expectedOutput := "Notice: App created\n" + testAppsOutput
+			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+		})
+	})
+})
+
+var _ = suite("apps/create-upsert", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect          *require.Assertions
+		server          *httptest.Server
+		appsCreateCount int
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Add("content-type", "application/json")
+
+			switch req.URL.Path {
+			case "/v2/apps/" + testAppUUID:
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				if req.Method != http.MethodPut {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+				var r godo.AppUpdateRequest
+				err := json.NewDecoder(req.Body).Decode(&r)
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				assert.Equal(t, testAppSpec, *r.Spec)
+				json.NewEncoder(w).Encode(testAppResponse)
+			case "/v2/apps":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodPost && req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				if req.Method == http.MethodPost {
+					if appsCreateCount > 0 {
+						var r godo.AppCreateRequest
+						err := json.NewDecoder(req.Body).Decode(&r)
+						if err != nil {
+							w.WriteHeader(http.StatusBadRequest)
+							return
+						}
+						assert.Equal(t, testAppSpec, *r.Spec)
+						json.NewEncoder(w).Encode(testAppResponse)
+					} else {
+						w.WriteHeader(http.StatusConflict)
+						appsCreateCount++
+					}
+				}
+				if req.Method == http.MethodGet {
+					json.NewEncoder(w).Encode(testAppsResponse)
+				}
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	it("uses upsert to update existing app", func() {
+		specFile, err := ioutil.TempFile("", "spec")
+		require.NoError(t, err)
+		defer func() {
+			os.Remove(specFile.Name())
+			specFile.Close()
+		}()
+
+		err = json.NewEncoder(specFile).Encode(&testAppSpec)
+		require.NoError(t, err)
+
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps",
+			"create",
+			"--upsert",
+			"--spec",
+			specFile.Name(),
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := "Notice: App already exists, updating\nNotice: App created\n" + testAppsOutput
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
 })
 
 var _ = suite("apps/get", func(t *testing.T, when spec.G, it spec.S) {
