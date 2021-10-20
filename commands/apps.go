@@ -981,5 +981,5 @@ func getIDByName(apps []*godo.App, name string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("app does not exist")
+	return "", fmt.Errorf("app not found")
 }
