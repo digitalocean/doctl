@@ -77,6 +77,10 @@ func init() {
 	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
 
 	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "Specify a custom authentication context name")
+	DoitCmd.RegisterFlagCompletionFunc(doctl.ArgContext, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return getAuthContextList(), cobra.ShellCompDirectiveNoFileComp
+	})
+
 	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "Show a log of network activity while performing a command")
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "Enable verbose output")
 
