@@ -92,16 +92,20 @@ You can provide a name to this initialization via the `+"`"+`--context`+"`"+` fl
 If the `+"`"+`--context`+"`"+` flag is not specified, a default authentication context will be created during initialization.
 
 If doctl is never initialized, you will need to specify an API token whenever you use a `+"`"+`doctl`+"`"+` command via the `+"`"+`--access-token`+"`"+` flag.`, Writer, false)
-	cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switches between authentication contexts", `This command allows you to switch between accounts with authentication contexts you've already created.
+	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switches between authentication contexts", `This command allows you to switch between accounts with authentication contexts you've already created.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
 For details on creating an authentication context, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
-	cmdBuilderWithInit(cmd, RunAuthRemove, "remove", "Remove authentication contexts ", `This command allows you to remove authentication contexts you've already created.
+	cmdAuthSwitch.AddValidArgsFunc(authContextListValidArgsFunc)
+
+	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove", "Remove authentication contexts ", `This command allows you to remove authentication contexts you've already created.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
 For details on creating an authentication context, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
+	cmdAuthRemove.AddValidArgsFunc(authContextListValidArgsFunc)
+
 	cmdAuthList := cmdBuilderWithInit(cmd, RunAuthList, "list", "List available authentication contexts", `List named authentication contexts that you created with `+"`"+`doctl auth init`+"`"+`.
 
 To switch between the contexts use `+"`"+`doctl switch <name>`+"`"+`, where `+"`"+`<name>`+"`"+` is one of the contexts listed.
@@ -282,4 +286,11 @@ func getAuthContextList() []string {
 	}
 
 	return contexts
+}
+
+func authContextListValidArgsFunc(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	if len(args) != 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+	return getAuthContextList(), cobra.ShellCompDirectiveNoFileComp
 }

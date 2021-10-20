@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -44,6 +45,19 @@ func (c *Command) AddCommand(commands ...*Command) {
 // ChildCommands returns the child commands.
 func (c *Command) ChildCommands() []*Command {
 	return c.childCommands
+}
+
+type ValidArgsFunc func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective)
+
+// AddValidArgsFunc sets the function to run for dynamic completions
+// ValidArgsFunc and ValidArgs are mutually exclusive. This function will
+// return an error if ValidArgs is already set.
+func (c *Command) AddValidArgsFunc(fn ValidArgsFunc) error {
+	if len(c.Command.ValidArgs) == 0 {
+		c.Command.ValidArgsFunction = fn
+		return nil
+	}
+	return errors.New("unable to add ValidArgsFunction when ValidArgs is already set")
 }
 
 // CmdBuilder builds a new command.
