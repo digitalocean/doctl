@@ -247,7 +247,7 @@ func RunAppsCreate(c *CmdConfig) error {
 	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
 	if err != nil {
 		if upsert {
-			if errorCodeIs(err, http.StatusConflict) {
+			if err.(*godo.ErrorResponse).Response.StatusCode == 409 {
 				// parse app ID
 				notice("App already exists, updating")
 
@@ -972,15 +972,6 @@ func parseAppAlert(destinations []byte) (*godo.AlertDestinationUpdateRequest, er
 	}
 
 	return &alertDestinations, nil
-}
-
-// This error validation probably should exist inside godo repo
-func errorCodeIs(err error, code int) bool {
-	if strings.Contains(err.Error(), fmt.Sprintf("%d", code)) {
-		return true
-	}
-
-	return false
 }
 
 func getIDByName(apps []*godo.App, name string) (string, error) {
