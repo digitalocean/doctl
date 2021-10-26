@@ -5,26 +5,30 @@
 **Table of Contents**
 
 - [Contributing to doctl](#contributing-to-doctl)
-    - [Issues](#issues)
-        - [Reporting an Issue](#reporting-an-issue)
-        - [Issue Lifecycle](#issue-lifecycle)
-    - [Developing](#developing)
-        - [Go environment](#go-environment)
-        - [Docker](#docker)
-        - [Testing](#testing)
-            - [Writing Tests](#writing-tests)
-              - [Unit tests](#unit-tests)
-              - [Integration tests](#integration-tests)
-            - [`godo` mocks](#godo-mocks)
-            - [Build Scripts](#build-scripts)
-    - [Releasing](#releasing)
-        - [Tagging a release](#tagging-a-release)
-        - [Oops! Something went wrong! What now?](#oops-something-went-wrong-what-now)
-            - [Github Releases & Dockerhub](#github-releases--dockerhub)
-                - [Prerequisites](#prerequisites)
-            - [Snap](#snap)
-                - [Prerequisites](#prerequisites-1)
-        - [Updating Homebrew](#updating-homebrew)
+  - [Issues](#issues)
+    - [Reporting an Issue](#reporting-an-issue)
+    - [Issue Lifecycle](#issue-lifecycle)
+  - [Pull Requests](#pull-requests)
+  - [Developing](#developing)
+  - [Documenting](#documenting)
+    - [Go environment](#go-environment)
+    - [Docker](#docker)
+    - [Testing](#testing)
+      - [Writing Tests](#writing-tests)
+        - [Unit tests](#unit-tests)
+        - [Integration tests](#integration-tests)
+      - [`godo` mocks](#godo-mocks)
+      - [Build Scripts](#build-scripts)
+  - [Releasing](#releasing)
+    - [Tagging a release](#tagging-a-release)
+        - [Prerequisites](#prerequisites)
+    - [If a release fails](#if-a-release-fails)
+      - [Github Releases & Dockerhub](#github-releases--dockerhub)
+        - [Prerequisites](#prerequisites-1)
+      - [Snap](#snap)
+        - [Prerequisites](#prerequisites-2)
+        - [Building a new snap base image](#building-a-new-snap-base-image)
+    - [Updating Homebrew](#updating-homebrew)
 
 <!-- markdown-toc end -->
 
@@ -191,8 +195,7 @@ to do so. Travis also runs shellcheck.
 
 ## Releasing
 
-To cut a release, push a new tag (versioning discussed below). The actual release is orchestrated
-by [Travis CI](https://docs.travis-ci.com/user/deployment/).
+To cut a release, push a new tag (versioning discussed below).
 
 ### Tagging a release
 
