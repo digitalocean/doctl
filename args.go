@@ -82,7 +82,7 @@ const (
 	ArgHA = "ha"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
-	// ArgCommandUpsert is a upsert for a resource to be created or updated argument.
+	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
 	ArgCommandUpsert = "upsert"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
@@ -92,7 +92,7 @@ const (
 	ArgDropletID = "droplet-id"
 	// ArgDropletIDs is a list of droplet IDs.
 	ArgDropletIDs = "droplet-ids"
-	// ArgKernelID is a ekrnel id argument.
+	// ArgKernelID is a kernel id argument.
 	ArgKernelID = "kernel-id"
 	// ArgKubernetesLabel is a Kubernetes label argument.
 	ArgKubernetesLabel = "label"
@@ -106,7 +106,7 @@ const (
 	ArgImageID = "image-id"
 	// ArgImagePublic is a public image argument.
 	ArgImagePublic = "public"
-	// ArgImageSlug is an image slug argment.
+	// ArgImageSlug is an image slug argument.
 	ArgImageSlug = "image-slug"
 	// ArgIPAddress is an IP address argument.
 	ArgIPAddress = "ip-address"
@@ -128,7 +128,7 @@ const (
 	ArgPrivateNetworking = "enable-private-networking"
 	// ArgMonitoring is an enable monitoring argument.
 	ArgMonitoring = "enable-monitoring"
-	// ArgDropletAgent is an argument for enabling/disbling the Droplet agent.
+	// ArgDropletAgent is an argument for enabling/disabling the Droplet agent.
 	ArgDropletAgent = "droplet-agent"
 	// ArgRecordData is a record data argument.
 	ArgRecordData = "record-data"
@@ -192,7 +192,7 @@ const (
 	ArgKeyPublicKeyFile = "public-key-file"
 	// ArgSSHUser is a SSH user argument.
 	ArgSSHUser = "ssh-user"
-	// ArgFormat is columns to include in output argment.
+	// ArgFormat is columns to include in output argument.
 	ArgFormat = "format"
 	// ArgNoHeader hides the output header.
 	ArgNoHeader = "no-header"
@@ -396,9 +396,9 @@ const (
 	// ArgAlertPolicyEmails are the emails to send alerts to.
 	ArgAlertPolicyEmails = "emails"
 
-	// ArgAlertPolicySlackChannels are the slack channels to send alerts to.
+	// ArgAlertPolicySlackChannels are the Slack channels to send alerts to.
 	ArgAlertPolicySlackChannels = "slack-channels"
 
-	// ArgAlertPolicySlackURLs are the slack URLs to send alerts to.
+	// ArgAlertPolicySlackURLs are the Slack URLs to send alerts to.
 	ArgAlertPolicySlackURLs = "slack-urls"
 )

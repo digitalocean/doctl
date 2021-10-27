@@ -140,7 +140,7 @@ type LatestVersioner interface {
 	LatestVersion() (string, error)
 }
 
-// GithubLatestVersioner retrieves the latest version from Github.
+// GithubLatestVersioner retrieves the latest version from GitHub.
 type GithubLatestVersioner struct{}
 
 var _ LatestVersioner = &GithubLatestVersioner{}

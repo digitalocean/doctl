@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// MockBalanceService is a mock of BalanceService interface
+// MockBalanceService is a mock for BalanceService interface
 type MockBalanceService struct {
 	ctrl     *gomock.Controller
 	recorder *MockBalanceServiceMockRecorder

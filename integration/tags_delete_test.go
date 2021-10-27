@@ -110,7 +110,7 @@ var _ = suite("compute/tags/delete", func(t *testing.T, when spec.G, it spec.S) 
 	})
 
 	when("deleting one tag without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -127,7 +127,7 @@ var _ = suite("compute/tags/delete", func(t *testing.T, when spec.G, it spec.S) 
 	})
 
 	when("deleting two tags without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,

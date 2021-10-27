@@ -112,7 +112,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Expected: "default (current)\ntest\n",
 		},
 		{
-			Name:    "default context and additional context set to addditional context",
+			Name:    "default context and additional context set to additional context",
 			Out:     &bytes.Buffer{},
 			Context: "test",
 			Contexts: map[string]interface{}{

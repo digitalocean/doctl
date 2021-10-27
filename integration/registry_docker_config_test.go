@@ -113,7 +113,7 @@ var _ = suite("registry/docker-config", func(t *testing.T, when spec.G, it spec.
 	})
 
 	when("expiry-seconds flag is passed", func() {
-		it("add the correct query paramater", func() {
+		it("add the correct query parameter", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,

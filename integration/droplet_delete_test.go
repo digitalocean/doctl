@@ -136,7 +136,7 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 	})
 
 	when("deleting one Droplet without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -153,7 +153,7 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 	})
 
 	when("deleting two Droplet without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -171,7 +171,7 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 	})
 
 	when("deleting one Droplet by tag without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -188,7 +188,7 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 	})
 
 	when("deleting two Droplet by tag without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,

@@ -100,7 +100,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("expiry-seconds flag is passed", func() {
-		it("add the correct query paramater", func() {
+		it("add the correct query parameter", func() {
 			tmpDir, err := ioutil.TempDir("", "")
 			expect.NoError(err)
 

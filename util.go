@@ -18,7 +18,7 @@ import (
 	"github.com/digitalocean/doctl/pkg/runner"
 )
 
-// MockRunner is an implemenation of Runner for mocking.
+// MockRunner is an implementation of Runner for mocking.
 type MockRunner struct {
 	Err error
 }
