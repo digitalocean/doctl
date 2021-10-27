@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// MockAccountService is a mock of AccountService interface
+// MockAccountService is a mock for AccountService interface
 type MockAccountService struct {
 	ctrl     *gomock.Controller
 	recorder *MockAccountServiceMockRecorder

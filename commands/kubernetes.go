@@ -153,7 +153,7 @@ func (p *kubeconfigProvider) Local() (*clientcmdapi.Config, error) {
 			for _, err := range a.Errors() {
 				// this should NOT be a contains check but they are formatting the
 				// error without implementing an unwrap (so the original permission
-				// error type is lost.
+				// error type is lost).
 				if strings.Contains(err.Error(), "permission denied") && isSnap {
 					warn("Using the doctl Snap? Grant access to the doctl:kube-config plug to use this command with: sudo snap connect doctl:kube-config")
 					return nil, err
@@ -1691,7 +1691,7 @@ func buildNodePoolRecycleRequestFromArgs(c *CmdConfig, clusterID, poolID string,
 	if allUUIDs {
 		r.Nodes = nodeIDorNames
 	} else {
-		// at least some of the args weren't UUIDs, so assume that they're all names
+		// at least some args weren't UUIDs, so assume that they're all names
 		nodes, err := nodesByNames(c.Kubernetes(), clusterID, poolID, nodeIDorNames)
 		if err != nil {
 			return err
@@ -2414,7 +2414,7 @@ func versionMaxBy(versions []do.KubernetesVersion, selector func(do.KubernetesVe
 	if err != nil {
 		return max, err
 	}
-	// NOTE: We have to iterate over all of versions here even though we know
+	// NOTE: We have to iterate over all versions here even though we know
 	// versions[0] won't be greater than maxSV so that the index i will be a
 	// valid index into versions rather than into versions[1:].
 	for i, v := range versions {

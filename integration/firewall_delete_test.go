@@ -98,7 +98,7 @@ var _ = suite("compute/firewall/delete", func(t *testing.T, when spec.G, it spec
 	})
 
 	when("deleting one firewall without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -115,7 +115,7 @@ var _ = suite("compute/firewall/delete", func(t *testing.T, when spec.G, it spec
 	})
 
 	when("deleting two firewalls without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,

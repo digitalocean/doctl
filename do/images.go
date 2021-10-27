@@ -19,7 +19,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// Image is a werapper for godo.Image
+// Image is a wrapper for godo.Image
 type Image struct {
 	*godo.Image
 }

@@ -31,7 +31,7 @@ func (oc *OneClick) JSON(out io.Writer) error {
 	return writeJSON(oc.OneClicks, out)
 }
 
-// Cols are the colums returned in the json
+// Cols are the columns returned in the json
 func (oc *OneClick) Cols() []string {
 	return []string{
 		"SLUG",

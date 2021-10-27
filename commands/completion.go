@@ -462,7 +462,7 @@ func RunCompletionZsh(c *CmdConfig) error {
 	// zshHead is the header required to declare zsh completion
 	zshHead := "#compdef doctl\n"
 
-	// zshInit represents intialization code needed to convert bash completion
+	// zshInit represents initialization code needed to convert bash completion
 	// code to zsh completion.
 	zshInit := `
 __doctl_bash_source() {

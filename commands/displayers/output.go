@@ -23,7 +23,7 @@ import (
 	"text/tabwriter"
 )
 
-// Displayable is a displable entity. These are used for printing results.
+// Displayable is a displayable entity. These are used for printing results.
 type Displayable interface {
 	Cols() []string
 	ColMap() map[string]string

@@ -651,7 +651,7 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 func TestKubernetesDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		// should'nt call `DeleteNodePool` so we don't set any expectations
+		// shouldn't call `DeleteNodePool` so we don't set any expectations
 		config.Doit.Set(config.NS, doctl.ArgForce, "false")
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -710,7 +710,7 @@ func TestKubernetesDelete(t *testing.T) {
 
 func TestKubernetesDeleteSelective(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		// should'nt call `DeleteNodePool` so we don't set any expectations
+		// shouldn't call `DeleteNodePool` so we don't set any expectations
 		config.Doit.Set(config.NS, doctl.ArgForce, "false")
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -1180,7 +1180,7 @@ func TestKubernetesNodePool_Recycle(t *testing.T) {
 
 func TestKubernetesNodePool_Delete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		// should'nt call `DeleteNodePool` so we don't set any expectations
+		// shouldn't call `DeleteNodePool` so we don't set any expectations
 		config.Doit.Set(config.NS, doctl.ArgForce, "false")
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 

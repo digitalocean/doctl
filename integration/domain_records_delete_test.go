@@ -114,7 +114,7 @@ var _ = suite("compute/domain/records/delete", func(t *testing.T, when spec.G, i
 	})
 
 	when("deleting one domain record without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -133,7 +133,7 @@ var _ = suite("compute/domain/records/delete", func(t *testing.T, when spec.G, i
 	})
 
 	when("deleting two domain records without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("correctly prompts for confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,

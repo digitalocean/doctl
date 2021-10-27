@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("failed to create temp dir")
 	}
-	defer os.RemoveAll(tmpDir) // yes, this is best effort only
+	defer os.RemoveAll(tmpDir) // yes, this is the best effort only
 
 	builtBinaryPath = filepath.Join(tmpDir, path.Base(packagePath))
 	if runtime.GOOS == "windows" {

@@ -137,7 +137,7 @@ func RunImagesListDistribution(c *CmdConfig) error {
 
 }
 
-// RunImagesListApplication lists application iamges.
+// RunImagesListApplication lists application images.
 func RunImagesListApplication(c *CmdConfig) error {
 	is := c.Images()
 

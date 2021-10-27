@@ -57,7 +57,7 @@ type DomainRecordEditRequest struct {
 // DomainRecords is a slice of DomainRecord.
 type DomainRecords []DomainRecord
 
-// DomainsService is the godo DOmainsService interface.
+// DomainsService is the godo DomainsService interface.
 type DomainsService interface {
 	List() (Domains, error)
 	Get(string) (*Domain, error)
