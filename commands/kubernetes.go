@@ -143,7 +143,7 @@ func (p *kubeconfigProvider) Remote(kube do.KubernetesService, clusterID string,
 	return clientcmd.Load(kubeconfig)
 }
 
-// Read reads the kubeconfig from the user's local kubeconfig file.
+// Local reads the kubeconfig from the user's local kubeconfig file.
 func (p *kubeconfigProvider) Local() (*clientcmdapi.Config, error) {
 	config, err := p.pathOptions.GetStartingConfig()
 	if err != nil {

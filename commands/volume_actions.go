@@ -191,7 +191,7 @@ func RunVolumeActionsGet(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunVolumeActionsGet returns a Volume Action
+// RunVolumeActionsList returns a Volume Action
 func RunVolumeActionsList(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
