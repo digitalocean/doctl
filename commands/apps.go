@@ -246,25 +246,22 @@ func RunAppsCreate(c *CmdConfig) error {
 
 	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
 	if err != nil {
-		if upsert {
-			if err.(*godo.ErrorResponse).Response.StatusCode == 409 {
-				// parse app ID
-				notice("App already exists, updating")
+		if gerr, ok := err.(*godo.ErrorResponse); ok && gerr.Response.StatusCode == 409 && upsert {
+			notice("App already exists, updating")
 
-				apps, err := c.Apps().List()
-				if err != nil {
-					return err
-				}
+			apps, err := c.Apps().List()
+			if err != nil {
+				return err
+			}
 
-				id, err := getIDByName(apps, appSpec.Name)
-				if err != nil {
-					return err
-				}
+			id, err := getIDByName(apps, appSpec.Name)
+			if err != nil {
+				return err
+			}
 
-				app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
-				if err != nil {
-					return err
-				}
+			app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
+			if err != nil {
+				return err
 			}
 		} else {
 			return err
