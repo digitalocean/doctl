@@ -61,7 +61,7 @@ func (f *Firewall) ColMap() map[string]string {
 }
 
 func (f *Firewall) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(f.Firewalls))
 
 	for _, fw := range f.Firewalls {
 		irs, ors := firewallRulesPrintHelper(fw)
@@ -128,7 +128,7 @@ func firewallInAndOutboundRulesPrintHelper(addresses []string, tags []string, dr
 }
 
 func firewallPendingChangesPrintHelper(fw do.Firewall) string {
-	output := []string{}
+	output := make([]string, 0, len(fw.PendingChanges))
 
 	for _, pc := range fw.PendingChanges {
 		output = append(output, fmt.Sprintf("%v:%v,%v:%v,%v:%v", "droplet_id", pc.DropletID, "removing", pc.Removing, "status", pc.Status))
@@ -138,7 +138,7 @@ func firewallPendingChangesPrintHelper(fw do.Firewall) string {
 }
 
 func dropletListHelper(IDs []int) string {
-	output := []string{}
+	output := make([]string, 0, len(IDs))
 
 	for _, id := range IDs {
 		output = append(output, strconv.Itoa(id))

@@ -78,7 +78,7 @@ func RunSnapshotList(c *CmdConfig) error {
 		return err
 	}
 
-	matches := []glob.Glob{}
+	matches := make([]glob.Glob, 0, len(c.Args))
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
 		if err != nil {
@@ -153,7 +153,7 @@ func RunSnapshotGet(c *CmdConfig) error {
 	ss := c.Snapshots()
 	ids := c.Args
 
-	var matchedList []do.Snapshot
+	matchedList := make([]do.Snapshot, 0, len(ids))
 
 	for _, id := range ids {
 		s, err := ss.Get(id)

@@ -437,7 +437,7 @@ func TestKubernetesCreate(t *testing.T) {
 		"key1": "value1",
 		"key2": "value2",
 	}
-	var inputLabels []string
+	inputLabels := make([]string, 0, len(testNodePool.Labels))
 	for key, val := range testNodePool.Labels {
 		inputLabels = append(inputLabels, fmt.Sprintf("%s=%s", key, val))
 	}
@@ -455,7 +455,7 @@ func TestKubernetesCreate(t *testing.T) {
 			Effect: "NoExecute",
 		},
 	}
-	var inputTaints []string
+	inputTaints := make([]string, 0, len(testNodePool.Taints))
 	for _, taint := range testNodePool.Taints {
 		inputTaints = append(inputTaints, taint.String())
 	}

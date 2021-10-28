@@ -45,7 +45,7 @@ func (si *Size) ColMap() map[string]string {
 }
 
 func (si *Size) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(si.Sizes))
 
 	for _, s := range si.Sizes {
 		o := map[string]interface{}{

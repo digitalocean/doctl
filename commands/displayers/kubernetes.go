@@ -326,15 +326,12 @@ func (ar *KubernetesAssociatedResources) ColMap() map[string]string {
 }
 
 func (ar *KubernetesAssociatedResources) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, 1)
-
 	o := map[string]interface{}{
 		"Volumes":         flattenAssociatedResourceIDs(ar.KubernetesAssociatedResources.Volumes),
 		"VolumeSnapshots": flattenAssociatedResourceIDs(ar.KubernetesAssociatedResources.VolumeSnapshots),
 		"LoadBalancers":   flattenAssociatedResourceIDs(ar.KubernetesAssociatedResources.LoadBalancers),
 	}
-	out = append(out, o)
-	return out
+	return []map[string]interface{}{o}
 }
 
 func flattenAssociatedResourceIDs(resources []*godo.AssociatedResource) (out []string) {

@@ -54,7 +54,7 @@ func (i *Invoice) ColMap() map[string]string {
 }
 
 func (i *Invoice) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(i.Invoice.Invoice.InvoiceItems))
 	for _, ii := range i.Invoice.Invoice.InvoiceItems {
 		x := map[string]interface{}{
 			"ResourceID":       ii.ResourceID,

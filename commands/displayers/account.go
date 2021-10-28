@@ -43,13 +43,11 @@ func (a *Account) ColMap() map[string]string {
 }
 
 func (a *Account) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
 	x := map[string]interface{}{
 		"Email": a.Email, "DropletLimit": a.DropletLimit,
 		"EmailVerified": a.EmailVerified, "UUID": a.UUID,
 		"Status": a.Status,
 	}
-	out = append(out, x)
 
-	return out
+	return []map[string]interface{}{x}
 }

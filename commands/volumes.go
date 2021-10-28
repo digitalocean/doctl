@@ -85,7 +85,7 @@ func RunVolumeList(c *CmdConfig) error {
 		return nil
 	}
 
-	matches := []glob.Glob{}
+	matches := make([]glob.Glob, 0, len(c.Args))
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
 		if err != nil {

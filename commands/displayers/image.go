@@ -43,7 +43,7 @@ func (gi *Image) ColMap() map[string]string {
 }
 
 func (gi *Image) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(gi.Images))
 
 	for _, i := range gi.Images {
 		publicStatus := false

@@ -43,7 +43,7 @@ func (fi *FloatingIP) ColMap() map[string]string {
 }
 
 func (fi *FloatingIP) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(fi.FloatingIPs))
 
 	for _, f := range fi.FloatingIPs {
 		var dropletID, dropletName string

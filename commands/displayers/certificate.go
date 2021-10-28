@@ -57,7 +57,7 @@ func (c *Certificate) ColMap() map[string]string {
 }
 
 func (c *Certificate) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(c.Certificates))
 
 	for _, c := range c.Certificates {
 		o := map[string]interface{}{

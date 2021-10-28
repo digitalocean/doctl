@@ -44,7 +44,7 @@ func (a *Action) ColMap() map[string]string {
 }
 
 func (a *Action) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(a.Actions))
 
 	for _, x := range a.Actions {
 		region := ""

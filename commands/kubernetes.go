@@ -1017,7 +1017,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		return err
 	}
 
-	var volIDs, snapshotIDs, lbIDs []string
+	volIDs := make([]string, 0, len(volumes))
 	for _, v := range volumes {
 		volumeID, err := iDize(c, v, "volume", cluster.RegionSlug)
 		if err != nil {
@@ -1025,6 +1025,8 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		}
 		volIDs = append(volIDs, volumeID)
 	}
+
+	snapshotIDs := make([]string, 0, len(volSnapshots))
 	for _, s := range volSnapshots {
 		snapID, err := iDize(c, s, "volume_snapshot", cluster.RegionSlug)
 		if err != nil {
@@ -1032,6 +1034,8 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		}
 		snapshotIDs = append(snapshotIDs, snapID)
 	}
+
+	lbIDs := make([]string, 0, len(loadBalancers))
 	for _, l := range loadBalancers {
 		lbID, err := iDize(c, l, "load_balancer", "")
 		if err != nil {
@@ -1518,7 +1522,7 @@ func (s *KubernetesCommandService) RunKubernetesRegistryAdd(c *CmdConfig) error 
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	var clusterUUIDs []string
+	clusterUUIDs := make([]string, 0, len(c.Args))
 	for _, arg := range c.Args {
 		clusterID, err := clusterIDize(c, arg)
 		if err != nil {
@@ -1537,7 +1541,7 @@ func (s *KubernetesCommandService) RunKubernetesRegistryRemove(c *CmdConfig) err
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	var clusterUUIDs []string
+	clusterUUIDs := make([]string, 0, len(c.Args))
 	for _, arg := range c.Args {
 		clusterID, err := clusterIDize(c, arg)
 		if err != nil {
@@ -2270,7 +2274,7 @@ func nodesByNames(kube do.KubernetesService, clusterID, poolID string, nodeNames
 	if err != nil {
 		return nil, err
 	}
-	var out []*godo.KubernetesNode
+	out := make([]*godo.KubernetesNode, 0, len(nodeNames))
 	for _, name := range nodeNames {
 		node, err := nodeByName(name, nodePool.Nodes)
 		if err != nil {
@@ -2366,7 +2370,7 @@ func latestReleases(versions []do.KubernetesVersion) ([]do.KubernetesVersion, er
 		return v.KubernetesVersion.KubernetesVersion
 	})
 
-	var out []do.KubernetesVersion
+	out := make([]do.KubernetesVersion, 0, len(versionsByK8S))
 	for _, versions := range versionsByK8S {
 		i, err := versionMaxBy(versions, func(v do.KubernetesVersion) string {
 			return v.Slug
