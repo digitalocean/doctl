@@ -54,8 +54,9 @@ func (i *BillingHistory) KV() []map[string]interface{} {
 		}
 		return *s
 	}
-	out := []map[string]interface{}{}
-	for _, ii := range i.BillingHistory.BillingHistory.BillingHistory {
+	history := i.BillingHistory.BillingHistory.BillingHistory
+	out := make([]map[string]interface{}, 0, len(history))
+	for _, ii := range history {
 		x := map[string]interface{}{
 			"Date":        ii.Date.Format(time.RFC3339),
 			"Type":        ii.Type,

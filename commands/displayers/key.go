@@ -43,7 +43,7 @@ func (ke *Key) ColMap() map[string]string {
 }
 
 func (ke *Key) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(ke.Keys))
 
 	for _, k := range ke.Keys {
 		o := map[string]interface{}{
@@ -82,7 +82,7 @@ func (ke *KeyGet) ColMap() map[string]string {
 }
 
 func (ke *KeyGet) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(ke.Keys))
 
 	for _, k := range ke.Keys {
 		o := map[string]interface{}{

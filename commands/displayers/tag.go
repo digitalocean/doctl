@@ -41,7 +41,7 @@ func (t *Tag) ColMap() map[string]string {
 }
 
 func (t *Tag) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(t.Tags))
 
 	for _, x := range t.Tags {
 		dropletCount := x.Resources.Droplets.Count

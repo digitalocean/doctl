@@ -50,7 +50,7 @@ func (d *Droplet) ColMap() map[string]string {
 }
 
 func (d *Droplet) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(d.Droplets))
 	for _, d := range d.Droplets {
 		sort.Strings(d.Tags)
 		tags := strings.Join(d.Tags, ",")

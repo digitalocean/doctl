@@ -442,7 +442,7 @@ func extractVolumes(volumeList []string) []godo.DropletCreateVolume {
 }
 
 func allInt(in []string) ([]int, error) {
-	out := []int{}
+	out := make([]int, 0, len(in))
 	seen := map[string]bool{}
 
 	for _, i := range in {
@@ -555,7 +555,7 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 		matchedMap[id] = true
 	}
 
-	var extractedIDs []int
+	extractedIDs := make([]int, 0, len(matchedMap))
 	for id := range matchedMap {
 		extractedIDs = append(extractedIDs, id)
 	}
@@ -635,7 +635,7 @@ func RunDropletList(c *CmdConfig) error {
 		return err
 	}
 
-	matches := []glob.Glob{}
+	matches := make([]glob.Glob, 0, len(c.Args))
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
 		if err != nil {

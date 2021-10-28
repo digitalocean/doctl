@@ -42,7 +42,7 @@ func (ke *Kernel) ColMap() map[string]string {
 }
 
 func (ke *Kernel) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(ke.Kernels))
 
 	for _, k := range ke.Kernels {
 		o := map[string]interface{}{

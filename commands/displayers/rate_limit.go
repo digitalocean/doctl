@@ -42,11 +42,9 @@ func (rl *RateLimit) ColMap() map[string]string {
 }
 
 func (rl *RateLimit) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
 	x := map[string]interface{}{
 		"Limit": rl.Limit, "Remaining": rl.Remaining, "Reset": rl.Reset,
 	}
-	out = append(out, x)
 
-	return out
+	return []map[string]interface{}{x}
 }

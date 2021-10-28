@@ -48,7 +48,7 @@ func (c *CDN) ColMap() map[string]string {
 }
 
 func (c *CDN) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(c.CDNs))
 
 	for _, cdn := range c.CDNs {
 		m := map[string]interface{}{

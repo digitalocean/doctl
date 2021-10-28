@@ -68,7 +68,7 @@ func (fis *floatingIPsService) List() (FloatingIPs, error) {
 		return nil, err
 	}
 
-	var list FloatingIPs
+	list := make(FloatingIPs, 0, len(si))
 	for _, x := range si {
 		fip := x.(godo.FloatingIP)
 		list = append(list, FloatingIP{FloatingIP: &fip})

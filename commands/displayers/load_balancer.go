@@ -77,10 +77,10 @@ func (lb *LoadBalancer) ColMap() map[string]string {
 }
 
 func (lb *LoadBalancer) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(lb.LoadBalancers))
 
 	for _, l := range lb.LoadBalancers {
-		forwardingRules := []string{}
+		forwardingRules := make([]string, 0, len(l.ForwardingRules))
 		for _, r := range l.ForwardingRules {
 			forwardingRules = append(forwardingRules, prettyPrintStruct(r))
 		}
@@ -122,8 +122,6 @@ func toBool(b *bool) bool {
 }
 
 func prettyPrintStruct(obj interface{}) string {
-	output := []string{}
-
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Printf("Recovered from %v", err)
@@ -131,7 +129,9 @@ func prettyPrintStruct(obj interface{}) string {
 	}()
 
 	val := reflect.Indirect(reflect.ValueOf(obj))
-	for i := 0; i < val.NumField(); i++ {
+	numField := val.NumField()
+	output := make([]string, 0, numField)
+	for i := 0; i < numField; i++ {
 		k := strings.Split(val.Type().Field(i).Tag.Get("json"), ",")[0]
 		v := reflect.ValueOf(val.Field(i).Interface())
 		output = append(output, fmt.Sprintf("%v:%v", k, v))

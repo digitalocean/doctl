@@ -222,8 +222,6 @@ func (dc *DatabaseConnection) ColMap() map[string]string {
 }
 
 func (dc *DatabaseConnection) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, 1)
-
 	c := dc.DatabaseConnection
 	o := map[string]interface{}{
 		"URI":      c.URI,
@@ -234,9 +232,8 @@ func (dc *DatabaseConnection) KV() []map[string]interface{} {
 		"Password": c.Password,
 		"SSL":      c.SSL,
 	}
-	out = append(out, o)
 
-	return out
+	return []map[string]interface{}{o}
 }
 
 type DatabaseReplicas struct {
@@ -380,17 +377,14 @@ func (dmw *DatabaseMaintenanceWindow) ColMap() map[string]string {
 }
 
 func (dmw *DatabaseMaintenanceWindow) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, 1)
-
 	mw := dmw.DatabaseMaintenanceWindow
 	o := map[string]interface{}{
 		"Day":     mw.Day,
 		"Hour":    mw.Hour,
 		"Pending": mw.Pending,
 	}
-	out = append(out, o)
 
-	return out
+	return []map[string]interface{}{o}
 }
 
 type DatabaseDBs struct {

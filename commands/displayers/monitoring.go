@@ -52,7 +52,7 @@ func (a *AlertPolicy) ColMap() map[string]string {
 }
 
 func (a *AlertPolicy) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(a.AlertPolicies))
 
 	for _, x := range a.AlertPolicies {
 		emails := ""

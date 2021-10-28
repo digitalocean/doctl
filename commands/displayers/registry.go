@@ -45,7 +45,7 @@ func (r *Registry) ColMap() map[string]string {
 }
 
 func (r *Registry) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(r.Registries))
 
 	for _, reg := range r.Registries {
 		m := map[string]interface{}{
@@ -88,7 +88,7 @@ func (r *Repository) ColMap() map[string]string {
 }
 
 func (r *Repository) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(r.Repositories))
 
 	for _, reg := range r.Repositories {
 		m := map[string]interface{}{
@@ -133,7 +133,7 @@ func (r *RepositoryTag) ColMap() map[string]string {
 }
 
 func (r *RepositoryTag) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(r.Tags))
 
 	for _, tag := range r.Tags {
 		m := map[string]interface{}{
@@ -184,7 +184,7 @@ func (g *GarbageCollection) ColMap() map[string]string {
 }
 
 func (g *GarbageCollection) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(g.GarbageCollections))
 
 	for _, gc := range g.GarbageCollections {
 		out = append(out, map[string]interface{}{
@@ -238,7 +238,7 @@ func (t *RegistrySubscriptionTiers) ColMap() map[string]string {
 }
 
 func (t *RegistrySubscriptionTiers) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(t.SubscriptionTiers))
 
 	for _, tier := range t.SubscriptionTiers {
 		out = append(out, map[string]interface{}{

@@ -76,7 +76,7 @@ func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []
 	}
 
 	if !noHeaders {
-		headers := []string{}
+		headers := make([]string, 0, len(cols))
 		for _, k := range cols {
 			col := item.ColMap()[k]
 			if col == "" {
@@ -89,8 +89,8 @@ func DisplayText(item Displayable, out io.Writer, noHeaders bool, includeCols []
 	}
 
 	for _, r := range item.KV() {
-		values := []interface{}{}
-		formats := []string{}
+		values := make([]interface{}, 0, len(cols))
+		formats := make([]string, 0, len(cols))
 
 		for _, col := range cols {
 			v := r[col]

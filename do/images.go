@@ -134,7 +134,7 @@ func (is *imagesService) listImages(lFn listFn, public bool) (Images, error) {
 		return nil, err
 	}
 
-	var list Images
+	list := make(Images, 0, len(si))
 	for i := range si {
 		image := si[i].(godo.Image)
 		list = append(list, Image{Image: &image})
