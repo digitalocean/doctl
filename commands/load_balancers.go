@@ -246,7 +246,7 @@ func RunLoadBalancerDelete(c *CmdConfig) error {
 			return err
 		}
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	return nil

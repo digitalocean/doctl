@@ -503,7 +503,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		if force || AskForConfirm(fmt.Sprintf("delete %d %s tagged \"%s\"? [affected %s: %s]", len(list), resourceType, tagName, resourceType, affectedIDs)) == nil {
 			return ds.DeleteByTag(tagName)
 		}
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	if force || AskForConfirmDelete("Droplet", len(c.Args)) == nil {
@@ -518,7 +518,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		}
 		return matchDroplets(c.Args, ds, fn)
 	}
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 type matchDropletsFn func(ids []int) error

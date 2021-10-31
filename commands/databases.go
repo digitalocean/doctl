@@ -230,7 +230,7 @@ func RunDatabaseDelete(c *CmdConfig) error {
 		return c.Databases().Delete(id)
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 func displayDatabases(c *CmdConfig, short bool, dbs ...do.Database) error {
@@ -618,7 +618,7 @@ func RunDatabaseUserDelete(c *CmdConfig) error {
 		return c.Databases().DeleteUser(databaseID, userID)
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
@@ -803,7 +803,7 @@ func RunDatabasePoolDelete(c *CmdConfig) error {
 		return c.Databases().DeletePool(databaseID, poolID)
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 func displayDatabasePools(c *CmdConfig, pools ...do.DatabasePool) error {
@@ -916,7 +916,7 @@ func RunDatabaseDBDelete(c *CmdConfig) error {
 		return c.Databases().DeleteDB(databaseID, dbID)
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 func displayDatabaseDBs(c *CmdConfig, dbs ...do.DatabaseDB) error {
@@ -1081,7 +1081,7 @@ func RunDatabaseReplicaDelete(c *CmdConfig) error {
 		return c.Databases().DeleteReplica(databaseID, replicaID)
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 func displayDatabaseReplicas(c *CmdConfig, short bool, replicas ...do.DatabaseReplica) error {

@@ -24,6 +24,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var errOperationAborted = fmt.Errorf("Operation aborted.")
+
 // Command is a wrapper around cobra.Command that adds doctl specific
 // functionality.
 type Command struct {
