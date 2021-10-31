@@ -21,7 +21,7 @@ var (
 )
 
 func wsHandler(t *testing.T) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			require.NoError(t, err)
@@ -51,7 +51,7 @@ func wsHandler(t *testing.T) http.HandlerFunc {
 				break
 			}
 		}
-	})
+	}
 }
 
 func TestListener(t *testing.T) {

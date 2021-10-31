@@ -21,7 +21,7 @@ func bytesToHumanReadibleUnit(bytes uint64, baseUnit uint64, units []string) str
 		return fmt.Sprintf("%d B", bytes)
 	}
 
-	div, exp := uint64(baseUnit), 0
+	div, exp := baseUnit, 0
 	for n := bytes / baseUnit; n >= baseUnit; n /= baseUnit {
 		div *= baseUnit
 		exp++
