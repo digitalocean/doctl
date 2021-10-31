@@ -77,13 +77,13 @@ var _ = suite("projects/resources/assign", func(t *testing.T, when spec.G, it sp
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(projcetsResourcesAssignOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(projectsResourcesAssignOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
 
 const (
-	projcetsResourcesAssignOutput = `
+	projectsResourcesAssignOutput = `
 URN           Assigned At             Status
 some-urn-1    2018-09-28T19:26:37Z    assigned
 some-urn-2    2018-09-28T19:26:37Z    assigned

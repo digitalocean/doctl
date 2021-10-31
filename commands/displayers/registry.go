@@ -138,7 +138,7 @@ func (r *RepositoryTag) KV() []map[string]interface{} {
 	for _, tag := range r.Tags {
 		m := map[string]interface{}{
 			"Tag":                 tag.Tag,
-			"CompressedSizeBytes": BytesToHumanReadibleUnit(tag.CompressedSizeBytes),
+			"CompressedSizeBytes": BytesToHumanReadableUnit(tag.CompressedSizeBytes),
 			"UpdatedAt":           tag.UpdatedAt,
 			"ManifestDigest":      tag.ManifestDigest,
 		}
@@ -245,9 +245,9 @@ func (t *RegistrySubscriptionTiers) KV() []map[string]interface{} {
 			"Name":                   tier.Name,
 			"Slug":                   tier.Slug,
 			"IncludedRepositories":   tier.IncludedRepositories,
-			"IncludedStorageBytes":   BytesToHumanReadibleUnit(tier.IncludedStorageBytes),
+			"IncludedStorageBytes":   BytesToHumanReadableUnit(tier.IncludedStorageBytes),
 			"AllowStorageOverage":    tier.AllowStorageOverage,
-			"IncludedBandwidthBytes": BytesToHumanReadibleUnit(tier.IncludedBandwidthBytes),
+			"IncludedBandwidthBytes": BytesToHumanReadableUnit(tier.IncludedBandwidthBytes),
 			"MonthlyPriceInCents":    fmt.Sprintf("$%d", tier.MonthlyPriceInCents/100),
 			"Eligible":               tier.Eligible,
 			"EligibilityReasons":     tier.EligibilityReasons,
