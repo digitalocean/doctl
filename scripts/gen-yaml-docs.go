@@ -65,7 +65,10 @@ func writeDocs(cmd *cobra.Command, dir string) error {
 	defer f.Close()
 
 	// Call Cobra's GenYaml command, passing in the created file
-	doc.GenYaml(cmd, f)
+	err = doc.GenYaml(cmd, f)
+	if err != nil {
+		return err
+	}
 	// Append alias information to the standard YAML output
 	aliases := fmt.Sprintf("aliases: %s\n", strings.Join(cmd.Aliases, ", "))
 
