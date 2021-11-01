@@ -136,7 +136,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			fmt.Fprintln(c.Out)
 		}
 
-		c.setContextAccessToken(string(token))
+		c.setContextAccessToken(token)
 
 		fmt.Fprintln(c.Out)
 		fmt.Fprint(c.Out, "Validating token... ")
