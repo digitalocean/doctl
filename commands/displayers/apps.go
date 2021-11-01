@@ -205,7 +205,7 @@ func (t AppTiers) KV() []map[string]interface{} {
 		out[i] = map[string]interface{}{
 			"Name":                 tier.Name,
 			"Slug":                 tier.Slug,
-			"EgressBandwidthBytes": BytesToHumanReadibleUnitBinary(egressBandwidth),
+			"EgressBandwidthBytes": BytesToHumanReadableUnitBinary(egressBandwidth),
 			"BuildSeconds":         tier.BuildSeconds,
 		}
 	}
@@ -269,7 +269,7 @@ func (is AppInstanceSizes) KV() []map[string]interface{} {
 			"Name":                     instanceSize.Name,
 			"Slug":                     instanceSize.Slug,
 			"CPUs":                     cpus,
-			"Memory":                   BytesToHumanReadibleUnitBinary(memory),
+			"Memory":                   BytesToHumanReadableUnitBinary(memory),
 			"USDPerMonth":              instanceSize.USDPerMonth,
 			"USDPerSecond":             fmt.Sprintf("%.7f", usdPerSecond),
 			"TierSlug":                 instanceSize.TierSlug,
