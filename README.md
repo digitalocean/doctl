@@ -25,17 +25,19 @@ Usage:
 Available Commands:
   1-click         Display commands that pertain to 1-click applications
   account         Display commands that retrieve account details
+  apps            Display commands for working with apps
   auth            Display commands for authenticating doctl with an account
   balance         Display commands for retrieving your account balance
   billing-history Display commands for retrieving your billing history
   completion      Modify your shell so doctl commands autocomplete with TAB
   compute         Display commands that manage infrastructure
   databases       Display commands that manage databases
-  help            Help with any command
+  help            Help about any command
   invoice         Display commands for retrieving invoices for your account
   kubernetes      Displays commands to manage Kubernetes clusters and configurations
+  monitoring      [Beta] Display commands to manage monitoring
   projects        Manage projects and assign resources to them
-  registry        [EA] Display commands for working with container registries
+  registry        Display commands for working with container registries
   version         Show the current version
   vpcs            Display commands that manage VPCs
 
