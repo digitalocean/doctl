@@ -318,9 +318,8 @@ func RunDropletCreate(c *CmdConfig) error {
 			return err
 		}
 	}
-	c.Display(item)
 
-	return nil
+	return c.Display(item)
 }
 
 // RunDropletTag adds a tag to a droplet.

@@ -415,7 +415,10 @@ func extractInboundRules(s string) (rules []godo.InboundRule, err error) {
 		}
 		mr, _ := json.Marshal(rule)
 		ir := &godo.InboundRule{}
-		json.Unmarshal(mr, ir)
+		err = json.Unmarshal(mr, ir)
+		if err != nil {
+			return nil, err
+		}
 		rules = append(rules, *ir)
 	}
 
@@ -435,7 +438,10 @@ func extractOutboundRules(s string) (rules []godo.OutboundRule, err error) {
 		}
 		mr, _ := json.Marshal(rule)
 		or := &godo.OutboundRule{}
-		json.Unmarshal(mr, or)
+		err = json.Unmarshal(mr, or)
+		if err != nil {
+			return nil, err
+		}
 		rules = append(rules, *or)
 	}
 
