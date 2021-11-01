@@ -290,7 +290,7 @@ func TestKubernetesGet(t *testing.T) {
 		tm.kubernetes.EXPECT().List().Return(clustersWithDups, nil)
 		config.Args = append(config.Args, name)
 		err := testK8sCmdService().RunKubernetesClusterGet(config)
-		assert.EqualError(t, err, errAmbigousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
+		assert.EqualError(t, err, errAmbiguousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
 	})
 }
 
@@ -808,7 +808,7 @@ func TestKubernetesListAssociatedResources(t *testing.T) {
 		tm.kubernetes.EXPECT().List().Return(clustersWithDups, nil)
 		config.Args = append(config.Args, name)
 		err := testK8sCmdService().RunKubernetesClusterListAssociatedResources(config)
-		assert.EqualError(t, err, errAmbigousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
+		assert.EqualError(t, err, errAmbiguousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
 	})
 }
 
@@ -867,7 +867,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(nodePoolsWithDups, nil)
 		config.Args = append(config.Args, testCluster.ID, name)
 		err := testK8sCmdService().RunKubernetesNodePoolGet(config)
-		assert.EqualError(t, err, errAmbigousPoolName(name, []string{testNodePool.ID, testNodePoolWithSameName.ID}).Error())
+		assert.EqualError(t, err, errAmbiguousPoolName(name, []string{testNodePool.ID, testNodePoolWithSameName.ID}).Error())
 	})
 }
 

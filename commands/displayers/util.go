@@ -2,21 +2,21 @@ package displayers
 
 import "fmt"
 
-// BytesToHumanReadibleUnit converts byte input to a human-readable
+// BytesToHumanReadableUnit converts byte input to a human-readable
 // form using the largest notation possible in decimal base.
-func BytesToHumanReadibleUnit(bytes uint64) string {
-	return bytesToHumanReadibleUnit(bytes, 1000, []string{"k", "M", "G", "T", "P", "E"})
+func BytesToHumanReadableUnit(bytes uint64) string {
+	return bytesToHumanReadableUnit(bytes, 1000, []string{"k", "M", "G", "T", "P", "E"})
 }
 
-// BytesToHumanReadibleUnitBinary converts byte input to a human-readable
+// BytesToHumanReadableUnitBinary converts byte input to a human-readable
 // form using the largest notation possible in binary base.
-func BytesToHumanReadibleUnitBinary(bytes uint64) string {
-	return bytesToHumanReadibleUnit(bytes, 1024, []string{"Ki", "Mi", "Gi", "Ti", "Pi", "Ei"})
+func BytesToHumanReadableUnitBinary(bytes uint64) string {
+	return bytesToHumanReadableUnit(bytes, 1024, []string{"Ki", "Mi", "Gi", "Ti", "Pi", "Ei"})
 }
 
-// BytesToHumanReadibleUnit converts byte input to a human-readable
+// bytesToHumanReadableUnit converts byte input to a human-readable
 // form using the largest notation possible.
-func bytesToHumanReadibleUnit(bytes uint64, baseUnit uint64, units []string) string {
+func bytesToHumanReadableUnit(bytes uint64, baseUnit uint64, units []string) string {
 	if bytes < baseUnit {
 		return fmt.Sprintf("%d B", bytes)
 	}
