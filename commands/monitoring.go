@@ -142,7 +142,7 @@ func RunCmdAlertPolicyCreate(c *CmdConfig) error {
 		return err
 	}
 
-	compare, err := getCompartor(compareStr)
+	compare, err := getComparator(compareStr)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func RunCmdAlertPolicyUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	compare, err := getCompartor(compareStr)
+	compare, err := getComparator(compareStr)
 	if err != nil {
 		return err
 	}
@@ -311,7 +311,7 @@ func RunCmdAlertPolicyUpdate(c *CmdConfig) error {
 	return c.Display(&displayers.AlertPolicy{AlertPolicies: do.AlertPolicies{*p}})
 }
 
-func getCompartor(compareStr string) (godo.AlertPolicyComp, error) {
+func getComparator(compareStr string) (godo.AlertPolicyComp, error) {
 	var compare godo.AlertPolicyComp
 	if strings.EqualFold("LessThan", compareStr) {
 		compare = godo.LessThan

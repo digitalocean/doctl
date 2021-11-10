@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,6 +30,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -76,7 +76,7 @@ func errNoClusterByName(name string) error {
 	return fmt.Errorf("no cluster goes by the name %q", name)
 }
 
-func errAmbigousClusterName(name string, ids []string) error {
+func errAmbiguousClusterName(name string, ids []string) error {
 	return fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", name, ids)
 }
 
@@ -84,7 +84,7 @@ func errNoPoolByName(name string) error {
 	return fmt.Errorf("No node pool goes by the name %q", name)
 }
 
-func errAmbigousPoolName(name string, ids []string) error {
+func errAmbiguousPoolName(name string, ids []string) error {
 	return fmt.Errorf("Many node pools go by the name %q, they have the following IDs: %v", name, ids)
 }
 
@@ -92,7 +92,7 @@ func errNoClusterNodeByName(name string) error {
 	return fmt.Errorf("No node goes by the name %q", name)
 }
 
-func errAmbigousClusterNodeName(name string, ids []string) error {
+func errAmbiguousClusterNodeName(name string, ids []string) error {
 	return fmt.Errorf("Many nodes go by the name %q, they have the following IDs: %v", name, ids)
 }
 
@@ -227,7 +227,7 @@ func kubernetesCluster() *Command {
 
 	cmd.AddCommand(kubernetesRegistryIntegration())
 
-	nodePoolDeatils := `- A list of node pools available inside the cluster`
+	nodePoolDetails := `- A list of node pools available inside the cluster`
 	clusterDetails := `
 
 - A unique ID for the cluster
@@ -245,10 +245,10 @@ This command retrieves the following details about a Kubernetes cluster: `+clust
 - An array of tags applied to the Kubernetes cluster. All clusters are automatically tagged `+"`"+`k8s`+"`"+` and `+"`"+`k8s:$K8S_CLUSTER_ID`+"`"+`.
 - A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was created.
 - A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was last updated.
-`+nodePoolDeatils,
+`+nodePoolDetails,
 		Writer, aliasOpt("g"), displayerType(&displayers.KubernetesClusters{}))
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterList, "list", "Retrieve the list of Kubernetes clusters for your account", `
-This command retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDeatils,
+This command retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.KubernetesClusters{}))
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
 		"Retrieve a list of available Kubernetes version upgrades", `
@@ -636,7 +636,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterGet(c *CmdConfig) error {
 	return displayClusters(c, false, *cluster)
 }
 
-// RunKubernetesClusterList lists kubernetess.
+// RunKubernetesClusterList lists kubernetes.
 func (s *KubernetesCommandService) RunKubernetesClusterList(c *CmdConfig) error {
 	kube := c.Kubernetes()
 	list, err := kube.List()
@@ -2008,7 +2008,7 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 
 // removeKubeconfig removes a remote cluster's config file from a local config file,
 // assuming that the current context in the remote config file points to the
-// cluster details to reomve from the local config.
+// cluster details to remove from the local config.
 func removeKubeconfig(remote, local *clientcmdapi.Config) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
@@ -2107,7 +2107,7 @@ func clusterByIDorName(kube do.KubernetesService, idOrName string) (*do.Kubernet
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, errAmbigousClusterName(idOrName, ids)
+		return nil, errAmbiguousClusterName(idOrName, ids)
 	default:
 		if len(out) != 1 {
 			panic("The default case should always have len(out) == 1.")
@@ -2228,7 +2228,7 @@ func poolByIDorName(kube do.KubernetesService, clusterID, idOrName string) (*do.
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, errAmbigousPoolName(idOrName, ids)
+		return nil, errAmbiguousPoolName(idOrName, ids)
 	default:
 		if len(out) != 1 {
 			panic("The default case should always have len(out) == 1.")
@@ -2258,7 +2258,7 @@ func poolIDize(kube do.KubernetesService, clusterID, idOrName string) (string, e
 	case len(ids) == 0:
 		return "", errNoPoolByName(idOrName)
 	case len(ids) > 1:
-		return "", errAmbigousPoolName(idOrName, ids)
+		return "", errAmbiguousPoolName(idOrName, ids)
 	default:
 		if len(ids) != 1 {
 			panic("The default case should always have len(ids) == 1.")
@@ -2301,7 +2301,7 @@ func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, errAmbigousClusterNodeName(name, ids)
+		return nil, errAmbiguousClusterNodeName(name, ids)
 	default:
 		if len(out) != 1 {
 			panic("The default case should always have len(out) == 1.")
@@ -2311,8 +2311,13 @@ func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode
 }
 
 func looksLikeUUID(str string) bool {
-	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-4][a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
-	return r.MatchString(str)
+	_, err := uuid.Parse(str)
+	if err != nil {
+		return false
+	}
+
+	// support only hyphenated UUIDs
+	return strings.Contains(str, "-")
 }
 
 func getVersionOrLatest(c *CmdConfig) (string, error) {

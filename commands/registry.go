@@ -386,7 +386,10 @@ func RunRegistryLogin(c *CmdConfig) error {
 			return err
 		}
 
-		cf.Save()
+		err = cf.Save()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
