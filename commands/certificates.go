@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
 	"io/ioutil"
 
 	"github.com/digitalocean/doctl"
@@ -211,7 +210,7 @@ func RunCertificateDelete(c *CmdConfig) error {
 			return err
 		}
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	return nil

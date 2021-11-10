@@ -636,7 +636,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				testRegistryName,
 			},
 			expect:      func(m *mocks.MockRegistryService, config *CmdConfig) {},
-			expectError: fmt.Errorf("Operation aborted."),
+			expectError: errOperationAborted,
 		},
 	}
 	for _, test := range tests {
