@@ -688,7 +688,7 @@ func RunStartGarbageCollection(c *CmdConfig) error {
 	msg := "run garbage collection -- this will put your registry in read-only mode until it finishes"
 
 	if !force && AskForConfirm(msg) != nil {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	gc, err := c.Registry().StartGarbageCollection(registryName, gcStartRequest)

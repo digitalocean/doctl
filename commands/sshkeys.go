@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
 	"io/ioutil"
 
 	"github.com/digitalocean/doctl"
@@ -197,7 +196,7 @@ func RunKeyDelete(c *CmdConfig) error {
 		return ks.Delete(rawKey)
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 // RunKeyUpdate updates a key.

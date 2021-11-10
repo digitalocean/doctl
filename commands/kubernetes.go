@@ -1430,7 +1430,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolDelete(c *CmdConfig) err
 			return err
 		}
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 	return nil
 }
@@ -1470,7 +1470,7 @@ func kubernetesNodeDelete(replace bool, c *CmdConfig) error {
 	}
 
 	if !(force || AskForConfirm(msg) == nil) {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	skipDrain, err := c.Doit.GetBool(c.NS, "skip-drain")

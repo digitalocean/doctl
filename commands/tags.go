@@ -14,8 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -123,7 +121,7 @@ func RunCmdTagDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	return nil

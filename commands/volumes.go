@@ -219,7 +219,7 @@ func RunVolumeDelete(c *CmdConfig) error {
 		id := c.Args[0]
 		return c.Volumes().DeleteVolume(id)
 	}
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 // RunVolumeGet gets a volume.
