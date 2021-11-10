@@ -53,7 +53,7 @@ type domainsRoot struct {
 	Meta    *Meta    `json:"meta"`
 }
 
-// DomainCreateRequest respresents a request to create a domain.
+// DomainCreateRequest represents a request to create a domain.
 type DomainCreateRequest struct {
 	Name      string `json:"name"`
 	IPAddress string `json:"ip_address,omitempty"`

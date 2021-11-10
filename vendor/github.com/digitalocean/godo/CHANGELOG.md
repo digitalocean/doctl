@@ -1,5 +1,21 @@
 # Change Log
 
+## [v1.71.0] - 2021-11-09
+
+- #498 - @bojand - apps: update spec to include log destinations
+
+## [v1.70.0] - 2021-11-01
+
+- #491 - @andrewsomething - Add support for retrieving Droplet monitoring metrics.
+- #494 - @alexandear - Refactor tests: replace t.Errorf with assert/require
+- #495 - @alexandear - Fix typos and grammar issues in comments
+- #492 - @andrewsomething - Update golang.org/x/net
+- #486 - @abeltay - Fix typo on "DigitalOcean"
+
+## [v1.69.1] - 2021-10-06
+
+- #484 - @sunny-b - k8s/godo: remove ha field from update request
+
 ## [v1.69.0] - 2021-10-04
 
 - #482 - @dikshant - godo/load-balancers: add DisableLetsEncryptDNSRecords field for LBaaS
