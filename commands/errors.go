@@ -25,6 +25,8 @@ import (
 )
 
 var (
+	errOperationAborted = fmt.Errorf("Operation aborted.")
+
 	colorErr    = color.RedString("Error")
 	colorWarn   = color.YellowString("Warning")
 	colorNotice = color.GreenString("Notice")
