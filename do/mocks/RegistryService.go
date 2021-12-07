@@ -226,6 +226,20 @@ func (mr *MockRegistryServiceMockRecorder) ListRepositoryTags(arg0, arg1 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoryTags", reflect.TypeOf((*MockRegistryService)(nil).ListRepositoryTags), arg0, arg1)
 }
 
+// RevokeOAuthToken mocks base method.
+func (m *MockRegistryService) RevokeOAuthToken(token, endpoint string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeOAuthToken", token, endpoint)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeOAuthToken indicates an expected call of RevokeOAuthToken.
+func (mr *MockRegistryServiceMockRecorder) RevokeOAuthToken(token, endpoint interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeOAuthToken", reflect.TypeOf((*MockRegistryService)(nil).RevokeOAuthToken), token, endpoint)
+}
+
 // StartGarbageCollection mocks base method.
 func (m *MockRegistryService) StartGarbageCollection(arg0 string, arg1 *godo.StartGarbageCollectionRequest) (*do.GarbageCollection, error) {
 	m.ctrl.T.Helper()

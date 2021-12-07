@@ -39,9 +39,13 @@ type dockerConfig struct {
 	} `json:"auths"`
 }
 
-// DOSecretOperatorAnnotation is the annotation key so that dosecret operator can do it's magic
-// and help users pull private images automatically in their DOKS clusters
-const DOSecretOperatorAnnotation = "digitalocean.com/dosecret-identifier"
+const (
+	// DOSecretOperatorAnnotation is the annotation key so that dosecret operator can do it's magic
+	// and help users pull private images automatically in their DOKS clusters
+	DOSecretOperatorAnnotation = "digitalocean.com/dosecret-identifier"
+
+	oauthTokenRevokeEndpoint = "https://cloud.digitalocean.com/v1/oauth/revoke"
+)
 
 // Registry creates the registry command
 func Registry() *Command {
@@ -80,8 +84,9 @@ func Registry() *Command {
 		"The length of time the registry credentials will be valid for in seconds. By default, the credentials do not expire.")
 
 	logoutRegDesc := "This command logs Docker out of the private container registry, revoking access to it."
-	CmdBuilder(cmd, RunRegistryLogout, "logout", "Log out Docker from a container registry",
+	cmdRunRegistryLogout := CmdBuilder(cmd, RunRegistryLogout, "logout", "Log out Docker from a container registry",
 		logoutRegDesc, Writer)
+	AddStringFlag(cmdRunRegistryLogout, doctl.ArgRegistryAuthorizationServerEndpoint, "", oauthTokenRevokeEndpoint, "The endpoint of the OAuth authorization server used to revoke credentials on logout.")
 
 	kubeManifestDesc := `This command outputs a YAML-formatted Kubernetes secret manifest that can be used to grant a Kubernetes cluster pull access to your private container registry.
 
@@ -486,12 +491,22 @@ func RunDockerConfig(c *CmdConfig) error {
 
 // RunRegistryLogout logs Docker out of the registry
 func RunRegistryLogout(c *CmdConfig) error {
+	endpoint, err := c.Doit.GetString(c.NS, doctl.ArgRegistryAuthorizationServerEndpoint)
+	if err != nil {
+		return err
+	}
+
 	server := c.Registry().Endpoint()
 	fmt.Printf("Removing login credentials for %s\n", server)
 
 	cf := dockerconf.LoadDefaultConfigFile(os.Stderr)
 	dockerCreds := cf.GetCredentialsStore(server)
-	err := dockerCreds.Erase(server)
+	authConfig, err := dockerCreds.Get(server)
+	if err != nil {
+		return err
+	}
+
+	err = dockerCreds.Erase(server)
 	if err != nil {
 		_, isSnap := os.LookupEnv("SNAP")
 		if os.IsPermission(err) && isSnap {
@@ -502,7 +517,7 @@ func RunRegistryLogout(c *CmdConfig) error {
 		return err
 	}
 
-	return nil
+	return c.Registry().RevokeOAuthToken(authConfig.Password, endpoint)
 }
 
 // Repository Run Commands

@@ -80,11 +80,11 @@ var _ = suite("registry/kubernetes-manifest", func(t *testing.T, when spec.G, it
 })
 
 const (
-	registryDockerCredentialsResponse = `{"auths":{"registry.digitalocean.com":{"auth":"YjdkMDNhNjk0N2IyMTdlZmI2ZjNlYzNiZDM1MDQ1ODI6YjdkMDNhNjk0N2IyMTdlZmI2ZjNlYzNiZDM1MDQ1ODIK"}}}`
+	registryDockerCredentialsResponse = `{"auths":{"registry.digitalocean.com":{"auth":"OGY4NzJlYWZjNTJmMTczODdkYTU2ZTUyZTgxMGMwYTYwMGM5ZjE2MzRjYTgxZjVhMDgzNmY3MTJiZjZiMzFlYzo4Zjg3MmVhZmM1MmYxNzM4N2RhNTZlNTJlODEwYzBhNjAwYzlmMTYzNGNhODFmNWEwODM2ZjcxMmJmNmIzMWVj"}}}`
 	registryKubernetesManifestOutput  = `
 apiVersion: v1
 data:
-  .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5kaWdpdGFsb2NlYW4uY29tIjp7ImF1dGgiOiJZamRrTUROaE5qazBOMkl5TVRkbFptSTJaak5sWXpOaVpETTFNRFExT0RJNllqZGtNRE5oTmprME4ySXlNVGRsWm1JMlpqTmxZek5pWkRNMU1EUTFPRElLIn19fQ==
+  .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5kaWdpdGFsb2NlYW4uY29tIjp7ImF1dGgiOiJPR1k0TnpKbFlXWmpOVEptTVRjek9EZGtZVFUyWlRVeVpUZ3hNR013WVRZd01HTTVaakUyTXpSallUZ3haalZoTURnek5tWTNNVEppWmpaaU16RmxZem80WmpnM01tVmhabU0xTW1ZeE56TTROMlJoTlRabE5USmxPREV3WXpCaE5qQXdZemxtTVRZek5HTmhPREZtTldFd09ETTJaamN4TW1KbU5tSXpNV1ZqIn19fQ==
 kind: Secret
 metadata:
   creationTimestamp: null
