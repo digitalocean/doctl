@@ -37,6 +37,16 @@ type Repository struct {
 	*godo.Repository
 }
 
+// RepositoryV2 wraps a godo RepositoryV2
+type RepositoryV2 struct {
+	*godo.RepositoryV2
+}
+
+// RepositoryManifest wraps a godo RepositoryManifest
+type RepositoryManifest struct {
+	*godo.RepositoryManifest
+}
+
 // RepositoryTag wraps a godo RepositoryTag
 type RepositoryTag struct {
 	*godo.RepositoryTag
@@ -64,7 +74,9 @@ type RegistryService interface {
 	Delete() error
 	DockerCredentials(*godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error)
 	ListRepositoryTags(string, string) ([]RepositoryTag, error)
+	ListRepositoryManifests(string, string) ([]RepositoryManifest, error)
 	ListRepositories(string) ([]Repository, error)
+	ListRepositoriesV2(string) ([]RepositoryV2, error)
 	DeleteTag(string, string, string) error
 	DeleteManifest(string, string, string) error
 	Endpoint() string
@@ -152,6 +164,39 @@ func (rs *registryService) ListRepositories(registry string) ([]Repository, erro
 	return list, nil
 }
 
+func (rs *registryService) ListRepositoriesV2(registry string) ([]RepositoryV2, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := rs.client.Registry.ListRepositoriesV2(rs.ctx, registry, &godo.TokenListOptions{
+			Page:    opt.Page,
+			PerPage: opt.PerPage,
+			// there's an opportunity for optimization here by using page token instead of page
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]RepositoryV2, len(si))
+	for i := range si {
+		a := si[i].(*godo.RepositoryV2)
+		list[i] = RepositoryV2{RepositoryV2: a}
+	}
+
+	return list, nil
+}
+
 func (rs *registryService) ListRepositoryTags(registry, repository string) ([]RepositoryTag, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := rs.client.Registry.ListRepositoryTags(rs.ctx, registry, repository, opt)
@@ -176,6 +221,35 @@ func (rs *registryService) ListRepositoryTags(registry, repository string) ([]Re
 	for i := range si {
 		a := si[i].(*godo.RepositoryTag)
 		list[i] = RepositoryTag{RepositoryTag: a}
+	}
+
+	return list, nil
+}
+
+func (rs *registryService) ListRepositoryManifests(registry, repository string) ([]RepositoryManifest, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := rs.client.Registry.ListRepositoryManifests(rs.ctx, registry, repository, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]RepositoryManifest, len(si))
+	for i := range si {
+		a := si[i].(*godo.RepositoryManifest)
+		list[i] = RepositoryManifest{RepositoryManifest: a}
 	}
 
 	return list, nil

@@ -211,6 +211,36 @@ func (mr *MockRegistryServiceMockRecorder) ListRepositories(arg0 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositories", reflect.TypeOf((*MockRegistryService)(nil).ListRepositories), arg0)
 }
 
+// ListRepositoriesV2 mocks base method.
+func (m *MockRegistryService) ListRepositoriesV2(arg0 string) ([]do.RepositoryV2, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRepositoriesV2", arg0)
+	ret0, _ := ret[0].([]do.RepositoryV2)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositoriesV2 indicates an expected call of ListRepositoriesV2.
+func (mr *MockRegistryServiceMockRecorder) ListRepositoriesV2(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoriesV2", reflect.TypeOf((*MockRegistryService)(nil).ListRepositoriesV2), arg0)
+}
+
+// ListRepositoryManifests mocks base method.
+func (m *MockRegistryService) ListRepositoryManifests(arg0, arg1 string) ([]do.RepositoryManifest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRepositoryManifests", arg0, arg1)
+	ret0, _ := ret[0].([]do.RepositoryManifest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositoryManifests indicates an expected call of ListRepositoryManifests.
+func (mr *MockRegistryServiceMockRecorder) ListRepositoryManifests(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoryManifests", reflect.TypeOf((*MockRegistryService)(nil).ListRepositoryManifests), arg0, arg1)
+}
+
 // ListRepositoryTags mocks base method.
 func (m *MockRegistryService) ListRepositoryTags(arg0, arg1 string) ([]do.RepositoryTag, error) {
 	m.ctrl.T.Helper()
