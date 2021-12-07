@@ -25,6 +25,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	k8sapiv1 "k8s.io/api/core/v1"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
@@ -538,7 +539,9 @@ func TestRegistryLogin(t *testing.T) {
 
 func TestRegistryLogout(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgRegistryAuthorizationServerEndpoint, "http://example.com")
 		tm.registry.EXPECT().Endpoint().Return(do.RegistryHostname)
+		tm.registry.EXPECT().RevokeOAuthToken(gomock.Any(), "http://example.com").Times(1).Return(nil)
 
 		config.Out = os.Stderr
 		err := RunRegistryLogout(config)

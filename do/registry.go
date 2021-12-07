@@ -15,7 +15,11 @@ package do
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/digitalocean/godo"
 )
@@ -69,6 +73,7 @@ type RegistryService interface {
 	ListGarbageCollections(string) ([]GarbageCollection, error)
 	CancelGarbageCollection(string, string) (*GarbageCollection, error)
 	GetSubscriptionTiers() ([]RegistrySubscriptionTier, error)
+	RevokeOAuthToken(token string, endpoint string) error
 }
 
 type registryService struct {
@@ -261,4 +266,27 @@ func (rs *registryService) GetSubscriptionTiers() ([]RegistrySubscriptionTier, e
 	}
 
 	return ret, nil
+}
+
+func (rs *registryService) RevokeOAuthToken(token string, endpoint string) error {
+	data := url.Values{}
+	data.Set("token", token)
+	req, err := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := http.Client{}
+
+	resp, err := client.Do(req)
+	if resp == nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("error revoking token: " + http.StatusText(resp.StatusCode))
+	}
+
+	return err
 }

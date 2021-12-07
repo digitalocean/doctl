@@ -349,6 +349,9 @@ const (
 	// ArgGCExcludeUnreferencedBlobs indicates that a garbage collection should
 	// not delete unreferenced blobs.
 	ArgGCExcludeUnreferencedBlobs = "exclude-unreferenced-blobs"
+	// ArgRegistryAuthorizationServerEndpoint is the endpoint of the OAuth authorization server
+	// used to revoke credentials on logout.
+	ArgRegistryAuthorizationServerEndpoint = "authorization-server-endpoint"
 
 	// 1-Click Args
 

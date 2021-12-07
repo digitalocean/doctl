@@ -18,8 +18,9 @@ import (
 
 var _ = suite("registry/logout", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect      *require.Assertions
+		server      *httptest.Server
+		oAuthServer *httptest.Server
 	)
 
 	it.Before(func() {
@@ -34,6 +35,27 @@ var _ = suite("registry/logout", func(t *testing.T, when spec.G, it spec.S) {
 			}
 
 			t.Fatalf("received unknown request: %s", dump)
+
+		}))
+
+		oAuthServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if http.MethodPost != req.Method {
+				t.Fatalf("method = %v, expected %v", req.Method, http.MethodPost)
+			}
+
+			authHeader := req.Header.Get("Authorization")
+			token := strings.TrimPrefix(strings.ToLower(authHeader), "bearer ")
+			if token == "" {
+				t.Fatalf("no token in auth header")
+			}
+
+			req.ParseForm()
+			bodyToken := req.Form.Get("token")
+			if token != bodyToken {
+				t.Fatalf("expected tokens to match: body  = %v, header %v", bodyToken, token)
+			}
+
+			w.WriteHeader(http.StatusOK)
 
 		}))
 	})
@@ -51,12 +73,13 @@ var _ = suite("registry/logout", func(t *testing.T, when spec.G, it spec.S) {
 			"-u", server.URL,
 			"registry",
 			"logout",
+			"--authorization-server-endpoint", oAuthServer.URL,
 		)
 		cmd.Env = os.Environ()
 		cmd.Env = append(cmd.Env, fmt.Sprintf("DOCKER_CONFIG=%s", tmpDir))
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, string(output))
 
 		fileBytes, err := ioutil.ReadFile(config)
 		expect.NoError(err)
