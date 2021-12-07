@@ -104,6 +104,61 @@ func (r *Repository) KV() []map[string]interface{} {
 	return out
 }
 
+type RepositoryV2 struct {
+	Repositories []do.RepositoryV2
+}
+
+var _ Displayable = &Repository{}
+
+func (r *RepositoryV2) JSON(out io.Writer) error {
+	return writeJSON(r.Repositories, out)
+}
+
+func (r *RepositoryV2) Cols() []string {
+	return []string{
+		"Name",
+		"LatestManifest",
+		"LatestTag",
+		"TagCount",
+		"ManifestCount",
+		"UpdatedAt",
+	}
+}
+
+func (r *RepositoryV2) ColMap() map[string]string {
+	return map[string]string{
+		"Name":           "Name",
+		"LatestManifest": "Latest Manifest",
+		"LatestTag":      "Latest Tag",
+		"TagCount":       "Tag Count",
+		"ManifestCount":  "Manifest Count",
+		"UpdatedAt":      "Updated At",
+	}
+}
+
+func (r *RepositoryV2) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(r.Repositories))
+
+	for _, reg := range r.Repositories {
+		latestTag := "<none>" // default when latest manifest has no tags
+		if len(reg.LatestManifest.Tags) > 0 {
+			latestTag = reg.LatestManifest.Tags[0]
+		}
+		m := map[string]interface{}{
+			"Name":           reg.Name,
+			"LatestManifest": reg.LatestManifest.Digest,
+			"LatestTag":      latestTag,
+			"TagCount":       reg.TagCount,
+			"ManifestCount":  reg.ManifestCount,
+			"UpdatedAt":      reg.LatestManifest.UpdatedAt,
+		}
+
+		out = append(out, m)
+	}
+
+	return out
+}
+
 type RepositoryTag struct {
 	Tags []do.RepositoryTag
 }
@@ -141,6 +196,54 @@ func (r *RepositoryTag) KV() []map[string]interface{} {
 			"CompressedSizeBytes": BytesToHumanReadableUnit(tag.CompressedSizeBytes),
 			"UpdatedAt":           tag.UpdatedAt,
 			"ManifestDigest":      tag.ManifestDigest,
+		}
+
+		out = append(out, m)
+	}
+
+	return out
+}
+
+type RepositoryManifest struct {
+	Manifests []do.RepositoryManifest
+}
+
+var _ Displayable = &RepositoryManifest{}
+
+func (r *RepositoryManifest) JSON(out io.Writer) error {
+	return writeJSON(r.Manifests, out)
+}
+
+func (r *RepositoryManifest) Cols() []string {
+	return []string{
+		"Digest",
+		"CompressedSizeBytes",
+		"SizeBytes",
+		"UpdatedAt",
+		"Tags",
+	}
+}
+
+func (r *RepositoryManifest) ColMap() map[string]string {
+	return map[string]string{
+		"Digest":              "Manifest Digest",
+		"CompressedSizeBytes": "Compressed Size",
+		"SizeBytes":           "Uncompressed Size",
+		"UpdatedAt":           "Updated At",
+		"Tags":                "Tags",
+	}
+}
+
+func (r *RepositoryManifest) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(r.Manifests))
+
+	for _, manifest := range r.Manifests {
+		m := map[string]interface{}{
+			"Digest":              manifest.Digest,
+			"CompressedSizeBytes": BytesToHumanReadableUnit(manifest.CompressedSizeBytes),
+			"SizeBytes":           BytesToHumanReadableUnit(manifest.SizeBytes),
+			"UpdatedAt":           manifest.UpdatedAt,
+			"Tags":                manifest.Tags,
 		}
 
 		out = append(out, m)

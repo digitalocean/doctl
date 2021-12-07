@@ -144,6 +144,21 @@ func Repository() *Command {
 		Writer, aliasOpt("ls"), displayerType(&displayers.Repository{}),
 	)
 
+	listRepositoriesV2Desc := `This command retrieves information about repositories in a registry, including:
+  - The repository name
+  - The latest manifest of the repository
+  - The latest manifest's latest tag, if any
+  - The number of tags in the repository
+  - The number of manifests in the repository
+`
+
+	CmdBuilder(
+		cmd,
+		RunListRepositoriesV2, "list-v2",
+		"List repositories for a container registry", listRepositoriesV2Desc,
+		Writer, aliasOpt("ls2"), displayerType(&displayers.Repository{}),
+	)
+
 	listRepositoryTagsDesc := `This command retrieves information about tags in a repository, including:
   - The tag name
   - The compressed size
@@ -168,6 +183,21 @@ func Repository() *Command {
 		aliasOpt("dt"),
 	)
 	AddBoolFlag(cmdRunRepositoryDeleteTag, doctl.ArgForce, doctl.ArgShortForce, false, "Force tag deletion")
+
+	listRepositoryManifests := `This command retrieves information about manifests in a repository, including:
+  - The manifest digest
+  - The compressed size
+  - The uncompressed size
+  - The last updated timestamp
+  - The manifest tags
+  - The manifest blobs (available in detailed output only)
+`
+	CmdBuilder(
+		cmd,
+		RunListRepositoryManifests, "list-manifests <repository>",
+		"List manifests for a repository in a container registry", listRepositoryManifests,
+		Writer, aliasOpt("lm"), displayerType(&displayers.RepositoryManifest{}),
+	)
 
 	deleteManifestDesc := "This command permanently deletes one or more repository manifests by digest."
 	cmdRunRepositoryDeleteManifest := CmdBuilder(
@@ -537,6 +567,21 @@ func RunListRepositories(c *CmdConfig) error {
 	return displayRepositories(c, repositories...)
 }
 
+// RunListRepositoriesV2 lists repositories for the registry
+func RunListRepositoriesV2(c *CmdConfig) error {
+	registry, err := c.Registry().Get()
+	if err != nil {
+		return fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	repositories, err := c.Registry().ListRepositoriesV2(registry.Name)
+	if err != nil {
+		return err
+	}
+
+	return displayRepositoriesV2(c, repositories...)
+}
+
 // RunListRepositoryTags lists tags for the repository in a registry
 func RunListRepositoryTags(c *CmdConfig) error {
 	err := ensureOneArg(c)
@@ -555,6 +600,26 @@ func RunListRepositoryTags(c *CmdConfig) error {
 	}
 
 	return displayRepositoryTags(c, tags...)
+}
+
+// RunListRepositoryManifests lists manifests for the repository in a registry
+func RunListRepositoryManifests(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+
+	registry, err := c.Registry().Get()
+	if err != nil {
+		return fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	manifests, err := c.Registry().ListRepositoryManifests(registry.Name, c.Args[0])
+	if err != nil {
+		return err
+	}
+
+	return displayRepositoryManifests(c, manifests...)
 }
 
 // RunRepositoryDeleteTag deletes one or more repository tags
@@ -645,9 +710,23 @@ func displayRepositories(c *CmdConfig, repositories ...do.Repository) error {
 	return c.Display(item)
 }
 
+func displayRepositoriesV2(c *CmdConfig, repositories ...do.RepositoryV2) error {
+	item := &displayers.RepositoryV2{
+		Repositories: repositories,
+	}
+	return c.Display(item)
+}
+
 func displayRepositoryTags(c *CmdConfig, tags ...do.RepositoryTag) error {
 	item := &displayers.RepositoryTag{
 		Tags: tags,
+	}
+	return c.Display(item)
+}
+
+func displayRepositoryManifests(c *CmdConfig, manifests ...do.RepositoryManifest) error {
+	item := &displayers.RepositoryManifest{
+		Manifests: manifests,
 	}
 	return c.Display(item)
 }
