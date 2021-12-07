@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -48,12 +49,72 @@ var (
 			UpdatedAt:           time.Now(),
 		},
 	}
+	testRepositoryManifest = do.RepositoryManifest{
+		RepositoryManifest: &godo.RepositoryManifest{
+			RegistryName:        testRegistryName,
+			Repository:          testRepoName,
+			Digest:              "sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b",
+			CompressedSizeBytes: 50,
+			SizeBytes:           100,
+			UpdatedAt:           time.Now(),
+			Tags:                []string{"v1", "v2"},
+			Blobs: []*godo.Blob{
+				{
+					Digest:              "sha256:123",
+					CompressedSizeBytes: 123,
+				},
+				{
+					Digest:              "sha256:456",
+					CompressedSizeBytes: 456,
+				},
+			},
+		},
+	}
+	testRepositoryManifestNoTags = do.RepositoryManifest{
+		RepositoryManifest: &godo.RepositoryManifest{
+			RegistryName:        testRegistryName,
+			Repository:          testRepoName,
+			Digest:              "sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b",
+			CompressedSizeBytes: 50,
+			SizeBytes:           100,
+			UpdatedAt:           time.Now(),
+			Tags:                []string{ /* I don't need any tags! */ },
+			Blobs: []*godo.Blob{
+				{
+					Digest:              "sha256:123",
+					CompressedSizeBytes: 123,
+				},
+				{
+					Digest:              "sha256:456",
+					CompressedSizeBytes: 456,
+				},
+			},
+		},
+	}
 	testRepository = do.Repository{
 		Repository: &godo.Repository{
 			RegistryName: testRegistryName,
 			Name:         testRegistryName,
 			TagCount:     5,
 			LatestTag:    testRepositoryTag.RepositoryTag,
+		},
+	}
+	testRepositoryV2 = do.RepositoryV2{
+		RepositoryV2: &godo.RepositoryV2{
+			RegistryName:   testRegistryName,
+			Name:           testRegistryName,
+			TagCount:       2,
+			ManifestCount:  1,
+			LatestManifest: testRepositoryManifest.RepositoryManifest,
+		},
+	}
+	testRepositoryV2NoTags = do.RepositoryV2{
+		RepositoryV2: &godo.RepositoryV2{
+			RegistryName:   testRegistryName,
+			Name:           testRegistryName,
+			TagCount:       0,
+			ManifestCount:  1,
+			LatestManifest: testRepositoryManifestNoTags.RepositoryManifest,
 		},
 	}
 	testDockerCredentials = &godo.DockerCredentials{
@@ -88,7 +149,7 @@ func TestRegistryCommand(t *testing.T) {
 func TestRepositoryCommand(t *testing.T) {
 	cmd := Repository()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "list", "list-tags", "delete-manifest", "delete-tag")
+	assertCommandNames(t, cmd, "list", "list-v2", "list-manifests", "list-tags", "delete-manifest", "delete-tag")
 }
 
 func TestGarbageCollectionCommand(t *testing.T) {
@@ -216,6 +277,45 @@ func TestRepositoryList(t *testing.T) {
 	})
 }
 
+func TestRepositoryListV2(t *testing.T) {
+	t.Run("with latest tag", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+			tm.registry.EXPECT().ListRepositoriesV2(testRepositoryV2.RegistryName).Return([]do.RepositoryV2{testRepositoryV2}, nil)
+
+			var buf bytes.Buffer
+			config.Out = &buf
+			err := RunListRepositoriesV2(config)
+			assert.NoError(t, err)
+
+			output := buf.String()
+			// instead of trying to match the output, do some basic content checks
+			assert.True(t, strings.Contains(output, testRepositoryV2.Name))
+			assert.True(t, strings.Contains(output, testRepositoryV2.LatestManifest.Digest))
+			// basic text format doesn't include blob data
+			assert.False(t, strings.Contains(output, testRepositoryV2.LatestManifest.Blobs[0].Digest))
+		})
+	})
+	t.Run("with <none> latest tag", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+			tm.registry.EXPECT().ListRepositoriesV2(testRepositoryV2NoTags.RegistryName).Return([]do.RepositoryV2{testRepositoryV2NoTags}, nil)
+
+			var buf bytes.Buffer
+			config.Out = &buf
+			err := RunListRepositoriesV2(config)
+			assert.NoError(t, err)
+
+			output := buf.String()
+			// instead of trying to match the output, do some basic content checks
+			assert.True(t, strings.Contains(output, testRepositoryV2NoTags.Name))
+			assert.True(t, strings.Contains(output, "<none>")) // default value when latest manifest has no tags
+			// basic text format doesn't include blob data
+			assert.False(t, strings.Contains(output, testRepositoryV2NoTags.LatestManifest.Blobs[0].Digest))
+		})
+	})
+}
+
 func TestRepositoryListTags(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
@@ -325,6 +425,30 @@ func TestRepositoryDeleteTag(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestRepositoryListManifests(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+		tm.registry.EXPECT().ListRepositoryManifests(
+			testRepositoryManifest.RegistryName,
+			testRepositoryManifest.Repository,
+		).Return([]do.RepositoryManifest{testRepositoryManifest}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = append(config.Args, testRepositoryManifest.Repository)
+
+		err := RunListRepositoryManifests(config)
+		assert.NoError(t, err)
+
+		output := buf.String()
+		// instead of trying to match the output, do some basic content checks
+		assert.True(t, strings.Contains(output, testRepositoryManifest.Digest))
+		assert.True(t, strings.Contains(output, fmt.Sprintf("%s", testRepositoryManifest.Tags)))
+		// basic text format doesn't include blob data
+		assert.False(t, strings.Contains(output, testRepositoryManifest.Blobs[0].Digest))
+	})
 }
 
 func TestRepositoryDeleteManifest(t *testing.T) {
