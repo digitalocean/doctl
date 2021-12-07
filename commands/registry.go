@@ -142,6 +142,7 @@ func Repository() *Command {
 		RunListRepositories, "list",
 		"List repositories for a container registry", listRepositoriesDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Repository{}),
+		hiddenCmd(),
 	)
 
 	listRepositoriesV2Desc := `This command retrieves information about repositories in a registry, including:
