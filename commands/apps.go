@@ -29,6 +29,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
@@ -273,13 +274,16 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
+	var errs error
+
 	if wait {
 		apps := c.Apps()
 		notice("App creation is in progress, waiting for app to be running")
 		err := waitForActiveDeployment(apps, app.ID, "")
 		if err != nil {
-			warn("App deployment couldn't enter `running` state: %v", err)
-			return c.Display(displayers.Apps{app})
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			errs = multierror.Append(errs, c.Display(displayers.Apps{app}))
+			return errs
 		} else {
 			app, _ = c.Apps().Get(app.ID)
 		}
@@ -342,13 +346,16 @@ func RunAppsUpdate(c *CmdConfig) error {
 		return err
 	}
 
+	var errs error
+
 	if wait {
 		apps := c.Apps()
 		notice("App update is in progress, waiting for app to be running")
 		err := waitForActiveDeployment(apps, app.ID, "")
 		if err != nil {
-			warn("App deployment couldn't enter `running` state: %v", err)
-			return c.Display(displayers.Apps{app})
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			errs = multierror.Append(errs, c.Display(displayers.Apps{app}))
+			return errs
 		} else {
 			app, _ = c.Apps().Get(app.ID)
 		}
@@ -405,13 +412,16 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 		return err
 	}
 
+	var errs error
+
 	if wait {
 		apps := c.Apps()
 		notice("App deployment is in progress, waiting for deployment to be running")
 		err := waitForActiveDeployment(apps, appID, deployment.ID)
 		if err != nil {
-			warn("App deployment couldn't enter `running` state: %v", err)
-			return c.Display(displayers.Deployments{deployment})
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			errs = multierror.Append(errs, c.Display(displayers.Deployments{deployment}))
+			return errs
 		} else {
 			deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
 		}
