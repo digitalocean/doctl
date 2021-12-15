@@ -282,11 +282,12 @@ func RunAppsCreate(c *CmdConfig) error {
 		err := waitForActiveDeployment(apps, app.ID, "")
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
-			errs = multierror.Append(errs, c.Display(displayers.Apps{app}))
+			if err := c.Display(displayers.Apps{app}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
 			return errs
-		} else {
-			app, _ = c.Apps().Get(app.ID)
 		}
+		app, _ = c.Apps().Get(app.ID)
 	}
 
 	notice("App created")
@@ -354,11 +355,12 @@ func RunAppsUpdate(c *CmdConfig) error {
 		err := waitForActiveDeployment(apps, app.ID, "")
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
-			errs = multierror.Append(errs, c.Display(displayers.Apps{app}))
+			if err := c.Display(displayers.Apps{app}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
 			return errs
-		} else {
-			app, _ = c.Apps().Get(app.ID)
 		}
+		app, _ = c.Apps().Get(app.ID)
 	}
 
 	notice("App updated")
@@ -420,11 +422,12 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 		err := waitForActiveDeployment(apps, appID, deployment.ID)
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
-			errs = multierror.Append(errs, c.Display(displayers.Deployments{deployment}))
+			if err := c.Display(displayers.Deployments{deployment}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
 			return errs
-		} else {
-			deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
 		}
+		deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
 	}
 
 	notice("Deployment created")
