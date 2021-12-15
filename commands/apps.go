@@ -29,6 +29,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 )
@@ -273,16 +274,20 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
+	var errs error
+
 	if wait {
 		apps := c.Apps()
 		notice("App creation is in progress, waiting for app to be running")
 		err := waitForActiveDeployment(apps, app.ID, "")
 		if err != nil {
-			warn("App deployment couldn't enter `running` state: %v", err)
-			return c.Display(displayers.Apps{app})
-		} else {
-			app, _ = c.Apps().Get(app.ID)
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			if err := c.Display(displayers.Apps{app}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+			return errs
 		}
+		app, _ = c.Apps().Get(app.ID)
 	}
 
 	notice("App created")
@@ -342,16 +347,20 @@ func RunAppsUpdate(c *CmdConfig) error {
 		return err
 	}
 
+	var errs error
+
 	if wait {
 		apps := c.Apps()
 		notice("App update is in progress, waiting for app to be running")
 		err := waitForActiveDeployment(apps, app.ID, "")
 		if err != nil {
-			warn("App deployment couldn't enter `running` state: %v", err)
-			return c.Display(displayers.Apps{app})
-		} else {
-			app, _ = c.Apps().Get(app.ID)
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			if err := c.Display(displayers.Apps{app}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+			return errs
 		}
+		app, _ = c.Apps().Get(app.ID)
 	}
 
 	notice("App updated")
@@ -405,16 +414,20 @@ func RunAppsCreateDeployment(c *CmdConfig) error {
 		return err
 	}
 
+	var errs error
+
 	if wait {
 		apps := c.Apps()
 		notice("App deployment is in progress, waiting for deployment to be running")
 		err := waitForActiveDeployment(apps, appID, deployment.ID)
 		if err != nil {
-			warn("App deployment couldn't enter `running` state: %v", err)
-			return c.Display(displayers.Deployments{deployment})
-		} else {
-			deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			if err := c.Display(displayers.Deployments{deployment}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+			return errs
 		}
+		deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
 	}
 
 	notice("Deployment created")
