@@ -98,7 +98,7 @@ const (
 	ArgKubernetesLabel = "label"
 	// ArgKubernetesTaint is a Kubernetes taint argument.
 	ArgKubernetesTaint = "taint"
-	// 	ArgKubernetesAlias is a Kubernetes alias argument that saves authentication information under the specified context.
+	// ArgKubernetesAlias is a Kubernetes alias argument that saves authentication information under the specified context.
 	ArgKubernetesAlias = "alias"
 	// ArgKubeConfigExpirySeconds indicates the length of time the token in a kubeconfig will be valid in seconds.
 	ArgKubeConfigExpirySeconds = "expiry-seconds"
