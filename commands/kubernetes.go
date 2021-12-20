@@ -399,7 +399,7 @@ This command adds the credentials for the specified cluster to your local kubeco
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "Boolean indicating whether to set the current kubectl context to that of the new cluster")
 	AddIntFlag(cmdSaveConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
 		"The length of time the cluster credentials will be valid for in seconds. By default, the credentials are automatically renewed as needed.")
-	AddStringFlag(cmdSaveConfig, doctl.ArgKubernetesAlias, "", "", "The context to save authentication information.")
+	AddStringFlag(cmdSaveConfig, doctl.ArgKubernetesAlias, "", "", "An alias for the cluster context name. Defaults to 'do-<region>-<cluster-name>'.")
 
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "Remove a cluster's credentials from your local kubeconfig", `
 This command removes the specified cluster's credentials from your local kubeconfig. After running this command, you will not be able to use `+"`"+`kubectl`+"`"+` to interact with your cluster.

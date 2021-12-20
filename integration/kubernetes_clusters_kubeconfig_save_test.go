@@ -149,6 +149,7 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 			err = f.Close()
 			expect.NoError(err)
 			expect.Contains(string(fileBytes), fmt.Sprintf("current-context: %s", "newalias_test"))
+			expect.Contains(string(fileBytes), fmt.Sprintf("name: %s", "newalias_test"))
 		})
 	})
 })
