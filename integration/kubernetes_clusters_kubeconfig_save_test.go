@@ -142,6 +142,7 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 			)
 
 			output, err := cmd.CombinedOutput()
+
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 
 			fileBytes, err := ioutil.ReadAll(f)
