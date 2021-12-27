@@ -119,6 +119,40 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 			expect.Contains(string(fileBytes), "token: some-token")
 		})
 	})
+	when("passing alias", func() {
+		it("creates an alias for a config", func() {
+			f, err := ioutil.TempFile("", "fake-kube-config")
+			expect.NoError(err)
+
+			defer os.Remove(f.Name())
+
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"kubernetes",
+				"clusters",
+				"kubeconfig",
+				"save",
+				"--alias", "newalias_test",
+				"some-cluster-name",
+			)
+
+			cmd.Env = append(os.Environ(),
+				fmt.Sprintf("KUBECONFIG=%s", f.Name()),
+			)
+
+			output, err := cmd.CombinedOutput()
+
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+
+			fileBytes, err := ioutil.ReadAll(f)
+			expect.NoError(err)
+			err = f.Close()
+			expect.NoError(err)
+			expect.Contains(string(fileBytes), fmt.Sprintf("current-context: %s", "newalias_test"))
+			expect.Contains(string(fileBytes), fmt.Sprintf("name: %s", "newalias_test"))
+		})
+	})
 })
 
 const (
