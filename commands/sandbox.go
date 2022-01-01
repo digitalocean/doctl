@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -32,9 +33,10 @@ const NODE_VERSION = "14.16.0"
 
 // This is what is returned from calls to the sandbox
 type SandboxOutput = struct {
-	Table    []interface{} `json:"table"`
-	Captured []string      `json:"captured"`
-	Entity   interface{}   `json:"entity"`
+	Table    []interface{} `json:"table,omitempty"`
+	Captured []string      `json:"captured,omitempty"`
+	Entity   interface{}   `json:"entity,omitempty"`
+	Error    string        `json:"error,omitempty"`
 }
 
 // Contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
@@ -59,66 +61,11 @@ sandbox development of serverless apps.  The command is long-running, and a netw
 	cmdBuilderWithInit(cmd, RunSandboxConnect, "connect <token>", "Connect your sandbox", `This command connects to your sandbox namespace using a token.
 You obtain the token from the cloud console (details TBD)`, Writer, false)
 
+	cmdBuilderWithInit(cmd, RunSandboxInfo, "info", "Provide information about your sandbox", `This command reports the status of your sandbox and some details
+concerning its connected function namespace`, Writer, false)
+
 	return cmd
 }
-
-// Executes a sandbox command
-func SandboxExec(command ...string) (SandboxOutput, error) {
-	sandboxDir, exists := getSandboxDirectory()
-	if !exists {
-		return SandboxOutput{}, errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
-	}
-	node := filepath.Join(sandboxDir, "node")
-	sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
-	nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
-	args := append([]string{sandboxJs}, command...)
-	cmd := exec.Command(node, args...)
-	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+nimbellaDir)
-	output, err := cmd.Output()
-	if err != nil {
-		return SandboxOutput{}, err
-	}
-	var result SandboxOutput
-	err = json.Unmarshal(output, &result)
-	if err != nil {
-		return SandboxOutput{}, err
-	}
-	return result, nil
-}
-
-// Download a network file to a local file
-func download(URL, targetFile string) error {
-	response, err := http.Get(URL)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode != 200 {
-		return errors.New(fmt.Sprintf("Received status code %d attempting to download from %s",
-			response.StatusCode, URL))
-	}
-	file, err := os.Create(targetFile)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	_, err = io.Copy(file, response.Body)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Returns the "sandbox" directory in which the artifacts for sandbox support are stored.
-// Returns the name of the directory and whether or not it exists.
-func getSandboxDirectory() (string, bool) {
-	sandboxDir := filepath.Join(defaultConfigHome(), "sandbox")
-	_, err := os.Stat(sandboxDir)
-	return sandboxDir, !os.IsNotExist(err)
-}
-
-// Invoke the sandbox bridge
 
 // RunSandboxInstall performs the network installation of the 'nim' adjunct to support sandbox development
 func RunSandboxInstall(c *CmdConfig) error {
@@ -205,6 +152,171 @@ func RunSandboxConnect(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Output was: %v\n", result)
+	PrintSandboxTextOutput(result)
 	return nil
+}
+
+// The info command
+func RunSandboxInfo(c *CmdConfig) error {
+	result, err := SandboxExec("auth/current", "--apihost", "--name")
+	if err != nil {
+		if IsSandboxInstalled() {
+			return errors.New("sandbox is installed but not connected to a function namespace (see 'doctl sandbox connect)")
+		}
+		return errors.New("sandbox is not installed (use 'doctl sandbox install')")
+	}
+	if len(result.Captured) == 0 {
+		return errors.New("Could not retrieve information about the connected namespace")
+	}
+	jsonInfo := strings.Join(result.Captured, " ")
+	type infoOutput = struct {
+		Name    string `json:"name"`
+		Apihost string `json:"apihost"`
+	}
+	var info infoOutput
+	err = json.Unmarshal([]byte(jsonInfo), &info)
+	fmt.Printf("Connected to function namespace '%s' on API host '%s'\n", info.Name, info.Apihost)
+	return nil
+}
+
+// "Public" functions
+
+// Executes a sandbox command
+func SandboxExec(command string, args ...string) (SandboxOutput, error) {
+	sandboxDir, exists := getSandboxDirectory()
+	if !exists {
+		return SandboxOutput{}, errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
+	}
+	node := filepath.Join(sandboxDir, "node")
+	sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
+	nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
+	args = append([]string{sandboxJs, command}, args...)
+	cmd := exec.Command(node, args...)
+	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+nimbellaDir)
+	output, err := cmd.Output()
+	if err != nil {
+		// Ignore "errors" that are just non-zero exit.  The
+		// sandbox uses this as a secondary indicator but the output
+		// is still trustworthy (and includes error information inline)
+		if _, ok := err.(*exec.ExitError); !ok {
+			// Real error of some sort
+			return SandboxOutput{}, err
+		}
+	}
+	var result SandboxOutput
+	err = json.Unmarshal(output, &result)
+	if err != nil {
+		return SandboxOutput{}, err
+	}
+	return result, nil
+}
+
+// A variant of SandboxExec convenient for calling from stylized command runners
+// Sets up the arguments and (especially) the flags for the actual call
+func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (SandboxOutput, error) {
+	args := append([]string{}, c.Args...)
+	for _, flag := range booleanFlags {
+		truth, err := c.Doit.GetBool(c.NS, flag)
+		if truth && err == nil {
+			args = append(args, "--"+flag)
+		}
+	}
+	for _, flag := range stringFlags {
+		value, err := c.Doit.GetString(c.NS, flag)
+		if err == nil && len(value) > 0 {
+			args = append(args, "--"+flag, value)
+		}
+	}
+	return SandboxExec(command, args...)
+}
+
+// Prints the output of a sandbox command execution in a
+// textual form (not always appropriate)
+func PrintSandboxTextOutput(output SandboxOutput) {
+	if len(output.Error) > 0 {
+		fmt.Printf("Error: %s\n", output.Error)
+		return
+	}
+	var captured, entity, table string
+	if len(output.Captured) > 0 {
+		captured = strings.Join(output.Captured, "\n")
+	}
+	if len(output.Table) > 0 {
+		table = genericJSON(output.Table)
+	}
+	if output.Entity != nil {
+		entity = genericJSON(output.Entity)
+	}
+	if len(captured) > 0 {
+		if len(table) != 0 || len(entity) != 0 {
+			// Mixed output; add header
+			fmt.Println("Text output:")
+		}
+		fmt.Println(captured)
+	}
+	if len(table) > 0 {
+		if len(captured) != 0 || len(entity) != 0 {
+			// Mixed output; add header
+			fmt.Println("Tabular output:")
+		}
+		fmt.Println(table)
+	}
+	if len(entity) > 0 {
+		if len(captured) != 0 || len(table) != 0 {
+			// Mixed output; add header
+			fmt.Println("JSON output:")
+		}
+		fmt.Println(entity)
+	}
+}
+
+// Answers whether sandbox is installed
+func IsSandboxInstalled() bool {
+	_, yes := getSandboxDirectory()
+	return yes
+}
+
+// "Private" utility functions
+
+// Download a network file to a local file
+func download(URL, targetFile string) error {
+	response, err := http.Get(URL)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		return errors.New(fmt.Sprintf("Received status code %d attempting to download from %s",
+			response.StatusCode, URL))
+	}
+	file, err := os.Create(targetFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = io.Copy(file, response.Body)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Returns the "sandbox" directory in which the artifacts for sandbox support are stored.
+// Returns the name of the directory and whether or not it exists.
+func getSandboxDirectory() (string, bool) {
+	sandboxDir := filepath.Join(defaultConfigHome(), "sandbox")
+	_, err := os.Stat(sandboxDir)
+	return sandboxDir, !os.IsNotExist(err)
+}
+
+// Converts something "object-like" but untyped to generic JSON
+// Designed for human eyes; does not provide an explicit error
+// result
+func genericJSON(toFormat interface{}) string {
+	bytes, err := json.MarshalIndent(&toFormat, "", "  ")
+	if err != nil {
+		return "<not representable as JSON>"
+	}
+	return string(bytes)
 }
