@@ -33,10 +33,11 @@ const NODE_VERSION = "14.16.0"
 
 // This is what is returned from calls to the sandbox
 type SandboxOutput = struct {
-	Table    []interface{} `json:"table,omitempty"`
-	Captured []string      `json:"captured,omitempty"`
-	Entity   interface{}   `json:"entity,omitempty"`
-	Error    string        `json:"error,omitempty"`
+	Table     []interface{} `json:"table,omitempty"`
+	Captured  []string      `json:"captured,omitempty"`
+	Formatted []string      `json:"formatted,omitempty"`
+	Entity    interface{}   `json:"entity,omitempty"`
+	Error     string        `json:"error,omitempty"`
 }
 
 // Contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
@@ -159,7 +160,7 @@ func RunSandboxConnect(c *CmdConfig) error {
 // The info command
 func RunSandboxInfo(c *CmdConfig) error {
 	result, err := SandboxExec("auth/current", "--apihost", "--name")
-	if err != nil {
+	if err != nil || len(result.Error) > 0 {
 		if IsSandboxInstalled() {
 			return errors.New("sandbox is installed but not connected to a function namespace (see 'doctl sandbox connect)")
 		}
@@ -231,17 +232,22 @@ func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringF
 }
 
 // Prints the output of a sandbox command execution in a
-// textual form (not always appropriate)
+// textual form (often, this can be improved upon)
 func PrintSandboxTextOutput(output SandboxOutput) {
 	if len(output.Error) > 0 {
 		fmt.Printf("Error: %s\n", output.Error)
 		return
 	}
+	// Attempt to deal with multiple forms of output present at the same time.
+	// This does not usually happen, except that Formatted and Table might both
+	// be present, in which case Formatted is used.
 	var captured, entity, table string
 	if len(output.Captured) > 0 {
 		captured = strings.Join(output.Captured, "\n")
 	}
-	if len(output.Table) > 0 {
+	if len(output.Formatted) > 0 {
+		table = strings.Join(output.Formatted, "\n")
+	} else if len(output.Table) > 0 {
 		table = genericJSON(output.Table)
 	}
 	if output.Entity != nil {
