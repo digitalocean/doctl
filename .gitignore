@@ -26,3 +26,6 @@ prime/
 stage/
 doctl_v*.snap
 snap/.snapcraft/
+
+# Prototype upload
+*.tar.gz
