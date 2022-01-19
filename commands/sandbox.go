@@ -33,11 +33,11 @@ const NODE_VERSION = "14.16.0"
 
 // This is what is returned from calls to the sandbox
 type SandboxOutput = struct {
-	Table     []interface{} `json:"table,omitempty"`
-	Captured  []string      `json:"captured,omitempty"`
-	Formatted []string      `json:"formatted,omitempty"`
-	Entity    interface{}   `json:"entity,omitempty"`
-	Error     string        `json:"error,omitempty"`
+	Table     []map[string]interface{} `json:"table,omitempty"`
+	Captured  []string                 `json:"captured,omitempty"`
+	Formatted []string                 `json:"formatted,omitempty"`
+	Entity    interface{}              `json:"entity,omitempty"`
+	Error     string                   `json:"error,omitempty"`
 }
 
 // Contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
@@ -153,7 +153,8 @@ func RunSandboxConnect(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(result)
+	mapResult := result.Entity.(map[string]interface{})
+	fmt.Printf("Connected to function namespace '%s' on API host '%s'\n", mapResult["namespace"], mapResult["apihost"])
 	return nil
 }
 
@@ -162,21 +163,16 @@ func RunSandboxInfo(c *CmdConfig) error {
 	result, err := SandboxExec("auth/current", "--apihost", "--name")
 	if err != nil || len(result.Error) > 0 {
 		if IsSandboxInstalled() {
-			return errors.New("sandbox is installed but not connected to a function namespace (see 'doctl sandbox connect)")
+			return errors.New("A sandbox is installed but not connected to a function namespace (see 'doctl sandbox connect')")
+			return nil
 		}
 		return errors.New("sandbox is not installed (use 'doctl sandbox install')")
 	}
-	if len(result.Captured) == 0 {
+	if result.Entity == nil {
 		return errors.New("Could not retrieve information about the connected namespace")
 	}
-	jsonInfo := strings.Join(result.Captured, " ")
-	type infoOutput = struct {
-		Name    string `json:"name"`
-		Apihost string `json:"apihost"`
-	}
-	var info infoOutput
-	err = json.Unmarshal([]byte(jsonInfo), &info)
-	fmt.Printf("Connected to function namespace '%s' on API host '%s'\n", info.Name, info.Apihost)
+	mapResult := result.Entity.(map[string]interface{})
+	fmt.Printf("Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], mapResult["apihost"])
 	return nil
 }
 
