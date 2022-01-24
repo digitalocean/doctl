@@ -327,7 +327,8 @@ type AppSpec struct {
 	// Workloads which do not expose publicly-accessible HTTP services.
 	Workers []*AppWorkerSpec `json:"workers,omitempty"`
 	// Pre and post deployment workloads which do not expose publicly-accessible HTTP routes.
-	Jobs []*AppJobSpec `json:"jobs,omitempty"`
+	Jobs      []*AppJobSpec       `json:"jobs,omitempty"`
+	Functions []*AppFunctionsSpec `json:"functions,omitempty"`
 	// Database instances which can provide persistence to workloads within the application.
 	Databases []*AppDatabaseSpec `json:"databases,omitempty"`
 	// A set of hostnames where the application will be available.
@@ -404,6 +405,22 @@ type AppWorkerSpec struct {
 	LogDestinations  []*AppLogDestinationSpec `json:"log_destinations,omitempty"`
 }
 
+// AppFunctionsSpec struct for AppFunctionsSpec
+type AppFunctionsSpec struct {
+	// The name. Must be unique across all components within the same app.
+	Name   string            `json:"name"`
+	Git    *GitSourceSpec    `json:"git,omitempty"`
+	GitHub *GitHubSourceSpec `json:"github,omitempty"`
+	GitLab *GitLabSourceSpec `json:"gitlab,omitempty"`
+	// An optional path to the working directory to use for the build. Must be relative to the root of the repo.
+	SourceDir string `json:"source_dir,omitempty"`
+	// A list of environment variables made available to the component.
+	Envs []*AppVariableDefinition `json:"envs,omitempty"`
+	// A list of HTTP routes that should be routed to this component.
+	Routes []*AppRouteSpec `json:"routes,omitempty"`
+	CORS   *AppCORSPolicy  `json:"cors,omitempty"`
+}
+
 // DeploymentCauseDetailsDigitalOceanUser struct for DeploymentCauseDetailsDigitalOceanUser
 type DeploymentCauseDetailsDigitalOceanUser struct {
 	UUID     string `json:"uuid,omitempty"`
@@ -455,6 +472,7 @@ type Deployment struct {
 	StaticSites          []*DeploymentStaticSite `json:"static_sites,omitempty"`
 	Workers              []*DeploymentWorker     `json:"workers,omitempty"`
 	Jobs                 []*DeploymentJob        `json:"jobs,omitempty"`
+	Functions            []*DeploymentFunctions  `json:"functions,omitempty"`
 	PhaseLastUpdatedAt   time.Time               `json:"phase_last_updated_at,omitempty"`
 	CreatedAt            time.Time               `json:"created_at,omitempty"`
 	UpdatedAt            time.Time               `json:"updated_at,omitempty"`
@@ -565,6 +583,12 @@ type DeploymentStaticSite struct {
 
 // DeploymentWorker struct for DeploymentWorker
 type DeploymentWorker struct {
+	Name             string `json:"name,omitempty"`
+	SourceCommitHash string `json:"source_commit_hash,omitempty"`
+}
+
+// DeploymentFunctions struct for DeploymentFunctions
+type DeploymentFunctions struct {
 	Name             string `json:"name,omitempty"`
 	SourceCommitHash string `json:"source_commit_hash,omitempty"`
 }

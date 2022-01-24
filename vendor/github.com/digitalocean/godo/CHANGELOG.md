@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.74.0] - 2022-01-20
+
+- #506 - @ZachEddy - Add new component type to apps-related structs
+
 ## [v1.73.0] - 2021-12-03
 
 - #501 - @CollinShoop - Add support for Registry ListManifests and ListRepositoriesV2
