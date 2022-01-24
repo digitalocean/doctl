@@ -205,6 +205,11 @@ func SandboxExec(command string, args ...string) (SandboxOutput, error) {
 	if err != nil {
 		return SandboxOutput{}, err
 	}
+	// Result is sound JSON but if it has an Error field the rest is not trustworthy
+	if len(result.Error) > 0 {
+		return SandboxOutput{}, errors.New(result.Error)
+	}
+	// Result is both sound and error free
 	return result, nil
 }
 
@@ -228,48 +233,22 @@ func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringF
 }
 
 // Prints the output of a sandbox command execution in a
-// textual form (often, this can be improved upon)
+// textual form (often, this can be improved upon).
+// Prints Formatted if present.
+// Else, prints Captured if present.
+// Else, prints Table or Entity using generic JSON formatting.
+// We don't expect both Table and Entity to be present and have no
+// special handling for that.
 func PrintSandboxTextOutput(output SandboxOutput) {
-	if len(output.Error) > 0 {
-		fmt.Printf("Error: %s\n", output.Error)
-		return
-	}
-	// Attempt to deal with multiple forms of output present at the same time.
-	// This does not usually happen, except that Formatted and Table might both
-	// be present, in which case Formatted is used.
-	var captured, entity, table string
-	if len(output.Captured) > 0 {
-		captured = strings.Join(output.Captured, "\n")
-	}
 	if len(output.Formatted) > 0 {
-		table = strings.Join(output.Formatted, "\n")
+		fmt.Println(strings.Join(output.Formatted, "\n"))
+	} else if len(output.Captured) > 0 {
+		fmt.Println(strings.Join(output.Captured, "\n"))
 	} else if len(output.Table) > 0 {
-		table = genericJSON(output.Table)
-	}
-	if output.Entity != nil {
-		entity = genericJSON(output.Entity)
-	}
-	if len(captured) > 0 {
-		if len(table) != 0 || len(entity) != 0 {
-			// Mixed output; add header
-			fmt.Println("Text output:")
-		}
-		fmt.Println(captured)
-	}
-	if len(table) > 0 {
-		if len(captured) != 0 || len(entity) != 0 {
-			// Mixed output; add header
-			fmt.Println("Tabular output:")
-		}
-		fmt.Println(table)
-	}
-	if len(entity) > 0 {
-		if len(captured) != 0 || len(table) != 0 {
-			// Mixed output; add header
-			fmt.Println("JSON output:")
-		}
-		fmt.Println(entity)
-	}
+		fmt.Println(genericJSON(output.Table))
+	} else if output.Entity != nil {
+		fmt.Println(genericJSON(output.Entity))
+	} // else no output (unusual but not impossible)
 }
 
 // Answers whether sandbox is installed
