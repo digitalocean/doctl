@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.75.0] - 2022-01-27
+
+- #508 - @ElanHasson - Synchronize public protos and add multiple specs
+
 ## [v1.74.0] - 2022-01-20
 
 - #506 - @ZachEddy - Add new component type to apps-related structs
