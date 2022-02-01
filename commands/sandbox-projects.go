@@ -39,7 +39,7 @@ func SandboxProjects() *Command {
 	AddBoolFlag(Deploy, "yarn", "", false, "Use yarn instead of npm for node builds")
 	AddStringFlag(Deploy, "web-local", "", "", "A local directory to receive web deploy, instead of uploading")
 	AddStringFlag(Deploy, "include", "", "", "Project portions to include")
-	AddStringFlag(Deploy, "exclude", "", "", "Project portions to exclude")
+	AddStringFlag(Deploy, "exclude", "", "web", "Project portions to exclude")
 	AddBoolFlag(Deploy, "remote-build", "", false, "Run builds remotely")
 	AddBoolFlag(Deploy, "incremental", "", false, "Deploy only changes since last deploy")
 	AddBoolFlag(Deploy, "anon-github", "", false, "Attempt GitHub deploys anonymously")
@@ -51,7 +51,7 @@ func SandboxProjects() *Command {
 		Writer, false)
 	AddStringFlag(GetMetadata, "env", "", "", "Path to environment file")
 	AddStringFlag(GetMetadata, "include", "", "", "Project portions to include")
-	AddStringFlag(GetMetadata, "exclude", "", "", "Project portions to exclude")
+	AddStringFlag(GetMetadata, "exclude", "", "web", "Project portions to exclude")
 	AddStringFlag(GetMetadata, "debug", "", "", "Debug level output")
 	GetMetadata.Flags().MarkHidden("debug")
 
@@ -88,7 +88,7 @@ func SandboxProjects() *Command {
 	AddBoolFlag(Watch, "yarn", "", false, "Use yarn instead of npm for node builds")
 	AddStringFlag(Watch, "web-local", "", "", "A local directory to receive web deploy, instead of uploading")
 	AddStringFlag(Watch, "include", "", "", "Project portions to include")
-	AddStringFlag(Watch, "exclude", "", "", "Project portions to exclude")
+	AddStringFlag(Watch, "exclude", "", "web", "Project portions to exclude")
 	AddBoolFlag(Watch, "remote-build", "", false, "Run builds remotely")
 	AddStringFlag(Watch, "debug", "", "", "Debug level output")
 	Watch.Flags().MarkHidden("debug")
@@ -156,15 +156,11 @@ func RunSandboxProjectsUpdate(c *CmdConfig) error {
 	return nil
 }
 
+// This is not the usual boiler-plate because the command is intended to be long-running in a separate window
 func RunSandboxProjectsWatch(c *CmdConfig) error {
 	argCount := len(c.Args)
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunSandboxExec("project/watch", c, []string{"insecure", "verbose-build", "verbose-zip", "yarn", "remote-build"}, []string{"target", "env", "build-env", "apihost", "auth", "web-local", "include", "exclude", "debug"})
-	if err != nil {
-		return err
-	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return RunSandboxExecStreaming("project/watch", c, []string{"insecure", "verbose-build", "verbose-zip", "yarn", "remote-build"}, []string{"target", "env", "build-env", "apihost", "auth", "web-local", "include", "exclude", "debug"})
 }

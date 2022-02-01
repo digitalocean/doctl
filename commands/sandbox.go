@@ -180,16 +180,10 @@ func RunSandboxInfo(c *CmdConfig) error {
 
 // Executes a sandbox command
 func SandboxExec(command string, args ...string) (SandboxOutput, error) {
-	sandboxDir, exists := getSandboxDirectory()
-	if !exists {
-		return SandboxOutput{}, errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
+	cmd, err := setupSandboxSubprocess(command, args)
+	if err != nil {
+		return SandboxOutput{}, err
 	}
-	node := filepath.Join(sandboxDir, "node")
-	sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
-	nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
-	args = append([]string{sandboxJs, command}, args...)
-	cmd := exec.Command(node, args...)
-	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+nimbellaDir)
 	output, err := cmd.Output()
 	if err != nil {
 		// Ignore "errors" that are just non-zero exit.  The
@@ -216,20 +210,24 @@ func SandboxExec(command string, args ...string) (SandboxOutput, error) {
 // A variant of SandboxExec convenient for calling from stylized command runners
 // Sets up the arguments and (especially) the flags for the actual call
 func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (SandboxOutput, error) {
-	args := append([]string{}, c.Args...)
-	for _, flag := range booleanFlags {
-		truth, err := c.Doit.GetBool(c.NS, flag)
-		if truth && err == nil {
-			args = append(args, "--"+flag)
-		}
-	}
-	for _, flag := range stringFlags {
-		value, err := c.Doit.GetString(c.NS, flag)
-		if err == nil && len(value) > 0 {
-			args = append(args, "--"+flag, value)
-		}
-	}
+	args := getFlatArgsArray(c, booleanFlags, stringFlags)
 	return SandboxExec(command, args...)
+}
+
+// Like RunSandboxExec but assumes that output will not be captured and can be streamed.
+// TODO: the table of commands for which this behavior is expected is currently defined
+// in the plugin but should probably be defined somewhere in the doctl codebase.
+func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
+	args := getFlatArgsArray(c, booleanFlags, stringFlags)
+	cmd, err := setupSandboxSubprocess(command, args)
+	if err != nil {
+		return err
+	}
+	// TODO the following does not filter output.  We might want output filtering as part of
+	// this function.
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // Prints the output of a sandbox command execution in a
@@ -300,4 +298,38 @@ func genericJSON(toFormat interface{}) string {
 		return "<not representable as JSON>"
 	}
 	return string(bytes)
+}
+
+// Convert the actual args, the boolean flags, and the string flags for a command
+// into a flat array which are passed to the plugin as 'args'.
+func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string) []string {
+	args := append([]string{}, c.Args...)
+	for _, flag := range booleanFlags {
+		truth, err := c.Doit.GetBool(c.NS, flag)
+		if truth && err == nil {
+			args = append(args, "--"+flag)
+		}
+	}
+	for _, flag := range stringFlags {
+		value, err := c.Doit.GetString(c.NS, flag)
+		if err == nil && len(value) > 0 {
+			args = append(args, "--"+flag, value)
+		}
+	}
+	return args
+}
+
+// Check for sandbox install, then setup a subprocess to run it for a given command and set of arguments
+func setupSandboxSubprocess(command string, args []string) (*exec.Cmd, error) {
+	sandboxDir, exists := getSandboxDirectory()
+	if !exists {
+		return nil, errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
+	}
+	node := filepath.Join(sandboxDir, "node")
+	sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
+	nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
+	args = append([]string{sandboxJs, command}, args...)
+	cmd := exec.Command(node, args...)
+	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+nimbellaDir)
+	return cmd, nil
 }
