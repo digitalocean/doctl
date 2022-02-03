@@ -1,5 +1,5 @@
 name: doctl
-version: git
+adopt-info: doctl
 summary: The official DigitalOcean command line interface
 description: |
   doctl allows you to interact with the DigitalOcean API via the command line.
