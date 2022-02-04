@@ -197,6 +197,11 @@ func SandboxExec(command string, args ...string) (SandboxOutput, error) {
 	if err != nil {
 		return SandboxOutput{}, err
 	}
+	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
+	// will continue to work for returning structured results.
+	if os.Getenv("DEBUG") != "" {
+		cmd.Stderr = os.Stderr
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		// Ignore "errors" that are just non-zero exit.  The
