@@ -26,7 +26,7 @@ jobs:
         id: build
         run: |
           make _build_snap && \
-          find doctl_*.snap -print -exec echo ::set-output name=snap::{} \;
+          find doctl_v*.snap -print -exec echo ::set-output name=snap::{} \;
 
       - uses: snapcore/action-publish@v1
         with:

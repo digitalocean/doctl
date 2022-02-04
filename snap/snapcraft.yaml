@@ -32,7 +32,7 @@ parts:
     override-pull: |
       git clone https://github.com/digitalocean/doctl.git .
     override-build: |
-      version=$(scripts/version.sh)
+      version=$(scripts/version.sh --snap)
       snapcraftctl set-version ${version}
 
       short=${version%+*}

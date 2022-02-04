@@ -18,6 +18,7 @@ Options:
   -i, --image  snap image version
   -b, --branch branch only
   -c, --commit commit only
+  --snap, returns the version formated for a snap release
 "
 
 semver() {
@@ -42,6 +43,16 @@ image() {
   echo "$(semver)-$(commit)-pre"
 }
 
+snap() {
+  version=$(semver)
+  if [[ $(git tag --points-at) != "" ]]; then
+    echo "v$version"
+  else
+    local_commit=$(git rev-parse --short HEAD)
+    echo "v$version+git$local_commit"
+  fi
+}
+
 ORIGIN=${ORIGIN:-origin}
 set +e
 git fetch --tags "${ORIGIN}" &>/dev/null
@@ -61,12 +72,12 @@ if [[ "$#" -eq 0 ]]; then
   if [[ -n "$br" ]]; then
     version="${version}-${br}"
   fi
-  
+
   cm=$(commit)
   if [[ -n "$cm" ]]; then
     version="${version}-${cm}"
   fi
-    
+
   echo "$version"
   exit 0
 fi
@@ -86,6 +97,10 @@ case "$1" in
 
   "-i"|"--image")
     version=$(image)
+    ;;
+
+  "--snap")
+    version=$(snap)
     ;;
 
   *)
