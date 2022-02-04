@@ -35,7 +35,8 @@ parts:
       version=$(scripts/version.sh --snap)
       snapcraftctl set-version ${version}
 
-      short=${version%+*}
+      short=${version#v}
+      short=${short%+*}
       short=${short%-*}
       baseFlag="-X github.com/digitalocean/doctl"
       ldFlags="${baseFlag}.Label=release ${baseFlag}.Build=$(git rev-parse --short HEAD)"
