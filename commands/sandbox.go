@@ -321,7 +321,10 @@ func genericJSON(toFormat interface{}) string {
 // This also adjusts certain flag names and values between doctl usage and nim usage.
 // 1.  The flag 'function' is renamed to 'action' if specified.
 // 2.  The flag 'exclude' is checked to ensure that, if empty, it is set to "web" and
-// if non-empty, the "web" value as added to it.
+//     if non-empty, the "web" value as added to it.
+// 3.  If the flag 'package' appears, the flag 'deployed' is added.
+// TODO these adjustments belong further up the call stack to avoid unintended collisions.
+// Some modest refactoring should enable that.
 func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string) []string {
 	args := append([]string{}, c.Args...)
 	for _, flag := range booleanFlags {
@@ -338,6 +341,8 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 			} else if flag == "exclude" {
 				// --exclude non-empty, add web
 				value = value + ",web"
+			} else if flag == "package" {
+				args = append(args, "--deployed")
 			}
 			args = append(args, "--"+flag, value)
 		} else if err == nil && flag == "exclude" {

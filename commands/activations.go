@@ -30,7 +30,10 @@ func Activations() *Command {
 	}
 
 	get := cmdBuilderWithInit(cmd, RunActivationsGet, "get [<activationId>]", "Retrieves an Activation",
-		`More information about 'activations get'`,
+		`Use `+"`"+`doctl sandbox activations get`+"`"+` to retrieve the activation record for a previously invoked function.
+There are several options for specifying the activation you want.  You can limit output to the result
+or the logs.  The `+"`"+`doctl sandbox activation logs`+"`"+` command has additional advanced capabilities for retrieving
+logs.`,
 		Writer, false)
 	AddBoolFlag(get, "last", "l", false, "Fetch the most recent activation (default)")
 	AddIntFlag(get, "skip", "s", 0, "SKIP number of activations")
@@ -39,10 +42,11 @@ func Activations() *Command {
 	AddStringFlag(get, "function", "f", "", "Fetch activations for a specific function")
 	AddBoolFlag(get, "quiet", "q", false, "Suppress last activation information header")
 
-	list := cmdBuilderWithInit(cmd, RunActivationsList, "list [<activation_name>]", "Lists all the Activations",
-		`More information about 'activations list'`,
+	list := cmdBuilderWithInit(cmd, RunActivationsList, "list [<activation_name>]", "Lists Activations for which records exist",
+		`Use `+"`"+`doctl sandbox activations list`+"`"+` to list the activation records that are present in the cloud for previously
+invoked functions.`,
 		Writer, false)
-	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of activations")
+	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of activations (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of activations from the result")
 	AddStringFlag(list, "since", "", "", "return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970")
 	AddStringFlag(list, "upto", "", "", "return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970")
@@ -50,11 +54,12 @@ func Activations() *Command {
 	AddBoolFlag(list, "full", "f", false, "include full activation description")
 
 	logs := cmdBuilderWithInit(cmd, RunActivationsLogs, "logs [<activationId>]", "Retrieves the Logs for an Activation",
-		`More information about 'activations logs'`,
+		`Use `+"`"+`doctl sandbox activations logs`+"`"+` to retrieve the logs portion of one or more activation records
+with various options, such as selecting by package or function, and optionally watching continuously
+for new arrivals.`,
 		Writer, false)
 	AddStringFlag(logs, "function", "f", "", "Fetch logs for a specific function")
-	AddStringFlag(logs, "package", "p", "", "Fetch logs for a specific package in the manifest")
-	AddBoolFlag(logs, "deployed", "d", false, "Fetch logs for all functions deployed under a specific package")
+	AddStringFlag(logs, "package", "p", "", "Fetch logs for a specific package")
 	AddBoolFlag(logs, "last", "l", false, "Fetch the most recent activation logs (default)")
 	AddIntFlag(logs, "limit", "n", 1, "Fetch the last LIMIT activation logs (up to 200)")
 	AddBoolFlag(logs, "strip", "r", false, "strip timestamp information and output first line only")
@@ -63,10 +68,11 @@ func Activations() *Command {
 	AddBoolFlag(logs, "poll", "", false, "Fetch logs continuously")
 
 	result := cmdBuilderWithInit(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
-		`More information about 'activations result'`,
+		`Use `+"`"+`doctl sandbox activations result`+"`"+` to retrieve just the results portion
+of one or more activation records.`,
 		Writer, false)
 	AddBoolFlag(result, "last", "l", false, "Fetch the most recent activation result (default)")
-	AddIntFlag(result, "limit", "n", 1, "Fetch the last LIMIT activation results (up to 200)")
+	AddIntFlag(result, "limit", "n", 1, "Fetch the last LIMIT activation results (default 30, max 200)")
 	AddIntFlag(result, "skip", "s", 0, "SKIP number of activations")
 	AddStringFlag(result, "function", "f", "", "Fetch results for a specific function")
 	AddBoolFlag(result, "quiet", "q", false, "Suppress last activation information header")
@@ -104,7 +110,10 @@ func RunActivationsLogs(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunSandboxExec("activation/logs", c, []string{"deployed", "last", "strip", "tail", "watch", "poll"}, []string{"function", "package", "limit"})
+	// TODO this will not be correct when tail, watch, or poll is specified.  To make it work correctly in a separate window we need to change
+	// how that decision is made inside the sandbox plugin.  Right now, it is made by command but to support correct behavior here it would need
+	// to be made by flag.  In general, we should be actively directing the plugin from here rather than letting it make an independent decision.
+	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "tail", "watch", "poll"}, []string{"function", "package", "limit"})
 	if err != nil {
 		return err
 	}
