@@ -48,23 +48,36 @@ func Sandbox() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "sandbox",
-			Short: "Display commands for managing a serverless development sandbox",
-			Long: `The ` + "`" + `doctl sandbox` + "`" + ` commands allow you to manage a serverless development sandbox as an optional add-on to ` + "`" + `doctl.
-You can install and de-install the sandbox support, or use a token to connect to your sandbox namespace.`,
+			Short: "[Beta] Develop functions in a sandbox prior to deploying them in an app",
+			Long: `The ` + "`" + `doctl sandbox` + "`" + ` commands provide a development sandbox for functions.  A sandbox has a local file system component and a cloud component.
+A one-time install of the sandbox software is needed (use ` + "`" + `doctl sandbox install` + "`" + ` to install the software, then ` + "`" + `doctl sandbox connect` + "`" + ` to
+connect to the cloud component of the sandbox provided with your account).  Other ` + "`" + `doctl sandbox` + "`" + ` commands are used to develop and test.`,
+			Aliases: []string{"sbx"},
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunSandboxInstall, "install", "Installs the sandbox support", `This command installs an add-on to `+"`"+`doctl that supports
-sandbox development of serverless apps.  The command is long-running, and a network connection is required.`, Writer, false)
+	// TODO: combine "install" and "connect into a single "enable" command, then "uninstall" should become "disable".
+	// We also need an update strategy.
+	cmdBuilderWithInit(cmd, RunSandboxInstall, "install", "Installs the sandbox support",
+		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other sandbox commands work.
+The install operation is long-running, and a network connection is required.`,
+		Writer, false)
 
-	cmdBuilderWithInit(cmd, RunSandboxUninstall, "uninstall", "Removes the sandbox support", ``, Writer, false)
+	cmdBuilderWithInit(cmd, RunSandboxUninstall, "uninstall", "Removes the sandbox support", `Removes sandbox support from `+"`"+`doctl`+"`",
+		Writer, false)
 
-	cmdBuilderWithInit(cmd, RunSandboxConnect, "connect <token>", "Connect your sandbox", `This command connects to your sandbox namespace using a token.
-You obtain the token from the cloud console (details TBD)`, Writer, false)
+	cmdBuilderWithInit(cmd, RunSandboxConnect, "connect <token>", "Connect the cloud portion of your sandbox",
+		`This command connects the cloud portion of your sandbox (needed for testing) by using a provided token.
+You obtain the token from the cloud console (details TBD)`,
+		Writer, false)
 
-	cmdBuilderWithInit(cmd, RunSandboxInfo, "info", "Provide information about your sandbox", `This command reports the status of your sandbox and some details
-concerning its connected function namespace`, Writer, false)
+	cmdBuilderWithInit(cmd, RunSandboxStatus, "status", "Provide information about your sandbox",
+		`This command reports the status of your sandbox and some details
+concerning its connected cloud portion`, Writer, false)
 
+	cmd.AddCommand(Activations())
+	cmd.AddCommand(Functions())
+	SandboxExtras(cmd)
 	return cmd
 }
 
@@ -158,8 +171,8 @@ func RunSandboxConnect(c *CmdConfig) error {
 	return nil
 }
 
-// The info command
-func RunSandboxInfo(c *CmdConfig) error {
+// The status command
+func RunSandboxStatus(c *CmdConfig) error {
 	result, err := SandboxExec("auth/current", "--apihost", "--name")
 	if err != nil || len(result.Error) > 0 {
 		if IsSandboxInstalled() {
@@ -215,8 +228,6 @@ func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringF
 }
 
 // Like RunSandboxExec but assumes that output will not be captured and can be streamed.
-// TODO: the table of commands for which this behavior is expected is currently defined
-// in the plugin but should probably be defined somewhere in the doctl codebase.
 func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
 	cmd, err := setupSandboxSubprocess(command, args)
@@ -302,6 +313,10 @@ func genericJSON(toFormat interface{}) string {
 
 // Convert the actual args, the boolean flags, and the string flags for a command
 // into a flat array which are passed to the plugin as 'args'.
+// This also adjusts certain flag names and values between doctl usage and nim usage.
+// 1.  The flag 'function' is renamed to 'action' if specified.
+// 2.  The flag 'exclude' is checked to ensure that, if empty, it is set to "web" and
+// if non-empty, the "web" value as added to it.
 func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string) []string {
 	args := append([]string{}, c.Args...)
 	for _, flag := range booleanFlags {
@@ -313,7 +328,16 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 	for _, flag := range stringFlags {
 		value, err := c.Doit.GetString(c.NS, flag)
 		if err == nil && len(value) > 0 {
+			if flag == "function" {
+				flag = "action"
+			} else if flag == "exclude" {
+				// --exclude non-empty, add web
+				value = value + ",web"
+			}
 			args = append(args, "--"+flag, value)
+		} else if err == nil && flag == "exclude" {
+			// --exclude not specified, set it to "web"
+			args = append(args, "--exclude", "web")
 		}
 	}
 	return args

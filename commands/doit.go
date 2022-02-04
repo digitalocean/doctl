@@ -85,9 +85,6 @@ func init() {
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "Enable verbose output")
 
 	addCommands()
-	if IsSandboxInstalled() {
-		addSandboxCommands()
-	}
 
 	cobra.OnInitialize(initConfig)
 }
@@ -153,14 +150,6 @@ func addCommands() {
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Sandbox())
-}
-
-//AddSandboxCommands add commands to the base command that should only be there when the sandbox is installed
-func addSandboxCommands() {
-	DoitCmd.AddCommand(Activations())
-	DoitCmd.AddCommand(Functions())
-	DoitCmd.AddCommand(SandboxProjects())
-	DoitCmd.AddCommand(Packages())
 }
 
 func computeCmd() *Command {
