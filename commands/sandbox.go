@@ -53,6 +53,7 @@ func Sandbox() *Command {
 A one-time install of the sandbox software is needed (use ` + "`" + `doctl sandbox install` + "`" + ` to install the software, then ` + "`" + `doctl sandbox connect` + "`" + ` to
 connect to the cloud component of the sandbox provided with your account).  Other ` + "`" + `doctl sandbox` + "`" + ` commands are used to develop and test.`,
 			Aliases: []string{"sbx"},
+			Hidden:  !IsSandboxInstalled(),
 		},
 	}
 
