@@ -14,6 +14,10 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
+	"fmt"
+	"strings"
+
 	"github.com/digitalocean/doctl"
 )
 
@@ -25,7 +29,7 @@ supporting artifacts while you're developing them.  When ready, you can upload t
 testing.  Later, after the area is committed to a `+"`"+`git`+"`"+` repository, you can create an app from them.
 `,
 		Writer, false)
-	AddStringFlag(create, "language", "l", "js", "Language for the project's initial sample")
+	AddStringFlag(create, "language", "l", "js", "Language for the initial sample code")
 	AddBoolFlag(create, "overwrite", "", false, "Clears and reuses an existing directory")
 
 	deploy := cmdBuilderWithInit(cmd, RunSandboxExtraDeploy, "deploy <directories>", "Deploy sandbox local assets to the cloud",
@@ -79,9 +83,27 @@ func RunSandboxExtraCreate(c *CmdConfig) error {
 	}
 	output, err := RunSandboxExec("project/create", c, []string{"overwrite"}, []string{"language"})
 	if err != nil {
+		// Fix up error message text
+		text := err.Error()
+		if strings.Contains(text, "already exists") {
+			text = strings.Replace(text, "-o", "--overwrite", 1)
+			err = errors.New(text)
+		}
 		return err
 	}
-	PrintSandboxTextOutput(output)
+	// Special processing for output, since PrintSandboxTextOutput will emit the 'nim' hint which
+	// is not quite right for doctl.
+	if jsonOutput, ok := output.Entity.(map[string]interface{}); ok {
+		if created, ok := jsonOutput["project"].(string); ok {
+			fmt.Printf(`A local sandbox area '%s' was created for you.
+You may deploy it by running the command shown on the next line:
+  doctl sandbox deploy %s
+`, created, created)
+			return nil
+		}
+	}
+	// Fall back if output is not structured the way we expect
+	fmt.Println("Sandbox initialized successfully in the local file system")
 	return nil
 }
 
@@ -89,6 +111,15 @@ func RunSandboxExtraDeploy(c *CmdConfig) error {
 	output, err := RunSandboxExec("project/deploy", c, []string{"insecure", "verbose-build", "verbose-zip", "yarn", "remote-build", "incremental"}, []string{"env", "build-env", "apihost", "auth", "include", "exclude"})
 	if err != nil {
 		return err
+	}
+	// The output from "project/deploy" is not quite right for doctl even with branding.
+	// TODO Should we increase the scope of the branding so that these fixups are less frequently needed?
+	for index, value := range output.Captured {
+		if strings.Contains(value, "Deploying project") {
+			output.Captured[index] = strings.Replace(value, "Deploying project", "Deployed", 1)
+		} else if strings.Contains(value, "Deployed actions") {
+			output.Captured[index] = "Deployed functions ('doctl sbx fn get <funcName> --url' for URL):"
+		}
 	}
 	PrintSandboxTextOutput(output)
 	return nil
