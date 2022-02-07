@@ -23,9 +23,7 @@ var _ = suite("auth/remove", func(t *testing.T, when spec.G, it spec.S) {
 	it.Before(func() {
 		expect = require.New(t)
 
-		var err error
-		tmpDir, err = ioutil.TempDir("", "")
-		expect.NoError(err)
+		tmpDir = t.TempDir()
 
 		testConfig = filepath.Join(tmpDir, "test-config.yml")
 		var testConfigBytes = []byte(`access-token: first-token

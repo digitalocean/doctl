@@ -61,11 +61,10 @@ var _ = suite("registry/logout", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	it("removes the registry from the docker config.json file", func() {
-		tmpDir, err := ioutil.TempDir("", "")
-		expect.NoError(err)
+		tmpDir := t.TempDir()
 
 		config := filepath.Join(tmpDir, "config.json")
-		err = ioutil.WriteFile(config, []byte(registryDockerCredentialsResponse), 0600)
+		err := ioutil.WriteFile(config, []byte(registryDockerCredentialsResponse), 0600)
 		expect.NoError(err)
 
 		cmd := exec.Command(builtBinaryPath,
