@@ -64,8 +64,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 
 	when("a custom config is provided", func() {
 		it("validates and saves the provided auth token", func() {
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 
@@ -136,8 +135,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 
 	when("a token cannot be validated", func() {
 		it("exits non-zero with an error", func() {
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 
@@ -176,8 +174,7 @@ auth-contexts:
 context: default
 `)
 
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
 
@@ -189,7 +186,7 @@ context: default
 				"--context",
 				nextContext,
 			)
-			_, err = cmd.CombinedOutput()
+			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
 			fileBytes, err := ioutil.ReadFile(testConfig)
@@ -222,8 +219,7 @@ auth-contexts:
 context: default
 `)
 
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
 
@@ -233,7 +229,7 @@ context: default
 				"switch",
 				"--config", testConfig,
 			)
-			_, err = cmd.CombinedOutput()
+			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
 			fileBytes, err := ioutil.ReadFile(testConfig)
@@ -253,8 +249,7 @@ auth-contexts:
 context: default
 `)
 
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
 
