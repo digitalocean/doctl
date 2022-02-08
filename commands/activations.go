@@ -29,12 +29,12 @@ func Activations() *Command {
 		},
 	}
 
-	get := cmdBuilderWithInit(cmd, RunActivationsGet, "get [<activationId>]", "Retrieves an Activation",
+	get := CmdBuilder(cmd, RunActivationsGet, "get [<activationId>]", "Retrieves an Activation",
 		`Use `+"`"+`doctl sandbox activations get`+"`"+` to retrieve the activation record for a previously invoked function.
 There are several options for specifying the activation you want.  You can limit output to the result
 or the logs.  The `+"`"+`doctl sandbox activation logs`+"`"+` command has additional advanced capabilities for retrieving
 logs.`,
-		Writer, false)
+		Writer)
 	AddBoolFlag(get, "last", "l", false, "Fetch the most recent activation (default)")
 	AddIntFlag(get, "skip", "s", 0, "SKIP number of activations")
 	AddBoolFlag(get, "logs", "g", false, "Emit only the logs, stripped of time stamps and stream identifier")
@@ -42,10 +42,10 @@ logs.`,
 	AddStringFlag(get, "function", "f", "", "Fetch activations for a specific function")
 	AddBoolFlag(get, "quiet", "q", false, "Suppress last activation information header")
 
-	list := cmdBuilderWithInit(cmd, RunActivationsList, "list [<activation_name>]", "Lists Activations for which records exist",
+	list := CmdBuilder(cmd, RunActivationsList, "list [<activation_name>]", "Lists Activations for which records exist",
 		`Use `+"`"+`doctl sandbox activations list`+"`"+` to list the activation records that are present in the cloud for previously
 invoked functions.`,
-		Writer, false)
+		Writer)
 	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of activations (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of activations from the result")
 	AddStringFlag(list, "since", "", "", "return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970")
@@ -53,11 +53,11 @@ invoked functions.`,
 	AddBoolFlag(list, "count", "", false, "show only the total number of activations")
 	AddBoolFlag(list, "full", "f", false, "include full activation description")
 
-	logs := cmdBuilderWithInit(cmd, RunActivationsLogs, "logs [<activationId>]", "Retrieves the Logs for an Activation",
+	logs := CmdBuilder(cmd, RunActivationsLogs, "logs [<activationId>]", "Retrieves the Logs for an Activation",
 		`Use `+"`"+`doctl sandbox activations logs`+"`"+` to retrieve the logs portion of one or more activation records
 with various options, such as selecting by package or function, and optionally watching continuously
 for new arrivals.`,
-		Writer, false)
+		Writer)
 	AddStringFlag(logs, "function", "f", "", "Fetch logs for a specific function")
 	AddStringFlag(logs, "package", "p", "", "Fetch logs for a specific package")
 	AddBoolFlag(logs, "last", "l", false, "Fetch the most recent activation logs (default)")
@@ -67,10 +67,10 @@ for new arrivals.`,
 	AddBoolFlag(logs, "watch", "w", false, "Fetch logs continuously")
 	AddBoolFlag(logs, "poll", "", false, "Fetch logs continuously")
 
-	result := cmdBuilderWithInit(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
+	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
 		`Use `+"`"+`doctl sandbox activations result`+"`"+` to retrieve just the results portion
 of one or more activation records.`,
-		Writer, false)
+		Writer)
 	AddBoolFlag(result, "last", "l", false, "Fetch the most recent activation result (default)")
 	AddIntFlag(result, "limit", "n", 1, "Fetch the last LIMIT activation results (default 30, max 200)")
 	AddIntFlag(result, "skip", "s", 0, "SKIP number of activations")

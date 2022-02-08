@@ -29,11 +29,11 @@ You are able to inspect and list these functions to know what is deployed.  You 
 		},
 	}
 
-	get := cmdBuilderWithInit(cmd, RunFunctionsGet, "get <functionName>", "Retrieves the deployed copy of a function (code or metadata)",
+	get := CmdBuilder(cmd, RunFunctionsGet, "get <functionName>", "Retrieves the deployed copy of a function (code or metadata)",
 		`Use `+"`"+`doctl sandbox functions get`+"`"+` to obtain the code or metadata of a deployed function.
 This allows you to inspect the deployed copy and ascertain whether it corresponds to what
 is in your sandbox area in the local file system.`,
-		Writer, false)
+		Writer)
 	AddBoolFlag(get, "url", "r", false, "get function url")
 	AddBoolFlag(get, "code", "", false, "show function code (only works if code is not a zip file)")
 	AddStringFlag(get, "save-env", "E", "", "save environment variables to FILE as key-value pairs")
@@ -41,20 +41,20 @@ is in your sandbox area in the local file system.`,
 	AddBoolFlag(get, "save", "", false, "save function code to file corresponding to the function name")
 	AddStringFlag(get, "save-as", "", "", "file to save function code to")
 
-	invoke := cmdBuilderWithInit(cmd, RunFunctionsInvoke, "invoke <functionName>", "Invokes a function",
+	invoke := CmdBuilder(cmd, RunFunctionsInvoke, "invoke <functionName>", "Invokes a function",
 		`Use `+"`"+`doctl sandbox functions invoke`+"`"+` to invoke a function of your sandbox that has been deployed
 to the cloud.  You can provide inputs and inspect outputs.`,
-		Writer, false)
+		Writer)
 	AddBoolFlag(invoke, "web", "", false, "Invoke as a web function, show result as web page")
 	AddStringFlag(invoke, "param", "p", "", "parameter values in KEY VALUE format")
 	AddStringFlag(invoke, "param-file", "P", "", "FILE containing parameter values in JSON format")
 	AddBoolFlag(invoke, "full", "f", false, "wait for full activation record")
 	AddBoolFlag(invoke, "no-wait", "n", false, "fire and forget (asynchronous invoke, does not wait for the result)")
 
-	list := cmdBuilderWithInit(cmd, RunFunctionsList, "list [<packageName>]", "Lists all the functions",
+	list := CmdBuilder(cmd, RunFunctionsList, "list [<packageName>]", "Lists all the functions",
 		`Use `+"`"+`doctl sandbox functions list`+"`"+` to list the functions of your sandbox that are deployed
 to the cloud.`,
-		Writer, false)
+		Writer)
 	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of functions (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of functions from the result")
 	AddBoolFlag(list, "count", "", false, "show only the total number of functions")
@@ -86,6 +86,7 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
 	PrintSandboxTextOutput(output)
 	return nil
 }

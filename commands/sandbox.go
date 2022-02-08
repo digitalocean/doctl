@@ -26,19 +26,11 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
 
 const NODE_VERSION = "14.16.0"
-
-// This is what is returned from calls to the sandbox
-type SandboxOutput = struct {
-	Table     []map[string]interface{} `json:"table,omitempty"`
-	Captured  []string                 `json:"captured,omitempty"`
-	Formatted []string                 `json:"formatted,omitempty"`
-	Entity    interface{}              `json:"entity,omitempty"`
-	Error     string                   `json:"error,omitempty"`
-}
 
 // Contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
 // The literal command 'doctl sandbox' is used only to install the sandbox and drive the
@@ -59,22 +51,22 @@ connect to the cloud component of the sandbox provided with your account).  Othe
 
 	// TODO: combine "install" and "connect into a single "enable" command, then "uninstall" should become "disable".
 	// We also need an update strategy.
-	cmdBuilderWithInit(cmd, RunSandboxInstall, "install", "Installs the sandbox support",
+	CmdBuilder(cmd, RunSandboxInstall, "install", "Installs the sandbox support",
 		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other sandbox commands work.
 The install operation is long-running, and a network connection is required.`,
-		Writer, false)
+		Writer)
 
-	cmdBuilderWithInit(cmd, RunSandboxUninstall, "uninstall", "Removes the sandbox support", `Removes sandbox support from `+"`"+`doctl`+"`",
-		Writer, false)
+	CmdBuilder(cmd, RunSandboxUninstall, "uninstall", "Removes the sandbox support", `Removes sandbox support from `+"`"+`doctl`+"`",
+		Writer)
 
-	cmdBuilderWithInit(cmd, RunSandboxConnect, "connect <token>", "Connect the cloud portion of your sandbox",
+	CmdBuilder(cmd, RunSandboxConnect, "connect <token>", "Connect the cloud portion of your sandbox",
 		`This command connects the cloud portion of your sandbox (needed for testing) by using a provided token.
 You obtain the token from the cloud console (details TBD)`,
-		Writer, false)
+		Writer)
 
-	cmdBuilderWithInit(cmd, RunSandboxStatus, "status", "Provide information about your sandbox",
+	CmdBuilder(cmd, RunSandboxStatus, "status", "Provide information about your sandbox",
 		`This command reports the status of your sandbox and some details
-concerning its connected cloud portion`, Writer, false)
+concerning its connected cloud portion`, Writer)
 
 	cmd.AddCommand(Activations())
 	cmd.AddCommand(Functions())
@@ -163,7 +155,7 @@ func RunSandboxConnect(c *CmdConfig) error {
 		return err
 	}
 	token := c.Args[0]
-	result, err := SandboxExec("auth/login", token)
+	result, err := SandboxExec(c, "auth/login", token)
 	if err != nil {
 		return err
 	}
@@ -174,11 +166,10 @@ func RunSandboxConnect(c *CmdConfig) error {
 
 // The status command
 func RunSandboxStatus(c *CmdConfig) error {
-	result, err := SandboxExec("auth/current", "--apihost", "--name")
+	result, err := SandboxExec(c, "auth/current", "--apihost", "--name")
 	if err != nil || len(result.Error) > 0 {
 		if IsSandboxInstalled() {
 			return errors.New("A sandbox is installed but not connected to a function namespace (see 'doctl sandbox connect')")
-			return nil
 		}
 		return errors.New("sandbox is not installed (use 'doctl sandbox install')")
 	}
@@ -193,50 +184,41 @@ func RunSandboxStatus(c *CmdConfig) error {
 // "Public" functions
 
 // Executes a sandbox command
-func SandboxExec(command string, args ...string) (SandboxOutput, error) {
-	cmd, err := setupSandboxSubprocess(command, args)
+func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput, error) {
+	sandbox := c.Sandbox()
+	cmd, err := setupSandboxSubprocess(sandbox, command, args)
 	if err != nil {
-		return SandboxOutput{}, err
+		return do.SandboxOutput{}, err
 	}
 	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
 	// will continue to work for returning structured results.
 	if os.Getenv("DEBUG") != "" {
 		cmd.Stderr = os.Stderr
 	}
-	output, err := cmd.Output()
-	if err != nil {
-		// Ignore "errors" that are just non-zero exit.  The
-		// sandbox uses this as a secondary indicator but the output
-		// is still trustworthy (and includes error information inline)
-		if _, ok := err.(*exec.ExitError); !ok {
-			// Real error of some sort
-			return SandboxOutput{}, err
-		}
-	}
-	var result SandboxOutput
-	err = json.Unmarshal(output, &result)
-	if err != nil {
-		return SandboxOutput{}, err
-	}
-	// Result is sound JSON but if it has an Error field the rest is not trustworthy
-	if len(result.Error) > 0 {
-		return SandboxOutput{}, errors.New(result.Error)
-	}
-	// Result is both sound and error free
-	return result, nil
+
+	return sandbox.Exec(cmd)
 }
 
 // A variant of SandboxExec convenient for calling from stylized command runners
 // Sets up the arguments and (especially) the flags for the actual call
-func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (SandboxOutput, error) {
+func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (do.SandboxOutput, error) {
+	sandbox := c.Sandbox()
+
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
-	return SandboxExec(command, args...)
+	cmd, err := setupSandboxSubprocess(sandbox, command, args)
+	if err != nil {
+		return do.SandboxOutput{}, err
+	}
+
+	return sandbox.Exec(cmd)
 }
 
 // Like RunSandboxExec but assumes that output will not be captured and can be streamed.
 func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
+	sandbox := c.Sandbox()
+
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
-	cmd, err := setupSandboxSubprocess(command, args)
+	cmd, err := setupSandboxSubprocess(sandbox, command, args)
 	if err != nil {
 		return err
 	}
@@ -254,7 +236,7 @@ func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string
 // Else, prints Table or Entity using generic JSON formatting.
 // We don't expect both Table and Entity to be present and have no
 // special handling for that.
-func PrintSandboxTextOutput(output SandboxOutput) {
+func PrintSandboxTextOutput(output do.SandboxOutput) {
 	if len(output.Formatted) > 0 {
 		fmt.Println(strings.Join(output.Formatted, "\n"))
 	} else if len(output.Captured) > 0 {
@@ -360,16 +342,11 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 }
 
 // Check for sandbox install, then setup a subprocess to run it for a given command and set of arguments
-func setupSandboxSubprocess(command string, args []string) (*exec.Cmd, error) {
-	sandboxDir, exists := getSandboxDirectory()
+func setupSandboxSubprocess(sandbox do.SandboxService, command string, args []string) (*exec.Cmd, error) {
+	_, exists := getSandboxDirectory()
 	if !exists {
 		return nil, errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
 	}
-	node := filepath.Join(sandboxDir, "node")
-	sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
-	nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
-	args = append([]string{sandboxJs, command}, args...)
-	cmd := exec.Command(node, args...)
-	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+nimbellaDir)
-	return cmd, nil
+
+	return sandbox.Cmd(command, args)
 }
