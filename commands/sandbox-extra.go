@@ -23,20 +23,20 @@ import (
 
 func SandboxExtras(cmd *Command) {
 
-	create := cmdBuilderWithInit(cmd, RunSandboxExtraCreate, "init <path>", "Initialize a local file system directory for the sandbox",
+	create := CmdBuilder(cmd, RunSandboxExtraCreate, "init <path>", "Initialize a local file system directory for the sandbox",
 		`The `+"`"+`doctl sandbox init`+"`"+` command specifies a directory in your file system which will hold functions and
 supporting artifacts while you're developing them.  When ready, you can upload these to the cloud for
 testing.  Later, after the area is committed to a `+"`"+`git`+"`"+` repository, you can create an app from them.
 `,
-		Writer, false)
+		Writer)
 	AddStringFlag(create, "language", "l", "js", "Language for the initial sample code")
 	AddBoolFlag(create, "overwrite", "", false, "Clears and reuses an existing directory")
 
-	deploy := cmdBuilderWithInit(cmd, RunSandboxExtraDeploy, "deploy <directories>", "Deploy sandbox local assets to the cloud",
+	deploy := CmdBuilder(cmd, RunSandboxExtraDeploy, "deploy <directories>", "Deploy sandbox local assets to the cloud",
 		`At any time you can use `+"`"+`doctl sandbox deploy`+"`"+` to upload the contents of a directory in your file system for
 testing in the cloud.  The area must be organized in the fashion expected by an App Platform Functions
 component.  The `+"`"+`doctl sandbox init`+"`"+` command will create a properly organized directory for you to work in.`,
-		Writer, false)
+		Writer)
 	AddStringFlag(deploy, "env", "", "", "Path to runtime environment file")
 	AddStringFlag(deploy, "build-env", "", "", "Path to build-time environment file")
 	AddStringFlag(deploy, "apihost", "", "", "API host to use")
@@ -50,19 +50,19 @@ component.  The `+"`"+`doctl sandbox init`+"`"+` command will create a properly 
 	AddBoolFlag(deploy, "remote-build", "", false, "Run builds remotely")
 	AddBoolFlag(deploy, "incremental", "", false, "Deploy only changes since last deploy")
 
-	getMetadata := cmdBuilderWithInit(cmd, RunSandboxExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a sandbox directory",
+	getMetadata := CmdBuilder(cmd, RunSandboxExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a sandbox directory",
 		`The `+"`"+`doctl sandbox get-metadata`+"`"+` command produces a JSON structure that summarizes the contents of a directory
 you have designated for functions development.  This can be useful for feeding into other tools.`,
-		Writer, false)
+		Writer)
 	AddStringFlag(getMetadata, "env", "", "", "Path to environment file")
 	AddStringFlag(getMetadata, "include", "", "", "Functions or packages to include")
 	AddStringFlag(getMetadata, "exclude", "", "", "Functions or packages to exclude")
 
-	watch := cmdBuilderWithInit(cmd, RunSandboxExtraWatch, "watch <directory>", "Watch a sandbox directory, deploying incrementally on change",
+	watch := CmdBuilder(cmd, RunSandboxExtraWatch, "watch <directory>", "Watch a sandbox directory, deploying incrementally on change",
 		`Type `+"`"+`doctl sandbox watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
 It will watch the directory (which should be one you initialized for sandbox use) and will deploy
 the contents to the cloud incrementally as it detects changes.`,
-		Writer, false)
+		Writer)
 	AddStringFlag(watch, "env", "", "", "Path to runtime environment file")
 	AddStringFlag(watch, "build-env", "", "", "Path to build-time environment file")
 	AddStringFlag(watch, "apihost", "", "", "API host to use")

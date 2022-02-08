@@ -41,3 +41,4 @@ mockgen -source 1_clicks.go -package=mocks OneClickService > mocks/OneClickServi
 mockgen -source ../pkg/runner/runner.go -package=mocks Runner > mocks/Runner.go
 mockgen -source ../pkg/listen/listen.go -package=mocks Listen > mocks/Listen.go
 mockgen -source monitoring.go -package=mocks MonitoringService > mocks/MonitoringService.go
+mockgen -source sandbox.go -package=mocks SandboxService > mocks/SandboxService.go

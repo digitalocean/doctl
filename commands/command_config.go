@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -67,6 +68,7 @@ type CmdConfig struct {
 	OneClicks         func() do.OneClickService
 	Apps              func() do.AppsService
 	Monitoring        func() do.MonitoringService
+	Sandbox           func() do.SandboxService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -116,6 +118,12 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(godoClient) }
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
 			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
+
+			sandboxDir, _ := getSandboxDirectory()
+			node := filepath.Join(sandboxDir, "node")
+			sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
+			nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
+			c.Sandbox = func() do.SandboxService { return do.NewSandboxService(sandboxJs, nimbellaDir, node) }
 
 			return nil
 		},
