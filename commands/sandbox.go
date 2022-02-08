@@ -341,11 +341,16 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 				flag = "action"
 			} else if flag == "exclude" {
 				// --exclude non-empty, add web
-				value = value + ",web"
+				args = append(args, "--exclude", value+",web")
 			} else if flag == "package" {
-				args = append(args, "--deployed")
+				args = append(args, "--deployed", "--package", value)
+			} else if flag == "param" {
+				values := strings.Split(value, " ")
+				args = append(args, "--param")
+				args = append(args, values...)
+			} else {
+				args = append(args, "--"+flag, value)
 			}
-			args = append(args, "--"+flag, value)
 		} else if err == nil && flag == "exclude" {
 			// --exclude not specified, set it to "web"
 			args = append(args, "--exclude", "web")
