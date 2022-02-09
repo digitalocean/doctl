@@ -42,8 +42,6 @@ func TestFunctionsCommand(t *testing.T) {
 func TestFunctionsInvoke(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		fakeCmd := &exec.Cmd{
-			// Path:   "/bin/true",
-			// Args:   []string{"action/invoke", "hello", "--param", "name", "world"},
 			Stdout: config.Out,
 		}
 		out := make(map[string]string)
