@@ -103,9 +103,11 @@ The list contains the size in GB, and the date and time the backup was taken.`, 
 
 	cmdDatabaseResize := CmdBuilder(cmd, RunDatabaseResize, "resize <database-id>", "Resize a database cluster", `This command resizes the specified database cluster.
 
-You must specify the size of the machines you wish to use as nodes as well as how many nodes you would like. For example:
+You must specify the desired number of nodes and size of the nodes. For example:
 
-	doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb`, Writer,
+	doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb
+			
+Database nodes cannot be resized to smaller sizes due to the risk of data loss.`, Writer,
 		aliasOpt("rs"))
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())

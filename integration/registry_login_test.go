@@ -68,8 +68,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 	when("all required flags are passed", func() {
 		it("writes a docker config.json file", func() {
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 
 			config := filepath.Join(tmpDir, "config.json")
 
@@ -101,8 +100,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 	when("expiry-seconds flag is passed", func() {
 		it("add the correct query parameter", func() {
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 
 			config := filepath.Join(tmpDir, "config.json")
 
