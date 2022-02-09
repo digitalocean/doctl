@@ -32,6 +32,9 @@ import (
 
 const NODE_VERSION = "14.16.0"
 
+// SandboxNotInstalledErr is the error returned to users when the sandbox is not installed.
+var SandboxNotInstalledErr = errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
+
 // Contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
 // The literal command 'doctl sandbox' is used only to install the sandbox and drive the
 // 'nim auth' subtree as needed for the integration.  All other 'nim' subtrees are shimmed
@@ -185,8 +188,11 @@ func RunSandboxStatus(c *CmdConfig) error {
 
 // Executes a sandbox command
 func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput, error) {
+	if !c.sandboxInstalled() {
+		return do.SandboxOutput{}, SandboxNotInstalledErr
+	}
 	sandbox := c.Sandbox()
-	cmd, err := setupSandboxSubprocess(sandbox, command, args)
+	cmd, err := sandbox.Cmd(command, args)
 	if err != nil {
 		return do.SandboxOutput{}, err
 	}
@@ -202,10 +208,13 @@ func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput
 // A variant of SandboxExec convenient for calling from stylized command runners
 // Sets up the arguments and (especially) the flags for the actual call
 func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (do.SandboxOutput, error) {
+	if !c.sandboxInstalled() {
+		return do.SandboxOutput{}, SandboxNotInstalledErr
+	}
 	sandbox := c.Sandbox()
 
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
-	cmd, err := setupSandboxSubprocess(sandbox, command, args)
+	cmd, err := sandbox.Cmd(command, args)
 	if err != nil {
 		return do.SandboxOutput{}, err
 	}
@@ -215,10 +224,13 @@ func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringF
 
 // Like RunSandboxExec but assumes that output will not be captured and can be streamed.
 func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
+	if !c.sandboxInstalled() {
+		return SandboxNotInstalledErr
+	}
 	sandbox := c.Sandbox()
 
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
-	cmd, err := setupSandboxSubprocess(sandbox, command, args)
+	cmd, err := sandbox.Cmd(command, args)
 	if err != nil {
 		return err
 	}
@@ -339,14 +351,4 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 		}
 	}
 	return args
-}
-
-// Check for sandbox install, then setup a subprocess to run it for a given command and set of arguments
-func setupSandboxSubprocess(sandbox do.SandboxService, command string, args []string) (*exec.Cmd, error) {
-	_, exists := getSandboxDirectory()
-	if !exists {
-		return nil, errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
-	}
-
-	return sandbox.Cmd(command, args)
 }
