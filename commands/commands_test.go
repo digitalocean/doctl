@@ -179,6 +179,7 @@ type tcMocks struct {
 	oneClick          *domocks.MockOneClickService
 	listen            *domocks.MockListenerService
 	monitoring        *domocks.MockMonitoringService
+	sandbox           *domocks.MockSandboxService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -219,6 +220,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		oneClick:          domocks.NewMockOneClickService(ctrl),
 		listen:            domocks.NewMockListenerService(ctrl),
 		monitoring:        domocks.NewMockMonitoringService(ctrl),
+		sandbox:           domocks.NewMockSandboxService(ctrl),
 	}
 
 	config := &CmdConfig{
@@ -234,6 +236,10 @@ func withTestClient(t *testing.T, tFn testFn) {
 		},
 
 		setContextAccessToken: func(token string) {},
+
+		sandboxInstalled: func() bool {
+			return true
+		},
 
 		Keys:              func() do.KeysService { return tm.keys },
 		Sizes:             func() do.SizesService { return tm.sizes },
@@ -266,6 +272,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		OneClicks:         func() do.OneClickService { return tm.oneClick },
 		Apps:              func() do.AppsService { return tm.apps },
 		Monitoring:        func() do.MonitoringService { return tm.monitoring },
+		Sandbox:           func() do.SandboxService { return tm.sandbox },
 	}
 
 	tFn(config, tm)
