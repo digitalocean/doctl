@@ -95,10 +95,11 @@ func RunSandboxExtraCreate(c *CmdConfig) error {
 	// is not quite right for doctl.
 	if jsonOutput, ok := output.Entity.(map[string]interface{}); ok {
 		if created, ok := jsonOutput["project"].(string); ok {
-			fmt.Printf(`A local sandbox area '%s' was created for you.
+			fmt.Fprintf(c.Out, `A local sandbox area '%s' was created for you.
 You may deploy it by running the command shown on the next line:
   doctl sandbox deploy %s
 `, created, created)
+			fmt.Fprintln(c.Out)
 			return nil
 		}
 	}

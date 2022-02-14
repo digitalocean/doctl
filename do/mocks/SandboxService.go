@@ -64,3 +64,17 @@ func (mr *MockSandboxServiceMockRecorder) Exec(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockSandboxService)(nil).Exec), arg0)
 }
+
+// Stream mocks base method.
+func (m *MockSandboxService) Stream(arg0 *exec.Cmd) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Stream", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Stream indicates an expected call of Stream.
+func (mr *MockSandboxServiceMockRecorder) Stream(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stream", reflect.TypeOf((*MockSandboxService)(nil).Stream), arg0)
+}
