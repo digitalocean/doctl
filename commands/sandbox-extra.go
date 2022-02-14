@@ -122,8 +122,7 @@ func RunSandboxExtraDeploy(c *CmdConfig) error {
 			output.Captured[index] = "Deployed functions ('doctl sbx fn get <funcName> --url' for URL):"
 		}
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 func RunSandboxExtraGetMetadata(c *CmdConfig) error {
@@ -135,8 +134,7 @@ func RunSandboxExtraGetMetadata(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 // This is not the usual boiler-plate because the command is intended to be long-running in a separate window

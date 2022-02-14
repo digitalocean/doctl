@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
 	"os/exec"
 	"sort"
 	"testing"
@@ -145,6 +146,8 @@ func TestFunctionsInvoke(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				buf := &bytes.Buffer{}
+				config.Out = buf
 				fakeCmd := &exec.Cmd{
 					Stdout: config.Out,
 				}
@@ -160,15 +163,17 @@ func TestFunctionsInvoke(t *testing.T) {
 					}
 				}
 
-				out := make(map[string]string)
-				out["body"] = "Hello world!"
 				tm.sandbox.EXPECT().Cmd("action/invoke", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
-					Entity: out,
+					Entity: map[string]interface{}{"body": "Hello world!"},
 				}, nil)
-
+				expectedOut := `{
+  "body": "Hello world!"
+}
+`
 				err := RunFunctionsInvoke(config)
 				require.NoError(t, err)
+				assert.Equal(t, expectedOut, buf.String())
 			})
 		})
 	}

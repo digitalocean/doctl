@@ -243,23 +243,27 @@ func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string
 	return sandbox.Stream(cmd)
 }
 
-// Prints the output of a sandbox command execution in a
+// PrintSandboxTextOutput prints the output of a sandbox command execution in a
 // textual form (often, this can be improved upon).
 // Prints Formatted if present.
 // Else, prints Captured if present.
 // Else, prints Table or Entity using generic JSON formatting.
 // We don't expect both Table and Entity to be present and have no
 // special handling for that.
-func PrintSandboxTextOutput(output do.SandboxOutput) {
+func (c *CmdConfig) PrintSandboxTextOutput(output do.SandboxOutput) error {
 	if len(output.Formatted) > 0 {
-		fmt.Println(strings.Join(output.Formatted, "\n"))
+		fmt.Fprintf(c.Out, strings.Join(output.Formatted, "\n"))
 	} else if len(output.Captured) > 0 {
-		fmt.Println(strings.Join(output.Captured, "\n"))
+		fmt.Fprintf(c.Out, strings.Join(output.Captured, "\n"))
 	} else if len(output.Table) > 0 {
-		fmt.Println(genericJSON(output.Table))
+		fmt.Fprintf(c.Out, genericJSON(output.Table))
 	} else if output.Entity != nil {
-		fmt.Println(genericJSON(output.Entity))
+		fmt.Fprintf(c.Out, genericJSON(output.Entity))
 	} // else no output (unusual but not impossible)
+
+	_, err := fmt.Fprintln(c.Out)
+
+	return err
 }
 
 // Answers whether sandbox is installed
