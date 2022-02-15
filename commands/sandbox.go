@@ -30,10 +30,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const NODE_VERSION = "14.16.0"
+const NODE_VERSION = "v14.16.0"
+const MIN_SANDBOX_VERSION = "2.3.1-1.0.0"
 
 // SandboxNotInstalledErr is the error returned to users when the sandbox is not installed.
 var SandboxNotInstalledErr = errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
+
+// SandboxNeedsUpgradeErr is the error returned to users when the sandbox is at too low a version
+var SandboxNeedsUpgradeErr = errors.New("The sandbox support needs to be upgraded (use `doctl sandbox upgrade`)")
 
 // Contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
 // The literal command 'doctl sandbox' is used only to install the sandbox and drive the
@@ -59,6 +63,11 @@ connect to the cloud component of the sandbox provided with your account).  Othe
 The install operation is long-running, and a network connection is required.`,
 		Writer)
 
+	CmdBuilder(cmd, RunSandboxUpgrade, "upgrade", "Upgrades sandbox support to match this version of doctl",
+		`This command upgrades the sandbox support software under `+"`"+`doctl`+"`"+` by installing over the existing version.
+The install operation is long-running, and a network connection is required.`,
+		Writer)
+
 	CmdBuilder(cmd, RunSandboxUninstall, "uninstall", "Removes the sandbox support", `Removes sandbox support from `+"`"+`doctl`+"`",
 		Writer)
 
@@ -79,72 +88,37 @@ concerning its connected cloud portion`, Writer)
 
 // RunSandboxInstall performs the network installation of the 'nim' adjunct to support sandbox development
 func RunSandboxInstall(c *CmdConfig) error {
-	// Check that the sandbox isn't already installed
-	sandboxDir, sandboxExists := getSandboxDirectory()
+	sandboxDir, sandboxExists, sandboxUpToDate := getSandboxDirectory()
 	if sandboxExists {
-		return errors.New("An existing sandbox install was detected.  Uninstall before installing again.")
+		if !sandboxUpToDate {
+			fmt.Println("Sandbox support is already installed, but needs an upgrade for this version of `doctl`.")
+			fmt.Println("Use `doctl sandbox upgrade` to upgrade the support.")
+			return nil
+		}
+		fmt.Println("Sandbox support is already installed at an appropriate version.  No action needed.")
+		return nil
 	}
-	// Make a temporary directory for use during the install
-	tmp, err := ioutil.TempDir("", "doctl-sandbox")
-	if err != nil {
-		return err
+	return doSandboxInstall(sandboxDir, false)
+}
+
+// 'doctl sandbox upgrade' is a variant on 'doctl sandbox install' for installing over an existing version when
+// the existing version is inadequate as detected by isSandboxUpToDate()
+func RunSandboxUpgrade(c *CmdConfig) error {
+	sandboxDir, sandboxExists, sandboxUpToDate := getSandboxDirectory()
+	if sandboxExists {
+		if sandboxUpToDate {
+			fmt.Println("Sandbox support is already installed at an appropriate version.  No action needed.")
+			return nil
+		}
+	} else {
+		return errors.New("Sandbox support was never installed.  Use `doctl sandbox install`.")
 	}
-	// Download the nodejs tarball for this os and architecture
-	goos := runtime.GOOS
-	arch := runtime.GOARCH
-	if arch == "amd64" {
-		arch = "x64"
-	}
-	nodeDir := fmt.Sprintf("node-v%s-%s-%s", NODE_VERSION, goos, arch)
-	URL := fmt.Sprintf("https://nodejs.org/dist/v%s/%s.tar.xz", NODE_VERSION, nodeDir)
-	nodeFileName := filepath.Join(tmp, "node-install.tar.xz")
-	fmt.Print("Downloading...")
-	err = download(URL, nodeFileName)
-	if err != nil {
-		return err
-	}
-	// Download the fat tarball with the nim CLI, deployer, and sandbox bridge
-	// TODO do these need to be arch-specific?  Currently assuming not.
-	URL = "https://do-serverless-tools.nyc3.digitaloceanspaces.com/doctl-sandbox.tar.xz"
-	sandboxFileName := filepath.Join(tmp, "doctl-sandbox.tar.xz")
-	err = download(URL, sandboxFileName)
-	if err != nil {
-		return err
-	}
-	// Exec tar binary twice to unpack the two tarballs into the tmp directory
-	fmt.Print("Unpacking...")
-	cmd := exec.Command("tar", "-C", tmp, "-xJf", nodeFileName)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("%s", output)
-		return err
-	}
-	cmd = exec.Command("tar", "-C", tmp, "-xJf", sandboxFileName)
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("%s", output)
-		return err
-	}
-	// Move artifacts to final location
-	fmt.Print("Installing...")
-	srcPath := filepath.Join(tmp, "sandbox")
-	err = os.Rename(srcPath, sandboxDir)
-	if err != nil {
-		return err
-	}
-	srcPath = filepath.Join(tmp, nodeDir, "bin", "node")
-	destPath := filepath.Join(sandboxDir, "node")
-	err = os.Rename(srcPath, destPath)
-	if err != nil {
-		return err
-	}
-	fmt.Println("\nDone")
-	return nil
+	return doSandboxInstall(sandboxDir, true)
 }
 
 // The uninstall command
 func RunSandboxUninstall(c *CmdConfig) error {
-	sandboxDir, exists := getSandboxDirectory()
+	sandboxDir, exists, _ := getSandboxDirectory()
 	if !exists {
 		return errors.New("Nothing to uninstall: no sandbox was found")
 	}
@@ -170,19 +144,25 @@ func RunSandboxConnect(c *CmdConfig) error {
 
 // The status command
 func RunSandboxStatus(c *CmdConfig) error {
-	result, err := SandboxExec(c, "auth/current", "--apihost", "--name")
-	if err != nil || len(result.Error) > 0 {
-		if c.sandboxInstalled() {
-			return errors.New("A sandbox is installed but not connected to a function namespace (see 'doctl sandbox connect')")
+	_, exists, uptodate := getSandboxDirectory()
+	if exists {
+		if uptodate {
+			result, err := SandboxExec(c, "auth/current", "--apihost", "--name")
+			if err != nil || len(result.Error) > 0 {
+				fmt.Fprintln(c.Out, "A sandbox is installed but not connected to a function namespace (see `doctl sandbox connect`)")
+				return nil
+			}
+			if result.Entity == nil {
+				return errors.New("Could not retrieve information about the connected namespace")
+			}
+			mapResult := result.Entity.(map[string]interface{})
+			fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], mapResult["apihost"])
+			return nil
 		}
-		return SandboxNotInstalledErr
+		fmt.Fprintln(c.Out, "A sandbox is installed but the version doesn't match this version of `doctl` (use `doctl sandbox upgrade`)")
+		return nil
 	}
-	if result.Entity == nil {
-		return errors.New("Could not retrieve information about the connected namespace")
-	}
-	mapResult := result.Entity.(map[string]interface{})
-	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], mapResult["apihost"])
-	fmt.Fprintln(c.Out)
+	fmt.Fprintln(c.Out, "Sandbox support is not installed (use `doctl sandbox install`)")
 	return nil
 }
 
@@ -190,8 +170,9 @@ func RunSandboxStatus(c *CmdConfig) error {
 
 // Executes a sandbox command
 func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput, error) {
-	if !c.sandboxInstalled() {
-		return do.SandboxOutput{}, SandboxNotInstalledErr
+	err := checkInstallStatus()
+	if err != nil {
+		return do.SandboxOutput{}, err
 	}
 	sandbox := c.Sandbox()
 	cmd, err := sandbox.Cmd(command, args)
@@ -210,8 +191,9 @@ func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput
 // A variant of SandboxExec convenient for calling from stylized command runners
 // Sets up the arguments and (especially) the flags for the actual call
 func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (do.SandboxOutput, error) {
-	if !c.sandboxInstalled() {
-		return do.SandboxOutput{}, SandboxNotInstalledErr
+	err := checkInstallStatus()
+	if err != nil {
+		return do.SandboxOutput{}, err
 	}
 	sandbox := c.Sandbox()
 
@@ -268,11 +250,134 @@ func (c *CmdConfig) PrintSandboxTextOutput(output do.SandboxOutput) error {
 
 // Answers whether sandbox is installed
 func IsSandboxInstalled() bool {
-	_, yes := getSandboxDirectory()
+	_, yes, _ := getSandboxDirectory()
 	return yes
 }
 
 // "Private" utility functions
+
+// Check install status and return an appropriate error for common issues
+// such as not installed or needs upgrade.  Returns nil when no error.
+func checkInstallStatus() error {
+	_, exists, uptodate := getSandboxDirectory()
+	if !exists {
+		return SandboxNotInstalledErr
+	}
+	if !uptodate {
+		return SandboxNeedsUpgradeErr
+	}
+	return nil
+}
+
+// Working subroutine for 'install' and 'upgrade'
+func doSandboxInstall(sandboxDir string, upgrading bool) error {
+	// Make a temporary directory for use during the install
+	tmp, err := ioutil.TempDir("", "doctl-sandbox")
+	if err != nil {
+		return err
+	}
+	// Download the nodejs tarball for this os and architecture
+	goos := runtime.GOOS
+	arch := runtime.GOARCH
+	if arch == "amd64" {
+		arch = "x64"
+	} else if arch == "windows" {
+		arch = "win"
+	}
+	var nodeFileName string
+	var nodeDir string
+	if upgrading && canReuseNode(sandboxDir) {
+		err = copyExistingNode(sandboxDir, tmp)
+		if err != nil {
+			return err
+		}
+	} else {
+		nodeDir = fmt.Sprintf("node-%s-%s-%s", NODE_VERSION, goos, arch)
+		URL := fmt.Sprintf("https://nodejs.org/dist/%s/%s.tar.gz", NODE_VERSION, nodeDir)
+		nodeFileName = filepath.Join(tmp, "node-install.tar.gz")
+		fmt.Print("Downloading...")
+		err = download(URL, nodeFileName)
+		if err != nil {
+			return err
+		}
+	}
+	// Download the fat tarball with the nim CLI, deployer, and sandbox bridge
+	// TODO do these need to be arch-specific?  Currently assuming not.
+	URL := fmt.Sprintf("https://do-serverless-tools.nyc3.digitaloceanspaces.com/doctl-sandbox-%s.tar.gz", MIN_SANDBOX_VERSION)
+	sandboxFileName := filepath.Join(tmp, "doctl-sandbox.tar.gz")
+	err = download(URL, sandboxFileName)
+	if err != nil {
+		return err
+	}
+	// Exec tar binary twice to unpack the two tarballs into the tmp directory
+	// TODO eliminate use of separate tar binary so we can support windows install with pure go code
+	fmt.Print("Unpacking...")
+	cmd := exec.Command("tar", "-C", tmp, "-xzf", sandboxFileName)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("%s", output)
+		return err
+	}
+	if nodeFileName != "" {
+		cmd := exec.Command("tar", "-C", tmp, "-xzf", nodeFileName)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("%s", output)
+			return err
+		}
+	}
+	// Move artifacts to final location
+	fmt.Print("Installing...")
+	srcPath := filepath.Join(tmp, "sandbox")
+	if upgrading {
+		// Preserve credentials by copying them from target (which will be replaced) to source.
+		credPath := filepath.Join(sandboxDir, ".nimbella")
+		relocPath := filepath.Join(srcPath, ".nimbella")
+		err = os.Rename(credPath, relocPath)
+		if err != nil {
+			return err
+		}
+		// Remove former sandboxDir before moving in the new one
+		err = os.RemoveAll(sandboxDir)
+	}
+	err = os.Rename(srcPath, sandboxDir)
+	if err != nil {
+		return err
+	}
+	if nodeFileName != "" {
+		srcPath = filepath.Join(tmp, nodeDir, "bin", "node")
+		destPath := filepath.Join(sandboxDir, "node")
+		err = os.Rename(srcPath, destPath)
+		if err != nil {
+			return err
+		}
+	}
+	fmt.Println("\nDone")
+	return nil
+}
+
+// Check whether the installed node is at the appropriate version
+// Avoids downloading node again during an upgrade
+func canReuseNode(sandboxDir string) bool {
+	return false
+}
+
+func copyExistingNode(from string, to string) error {
+	return nil
+}
+
+// Get the version of the current sandbox.
+// Called when sandbox is known to exist.
+// Returns "0" if the installed sandbox pre-dates the versioning system
+// Otherwise, returns the version string stored in the sandbox directory.
+func getCurrentSandboxVersion(sandboxDir string) string {
+	versionFile := filepath.Join(sandboxDir, "version")
+	contents, err := ioutil.ReadFile(versionFile)
+	if err != nil {
+		return "0"
+	}
+	return string(contents)
+}
 
 // Download a network file to a local file
 func download(URL, targetFile string) error {
@@ -299,11 +404,16 @@ func download(URL, targetFile string) error {
 }
 
 // Returns the "sandbox" directory in which the artifacts for sandbox support are stored.
-// Returns the name of the directory and whether or not it exists.
-func getSandboxDirectory() (string, bool) {
+// Returns the name of the directory, whether it exists, and whether it is up to date.
+func getSandboxDirectory() (string, bool, bool) {
 	sandboxDir := filepath.Join(defaultConfigHome(), "sandbox")
 	_, err := os.Stat(sandboxDir)
-	return sandboxDir, !os.IsNotExist(err)
+	exists := !os.IsNotExist(err)
+	uptodate := false
+	if exists {
+		uptodate = getCurrentSandboxVersion(sandboxDir) >= MIN_SANDBOX_VERSION
+	}
+	return sandboxDir, exists, uptodate
 }
 
 // Converts something "object-like" but untyped to generic JSON
