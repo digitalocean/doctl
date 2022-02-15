@@ -120,7 +120,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
 			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
 
-			sandboxDir, _ := getSandboxDirectory()
+			sandboxDir, _, _ := getSandboxDirectory()
 			node := filepath.Join(sandboxDir, "node")
 			sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
 			nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
