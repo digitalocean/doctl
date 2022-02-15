@@ -11,6 +11,7 @@ import (
 type SandboxService interface {
 	Cmd(string, []string) (*exec.Cmd, error)
 	Exec(*exec.Cmd) (SandboxOutput, error)
+	Stream(*exec.Cmd) error
 }
 
 type sandboxService struct {
@@ -22,7 +23,7 @@ type sandboxService struct {
 var _ SandboxService = &sandboxService{}
 
 // SandboxOutput contains the output returned from calls to the sandbox plugin.
-type SandboxOutput = struct {
+type SandboxOutput struct {
 	Table     []map[string]interface{} `json:"table,omitempty"`
 	Captured  []string                 `json:"captured,omitempty"`
 	Formatted []string                 `json:"formatted,omitempty"`
@@ -71,4 +72,10 @@ func (n *sandboxService) Exec(cmd *exec.Cmd) (SandboxOutput, error) {
 	}
 	// Result is both sound and error free
 	return result, nil
+}
+
+// Stream is like Exec but assumes that output will not be captured and can be streamed.
+func (n *sandboxService) Stream(cmd *exec.Cmd) error {
+
+	return cmd.Run()
 }

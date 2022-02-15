@@ -88,8 +88,7 @@ func RunActivationsGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 func RunActivationsList(c *CmdConfig) error {
@@ -101,8 +100,7 @@ func RunActivationsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 func RunActivationsLogs(c *CmdConfig) error {
@@ -117,8 +115,7 @@ func RunActivationsLogs(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 func RunActivationsResult(c *CmdConfig) error {
@@ -130,6 +127,5 @@ func RunActivationsResult(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }

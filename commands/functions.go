@@ -73,8 +73,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 func RunFunctionsInvoke(c *CmdConfig) error {
@@ -87,8 +86,7 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 		return err
 	}
 
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 func RunFunctionsList(c *CmdConfig) error {
@@ -100,6 +98,5 @@ func RunFunctionsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
