@@ -95,10 +95,11 @@ func RunSandboxExtraCreate(c *CmdConfig) error {
 	// is not quite right for doctl.
 	if jsonOutput, ok := output.Entity.(map[string]interface{}); ok {
 		if created, ok := jsonOutput["project"].(string); ok {
-			fmt.Printf(`A local sandbox area '%s' was created for you.
+			fmt.Fprintf(c.Out, `A local sandbox area '%s' was created for you.
 You may deploy it by running the command shown on the next line:
   doctl sandbox deploy %s
 `, created, created)
+			fmt.Fprintln(c.Out)
 			return nil
 		}
 	}
@@ -121,8 +122,7 @@ func RunSandboxExtraDeploy(c *CmdConfig) error {
 			output.Captured[index] = "Deployed functions ('doctl sbx fn get <funcName> --url' for URL):"
 		}
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 func RunSandboxExtraGetMetadata(c *CmdConfig) error {
@@ -134,8 +134,7 @@ func RunSandboxExtraGetMetadata(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	PrintSandboxTextOutput(output)
-	return nil
+	return c.PrintSandboxTextOutput(output)
 }
 
 // This is not the usual boiler-plate because the command is intended to be long-running in a separate window

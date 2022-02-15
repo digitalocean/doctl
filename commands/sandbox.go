@@ -163,7 +163,8 @@ func RunSandboxConnect(c *CmdConfig) error {
 		return err
 	}
 	mapResult := result.Entity.(map[string]interface{})
-	fmt.Printf("Connected to function namespace '%s' on API host '%s'\n", mapResult["namespace"], mapResult["apihost"])
+	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["namespace"], mapResult["apihost"])
+	fmt.Fprintln(c.Out)
 	return nil
 }
 
@@ -171,16 +172,17 @@ func RunSandboxConnect(c *CmdConfig) error {
 func RunSandboxStatus(c *CmdConfig) error {
 	result, err := SandboxExec(c, "auth/current", "--apihost", "--name")
 	if err != nil || len(result.Error) > 0 {
-		if IsSandboxInstalled() {
+		if c.sandboxInstalled() {
 			return errors.New("A sandbox is installed but not connected to a function namespace (see 'doctl sandbox connect')")
 		}
-		return errors.New("sandbox is not installed (use 'doctl sandbox install')")
+		return SandboxNotInstalledErr
 	}
 	if result.Entity == nil {
 		return errors.New("Could not retrieve information about the connected namespace")
 	}
 	mapResult := result.Entity.(map[string]interface{})
-	fmt.Printf("Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], mapResult["apihost"])
+	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], mapResult["apihost"])
+	fmt.Fprintln(c.Out)
 	return nil
 }
 
@@ -238,26 +240,30 @@ func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string
 	// this function.
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return sandbox.Stream(cmd)
 }
 
-// Prints the output of a sandbox command execution in a
+// PrintSandboxTextOutput prints the output of a sandbox command execution in a
 // textual form (often, this can be improved upon).
 // Prints Formatted if present.
 // Else, prints Captured if present.
 // Else, prints Table or Entity using generic JSON formatting.
 // We don't expect both Table and Entity to be present and have no
 // special handling for that.
-func PrintSandboxTextOutput(output do.SandboxOutput) {
+func (c *CmdConfig) PrintSandboxTextOutput(output do.SandboxOutput) error {
 	if len(output.Formatted) > 0 {
-		fmt.Println(strings.Join(output.Formatted, "\n"))
+		fmt.Fprintf(c.Out, strings.Join(output.Formatted, "\n"))
 	} else if len(output.Captured) > 0 {
-		fmt.Println(strings.Join(output.Captured, "\n"))
+		fmt.Fprintf(c.Out, strings.Join(output.Captured, "\n"))
 	} else if len(output.Table) > 0 {
-		fmt.Println(genericJSON(output.Table))
+		fmt.Fprintf(c.Out, genericJSON(output.Table))
 	} else if output.Entity != nil {
-		fmt.Println(genericJSON(output.Entity))
+		fmt.Fprintf(c.Out, genericJSON(output.Entity))
 	} // else no output (unusual but not impossible)
+
+	_, err := fmt.Fprintln(c.Out)
+
+	return err
 }
 
 // Answers whether sandbox is installed
@@ -333,6 +339,7 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 		if err == nil && len(value) > 0 {
 			if flag == "function" {
 				flag = "action"
+				// TODO: Should this be added to the args?
 			} else if flag == "exclude" {
 				// --exclude non-empty, add web
 				args = append(args, "--exclude", value+",web")
@@ -350,5 +357,6 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 			args = append(args, "--exclude", "web")
 		}
 	}
+
 	return args
 }
