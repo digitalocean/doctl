@@ -81,20 +81,33 @@ func TestSandboxStatusWhenNotConnected(t *testing.T) {
 
 		err := RunSandboxStatus(config)
 		require.Error(t, err)
-		assert.EqualError(t, err, "A sandbox is installed but not connected to a function namespace (see 'doctl sandbox connect')")
+		assert.ErrorIs(t, err, SandboxNotConnectedErr)
 	})
 }
 
 func TestSandboxStatusWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.sandboxInstalled = func() bool {
-			return false
+		config.checkSandboxStatus = func() error {
+			return SandboxNotInstalledErr
 		}
 
 		err := RunSandboxStatus(config)
 
 		require.Error(t, err)
-		assert.EqualError(t, err, SandboxNotInstalledErr.Error())
+		assert.ErrorIs(t, err, SandboxNotInstalledErr)
+	})
+}
+
+func TestSandboxStatusWhenNotUpToDate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.checkSandboxStatus = func() error {
+			return SandboxNeedsUpgradeErr
+		}
+
+		err := RunSandboxStatus(config)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, SandboxNeedsUpgradeErr)
 	})
 }
 
