@@ -237,8 +237,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 		setContextAccessToken: func(token string) {},
 
-		sandboxInstalled: func() bool {
-			return true
+		checkSandboxStatus: func() error {
+			return nil
 		},
 
 		Keys:              func() do.KeysService { return tm.keys },

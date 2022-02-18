@@ -34,10 +34,13 @@ const NODE_VERSION = "v14.16.0"
 const MIN_SANDBOX_VERSION = "2.3.1-1.0.0"
 
 // SandboxNotInstalledErr is the error returned to users when the sandbox is not installed.
-var SandboxNotInstalledErr = errors.New("The sandbox is not installed.  Use `doctl sandbox install` to install it")
+var SandboxNotInstalledErr = errors.New("The sandbox is not installed (use `doctl sandbox install`)")
 
 // SandboxNeedsUpgradeErr is the error returned to users when the sandbox is at too low a version
 var SandboxNeedsUpgradeErr = errors.New("The sandbox support needs to be upgraded (use `doctl sandbox upgrade`)")
+
+// SandboxNotConnectedErr is the error returned to users when the sandbox is not connected to a namespace
+var SandboxNotConnectedErr = errors.New("A sandbox is installed but not connected to a function namespace (use `doctl sandbox connect`)")
 
 // Contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
 // The literal command 'doctl sandbox' is used only to install the sandbox and drive the
@@ -52,7 +55,7 @@ func Sandbox() *Command {
 A one-time install of the sandbox software is needed (use ` + "`" + `doctl sandbox install` + "`" + ` to install the software, then ` + "`" + `doctl sandbox connect` + "`" + ` to
 connect to the cloud component of the sandbox provided with your account).  Other ` + "`" + `doctl sandbox` + "`" + ` commands are used to develop and test.`,
 			Aliases: []string{"sbx"},
-			Hidden:  !IsSandboxInstalled(),
+			Hidden:  !isSandboxInstalled(),
 		},
 	}
 
@@ -144,25 +147,22 @@ func RunSandboxConnect(c *CmdConfig) error {
 
 // The status command
 func RunSandboxStatus(c *CmdConfig) error {
-	_, exists, uptodate := getSandboxDirectory()
-	if exists {
-		if uptodate {
-			result, err := SandboxExec(c, "auth/current", "--apihost", "--name")
-			if err != nil || len(result.Error) > 0 {
-				fmt.Fprintln(c.Out, "A sandbox is installed but not connected to a function namespace (see `doctl sandbox connect`)")
-				return nil
-			}
-			if result.Entity == nil {
-				return errors.New("Could not retrieve information about the connected namespace")
-			}
-			mapResult := result.Entity.(map[string]interface{})
-			fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], mapResult["apihost"])
-			return nil
-		}
-		fmt.Fprintln(c.Out, "A sandbox is installed but the version doesn't match this version of `doctl` (use `doctl sandbox upgrade`)")
-		return nil
+	status := c.checkSandboxStatus()
+	if status == SandboxNeedsUpgradeErr || status == SandboxNotInstalledErr {
+		return status
 	}
-	fmt.Fprintln(c.Out, "Sandbox support is not installed (use `doctl sandbox install`)")
+	if status != nil {
+		return fmt.Errorf("Unexpected error: %w", status)
+	}
+	result, err := SandboxExec(c, "auth/current", "--apihost", "--name")
+	if err != nil || len(result.Error) > 0 {
+		return SandboxNotConnectedErr
+	}
+	if result.Entity == nil {
+		return errors.New("Could not retrieve information about the connected namespace")
+	}
+	mapResult := result.Entity.(map[string]interface{})
+	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n\n", mapResult["name"], mapResult["apihost"])
 	return nil
 }
 
@@ -170,7 +170,7 @@ func RunSandboxStatus(c *CmdConfig) error {
 
 // Executes a sandbox command
 func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput, error) {
-	err := checkInstallStatus()
+	err := c.checkSandboxStatus()
 	if err != nil {
 		return do.SandboxOutput{}, err
 	}
@@ -191,12 +191,12 @@ func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput
 // A variant of SandboxExec convenient for calling from stylized command runners
 // Sets up the arguments and (especially) the flags for the actual call
 func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (do.SandboxOutput, error) {
-	err := checkInstallStatus()
+	err := c.checkSandboxStatus()
 	if err != nil {
 		return do.SandboxOutput{}, err
 	}
-	sandbox := c.Sandbox()
 
+	sandbox := c.Sandbox()
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
 	cmd, err := sandbox.Cmd(command, args)
 	if err != nil {
@@ -208,8 +208,9 @@ func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringF
 
 // Like RunSandboxExec but assumes that output will not be captured and can be streamed.
 func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
-	if !c.sandboxInstalled() {
-		return SandboxNotInstalledErr
+	err := c.checkSandboxStatus()
+	if err != nil {
+		return err
 	}
 	sandbox := c.Sandbox()
 
@@ -248,17 +249,9 @@ func (c *CmdConfig) PrintSandboxTextOutput(output do.SandboxOutput) error {
 	return err
 }
 
-// Answers whether sandbox is installed
-func IsSandboxInstalled() bool {
-	_, yes, _ := getSandboxDirectory()
-	return yes
-}
-
-// "Private" utility functions
-
 // Check install status and return an appropriate error for common issues
 // such as not installed or needs upgrade.  Returns nil when no error.
-func checkInstallStatus() error {
+func CheckSandboxStatus() error {
 	_, exists, uptodate := getSandboxDirectory()
 	if !exists {
 		return SandboxNotInstalledErr
@@ -267,6 +260,14 @@ func checkInstallStatus() error {
 		return SandboxNeedsUpgradeErr
 	}
 	return nil
+}
+
+// "Private" utility functions
+
+// Answers whether sandbox is installed
+func isSandboxInstalled() bool {
+	_, yes, _ := getSandboxDirectory()
+	return yes
 }
 
 // Working subroutine for 'install' and 'upgrade'
