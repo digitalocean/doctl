@@ -36,6 +36,7 @@ type CmdConfig struct {
 	setContextAccessToken func(string)
 	removeContext         func(string) error
 	checkSandboxStatus    func() error
+	installSandbox        func(string, bool) error
 
 	// services
 	Keys              func() do.KeysService
@@ -120,7 +121,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
 			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
 
-			sandboxDir, _, _ := getSandboxDirectory()
+			sandboxDir, _ := getSandboxDirectory()
 			node := filepath.Join(sandboxDir, "node")
 			sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
 			nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
@@ -188,6 +189,10 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 
 		checkSandboxStatus: func() error {
 			return CheckSandboxStatus()
+		},
+
+		installSandbox: func(dir string, upgrading bool) error {
+			return InstallSandbox(dir, upgrading)
 		},
 	}
 
