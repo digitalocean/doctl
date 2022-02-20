@@ -15,6 +15,7 @@ package commands
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"testing"
 
@@ -108,6 +109,120 @@ func TestSandboxStatusWhenNotUpToDate(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, SandboxNeedsUpgradeErr)
+	})
+}
+
+func TestSandboxInstallFromScratch(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+
+		config.installSandbox = func(dir string, upgrade bool) error {
+			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
+			return nil
+		}
+		config.checkSandboxStatus = func() error {
+			return SandboxNotInstalledErr
+		}
+
+		err := RunSandboxInstall(config)
+		require.NoError(t, err)
+		assert.Equal(t, "Installed with upgrade false\n", buf.String())
+	})
+}
+
+func TestSandboxInstallWhenInstalledNotCurrent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+
+		config.installSandbox = func(dir string, upgrade bool) error {
+			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
+			return nil
+		}
+		config.checkSandboxStatus = func() error {
+			return SandboxNeedsUpgradeErr
+		}
+
+		err := RunSandboxInstall(config)
+		require.NoError(t, err)
+		assert.Equal(t, "Sandbox support is already installed, but needs an upgrade for this version of `doctl`.\nUse `doctl sandbox upgrade` to upgrade the support.\n", buf.String())
+	})
+}
+
+func TestSandboxInstallWhenInstalledAndCurrent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+
+		config.installSandbox = func(dir string, upgrade bool) error {
+			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
+			return nil
+		}
+		config.checkSandboxStatus = func() error {
+			return nil
+		}
+
+		err := RunSandboxInstall(config)
+		require.NoError(t, err)
+		assert.Equal(t, "Sandbox support is already installed at an appropriate version.  No action needed.\n", buf.String())
+	})
+}
+
+func TestSandboxUpgradeWhenNotInstalled(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+
+		config.installSandbox = func(dir string, upgrade bool) error {
+			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
+			return nil
+		}
+		config.checkSandboxStatus = func() error {
+			return SandboxNotInstalledErr
+		}
+
+		err := RunSandboxUpgrade(config)
+		require.NoError(t, err)
+		assert.Equal(t, "Sandbox support was never installed.  Use `doctl sandbox install`.\n", buf.String())
+	})
+}
+
+func TestSandboxUpgradeWhenInstalledAndCurrent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+
+		config.installSandbox = func(dir string, upgrade bool) error {
+			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
+			return nil
+		}
+		config.checkSandboxStatus = func() error {
+			return nil
+		}
+
+		err := RunSandboxUpgrade(config)
+		require.NoError(t, err)
+		assert.Equal(t, "Sandbox support is already installed at an appropriate version.  No action needed.\n", buf.String())
+	})
+}
+
+func TestSandboxUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+
+		config.installSandbox = func(dir string, upgrade bool) error {
+			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
+			return nil
+		}
+		config.checkSandboxStatus = func() error {
+			return SandboxNeedsUpgradeErr
+		}
+
+		err := RunSandboxUpgrade(config)
+		require.NoError(t, err)
+		assert.Equal(t, "Installed with upgrade true\n", buf.String())
 	})
 }
 
