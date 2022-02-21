@@ -125,7 +125,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			node := filepath.Join(sandboxDir, "node")
 			sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
 			nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
-			c.Sandbox = func() do.SandboxService { return do.NewSandboxService(sandboxJs, nimbellaDir, node) }
+			c.Sandbox = func() do.SandboxService { return do.NewSandboxService(sandboxJs, nimbellaDir, node, godoClient) }
 
 			return nil
 		},

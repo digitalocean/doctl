@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -137,7 +138,11 @@ func RunSandboxConnect(c *CmdConfig) error {
 		return err
 	}
 	token := c.Args[0]
-	result, err := SandboxExec(c, "auth/login", token)
+	creds, err := c.Sandbox().ResolveToken(context.TODO(), token)
+	if err != nil {
+		return err
+	}
+	result, err := SandboxExec(c, "auth/login", "--auth", creds.Auth, "--apihost", creds.ApiHost)
 	if err != nil {
 		return err
 	}
