@@ -1,23 +1,58 @@
 package do
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"os"
 	"os/exec"
+
+	"github.com/digitalocean/godo"
 )
 
-// SandboxService is an interface for interacting with the sandbox plugin.
+// SandboxCredentials is the type returned by the ResolveToken and ResolveNamespace functions
+// The values in it can be used to connect sandbox support to a specific namespace using the plugin.
+type SandboxCredentials struct {
+	Auth    string
+	ApiHost string
+}
+
+// TokenRequest is the type of the request body for v2/function/namespaces/namespace when requesting
+// the credentials for a JWT
+type InputNamespace struct {
+	Token string `json:"token"`
+}
+type TokenRequest struct {
+	Namespace InputNamespace `json:"namespace"`
+}
+
+// TokenDecoded is the expected response field for v2/function/namespaces/namespace when requesting
+// the credentials for a JWT
+type OutputNamespace struct {
+	ApiHost string `json:"api_host"`
+	Uuid    string `json:"uuid"`
+	Key     string `json:"key"`
+}
+type TokenDecoded struct {
+	Namespace OutputNamespace `json:"namespace"`
+}
+
+// SandboxService is an interface for interacting with the sandbox plugin
+// and with the namespaces service.
 type SandboxService interface {
 	Cmd(string, []string) (*exec.Cmd, error)
 	Exec(*exec.Cmd) (SandboxOutput, error)
 	Stream(*exec.Cmd) error
+	ResolveToken(context.Context, string) (SandboxCredentials, error)
+	ResolveNamespace(context.Context, string) (SandboxCredentials, error)
 }
 
 type sandboxService struct {
 	sandboxJs  string
 	sandboxDir string
 	node       string
+	client     *godo.Client
 }
 
 var _ SandboxService = &sandboxService{}
@@ -32,11 +67,12 @@ type SandboxOutput struct {
 }
 
 // NewSandboxService returns a configure SandboxService.
-func NewSandboxService(sandboxJs string, sandboxDir string, node string) SandboxService {
+func NewSandboxService(sandboxJs string, sandboxDir string, node string, client *godo.Client) SandboxService {
 	return &sandboxService{
 		sandboxJs:  sandboxJs,
 		sandboxDir: sandboxDir,
 		node:       node,
+		client:     client,
 	}
 }
 
@@ -78,4 +114,38 @@ func (n *sandboxService) Exec(cmd *exec.Cmd) (SandboxOutput, error) {
 func (n *sandboxService) Stream(cmd *exec.Cmd) error {
 
 	return cmd.Run()
+}
+
+// ResolveToken resolves a JWT issued by the UI into a set of credentials for the sandbox
+// Note: the use of JWTs may eventually go away in favor of going straight from namespace
+// name to the actual tokens.
+func (n *sandboxService) ResolveToken(ctx context.Context, token string) (SandboxCredentials, error) {
+	path := "v2/function/namespaces/namespace"
+	body := TokenRequest{Namespace: InputNamespace{Token: token}}
+	req, err := n.client.NewRequest(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return SandboxCredentials{}, err
+	}
+	tokenDecoded := new(TokenDecoded)
+	_, err = n.client.Do(ctx, req, tokenDecoded)
+	if err != nil {
+		return SandboxCredentials{}, err
+	}
+	ans := SandboxCredentials{
+		ApiHost: tokenDecoded.Namespace.ApiHost,
+		Auth:    tokenDecoded.Namespace.Uuid + ":" + tokenDecoded.Namespace.Key,
+	}
+	return ans, nil
+}
+
+// ResolveNamespace resolves a namespace name into a set of credentials for the sandbox.
+// If "" is given as the namespace name, the available namespaces are retrieved and the
+// function attempts to identify one of them as the sandbox namespace.
+// Note: at present, the "" option only works when the customer has exactly one namespace
+// whose 'label' field contains the substring 'sandbox'.   This is subject to change.
+// Note: at present, two remote calls are needed to go from a namespace name to the needed
+// credentials.  First, a JWT token is remotely generated, then ResolveToken call is used
+// to resolve it.  This will be streamlined in the future.
+func (n *sandboxService) ResolveNamespace(ctx context.Context, namespace string) (SandboxCredentials, error) {
+	return SandboxCredentials{}, nil
 }
