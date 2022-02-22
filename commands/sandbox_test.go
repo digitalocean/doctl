@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSandboxConnect(t *testing.T) {
+func TestSandboxConnectNamespace(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
@@ -35,6 +35,31 @@ func TestSandboxConnect(t *testing.T) {
 
 		config.Args = append(config.Args, "hello")
 		tm.sandbox.EXPECT().ResolveNamespace(context.TODO(), "hello").Return(do.SandboxCredentials{Auth: "xyzzy", ApiHost: "https://api.example.com"}, nil)
+		tm.sandbox.EXPECT().Cmd("auth/login", []string{"--auth", "xyzzy", "--apihost", "https://api.example.com"}).Return(fakeCmd, nil)
+		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+			Entity: map[string]interface{}{
+				"namespace": "hello",
+				"apihost":   "https://api.example.com",
+			},
+		}, nil)
+
+		err := RunSandboxConnect(config)
+		require.NoError(t, err)
+		assert.Equal(t, "Connected to function namespace 'hello' on API host 'https://api.example.com'\n\n", buf.String())
+	})
+}
+
+func TestSandboxConnectToken(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+		fakeCmd := &exec.Cmd{
+			Stdout: config.Out,
+		}
+
+		fakeJWT := "a-very-fake-JWT.a-very-fake-JWT.a-very-fake-JWT" // very unimaginative also, but this is enough to trigger JWT recognition
+		config.Args = append(config.Args, fakeJWT)
+		tm.sandbox.EXPECT().ResolveToken(context.TODO(), fakeJWT).Return(do.SandboxCredentials{Auth: "xyzzy", ApiHost: "https://api.example.com"}, nil)
 		tm.sandbox.EXPECT().Cmd("auth/login", []string{"--auth", "xyzzy", "--apihost", "https://api.example.com"}).Return(fakeCmd, nil)
 		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 			Entity: map[string]interface{}{
