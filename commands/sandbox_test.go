@@ -15,6 +15,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"testing"
@@ -32,8 +33,9 @@ func TestSandboxConnect(t *testing.T) {
 			Stdout: config.Out,
 		}
 
-		config.Args = append(config.Args, "token")
-		tm.sandbox.EXPECT().Cmd("auth/login", []string{"token"}).Return(fakeCmd, nil)
+		config.Args = append(config.Args, "hello")
+		tm.sandbox.EXPECT().ResolveNamespace(context.TODO(), "hello").Return(do.SandboxCredentials{Auth: "xyzzy", ApiHost: "https://api.example.com"}, nil)
+		tm.sandbox.EXPECT().Cmd("auth/login", []string{"--auth", "xyzzy", "--apihost", "https://api.example.com"}).Return(fakeCmd, nil)
 		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 			Entity: map[string]interface{}{
 				"namespace": "hello",
