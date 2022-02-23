@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
@@ -73,9 +75,14 @@ The install operation is long-running, and a network connection is required.`,
 	CmdBuilder(cmd, RunSandboxUninstall, "uninstall", "Removes the sandbox support", `Removes sandbox support from `+"`"+`doctl`+"`",
 		Writer)
 
-	CmdBuilder(cmd, RunSandboxConnect, "connect <token>", "Connect the cloud portion of your sandbox",
-		`This command connects the cloud portion of your sandbox (needed for testing) by using a provided token.
-You obtain the token from the cloud console (details TBD)`,
+	CmdBuilder(cmd, RunSandboxConnect, "connect [<token>|<namespace>]", "Connect the cloud portion of your sandbox",
+		`This command connects the cloud portion of your sandbox (needed for testing).
+There are several ways to use it.
+1. If your account has been explicitly provisioned with sandbox support, invoke with no arguments.
+2. (DO internal) If you obtained a namespace for your account using the alpha console, you may
+use either the namespace name or the generated token as the argument.  The ability to generate
+and use a token is for compatibility with the previous behavior of the command and is likely
+to be deprecated and removed`,
 		Writer)
 
 	CmdBuilder(cmd, RunSandboxStatus, "status", "Provide information about your sandbox",
@@ -132,12 +139,28 @@ func RunSandboxUninstall(c *CmdConfig) error {
 
 // The connect command
 func RunSandboxConnect(c *CmdConfig) error {
-	err := ensureOneArg(c)
+	var (
+		arg   string
+		token bool
+		creds do.SandboxCredentials
+		err   error
+	)
+	if len(c.Args) > 1 {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+	if len(c.Args) == 1 {
+		arg = c.Args[0]
+		token = isJWT(arg)
+	}
+	if token {
+		creds, err = c.Sandbox().ResolveToken(context.TODO(), arg)
+	} else {
+		creds, err = c.Sandbox().ResolveNamespace(context.TODO(), arg)
+	}
 	if err != nil {
 		return err
 	}
-	token := c.Args[0]
-	result, err := SandboxExec(c, "auth/login", token)
+	result, err := SandboxExec(c, "auth/login", "--auth", creds.Auth, "--apihost", creds.APIHost)
 	if err != nil {
 		return err
 	}
@@ -145,6 +168,16 @@ func RunSandboxConnect(c *CmdConfig) error {
 	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["namespace"], mapResult["apihost"])
 	fmt.Fprintln(c.Out)
 	return nil
+}
+
+// Determine whether an argument is a JWT or a namespace.  The heuristic is based on the length of the
+// string and whether it contains two dots (then JWT, otherwise namespace).
+func isJWT(candidate string) bool {
+	if len(candidate) < 30 {
+		return false
+	}
+	parts := strings.Split(candidate, ".")
+	return len(parts) == 3
 }
 
 // The status command

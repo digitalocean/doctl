@@ -1,23 +1,73 @@
 package do
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"os"
 	"os/exec"
+	"strings"
+
+	"github.com/digitalocean/godo"
 )
 
-// SandboxService is an interface for interacting with the sandbox plugin.
+// SandboxCredentials is the type returned by the ResolveToken and ResolveNamespace functions
+// The values in it can be used to connect sandbox support to a specific namespace using the plugin.
+type SandboxCredentials struct {
+	Auth    string
+	APIHost string
+}
+
+// The type of the "namespace" member of POST input for API calls.
+// Only one of the fields is typically specified
+type inputNamespace struct {
+	Token     string `json:"token,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// The type of the "namespace" member of the response to API calls.  Only some
+// fields are relevant to each call.
+type outputNamespace struct {
+	APIHost   string `json:"api_host"`
+	UUID      string `json:"uuid"`
+	Key       string `json:"key"`
+	Token     string `json:"token"`
+	Label     string `json:"label"`
+	Namespace string `json:"namespace"`
+}
+
+// namespacesPostBody is the type of the request body for v2/function/namespaces/... calls that use
+// the POST verb.  Only the relevant parts of the contained inputNamespace need be specified
+type namespacesPostBody struct {
+	Namespace inputNamespace `json:"namespace"`
+}
+
+// namespacesResponseBody is the type of the response body from API calls other than "list namespaces".
+type namespacesResponseBody struct {
+	Namespace outputNamespace `json:"namespace"`
+}
+
+// namespaceList is the type of the response body from "list namespaces"
+type namespaceList struct {
+	Namespaces []outputNamespace `json:"namespaces"`
+}
+
+// SandboxService is an interface for interacting with the sandbox plugin
+// and with the namespaces service.
 type SandboxService interface {
 	Cmd(string, []string) (*exec.Cmd, error)
 	Exec(*exec.Cmd) (SandboxOutput, error)
 	Stream(*exec.Cmd) error
+	ResolveToken(context.Context, string) (SandboxCredentials, error)
+	ResolveNamespace(context.Context, string) (SandboxCredentials, error)
 }
 
 type sandboxService struct {
 	sandboxJs  string
 	sandboxDir string
 	node       string
+	client     *godo.Client
 }
 
 var _ SandboxService = &sandboxService{}
@@ -31,12 +81,13 @@ type SandboxOutput struct {
 	Error     string                   `json:"error,omitempty"`
 }
 
-// NewSandboxService returns a configure SandboxService.
-func NewSandboxService(sandboxJs string, sandboxDir string, node string) SandboxService {
+// NewSandboxService returns a configured SandboxService.
+func NewSandboxService(sandboxJs string, sandboxDir string, node string, client *godo.Client) SandboxService {
 	return &sandboxService{
 		sandboxJs:  sandboxJs,
 		sandboxDir: sandboxDir,
 		node:       node,
+		client:     client,
 	}
 }
 
@@ -78,4 +129,92 @@ func (n *sandboxService) Exec(cmd *exec.Cmd) (SandboxOutput, error) {
 func (n *sandboxService) Stream(cmd *exec.Cmd) error {
 
 	return cmd.Run()
+}
+
+// ResolveToken resolves a JWT issued by the UI into a set of credentials for the sandbox
+// Note: the use of JWTs may eventually go away in favor of going straight from namespace
+// name to the actual tokens.
+func (n *sandboxService) ResolveToken(ctx context.Context, token string) (SandboxCredentials, error) {
+	path := "v2/function/namespaces/namespace"
+	body := namespacesPostBody{Namespace: inputNamespace{Token: token}}
+	req, err := n.client.NewRequest(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return SandboxCredentials{}, err
+	}
+	tokenDecoded := new(namespacesResponseBody)
+	_, err = n.client.Do(ctx, req, tokenDecoded)
+	if err != nil {
+		return SandboxCredentials{}, err
+	}
+	ans := SandboxCredentials{
+		APIHost: tokenDecoded.Namespace.APIHost,
+		Auth:    tokenDecoded.Namespace.UUID + ":" + tokenDecoded.Namespace.Key,
+	}
+	return ans, nil
+}
+
+// ResolveNamespace resolves a namespace name into a set of credentials for the sandbox.
+// If "" is given as the namespace name, the available namespaces are retrieved and the
+// function attempts to identify one of them as the sandbox namespace.
+// Note: at present, the "" option only works when the customer has exactly one namespace
+// whose 'label' field contains the substring 'sandbox'.   This is subject to change.
+// Note: at present, two remote calls are needed to go from a namespace name to the needed
+// credentials.  First, a JWT token is remotely generated, then ResolveToken call is used
+// to resolve it.  This will be streamlined in the future.
+func (n *sandboxService) ResolveNamespace(ctx context.Context, namespace string) (SandboxCredentials, error) {
+	var err error
+	if namespace == "" {
+		namespace, err = findSandboxNamespace(ctx, n.client)
+		if err != nil {
+			return SandboxCredentials{}, err
+		}
+	}
+	token, err := getTokenForNamespace(ctx, n.client, namespace)
+	if err != nil {
+		return SandboxCredentials{}, err
+	}
+	return n.ResolveToken(ctx, token)
+}
+
+// getTokenForNamespace is a subroutine of ResolveNamespace wrapping the call to
+// obtain a JWT.  This step should eventually be eliminated in favor of an API
+// that goes directly from namespace to credentials.
+func getTokenForNamespace(ctx context.Context, client *godo.Client, namespace string) (string, error) {
+	path := "v2/function/namespaces/login_token"
+	body := namespacesPostBody{Namespace: inputNamespace{Namespace: namespace}}
+	req, err := client.NewRequest(ctx, http.MethodPost, path, body)
+	if err != nil {
+		return "", err
+	}
+	tokenResponse := new(namespacesResponseBody)
+	_, err = client.Do(ctx, req, tokenResponse)
+	if err != nil {
+		return "", err
+	}
+	return tokenResponse.Namespace.Token, nil
+}
+
+// findSandboxNamespace is a subroutine of ResolveNamespace implementing the search for
+// a sandbox namespace.
+func findSandboxNamespace(ctx context.Context, client *godo.Client) (string, error) {
+	path := "v2/function/namespaces"
+	req, err := client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return "", err
+	}
+	namespaces := new(namespaceList)
+	_, err = client.Do(ctx, req, namespaces)
+	if err != nil {
+		return "", err
+	}
+	sandboxes := []string{}
+	for _, ns := range namespaces.Namespaces {
+		if strings.Contains(ns.Label, "sandbox") {
+			sandboxes = append(sandboxes, ns.Namespace)
+		}
+	}
+	if len(sandboxes) == 1 {
+		return sandboxes[0], nil
+	}
+	return "", errors.New("could not find a sandbox namespace in the cloud for this account")
 }
