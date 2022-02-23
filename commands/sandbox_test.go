@@ -109,33 +109,33 @@ func TestSandboxStatusWhenNotConnected(t *testing.T) {
 
 		err := RunSandboxStatus(config)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, SandboxNotConnectedErr)
+		assert.ErrorIs(t, err, ErrSandboxNotConnected)
 	})
 }
 
 func TestSandboxStatusWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.checkSandboxStatus = func() error {
-			return SandboxNotInstalledErr
+			return ErrSandboxNotInstalled
 		}
 
 		err := RunSandboxStatus(config)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, SandboxNotInstalledErr)
+		assert.ErrorIs(t, err, ErrSandboxNotInstalled)
 	})
 }
 
 func TestSandboxStatusWhenNotUpToDate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.checkSandboxStatus = func() error {
-			return SandboxNeedsUpgradeErr
+			return ErrSandboxNeedsUpgrade
 		}
 
 		err := RunSandboxStatus(config)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, SandboxNeedsUpgradeErr)
+		assert.ErrorIs(t, err, ErrSandboxNeedsUpgrade)
 	})
 }
 
@@ -149,7 +149,7 @@ func TestSandboxInstallFromScratch(t *testing.T) {
 			return nil
 		}
 		config.checkSandboxStatus = func() error {
-			return SandboxNotInstalledErr
+			return ErrSandboxNotInstalled
 		}
 
 		err := RunSandboxInstall(config)
@@ -168,7 +168,7 @@ func TestSandboxInstallWhenInstalledNotCurrent(t *testing.T) {
 			return nil
 		}
 		config.checkSandboxStatus = func() error {
-			return SandboxNeedsUpgradeErr
+			return ErrSandboxNeedsUpgrade
 		}
 
 		err := RunSandboxInstall(config)
@@ -206,7 +206,7 @@ func TestSandboxUpgradeWhenNotInstalled(t *testing.T) {
 			return nil
 		}
 		config.checkSandboxStatus = func() error {
-			return SandboxNotInstalledErr
+			return ErrSandboxNotInstalled
 		}
 
 		err := RunSandboxUpgrade(config)
@@ -244,7 +244,7 @@ func TestSandboxUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
 			return nil
 		}
 		config.checkSandboxStatus = func() error {
-			return SandboxNeedsUpgradeErr
+			return ErrSandboxNeedsUpgrade
 		}
 
 		err := RunSandboxUpgrade(config)

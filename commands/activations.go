@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Activations generates the sandbox 'activations' subtree for addition to the doctl command
 func Activations() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -79,6 +80,8 @@ of one or more activation records.`,
 
 	return cmd
 }
+
+// RunActivationsGet supports the 'activations get' command
 func RunActivationsGet(c *CmdConfig) error {
 	argCount := len(c.Args)
 	if argCount > 1 {
@@ -91,6 +94,7 @@ func RunActivationsGet(c *CmdConfig) error {
 	return c.PrintSandboxTextOutput(output)
 }
 
+// RunActivationsList supports the 'activations list' command
 func RunActivationsList(c *CmdConfig) error {
 	argCount := len(c.Args)
 	if argCount > 1 {
@@ -103,6 +107,7 @@ func RunActivationsList(c *CmdConfig) error {
 	return c.PrintSandboxTextOutput(output)
 }
 
+// RunActivationsLogs supports the 'activations logs' command
 func RunActivationsLogs(c *CmdConfig) error {
 	argCount := len(c.Args)
 	if argCount > 1 {
@@ -118,6 +123,7 @@ func RunActivationsLogs(c *CmdConfig) error {
 	return c.PrintSandboxTextOutput(output)
 }
 
+// RunActivationsResult supports the 'activations result' command
 func RunActivationsResult(c *CmdConfig) error {
 	argCount := len(c.Args)
 	if argCount > 1 {

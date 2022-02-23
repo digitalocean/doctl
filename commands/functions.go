@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Functions generates the sandbox 'functions' subtree for addition to the doctl command
 func Functions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -64,6 +65,7 @@ to the cloud.`,
 	return cmd
 }
 
+// RunFunctionsGet supports the 'sandbox functions get' command
 func RunFunctionsGet(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
@@ -76,6 +78,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	return c.PrintSandboxTextOutput(output)
 }
 
+// RunFunctionsInvoke supports the 'sandbox functions invoke' command
 func RunFunctionsInvoke(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
@@ -89,6 +92,7 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 	return c.PrintSandboxTextOutput(output)
 }
 
+// RunFunctionsList supports the 'sandbox functions list' command
 func RunFunctionsList(c *CmdConfig) error {
 	argCount := len(c.Args)
 	if argCount > 1 {
