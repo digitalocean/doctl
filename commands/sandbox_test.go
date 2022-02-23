@@ -34,7 +34,7 @@ func TestSandboxConnectNamespace(t *testing.T) {
 		}
 
 		config.Args = append(config.Args, "hello")
-		tm.sandbox.EXPECT().ResolveNamespace(context.TODO(), "hello").Return(do.SandboxCredentials{Auth: "xyzzy", ApiHost: "https://api.example.com"}, nil)
+		tm.sandbox.EXPECT().ResolveNamespace(context.TODO(), "hello").Return(do.SandboxCredentials{Auth: "xyzzy", APIHost: "https://api.example.com"}, nil)
 		tm.sandbox.EXPECT().Cmd("auth/login", []string{"--auth", "xyzzy", "--apihost", "https://api.example.com"}).Return(fakeCmd, nil)
 		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 			Entity: map[string]interface{}{
@@ -59,7 +59,7 @@ func TestSandboxConnectToken(t *testing.T) {
 
 		fakeJWT := "a-very-fake-JWT.a-very-fake-JWT.a-very-fake-JWT" // very unimaginative also, but this is enough to trigger JWT recognition
 		config.Args = append(config.Args, fakeJWT)
-		tm.sandbox.EXPECT().ResolveToken(context.TODO(), fakeJWT).Return(do.SandboxCredentials{Auth: "xyzzy", ApiHost: "https://api.example.com"}, nil)
+		tm.sandbox.EXPECT().ResolveToken(context.TODO(), fakeJWT).Return(do.SandboxCredentials{Auth: "xyzzy", APIHost: "https://api.example.com"}, nil)
 		tm.sandbox.EXPECT().Cmd("auth/login", []string{"--auth", "xyzzy", "--apihost", "https://api.example.com"}).Return(fakeCmd, nil)
 		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 			Entity: map[string]interface{}{
