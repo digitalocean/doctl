@@ -139,10 +139,12 @@ func RunSandboxUninstall(c *CmdConfig) error {
 
 // The connect command
 func RunSandboxConnect(c *CmdConfig) error {
-	var arg string
-	var token bool
-	var creds do.SandboxCredentials
-	var err error
+	var (
+		arg   string
+		token bool
+		creds do.SandboxCredentials
+		err   error
+	)
 	if len(c.Args) > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
