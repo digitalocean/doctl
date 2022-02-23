@@ -16,7 +16,7 @@ import (
 // The values in it can be used to connect sandbox support to a specific namespace using the plugin.
 type SandboxCredentials struct {
 	Auth    string
-	ApiHost string
+	APIHost string
 }
 
 // The type of the "namespace" member of POST input for API calls.
@@ -29,22 +29,22 @@ type inputNamespace struct {
 // The type of the "namespace" member of the response to API calls.  Only some
 // fields are relevant to each call.
 type outputNamespace struct {
-	ApiHost   string `json:"api_host"`
-	Uuid      string `json:"uuid"`
+	APIHost   string `json:"api_host"`
+	UUID      string `json:"uuid"`
 	Key       string `json:"key"`
 	Token     string `json:"token"`
 	Label     string `json:"label"`
 	Namespace string `json:"namespace"`
 }
 
-// postBody is the type of the request body for v2/function/namespaces/... calls that use
+// namespacesPostBody is the type of the request body for v2/function/namespaces/... calls that use
 // the POST verb.  Only the relevant parts of the contained inputNamespace need be specified
-type postBody struct {
+type namespacesPostBody struct {
 	Namespace inputNamespace `json:"namespace"`
 }
 
-// responseBody is the type of the response body from API calls other than "list namespaces".
-type responseBody struct {
+// namespacesResponseBody is the type of the response body from API calls other than "list namespaces".
+type namespacesResponseBody struct {
 	Namespace outputNamespace `json:"namespace"`
 }
 
@@ -136,19 +136,19 @@ func (n *sandboxService) Stream(cmd *exec.Cmd) error {
 // name to the actual tokens.
 func (n *sandboxService) ResolveToken(ctx context.Context, token string) (SandboxCredentials, error) {
 	path := "v2/function/namespaces/namespace"
-	body := postBody{Namespace: inputNamespace{Token: token}}
+	body := namespacesPostBody{Namespace: inputNamespace{Token: token}}
 	req, err := n.client.NewRequest(ctx, http.MethodPost, path, body)
 	if err != nil {
 		return SandboxCredentials{}, err
 	}
-	tokenDecoded := new(responseBody)
+	tokenDecoded := new(namespacesResponseBody)
 	_, err = n.client.Do(ctx, req, tokenDecoded)
 	if err != nil {
 		return SandboxCredentials{}, err
 	}
 	ans := SandboxCredentials{
-		ApiHost: tokenDecoded.Namespace.ApiHost,
-		Auth:    tokenDecoded.Namespace.Uuid + ":" + tokenDecoded.Namespace.Key,
+		APIHost: tokenDecoded.Namespace.APIHost,
+		Auth:    tokenDecoded.Namespace.UUID + ":" + tokenDecoded.Namespace.Key,
 	}
 	return ans, nil
 }
@@ -164,12 +164,12 @@ func (n *sandboxService) ResolveToken(ctx context.Context, token string) (Sandbo
 func (n *sandboxService) ResolveNamespace(ctx context.Context, namespace string) (SandboxCredentials, error) {
 	var err error
 	if namespace == "" {
-		namespace, err = findSandboxNamespace(n.client, ctx)
+		namespace, err = findSandboxNamespace(ctx, n.client)
 		if err != nil {
 			return SandboxCredentials{}, err
 		}
 	}
-	token, err := getTokenForNamespace(n.client, ctx, namespace)
+	token, err := getTokenForNamespace(ctx, n.client, namespace)
 	if err != nil {
 		return SandboxCredentials{}, err
 	}
@@ -179,14 +179,14 @@ func (n *sandboxService) ResolveNamespace(ctx context.Context, namespace string)
 // getTokenForNamespace is a subroutine of ResolveNamespace wrapping the call to
 // obtain a JWT.  This step should eventually be eliminated in favor of an API
 // that goes directly from namespace to credentials.
-func getTokenForNamespace(client *godo.Client, ctx context.Context, namespace string) (string, error) {
+func getTokenForNamespace(ctx context.Context, client *godo.Client, namespace string) (string, error) {
 	path := "v2/function/namespaces/login_token"
-	body := postBody{Namespace: inputNamespace{Namespace: namespace}}
+	body := namespacesPostBody{Namespace: inputNamespace{Namespace: namespace}}
 	req, err := client.NewRequest(ctx, http.MethodPost, path, body)
 	if err != nil {
 		return "", err
 	}
-	tokenResponse := new(responseBody)
+	tokenResponse := new(namespacesResponseBody)
 	_, err = client.Do(ctx, req, tokenResponse)
 	if err != nil {
 		return "", err
@@ -196,7 +196,7 @@ func getTokenForNamespace(client *godo.Client, ctx context.Context, namespace st
 
 // findSandboxNamespace is a subroutine of ResolveNamespace implementing the search for
 // a sandbox namespace.
-func findSandboxNamespace(client *godo.Client, ctx context.Context) (string, error) {
+func findSandboxNamespace(ctx context.Context, client *godo.Client) (string, error) {
 	path := "v2/function/namespaces"
 	req, err := client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {

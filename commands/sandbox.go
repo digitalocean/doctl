@@ -160,7 +160,7 @@ func RunSandboxConnect(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	result, err := SandboxExec(c, "auth/login", "--auth", creds.Auth, "--apihost", creds.ApiHost)
+	result, err := SandboxExec(c, "auth/login", "--auth", creds.Auth, "--apihost", creds.APIHost)
 	if err != nil {
 		return err
 	}
