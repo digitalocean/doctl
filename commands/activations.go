@@ -113,14 +113,26 @@ func RunActivationsLogs(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	// TODO this will not be correct when tail, watch, or poll is specified.  To make it work correctly in a separate window we need to change
-	// how that decision is made inside the sandbox plugin.  Right now, it is made by command but to support correct behavior here it would need
-	// to be made by flag.  In general, we should be actively directing the plugin from here rather than letting it make an independent decision.
+	if isWatching(c) {
+		return RunSandboxExecStreaming("activation/logs", c, []string{"last", "strip", "tail", "watch", "poll"}, []string{"function", "package", "limit"})
+	}
 	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "tail", "watch", "poll"}, []string{"function", "package", "limit"})
 	if err != nil {
 		return err
 	}
 	return c.PrintSandboxTextOutput(output)
+}
+
+// isWatching decides whether the flags of an 'activation logs' command are implementing the watching
+// feature.  The possible flags are --tail, --watch, and --poll (they are equivalent).
+func isWatching(c *CmdConfig) bool {
+	for _, flag := range []string{"tail", "watch", "poll"} {
+		yes, err := c.Doit.GetBool(c.NS, flag)
+		if yes && err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // RunActivationsResult supports the 'activations result' command
