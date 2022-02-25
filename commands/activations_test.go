@@ -190,6 +190,7 @@ func TestActivationsLogs(t *testing.T) {
 		doctlArgs       string
 		doctlFlags      map[string]string
 		expectedNimArgs []string
+		expectStream    bool
 	}{
 		{
 			name:            "no flags or args",
@@ -210,36 +211,26 @@ func TestActivationsLogs(t *testing.T) {
 			doctlFlags:      map[string]string{"limit": "10"},
 			expectedNimArgs: []string{"--limit", "10"},
 		},
-		// TODO: This flag is currently ignored. Is that what we want?
-		// {
-		// 	name:            "function flag",
-		// 	doctlFlags:      map[string]string{"function": "sample"},
-		// 	expectedNimArgs: []string{"--action", "sample"},
-		// },
+		{
+			name:            "function flag",
+			doctlFlags:      map[string]string{"function": "sample"},
+			expectedNimArgs: []string{"--action", "sample"},
+		},
 		{
 			name:            "package flag",
 			doctlFlags:      map[string]string{"package": "sample"},
 			expectedNimArgs: []string{"--deployed", "--package", "sample"},
 		},
 		{
-			name:            "poll flag",
-			doctlFlags:      map[string]string{"poll": ""},
-			expectedNimArgs: []string{"--poll"},
+			name:            "follow flag",
+			doctlFlags:      map[string]string{"follow": ""},
+			expectedNimArgs: []string{"--follow"},
+			expectStream:    true,
 		},
 		{
 			name:            "strip flag",
 			doctlFlags:      map[string]string{"strip": ""},
 			expectedNimArgs: []string{"--strip"},
-		},
-		{
-			name:            "tail flag",
-			doctlFlags:      map[string]string{"tail": ""},
-			expectedNimArgs: []string{"--tail"},
-		},
-		{
-			name:            "watch flag",
-			doctlFlags:      map[string]string{"watch": ""},
-			expectedNimArgs: []string{"--watch"},
 		},
 	}
 
@@ -264,8 +255,14 @@ func TestActivationsLogs(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().Cmd("activation/logs", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				if tt.expectStream {
+					expectedArgs := append([]string{"activation/logs"}, tt.expectedNimArgs...)
+					tm.sandbox.EXPECT().Cmd("nocapture", expectedArgs).Return(fakeCmd, nil)
+					tm.sandbox.EXPECT().Stream(fakeCmd).Return(nil)
+				} else {
+					tm.sandbox.EXPECT().Cmd("activation/logs", tt.expectedNimArgs).Return(fakeCmd, nil)
+					tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				}
 
 				err := RunActivationsLogs(config)
 				require.NoError(t, err)

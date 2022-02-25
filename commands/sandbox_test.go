@@ -377,7 +377,7 @@ func TestSandboxWatch(t *testing.T) {
 		{
 			name:            "no flags with path",
 			doctlArgs:       "path/to/project",
-			expectedNimArgs: []string{"path/to/project", "--exclude", "web"},
+			expectedNimArgs: []string{"project/watch", "path/to/project", "--exclude", "web"},
 		},
 		// TODO: Add additional scenarios for other flags, etc.
 	}
@@ -403,7 +403,7 @@ func TestSandboxWatch(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().Cmd("project/watch", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.sandbox.EXPECT().Cmd("nocapture", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Stream(fakeCmd).Return(nil)
 
 				err := RunSandboxExtraWatch(config)

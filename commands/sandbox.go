@@ -33,7 +33,11 @@ import (
 )
 
 const nodeVersion = "v14.16.0"
-const minSandboxVersion = "2.3.1-1.0.0"
+const minSandboxVersion = "2.3.6-1.1.0"
+
+// noCapture is the string constant recognized by the plugin.  It suppresses output
+// capture when in the initial (command) position.
+const noCapture = "nocapture"
 
 // ErrSandboxNotInstalled is the error returned to users when the sandbox is not installed.
 var ErrSandboxNotInstalled = errors.New("The sandbox is not installed (use `doctl sandbox install`)")
@@ -250,7 +254,9 @@ func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string
 	sandbox := c.Sandbox()
 
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
-	cmd, err := sandbox.Cmd(command, args)
+	args = append([]string{command}, args...)
+
+	cmd, err := sandbox.Cmd(noCapture, args)
 	if err != nil {
 		return err
 	}
@@ -505,8 +511,7 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 		value, err := c.Doit.GetString(c.NS, flag)
 		if err == nil && len(value) > 0 {
 			if flag == "function" {
-				flag = "action"
-				// TODO: Should this be added to the args?
+				args = append(args, "--action", value)
 			} else if flag == "exclude" {
 				// --exclude non-empty, add web
 				args = append(args, "--exclude", value+",web")

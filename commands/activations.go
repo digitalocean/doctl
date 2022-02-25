@@ -64,9 +64,7 @@ for new arrivals.`,
 	AddBoolFlag(logs, "last", "l", false, "Fetch the most recent activation logs (default)")
 	AddIntFlag(logs, "limit", "n", 1, "Fetch the last LIMIT activation logs (up to 200)")
 	AddBoolFlag(logs, "strip", "r", false, "strip timestamp information and output first line only")
-	AddBoolFlag(logs, "tail", "", false, "Fetch logs continuously")
-	AddBoolFlag(logs, "watch", "w", false, "Fetch logs continuously")
-	AddBoolFlag(logs, "poll", "", false, "Fetch logs continuously")
+	AddBoolFlag(logs, "follow", "", false, "Fetch logs continuously")
 
 	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
 		`Use `+"`"+`doctl sandbox activations result`+"`"+` to retrieve just the results portion
@@ -113,14 +111,21 @@ func RunActivationsLogs(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	// TODO this will not be correct when tail, watch, or poll is specified.  To make it work correctly in a separate window we need to change
-	// how that decision is made inside the sandbox plugin.  Right now, it is made by command but to support correct behavior here it would need
-	// to be made by flag.  In general, we should be actively directing the plugin from here rather than letting it make an independent decision.
-	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "tail", "watch", "poll"}, []string{"function", "package", "limit"})
+	if isWatching(c) {
+		return RunSandboxExecStreaming("activation/logs", c, []string{"last", "strip", "follow"}, []string{"function", "package", "limit"})
+	}
+	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "follow"}, []string{"function", "package", "limit"})
 	if err != nil {
 		return err
 	}
 	return c.PrintSandboxTextOutput(output)
+}
+
+// isWatching decides whether the flags of an 'activation logs' command are implementing the watching
+// feature.  Currently, this is indicated by the --follow flag.
+func isWatching(c *CmdConfig) bool {
+	yes, err := c.Doit.GetBool(c.NS, "follow")
+	return yes && err == nil
 }
 
 // RunActivationsResult supports the 'activations result' command
