@@ -222,27 +222,15 @@ func TestActivationsLogs(t *testing.T) {
 			expectedNimArgs: []string{"--deployed", "--package", "sample"},
 		},
 		{
-			name:            "poll flag",
-			doctlFlags:      map[string]string{"poll": ""},
-			expectedNimArgs: []string{"--poll"},
+			name:            "follow flag",
+			doctlFlags:      map[string]string{"follow": ""},
+			expectedNimArgs: []string{"--follow"},
 			expectStream:    true,
 		},
 		{
 			name:            "strip flag",
 			doctlFlags:      map[string]string{"strip": ""},
 			expectedNimArgs: []string{"--strip"},
-		},
-		{
-			name:            "tail flag",
-			doctlFlags:      map[string]string{"tail": ""},
-			expectedNimArgs: []string{"--tail"},
-			expectStream:    true,
-		},
-		{
-			name:            "watch flag",
-			doctlFlags:      map[string]string{"watch": ""},
-			expectedNimArgs: []string{"--watch"},
-			expectStream:    true,
 		},
 	}
 

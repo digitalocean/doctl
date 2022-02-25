@@ -64,9 +64,7 @@ for new arrivals.`,
 	AddBoolFlag(logs, "last", "l", false, "Fetch the most recent activation logs (default)")
 	AddIntFlag(logs, "limit", "n", 1, "Fetch the last LIMIT activation logs (up to 200)")
 	AddBoolFlag(logs, "strip", "r", false, "strip timestamp information and output first line only")
-	AddBoolFlag(logs, "tail", "", false, "Fetch logs continuously")
-	AddBoolFlag(logs, "watch", "w", false, "Fetch logs continuously")
-	AddBoolFlag(logs, "poll", "", false, "Fetch logs continuously")
+	AddBoolFlag(logs, "follow", "", false, "Fetch logs continuously")
 
 	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
 		`Use `+"`"+`doctl sandbox activations result`+"`"+` to retrieve just the results portion
@@ -114,9 +112,9 @@ func RunActivationsLogs(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	if isWatching(c) {
-		return RunSandboxExecStreaming("activation/logs", c, []string{"last", "strip", "tail", "watch", "poll"}, []string{"function", "package", "limit"})
+		return RunSandboxExecStreaming("activation/logs", c, []string{"last", "strip", "follow"}, []string{"function", "package", "limit"})
 	}
-	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "tail", "watch", "poll"}, []string{"function", "package", "limit"})
+	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "follow"}, []string{"function", "package", "limit"})
 	if err != nil {
 		return err
 	}
@@ -124,15 +122,10 @@ func RunActivationsLogs(c *CmdConfig) error {
 }
 
 // isWatching decides whether the flags of an 'activation logs' command are implementing the watching
-// feature.  The possible flags are --tail, --watch, and --poll (they are equivalent).
+// feature.  Currently, this is indicated by the --follow flag.
 func isWatching(c *CmdConfig) bool {
-	for _, flag := range []string{"tail", "watch", "poll"} {
-		yes, err := c.Doit.GetBool(c.NS, flag)
-		if yes && err == nil {
-			return true
-		}
-	}
-	return false
+	yes, err := c.Doit.GetBool(c.NS, "follow")
+	return yes && err == nil
 }
 
 // RunActivationsResult supports the 'activations result' command
