@@ -89,7 +89,8 @@ to be deprecated and removed`,
 		`This command reports the status of your sandbox and some details
 concerning its connected cloud portion`, Writer)
 
-	undeploy := CmdBuilder(cmd, RunSandboxUndeploy, "undeploy", "Removes resources from the cloud portion of your sandbox",
+	undeploy := CmdBuilder(cmd, RunSandboxUndeploy, "undeploy [<package|function>...]",
+		"Removes resources from the cloud portion of your sandbox",
 		`This command removes functions, entire packages, or all functions and packages, from the cloud portion
 of your sandbox.  In general, deploying new content does not remove old content although it may overwrite it.
 Use `+"`"+`doctl sandbox undeploy`+"`"+` to effect removal.  The command accepts a list of functions or packages.
