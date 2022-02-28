@@ -49,9 +49,6 @@ var ErrSandboxNeedsUpgrade = errors.New("The sandbox support needs to be upgrade
 var ErrSandboxNotConnected = errors.New("A sandbox is installed but not connected to a function namespace (use `doctl sandbox connect`)")
 
 // Sandbox contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
-// The literal command 'doctl sandbox' is used only to install the sandbox and drive the
-// 'nim auth' subtree as needed for the integration.  All other 'nim' subtrees are shimmed
-// with independent 'doctl' commands as needed.
 func Sandbox() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -65,7 +62,6 @@ connect to the cloud component of the sandbox provided with your account).  Othe
 		},
 	}
 
-	// TODO: combine "install" and "connect into a single "enable" command, then "uninstall" should become "disable".
 	CmdBuilder(cmd, RunSandboxInstall, "install", "Installs the sandbox support",
 		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other sandbox commands work.
 The install operation is long-running, and a network connection is required.`,
@@ -92,6 +88,16 @@ to be deprecated and removed`,
 	CmdBuilder(cmd, RunSandboxStatus, "status", "Provide information about your sandbox",
 		`This command reports the status of your sandbox and some details
 concerning its connected cloud portion`, Writer)
+
+	undeploy := CmdBuilder(cmd, RunSandboxUndeploy, "undeploy", "Removes resources from the cloud portion of your sandbox",
+		`This command removes functions, entire packages, or all functions and packages, from the cloud portion
+of your sandbox.  In general, deploying new content does not remove old content although it may overwrite it.
+Use `+"`"+`doctl sandbox undeploy`+"`"+` to effect removal.  The command accepts a list of functions or packages.
+Functions should be listed in `+"`"+`pkgName/fnName`+"`"+` form, or `+"`"+`fnName`+"`"+` for a function not in any package.
+The `+"`"+`--packages`+"`"+` flag causes arguments without slash separators to be intepreted as packages, in which case
+the entire packages are removed.`, Writer)
+	AddBoolFlag(undeploy, "packages", "p", false, "interpret simple name arguments as packages")
+	AddBoolFlag(undeploy, "all", "", false, "remove all packages and functions")
 
 	cmd.AddCommand(Activations())
 	cmd.AddCommand(Functions())
@@ -202,6 +208,81 @@ func RunSandboxStatus(c *CmdConfig) error {
 	}
 	mapResult := result.Entity.(map[string]interface{})
 	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n\n", mapResult["name"], mapResult["apihost"])
+	return nil
+}
+
+// RunSandboxUndeploy implements the 'doctl sandbox undeploy' command
+func RunSandboxUndeploy(c *CmdConfig) error {
+	haveArgs := len(c.Args) > 0
+	pkgFlag, _ := c.Doit.GetBool(c.NS, "packages")
+	all, _ := c.Doit.GetBool(c.NS, "all")
+	if haveArgs && all {
+		return fmt.Errorf("command line arguments and the `--all` flag are mutually exclusive")
+	}
+	if !haveArgs && !all {
+		return fmt.Errorf("either command line arguments or `--all` must be specified")
+	}
+	if all {
+		return cleanNamespace(c)
+	}
+	var lastError error
+	errorCount := 0
+	for _, arg := range c.Args {
+		var err error
+		if strings.Contains(arg, "/") || !pkgFlag {
+			err = deleteFunction(c, arg)
+		} else {
+			err = deletePackage(c, arg)
+		}
+		if err != nil {
+			lastError = err
+			errorCount++
+		}
+	}
+	if errorCount > 0 {
+		return fmt.Errorf("there were %d errors detected, e.g.: %w", errorCount, lastError)
+	}
+	if all {
+		fmt.Fprintln(c.Out, "All sandbox content has been undeployed")
+	} else {
+		fmt.Fprintln(c.Out, "The requested resources have been undeployed")
+	}
+	return nil
+}
+
+// cleanNamespace is a subroutine of RunSandboxDeploy for clearing the entire namespace
+func cleanNamespace(c *CmdConfig) error {
+	result, err := SandboxExec(c, "namespace/clean", "--force")
+	if err != nil {
+		return err
+	}
+	if result.Error != "" {
+		return fmt.Errorf(result.Error)
+	}
+	return nil
+}
+
+// deleteFunction is a subroutine of RunSandboxDeploy for deleting one function
+func deleteFunction(c *CmdConfig, fn string) error {
+	result, err := SandboxExec(c, "action/delete", fn)
+	if err != nil {
+		return err
+	}
+	if result.Error != "" {
+		return fmt.Errorf(result.Error)
+	}
+	return nil
+}
+
+// deletePackage is a subroutine of RunSandboxDeploy for deleting a package
+func deletePackage(c *CmdConfig, pkg string) error {
+	result, err := SandboxExec(c, "package/delete", pkg, "--recursive")
+	if err != nil {
+		return err
+	}
+	if result.Error != "" {
+		return fmt.Errorf(result.Error)
+	}
 	return nil
 }
 
