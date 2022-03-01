@@ -368,52 +368,74 @@ func TestSandboxDeploy(t *testing.T) {
 }
 
 func TestSandboxUndeploy(t *testing.T) {
+	type testNimCmd struct {
+		cmd  string
+		args []string
+	}
+
 	tests := []struct {
 		name            string
 		doctlArgs       []string
 		doctlFlags      map[string]string
-		expectedCmds    []string
-		expectedNimArgs [][]string
+		expectedNimCmds []testNimCmd
 		expectedError   error
 	}{
 		{
 			name:            "no arguments or flags",
 			doctlArgs:       nil,
 			doctlFlags:      nil,
-			expectedCmds:    nil,
-			expectedNimArgs: nil,
+			expectedNimCmds: nil,
 			expectedError:   errUndeployTooFewArgs,
 		},
 		{
-			name:            "with --all flag only",
-			doctlArgs:       nil,
-			doctlFlags:      map[string]string{"all": ""},
-			expectedCmds:    []string{"namespace/clean"},
-			expectedNimArgs: [][]string{{"--force"}},
-			expectedError:   nil,
+			name:       "with --all flag only",
+			doctlArgs:  nil,
+			doctlFlags: map[string]string{"all": ""},
+			expectedNimCmds: []testNimCmd{
+				{
+					cmd:  "namespace/clean",
+					args: []string{"--force"},
+				},
+			},
+			expectedError: nil,
 		},
 		{
-			name:            "mixed args, no flags",
-			doctlArgs:       []string{"foo/bar", "baz"},
-			doctlFlags:      nil,
-			expectedCmds:    []string{"action/delete", "action/delete"},
-			expectedNimArgs: [][]string{{"foo/bar"}, {"baz"}},
-			expectedError:   nil,
+			name:       "mixed args, no flags",
+			doctlArgs:  []string{"foo/bar", "baz"},
+			doctlFlags: nil,
+			expectedNimCmds: []testNimCmd{
+				{
+					cmd:  "action/delete",
+					args: []string{"foo/bar"},
+				},
+				{
+					cmd:  "action/delete",
+					args: []string{"baz"},
+				},
+			},
+			expectedError: nil,
 		},
 		{
-			name:            "mixed args, --packages flag",
-			doctlArgs:       []string{"foo/bar", "baz"},
-			doctlFlags:      map[string]string{"packages": ""},
-			expectedCmds:    []string{"action/delete", "package/delete"},
-			expectedNimArgs: [][]string{{"foo/bar"}, {"baz", "--recursive"}},
-			expectedError:   nil,
+			name:       "mixed args, --packages flag",
+			doctlArgs:  []string{"foo/bar", "baz"},
+			doctlFlags: map[string]string{"packages": ""},
+			expectedNimCmds: []testNimCmd{
+				{
+					cmd:  "action/delete",
+					args: []string{"foo/bar"},
+				},
+				{
+					cmd:  "package/delete",
+					args: []string{"baz", "--recursive"},
+				},
+			},
+			expectedError: nil,
 		},
 		{
 			name:            "mixed args, --all flag",
 			doctlArgs:       []string{"foo/bar", "baz"},
 			doctlFlags:      map[string]string{"all": ""},
-			expectedCmds:    nil,
-			expectedNimArgs: nil,
+			expectedNimCmds: nil,
 			expectedError:   errUndeployAllAndArgs,
 		},
 	}
@@ -439,8 +461,8 @@ func TestSandboxUndeploy(t *testing.T) {
 					}
 				}
 
-				for i, cmd := range tt.expectedCmds {
-					tm.sandbox.EXPECT().Cmd(cmd, tt.expectedNimArgs[i]).Return(fakeCmd, nil)
+				for i := range tt.expectedNimCmds {
+					tm.sandbox.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
 					tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
 				}
 				err := RunSandboxUndeploy(config)
