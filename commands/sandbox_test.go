@@ -367,6 +367,94 @@ func TestSandboxDeploy(t *testing.T) {
 	}
 }
 
+func TestSandboxUndeploy(t *testing.T) {
+	tests := []struct {
+		name            string
+		doctlArgs       []string
+		doctlFlags      map[string]string
+		expectedCmds    []string
+		expectedNimArgs [][]string
+		expectedError   error
+	}{
+		{
+			name:            "no arguments or flags",
+			doctlArgs:       nil,
+			doctlFlags:      nil,
+			expectedCmds:    nil,
+			expectedNimArgs: nil,
+			expectedError:   errUndeployTooFewArgs,
+		},
+		{
+			name:            "with --all flag only",
+			doctlArgs:       nil,
+			doctlFlags:      map[string]string{"all": ""},
+			expectedCmds:    []string{"namespace/clean"},
+			expectedNimArgs: [][]string{{"--force"}},
+			expectedError:   nil,
+		},
+		{
+			name:            "mixed args, no flags",
+			doctlArgs:       []string{"foo/bar", "baz"},
+			doctlFlags:      nil,
+			expectedCmds:    []string{"action/delete", "action/delete"},
+			expectedNimArgs: [][]string{{"foo/bar"}, {"baz"}},
+			expectedError:   nil,
+		},
+		{
+			name:            "mixed args, --packages flag",
+			doctlArgs:       []string{"foo/bar", "baz"},
+			doctlFlags:      map[string]string{"packages": ""},
+			expectedCmds:    []string{"action/delete", "package/delete"},
+			expectedNimArgs: [][]string{{"foo/bar"}, {"baz", "--recursive"}},
+			expectedError:   nil,
+		},
+		{
+			name:            "mixed args, --all flag",
+			doctlArgs:       []string{"foo/bar", "baz"},
+			doctlFlags:      map[string]string{"all": ""},
+			expectedCmds:    nil,
+			expectedNimArgs: nil,
+			expectedError:   errUndeployAllAndArgs,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				fakeCmd := &exec.Cmd{
+					Stdout: config.Out,
+				}
+
+				if len(tt.doctlArgs) > 0 {
+					config.Args = append(config.Args, tt.doctlArgs...)
+				}
+
+				if tt.doctlFlags != nil {
+					for k, v := range tt.doctlFlags {
+						if v == "" {
+							config.Doit.Set(config.NS, k, true)
+						} else {
+							config.Doit.Set(config.NS, k, v)
+						}
+					}
+				}
+
+				for i, cmd := range tt.expectedCmds {
+					tm.sandbox.EXPECT().Cmd(cmd, tt.expectedNimArgs[i]).Return(fakeCmd, nil)
+					tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				}
+				err := RunSandboxUndeploy(config)
+				if tt.expectedError != nil {
+					require.Error(t, err)
+					assert.ErrorIs(t, err, tt.expectedError)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		})
+	}
+}
+
 func TestSandboxWatch(t *testing.T) {
 	tests := []struct {
 		name            string
