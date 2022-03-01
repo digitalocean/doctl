@@ -32,8 +32,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const nodeVersion = "v14.16.0"
-const minSandboxVersion = "2.3.6-1.1.0"
+const nodeVersion = "v16.13.0"
+const minSandboxVersion = "2.3.7-1.1.0"
 
 // noCapture is the string constant recognized by the plugin.  It suppresses output
 // capture when in the initial (command) position.
