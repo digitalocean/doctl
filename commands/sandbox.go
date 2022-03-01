@@ -48,6 +48,12 @@ var ErrSandboxNeedsUpgrade = errors.New("The sandbox support needs to be upgrade
 // ErrSandboxNotConnected is the error returned to users when the sandbox is not connected to a namespace
 var ErrSandboxNotConnected = errors.New("A sandbox is installed but not connected to a function namespace (use `doctl sandbox connect`)")
 
+// ErrUndeployAllAndArgs is the error returned when the --all flag is used along with args on undeploy
+var errUndeployAllAndArgs = errors.New("command line arguments and the `--all` flag are mutually exclusive")
+
+// ErrUndeployTooFewArgs is the error returned when neither --all nor args are specified on undeploy
+var errUndeployTooFewArgs = errors.New("either command line arguments or `--all` must be specified")
+
 // Sandbox contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
 func Sandbox() *Command {
 	cmd := &Command{
@@ -218,10 +224,10 @@ func RunSandboxUndeploy(c *CmdConfig) error {
 	pkgFlag, _ := c.Doit.GetBool(c.NS, "packages")
 	all, _ := c.Doit.GetBool(c.NS, "all")
 	if haveArgs && all {
-		return fmt.Errorf("command line arguments and the `--all` flag are mutually exclusive")
+		return errUndeployAllAndArgs
 	}
 	if !haveArgs && !all {
-		return fmt.Errorf("either command line arguments or `--all` must be specified")
+		return errUndeployTooFewArgs
 	}
 	if all {
 		return cleanNamespace(c)
