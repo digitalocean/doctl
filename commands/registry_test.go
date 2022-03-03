@@ -34,6 +34,7 @@ import (
 
 var (
 	testRegistryName     = "container-registry"
+	testRegistryRegion   = "r1"
 	testSubscriptionTier = "basic"
 	invalidRegistryName  = "invalid-container-registry"
 	testRegistry         = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
@@ -159,17 +160,36 @@ func TestGarbageCollectionCommand(t *testing.T) {
 }
 
 func TestRegistryCreate(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		rcr := godo.RegistryCreateRequest{
-			Name:                 testRegistryName,
-			SubscriptionTierSlug: testSubscriptionTier,
-		}
-		tm.registry.EXPECT().Create(&rcr).Return(&testRegistry, nil)
-		config.Args = append(config.Args, testRegistryName)
-		config.Doit.Set(config.NS, doctl.ArgSubscriptionTier, "basic")
+	t.Run("success", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			rcr := godo.RegistryCreateRequest{
+				Name:                 testRegistryName,
+				SubscriptionTierSlug: testSubscriptionTier,
+				Region:               testRegistryRegion,
+			}
+			tm.registry.EXPECT().Create(&rcr).Return(&testRegistry, nil)
+			config.Args = append(config.Args, testRegistryName)
+			config.Doit.Set(config.NS, doctl.ArgSubscriptionTier, testSubscriptionTier)
+			config.Doit.Set(config.NS, doctl.ArgRegionSlug, testRegistryRegion)
 
-		err := RunRegistryCreate(config)
-		assert.NoError(t, err)
+			err := RunRegistryCreate(config)
+			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("region omitted", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			rcr := godo.RegistryCreateRequest{
+				Name:                 testRegistryName,
+				SubscriptionTierSlug: testSubscriptionTier,
+			}
+			tm.registry.EXPECT().Create(&rcr).Return(&testRegistry, nil)
+			config.Args = append(config.Args, testRegistryName)
+			config.Doit.Set(config.NS, doctl.ArgSubscriptionTier, testSubscriptionTier)
+
+			err := RunRegistryCreate(config)
+			assert.NoError(t, err)
+		})
 	})
 }
 

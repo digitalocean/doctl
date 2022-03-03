@@ -324,12 +324,17 @@ func RunRegistryCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
 
 	rs := c.Registry()
 
 	rcr := &godo.RegistryCreateRequest{
 		Name:                 name,
 		SubscriptionTierSlug: subscriptionTier,
+		Region:               region,
 	}
 	r, err := rs.Create(rcr)
 	if err != nil {
