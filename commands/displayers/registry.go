@@ -359,3 +359,35 @@ func (t *RegistrySubscriptionTiers) KV() []map[string]interface{} {
 
 	return out
 }
+
+type RegistryAvailableRegions struct {
+	Regions []string
+}
+
+func (t *RegistryAvailableRegions) JSON(out io.Writer) error {
+	return writeJSON(t, out)
+}
+
+func (t *RegistryAvailableRegions) Cols() []string {
+	return []string{
+		"Slug",
+	}
+}
+
+func (t *RegistryAvailableRegions) ColMap() map[string]string {
+	return map[string]string{
+		"Slug": "Region Slug",
+	}
+}
+
+func (t *RegistryAvailableRegions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(t.Regions))
+
+	for _, region := range t.Regions {
+		out = append(out, map[string]interface{}{
+			"Slug": region,
+		})
+	}
+
+	return out
+}

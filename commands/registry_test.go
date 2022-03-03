@@ -1025,3 +1025,18 @@ func TestGarbageCollectionUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAvailableRegions(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		t.Run("success", func(t *testing.T) {
+			tm.registry.EXPECT().GetAvailableRegions().Return([]string{"fra1", "sfo2", "blr1"}, nil)
+			err := RunGetRegistryOptionsRegions(config)
+			assert.NoError(t, err)
+		})
+		t.Run("error", func(t *testing.T) {
+			tm.registry.EXPECT().GetAvailableRegions().Return(nil, errors.New("whoops"))
+			err := RunGetRegistryOptionsRegions(config)
+			assert.Error(t, err)
+		})
+	})
+}

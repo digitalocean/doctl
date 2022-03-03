@@ -304,6 +304,8 @@ func RegistryOptions() *Command {
 
 	tiersDesc := "List available container registry subscription tiers"
 	CmdBuilder(cmd, RunRegistryOptionsTiers, "subscription-tiers", tiersDesc, tiersDesc, Writer, aliasOpt("tiers"))
+	regionsDesc := "List available container registry regions"
+	CmdBuilder(cmd, RunGetRegistryOptionsRegions, "available-regions", regionsDesc, regionsDesc, Writer, aliasOpt("regions"))
 
 	return cmd
 }
@@ -903,6 +905,18 @@ func RunRegistryOptionsTiers(c *CmdConfig) error {
 
 	item := &displayers.RegistrySubscriptionTiers{
 		SubscriptionTiers: tiers,
+	}
+	return c.Display(item)
+}
+
+func RunGetRegistryOptionsRegions(c *CmdConfig) error {
+	regions, err := c.Registry().GetAvailableRegions()
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.RegistryAvailableRegions{
+		Regions: regions,
 	}
 	return c.Display(item)
 }
