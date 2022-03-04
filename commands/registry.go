@@ -67,6 +67,8 @@ func Registry() *Command {
 		"Create a private container registry", createRegDesc, Writer)
 	AddStringFlag(cmdRunRegistryCreate, doctl.ArgSubscriptionTier, "", "basic",
 		"Subscription tier for the new registry. Possible values: see `doctl registry options subscription-tiers`", requiredOpt())
+	AddStringFlag(cmdRunRegistryCreate, doctl.ArgRegionSlug, "", "",
+		"Region for the new registry. Possible values: see `doctl registry options available-regions`")
 
 	getRegDesc := "This command retrieves details about a private container registry including its name and the endpoint used to access it."
 	CmdBuilder(cmd, RunRegistryGet, "get", "Retrieve details about a container registry",
