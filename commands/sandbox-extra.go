@@ -29,9 +29,9 @@ func SandboxExtras(cmd *Command) {
 		`The `+"`"+`doctl sandbox init`+"`"+` command specifies a directory in your file system which will hold functions and
 supporting artifacts while you're developing them.  When ready, you can upload these to the cloud for
 testing.  Later, after the area is committed to a `+"`"+`git`+"`"+` repository, you can create an app from them.
-`,
+Type `+"`"+`doctl sandbox status --languages`+"`"+` for a list of supported languages.`,
 		Writer)
-	AddStringFlag(create, "language", "l", "js", "Language for the initial sample code")
+	AddStringFlag(create, "language", "l", "javascript", "Language for the initial sample code")
 	AddBoolFlag(create, "overwrite", "", false, "Clears and reuses an existing directory")
 
 	deploy := CmdBuilder(cmd, RunSandboxExtraDeploy, "deploy <directories>", "Deploy sandbox local assets to the cloud",

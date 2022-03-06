@@ -33,7 +33,7 @@ import (
 )
 
 const nodeVersion = "v16.13.0"
-const minSandboxVersion = "2.3.7-1.1.0"
+const minSandboxVersion = "2.3.8-1.1.0"
 
 // noCapture is the string constant recognized by the plugin.  It suppresses output
 // capture when in the initial (command) position.
@@ -91,9 +91,10 @@ and use a token is for compatibility with the previous behavior of the command a
 to be deprecated and removed`,
 		Writer)
 
-	CmdBuilder(cmd, RunSandboxStatus, "status", "Provide information about your sandbox",
-		`This command reports the status of your sandbox and some details
-concerning its connected cloud portion`, Writer)
+	status := CmdBuilder(cmd, RunSandboxStatus, "status", "Provide information about your sandbox",
+		`This command reports the status of your sandbox and some details concerning its connected cloud portion.
+With the `+"`"+`--languages flag, it will report the supported languages.`, Writer)
+	AddBoolFlag(status, "languages", "l", false, "show available languages (if connected to the cloud)")
 
 	undeploy := CmdBuilder(cmd, RunSandboxUndeploy, "undeploy [<package|function>...]",
 		"Removes resources from the cloud portion of your sandbox",
@@ -215,6 +216,14 @@ func RunSandboxStatus(c *CmdConfig) error {
 	}
 	mapResult := result.Entity.(map[string]interface{})
 	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n\n", mapResult["name"], mapResult["apihost"])
+	displayRuntimes, _ := c.Doit.GetBool(c.NS, "languages")
+	if displayRuntimes {
+		result, err = SandboxExec(c, "info", "--runtimes")
+		if result.Error == "" && err == nil {
+			fmt.Fprintf(c.Out, "Available runtimes:\n")
+			c.PrintSandboxTextOutput(result)
+		}
+	}
 	return nil
 }
 
