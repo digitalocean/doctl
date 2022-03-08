@@ -338,7 +338,7 @@ The most common way to use the `completion` command is by adding a line to your 
 source <(doctl completion your_shell_here)
 ```
 
-for zsh, also add this:
+If you are using ZSH, add this line to your `~/.zshrc` file:
 
 ```
 compdef _doctl doctl
