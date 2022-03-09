@@ -29,30 +29,31 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/pkg/extract"
 	"github.com/spf13/cobra"
 )
 
-const nodeVersion = "v16.13.0"
-const minSandboxVersion = "2.3.9-1.1.0"
+const (
+	nodeVersion       = "v16.13.0"
+	minSandboxVersion = "2.3.9-1.1.0"
 
-// noCapture is the string constant recognized by the plugin.  It suppresses output
-// capture when in the initial (command) position.
-const noCapture = "nocapture"
+	// noCapture is the string constant recognized by the plugin.  It suppresses output
+	// capture when in the initial (command) position.
+	noCapture = "nocapture"
+)
 
-// ErrSandboxNotInstalled is the error returned to users when the sandbox is not installed.
-var ErrSandboxNotInstalled = errors.New("The sandbox is not installed (use `doctl sandbox install`)")
-
-// ErrSandboxNeedsUpgrade is the error returned to users when the sandbox is at too low a version
-var ErrSandboxNeedsUpgrade = errors.New("The sandbox support needs to be upgraded (use `doctl sandbox upgrade`)")
-
-// ErrSandboxNotConnected is the error returned to users when the sandbox is not connected to a namespace
-var ErrSandboxNotConnected = errors.New("A sandbox is installed but not connected to a function namespace (use `doctl sandbox connect`)")
-
-// ErrUndeployAllAndArgs is the error returned when the --all flag is used along with args on undeploy
-var errUndeployAllAndArgs = errors.New("command line arguments and the `--all` flag are mutually exclusive")
-
-// ErrUndeployTooFewArgs is the error returned when neither --all nor args are specified on undeploy
-var errUndeployTooFewArgs = errors.New("either command line arguments or `--all` must be specified")
+var (
+	// ErrSandboxNotInstalled is the error returned to users when the sandbox is not installed.
+	ErrSandboxNotInstalled = errors.New("The sandbox is not installed (use `doctl sandbox install`)")
+	// ErrSandboxNeedsUpgrade is the error returned to users when the sandbox is at too low a version
+	ErrSandboxNeedsUpgrade = errors.New("The sandbox support needs to be upgraded (use `doctl sandbox upgrade`)")
+	// ErrSandboxNotConnected is the error returned to users when the sandbox is not connected to a namespace
+	ErrSandboxNotConnected = errors.New("A sandbox is installed but not connected to a function namespace (use `doctl sandbox connect`)")
+	// ErrUndeployAllAndArgs is the error returned when the --all flag is used along with args on undeploy
+	errUndeployAllAndArgs = errors.New("command line arguments and the `--all` flag are mutually exclusive")
+	// ErrUndeployTooFewArgs is the error returned when neither --all nor args are specified on undeploy
+	errUndeployTooFewArgs = errors.New("either command line arguments or `--all` must be specified")
+)
 
 // Sandbox contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
 func Sandbox() *Command {
@@ -438,19 +439,14 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 	}
 	// Exec the tar binary at least once to unpack the fat tarball and possibly a second time if
 	// node was downloaded.  If node was not download, just move the existing binary into place.
-	// TODO eliminate use of separate tar binary so we can support windows install with pure go code
 	fmt.Print("Unpacking...")
-	cmd := exec.Command("tar", "-C", tmp, "-xzf", sandboxFileName)
-	output, err := cmd.CombinedOutput()
+	err = extract.Extract(sandboxFileName, tmp)
 	if err != nil {
-		fmt.Printf("%s", output)
 		return err
 	}
 	if nodeFileName != "" {
-		cmd := exec.Command("tar", "-C", tmp, "-xzf", nodeFileName)
-		output, err := cmd.CombinedOutput()
+		err = extract.Extract(nodeFileName, tmp)
 		if err != nil {
-			fmt.Printf("%s", output)
 			return err
 		}
 	}
