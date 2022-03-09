@@ -499,10 +499,11 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 	}
 	if nodeFileName != "" {
 		srcPath = filepath.Join(tmp, nodeDir, "bin", "node")
+		destPath := filepath.Join(sandboxDir, "node")
 		if goos == "win" {
 			srcPath = filepath.Join(tmp, nodeDir, "node.exe")
+			destPath = filepath.Join(sandboxDir, "node.exe")
 		}
-		destPath := filepath.Join(sandboxDir, "node")
 		err = os.Rename(srcPath, destPath)
 		if err != nil {
 			return err
