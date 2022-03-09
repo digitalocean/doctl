@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"runtime"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -122,7 +123,11 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
 
 			sandboxDir, _ := getSandboxDirectory()
-			node := filepath.Join(sandboxDir, "node")
+			nodeBin := "node"
+			if runtime.GOOS == "windows" {
+				nodeBin = "node.exe"
+			}
+			node := filepath.Join(sandboxDir, nodeBin)
 			sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
 			nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
 			c.Sandbox = func() do.SandboxService { return do.NewSandboxService(sandboxJs, nimbellaDir, node, godoClient) }
