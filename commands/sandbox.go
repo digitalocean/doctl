@@ -408,27 +408,42 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 	if err != nil {
 		return err
 	}
+
 	// Download the nodejs tarball for this os and architecture
+	fmt.Print("Downloading...")
+
 	goos := runtime.GOOS
 	arch := runtime.GOARCH
 	if arch == "amd64" {
 		arch = "x64"
-	} else if arch == "windows" {
-		arch = "win"
 	}
-	fmt.Print("Downloading...")
-	var nodeFileName string
-	var nodeDir string
+	if goos == "windows" {
+		goos = "win"
+	}
+
+	var (
+		nodeURL      string
+		nodeFileName string
+		nodeDir      string
+	)
+
 	// Download nodejs only if necessary
 	if !upgrading || !canReuseNode(sandboxDir) {
 		nodeDir = fmt.Sprintf("node-%s-%s-%s", nodeVersion, goos, arch)
-		URL := fmt.Sprintf("https://nodejs.org/dist/%s/%s.tar.gz", nodeVersion, nodeDir)
+		nodeURL = fmt.Sprintf("https://nodejs.org/dist/%s/%s.tar.gz", nodeVersion, nodeDir)
 		nodeFileName = filepath.Join(tmp, "node-install.tar.gz")
-		err = download(URL, nodeFileName)
+
+		if goos == "win" {
+			nodeURL = fmt.Sprintf("https://nodejs.org/dist/%s/%s.zip", nodeVersion, nodeDir)
+			nodeFileName = filepath.Join(tmp, "node-install.zip")
+		}
+
+		err = download(nodeURL, nodeFileName)
 		if err != nil {
 			return err
 		}
 	}
+
 	// Download the fat tarball with the nim CLI, deployer, and sandbox bridge
 	// TODO do these need to be arch-specific?  Currently assuming not.
 	URL := fmt.Sprintf("https://do-serverless-tools.nyc3.digitaloceanspaces.com/doctl-sandbox-%s.tar.gz", minSandboxVersion)
@@ -437,6 +452,7 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 	if err != nil {
 		return err
 	}
+
 	// Exec the tar binary at least once to unpack the fat tarball and possibly a second time if
 	// node was downloaded.  If node was not download, just move the existing binary into place.
 	fmt.Print("Unpacking...")
@@ -444,12 +460,14 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 	if err != nil {
 		return err
 	}
+
 	if nodeFileName != "" {
 		err = extract.Extract(nodeFileName, tmp)
 		if err != nil {
 			return err
 		}
 	}
+
 	// Move artifacts to final location
 	fmt.Print("Installing...")
 	srcPath := filepath.Join(tmp, "sandbox")
@@ -482,6 +500,10 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 	if nodeFileName != "" {
 		srcPath = filepath.Join(tmp, nodeDir, "bin", "node")
 		destPath := filepath.Join(sandboxDir, "node")
+		if goos == "win" {
+			srcPath = filepath.Join(tmp, nodeDir, "node.exe")
+			destPath = filepath.Join(sandboxDir, "node.exe")
+		}
 		err = os.Rename(srcPath, destPath)
 		if err != nil {
 			return err
