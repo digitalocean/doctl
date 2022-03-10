@@ -20,7 +20,7 @@ github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.75.0
+# github.com/digitalocean/godo v1.76.0
 ## explicit; go 1.16
 github.com/digitalocean/godo
 github.com/digitalocean/godo/metrics

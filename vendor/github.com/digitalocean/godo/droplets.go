@@ -216,37 +216,41 @@ func (d DropletCreateSSHKey) MarshalJSON() ([]byte, error) {
 
 // DropletCreateRequest represents a request to create a Droplet.
 type DropletCreateRequest struct {
-	Name              string                `json:"name"`
-	Region            string                `json:"region"`
-	Size              string                `json:"size"`
-	Image             DropletCreateImage    `json:"image"`
-	SSHKeys           []DropletCreateSSHKey `json:"ssh_keys"`
-	Backups           bool                  `json:"backups"`
-	IPv6              bool                  `json:"ipv6"`
-	PrivateNetworking bool                  `json:"private_networking"`
-	Monitoring        bool                  `json:"monitoring"`
-	UserData          string                `json:"user_data,omitempty"`
-	Volumes           []DropletCreateVolume `json:"volumes,omitempty"`
-	Tags              []string              `json:"tags"`
-	VPCUUID           string                `json:"vpc_uuid,omitempty"`
-	WithDropletAgent  *bool                 `json:"with_droplet_agent,omitempty"`
+	Name                    string                `json:"name"`
+	Region                  string                `json:"region"`
+	Size                    string                `json:"size"`
+	Image                   DropletCreateImage    `json:"image"`
+	SSHKeys                 []DropletCreateSSHKey `json:"ssh_keys"`
+	Backups                 bool                  `json:"backups"`
+	IPv6                    bool                  `json:"ipv6"`
+	PrivateNetworking       bool                  `json:"private_networking"`
+	Monitoring              bool                  `json:"monitoring"`
+	UserData                string                `json:"user_data,omitempty"`
+	Volumes                 []DropletCreateVolume `json:"volumes,omitempty"`
+	Tags                    []string              `json:"tags"`
+	VPCUUID                 string                `json:"vpc_uuid,omitempty"`
+	WithDropletAgent        *bool                 `json:"with_droplet_agent,omitempty"`
+	DisablePublicNetworking bool                  `json:"disable_public_networking,omitempty"`
+	WithFloatingIPAddress   bool                  `json:"with_floating_ip_address,omitempty"`
 }
 
 // DropletMultiCreateRequest is a request to create multiple Droplets.
 type DropletMultiCreateRequest struct {
-	Names             []string              `json:"names"`
-	Region            string                `json:"region"`
-	Size              string                `json:"size"`
-	Image             DropletCreateImage    `json:"image"`
-	SSHKeys           []DropletCreateSSHKey `json:"ssh_keys"`
-	Backups           bool                  `json:"backups"`
-	IPv6              bool                  `json:"ipv6"`
-	PrivateNetworking bool                  `json:"private_networking"`
-	Monitoring        bool                  `json:"monitoring"`
-	UserData          string                `json:"user_data,omitempty"`
-	Tags              []string              `json:"tags"`
-	VPCUUID           string                `json:"vpc_uuid,omitempty"`
-	WithDropletAgent  *bool                 `json:"with_droplet_agent,omitempty"`
+	Names                   []string              `json:"names"`
+	Region                  string                `json:"region"`
+	Size                    string                `json:"size"`
+	Image                   DropletCreateImage    `json:"image"`
+	SSHKeys                 []DropletCreateSSHKey `json:"ssh_keys"`
+	Backups                 bool                  `json:"backups"`
+	IPv6                    bool                  `json:"ipv6"`
+	PrivateNetworking       bool                  `json:"private_networking"`
+	Monitoring              bool                  `json:"monitoring"`
+	UserData                string                `json:"user_data,omitempty"`
+	Tags                    []string              `json:"tags"`
+	VPCUUID                 string                `json:"vpc_uuid,omitempty"`
+	WithDropletAgent        *bool                 `json:"with_droplet_agent,omitempty"`
+	DisablePublicNetworking bool                  `json:"disable_public_networking,omitempty"`
+	WithFloatingIPAddress   bool                  `json:"with_floating_ip_address,omitempty"`
 }
 
 func (d DropletCreateRequest) String() string {
