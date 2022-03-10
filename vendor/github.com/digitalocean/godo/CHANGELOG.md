@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.76.0] - 2022-03-09
+
+- #516 - @CollinShoop - Add registry region support
+
 ## [v1.75.0] - 2022-01-27
 
 - #508 - @ElanHasson - Synchronize public protos and add multiple specs

@@ -85,6 +85,7 @@ type RegistryService interface {
 	ListGarbageCollections(string) ([]GarbageCollection, error)
 	CancelGarbageCollection(string, string) (*GarbageCollection, error)
 	GetSubscriptionTiers() ([]RegistrySubscriptionTier, error)
+	GetAvailableRegions() ([]string, error)
 	RevokeOAuthToken(token string, endpoint string) error
 }
 
@@ -340,6 +341,15 @@ func (rs *registryService) GetSubscriptionTiers() ([]RegistrySubscriptionTier, e
 	}
 
 	return ret, nil
+}
+
+func (rs *registryService) GetAvailableRegions() ([]string, error) {
+	opts, _, err := rs.client.Registry.GetOptions(rs.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return opts.AvailableRegions, nil
 }
 
 func (rs *registryService) RevokeOAuthToken(token string, endpoint string) error {

@@ -34,6 +34,7 @@ func (r *Registry) Cols() []string {
 	return []string{
 		"Name",
 		"Endpoint",
+		"Region",
 	}
 }
 
@@ -41,6 +42,7 @@ func (r *Registry) ColMap() map[string]string {
 	return map[string]string{
 		"Name":     "Name",
 		"Endpoint": "Endpoint",
+		"Region":   "Region slug",
 	}
 }
 
@@ -51,6 +53,7 @@ func (r *Registry) KV() []map[string]interface{} {
 		m := map[string]interface{}{
 			"Name":     reg.Name,
 			"Endpoint": reg.Endpoint(),
+			"Region":   reg.Region,
 		}
 
 		out = append(out, m)
@@ -354,6 +357,38 @@ func (t *RegistrySubscriptionTiers) KV() []map[string]interface{} {
 			"MonthlyPriceInCents":    fmt.Sprintf("$%d", tier.MonthlyPriceInCents/100),
 			"Eligible":               tier.Eligible,
 			"EligibilityReasons":     tier.EligibilityReasons,
+		})
+	}
+
+	return out
+}
+
+type RegistryAvailableRegions struct {
+	Regions []string
+}
+
+func (t *RegistryAvailableRegions) JSON(out io.Writer) error {
+	return writeJSON(t, out)
+}
+
+func (t *RegistryAvailableRegions) Cols() []string {
+	return []string{
+		"Slug",
+	}
+}
+
+func (t *RegistryAvailableRegions) ColMap() map[string]string {
+	return map[string]string{
+		"Slug": "Region Slug",
+	}
+}
+
+func (t *RegistryAvailableRegions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(t.Regions))
+
+	for _, region := range t.Regions {
+		out = append(out, map[string]interface{}{
+			"Slug": region,
 		})
 	}
 

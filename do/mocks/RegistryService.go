@@ -151,6 +151,21 @@ func (mr *MockRegistryServiceMockRecorder) Get() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRegistryService)(nil).Get))
 }
 
+// GetAvailableRegions mocks base method.
+func (m *MockRegistryService) GetAvailableRegions() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAvailableRegions")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAvailableRegions indicates an expected call of GetAvailableRegions.
+func (mr *MockRegistryServiceMockRecorder) GetAvailableRegions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableRegions", reflect.TypeOf((*MockRegistryService)(nil).GetAvailableRegions))
+}
+
 // GetGarbageCollection mocks base method.
 func (m *MockRegistryService) GetGarbageCollection(arg0 string) (*do.GarbageCollection, error) {
 	m.ctrl.T.Helper()

@@ -67,6 +67,8 @@ func Registry() *Command {
 		"Create a private container registry", createRegDesc, Writer)
 	AddStringFlag(cmdRunRegistryCreate, doctl.ArgSubscriptionTier, "", "basic",
 		"Subscription tier for the new registry. Possible values: see `doctl registry options subscription-tiers`", requiredOpt())
+	AddStringFlag(cmdRunRegistryCreate, doctl.ArgRegionSlug, "", "",
+		"Region for the new registry. Possible values: see `doctl registry options available-regions`")
 
 	getRegDesc := "This command retrieves details about a private container registry including its name and the endpoint used to access it."
 	CmdBuilder(cmd, RunRegistryGet, "get", "Retrieve details about a container registry",
@@ -304,6 +306,8 @@ func RegistryOptions() *Command {
 
 	tiersDesc := "List available container registry subscription tiers"
 	CmdBuilder(cmd, RunRegistryOptionsTiers, "subscription-tiers", tiersDesc, tiersDesc, Writer, aliasOpt("tiers"))
+	regionsDesc := "List available container registry regions"
+	CmdBuilder(cmd, RunGetRegistryOptionsRegions, "available-regions", regionsDesc, regionsDesc, Writer, aliasOpt("regions"))
 
 	return cmd
 }
@@ -322,12 +326,17 @@ func RunRegistryCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
 
 	rs := c.Registry()
 
 	rcr := &godo.RegistryCreateRequest{
 		Name:                 name,
 		SubscriptionTierSlug: subscriptionTier,
+		Region:               region,
 	}
 	r, err := rs.Create(rcr)
 	if err != nil {
@@ -903,6 +912,18 @@ func RunRegistryOptionsTiers(c *CmdConfig) error {
 
 	item := &displayers.RegistrySubscriptionTiers{
 		SubscriptionTiers: tiers,
+	}
+	return c.Display(item)
+}
+
+func RunGetRegistryOptionsRegions(c *CmdConfig) error {
+	regions, err := c.Registry().GetAvailableRegions()
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.RegistryAvailableRegions{
+		Regions: regions,
 	}
 	return c.Display(item)
 }
