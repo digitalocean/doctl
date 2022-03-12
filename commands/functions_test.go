@@ -138,7 +138,7 @@ func TestFunctionsInvoke(t *testing.T) {
 		{
 			name:            "param flag",
 			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"param": "name world"},
+			doctlFlags:      map[string]string{"param": "name:world"},
 			expectedNimArgs: []string{"hello", "--param", "name", "world"},
 		},
 	}

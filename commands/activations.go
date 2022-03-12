@@ -85,7 +85,8 @@ func RunActivationsGet(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunSandboxExec("activation/get", c, []string{"last", "logs", "result", "quiet"}, []string{"skip", "function"})
+	replaceFunctionWithAction(c)
+	output, err := RunSandboxExec("activation/get", c, []string{"last", "logs", "result", "quiet"}, []string{"skip", "action"})
 	if err != nil {
 		return err
 	}
@@ -111,10 +112,12 @@ func RunActivationsLogs(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
+	replaceFunctionWithAction(c)
+	augmentPackageWithDeployed(c)
 	if isWatching(c) {
-		return RunSandboxExecStreaming("activation/logs", c, []string{"last", "strip", "follow"}, []string{"function", "package", "limit"})
+		return RunSandboxExecStreaming("activation/logs", c, []string{"last", "strip", "follow", "deployed"}, []string{"action", "package", "limit"})
 	}
-	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "follow"}, []string{"function", "package", "limit"})
+	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "follow", "deployed"}, []string{"action", "package", "limit"})
 	if err != nil {
 		return err
 	}
@@ -134,9 +137,30 @@ func RunActivationsResult(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunSandboxExec("activation/result", c, []string{"last", "quiet"}, []string{"limit", "skip", "function"})
+	replaceFunctionWithAction(c)
+	output, err := RunSandboxExec("activation/result", c, []string{"last", "quiet"}, []string{"limit", "skip", "action"})
 	if err != nil {
 		return err
 	}
 	return c.PrintSandboxTextOutput(output)
+}
+
+// replaceFunctionWithAction detects that --function was specified and renames it to --action (which is what nim
+// will expect to see).
+func replaceFunctionWithAction(c *CmdConfig) {
+	value, err := c.Doit.GetString(c.NS, "function")
+	if err == nil && value != "" {
+		c.Doit.Set(c.NS, "function", "")
+		c.Doit.Set(c.NS, "action", value)
+	}
+}
+
+// augmentPackageWithDeployed detects that --package was specified and adds the --deployed flag if so.
+// The code in 'nim' (inherited from Adobe I/O) will otherwise look for a deployment manifest which we
+// don't want to support here.
+func augmentPackageWithDeployed(c *CmdConfig) {
+	value, err := c.Doit.GetString(c.NS, "package")
+	if err == nil && value != "" {
+		c.Doit.Set(c.NS, "deployed", true)
+	}
 }

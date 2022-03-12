@@ -47,8 +47,8 @@ component.  The `+"`"+`doctl sandbox init`+"`"+` command will create a properly 
 	AddBoolFlag(deploy, "verbose-build", "", false, "Display build details")
 	AddBoolFlag(deploy, "verbose-zip", "", false, "Display start/end of zipping phase for each function")
 	AddBoolFlag(deploy, "yarn", "", false, "Use yarn instead of npm for node builds")
-	AddStringFlag(deploy, "include", "", "", "Functions or packages to include")
-	AddStringFlag(deploy, "exclude", "", "", "Functions or packages to exclude")
+	AddStringFlag(deploy, "include", "", "", "Functions and/or packages to include")
+	AddStringFlag(deploy, "exclude", "", "", "Functions and/or packages to exclude")
 	AddBoolFlag(deploy, "remote-build", "", false, "Run builds remotely")
 	AddBoolFlag(deploy, "incremental", "", false, "Deploy only changes since last deploy")
 
@@ -73,8 +73,8 @@ the contents to the cloud incrementally as it detects changes.`,
 	AddBoolFlag(watch, "verbose-build", "", false, "Display build details")
 	AddBoolFlag(watch, "verbose-zip", "", false, "Display start/end of zipping phase for each function")
 	AddBoolFlag(watch, "yarn", "", false, "Use yarn instead of npm for node builds")
-	AddStringFlag(watch, "include", "", "", "FUnctions and package to include")
-	AddStringFlag(watch, "exclude", "", "", "Functions and packages to exclude")
+	AddStringFlag(watch, "include", "", "", "Functions and/or packages to include")
+	AddStringFlag(watch, "exclude", "", "", "Functions and/or packages to exclude")
 	AddBoolFlag(watch, "remote-build", "", false, "Run builds remotely")
 }
 
@@ -113,6 +113,7 @@ You may deploy it by running the command shown on the next line:
 
 // RunSandboxExtraDeploy supports the 'sandbox deploy' command
 func RunSandboxExtraDeploy(c *CmdConfig) error {
+	adjustIncludeAndExclude(c)
 	output, err := RunSandboxExec("project/deploy", c, []string{"insecure", "verbose-build", "verbose-zip", "yarn", "remote-build", "incremental"}, []string{"env", "build-env", "apihost", "auth", "include", "exclude"})
 	if err != nil {
 		return err
@@ -131,6 +132,7 @@ func RunSandboxExtraDeploy(c *CmdConfig) error {
 
 // RunSandboxExtraGetMetadata supports the 'sandbox get-metadata' command
 func RunSandboxExtraGetMetadata(c *CmdConfig) error {
+	adjustIncludeAndExclude(c)
 	err := ensureOneArg(c)
 	if err != nil {
 		return err
@@ -145,9 +147,45 @@ func RunSandboxExtraGetMetadata(c *CmdConfig) error {
 // RunSandboxExtraWatch supports 'sandbox watch'
 // This is not the usual boiler-plate because the command is intended to be long-running in a separate window
 func RunSandboxExtraWatch(c *CmdConfig) error {
+	adjustIncludeAndExclude(c)
 	argCount := len(c.Args)
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	return RunSandboxExecStreaming("project/watch", c, []string{"insecure", "verbose-build", "verbose-zip", "yarn", "remote-build"}, []string{"env", "build-env", "apihost", "auth", "include", "exclude"})
+}
+
+// adjustIncludeAndExclude deals with the fact that 'web' has special meaning to 'nim'.
+// 1.  If the developer has a package called 'web' and wishes to include or exclude it, 'nim' will be confused unless a trailing
+// slash is added to indicate that the intent is the package called 'web' and not 'web content.'
+// 2.  Since projects may have a non-empty 'web' folder, 'nim' will want to deploy it unless '--exclude web' is provided.
+// Note that the developer may already by using '--exclude', so this additional exclusion will be an append to the existing
+// value.
+func adjustIncludeAndExclude(c *CmdConfig) {
+	includes, err := c.Doit.GetString(c.NS, "include")
+	if err == nil && includes != "" {
+		includes = qualifyWebWithSlash(includes)
+		c.Doit.Set(c.NS, "include", includes)
+	}
+	excludes, err := c.Doit.GetString(c.NS, "exclude")
+	if err == nil && excludes != "" {
+		excludes = qualifyWebWithSlash(excludes)
+		excludes = excludes + ",web"
+		c.Doit.Set(c.NS, "exclude", excludes)
+	} else {
+		c.Doit.Set(c.NS, "exclude", "web")
+	}
+}
+
+// qualifyWebWithSlash is a subroutine used by adjustIncludeAndExclude.  Given a comma-separated
+// list of tokens, if any of those tokens are 'web', change that token to 'web/' and return the
+// modified list.
+func qualifyWebWithSlash(original string) string {
+	tokens := strings.Split(original, ",")
+	for i, token := range tokens {
+		if token == "web" {
+			tokens[i] = "web/"
+		}
+	}
+	return strings.Join(tokens, ",")
 }

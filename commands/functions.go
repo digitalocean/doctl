@@ -14,6 +14,9 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
+	"strings"
+
 	"github.com/digitalocean/doctl"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +50,7 @@ is in your sandbox area in the local file system.`,
 to the cloud.  You can provide inputs and inspect outputs.`,
 		Writer)
 	AddBoolFlag(invoke, "web", "", false, "Invoke as a web function, show result as web page")
-	AddStringFlag(invoke, "param", "p", "", "parameter values in KEY VALUE format")
+	AddStringSliceFlag(invoke, "param", "p", []string{}, "parameter values in KEY:VALUE format, list allowed")
 	AddStringFlag(invoke, "param-file", "P", "", "FILE containing parameter values in JSON format")
 	AddBoolFlag(invoke, "full", "f", false, "wait for full activation record")
 	AddBoolFlag(invoke, "no-wait", "n", false, "fire and forget (asynchronous invoke, does not wait for the result)")
@@ -84,7 +87,13 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	output, err := RunSandboxExec("action/invoke", c, []string{"web", "full", "no-wait", "result"}, []string{"param", "param-file"})
+	// Assemble args and flags except for "param"
+	args := getFlatArgsArray(c, []string{"web", "full", "no-wait", "result"}, []string{"param-file"})
+	args, err = appendParams(c, args)
+	if err != nil {
+		return err
+	}
+	output, err := SandboxExec(c, "action/invoke", args...)
 	if err != nil {
 		return err
 	}
@@ -103,4 +112,24 @@ func RunFunctionsList(c *CmdConfig) error {
 		return err
 	}
 	return c.PrintSandboxTextOutput(output)
+}
+
+// appendParams determines if there is a 'param' flag (value is a slice, elements
+// of the slice should be in KEY:VALUE form), if so, transforms it into the form
+// expected by 'nim' (each param is its own --param flag, KEY and VALUE are separate
+// tokens).   The 'args' argument is the result of getFlatArgsArray and is appended
+// to.
+func appendParams(c *CmdConfig, args []string) ([]string, error) {
+	params, err := c.Doit.GetStringSlice(c.NS, "param")
+	if err != nil || len(params) == 0 {
+		return args, nil // error here is not considered an error (and probably won't occur)
+	}
+	for _, param := range params {
+		parts := strings.Split(param, ":")
+		if len(parts) != 2 {
+			return args, errors.New("values for --params must have KEY:VALUE form")
+		}
+		args = append(args, "--param", parts[0], parts[1])
+	}
+	return args, nil
 }
