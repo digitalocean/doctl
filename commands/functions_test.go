@@ -121,7 +121,7 @@ func TestFunctionsInvoke(t *testing.T) {
 	tests := []struct {
 		name            string
 		doctlArgs       string
-		doctlFlags      map[string]string
+		doctlFlags      map[string]interface{}
 		expectedNimArgs []string
 	}{
 		{
@@ -132,14 +132,20 @@ func TestFunctionsInvoke(t *testing.T) {
 		{
 			name:            "full flag",
 			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"full": ""},
+			doctlFlags:      map[string]interface{}{"full": ""},
 			expectedNimArgs: []string{"hello", "--full"},
 		},
 		{
 			name:            "param flag",
 			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"param": "name:world"},
+			doctlFlags:      map[string]interface{}{"param": "name:world"},
 			expectedNimArgs: []string{"hello", "--param", "name", "world"},
+		},
+		{
+			name:            "param flag list",
+			doctlArgs:       "hello",
+			doctlFlags:      map[string]interface{}{"param": []string{"name:world", "address:everywhere"}},
+			expectedNimArgs: []string{"hello", "--param", "name", "world", "--param", "address", "everywhere"},
 		},
 	}
 

@@ -333,6 +333,18 @@ func TestSandboxDeploy(t *testing.T) {
 			doctlArgs:       "path/to/project",
 			expectedNimArgs: []string{"path/to/project", "--exclude", "web"},
 		},
+		{
+			name:            "include flag for package 'web'",
+			doctlArgs:       "path/to/project",
+			doctlFlags:      map[string]string{"include": "web"},
+			expectedNimArgs: []string{"path/to/project", "--include", "web/", "--exclude", "web"},
+		},
+		{
+			name:            "exclude flag for package 'web'",
+			doctlArgs:       "path/to/project",
+			doctlFlags:      map[string]string{"exclude": "web"},
+			expectedNimArgs: []string{"path/to/project", "--exclude", "web/,web"},
+		},
 		// TODO: Add additional scenarios for other flags, etc.
 	}
 

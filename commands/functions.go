@@ -89,6 +89,7 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 	}
 	// Assemble args and flags except for "param"
 	args := getFlatArgsArray(c, []string{"web", "full", "no-wait", "result"}, []string{"param-file"})
+	// Add "param" with special handling if present
 	args, err = appendParams(c, args)
 	if err != nil {
 		return err
