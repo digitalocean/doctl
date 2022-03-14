@@ -18,6 +18,29 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	activationGet    = "activation/get"
+	flagLast         = "last"
+	flagLogs         = "logs"
+	flagResult       = "result"
+	flagQuiet        = "quiet"
+	flagSkip         = "skip"
+	flagAction       = "action"
+	activationList   = "activation/list"
+	flagCount        = "count"
+	flagFull         = "full"
+	flagLimit        = "limit"
+	flagSince        = "since"
+	flagUpto         = "upto"
+	activationLogs   = "activation/logs"
+	flagStrip        = "strip"
+	flagFollow       = "follow"
+	flagDeployed     = "deployed"
+	flagPackage      = "package"
+	activationResult = "activation/result"
+	flagFunction     = "function"
+)
+
 // Activations generates the sandbox 'activations' subtree for addition to the doctl command
 func Activations() *Command {
 	cmd := &Command{
@@ -86,7 +109,7 @@ func RunActivationsGet(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	replaceFunctionWithAction(c)
-	output, err := RunSandboxExec("activation/get", c, []string{"last", "logs", "result", "quiet"}, []string{"skip", "action"})
+	output, err := RunSandboxExec(activationGet, c, []string{flagLast, flagLogs, flagResult, flagQuiet}, []string{flagSkip, flagAction})
 	if err != nil {
 		return err
 	}
@@ -99,7 +122,7 @@ func RunActivationsList(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunSandboxExec("activation/list", c, []string{"count", "full"}, []string{"limit", "skip", "since", "upto"})
+	output, err := RunSandboxExec(activationList, c, []string{flagCount, flagFull}, []string{flagLimit, flagSkip, flagSince, flagUpto})
 	if err != nil {
 		return err
 	}
@@ -115,9 +138,9 @@ func RunActivationsLogs(c *CmdConfig) error {
 	replaceFunctionWithAction(c)
 	augmentPackageWithDeployed(c)
 	if isWatching(c) {
-		return RunSandboxExecStreaming("activation/logs", c, []string{"last", "strip", "follow", "deployed"}, []string{"action", "package", "limit"})
+		return RunSandboxExecStreaming(activationLogs, c, []string{flagLast, flagStrip, flagFollow, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
 	}
-	output, err := RunSandboxExec("activation/logs", c, []string{"last", "strip", "follow", "deployed"}, []string{"action", "package", "limit"})
+	output, err := RunSandboxExec(activationLogs, c, []string{flagLast, flagStrip, flagFollow, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
 	if err != nil {
 		return err
 	}
@@ -127,7 +150,7 @@ func RunActivationsLogs(c *CmdConfig) error {
 // isWatching decides whether the flags of an 'activation logs' command are implementing the watching
 // feature.  Currently, this is indicated by the --follow flag.
 func isWatching(c *CmdConfig) bool {
-	yes, err := c.Doit.GetBool(c.NS, "follow")
+	yes, err := c.Doit.GetBool(c.NS, flagFollow)
 	return yes && err == nil
 }
 
@@ -138,7 +161,7 @@ func RunActivationsResult(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	replaceFunctionWithAction(c)
-	output, err := RunSandboxExec("activation/result", c, []string{"last", "quiet"}, []string{"limit", "skip", "action"})
+	output, err := RunSandboxExec(activationResult, c, []string{flagLast, flagQuiet}, []string{flagLimit, flagSkip, flagAction})
 	if err != nil {
 		return err
 	}
@@ -148,10 +171,10 @@ func RunActivationsResult(c *CmdConfig) error {
 // replaceFunctionWithAction detects that --function was specified and renames it to --action (which is what nim
 // will expect to see).
 func replaceFunctionWithAction(c *CmdConfig) {
-	value, err := c.Doit.GetString(c.NS, "function")
+	value, err := c.Doit.GetString(c.NS, flagFunction)
 	if err == nil && value != "" {
-		c.Doit.Set(c.NS, "function", "")
-		c.Doit.Set(c.NS, "action", value)
+		c.Doit.Set(c.NS, flagFunction, "")
+		c.Doit.Set(c.NS, flagAction, value)
 	}
 }
 
@@ -159,8 +182,8 @@ func replaceFunctionWithAction(c *CmdConfig) {
 // The code in 'nim' (inherited from Adobe I/O) will otherwise look for a deployment manifest which we
 // don't want to support here.
 func augmentPackageWithDeployed(c *CmdConfig) {
-	value, err := c.Doit.GetString(c.NS, "package")
+	value, err := c.Doit.GetString(c.NS, flagPackage)
 	if err == nil && value != "" {
-		c.Doit.Set(c.NS, "deployed", true)
+		c.Doit.Set(c.NS, flagDeployed, true)
 	}
 }
