@@ -21,6 +21,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	actionGet       = "action/get"
+	flagURL         = "url"
+	flagCode        = "code"
+	flagSave        = "save"
+	flagSaveEnv     = "save-env"
+	flagSaveEnvJson = "save-env-json"
+	flagSaveAs      = "save-as"
+	actionInvoke    = "action/invoke"
+	flagWeb         = "web"
+	flagNoWait      = "no-wait"
+	flagParamFile   = "param-file"
+	actionList      = "action/list"
+	flagNameSort    = "name-sort"
+	flagNameName    = "name" // avoid conflict with flagName, which is a function
+	flagParam       = "param"
+	dashdashParam   = "--param"
+	// Borrowed from activations.go:
+	// flagFull     = "full"
+	// flagResult   = "result"
+	// flagCount    = "count"
+	// flagLimit    = "limit"
+	// flagSkip     = "skip"
+)
+
 // Functions generates the sandbox 'functions' subtree for addition to the doctl command
 func Functions() *Command {
 	cmd := &Command{
@@ -74,7 +99,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	output, err := RunSandboxExec("action/get", c, []string{"url", "code", "save"}, []string{"save-env", "save-env-json", "save-as"})
+	output, err := RunSandboxExec(actionGet, c, []string{flagURL, flagCode, flagSave}, []string{flagSaveEnv, flagSaveEnvJson, flagSaveAs})
 	if err != nil {
 		return err
 	}
@@ -88,13 +113,13 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 		return err
 	}
 	// Assemble args and flags except for "param"
-	args := getFlatArgsArray(c, []string{"web", "full", "no-wait", "result"}, []string{"param-file"})
+	args := getFlatArgsArray(c, []string{flagWeb, flagFull, flagNoWait, flagResult}, []string{flagParamFile})
 	// Add "param" with special handling if present
 	args, err = appendParams(c, args)
 	if err != nil {
 		return err
 	}
-	output, err := SandboxExec(c, "action/invoke", args...)
+	output, err := SandboxExec(c, actionInvoke, args...)
 	if err != nil {
 		return err
 	}
@@ -108,7 +133,7 @@ func RunFunctionsList(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunSandboxExec("action/list", c, []string{"count", "name-sort", "name"}, []string{"limit", "skip"})
+	output, err := RunSandboxExec(actionList, c, []string{flagCount, flagNameSort, flagNameName}, []string{flagLimit, flagSkip})
 	if err != nil {
 		return err
 	}
@@ -121,7 +146,7 @@ func RunFunctionsList(c *CmdConfig) error {
 // tokens).   The 'args' argument is the result of getFlatArgsArray and is appended
 // to.
 func appendParams(c *CmdConfig, args []string) ([]string, error) {
-	params, err := c.Doit.GetStringSlice(c.NS, "param")
+	params, err := c.Doit.GetStringSlice(c.NS, flagParam)
 	if err != nil || len(params) == 0 {
 		return args, nil // error here is not considered an error (and probably won't occur)
 	}
@@ -130,7 +155,7 @@ func appendParams(c *CmdConfig, args []string) ([]string, error) {
 		if len(parts) != 2 {
 			return args, errors.New("values for --params must have KEY:VALUE form")
 		}
-		args = append(args, "--param", parts[0], parts[1])
+		args = append(args, dashdashParam, parts[0], parts[1])
 	}
 	return args, nil
 }
