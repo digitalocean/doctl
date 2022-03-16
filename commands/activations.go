@@ -18,29 +18,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	activationGet    = "activation/get"
-	flagLast         = "last"
-	flagLogs         = "logs"
-	flagResult       = "result"
-	flagQuiet        = "quiet"
-	flagSkip         = "skip"
-	flagAction       = "action"
-	activationList   = "activation/list"
-	flagCount        = "count"
-	flagFull         = "full"
-	flagLimit        = "limit"
-	flagSince        = "since"
-	flagUpto         = "upto"
-	activationLogs   = "activation/logs"
-	flagStrip        = "strip"
-	flagFollow       = "follow"
-	flagDeployed     = "deployed"
-	flagPackage      = "package"
-	activationResult = "activation/result"
-	flagFunction     = "function"
-)
-
 // Activations generates the sandbox 'activations' subtree for addition to the doctl command
 func Activations() *Command {
 	cmd := &Command{

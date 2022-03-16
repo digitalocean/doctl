@@ -21,31 +21,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	actionGet       = "action/get"
-	flagURL         = "url"
-	flagCode        = "code"
-	flagSave        = "save"
-	flagSaveEnv     = "save-env"
-	flagSaveEnvJson = "save-env-json"
-	flagSaveAs      = "save-as"
-	actionInvoke    = "action/invoke"
-	flagWeb         = "web"
-	flagNoWait      = "no-wait"
-	flagParamFile   = "param-file"
-	actionList      = "action/list"
-	flagNameSort    = "name-sort"
-	flagNameName    = "name" // avoid conflict with flagName, which is a function
-	flagParam       = "param"
-	dashdashParam   = "--param"
-	// Borrowed from activations.go:
-	// flagFull     = "full"
-	// flagResult   = "result"
-	// flagCount    = "count"
-	// flagLimit    = "limit"
-	// flagSkip     = "skip"
-)
-
 // Functions generates the sandbox 'functions' subtree for addition to the doctl command
 func Functions() *Command {
 	cmd := &Command{
