@@ -117,19 +117,21 @@ const (
 	AppAlertSpecOperator_LessThan            AppAlertSpecOperator = "LESS_THAN"
 )
 
-// AppAlertSpecRule  - CPU_UTILIZATION: Represents CPU for a given container instance. Only applicable at the component level.  - MEM_UTILIZATION: Represents RAM for a given container instance. Only applicable at the component level.  - RESTART_COUNT: Represents restart count for a given container instance. Only applicable at the component level.  - DEPLOYMENT_FAILED: Represents whether a deployment has failed. Only applicable at the app level.  - DEPLOYMENT_LIVE: Represents whether a deployment has succeeded. Only applicable at the app level.  - DOMAIN_FAILED: Represents whether a domain configuration has failed. Only applicable at the app level.  - DOMAIN_LIVE: Represents whether a domain configuration has succeeded. Only applicable at the app level.
+// AppAlertSpecRule  - CPU_UTILIZATION: Represents CPU for a given container instance. Only applicable at the component level.  - MEM_UTILIZATION: Represents RAM for a given container instance. Only applicable at the component level.  - RESTART_COUNT: Represents restart count for a given container instance. Only applicable at the component level.  - DEPLOYMENT_FAILED: Represents whether a deployment has failed. Only applicable at the app level.  - DEPLOYMENT_LIVE: Represents whether a deployment has succeeded. Only applicable at the app level.  - DOMAIN_FAILED: Represents whether a domain configuration has failed. Only applicable at the app level.  - DOMAIN_LIVE: Represents whether a domain configuration has succeeded. Only applicable at the app level.  - FUNCTIONS_ACTIVATION_COUNT: Represents an activation count for a given functions instance. Only applicable to functions components.  - FUNCTIONS_AVERAGE_DURATION_MS: Represents the average duration for function runtimes. Only applicable to functions components.
 type AppAlertSpecRule string
 
 // List of AppAlertSpecRule
 const (
-	AppAlertSpecRule_UnspecifiedRule  AppAlertSpecRule = "UNSPECIFIED_RULE"
-	AppAlertSpecRule_CPUUtilization   AppAlertSpecRule = "CPU_UTILIZATION"
-	AppAlertSpecRule_MemUtilization   AppAlertSpecRule = "MEM_UTILIZATION"
-	AppAlertSpecRule_RestartCount     AppAlertSpecRule = "RESTART_COUNT"
-	AppAlertSpecRule_DeploymentFailed AppAlertSpecRule = "DEPLOYMENT_FAILED"
-	AppAlertSpecRule_DeploymentLive   AppAlertSpecRule = "DEPLOYMENT_LIVE"
-	AppAlertSpecRule_DomainFailed     AppAlertSpecRule = "DOMAIN_FAILED"
-	AppAlertSpecRule_DomainLive       AppAlertSpecRule = "DOMAIN_LIVE"
+	AppAlertSpecRule_UnspecifiedRule            AppAlertSpecRule = "UNSPECIFIED_RULE"
+	AppAlertSpecRule_CPUUtilization             AppAlertSpecRule = "CPU_UTILIZATION"
+	AppAlertSpecRule_MemUtilization             AppAlertSpecRule = "MEM_UTILIZATION"
+	AppAlertSpecRule_RestartCount               AppAlertSpecRule = "RESTART_COUNT"
+	AppAlertSpecRule_DeploymentFailed           AppAlertSpecRule = "DEPLOYMENT_FAILED"
+	AppAlertSpecRule_DeploymentLive             AppAlertSpecRule = "DEPLOYMENT_LIVE"
+	AppAlertSpecRule_DomainFailed               AppAlertSpecRule = "DOMAIN_FAILED"
+	AppAlertSpecRule_DomainLive                 AppAlertSpecRule = "DOMAIN_LIVE"
+	AppAlertSpecRule_FunctionsActivationCount   AppAlertSpecRule = "FUNCTIONS_ACTIVATION_COUNT"
+	AppAlertSpecRule_FunctionsAverageDurationMS AppAlertSpecRule = "FUNCTIONS_AVERAGE_DURATION_MS"
 )
 
 // AppAlertSpecWindow the model 'AppAlertSpecWindow'
@@ -219,6 +221,21 @@ type AppFunctionsSpec struct {
 	CORS            *AppCORSPolicy           `json:"cors,omitempty"`
 }
 
+// AppIngressSpec struct for AppIngressSpec
+type AppIngressSpec struct {
+	LoadBalancer     AppIngressSpecLoadBalancer `json:"load_balancer,omitempty"`
+	LoadBalancerSize int64                      `json:"load_balancer_size,omitempty"`
+}
+
+// AppIngressSpecLoadBalancer the model 'AppIngressSpecLoadBalancer'
+type AppIngressSpecLoadBalancer string
+
+// List of AppIngressSpecLoadBalancer
+const (
+	AppIngressSpecLoadBalancer_Unknown      AppIngressSpecLoadBalancer = "UNKNOWN"
+	AppIngressSpecLoadBalancer_DigitalOcean AppIngressSpecLoadBalancer = "DIGITALOCEAN"
+)
+
 // AppJobSpec struct for AppJobSpec
 type AppJobSpec struct {
 	// The name. Must be unique across all components within the same app.
@@ -263,12 +280,13 @@ const (
 // AppLogDestinationSpec struct for AppLogDestinationSpec
 type AppLogDestinationSpec struct {
 	// Name of the log destination.
-	Name       string                           `json:"name,omitempty"`
-	Papertrail *AppLogDestinationSpecPapertrail `json:"papertrail,omitempty"`
-	Datadog    *AppLogDestinationSpecDataDog    `json:"datadog,omitempty"`
-	Logtail    *AppLogDestinationSpecLogtail    `json:"logtail,omitempty"`
-	Endpoint   string                           `json:"endpoint,omitempty"`
-	Headers    []*AppLogDestinationSpecHeader   `json:"headers,omitempty"`
+	Name        string                           `json:"name,omitempty"`
+	Papertrail  *AppLogDestinationSpecPapertrail `json:"papertrail,omitempty"`
+	Datadog     *AppLogDestinationSpecDataDog    `json:"datadog,omitempty"`
+	Logtail     *AppLogDestinationSpecLogtail    `json:"logtail,omitempty"`
+	Endpoint    string                           `json:"endpoint,omitempty"`
+	TLSInsecure bool                             `json:"tls_insecure,omitempty"`
+	Headers     []*AppLogDestinationSpecHeader   `json:"headers,omitempty"`
 }
 
 // AppLogDestinationSpecDataDog DataDog configuration.
@@ -384,7 +402,8 @@ type AppSpec struct {
 	// A list of environment variables made available to all components in the app.
 	Envs []*AppVariableDefinition `json:"envs,omitempty"`
 	// A list of alerts which apply to the app.
-	Alerts []*AppAlertSpec `json:"alerts,omitempty"`
+	Alerts  []*AppAlertSpec `json:"alerts,omitempty"`
+	Ingress *AppIngressSpec `json:"ingress,omitempty"`
 }
 
 // AppStaticSiteSpec struct for AppStaticSiteSpec
@@ -518,6 +537,7 @@ type Deployment struct {
 	TierSlug             string                  `json:"tier_slug,omitempty"`
 	PreviousDeploymentID string                  `json:"previous_deployment_id,omitempty"`
 	CauseDetails         *DeploymentCauseDetails `json:"cause_details,omitempty"`
+	LoadBalancerID       string                  `json:"load_balancer_id,omitempty"`
 }
 
 // DeploymentCauseDetails struct for DeploymentCauseDetails

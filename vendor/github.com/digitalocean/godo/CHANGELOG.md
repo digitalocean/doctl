@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.77.0] - 2022-03-16
+
+- #518 - @rcj4747 - apps: Update apps protos
+
 ## [v1.76.0] - 2022-03-09
 
 - #516 - @CollinShoop - Add registry region support
