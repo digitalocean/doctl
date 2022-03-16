@@ -74,7 +74,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	output, err := RunSandboxExec(actionGet, c, []string{flagURL, flagCode, flagSave}, []string{flagSaveEnv, flagSaveEnvJson, flagSaveAs})
+	output, err := RunSandboxExec(actionGet, c, []string{flagURL, flagCode, flagSave}, []string{flagSaveEnv, flagSaveEnvJSON, flagSaveAs})
 	if err != nil {
 		return err
 	}

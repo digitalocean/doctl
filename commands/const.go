@@ -21,7 +21,7 @@ const (
 	flagCode           = "code"
 	flagSave           = "save"
 	flagSaveEnv        = "save-env"
-	flagSaveEnvJson    = "save-env-json"
+	flagSaveEnvJSON    = "save-env-json"
 	flagSaveAs         = "save-as"
 	actionInvoke       = "action/invoke"
 	flagWeb            = "web"
