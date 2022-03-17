@@ -35,7 +35,7 @@ import (
 
 const (
 	nodeVersion       = "v16.13.0"
-	minSandboxVersion = "2.3.9-1.1.0"
+	minSandboxVersion = "2.3.10-1.1.0"
 
 	// noCapture is the string constant recognized by the plugin.  It suppresses output
 	// capture when in the initial (command) position.
