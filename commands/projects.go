@@ -265,6 +265,8 @@ func RunProjectResourcesGet(c *CmdConfig) error {
 		return RunDomainGet(c)
 	case "volume":
 		return RunVolumeGet(c)
+	case "app":
+		return RunAppsGet(c)
 	default:
 		return fmt.Errorf("%q is an invalid resource type, consult the documentation", parts[1])
 	}
