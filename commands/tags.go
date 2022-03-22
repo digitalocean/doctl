@@ -17,7 +17,9 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/pkg/urn"
 	"github.com/digitalocean/godo"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -50,6 +52,12 @@ resources attribute with information about resources that have been tagged.`,
 
 Deleting a tag also removes the tag from all the resources that had been tagged with it.`, Writer)
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete tag without confirmation prompt")
+
+	cmdApplyTag := CmdBuilder(cmd, RunCmdApplyTag, "apply <tag-name> --resource=<urn> [--resource=<urn> ...]", "Apply a tag to resources", `Use this command to tag one or more resources. Resources must be specified as URNs ("do:<resource_type>:<identifier>").`, Writer)
+	AddStringSliceFlag(cmdApplyTag, doctl.ArgResourceType, "", []string{}, "The resource to tag in URN format (do:<resource_type>:<identifier>)", requiredOpt())
+
+	cmdRemoveTag := CmdBuilder(cmd, RunCmdRemoveTag, "remove <tag-name> --resource=<urn> [--resource=<urn> ...]", "Remove a tag from resources", `Use this command to remove a tag from one or more resources. Resources must be specified as URNs ("do:<resource_type>:<identifier>").`, Writer)
+	AddStringSliceFlag(cmdRemoveTag, doctl.ArgResourceType, "", []string{}, "The resource to tag in URN format (do:<resource_type>:<identifier>)", requiredOpt())
 
 	return cmd
 }
@@ -125,4 +133,73 @@ func RunCmdTagDelete(c *CmdConfig) error {
 	}
 
 	return nil
+}
+
+// RunCmdApplyTag applies a tag to one or more resources.
+func RunCmdApplyTag(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	tagName := c.Args[0]
+
+	urns, err := c.Doit.GetStringSlice(c.NS, doctl.ArgResourceType)
+	if err != nil {
+		return err
+	}
+
+	resourceReq, err := buildTagResources(urns)
+	if err != nil {
+		return err
+	}
+
+	tagReq := &godo.TagResourcesRequest{Resources: resourceReq}
+
+	return c.Tags().TagResources(tagName, tagReq)
+}
+
+// RunCmdRemoveTag removes a tag from one or more resources.
+func RunCmdRemoveTag(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	tagName := c.Args[0]
+
+	urns, err := c.Doit.GetStringSlice(c.NS, doctl.ArgResourceType)
+	if err != nil {
+		return err
+	}
+
+	resourceReq, err := buildTagResources(urns)
+	if err != nil {
+		return err
+	}
+
+	tagReq := &godo.UntagResourcesRequest{Resources: resourceReq}
+
+	return c.Tags().UntagResources(tagName, tagReq)
+}
+
+func buildTagResources(urns []string) ([]godo.Resource, error) {
+	resources := []godo.Resource{}
+	for _, u := range urns {
+		parsedURN, err := urn.ParseURN(u)
+		if err != nil {
+			return nil, errors.Wrap(err, `URN must be in the format "do:<resource_type>:<resource_id>"`)
+		}
+
+		resource := godo.Resource{
+			ID:   parsedURN.Identifier(),
+			Type: godo.ResourceType(parsedURN.Collection()),
+		}
+		// The URN collection for databases is actually "dbaas" but the resource
+		// type for tags is "database" Support the use of a real URN.
+		if resource.Type == "dbaas" {
+			resource.Type = "database"
+		}
+		resources = append(resources, resource)
+	}
+
+	return resources, nil
 }
