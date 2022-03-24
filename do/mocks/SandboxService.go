@@ -66,34 +66,19 @@ func (mr *MockSandboxServiceMockRecorder) Exec(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockSandboxService)(nil).Exec), arg0)
 }
 
-// ResolveNamespace mocks base method.
-func (m *MockSandboxService) ResolveNamespace(arg0 context.Context, arg1 string) (do.SandboxCredentials, error) {
+// GetSandboxNamespace mocks base method.
+func (m *MockSandboxService) GetSandboxNamespace(arg0 context.Context) (do.SandboxCredentials, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResolveNamespace", arg0, arg1)
+	ret := m.ctrl.Call(m, "GetSandboxNamespace", arg0)
 	ret0, _ := ret[0].(do.SandboxCredentials)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ResolveNamespace indicates an expected call of ResolveNamespace.
-func (mr *MockSandboxServiceMockRecorder) ResolveNamespace(arg0, arg1 interface{}) *gomock.Call {
+// GetSandboxNamespace indicates an expected call of GetSandboxNamespace.
+func (mr *MockSandboxServiceMockRecorder) GetSandboxNamespace(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveNamespace", reflect.TypeOf((*MockSandboxService)(nil).ResolveNamespace), arg0, arg1)
-}
-
-// ResolveToken mocks base method.
-func (m *MockSandboxService) ResolveToken(arg0 context.Context, arg1 string) (do.SandboxCredentials, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResolveToken", arg0, arg1)
-	ret0, _ := ret[0].(do.SandboxCredentials)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ResolveToken indicates an expected call of ResolveToken.
-func (mr *MockSandboxServiceMockRecorder) ResolveToken(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveToken", reflect.TypeOf((*MockSandboxService)(nil).ResolveToken), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxNamespace", reflect.TypeOf((*MockSandboxService)(nil).GetSandboxNamespace), arg0)
 }
 
 // Stream mocks base method.
