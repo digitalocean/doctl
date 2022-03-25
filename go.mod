@@ -10,7 +10,7 @@ require (
 	github.com/digitalocean/godo v1.77.0
 	github.com/docker/cli v20.10.14+incompatible
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200531234253-77e06fda0c94+incompatible // indirect
-	github.com/docker/docker-credential-helpers v0.6.3 // indirect
+	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.12.0
 	github.com/gobwas/glob v0.2.3
