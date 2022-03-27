@@ -37,7 +37,7 @@ type CmdConfig struct {
 	setContextAccessToken func(string)
 	removeContext         func(string) error
 	checkSandboxStatus    func() error
-	installSandbox        func(string, bool) error
+	installSandbox        func(*CmdConfig, string, bool) error
 
 	// services
 	Keys              func() do.KeysService
@@ -129,7 +129,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			}
 			node := filepath.Join(sandboxDir, nodeBin)
 			sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
-			nimbellaDir := filepath.Join(sandboxDir, ".nimbella")
+			nimbellaDir := getCredentialDirectory(c, sandboxDir)
 			c.Sandbox = func() do.SandboxService { return do.NewSandboxService(sandboxJs, nimbellaDir, node, godoClient) }
 
 			return nil
@@ -196,8 +196,8 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			return CheckSandboxStatus()
 		},
 
-		installSandbox: func(dir string, upgrading bool) error {
-			return InstallSandbox(dir, upgrading)
+		installSandbox: func(c *CmdConfig, dir string, upgrading bool) error {
+			return InstallSandbox(c, dir, upgrading)
 		},
 	}
 

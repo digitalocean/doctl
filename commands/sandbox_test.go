@@ -118,7 +118,7 @@ func TestSandboxInstallFromScratch(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(dir string, upgrade bool) error {
+		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
@@ -137,7 +137,7 @@ func TestSandboxInstallWhenInstalledNotCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(dir string, upgrade bool) error {
+		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
@@ -156,7 +156,7 @@ func TestSandboxInstallWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(dir string, upgrade bool) error {
+		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
@@ -175,7 +175,7 @@ func TestSandboxUpgradeWhenNotInstalled(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(dir string, upgrade bool) error {
+		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
@@ -194,7 +194,7 @@ func TestSandboxUpgradeWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(dir string, upgrade bool) error {
+		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
@@ -213,7 +213,7 @@ func TestSandboxUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(dir string, upgrade bool) error {
+		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
