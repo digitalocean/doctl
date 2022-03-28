@@ -39,7 +39,7 @@ const (
 	// version of the bridge code in the sandbox plugin repository.
 	minSandboxVersion = "3.0.0-1.1.0"
 
-	// The version of nodejs to download alongsize the plugin download.
+	// The version of nodejs to download alongsize the plugin downl
 	nodeVersion = "v16.13.0"
 
 	// noCapture is the string constant recognized by the plugin.  It suppresses output
@@ -356,17 +356,16 @@ func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string
 // We don't expect both Table and Entity to be present and have no
 // special handling for that.
 func (c *CmdConfig) PrintSandboxTextOutput(output do.SandboxOutput) error {
+	var err error
 	if len(output.Formatted) > 0 {
-		fmt.Fprintf(c.Out, strings.Join(output.Formatted, "\n"))
+		_, err = fmt.Fprintln(c.Out, strings.Join(output.Formatted, "\n"))
 	} else if len(output.Captured) > 0 {
-		fmt.Fprintf(c.Out, strings.Join(output.Captured, "\n"))
+		_, err = fmt.Fprintln(c.Out, strings.Join(output.Captured, "\n"))
 	} else if len(output.Table) > 0 {
-		fmt.Fprintf(c.Out, genericJSON(output.Table))
+		_, err = fmt.Fprintln(c.Out, genericJSON(output.Table))
 	} else if output.Entity != nil {
-		fmt.Fprintf(c.Out, genericJSON(output.Entity))
+		_, err = fmt.Fprintln(c.Out, genericJSON(output.Entity))
 	} // else no output (unusual but not impossible)
-
-	_, err := fmt.Fprintln(c.Out)
 
 	return err
 }
