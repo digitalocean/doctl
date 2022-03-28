@@ -15,6 +15,8 @@ package commands
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -604,8 +606,10 @@ func getSandboxDirectory() (string, bool) {
 // sandbox credentials to DO credentials
 func getCredentialDirectory(c *CmdConfig, sandboxDir string) string {
 	token := c.getContextAccessToken()
-	runes := []rune(token)
-	leafDir := string(runes[:8])
+	hasher := sha1.New()
+	hasher.Write([]byte(token))
+	sha := hasher.Sum(nil)
+	leafDir := hex.EncodeToString(sha[:4])
 	return filepath.Join(sandboxDir, credsDir, leafDir)
 }
 
