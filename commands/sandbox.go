@@ -15,6 +15,8 @@ package commands
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,12 +36,21 @@ import (
 )
 
 const (
-	nodeVersion       = "v16.13.0"
-	minSandboxVersion = "2.3.10-1.1.0"
+	// Minimum required version of the sandbox plugin code.  The first part is
+	// the version of the incorporated Nimbella CLI and the second part is the
+	// version of the bridge code in the sandbox plugin repository.
+	minSandboxVersion = "3.0.0-1.1.0"
+
+	// The version of nodejs to download alongsize the plugin downl
+	nodeVersion = "v16.13.0"
 
 	// noCapture is the string constant recognized by the plugin.  It suppresses output
 	// capture when in the initial (command) position.
 	noCapture = "nocapture"
+
+	// credsDir is the directory under the sandbox where all credentials are stored.
+	// It in turn has a subdirectory for each access token employed (formed as a prefix of the token).
+	credsDir = "creds"
 )
 
 var (
@@ -121,7 +132,7 @@ func RunSandboxInstall(c *CmdConfig) error {
 		return nil
 	}
 	sandboxDir, _ := getSandboxDirectory()
-	return c.installSandbox(sandboxDir, false)
+	return c.installSandbox(c, sandboxDir, false)
 }
 
 // RunSandboxUpgrade is a variant on RunSandboxInstall for installing over an existing version when
@@ -138,7 +149,7 @@ func RunSandboxUpgrade(c *CmdConfig) error {
 		return nil
 	}
 	sandboxDir, _ := getSandboxDirectory()
-	return c.installSandbox(sandboxDir, true)
+	return c.installSandbox(c, sandboxDir, true)
 }
 
 // RunSandboxUninstall removes the sandbox support and any stored credentials
@@ -347,17 +358,16 @@ func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string
 // We don't expect both Table and Entity to be present and have no
 // special handling for that.
 func (c *CmdConfig) PrintSandboxTextOutput(output do.SandboxOutput) error {
+	var err error
 	if len(output.Formatted) > 0 {
-		fmt.Fprintf(c.Out, strings.Join(output.Formatted, "\n"))
+		_, err = fmt.Fprintln(c.Out, strings.Join(output.Formatted, "\n"))
 	} else if len(output.Captured) > 0 {
-		fmt.Fprintf(c.Out, strings.Join(output.Captured, "\n"))
+		_, err = fmt.Fprintln(c.Out, strings.Join(output.Captured, "\n"))
 	} else if len(output.Table) > 0 {
-		fmt.Fprintf(c.Out, genericJSON(output.Table))
+		_, err = fmt.Fprintln(c.Out, genericJSON(output.Table))
 	} else if output.Entity != nil {
-		fmt.Fprintf(c.Out, genericJSON(output.Entity))
+		_, err = fmt.Fprintln(c.Out, genericJSON(output.Entity))
 	} // else no output (unusual but not impossible)
-
-	_, err := fmt.Fprintln(c.Out)
 
 	return err
 }
@@ -376,7 +386,7 @@ func CheckSandboxStatus() error {
 }
 
 // InstallSandbox is the working subroutine for 'install' and 'upgrade'
-func InstallSandbox(sandboxDir string, upgrading bool) error {
+func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 	// Make a temporary directory for use during the install
 	tmp, err := ioutil.TempDir("", "doctl-sandbox")
 	if err != nil {
@@ -427,8 +437,8 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 		return err
 	}
 
-	// Exec the tar binary at least once to unpack the fat tarball and possibly a second time if
-	// node was downloaded.  If node was not download, just move the existing binary into place.
+	// Exec the Extract utility at least once to unpack the fat tarball and possibly a second time if
+	// node was downloaded.  If node was not downloaded, just move the existing binary into place.
 	fmt.Print("Unpacking...")
 	err = extract.Extract(sandboxFileName, tmp)
 	if err != nil {
@@ -447,9 +457,7 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 	srcPath := filepath.Join(tmp, "sandbox")
 	if upgrading {
 		// Preserve credentials by moving them from target (which will be replaced) to source.
-		credPath := filepath.Join(sandboxDir, ".nimbella")
-		relocPath := filepath.Join(srcPath, ".nimbella")
-		err = os.Rename(credPath, relocPath)
+		err = preserveCreds(c, srcPath, sandboxDir)
 		if err != nil {
 			return err
 		}
@@ -460,6 +468,13 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 			if err != nil {
 				return err
 			}
+		}
+	} else {
+		// Make new empty credentials directory
+		emptyCreds := filepath.Join(srcPath, credsDir)
+		err = os.Mkdir(emptyCreds, 0700)
+		if err != nil {
+			return nil
 		}
 	}
 	// Remove former sandboxDir before moving in the new one
@@ -485,6 +500,30 @@ func InstallSandbox(sandboxDir string, upgrading bool) error {
 	}
 	fmt.Println("\nDone")
 	return nil
+}
+
+// preserveCreds preserves existing credentials in a sandbox directory
+// that is about to be replaced by moving them to the staging directory
+// containing the replacement.
+func preserveCreds(c *CmdConfig, stagingDir string, sandboxDir string) error {
+	credPath := filepath.Join(sandboxDir, credsDir)
+	relocPath := filepath.Join(stagingDir, credsDir)
+	err := os.Rename(credPath, relocPath)
+	if err == nil {
+		return nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	// There was no creds directory.  Check for legacy form and convert as part
+	// of preserving.
+	legacyCredPath := filepath.Join(sandboxDir, ".nimbella")
+	err = os.Mkdir(relocPath, 0700)
+	if err != nil {
+		return err
+	}
+	moveLegacyTo := getCredentialDirectory(c, stagingDir)
+	return os.Rename(legacyCredPath, moveLegacyTo)
 }
 
 // "Private" utility functions
@@ -560,6 +599,18 @@ func getSandboxDirectory() (string, bool) {
 	_, err := os.Stat(sandboxDir)
 	exists := !os.IsNotExist(err)
 	return sandboxDir, exists
+}
+
+// getCredentialDirectory returns the directory in which credentials should be stored for a given
+// CmdConfig.  The actual leaf directory is a function of the access token being used.  This ties
+// sandbox credentials to DO credentials
+func getCredentialDirectory(c *CmdConfig, sandboxDir string) string {
+	token := c.getContextAccessToken()
+	hasher := sha1.New()
+	hasher.Write([]byte(token))
+	sha := hasher.Sum(nil)
+	leafDir := hex.EncodeToString(sha[:4])
+	return filepath.Join(sandboxDir, credsDir, leafDir)
 }
 
 // sandboxUpToDate answers whether the installed version of the sandbox is at least
