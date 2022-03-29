@@ -17,7 +17,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/digitalocean/doctl/do"
@@ -507,4 +510,109 @@ func TestSandboxWatch(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestGetCredentialDirectory(t *testing.T) {
+	testDir := "/home/foo/.config/doctl/sandbox/"
+	tests := []struct {
+		name      string
+		tokenFunc func() string
+		expected  string
+	}{
+		{
+			name: "legacy token",
+			tokenFunc: func() string {
+				return "a7bbe7e8af7411ec912e47a270a2ee78a7bbe7e8af7411ec912e47a270a2ee78"
+			},
+			expected: filepath.Join(testDir, "creds", "3785870f"),
+		},
+		{
+			name: "v1 token",
+			tokenFunc: func() string {
+				return "dop_v1_a7bbe7e8af7411ec912e47a270a2ee78a7bbe7e8af7411ec912e47a270a2ee78"
+			},
+			expected: filepath.Join(testDir, "creds", "7a1ae925"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.getContextAccessToken = tt.tokenFunc
+
+				out := getCredentialDirectory(config, testDir)
+				require.Equal(t, tt.expected, out)
+			})
+		})
+	}
+}
+
+func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tmp, err := ioutil.TempDir("", "test-dir")
+		require.NoError(t, err)
+		defer func() {
+			err := os.RemoveAll(tmp)
+			require.NoError(t, err, "error cleaning tmp dir")
+		}()
+
+		// Set up "existing" creds in the "sandbox" dir
+		sandboxDir := filepath.Join(tmp, "sandbox")
+		sandboxCredsDir := filepath.Join(sandboxDir, "creds", "d5b388f2")
+		err = os.MkdirAll(sandboxCredsDir, os.FileMode(0755))
+		require.NoError(t, err)
+		sandboxCreds := filepath.Join(sandboxCredsDir, "credentials.json")
+		creds, err := os.Create(sandboxCreds)
+		require.NoError(t, err)
+		creds.Close()
+
+		// Create staging dir
+		stagingDir := filepath.Join(tmp, "staging")
+		err = os.MkdirAll(stagingDir, os.FileMode(0755))
+		require.NoError(t, err)
+
+		err = preserveCreds(config, stagingDir, sandboxDir)
+		require.NoError(t, err)
+
+		stagingCreds := filepath.Join(stagingDir, "creds", "d5b388f2", "credentials.json")
+		_, err = os.Stat(stagingCreds)
+		require.NoError(t, err, "expected creds to exist in staging dir")
+	})
+}
+
+func TestPreserveCredsMovesLegacyCreds(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		// Mock token to get a stable hash (3785870f)
+		config.getContextAccessToken = func() string {
+			return "a7bbe7e8af7411ec912e47a270a2ee78a7bbe7e8af7411ec912e47a270a2ee78"
+		}
+
+		tmp, err := ioutil.TempDir("", "test-dir")
+		require.NoError(t, err)
+		defer func() {
+			err := os.RemoveAll(tmp)
+			require.NoError(t, err, "error cleaning tmp dir")
+		}()
+
+		// Set up "existing" legacy creds in the "sandbox" dir
+		sandboxDir := filepath.Join(tmp, "sandbox")
+		legacyCredsDir := filepath.Join(sandboxDir, ".nimbella")
+		err = os.MkdirAll(legacyCredsDir, os.FileMode(0755))
+		require.NoError(t, err)
+		legacyCreds := filepath.Join(legacyCredsDir, "credentials.json")
+		creds, err := os.Create(legacyCreds)
+		require.NoError(t, err)
+		creds.Close()
+
+		stagingDir := filepath.Join(tmp, "staging")
+		err = os.MkdirAll(stagingDir, os.FileMode(0755))
+		require.NoError(t, err)
+
+		err = preserveCreds(config, stagingDir, sandboxDir)
+		require.NoError(t, err)
+
+		stagingCreds := filepath.Join(stagingDir, "creds", "3785870f", "credentials.json")
+		_, err = os.Stat(stagingCreds)
+		require.NoError(t, err, "expected new creds to exist in staging dir")
+	})
 }
