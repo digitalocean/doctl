@@ -201,8 +201,6 @@ To cut a release, push a new tag (versioning discussed below).
 
 ##### Prerequisites
 
-* [github-changelog-generator](https://github.com/digitalocean/github-changelog-generator)
-
 1. Run `make changes` to review the changes since the last
    release. Based on the changes, decide what kind of release you are
    doing (bugfix, feature or breaking).
@@ -216,44 +214,6 @@ To cut a release, push a new tag (versioning discussed below).
    do so by setting `ORIGIN=(preferred remote name)`.
 
 The new tag triggers the release.
-
-### If a release fails
-
-If part of a release fails, you can run the target for that part of the release yourself.
-
-#### Github Releases & Dockerhub
-
-`make release` releases the most recent tag to github releases and
-dockerhub images. If `make release` fails, you can always fall back to
-`goreleaser` itself.
-
-##### Prerequisites
-
-* [goreleaser](https://goreleaser.com/install/)
-* [docker](https://docs.docker.com/install/)
-* a valid `GITHUB_TOKEN` environment variable with access to the
-  `digitalocean/doctl` repo. You can generate a token
-  [here](https://github.com/settings/tokens), it needs the `public_repo`
-  access.
-* a valid [Docker Hub](dockerhub.com) login with access to the `digitalocean` account. Post
-  in #it_support to request access.
-
-#### Snap
-
-`make snap` builds and pushes a snap for the most recent tag to the
-snap store.  Specify the release channel using the environment
-variable `CHANNEL`, which defaults to `stable`:
-
-    CHANNEL=candidate make _snap
-
-If `make snap` fails, you can fall back to building and pushing the
-snap manually.
-
-##### Prerequisites
-
-* [docker](https://docs.docker.com/install/)
-* a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account.
-  Post in #it_support to request access.
 
 ##### Building a new snap base image
 
