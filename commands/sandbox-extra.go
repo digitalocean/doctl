@@ -116,11 +116,13 @@ func RunSandboxExtraDeploy(c *CmdConfig) error {
 	adjustIncludeAndExclude(c)
 	output, err := RunSandboxExec(projectDeploy, c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild, flagIncremental},
 		[]string{flagEnv, flagBuildEnv, flagApihost, flagAuth, flagInclude, flagExclude})
-	if err != nil {
+	if err != nil && len(output.Captured) == 0 {
+		// Just an error, nothing in 'Captured'
 		return err
 	}
-	// The output from "project/deploy" is not quite right for doctl even with branding.
-	// TODO Should we increase the scope of the branding so that these fixups are less frequently needed?
+	// The output from "project/deploy" is not quite right for doctl even with branding, so fix up
+	// what is in 'Captured'.  We do this even if there has been an error, because the output of
+	// deploy is complex and the transcript is often needed to interpret the error.
 	for index, value := range output.Captured {
 		if strings.Contains(value, "Deploying project") {
 			output.Captured[index] = strings.Replace(value, "Deploying project", "Deployed", 1)
@@ -128,7 +130,14 @@ func RunSandboxExtraDeploy(c *CmdConfig) error {
 			output.Captured[index] = "Deployed functions ('doctl sbx fn get <funcName> --url' for URL):"
 		}
 	}
-	return c.PrintSandboxTextOutput(output)
+	if err == nil {
+		// Normal error-free return
+		return c.PrintSandboxTextOutput(output)
+	}
+	// When there is an error but also a transcript, display the transcript before return the error
+	// This is "best effort" so we ignore any error returns from the print statement
+	fmt.Fprintln(c.Out, strings.Join(output.Captured, "\n"))
+	return err
 }
 
 // RunSandboxExtraGetMetadata supports the 'sandbox get-metadata' command
