@@ -48,6 +48,7 @@ const (
 	activationLogs     = "activation/logs"
 	flagStrip          = "strip"
 	flagFollow         = "follow"
+	flagWatch          = "watch"
 	flagDeployed       = "deployed"
 	flagPackage        = "package"
 	activationResult   = "activation/result"

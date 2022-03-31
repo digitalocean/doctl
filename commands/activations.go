@@ -115,20 +115,25 @@ func RunActivationsLogs(c *CmdConfig) error {
 	replaceFunctionWithAction(c)
 	augmentPackageWithDeployed(c)
 	if isWatching(c) {
-		return RunSandboxExecStreaming(activationLogs, c, []string{flagLast, flagStrip, flagFollow, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
+		return RunSandboxExecStreaming(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
 	}
-	output, err := RunSandboxExec(activationLogs, c, []string{flagLast, flagStrip, flagFollow, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
+	output, err := RunSandboxExec(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
 	if err != nil {
 		return err
 	}
 	return c.PrintSandboxTextOutput(output)
 }
 
-// isWatching decides whether the flags of an 'activation logs' command are implementing the watching
-// feature.  Currently, this is indicated by the --follow flag.
+// isWatching (1) modifies the config replacing the "follow" flag (significant to doctl) with the
+// "watch" flag (significant to nim)  (2) Returns whether the command should be run in streaming mode
+// (will be true iff follow/watch is true).
 func isWatching(c *CmdConfig) bool {
 	yes, err := c.Doit.GetBool(c.NS, flagFollow)
-	return yes && err == nil
+	if yes && err == nil {
+		c.Doit.Set(c.NS, flagWatch, true)
+		return true
+	}
+	return false
 }
 
 // RunActivationsResult supports the 'activations result' command
