@@ -1,3 +1,16 @@
+/*
+Copyright 2018 The Doctl Authors All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package do
 
 import (
@@ -94,9 +107,12 @@ func (n *sandboxService) Exec(cmd *exec.Cmd) (SandboxOutput, error) {
 	if err != nil {
 		return SandboxOutput{}, err
 	}
-	// Result is sound JSON but if it has an Error field the rest is not trustworthy
+	// Result is sound JSON but also has an error field, meaning that something did
+	// go wrong.  In this case we return the actual output but also the distinguished
+	// error return.  Most callers will process only the error, which is fine.  Sometimes,
+	// however, there is other information that can be useful as part of the error report.
 	if len(result.Error) > 0 {
-		return SandboxOutput{}, errors.New(result.Error)
+		return result, errors.New(result.Error)
 	}
 	// Result is both sound and error free
 	return result, nil
