@@ -224,7 +224,7 @@ func TestActivationsLogs(t *testing.T) {
 		{
 			name:            "follow flag",
 			doctlFlags:      map[string]string{"follow": ""},
-			expectedNimArgs: []string{"--follow"},
+			expectedNimArgs: []string{"--watch"},
 			expectStream:    true,
 		},
 		{
