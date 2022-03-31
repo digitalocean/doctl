@@ -117,21 +117,24 @@ const (
 	AppAlertSpecOperator_LessThan            AppAlertSpecOperator = "LESS_THAN"
 )
 
-// AppAlertSpecRule  - CPU_UTILIZATION: Represents CPU for a given container instance. Only applicable at the component level.  - MEM_UTILIZATION: Represents RAM for a given container instance. Only applicable at the component level.  - RESTART_COUNT: Represents restart count for a given container instance. Only applicable at the component level.  - DEPLOYMENT_FAILED: Represents whether a deployment has failed. Only applicable at the app level.  - DEPLOYMENT_LIVE: Represents whether a deployment has succeeded. Only applicable at the app level.  - DOMAIN_FAILED: Represents whether a domain configuration has failed. Only applicable at the app level.  - DOMAIN_LIVE: Represents whether a domain configuration has succeeded. Only applicable at the app level.  - FUNCTIONS_ACTIVATION_COUNT: Represents an activation count for a given functions instance. Only applicable to functions components.  - FUNCTIONS_AVERAGE_DURATION_MS: Represents the average duration for function runtimes. Only applicable to functions components.
+// AppAlertSpecRule  - CPU_UTILIZATION: Represents CPU for a given container instance. Only applicable at the component level.  - MEM_UTILIZATION: Represents RAM for a given container instance. Only applicable at the component level.  - RESTART_COUNT: Represents restart count for a given container instance. Only applicable at the component level.  - DEPLOYMENT_FAILED: Represents whether a deployment has failed. Only applicable at the app level.  - DEPLOYMENT_LIVE: Represents whether a deployment has succeeded. Only applicable at the app level.  - DOMAIN_FAILED: Represents whether a domain configuration has failed. Only applicable at the app level.  - DOMAIN_LIVE: Represents whether a domain configuration has succeeded. Only applicable at the app level.  - FUNCTIONS_ACTIVATION_COUNT: Represents an activation count for a given functions instance. Only applicable to functions components.  - FUNCTIONS_AVERAGE_DURATION_MS: Represents the average duration for function runtimes. Only applicable to functions components.  - FUNCTIONS_ERROR_RATE_PER_MINUTE: Represents an error rate per minute for a given functions instance. Only applicable to functions components.  - FUNCTIONS_AVERAGE_WAIT_TIME_MS: Represents the average wait time for functions. Only applicable to functions components.  - FUNCTIONS_ERROR_COUNT: Represents an error count for a given functions instance. Only applicable to functions components.
 type AppAlertSpecRule string
 
 // List of AppAlertSpecRule
 const (
-	AppAlertSpecRule_UnspecifiedRule            AppAlertSpecRule = "UNSPECIFIED_RULE"
-	AppAlertSpecRule_CPUUtilization             AppAlertSpecRule = "CPU_UTILIZATION"
-	AppAlertSpecRule_MemUtilization             AppAlertSpecRule = "MEM_UTILIZATION"
-	AppAlertSpecRule_RestartCount               AppAlertSpecRule = "RESTART_COUNT"
-	AppAlertSpecRule_DeploymentFailed           AppAlertSpecRule = "DEPLOYMENT_FAILED"
-	AppAlertSpecRule_DeploymentLive             AppAlertSpecRule = "DEPLOYMENT_LIVE"
-	AppAlertSpecRule_DomainFailed               AppAlertSpecRule = "DOMAIN_FAILED"
-	AppAlertSpecRule_DomainLive                 AppAlertSpecRule = "DOMAIN_LIVE"
-	AppAlertSpecRule_FunctionsActivationCount   AppAlertSpecRule = "FUNCTIONS_ACTIVATION_COUNT"
-	AppAlertSpecRule_FunctionsAverageDurationMS AppAlertSpecRule = "FUNCTIONS_AVERAGE_DURATION_MS"
+	AppAlertSpecRule_UnspecifiedRule             AppAlertSpecRule = "UNSPECIFIED_RULE"
+	AppAlertSpecRule_CPUUtilization              AppAlertSpecRule = "CPU_UTILIZATION"
+	AppAlertSpecRule_MemUtilization              AppAlertSpecRule = "MEM_UTILIZATION"
+	AppAlertSpecRule_RestartCount                AppAlertSpecRule = "RESTART_COUNT"
+	AppAlertSpecRule_DeploymentFailed            AppAlertSpecRule = "DEPLOYMENT_FAILED"
+	AppAlertSpecRule_DeploymentLive              AppAlertSpecRule = "DEPLOYMENT_LIVE"
+	AppAlertSpecRule_DomainFailed                AppAlertSpecRule = "DOMAIN_FAILED"
+	AppAlertSpecRule_DomainLive                  AppAlertSpecRule = "DOMAIN_LIVE"
+	AppAlertSpecRule_FunctionsActivationCount    AppAlertSpecRule = "FUNCTIONS_ACTIVATION_COUNT"
+	AppAlertSpecRule_FunctionsAverageDurationMS  AppAlertSpecRule = "FUNCTIONS_AVERAGE_DURATION_MS"
+	AppAlertSpecRule_FunctionsErrorRatePerMinute AppAlertSpecRule = "FUNCTIONS_ERROR_RATE_PER_MINUTE"
+	AppAlertSpecRule_FunctionsAverageWaitTimeMs  AppAlertSpecRule = "FUNCTIONS_AVERAGE_WAIT_TIME_MS"
+	AppAlertSpecRule_FunctionsErrorCount         AppAlertSpecRule = "FUNCTIONS_ERROR_COUNT"
 )
 
 // AppAlertSpecWindow the model 'AppAlertSpecWindow'
@@ -279,8 +282,7 @@ const (
 
 // AppLogDestinationSpec struct for AppLogDestinationSpec
 type AppLogDestinationSpec struct {
-	// Name of the log destination.
-	Name        string                           `json:"name,omitempty"`
+	Name        string                           `json:"name"`
 	Papertrail  *AppLogDestinationSpecPapertrail `json:"papertrail,omitempty"`
 	Datadog     *AppLogDestinationSpecDataDog    `json:"datadog,omitempty"`
 	Logtail     *AppLogDestinationSpecLogtail    `json:"logtail,omitempty"`
@@ -402,8 +404,9 @@ type AppSpec struct {
 	// A list of environment variables made available to all components in the app.
 	Envs []*AppVariableDefinition `json:"envs,omitempty"`
 	// A list of alerts which apply to the app.
-	Alerts  []*AppAlertSpec `json:"alerts,omitempty"`
-	Ingress *AppIngressSpec `json:"ingress,omitempty"`
+	Alerts   []*AppAlertSpec `json:"alerts,omitempty"`
+	Ingress  *AppIngressSpec `json:"ingress,omitempty"`
+	Features []string        `json:"features,omitempty"`
 }
 
 // AppStaticSiteSpec struct for AppStaticSiteSpec
