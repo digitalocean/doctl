@@ -39,7 +39,7 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minSandboxVersion = "3.0.4-1.2.0"
+	minSandboxVersion = "3.0.5-1.2.0"
 
 	// The version of nodejs to download alongsize the plugin downl
 	nodeVersion = "v16.13.0"
@@ -430,7 +430,8 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 
 	// Download the fat tarball with the nim CLI, deployer, and sandbox bridge
 	// TODO do these need to be arch-specific?  Currently assuming not.
-	URL := fmt.Sprintf("https://do-serverless-tools.nyc3.digitaloceanspaces.com/doctl-sandbox-%s.tar.gz", minSandboxVersion)
+	URL := fmt.Sprintf("https://do-serverless-tools.nyc3.digitaloceanspaces.com/doctl-sandbox-%s.tar.gz",
+		getMinSandboxVersion())
 	sandboxFileName := filepath.Join(tmp, "doctl-sandbox.tar.gz")
 	err = download(URL, sandboxFileName)
 	if err != nil {
@@ -593,9 +594,14 @@ func download(URL, targetFile string) error {
 }
 
 // getSandboxDirectory returns the "sandbox" directory in which the artifacts for sandbox support
-// are stored.  Returns the name of the directory and whether it exists.
+// are stored.  Returns the name of the directory and whether it exists.  The standard location
+// (and the only one that customers are expected to use) is relative to the defaultConfigHome.
+// For testing purposes, an override can be provided via an environment variable.
 func getSandboxDirectory() (string, bool) {
-	sandboxDir := filepath.Join(defaultConfigHome(), "sandbox")
+	sandboxDir := os.Getenv("sandboxDirectory")
+	if sandboxDir == "" {
+		sandboxDir = filepath.Join(defaultConfigHome(), "sandbox")
+	}
 	_, err := os.Stat(sandboxDir)
 	exists := !os.IsNotExist(err)
 	return sandboxDir, exists
@@ -616,7 +622,7 @@ func getCredentialDirectory(c *CmdConfig, sandboxDir string) string {
 // sandboxUpToDate answers whether the installed version of the sandbox is at least
 // what is required by doctl
 func sandboxUptodate(sandboxDir string) bool {
-	return getCurrentSandboxVersion(sandboxDir) >= minSandboxVersion
+	return getCurrentSandboxVersion(sandboxDir) >= getMinSandboxVersion()
 }
 
 // Converts something "object-like" but untyped to generic JSON
@@ -648,4 +654,13 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 	}
 
 	return args
+}
+
+// Return the minSandboxVersion (allows the constant to be overridden via an environment variable)
+func getMinSandboxVersion() string {
+	fromEnv := os.Getenv("minSandboxVersion")
+	if fromEnv != "" {
+		return fromEnv
+	}
+	return minSandboxVersion
 }
