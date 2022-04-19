@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/digitalocean/godo"
 )
@@ -34,9 +35,10 @@ type SandboxCredentials struct {
 // The type of the "namespace" member of the response to /api/v2/functions/sandbox
 // Only relevant fields unmarshalled
 type outputNamespace struct {
-	APIHost string `json:"api_host"`
-	UUID    string `json:"uuid"`
-	Key     string `json:"key"`
+	Namespace string `json:"namespace"`
+	APIHost   string `json:"api_host"`
+	UUID      string `json:"uuid"`
+	Key       string `json:"key"`
 }
 
 // namespacesResponseBody is the type of the response body for /api/v2/functions/sandbox
@@ -138,8 +140,26 @@ func (n *sandboxService) GetSandboxNamespace(ctx context.Context) (SandboxCreden
 		return SandboxCredentials{}, err
 	}
 	ans := SandboxCredentials{
-		APIHost: decoded.Namespace.APIHost,
+		APIHost: assignAPIHost(decoded.Namespace.APIHost, decoded.Namespace.Namespace),
 		Auth:    decoded.Namespace.UUID + ":" + decoded.Namespace.Key,
 	}
 	return ans, nil
+}
+
+// Assign the correct API host based on the namespace name.
+// Every serverless cluster has two domain names, one ending in '.io', the other in '.co'.
+// By convention, the portal only returns the '.io' one but 'doctl sbx' must start using
+// only the '.co' one (the '.io' one will eventually require mtls authentication).
+// During a migration period, we can continue to support reconnection to "old" namespaces
+// (not prefixed by "fn-") but should make sure that all "new" namespaces (prefixed by "fn-")
+// switch their API host name from '.io' to '.co'.  Eventually, reconnection to old
+// namespaces will fail and they will be removed.  We will need to ensure that users are
+// using a doctl containing this code so they can obtain conforming namespaces.
+func assignAPIHost(origAPIHost string, namespace string) string {
+	if strings.HasPrefix(namespace, "fn-") {
+		hostParts := strings.Split(origAPIHost, ".")
+		sansSuffix := strings.Join(hostParts[:len(hostParts)-1], ".")
+		return sansSuffix + ".co"
+	}
+	return origAPIHost
 }
