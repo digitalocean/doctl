@@ -237,7 +237,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 		setContextAccessToken: func(token string) {},
 
-		checkSandboxStatus: func() error {
+		checkSandboxStatus: func(c *CmdConfig) error {
 			return nil
 		},
 

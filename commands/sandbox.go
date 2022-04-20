@@ -51,6 +51,9 @@ const (
 	// credsDir is the directory under the sandbox where all credentials are stored.
 	// It in turn has a subdirectory for each access token employed (formed as a prefix of the token).
 	credsDir = "creds"
+
+	// credentialsFile is the name of the file where the sandbox plugin stores OpenWhisk credentialsl
+	credentialsFile = "credentials.json"
 )
 
 var (
@@ -121,7 +124,7 @@ the entire packages are removed.`, Writer)
 
 // RunSandboxInstall performs the network installation of the 'nim' adjunct to support sandbox development
 func RunSandboxInstall(c *CmdConfig) error {
-	status := c.checkSandboxStatus()
+	status := c.checkSandboxStatus(c)
 	if status == ErrSandboxNeedsUpgrade {
 		fmt.Fprintln(c.Out, "Sandbox support is already installed, but needs an upgrade for this version of `doctl`.")
 		fmt.Fprintln(c.Out, "Use `doctl sandbox upgrade` to upgrade the support.")
@@ -138,7 +141,7 @@ func RunSandboxInstall(c *CmdConfig) error {
 // RunSandboxUpgrade is a variant on RunSandboxInstall for installing over an existing version when
 // the existing version is inadequate as detected by checkSandboxStatus()
 func RunSandboxUpgrade(c *CmdConfig) error {
-	status := c.checkSandboxStatus()
+	status := c.checkSandboxStatus(c)
 	if status == nil {
 		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version.  No action needed.")
 		// TODO should there be an option to upgrade beyond the minimum needed?
@@ -174,7 +177,12 @@ func RunSandboxConnect(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	result, err := SandboxExec(c, "auth/login", "--auth", creds.Auth, "--apihost", creds.APIHost)
+	// Non-standard check for the connect command (only): it's ok to not be connected.
+	err = c.checkSandboxStatus(c)
+	if err != nil && err != ErrSandboxNotConnected {
+		return err
+	}
+	result, err := sandboxExecNoCheck(c, "auth/login", []string{"--auth", creds.Auth, "--apihost", creds.APIHost})
 	if err != nil {
 		return err
 	}
@@ -186,13 +194,15 @@ func RunSandboxConnect(c *CmdConfig) error {
 
 // RunSandboxStatus gives a report on the status of the sandbox (installed, up to date, connected)
 func RunSandboxStatus(c *CmdConfig) error {
-	status := c.checkSandboxStatus()
-	if status == ErrSandboxNeedsUpgrade || status == ErrSandboxNotInstalled {
+	status := c.checkSandboxStatus(c)
+	if status == ErrSandboxNeedsUpgrade || status == ErrSandboxNotInstalled || status == ErrSandboxNotConnected {
 		return status
 	}
 	if status != nil {
 		return fmt.Errorf("Unexpected error: %w", status)
 	}
+	// Check the connected state more deeply (since this is a status command we want to
+	// be more accurate; the connected check in checkSandboxStatus is lightweight and heuristic).
 	result, err := SandboxExec(c, "auth/current", "--apihost", "--name")
 	if err != nil || len(result.Error) > 0 {
 		return ErrSandboxNotConnected
@@ -292,28 +302,26 @@ func deletePackage(c *CmdConfig, pkg string) error {
 
 // SandboxExec executes a sandbox command
 func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput, error) {
-	err := c.checkSandboxStatus()
+	err := c.checkSandboxStatus(c)
 	if err != nil {
 		return do.SandboxOutput{}, err
 	}
+	return sandboxExecNoCheck(c, command, args)
+}
+
+func sandboxExecNoCheck(c *CmdConfig, command string, args []string) (do.SandboxOutput, error) {
 	sandbox := c.Sandbox()
 	cmd, err := sandbox.Cmd(command, args)
 	if err != nil {
 		return do.SandboxOutput{}, err
 	}
-	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
-	// will continue to work for returning structured results.
-	if os.Getenv("DEBUG") != "" {
-		cmd.Stderr = os.Stderr
-	}
-
 	return sandbox.Exec(cmd)
 }
 
 // RunSandboxExec is a variant of SandboxExec convenient for calling from stylized command runners
 // Sets up the arguments and (especially) the flags for the actual call
 func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (do.SandboxOutput, error) {
-	err := c.checkSandboxStatus()
+	err := c.checkSandboxStatus(c)
 	if err != nil {
 		return do.SandboxOutput{}, err
 	}
@@ -330,7 +338,7 @@ func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringF
 
 // RunSandboxExecStreaming is like RunSandboxExec but assumes that output will not be captured and can be streamed.
 func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
-	err := c.checkSandboxStatus()
+	err := c.checkSandboxStatus(c)
 	if err != nil {
 		return err
 	}
@@ -374,13 +382,16 @@ func (c *CmdConfig) PrintSandboxTextOutput(output do.SandboxOutput) error {
 
 // CheckSandboxStatus checks install status and returns an appropriate error for common issues
 // such as not installed or needs upgrade.  Returns nil when no error.
-func CheckSandboxStatus() error {
+func CheckSandboxStatus(c *CmdConfig) error {
 	sandboxDir, exists := getSandboxDirectory()
 	if !exists {
 		return ErrSandboxNotInstalled
 	}
 	if !sandboxUptodate(sandboxDir) {
 		return ErrSandboxNeedsUpgrade
+	}
+	if !isSandboxConnected(c, sandboxDir) {
+		return ErrSandboxNotConnected
 	}
 	return nil
 }
@@ -623,6 +634,19 @@ func getCredentialDirectory(c *CmdConfig, sandboxDir string) string {
 // what is required by doctl
 func sandboxUptodate(sandboxDir string) bool {
 	return getCurrentSandboxVersion(sandboxDir) >= getMinSandboxVersion()
+}
+
+// Determines whether the sandbox appears to be connected.  The purpose is
+// to fail fast (when feasible) on sandboxes that are clearly not connected.
+// However, it is important not to add excessive overhead on each call (e.g.
+// asking the plugin to validate credentials), so the test is not foolproof.
+// It merely tests whether a credentials directory has been created for the
+// current doctl access token and appears to have a credentials.json in it.
+func isSandboxConnected(c *CmdConfig, sandboxDir string) bool {
+	creds := getCredentialDirectory(c, sandboxDir)
+	credsFile := filepath.Join(creds, credentialsFile)
+	_, err := os.Stat(credsFile)
+	return !os.IsNotExist(err)
 }
 
 // Converts something "object-like" but untyped to generic JSON

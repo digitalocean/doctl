@@ -92,7 +92,7 @@ func TestSandboxStatusWhenNotConnected(t *testing.T) {
 
 func TestSandboxStatusWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.checkSandboxStatus = func() error {
+		config.checkSandboxStatus = func(*CmdConfig) error {
 			return ErrSandboxNotInstalled
 		}
 
@@ -105,7 +105,7 @@ func TestSandboxStatusWhenNotInstalled(t *testing.T) {
 
 func TestSandboxStatusWhenNotUpToDate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.checkSandboxStatus = func() error {
+		config.checkSandboxStatus = func(*CmdConfig) error {
 			return ErrSandboxNeedsUpgrade
 		}
 
@@ -125,7 +125,7 @@ func TestSandboxInstallFromScratch(t *testing.T) {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
-		config.checkSandboxStatus = func() error {
+		config.checkSandboxStatus = func(*CmdConfig) error {
 			return ErrSandboxNotInstalled
 		}
 
@@ -144,7 +144,7 @@ func TestSandboxInstallWhenInstalledNotCurrent(t *testing.T) {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
-		config.checkSandboxStatus = func() error {
+		config.checkSandboxStatus = func(*CmdConfig) error {
 			return ErrSandboxNeedsUpgrade
 		}
 
@@ -163,7 +163,7 @@ func TestSandboxInstallWhenInstalledAndCurrent(t *testing.T) {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
-		config.checkSandboxStatus = func() error {
+		config.checkSandboxStatus = func(*CmdConfig) error {
 			return nil
 		}
 
@@ -182,7 +182,7 @@ func TestSandboxUpgradeWhenNotInstalled(t *testing.T) {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
-		config.checkSandboxStatus = func() error {
+		config.checkSandboxStatus = func(*CmdConfig) error {
 			return ErrSandboxNotInstalled
 		}
 
@@ -201,7 +201,7 @@ func TestSandboxUpgradeWhenInstalledAndCurrent(t *testing.T) {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
-		config.checkSandboxStatus = func() error {
+		config.checkSandboxStatus = func(*CmdConfig) error {
 			return nil
 		}
 
@@ -220,7 +220,7 @@ func TestSandboxUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
 			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
 			return nil
 		}
-		config.checkSandboxStatus = func() error {
+		config.checkSandboxStatus = func(*CmdConfig) error {
 			return ErrSandboxNeedsUpgrade
 		}
 

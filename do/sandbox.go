@@ -88,7 +88,11 @@ func (n *sandboxService) Cmd(command string, args []string) (*exec.Cmd, error) {
 	args = append([]string{n.sandboxJs, command}, args...)
 	cmd := exec.Command(n.node, args...)
 	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+n.sandboxDir)
-
+	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
+	// will continue to work for returning structured results.
+	if os.Getenv("DEBUG") != "" {
+		cmd.Stderr = os.Stderr
+	}
 	return cmd, nil
 }
 
