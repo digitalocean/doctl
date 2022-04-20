@@ -409,11 +409,13 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 
 	goos := runtime.GOOS
 	arch := runtime.GOARCH
+	nodeBin := "node"
 	if arch == "amd64" {
 		arch = "x64"
 	}
 	if goos == "windows" {
 		goos = "win"
+		nodeBin = "node.exe"
 	}
 
 	var (
@@ -423,7 +425,7 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 	)
 
 	// Download nodejs only if necessary
-	if !upgrading || !canReuseNode(sandboxDir) {
+	if !upgrading || !canReuseNode(sandboxDir, nodeBin) {
 		nodeDir = fmt.Sprintf("node-%s-%s-%s", nodeVersion, goos, arch)
 		nodeURL = fmt.Sprintf("https://nodejs.org/dist/%s/%s.tar.gz", nodeVersion, nodeDir)
 		nodeFileName = filepath.Join(tmp, "node-install.tar.gz")
@@ -476,7 +478,7 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 		// Preserve existing node if necessary
 		if nodeFileName == "" {
 			// Node was not downloaded
-			err = moveExistingNode(sandboxDir, srcPath)
+			err = moveExistingNode(sandboxDir, srcPath, nodeBin)
 			if err != nil {
 				return err
 			}
@@ -499,12 +501,8 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 		return err
 	}
 	if nodeFileName != "" {
-		srcPath = filepath.Join(tmp, nodeDir, "bin", "node")
-		destPath := filepath.Join(sandboxDir, "node")
-		if goos == "win" {
-			srcPath = filepath.Join(tmp, nodeDir, "node.exe")
-			destPath = filepath.Join(sandboxDir, "node.exe")
-		}
+		srcPath = filepath.Join(tmp, nodeDir, "bin", nodeBin)
+		destPath := filepath.Join(sandboxDir, nodeBin)
 		err = os.Rename(srcPath, destPath)
 		if err != nil {
 			return err
@@ -561,9 +559,9 @@ func isSandboxInstalled() bool {
 
 // Gets the version of the node binary in the sandbox.  Determine if it is
 // usable or whether it has to be upgraded.
-func canReuseNode(sandboxDir string) bool {
-	nodeBin := filepath.Join(sandboxDir, "node")
-	cmd := exec.Command(nodeBin, "--version")
+func canReuseNode(sandboxDir string, nodeBin string) bool {
+	fullNodeBin := filepath.Join(sandboxDir, nodeBin)
+	cmd := exec.Command(fullNodeBin, "--version")
 	result, err := cmd.Output()
 	if err == nil {
 		installed := strings.TrimSpace(string(result))
@@ -574,9 +572,9 @@ func canReuseNode(sandboxDir string) bool {
 
 // Moves the existing node binary from the sandbox that contains it to the new sandbox being
 // staged during an upgrade.  This preserves it for reuse and avoids the need to download.
-func moveExistingNode(existing string, staging string) error {
-	srcPath := filepath.Join(existing, "node")
-	destPath := filepath.Join(staging, "node")
+func moveExistingNode(existing string, staging string, nodeBin string) error {
+	srcPath := filepath.Join(existing, nodeBin)
+	destPath := filepath.Join(staging, nodeBin)
 	return os.Rename(srcPath, destPath)
 }
 
