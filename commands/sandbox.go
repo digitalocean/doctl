@@ -398,8 +398,11 @@ func CheckSandboxStatus(c *CmdConfig) error {
 
 // InstallSandbox is the working subroutine for 'install' and 'upgrade'
 func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
-	// Make a temporary directory for use during the install
-	tmp, err := ioutil.TempDir("", "doctl-sandbox")
+	// Make a temporary directory for use during the install.
+	// Note: we don't let this be allocated in the system temporaries area because
+	// that might be on a separate file system, meaning that the final install step
+	// will require an additional copy rather than a simple rename.
+	tmp, err := ioutil.TempDir(defaultConfigHome(), "sbx-install")
 	if err != nil {
 		return err
 	}
@@ -501,13 +504,21 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 		return err
 	}
 	if nodeFileName != "" {
-		srcPath = filepath.Join(tmp, nodeDir, "bin", nodeBin)
+		if goos == "win" {
+			srcPath = filepath.Join(tmp, nodeDir, nodeBin)
+		} else {
+			// Additional nesting in non-windows case
+			srcPath = filepath.Join(tmp, nodeDir, "bin", nodeBin)
+		}
 		destPath := filepath.Join(sandboxDir, nodeBin)
 		err = os.Rename(srcPath, destPath)
 		if err != nil {
 			return err
 		}
 	}
+	// Clean up temp directory
+	fmt.Print("Cleaning up...")
+	os.RemoveAll(tmp) // Best effort, ignore error
 	fmt.Println("\nDone")
 	return nil
 }
