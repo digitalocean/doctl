@@ -39,9 +39,9 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minSandboxVersion = "3.0.5-1.2.0"
+	minSandboxVersion = "3.0.7-1.2.1"
 
-	// The version of nodejs to download alongsize the plugin downl
+	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
 
 	// noCapture is the string constant recognized by the plugin.  It suppresses output
@@ -52,7 +52,7 @@ const (
 	// It in turn has a subdirectory for each access token employed (formed as a prefix of the token).
 	credsDir = "creds"
 
-	// credentialsFile is the name of the file where the sandbox plugin stores OpenWhisk credentialsl
+	// credentialsFile is the name of the file where the sandbox plugin stores OpenWhisk credentials.
 	credentialsFile = "credentials.json"
 )
 
