@@ -36,7 +36,7 @@ type CmdConfig struct {
 	getContextAccessToken func() string
 	setContextAccessToken func(string)
 	removeContext         func(string) error
-	checkSandboxStatus    func() error
+	checkSandboxStatus    func(*CmdConfig) error
 	installSandbox        func(*CmdConfig, string, bool) error
 
 	// services
@@ -192,8 +192,8 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			return nil
 		},
 
-		checkSandboxStatus: func() error {
-			return CheckSandboxStatus()
+		checkSandboxStatus: func(c *CmdConfig) error {
+			return CheckSandboxStatus(c)
 		},
 
 		installSandbox: func(c *CmdConfig, dir string, upgrading bool) error {
