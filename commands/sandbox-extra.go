@@ -114,6 +114,10 @@ You may deploy it by running the command shown on the next line:
 // RunSandboxExtraDeploy supports the 'sandbox deploy' command
 func RunSandboxExtraDeploy(c *CmdConfig) error {
 	adjustIncludeAndExclude(c)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
 	output, err := RunSandboxExec(projectDeploy, c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild, flagIncremental},
 		[]string{flagEnv, flagBuildEnv, flagApihost, flagAuth, flagInclude, flagExclude})
 	if err != nil && len(output.Captured) == 0 {
@@ -158,9 +162,9 @@ func RunSandboxExtraGetMetadata(c *CmdConfig) error {
 // This is not the usual boiler-plate because the command is intended to be long-running in a separate window
 func RunSandboxExtraWatch(c *CmdConfig) error {
 	adjustIncludeAndExclude(c)
-	argCount := len(c.Args)
-	if argCount > 1 {
-		return doctl.NewTooManyArgsErr(c.NS)
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
 	}
 	return RunSandboxExecStreaming(projectWatch, c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild},
 		[]string{flagEnv, flagBuildEnv, flagApihost, flagAuth, flagInclude, flagExclude})
