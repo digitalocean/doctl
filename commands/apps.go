@@ -450,13 +450,19 @@ func waitForActiveDeployment(apps do.AppsService, appID string, deploymentID str
 		}
 
 		if deploymentID == "" {
-			app, err := apps.Get(appID)
+			deployments, err := apps.ListDeployments(appID)
 			if err != nil {
 				return err
 			}
 
-			if app.InProgressDeployment != nil {
-				deploymentID = app.InProgressDeployment.ID
+			// We could find no deployments if both of the following are true:
+			// - The deployment isn't created in the backend synchronously with the create/update request.
+			// - This is the first ever deployment of the app.
+			// Note that if the first is ever true we will do the wrong thing here and test the status of
+			// a previous deployment, however there's no better way to correlate a deployment with the
+			// request that triggered it.
+			if len(deployments) > 0 {
+				deploymentID = deployments[0].ID
 			}
 		} else {
 			deployment, err := apps.GetDeployment(appID, deploymentID)

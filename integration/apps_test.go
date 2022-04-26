@@ -157,7 +157,6 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 		expect          *require.Assertions
 		server          *httptest.Server
 		deploymentCount int
-		getCounter      int
 	)
 
 	it.Before(func() {
@@ -198,12 +197,18 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
-				if getCounter > 0 {
-					json.NewEncoder(w).Encode(testAppResponse)
-				} else {
-					json.NewEncoder(w).Encode(testAppResponseInProgress)
-					getCounter++
+				json.NewEncoder(w).Encode(testAppResponse)
+			case "/v2/apps/" + testAppUUID + "/deployments":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
 				}
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+				json.NewEncoder(w).Encode(testDeploymentsResponse)
 			case "/v2/apps/" + testAppUUID + "/deployments/" + testDeploymentUUID:
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
@@ -522,7 +527,6 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect          *require.Assertions
 		server          *httptest.Server
-		getAppCounter   int
 		deploymentCount int
 	)
 
@@ -554,13 +558,19 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 					json.NewEncoder(w).Encode(testAppResponse)
 				}
 				if req.Method == http.MethodGet {
-					if getAppCounter > 0 {
-						json.NewEncoder(w).Encode(testAppResponse)
-					} else {
-						json.NewEncoder(w).Encode(testAppResponseInProgress)
-						getAppCounter++
-					}
+					json.NewEncoder(w).Encode(testAppResponse)
 				}
+			case "/v2/apps/" + testAppUUID + "/deployments":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+				json.NewEncoder(w).Encode(testDeploymentsResponse)
 			case "/v2/apps/" + testAppUUID + "/deployments/" + testDeploymentUUID:
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
