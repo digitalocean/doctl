@@ -39,7 +39,7 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minSandboxVersion = "3.0.7-1.2.1"
+	minSandboxVersion = "3.0.8-1.2.1"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -415,6 +415,12 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 	nodeBin := "node"
 	if arch == "amd64" {
 		arch = "x64"
+	}
+	if arch == "386" {
+		if goos == "linux" {
+			return errors.New("sandbox is not supported on 32-bit linux")
+		}
+		arch = "x86"
 	}
 	if goos == "windows" {
 		goos = "win"
