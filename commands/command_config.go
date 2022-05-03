@@ -16,6 +16,8 @@ package commands
 import (
 	"fmt"
 	"io"
+	"path/filepath"
+	"runtime"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -34,6 +36,8 @@ type CmdConfig struct {
 	getContextAccessToken func() string
 	setContextAccessToken func(string)
 	removeContext         func(string) error
+	checkSandboxStatus    func(*CmdConfig) error
+	installSandbox        func(*CmdConfig, string, bool) error
 
 	// services
 	Keys              func() do.KeysService
@@ -67,6 +71,7 @@ type CmdConfig struct {
 	OneClicks         func() do.OneClickService
 	Apps              func() do.AppsService
 	Monitoring        func() do.MonitoringService
+	Sandbox           func() do.SandboxService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -116,6 +121,16 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(godoClient) }
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
 			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
+
+			sandboxDir, _ := getSandboxDirectory()
+			nodeBin := "node"
+			if runtime.GOOS == "windows" {
+				nodeBin = "node.exe"
+			}
+			node := filepath.Join(sandboxDir, nodeBin)
+			sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
+			nimbellaDir := getCredentialDirectory(c, sandboxDir)
+			c.Sandbox = func() do.SandboxService { return do.NewSandboxService(sandboxJs, nimbellaDir, node, godoClient) }
 
 			return nil
 		},
@@ -175,6 +190,14 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			viper.Set("auth-contexts", contexts)
 
 			return nil
+		},
+
+		checkSandboxStatus: func(c *CmdConfig) error {
+			return CheckSandboxStatus(c)
+		},
+
+		installSandbox: func(c *CmdConfig, dir string, upgrading bool) error {
+			return InstallSandbox(c, dir, upgrading)
 		},
 	}
 
