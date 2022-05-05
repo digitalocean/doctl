@@ -104,6 +104,7 @@ The install operation is long-running, and a network connection is required.`,
 		`This command reports the status of your sandbox and some details concerning its connected cloud portion.
 With the `+"`"+`--languages flag, it will report the supported languages.`, Writer)
 	AddBoolFlag(status, "languages", "l", false, "show available languages (if connected to the cloud)")
+	AddBoolFlag(status, "version", "", false, "just show the version, don't check status")
 
 	undeploy := CmdBuilder(cmd, RunSandboxUndeploy, "undeploy [<package|function>...]",
 		"Removes resources from the cloud portion of your sandbox",
@@ -195,7 +196,21 @@ func RunSandboxConnect(c *CmdConfig) error {
 // RunSandboxStatus gives a report on the status of the sandbox (installed, up to date, connected)
 func RunSandboxStatus(c *CmdConfig) error {
 	status := c.checkSandboxStatus(c)
-	if status == ErrSandboxNeedsUpgrade || status == ErrSandboxNotInstalled || status == ErrSandboxNotConnected {
+	if status == ErrSandboxNotInstalled {
+		return status
+	}
+	version, _ := c.Doit.GetBool(c.NS, "version")
+	if version {
+		if status == ErrSandboxNeedsUpgrade {
+			sandboxDir, _ := getSandboxDirectory() // we know it exists
+			currentVersion := getCurrentSandboxVersion(sandboxDir)
+			fmt.Fprintf(c.Out, "Current: %s, required: %s\n", currentVersion, getMinSandboxVersion())
+			return nil
+		}
+		fmt.Fprintln(c.Out, getMinSandboxVersion())
+		return nil
+	}
+	if status == ErrSandboxNeedsUpgrade || status == ErrSandboxNotConnected {
 		return status
 	}
 	if status != nil {
@@ -211,7 +226,8 @@ func RunSandboxStatus(c *CmdConfig) error {
 		return errors.New("Could not retrieve information about the connected namespace")
 	}
 	mapResult := result.Entity.(map[string]interface{})
-	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n\n", mapResult["name"], mapResult["apihost"])
+	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], mapResult["apihost"])
+	fmt.Fprintf(c.Out, "Sandbox version is %s\n\n", minSandboxVersion)
 	displayRuntimes, _ := c.Doit.GetBool(c.NS, "languages")
 	if displayRuntimes {
 		result, err = SandboxExec(c, "info", "--runtimes")

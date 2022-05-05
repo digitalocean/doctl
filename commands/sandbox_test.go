@@ -69,7 +69,7 @@ func TestSandboxStatusWhenConnected(t *testing.T) {
 
 		err := RunSandboxStatus(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Connected to function namespace 'hello' on API host 'https://api.example.com'\n\n", buf.String())
+		assert.Contains(t, buf.String(), "Connected to function namespace 'hello' on API host 'https://api.example.com'\nSandbox version is")
 	})
 }
 
