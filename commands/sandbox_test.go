@@ -73,6 +73,57 @@ func TestSandboxStatusWhenConnected(t *testing.T) {
 	})
 }
 
+func TestSandboxStatusWithLanguages(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+		config.Doit.Set(config.NS, "languages", true)
+		fakeCmd := &exec.Cmd{
+			Stdout: config.Out,
+		}
+		fakeHostInfo := do.ServerlessHostInfo{
+			Runtimes: map[string][]do.ServerlessRuntime{
+				"go": {
+					{
+						Kind:       "go:1.20",
+						Deprecated: true,
+						Default:    false,
+					},
+					{
+						Kind:       "go:1.21",
+						Deprecated: false,
+						Default:    false,
+					},
+					{
+						Kind:       "go:1.22",
+						Deprecated: false,
+						Default:    true,
+					},
+				},
+			},
+		}
+		expectedDisplay := `go:
+  Keywords: go, golang
+  Runtime versions:
+    go:1.20 (deprecated)
+    go:1.21
+    go:1.22 (go:default)
+`
+
+		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
+		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+			Entity: map[string]interface{}{
+				"name":    "hello",
+				"apihost": "https://api.example.com",
+			},
+		}, nil)
+		tm.sandbox.EXPECT().GetHostInfo("https://api.example.com").Return(fakeHostInfo, nil)
+		err := RunSandboxStatus(config)
+		require.NoError(t, err)
+		assert.Contains(t, buf.String(), expectedDisplay)
+	})
+}
+
 func TestSandboxStatusWhenNotConnected(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		fakeCmd := &exec.Cmd{

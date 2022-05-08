@@ -63,10 +63,27 @@ var (
 	ErrSandboxNeedsUpgrade = errors.New("The sandbox support needs to be upgraded (use `doctl sandbox upgrade`)")
 	// ErrSandboxNotConnected is the error returned to users when the sandbox is not connected to a namespace
 	ErrSandboxNotConnected = errors.New("A sandbox is installed but not connected to a function namespace (use `doctl sandbox connect`)")
-	// ErrUndeployAllAndArgs is the error returned when the --all flag is used along with args on undeploy
+	// errUndeployAllAndArgs is the error returned when the --all flag is used along with args on undeploy
 	errUndeployAllAndArgs = errors.New("command line arguments and the `--all` flag are mutually exclusive")
-	// ErrUndeployTooFewArgs is the error returned when neither --all nor args are specified on undeploy
+	// errUndeployTooFewArgs is the error returned when neither --all nor args are specified on undeploy
 	errUndeployTooFewArgs = errors.New("either command line arguments or `--all` must be specified")
+
+	// languageKeywords maps the backend's runtime category names to keywords accepted as languages
+	// Note: this table has all languages for which we possess samples.  Only those with currently
+	// active runtimes will display.
+	languageKeywords map[string][]string = map[string][]string{
+		"nodejs":     {"javascript", "js"},
+		"deno":       {"deno"},
+		"go":         {"go", "golang"},
+		"java":       {"java"},
+		"php":        {"php"},
+		"python":     {"python", "py"},
+		"ruby":       {"ruby"},
+		"rust":       {"rust"},
+		"swift":      {"swift"},
+		"dotnet":     {"csharp", "cs"},
+		"typescript": {"typescript", "ts"},
+	}
 )
 
 // Sandbox contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
@@ -226,14 +243,38 @@ func RunSandboxStatus(c *CmdConfig) error {
 		return errors.New("Could not retrieve information about the connected namespace")
 	}
 	mapResult := result.Entity.(map[string]interface{})
-	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], mapResult["apihost"])
+	apiHost := mapResult["apihost"].(string)
+	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], apiHost)
 	fmt.Fprintf(c.Out, "Sandbox version is %s\n\n", minSandboxVersion)
-	displayRuntimes, _ := c.Doit.GetBool(c.NS, "languages")
-	if displayRuntimes {
-		result, err = SandboxExec(c, "info", "--runtimes")
-		if result.Error == "" && err == nil {
-			fmt.Fprintf(c.Out, "Available runtimes:\n")
-			c.PrintSandboxTextOutput(result)
+	languages, _ := c.Doit.GetBool(c.NS, "languages")
+	if languages {
+		return showLanguageInfo(c, apiHost)
+	}
+	return nil
+}
+
+// showLanguageInfo is called by RunSandboxStatus when --languages is specified
+func showLanguageInfo(c *CmdConfig, APIHost string) error {
+	info, err := c.Sandbox().GetHostInfo(APIHost)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(c.Out, "Supported Languages:\n")
+	for language := range info.Runtimes {
+		fmt.Fprintf(c.Out, "%s:\n", language)
+		keywords := strings.Join(languageKeywords[language], ", ")
+		fmt.Fprintf(c.Out, "  Keywords: %s\n", keywords)
+		fmt.Fprintf(c.Out, "  Runtime versions:\n")
+		runtimes := info.Runtimes[language]
+		for _, runtime := range runtimes {
+			tag := ""
+			if runtime.Default {
+				tag = fmt.Sprintf(" (%s:default)", language)
+			}
+			if runtime.Deprecated {
+				tag = " (deprecated)"
+			}
+			fmt.Fprintf(c.Out, "    %s%s\n", runtime.Kind, tag)
 		}
 	}
 	return nil

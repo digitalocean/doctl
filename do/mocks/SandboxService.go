@@ -66,6 +66,21 @@ func (mr *MockSandboxServiceMockRecorder) Exec(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockSandboxService)(nil).Exec), arg0)
 }
 
+// GetHostInfo mocks base method.
+func (m *MockSandboxService) GetHostInfo(arg0 string) (do.ServerlessHostInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHostInfo", arg0)
+	ret0, _ := ret[0].(do.ServerlessHostInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHostInfo indicates an expected call of GetHostInfo.
+func (mr *MockSandboxServiceMockRecorder) GetHostInfo(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHostInfo", reflect.TypeOf((*MockSandboxService)(nil).GetHostInfo), arg0)
+}
+
 // GetSandboxNamespace mocks base method.
 func (m *MockSandboxService) GetSandboxNamespace(arg0 context.Context) (do.SandboxCredentials, error) {
 	m.ctrl.T.Helper()
