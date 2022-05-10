@@ -152,7 +152,7 @@ func (n *sandboxService) Stream(cmd *exec.Cmd) error {
 // the invoking doctl context.
 func (n *sandboxService) GetSandboxNamespace(ctx context.Context) (SandboxCredentials, error) {
 	path := "v2/functions/sandbox"
-	req, err := n.client.NewRequest(ctx, http.MethodGet, path, nil)
+	req, err := n.client.NewRequest(ctx, http.MethodPost, path, nil)
 	if err != nil {
 		return SandboxCredentials{}, err
 	}
