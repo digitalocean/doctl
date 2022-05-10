@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -46,13 +47,30 @@ type namespacesResponseBody struct {
 	Namespace outputNamespace `json:"namespace"`
 }
 
-// SandboxService is an interface for interacting with the sandbox plugin
-// and with the namespaces service.
+// ServerlessRuntime is the type of a runtime entry returned by the API host controller
+// of the serverless cluster.
+// Only relevant fields unmarshalled
+type ServerlessRuntime struct {
+	Default    bool   `json:"default"`
+	Deprecated bool   `json:"deprecated"`
+	Kind       string `json:"kind"`
+}
+
+// ServerlessHostInfo is the type of the host information return from the API host controller
+// of the serverless cluster.
+// Only relevant fields unmarshaled.
+type ServerlessHostInfo struct {
+	Runtimes map[string][]ServerlessRuntime `json:"runtimes"`
+}
+
+// SandboxService is an interface for interacting with the sandbox plugin,
+// with the namespaces service, and with the serverless cluster controller.
 type SandboxService interface {
 	Cmd(string, []string) (*exec.Cmd, error)
 	Exec(*exec.Cmd) (SandboxOutput, error)
 	Stream(*exec.Cmd) error
 	GetSandboxNamespace(context.Context) (SandboxCredentials, error)
+	GetHostInfo(string) (ServerlessHostInfo, error)
 }
 
 type sandboxService struct {
@@ -148,6 +166,20 @@ func (n *sandboxService) GetSandboxNamespace(ctx context.Context) (SandboxCreden
 		Auth:    decoded.Namespace.UUID + ":" + decoded.Namespace.Key,
 	}
 	return ans, nil
+}
+
+// GetHostInfo returns the HostInfo structure of the provided API host
+func (n *sandboxService) GetHostInfo(APIHost string) (ServerlessHostInfo, error) {
+	endpoint := APIHost + "/api/v1"
+	resp, err := http.Get(endpoint)
+	if err != nil {
+		return ServerlessHostInfo{}, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	var result ServerlessHostInfo
+	err = json.Unmarshal(body, &result)
+	return result, err
 }
 
 // Assign the correct API host based on the namespace name.

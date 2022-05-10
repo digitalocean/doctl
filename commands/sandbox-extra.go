@@ -25,9 +25,11 @@ func SandboxExtras(cmd *Command) {
 
 	create := CmdBuilder(cmd, RunSandboxExtraCreate, "init <path>", "Initialize a local file system directory for the sandbox",
 		`The `+"`"+`doctl sandbox init`+"`"+` command specifies a directory in your file system which will hold functions and
-supporting artifacts while you're developing them.  When ready, you can upload these to the cloud for
-testing.  Later, after the area is committed to a `+"`"+`git`+"`"+` repository, you can create an app from them.
-Type `+"`"+`doctl sandbox status --languages`+"`"+` for a list of supported languages.`,
+supporting artifacts while you're developing them.  When ready, you can upload these to the cloud for testing.
+Later, after the area is committed to a `+"`"+`git`+"`"+` repository, you can create an app from them.
+
+Type `+"`"+`doctl sandbox status --languages`+"`"+` for a list of supported languages.  Use one of the displayed keywords
+to choose your sample language for `+"`"+`doctl sandbox init`+"`"+`.`,
 		Writer)
 	AddStringFlag(create, "language", "l", "javascript", "Language for the initial sample code")
 	AddBoolFlag(create, "overwrite", "", false, "Clears and reuses an existing directory")
