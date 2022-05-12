@@ -15,6 +15,7 @@ package commands
 
 import (
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
@@ -30,6 +31,13 @@ var testAccount = &do.Account{
 	},
 }
 
+var testRateLimit = &do.RateLimit{
+	Rate: &godo.Rate{
+		Limit:     200,
+		Remaining: 199,
+	},
+}
+
 func TestAccountCommand(t *testing.T) {
 	acctCmd := Account()
 	assert.NotNil(t, acctCmd)
@@ -41,6 +49,17 @@ func TestAccountGet(t *testing.T) {
 		tm.account.EXPECT().Get().Return(testAccount, nil)
 
 		err := RunAccountGet(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestAccountGetRateLimit(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		now := time.Now()
+		testRateLimit.Reset = godo.Timestamp{Time: now}
+		tm.account.EXPECT().RateLimit().Return(testRateLimit, nil)
+
+		err := RunAccountRateLimit(config)
 		assert.NoError(t, err)
 	})
 }

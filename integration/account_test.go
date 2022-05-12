@@ -78,22 +78,33 @@ var _ = suite("account/ratelimit", func(t *testing.T, when spec.G, it spec.S) {
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
 			case "/v2/account":
-				auth := req.Header.Get("Authorization")
-				if auth != "Bearer some-magic-token" {
-					w.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-
 				if req.Method != "GET" {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
 
-				w.Header().Add("RateLimit-Limit", "200")
-				w.Header().Add("RateLimit-Remaining", "199")
-				w.Header().Add("RateLimit-Reset", "1565385881")
+				auth := req.Header.Get("Authorization")
+				if auth == "Bearer some-magic-token" {
+					w.Header().Add("RateLimit-Limit", "200")
+					w.Header().Add("RateLimit-Remaining", "199")
+					w.Header().Add("RateLimit-Reset", "1565385881")
 
-				w.Write([]byte(`{ "account":{}}`))
+					w.Write([]byte(`{ "account":{}}`))
+					return
+				}
+
+				if auth == "Bearer token-with-ratelimit-exhausted" {
+					w.Header().Add("RateLimit-Limit", "200")
+					w.Header().Add("RateLimit-Remaining", "0")
+					w.Header().Add("RateLimit-Reset", "1565385881")
+					w.WriteHeader(http.StatusTooManyRequests)
+
+					w.Write([]byte(`{ "id":"too_many_requests", "message":"Too many requests"}`))
+					return
+				}
+
+				w.WriteHeader(http.StatusUnauthorized)
+				return
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -120,6 +131,22 @@ var _ = suite("account/ratelimit", func(t *testing.T, when spec.G, it spec.S) {
 		expectedOutput := strings.TrimSpace(fmt.Sprintf(ratelimitOutput, t))
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
+
+	it("doesn't return an error when rate-limted", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "token-with-ratelimit-exhausted",
+			"-u", server.URL,
+			"account",
+			"ratelimit",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		t := time.Unix(1565385881, 0)
+		expectedOutput := strings.TrimSpace(fmt.Sprintf(ratelimitExhaustedOutput, t))
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
 })
 
 const (
@@ -143,5 +170,10 @@ sammy@digitalocean.com    25               true              b6fr89dbf6d9156cace
 	ratelimitOutput = `
 Limit    Remaining    Reset
 200      199          %s
+`
+
+	ratelimitExhaustedOutput = `
+Limit    Remaining    Reset
+200      0            %s
 `
 )
