@@ -29,6 +29,9 @@ var (
 		{
 			ProjectResource: &godo.ProjectResource{URN: "do:floatingip:1.2.3.4"},
 		},
+		{
+			ProjectResource: &godo.ProjectResource{URN: "do:app:6f30f890-d2f7-11ec-b23c-bf05f13731ef"},
+		},
 	}
 	testProjectResourcesListSingle = do.ProjectResources{
 		{
@@ -215,12 +218,14 @@ func TestProjectResourcesAssignOneResource(t *testing.T) {
 func TestProjectResourcesAssignMultipleResources(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		projectUUID := "ab06e011-6dd1-4034-9293-201f71aba299"
-		urn := "do:droplet:1234"
-		otherURN := "do:floatingip:1.2.3.4"
-		tm.projects.EXPECT().AssignResources(projectUUID, []string{urn, otherURN}).Return(testProjectResourcesList, nil)
+		dropletURN := "do:droplet:1234"
+		flipURN := "do:floatingip:1.2.3.4"
+		appURN := "do:app:6f30f890-d2f7-11ec-b23c-bf05f13731ef"
+
+		tm.projects.EXPECT().AssignResources(projectUUID, []string{dropletURN, flipURN, appURN}).Return(testProjectResourcesList, nil)
 
 		config.Args = append(config.Args, projectUUID)
-		config.Doit.Set(config.NS, doctl.ArgProjectResource, []string{urn, otherURN})
+		config.Doit.Set(config.NS, doctl.ArgProjectResource, []string{dropletURN, flipURN, appURN})
 
 		err := RunProjectResourcesAssign(config)
 		assert.NoError(t, err)
