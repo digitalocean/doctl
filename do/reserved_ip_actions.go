@@ -19,30 +19,30 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// FloatingIPActionsService is an interface for interacting with
-// DigitalOcean's floating ip action api.
-type FloatingIPActionsService interface {
+// ReservedIPActionsService is an interface for interacting with
+// DigitalOcean's reserved ip action api.
+type ReservedIPActionsService interface {
 	Assign(ip string, dropletID int) (*Action, error)
 	Unassign(ip string) (*Action, error)
 	Get(ip string, actionID int) (*Action, error)
 	List(ip string, opt *godo.ListOptions) ([]Action, error)
 }
 
-type floatingIPActionsService struct {
+type reservedIPActionsService struct {
 	client *godo.Client
 }
 
-var _ FloatingIPActionsService = &floatingIPActionsService{}
+var _ ReservedIPActionsService = &reservedIPActionsService{}
 
-// NewFloatingIPActionsService builds a FloatingIPActionsService instance.
-func NewFloatingIPActionsService(godoClient *godo.Client) FloatingIPActionsService {
-	return &floatingIPActionsService{
+// NewReservedIPActionsService builds a ReservedIPActionsService instance.
+func NewReservedIPActionsService(godoClient *godo.Client) ReservedIPActionsService {
+	return &reservedIPActionsService{
 		client: godoClient,
 	}
 }
 
-func (fia *floatingIPActionsService) Assign(ip string, dropletID int) (*Action, error) {
-	a, _, err := fia.client.FloatingIPActions.Assign(context.TODO(), ip, dropletID)
+func (fia *reservedIPActionsService) Assign(ip string, dropletID int) (*Action, error) {
+	a, _, err := fia.client.ReservedIPActions.Assign(context.TODO(), ip, dropletID)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +50,8 @@ func (fia *floatingIPActionsService) Assign(ip string, dropletID int) (*Action, 
 	return &Action{Action: a}, nil
 }
 
-func (fia *floatingIPActionsService) Unassign(ip string) (*Action, error) {
-	a, _, err := fia.client.FloatingIPActions.Unassign(context.TODO(), ip)
+func (fia *reservedIPActionsService) Unassign(ip string) (*Action, error) {
+	a, _, err := fia.client.ReservedIPActions.Unassign(context.TODO(), ip)
 	if err != nil {
 		return nil, err
 	}
@@ -59,8 +59,8 @@ func (fia *floatingIPActionsService) Unassign(ip string) (*Action, error) {
 	return &Action{Action: a}, nil
 }
 
-func (fia *floatingIPActionsService) Get(ip string, actionID int) (*Action, error) {
-	a, _, err := fia.client.FloatingIPActions.Get(context.TODO(), ip, actionID)
+func (fia *reservedIPActionsService) Get(ip string, actionID int) (*Action, error) {
+	a, _, err := fia.client.ReservedIPActions.Get(context.TODO(), ip, actionID)
 	if err != nil {
 		return nil, err
 	}
@@ -68,9 +68,9 @@ func (fia *floatingIPActionsService) Get(ip string, actionID int) (*Action, erro
 	return &Action{Action: a}, nil
 }
 
-func (fia *floatingIPActionsService) List(ip string, opt *godo.ListOptions) ([]Action, error) {
+func (fia *reservedIPActionsService) List(ip string, opt *godo.ListOptions) ([]Action, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
-		list, resp, err := fia.client.FloatingIPActions.List(context.TODO(), ip, opt)
+		list, resp, err := fia.client.ReservedIPActions.List(context.TODO(), ip, opt)
 		if err != nil {
 			return nil, nil, err
 		}
