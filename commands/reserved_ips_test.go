@@ -21,79 +21,79 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFloatingIPCommands(t *testing.T) {
-	cmd := FloatingIP()
+func TestReservedIPCommands(t *testing.T) {
+	cmd := ReservedIP()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd, "create", "delete", "get", "list")
 }
 
-func TestFloatingIPsList(t *testing.T) {
+func TestReservedIPsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPs.EXPECT().List().Return(testFloatingIPList, nil)
+		tm.reservedIPs.EXPECT().List().Return(testReservedIPList, nil)
 
-		RunFloatingIPList(config)
+		RunReservedIPList(config)
 	})
 }
 
-func TestFloatingIPsGet(t *testing.T) {
+func TestReservedIPsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPs.EXPECT().Get("127.0.0.1").Return(&testFloatingIP, nil)
+		tm.reservedIPs.EXPECT().Get("127.0.0.1").Return(&testReservedIP, nil)
 
 		config.Args = append(config.Args, "127.0.0.1")
 
-		RunFloatingIPGet(config)
+		RunReservedIPGet(config)
 	})
 }
 
-func TestFloatingIPsCreate_Droplet(t *testing.T) {
+func TestReservedIPsCreate_Droplet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		ficr := &godo.FloatingIPCreateRequest{DropletID: 1}
-		tm.floatingIPs.EXPECT().Create(ficr).Return(&testFloatingIP, nil)
+		ficr := &godo.ReservedIPCreateRequest{DropletID: 1}
+		tm.reservedIPs.EXPECT().Create(ficr).Return(&testReservedIP, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgDropletID, 1)
 
-		err := RunFloatingIPCreate(config)
+		err := RunReservedIPCreate(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestFloatingIPsCreate_Region(t *testing.T) {
+func TestReservedIPsCreate_Region(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		ficr := &godo.FloatingIPCreateRequest{Region: "dev0"}
-		tm.floatingIPs.EXPECT().Create(ficr).Return(&testFloatingIP, nil)
+		ficr := &godo.ReservedIPCreateRequest{Region: "dev0"}
+		tm.reservedIPs.EXPECT().Create(ficr).Return(&testReservedIP, nil)
 
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
 
-		err := RunFloatingIPCreate(config)
+		err := RunReservedIPCreate(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestFloatingIPsCreate_fail_with_no_args(t *testing.T) {
+func TestReservedIPsCreate_fail_with_no_args(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		err := RunFloatingIPCreate(config)
+		err := RunReservedIPCreate(config)
 		assert.Error(t, err)
 	})
 }
 
-func TestFloatingIPsCreate_fail_with_both_args(t *testing.T) {
+func TestReservedIPsCreate_fail_with_both_args(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgDropletID, 1)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
 
-		err := RunFloatingIPCreate(config)
+		err := RunReservedIPCreate(config)
 		assert.Error(t, err)
 	})
 }
 
-func TestFloatingIPsDelete(t *testing.T) {
+func TestReservedIPsDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPs.EXPECT().Delete("127.0.0.1").Return(nil)
+		tm.reservedIPs.EXPECT().Delete("127.0.0.1").Return(nil)
 
 		config.Args = append(config.Args, "127.0.0.1")
 
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
-		RunFloatingIPDelete(config)
+		RunReservedIPDelete(config)
 	})
 }

@@ -20,32 +20,32 @@ import (
 	"github.com/digitalocean/doctl/do"
 )
 
-type FloatingIP struct {
-	FloatingIPs do.FloatingIPs
+type ReservedIP struct {
+	ReservedIPs do.ReservedIPs
 }
 
-var _ Displayable = &FloatingIP{}
+var _ Displayable = &ReservedIP{}
 
-func (fi *FloatingIP) JSON(out io.Writer) error {
-	return writeJSON(fi.FloatingIPs, out)
+func (rip *ReservedIP) JSON(out io.Writer) error {
+	return writeJSON(rip.ReservedIPs, out)
 }
 
-func (fi *FloatingIP) Cols() []string {
+func (rip *ReservedIP) Cols() []string {
 	return []string{
 		"IP", "Region", "DropletID", "DropletName",
 	}
 }
 
-func (fi *FloatingIP) ColMap() map[string]string {
+func (rip *ReservedIP) ColMap() map[string]string {
 	return map[string]string{
 		"IP": "IP", "Region": "Region", "DropletID": "Droplet ID", "DropletName": "Droplet Name",
 	}
 }
 
-func (fi *FloatingIP) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(fi.FloatingIPs))
+func (rip *ReservedIP) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rip.ReservedIPs))
 
-	for _, f := range fi.FloatingIPs {
+	for _, f := range rip.ReservedIPs {
 		var dropletID, dropletName string
 		if f.Droplet != nil {
 			dropletID = fmt.Sprintf("%d", f.Droplet.ID)

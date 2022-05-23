@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/reserved-ip/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -25,7 +25,7 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/reserved_ips":
+			case "/v2/reserved_ips/1.1.1.1":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -37,7 +37,7 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 					return
 				}
 
-				w.Write([]byte(floatingIPListResponse))
+				w.Write([]byte(reservedIPGetResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -51,63 +51,45 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 	})
 
 	when("required flags are passed", func() {
-		it("lists all floating-ips", func() {
-			aliases := []string{"list", "ls"}
+		it("gets the specified load balancer", func() {
+			aliases := []string{"get", "g"}
 
 			for _, alias := range aliases {
 				cmd = exec.Command(builtBinaryPath,
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"compute",
-					"floating-ip",
+					"reserved-ip",
 					alias,
+					"1.1.1.1",
 				)
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(floatingIPListOutput), strings.TrimSpace(string(output)))
+				expect.Equal(strings.TrimSpace(reservedIPGetOutput), strings.TrimSpace(string(output)))
 			}
 		})
 	})
 })
 
 const (
-	floatingIPListOutput = `
+	reservedIPGetOutput = `
 IP         Region    Droplet ID    Droplet Name
-8.8.8.8    nyc3      8888          hello
-1.1.1.1    nyc3      1111
+1.1.1.1    nyc3
 `
-	floatingIPListResponse = `
+	reservedIPGetResponse = `
 {
-  "reserved_ips": [
-    {
-      "ip": "8.8.8.8",
-      "droplet": {"id": 8888, "name": "hello"},
-      "region": {
-        "name": "New York 3",
-        "slug": "nyc3",
-        "sizes": [ "s-1vcpu-1gb" ],
-        "features": [ "metadata" ],
-        "available": true
-      },
-      "locked": false
+  "reserved_ip": {
+    "ip": "1.1.1.1",
+    "droplet": null,
+    "region": {
+      "name": "New York 3",
+      "slug": "nyc3",
+      "sizes": [ "s-32vcpu-192gb" ],
+      "features": [ "metadata" ],
+      "available": true
     },
-    {
-      "ip": "1.1.1.1",
-      "droplet": {"id": 1111},
-      "region": {
-        "name": "New York 3",
-        "slug": "nyc3",
-        "sizes": [ "s-1vcpu-1gb" ],
-        "features": [ "metadata" ],
-        "available": true
-      },
-      "locked": false
-    }
-  ],
-  "links": {},
-  "meta": {
-    "total": 2
+    "locked": false
   }
 }
 `

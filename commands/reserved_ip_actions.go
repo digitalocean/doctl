@@ -23,20 +23,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// FloatingIPAction creates the floating IP action command.
-func FloatingIPAction() *Command {
+// ReservedIPAction creates the reserved IP action command.
+func ReservedIPAction() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "floating-ip-action",
-			Short:   "Display commands to associate floating IP addresses with Droplets",
-			Long:    "Floating IP actions are commands that are used to manage DigitalOcean floating IP addresses.",
-			Aliases: []string{"fipa"},
+			Use:     "reserved-ip-action",
+			Short:   "Display commands to associate reserved IP addresses with Droplets",
+			Long:    "Reserved IP actions are commands that are used to manage DigitalOcean reserved IP addresses.",
+			Aliases: []string{"fipa", "floating-ip-action", "floating-ip-actions", "reserved-ip-actions"},
 		},
 	}
-	flipactionDetail := `
+	flipActionDetail := `
 
-	- The unique numeric ID used to identify and reference a floating IP action.
-	- The status of the floating IP action. This will be either "in-progress", "completed", or "errored".
+	- The unique numeric ID used to identify and reference a reserved IP action.
+	- The status of the reserved IP action. This will be either "in-progress", "completed", or "errored".
 	- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
 	- A time value given in ISO8601 combined date and time format that represents when the action was completed.
 	- The resource ID, which is a unique identifier for the resource that the action is associated with.
@@ -44,30 +44,30 @@ func FloatingIPAction() *Command {
 	- The region where the action occurred.
 	- The slug for the region where the action occurred.
 `
-	CmdBuilder(cmd, RunFloatingIPActionsGet,
-		"get <floating-ip> <action-id>", "Retrieve the status of a floating IP action", `Use this command to retrieve the status of a floating IP action. Outputs the following information:`+flipactionDetail, Writer,
+	CmdBuilder(cmd, RunReservedIPActionsGet,
+		"get <reserved-ip> <action-id>", "Retrieve the status of a reserved IP action", `Use this command to retrieve the status of a reserved IP action. Outputs the following information:`+flipActionDetail, Writer,
 		displayerType(&displayers.Action{}))
 
-	CmdBuilder(cmd, RunFloatingIPActionsAssign,
-		"assign <floating-ip> <droplet-id>", "Assign a floating IP address to a Droplet", "Use this command to assign a floating IP address to a Droplet by specifying the `droplet_id`.", Writer,
+	CmdBuilder(cmd, RunReservedIPActionsAssign,
+		"assign <reserved-ip> <droplet-id>", "Assign a reserved IP address to a Droplet", "Use this command to assign a reserved IP address to a Droplet by specifying the `droplet_id`.", Writer,
 		displayerType(&displayers.Action{}))
 
-	CmdBuilder(cmd, RunFloatingIPActionsUnassign,
-		"unassign <floating-ip>", "Unassign a floating IP address from a Droplet", `Use this command to unassign a floating IP address from a Droplet. The floating IP address will be reserved in the region but not assigned to a Droplet.`, Writer,
+	CmdBuilder(cmd, RunReservedIPActionsUnassign,
+		"unassign <reserved-ip>", "Unassign a reserved IP address from a Droplet", `Use this command to unassign a reserved IP address from a Droplet. The reserved IP address will be reserved in the region but not assigned to a Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 
 	return cmd
 }
 
-// RunFloatingIPActionsGet retrieves an action for a floating IP.
-func RunFloatingIPActionsGet(c *CmdConfig) error {
+// RunReservedIPActionsGet retrieves an action for a reserved IP.
+func RunReservedIPActionsGet(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ip := c.Args[0]
 
-	fia := c.FloatingIPActions()
+	fia := c.ReservedIPActions()
 
 	actionID, err := strconv.Atoi(c.Args[1])
 	if err != nil {
@@ -83,15 +83,15 @@ func RunFloatingIPActionsGet(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunFloatingIPActionsAssign assigns a floating IP to a droplet.
-func RunFloatingIPActionsAssign(c *CmdConfig) error {
+// RunReservedIPActionsAssign assigns a reserved IP to a droplet.
+func RunReservedIPActionsAssign(c *CmdConfig) error {
 	if len(c.Args) != 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
 	ip := c.Args[0]
 
-	fia := c.FloatingIPActions()
+	fia := c.ReservedIPActions()
 
 	dropletID, err := strconv.Atoi(c.Args[1])
 	if err != nil {
@@ -107,8 +107,8 @@ func RunFloatingIPActionsAssign(c *CmdConfig) error {
 	return c.Display(item)
 }
 
-// RunFloatingIPActionsUnassign unassigns a floating IP to a droplet.
-func RunFloatingIPActionsUnassign(c *CmdConfig) error {
+// RunReservedIPActionsUnassign unassigns a reserved IP to a droplet.
+func RunReservedIPActionsUnassign(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
 		return err
@@ -116,7 +116,7 @@ func RunFloatingIPActionsUnassign(c *CmdConfig) error {
 
 	ip := c.Args[0]
 
-	fia := c.FloatingIPActions()
+	fia := c.ReservedIPActions()
 
 	a, err := fia.Unassign(ip)
 	if err != nil {

@@ -97,14 +97,14 @@ var (
 	testPrivateDropletList = do.Droplets{testPrivateDroplet}
 	testKernel             = do.Kernel{Kernel: &godo.Kernel{ID: 1}}
 	testKernelList         = do.Kernels{testKernel}
-	testFloatingIP         = do.FloatingIP{
-		FloatingIP: &godo.FloatingIP{
+	testReservedIP         = do.ReservedIP{
+		ReservedIP: &godo.ReservedIP{
 			Droplet: testDroplet.Droplet,
 			Region:  testDroplet.Region,
 			IP:      "127.0.0.1",
 		},
 	}
-	testFloatingIPList = do.FloatingIPs{testFloatingIP}
+	testReservedIPList = do.ReservedIPs{testReservedIP}
 
 	testSnapshot = do.Snapshot{
 		Snapshot: &godo.Snapshot{
@@ -160,8 +160,8 @@ type tcMocks struct {
 	images            *domocks.MockImagesService
 	imageActions      *domocks.MockImageActionsService
 	invoices          *domocks.MockInvoicesService
-	floatingIPs       *domocks.MockFloatingIPsService
-	floatingIPActions *domocks.MockFloatingIPActionsService
+	reservedIPs       *domocks.MockReservedIPsService
+	reservedIPActions *domocks.MockReservedIPActionsService
 	domains           *domocks.MockDomainsService
 	volumes           *domocks.MockVolumesService
 	volumeActions     *domocks.MockVolumeActionsService
@@ -198,8 +198,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		images:            domocks.NewMockImagesService(ctrl),
 		imageActions:      domocks.NewMockImageActionsService(ctrl),
 		invoices:          domocks.NewMockInvoicesService(ctrl),
-		floatingIPs:       domocks.NewMockFloatingIPsService(ctrl),
-		floatingIPActions: domocks.NewMockFloatingIPActionsService(ctrl),
+		reservedIPs:       domocks.NewMockReservedIPsService(ctrl),
+		reservedIPActions: domocks.NewMockReservedIPActionsService(ctrl),
 		droplets:          domocks.NewMockDropletsService(ctrl),
 		dropletActions:    domocks.NewMockDropletActionsService(ctrl),
 		domains:           domocks.NewMockDomainsService(ctrl),
@@ -246,8 +246,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Regions:           func() do.RegionsService { return tm.regions },
 		Images:            func() do.ImagesService { return tm.images },
 		ImageActions:      func() do.ImageActionsService { return tm.imageActions },
-		FloatingIPs:       func() do.FloatingIPsService { return tm.floatingIPs },
-		FloatingIPActions: func() do.FloatingIPActionsService { return tm.floatingIPActions },
+		ReservedIPs:       func() do.ReservedIPsService { return tm.reservedIPs },
+		ReservedIPActions: func() do.ReservedIPActionsService { return tm.reservedIPActions },
 		Droplets:          func() do.DropletsService { return tm.droplets },
 		DropletActions:    func() do.DropletActionsService { return tm.dropletActions },
 		Domains:           func() do.DomainsService { return tm.domains },

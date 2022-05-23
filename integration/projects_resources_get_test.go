@@ -37,7 +37,7 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 				}
 
 				w.Write([]byte(dropletGetResponse))
-			case "/v2/floating_ips/1111":
+			case "/v2/reserved_ips/1111":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -134,6 +134,23 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 		})
 	})
 
+	when("passing a reserved ip urn", func() {
+		it("gets that resource for the project", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"projects",
+				"resources",
+				"get",
+				"do:reservedip:1111",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(projectsResourcesGetFloatingIPOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
 	when("passing a loadbalancer urn", func() {
 		it("gets that resource for the project", func() {
 			cmd := exec.Command(builtBinaryPath,
@@ -197,7 +214,7 @@ IP             Region    Droplet ID    Droplet Name
 `
 	projectsResourcesGetFloatingIPResponse = `
 {
-  "floating_ip": {
+  "reserved_ip": {
     "ip": "45.55.96.47",
     "droplet": null,
     "region": {

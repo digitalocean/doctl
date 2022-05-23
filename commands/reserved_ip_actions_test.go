@@ -19,42 +19,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFloatingIPActionCommand(t *testing.T) {
-	cmd := FloatingIPAction()
+func TestReservedIPActionCommand(t *testing.T) {
+	cmd := ReservedIPAction()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd, "assign", "get", "unassign")
 }
 
-func TestFloatingIPActionsGet(t *testing.T) {
+func TestReservedIPActionsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPActions.EXPECT().Get("127.0.0.1", 2).Return(&testAction, nil)
+		tm.reservedIPActions.EXPECT().Get("127.0.0.1", 2).Return(&testAction, nil)
 
 		config.Args = append(config.Args, "127.0.0.1", "2")
 
-		err := RunFloatingIPActionsGet(config)
+		err := RunReservedIPActionsGet(config)
 		assert.NoError(t, err)
 	})
 
 }
 
-func TestFloatingIPActionsAssign(t *testing.T) {
+func TestReservedIPActionsAssign(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPActions.EXPECT().Assign("127.0.0.1", 2).Return(&testAction, nil)
+		tm.reservedIPActions.EXPECT().Assign("127.0.0.1", 2).Return(&testAction, nil)
 
 		config.Args = append(config.Args, "127.0.0.1", "2")
 
-		err := RunFloatingIPActionsAssign(config)
+		err := RunReservedIPActionsAssign(config)
 		assert.NoError(t, err)
 	})
 }
 
-func TestFloatingIPActionsUnassign(t *testing.T) {
+func TestReservedIPActionsUnassign(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.floatingIPActions.EXPECT().Unassign("127.0.0.1").Return(&testAction, nil)
+		tm.reservedIPActions.EXPECT().Unassign("127.0.0.1").Return(&testAction, nil)
 
 		config.Args = append(config.Args, "127.0.0.1")
 
-		err := RunFloatingIPActionsUnassign(config)
+		err := RunReservedIPActionsUnassign(config)
 		assert.NoError(t, err)
 	})
 }

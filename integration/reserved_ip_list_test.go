@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/reserved-ip/list", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -37,7 +37,7 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 					return
 				}
 
-				w.Write([]byte(floatingIPListResponse))
+				w.Write([]byte(reservedIPListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -51,7 +51,7 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 	})
 
 	when("required flags are passed", func() {
-		it("lists all floating-ips", func() {
+		it("lists all reserved-ips", func() {
 			aliases := []string{"list", "ls"}
 
 			for _, alias := range aliases {
@@ -59,25 +59,25 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"compute",
-					"floating-ip",
+					"reserved-ip",
 					alias,
 				)
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(floatingIPListOutput), strings.TrimSpace(string(output)))
+				expect.Equal(strings.TrimSpace(reservedIPListOutput), strings.TrimSpace(string(output)))
 			}
 		})
 	})
 })
 
 const (
-	floatingIPListOutput = `
+	reservedIPListOutput = `
 IP         Region    Droplet ID    Droplet Name
 8.8.8.8    nyc3      8888          hello
 1.1.1.1    nyc3      1111
 `
-	floatingIPListResponse = `
+	reservedIPListResponse = `
 {
   "reserved_ips": [
     {
