@@ -91,12 +91,11 @@ func Sandbox() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "sandbox",
-			Short: "[Beta] Develop functions in a sandbox prior to deploying them in an app",
+			Short: "Develop functions in a sandbox prior to deploying them in an app",
 			Long: `The ` + "`" + `doctl sandbox` + "`" + ` commands provide a development sandbox for functions.  A sandbox has a local file system component and a cloud component.
 A one-time install of the sandbox software is needed (use ` + "`" + `doctl sandbox install` + "`" + ` to install the software, then ` + "`" + `doctl sandbox connect` + "`" + ` to
 connect to the cloud component of the sandbox provided with your account).  Other ` + "`" + `doctl sandbox` + "`" + ` commands are used to develop and test.`,
 			Aliases: []string{"sbx", "serverless", "sls"},
-			Hidden:  !isSandboxInstalled(),
 		},
 	}
 
@@ -623,12 +622,6 @@ func getCurrentSandboxVersion(sandboxDir string) string {
 		return "0"
 	}
 	return string(contents)
-}
-
-// Answers whether sandbox is installed
-func isSandboxInstalled() bool {
-	_, yes := getSandboxDirectory()
-	return yes
 }
 
 // Gets the version of the node binary in the sandbox.  Determine if it is
