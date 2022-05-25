@@ -147,6 +147,12 @@ func TestFunctionsInvoke(t *testing.T) {
 			doctlFlags:      map[string]interface{}{"param": []string{"name:world", "address:everywhere"}},
 			expectedNimArgs: []string{"hello", "--param", "name", "world", "--param", "address", "everywhere"},
 		},
+		{
+			name:            "param flag colon-value",
+			doctlArgs:       "hello",
+			doctlFlags:      map[string]interface{}{"param": []string{"url:https://example.com"}},
+			expectedNimArgs: []string{"hello", "--param", "url", "https://example.com"},
+		},
 	}
 
 	for _, tt := range tests {
