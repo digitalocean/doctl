@@ -127,10 +127,11 @@ func appendParams(c *CmdConfig, args []string) ([]string, error) {
 	}
 	for _, param := range params {
 		parts := strings.Split(param, ":")
-		if len(parts) != 2 {
+		if len(parts) < 2 {
 			return args, errors.New("values for --params must have KEY:VALUE form")
 		}
-		args = append(args, dashdashParam, parts[0], parts[1])
+		parts1 := strings.Join(parts[1:], ":")
+		args = append(args, dashdashParam, parts[0], parts1)
 	}
 	return args, nil
 }
