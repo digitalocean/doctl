@@ -29,6 +29,11 @@ parts:
     after: [launcher]
     source: .
     plugin: go
+    build-environment:
+    # Results in installation to /snap/doctl/current/opt/sandbox
+    - OVERRIDE_SANDBOX_DIR: "$SNAPCRAFT_PART_INSTALL/opt/sandbox"
+    # Override to prevent 'invalid cross-device link' calling doctl
+    - XDG_CONFIG_HOME: "$SNAPCRAFT_PART_INSTALL/tmp/.config"
     override-pull: |
       git clone https://github.com/digitalocean/doctl.git .
     override-build: |
@@ -49,6 +54,10 @@ parts:
       chmod +x doctl
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
       mv doctl $SNAPCRAFT_PART_INSTALL/bin/
+
+      # Install the sandbox
+      $SNAPCRAFT_PART_INSTALL/bin/doctl sandbox install
+      rm -r $XDG_CONFIG_HOME/doctl
     organize:
       bin/doctl: bin/doctl.real
 

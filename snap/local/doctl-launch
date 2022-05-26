@@ -1,3 +1,7 @@
 #!/bin/sh
+
+# /snap/doctl/current/opt/sandbox
+export OVERRIDE_SANDBOX_DIR="$SNAP/opt/sandbox"
+
 real_home=$(getent passwd "$(id -u)" | cut -d ':' -f 6)
 HOME=$real_home doctl.real "$@"
