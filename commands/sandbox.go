@@ -152,6 +152,13 @@ func RunSandboxInstall(c *CmdConfig) error {
 		return nil
 	}
 	sandboxDir, _ := getSandboxDirectory()
+	_, isSnap := os.LookupEnv("SNAP")
+	if isSnap {
+		warn(`Using the doctl Snap? You may have to relax its confinement in order to use the sandbox support.
+Use 'snap remove doctl', then 'snap install doctl --devmode'.
+You should not have to repeat 'doctl sandbox install' after doing that.
+`)
+	}
 	return c.installSandbox(c, sandboxDir, false)
 }
 
