@@ -99,10 +99,10 @@ connect to the cloud component of the sandbox provided with your account).  Othe
 		},
 	}
 
-	CmdBuilder(cmd, RunSandboxInstall, "install", "Installs the sandbox support",
+	cmdBuilderWithInit(cmd, RunSandboxInstall, "install", "Installs the sandbox support",
 		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other sandbox commands work.
 The install operation is long-running, and a network connection is required.`,
-		Writer)
+		Writer, false)
 
 	CmdBuilder(cmd, RunSandboxUpgrade, "upgrade", "Upgrades sandbox support to match this version of doctl",
 		`This command upgrades the sandbox support software under `+"`"+`doctl`+"`"+` by installing over the existing version.
@@ -142,16 +142,21 @@ the entire packages are removed.`, Writer)
 // RunSandboxInstall performs the network installation of the 'nim' adjunct to support sandbox development
 func RunSandboxInstall(c *CmdConfig) error {
 	status := c.checkSandboxStatus(c)
-	if status == ErrSandboxNeedsUpgrade {
+	switch status {
+	case nil:
+		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version.  No action needed.")
+		return nil
+	case ErrSandboxNeedsUpgrade:
 		fmt.Fprintln(c.Out, "Sandbox support is already installed, but needs an upgrade for this version of `doctl`.")
 		fmt.Fprintln(c.Out, "Use `doctl sandbox upgrade` to upgrade the support.")
 		return nil
-	}
-	if status == nil {
-		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version.  No action needed.")
+	case ErrSandboxNotConnected:
+		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version, but not connected to a function namespace.  Use `doctl sandbox connect`.")
 		return nil
 	}
+
 	sandboxDir, _ := getSandboxDirectory()
+
 	return c.installSandbox(c, sandboxDir, false)
 }
 
@@ -159,16 +164,21 @@ func RunSandboxInstall(c *CmdConfig) error {
 // the existing version is inadequate as detected by checkSandboxStatus()
 func RunSandboxUpgrade(c *CmdConfig) error {
 	status := c.checkSandboxStatus(c)
-	if status == nil {
+	switch status {
+	case nil:
 		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version.  No action needed.")
 		// TODO should there be an option to upgrade beyond the minimum needed?
 		return nil
-	}
-	if status == ErrSandboxNotInstalled {
+	case ErrSandboxNotInstalled:
 		fmt.Fprintln(c.Out, "Sandbox support was never installed.  Use `doctl sandbox install`.")
 		return nil
+	case ErrSandboxNotConnected:
+		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version, but not connected to a function namespace.  Use `doctl sandbox connect`.")
+		return nil
 	}
+
 	sandboxDir, _ := getSandboxDirectory()
+
 	return c.installSandbox(c, sandboxDir, true)
 }
 
@@ -199,6 +209,19 @@ func RunSandboxConnect(c *CmdConfig) error {
 	if err != nil && err != ErrSandboxNotConnected {
 		return err
 	}
+
+	// Create the credentials dir if run as a snap as this might not have
+	// happened yet since the initial install happens on the build host.
+	_, isSnap := os.LookupEnv("SNAP")
+	if isSnap {
+		sandboxDir, _ := getSandboxDirectory()
+		credsDir := getCredentialDirectory(c, sandboxDir)
+		err = os.MkdirAll(credsDir, 0700)
+		if err != nil {
+			return nil
+		}
+	}
+
 	result, err := sandboxExecNoCheck(c, "auth/login", []string{"--auth", creds.Auth, "--apihost", creds.APIHost})
 	if err != nil {
 		return err
@@ -458,7 +481,7 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 	// Note: we don't let this be allocated in the system temporaries area because
 	// that might be on a separate file system, meaning that the final install step
 	// will require an additional copy rather than a simple rename.
-	tmp, err := ioutil.TempDir(defaultConfigHome(), "sbx-install")
+	tmp, err := ioutil.TempDir(configHome(), "sbx-install")
 	if err != nil {
 		return err
 	}
@@ -551,9 +574,15 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 	} else {
 		// Make new empty credentials directory
 		emptyCreds := filepath.Join(srcPath, credsDir)
-		err = os.Mkdir(emptyCreds, 0700)
+		err = os.MkdirAll(emptyCreds, 0700)
 		if err != nil {
 			return nil
+		}
+
+		// Create the sandbox directory if necessary.
+		err := os.MkdirAll(sandboxDir, 0755)
+		if err != nil {
+			return err
 		}
 	}
 	// Remove former sandboxDir before moving in the new one
@@ -565,6 +594,7 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 	if err != nil {
 		return err
 	}
+
 	if nodeFileName != "" {
 		if goos == "win" {
 			srcPath = filepath.Join(tmp, nodeDir, nodeBin)
@@ -601,7 +631,7 @@ func preserveCreds(c *CmdConfig, stagingDir string, sandboxDir string) error {
 	// There was no creds directory.  Check for legacy form and convert as part
 	// of preserving.
 	legacyCredPath := filepath.Join(sandboxDir, ".nimbella")
-	err = os.Mkdir(relocPath, 0700)
+	err = os.MkdirAll(relocPath, 0700)
 	if err != nil {
 		return err
 	}
@@ -674,12 +704,13 @@ func download(URL, targetFile string) error {
 // (and the only one that customers are expected to use) is relative to the defaultConfigHome.
 // For testing purposes, an override can be provided via an environment variable.
 func getSandboxDirectory() (string, bool) {
-	sandboxDir := os.Getenv("sandboxDirectory")
-	if sandboxDir == "" {
+	sandboxDir, shouldOverride := os.LookupEnv("OVERRIDE_SANDBOX_DIR")
+	if !shouldOverride {
 		sandboxDir = filepath.Join(defaultConfigHome(), "sandbox")
 	}
 	_, err := os.Stat(sandboxDir)
 	exists := !os.IsNotExist(err)
+
 	return sandboxDir, exists
 }
 
@@ -692,6 +723,14 @@ func getCredentialDirectory(c *CmdConfig, sandboxDir string) string {
 	hasher.Write([]byte(token))
 	sha := hasher.Sum(nil)
 	leafDir := hex.EncodeToString(sha[:4])
+
+	// When running as a snap, the credential are stored separately from the
+	// actual sandbox install. So we ignore any override of the sandboxDir here.
+	_, isSnap := os.LookupEnv("SNAP")
+	if isSnap {
+		sandboxDir = filepath.Join(configHome(), "sandbox")
+	}
+
 	return filepath.Join(sandboxDir, credsDir, leafDir)
 }
 
