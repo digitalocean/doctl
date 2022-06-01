@@ -26,17 +26,17 @@ func Functions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "functions",
-			Short: "Work with the functions of your sandbox",
-			Long: `The subcommands of ` + "`" + `doctl sandbox functions` + "`" + ` operate on the deployed (cloud-resident) functions of your sandbox.
+			Short: "Work with the functions in your namespace",
+			Long: `The subcommands of ` + "`" + `doctl serverless functions` + "`" + ` operate on your functions namespace. 
 You are able to inspect and list these functions to know what is deployed.  You can also invoke functions to test them.`,
 			Aliases: []string{"fn"},
 		},
 	}
 
 	get := CmdBuilder(cmd, RunFunctionsGet, "get <functionName>", "Retrieves the deployed copy of a function (code or metadata)",
-		`Use `+"`"+`doctl sandbox functions get`+"`"+` to obtain the code or metadata of a deployed function.
+		`Use `+"`"+`doctl serverless functions get`+"`"+` to obtain the code or metadata of a deployed function.
 This allows you to inspect the deployed copy and ascertain whether it corresponds to what
-is in your sandbox area in the local file system.`,
+is in your functions project in the local file system.`,
 		Writer)
 	AddBoolFlag(get, "url", "r", false, "get function url")
 	AddBoolFlag(get, "code", "", false, "show function code (only works if code is not a zip file)")
@@ -46,8 +46,8 @@ is in your sandbox area in the local file system.`,
 	AddStringFlag(get, "save-as", "", "", "file to save function code to")
 
 	invoke := CmdBuilder(cmd, RunFunctionsInvoke, "invoke <functionName>", "Invokes a function",
-		`Use `+"`"+`doctl sandbox functions invoke`+"`"+` to invoke a function of your sandbox that has been deployed
-to the cloud.  You can provide inputs and inspect outputs.`,
+		`Use `+"`"+`doctl serverless functions invoke`+"`"+` to invoke a function in your functions namespace.
+You can provide inputs and inspect outputs.`,
 		Writer)
 	AddBoolFlag(invoke, "web", "", false, "Invoke as a web function, show result as web page")
 	AddStringSliceFlag(invoke, "param", "p", []string{}, "parameter values in KEY:VALUE format, list allowed")
@@ -55,9 +55,8 @@ to the cloud.  You can provide inputs and inspect outputs.`,
 	AddBoolFlag(invoke, "full", "f", false, "wait for full activation record")
 	AddBoolFlag(invoke, "no-wait", "n", false, "fire and forget (asynchronous invoke, does not wait for the result)")
 
-	list := CmdBuilder(cmd, RunFunctionsList, "list [<packageName>]", "Lists all the functions",
-		`Use `+"`"+`doctl sandbox functions list`+"`"+` to list the functions of your sandbox that are deployed
-to the cloud.`,
+	list := CmdBuilder(cmd, RunFunctionsList, "list [<packageName>]", "Lists the functions in your functions namespace",
+		`Use `+"`"+`doctl serverless functions list`+"`"+` to list the functions in your functions namespace.`,
 		Writer)
 	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of functions (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of functions from the result")

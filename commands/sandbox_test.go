@@ -47,7 +47,7 @@ func TestSandboxConnect(t *testing.T) {
 
 		err := RunSandboxConnect(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Connected to function namespace 'hello' on API host 'https://api.example.com'\n\n", buf.String())
+		assert.Equal(t, "Connected to functions namespace 'hello' on API host 'https://api.example.com'\n\n", buf.String())
 	})
 }
 
@@ -69,7 +69,7 @@ func TestSandboxStatusWhenConnected(t *testing.T) {
 
 		err := RunSandboxStatus(config)
 		require.NoError(t, err)
-		assert.Contains(t, buf.String(), "Connected to function namespace 'hello' on API host 'https://api.example.com'\nSandbox version is")
+		assert.Contains(t, buf.String(), "Connected to functions namespace 'hello' on API host 'https://api.example.com'\nServerless software version is")
 	})
 }
 
@@ -201,7 +201,7 @@ func TestSandboxInstallWhenInstalledNotCurrent(t *testing.T) {
 
 		err := RunSandboxInstall(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Sandbox support is already installed, but needs an upgrade for this version of `doctl`.\nUse `doctl sandbox upgrade` to upgrade the support.\n", buf.String())
+		assert.Equal(t, "Serverless support is already installed, but needs an upgrade for this version of `doctl`.\nUse `doctl serverless upgrade` to upgrade the support.\n", buf.String())
 	})
 }
 
@@ -220,7 +220,7 @@ func TestSandboxInstallWhenInstalledAndCurrent(t *testing.T) {
 
 		err := RunSandboxInstall(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Sandbox support is already installed at an appropriate version.  No action needed.\n", buf.String())
+		assert.Equal(t, "Serverless support is already installed at an appropriate version.  No action needed.\n", buf.String())
 	})
 }
 
@@ -239,7 +239,7 @@ func TestSandboxUpgradeWhenNotInstalled(t *testing.T) {
 
 		err := RunSandboxUpgrade(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Sandbox support was never installed.  Use `doctl sandbox install`.\n", buf.String())
+		assert.Equal(t, "Serverless support was never installed.  Use `doctl serverless install`.\n", buf.String())
 	})
 }
 
@@ -258,7 +258,7 @@ func TestSandboxUpgradeWhenInstalledAndCurrent(t *testing.T) {
 
 		err := RunSandboxUpgrade(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Sandbox support is already installed at an appropriate version.  No action needed.\n", buf.String())
+		assert.Equal(t, "Serverless support is already installed at an appropriate version.  No action needed.\n", buf.String())
 	})
 }
 
@@ -341,9 +341,9 @@ func TestSandboxInit(t *testing.T) {
 
 				err := RunSandboxExtraCreate(config)
 				require.NoError(t, err)
-				assert.Equal(t, `A local sandbox area 'foo' was created for you.
+				assert.Equal(t, `A local functions project directory 'foo' was created for you.
 You may deploy it by running the command shown on the next line:
-  doctl sandbox deploy foo`+"\n\n", buf.String())
+  doctl serverless deploy foo`+"\n\n", buf.String())
 			})
 		})
 	}
