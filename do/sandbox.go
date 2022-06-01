@@ -63,6 +63,25 @@ type ServerlessHostInfo struct {
 	Runtimes map[string][]ServerlessRuntime `json:"runtimes"`
 }
 
+// FunctionInfo is the type of an individual function in the output
+// of doctl sls fn list.  Only relevant fields are unmarshaled.
+// Note: when we start replacing the sandbox plugin path with direct calls
+// to backend controller operations, this will be replaced by declarations
+// in the golang openwhisk client.
+type FunctionInfo struct {
+	Name        string       `json:"name"`
+	Namespace   string       `json:"namespace"`
+	Updated     int64        `json:"updated"`
+	Version     string       `json:"version"`
+	Annotations []Annotation `json:"annotations"`
+}
+
+// Annotation is a key/value type suitable for individual annotations
+type Annotation struct {
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
+}
+
 // SandboxService is an interface for interacting with the sandbox plugin,
 // with the namespaces service, and with the serverless cluster controller.
 type SandboxService interface {
