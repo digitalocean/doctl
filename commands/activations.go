@@ -24,16 +24,16 @@ func Activations() *Command {
 		Command: &cobra.Command{
 			Use:   "activations",
 			Short: "Work with activation records",
-			Long: `The subcommands of ` + "`" + `doctl sandbox activations` + "`" + ` will list or retrieve results, logs, or complete
-"activation records" which result from invoking functions deployed to your sandbox.`,
+			Long: `The subcommands of ` + "`" + `doctl serverless activations` + "`" + ` will list or retrieve results, logs, or complete
+"activation records" which result from invoking functions deployed to your functions namespace.`,
 			Aliases: []string{"actv"},
 		},
 	}
 
 	get := CmdBuilder(cmd, RunActivationsGet, "get [<activationId>]", "Retrieves an Activation",
-		`Use `+"`"+`doctl sandbox activations get`+"`"+` to retrieve the activation record for a previously invoked function.
+		`Use `+"`"+`doctl serverless activations get`+"`"+` to retrieve the activation record for a previously invoked function.
 There are several options for specifying the activation you want.  You can limit output to the result
-or the logs.  The `+"`"+`doctl sandbox activation logs`+"`"+` command has additional advanced capabilities for retrieving
+or the logs.  The `+"`"+`doctl serverless activation logs`+"`"+` command has additional advanced capabilities for retrieving
 logs.`,
 		Writer)
 	AddBoolFlag(get, "last", "l", false, "Fetch the most recent activation (default)")
@@ -44,7 +44,7 @@ logs.`,
 	AddBoolFlag(get, "quiet", "q", false, "Suppress last activation information header")
 
 	list := CmdBuilder(cmd, RunActivationsList, "list [<activation_name>]", "Lists Activations for which records exist",
-		`Use `+"`"+`doctl sandbox activations list`+"`"+` to list the activation records that are present in the cloud for previously
+		`Use `+"`"+`doctl serverless activations list`+"`"+` to list the activation records that are present in the cloud for previously
 invoked functions.`,
 		Writer)
 	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of activations (default 30, max 200)")
@@ -55,7 +55,7 @@ invoked functions.`,
 	AddBoolFlag(list, "full", "f", false, "include full activation description")
 
 	logs := CmdBuilder(cmd, RunActivationsLogs, "logs [<activationId>]", "Retrieves the Logs for an Activation",
-		`Use `+"`"+`doctl sandbox activations logs`+"`"+` to retrieve the logs portion of one or more activation records
+		`Use `+"`"+`doctl serverless activations logs`+"`"+` to retrieve the logs portion of one or more activation records
 with various options, such as selecting by package or function, and optionally watching continuously
 for new arrivals.`,
 		Writer)
@@ -67,7 +67,7 @@ for new arrivals.`,
 	AddBoolFlag(logs, "follow", "", false, "Fetch logs continuously")
 
 	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
-		`Use `+"`"+`doctl sandbox activations result`+"`"+` to retrieve just the results portion
+		`Use `+"`"+`doctl serverless activations result`+"`"+` to retrieve just the results portion
 of one or more activation records.`,
 		Writer)
 	AddBoolFlag(result, "last", "l", false, "Fetch the most recent activation result (default)")

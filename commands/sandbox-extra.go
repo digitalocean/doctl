@@ -23,21 +23,21 @@ import (
 // oclif equivalents and subsequently modified.
 func SandboxExtras(cmd *Command) {
 
-	create := CmdBuilder(cmd, RunSandboxExtraCreate, "init <path>", "Initialize a local file system directory for the sandbox",
-		`The `+"`"+`doctl sandbox init`+"`"+` command specifies a directory in your file system which will hold functions and
-supporting artifacts while you're developing them.  When ready, you can upload these to the cloud for testing.
-Later, after the area is committed to a `+"`"+`git`+"`"+` repository, you can create an app from them.
+	create := CmdBuilder(cmd, RunSandboxExtraCreate, "init <path>", "Initialize a 'functions project' directory in your local file system",
+		`The `+"`"+`doctl serverless init`+"`"+` command specifies a directory in your file system which will hold functions and
+supporting artifacts while you're developing them.  This 'functions project' can be uploaded to your functions namespace for testing.
+Later, after the functions project is committed to a `+"`"+`git`+"`"+` repository, you can create an app, or an app component, from it.
 
-Type `+"`"+`doctl sandbox status --languages`+"`"+` for a list of supported languages.  Use one of the displayed keywords
-to choose your sample language for `+"`"+`doctl sandbox init`+"`"+`.`,
+Type `+"`"+`doctl serverless status --languages`+"`"+` for a list of supported languages.  Use one of the displayed keywords
+to choose your sample language for `+"`"+`doctl serverless init`+"`"+`.`,
 		Writer)
 	AddStringFlag(create, "language", "l", "javascript", "Language for the initial sample code")
 	AddBoolFlag(create, "overwrite", "", false, "Clears and reuses an existing directory")
 
-	deploy := CmdBuilder(cmd, RunSandboxExtraDeploy, "deploy <directories>", "Deploy sandbox local assets to the cloud",
-		`At any time you can use `+"`"+`doctl sandbox deploy`+"`"+` to upload the contents of a directory in your file system for
-testing in the cloud.  The area must be organized in the fashion expected by an App Platform Functions
-component.  The `+"`"+`doctl sandbox init`+"`"+` command will create a properly organized directory for you to work in.`,
+	deploy := CmdBuilder(cmd, RunSandboxExtraDeploy, "deploy <directories>", "Deploy a functions project to your functions namespace",
+		`At any time you can use `+"`"+`doctl serverless deploy`+"`"+` to upload the contents of a functions project in your file system for
+testing in your serverless namespace.  The project must be organized in the fashion expected by an App Platform Functions
+component.  The `+"`"+`doctl serverless init`+"`"+` command will create a properly organized directory for you to work in.`,
 		Writer)
 	AddStringFlag(deploy, "env", "", "", "Path to runtime environment file")
 	AddStringFlag(deploy, "build-env", "", "", "Path to build-time environment file")
@@ -52,17 +52,17 @@ component.  The `+"`"+`doctl sandbox init`+"`"+` command will create a properly 
 	AddBoolFlag(deploy, "remote-build", "", false, "Run builds remotely")
 	AddBoolFlag(deploy, "incremental", "", false, "Deploy only changes since last deploy")
 
-	getMetadata := CmdBuilder(cmd, RunSandboxExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a sandbox directory",
-		`The `+"`"+`doctl sandbox get-metadata`+"`"+` command produces a JSON structure that summarizes the contents of a directory
-you have designated for functions development.  This can be useful for feeding into other tools.`,
+	getMetadata := CmdBuilder(cmd, RunSandboxExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a functions project",
+		`The `+"`"+`doctl serverless get-metadata`+"`"+` command produces a JSON structure that summarizes the contents of a functions
+project (a directory you have designated for functions development).  This can be useful for feeding into other tools.`,
 		Writer)
 	AddStringFlag(getMetadata, "env", "", "", "Path to environment file")
 	AddStringFlag(getMetadata, "include", "", "", "Functions or packages to include")
 	AddStringFlag(getMetadata, "exclude", "", "", "Functions or packages to exclude")
 
-	watch := CmdBuilder(cmd, RunSandboxExtraWatch, "watch <directory>", "Watch a sandbox directory, deploying incrementally on change",
+	watch := CmdBuilder(cmd, RunSandboxExtraWatch, "watch <directory>", "Watch a functions project directory, deploying incrementally on change",
 		`Type `+"`"+`doctl sandbox watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
-It will watch the directory (which should be one you initialized for sandbox use) and will deploy
+It will watch the directory (which should be one you initialized for serverless development) and will deploy
 the contents to the cloud incrementally as it detects changes.`,
 		Writer)
 	AddStringFlag(watch, "env", "", "", "Path to runtime environment file")
@@ -98,16 +98,16 @@ func RunSandboxExtraCreate(c *CmdConfig) error {
 	// is not quite right for doctl.
 	if jsonOutput, ok := output.Entity.(map[string]interface{}); ok {
 		if created, ok := jsonOutput["project"].(string); ok {
-			fmt.Fprintf(c.Out, `A local sandbox area '%s' was created for you.
+			fmt.Fprintf(c.Out, `A local functions project directory '%s' was created for you.
 You may deploy it by running the command shown on the next line:
-  doctl sandbox deploy %s
+  doctl serverless deploy %s
 `, created, created)
 			fmt.Fprintln(c.Out)
 			return nil
 		}
 	}
 	// Fall back if output is not structured the way we expect
-	fmt.Println("Sandbox initialized successfully in the local file system")
+	fmt.Println("Functions project initialized successfully in the local file system")
 	return nil
 }
 

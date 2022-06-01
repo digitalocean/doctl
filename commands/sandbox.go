@@ -58,11 +58,11 @@ const (
 
 var (
 	// ErrSandboxNotInstalled is the error returned to users when the sandbox is not installed.
-	ErrSandboxNotInstalled = errors.New("The sandbox is not installed (use `doctl sandbox install`)")
+	ErrSandboxNotInstalled = errors.New("Serverless support is not installed (use `doctl serverless install`)")
 	// ErrSandboxNeedsUpgrade is the error returned to users when the sandbox is at too low a version
-	ErrSandboxNeedsUpgrade = errors.New("The sandbox support needs to be upgraded (use `doctl sandbox upgrade`)")
+	ErrSandboxNeedsUpgrade = errors.New("Serverless support needs to be upgraded (use `doctl serverless upgrade`)")
 	// ErrSandboxNotConnected is the error returned to users when the sandbox is not connected to a namespace
-	ErrSandboxNotConnected = errors.New("A sandbox is installed but not connected to a function namespace (use `doctl sandbox connect`)")
+	ErrSandboxNotConnected = errors.New("Serverless support is installed but not connected to a functions namespace (use `doctl serverless connect`)")
 	// errUndeployAllAndArgs is the error returned when the --all flag is used along with args on undeploy
 	errUndeployAllAndArgs = errors.New("command line arguments and the `--all` flag are mutually exclusive")
 	// errUndeployTooFewArgs is the error returned when neither --all nor args are specified on undeploy
@@ -86,47 +86,50 @@ var (
 	}
 )
 
-// Sandbox contains support for 'sandbox' commands provided by a hidden install of the Nimbella CLI
+// Sandbox contains support for 'serverless' commands provided by a hidden install of the Nimbella CLI
 func Sandbox() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "sandbox",
-			Short: "Develop functions in a sandbox prior to deploying them in an app",
-			Long: `The ` + "`" + `doctl sandbox` + "`" + ` commands provide a development sandbox for functions.  A sandbox has a local file system component and a cloud component.
-A one-time install of the sandbox software is needed (use ` + "`" + `doctl sandbox install` + "`" + ` to install the software, then ` + "`" + `doctl sandbox connect` + "`" + ` to
-connect to the cloud component of the sandbox provided with your account).  Other ` + "`" + `doctl sandbox` + "`" + ` commands are used to develop and test.`,
-			Aliases: []string{"sbx", "serverless", "sls"},
+			Use:   "serverless",
+			Short: "Develop and test serverless functions",
+			Long: `The ` + "`" + `doctl serverless` + "`" + ` commands provide an environment for developing and testing serverless functions.
+One or more local file system areas are employed, along with a 'functions namespace' in the cloud.
+A one-time install of the serverless software is needed (use ` + "`" + `doctl serverless install` + "`" + ` to install the software,
+then ` + "`" + `doctl serverless connect` + "`" + ` to connect to a functions namespace provided with your account).
+Other ` + "`" + `doctl serverless` + "`" + ` commands are used to develop and test.`,
+			Aliases: []string{"sandbox", "sbx", "sls"},
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunSandboxInstall, "install", "Installs the sandbox support",
-		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other sandbox commands work.
+	cmdBuilderWithInit(cmd, RunSandboxInstall, "install", "Installs the serverless support",
+		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other serverless commands work.
 The install operation is long-running, and a network connection is required.`,
 		Writer, false)
 
-	CmdBuilder(cmd, RunSandboxUpgrade, "upgrade", "Upgrades sandbox support to match this version of doctl",
-		`This command upgrades the sandbox support software under `+"`"+`doctl`+"`"+` by installing over the existing version.
+	CmdBuilder(cmd, RunSandboxUpgrade, "upgrade", "Upgrades serverless support to match this version of doctl",
+		`This command upgrades the serverless support software under `+"`"+`doctl`+"`"+` by installing over the existing version.
 The install operation is long-running, and a network connection is required.`,
 		Writer)
 
-	CmdBuilder(cmd, RunSandboxUninstall, "uninstall", "Removes the sandbox support", `Removes sandbox support from `+"`"+`doctl`+"`",
+	CmdBuilder(cmd, RunSandboxUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
 		Writer)
 
-	CmdBuilder(cmd, RunSandboxConnect, "connect", "Connect the cloud portion of your sandbox",
-		`This command connects the cloud portion of your sandbox (needed for testing).`,
+	CmdBuilder(cmd, RunSandboxConnect, "connect", "Connects local serverless support to your functions namespace",
+		`This command connects `+"`"+`doctl serverless`+"`"+` to your functions namespace (needed for testing).`,
 		Writer)
 
-	status := CmdBuilder(cmd, RunSandboxStatus, "status", "Provide information about your sandbox",
-		`This command reports the status of your sandbox and some details concerning its connected cloud portion.
-With the `+"`"+`--languages flag, it will report the supported languages.`, Writer)
+	status := CmdBuilder(cmd, RunSandboxStatus, "status", "Provide information about serverless support",
+		`This command reports the status of serverless support and some details concerning its connected functions namespace.
+With the `+"`"+`--languages flag, it will report the supported languages.
+With the `+"`"+`--version flag, it will show just version information about the serverless component`, Writer)
 	AddBoolFlag(status, "languages", "l", false, "show available languages (if connected to the cloud)")
 	AddBoolFlag(status, "version", "", false, "just show the version, don't check status")
 
 	undeploy := CmdBuilder(cmd, RunSandboxUndeploy, "undeploy [<package|function>...]",
-		"Removes resources from the cloud portion of your sandbox",
-		`This command removes functions, entire packages, or all functions and packages, from the cloud portion
-of your sandbox.  In general, deploying new content does not remove old content although it may overwrite it.
-Use `+"`"+`doctl sandbox undeploy`+"`"+` to effect removal.  The command accepts a list of functions or packages.
+		"Removes resources from your functions namespace",
+		`This command removes functions, entire packages, or all functions and packages, from your function
+namespace.  In general, deploying new content does not remove old content although it may overwrite it.
+Use `+"`"+`doctl serverless undeploy`+"`"+` to effect removal.  The command accepts a list of functions or packages.
 Functions should be listed in `+"`"+`pkgName/fnName`+"`"+` form, or `+"`"+`fnName`+"`"+` for a function not in any package.
 The `+"`"+`--packages`+"`"+` flag causes arguments without slash separators to be intepreted as packages, in which case
 the entire packages are removed.`, Writer)
@@ -144,14 +147,14 @@ func RunSandboxInstall(c *CmdConfig) error {
 	status := c.checkSandboxStatus(c)
 	switch status {
 	case nil:
-		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version.  No action needed.")
+		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
 		return nil
 	case ErrSandboxNeedsUpgrade:
-		fmt.Fprintln(c.Out, "Sandbox support is already installed, but needs an upgrade for this version of `doctl`.")
-		fmt.Fprintln(c.Out, "Use `doctl sandbox upgrade` to upgrade the support.")
+		fmt.Fprintln(c.Out, "Serverless support is already installed, but needs an upgrade for this version of `doctl`.")
+		fmt.Fprintln(c.Out, "Use `doctl serverless upgrade` to upgrade the support.")
 		return nil
 	case ErrSandboxNotConnected:
-		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version, but not connected to a function namespace.  Use `doctl sandbox connect`.")
+		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version, but not connected to a functions namespace.  Use `doctl serverless connect`.")
 		return nil
 	}
 
@@ -166,14 +169,14 @@ func RunSandboxUpgrade(c *CmdConfig) error {
 	status := c.checkSandboxStatus(c)
 	switch status {
 	case nil:
-		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version.  No action needed.")
+		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
 		// TODO should there be an option to upgrade beyond the minimum needed?
 		return nil
 	case ErrSandboxNotInstalled:
-		fmt.Fprintln(c.Out, "Sandbox support was never installed.  Use `doctl sandbox install`.")
+		fmt.Fprintln(c.Out, "Serverless support was never installed.  Use `doctl serverless install`.")
 		return nil
 	case ErrSandboxNotConnected:
-		fmt.Fprintln(c.Out, "Sandbox support is already installed at an appropriate version, but not connected to a function namespace.  Use `doctl sandbox connect`.")
+		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version, but not connected to a functions namespace.  Use `doctl serverless connect`.")
 		return nil
 	}
 
@@ -186,7 +189,7 @@ func RunSandboxUpgrade(c *CmdConfig) error {
 func RunSandboxUninstall(c *CmdConfig) error {
 	sandboxDir, exists := getSandboxDirectory()
 	if !exists {
-		return errors.New("Nothing to uninstall: no sandbox was found")
+		return errors.New("Nothing to uninstall: no serverless support was found")
 	}
 	return os.RemoveAll(sandboxDir)
 }
@@ -227,7 +230,7 @@ func RunSandboxConnect(c *CmdConfig) error {
 		return err
 	}
 	mapResult := result.Entity.(map[string]interface{})
-	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["namespace"], mapResult["apihost"])
+	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["namespace"], mapResult["apihost"])
 	fmt.Fprintln(c.Out)
 	return nil
 }
@@ -266,8 +269,8 @@ func RunSandboxStatus(c *CmdConfig) error {
 	}
 	mapResult := result.Entity.(map[string]interface{})
 	apiHost := mapResult["apihost"].(string)
-	fmt.Fprintf(c.Out, "Connected to function namespace '%s' on API host '%s'\n", mapResult["name"], apiHost)
-	fmt.Fprintf(c.Out, "Sandbox version is %s\n\n", minSandboxVersion)
+	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["name"], apiHost)
+	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", minSandboxVersion)
 	languages, _ := c.Doit.GetBool(c.NS, "languages")
 	if languages {
 		return showLanguageInfo(c, apiHost)
@@ -334,7 +337,7 @@ func RunSandboxUndeploy(c *CmdConfig) error {
 		return fmt.Errorf("there were %d errors detected, e.g.: %w", errorCount, lastError)
 	}
 	if all {
-		fmt.Fprintln(c.Out, "All sandbox content has been undeployed")
+		fmt.Fprintln(c.Out, "All resources in the functions namespace have been undeployed")
 	} else {
 		fmt.Fprintln(c.Out, "The requested resources have been undeployed")
 	}
@@ -497,7 +500,7 @@ func InstallSandbox(c *CmdConfig, sandboxDir string, upgrading bool) error {
 	}
 	if arch == "386" {
 		if goos == "linux" {
-			return errors.New("sandbox is not supported on 32-bit linux")
+			return errors.New("serverless support is not available for 32-bit linux")
 		}
 		arch = "x86"
 	}
