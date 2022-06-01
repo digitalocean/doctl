@@ -60,7 +60,7 @@ You can provide inputs and inspect outputs.`,
 
 	list := CmdBuilder(cmd, RunFunctionsList, "list [<packageName>]", "Lists the functions in your functions namespace",
 		`Use `+"`"+`doctl serverless functions list`+"`"+` to list the functions in your functions namespace.`,
-		Writer)
+		Writer, displayerType(&displayers.Functions{}))
 	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of functions (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of functions from the result")
 	AddBoolFlag(list, "count", "", false, "show only the total number of functions")
@@ -111,7 +111,11 @@ func RunFunctionsList(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	// Determine if '--count' is requested since we will use simple text output in that case.
+	// Count is mutually exclusive with the global format flag.
 	count, _ := c.Doit.GetBool(c.NS, flagCount)
+	if count && c.Doit.IsSet("format") {
+		return errors.New("the --count and --format flags are mutually exclusive")
+	}
 	// Add JSON flag so we can control output format
 	if !count {
 		c.Doit.Set(c.NS, flagJSON, true)
