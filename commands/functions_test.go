@@ -200,7 +200,7 @@ func TestFunctionsList(t *testing.T) {
 	}{
 		{
 			name:            "no flags or args",
-			expectedNimArgs: []string{},
+			expectedNimArgs: []string{"--json"},
 		},
 		{
 			name:            "count flag",
@@ -210,22 +210,22 @@ func TestFunctionsList(t *testing.T) {
 		{
 			name:            "limit flag",
 			doctlFlags:      map[string]string{"limit": "1"},
-			expectedNimArgs: []string{"--limit", "1"},
+			expectedNimArgs: []string{"--json", "--limit", "1"},
 		},
 		{
 			name:            "name flag",
 			doctlFlags:      map[string]string{"name": ""},
-			expectedNimArgs: []string{"--name"},
+			expectedNimArgs: []string{"--name", "--json"},
 		},
 		{
 			name:            "name-sort flag",
 			doctlFlags:      map[string]string{"name-sort": ""},
-			expectedNimArgs: []string{"--name-sort"},
+			expectedNimArgs: []string{"--name-sort", "--json"},
 		},
 		{
 			name:            "skip flag",
 			doctlFlags:      map[string]string{"skip": "1"},
-			expectedNimArgs: []string{"--skip", "1"},
+			expectedNimArgs: []string{"--json", "--skip", "1"},
 		},
 	}
 

@@ -14,10 +14,13 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +60,7 @@ You can provide inputs and inspect outputs.`,
 
 	list := CmdBuilder(cmd, RunFunctionsList, "list [<packageName>]", "Lists the functions in your functions namespace",
 		`Use `+"`"+`doctl serverless functions list`+"`"+` to list the functions in your functions namespace.`,
-		Writer)
+		Writer, displayerType(&displayers.Functions{}))
 	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of functions (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of functions from the result")
 	AddBoolFlag(list, "count", "", false, "show only the total number of functions")
@@ -107,11 +110,34 @@ func RunFunctionsList(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunSandboxExec(actionList, c, []string{flagCount, flagNameSort, flagNameName}, []string{flagLimit, flagSkip})
+	// Determine if '--count' is requested since we will use simple text output in that case.
+	// Count is mutually exclusive with the global format flag.
+	count, _ := c.Doit.GetBool(c.NS, flagCount)
+	if count && c.Doit.IsSet("format") {
+		return errors.New("the --count and --format flags are mutually exclusive")
+	}
+	// Add JSON flag so we can control output format
+	if !count {
+		c.Doit.Set(c.NS, flagJSON, true)
+	}
+	output, err := RunSandboxExec(actionList, c, []string{flagCount, flagNameSort, flagNameName, flagJSON}, []string{flagLimit, flagSkip})
 	if err != nil {
 		return err
 	}
-	return c.PrintSandboxTextOutput(output)
+	if count {
+		return c.PrintSandboxTextOutput(output)
+	}
+	// Reparse the output to use a more specific type, which can then be passed to the displayer
+	rawOutput, err := json.Marshal(output.Entity)
+	if err != nil {
+		return err
+	}
+	var formatted []do.FunctionInfo
+	err = json.Unmarshal(rawOutput, &formatted)
+	if err != nil {
+		return err
+	}
+	return c.Display(&displayers.Functions{Info: formatted})
 }
 
 // appendParams determines if there is a 'param' flag (value is a slice, elements
