@@ -97,6 +97,56 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 
+	when("the --access-token flag is used", func() {
+		it("validates and saves the provided token non-interactively", func() {
+			tmpDir := t.TempDir()
+
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", testConfig,
+				"auth",
+				"init",
+				"--access-token", "some-magic-token",
+			)
+
+			_, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+
+			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+		})
+
+		it("validates and overwrites an existing token non-interactively", func() {
+			var testConfigBytes = []byte(`access-token: first-token
+context: default
+`)
+
+			tmpDir := t.TempDir()
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", testConfig,
+				"auth",
+				"init",
+				"--access-token", "some-magic-token",
+			)
+
+			_, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+
+			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+		})
+	})
+
 	when("no custom config is provided", func() {
 		it("saves the auth token to the default config path", func() {
 			cmd := exec.Command(builtBinaryPath,
