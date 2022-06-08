@@ -106,6 +106,7 @@ const (
     {
       "slug": "512mb",
       "memory": 512,
+	  "description": "Basic",
       "vcpus": 1,
       "disk": 20,
       "transfer": 1,
@@ -119,6 +120,7 @@ const (
     {
       "slug": "s-1vcpu-1gb",
       "memory": 1024,
+	  "description": "Basic",
       "vcpus": 1,
       "disk": 25,
       "transfer": 1,
@@ -137,9 +139,9 @@ const (
 }
 `
 	sizeListOutput = `
-Slug           Memory    VCPUs    Disk    Price Monthly    Price Hourly
-512mb          512       1        20      5.00             0.007440
-s-1vcpu-1gb    1024      1        25      5.00             0.007440
+Slug           Description    Memory    VCPUs    Disk    Price Monthly    Price Hourly
+512mb          Basic          512       1        20      5.00             0.007440
+s-1vcpu-1gb    Basic          1024      1        25      5.00             0.007440
 `
 	sizeListFormatOutput = `
 Slug           Price Monthly
@@ -148,7 +150,7 @@ s-1vcpu-1gb    5.00
 
 `
 	sizeListNoHeaderOutput = `
-512mb          512     1    20    5.00    0.007440
-s-1vcpu-1gb    1024    1    25    5.00    0.007440
+512mb          Basic    512     1    20    5.00    0.007440
+s-1vcpu-1gb    Basic    1024    1    25    5.00    0.007440
 `
 )
