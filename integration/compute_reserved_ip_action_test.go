@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/reserved-ip-action", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -37,7 +37,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				w.Write([]byte(floatingIPActionResponse))
+				w.Write([]byte(reservedIPActionResponse))
 			case "/v2/reserved_ips/1/actions":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
@@ -55,7 +55,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 
 				expect.JSONEq(`{"type":"unassign"}`, string(reqBody))
 
-				w.Write([]byte(floatingIPActionResponse))
+				w.Write([]byte(reservedIPActionResponse))
 			case "/v2/reserved_ips/1313/actions":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
@@ -73,7 +73,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 
 				expect.JSONEq(`{"droplet_id":1414,"type":"assign"}`, string(reqBody))
 
-				w.Write([]byte(floatingIPActionResponse))
+				w.Write([]byte(reservedIPActionResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -86,12 +86,12 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 	})
 
 	when("command is get", func() {
-		it("gets the specified floating-ip action", func() {
+		it("gets the specified reserved-ip action", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"floating-ip-action",
+				"reserved-ip-action",
 				"get",
 				"77",
 				"66",
@@ -99,7 +99,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPActionOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(reservedIPActionOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -109,7 +109,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"floating-ip-action",
+				"reserved-ip-action",
 				"assign",
 				"1313",
 				"1414",
@@ -117,7 +117,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPActionOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(reservedIPActionOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -127,24 +127,24 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"compute",
-				"floating-ip-action",
+				"reserved-ip-action",
 				"unassign",
 				"1",
 			)
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(floatingIPActionOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(reservedIPActionOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
 
 const (
-	floatingIPActionOutput = `
+	reservedIPActionOutput = `
 ID          Status         Type         Started At                       Completed At    Resource ID    Resource Type    Region
-68212728    in-progress    assign_ip    2015-10-15 17:45:44 +0000 UTC    <nil>           758603823      floating_ip      nyc3
+68212728    in-progress    assign_ip    2015-10-15 17:45:44 +0000 UTC    <nil>           758603823      reserved_ip      nyc3
 	`
-	floatingIPActionResponse = `
+	reservedIPActionResponse = `
 {
   "action": {
     "id": 68212728,
@@ -153,7 +153,7 @@ ID          Status         Type         Started At                       Complet
     "started_at": "2015-10-15T17:45:44Z",
     "completed_at": null,
     "resource_id": 758603823,
-    "resource_type": "floating_ip",
+    "resource_type": "reserved_ip",
     "region": {
       "name": "New York 3",
       "slug": "nyc3",

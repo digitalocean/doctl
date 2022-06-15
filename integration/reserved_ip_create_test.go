@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("compute/floating-ip/create", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("compute/reserved-ip/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		cmd    *exec.Cmd
@@ -41,14 +41,14 @@ var _ = suite("compute/floating-ip/create", func(t *testing.T, when spec.G, it s
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
-				matchedRequest := floatingIPCreateRequest
+				matchedRequest := reservedIPCreateRequest
 				if !strings.Contains(string(reqBody), "droplet_id") {
-					matchedRequest = floatingIPRegionCreateRequest
+					matchedRequest = reservedIPRegionCreateRequest
 				}
 
 				expect.JSONEq(matchedRequest, string(reqBody))
 
-				w.Write([]byte(floatingIPCreateResponse))
+				w.Write([]byte(reservedIPCreateResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -62,7 +62,7 @@ var _ = suite("compute/floating-ip/create", func(t *testing.T, when spec.G, it s
 	})
 
 	when("the minimum flags are provided", func() {
-		it("creates the floating-ip", func() {
+		it("creates the reserved-ip", func() {
 			aliases := []string{"create", "c"}
 
 			for _, alias := range aliases {
@@ -70,25 +70,25 @@ var _ = suite("compute/floating-ip/create", func(t *testing.T, when spec.G, it s
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"compute",
-					"floating-ip",
+					"reserved-ip",
 					alias,
 					"--droplet-id", "1212",
 				)
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(floatingIPCreateOutput), strings.TrimSpace(string(output)))
+				expect.Equal(strings.TrimSpace(reservedIPCreateOutput), strings.TrimSpace(string(output)))
 			}
 		})
 	})
 })
 
 const (
-	floatingIPCreateOutput = `
+	reservedIPCreateOutput = `
 IP             Region    Droplet ID    Droplet Name
 45.55.96.47    nyc3      1212          magic-name
 `
-	floatingIPCreateResponse = `
+	reservedIPCreateResponse = `
 {
   "reserved_ip": {
     "ip": "45.55.96.47",
@@ -108,10 +108,10 @@ IP             Region    Droplet ID    Droplet Name
   "links": {}
 }
 `
-	floatingIPCreateRequest = `
+	reservedIPCreateRequest = `
 {"droplet_id":1212}
 `
-	floatingIPRegionCreateRequest = `
+	reservedIPRegionCreateRequest = `
 {"region":"newark"}
 `
 )

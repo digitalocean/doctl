@@ -259,7 +259,9 @@ func RunProjectResourcesGet(c *CmdConfig) error {
 	case "droplet":
 		return RunDropletGet(c)
 	case "floatingip":
-		return RunFloatingIPGet(c)
+		return RunReservedIPGet(c)
+	case "reservedip":
+		return RunReservedIPGet(c)
 	case "loadbalancer":
 		return RunLoadBalancerGet(c)
 	case "domain":
