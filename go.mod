@@ -7,7 +7,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/containerd/continuity v0.2.2 // indirect
 	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.80.0
+	github.com/digitalocean/godo v1.81.0
 	github.com/docker/cli v20.10.14+incompatible
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200531234253-77e06fda0c94+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
@@ -86,5 +86,3 @@ require (
 	k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.1.2 // indirect
 )
-
-replace github.com/digitalocean/godo => github.com/senorprogrammer/godo v1.75.1-0.20220511210934-477acfa9ed5f
