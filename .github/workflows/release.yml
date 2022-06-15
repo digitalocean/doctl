@@ -68,8 +68,9 @@ jobs:
           make _build_snap && \
           find doctl_v*.snap -print -exec echo ::set-output name=snap::{} \;
 
-      - uses: snapcore/action-publish@v1
+      - uses: snapcore/action-publish@master
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_TOKEN }}
         with:
-          store_login: ${{ secrets.SNAP_TOKEN }}
           snap: ${{ steps.build.outputs.snap }}
           release: stable
