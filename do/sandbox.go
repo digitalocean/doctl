@@ -96,6 +96,7 @@ type sandboxService struct {
 	sandboxJs  string
 	sandboxDir string
 	node       string
+	userAgent  string
 	client     *godo.Client
 }
 
@@ -111,11 +112,12 @@ type SandboxOutput struct {
 }
 
 // NewSandboxService returns a configured SandboxService.
-func NewSandboxService(sandboxJs string, sandboxDir string, node string, client *godo.Client) SandboxService {
+func NewSandboxService(sandboxJs string, sandboxDir string, node string, userAgent string, client *godo.Client) SandboxService {
 	return &sandboxService{
 		sandboxJs:  sandboxJs,
 		sandboxDir: sandboxDir,
 		node:       node,
+		userAgent:  userAgent,
 		client:     client,
 	}
 }
@@ -124,7 +126,7 @@ func NewSandboxService(sandboxJs string, sandboxDir string, node string, client 
 func (n *sandboxService) Cmd(command string, args []string) (*exec.Cmd, error) {
 	args = append([]string{n.sandboxJs, command}, args...)
 	cmd := exec.Command(n.node, args...)
-	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+n.sandboxDir)
+	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+n.sandboxDir, "NIM_USER_AGENT="+n.userAgent)
 	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
 	// will continue to work for returning structured results.
 	if os.Getenv("DEBUG") != "" {
