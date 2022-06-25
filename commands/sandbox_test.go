@@ -32,18 +32,8 @@ func TestSandboxConnect(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
-		fakeCmd := &exec.Cmd{
-			Stdout: config.Out,
-		}
 
-		tm.sandbox.EXPECT().GetSandboxNamespace(context.TODO()).Return(do.SandboxCredentials{Auth: "xyzzy", APIHost: "https://api.example.com"}, nil)
-		tm.sandbox.EXPECT().Cmd("auth/login", []string{"--auth", "xyzzy", "--apihost", "https://api.example.com"}).Return(fakeCmd, nil)
-		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
-			Entity: map[string]interface{}{
-				"namespace": "hello",
-				"apihost":   "https://api.example.com",
-			},
-		}, nil)
+		tm.sandbox.EXPECT().GetSandboxNamespace(context.TODO()).Return(do.SandboxCredentials{Namespace: "hello", APIHost: "https://api.example.com"}, nil)
 
 		err := RunSandboxConnect(config)
 		require.NoError(t, err)

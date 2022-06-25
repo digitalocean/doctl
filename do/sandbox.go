@@ -26,11 +26,15 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// SandboxCredentials is the type returned by the GetSandboxNamespace function.
-// The values in it can be used to connect sandbox support to a specific namespace using the plugin.
+// SandboxCredentials models what is stored in credentials.json for use by the plugin and nim.
+// It is also the type returned by the GetSandboxNamespace function.
 type SandboxCredentials struct {
-	Auth    string
-	APIHost string
+	APIHost     string                                  `json:"currentHost"`
+	Namespace   string                                  `json:"currentNamespace"`
+	Credentials map[string]map[string]SandboxCredential `json:"credentials"`
+}
+type SandboxCredential struct {
+	Auth string `json:"api_key"`
 }
 
 // The type of the "namespace" member of the response to /api/v2/functions/sandbox
@@ -182,9 +186,13 @@ func (n *sandboxService) GetSandboxNamespace(ctx context.Context) (SandboxCreden
 	if err != nil {
 		return SandboxCredentials{}, err
 	}
+	host := assignAPIHost(decoded.Namespace.APIHost, decoded.Namespace.Namespace)
+	credential := SandboxCredential{Auth: decoded.Namespace.UUID + ":" + decoded.Namespace.Key}
+	namespace := decoded.Namespace.Namespace
 	ans := SandboxCredentials{
-		APIHost: assignAPIHost(decoded.Namespace.APIHost, decoded.Namespace.Namespace),
-		Auth:    decoded.Namespace.UUID + ":" + decoded.Namespace.Key,
+		APIHost:     host,
+		Namespace:   namespace,
+		Credentials: map[string]map[string]SandboxCredential{host: {namespace: credential}},
 	}
 	return ans, nil
 }

@@ -200,16 +200,28 @@ func RunSandboxConnect(c *CmdConfig) error {
 		creds do.SandboxCredentials
 		err   error
 	)
+
 	if len(c.Args) > 0 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
+
+	// Non-standard check for the connect command (only): it's ok to not be connected.
+	err = c.checkSandboxStatus(c)
+	if err != nil && err != ErrSandboxNotConnected {
+		return err
+	}
+
+	// Compute the credentials dir location
+	sandboxDir, _ := getSandboxDirectory()
+	credsDir := getCredentialDirectory(c, sandboxDir)
+
+	// Get the credentials for the sandbox namespace as a struct and marshaled as a bytes array
 	creds, err = c.Sandbox().GetSandboxNamespace(context.TODO())
 	if err != nil {
 		return err
 	}
-	// Non-standard check for the connect command (only): it's ok to not be connected.
-	err = c.checkSandboxStatus(c)
-	if err != nil && err != ErrSandboxNotConnected {
+	bytes, err := json.MarshalIndent(&creds, "", "  ")
+	if err != nil {
 		return err
 	}
 
@@ -217,20 +229,20 @@ func RunSandboxConnect(c *CmdConfig) error {
 	// happened yet since the initial install happens on the build host.
 	_, isSnap := os.LookupEnv("SNAP")
 	if isSnap {
-		sandboxDir, _ := getSandboxDirectory()
-		credsDir := getCredentialDirectory(c, sandboxDir)
 		err = os.MkdirAll(credsDir, 0700)
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
-	result, err := sandboxExecNoCheck(c, "auth/login", []string{"--auth", creds.Auth, "--apihost", creds.APIHost})
+	// Write the credentials
+	credsPath := filepath.Join(credsDir, credentialsFile)
+	err = os.WriteFile(credsPath, bytes, 0644)
 	if err != nil {
 		return err
 	}
-	mapResult := result.Entity.(map[string]interface{})
-	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["namespace"], mapResult["apihost"])
+
+	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", creds.Namespace, creds.APIHost)
 	fmt.Fprintln(c.Out)
 	return nil
 }
