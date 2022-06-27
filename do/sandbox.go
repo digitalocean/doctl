@@ -238,14 +238,10 @@ func assignAPIHost(origAPIHost string, namespace string) string {
 
 // WriteCredentials writes a set of serverless credentials to the appropriate 'creds' directory
 func (n *sandboxService) WriteCredentials(creds SandboxCredentials) error {
-	// Create the credentials dir if run as a snap as this might not have
-	// happened yet since the initial install happens on the build host.
-	_, isSnap := os.LookupEnv("SNAP")
-	if isSnap {
-		err := os.MkdirAll(n.credsDir, 0700)
-		if err != nil {
-			return err
-		}
+	// Create the directory into which the file will be written.
+	err := os.MkdirAll(s.credsDir, 0700)
+	if err != nil {
+		return err
 	}
 	// Write the credentials
 	credsPath := filepath.Join(n.credsDir, CredentialsFile)
