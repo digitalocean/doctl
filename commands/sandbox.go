@@ -51,9 +51,6 @@ const (
 	// credsDir is the directory under the sandbox where all credentials are stored.
 	// It in turn has a subdirectory for each access token employed (formed as a prefix of the token).
 	credsDir = "creds"
-
-	// credentialsFile is the name of the file where the sandbox plugin stores OpenWhisk credentials.
-	credentialsFile = "credentials.json"
 )
 
 var (
@@ -211,33 +208,15 @@ func RunSandboxConnect(c *CmdConfig) error {
 		return err
 	}
 
-	// Compute the credentials dir location
-	sandboxDir, _ := getSandboxDirectory()
-	credsDir := getCredentialDirectory(c, sandboxDir)
-
-	// Get the credentials for the sandbox namespace as a struct and marshaled as a bytes array
-	creds, err = c.Sandbox().GetSandboxNamespace(context.TODO())
-	if err != nil {
-		return err
-	}
-	bytes, err := json.MarshalIndent(&creds, "", "  ")
+	// Get the credentials for the sandbox namespace
+	sandbox := c.Sandbox()
+	creds, err = sandbox.GetSandboxNamespace(context.TODO())
 	if err != nil {
 		return err
 	}
 
-	// Create the credentials dir if run as a snap as this might not have
-	// happened yet since the initial install happens on the build host.
-	_, isSnap := os.LookupEnv("SNAP")
-	if isSnap {
-		err = os.MkdirAll(credsDir, 0700)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Write the credentials
-	credsPath := filepath.Join(credsDir, credentialsFile)
-	err = os.WriteFile(credsPath, bytes, 0600)
+	// Store the credentials
+	err = sandbox.WriteCredentials(creds)
 	if err != nil {
 		return err
 	}
@@ -763,7 +742,7 @@ func sandboxUptodate(sandboxDir string) bool {
 // current doctl access token and appears to have a credentials.json in it.
 func isSandboxConnected(c *CmdConfig, sandboxDir string) bool {
 	creds := getCredentialDirectory(c, sandboxDir)
-	credsFile := filepath.Join(creds, credentialsFile)
+	credsFile := filepath.Join(creds, do.CredentialsFile)
 	_, err := os.Stat(credsFile)
 	return !os.IsNotExist(err)
 }

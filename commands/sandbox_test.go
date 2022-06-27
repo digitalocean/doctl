@@ -33,7 +33,9 @@ func TestSandboxConnect(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.sandbox.EXPECT().GetSandboxNamespace(context.TODO()).Return(do.SandboxCredentials{Namespace: "hello", APIHost: "https://api.example.com"}, nil)
+		creds := do.SandboxCredentials{Namespace: "hello", APIHost: "https://api.example.com"}
+		tm.sandbox.EXPECT().GetSandboxNamespace(context.TODO()).Return(creds, nil)
+		tm.sandbox.EXPECT().WriteCredentials(creds).Return(nil)
 
 		err := RunSandboxConnect(config)
 		require.NoError(t, err)

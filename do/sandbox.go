@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/digitalocean/godo"
@@ -33,6 +34,8 @@ type SandboxCredentials struct {
 	Namespace   string                                  `json:"currentNamespace"`
 	Credentials map[string]map[string]SandboxCredential `json:"credentials"`
 }
+
+// SandboxCredential is the type of an individual entry in SandboxCredentials
 type SandboxCredential struct {
 	Auth string `json:"api_key"`
 }
@@ -93,16 +96,20 @@ type SandboxService interface {
 	Exec(*exec.Cmd) (SandboxOutput, error)
 	Stream(*exec.Cmd) error
 	GetSandboxNamespace(context.Context) (SandboxCredentials, error)
+	WriteCredentials(SandboxCredentials) error
 	GetHostInfo(string) (ServerlessHostInfo, error)
 }
 
 type sandboxService struct {
-	sandboxJs  string
-	sandboxDir string
-	node       string
-	userAgent  string
-	client     *godo.Client
+	sandboxJs string
+	credsDir  string // note: this was misleadingly named sandboxDir previously
+	node      string
+	userAgent string
+	client    *godo.Client
 }
+
+// CredentialsFile is the name of the file where the sandbox plugin stores OpenWhisk credentials.
+const CredentialsFile = "credentials.json"
 
 var _ SandboxService = &sandboxService{}
 
@@ -116,13 +123,13 @@ type SandboxOutput struct {
 }
 
 // NewSandboxService returns a configured SandboxService.
-func NewSandboxService(sandboxJs string, sandboxDir string, node string, userAgent string, client *godo.Client) SandboxService {
+func NewSandboxService(sandboxJs string, credsDir string, node string, userAgent string, client *godo.Client) SandboxService {
 	return &sandboxService{
-		sandboxJs:  sandboxJs,
-		sandboxDir: sandboxDir,
-		node:       node,
-		userAgent:  userAgent,
-		client:     client,
+		sandboxJs: sandboxJs,
+		credsDir:  credsDir,
+		node:      node,
+		userAgent: userAgent,
+		client:    client,
 	}
 }
 
@@ -130,7 +137,7 @@ func NewSandboxService(sandboxJs string, sandboxDir string, node string, userAge
 func (n *sandboxService) Cmd(command string, args []string) (*exec.Cmd, error) {
 	args = append([]string{n.sandboxJs, command}, args...)
 	cmd := exec.Command(n.node, args...)
-	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+n.sandboxDir, "NIM_USER_AGENT="+n.userAgent)
+	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+n.credsDir, "NIM_USER_AGENT="+n.userAgent)
 	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
 	// will continue to work for returning structured results.
 	if os.Getenv("DEBUG") != "" {
@@ -227,4 +234,24 @@ func assignAPIHost(origAPIHost string, namespace string) string {
 		return sansSuffix + ".co"
 	}
 	return origAPIHost
+}
+
+// WriteCredentials writes a set of serverless credentials to the appropriate 'creds' directory
+func (n *sandboxService) WriteCredentials(creds SandboxCredentials) error {
+	// Create the credentials dir if run as a snap as this might not have
+	// happened yet since the initial install happens on the build host.
+	_, isSnap := os.LookupEnv("SNAP")
+	if isSnap {
+		err := os.MkdirAll(n.credsDir, 0700)
+		if err != nil {
+			return err
+		}
+	}
+	// Write the credentials
+	credsPath := filepath.Join(n.credsDir, CredentialsFile)
+	bytes, err := json.MarshalIndent(&creds, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(credsPath, bytes, 0600)
 }
