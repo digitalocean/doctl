@@ -237,7 +237,7 @@ func RunSandboxConnect(c *CmdConfig) error {
 
 	// Write the credentials
 	credsPath := filepath.Join(credsDir, credentialsFile)
-	err = os.WriteFile(credsPath, bytes, 0644)
+	err = os.WriteFile(credsPath, bytes, 0600)
 	if err != nil {
 		return err
 	}
