@@ -239,7 +239,7 @@ func assignAPIHost(origAPIHost string, namespace string) string {
 // WriteCredentials writes a set of serverless credentials to the appropriate 'creds' directory
 func (n *sandboxService) WriteCredentials(creds SandboxCredentials) error {
 	// Create the directory into which the file will be written.
-	err := os.MkdirAll(s.credsDir, 0700)
+	err := os.MkdirAll(n.credsDir, 0700)
 	if err != nil {
 		return err
 	}
