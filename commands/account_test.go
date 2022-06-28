@@ -28,6 +28,10 @@ var testAccount = &do.Account{
 		Email:         "user@example.com",
 		UUID:          "1234",
 		EmailVerified: true,
+		Team: &godo.TeamInfo{
+			Name: "Test Team",
+			UUID: "aaa-bbb-ccc",
+		},
 	},
 }
 
