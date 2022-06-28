@@ -51,9 +51,6 @@ const (
 	// credsDir is the directory under the sandbox where all credentials are stored.
 	// It in turn has a subdirectory for each access token employed (formed as a prefix of the token).
 	credsDir = "creds"
-
-	// credentialsFile is the name of the file where the sandbox plugin stores OpenWhisk credentials.
-	credentialsFile = "credentials.json"
 )
 
 var (
@@ -200,37 +197,31 @@ func RunSandboxConnect(c *CmdConfig) error {
 		creds do.SandboxCredentials
 		err   error
 	)
+
 	if len(c.Args) > 0 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	creds, err = c.Sandbox().GetSandboxNamespace(context.TODO())
-	if err != nil {
-		return err
-	}
+
 	// Non-standard check for the connect command (only): it's ok to not be connected.
 	err = c.checkSandboxStatus(c)
 	if err != nil && err != ErrSandboxNotConnected {
 		return err
 	}
 
-	// Create the credentials dir if run as a snap as this might not have
-	// happened yet since the initial install happens on the build host.
-	_, isSnap := os.LookupEnv("SNAP")
-	if isSnap {
-		sandboxDir, _ := getSandboxDirectory()
-		credsDir := getCredentialDirectory(c, sandboxDir)
-		err = os.MkdirAll(credsDir, 0700)
-		if err != nil {
-			return nil
-		}
-	}
-
-	result, err := sandboxExecNoCheck(c, "auth/login", []string{"--auth", creds.Auth, "--apihost", creds.APIHost})
+	// Get the credentials for the sandbox namespace
+	sandbox := c.Sandbox()
+	creds, err = sandbox.GetSandboxNamespace(context.TODO())
 	if err != nil {
 		return err
 	}
-	mapResult := result.Entity.(map[string]interface{})
-	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["namespace"], mapResult["apihost"])
+
+	// Store the credentials
+	err = sandbox.WriteCredentials(creds)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", creds.Namespace, creds.APIHost)
 	fmt.Fprintln(c.Out)
 	return nil
 }
@@ -751,7 +742,7 @@ func sandboxUptodate(sandboxDir string) bool {
 // current doctl access token and appears to have a credentials.json in it.
 func isSandboxConnected(c *CmdConfig, sandboxDir string) bool {
 	creds := getCredentialDirectory(c, sandboxDir)
-	credsFile := filepath.Join(creds, credentialsFile)
+	credsFile := filepath.Join(creds, do.CredentialsFile)
 	_, err := os.Stat(credsFile)
 	return !os.IsNotExist(err)
 }

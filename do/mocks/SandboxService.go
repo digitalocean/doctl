@@ -109,3 +109,17 @@ func (mr *MockSandboxServiceMockRecorder) Stream(arg0 interface{}) *gomock.Call 
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stream", reflect.TypeOf((*MockSandboxService)(nil).Stream), arg0)
 }
+
+// WriteCredentials mocks base method.
+func (m *MockSandboxService) WriteCredentials(arg0 do.SandboxCredentials) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteCredentials", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteCredentials indicates an expected call of WriteCredentials.
+func (mr *MockSandboxServiceMockRecorder) WriteCredentials(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteCredentials", reflect.TypeOf((*MockSandboxService)(nil).WriteCredentials), arg0)
+}
