@@ -130,7 +130,10 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			node := filepath.Join(sandboxDir, nodeBin)
 			sandboxJs := filepath.Join(sandboxDir, "sandbox.js")
 			nimbellaDir := getCredentialDirectory(c, sandboxDir)
-			c.Sandbox = func() do.SandboxService { return do.NewSandboxService(sandboxJs, nimbellaDir, node, godoClient) }
+			userAgent := fmt.Sprintf("doctl/%s serverless/%s", doctl.DoitVersion.String(), minSandboxVersion)
+			c.Sandbox = func() do.SandboxService {
+				return do.NewSandboxService(sandboxJs, nimbellaDir, node, userAgent, godoClient)
+			}
 
 			return nil
 		},
