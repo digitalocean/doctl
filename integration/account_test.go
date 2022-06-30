@@ -64,6 +64,23 @@ var _ = suite("account/get", func(t *testing.T, when spec.G, it spec.S) {
 
 		expect.Equal(strings.TrimSpace(accountOutput), strings.TrimSpace(string(output)))
 	})
+
+	when("format flags are passed", func() {
+		it("only displays the correct fields", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"account",
+				"get",
+				"--format", "Email,UUID,TeamUUID",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, string(output))
+
+			expect.Equal(strings.TrimSpace(formattedAccountOutput), strings.TrimSpace(string(output)))
+		})
+	})
 })
 
 var _ = suite("account/ratelimit", func(t *testing.T, when spec.G, it spec.S) {
@@ -159,12 +176,21 @@ const (
     "uuid": "b6fr89dbf6d9156cace5f3c78dc9851d957381ef",
     "email_verified": true,
     "status": "active",
-    "status_message": ""
+    "status_message": "",
+    "team": {
+      "uuid": "e8566708-f6fd-11ec-aac1-7f9bcd99de41",
+      "name": "My Team"
+    }
   }
 }`
 	accountOutput = `
-Email                     Droplet Limit    Email Verified    UUID                                        Status
-sammy@digitalocean.com    25               true              b6fr89dbf6d9156cace5f3c78dc9851d957381ef    active
+User Email                Team       Droplet Limit    Email Verified    User UUID                                   Status
+sammy@digitalocean.com    My Team    25               true              b6fr89dbf6d9156cace5f3c78dc9851d957381ef    active
+`
+
+	formattedAccountOutput = `
+User Email                User UUID                                   Team UUID
+sammy@digitalocean.com    b6fr89dbf6d9156cace5f3c78dc9851d957381ef    e8566708-f6fd-11ec-aac1-7f9bcd99de41
 `
 
 	ratelimitOutput = `
