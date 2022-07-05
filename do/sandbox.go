@@ -156,15 +156,22 @@ type SandboxOutput struct {
 }
 
 // NewSandboxService returns a configured SandboxService.
-func NewSandboxService(client *godo.Client, sandboxDir string, credsToken string) SandboxService {
+func NewSandboxService(client *godo.Client, usualSandboxDir string, credsToken string) SandboxService {
 	nodeBin := "node"
 	if runtime.GOOS == "windows" {
 		nodeBin = "node.exe"
 	}
+	// The following is needed to support snap installation.  For snap, the installation directory
+	// is relocated to a snap-managed area.  That area is not user-writable, so, the credsDir location
+	// is always computed relative to the normal installation area (usualSandboxDir).
+	sandboxDir := os.Getenv("OVERRIDE_SANDBOX_DIR")
+	if sandboxDir == "" {
+		sandboxDir = usualSandboxDir
+	}
 	return &sandboxService{
 		sandboxJs:  filepath.Join(sandboxDir, "sandbox.js"),
 		sandboxDir: sandboxDir,
-		credsDir:   GetCredentialDirectory(credsToken, sandboxDir),
+		credsDir:   GetCredentialDirectory(credsToken, usualSandboxDir),
 		node:       filepath.Join(sandboxDir, nodeBin),
 		userAgent:  fmt.Sprintf("doctl/%s serverless/%s", doctl.DoitVersion.String(), minSandboxVersion),
 		client:     client,
