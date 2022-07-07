@@ -26,21 +26,9 @@ import (
 )
 
 const (
-	// Minimum required version of the sandbox plugin code.  The first part is
-	// the version of the incorporated Nimbella CLI and the second part is the
-	// version of the bridge code in the sandbox plugin repository.
-	minSandboxVersion = "4.1.0-1.3.0"
-
-	// The version of nodejs to download alongsize the plugin download.
-	nodeVersion = "v16.13.0"
-
 	// noCapture is the string constant recognized by the plugin.  It suppresses output
 	// capture when in the initial (command) position.
 	noCapture = "nocapture"
-
-	// credsDir is the directory under the sandbox where all credentials are stored.
-	// It in turn has a subdirectory for each access token employed (formed as a prefix of the token).
-	credsDir = "creds"
 )
 
 // SandboxExec executes a sandbox command

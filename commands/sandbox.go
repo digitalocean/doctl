@@ -227,7 +227,7 @@ func RunSandboxStatus(c *CmdConfig) error {
 	mapResult := result.Entity.(map[string]interface{})
 	apiHost := mapResult["apihost"].(string)
 	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["name"], apiHost)
-	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", minSandboxVersion)
+	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", do.GetMinSandboxVersion())
 	languages, _ := c.Doit.GetBool(c.NS, "languages")
 	if languages {
 		return showLanguageInfo(c, apiHost)
