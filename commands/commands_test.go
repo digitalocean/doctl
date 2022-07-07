@@ -237,10 +237,6 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 		setContextAccessToken: func(token string) {},
 
-		checkSandboxStatus: func(c *CmdConfig) error {
-			return nil
-		},
-
 		Keys:              func() do.KeysService { return tm.keys },
 		Sizes:             func() do.SizesService { return tm.sizes },
 		Regions:           func() do.RegionsService { return tm.regions },

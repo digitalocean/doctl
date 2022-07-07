@@ -36,6 +36,20 @@ func (m *MockSandboxService) EXPECT() *MockSandboxServiceMockRecorder {
 	return m.recorder
 }
 
+// CheckSandboxStatus mocks base method.
+func (m *MockSandboxService) CheckSandboxStatus(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckSandboxStatus", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckSandboxStatus indicates an expected call of CheckSandboxStatus.
+func (mr *MockSandboxServiceMockRecorder) CheckSandboxStatus(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckSandboxStatus", reflect.TypeOf((*MockSandboxService)(nil).CheckSandboxStatus), arg0)
+}
+
 // Cmd mocks base method.
 func (m *MockSandboxService) Cmd(arg0 string, arg1 []string) (*exec.Cmd, error) {
 	m.ctrl.T.Helper()
@@ -94,6 +108,20 @@ func (m *MockSandboxService) GetSandboxNamespace(arg0 context.Context) (do.Sandb
 func (mr *MockSandboxServiceMockRecorder) GetSandboxNamespace(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxNamespace", reflect.TypeOf((*MockSandboxService)(nil).GetSandboxNamespace), arg0)
+}
+
+// InstallSandbox mocks base method.
+func (m *MockSandboxService) InstallSandbox(arg0 string, arg1 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallSandbox", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallSandbox indicates an expected call of InstallSandbox.
+func (mr *MockSandboxServiceMockRecorder) InstallSandbox(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallSandbox", reflect.TypeOf((*MockSandboxService)(nil).InstallSandbox), arg0, arg1)
 }
 
 // Stream mocks base method.

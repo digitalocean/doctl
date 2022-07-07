@@ -16,7 +16,6 @@ package commands
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -33,6 +32,7 @@ func TestSandboxConnect(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
+		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(do.ErrSandboxNotConnected)
 		creds := do.SandboxCredentials{Namespace: "hello", APIHost: "https://api.example.com"}
 		tm.sandbox.EXPECT().GetSandboxNamespace(context.TODO()).Return(creds, nil)
 		tm.sandbox.EXPECT().WriteCredentials(creds).Return(nil)
@@ -51,6 +51,7 @@ func TestSandboxStatusWhenConnected(t *testing.T) {
 			Stdout: config.Out,
 		}
 
+		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
 		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 			Entity: map[string]interface{}{
@@ -102,6 +103,7 @@ func TestSandboxStatusWithLanguages(t *testing.T) {
     go:1.22 (go:default)
 `
 
+		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
 		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 			Entity: map[string]interface{}{
@@ -122,6 +124,7 @@ func TestSandboxStatusWhenNotConnected(t *testing.T) {
 			Stdout: config.Out,
 		}
 
+		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
 		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 			Error: "403",
@@ -129,33 +132,29 @@ func TestSandboxStatusWhenNotConnected(t *testing.T) {
 
 		err := RunSandboxStatus(config)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrSandboxNotConnected)
+		assert.ErrorIs(t, err, do.ErrSandboxNotConnected)
 	})
 }
 
 func TestSandboxStatusWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNotInstalled
-		}
+		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(do.ErrSandboxNotInstalled)
 
 		err := RunSandboxStatus(config)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrSandboxNotInstalled)
+		assert.ErrorIs(t, err, do.ErrSandboxNotInstalled)
 	})
 }
 
 func TestSandboxStatusWhenNotUpToDate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNeedsUpgrade
-		}
+		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(do.ErrSandboxNeedsUpgrade)
 
 		err := RunSandboxStatus(config)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrSandboxNeedsUpgrade)
+		assert.ErrorIs(t, err, do.ErrSandboxNeedsUpgrade)
 	})
 }
 
@@ -164,17 +163,12 @@ func TestSandboxInstallFromScratch(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNotInstalled
-		}
+		credsToken := hashAccessToken(config)
+		tm.sandbox.EXPECT().CheckSandboxStatus(credsToken).Return(do.ErrSandboxNotInstalled)
+		tm.sandbox.EXPECT().InstallSandbox(credsToken, false).Return(nil)
 
 		err := RunSandboxInstall(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Installed with upgrade false\n", buf.String())
 	})
 }
 
@@ -183,13 +177,8 @@ func TestSandboxInstallWhenInstalledNotCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNeedsUpgrade
-		}
+		credsToken := hashAccessToken(config)
+		tm.sandbox.EXPECT().CheckSandboxStatus(credsToken).Return(do.ErrSandboxNeedsUpgrade)
 
 		err := RunSandboxInstall(config)
 		require.NoError(t, err)
@@ -202,13 +191,7 @@ func TestSandboxInstallWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return nil
-		}
+		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(nil)
 
 		err := RunSandboxInstall(config)
 		require.NoError(t, err)
@@ -221,13 +204,8 @@ func TestSandboxUpgradeWhenNotInstalled(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNotInstalled
-		}
+		credsToken := hashAccessToken(config)
+		tm.sandbox.EXPECT().CheckSandboxStatus(credsToken).Return(do.ErrSandboxNotInstalled)
 
 		err := RunSandboxUpgrade(config)
 		require.NoError(t, err)
@@ -240,13 +218,7 @@ func TestSandboxUpgradeWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return nil
-		}
+		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(nil)
 
 		err := RunSandboxUpgrade(config)
 		require.NoError(t, err)
@@ -259,17 +231,12 @@ func TestSandboxUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNeedsUpgrade
-		}
+		credsToken := hashAccessToken(config)
+		tm.sandbox.EXPECT().CheckSandboxStatus(credsToken).Return(do.ErrSandboxNeedsUpgrade)
+		tm.sandbox.EXPECT().InstallSandbox(credsToken, true).Return(nil)
 
 		err := RunSandboxUpgrade(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Installed with upgrade true\n", buf.String())
 	})
 }
 
@@ -326,6 +293,7 @@ func TestSandboxInit(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("project/create", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 					Entity: tt.out,
@@ -389,6 +357,7 @@ func TestSandboxDeploy(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("project/deploy", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
 
@@ -493,6 +462,9 @@ func TestSandboxUndeploy(t *testing.T) {
 					}
 				}
 
+				if tt.expectedError == nil {
+					tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				}
 				for i := range tt.expectedNimCmds {
 					tm.sandbox.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
 					tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
@@ -545,6 +517,7 @@ func TestSandboxWatch(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("nocapture", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Stream(fakeCmd).Return(nil)
 
@@ -583,7 +556,7 @@ func TestGetCredentialDirectory(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				config.getContextAccessToken = tt.tokenFunc
 
-				out := getCredentialDirectory(config, testDir)
+				out := do.GetCredentialDirectory(hashAccessToken(config), testDir)
 				require.Equal(t, tt.expected, out)
 			})
 		})
@@ -614,7 +587,7 @@ func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
 		err = os.MkdirAll(stagingDir, os.FileMode(0755))
 		require.NoError(t, err)
 
-		err = preserveCreds(config, stagingDir, sandboxDir)
+		err = do.PreserveCreds(hashAccessToken(config), stagingDir, sandboxDir)
 		require.NoError(t, err)
 
 		stagingCreds := filepath.Join(stagingDir, "creds", "d5b388f2", "credentials.json")
@@ -651,7 +624,7 @@ func TestPreserveCredsMovesLegacyCreds(t *testing.T) {
 		err = os.MkdirAll(stagingDir, os.FileMode(0755))
 		require.NoError(t, err)
 
-		err = preserveCreds(config, stagingDir, sandboxDir)
+		err = do.PreserveCreds(hashAccessToken(config), stagingDir, sandboxDir)
 		require.NoError(t, err)
 
 		stagingCreds := filepath.Join(stagingDir, "creds", "3785870f", "credentials.json")

@@ -95,6 +95,7 @@ func TestActivationsGet(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("activation/get", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
 
@@ -174,6 +175,7 @@ func TestActivationsList(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("activation/list", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
 
@@ -255,6 +257,7 @@ func TestActivationsLogs(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				if tt.expectStream {
 					expectedArgs := append([]string{"activation/logs"}, tt.expectedNimArgs...)
 					tm.sandbox.EXPECT().Cmd("nocapture", expectedArgs).Return(fakeCmd, nil)
@@ -330,6 +333,7 @@ func TestActivationsResult(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("activation/result", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
 

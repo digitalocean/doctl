@@ -107,6 +107,7 @@ func TestFunctionsGet(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("action/get", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
 
@@ -175,6 +176,7 @@ func TestFunctionsInvoke(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("action/invoke", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
 					Entity: map[string]interface{}{"body": "Hello world!"},
@@ -250,6 +252,7 @@ func TestFunctionsList(t *testing.T) {
 					}
 				}
 
+				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("action/list", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
 
