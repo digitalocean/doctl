@@ -99,7 +99,7 @@ To see a list of available authentication contexts, call `+"`"+`doctl auth list`
 For details on creating an authentication context, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer, false)
 	cmdAuthSwitch.AddValidArgsFunc(authContextListValidArgsFunc)
 
-	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove", "Remove authentication contexts ", `This command allows you to remove authentication contexts you've already created.
+	cmdAuthRemove := cmdBuilderWithInit(cmd, RunAuthRemove, "remove", "Remove authentication contexts ", `This command allows you to remove authentication contexts you've already created. For example, to remove a context called `example-context` run ` + "`" + `doctl auth switch --context <name>` + "`" + `.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
 
