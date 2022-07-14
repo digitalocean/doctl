@@ -45,6 +45,8 @@ func Apps() *Command {
 		},
 	}
 
+	cmd.AddCommand(AppsDev())
+
 	create := CmdBuilder(
 		cmd,
 		RunAppsCreate,

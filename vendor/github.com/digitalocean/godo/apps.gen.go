@@ -77,23 +77,26 @@ type AppAlertSlackWebhook struct {
 
 // App An application's configuration and status.
 type App struct {
-	ID                      string       `json:"id,omitempty"`
-	OwnerUUID               string       `json:"owner_uuid,omitempty"`
-	Spec                    *AppSpec     `json:"spec"`
-	LastDeploymentActiveAt  time.Time    `json:"last_deployment_active_at,omitempty"`
-	DefaultIngress          string       `json:"default_ingress,omitempty"`
-	CreatedAt               time.Time    `json:"created_at,omitempty"`
-	UpdatedAt               time.Time    `json:"updated_at,omitempty"`
-	ActiveDeployment        *Deployment  `json:"active_deployment,omitempty"`
-	InProgressDeployment    *Deployment  `json:"in_progress_deployment,omitempty"`
-	LastDeploymentCreatedAt time.Time    `json:"last_deployment_created_at,omitempty"`
-	LiveURL                 string       `json:"live_url,omitempty"`
-	Region                  *AppRegion   `json:"region,omitempty"`
-	TierSlug                string       `json:"tier_slug,omitempty"`
-	LiveURLBase             string       `json:"live_url_base,omitempty"`
-	LiveDomain              string       `json:"live_domain,omitempty"`
-	Domains                 []*AppDomain `json:"domains,omitempty"`
-	PinnedDeployment        *Deployment  `json:"pinned_deployment,omitempty"`
+	ID                      string          `json:"id,omitempty"`
+	OwnerUUID               string          `json:"owner_uuid,omitempty"`
+	Spec                    *AppSpec        `json:"spec"`
+	LastDeploymentActiveAt  time.Time       `json:"last_deployment_active_at,omitempty"`
+	DefaultIngress          string          `json:"default_ingress,omitempty"`
+	CreatedAt               time.Time       `json:"created_at,omitempty"`
+	UpdatedAt               time.Time       `json:"updated_at,omitempty"`
+	ActiveDeployment        *Deployment     `json:"active_deployment,omitempty"`
+	InProgressDeployment    *Deployment     `json:"in_progress_deployment,omitempty"`
+	LastDeploymentCreatedAt time.Time       `json:"last_deployment_created_at,omitempty"`
+	LiveURL                 string          `json:"live_url,omitempty"`
+	Region                  *AppRegion      `json:"region,omitempty"`
+	TierSlug                string          `json:"tier_slug,omitempty"`
+	LiveURLBase             string          `json:"live_url_base,omitempty"`
+	LiveDomain              string          `json:"live_domain,omitempty"`
+	Domains                 []*AppDomain    `json:"domains,omitempty"`
+	PinnedDeployment        *Deployment     `json:"pinned_deployment,omitempty"`
+	BuildConfig             *AppBuildConfig `json:"build_config,omitempty"`
+	// The UUID of the fleet (a.k.a project) for the app. This will be empty if there is a fleet lookup failure.
+	FleetUUID string `json:"fleet_uuid,omitempty"`
 }
 
 // AppAlertSpec Configuration of an alert for the app or a individual component.
@@ -149,6 +152,17 @@ const (
 	AppAlertSpecWindow_ThirtyMinutes     AppAlertSpecWindow = "THIRTY_MINUTES"
 	AppAlertSpecWindow_OneHour           AppAlertSpecWindow = "ONE_HOUR"
 )
+
+// AppBuildConfig struct for AppBuildConfig
+type AppBuildConfig struct {
+	CNBVersioning *AppBuildConfigCNBVersioning `json:"cnb_versioning,omitempty"`
+}
+
+// AppBuildConfigCNBVersioning struct for AppBuildConfigCNBVersioning
+type AppBuildConfigCNBVersioning struct {
+	// List of versioned buildpacks used for the application.  Buildpacks are only versioned based on the major semver version, threfore exact versions will not be available at the app build config.
+	Buildpacks []*Buildpack `json:"buildpacks,omitempty"`
+}
 
 // AppDatabaseSpec struct for AppDatabaseSpec
 type AppDatabaseSpec struct {
@@ -283,6 +297,7 @@ const (
 
 // AppLogDestinationSpec struct for AppLogDestinationSpec
 type AppLogDestinationSpec struct {
+	// Name of the log destination.
 	Name        string                           `json:"name"`
 	Papertrail  *AppLogDestinationSpecPapertrail `json:"papertrail,omitempty"`
 	Datadog     *AppLogDestinationSpecDataDog    `json:"datadog,omitempty"`
@@ -368,15 +383,15 @@ type AppServiceSpec struct {
 type AppServiceSpecHealthCheck struct {
 	// Deprecated. Use http_path instead.
 	Path string `json:"path,omitempty"`
-	// The number of seconds to wait before beginning health checks.
+	// The number of seconds to wait before beginning health checks. Default: 0 seconds; start health checks as soon as the service starts.
 	InitialDelaySeconds int32 `json:"initial_delay_seconds,omitempty"`
-	// The number of seconds to wait between health checks.
+	// The number of seconds to wait between health checks. Default: 10 seconds.
 	PeriodSeconds int32 `json:"period_seconds,omitempty"`
-	// The number of seconds after which the check times out.
+	// The number of seconds after which the check times out. Default: 1 second.
 	TimeoutSeconds int32 `json:"timeout_seconds,omitempty"`
-	// The number of successful health checks before considered healthy.
+	// The number of successful health checks before considered healthy. Default: 1.
 	SuccessThreshold int32 `json:"success_threshold,omitempty"`
-	// The number of failed health checks before considered unhealthy.
+	// The number of failed health checks before considered unhealthy. Default: 9.
 	FailureThreshold int32 `json:"failure_threshold,omitempty"`
 	// The route path used for the HTTP health check ping. If not set, the HTTP health check will be disabled and a TCP health check used instead.
 	HTTPPath string `json:"http_path,omitempty"`
@@ -479,6 +494,24 @@ type AppWorkerSpec struct {
 	LogDestinations []*AppLogDestinationSpec `json:"log_destinations,omitempty"`
 }
 
+// Buildpack struct for Buildpack
+type Buildpack struct {
+	// The ID of the buildpack.
+	ID string `json:"id,omitempty"`
+	// Full semver version string.
+	Version string `json:"version,omitempty"`
+	// The major version line that the buildpack is pinned to. Example: a value of `1` indicates that the buildpack is pinned to versions `>=1.0.0 and <2.0.0`.
+	MajorVersion int32 `json:"major_version,omitempty"`
+	// Indicates whether the buildpack is on the latest major version line available.
+	Latest bool `json:"latest,omitempty"`
+	// A human friendly name.
+	Name string `json:"name,omitempty"`
+	// A description of the buildpack's purpose and steps performed at build time.
+	Description []string `json:"description,omitempty"`
+	// A link to the buildpack's documentation.
+	DocsLink string `json:"docs_link,omitempty"`
+}
+
 // DeploymentCauseDetailsDigitalOceanUser struct for DeploymentCauseDetailsDigitalOceanUser
 type DeploymentCauseDetailsDigitalOceanUser struct {
 	UUID     string `json:"uuid,omitempty"`
@@ -521,6 +554,8 @@ type AppCORSPolicy struct {
 // AppCreateRequest struct for AppCreateRequest
 type AppCreateRequest struct {
 	Spec *AppSpec `json:"spec"`
+	// Optional. The UUID of the fleet (project) the app should be assigned.
+	FleetUUID string `json:"fleet_uuid,omitempty"`
 }
 
 // DeployTemplate struct for DeployTemplate
@@ -585,6 +620,8 @@ type DeploymentFunctions struct {
 type DeploymentJob struct {
 	Name             string `json:"name,omitempty"`
 	SourceCommitHash string `json:"source_commit_hash,omitempty"`
+	// The list of resolved buildpacks used for a given deployment component.
+	Buildpacks []*Buildpack `json:"buildpacks,omitempty"`
 }
 
 // DeploymentPhase the model 'DeploymentPhase'
@@ -649,18 +686,24 @@ const (
 type DeploymentService struct {
 	Name             string `json:"name,omitempty"`
 	SourceCommitHash string `json:"source_commit_hash,omitempty"`
+	// The list of resolved buildpacks used for a given deployment component.
+	Buildpacks []*Buildpack `json:"buildpacks,omitempty"`
 }
 
 // DeploymentStaticSite struct for DeploymentStaticSite
 type DeploymentStaticSite struct {
 	Name             string `json:"name,omitempty"`
 	SourceCommitHash string `json:"source_commit_hash,omitempty"`
+	// The list of resolved buildpacks used for a given deployment component.
+	Buildpacks []*Buildpack `json:"buildpacks,omitempty"`
 }
 
 // DeploymentWorker struct for DeploymentWorker
 type DeploymentWorker struct {
 	Name             string `json:"name,omitempty"`
 	SourceCommitHash string `json:"source_commit_hash,omitempty"`
+	// The list of resolved buildpacks used for a given deployment component.
+	Buildpacks []*Buildpack `json:"buildpacks,omitempty"`
 }
 
 // DetectRequest struct for DetectRequest
@@ -693,30 +736,42 @@ type DetectResponseComponent struct {
 	RunCommand      string   `json:"run_command,omitempty"`
 	EnvironmentSlug string   `json:"environment_slug,omitempty"`
 	// A list of HTTP ports that this component may listen on. The recommendation is to use the last port in the list.
-	HTTPPorts          []int64                            `json:"http_ports,omitempty"`
-	EnvVars            []*AppVariableDefinition           `json:"env_vars,omitempty"`
+	HTTPPorts []int64                  `json:"http_ports,omitempty"`
+	EnvVars   []*AppVariableDefinition `json:"env_vars,omitempty"`
+	// List of serverless packages detected.
 	ServerlessPackages []*DetectResponseServerlessPackage `json:"serverless_packages,omitempty"`
 	SourceDir          string                             `json:"source_dir,omitempty"`
+	// The list of detected buildpacks that will be used for the component build.
+	Buildpacks []*Buildpack `json:"buildpacks,omitempty"`
 }
 
 // DetectResponseServerlessFunction struct for DetectResponseServerlessFunction
 type DetectResponseServerlessFunction struct {
-	Name    string                                  `json:"name,omitempty"`
-	Package string                                  `json:"package,omitempty"`
+	// Name of the function.
+	Name string `json:"name,omitempty"`
+	// Package that the function belongs to.
+	Package string `json:"package,omitempty"`
+	// Runtime detected for the function.
 	Runtime string                                  `json:"runtime,omitempty"`
 	Limits  *DetectResponseServerlessFunctionLimits `json:"limits,omitempty"`
 }
 
 // DetectResponseServerlessFunctionLimits struct for DetectResponseServerlessFunctionLimits
 type DetectResponseServerlessFunctionLimits struct {
+	// Timeout for function invocation in milliseconds.
 	Timeout string `json:"timeout,omitempty"`
-	Memory  string `json:"memory,omitempty"`
-	Logs    string `json:"logs,omitempty"`
+	// Max memory allocation for function invocation in megabytes.
+	Memory string `json:"memory,omitempty"`
+	// Max log size usage for function invocation in kilobytes.
+	Logs string `json:"logs,omitempty"`
 }
 
 // DetectResponseServerlessPackage struct for DetectResponseServerlessPackage
 type DetectResponseServerlessPackage struct {
-	Name      string                              `json:"name,omitempty"`
+	// Name of the serverless package.
+	Name string `json:"name,omitempty"`
+	// List of actions detected in the serverless package.
+	// List of functions detected in the serverless package.
 	Functions []*DetectResponseServerlessFunction `json:"functions,omitempty"`
 }
 
@@ -743,6 +798,7 @@ const (
 	DeploymentCauseDetailsDigitalOceanUserActionName_ResetDatabasePassword DeploymentCauseDetailsDigitalOceanUserActionName = "RESET_DATABASE_PASSWORD"
 	DeploymentCauseDetailsDigitalOceanUserActionName_RollbackApp           DeploymentCauseDetailsDigitalOceanUserActionName = "ROLLBACK_APP"
 	DeploymentCauseDetailsDigitalOceanUserActionName_RevertAppRollback     DeploymentCauseDetailsDigitalOceanUserActionName = "REVERT_APP_ROLLBACK"
+	DeploymentCauseDetailsDigitalOceanUserActionName_UpgradeBuildpack      DeploymentCauseDetailsDigitalOceanUserActionName = "UPGRADE_BUILDPACK"
 )
 
 // AppDomain struct for AppDomain
@@ -833,7 +889,16 @@ type ImageSourceSpec struct {
 	// The repository name.
 	Repository string `json:"repository,omitempty"`
 	// The repository tag. Defaults to `latest` if not provided.
-	Tag string `json:"tag,omitempty"`
+	Tag          string                       `json:"tag,omitempty"`
+	DeployOnPush *ImageSourceSpecDeployOnPush `json:"deploy_on_push,omitempty"`
+}
+
+// ImageSourceSpecDeployOnPush struct for ImageSourceSpecDeployOnPush
+type ImageSourceSpecDeployOnPush struct {
+	// Automatically deploy new images. Only for DOCR images.
+	Enabled bool `json:"enabled,omitempty"`
+	// Regex filter for valid tags. Only for DOCR images. If empty, all tags will be matched.  Maximum length: 1024 characters  Example: ^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$ This will match [semantic versioning](https://semver.org/) formatted tags  deployable:    1.0.0  not deployable: 1.0.0-alpha
+	TagFilter string `json:"tag_filter,omitempty"`
 }
 
 // ImageSourceSpecRegistryType  - DOCR: The DigitalOcean container registry type.  - DOCKER_HUB: The DockerHub container registry type.
@@ -870,6 +935,12 @@ const (
 	AppInstanceSizeCPUType_Dedicated   AppInstanceSizeCPUType = "DEDICATED"
 )
 
+// ListBuildpacksResponse struct for ListBuildpacksResponse
+type ListBuildpacksResponse struct {
+	// List of the available buildpacks on App Platform.
+	Buildpacks []*Buildpack `json:"buildpacks,omitempty"`
+}
+
 // AppProposeRequest struct for AppProposeRequest
 type AppProposeRequest struct {
 	Spec *AppSpec `json:"spec"`
@@ -879,22 +950,22 @@ type AppProposeRequest struct {
 
 // AppProposeResponse struct for AppProposeResponse
 type AppProposeResponse struct {
-	// Deprecated. Please use AppIsStarter instead.
+	// Deprecated. Please use app_is_starter instead.
 	AppIsStatic bool `json:"app_is_static,omitempty"`
 	// Indicates whether the app name is available.
 	AppNameAvailable bool `json:"app_name_available,omitempty"`
 	// If the app name is unavailable, this will be set to a suggested available name.
 	AppNameSuggestion string `json:"app_name_suggestion,omitempty"`
-	// Deprecated. Please use ExistingStarterApps instead.
+	// Deprecated. Please use existing_starter_apps instead.
 	ExistingStaticApps string `json:"existing_static_apps,omitempty"`
-	// Deprecated. Please use MaxFreeStarterApps instead.
+	// Deprecated. Please use max_free_starter_apps instead.
 	MaxFreeStaticApps string   `json:"max_free_static_apps,omitempty"`
 	Spec              *AppSpec `json:"spec,omitempty"`
 	// The monthly cost of the proposed app in USD.
 	AppCost float32 `json:"app_cost,omitempty"`
-	// The monthly cost of the proposed app in USD using the next pricing plan tier. For example, if you propose an app that uses the Basic tier, the `AppTierUpgradeCost` field displays the monthly cost of the app if it were to use the Professional tier. If the proposed app already uses the most expensive tier, the field is empty.
+	// The monthly cost of the proposed app in USD using the next pricing plan tier. For example, if you propose an app that uses the Basic tier, the `app_tier_upgrade_cost` field displays the monthly cost of the app if it were to use the Professional tier. If the proposed app already uses the most expensive tier, the field is empty.
 	AppTierUpgradeCost float32 `json:"app_tier_upgrade_cost,omitempty"`
-	// The monthly cost of the proposed app in USD using the previous pricing plan tier. For example, if you propose an app that uses the Professional tier, the `AppTierDowngradeCost` field displays the monthly cost of the app if it were to use the Basic tier. If the proposed app already uses the lest expensive tier, the field is empty.
+	// The monthly cost of the proposed app in USD using the previous pricing plan tier. For example, if you propose an app that uses the Professional tier, the `app_tier_downgrade_cost` field displays the monthly cost of the app if it were to use the Basic tier. If the proposed app already uses the lest expensive tier, the field is empty.
 	AppTierDowngradeCost float32 `json:"app_tier_downgrade_cost,omitempty"`
 	// The number of existing starter tier apps the account has.
 	ExistingStarterApps string `json:"existing_starter_apps,omitempty"`
@@ -932,6 +1003,25 @@ type AppTier struct {
 	Slug                 string `json:"slug,omitempty"`
 	EgressBandwidthBytes string `json:"egress_bandwidth_bytes,omitempty"`
 	BuildSeconds         string `json:"build_seconds,omitempty"`
+}
+
+// UpgradeBuildpackRequest struct for UpgradeBuildpackRequest
+type UpgradeBuildpackRequest struct {
+	// The ID of the app to upgrade buildpack versions for.
+	AppID string `json:"app_id,omitempty"`
+	// The ID of the buildpack to upgrade.
+	BuildpackID string `json:"buildpack_id,omitempty"`
+	// The Major Version to upgrade the buildpack to. If omitted, the latest available major version will be used.
+	MajorVersion int32 `json:"major_version,omitempty"`
+	// Whether or not to trigger a deployment for the app after upgrading the buildpack.
+	TriggerDeployment bool `json:"trigger_deployment,omitempty"`
+}
+
+// UpgradeBuildpackResponse struct for UpgradeBuildpackResponse
+type UpgradeBuildpackResponse struct {
+	// The components that were affected by the upgrade.
+	AffectedComponents []string    `json:"affected_components,omitempty"`
+	Deployment         *Deployment `json:"deployment,omitempty"`
 }
 
 // AppVariableScope the model 'AppVariableScope'
