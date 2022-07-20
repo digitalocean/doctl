@@ -13,7 +13,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockSandboxService is a mock of SandboxService interface.
+// MockSandboxService is a mock of ServerlessService interface.
 type MockSandboxService struct {
 	ctrl     *gomock.Controller
 	recorder *MockSandboxServiceMockRecorder
@@ -36,18 +36,18 @@ func (m *MockSandboxService) EXPECT() *MockSandboxServiceMockRecorder {
 	return m.recorder
 }
 
-// CheckSandboxStatus mocks base method.
-func (m *MockSandboxService) CheckSandboxStatus(arg0 string) error {
+// CheckServerlessStatus mocks base method.
+func (m *MockSandboxService) CheckServerlessStatus(arg0 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckSandboxStatus", arg0)
+	ret := m.ctrl.Call(m, "CheckServerlessStatus", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CheckSandboxStatus indicates an expected call of CheckSandboxStatus.
-func (mr *MockSandboxServiceMockRecorder) CheckSandboxStatus(arg0 interface{}) *gomock.Call {
+// CheckServerlessStatus indicates an expected call of CheckServerlessStatus.
+func (mr *MockSandboxServiceMockRecorder) CheckServerlessStatus(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckSandboxStatus", reflect.TypeOf((*MockSandboxService)(nil).CheckSandboxStatus), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckServerlessStatus", reflect.TypeOf((*MockSandboxService)(nil).CheckServerlessStatus), arg0)
 }
 
 // Cmd mocks base method.
@@ -66,10 +66,10 @@ func (mr *MockSandboxServiceMockRecorder) Cmd(arg0, arg1 interface{}) *gomock.Ca
 }
 
 // Exec mocks base method.
-func (m *MockSandboxService) Exec(arg0 *exec.Cmd) (do.SandboxOutput, error) {
+func (m *MockSandboxService) Exec(arg0 *exec.Cmd) (do.ServerlessOutput, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exec", arg0)
-	ret0, _ := ret[0].(do.SandboxOutput)
+	ret0, _ := ret[0].(do.ServerlessOutput)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -95,33 +95,33 @@ func (mr *MockSandboxServiceMockRecorder) GetHostInfo(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHostInfo", reflect.TypeOf((*MockSandboxService)(nil).GetHostInfo), arg0)
 }
 
-// GetSandboxNamespace mocks base method.
-func (m *MockSandboxService) GetSandboxNamespace(arg0 context.Context) (do.SandboxCredentials, error) {
+// GetServerlessNamespace mocks base method.
+func (m *MockSandboxService) GetServerlessNamespace(arg0 context.Context) (do.ServerlessCredentials, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSandboxNamespace", arg0)
-	ret0, _ := ret[0].(do.SandboxCredentials)
+	ret := m.ctrl.Call(m, "GetServerlessNamespace", arg0)
+	ret0, _ := ret[0].(do.ServerlessCredentials)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetSandboxNamespace indicates an expected call of GetSandboxNamespace.
-func (mr *MockSandboxServiceMockRecorder) GetSandboxNamespace(arg0 interface{}) *gomock.Call {
+// GetServerlessNamespace indicates an expected call of GetServerlessNamespace.
+func (mr *MockSandboxServiceMockRecorder) GetServerlessNamespace(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSandboxNamespace", reflect.TypeOf((*MockSandboxService)(nil).GetSandboxNamespace), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetServerlessNamespace", reflect.TypeOf((*MockSandboxService)(nil).GetServerlessNamespace), arg0)
 }
 
-// InstallSandbox mocks base method.
-func (m *MockSandboxService) InstallSandbox(arg0 string, arg1 bool) error {
+// InstallServerless mocks base method.
+func (m *MockSandboxService) InstallServerless(arg0 string, arg1 bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InstallSandbox", arg0, arg1)
+	ret := m.ctrl.Call(m, "InstallServerless", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// InstallSandbox indicates an expected call of InstallSandbox.
-func (mr *MockSandboxServiceMockRecorder) InstallSandbox(arg0, arg1 interface{}) *gomock.Call {
+// InstallServerless indicates an expected call of InstallServerless.
+func (mr *MockSandboxServiceMockRecorder) InstallServerless(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallSandbox", reflect.TypeOf((*MockSandboxService)(nil).InstallSandbox), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallServerless", reflect.TypeOf((*MockSandboxService)(nil).InstallServerless), arg0, arg1)
 }
 
 // Stream mocks base method.
@@ -139,7 +139,7 @@ func (mr *MockSandboxServiceMockRecorder) Stream(arg0 interface{}) *gomock.Call 
 }
 
 // WriteCredentials mocks base method.
-func (m *MockSandboxService) WriteCredentials(arg0 do.SandboxCredentials) error {
+func (m *MockSandboxService) WriteCredentials(arg0 do.ServerlessCredentials) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WriteCredentials", arg0)
 	ret0, _ := ret[0].(error)

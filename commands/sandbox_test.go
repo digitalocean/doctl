@@ -32,9 +32,9 @@ func TestSandboxConnect(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(do.ErrSandboxNotConnected)
-		creds := do.SandboxCredentials{Namespace: "hello", APIHost: "https://api.example.com"}
-		tm.sandbox.EXPECT().GetSandboxNamespace(context.TODO()).Return(creds, nil)
+		tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotConnected)
+		creds := do.ServerlessCredentials{Namespace: "hello", APIHost: "https://api.example.com"}
+		tm.sandbox.EXPECT().GetServerlessNamespace(context.TODO()).Return(creds, nil)
 		tm.sandbox.EXPECT().WriteCredentials(creds).Return(nil)
 
 		err := RunSandboxConnect(config)
@@ -51,9 +51,9 @@ func TestSandboxStatusWhenConnected(t *testing.T) {
 			Stdout: config.Out,
 		}
 
-		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 			Entity: map[string]interface{}{
 				"name":    "hello",
 				"apihost": "https://api.example.com",
@@ -103,9 +103,9 @@ func TestSandboxStatusWithLanguages(t *testing.T) {
     go:1.22 (go:default)
 `
 
-		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 			Entity: map[string]interface{}{
 				"name":    "hello",
 				"apihost": "https://api.example.com",
@@ -124,37 +124,37 @@ func TestSandboxStatusWhenNotConnected(t *testing.T) {
 			Stdout: config.Out,
 		}
 
-		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 			Error: "403",
 		}, nil)
 
 		err := RunSandboxStatus(config)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, do.ErrSandboxNotConnected)
+		assert.ErrorIs(t, err, do.ErrServerlessNotConnected)
 	})
 }
 
 func TestSandboxStatusWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(do.ErrSandboxNotInstalled)
+		tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotInstalled)
 
 		err := RunSandboxStatus(config)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, do.ErrSandboxNotInstalled)
+		assert.ErrorIs(t, err, do.ErrServerlessNotInstalled)
 	})
 }
 
 func TestSandboxStatusWhenNotUpToDate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(do.ErrSandboxNeedsUpgrade)
+		tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNeedsUpgrade)
 
 		err := RunSandboxStatus(config)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, do.ErrSandboxNeedsUpgrade)
+		assert.ErrorIs(t, err, do.ErrServerlessNeedsUpgrade)
 	})
 }
 
@@ -164,8 +164,8 @@ func TestSandboxInstallFromScratch(t *testing.T) {
 		config.Out = buf
 
 		credsToken := hashAccessToken(config)
-		tm.sandbox.EXPECT().CheckSandboxStatus(credsToken).Return(do.ErrSandboxNotInstalled)
-		tm.sandbox.EXPECT().InstallSandbox(credsToken, false).Return(nil)
+		tm.sandbox.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNotInstalled)
+		tm.sandbox.EXPECT().InstallServerless(credsToken, false).Return(nil)
 
 		err := RunSandboxInstall(config)
 		require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestSandboxInstallWhenInstalledNotCurrent(t *testing.T) {
 		config.Out = buf
 
 		credsToken := hashAccessToken(config)
-		tm.sandbox.EXPECT().CheckSandboxStatus(credsToken).Return(do.ErrSandboxNeedsUpgrade)
+		tm.sandbox.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNeedsUpgrade)
 
 		err := RunSandboxInstall(config)
 		require.NoError(t, err)
@@ -191,7 +191,7 @@ func TestSandboxInstallWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(nil)
+		tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
 
 		err := RunSandboxInstall(config)
 		require.NoError(t, err)
@@ -205,7 +205,7 @@ func TestSandboxUpgradeWhenNotInstalled(t *testing.T) {
 		config.Out = buf
 
 		credsToken := hashAccessToken(config)
-		tm.sandbox.EXPECT().CheckSandboxStatus(credsToken).Return(do.ErrSandboxNotInstalled)
+		tm.sandbox.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNotInstalled)
 
 		err := RunSandboxUpgrade(config)
 		require.NoError(t, err)
@@ -218,7 +218,7 @@ func TestSandboxUpgradeWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).Return(nil)
+		tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
 
 		err := RunSandboxUpgrade(config)
 		require.NoError(t, err)
@@ -232,8 +232,8 @@ func TestSandboxUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
 		config.Out = buf
 
 		credsToken := hashAccessToken(config)
-		tm.sandbox.EXPECT().CheckSandboxStatus(credsToken).Return(do.ErrSandboxNeedsUpgrade)
-		tm.sandbox.EXPECT().InstallSandbox(credsToken, true).Return(nil)
+		tm.sandbox.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNeedsUpgrade)
+		tm.sandbox.EXPECT().InstallServerless(credsToken, true).Return(nil)
 
 		err := RunSandboxUpgrade(config)
 		require.NoError(t, err)
@@ -293,9 +293,9 @@ func TestSandboxInit(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("project/create", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 					Entity: tt.out,
 				}, nil)
 
@@ -357,9 +357,9 @@ func TestSandboxDeploy(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("project/deploy", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
 				err := RunSandboxExtraDeploy(config)
 				require.NoError(t, err)
@@ -463,11 +463,11 @@ func TestSandboxUndeploy(t *testing.T) {
 				}
 
 				if tt.expectedError == nil {
-					tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+					tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				}
 				for i := range tt.expectedNimCmds {
 					tm.sandbox.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
-					tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+					tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 				}
 				err := RunSandboxUndeploy(config)
 				if tt.expectedError != nil {
@@ -517,7 +517,7 @@ func TestSandboxWatch(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				tm.sandbox.EXPECT().Cmd("nocapture", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.sandbox.EXPECT().Stream(fakeCmd).Return(nil)
 
@@ -573,8 +573,8 @@ func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
 		}()
 
 		// Set up "existing" creds in the "sandbox" dir
-		sandboxDir := filepath.Join(tmp, "sandbox")
-		sandboxCredsDir := filepath.Join(sandboxDir, "creds", "d5b388f2")
+		serverlessDir := filepath.Join(tmp, "sandbox")
+		sandboxCredsDir := filepath.Join(serverlessDir, "creds", "d5b388f2")
 		err = os.MkdirAll(sandboxCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
 		sandboxCreds := filepath.Join(sandboxCredsDir, "credentials.json")
@@ -587,7 +587,7 @@ func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
 		err = os.MkdirAll(stagingDir, os.FileMode(0755))
 		require.NoError(t, err)
 
-		err = do.PreserveCreds(hashAccessToken(config), stagingDir, sandboxDir)
+		err = do.PreserveCreds(hashAccessToken(config), stagingDir, serverlessDir)
 		require.NoError(t, err)
 
 		stagingCreds := filepath.Join(stagingDir, "creds", "d5b388f2", "credentials.json")
@@ -611,8 +611,8 @@ func TestPreserveCredsMovesLegacyCreds(t *testing.T) {
 		}()
 
 		// Set up "existing" legacy creds in the "sandbox" dir
-		sandboxDir := filepath.Join(tmp, "sandbox")
-		legacyCredsDir := filepath.Join(sandboxDir, ".nimbella")
+		serverlessDir := filepath.Join(tmp, "sandbox")
+		legacyCredsDir := filepath.Join(serverlessDir, ".nimbella")
 		err = os.MkdirAll(legacyCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
 		legacyCreds := filepath.Join(legacyCredsDir, "credentials.json")
@@ -624,7 +624,7 @@ func TestPreserveCredsMovesLegacyCreds(t *testing.T) {
 		err = os.MkdirAll(stagingDir, os.FileMode(0755))
 		require.NoError(t, err)
 
-		err = do.PreserveCreds(hashAccessToken(config), stagingDir, sandboxDir)
+		err = do.PreserveCreds(hashAccessToken(config), stagingDir, serverlessDir)
 		require.NoError(t, err)
 
 		stagingCreds := filepath.Join(stagingDir, "creds", "3785870f", "credentials.json")

@@ -32,16 +32,16 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-// SandboxCredentials models what is stored in credentials.json for use by the plugin and nim.
-// It is also the type returned by the GetSandboxNamespace function.
-type SandboxCredentials struct {
-	APIHost     string                                  `json:"currentHost"`
-	Namespace   string                                  `json:"currentNamespace"`
-	Credentials map[string]map[string]SandboxCredential `json:"credentials"`
+// ServerlessCredentials models what is stored in credentials.json for use by the plugin and nim.
+// It is also the type returned by the GetServerlessNamespace function.
+type ServerlessCredentials struct {
+	APIHost     string                                     `json:"currentHost"`
+	Namespace   string                                     `json:"currentNamespace"`
+	Credentials map[string]map[string]ServerlessCredential `json:"credentials"`
 }
 
-// SandboxCredential is the type of an individual entry in SandboxCredentials
-type SandboxCredential struct {
+// ServerlessCredential is the type of an individual entry in ServerlessCredentials
+type ServerlessCredential struct {
 	Auth string `json:"api_key"`
 }
 
@@ -94,33 +94,33 @@ type Annotation struct {
 	Value interface{} `json:"value"`
 }
 
-// SandboxService is an interface for interacting with the sandbox plugin,
+// ServerlessService is an interface for interacting with the sandbox plugin,
 // with the namespaces service, and with the serverless cluster controller.
-type SandboxService interface {
+type ServerlessService interface {
 	Cmd(string, []string) (*exec.Cmd, error)
-	Exec(*exec.Cmd) (SandboxOutput, error)
+	Exec(*exec.Cmd) (ServerlessOutput, error)
 	Stream(*exec.Cmd) error
-	GetSandboxNamespace(context.Context) (SandboxCredentials, error)
-	WriteCredentials(SandboxCredentials) error
+	GetServerlessNamespace(context.Context) (ServerlessCredentials, error)
+	WriteCredentials(ServerlessCredentials) error
 	GetHostInfo(string) (ServerlessHostInfo, error)
-	CheckSandboxStatus(string) error
-	InstallSandbox(string, bool) error
+	CheckServerlessStatus(string) error
+	InstallServerless(string, bool) error
 }
 
-type sandboxService struct {
-	sandboxJs  string
-	sandboxDir string
-	credsDir   string
-	node       string
-	userAgent  string
-	client     *godo.Client
+type serverlessService struct {
+	serverlessJs  string
+	serverlessDir string
+	credsDir      string
+	node          string
+	userAgent     string
+	client        *godo.Client
 }
 
 const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minSandboxVersion = "4.1.0-1.3.0"
+	minServerlessVersion = "4.1.0-1.3.0"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -133,21 +133,21 @@ const (
 	CredentialsFile = "credentials.json"
 )
 
-var _ SandboxService = &sandboxService{}
+var _ ServerlessService = &serverlessService{}
 
 var (
-	// ErrSandboxNotInstalled is the error returned to users when the sandbox is not installed.
-	ErrSandboxNotInstalled = errors.New("Serverless support is not installed (use `doctl serverless install`)")
+	// ErrServerlessNotInstalled is the error returned to users when the sandbox is not installed.
+	ErrServerlessNotInstalled = errors.New("Serverless support is not installed (use `doctl serverless install`)")
 
-	// ErrSandboxNeedsUpgrade is the error returned to users when the sandbox is at too low a version
-	ErrSandboxNeedsUpgrade = errors.New("Serverless support needs to be upgraded (use `doctl serverless upgrade`)")
+	// ErrServerlessNeedsUpgrade is the error returned to users when the sandbox is at too low a version
+	ErrServerlessNeedsUpgrade = errors.New("Serverless support needs to be upgraded (use `doctl serverless upgrade`)")
 
-	// ErrSandboxNotConnected is the error returned to users when the sandbox is not connected to a namespace
-	ErrSandboxNotConnected = errors.New("Serverless support is installed but not connected to a functions namespace (use `doctl serverless connect`)")
+	// ErrServerlessNotConnected is the error returned to users when the sandbox is not connected to a namespace
+	ErrServerlessNotConnected = errors.New("Serverless support is installed but not connected to a functions namespace (use `doctl serverless connect`)")
 )
 
-// SandboxOutput contains the output returned from calls to the sandbox plugin.
-type SandboxOutput struct {
+// ServerlessOutput contains the output returned from calls to the sandbox plugin.
+type ServerlessOutput struct {
 	Table     []map[string]interface{} `json:"table,omitempty"`
 	Captured  []string                 `json:"captured,omitempty"`
 	Formatted []string                 `json:"formatted,omitempty"`
@@ -155,53 +155,53 @@ type SandboxOutput struct {
 	Error     string                   `json:"error,omitempty"`
 }
 
-// NewSandboxService returns a configured SandboxService.
-func NewSandboxService(client *godo.Client, usualSandboxDir string, credsToken string) SandboxService {
+// NewServerlessService returns a configured ServerlessService.
+func NewServerlessService(client *godo.Client, usualServerlessDir string, credsToken string) ServerlessService {
 	nodeBin := "node"
 	if runtime.GOOS == "windows" {
 		nodeBin = "node.exe"
 	}
 	// The following is needed to support snap installation.  For snap, the installation directory
 	// is relocated to a snap-managed area.  That area is not user-writable, so, the credsDir location
-	// is always computed relative to the normal installation area (usualSandboxDir).
-	sandboxDir := os.Getenv("OVERRIDE_SANDBOX_DIR")
-	if sandboxDir == "" {
-		sandboxDir = usualSandboxDir
+	// is always computed relative to the normal installation area (usualServerlessDir).
+	serverlessDir := os.Getenv("OVERRIDE_SANDBOX_DIR")
+	if serverlessDir == "" {
+		serverlessDir = usualServerlessDir
 	}
-	return &sandboxService{
-		sandboxJs:  filepath.Join(sandboxDir, "sandbox.js"),
-		sandboxDir: sandboxDir,
-		credsDir:   GetCredentialDirectory(credsToken, usualSandboxDir),
-		node:       filepath.Join(sandboxDir, nodeBin),
-		userAgent:  fmt.Sprintf("doctl/%s serverless/%s", doctl.DoitVersion.String(), minSandboxVersion),
-		client:     client,
+	return &serverlessService{
+		serverlessJs:  filepath.Join(serverlessDir, "sandbox.js"),
+		serverlessDir: serverlessDir,
+		credsDir:      GetCredentialDirectory(credsToken, usualServerlessDir),
+		node:          filepath.Join(serverlessDir, nodeBin),
+		userAgent:     fmt.Sprintf("doctl/%s serverless/%s", doctl.DoitVersion.String(), minServerlessVersion),
+		client:        client,
 	}
 }
 
-func (s *sandboxService) CheckSandboxStatus(leafCredsDir string) error {
-	_, err := os.Stat(s.sandboxDir)
+func (s *serverlessService) CheckServerlessStatus(leafCredsDir string) error {
+	_, err := os.Stat(s.serverlessDir)
 	if os.IsNotExist(err) {
-		return ErrSandboxNotInstalled
+		return ErrServerlessNotInstalled
 	}
-	if !sandboxUptodate(s.sandboxDir) {
-		return ErrSandboxNeedsUpgrade
+	if !serverlessUptodate(s.serverlessDir) {
+		return ErrServerlessNeedsUpgrade
 	}
-	if !isSandboxConnected(leafCredsDir, s.sandboxDir) {
-		return ErrSandboxNotConnected
+	if !isServerlessConnected(leafCredsDir, s.serverlessDir) {
+		return ErrServerlessNotConnected
 	}
 	return nil
 }
 
-// InstallSandbox is the common subroutine for both serverless install and serverless upgrade
-func (s *sandboxService) InstallSandbox(leafCredsDir string, upgrading bool) error {
-	sandboxDir := s.sandboxDir
+// InstallServerless is the common subroutine for both serverless install and serverless upgrade
+func (s *serverlessService) InstallServerless(leafCredsDir string, upgrading bool) error {
+	serverlessDir := s.serverlessDir
 
 	// Make a temporary directory for use during the install.
 	// Note: we don't let this be allocated in the system temporaries area because
 	// that might be on a separate file system, meaning that the final install step
 	// will require an additional copy rather than a simple rename.
 
-	tmp, err := ioutil.TempDir(filepath.Dir(sandboxDir), "sbx-install")
+	tmp, err := ioutil.TempDir(filepath.Dir(serverlessDir), "sbx-install")
 	if err != nil {
 		return err
 	}
@@ -233,7 +233,7 @@ func (s *sandboxService) InstallSandbox(leafCredsDir string, upgrading bool) err
 	)
 
 	// Download nodejs only if necessary
-	if !upgrading || !canReuseNode(sandboxDir, nodeBin) {
+	if !upgrading || !canReuseNode(serverlessDir, nodeBin) {
 		nodeDir = fmt.Sprintf("node-%s-%s-%s", nodeVersion, goos, arch)
 		nodeURL = fmt.Sprintf("https://nodejs.org/dist/%s/%s.tar.gz", nodeVersion, nodeDir)
 		nodeFileName = filepath.Join(tmp, "node-install.tar.gz")
@@ -252,7 +252,7 @@ func (s *sandboxService) InstallSandbox(leafCredsDir string, upgrading bool) err
 	// Download the fat tarball with the nim CLI, deployer, and sandbox bridge
 	// TODO do these need to be arch-specific?  Currently assuming not.
 	URL := fmt.Sprintf("https://do-serverless-tools.nyc3.digitaloceanspaces.com/doctl-sandbox-%s.tar.gz",
-		GetMinSandboxVersion())
+		GetMinServerlessVersion())
 	sandboxFileName := filepath.Join(tmp, "doctl-sandbox.tar.gz")
 	err = download(URL, sandboxFileName)
 	if err != nil {
@@ -279,14 +279,14 @@ func (s *sandboxService) InstallSandbox(leafCredsDir string, upgrading bool) err
 	srcPath := filepath.Join(tmp, "sandbox")
 	if upgrading {
 		// Preserve credentials by moving them from target (which will be replaced) to source.
-		err = PreserveCreds(leafCredsDir, srcPath, sandboxDir)
+		err = PreserveCreds(leafCredsDir, srcPath, serverlessDir)
 		if err != nil {
 			return err
 		}
 		// Preserve existing node if necessary
 		if nodeFileName == "" {
 			// Node was not downloaded
-			err = moveExistingNode(sandboxDir, srcPath, nodeBin)
+			err = moveExistingNode(serverlessDir, srcPath, nodeBin)
 			if err != nil {
 				return err
 			}
@@ -300,17 +300,17 @@ func (s *sandboxService) InstallSandbox(leafCredsDir string, upgrading bool) err
 		}
 
 		// Create the sandbox directory if necessary.
-		err := os.MkdirAll(sandboxDir, 0755)
+		err := os.MkdirAll(serverlessDir, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	// Remove former sandboxDir before moving in the new one
-	err = os.RemoveAll(sandboxDir)
+	// Remove former serverlessDir before moving in the new one
+	err = os.RemoveAll(serverlessDir)
 	if err != nil {
 		return err
 	}
-	err = os.Rename(srcPath, sandboxDir)
+	err = os.Rename(srcPath, serverlessDir)
 	if err != nil {
 		return err
 	}
@@ -322,7 +322,7 @@ func (s *sandboxService) InstallSandbox(leafCredsDir string, upgrading bool) err
 			// Additional nesting in non-windows case
 			srcPath = filepath.Join(tmp, nodeDir, "bin", nodeBin)
 		}
-		destPath := filepath.Join(sandboxDir, nodeBin)
+		destPath := filepath.Join(serverlessDir, nodeBin)
 		err = os.Rename(srcPath, destPath)
 		if err != nil {
 			return err
@@ -336,8 +336,8 @@ func (s *sandboxService) InstallSandbox(leafCredsDir string, upgrading bool) err
 }
 
 // Cmd builds an *exec.Cmd for calling into the sandbox plugin.
-func (s *sandboxService) Cmd(command string, args []string) (*exec.Cmd, error) {
-	args = append([]string{s.sandboxJs, command}, args...)
+func (s *serverlessService) Cmd(command string, args []string) (*exec.Cmd, error) {
+	args = append([]string{s.serverlessJs, command}, args...)
 	cmd := exec.Command(s.node, args...)
 	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+s.credsDir, "NIM_USER_AGENT="+s.userAgent)
 	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
@@ -348,22 +348,22 @@ func (s *sandboxService) Cmd(command string, args []string) (*exec.Cmd, error) {
 	return cmd, nil
 }
 
-// Exec executes an *exec.Cmd and captures its output in a SandboxOutput.
-func (s *sandboxService) Exec(cmd *exec.Cmd) (SandboxOutput, error) {
+// Exec executes an *exec.Cmd and captures its output in a ServerlessOutput.
+func (s *serverlessService) Exec(cmd *exec.Cmd) (ServerlessOutput, error) {
 	output, err := cmd.Output()
 	if err != nil {
 		// Ignore "errors" that are just non-zero exit.  The
-		// sandbox uses this as a secondary indicator but the output
+		// serverless uses this as a secondary indicator but the output
 		// is still trustworthy (and includes error information inline)
 		if _, ok := err.(*exec.ExitError); !ok {
 			// Real error of some sort
-			return SandboxOutput{}, err
+			return ServerlessOutput{}, err
 		}
 	}
-	var result SandboxOutput
+	var result ServerlessOutput
 	err = json.Unmarshal(output, &result)
 	if err != nil {
-		return SandboxOutput{}, err
+		return ServerlessOutput{}, err
 	}
 	// Result is sound JSON but also has an error field, meaning that something did
 	// go wrong.  In this case we return the actual output but also the distinguished
@@ -377,37 +377,37 @@ func (s *sandboxService) Exec(cmd *exec.Cmd) (SandboxOutput, error) {
 }
 
 // Stream is like Exec but assumes that output will not be captured and can be streamed.
-func (s *sandboxService) Stream(cmd *exec.Cmd) error {
+func (s *serverlessService) Stream(cmd *exec.Cmd) error {
 
 	return cmd.Run()
 }
 
-// GetSandboxNamespace returns the credentials of the one sandbox namespace assigned to
+// GetServerlessNamespace returns the credentials of the one serverless namespace assigned to
 // the invoking doctl context.
-func (s *sandboxService) GetSandboxNamespace(ctx context.Context) (SandboxCredentials, error) {
+func (s *serverlessService) GetServerlessNamespace(ctx context.Context) (ServerlessCredentials, error) {
 	path := "v2/functions/sandbox"
 	req, err := s.client.NewRequest(ctx, http.MethodPost, path, nil)
 	if err != nil {
-		return SandboxCredentials{}, err
+		return ServerlessCredentials{}, err
 	}
 	decoded := new(namespacesResponseBody)
 	_, err = s.client.Do(ctx, req, decoded)
 	if err != nil {
-		return SandboxCredentials{}, err
+		return ServerlessCredentials{}, err
 	}
 	host := assignAPIHost(decoded.Namespace.APIHost, decoded.Namespace.Namespace)
-	credential := SandboxCredential{Auth: decoded.Namespace.UUID + ":" + decoded.Namespace.Key}
+	credential := ServerlessCredential{Auth: decoded.Namespace.UUID + ":" + decoded.Namespace.Key}
 	namespace := decoded.Namespace.Namespace
-	ans := SandboxCredentials{
+	ans := ServerlessCredentials{
 		APIHost:     host,
 		Namespace:   namespace,
-		Credentials: map[string]map[string]SandboxCredential{host: {namespace: credential}},
+		Credentials: map[string]map[string]ServerlessCredential{host: {namespace: credential}},
 	}
 	return ans, nil
 }
 
 // GetHostInfo returns the HostInfo structure of the provided API host
-func (s *sandboxService) GetHostInfo(APIHost string) (ServerlessHostInfo, error) {
+func (s *serverlessService) GetHostInfo(APIHost string) (ServerlessHostInfo, error) {
 	endpoint := APIHost + "/api/v1"
 	resp, err := http.Get(endpoint)
 	if err != nil {
@@ -439,7 +439,7 @@ func assignAPIHost(origAPIHost string, namespace string) string {
 }
 
 // WriteCredentials writes a set of serverless credentials to the appropriate 'creds' directory
-func (s *sandboxService) WriteCredentials(creds SandboxCredentials) error {
+func (s *serverlessService) WriteCredentials(creds ServerlessCredentials) error {
 	// Create the directory into which the file will be written.
 	err := os.MkdirAll(s.credsDir, 0700)
 	if err != nil {
@@ -454,31 +454,31 @@ func (s *sandboxService) WriteCredentials(creds SandboxCredentials) error {
 	return os.WriteFile(credsPath, bytes, 0600)
 }
 
-// Determines whether the sandbox appears to be connected.  The purpose is
+// Determines whether the serverlessUptodate appears to be connected.  The purpose is
 // to fail fast (when feasible) on sandboxes that are clearly not connected.
 // However, it is important not to add excessive overhead on each call (e.g.
 // asking the plugin to validate credentials), so the test is not foolproof.
 // It merely tests whether a credentials directory has been created for the
 // current doctl access token and appears to have a credentials.json in it.
-func isSandboxConnected(leafCredsDir string, sandboxDir string) bool {
-	creds := GetCredentialDirectory(leafCredsDir, sandboxDir)
+func isServerlessConnected(leafCredsDir string, serverlessDir string) bool {
+	creds := GetCredentialDirectory(leafCredsDir, serverlessDir)
 	credsFile := filepath.Join(creds, CredentialsFile)
 	_, err := os.Stat(credsFile)
 	return !os.IsNotExist(err)
 }
 
-// sandboxUpToDate answers whether the installed version of the sandbox is at least
+// serverlessUptodate answers whether the installed version of the serverlessUptodate is at least
 // what is required by doctl
-func sandboxUptodate(sandboxDir string) bool {
-	return GetCurrentSandboxVersion(sandboxDir) >= GetMinSandboxVersion()
+func serverlessUptodate(serverlessDir string) bool {
+	return GetCurrentServerlessVersion(serverlessDir) >= GetMinServerlessVersion()
 }
 
-// GetCurrentSandboxVersion gets the version of the current sandbox.
-// To be called only when sandbox is known to exist.
-// Returns "0" if the installed sandbox pre-dates the versioning system
-// Otherwise, returns the version string stored in the sandbox directory.
-func GetCurrentSandboxVersion(sandboxDir string) string {
-	versionFile := filepath.Join(sandboxDir, "version")
+// GetCurrentServerlessVersion gets the version of the current serverless.
+// To be called only when serverless is known to exist.
+// Returns "0" if the installed serverless pre-dates the versioning system
+// Otherwise, returns the version string stored in the serverless directory.
+func GetCurrentServerlessVersion(serverlessDir string) string {
+	versionFile := filepath.Join(serverlessDir, "version")
 	contents, err := ioutil.ReadFile(versionFile)
 	if err != nil {
 		return "0"
@@ -486,26 +486,26 @@ func GetCurrentSandboxVersion(sandboxDir string) string {
 	return string(contents)
 }
 
-// GetMinSandboxVersion returns the minSandboxVersion (allows the constant to be overridden via an environment variable)
-func GetMinSandboxVersion() string {
-	fromEnv := os.Getenv("minSandboxVersion")
+// GetMinServerlessVersion returns the minServerlessVersion (allows the constant to be overridden via an environment variable)
+func GetMinServerlessVersion() string {
+	fromEnv := os.Getenv("minServerlessVersion")
 	if fromEnv != "" {
 		return fromEnv
 	}
-	return minSandboxVersion
+	return minServerlessVersion
 }
 
 // GetCredentialDirectory returns the directory in which credentials should be stored for a given
 // CmdConfig.  The actual leaf directory is a function of the access token being used.  This ties
-// sandbox credentials to DO credentials
-func GetCredentialDirectory(leafDir string, sandboxDir string) string {
-	return filepath.Join(sandboxDir, credsDir, leafDir)
+// serverless credentials to DO credentials
+func GetCredentialDirectory(leafDir string, serverlessDir string) string {
+	return filepath.Join(serverlessDir, credsDir, leafDir)
 }
 
-// Gets the version of the node binary in the sandbox.  Determine if it is
+// Gets the version of the node binary in the serverless.  Determine if it is
 // usable or whether it has to be upgraded.
-func canReuseNode(sandboxDir string, nodeBin string) bool {
-	fullNodeBin := filepath.Join(sandboxDir, nodeBin)
+func canReuseNode(serverlessDir string, nodeBin string) bool {
+	fullNodeBin := filepath.Join(serverlessDir, nodeBin)
 	cmd := exec.Command(fullNodeBin, "--version")
 	result, err := cmd.Output()
 	if err == nil {
@@ -515,7 +515,7 @@ func canReuseNode(sandboxDir string, nodeBin string) bool {
 	return false
 }
 
-// Moves the existing node binary from the sandbox that contains it to the new sandbox being
+// Moves the existing node binary from the serverless that contains it to the new serverless being
 // staged during an upgrade.  This preserves it for reuse and avoids the need to download.
 func moveExistingNode(existing string, staging string, nodeBin string) error {
 	srcPath := filepath.Join(existing, nodeBin)
@@ -547,11 +547,11 @@ func download(URL, targetFile string) error {
 	return nil
 }
 
-// PreserveCreds preserves existing credentials in a sandbox directory
+// PreserveCreds preserves existing credentials in a serverless directory
 // that is about to be replaced by moving them to the staging directory
 // containing the replacement.
-func PreserveCreds(leafDir string, stagingDir string, sandboxDir string) error {
-	credPath := filepath.Join(sandboxDir, credsDir)
+func PreserveCreds(leafDir string, stagingDir string, serverlessDir string) error {
+	credPath := filepath.Join(serverlessDir, credsDir)
 	relocPath := filepath.Join(stagingDir, credsDir)
 	err := os.Rename(credPath, relocPath)
 	if err == nil {
@@ -562,7 +562,7 @@ func PreserveCreds(leafDir string, stagingDir string, sandboxDir string) error {
 	}
 	// There was no creds directory.  Check for legacy form and convert as part
 	// of preserving.
-	legacyCredPath := filepath.Join(sandboxDir, ".nimbella")
+	legacyCredPath := filepath.Join(serverlessDir, ".nimbella")
 	err = os.MkdirAll(relocPath, 0700)
 	if err != nil {
 		return err

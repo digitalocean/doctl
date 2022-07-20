@@ -102,7 +102,7 @@ the entire packages are removed.`, Writer)
 
 	cmd.AddCommand(Activations())
 	cmd.AddCommand(Functions())
-	SandboxExtras(cmd)
+	ServerlessExtras(cmd)
 	return cmd
 }
 
@@ -110,20 +110,20 @@ the entire packages are removed.`, Writer)
 func RunSandboxInstall(c *CmdConfig) error {
 	credsLeafDir := hashAccessToken(c)
 	sandbox := c.Sandbox()
-	status := sandbox.CheckSandboxStatus(credsLeafDir)
+	status := sandbox.CheckServerlessStatus(credsLeafDir)
 	switch status {
 	case nil:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
 		return nil
-	case do.ErrSandboxNeedsUpgrade:
+	case do.ErrServerlessNeedsUpgrade:
 		fmt.Fprintln(c.Out, "Serverless support is already installed, but needs an upgrade for this version of `doctl`.")
 		fmt.Fprintln(c.Out, "Use `doctl serverless upgrade` to upgrade the support.")
 		return nil
-	case do.ErrSandboxNotConnected:
+	case do.ErrServerlessNotConnected:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version, but not connected to a functions namespace.  Use `doctl serverless connect`.")
 		return nil
 	}
-	return sandbox.InstallSandbox(credsLeafDir, false)
+	return sandbox.InstallServerless(credsLeafDir, false)
 }
 
 // RunSandboxUpgrade is a variant on RunSandboxInstall for installing over an existing version when
@@ -131,35 +131,35 @@ func RunSandboxInstall(c *CmdConfig) error {
 func RunSandboxUpgrade(c *CmdConfig) error {
 	credsLeafDir := hashAccessToken(c)
 	sandbox := c.Sandbox()
-	status := sandbox.CheckSandboxStatus(credsLeafDir)
+	status := sandbox.CheckServerlessStatus(credsLeafDir)
 	switch status {
 	case nil:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
 		// TODO should there be an option to upgrade beyond the minimum needed?
 		return nil
-	case do.ErrSandboxNotInstalled:
+	case do.ErrServerlessNotInstalled:
 		fmt.Fprintln(c.Out, "Serverless support was never installed.  Use `doctl serverless install`.")
 		return nil
-	case do.ErrSandboxNotConnected:
+	case do.ErrServerlessNotConnected:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version, but not connected to a functions namespace.  Use `doctl serverless connect`.")
 		return nil
 	}
-	return sandbox.InstallSandbox(credsLeafDir, true)
+	return sandbox.InstallServerless(credsLeafDir, true)
 }
 
 // RunSandboxUninstall removes the sandbox support and any stored credentials
 func RunSandboxUninstall(c *CmdConfig) error {
-	err := c.Sandbox().CheckSandboxStatus(hashAccessToken(c))
-	if err == do.ErrSandboxNotInstalled {
+	err := c.Sandbox().CheckServerlessStatus(hashAccessToken(c))
+	if err == do.ErrServerlessNotInstalled {
 		return errors.New("Nothing to uninstall: no serverless support was found")
 	}
-	return os.RemoveAll(getSandboxDirectory())
+	return os.RemoveAll(getServerlessDirectory())
 }
 
 // RunSandboxConnect implements the sandbox connect command
 func RunSandboxConnect(c *CmdConfig) error {
 	var (
-		creds do.SandboxCredentials
+		creds do.ServerlessCredentials
 		err   error
 	)
 
@@ -170,13 +170,13 @@ func RunSandboxConnect(c *CmdConfig) error {
 	sandbox := c.Sandbox()
 
 	// Non-standard check for the connect command (only): it's ok to not be connected.
-	err = sandbox.CheckSandboxStatus(hashAccessToken(c))
-	if err != nil && err != do.ErrSandboxNotConnected {
+	err = sandbox.CheckServerlessStatus(hashAccessToken(c))
+	if err != nil && err != do.ErrServerlessNotConnected {
 		return err
 	}
 
 	// Get the credentials for the sandbox namespace
-	creds, err = sandbox.GetSandboxNamespace(context.TODO())
+	creds, err = sandbox.GetServerlessNamespace(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -194,22 +194,22 @@ func RunSandboxConnect(c *CmdConfig) error {
 
 // RunSandboxStatus gives a report on the status of the sandbox (installed, up to date, connected)
 func RunSandboxStatus(c *CmdConfig) error {
-	status := c.Sandbox().CheckSandboxStatus(hashAccessToken(c))
-	if status == do.ErrSandboxNotInstalled {
+	status := c.Sandbox().CheckServerlessStatus(hashAccessToken(c))
+	if status == do.ErrServerlessNotInstalled {
 		return status
 	}
 	version, _ := c.Doit.GetBool(c.NS, "version")
 	if version {
-		if status == do.ErrSandboxNeedsUpgrade {
-			sandboxDir := getSandboxDirectory() // we know it exists
-			currentVersion := do.GetCurrentSandboxVersion(sandboxDir)
-			fmt.Fprintf(c.Out, "Current: %s, required: %s\n", currentVersion, do.GetMinSandboxVersion())
+		if status == do.ErrServerlessNeedsUpgrade {
+			serverlessDir := getServerlessDirectory() // we know it exists
+			currentVersion := do.GetCurrentServerlessVersion(serverlessDir)
+			fmt.Fprintf(c.Out, "Current: %s, required: %s\n", currentVersion, do.GetMinServerlessVersion())
 			return nil
 		}
-		fmt.Fprintln(c.Out, do.GetMinSandboxVersion())
+		fmt.Fprintln(c.Out, do.GetMinServerlessVersion())
 		return nil
 	}
-	if status == do.ErrSandboxNeedsUpgrade || status == do.ErrSandboxNotConnected {
+	if status == do.ErrServerlessNeedsUpgrade || status == do.ErrServerlessNotConnected {
 		return status
 	}
 	if status != nil {
@@ -217,9 +217,9 @@ func RunSandboxStatus(c *CmdConfig) error {
 	}
 	// Check the connected state more deeply (since this is a status command we want to
 	// be more accurate; the connected check in checkSandboxStatus is lightweight and heuristic).
-	result, err := SandboxExec(c, "auth/current", "--apihost", "--name")
+	result, err := ServerlessExec(c, "auth/current", "--apihost", "--name")
 	if err != nil || len(result.Error) > 0 {
-		return do.ErrSandboxNotConnected
+		return do.ErrServerlessNotConnected
 	}
 	if result.Entity == nil {
 		return errors.New("Could not retrieve information about the connected namespace")
@@ -227,7 +227,7 @@ func RunSandboxStatus(c *CmdConfig) error {
 	mapResult := result.Entity.(map[string]interface{})
 	apiHost := mapResult["apihost"].(string)
 	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["name"], apiHost)
-	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", do.GetMinSandboxVersion())
+	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", do.GetMinServerlessVersion())
 	languages, _ := c.Doit.GetBool(c.NS, "languages")
 	if languages {
 		return showLanguageInfo(c, apiHost)
@@ -303,7 +303,7 @@ func RunSandboxUndeploy(c *CmdConfig) error {
 
 // cleanNamespace is a subroutine of RunSandboxDeploy for clearing the entire namespace
 func cleanNamespace(c *CmdConfig) error {
-	result, err := SandboxExec(c, "namespace/clean", "--force")
+	result, err := ServerlessExec(c, "namespace/clean", "--force")
 	if err != nil {
 		return err
 	}
@@ -315,7 +315,7 @@ func cleanNamespace(c *CmdConfig) error {
 
 // deleteFunction is a subroutine of RunSandboxDeploy for deleting one function
 func deleteFunction(c *CmdConfig, fn string) error {
-	result, err := SandboxExec(c, "action/delete", fn)
+	result, err := ServerlessExec(c, "action/delete", fn)
 	if err != nil {
 		return err
 	}
@@ -327,7 +327,7 @@ func deleteFunction(c *CmdConfig, fn string) error {
 
 // deletePackage is a subroutine of RunSandboxDeploy for deleting a package
 func deletePackage(c *CmdConfig, pkg string) error {
-	result, err := SandboxExec(c, "package/delete", pkg, "--recursive")
+	result, err := ServerlessExec(c, "package/delete", pkg, "--recursive")
 	if err != nil {
 		return err
 	}

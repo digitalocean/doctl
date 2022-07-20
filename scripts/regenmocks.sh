@@ -41,4 +41,4 @@ mockgen -source ../pkg/listen/listen.go -package=mocks Listen > mocks/Listen.go
 mockgen -source monitoring.go -package=mocks MonitoringService > mocks/MonitoringService.go
 mockgen -source reserved_ip_actions.go -package=mocks ReservedIPActionsService > mocks/ReservedIPActionsService.go
 mockgen -source reserved_ips.go -package=mocks ReservedIPsService > mocks/ReservedIPsService.go
-mockgen -source sandbox.go -package=mocks SandboxService > mocks/SandboxService.go
+mockgen -source sandbox.go -package=mocks ServerlessService > mocks/ServerlessService.go

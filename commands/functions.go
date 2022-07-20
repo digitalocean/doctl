@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Functions generates the sandbox 'functions' subtree for addition to the doctl command
+// Functions generates the serverless 'functions' subtree for addition to the doctl command
 func Functions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -70,20 +70,20 @@ You can provide inputs and inspect outputs.`,
 	return cmd
 }
 
-// RunFunctionsGet supports the 'sandbox functions get' command
+// RunFunctionsGet supports the 'serverless functions get' command
 func RunFunctionsGet(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
 		return err
 	}
-	output, err := RunSandboxExec(actionGet, c, []string{flagURL, flagCode, flagSave}, []string{flagSaveEnv, flagSaveEnvJSON, flagSaveAs})
+	output, err := RunServerlessExec(actionGet, c, []string{flagURL, flagCode, flagSave}, []string{flagSaveEnv, flagSaveEnvJSON, flagSaveAs})
 	if err != nil {
 		return err
 	}
-	return c.PrintSandboxTextOutput(output)
+	return c.PrintServerlessTextOutput(output)
 }
 
-// RunFunctionsInvoke supports the 'sandbox functions invoke' command
+// RunFunctionsInvoke supports the 'serverless functions invoke' command
 func RunFunctionsInvoke(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
@@ -96,15 +96,15 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	output, err := SandboxExec(c, actionInvoke, args...)
+	output, err := ServerlessExec(c, actionInvoke, args...)
 	if err != nil {
 		return err
 	}
 
-	return c.PrintSandboxTextOutput(output)
+	return c.PrintServerlessTextOutput(output)
 }
 
-// RunFunctionsList supports the 'sandbox functions list' command
+// RunFunctionsList supports the 'serverless functions list' command
 func RunFunctionsList(c *CmdConfig) error {
 	argCount := len(c.Args)
 	if argCount > 1 {
@@ -120,12 +120,12 @@ func RunFunctionsList(c *CmdConfig) error {
 	if !count {
 		c.Doit.Set(c.NS, flagJSON, true)
 	}
-	output, err := RunSandboxExec(actionList, c, []string{flagCount, flagNameSort, flagNameName, flagJSON}, []string{flagLimit, flagSkip})
+	output, err := RunServerlessExec(actionList, c, []string{flagCount, flagNameSort, flagNameName, flagJSON}, []string{flagLimit, flagSkip})
 	if err != nil {
 		return err
 	}
 	if count {
-		return c.PrintSandboxTextOutput(output)
+		return c.PrintServerlessTextOutput(output)
 	}
 	// Reparse the output to use a more specific type, which can then be passed to the displayer
 	rawOutput, err := json.Marshal(output.Entity)

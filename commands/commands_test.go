@@ -268,7 +268,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		OneClicks:         func() do.OneClickService { return tm.oneClick },
 		Apps:              func() do.AppsService { return tm.apps },
 		Monitoring:        func() do.MonitoringService { return tm.monitoring },
-		Sandbox:           func() do.SandboxService { return tm.sandbox },
+		Sandbox:           func() do.ServerlessService { return tm.sandbox },
 	}
 
 	tFn(config, tm)
