@@ -46,13 +46,15 @@ type ServerlessCredential struct {
 	Auth string `json:"api_key"`
 }
 
-// The type of the "namespace" member of the response to /api/v2/functions/sandbox
-// Only relevant fields unmarshalled
-type outputNamespace struct {
+// The type of the "namespace" member of the response to /api/v2/functions/sandbox and
+// /api/v2/functions/namespaces APIs.  Only relevant fields unmarshalled
+type OutputNamespace struct {
 	Namespace string `json:"namespace"`
 	APIHost   string `json:"api_host"`
 	UUID      string `json:"uuid"`
 	Key       string `json:"key"`
+	Label     string `json:"label"`
+	Region    string `json:"Region"`
 }
 
 // FunctionParameter is the type of a parameter in the response body of action.get.  We do our
@@ -71,9 +73,26 @@ type FunctionParameterReparse struct {
 	Parameters []FunctionParameter `json:"parameters"`
 }
 
-// namespacesResponseBody is the type of the response body for /api/v2/functions/sandbox
-type namespacesResponseBody struct {
-	Namespace outputNamespace `json:"namespace"`
+// NamespaceResponse is the type of the response body for /api/v2/functions/sandbox (POST) and
+// /api/v2/functions/namespaces/<nsName> (GET)
+type NamespaceResponse struct {
+	Namespace OutputNamespace `json:"namespace"`
+}
+
+// NamespaceListResponse is the type of the response body for /api/v2/functions/namespaces (GET)
+type NamespaceListResponse struct {
+	Namespaces []OutputNamespace `json:"namespaces"`
+}
+
+// newNamespaceRequest is the type of the POST body for requesting a new namespace
+type newNamespaceRequest struct {
+	Namespace inputNamespace `json:"namespace"`
+}
+
+// inputNamespace is the reduced representation of a namespace used when requesting a new one
+type inputNamespace struct {
+	Label  string `json:"label"`
+	Region string `json:"Region"`
 }
 
 // ServerlessRuntime is the type of a runtime entry returned by the API host controller
@@ -118,6 +137,10 @@ type ServerlessService interface {
 	Exec(*exec.Cmd) (ServerlessOutput, error)
 	Stream(*exec.Cmd) error
 	GetServerlessNamespace(context.Context) (ServerlessCredentials, error)
+	ListNamespaces(context.Context) (NamespaceListResponse, error)
+	GetNamespace(context.Context, string) (ServerlessCredentials, error)
+	CreateNamespace(context.Context, string, string) (ServerlessCredentials, error)
+	DeleteNamespace(context.Context, string) error
 	WriteCredentials(ServerlessCredentials) error
 	ReadCredentials() (ServerlessCredentials, error)
 	GetHostInfo(string) (ServerlessHostInfo, error)
@@ -432,8 +455,18 @@ func (s *serverlessService) GetServerlessNamespace(ctx context.Context) (Serverl
 	if err != nil {
 		return ServerlessCredentials{}, err
 	}
-	decoded := new(namespacesResponseBody)
-	_, err = s.client.Do(ctx, req, decoded)
+	return executeNamespaceRequest(ctx, s, req)
+}
+
+// executeNamespaceRequest executes a valid http.Request object where the request is expected
+// to return a NamespaceResponse.  The response is converted to ServerlessCredentials.  The request
+// may represent the (new) 'namespaces/<name>' GET API, the (legacy) 'sandbox' POST API, or
+// a namespace creation.
+// The legacy API will continue to be used by some users until feature-flipper protection is removed
+// from the new one.
+func executeNamespaceRequest(ctx context.Context, s *serverlessService, req *http.Request) (ServerlessCredentials, error) {
+	decoded := new(NamespaceResponse)
+	_, err := s.client.Do(ctx, req, decoded)
 	if err != nil {
 		return ServerlessCredentials{}, err
 	}
@@ -446,6 +479,53 @@ func (s *serverlessService) GetServerlessNamespace(ctx context.Context) (Serverl
 		Credentials: map[string]map[string]ServerlessCredential{host: {namespace: credential}},
 	}
 	return ans, nil
+}
+
+// ListNamespaces obtains the full list of namespaces that belong to the requesting account
+func (s *serverlessService) ListNamespaces(ctx context.Context) (NamespaceListResponse, error) {
+	path := "v2/functions/namespaces"
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return NamespaceListResponse{}, err
+	}
+	decoded := new(NamespaceListResponse)
+	_, err = s.client.Do(ctx, req, decoded)
+	if err != nil {
+		return NamespaceListResponse{}, err
+	}
+	return *decoded, nil
+}
+
+// GetNamespace obtains the credentials of a specific namespace, given its name
+func (s *serverlessService) GetNamespace(ctx context.Context, name string) (ServerlessCredentials, error) {
+	path := "v2/functions/namespaces/" + name
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return ServerlessCredentials{}, err
+	}
+	return executeNamespaceRequest(ctx, s, req)
+}
+
+// CreateNamespace creates a new namespace and returns its credentials, given a label and region
+func (s *serverlessService) CreateNamespace(ctx context.Context, label string, region string) (ServerlessCredentials, error) {
+	reqBody := newNamespaceRequest{Namespace: inputNamespace{Label: label, Region: region}}
+	path := "v2/functions/namespaces"
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, reqBody)
+	if err != nil {
+		return ServerlessCredentials{}, err
+	}
+	return executeNamespaceRequest(ctx, s, req)
+}
+
+// DeleteNamespace deletes a namespace by name
+func (s *serverlessService) DeleteNamespace(ctx context.Context, name string) error {
+	path := "v2/functions/namespaces/" + name
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.Do(ctx, req, nil)
+	return err
 }
 
 // GetHostInfo returns the HostInfo structure of the provided API host

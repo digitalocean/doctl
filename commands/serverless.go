@@ -102,6 +102,7 @@ the entire packages are removed.`, Writer)
 
 	cmd.AddCommand(Activations())
 	cmd.AddCommand(Functions())
+	cmd.AddCommand(Namespaces())
 	ServerlessExtras(cmd)
 	return cmd
 }

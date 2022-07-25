@@ -66,6 +66,35 @@ func (mr *MockServerlessServiceMockRecorder) Cmd(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Cmd", reflect.TypeOf((*MockServerlessService)(nil).Cmd), arg0, arg1)
 }
 
+// CreateNamespace mocks base method.
+func (m *MockServerlessService) CreateNamespace(arg0 context.Context, arg1, arg2 string) (do.ServerlessCredentials, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateNamespace", arg0, arg1, arg2)
+	ret0, _ := ret[0].(do.ServerlessCredentials)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateNamespace indicates an expected call of CreateNamespace.
+func (mr *MockServerlessServiceMockRecorder) CreateNamespace(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNamespace", reflect.TypeOf((*MockServerlessService)(nil).CreateNamespace), arg0, arg1, arg2)
+}
+
+// DeleteNamespace mocks base method.
+func (m *MockServerlessService) DeleteNamespace(arg0 context.Context, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteNamespace", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteNamespace indicates an expected call of DeleteNamespace.
+func (mr *MockServerlessServiceMockRecorder) DeleteNamespace(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNamespace", reflect.TypeOf((*MockServerlessService)(nil).DeleteNamespace), arg0, arg1)
+}
+
 // Exec mocks base method.
 func (m *MockServerlessService) Exec(arg0 *exec.Cmd) (do.ServerlessOutput, error) {
 	m.ctrl.T.Helper()
@@ -127,6 +156,21 @@ func (mr *MockServerlessServiceMockRecorder) GetHostInfo(arg0 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHostInfo", reflect.TypeOf((*MockServerlessService)(nil).GetHostInfo), arg0)
 }
 
+// GetNamespace mocks base method.
+func (m *MockServerlessService) GetNamespace(arg0 context.Context, arg1 string) (do.ServerlessCredentials, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNamespace", arg0, arg1)
+	ret0, _ := ret[0].(do.ServerlessCredentials)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNamespace indicates an expected call of GetNamespace.
+func (mr *MockServerlessServiceMockRecorder) GetNamespace(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespace", reflect.TypeOf((*MockServerlessService)(nil).GetNamespace), arg0, arg1)
+}
+
 // GetServerlessNamespace mocks base method.
 func (m *MockServerlessService) GetServerlessNamespace(arg0 context.Context) (do.ServerlessCredentials, error) {
 	m.ctrl.T.Helper()
@@ -154,6 +198,21 @@ func (m *MockServerlessService) InstallServerless(arg0 string, arg1 bool) error 
 func (mr *MockServerlessServiceMockRecorder) InstallServerless(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallServerless", reflect.TypeOf((*MockServerlessService)(nil).InstallServerless), arg0, arg1)
+}
+
+// ListNamespaces mocks base method.
+func (m *MockServerlessService) ListNamespaces(arg0 context.Context) (do.NamespaceListResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListNamespaces", arg0)
+	ret0, _ := ret[0].(do.NamespaceListResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListNamespaces indicates an expected call of ListNamespaces.
+func (mr *MockServerlessServiceMockRecorder) ListNamespaces(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNamespaces", reflect.TypeOf((*MockServerlessService)(nil).ListNamespaces), arg0)
 }
 
 // ReadCredentials mocks base method.
