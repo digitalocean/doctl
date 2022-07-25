@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Activations generates the sandbox 'activations' subtree for addition to the doctl command
+// Activations generates the serverless 'activations' subtree for addition to the doctl command
 func Activations() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -86,11 +86,11 @@ func RunActivationsGet(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	replaceFunctionWithAction(c)
-	output, err := RunSandboxExec(activationGet, c, []string{flagLast, flagLogs, flagResult, flagQuiet}, []string{flagSkip, flagAction})
+	output, err := RunServerlessExec(activationGet, c, []string{flagLast, flagLogs, flagResult, flagQuiet}, []string{flagSkip, flagAction})
 	if err != nil {
 		return err
 	}
-	return c.PrintSandboxTextOutput(output)
+	return c.PrintServerlessTextOutput(output)
 }
 
 // RunActivationsList supports the 'activations list' command
@@ -99,11 +99,11 @@ func RunActivationsList(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunSandboxExec(activationList, c, []string{flagCount, flagFull}, []string{flagLimit, flagSkip, flagSince, flagUpto})
+	output, err := RunServerlessExec(activationList, c, []string{flagCount, flagFull}, []string{flagLimit, flagSkip, flagSince, flagUpto})
 	if err != nil {
 		return err
 	}
-	return c.PrintSandboxTextOutput(output)
+	return c.PrintServerlessTextOutput(output)
 }
 
 // RunActivationsLogs supports the 'activations logs' command
@@ -115,13 +115,13 @@ func RunActivationsLogs(c *CmdConfig) error {
 	replaceFunctionWithAction(c)
 	augmentPackageWithDeployed(c)
 	if isWatching(c) {
-		return RunSandboxExecStreaming(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
+		return RunServerlessExecStreaming(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
 	}
-	output, err := RunSandboxExec(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
+	output, err := RunServerlessExec(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
 	if err != nil {
 		return err
 	}
-	return c.PrintSandboxTextOutput(output)
+	return c.PrintServerlessTextOutput(output)
 }
 
 // isWatching (1) modifies the config replacing the "follow" flag (significant to doctl) with the
@@ -143,11 +143,11 @@ func RunActivationsResult(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	replaceFunctionWithAction(c)
-	output, err := RunSandboxExec(activationResult, c, []string{flagLast, flagQuiet}, []string{flagLimit, flagSkip, flagAction})
+	output, err := RunServerlessExec(activationResult, c, []string{flagLast, flagQuiet}, []string{flagLimit, flagSkip, flagAction})
 	if err != nil {
 		return err
 	}
-	return c.PrintSandboxTextOutput(output)
+	return c.PrintServerlessTextOutput(output)
 }
 
 // replaceFunctionWithAction detects that --function was specified and renames it to --action (which is what nim

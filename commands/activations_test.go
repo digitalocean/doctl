@@ -95,9 +95,9 @@ func TestActivationsGet(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.sandbox.EXPECT().Cmd("activation/get", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("activation/get", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
 				err := RunActivationsGet(config)
 				require.NoError(t, err)
@@ -175,9 +175,9 @@ func TestActivationsList(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.sandbox.EXPECT().Cmd("activation/list", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("activation/list", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
 				err := RunActivationsList(config)
 				require.NoError(t, err)
@@ -257,14 +257,14 @@ func TestActivationsLogs(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				if tt.expectStream {
 					expectedArgs := append([]string{"activation/logs"}, tt.expectedNimArgs...)
-					tm.sandbox.EXPECT().Cmd("nocapture", expectedArgs).Return(fakeCmd, nil)
-					tm.sandbox.EXPECT().Stream(fakeCmd).Return(nil)
+					tm.serverless.EXPECT().Cmd("nocapture", expectedArgs).Return(fakeCmd, nil)
+					tm.serverless.EXPECT().Stream(fakeCmd).Return(nil)
 				} else {
-					tm.sandbox.EXPECT().Cmd("activation/logs", tt.expectedNimArgs).Return(fakeCmd, nil)
-					tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+					tm.serverless.EXPECT().Cmd("activation/logs", tt.expectedNimArgs).Return(fakeCmd, nil)
+					tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 				}
 
 				err := RunActivationsLogs(config)
@@ -333,9 +333,9 @@ func TestActivationsResult(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckSandboxStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.sandbox.EXPECT().Cmd("activation/result", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("activation/result", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
 				err := RunActivationsResult(config)
 				require.NoError(t, err)

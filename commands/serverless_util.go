@@ -31,46 +31,46 @@ const (
 	noCapture = "nocapture"
 )
 
-// SandboxExec executes a sandbox command
-func SandboxExec(c *CmdConfig, command string, args ...string) (do.SandboxOutput, error) {
-	sandbox := c.Sandbox()
-	err := sandbox.CheckSandboxStatus(hashAccessToken(c))
+// ServerlessExec executes a serverless command
+func ServerlessExec(c *CmdConfig, command string, args ...string) (do.ServerlessOutput, error) {
+	serverless := c.Serverless()
+	err := serverless.CheckServerlessStatus(hashAccessToken(c))
 	if err != nil {
-		return do.SandboxOutput{}, err
+		return do.ServerlessOutput{}, err
 	}
-	return sandboxExecNoCheck(sandbox, command, args)
+	return serverlessExecNoCheck(serverless, command, args)
 }
 
-func sandboxExecNoCheck(sandbox do.SandboxService, command string, args []string) (do.SandboxOutput, error) {
-	cmd, err := sandbox.Cmd(command, args)
+func serverlessExecNoCheck(serverless do.ServerlessService, command string, args []string) (do.ServerlessOutput, error) {
+	cmd, err := serverless.Cmd(command, args)
 	if err != nil {
-		return do.SandboxOutput{}, err
+		return do.ServerlessOutput{}, err
 	}
-	return sandbox.Exec(cmd)
+	return serverless.Exec(cmd)
 }
 
-// RunSandboxExec is a variant of SandboxExec convenient for calling from stylized command runners
+// RunServerlessExec is a variant of ServerlessExec convenient for calling from stylized command runners
 // Sets up the arguments and (especially) the flags for the actual call
-func RunSandboxExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (do.SandboxOutput, error) {
-	sandbox := c.Sandbox()
-	err := sandbox.CheckSandboxStatus(hashAccessToken(c))
+func RunServerlessExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (do.ServerlessOutput, error) {
+	serverless := c.Serverless()
+	err := serverless.CheckServerlessStatus(hashAccessToken(c))
 	if err != nil {
-		return do.SandboxOutput{}, err
+		return do.ServerlessOutput{}, err
 	}
 
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
-	cmd, err := sandbox.Cmd(command, args)
+	cmd, err := serverless.Cmd(command, args)
 	if err != nil {
-		return do.SandboxOutput{}, err
+		return do.ServerlessOutput{}, err
 	}
 
-	return sandbox.Exec(cmd)
+	return serverless.Exec(cmd)
 }
 
-// RunSandboxExecStreaming is like RunSandboxExec but assumes that output will not be captured and can be streamed.
-func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
-	sandbox := c.Sandbox()
-	err := sandbox.CheckSandboxStatus(hashAccessToken(c))
+// RunServerlessExecStreaming is like RunServerlessExec but assumes that output will not be captured and can be streamed.
+func RunServerlessExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
+	serverless := c.Serverless()
+	err := serverless.CheckServerlessStatus(hashAccessToken(c))
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string
 	args := getFlatArgsArray(c, booleanFlags, stringFlags)
 	args = append([]string{command}, args...)
 
-	cmd, err := sandbox.Cmd(noCapture, args)
+	cmd, err := serverless.Cmd(noCapture, args)
 	if err != nil {
 		return err
 	}
@@ -86,17 +86,17 @@ func RunSandboxExecStreaming(command string, c *CmdConfig, booleanFlags []string
 	// this function.
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return sandbox.Stream(cmd)
+	return serverless.Stream(cmd)
 }
 
-// PrintSandboxTextOutput prints the output of a sandbox command execution in a
+// PrintServerlessTextOutput prints the output of a serverless command execution in a
 // textual form (often, this can be improved upon).
 // Prints Formatted if present.
 // Else, prints Captured if present.
 // Else, prints Table or Entity using generic JSON formatting.
 // We don't expect both Table and Entity to be present and have no
 // special handling for that.
-func (c *CmdConfig) PrintSandboxTextOutput(output do.SandboxOutput) error {
+func (c *CmdConfig) PrintServerlessTextOutput(output do.ServerlessOutput) error {
 	var err error
 	if len(output.Formatted) > 0 {
 		_, err = fmt.Fprintln(c.Out, strings.Join(output.Formatted, "\n"))
@@ -119,14 +119,14 @@ func hashAccessToken(c *CmdConfig) string {
 	return hex.EncodeToString(sha[:4])
 }
 
-// Determines whether the sandbox appears to be connected.  The purpose is
-// to fail fast (when feasible) on sandboxes that are clearly not connected.
+// Determines whether the serverless appears to be connected.  The purpose is
+// to fail fast (when feasible) on serverless that are clearly not connected.
 // However, it is important not to add excessive overhead on each call (e.g.
 // asking the plugin to validate credentials), so the test is not foolproof.
 // It merely tests whether a credentials directory has been created for the
 // current doctl access token and appears to have a credentials.json in it.
-func isSandboxConnected(leafCredsDir string, sandboxDir string) bool {
-	creds := do.GetCredentialDirectory(leafCredsDir, sandboxDir)
+func isServerlessConnected(leafCredsDir string, serverlessDir string) bool {
+	creds := do.GetCredentialDirectory(leafCredsDir, serverlessDir)
 	credsFile := filepath.Join(creds, do.CredentialsFile)
 	_, err := os.Stat(credsFile)
 	return !os.IsNotExist(err)
@@ -163,9 +163,9 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 	return args
 }
 
-// getSandboxDirectory returns the "sandbox" directory in which the artifacts for sandbox support
+// getServerlessDirectory returns the "serverless" directory in which the artifacts for serverless support
 // are stored.  Returns the name of the directory whether or not it exists.  The standard location
 // (and the only one that customers are expected to use) is relative to the defaultConfigHome.
-func getSandboxDirectory() string {
+func getServerlessDirectory() string {
 	return filepath.Join(defaultConfigHome(), "sandbox")
 }

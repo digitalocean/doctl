@@ -149,7 +149,7 @@ func addCommands() {
 	DoitCmd.AddCommand(VPCs())
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
-	DoitCmd.AddCommand(Sandbox())
+	DoitCmd.AddCommand(Serverless())
 }
 
 func computeCmd() *Command {
