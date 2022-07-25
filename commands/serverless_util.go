@@ -33,7 +33,7 @@ const (
 
 // ServerlessExec executes a serverless command
 func ServerlessExec(c *CmdConfig, command string, args ...string) (do.ServerlessOutput, error) {
-	serverless := c.Sandbox()
+	serverless := c.Serverless()
 	err := serverless.CheckServerlessStatus(hashAccessToken(c))
 	if err != nil {
 		return do.ServerlessOutput{}, err
@@ -52,7 +52,7 @@ func serverlessExecNoCheck(serverless do.ServerlessService, command string, args
 // RunServerlessExec is a variant of ServerlessExec convenient for calling from stylized command runners
 // Sets up the arguments and (especially) the flags for the actual call
 func RunServerlessExec(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) (do.ServerlessOutput, error) {
-	serverless := c.Sandbox()
+	serverless := c.Serverless()
 	err := serverless.CheckServerlessStatus(hashAccessToken(c))
 	if err != nil {
 		return do.ServerlessOutput{}, err
@@ -69,7 +69,7 @@ func RunServerlessExec(command string, c *CmdConfig, booleanFlags []string, stri
 
 // RunServerlessExecStreaming is like RunServerlessExec but assumes that output will not be captured and can be streamed.
 func RunServerlessExecStreaming(command string, c *CmdConfig, booleanFlags []string, stringFlags []string) error {
-	serverless := c.Sandbox()
+	serverless := c.Serverless()
 	err := serverless.CheckServerlessStatus(hashAccessToken(c))
 	if err != nil {
 		return err

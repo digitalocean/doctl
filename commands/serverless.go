@@ -50,8 +50,8 @@ var (
 	}
 )
 
-// Sandbox contains support for 'serverless' commands provided by a hidden install of the Nimbella CLI
-func Sandbox() *Command {
+// Serverless contains support for 'serverless' commands provided by a hidden install of the Nimbella CLI
+func Serverless() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "serverless",
@@ -65,31 +65,31 @@ Other ` + "`" + `doctl serverless` + "`" + ` commands are used to develop and te
 		},
 	}
 
-	CmdBuilder(cmd, RunSandboxInstall, "install", "Installs the serverless support",
+	CmdBuilder(cmd, RunServerlessInstall, "install", "Installs the serverless support",
 		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other serverless commands work.
 The install operation is long-running, and a network connection is required.`,
 		Writer)
 
-	CmdBuilder(cmd, RunSandboxUpgrade, "upgrade", "Upgrades serverless support to match this version of doctl",
+	CmdBuilder(cmd, RunServerlessUpgrade, "upgrade", "Upgrades serverless support to match this version of doctl",
 		`This command upgrades the serverless support software under `+"`"+`doctl`+"`"+` by installing over the existing version.
 The install operation is long-running, and a network connection is required.`,
 		Writer)
 
-	CmdBuilder(cmd, RunSandboxUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
+	CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
 		Writer)
 
-	CmdBuilder(cmd, RunSandboxConnect, "connect", "Connects local serverless support to your functions namespace",
+	CmdBuilder(cmd, RunServerlessConnect, "connect", "Connects local serverless support to your functions namespace",
 		`This command connects `+"`"+`doctl serverless`+"`"+` to your functions namespace (needed for testing).`,
 		Writer)
 
-	status := CmdBuilder(cmd, RunSandboxStatus, "status", "Provide information about serverless support",
+	status := CmdBuilder(cmd, RunServerlessStatus, "status", "Provide information about serverless support",
 		`This command reports the status of serverless support and some details concerning its connected functions namespace.
 With the `+"`"+`--languages flag, it will report the supported languages.
 With the `+"`"+`--version flag, it will show just version information about the serverless component`, Writer)
 	AddBoolFlag(status, "languages", "l", false, "show available languages (if connected to the cloud)")
 	AddBoolFlag(status, "version", "", false, "just show the version, don't check status")
 
-	undeploy := CmdBuilder(cmd, RunSandboxUndeploy, "undeploy [<package|function>...]",
+	undeploy := CmdBuilder(cmd, RunServerlessUndeploy, "undeploy [<package|function>...]",
 		"Removes resources from your functions namespace",
 		`This command removes functions, entire packages, or all functions and packages, from your function
 namespace.  In general, deploying new content does not remove old content although it may overwrite it.
@@ -106,11 +106,11 @@ the entire packages are removed.`, Writer)
 	return cmd
 }
 
-// RunSandboxInstall performs the network installation of the 'nim' adjunct to support sandbox development
-func RunSandboxInstall(c *CmdConfig) error {
+// RunServerlessInstall performs the network installation of the 'nim' adjunct to support serverless development
+func RunServerlessInstall(c *CmdConfig) error {
 	credsLeafDir := hashAccessToken(c)
-	sandbox := c.Sandbox()
-	status := sandbox.CheckServerlessStatus(credsLeafDir)
+	serverless := c.Serverless()
+	status := serverless.CheckServerlessStatus(credsLeafDir)
 	switch status {
 	case nil:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
@@ -123,15 +123,15 @@ func RunSandboxInstall(c *CmdConfig) error {
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version, but not connected to a functions namespace.  Use `doctl serverless connect`.")
 		return nil
 	}
-	return sandbox.InstallServerless(credsLeafDir, false)
+	return serverless.InstallServerless(credsLeafDir, false)
 }
 
-// RunSandboxUpgrade is a variant on RunSandboxInstall for installing over an existing version when
-// the existing version is inadequate as detected by checkSandboxStatus()
-func RunSandboxUpgrade(c *CmdConfig) error {
+// RunServerlessUpgrade is a variant on RunServerlessInstall for installing over an existing version when
+// the existing version is inadequate as detected by checkServerlessStatus()
+func RunServerlessUpgrade(c *CmdConfig) error {
 	credsLeafDir := hashAccessToken(c)
-	sandbox := c.Sandbox()
-	status := sandbox.CheckServerlessStatus(credsLeafDir)
+	serverless := c.Serverless()
+	status := serverless.CheckServerlessStatus(credsLeafDir)
 	switch status {
 	case nil:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
@@ -144,20 +144,20 @@ func RunSandboxUpgrade(c *CmdConfig) error {
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version, but not connected to a functions namespace.  Use `doctl serverless connect`.")
 		return nil
 	}
-	return sandbox.InstallServerless(credsLeafDir, true)
+	return serverless.InstallServerless(credsLeafDir, true)
 }
 
-// RunSandboxUninstall removes the sandbox support and any stored credentials
-func RunSandboxUninstall(c *CmdConfig) error {
-	err := c.Sandbox().CheckServerlessStatus(hashAccessToken(c))
+// RunServerlessUninstall removes the serverless support and any stored credentials
+func RunServerlessUninstall(c *CmdConfig) error {
+	err := c.Serverless().CheckServerlessStatus(hashAccessToken(c))
 	if err == do.ErrServerlessNotInstalled {
 		return errors.New("Nothing to uninstall: no serverless support was found")
 	}
 	return os.RemoveAll(getServerlessDirectory())
 }
 
-// RunSandboxConnect implements the sandbox connect command
-func RunSandboxConnect(c *CmdConfig) error {
+// RunServerlessConnect implements the serverless connect command
+func RunServerlessConnect(c *CmdConfig) error {
 	var (
 		creds do.ServerlessCredentials
 		err   error
@@ -167,22 +167,22 @@ func RunSandboxConnect(c *CmdConfig) error {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
-	sandbox := c.Sandbox()
+	serverless := c.Serverless()
 
 	// Non-standard check for the connect command (only): it's ok to not be connected.
-	err = sandbox.CheckServerlessStatus(hashAccessToken(c))
+	err = serverless.CheckServerlessStatus(hashAccessToken(c))
 	if err != nil && err != do.ErrServerlessNotConnected {
 		return err
 	}
 
-	// Get the credentials for the sandbox namespace
-	creds, err = sandbox.GetServerlessNamespace(context.TODO())
+	// Get the credentials for the serverless namespace
+	creds, err = serverless.GetServerlessNamespace(context.TODO())
 	if err != nil {
 		return err
 	}
 
 	// Store the credentials
-	err = sandbox.WriteCredentials(creds)
+	err = serverless.WriteCredentials(creds)
 	if err != nil {
 		return err
 	}
@@ -192,9 +192,9 @@ func RunSandboxConnect(c *CmdConfig) error {
 	return nil
 }
 
-// RunSandboxStatus gives a report on the status of the sandbox (installed, up to date, connected)
-func RunSandboxStatus(c *CmdConfig) error {
-	status := c.Sandbox().CheckServerlessStatus(hashAccessToken(c))
+// RunServerlessStatus gives a report on the status of the serverless (installed, up to date, connected)
+func RunServerlessStatus(c *CmdConfig) error {
+	status := c.Serverless().CheckServerlessStatus(hashAccessToken(c))
 	if status == do.ErrServerlessNotInstalled {
 		return status
 	}
@@ -216,7 +216,7 @@ func RunSandboxStatus(c *CmdConfig) error {
 		return fmt.Errorf("Unexpected error: %w", status)
 	}
 	// Check the connected state more deeply (since this is a status command we want to
-	// be more accurate; the connected check in checkSandboxStatus is lightweight and heuristic).
+	// be more accurate; the connected check in checkServerlessStatus is lightweight and heuristic).
 	result, err := ServerlessExec(c, "auth/current", "--apihost", "--name")
 	if err != nil || len(result.Error) > 0 {
 		return do.ErrServerlessNotConnected
@@ -235,9 +235,9 @@ func RunSandboxStatus(c *CmdConfig) error {
 	return nil
 }
 
-// showLanguageInfo is called by RunSandboxStatus when --languages is specified
+// showLanguageInfo is called by RunServerlessStatus when --languages is specified
 func showLanguageInfo(c *CmdConfig, APIHost string) error {
-	info, err := c.Sandbox().GetHostInfo(APIHost)
+	info, err := c.Serverless().GetHostInfo(APIHost)
 	if err != nil {
 		return err
 	}
@@ -262,8 +262,8 @@ func showLanguageInfo(c *CmdConfig, APIHost string) error {
 	return nil
 }
 
-// RunSandboxUndeploy implements the 'doctl sandbox undeploy' command
-func RunSandboxUndeploy(c *CmdConfig) error {
+// RunServerlessUndeploy implements the 'doctl serverless undeploy' command
+func RunServerlessUndeploy(c *CmdConfig) error {
 	haveArgs := len(c.Args) > 0
 	pkgFlag, _ := c.Doit.GetBool(c.NS, "packages")
 	all, _ := c.Doit.GetBool(c.NS, "all")
@@ -301,7 +301,7 @@ func RunSandboxUndeploy(c *CmdConfig) error {
 	return nil
 }
 
-// cleanNamespace is a subroutine of RunSandboxDeploy for clearing the entire namespace
+// cleanNamespace is a subroutine of RunServerlessDeploy for clearing the entire namespace
 func cleanNamespace(c *CmdConfig) error {
 	result, err := ServerlessExec(c, "namespace/clean", "--force")
 	if err != nil {
@@ -313,7 +313,7 @@ func cleanNamespace(c *CmdConfig) error {
 	return nil
 }
 
-// deleteFunction is a subroutine of RunSandboxDeploy for deleting one function
+// deleteFunction is a subroutine of RunServerlessDeploy for deleting one function
 func deleteFunction(c *CmdConfig, fn string) error {
 	result, err := ServerlessExec(c, "action/delete", fn)
 	if err != nil {
@@ -325,7 +325,7 @@ func deleteFunction(c *CmdConfig, fn string) error {
 	return nil
 }
 
-// deletePackage is a subroutine of RunSandboxDeploy for deleting a package
+// deletePackage is a subroutine of RunServerlessDeploy for deleting a package
 func deletePackage(c *CmdConfig, pkg string) error {
 	result, err := ServerlessExec(c, "package/delete", pkg, "--recursive")
 	if err != nil {

@@ -107,9 +107,9 @@ func TestFunctionsGet(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.sandbox.EXPECT().Cmd("action/get", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("action/get", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
 				err := RunFunctionsGet(config)
 				require.NoError(t, err)
@@ -176,9 +176,9 @@ func TestFunctionsInvoke(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.sandbox.EXPECT().Cmd("action/invoke", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("action/invoke", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 					Entity: map[string]interface{}{"body": "Hello world!"},
 				}, nil)
 				expectedOut := `{
@@ -252,9 +252,9 @@ func TestFunctionsList(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.sandbox.EXPECT().Cmd("action/list", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("action/list", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
 				err := RunFunctionsList(config)
 				require.NoError(t, err)

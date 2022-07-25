@@ -61,7 +61,7 @@ project (a directory you have designated for functions development).  This can b
 	AddStringFlag(getMetadata, "exclude", "", "", "Functions or packages to exclude")
 
 	watch := CmdBuilder(cmd, RunServerlessExtraWatch, "watch <directory>", "Watch a functions project directory, deploying incrementally on change",
-		`Type `+"`"+`doctl sandbox watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
+		`Type `+"`"+`doctl serverless watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
 It will watch the directory (which should be one you initialized for serverless development) and will deploy
 the contents to the cloud incrementally as it detects changes.`,
 		Writer)
