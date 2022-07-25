@@ -574,11 +574,11 @@ func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
 
 		// Set up "existing" creds in the "sandbox" dir
 		serverlessDir := filepath.Join(tmp, "sandbox")
-		sandboxCredsDir := filepath.Join(serverlessDir, "creds", "d5b388f2")
-		err = os.MkdirAll(sandboxCredsDir, os.FileMode(0755))
+		serverlessCredsDir := filepath.Join(serverlessDir, "creds", "d5b388f2")
+		err = os.MkdirAll(serverlessCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
-		sandboxCreds := filepath.Join(sandboxCredsDir, "credentials.json")
-		creds, err := os.Create(sandboxCreds)
+		serverlessCreds := filepath.Join(serverlessCredsDir, "credentials.json")
+		creds, err := os.Create(serverlessCreds)
 		require.NoError(t, err)
 		creds.Close()
 
