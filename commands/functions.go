@@ -76,10 +76,14 @@ func RunFunctionsGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	output, err := RunServerlessExec(actionGet, c, []string{flagURL, flagCode, flagSave}, []string{flagSaveEnv, flagSaveEnvJSON, flagSaveAs})
+	// TODO: the flags in the following need to be implemented.  Currently, they are ignored.
+	// output, err := RunServerlessExec(actionGet, c, []string{flagURL, flagCode, flagSave}, []string{flagSaveEnv, flagSaveEnvJSON, flagSaveAs})
+	action, err := c.Serverless().GetFunction(c.Args[0], false)
 	if err != nil {
 		return err
 	}
+	// TODO output processing should be re-aligned to avoid using the do.ServerlessOutput structure
+	output := do.ServerlessOutput{Entity: action}
 	return c.PrintServerlessTextOutput(output)
 }
 
