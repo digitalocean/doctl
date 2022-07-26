@@ -108,6 +108,7 @@ type ServerlessService interface {
 	CheckServerlessStatus(string) error
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, error)
+	GetConnectedAPIHost() (string, error)
 }
 
 type serverlessService struct {
@@ -454,6 +455,15 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 	action, _, err := s.owClient.Actions.Get(name, fetchCode)
 	// TODO probably should analyze response
 	return *action, err
+}
+
+// GetConnectedAPIHost retrieves the API host to which the service is currently connected
+func (s *serverlessService) GetConnectedAPIHost() (string, error) {
+	err := initWhisk(s)
+	if err != nil {
+		return "", err
+	}
+	return s.owClient.Config.Host, nil
 }
 
 // Assign the correct API host based on the namespace name.
