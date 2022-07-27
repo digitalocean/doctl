@@ -148,6 +148,9 @@ func TestFunctionsGet(t *testing.T) {
 					tm.serverless.EXPECT().GetConnectedAPIHost().Return("https://example.com", nil)
 				}
 
+				if tt.expectSaved != "" {
+					defer os.Remove(tt.expectSaved)
+				}
 				err := RunFunctionsGet(config)
 				require.NoError(t, err)
 				assert.Equal(t, tt.expectOutput, buf.String())
@@ -155,7 +158,6 @@ func TestFunctionsGet(t *testing.T) {
 					contents, err := os.ReadFile(tt.expectSaved)
 					require.NoError(t, err)
 					assert.Equal(t, string(contents), code)
-					os.Remove(tt.expectSaved)
 				}
 			})
 		})
