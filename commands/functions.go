@@ -91,7 +91,8 @@ func LegacyRunFunctionsGet(c *CmdConfig) error {
 
 // RunFunctionsGet supports the 'serverless functions get' command
 func RunFunctionsGet(c *CmdConfig) error {
-	// Punt to the legacy path if the user is requesting the save-env or save-env-json options
+	// TEMP punt to the legacy path if the user is requesting the save-env or save-env-json options
+	// TODO figure out how to support these properly
 	saveEnvFlag, _ := c.Doit.GetString(c.NS, flagSaveEnv)
 	saveEnvJSONFlag, _ := c.Doit.GetString(c.NS, flagSaveEnvJSON)
 	if saveEnvFlag != "" || saveEnvJSONFlag != "" {

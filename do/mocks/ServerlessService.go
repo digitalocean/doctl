@@ -9,6 +9,7 @@ import (
 	exec "os/exec"
 	reflect "reflect"
 
+	whisk "github.com/apache/openwhisk-client-go/whisk"
 	do "github.com/digitalocean/doctl/do"
 	gomock "github.com/golang/mock/gomock"
 )
@@ -80,6 +81,36 @@ func (mr *MockServerlessServiceMockRecorder) Exec(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockServerlessService)(nil).Exec), arg0)
 }
 
+// GetConnectedAPIHost mocks base method.
+func (m *MockServerlessService) GetConnectedAPIHost() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetConnectedAPIHost")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetConnectedAPIHost indicates an expected call of GetConnectedAPIHost.
+func (mr *MockServerlessServiceMockRecorder) GetConnectedAPIHost() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnectedAPIHost", reflect.TypeOf((*MockServerlessService)(nil).GetConnectedAPIHost))
+}
+
+// GetFunction mocks base method.
+func (m *MockServerlessService) GetFunction(arg0 string, arg1 bool) (whisk.Action, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFunction", arg0, arg1)
+	ret0, _ := ret[0].(whisk.Action)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetFunction indicates an expected call of GetFunction.
+func (mr *MockServerlessServiceMockRecorder) GetFunction(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFunction", reflect.TypeOf((*MockServerlessService)(nil).GetFunction), arg0, arg1)
+}
+
 // GetHostInfo mocks base method.
 func (m *MockServerlessService) GetHostInfo(arg0 string) (do.ServerlessHostInfo, error) {
 	m.ctrl.T.Helper()
@@ -122,6 +153,21 @@ func (m *MockServerlessService) InstallServerless(arg0 string, arg1 bool) error 
 func (mr *MockServerlessServiceMockRecorder) InstallServerless(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallServerless", reflect.TypeOf((*MockServerlessService)(nil).InstallServerless), arg0, arg1)
+}
+
+// ReadCredentials mocks base method.
+func (m *MockServerlessService) ReadCredentials() (do.ServerlessCredentials, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadCredentials")
+	ret0, _ := ret[0].(do.ServerlessCredentials)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadCredentials indicates an expected call of ReadCredentials.
+func (mr *MockServerlessServiceMockRecorder) ReadCredentials() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadCredentials", reflect.TypeOf((*MockServerlessService)(nil).ReadCredentials))
 }
 
 // Stream mocks base method.
