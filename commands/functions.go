@@ -74,31 +74,8 @@ You can provide inputs and inspect outputs.`,
 	return cmd
 }
 
-// LegacyRunFunctionsGet is the older implementation of RunFunctionsGet that used the sandbox plugin
-// rather than the golang OW client.  It is still needed if the save-env or save-env-json flags are specified
-// because the golang OW client doesn't support distinguishing environment variables from ordinary parameters.
-func LegacyRunFunctionsGet(c *CmdConfig) error {
-	err := ensureOneArg(c)
-	if err != nil {
-		return err
-	}
-	output, err := RunServerlessExec(actionGet, c, []string{flagURL, flagCode, flagSave}, []string{flagSaveEnv, flagSaveEnvJSON, flagSaveAs})
-	if err != nil {
-		return err
-	}
-	return c.PrintServerlessTextOutput(output)
-}
-
 // RunFunctionsGet supports the 'serverless functions get' command
 func RunFunctionsGet(c *CmdConfig) error {
-	// TEMP punt to the legacy path if the user is requesting the save-env or save-env-json options
-	// TODO figure out how to support these properly
-	saveEnvFlag, _ := c.Doit.GetString(c.NS, flagSaveEnv)
-	saveEnvJSONFlag, _ := c.Doit.GetString(c.NS, flagSaveEnvJSON)
-	if saveEnvFlag != "" || saveEnvJSONFlag != "" {
-		return LegacyRunFunctionsGet(c)
-	}
-	// Remaining cases can be supported via the new path
 	err := ensureOneArg(c)
 	if err != nil {
 		return err
@@ -107,9 +84,11 @@ func RunFunctionsGet(c *CmdConfig) error {
 	codeFlag, _ := c.Doit.GetBool(c.NS, flagCode)
 	saveFlag, _ := c.Doit.GetBool(c.NS, flagSave)
 	saveAsFlag, _ := c.Doit.GetString(c.NS, flagSaveAs)
+	saveEnvFlag, _ := c.Doit.GetString(c.NS, flagSaveEnv)
+	saveEnvJSONFlag, _ := c.Doit.GetString(c.NS, flagSaveEnvJSON)
 	fetchCode := codeFlag || saveFlag || saveAsFlag != ""
 	sls := c.Serverless()
-	action, err := sls.GetFunction(c.Args[0], fetchCode)
+	action, parms, err := sls.GetFunction(c.Args[0], fetchCode)
 	if err != nil {
 		return err
 	}
@@ -120,24 +99,24 @@ func RunFunctionsGet(c *CmdConfig) error {
 		}
 		_, err = fmt.Fprintln(c.Out, computeURL(action, host))
 		return err
-	} else if saveFlag || saveAsFlag != "" {
-		return doSavingForFunctionGet(action, saveAsFlag)
+	} else if saveFlag || saveAsFlag != "" || saveEnvFlag != "" || saveEnvJSONFlag != "" {
+		return doSavingForFunctionGet(action, saveFlag, saveAsFlag, saveEnvFlag, saveEnvJSONFlag, parms)
 	} else if codeFlag {
 		if !*action.Exec.Binary {
 			_, err = fmt.Fprintln(c.Out, *action.Exec.Code)
 			return err
-		} else {
-			return errors.New("Binary code cannot be displayed on the console")
 		}
+		return errors.New("Binary code cannot be displayed on the console")
 	}
 	output := do.ServerlessOutput{Entity: action}
 	return c.PrintServerlessTextOutput(output)
 }
 
-// doSavingForFunctionGet performs the save operations for code.  If saveAs is provided,
-// it is used.  Otherwise, the usual naming conventions sfor --save are applied.
-func doSavingForFunctionGet(action whisk.Action, saveAs string) error {
-	var extension string
+// doSavingForFunctionGet performs the save operations for code and for environment variables.
+func doSavingForFunctionGet(action whisk.Action, save bool, saveAs string, saveEnv string, saveEnvJSON string,
+	parms []do.FunctionParameter) error {
+	// First process save and saveAs
+	var extension string // used only when save and !saveAs
 	var data []byte
 	if *action.Exec.Binary {
 		extension = ".zip"
@@ -150,10 +129,45 @@ func doSavingForFunctionGet(action whisk.Action, saveAs string) error {
 		extension = fileExtensionForKind(action.Exec.Kind) // find equivalent
 		data = []byte(*action.Exec.Code)
 	}
-	if saveAs == "" {
+	if save && saveAs == "" {
 		saveAs = action.Name + extension
 	}
-	return os.WriteFile(saveAs, data, 0666)
+	if saveAs != "" {
+		err := os.WriteFile(saveAs, data, 0666)
+		if err != nil {
+			return err
+		}
+	}
+	// Process saveEnv and saveEnvJSON.  Could do both if both are specified.
+	if saveEnv != "" || saveEnvJSON != "" {
+		keyVals := []string{}
+		envMap := map[string]string{}
+		for _, parm := range parms {
+			if parm.Init {
+				keyVal := parm.Key + "=" + parm.Value
+				keyVals = append(keyVals, keyVal)
+				envMap[parm.Key] = parm.Value
+			}
+		}
+		if saveEnv != "" {
+			data := []byte(strings.Join(keyVals, "\n"))
+			err := os.WriteFile(saveEnv, data, 0666)
+			if err != nil {
+				return err
+			}
+		}
+		if saveEnvJSON != "" {
+			data, err := json.MarshalIndent(&envMap, "", "  ")
+			if err != nil {
+				return err
+			}
+			err = os.WriteFile(saveEnvJSON, data, 0666)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // fileExtensionforKind finds the right file extension for a given runtime 'kind'.
@@ -187,12 +201,11 @@ func computeURL(action whisk.Action, host string) string {
 			packageName = "default"
 		}
 		return fmt.Sprintf("%s/api/v1/web/%s/%s/%s", host, namespace, packageName, action.Name)
-	} else {
-		if packageName != "" {
-			packageName += "/"
-		}
-		return fmt.Sprintf("%s/api/v1/namespaces/%s/actions/%s%s", host, namespace, packageName, action.Name)
 	}
+	if packageName != "" {
+		packageName += "/"
+	}
+	return fmt.Sprintf("%s/api/v1/namespaces/%s/actions/%s%s", host, namespace, packageName, action.Name)
 }
 
 // RunFunctionsInvoke supports the 'serverless functions invoke' command

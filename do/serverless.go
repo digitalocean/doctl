@@ -55,6 +55,22 @@ type outputNamespace struct {
 	Key       string `json:"key"`
 }
 
+// FunctionParameter is the type of a parameter in the response body of action.get.  We do our
+// own JSON unmarshaling of these because the go OpenWhisk client doesn't include the "init" and
+// "encryption" members, of which at least "init" is needed.
+type FunctionParameter struct {
+	Key        string `json:"key"`
+	Value      string `json:"value"`
+	Init       bool   `json:"init"`
+	Encryption string `json:"encryption"`
+}
+
+// FunctionParameterReparse is a partial remapping of whisk.Action so that the parameters
+// are declared as FunctionParameter rather than whisk.KeyValue.
+type FunctionParameterReparse struct {
+	Parameters []FunctionParameter `json:"parameters"`
+}
+
 // namespacesResponseBody is the type of the response body for /api/v2/functions/sandbox
 type namespacesResponseBody struct {
 	Namespace outputNamespace `json:"namespace"`
@@ -107,7 +123,7 @@ type ServerlessService interface {
 	GetHostInfo(string) (ServerlessHostInfo, error)
 	CheckServerlessStatus(string) error
 	InstallServerless(string, bool) error
-	GetFunction(string, bool) (whisk.Action, error)
+	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	GetConnectedAPIHost() (string, error)
 }
 
@@ -447,14 +463,26 @@ func (s *serverlessService) GetHostInfo(APIHost string) (ServerlessHostInfo, err
 }
 
 // GetFunction returns the metadata and optionally the code of a deployer function
-func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Action, error) {
+func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Action, []FunctionParameter, error) {
 	err := initWhisk(s)
 	if err != nil {
-		return whisk.Action{}, nil
+		return whisk.Action{}, []FunctionParameter{}, nil
 	}
-	action, _, err := s.owClient.Actions.Get(name, fetchCode)
-	// TODO probably should analyze response
-	return *action, err
+	action, resp, err := s.owClient.Actions.Get(name, fetchCode)
+	var parameters []FunctionParameter
+	if resp != nil && err == nil {
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err == nil {
+			reparse := FunctionParameterReparse{}
+			err = json.Unmarshal(body, &reparse)
+			if err != nil {
+				return whisk.Action{}, []FunctionParameter{}, err
+			}
+			parameters = reparse.Parameters
+		}
+	}
+	return *action, parameters, err
 }
 
 // GetConnectedAPIHost retrieves the API host to which the service is currently connected

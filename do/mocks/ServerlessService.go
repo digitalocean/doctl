@@ -97,12 +97,13 @@ func (mr *MockServerlessServiceMockRecorder) GetConnectedAPIHost() *gomock.Call 
 }
 
 // GetFunction mocks base method.
-func (m *MockServerlessService) GetFunction(arg0 string, arg1 bool) (whisk.Action, error) {
+func (m *MockServerlessService) GetFunction(arg0 string, arg1 bool) (whisk.Action, []do.FunctionParameter, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFunction", arg0, arg1)
 	ret0, _ := ret[0].(whisk.Action)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].([]do.FunctionParameter)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // GetFunction indicates an expected call of GetFunction.
