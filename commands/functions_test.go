@@ -15,10 +15,12 @@ package commands
 
 import (
 	"bytes"
+	"os"
 	"os/exec"
 	"sort"
 	"testing"
 
+	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,60 +43,92 @@ func TestFunctionsCommand(t *testing.T) {
 
 func TestFunctionsGet(t *testing.T) {
 	tests := []struct {
-		name            string
-		doctlArgs       string
-		doctlFlags      map[string]string
-		expectedNimArgs []string
+		name           string
+		doctlArgs      string
+		doctlFlags     map[string]string
+		fetchCode      bool
+		expectAPIHost  bool
+		expectSaved    string
+		expectOutput   string
+		expectPlainEnv string
+		expectJSONEnv  string
 	}{
 		{
-			name:            "no flags",
-			doctlArgs:       "hello",
-			expectedNimArgs: []string{"hello"},
+			name:         "no flags",
+			doctlArgs:    "hello",
+			expectOutput: "{\n  \"namespace\": \"thenamespace\",\n  \"name\": \"hello\",\n  \"exec\": {\n    \"kind\": \"nodejs:14\",\n    \"code\": \"code of the function\",\n    \"binary\": false\n  },\n  \"annotations\": [\n    {\n      \"key\": \"web-export\",\n      \"value\": true\n    }\n  ]\n}\n",
 		},
 		{
-			name:            "code flag",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"code": ""},
-			expectedNimArgs: []string{"hello", "--code"},
+			name:         "code flag",
+			doctlArgs:    "hello",
+			doctlFlags:   map[string]string{"code": ""},
+			fetchCode:    true,
+			expectOutput: "code of the function\n",
 		},
 		{
-			name:            "url flag",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"url": ""},
-			expectedNimArgs: []string{"hello", "--url"},
+			name:          "url flag",
+			doctlArgs:     "hello",
+			doctlFlags:    map[string]string{"url": ""},
+			expectAPIHost: true,
+			expectOutput:  "https://example.com/api/v1/web/thenamespace/default/hello\n",
 		},
 		{
-			name:            "save flag",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"save": ""},
-			expectedNimArgs: []string{"hello", "--save"},
+			name:          "save flag",
+			doctlArgs:     "hello",
+			doctlFlags:    map[string]string{"save": ""},
+			fetchCode:     true,
+			expectAPIHost: false,
+			expectSaved:   "hello.js",
 		},
 		{
-			name:            "save-as flag",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"save-as": "/path/to/code.py"},
-			expectedNimArgs: []string{"hello", "--save-as", "/path/to/code.py"},
+			name:        "save-as flag",
+			doctlArgs:   "hello",
+			doctlFlags:  map[string]string{"save-as": "savedcode"},
+			fetchCode:   true,
+			expectSaved: "savedcode",
 		},
 		{
-			name:            "save-env flag",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"save-env": "/path/to/code.env"},
-			expectedNimArgs: []string{"hello", "--save-env", "/path/to/code.env"},
+			name:           "save-env flag",
+			doctlArgs:      "hello",
+			doctlFlags:     map[string]string{"save-env": "code.env"},
+			expectPlainEnv: "code.env",
 		},
 		{
-			name:            "save-env-json flag",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]string{"save-env-json": "/path/to/code.json"},
-			expectedNimArgs: []string{"hello", "--save-env-json", "/path/to/code.json"},
+			name:          "save-env-json flag",
+			doctlArgs:     "hello",
+			doctlFlags:    map[string]string{"save-env-json": "code.json"},
+			expectJSONEnv: "code.json",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
+				code := "code of the function"
+				binaryFalse := false
+				actionResponse := whisk.Action{
+					Exec: &whisk.Exec{
+						Code:   &code,
+						Binary: &binaryFalse,
+						Kind:   "nodejs:14",
+					},
+					Annotations: whisk.KeyValueArr{
+						whisk.KeyValue{
+							Key:   "web-export",
+							Value: true,
+						},
+					},
+					Name:      "hello",
+					Namespace: "thenamespace",
 				}
+				param := do.FunctionParameter{Init: true, Key: "foo", Value: "bar"}
+				paramResponse := []do.FunctionParameter{param}
+				buf := &bytes.Buffer{}
+				config.Out = buf
+				plainEnv := "foo=bar"
+				jsonEnv := `{
+  "foo": "bar"
+}`
 
 				config.Args = append(config.Args, tt.doctlArgs)
 				if tt.doctlFlags != nil {
@@ -107,12 +141,31 @@ func TestFunctionsGet(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("action/get", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
+				tm.serverless.EXPECT().GetFunction("hello", tt.fetchCode).Return(actionResponse, paramResponse, nil)
+				if tt.expectAPIHost {
+					tm.serverless.EXPECT().GetConnectedAPIHost().Return("https://example.com", nil)
+				}
+
+				savedFiles := []string{tt.expectSaved, tt.expectPlainEnv, tt.expectJSONEnv}
+				defer func() {
+					for _, file := range savedFiles {
+						if file != "" {
+							os.Remove(file)
+						}
+					}
+				}()
 
 				err := RunFunctionsGet(config)
 				require.NoError(t, err)
+				assert.Equal(t, tt.expectOutput, buf.String())
+				expectedContents := []string{code, plainEnv, jsonEnv}
+				for i, file := range savedFiles {
+					if file != "" {
+						contents, err := os.ReadFile(file)
+						require.NoError(t, err)
+						assert.Equal(t, string(contents), expectedContents[i])
+					}
+				}
 			})
 		})
 	}

@@ -27,6 +27,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/extract"
 	"github.com/digitalocean/godo"
@@ -52,6 +53,22 @@ type outputNamespace struct {
 	APIHost   string `json:"api_host"`
 	UUID      string `json:"uuid"`
 	Key       string `json:"key"`
+}
+
+// FunctionParameter is the type of a parameter in the response body of action.get.  We do our
+// own JSON unmarshaling of these because the go OpenWhisk client doesn't include the "init" and
+// "encryption" members, of which at least "init" is needed.
+type FunctionParameter struct {
+	Key        string `json:"key"`
+	Value      string `json:"value"`
+	Init       bool   `json:"init"`
+	Encryption string `json:"encryption"`
+}
+
+// FunctionParameterReparse is a partial remapping of whisk.Action so that the parameters
+// are declared as FunctionParameter rather than whisk.KeyValue.
+type FunctionParameterReparse struct {
+	Parameters []FunctionParameter `json:"parameters"`
 }
 
 // namespacesResponseBody is the type of the response body for /api/v2/functions/sandbox
@@ -102,9 +119,12 @@ type ServerlessService interface {
 	Stream(*exec.Cmd) error
 	GetServerlessNamespace(context.Context) (ServerlessCredentials, error)
 	WriteCredentials(ServerlessCredentials) error
+	ReadCredentials() (ServerlessCredentials, error)
 	GetHostInfo(string) (ServerlessHostInfo, error)
 	CheckServerlessStatus(string) error
 	InstallServerless(string, bool) error
+	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
+	GetConnectedAPIHost() (string, error)
 }
 
 type serverlessService struct {
@@ -114,6 +134,7 @@ type serverlessService struct {
 	node          string
 	userAgent     string
 	client        *godo.Client
+	owClient      *whisk.Client
 }
 
 const (
@@ -175,7 +196,28 @@ func NewServerlessService(client *godo.Client, usualServerlessDir string, credsT
 		node:          filepath.Join(serverlessDir, nodeBin),
 		userAgent:     fmt.Sprintf("doctl/%s serverless/%s", doctl.DoitVersion.String(), minServerlessVersion),
 		client:        client,
+		owClient:      nil,
 	}
+}
+
+// InitWhisk is an on-demand initializer for the OpenWhisk client, called when that client
+// is needed.
+func initWhisk(s *serverlessService) error {
+	if s.owClient != nil {
+		return nil
+	}
+	creds, err := s.ReadCredentials()
+	if err != nil {
+		return err
+	}
+	credential := creds.Credentials[creds.APIHost][creds.Namespace]
+	config := whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
+	client, err := whisk.NewClient(http.DefaultClient, &config)
+	if err != nil {
+		return err
+	}
+	s.owClient = client
+	return nil
 }
 
 func (s *serverlessService) CheckServerlessStatus(leafCredsDir string) error {
@@ -420,6 +462,38 @@ func (s *serverlessService) GetHostInfo(APIHost string) (ServerlessHostInfo, err
 	return result, err
 }
 
+// GetFunction returns the metadata and optionally the code of a deployer function
+func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Action, []FunctionParameter, error) {
+	err := initWhisk(s)
+	if err != nil {
+		return whisk.Action{}, []FunctionParameter{}, nil
+	}
+	action, resp, err := s.owClient.Actions.Get(name, fetchCode)
+	var parameters []FunctionParameter
+	if resp != nil && err == nil {
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if err == nil {
+			reparse := FunctionParameterReparse{}
+			err = json.Unmarshal(body, &reparse)
+			if err != nil {
+				return whisk.Action{}, []FunctionParameter{}, err
+			}
+			parameters = reparse.Parameters
+		}
+	}
+	return *action, parameters, err
+}
+
+// GetConnectedAPIHost retrieves the API host to which the service is currently connected
+func (s *serverlessService) GetConnectedAPIHost() (string, error) {
+	err := initWhisk(s)
+	if err != nil {
+		return "", err
+	}
+	return s.owClient.Config.Host, nil
+}
+
 // Assign the correct API host based on the namespace name.
 // Every serverless cluster has two domain names, one ending in '.io', the other in '.co'.
 // By convention, the portal only returns the '.io' one but 'doctl sbx' must start using
@@ -452,6 +526,18 @@ func (s *serverlessService) WriteCredentials(creds ServerlessCredentials) error 
 		return err
 	}
 	return os.WriteFile(credsPath, bytes, 0600)
+}
+
+// ReadCredentials reads the current serverless credentials from the appropriate 'creds' diretory
+func (s *serverlessService) ReadCredentials() (ServerlessCredentials, error) {
+	creds := ServerlessCredentials{}
+	credsPath := filepath.Join(s.credsDir, CredentialsFile)
+	bytes, err := os.ReadFile(credsPath)
+	if err != nil {
+		return creds, err
+	}
+	err = json.Unmarshal(bytes, &creds)
+	return creds, err
 }
 
 // Determines whether the serverlessUptodate appears to be connected.  The purpose is

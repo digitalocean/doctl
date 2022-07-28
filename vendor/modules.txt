@@ -5,9 +5,16 @@ github.com/Microsoft/go-winio/pkg/guid
 # github.com/Microsoft/hcsshim v0.9.2
 ## explicit; go 1.13
 github.com/Microsoft/hcsshim/osversion
+# github.com/apache/openwhisk-client-go v0.0.0-20211007130743-38709899040b
+## explicit; go 1.15
+github.com/apache/openwhisk-client-go/whisk
+github.com/apache/openwhisk-client-go/wski18n
 # github.com/blang/semver v3.5.1+incompatible
 ## explicit
 github.com/blang/semver
+# github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21
+## explicit
+github.com/cloudfoundry/jibber_jabber
 # github.com/containerd/continuity v0.2.2
 ## explicit; go 1.13
 github.com/containerd/continuity/pathdriver
@@ -17,7 +24,7 @@ github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/creack/pty v1.1.11
 ## explicit; go 1.13
 github.com/creack/pty
-# github.com/davecgh/go-spew v1.1.1
+# github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
 # github.com/digitalocean/godo v1.81.0
@@ -114,6 +121,9 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
+# github.com/hokaccha/go-prettyjson v0.0.0-20210113012101-fb4e108d2519
+## explicit
+github.com/hokaccha/go-prettyjson
 # github.com/imdario/mergo v0.3.12
 ## explicit; go 1.13
 github.com/imdario/mergo
@@ -150,6 +160,12 @@ github.com/modern-go/reflect2
 # github.com/natefinch/pie v0.0.0-20170715172608-9a0d72014007
 ## explicit
 github.com/natefinch/pie
+# github.com/nicksnyder/go-i18n v1.10.1
+## explicit
+github.com/nicksnyder/go-i18n/i18n
+github.com/nicksnyder/go-i18n/i18n/bundle
+github.com/nicksnyder/go-i18n/i18n/language
+github.com/nicksnyder/go-i18n/i18n/translation
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
@@ -172,7 +188,7 @@ github.com/pelletier/go-toml/v2/internal/tracker
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
-# github.com/pmezard/go-difflib v1.0.0
+# github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 ## explicit
 github.com/pmezard/go-difflib/difflib
 # github.com/russross/blackfriday/v2 v2.1.0
