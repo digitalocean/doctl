@@ -14,10 +14,13 @@ limitations under the License.
 package commands
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -78,9 +81,11 @@ The install operation is long-running, and a network connection is required.`,
 	CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
 		Writer)
 
-	CmdBuilder(cmd, RunServerlessConnect, "connect", "Connects local serverless support to your functions namespace",
+	connect := CmdBuilder(cmd, RunServerlessConnect, "connect", "Connects local serverless support to your functions namespace",
 		`This command connects `+"`"+`doctl serverless`+"`"+` to your functions namespace (needed for testing).`,
 		Writer)
+	AddBoolFlag(connect, "beta", "", false, "use beta features to connect when no namespace is specified")
+	connect.Flags().MarkHidden("beta")
 
 	status := CmdBuilder(cmd, RunServerlessStatus, "status", "Provide information about serverless support",
 		`This command reports the status of serverless support and some details concerning its connected functions namespace.
@@ -164,32 +169,123 @@ func RunServerlessConnect(c *CmdConfig) error {
 		err   error
 	)
 
-	if len(c.Args) > 0 {
+	beta, _ := c.Doit.GetBool(c.NS, "beta")
+	maxArgs := 0
+	if beta {
+		maxArgs = 1
+	}
+	if len(c.Args) > maxArgs {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
-	serverless := c.Serverless()
+	sls := c.Serverless()
 
 	// Non-standard check for the connect command (only): it's ok to not be connected.
-	err = serverless.CheckServerlessStatus(hashAccessToken(c))
+	err = sls.CheckServerlessStatus(hashAccessToken(c))
 	if err != nil && err != do.ErrServerlessNotConnected {
 		return err
 	}
 
-	// Get the credentials for the serverless namespace
-	creds, err = serverless.GetServerlessNamespace(context.TODO())
+	ctx := context.TODO()
+
+	// If an arg is specified, retrieve the namespaces that match and proceed according to whether there
+	// are 0, 1, or >1 matches.
+	if len(c.Args) > 0 {
+		list, err := getMatchingNamespaces(ctx, sls, c.Args[0])
+		if err != nil {
+			return err
+		}
+		if len(list) == 0 {
+			return fmt.Errorf("you have no namespaces matching '%s'", c.Args[0])
+		}
+		return connectFromList(ctx, sls, list, c.Out)
+	}
+
+	// Handle the case where no namespace was specified (originally, this was the only supported behavior)
+	// If requested via the --beta flag, do it the "new way".
+	if beta {
+		list, err := getMatchingNamespaces(ctx, sls, "")
+		if err != nil {
+			return err
+		}
+		if len(list) == 0 {
+			return errors.New("you must create a namespace with `doctl namespace create`, specifying a region and label")
+		}
+		return connectFromList(ctx, sls, list, c.Out)
+	}
+
+	// Legacy path when there is no argument and --beta is not specified
+	creds, err = sls.GetServerlessNamespace(ctx)
 	if err != nil {
 		return err
 	}
+	return finishConnecting(sls, creds, "", c.Out)
+}
 
+// connectFromList connects a namespace based on a non-empty list of namespaces.  If the list is
+// singular that determines the namespace that will be connected.  Otherwise, this is determined
+// via a prompt.
+func connectFromList(ctx context.Context, sls do.ServerlessService, list []do.OutputNamespace, out io.Writer) error {
+	var ns do.OutputNamespace
+	if len(list) == 1 {
+		ns = list[0]
+	} else {
+		ns = chooseFromList(list, out)
+		if ns.Namespace == "" {
+			return nil
+		}
+	}
+	creds, err := sls.GetNamespace(ctx, ns.Namespace)
+	if err != nil {
+		return err
+	}
+	return finishConnecting(sls, creds, ns.Label, out)
+}
+
+// ChoiceReader is the Reader for reading the user's response to the prompt to choose
+// a namespace.  It can be replaced for testing.
+var ChoiceReader = os.Stdin
+
+// chooseFromList displays a list of namespaces (label, region, id) assigning each one a number.
+// The user can than respond to a prompt that chooses from the list by number.  The response 'x' is
+// also accepted and exits the command.
+func chooseFromList(list []do.OutputNamespace, out io.Writer) do.OutputNamespace {
+	for i, ns := range list {
+		fmt.Fprintf(out, "%d: %s in %s, label=%s\n", i, ns.Namespace, ns.Region, ns.Label)
+	}
+	reader := bufio.NewReader(ChoiceReader)
+	for {
+		fmt.Fprintln(out, "Choose a namespace by number or 'x' to exit")
+		choice, err := reader.ReadString('\n')
+		if err != nil {
+			continue
+		}
+		choice = strings.TrimSpace(choice)
+		if choice == "x" {
+			return do.OutputNamespace{}
+		}
+		i, err := strconv.Atoi(choice)
+		if err == nil && i >= 0 && i < len(list) {
+			return list[i]
+		}
+	}
+}
+
+// finishConnecting performs the final steps of 'doctl serverless connect' regardless of whether
+// the legacy behavior is chosen or the new behavior (via the 'connectFromList` function)
+func finishConnecting(sls do.ServerlessService, creds do.ServerlessCredentials, label string, out io.Writer) error {
 	// Store the credentials
-	err = serverless.WriteCredentials(creds)
+	err := sls.WriteCredentials(creds)
 	if err != nil {
 		return err
 	}
 
-	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", creds.Namespace, creds.APIHost)
-	fmt.Fprintln(c.Out)
+	labelTag := ""
+	if label != "" {
+		labelTag = " (label=" + label + ")"
+	}
+	fmt.Fprintf(out, "Connected to functions namespace '%s' on API host '%s'%s\n", creds.Namespace, creds.APIHost, labelTag)
+	fmt.Fprintln(out)
 	return nil
 }
 
