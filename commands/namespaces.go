@@ -16,6 +16,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -25,7 +26,7 @@ import (
 )
 
 // validRegions provides the list of regions and datacenters where namespaces may be created.
-// Note that AP and Functions share the same list of regions but Functions are availble in only
+// Note that AP and Functions share the same list of regions but Functions are available in only
 // one datacenter per region, so we're using our own static list for the moment (AP has a dynamic
 // list that can be interrogated once we have a reliable dynamic way of distinguishing which datacenters
 // actually host Functions).
@@ -186,6 +187,7 @@ func getValidRegions() []string {
 		vrs[i+1] = v
 		i += 2
 	}
+	sort.Strings(vrs)
 	return vrs
 }
 
@@ -205,7 +207,7 @@ func isLabelUnique(ctx context.Context, ss do.ServerlessService, label string) (
 }
 
 // getValidRegion returns a valid region value for the API (a four-letter datacenter slug) given either
-// a datacenter slug a three-letter region slug).  Functions are offered in one data center per region.
+// a datacenter slug or a three-letter region slug.  Functions are offered in one data center per region.
 // The empty string is returned if the value is invalid.
 func getValidRegion(value string) string {
 	if len(value) == 3 {

@@ -139,3 +139,47 @@ func TestNamespacesCreate(t *testing.T) {
 		})
 	}
 }
+
+func TestNamespacesListRegions(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+
+		expectedOutput := "[ams ams3 blr blr1 fra fra1 lon lon1 nyc nyc1 sfo sfo3 sgp sgp1 tor tor1]\n"
+
+		err := RunNamespacesListRegions(config)
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedOutput, buf.String())
+	})
+}
+
+func TestNamespacesList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+
+		returnedList := do.NamespaceListResponse{Namespaces: []do.OutputNamespace{
+			do.OutputNamespace{
+				Label:     "my_dog",
+				Namespace: "ns1",
+				Region:    "lon1",
+				APIHost:   "https://lon1.example.com",
+			},
+			do.OutputNamespace{
+				Label:     "something",
+				Namespace: "ns2",
+				Region:    "sgp1",
+				APIHost:   "https://sgp1.example.com",
+			},
+		}}
+		expectedOutput := "Label        Region    Namespace ID    API Host\nmy_dog       lon1      ns1             https://lon1.example.com\nsomething    sgp1      ns2             https://sgp1.example.com\n"
+
+		tm.serverless.EXPECT().ListNamespaces(context.TODO()).Return(returnedList, nil)
+
+		err := RunNamespacesList(config)
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedOutput, buf.String())
+	})
+}
