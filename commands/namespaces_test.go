@@ -128,7 +128,7 @@ func TestNamespacesCreate(t *testing.T) {
 
 				err := RunNamespacesCreate(config)
 				if tt.expectedError != nil {
-					assert.Equal(t, err, tt.expectedError)
+					assert.Equal(t, tt.expectedError, err)
 				} else {
 					require.NoError(t, err)
 				}
@@ -258,7 +258,7 @@ func TestNamespacesDelete(t *testing.T) {
 
 				err := RunNamespacesDelete(config)
 				if tt.expectedError != nil {
-					assert.Equal(t, err, tt.expectedError)
+					assert.Equal(t, tt.expectedError, err)
 				} else {
 					require.NoError(t, err)
 				}
