@@ -140,7 +140,7 @@ func RunNamespacesDelete(c *CmdConfig) error {
 	}
 	// Must be an exact match though (avoids errors).
 	if len(matches) != 1 || (arg != label && arg != id) {
-		return fmt.Errorf("'%s' does not correspond to any of your namespaces", arg)
+		return fmt.Errorf("'%s' does not exactly match the label or id of any of your namespaces", arg)
 	}
 	force, _ := c.Doit.GetBool(c.NS, "force")
 	if !force {

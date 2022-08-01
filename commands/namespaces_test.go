@@ -109,7 +109,7 @@ func TestNamespacesCreate(t *testing.T) {
 				ctx := context.TODO()
 				if tt.expectList {
 					initialList := do.NamespaceListResponse{Namespaces: []do.OutputNamespace{
-						do.OutputNamespace{Label: "my_dog"},
+						{Label: "my_dog"},
 					}}
 					tm.serverless.EXPECT().ListNamespaces(ctx).Return(initialList, nil)
 				}
@@ -160,13 +160,13 @@ func TestNamespacesList(t *testing.T) {
 		config.Out = buf
 
 		returnedList := do.NamespaceListResponse{Namespaces: []do.OutputNamespace{
-			do.OutputNamespace{
+			{
 				Label:     "my_dog",
 				Namespace: "ns1",
 				Region:    "lon1",
 				APIHost:   "https://lon1.example.com",
 			},
-			do.OutputNamespace{
+			{
 				Label:     "something",
 				Namespace: "ns2",
 				Region:    "sgp1",
@@ -182,4 +182,90 @@ func TestNamespacesList(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedOutput, buf.String())
 	})
+}
+
+func TestNamespacesDelete(t *testing.T) {
+	tests := []struct {
+		name               string
+		doctlFlags         map[string]interface{}
+		doctlArg           string
+		expectedOutput     string
+		expectedError      error
+		expectConfirmation bool
+	}{
+		{
+			name:          "nonmatching argument",
+			doctlArg:      "xyzzy",
+			expectedError: errors.New("'xyzzy' does not exactly match the label or id of any of your namespaces"),
+		},
+		{
+			name:          "partial match argument",
+			doctlArg:      "some",
+			expectedError: errors.New("'some' does not exactly match the label or id of any of your namespaces"),
+		},
+		{
+			name:       "valid argument with force",
+			doctlArg:   "my_dog",
+			doctlFlags: map[string]interface{}{"force": true},
+		},
+		{
+			name:               "valid argument with prompt",
+			doctlArg:           "my_dog",
+			expectConfirmation: true,
+			expectedError:      errors.New("deletion of 'ns1' not confirmed, doing nothing"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				buf := &bytes.Buffer{}
+				config.Out = buf
+				if tt.doctlFlags != nil {
+					for k, v := range tt.doctlFlags {
+						if v == "" {
+							config.Doit.Set(config.NS, k, true)
+						} else {
+							config.Doit.Set(config.NS, k, v)
+						}
+					}
+				}
+				config.Args = append(config.Args, tt.doctlArg)
+				listForMatching := do.NamespaceListResponse{Namespaces: []do.OutputNamespace{
+					{
+						Label:     "my_dog",
+						Namespace: "ns1",
+						Region:    "lon1",
+						APIHost:   "https://lon1.example.com",
+					},
+					{
+						Label:     "something",
+						Namespace: "ns2",
+						Region:    "sgp1",
+						APIHost:   "https://sgp1.example.com",
+					},
+				}}
+				// Confirmation dialog can't be fully mocked but it can be replaced
+				// (as in confirmation_test.go).
+				retrieveUserInput = func(string) (string, error) {
+					return "no", nil
+				}
+
+				ctx := context.TODO()
+				tm.serverless.EXPECT().ListNamespaces(ctx).Return(listForMatching, nil)
+				if tt.expectedError == nil {
+					tm.serverless.EXPECT().DeleteNamespace(ctx, "ns1").Return(nil)
+				}
+
+				err := RunNamespacesDelete(config)
+				if tt.expectedError != nil {
+					assert.Equal(t, err, tt.expectedError)
+				} else {
+					require.NoError(t, err)
+				}
+				if tt.expectedOutput != "" {
+					assert.Equal(t, tt.expectedOutput, buf.String())
+				}
+			})
+		})
+	}
 }
