@@ -127,6 +127,9 @@ func configHome() string {
 // Execute executes the current command using DoitCmd.
 func Execute() {
 	if err := DoitCmd.Execute(); err != nil {
+		if !strings.Contains(err.Error(), "unknown command") {
+			fmt.Println(err)
+		}
 		os.Exit(-1)
 	}
 }
