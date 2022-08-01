@@ -242,9 +242,9 @@ func connectFromList(ctx context.Context, sls do.ServerlessService, list []do.Ou
 	return finishConnecting(sls, creds, ns.Label, out)
 }
 
-// ChoiceReader is the Reader for reading the user's response to the prompt to choose
+// connectChoiceReader is the bufio.Reader for reading the user's response to the prompt to choose
 // a namespace.  It can be replaced for testing.
-var ChoiceReader = os.Stdin
+var connectChoiceReader *bufio.Reader = bufio.NewReader(os.Stdin)
 
 // chooseFromList displays a list of namespaces (label, region, id) assigning each one a number.
 // The user can than respond to a prompt that chooses from the list by number.  The response 'x' is
@@ -253,10 +253,9 @@ func chooseFromList(list []do.OutputNamespace, out io.Writer) do.OutputNamespace
 	for i, ns := range list {
 		fmt.Fprintf(out, "%d: %s in %s, label=%s\n", i, ns.Namespace, ns.Region, ns.Label)
 	}
-	reader := bufio.NewReader(ChoiceReader)
 	for {
 		fmt.Fprintln(out, "Choose a namespace by number or 'x' to exit")
-		choice, err := reader.ReadString('\n')
+		choice, err := connectChoiceReader.ReadString('\n')
 		if err != nil {
 			continue
 		}
