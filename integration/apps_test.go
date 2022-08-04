@@ -150,12 +150,6 @@ f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         1970-01-01 00:00:0
 f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    1/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
 	testRegionsOutput = `Region    Label        Continent    Data Centers    Is Disabled?    Reason (if disabled)    Is Default?
 ams       Amsterdam    Europe       [ams3]          false                                   true`
-	testSpellingError = `Error: unknown command "apa" for "doctl"
-
-Did you mean this?
-	apps
-
-Run 'doctl --help' for usage.`
 )
 
 var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
@@ -316,14 +310,6 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 			expect.NoError(err)
 			expectedOutput := "Notice: App created\n" + testAppsOutput
 			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
-		})
-	})
-	when("the command is spelled incorrectly", func() {
-		it("spell checks once", func() {
-			cmd := exec.Command(builtBinaryPath, "apa")
-			output, err := cmd.CombinedOutput()
-			expect.Error(err)
-			expect.Equal(testSpellingError, strings.TrimSpace(string(output)))
 		})
 	})
 })
