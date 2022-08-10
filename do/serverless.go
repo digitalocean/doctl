@@ -31,6 +31,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/extract"
 	"github.com/digitalocean/godo"
+	"gopkg.in/yaml.v3"
 )
 
 // ServerlessCredentials models what is stored in credentials.json for use by the plugin and nim.
@@ -130,6 +131,80 @@ type Annotation struct {
 	Value interface{} `json:"value"`
 }
 
+// ServerlessProject ...
+type ServerlessProject struct {
+	ProjectPath string `json:project_path`
+	ConfigPath  string `json:config_path`
+}
+
+// ProjectSpec describes a project.yml spec
+// reference: https://docs.nimbella.com/configuration/
+type ProjectSpec struct {
+	TargetNamespace string                 `json:"targetNamespace,omitempty"`
+	CleanNamespace  bool                   `json:"cleanNamespace,omitempty"`
+	Bucket          *ProjectSpecBucket     `json:"bucket,omitempty"`
+	Parameters      map[string]interface{} `json:"parameters,omitempty"`
+	Environment     map[string]interface{} `json:"environment,omitempty"`
+	Packages        []*ProjectSpecPackage  `json:"packages,omitempty"`
+}
+
+// ProjectSpecBucket ...
+type ProjectSpecBucket struct {
+	PrefixPath     string `json:"prefixPath,omitempty"`
+	Strip          int    `json:"strip,omitempty"`
+	MainPageSuffix string `json:"mainPageSuffix,omitempty"`
+	NotFoundPage   string `json:"notFoundPage,omitempty"`
+	Clean          bool   `json:"clean,omitempty"`
+	UseCache       bool   `json:"useCache,omitempty"`
+	RemoteBuild    bool   `json:"remoteBuild,omitempty"`
+	LocalBuild     bool   `json:"localBuild,omitempty"`
+}
+
+// ProjectSpecPackage ...
+type ProjectSpecPackage struct {
+	Name        string                 `json:"name,omitempty"`
+	Shared      bool                   `json:"shared,omitempty"`
+	Clean       bool                   `json:"clean,omitempty"`
+	Environment map[string]interface{} `json:"environment,omitempty"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+	Annotations map[string]interface{} `json:"annotations,omitempty"`
+	Functions   []*ProjectSpecFunction `json:"functions,omitempty"`
+}
+
+// ProjectSpecFunction ...
+type ProjectSpecFunction struct {
+	Name    string `json:"name,omitempty"`
+	Package string `json:"package,omitempty"`
+	Clean   bool   `json:"clean,omitempty"`
+	Binary  bool   `json:"binary,omitempty"`
+	Main    string `json:"main,omitempty"`
+	Runtime string `json:"runtime,omitempty"`
+	// `web` can be either true or "raw". We use interface{} to support both types. If we start consuming the value we
+	// should probably define a custom type with proper validation.
+	Web         interface{}               `json:"web,omitempty"`
+	WebSecure   interface{}               `json:"webSecure,omitempty"`
+	Sequence    []string                  `json:"sequence,omitempty"`
+	Parameters  map[string]interface{}    `json:"parameters,omitempty"`
+	Environment map[string]interface{}    `json:"environment,omitempty"`
+	Annotations map[string]interface{}    `json:"annotations,omitempty"`
+	Limits      ProjectSpecFunctionLimits `json:"limits,omitempty"`
+}
+
+// ProjectSpecFunctionLimits ...
+// ref: https://github.com/apache/openwhisk-client-js/blob/1aba396e8a59afd5a90acb8157f2009746d7a714/lib/main.d.ts#L263-L268
+type ProjectSpecFunctionLimits struct {
+	Timeout     int `json:"timeout,omitempty"`
+	Memory      int `json:"memory,omitempty"`
+	Logs        int `json:"logs,omitempty"`
+	Concurrency int `json:"concurrency,omitempty"`
+}
+
+// ProjectMetadata describes the nim project:get-metadata output structure.
+type ProjectMetadata struct {
+	ProjectSpec
+	UnresolvedVariables []string `json:"unresolvedVariables,omitempty"`
+}
+
 // ServerlessService is an interface for interacting with the sandbox plugin,
 // with the namespaces service, and with the serverless cluster controller.
 type ServerlessService interface {
@@ -148,6 +223,8 @@ type ServerlessService interface {
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	GetConnectedAPIHost() (string, error)
+	ReadProject(ServerlessProject) (string, error)
+	WriteProject(ServerlessProject) (string, error)
 }
 
 type serverlessService struct {
@@ -175,6 +252,42 @@ const (
 
 	// CredentialsFile is the name of the file where the sandbox plugin stores OpenWhisk credentials.
 	CredentialsFile = "credentials.json"
+)
+
+const (
+	/*
+		The following are forbidden configurations for a serverless project.
+		Validation ensures these are the configurations are not set in the project.yml
+		Some of these configs can exist at multiple levels (i.e. Namespace, package, and action)
+	*/
+
+	// ForbiddenConfigCleanNamespace ...
+	ForbiddenConfigCleanNamespace = "cleanNamespace"
+	// ForbiddenConfigCleanPackage ...
+	ForbiddenConfigCleanPackage = "cleanPackage"
+	// ForbiddenConfigCleanAction ...
+	ForbiddenConfigCleanAction = "cleanAction"
+	// ForbiddenConfigBucket ...
+	ForbiddenConfigBucket = "bucket"
+	// ForbiddenConfigShared ...
+	ForbiddenConfigShared = "shared"
+	// ForbiddenConfigWebSecure ...
+	ForbiddenConfigWebSecure = "webSecure"
+	// ForbiddenConfigSequence ...
+	ForbiddenConfigSequence = "sequence"
+	// ForbiddenConfigProvideAPIKeyAnnotation ...
+	ForbiddenConfigProvideAPIKeyAnnotation = "provideAPIKeyAnnotation"
+	// ForbiddenConfigRequireWhiskAuthAnnotation ...
+	ForbiddenConfigRequireWhiskAuthAnnotation = "provideWhiskAuthAnnotation"
+
+	/*
+		These are values for forbidden annotations. Not all annotations are forbidden
+	*/
+
+	// ForbiddenAnnotationProvideAPIKey ...
+	ForbiddenAnnotationProvideAPIKey = "provide-api-key"
+	// ForbiddenAnnotationRequireWhiskAuth ...
+	ForbiddenAnnotationRequireWhiskAuth = "require-whisk-auth"
 )
 
 var _ ServerlessService = &serverlessService{}
@@ -589,6 +702,69 @@ func (s *serverlessService) GetConnectedAPIHost() (string, error) {
 	return s.owClient.Config.Host, nil
 }
 
+// ReadProject takes the path where projec lies and validates the project.yml.
+// once project.yml is validated it reads the directory for all the files and sub-directory
+// and returns the struct of the files
+func (s *serverlessService) ReadProject(project ServerlessProject) (string, error) {
+	// projectSpec
+	_, err := readProjectConfig(project.ConfigPath)
+	if err != nil {
+		return "", err
+	}
+
+	return "", nil
+}
+
+// WriteProject ...
+func (s *serverlessService) WriteProject(project ServerlessProject) (string, error) {
+	// TODO
+	return "", nil
+}
+
+func readProjectConfig(configPath string) (ProjectSpec, error) {
+	spec := ProjectSpec{}
+	// reading config file content
+	content, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		return spec, err
+	}
+
+	if strings.HasSuffix(configPath, ".json") {
+		// unmarshal project.json
+		err = json.Unmarshal([]byte(content), spec)
+		if err != nil {
+			return spec, err
+		}
+	} else {
+		// unmarshal project.yml
+		err = yaml.Unmarshal([]byte(content), spec)
+		if err != nil {
+			return spec, err
+		}
+	}
+
+	err = validateConfig(&spec)
+	if err != nil {
+		return spec, err
+	}
+
+	return spec, nil
+}
+
+func validateConfig(config *ProjectSpec) error {
+	forbiddenConfigs, err := ListForbiddenConfigs(config)
+
+	if err != nil {
+		return err
+	}
+
+	if len(forbiddenConfigs) > 0 {
+		return fmt.Errorf("project.yml contains forbidden fields")
+	}
+
+	return nil
+}
+
 // Assign the correct API host based on the namespace name.
 // Every serverless cluster has two domain names, one ending in '.io', the other in '.co'.
 // By convention, the portal only returns the '.io' one but 'doctl sbx' must start using
@@ -750,4 +926,117 @@ func PreserveCreds(leafDir string, stagingDir string, serverlessDir string) erro
 	}
 	moveLegacyTo := GetCredentialDirectory(leafDir, stagingDir)
 	return os.Rename(legacyCredPath, moveLegacyTo)
+}
+
+// ListForbiddenConfigs returns a list of forbidden config values in a project spec.
+func ListForbiddenConfigs(serverlessProject *ProjectSpec) ([]string, error) {
+	var forbiddenConfigs []string
+
+	// validate global forbidden configs
+	topLevelForbiddenConfigs, err := validateTopLevelFields(serverlessProject)
+	if err != nil {
+		return nil, fmt.Errorf("validating global serverless configs: %w", err)
+	}
+	forbiddenConfigs = append(forbiddenConfigs, topLevelForbiddenConfigs...)
+
+	// validate package-level configs
+	for _, p := range serverlessProject.Packages {
+		packageLevelForbiddenConfigs, err := validateProjectLevelFields(p)
+		if err != nil {
+			return nil, fmt.Errorf("validating package-level serverless configs: %w", err)
+		}
+		forbiddenConfigs = append(forbiddenConfigs, packageLevelForbiddenConfigs...)
+
+		//validate function-level forbidden configs
+		for _, a := range p.Functions {
+			actionLevelForbiddenConfigs, err := validateFunctionLevelFields(a)
+			if err != nil {
+				return nil, fmt.Errorf("validating package-level serverless configs: %w", err)
+			}
+			forbiddenConfigs = append(forbiddenConfigs, actionLevelForbiddenConfigs...)
+		}
+	}
+	return forbiddenConfigs, nil
+}
+
+// ListInvalidWebsecureValues returns a list of forbidden websecure values for an action in a project spec.
+// a valid websecure value is any string other than "true"
+func ListInvalidWebsecureValues(serverlessProject *ProjectSpec) ([]string, error) {
+	var invalidValues = []string{}
+
+	for _, p := range serverlessProject.Packages {
+		for _, f := range p.Functions {
+			switch value := f.WebSecure.(type) {
+			case string:
+				if strings.ToLower(value) == "true" { /* "true" is not a valid value */
+					invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, f.Package, value))
+				}
+				// any other value is fine
+			default: // bool or any other type
+				/* "web-action" must be a string */
+				invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, f.Package, value))
+			}
+		}
+	}
+
+	return invalidValues, nil
+}
+
+// validateTopLevelFields validates global forbidden configs
+func validateTopLevelFields(serverlessProject *ProjectSpec) ([]string, error) {
+	var forbiddenConfigs []string
+
+	if serverlessProject.CleanNamespace {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigCleanNamespace)
+	}
+
+	if serverlessProject.Bucket != nil {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigBucket)
+
+	}
+	return forbiddenConfigs, nil
+}
+
+// validate project-level forbidden configs
+func validateProjectLevelFields(serverlessPackage *ProjectSpecPackage) ([]string, error) {
+	var forbiddenConfigs []string
+
+	if serverlessPackage.Shared {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigShared)
+	}
+	if serverlessPackage.Clean {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigCleanPackage)
+	}
+
+	if _, ok := serverlessPackage.Annotations[ForbiddenAnnotationProvideAPIKey]; ok {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenAnnotationProvideAPIKey)
+	}
+
+	if _, ok := serverlessPackage.Annotations[ForbiddenAnnotationRequireWhiskAuth]; ok {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenAnnotationRequireWhiskAuth)
+	}
+
+	return forbiddenConfigs, nil
+}
+
+// validate project-level forbidden configs
+func validateFunctionLevelFields(serverlessAction *ProjectSpecFunction) ([]string, error) {
+	var forbiddenConfigs []string
+
+	if serverlessAction.Clean {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigCleanAction)
+	}
+	if serverlessAction.Sequence != nil {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigSequence)
+	}
+
+	if _, ok := serverlessAction.Annotations[ForbiddenAnnotationProvideAPIKey]; ok {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenAnnotationProvideAPIKey)
+	}
+
+	if _, ok := serverlessAction.Annotations[ForbiddenAnnotationRequireWhiskAuth]; ok {
+		forbiddenConfigs = append(forbiddenConfigs, ForbiddenAnnotationRequireWhiskAuth)
+	}
+
+	return forbiddenConfigs, nil
 }
