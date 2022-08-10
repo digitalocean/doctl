@@ -7,7 +7,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.81.0
+	github.com/digitalocean/godo v1.83.0
 	github.com/docker/cli v20.10.17+incompatible
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200531234253-77e06fda0c94+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect

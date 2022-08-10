@@ -19,6 +19,10 @@ import (
 	"github.com/digitalocean/doctl/do"
 )
 
+var (
+	dbEngines = []string{"mongodb", "pg", "mysql", "redis"}
+)
+
 type Databases struct {
 	Databases do.Databases
 	Short     bool
@@ -297,6 +301,75 @@ func (dr *DatabaseReplicas) KV() []map[string]interface{} {
 		out = append(out, o)
 	}
 
+	return out
+}
+
+type DatabaseOptions struct {
+	DatabaseOptions do.DatabaseOptions
+}
+
+var _ Displayable = &DatabaseOptions{}
+
+func (do *DatabaseOptions) JSON(out io.Writer) error {
+	return writeJSON(do.DatabaseOptions, out)
+}
+
+func (do *DatabaseOptions) Cols() []string {
+	return []string{
+		"Engine",
+	}
+}
+
+func (do *DatabaseOptions) ColMap() map[string]string {
+	return map[string]string{
+		"Engine": "Engine",
+	}
+}
+
+func (do *DatabaseOptions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dbEngines))
+	for _, eng := range dbEngines {
+		o := map[string]interface{}{
+			"Engine": eng,
+		}
+		out = append(out, o)
+	}
+	return out
+}
+
+type KeyValues struct {
+	KeyValues do.KeyValues
+}
+
+var _ Displayable = &KeyValues{}
+
+func (dkv *KeyValues) JSON(out io.Writer) error {
+	return writeJSON(dkv.KeyValues, out)
+}
+
+func (dkv *KeyValues) Cols() []string {
+	return []string{
+		dkv.KeyValues.KeyDescription,
+		dkv.KeyValues.ValueDescription,
+	}
+}
+
+func (dkv *KeyValues) ColMap() map[string]string {
+	return map[string]string{
+		dkv.KeyValues.KeyDescription:   dkv.KeyValues.KeyDescription,
+		dkv.KeyValues.ValueDescription: dkv.KeyValues.ValueDescription,
+	}
+}
+
+func (dkv *KeyValues) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dbEngines))
+	for _, p := range dkv.KeyValues.Pairs {
+		o := map[string]interface{}{
+			dkv.KeyValues.KeyDescription:   p.Key,
+			dkv.KeyValues.ValueDescription: p.Value,
+		}
+		out = append(out, o)
+	}
 	return out
 }
 

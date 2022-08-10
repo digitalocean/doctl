@@ -145,6 +145,10 @@ var (
 		godo.SQLModeNoTableOptions,
 	}
 
+	testDBEngineOptions = &do.DatabaseOptions{
+		DatabaseOptions: &godo.DatabaseOptions{},
+	}
+
 	errTest = errors.New("error")
 )
 
@@ -222,6 +226,17 @@ func TestDatabaseReplicaCommand(t *testing.T) {
 		"create",
 		"delete",
 		"connection",
+	)
+}
+
+func TestDatabaseOptionsCommand(t *testing.T) {
+	cmd := databaseOptions()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd,
+		"engines",
+		"regions",
+		"slugs",
+		"versions",
 	)
 }
 
@@ -1000,5 +1015,21 @@ func TestDatabaseSetSQLModes(t *testing.T) {
 			err := RunDatabaseSetSQLModes(config)
 			assert.Error(t, err)
 		})
+	})
+}
+
+func TestDatabaseListOptions(t *testing.T) {
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().ListOptions().Return(testDBEngineOptions, nil)
+		err := RunDatabaseEngineOptions(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().ListOptions().Return(nil, errTest)
+		err := RunDatabaseEngineOptions(config)
+		assert.EqualError(t, err, errTest.Error())
 	})
 }
