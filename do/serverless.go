@@ -493,7 +493,22 @@ func (s *serverlessService) ListNamespaces(ctx context.Context) (NamespaceListRe
 	if err != nil {
 		return NamespaceListResponse{}, err
 	}
-	return *decoded, nil
+	return removeAppNamespaces(*decoded), nil
+}
+
+// removeAppNamespaces modifies a NamespaceListResponse to exclude namespaces prefixed by ap-.
+// Those are supposed to be managed by App Platform and should not be available to doctl serverless
+// for connection or modification of any kind.  This is intended to be temporary because the filtering
+// really should be done within the API.
+func removeAppNamespaces(input NamespaceListResponse) NamespaceListResponse {
+	newList := []OutputNamespace{}
+	for _, ns := range input.Namespaces {
+		if strings.HasPrefix(ns.Namespace, "ap-") {
+			continue
+		}
+		newList = append(newList, ns)
+	}
+	return NamespaceListResponse{Namespaces: newList}
 }
 
 // GetNamespace obtains the credentials of a specific namespace, given its name
