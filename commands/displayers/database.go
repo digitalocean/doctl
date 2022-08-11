@@ -327,8 +327,22 @@ func (do *DatabaseOptions) ColMap() map[string]string {
 }
 
 func (do *DatabaseOptions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dbEngines))
-	for _, eng := range dbEngines {
+	engines := make([]string, 0)
+	if &do.DatabaseOptions.MongoDBOptions != nil {
+		engines = append(engines, "mongodb")
+	}
+	if &do.DatabaseOptions.RedisOptions != nil {
+		engines = append(engines, "redis")
+	}
+	if &do.DatabaseOptions.MySQLOptions != nil {
+		engines = append(engines, "mysql")
+	}
+	if &do.DatabaseOptions.PostgresSQLOptions != nil {
+		engines = append(engines, "pg")
+	}
+
+	out := make([]map[string]interface{}, 0, len(engines))
+	for _, eng := range engines {
 		o := map[string]interface{}{
 			"Engine": eng,
 		}
