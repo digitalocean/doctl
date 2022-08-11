@@ -16,7 +16,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -693,25 +692,14 @@ func displayDatabaseRegionOptions(c *CmdConfig, regions map[string][]string) err
 	item := &displayers.DatabaseRegionOptions{RegionMap: regions}
 	return c.Display(item)
 }
+
 func displayDatabaseVersionOptions(c *CmdConfig, regions map[string][]string) error {
 	item := &displayers.DatabaseRegionOptions{RegionMap: regions}
 	return c.Display(item)
 }
 
-func displayDatabaseKeyValues(c *CmdConfig, in map[string][]string, keyName string, valName string) error {
-	pairs := make([]do.KeyValue, 0)
-	for k, v := range in {
-		for _, r := range v {
-			kv := do.KeyValue{Key: k, Value: r}
-			pairs = append(pairs, kv)
-		}
-	}
-
-	item := &displayers.KeyValues{KeyValues: do.KeyValues{
-		Pairs:            pairs,
-		KeyDescription:   keyName,
-		ValueDescription: valName,
-	}}
+func displayDatabaseLayoutOptions(c *CmdConfig, layouts []godo.DatabaseLayout) error {
+	item := &displayers.DatabaseLayoutOptions{Layouts: layouts}
 	return c.Display(item)
 }
 
@@ -785,7 +773,6 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		return err
 	}
 
-	slugs := make(map[string][]string, 0)
 	layouts := make([]godo.DatabaseLayout, 0)
 	switch engine {
 	case "mongodb":
@@ -797,11 +784,8 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 	case "redis":
 		layouts = options.RedisOptions.Layouts
 	}
-	for _, layout := range layouts {
-		slugs[strconv.Itoa(layout.NodeNum)] = append(slugs[strconv.Itoa(layout.NodeNum)], layout.Sizes...)
-	}
 
-	return displayDatabaseKeyValues(c, slugs, "NodeNum", "Slug")
+	return displayDatabaseLayoutOptions(c, layouts)
 }
 
 func databasePool() *Command {

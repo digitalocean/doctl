@@ -14,6 +14,7 @@ limitations under the License.
 package displayers
 
 import (
+	"github.com/digitalocean/godo"
 	"io"
 
 	"github.com/digitalocean/doctl/do"
@@ -427,38 +428,40 @@ func (dbv *DatabaseVersionOptions) KV() []map[string]interface{} {
 	return out
 }
 
-type KeyValues struct {
-	KeyValues do.KeyValues
+type DatabaseLayoutOptions struct {
+	Layouts []godo.DatabaseLayout
 }
 
-var _ Displayable = &KeyValues{}
+var _ Displayable = &DatabaseLayoutOptions{}
 
-func (dkv *KeyValues) JSON(out io.Writer) error {
-	return writeJSON(dkv.KeyValues, out)
+func (dbl *DatabaseLayoutOptions) JSON(out io.Writer) error {
+	return writeJSON(dbl.Layouts, out)
 }
 
-func (dkv *KeyValues) Cols() []string {
+func (dbl *DatabaseLayoutOptions) Cols() []string {
 	return []string{
-		dkv.KeyValues.KeyDescription,
-		dkv.KeyValues.ValueDescription,
+		"NodeNum",
+		"Slug",
 	}
 }
 
-func (dkv *KeyValues) ColMap() map[string]string {
+func (dbl *DatabaseLayoutOptions) ColMap() map[string]string {
 	return map[string]string{
-		dkv.KeyValues.KeyDescription:   dkv.KeyValues.KeyDescription,
-		dkv.KeyValues.ValueDescription: dkv.KeyValues.ValueDescription,
+		"NodeNum": "NodeNum",
+		"Slug":    "Slug",
 	}
 }
 
-func (dkv *KeyValues) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dbEngines))
-	for _, p := range dkv.KeyValues.Pairs {
-		o := map[string]interface{}{
-			dkv.KeyValues.KeyDescription:   p.Key,
-			dkv.KeyValues.ValueDescription: p.Value,
+func (dbl *DatabaseLayoutOptions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0)
+	for _, l := range dbl.Layouts {
+		for _, s := range l.Sizes {
+			o := map[string]interface{}{
+				"NodeNum": l.NodeNum,
+				"Slug":    s,
+			}
+			out = append(out, o)
 		}
-		out = append(out, o)
 	}
 	return out
 }
