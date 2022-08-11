@@ -689,7 +689,11 @@ func displayDatabaseEngineOptions(c *CmdConfig, options *do.DatabaseOptions) err
 	return c.Display(item)
 }
 
-func displayDatabaseRegionsOptions(c *CmdConfig, regions map[string][]string) error {
+func displayDatabaseRegionOptions(c *CmdConfig, regions map[string][]string) error {
+	item := &displayers.DatabaseRegionOptions{RegionMap: regions}
+	return c.Display(item)
+}
+func displayDatabaseVersionOptions(c *CmdConfig, regions map[string][]string) error {
 	item := &displayers.DatabaseRegionOptions{RegionMap: regions}
 	return c.Display(item)
 }
@@ -737,15 +741,12 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["redis"] = options.RedisOptions.Regions
 	}
 
-	return displayDatabaseRegionsOptions(c, regions)
+	return displayDatabaseRegionOptions(c, regions)
 }
 
 // RunDatabaseVersionOptions retrieves a list of the available versions for a given database engine
 func RunDatabaseVersionOptions(c *CmdConfig) error {
-	engine, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
-	if err != nil {
-		engine = ""
-	}
+	engine, _ := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
 
 	options, err := c.Databases().ListOptions()
 	if err != nil {
@@ -769,7 +770,7 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["redis"] = options.RedisOptions.Versions
 	}
 
-	return displayDatabaseKeyValues(c, versions, "Engine", "Version")
+	return displayDatabaseVersionOptions(c, versions)
 }
 
 // RunDatabaseSlugOptions retrieves a list of the available slugs for a given database engine

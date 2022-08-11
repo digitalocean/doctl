@@ -378,10 +378,48 @@ func (dbr *DatabaseRegionOptions) ColMap() map[string]string {
 func (dbr *DatabaseRegionOptions) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0)
 	for eng, regions := range dbr.RegionMap {
-		for _, region := range regions {
+		for _, r := range regions {
 			o := map[string]interface{}{
 				"Engine": eng,
-				"Region": region,
+				"Region": r,
+			}
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
+type DatabaseVersionOptions struct {
+	VersionMap map[string][]string
+}
+
+var _ Displayable = &DatabaseVersionOptions{}
+
+func (dbv *DatabaseVersionOptions) JSON(out io.Writer) error {
+	return writeJSON(dbv.VersionMap, out)
+}
+
+func (dbv *DatabaseVersionOptions) Cols() []string {
+	return []string{
+		"Engine",
+		"Version",
+	}
+}
+
+func (dbv *DatabaseVersionOptions) ColMap() map[string]string {
+	return map[string]string{
+		"Engine":  "Engine",
+		"Version": "Version",
+	}
+}
+
+func (dbv *DatabaseVersionOptions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0)
+	for eng, versions := range dbv.VersionMap {
+		for _, v := range versions {
+			o := map[string]interface{}{
+				"Engine":   eng,
+				"Versions": v,
 			}
 			out = append(out, o)
 		}
