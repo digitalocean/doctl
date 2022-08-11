@@ -166,6 +166,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"firewalls",
 		"backups",
 		"replica",
+		"options",
 		"maintenance-window",
 		"user",
 		"pool",

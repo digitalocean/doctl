@@ -17,6 +17,8 @@ import (
 	"io"
 
 	"github.com/digitalocean/doctl/do"
+
+	"github.com/digitalocean/godo"
 )
 
 type Databases struct {
@@ -424,7 +426,7 @@ func (dbv *DatabaseVersionOptions) KV() []map[string]interface{} {
 }
 
 type DatabaseLayoutOptions struct {
-	Layouts []do.DatabaseLayout
+	Layouts []godo.DatabaseLayout
 }
 
 var _ Displayable = &DatabaseLayoutOptions{}
