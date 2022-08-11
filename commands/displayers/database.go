@@ -14,9 +14,11 @@ limitations under the License.
 package displayers
 
 import (
-	"io"
-
 	"github.com/digitalocean/doctl/do"
+	"io"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/digitalocean/godo"
 )
@@ -361,28 +363,32 @@ func (dbr *DatabaseRegionOptions) JSON(out io.Writer) error {
 
 func (dbr *DatabaseRegionOptions) Cols() []string {
 	return []string{
-		"Engine",
 		"Region",
+		"Engines",
 	}
 }
 
 func (dbr *DatabaseRegionOptions) ColMap() map[string]string {
 	return map[string]string{
-		"Engine": "Engine",
-		"Region": "Region",
+		"Engines": "Engines",
+		"Region":  "Region",
 	}
 }
 
 func (dbr *DatabaseRegionOptions) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0)
+	regionEngineMap := make(map[string][]string, 0)
 	for eng, regions := range dbr.RegionMap {
 		for _, r := range regions {
-			o := map[string]interface{}{
-				"Engine": eng,
-				"Region": r,
-			}
-			out = append(out, o)
+			regionEngineMap[r] = append(regionEngineMap[r], eng)
 		}
+	}
+	for r, engines := range regionEngineMap {
+		o := map[string]interface{}{
+			"Region":  r,
+			"Engines": "[" + strings.Join(engines, ",") + "]",
+		}
+		out = append(out, o)
 	}
 	return out
 }
@@ -400,27 +406,25 @@ func (dbv *DatabaseVersionOptions) JSON(out io.Writer) error {
 func (dbv *DatabaseVersionOptions) Cols() []string {
 	return []string{
 		"Engine",
-		"Version",
+		"Versions",
 	}
 }
 
 func (dbv *DatabaseVersionOptions) ColMap() map[string]string {
 	return map[string]string{
-		"Engine":  "Engine",
-		"Version": "Version",
+		"Engine":   "Engine",
+		"Versions": "Versions",
 	}
 }
 
 func (dbv *DatabaseVersionOptions) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0)
 	for eng, versions := range dbv.VersionMap {
-		for _, v := range versions {
-			o := map[string]interface{}{
-				"Engine":   eng,
-				"Versions": v,
-			}
-			out = append(out, o)
+		o := map[string]interface{}{
+			"Engine":   eng,
+			"Versions": "[" + strings.Join(versions, ",") + "]",
 		}
+		out = append(out, o)
 	}
 	return out
 }
@@ -437,28 +441,39 @@ func (dbl *DatabaseLayoutOptions) JSON(out io.Writer) error {
 
 func (dbl *DatabaseLayoutOptions) Cols() []string {
 	return []string{
-		"NodeNum",
 		"Slug",
+		"NodeNums",
 	}
 }
 
 func (dbl *DatabaseLayoutOptions) ColMap() map[string]string {
 	return map[string]string{
-		"NodeNum": "NodeNum",
-		"Slug":    "Slug",
+		"Slug":     "Slug",
+		"NodeNums": "NodeNums",
 	}
 }
 
 func (dbl *DatabaseLayoutOptions) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0)
-	for _, l := range dbl.Layouts {
-		for _, s := range l.Sizes {
-			o := map[string]interface{}{
-				"NodeNum": l.NodeNum,
-				"Slug":    s,
-			}
-			out = append(out, o)
+	slugNodeMap := make(map[string][]string, 0)
+	for _, layout := range dbl.Layouts {
+		for _, s := range layout.Sizes {
+			slugNodeMap[s] = append(slugNodeMap[s], strconv.Itoa(layout.NodeNum))
 		}
+	}
+	keys := make([]string, 0)
+	for k, _ := range slugNodeMap {
+		keys = append(keys, k)
+	}
+	// sort keys to have deterministic ordering
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		o := map[string]interface{}{
+			"Slug":     k,
+			"NodeNums": "[" + strings.Join(slugNodeMap[k], ",") + "]",
+		}
+		out = append(out, o)
 	}
 	return out
 }

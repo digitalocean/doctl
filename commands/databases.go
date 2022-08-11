@@ -693,8 +693,8 @@ func displayDatabaseRegionOptions(c *CmdConfig, regions map[string][]string) err
 	return c.Display(item)
 }
 
-func displayDatabaseVersionOptions(c *CmdConfig, regions map[string][]string) error {
-	item := &displayers.DatabaseRegionOptions{RegionMap: regions}
+func displayDatabaseVersionOptions(c *CmdConfig, versions map[string][]string) error {
+	item := &displayers.DatabaseVersionOptions{VersionMap: versions}
 	return c.Display(item)
 }
 
