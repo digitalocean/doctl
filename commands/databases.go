@@ -45,7 +45,7 @@ func Databases() *Command {
 			Use:     "databases",
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
-			Long:    "The commands under `doctl databases` are for managing your database services.",
+			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, PostgreSQL, and MongoDB database services.",
 		},
 	}
 
@@ -53,12 +53,12 @@ func Databases() *Command {
 
 - The database ID, in UUID format
 - The name you gave the database cluster
-- The database engine (e.g. ` + "`" + `redis` + "`" + `, ` + "`" + `pg` + "`" + `, ` + "`" + `mysql` + "`" + `, ` + "`" + `mongodb` + "`" + `)
-- The engine version (e.g. ` + "`" + `11` + "`" + ` for PostgreSQL version 11)
+- The database engine (e.g. ` + "`redis`, `pg`, `mysql` , or `mongodb`" + `)
+- The engine version (e.g. ` + "`14`" + ` for PostgreSQL version 14)
 - The number of nodes in the database cluster
-- The region the database cluster resides in (e.g. ` + "`" + `sfo2` + "`" + `, ` + "`" + `nyc1` + "`" + `)
-- The current status of the database cluster (e.g. ` + "`" + `online` + "`" + `)
-- The size of the machine running the database instance (e.g. ` + "`" + `db-s-1vcpu-1gb` + "`" + `)`
+- The region the database cluster resides in (e.g. ` + "`sfo2`, " + "`nyc1`" + `)
+- The current status of the database cluster (e.g. ` + "`online`" + `)
+- The size of the machine running the database instance (e.g. ` + "`db-s-1vcpu-1gb`" + `)`
 
 	CmdBuilder(cmd, RunDatabaseList, "list", "List your database clusters", `This command lists the database clusters associated with your account. The following details are provided:`+clusterDetails, Writer, aliasOpt("ls"), displayerType(&displayers.Databases{}))
 	CmdBuilder(cmd, RunDatabaseGet, "get <database-id>", "Get details for a database cluster", `This command retrieves the following details about the specified database cluster: `+clusterDetails+`
@@ -74,8 +74,8 @@ There are a number of flags that customize the configuration, all of which are o
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseNumNodes, "", defaultDatabaseNodeCount, nodeNumberDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The region where the database cluster will be created, e.g. `nyc1` or `sfo2`")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql` for MySQL, `redis` for Redis, and `mongodb` for MongoDB.")
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 11 for PostgreSQL version 11")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, and `mongodb`.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
@@ -107,7 +107,7 @@ The list contains the size in GB, and the date and time the backup was taken.`, 
 You must specify the desired number of nodes and size of the nodes. For example:
 
 	doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb
-			
+
 Database nodes cannot be resized to smaller sizes due to the risk of data loss.`, Writer,
 		aliasOpt("rs"))
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
@@ -1374,14 +1374,14 @@ This command requires the ID of a database cluster, which you can retrieve by ca
 	databaseFirewallUpdateDetails := `
 Use this command to replace the firewall rules of a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
 
-	doctl databases list 
-	
+	doctl databases list
+
 This command also requires a --rule flag. You can pass in multiple --rule flags. Each rule passed in to the --rule flag must be of format type:value
 	- "type" is the type of resource that the firewall rule allows to access the database cluster. The possible values for type are:  "droplet", "k8s", "ip_addr", "tag", or "app"
 	- "value" is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster
 
 For example:
-	
+
 	doctl databases firewalls replace d1234-1c12-1234-b123-12345c4789 --rule tag:backend --rule ip_addr:0.0.0.0
 
 	or
