@@ -14,14 +14,9 @@ limitations under the License.
 package displayers
 
 import (
-	"github.com/digitalocean/godo"
 	"io"
 
 	"github.com/digitalocean/doctl/do"
-)
-
-var (
-	dbEngines = []string{"mongodb", "pg", "mysql", "redis"}
 )
 
 type Databases struct {
@@ -429,7 +424,7 @@ func (dbv *DatabaseVersionOptions) KV() []map[string]interface{} {
 }
 
 type DatabaseLayoutOptions struct {
-	Layouts []godo.DatabaseLayout
+	Layouts []do.DatabaseLayout
 }
 
 var _ Displayable = &DatabaseLayoutOptions{}

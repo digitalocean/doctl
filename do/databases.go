@@ -91,15 +91,9 @@ type DatabaseOptions struct {
 	*godo.DatabaseOptions
 }
 
-type KeyValues struct {
-	Pairs            []KeyValue
-	KeyDescription   string
-	ValueDescription string
-}
-
-type KeyValue struct {
-	Key   string
-	Value string
+// DatabaseLayout is a wrapper for
+type DatabaseLayout struct {
+	*godo.DatabaseLayout
 }
 
 // DatabasesService is an interface for interacting with DigitalOcean's Database API
