@@ -351,6 +351,44 @@ func (do *DatabaseOptions) KV() []map[string]interface{} {
 	return out
 }
 
+type DatabaseRegionOptions struct {
+	RegionMap map[string][]string
+}
+
+var _ Displayable = &DatabaseRegionOptions{}
+
+func (dbr *DatabaseRegionOptions) JSON(out io.Writer) error {
+	return writeJSON(dbr.RegionMap, out)
+}
+
+func (dbr *DatabaseRegionOptions) Cols() []string {
+	return []string{
+		"Engine",
+		"Region",
+	}
+}
+
+func (dbr *DatabaseRegionOptions) ColMap() map[string]string {
+	return map[string]string{
+		"Engine": "Engine",
+		"Region": "Region",
+	}
+}
+
+func (dbr *DatabaseRegionOptions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0)
+	for eng, regions := range dbr.RegionMap {
+		for _, region := range regions {
+			o := map[string]interface{}{
+				"Engine": eng,
+				"Region": region,
+			}
+			out = append(out, o)
+		}
+	}
+	return out
+}
+
 type KeyValues struct {
 	KeyValues do.KeyValues
 }

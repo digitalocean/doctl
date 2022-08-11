@@ -689,6 +689,11 @@ func displayDatabaseEngineOptions(c *CmdConfig, options *do.DatabaseOptions) err
 	return c.Display(item)
 }
 
+func displayDatabaseRegionsOptions(c *CmdConfig, regions map[string][]string) error {
+	item := &displayers.DatabaseRegionOptions{RegionMap: regions}
+	return c.Display(item)
+}
+
 func displayDatabaseKeyValues(c *CmdConfig, in map[string][]string, keyName string, valName string) error {
 	pairs := make([]do.KeyValue, 0)
 	for k, v := range in {
@@ -708,9 +713,7 @@ func displayDatabaseKeyValues(c *CmdConfig, in map[string][]string, keyName stri
 
 // RunDatabaseRegionOptions retrieves a list of the available regions for a given database engine
 func RunDatabaseRegionOptions(c *CmdConfig) error {
-	engine, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
-	if err != nil {
-	}
+	engine, _ := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
 
 	options, err := c.Databases().ListOptions()
 	if err != nil {
@@ -734,7 +737,7 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["redis"] = options.RedisOptions.Regions
 	}
 
-	return displayDatabaseKeyValues(c, regions, "Engine", "Region")
+	return displayDatabaseRegionsOptions(c, regions)
 }
 
 // RunDatabaseVersionOptions retrieves a list of the available versions for a given database engine
