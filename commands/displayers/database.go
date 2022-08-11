@@ -14,12 +14,12 @@ limitations under the License.
 package displayers
 
 import (
-	"github.com/digitalocean/doctl/do"
 	"io"
 	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 )
 
