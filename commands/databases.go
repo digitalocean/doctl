@@ -124,6 +124,7 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 	cmd.AddCommand(databasePool())
 	cmd.AddCommand(sqlMode())
 	cmd.AddCommand(databaseFirewalls())
+	cmd.AddCommand(databaseOptions())
 
 	return cmd
 }
@@ -626,6 +627,165 @@ func RunDatabaseUserDelete(c *CmdConfig) error {
 func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
 	item := &displayers.DatabaseUsers{DatabaseUsers: users}
 	return c.Display(item)
+}
+
+func databaseOptions() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "options",
+			Aliases: []string{"o"},
+			Short:   `Display available database options (regions, version, layouts, etc.) for all available database engines`,
+			Long:    `The subcommands under ` + "`" + `doctl databases options` + "`" + ` enable the navigation of available options under each database engine`,
+		},
+	}
+	databaseOptionEngines := `
+This command lists the available database engines:
+
+- The key of the database engine. Possible values are: "pg" for PostgreSQL, "mysql"" for MySQL, "redis"" for Redis, and "mongodb" for MongoDB
+`
+	databaseOptionRegions := `
+- The region of the database engine.
+`
+	databaseOptionVersions := `
+- The version of the database engine.
+`
+	databaseOptionSlugs := `
+- The slug of the database engine. These are prefixed with "db" for basic nodes, "gd" for general purpose nodes, "sol" for storage optimized nodes, and "m" for memory optimized nodes
+`
+	CmdBuilder(cmd, RunDatabaseEngineOptions, "engines", "Retrieves a list of the available database engines", databaseOptionEngines,
+		Writer, aliasOpt("eng"))
+
+	cmdRegionOptions := CmdBuilder(cmd, RunDatabaseRegionOptions, "regions", "Retrieves a list of the available regions for a given database engine", databaseOptionEngines+databaseOptionRegions,
+		Writer, aliasOpt("r"))
+	AddStringFlag(cmdRegionOptions, doctl.ArgDatabaseEngine, "",
+		"", "The database engine")
+
+	cmdVersionOptions := CmdBuilder(cmd, RunDatabaseVersionOptions, "versions", "Retrieves a list of the available versions for a given database engine", databaseOptionEngines+databaseOptionVersions,
+		Writer, aliasOpt("v"))
+	AddStringFlag(cmdVersionOptions, doctl.ArgDatabaseEngine, "",
+		"", "The database engine")
+
+	cmdSlugOptions := CmdBuilder(cmd, RunDatabaseSlugOptions, "slugs", "Retrieves a list of the available slugs for a given database engine", databaseOptionEngines+databaseOptionSlugs,
+		Writer, aliasOpt("s"))
+	AddStringFlag(cmdSlugOptions, doctl.ArgDatabaseEngine, "",
+		"", "The database engine", requiredOpt())
+
+	return cmd
+}
+
+// RunDatabaseEngineOptions retrieves a list of the available database engines
+func RunDatabaseEngineOptions(c *CmdConfig) error {
+	options, err := c.Databases().ListOptions()
+	if err != nil {
+		return err
+	}
+
+	return displayDatabaseEngineOptions(c, options)
+}
+
+func displayDatabaseEngineOptions(c *CmdConfig, options *do.DatabaseOptions) error {
+	item := &displayers.DatabaseOptions{DatabaseOptions: *options}
+	return c.Display(item)
+}
+
+func displayDatabaseRegionOptions(c *CmdConfig, regions map[string][]string) error {
+	item := &displayers.DatabaseRegionOptions{RegionMap: regions}
+	return c.Display(item)
+}
+
+func displayDatabaseVersionOptions(c *CmdConfig, versions map[string][]string) error {
+	item := &displayers.DatabaseVersionOptions{VersionMap: versions}
+	return c.Display(item)
+}
+
+func displayDatabaseLayoutOptions(c *CmdConfig, layouts []godo.DatabaseLayout) error {
+	item := &displayers.DatabaseLayoutOptions{Layouts: layouts}
+	return c.Display(item)
+}
+
+// RunDatabaseRegionOptions retrieves a list of the available regions for a given database engine
+func RunDatabaseRegionOptions(c *CmdConfig) error {
+	engine, _ := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+
+	options, err := c.Databases().ListOptions()
+	if err != nil {
+		return err
+	}
+
+	regions := make(map[string][]string, 0)
+	switch engine {
+	case "mongodb":
+		regions["mongodb"] = options.MongoDBOptions.Regions
+	case "mysql":
+		regions["mysql"] = options.MySQLOptions.Regions
+	case "pg":
+		regions["pg"] = options.PostgresSQLOptions.Regions
+	case "redis":
+		regions["redis"] = options.RedisOptions.Regions
+	case "":
+		regions["mongodb"] = options.MongoDBOptions.Regions
+		regions["mysql"] = options.MySQLOptions.Regions
+		regions["pg"] = options.PostgresSQLOptions.Regions
+		regions["redis"] = options.RedisOptions.Regions
+	}
+
+	return displayDatabaseRegionOptions(c, regions)
+}
+
+// RunDatabaseVersionOptions retrieves a list of the available versions for a given database engine
+func RunDatabaseVersionOptions(c *CmdConfig) error {
+	engine, _ := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+
+	options, err := c.Databases().ListOptions()
+	if err != nil {
+		return err
+	}
+
+	versions := make(map[string][]string, 0)
+	switch engine {
+	case "mongodb":
+		versions["mongodb"] = options.MongoDBOptions.Versions
+	case "mysql":
+		versions["mysql"] = options.MySQLOptions.Versions
+	case "pg":
+		versions["pg"] = options.PostgresSQLOptions.Versions
+	case "redis":
+		versions["redis"] = options.RedisOptions.Versions
+	case "":
+		versions["mongodb"] = options.MongoDBOptions.Versions
+		versions["mysql"] = options.MySQLOptions.Versions
+		versions["pg"] = options.PostgresSQLOptions.Versions
+		versions["redis"] = options.RedisOptions.Versions
+	}
+
+	return displayDatabaseVersionOptions(c, versions)
+}
+
+// RunDatabaseSlugOptions retrieves a list of the available slugs for a given database engine
+func RunDatabaseSlugOptions(c *CmdConfig) error {
+	engine, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+	if err != nil {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	options, err := c.Databases().ListOptions()
+	if err != nil {
+		return err
+	}
+
+	layouts := make([]godo.DatabaseLayout, 0)
+	switch engine {
+	case "mongodb":
+		layouts = options.MongoDBOptions.Layouts
+	case "mysql":
+		layouts = options.MySQLOptions.Layouts
+	case "pg":
+		layouts = options.PostgresSQLOptions.Layouts
+	case "redis":
+		layouts = options.RedisOptions.Layouts
+	}
+
+	return displayDatabaseLayoutOptions(c, layouts)
 }
 
 func databasePool() *Command {
