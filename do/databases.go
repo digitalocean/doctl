@@ -86,6 +86,16 @@ type DatabaseFirewallRule struct {
 // DatabaseFirewallRules is a slice of DatabaseFirewallRule
 type DatabaseFirewallRules []DatabaseFirewallRule
 
+// DatabaseOptions is a wrapper for
+type DatabaseOptions struct {
+	*godo.DatabaseOptions
+}
+
+// DatabaseLayout is a wrapper for
+type DatabaseLayout struct {
+	*godo.DatabaseLayout
+}
+
 // DatabasesService is an interface for interacting with DigitalOcean's Database API
 type DatabasesService interface {
 	List() (Databases, error)
@@ -127,6 +137,8 @@ type DatabasesService interface {
 
 	GetFirewallRules(string) (DatabaseFirewallRules, error)
 	UpdateFirewallRules(databaseID string, req *godo.DatabaseUpdateFirewallRulesRequest) error
+
+	ListOptions() (*DatabaseOptions, error)
 }
 
 type databasesService struct {
@@ -531,4 +543,13 @@ func (ds *databasesService) UpdateFirewallRules(databaseID string, req *godo.Dat
 	_, err := ds.client.Databases.UpdateFirewallRules(context.TODO(), databaseID, req)
 
 	return err
+}
+
+func (ds *databasesService) ListOptions() (*DatabaseOptions, error) {
+	options, _, err := ds.client.Databases.ListOptions(context.TODO())
+
+	if err != nil {
+		return nil, err
+	}
+	return &DatabaseOptions{DatabaseOptions: options}, nil
 }

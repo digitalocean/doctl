@@ -18,6 +18,20 @@ type MockDatabasesService struct {
 	recorder *MockDatabasesServiceMockRecorder
 }
 
+func (m *MockDatabasesService) ListOptions() (*do.DatabaseOptions, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOptions")
+	ret0, _ := ret[0].(*do.DatabaseOptions)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListOptions indicates an expected call of ListOptions.
+func (mr *MockDatabasesServiceMockRecorder) ListOptions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOptions", reflect.TypeOf((*MockDatabasesService)(nil).ListOptions))
+}
+
 // MockDatabasesServiceMockRecorder is the mock recorder for MockDatabasesService.
 type MockDatabasesServiceMockRecorder struct {
 	mock *MockDatabasesService
