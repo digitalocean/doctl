@@ -230,6 +230,21 @@ func (mr *MockServerlessServiceMockRecorder) ReadCredentials() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadCredentials", reflect.TypeOf((*MockServerlessService)(nil).ReadCredentials))
 }
 
+// ReadProject mocks base method.
+func (m *MockServerlessService) ReadProject(arg0 do.ServerlessProject) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadProject", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadProject indicates an expected call of ReadProject.
+func (mr *MockServerlessServiceMockRecorder) ReadProject(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadProject", reflect.TypeOf((*MockServerlessService)(nil).ReadProject), arg0)
+}
+
 // Stream mocks base method.
 func (m *MockServerlessService) Stream(arg0 *exec.Cmd) error {
 	m.ctrl.T.Helper()
@@ -256,4 +271,19 @@ func (m *MockServerlessService) WriteCredentials(arg0 do.ServerlessCredentials) 
 func (mr *MockServerlessServiceMockRecorder) WriteCredentials(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteCredentials", reflect.TypeOf((*MockServerlessService)(nil).WriteCredentials), arg0)
+}
+
+// WriteProject mocks base method.
+func (m *MockServerlessService) WriteProject(arg0 do.ServerlessProject) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteProject", arg0)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WriteProject indicates an expected call of WriteProject.
+func (mr *MockServerlessServiceMockRecorder) WriteProject(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteProject", reflect.TypeOf((*MockServerlessService)(nil).WriteProject), arg0)
 }
