@@ -133,38 +133,22 @@ type Annotation struct {
 
 // ServerlessProject ...
 type ServerlessProject struct {
-	ProjectPath string `json:project_path`
-	ConfigPath  string `json:config_path`
+	ProjectPath string `json:"project_path"`
+	ConfigPath  string `json:"config_path"`
 }
 
 // ProjectSpec describes a project.yml spec
 // reference: https://docs.nimbella.com/configuration/
 type ProjectSpec struct {
-	TargetNamespace string                 `json:"targetNamespace,omitempty"`
-	CleanNamespace  bool                   `json:"cleanNamespace,omitempty"`
-	Bucket          *ProjectSpecBucket     `json:"bucket,omitempty"`
-	Parameters      map[string]interface{} `json:"parameters,omitempty"`
-	Environment     map[string]interface{} `json:"environment,omitempty"`
-	Packages        []*ProjectSpecPackage  `json:"packages,omitempty"`
-}
-
-// ProjectSpecBucket ...
-type ProjectSpecBucket struct {
-	PrefixPath     string `json:"prefixPath,omitempty"`
-	Strip          int    `json:"strip,omitempty"`
-	MainPageSuffix string `json:"mainPageSuffix,omitempty"`
-	NotFoundPage   string `json:"notFoundPage,omitempty"`
-	Clean          bool   `json:"clean,omitempty"`
-	UseCache       bool   `json:"useCache,omitempty"`
-	RemoteBuild    bool   `json:"remoteBuild,omitempty"`
-	LocalBuild     bool   `json:"localBuild,omitempty"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+	Environment map[string]interface{} `json:"environment,omitempty"`
+	Packages    []*ProjectSpecPackage  `json:"packages,omitempty"`
 }
 
 // ProjectSpecPackage ...
 type ProjectSpecPackage struct {
 	Name        string                 `json:"name,omitempty"`
 	Shared      bool                   `json:"shared,omitempty"`
-	Clean       bool                   `json:"clean,omitempty"`
 	Environment map[string]interface{} `json:"environment,omitempty"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 	Annotations map[string]interface{} `json:"annotations,omitempty"`
@@ -175,7 +159,6 @@ type ProjectSpecPackage struct {
 type ProjectSpecFunction struct {
 	Name    string `json:"name,omitempty"`
 	Package string `json:"package,omitempty"`
-	Clean   bool   `json:"clean,omitempty"`
 	Binary  bool   `json:"binary,omitempty"`
 	Main    string `json:"main,omitempty"`
 	Runtime string `json:"runtime,omitempty"`
@@ -261,14 +244,6 @@ const (
 		Some of these configs can exist at multiple levels (i.e. Namespace, package, and action)
 	*/
 
-	// ForbiddenConfigCleanNamespace ...
-	ForbiddenConfigCleanNamespace = "cleanNamespace"
-	// ForbiddenConfigCleanPackage ...
-	ForbiddenConfigCleanPackage = "cleanPackage"
-	// ForbiddenConfigCleanAction ...
-	ForbiddenConfigCleanAction = "cleanAction"
-	// ForbiddenConfigBucket ...
-	ForbiddenConfigBucket = "bucket"
 	// ForbiddenConfigShared ...
 	ForbiddenConfigShared = "shared"
 	// ForbiddenConfigWebSecure ...
@@ -294,13 +269,13 @@ var _ ServerlessService = &serverlessService{}
 
 var (
 	// ErrServerlessNotInstalled is the error returned to users when the sandbox is not installed.
-	ErrServerlessNotInstalled = errors.New("Serverless support is not installed (use `doctl serverless install`)")
+	ErrServerlessNotInstalled = errors.New("serverless support is not installed (use `doctl serverless install`)")
 
 	// ErrServerlessNeedsUpgrade is the error returned to users when the sandbox is at too low a version
-	ErrServerlessNeedsUpgrade = errors.New("Serverless support needs to be upgraded (use `doctl serverless upgrade`)")
+	ErrServerlessNeedsUpgrade = errors.New("serverless support needs to be upgraded (use `doctl serverless upgrade`)")
 
 	// ErrServerlessNotConnected is the error returned to users when the sandbox is not connected to a namespace
-	ErrServerlessNotConnected = errors.New("Serverless support is installed but not connected to a functions namespace (use `doctl serverless connect`)")
+	ErrServerlessNotConnected = errors.New("serverless support is installed but not connected to a functions namespace (use `doctl serverless connect`)")
 )
 
 // ServerlessOutput contains the output returned from calls to the sandbox plugin.
@@ -731,13 +706,13 @@ func readProjectConfig(configPath string) (ProjectSpec, error) {
 
 	if strings.HasSuffix(configPath, ".json") {
 		// unmarshal project.json
-		err = json.Unmarshal([]byte(content), spec)
+		err = json.Unmarshal([]byte(content), &spec)
 		if err != nil {
 			return spec, err
 		}
 	} else {
 		// unmarshal project.yml
-		err = yaml.Unmarshal([]byte(content), spec)
+		err = yaml.Unmarshal([]byte(content), &spec)
 		if err != nil {
 			return spec, err
 		}
@@ -889,7 +864,7 @@ func download(URL, targetFile string) error {
 	defer response.Body.Close()
 
 	if response.StatusCode != 200 {
-		return fmt.Errorf("Received status code %d attempting to download from %s",
+		return fmt.Errorf("received status code %d attempting to download from %s",
 			response.StatusCode, URL)
 	}
 	file, err := os.Create(targetFile)
@@ -931,13 +906,6 @@ func PreserveCreds(leafDir string, stagingDir string, serverlessDir string) erro
 // ListForbiddenConfigs returns a list of forbidden config values in a project spec.
 func ListForbiddenConfigs(serverlessProject *ProjectSpec) ([]string, error) {
 	var forbiddenConfigs []string
-
-	// validate global forbidden configs
-	topLevelForbiddenConfigs, err := validateTopLevelFields(serverlessProject)
-	if err != nil {
-		return nil, fmt.Errorf("validating global serverless configs: %w", err)
-	}
-	forbiddenConfigs = append(forbiddenConfigs, topLevelForbiddenConfigs...)
 
 	// validate package-level configs
 	for _, p := range serverlessProject.Packages {
@@ -982,30 +950,12 @@ func ListInvalidWebsecureValues(serverlessProject *ProjectSpec) ([]string, error
 	return invalidValues, nil
 }
 
-// validateTopLevelFields validates global forbidden configs
-func validateTopLevelFields(serverlessProject *ProjectSpec) ([]string, error) {
-	var forbiddenConfigs []string
-
-	if serverlessProject.CleanNamespace {
-		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigCleanNamespace)
-	}
-
-	if serverlessProject.Bucket != nil {
-		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigBucket)
-
-	}
-	return forbiddenConfigs, nil
-}
-
 // validate project-level forbidden configs
 func validateProjectLevelFields(serverlessPackage *ProjectSpecPackage) ([]string, error) {
 	var forbiddenConfigs []string
 
 	if serverlessPackage.Shared {
 		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigShared)
-	}
-	if serverlessPackage.Clean {
-		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigCleanPackage)
 	}
 
 	if _, ok := serverlessPackage.Annotations[ForbiddenAnnotationProvideAPIKey]; ok {
@@ -1023,9 +973,6 @@ func validateProjectLevelFields(serverlessPackage *ProjectSpecPackage) ([]string
 func validateFunctionLevelFields(serverlessAction *ProjectSpecFunction) ([]string, error) {
 	var forbiddenConfigs []string
 
-	if serverlessAction.Clean {
-		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigCleanAction)
-	}
 	if serverlessAction.Sequence != nil {
 		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigSequence)
 	}
