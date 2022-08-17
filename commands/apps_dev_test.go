@@ -32,6 +32,7 @@ func TestRunAppsDevBuild(t *testing.T) {
 			config.Args = append(config.Args, component)
 			config.Doit.Set(config.NS, doctl.ArgAppSpec, specFile)
 			config.Doit.Set(config.NS, doctl.ArgRegistryName, registryName)
+			config.Doit.Set(config.NS, doctl.ArgInteractive, false)
 
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
 			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
@@ -53,6 +54,7 @@ func TestRunAppsDevBuild(t *testing.T) {
 			config.Args = append(config.Args, component)
 			config.Doit.Set(config.NS, doctl.ArgApp, appID)
 			config.Doit.Set(config.NS, doctl.ArgRegistryName, registryName)
+			config.Doit.Set(config.NS, doctl.ArgInteractive, false)
 
 			err := RunAppsDevBuild(config)
 			require.NoError(t, err)
