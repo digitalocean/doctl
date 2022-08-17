@@ -809,7 +809,7 @@ Connection pools can be created and deleted with these commands, or you can simp
 
 	connectionPoolDetails := `
 
-- The username of the database user account that the connection pool uses
+- The database user that the connection pool uses. When excluded, all connections to the database use the inbound user.
 - The name of the connection pool
 - The size of the connection pool, i.e. the number of connections that will be allocated
 - The database within the cluster for which the connection pool is used
@@ -850,7 +850,7 @@ We recommend starting with a pool size of about half your available connections 
 	AddIntFlag(cmdDatabasePoolCreate, doctl.ArgSizeSlug, "", 0, "pool size",
 		requiredOpt())
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolUserName, "", "",
-		"The username for the database user", requiredOpt())
+		"The username for the database user")
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolDBName, "", "",
 		"The name of the specific database within the database cluster", requiredOpt())
 
