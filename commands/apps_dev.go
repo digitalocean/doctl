@@ -269,18 +269,21 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
-	pager := newLogPager(context.Background())
-	pager.title = "Building " + component
-	go func() {
-		_ = pager.Start()
-		pager.content.WriteTo(os.Stdout)
-	}()
+	logWriter := os.Stdout
+	if Interactive {
+		pager := newLogPager(context.Background())
+		pager.title = "Building " + component
+		go func() {
+			_ = pager.Start()
+			pager.content.WriteTo(os.Stdout)
+		}()
+	}
 
 	builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, spec, builder.NewBuilderOpts{
 		Component: component,
 		Registry:  registryName,
 		Envs:      envs,
-		LogWriter: pager,
+		LogWriter: logWriter,
 	})
 	if err != nil {
 		return err
