@@ -28,14 +28,18 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/blang/semver"
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
+	"github.com/docker/docker/client"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
+
+	"github.com/digitalocean/doctl/internal/apps/builder"
 )
 
 const (
@@ -173,6 +177,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient(trace bool, accessToken string) (*godo.Client, error)
+	GetContainerEngineClient() (builder.ContainerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
 	Set(ns, key string, val interface{})
@@ -184,6 +189,7 @@ type Config interface {
 	GetIntPtr(ns, key string) (*int, error)
 	GetStringSlice(ns, key string) ([]string, error)
 	GetStringMapString(ns, key string) (map[string]string, error)
+	GetDuration(ns, key string) (time.Duration, error)
 }
 
 // LiveConfig is an implementation of Config for live values.
@@ -227,6 +233,15 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 	}
 
 	return godo.New(oauthClient, args...)
+}
+
+// GetContainerEngineClient returns a container engine client.
+func (c *LiveConfig) GetContainerEngineClient() (builder.ContainerEngineClient, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return nil, err
+	}
+	return cli, nil
 }
 
 func userAgent() string {
@@ -375,6 +390,11 @@ func (c *LiveConfig) GetStringMapString(ns, key string) (map[string]string, erro
 	return vals, nil
 }
 
+// GetDuration returns a config value as a duration.
+func (c *LiveConfig) GetDuration(ns, key string) (time.Duration, error) {
+	return viper.GetDuration(nskey(ns, key)), nil
+}
+
 func nskey(ns, key string) string {
 	return fmt.Sprintf("%s.%s", ns, key)
 }
@@ -385,10 +405,11 @@ func isRequired(key string) bool {
 
 // TestConfig is an implementation of Config for testing.
 type TestConfig struct {
-	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	ListenFn func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
-	v        *viper.Viper
-	IsSetMap map[string]bool
+	SSHFn                 func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	ListenFn              func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
+	v                     *viper.Viper
+	IsSetMap              map[string]bool
+	ContainerEngineClient builder.ContainerEngineClient
 }
 
 var _ Config = &TestConfig{}
@@ -411,6 +432,12 @@ func NewTestConfig() *TestConfig {
 // be nil.
 func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client, error) {
 	return &godo.Client{}, nil
+}
+
+// GetContainerEngineClient mocks a GetContainerEngineClient call. The returned client will
+// be nil unless configured in the test config.
+func (c *TestConfig) GetContainerEngineClient() (builder.ContainerEngineClient, error) {
+	return c.ContainerEngineClient, nil
 }
 
 // SSH returns a mock SSH runner.
@@ -492,6 +519,13 @@ func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
 	}
 	val := c.v.GetBool(nskey)
 	return &val, nil
+}
+
+// GetDuration returns the duration value for the key in the given namespace. Because
+// this is a mock implementation, and error will never be returned.
+func (c *TestConfig) GetDuration(ns, key string) (time.Duration, error) {
+	nskey := fmt.Sprintf("%s-%s", ns, key)
+	return c.v.GetDuration(nskey), nil
 }
 
 // This is needed because an empty StringSlice flag returns `"[]"`

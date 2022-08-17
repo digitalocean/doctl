@@ -1,0 +1,126 @@
+package builder
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"sort"
+	"time"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/pkg/stdcopy"
+)
+
+const (
+	// CNBBuilderImage represents the local cnb builder.
+	CNBBuilderImage = "digitaloceanapps/cnb-local-builder:dev"
+)
+
+// CNBComponentBuilder represents a CNB builder
+type CNBComponentBuilder struct {
+	baseComponentBuilder
+}
+
+// Build attempts to build the requested component using the CNB Builder.
+func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderResult, err error) {
+	if b.component == nil {
+		return res, errors.New("no component was provided for the build")
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return res, err
+	}
+
+	buildContainer, err := b.cli.ContainerCreate(ctx, &container.Config{
+		Image:        CNBBuilderImage,
+		Entrypoint:   []string{"sh", "-c", "sleep infinity"},
+		AttachStdout: true,
+		AttachStderr: true,
+	}, &container.HostConfig{
+		Mounts: []mount.Mount{
+			{
+				Type:   mount.TypeBind,
+				Source: "/var/run/docker.sock",
+				Target: "/var/run/docker.sock",
+			},
+			{
+				Type:   mount.TypeBind,
+				Source: cwd,
+				Target: "/workspace",
+			},
+		},
+	}, nil, nil, "")
+	if err != nil {
+		return res, err
+	}
+	defer func() {
+		err = b.cli.ContainerRemove(ctx, buildContainer.ID, types.ContainerRemoveOptions{
+			Force: true,
+		})
+	}()
+
+	start := time.Now()
+	if err := b.cli.ContainerStart(ctx, buildContainer.ID, types.ContainerStartOptions{}); err != nil {
+		return res, err
+	}
+
+	execRes, err := b.cli.ContainerExecCreate(ctx, buildContainer.ID, types.ExecConfig{
+		AttachStderr: true,
+		AttachStdout: true,
+		Env:          b.cnbEnv(),
+		Cmd:          []string{"sh", "-c", "/.app_platform/build.sh"},
+	})
+	if err != nil {
+		return res, err
+	}
+
+	attachRes, err := b.cli.ContainerExecAttach(ctx, execRes.ID, types.ExecStartCheck{})
+	if err != nil {
+		return res, err
+	}
+	defer attachRes.Close()
+
+	// read the output
+	outputDone := make(chan error)
+
+	go func() {
+		// StdCopy demultiplexes the stream into two buffers
+		_, err := stdcopy.StdCopy(b.logWriter, b.logWriter, attachRes.Reader)
+		outputDone <- err
+	}()
+
+	select {
+	case err := <-outputDone:
+		if err != nil {
+			return res, err
+		}
+	case <-ctx.Done():
+		return res, ctx.Err()
+	}
+
+	execInspectRes, err := b.cli.ContainerExecInspect(ctx, execRes.ID)
+	if err != nil {
+		return res, err
+	}
+
+	res.Image = fmt.Sprintf("%s/%s:dev", b.registry, b.component.GetName())
+	res.BuildDuration = time.Since(start)
+	res.ExitCode = execInspectRes.ExitCode
+	return res, nil
+}
+
+func (b *CNBComponentBuilder) cnbEnv() []string {
+	args := getBuildArgs(b.spec, b.component, b.envOverrides)
+	envs := []string{}
+	for k, v := range args {
+		// NOTE(ntate) getBuildArgs already preprends _APP
+		envs = append(envs, k+"="+*v)
+	}
+	envs = append(envs, "APP_IMAGE_URL="+b.ImageOutputName())
+	sort.Strings(envs)
+	return envs
+}
