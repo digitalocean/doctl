@@ -1,6 +1,8 @@
 package charm
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+)
 
 // TextBox
 type TextBox struct {
@@ -20,5 +22,10 @@ func NewTextBox() TextBox {
 
 func (t TextBox) Success() TextBox {
 	t.style.BorderForeground(Colors.Success)
+	return t
+}
+
+func (t TextBox) Error() TextBox {
+	t.style.BorderForeground(Colors.Error)
 	return t
 }

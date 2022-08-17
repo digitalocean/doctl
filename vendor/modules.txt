@@ -33,6 +33,9 @@ github.com/Microsoft/hcsshim/osversion
 ## explicit; go 1.15
 github.com/apache/openwhisk-client-go/whisk
 github.com/apache/openwhisk-client-go/wski18n
+# github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
+## explicit
+github.com/armon/circbuf
 # github.com/atotto/clipboard v0.1.4
 ## explicit
 github.com/atotto/clipboard

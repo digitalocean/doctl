@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/digitalocean/godo"
@@ -39,8 +39,16 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		return res, errors.New("no component was provided for the build")
 	}
 
+	buildContext := filepath.Clean(b.component.GetSourceDir())
+	buildContext, err := filepath.Rel(".", buildContext)
+	if err != nil {
+		return res, err
+	}
+	// TODO Dockerfile must be relative to the source dir.
+	// Make it relative and if it's outside the source dir add it to the archive.
+	// ref: https://github.com/docker/cli/blob/9400e3dbe8ebd0bede3ab7023f744a8d7f4397d2/cli/command/image/build.go#L280-L286
 	start := time.Now()
-	tar, err := archive.TarWithOptions(".", &archive.TarOptions{})
+	tar, err := archive.TarWithOptions(buildContext, &archive.TarOptions{})
 	if err != nil {
 		return res, err
 	}
@@ -58,7 +66,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		return res, err
 	}
 	defer dockerRes.Body.Close()
-	print(dockerRes.Body, b.logWriter)
+	print(dockerRes.Body, b.getLogWriter())
 	res.Image = b.ImageOutputName()
 	res.BuildDuration = time.Since(start)
 	res.ExitCode = 0
@@ -117,13 +125,8 @@ type dockerBuildOut struct {
 }
 
 // TODO(ntate); clean this up and make it nice
-func print(rd io.Reader, w io.WriteCloser) error {
+func print(rd io.Reader, w io.Writer) error {
 	var lastLine string
-	if w == nil {
-		w = os.Stdout
-	}
-	defer w.Close()
-
 	scanner := bufio.NewScanner(rd)
 	for scanner.Scan() {
 		lastLine = scanner.Text()
