@@ -17,6 +17,11 @@ type Style struct {
 	style lipgloss.Style
 }
 
+// NewStyle creates a new styled component.
+func NewStyle(style lipgloss.Style) Style {
+	return Style{style.Copy()}
+}
+
 // Lipgloss returns a copy of the underlying lipgloss.Style.
 func (s Style) Lipgloss() lipgloss.Style {
 	return s.style.Copy()
@@ -62,7 +67,7 @@ func (s Style) S(str any) string {
 
 // Printf formats the specified text with the style applied and prints it to stdout.
 func (s Style) Printf(format string, a ...any) (int, error) {
-	return fmt.Fprintln(os.Stdout, s.Sprintf(format, a...))
+	return fmt.Fprint(os.Stdout, s.Sprintf(format, a...))
 }
 
 // Write implements the io.Writer interface and prints to stdout.

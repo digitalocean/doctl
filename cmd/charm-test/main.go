@@ -17,7 +17,7 @@ func main() {
 		charm.TextSuccess.WithString("woo!"), charm.TextSuccess.S("woo 2!"),
 	)
 
-	if err := charm.TemplatePrint(heredoc.Doc(`
+	if err := charm.TemplatePrintE(heredoc.Doc(`
 		--- template ---
 		This is an example template.
 
