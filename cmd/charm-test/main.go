@@ -54,7 +54,7 @@ func main() {
 		charm.TextWarning.S(dur.Truncate(time.Second).String()),
 	)
 
-	if err := charm.TemplateBuffered(charm.NewTextBox().Success(), heredoc.Doc(`
+	if err := charm.TemplateBufferedE(charm.NewTextBox().Success(), heredoc.Doc(`
 		{{ success checkmark }} Successfully built {{ success  .img }} in {{ warning (duration .dur) }}`,
 	), map[string]any{
 		"img": img,
@@ -62,4 +62,11 @@ func main() {
 	}); err != nil {
 		panic(err)
 	}
+
+	charm.TemplateBuffered(charm.NewTextBox().Success(), heredoc.Doc(`
+		{{ success checkmark }} Successfully built {{ success  .img }} in {{ warning (duration .dur) }}`,
+	), map[string]any{
+		"img": img,
+		"dur": dur,
+	})
 }

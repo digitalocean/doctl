@@ -298,16 +298,14 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// 	charm.TextSuccess.S(res.BuildDuration.Truncate(time.Second).String()),
 	// )
 
-	if err := charm.TemplateBuffered(
+	charm.TemplateBuffered(
 		charm.NewTextBox().Success(),
 		`{{ success checkmark }} Successfully built {{ success .img }} in {{ warning (duration .dur) }}`,
 		map[string]any{
 			"img": res.Image,
 			"dur": res.BuildDuration,
 		},
-	); err != nil {
-		return err
-	}
+	)
 	return nil
 }
 

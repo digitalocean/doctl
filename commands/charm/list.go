@@ -2,13 +2,14 @@ package charm
 
 import (
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 var (
 	// ListDefaultStyle is the default list style.
-	ListDefaultStyle = Style{lipgloss.NewStyle().Margin(1, 2)}
+	ListDefaultStyle = Style{lipgloss.NewStyle().Margin(1, 1)}
 )
 
 // List is a component used to select an item from a list.
@@ -31,8 +32,12 @@ func NewList(items []list.Item) *List {
 	// TODO: accept an optional sample item for the height
 	delegate.SetHeight(3)
 
+	model := list.New(items, delegate, 0, 0)
+	model.Paginator.Type = paginator.Arabic
+	model.Paginator.ArabicFormat = "page %d of %d"
+
 	return &List{
-		model: list.New(items, delegate, 0, 0),
+		model: model,
 		Style: ListDefaultStyle,
 	}
 }

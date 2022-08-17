@@ -62,8 +62,8 @@ func Template(w io.Writer, content string, data any) error {
 	return tmpl.Execute(w, data)
 }
 
-// TemplateBuffered executes a template and writes the result to the given writer once.
-func TemplateBuffered(w io.Writer, content string, data any) error {
+// TemplateBufferedE executes a template and writes the result to the given writer once.
+func TemplateBufferedE(w io.Writer, content string, data any) error {
 	var buf bytes.Buffer
 	err := Template(&buf, content, data)
 	if err != nil {
@@ -73,14 +73,32 @@ func TemplateBuffered(w io.Writer, content string, data any) error {
 	return err
 }
 
-// TemplateString executes a template and returns it as a string.
-func TemplateString(content string, data any) (string, error) {
+// TemplateBuffered executes a template and writes the result to the given writer once. If an error occurs, it is written
+// to the writer instead.
+func TemplateBuffered(w io.Writer, content string, data any) {
+	err := TemplateBufferedE(w, content, data)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+	}
+}
+
+// TemplateStringE executes a template and returns it as a string.
+func TemplateStringE(content string, data any) (string, error) {
 	var buf bytes.Buffer
 	err := Template(&buf, content, data)
 	if err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// TemplateString executes a template and returns it as a string. If an error occurs, the error text is returned instead.
+func TemplateString(content string, data any) string {
+	res, err := TemplateStringE(content, data)
+	if err != nil {
+		return err.Error()
+	}
+	return res
 }
 
 // TemplatePrint executes a template and prints it directly to stdout.
