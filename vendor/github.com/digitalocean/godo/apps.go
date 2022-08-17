@@ -2,8 +2,10 @@ package godo
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -441,4 +443,216 @@ func (s *AppsServiceOp) Detect(ctx context.Context, detect *DetectRequest) (*Det
 		return nil, resp, err
 	}
 	return res, resp, nil
+}
+
+// AppComponentType is an app component type.
+type AppComponentType string
+
+const (
+	// AppComponentTypeService is the type for a service component.
+	AppComponentTypeService AppComponentType = "service"
+	// AppComponentTypeWorker is the type for a worker component.
+	AppComponentTypeWorker AppComponentType = "worker"
+	// AppComponentTypeJob is the type for a job component.
+	AppComponentTypeJob AppComponentType = "job"
+	// AppComponentTypeStaticSite is the type for a static site component.
+	AppComponentTypeStaticSite AppComponentType = "static_site"
+	// AppComponentTypeDatabase is the type for a database component.
+	AppComponentTypeDatabase AppComponentType = "database"
+	// AppComponentTypeFunctions is the type for a functions component.
+	AppComponentTypeFunctions AppComponentType = "functions"
+)
+
+// GetType returns the Service component type.
+func (s *AppServiceSpec) GetType() AppComponentType {
+	return AppComponentTypeService
+}
+
+// GetType returns the Worker component type.
+func (s *AppWorkerSpec) GetType() AppComponentType {
+	return AppComponentTypeWorker
+}
+
+// GetType returns the Job component type.
+func (s *AppJobSpec) GetType() AppComponentType {
+	return AppComponentTypeJob
+}
+
+// GetType returns the StaticSite component type.
+func (s *AppStaticSiteSpec) GetType() AppComponentType {
+	return AppComponentTypeStaticSite
+}
+
+// GetType returns the Database component type.
+func (s *AppDatabaseSpec) GetType() AppComponentType {
+	return AppComponentTypeDatabase
+}
+
+// GetType returns the Functions component type.
+func (s *AppFunctionsSpec) GetType() AppComponentType {
+	return AppComponentTypeFunctions
+}
+
+// GetKey returns the canonical representation of a github source.
+func (s *GitHubSourceSpec) GetKey() string {
+	return fmt.Sprintf("github/%s/%s", strings.ToLower(s.GetRepo()), s.GetBranch())
+}
+
+// GetKey returns the canonical representation of a github source.
+func (s *GitLabSourceSpec) GetKey() string {
+	return fmt.Sprintf("gitlab/%s/%s", strings.ToLower(s.GetRepo()), s.GetBranch())
+}
+
+// GetKey is the canonical representation of a git source.
+func (s *GitSourceSpec) GetKey() string {
+	repoCloneURL := strings.ToLower(s.GetRepoCloneURL())
+	return fmt.Sprintf("git/%s/%s", repoCloneURL, s.GetBranch())
+}
+
+// GetKey is the canonical representation of an image source.
+func (s *ImageSourceSpec) GetKey() string {
+	// Docker + OCI registry + repo names are required to be lower-case so no CI compare is needed.
+	key := fmt.Sprintf("image/%s", s.GetRegistryType())
+	if s.GetRegistry() != "" {
+		key = fmt.Sprintf("%s/%s", key, s.GetRegistry())
+	}
+	key = fmt.Sprintf("%s/%s", key, s.GetRepository())
+	if s.GetTag() != "" {
+		key = fmt.Sprintf("%s:%s", key, s.GetTag())
+	}
+	return key
+}
+
+// AppComponentSpec represents a component's spec.
+type AppComponentSpec interface {
+	GetName() string
+	GetType() AppComponentType
+}
+
+// AppBuildableComponentSpec is a component that needs to be built.
+type AppBuildableComponentSpec interface {
+	AppComponentSpec
+
+	GetGit() *GitSourceSpec
+	GetGitHub() *GitHubSourceSpec
+	GetGitLab() *GitLabSourceSpec
+
+	GetSourceDir() string
+	GetDockerfilePath() string
+	GetBuildCommand() string
+	GetEnvironmentSlug() string
+
+	GetEnvs() []*AppVariableDefinition
+}
+
+// AppContainerComponentSpec is a component that runs in a cluster.
+type AppContainerComponentSpec interface {
+	AppBuildableComponentSpec
+
+	GetImage() *ImageSourceSpec
+
+	GetRunCommand() string
+
+	GetInstanceSizeSlug() string
+	GetInstanceCount() int64
+}
+
+// AppRoutableComponentSpec is a component that defines routes.
+type AppRoutableComponentSpec interface {
+	AppComponentSpec
+
+	GetRoutes() []*AppRouteSpec
+	GetCORS() *AppCORSPolicy
+}
+
+// SourceSpec represents a source.
+type SourceSpec interface {
+	GetKey() string
+}
+
+// VCSSourceSpec represents a VCS source.
+type VCSSourceSpec interface {
+	SourceSpec
+	GetRepo() string
+	GetBranch() string
+}
+
+// AppLoggableComponentSpec represents a component that can have log destinations.
+type AppLoggableComponentSpec interface {
+	GetLogDestinations() []*AppLogDestinationSpec
+}
+
+// ForEachAppComponentSpec iterates over each component spec in an app.
+func (s *AppSpec) ForEachAppComponentSpec(fn func(component AppComponentSpec) error) error {
+	if s == nil {
+		return nil
+	}
+	for _, c := range s.Services {
+		if err := fn(c); err != nil {
+			return err
+		}
+	}
+	for _, c := range s.Workers {
+		if err := fn(c); err != nil {
+			return err
+		}
+	}
+	for _, c := range s.Jobs {
+		if err := fn(c); err != nil {
+			return err
+		}
+	}
+	for _, c := range s.StaticSites {
+		if err := fn(c); err != nil {
+			return err
+		}
+	}
+	for _, c := range s.Databases {
+		if err := fn(c); err != nil {
+			return err
+		}
+	}
+	for _, c := range s.Functions {
+		if err := fn(c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ForEachAppSpecComponent loops over each component spec that matches the provided interface type.
+func ForEachAppSpecComponent[T any](s *AppSpec, fn func(component T) error) error {
+	return s.ForEachAppComponentSpec(func(component AppComponentSpec) error {
+		if c, ok := component.(T); ok {
+			if err := fn(c); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// GetAppSpecComponent returns an app spec component by type and name.
+// The ComponentSpec type can be used for no restriction on component type.
+func GetAppSpecComponent[T interface {
+	GetName() string
+}](s *AppSpec, name string) (T, error) {
+	var c T
+	errStop := errors.New("stop")
+	err := ForEachAppSpecComponent(s, func(component T) error {
+		if component.GetName() == name {
+			c = component
+			return errStop
+		}
+		return nil
+	})
+	if err == errStop {
+		return c, nil
+	}
+	return c, fmt.Errorf("component %s not found", name)
+}
+
+// GetRepo allows GitSourceSpec to implement the SourceSpec interface.
+func (s *GitSourceSpec) GetRepo() string {
+	return s.RepoCloneURL
 }
