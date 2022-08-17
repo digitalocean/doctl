@@ -27,6 +27,7 @@ func TestAppsCommand(t *testing.T) {
 		"list",
 		"update",
 		"delete",
+		"dev",
 		"create-deployment",
 		"get-deployment",
 		"list-deployments",

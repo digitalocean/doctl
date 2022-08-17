@@ -19,9 +19,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -53,6 +55,8 @@ var (
 	Trace bool
 	//Verbose toggle verbose output on and off
 	Verbose bool
+	//Interactive toggle interactive behavior
+	Interactive bool
 
 	requiredColor = color.New(color.Bold).SprintfFunc()
 )
@@ -83,6 +87,14 @@ func init() {
 
 	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "Show a log of network activity while performing a command")
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "Enable verbose output")
+
+	interactive := isTerminal(os.Stdout) && isTerminal(os.Stderr)
+	interactiveHelpText := "Enable interactive behavior. Defaults to true if the terminal supports it"
+	if !interactive {
+		// this is automatically added if interactive == true
+		interactiveHelpText += " (default false)"
+	}
+	rootPFlagSet.BoolVarP(&Interactive, doctl.ArgInteractive, "", interactive, interactiveHelpText)
 
 	addCommands()
 
@@ -261,6 +273,17 @@ func AddStringMapStringFlag(cmd *Command, name, shorthand string, def map[string
 	}
 }
 
+// AddDurationFlag adds a duration flag to a command.
+func AddDurationFlag(cmd *Command, name, shorthand string, def time.Duration, desc string, opts ...flagOpt) {
+	fn := flagName(cmd, name)
+	cmd.Flags().DurationP(name, shorthand, def, desc)
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
+}
+
 func flagName(cmd *Command, name string) string {
 	if cmd.Parent() != nil {
 		return fmt.Sprintf("%s.%s.%s", cmd.Parent().Name(), cmd.Name(), name)
@@ -273,4 +296,8 @@ func cmdNS(cmd *cobra.Command) string {
 		return fmt.Sprintf("%s.%s", cmd.Parent().Name(), cmd.Name())
 	}
 	return fmt.Sprintf("%s", cmd.Name())
+}
+
+func isTerminal(f *os.File) bool {
+	return isatty.IsTerminal(f.Fd()) || isatty.IsCygwinTerminal(f.Fd())
 }
