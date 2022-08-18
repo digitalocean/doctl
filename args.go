@@ -42,8 +42,8 @@ const (
 	ArgAppLogType = "type"
 	// ArgAppDeployment is the deployment ID.
 	ArgAppDeployment = "deployment"
-	// ArgAppDevLinkConfig is the path to the app dev link config.
-	ArgAppDevLinkConfig = "link-config"
+	// ArgAppDevConfig is the path to the app dev link config.
+	ArgAppDevConfig = "appdev-config"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.
