@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/MakeNowJust/heredoc"
@@ -19,10 +18,10 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
+	// AppsDevDefaultSpecPath is the default spec path for an app.
 	AppsDevDefaultSpecPath = ".do/app.yaml"
 )
 
@@ -33,9 +32,11 @@ func AppsDev() *Command {
 			Use:     "dev",
 			Aliases: []string{},
 			Short:   "Display commands for working with app platform local development.",
-			Long:    "...",
+			Long:    `Display commands for working with app platform local development.`,
 		},
 	}
+
+	cmd.AddCommand(AppsDevConfig())
 
 	build := CmdBuilder(
 		cmd,
@@ -83,38 +84,6 @@ func AppsDev() *Command {
 		"Registry name to build use for the component build.",
 	)
 
-	link := CmdBuilder(
-		cmd,
-		RunAppsDevLink,
-		"link",
-		"Link a repository to an app.",
-		`Link a repository to an app.`,
-		Writer,
-		displayerType(&displayers.Apps{}),
-	)
-
-	AddStringFlag(
-		link, doctl.ArgAppDevLinkConfig,
-		"", "",
-		`Path to the app dev link config.`,
-	)
-
-	unlink := CmdBuilder(
-		cmd,
-		RunAppsDevUnLink,
-		"unlink",
-		"Unlink a repository from an app.",
-		`Unlink a repository from an app.`,
-		Writer,
-		displayerType(&displayers.Apps{}),
-	)
-
-	AddStringFlag(
-		unlink, doctl.ArgAppDevLinkConfig,
-		"", "",
-		`Path to the app dev link config.`,
-	)
-
 	return cmd
 }
 
@@ -127,23 +96,15 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		defer cancel()
 	}
 
-	var spec *godo.AppSpec
+	conf, err := newAppDevConfig(c)
+	if err != nil {
+		return err
+	}
 
-	// TODO(ntate); cleanup
-	appID, err := c.Doit.GetString(c.NS, doctl.ArgApp)
+	var spec *godo.AppSpec
+	appID, err := conf.GetString(doctl.ArgApp)
 	if err != nil {
 		return err
-	}
-	linkConfigFile, err := c.Doit.GetString(c.NS, doctl.ArgAppDevLinkConfig)
-	if err != nil {
-		return err
-	}
-	linkConfig, err := newAppLinkConfig(linkConfigFile, false)
-	if err != nil && linkConfigFile != "" {
-		return err
-	}
-	if linkConfig != nil && appID == "" {
-		appID = linkConfig.GetString(doctl.ArgApp)
 	}
 
 	// TODO: if this is the user's first time running dev build, ask them if they'd like to
@@ -156,21 +117,22 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		spec = app.Spec
 	}
 
+	appSpecPath, err := conf.GetString(doctl.ArgAppSpec)
+	if err != nil {
+		return err
+	}
+
 	if spec == nil {
-		specPath, err := c.Doit.GetString(c.NS, doctl.ArgAppSpec)
-		if err != nil {
-			return err
-		}
-		if specPath == "" {
+		if appSpecPath == "" {
 			if _, err := os.Stat(AppsDevDefaultSpecPath); err == nil {
-				specPath = AppsDevDefaultSpecPath
+				appSpecPath = AppsDevDefaultSpecPath
 				charm.TemplatePrint(heredoc.Doc(`
 					{{success checkmark}} using app spec at {{highlight .}}{{nl}}`,
 				), AppsDevDefaultSpecPath)
 			}
 		}
-		if specPath != "" {
-			spec, err = readAppSpec(os.Stdin, specPath)
+		if appSpecPath != "" {
+			spec, err = readAppSpec(os.Stdin, appSpecPath)
 			if err != nil {
 				return err
 			}
@@ -244,7 +206,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 
 	var envs map[string]string
-	envFile, err := c.Doit.GetString(c.NS, doctl.ArgEnvFile)
+	envFile, err := conf.GetString(doctl.ArgEnvFile)
 	if err != nil {
 		return err
 	}
@@ -255,11 +217,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 	}
 
-	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistryName)
-	if err != nil {
-		return err
-	}
-
 	cli, err := c.Doit.GetContainerEngineClient()
 	if err != nil {
 		return err
@@ -268,9 +225,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	charm.TemplatePrint(heredoc.Doc(`
-		{{success checkmark}} building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}{{nl}}{{nl}}`,
-	), componentSpec)
 	var (
 		wg        sync.WaitGroup
 		logWriter io.Writer
@@ -295,6 +249,18 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	} else {
 		logWriter = os.Stdout
 	}
+
+	registryName, err := conf.GetString(doctl.ArgRegistryName)
+	if err != nil {
+		return err
+	}
+	if registryName == "" {
+		return errors.New("registry-name is required")
+	}
+
+	charm.TemplatePrint(heredoc.Doc(`
+		{{success checkmark}} building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}{{nl}}{{nl}}`,
+	), componentSpec)
 
 	var res builder.ComponentBuilderResult
 	err = func() error {
@@ -340,118 +306,4 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 	fmt.Print("\n")
 	return nil
-}
-
-// RunAppsDevLink links a repo to an app.
-func RunAppsDevLink(c *CmdConfig) error {
-	if len(c.Args) < 1 {
-		return errors.New("app id is required")
-	}
-
-	appID := c.Args[0]
-	_, err := c.Apps().Get(appID)
-	if err != nil {
-		return err
-	}
-
-	linkConfigFile, err := c.Doit.GetString(c.NS, doctl.ArgAppDevLinkConfig)
-	if err != nil {
-		return err
-	}
-
-	linkConfig, err := newAppLinkConfig(linkConfigFile, true)
-	if err != nil {
-		return err
-	}
-
-	linkConfig.Set(doctl.ArgApp, appID)
-	err = linkConfig.WriteConfig()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// RunAppsDevUnLink unlinks a repo to an app.
-func RunAppsDevUnLink(c *CmdConfig) error {
-	linkConfigFile, err := c.Doit.GetString(c.NS, doctl.ArgAppDevLinkConfig)
-	if err != nil {
-		return err
-	}
-
-	linkConfig, err := newAppLinkConfig(linkConfigFile, false)
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		return nil
-	} else if err != nil {
-		return err
-	}
-
-	linkConfig.Set(doctl.ArgApp, "")
-	err = linkConfig.WriteConfig()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-type appLinkConfig struct {
-	*viper.Viper
-}
-
-func newAppLinkConfig(linkFile string, createIfNotExists bool) (*appLinkConfig, error) {
-	config := &appLinkConfig{
-		viper.New(),
-	}
-
-	// attempt to find default link file
-	if linkFile == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, err
-		}
-		gitRoot, err := FindTopLevelGitDir(cwd)
-		if err != nil {
-			return nil, err
-		}
-		linkFile = gitRoot + "/.dolocal.yaml"
-	}
-
-	if _, err := os.Stat(linkFile); errors.Is(err, os.ErrNotExist) && createIfNotExists {
-		if f, err := os.Create(linkFile); err == nil {
-			f.Close()
-		}
-	} else if err != nil {
-		return nil, err
-	}
-
-	config.SetConfigType("yaml")
-	config.SetConfigFile(linkFile)
-
-	if err := config.ReadInConfig(); err != nil {
-		return nil, err
-	}
-
-	return config, nil
-}
-
-// FindTopLevelGitDir ...
-func FindTopLevelGitDir(workingDir string) (string, error) {
-	dir, err := filepath.Abs(workingDir)
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return dir, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", errors.New("no git repository found")
-		}
-		dir = parent
-	}
 }
