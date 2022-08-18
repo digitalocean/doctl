@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"time"
 
 	"github.com/digitalocean/godo"
@@ -36,11 +37,18 @@ type baseComponentBuilder struct {
 	registry     string
 	envOverrides map[string]string
 
-	logWriter io.WriteCloser
+	logWriter io.Writer
 }
 
 func (b baseComponentBuilder) ImageOutputName() string {
 	return fmt.Sprintf("%s/%s:dev", b.registry, b.component.GetName())
+}
+
+func (b baseComponentBuilder) getLogWriter() io.Writer {
+	if b.logWriter == nil {
+		return os.Stdout
+	}
+	return b.logWriter
 }
 
 // NewBuilderOpts ...
@@ -48,7 +56,7 @@ type NewBuilderOpts struct {
 	Component string
 	Registry  string
 	Envs      map[string]string
-	LogWriter io.WriteCloser
+	LogWriter io.Writer
 }
 
 // DefaultComponentBuilderFactory is the standard component builder factory.

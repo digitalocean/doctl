@@ -25,6 +25,8 @@ func TemplateFuncs(colors ColorScheme) template.FuncMap {
 		"underline": TextUnderline.S,
 		"nl":        factory("\n"),
 
+		"lower":        strings.ToLower,
+		"snakeToTitle": SnakeToTitle,
 		"join": func(sep string, pieces ...any) string {
 			strs := make([]string, len(pieces))
 			for i, p := range pieces {
@@ -101,7 +103,19 @@ func TemplateString(content string, data any) string {
 	return res
 }
 
-// TemplatePrint executes a template and prints it directly to stdout.
-func TemplatePrint(content string, data any) error {
+// TemplatePrintE executes a template and prints it directly to stdout.
+func TemplatePrintE(content string, data any) error {
 	return Template(os.Stdout, content, data)
+}
+
+// TemplatePrint executes a template and prints it directly to stdout. If an error occurs, it is written to stderr as well.
+func TemplatePrint(content string, data any) {
+	err := Template(os.Stdout, content, data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", TextError.S(err))
+	}
+}
+
+func SnakeToTitle(s any) string {
+	return strings.Title(strings.ReplaceAll(strings.ToLower(fmt.Sprint(s)), "_", " "))
 }

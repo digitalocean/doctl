@@ -3,7 +3,6 @@ package builder
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"sort"
 	"time"
@@ -57,13 +56,18 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	if err != nil {
 		return res, err
 	}
+
+	start := time.Now()
 	defer func() {
+		res.BuildDuration = time.Since(start)
+		// we use context.Background() so we can remove the container if the original context is cancelled.
+		ctx := context.Background()
+
 		err = b.cli.ContainerRemove(ctx, buildContainer.ID, types.ContainerRemoveOptions{
 			Force: true,
 		})
 	}()
 
-	start := time.Now()
 	if err := b.cli.ContainerStart(ctx, buildContainer.ID, types.ContainerStartOptions{}); err != nil {
 		return res, err
 	}
@@ -77,6 +81,13 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	if err != nil {
 		return res, err
 	}
+	defer func() {
+		ctx := context.Background()
+		execInspectRes, err := b.cli.ContainerExecInspect(ctx, execRes.ID)
+		if err == nil {
+			res.ExitCode = execInspectRes.ExitCode
+		}
+	}()
 
 	attachRes, err := b.cli.ContainerExecAttach(ctx, execRes.ID, types.ExecStartCheck{})
 	if err != nil {
@@ -89,7 +100,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 
 	go func() {
 		// StdCopy demultiplexes the stream into two buffers
-		_, err := stdcopy.StdCopy(b.logWriter, b.logWriter, attachRes.Reader)
+		_, err := stdcopy.StdCopy(b.getLogWriter(), b.getLogWriter(), attachRes.Reader)
 		outputDone <- err
 	}()
 
@@ -98,18 +109,10 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		if err != nil {
 			return res, err
 		}
+		res.Image = b.ImageOutputName()
 	case <-ctx.Done():
 		return res, ctx.Err()
 	}
-
-	execInspectRes, err := b.cli.ContainerExecInspect(ctx, execRes.ID)
-	if err != nil {
-		return res, err
-	}
-
-	res.Image = fmt.Sprintf("%s/%s:dev", b.registry, b.component.GetName())
-	res.BuildDuration = time.Since(start)
-	res.ExitCode = execInspectRes.ExitCode
 	return res, nil
 }
 

@@ -1,14 +1,13 @@
 package commands
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
+	"sync"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl"
@@ -17,9 +16,6 @@ import (
 	"github.com/digitalocean/doctl/internal/apps/builder"
 
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/godo"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -168,7 +164,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		if specPath == "" {
 			if _, err := os.Stat(AppsDevDefaultSpecPath); err == nil {
 				specPath = AppsDevDefaultSpecPath
-				_ = charm.TemplatePrint(heredoc.Doc(`
+				charm.TemplatePrint(heredoc.Doc(`
 					{{success checkmark}} using app spec at {{highlight .}}{{nl}}`,
 				), AppsDevDefaultSpecPath)
 			}
@@ -269,215 +265,81 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
-	logWriter := os.Stdout
-	if Interactive {
-		pager := newLogPager(context.Background())
-		pager.title = "Building " + component
-		go func() {
-			_ = pager.Start()
-			pager.content.WriteTo(os.Stdout)
-		}()
-	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, spec, builder.NewBuilderOpts{
-		Component: component,
-		Registry:  registryName,
-		Envs:      envs,
-		LogWriter: logWriter,
-	})
-	if err != nil {
-		return err
-	}
-	res, err := builder.Build(ctx)
-	if err != nil {
-		return err
-	}
-
-	// fmt.Fprintf(
-	// 	charm.NewTextBox().Success(),
-	// 	"%s Successfully built %s in %s",
-	// 	charm.CheckmarkSuccess,
-	// 	charm.TextSuccess.S(res.Image),
-	// 	charm.TextSuccess.S(res.BuildDuration.Truncate(time.Second).String()),
-	// )
-
-	charm.TemplateBuffered(
-		charm.NewTextBox().Success(),
-		`{{ success checkmark }} Successfully built {{ success .img }} in {{ warning (duration .dur) }}`,
-		map[string]any{
-			"img": res.Image,
-			"dur": res.BuildDuration,
-		},
-	)
-	return nil
-}
-
-func newLogPager(ctx context.Context) *logPager {
-	// ctx, cancel := context.WithCancel(ctx)
-	return &logPager{
-		// ctx:    ctx,
-		// cancel: cancel,
-		start: time.Now(),
-	}
-}
-
-type logPager struct {
-	title string
-	// ctx    context.Context
-	// cancel context.CancelFunc
-	highPerf bool
-	p        *tea.Program
-	content  bytes.Buffer
-	ready    bool
-	viewport viewport.Model
-	start    time.Time
-}
-
-func (p *logPager) Write(b []byte) (int, error) {
-	n, err := p.content.Write(b)
-	p.p.Send(msgReload{})
-	return n, err
-}
-
-func (p *logPager) Close() error {
-	if p.p != nil {
-		p.p.Send(msgCancel{})
-	}
-	return nil
-}
-
-type msgCancel struct{}
-type msgReload struct{}
-type msgTick struct{}
-
-func (m *logPager) Init() tea.Cmd {
-	return m.timerTick()
-}
-
-func (m *logPager) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	charm.TemplatePrint(heredoc.Doc(`
+		{{success checkmark}} building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}{{nl}}{{nl}}`,
+	), componentSpec)
 	var (
-		cmd  tea.Cmd
-		cmds []tea.Cmd
+		wg        sync.WaitGroup
+		logWriter io.Writer
 	)
-
-	switch msg := msg.(type) {
-	case msgCancel:
-		return m, tea.Quit
-	case tea.KeyMsg:
-		if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
-			return m, tea.Quit
+	if Interactive {
+		pager, err := charm.NewPager(
+			charm.PagerWithTitle("Building " + component),
+		)
+		if err != nil {
+			return fmt.Errorf("starting log pager: %w", err)
 		}
-
-	case tea.WindowSizeMsg:
-		headerHeight := lipgloss.Height(m.headerView())
-		footerHeight := lipgloss.Height(m.footerView())
-		verticalMarginHeight := headerHeight + footerHeight
-
-		if !m.ready {
-			// Since this program is using the full size of the viewport we
-			// need to wait until we've received the window dimensions before
-			// we can initialize the viewport. The initial dimensions come in
-			// quickly, though asynchronously, which is why we wait for them
-			// here.
-			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
-			m.viewport.YPosition = headerHeight
-			m.viewport.HighPerformanceRendering = m.highPerf
-			m.viewport.SetContent(m.content.String())
-			m.ready = true
-
-			// This is only necessary for high performance rendering, which in
-			// most cases you won't need.
-			//
-			// Render the viewport one line below the header.
-			m.viewport.YPosition = headerHeight + 1
-		} else {
-			m.viewport.Width = msg.Width
-			m.viewport.Height = msg.Height - verticalMarginHeight
-		}
-
-		if m.highPerf {
-			// Render (or re-render) the whole viewport. Necessary both to
-			// initialize the viewport and when the window is resized.
-			//
-			// This is needed for high-performance rendering only.
-			cmds = append(cmds, viewport.Sync(m.viewport))
-		}
-	case msgReload:
-		m.viewport.SetContent(m.content.String())
-		m.viewport.GotoBottom()
-		if m.highPerf {
-			cmds = append(cmds, viewport.Sync(m.viewport))
-		}
-	case msgTick:
-		return m, m.timerTick()
+		wg.Add(1)
+		go func() {
+			defer cancel()
+			defer wg.Done()
+			err := pager.Start(ctx)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "pager error: %v\n", err)
+			}
+		}()
+		logWriter = pager
+	} else {
+		logWriter = os.Stdout
 	}
 
-	// Handle keyboard and mouse events in the viewport
-	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
+	var res builder.ComponentBuilderResult
+	err = func() error {
+		defer cancel()
+		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, spec, builder.NewBuilderOpts{
+			Component: component,
+			Registry:  registryName,
+			Envs:      envs,
+			LogWriter: logWriter,
+		})
+		if err != nil {
+			return err
+		}
+		res, err = builder.Build(ctx)
+		if err != nil {
+			return err
+		}
+		return nil
+	}()
+	// allow the pager to exit cleanly
+	wg.Wait()
 
-	return m, tea.Batch(cmds...)
-}
-
-func (m *logPager) View() string {
-	if !m.ready {
-		return "\n  Initializing..."
+	if err != nil {
+		return err
+	} else if res.ExitCode == 0 {
+		charm.TemplateBuffered(
+			charm.NewTextBox().Success(),
+			`{{success checkmark}} successfully built {{success .img}} in {{warning (duration .dur)}}`,
+			map[string]any{
+				"img": res.Image,
+				"dur": res.BuildDuration,
+			},
+		)
+	} else {
+		charm.TemplateBuffered(
+			charm.NewTextBox().Error(),
+			`{{error crossmark}} build container exited with code {{highlight .code}} after {{warning (duration .dur)}}`,
+			map[string]any{
+				"code": res.ExitCode,
+				"dur":  res.BuildDuration,
+			},
+		)
 	}
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
-}
-
-func (m *logPager) headerView() string {
-	title := m.titleStyle().Render(m.title)
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
-	line = lipgloss.NewStyle().Foreground(lipgloss.Color("#9B9B9B")).Render(line)
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
-}
-
-func (m *logPager) footerView() string {
-	info := m.infoStyle().Render(time.Since(m.start).Truncate(time.Second).String())
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
-	line = lipgloss.NewStyle().Foreground(lipgloss.Color("#9B9B9B")).Render(line)
-	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
-}
-
-func (m *logPager) titleStyle() lipgloss.Style {
-	b := lipgloss.RoundedBorder()
-	b.Right = "├"
-	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color( /*"#EE6FF8"*/ "#dddddd")).
-		BorderStyle(b).
-		BorderForeground(lipgloss.Color("#9B9B9B")).
-		Padding(0, 1)
-}
-
-func (m *logPager) infoStyle() lipgloss.Style {
-	b := lipgloss.RoundedBorder()
-	b.Left = "┤"
-	return m.titleStyle().Copy().BorderStyle(b).Foreground(lipgloss.Color("#dddddd"))
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func (p *logPager) timerTick() tea.Cmd {
-	return tea.Tick(time.Second, func(_ time.Time) tea.Msg {
-		return msgTick{}
-	})
-}
-
-func (p *logPager) Start() error {
-	prog := tea.NewProgram(
-		p,
-		tea.WithAltScreen(),       // use the full size of the terminal in its "alternate screen buffer"
-		tea.WithMouseCellMotion(), // turn on mouse support so we can track the mouse wheel
-	)
-	p.p = prog
-
-	return prog.Start()
+	fmt.Print("\n")
+	return nil
 }
 
 // RunAppsDevLink links a repo to an app.
