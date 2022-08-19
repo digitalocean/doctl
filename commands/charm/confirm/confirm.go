@@ -37,8 +37,9 @@ func fromChoice(v Choice) confirmation.Value {
 }
 
 type Prompt struct {
-	text   string
-	choice Choice
+	text          string
+	choice        Choice
+	displayResult DisplayResult
 }
 
 type Option func(*Prompt)
@@ -46,6 +47,21 @@ type Option func(*Prompt)
 func WithDefaultChoice(c Choice) Option {
 	return func(p *Prompt) {
 		p.choice = c
+	}
+}
+
+type DisplayResult int
+
+const (
+	DisplayResultNormal DisplayResult = iota
+	DisplayResultEphemeral
+	DisplayResultEphemeralYes
+	DisplayResultEphemeralNo
+)
+
+func WithDisplayResult(v DisplayResult) Option {
+	return func(p *Prompt) {
+		p.displayResult = v
 	}
 }
 
@@ -71,18 +87,31 @@ var promptTemplate = `
 `
 
 var resultTemplate = `
+{{- if RenderResult .FinalValue -}}
 {{- if.FinalValue -}}{{success promptPrefix}}{{else}}{{error promptPrefix}}{{end}}
 {{- print " " .Prompt " " -}}
-{{- if .FinalValue -}}
-	{{- success "yes" -}}
-{{- else -}}
-	{{- error "no" -}}
-{{- end }}
+	{{- if .FinalValue -}}
+		{{- success "yes" -}}
+	{{- else -}}
+		{{- error "no" -}}
+	{{- end }}
+{{- end -}}
 `
 
 func (p *Prompt) Prompt() (Choice, error) {
 	input := confirmation.New(p.text, fromChoice(p.choice))
-	input.ExtendedTemplateFuncs = charm.TemplateFuncs(charm.Colors)
+	tfs := charm.TemplateFuncs(charm.Colors)
+	tfs["RenderResult"] = func(finalValue bool) bool {
+		switch p.displayResult {
+		case DisplayResultEphemeralNo:
+			return finalValue
+		case DisplayResultEphemeralYes:
+			return !finalValue
+		default:
+			return true
+		}
+	}
+	input.ExtendedTemplateFuncs = tfs
 	input.Template = promptTemplate
 	input.ResultTemplate = resultTemplate
 
