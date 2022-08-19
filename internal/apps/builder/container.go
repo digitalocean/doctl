@@ -1,4 +1,4 @@
-//go:generate go run github.com/golang/mock/mockgen -source container.go -package builder -destination container_mock.go ContainerEngineClient
+//go:generate go run github.com/golang/mock/mockgen -source container.go -package builder -destination container_mock.go DockerEngineClient
 
 package builder
 
@@ -12,8 +12,8 @@ import (
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// ContainerEngineClient ...
-type ContainerEngineClient interface {
+// DockerEngineClient ...
+type DockerEngineClient interface {
 	ContainerCreate(ctx context.Context, config *containertypes.Config, hostConfig *containertypes.HostConfig, networkingConfig *networktypes.NetworkingConfig, platform *specs.Platform, containerName string) (containertypes.ContainerCreateCreatedBody, error)
 	ContainerStart(ctx context.Context, containerName string, options types.ContainerStartOptions) error
 	ContainerLogs(ctx context.Context, containerName string, options types.ContainerLogsOptions) (io.ReadCloser, error)
@@ -24,4 +24,5 @@ type ContainerEngineClient interface {
 	ContainerExecStart(ctx context.Context, execID string, config types.ExecStartCheck) error
 	ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error)
 	ImageBuild(ctx context.Context, context io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
+	CopyToContainer(ctx context.Context, container, path string, content io.Reader, options types.CopyToContainerOptions) error
 }
