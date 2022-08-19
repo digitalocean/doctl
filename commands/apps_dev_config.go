@@ -139,8 +139,9 @@ func RunAppsDevConfigUnset(c *CmdConfig) error {
 }
 
 type appDevConfig struct {
-	cmdConfig *CmdConfig
-	viper     *viper.Viper
+	contextDir string
+	cmdConfig  *CmdConfig
+	viper      *viper.Viper
 }
 
 var validAppDevKeys = map[string]bool{
@@ -197,16 +198,23 @@ func newAppDevConfig(cmdConfig *CmdConfig) (*appDevConfig, error) {
 		return nil, err
 	}
 
+	config.contextDir, err = os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	gitRoot, err := findTopLevelGitDir(config.contextDir)
+	if err != nil && !errors.Is(err, errNoGitRepo) {
+		return nil, err
+	}
+	if gitRoot != "" {
+		config.contextDir = gitRoot
+	}
+
 	if devConfigFilePath == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return nil, err
+		if gitRoot == "" {
+			return nil, errNoGitRepo
 		}
-		configDir, err := findTopLevelGitDir(cwd)
-		if err != nil {
-			return nil, err
-		}
-		configDir = filepath.Join(configDir, ".do")
+		configDir := filepath.Join(gitRoot, ".do")
 		err = os.MkdirAll(configDir, os.ModePerm)
 		if err != nil {
 			return nil, err
@@ -277,6 +285,8 @@ func ensureStringInFile(file string, val string) error {
 
 	return nil
 }
+
+var errNoGitRepo = errors.New("no git repository found")
 
 // findTopLevelGitDir ...
 func findTopLevelGitDir(workingDir string) (string, error) {

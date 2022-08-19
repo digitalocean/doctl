@@ -34,8 +34,11 @@ func TestRunAppsDevBuild(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgRegistryName, registryName)
 			config.Doit.Set(config.NS, doctl.ArgInteractive, false)
 
+			conf, err := newAppDevConfig(config)
+			require.NoError(t, err)
+
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
-			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
+			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), conf.contextDir, sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
 
 			err = RunAppsDevBuild(config)
 			require.NoError(t, err)
@@ -44,7 +47,9 @@ func TestRunAppsDevBuild(t *testing.T) {
 
 	t.Run("with appID", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
+			conf, err := newAppDevConfig(config)
+			require.NoError(t, err)
+			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), conf.contextDir, sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
 
 			tm.apps.EXPECT().Get(appID).Times(1).Return(&godo.App{
@@ -56,7 +61,7 @@ func TestRunAppsDevBuild(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgRegistryName, registryName)
 			config.Doit.Set(config.NS, doctl.ArgInteractive, false)
 
-			err := RunAppsDevBuild(config)
+			err = RunAppsDevBuild(config)
 			require.NoError(t, err)
 		})
 	})

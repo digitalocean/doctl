@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
@@ -40,24 +41,26 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		return res, err
 	}
 
+	mounts := []mount.Mount{{
+		Type:   mount.TypeBind,
+		Source: "/var/run/docker.sock",
+		Target: "/var/run/docker.sock",
+	}}
+	if !b.copyOnWriteSemantics {
+		mounts = append(mounts, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: cwd,
+			Target: "/workspace",
+		})
+	}
+
 	buildContainer, err := b.cli.ContainerCreate(ctx, &container.Config{
 		Image:        CNBBuilderImage,
 		Entrypoint:   []string{"sh", "-c", "sleep infinity"},
 		AttachStdout: true,
 		AttachStderr: true,
 	}, &container.HostConfig{
-		Mounts: []mount.Mount{
-			{
-				Type:   mount.TypeBind,
-				Source: "/var/run/docker.sock",
-				Target: "/var/run/docker.sock",
-			},
-			{
-				Type:   mount.TypeBind,
-				Source: cwd,
-				Target: "/workspace",
-			},
-		},
+		Mounts: mounts,
 	}, nil, nil, "")
 	if err != nil {
 		return res, err
@@ -76,6 +79,35 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 
 	if err := b.cli.ContainerStart(ctx, buildContainer.ID, types.ContainerStartOptions{}); err != nil {
 		return res, err
+	}
+
+	if b.copyOnWriteSemantics {
+		// Prepare source copy info.
+		srcInfo, err := archive.CopyInfoSourcePath(b.contextDir, true)
+		if err != nil {
+			return res, err
+		}
+		srcArchive, err := archive.TarResource(srcInfo)
+		if err != nil {
+			return res, err
+		}
+		defer srcArchive.Close()
+		dstInfo := archive.CopyInfo{
+			Path:  "/workspace",
+			IsDir: true,
+		}
+		archDir, preparedArchive, err := archive.PrepareArchiveCopy(srcArchive, srcInfo, dstInfo)
+		if err != nil {
+			return res, err
+		}
+		defer preparedArchive.Close()
+		err = b.cli.CopyToContainer(ctx, buildContainer.ID, archDir, preparedArchive, types.CopyToContainerOptions{
+			AllowOverwriteDirWithFile: false,
+			CopyUIDGID:                false,
+		})
+		if err != nil {
+			return res, err
+		}
 	}
 
 	execRes, err := b.cli.ContainerExecCreate(ctx, buildContainer.ID, types.ExecConfig{

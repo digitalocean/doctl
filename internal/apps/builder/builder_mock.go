@@ -36,18 +36,18 @@ func (m *MockComponentBuilderFactory) EXPECT() *MockComponentBuilderFactoryMockR
 }
 
 // NewComponentBuilder mocks base method.
-func (m *MockComponentBuilderFactory) NewComponentBuilder(arg0 ContainerEngineClient, arg1 *godo.AppSpec, arg2 NewBuilderOpts) (ComponentBuilder, error) {
+func (m *MockComponentBuilderFactory) NewComponentBuilder(arg0 DockerEngineClient, arg1 string, arg2 *godo.AppSpec, arg3 NewBuilderOpts) (ComponentBuilder, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewComponentBuilder", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "NewComponentBuilder", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(ComponentBuilder)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // NewComponentBuilder indicates an expected call of NewComponentBuilder.
-func (mr *MockComponentBuilderFactoryMockRecorder) NewComponentBuilder(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockComponentBuilderFactoryMockRecorder) NewComponentBuilder(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewComponentBuilder", reflect.TypeOf((*MockComponentBuilderFactory)(nil).NewComponentBuilder), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewComponentBuilder", reflect.TypeOf((*MockComponentBuilderFactory)(nil).NewComponentBuilder), arg0, arg1, arg2, arg3)
 }
 
 // MockComponentBuilder is a mock of ComponentBuilder interface.

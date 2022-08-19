@@ -17,7 +17,7 @@ import (
 
 // ComponentBuilderFactory is the interface for creating a component builder.
 type ComponentBuilderFactory interface {
-	NewComponentBuilder(ContainerEngineClient, *godo.AppSpec, NewBuilderOpts) (ComponentBuilder, error)
+	NewComponentBuilder(DockerEngineClient, string, *godo.AppSpec, NewBuilderOpts) (ComponentBuilder, error)
 }
 
 // ComponentBuilder is the interface of building one or more components.
@@ -33,12 +33,14 @@ type ComponentBuilderResult struct {
 }
 
 type baseComponentBuilder struct {
-	cli                  ContainerEngineClient
+	cli                  DockerEngineClient
+	contextDir           string
 	spec                 *godo.AppSpec
 	component            godo.AppBuildableComponentSpec
 	registry             string
 	envOverrides         map[string]string
 	buildCommandOverride string
+	copyOnWriteSemantics bool
 
 	logWriter io.Writer
 }
@@ -118,7 +120,7 @@ type DefaultComponentBuilderFactory struct{}
 
 // NewComponentBuilder returns the correct builder type depending upon the provided
 // app and component.
-func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli ContainerEngineClient, spec *godo.AppSpec, opts NewBuilderOpts) (ComponentBuilder, error) {
+func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineClient, contextDir string, spec *godo.AppSpec, opts NewBuilderOpts) (ComponentBuilder, error) {
 	// TODO(ntate): handle DetectionBuilder and allow empty component
 	if opts.Component == "" {
 		return nil, errors.New("component is required")
@@ -132,15 +134,22 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli ContainerEngine
 		return nil, fmt.Errorf("component %s does not exist", opts.Component)
 	}
 
+	// NOTE(ntate); We don't provide this as a configureable argument today.
+	// We always assume we want copy-on-write. Caching occurs through re-use of the built OCI image.
+	// This may change in the future so we provide as an argument to the baseComponentBuilder.
+	copyOnWriteSemantics := true
+
 	if component.GetDockerfilePath() == "" {
 		return &CNBComponentBuilder{
 			baseComponentBuilder: baseComponentBuilder{
 				cli,
+				contextDir,
 				spec,
 				component,
 				opts.Registry,
 				opts.EnvOverride,
 				opts.BuildCommandOverride,
+				copyOnWriteSemantics,
 				opts.LogWriter,
 			},
 		}, nil
@@ -149,11 +158,13 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli ContainerEngine
 	return &DockerComponentBuilder{
 		baseComponentBuilder: baseComponentBuilder{
 			cli,
+			contextDir,
 			spec,
 			component,
 			opts.Registry,
 			opts.EnvOverride,
 			opts.BuildCommandOverride,
+			copyOnWriteSemantics,
 			opts.LogWriter,
 		},
 	}, nil
