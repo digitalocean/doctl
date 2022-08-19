@@ -2,6 +2,7 @@ package confirm
 
 import (
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/erikgeiser/promptkit/confirmation"
 )
 
@@ -100,7 +101,7 @@ var resultTemplate = `
 
 func (p *Prompt) Prompt() (Choice, error) {
 	input := confirmation.New(p.text, fromChoice(p.choice))
-	tfs := charm.TemplateFuncs(charm.Colors)
+	tfs := template.Funcs(charm.Colors)
 	tfs["RenderResult"] = func(finalValue bool) bool {
 		switch p.displayResult {
 		case DisplayResultEphemeralNo:

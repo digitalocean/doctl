@@ -12,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/template"
 )
 
 type WriterStringer interface {
@@ -129,7 +130,7 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if k := msg.String(); k == "ctrl+c" {
-			charm.TemplateBuffered(
+			template.Buffered(
 				m.buffer,
 				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling build")}}{{nl}}`,
 				nil,

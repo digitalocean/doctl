@@ -3,9 +3,9 @@ package input
 import (
 	"errors"
 	"fmt"
-	"text/template"
 
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/erikgeiser/promptkit"
 	"github.com/erikgeiser/promptkit/textinput"
 )
@@ -68,7 +68,7 @@ func WithInitialValue(s string) Option {
 var templateFuncs template.FuncMap
 
 func init() {
-	ctf := charm.TemplateFuncs(charm.Colors)
+	ctf := template.Funcs(charm.Colors)
 	templateFuncs = make(template.FuncMap, len(ctf))
 	for k, v := range ctf {
 		templateFuncs[k] = v
@@ -118,7 +118,7 @@ func (i *Input) Prompt() (string, error) {
 	res, err := in.RunPrompt()
 	if err != nil {
 		if errors.Is(err, promptkit.ErrAborted) {
-			charm.TemplatePrint(`
+			template.Print(`
 			{{- error promptPrefix }} {{ muted . }} {{ error "cancelled" }}{{nl -}}
 		`, i.text)
 		}
