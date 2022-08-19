@@ -76,10 +76,6 @@ func (p *Pager) Start(ctx context.Context) error {
 	err := prog.Start()
 	content := p.buffer.String()
 	fmt.Fprintln(charm.Indent(4), content)
-	if len(content) > 0 && content[len(content)-1] != '\n' {
-		// TODO: conditional newline
-	}
-	fmt.Print("\n")
 	return err
 }
 

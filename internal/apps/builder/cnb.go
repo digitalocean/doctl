@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -175,7 +175,7 @@ func (b *CNBComponentBuilder) cnbEnv() []string {
 	}
 
 	if b.buildCommandOverride != "" {
-		charm.TemplatePrint(heredoc.Doc(`
+		template.Print(heredoc.Doc(`
 				=> Overriding default build command with custom command: {{highlight .}}{{nl}}`,
 		), b.buildCommandOverride)
 		envs = append(envs, "BUILD_COMMAND="+b.buildCommandOverride)

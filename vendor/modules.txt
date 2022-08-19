@@ -281,6 +281,7 @@ github.com/muesli/cancelreader
 # github.com/muesli/reflow v0.3.0
 ## explicit; go 1.13
 github.com/muesli/reflow/ansi
+github.com/muesli/reflow/indent
 github.com/muesli/reflow/truncate
 github.com/muesli/reflow/wordwrap
 github.com/muesli/reflow/wrap
