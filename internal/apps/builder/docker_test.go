@@ -86,11 +86,9 @@ func TestDockerComponentBuild(t *testing.T) {
 				builder.ImageOutputName(),
 			},
 			BuildArgs: map[string]*string{
-				"APP_PLATFORM_COMPONENT_TYPE": strPtr(string(service.GetType())),
-				"SOURCE_DIR":                  strPtr(service.GetSourceDir()),
-				"build-arg-1":                 strPtr("build-val-1"),
-				"override-1":                  strPtr("newval"),
-				"run-build-arg-1":             strPtr("run-build-val-1"),
+				"build-arg-1":     strPtr("build-val-1"),
+				"override-1":      strPtr("newval"),
+				"run-build-arg-1": strPtr("run-build-val-1"),
 			},
 		}).Return(types.ImageBuildResponse{
 			Body: ioutil.NopCloser(strings.NewReader("")),

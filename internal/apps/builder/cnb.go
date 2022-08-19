@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -16,6 +17,9 @@ import (
 const (
 	// CNBBuilderImage represents the local cnb builder.
 	CNBBuilderImage = "digitaloceanapps/cnb-local-builder:dev"
+
+	appVarAllowListKey = "APP_VARS"
+	appVarPrefix       = "APP_VAR_"
 )
 
 // CNBComponentBuilder represents a CNB builder
@@ -117,13 +121,29 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 }
 
 func (b *CNBComponentBuilder) cnbEnv() []string {
-	args := getBuildArgs(b.spec, b.component, b.envOverrides)
+	envMap := b.getEnvMap()
 	envs := []string{}
-	for k, v := range args {
-		// NOTE(ntate) getBuildArgs already preprends _APP
-		envs = append(envs, k+"="+*v)
+
+	appVars := []string{}
+	for k, v := range envMap {
+		envs = append(envs, appVarPrefix+k+"="+v)
+		appVars = append(appVars, k)
 	}
+	if len(appVars) > 0 {
+		sort.Strings(appVars)
+		envs = append(envs, appVarAllowListKey+"="+strings.Join(appVars, ","))
+	}
+
 	envs = append(envs, "APP_IMAGE_URL="+b.ImageOutputName())
+	envs = append(envs, "APP_PLATFORM_COMPONENT_TYPE="+string(b.component.GetType()))
+	if b.component.GetSourceDir() != "" {
+		envs = append(envs, "SOURCE_DIR="+b.component.GetSourceDir())
+	}
+	if b.component.GetBuildCommand() != "" {
+		envs = append(envs, "BUILD_COMMAND="+b.component.GetBuildCommand())
+	}
+
 	sort.Strings(envs)
+
 	return envs
 }
