@@ -61,6 +61,8 @@ project (a directory you have designated for functions development).  This can b
 	AddStringFlag(getMetadata, "env", "", "", "Path to environment file")
 	AddStringFlag(getMetadata, "include", "", "", "Functions or packages to include")
 	AddStringFlag(getMetadata, "exclude", "", "", "Functions or packages to exclude")
+	AddBoolFlag(getMetadata, "project-reader", "", false, "Test new project reader service")
+	getMetadata.Flags().MarkHidden("project-reader")
 
 	watch := CmdBuilder(cmd, RunServerlessExtraWatch, "watch <directory>", "Watch a functions project directory, deploying incrementally on change",
 		`Type `+"`"+`doctl serverless watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
@@ -78,8 +80,6 @@ the contents to the cloud incrementally as it detects changes.`,
 	AddStringFlag(watch, "include", "", "", "Functions and/or packages to include")
 	AddStringFlag(watch, "exclude", "", "", "Functions and/or packages to exclude")
 	AddBoolFlag(watch, "remote-build", "", false, "Run builds remotely")
-	AddBoolFlag(getMetadata, "project-reader", "", false, "Test new project reader service")
-	getMetadata.Flags().MarkHidden("project-reader")
 }
 
 // RunServerlessExtraCreate supports the 'serverless init' command
@@ -159,10 +159,10 @@ func RunServerlessExtraGetMetadata(c *CmdConfig) error {
 
 	var output do.ServerlessOutput
 	project := do.ServerlessProject{
-		ProjectPath: args[0],
+		ProjectPath: c.Args[0],
 	}
 	if r {
-		output, err = c.Serverless().ReadProject(&project, args)
+		output, err = c.Serverless().ReadProject(&project, c.Args)
 	} else {
 		output, err = RunServerlessExec(projectGetMetadata, c, []string{flagJSON, flagProjectReader}, []string{flagEnv, flagInclude, flagExclude})
 	}

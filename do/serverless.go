@@ -692,9 +692,7 @@ func (s *serverlessService) ReadProject(project *ServerlessProject, args []strin
 	if err != nil {
 		return ServerlessOutput{}, err
 	}
-	return ServerlessOutput{
-		Error: err.Error(),
-	}, nil
+	return ServerlessOutput{}, nil
 }
 
 // WriteProject ...
