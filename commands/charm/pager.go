@@ -123,6 +123,11 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if k := msg.String(); k == "ctrl+c" {
+			TemplateBuffered(
+				m.buffer,
+				`{{nl}}{{error (join " " crossmark "got ctrl-c, cancelling build")}}{{nl}}`,
+				nil,
+			)
 			m.cancel()
 			return m, nil
 		}
@@ -156,7 +161,9 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.SetContent(m.buffer.String())
 		m.viewport.GotoBottom()
 	case msgTick:
-		cmds = append(cmds, m.timerTick())
+		if m.ctx.Err() == nil {
+			cmds = append(cmds, m.timerTick())
+		}
 	}
 
 	// Handle keyboard and mouse events in the viewport
