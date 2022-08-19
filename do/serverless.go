@@ -705,7 +705,7 @@ func (s *serverlessService) WriteProject(project ServerlessProject) (string, err
 
 func readTopLevel(project *ServerlessProject) error {
 	const (
-		Config   = "project.yaml"
+		Config   = "project.yml"
 		Packages = "packages"
 	)
 	files, err := ioutil.ReadDir(project.ProjectPath)
