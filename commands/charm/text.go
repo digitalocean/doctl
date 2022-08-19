@@ -15,49 +15,62 @@ var (
 	TextUnderline = Style{lipgloss.NewStyle().Underline(true)}
 )
 
-const (
-	// CheckmarkCharacter is the checkmark character.
-	CheckmarkCharacter = "✔"
-	// CrossmarkCharacter is the crossmark character.
-	CrossmarkCharacter = "✘"
-	// PromptPrefixCharacter is the > prompt character.
-	PromptPrefixCharacter = "❯"
-	// PointerUpCharacter is an up pointer character.
-	PointerUpCharacter = "▴"
-	// PointerRightCharacter is a right pointer character.
-	PointerRightCharacter = "▸"
-	// PointerDownCharacter is a down pointer character.
-	PointerDownCharacter = "▾"
-	// PointerLeftCharacter is a left pointer character.
-	PointerLeftCharacter = "◂"
-)
-
 var (
 	// Checkmark is a checkmark icon.
-	Checkmark = Style{lipgloss.NewStyle().SetString(CheckmarkCharacter)}
-	// CheckmarkSuccess is a green checkmark icon.
-	CheckmarkSuccess = Checkmark.Inherit(TextSuccess)
-
+	Checkmark = NewStyledText("✔")
 	// Crossmark is a crossmark icon.
-	Crossmark = Style{lipgloss.NewStyle().SetString(CrossmarkCharacter)}
-	// CrossmarkSuccess is a green crossmark icon.
-	CrossmarkError = Crossmark.Inherit(TextError)
-
+	Crossmark = NewStyledText("✘")
+	// Astreisk is a astreisk icon.
+	Astreisk = NewStyledText("✱")
 	// PromptPrefix is a prompt-prefix icon.
-	PromptPrefix = Style{lipgloss.NewStyle().SetString(PromptPrefixCharacter)}
-	// PromptPrefixSuccess is a green prompt-prefix icon.
-	PromptPrefixSuccess = PromptPrefix.Inherit(TextSuccess)
-	// PromptPrefixError is a red prompt-prefix icon.
-	PromptPrefixError = PromptPrefix.Inherit(TextError)
-	// PromptPrefixHighlight is a highlighted prompt-prefix icon.
-	PromptPrefixHighlight = PromptPrefix.Inherit(TextHighlight)
-
+	PromptPrefix = NewStyledText("❯")
 	// PointerUpCharacter is an up pointer icon.
-	PointerUp = Style{lipgloss.NewStyle().SetString(PointerUpCharacter)}
+	PointerUp = NewStyledText("▴")
 	// PointerRightCharacter is a right pointer icon.
-	PointerRight = Style{lipgloss.NewStyle().SetString(PointerRightCharacter)}
+	PointerRight = NewStyledText("▸")
 	// PointerDownCharacter is a down pointer icon.
-	PointerDown = Style{lipgloss.NewStyle().SetString(PointerDownCharacter)}
+	PointerDown = NewStyledText("▾")
 	// PointerLeftCharacter is a left pointer icon.
-	PointerLeft = Style{lipgloss.NewStyle().SetString(PointerLeftCharacter)}
+	PointerLeft = NewStyledText("◂")
 )
+
+type StyledText struct {
+	style Style
+}
+
+// NewStyledText builds a new styled text component.
+func NewStyledText(s string) StyledText {
+	return StyledText{
+		style: NewStyle(lipgloss.NewStyle().SetString(s)),
+	}
+}
+
+func (t StyledText) String() string {
+	return t.style.String()
+}
+
+func (t StyledText) Inherit(styles ...Style) StyledText {
+	return StyledText{
+		style: t.style.Copy().Inherit(styles...),
+	}
+}
+
+func (t StyledText) Success() StyledText {
+	return t.Inherit(TextSuccess)
+}
+
+func (t StyledText) Warning() StyledText {
+	return t.Inherit(TextWarning)
+}
+
+func (t StyledText) Error() StyledText {
+	return t.Inherit(TextError)
+}
+
+func (t StyledText) Highlight() StyledText {
+	return t.Inherit(TextHighlight)
+}
+
+func (t StyledText) Muted() StyledText {
+	return t.Inherit(TextMuted)
+}

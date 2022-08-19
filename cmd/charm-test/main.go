@@ -13,12 +13,20 @@ import (
 )
 
 func main() {
-	confirm.New("proceed?", confirm.WithDefaultChoice(confirm.Yes)).Prompt()
+	var err error
 	i := input.New("app name:", input.WithRequired())
-	i.Prompt()
+	_, err = i.Prompt()
+	if err != nil {
+		fmt.Println(err)
+	}
+	_, err = confirm.New("proceed?", confirm.WithDefaultChoice(confirm.Yes)).Prompt()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	fmt.Println(
-		charm.Checkmark, charm.CheckmarkSuccess,
+		charm.Checkmark,
+		charm.Checkmark.Inherit(charm.TextSuccess),
 	)
 
 	fmt.Println(
@@ -57,7 +65,7 @@ func main() {
 	fmt.Fprintf(
 		textbox.New().Success(),
 		"%s Successfully built %s in %s",
-		charm.CheckmarkSuccess,
+		charm.Checkmark.Success(),
 		charm.TextSuccess.S(img),
 		charm.TextWarning.S(dur.Truncate(time.Second).String()),
 	)

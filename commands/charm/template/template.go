@@ -20,6 +20,7 @@ func Funcs(colors charm.ColorScheme) template.FuncMap {
 	return template.FuncMap{
 		"checkmark":    charm.Factory(charm.Checkmark),
 		"crossmark":    charm.Factory(charm.Crossmark),
+		"asterisk":     charm.Factory(charm.Astreisk),
 		"promptPrefix": charm.Factory(charm.PromptPrefix),
 		"pointerUp":    charm.Factory(charm.PointerUp),
 		"pointerRight": charm.Factory(charm.PointerRight),
