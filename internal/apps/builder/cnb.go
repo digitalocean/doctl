@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
+	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -139,7 +141,13 @@ func (b *CNBComponentBuilder) cnbEnv() []string {
 	if b.component.GetSourceDir() != "" {
 		envs = append(envs, "SOURCE_DIR="+b.component.GetSourceDir())
 	}
-	if b.component.GetBuildCommand() != "" {
+
+	if b.buildCommandOverride != "" {
+		charm.TemplatePrint(heredoc.Doc(`
+				=> Overriding default build command with custom command: {{highlight .}}{{nl}}`,
+		), b.buildCommandOverride)
+		envs = append(envs, "BUILD_COMMAND="+b.buildCommandOverride)
+	} else if b.component.GetBuildCommand() != "" {
 		envs = append(envs, "BUILD_COMMAND="+b.component.GetBuildCommand())
 	}
 

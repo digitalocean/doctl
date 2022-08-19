@@ -144,10 +144,11 @@ type appDevConfig struct {
 }
 
 var validAppDevKeys = map[string]bool{
-	doctl.ArgApp:          true,
-	doctl.ArgAppSpec:      true,
-	doctl.ArgEnvFile:      true,
-	doctl.ArgRegistryName: true,
+	doctl.ArgApp:                true,
+	doctl.ArgAppSpec:            true,
+	doctl.ArgEnvFile:            true,
+	doctl.ArgRegistryName:       true,
+	doctl.ArgAppDevBuildCommand: true,
 }
 
 func outputValidAppDevKeys() string {

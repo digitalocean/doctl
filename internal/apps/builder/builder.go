@@ -33,11 +33,12 @@ type ComponentBuilderResult struct {
 }
 
 type baseComponentBuilder struct {
-	cli          ContainerEngineClient
-	spec         *godo.AppSpec
-	component    godo.AppBuildableComponentSpec
-	registry     string
-	envOverrides map[string]string
+	cli                  ContainerEngineClient
+	spec                 *godo.AppSpec
+	component            godo.AppBuildableComponentSpec
+	registry             string
+	envOverrides         map[string]string
+	buildCommandOverride string
 
 	logWriter io.Writer
 }
@@ -105,10 +106,11 @@ func (b baseComponentBuilder) getEnvMap() map[string]string {
 
 // NewBuilderOpts ...
 type NewBuilderOpts struct {
-	Component string
-	Registry  string
-	Envs      map[string]string
-	LogWriter io.Writer
+	Component            string
+	Registry             string
+	EnvOverride          map[string]string
+	BuildCommandOverride string
+	LogWriter            io.Writer
 }
 
 // DefaultComponentBuilderFactory is the standard component builder factory.
@@ -137,7 +139,8 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli ContainerEngine
 				spec,
 				component,
 				opts.Registry,
-				opts.Envs,
+				opts.EnvOverride,
+				opts.BuildCommandOverride,
 				opts.LogWriter,
 			},
 		}, nil
@@ -149,7 +152,8 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli ContainerEngine
 			spec,
 			component,
 			opts.Registry,
-			opts.Envs,
+			opts.EnvOverride,
+			opts.BuildCommandOverride,
 			opts.LogWriter,
 		},
 	}, nil
