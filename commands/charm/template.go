@@ -13,17 +13,25 @@ import (
 // TemplateFuncs returns template helpers.
 func TemplateFuncs(colors ColorScheme) template.FuncMap {
 	return template.FuncMap{
-		"checkmark":  factory(Checkmark),
-		"crossmark":  factory(Crossmark),
+		"checkmark":    factory(Checkmark),
+		"crossmark":    factory(Crossmark),
+		"promptPrefix": factory(PromptPrefix),
+		"pointerUp":    factory(PointerUp),
+		"pointerRight": factory(PointerRight),
+		"pointerDown":  factory(PointerDown),
+		"pointerLeft":  factory(PointerLeft),
+		"nl":           factory("\n"),
+
 		"newTextBox": NewTextBox,
 
 		"success":   TextSuccess.S,
 		"warning":   TextWarning.S,
 		"error":     TextError.S,
 		"highlight": TextHighlight.S,
+		"muted":     TextMuted.S,
+
 		"bold":      TextBold.S,
 		"underline": TextUnderline.S,
-		"nl":        factory("\n"),
 
 		"lower":        strings.ToLower,
 		"snakeToTitle": SnakeToTitle,
@@ -80,7 +88,7 @@ func TemplateBufferedE(w io.Writer, content string, data any) error {
 func TemplateBuffered(w io.Writer, content string, data any) {
 	err := TemplateBufferedE(w, content, data)
 	if err != nil {
-		w.Write([]byte(err.Error()))
+		fmt.Fprintf(w, "%s", TextError.S(err))
 	}
 }
 
