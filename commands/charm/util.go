@@ -1,6 +1,11 @@
 package charm
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+)
 
 func Margin(i ...int) Style {
 	return NewStyle(lipgloss.NewStyle().Margin(i...))
@@ -14,4 +19,8 @@ func Factory[T any](x T) func() T {
 	return func() T {
 		return x
 	}
+}
+
+func SnakeToTitle(s any) string {
+	return strings.Title(strings.ReplaceAll(strings.ToLower(fmt.Sprint(s)), "_", " "))
 }

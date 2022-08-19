@@ -10,10 +10,11 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/confirm"
 	"github.com/digitalocean/doctl/commands/charm/list"
 	"github.com/digitalocean/doctl/commands/charm/pager"
+	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/commands/charm/textbox"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 
@@ -134,7 +135,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		if appSpecPath == "" {
 			if _, err := os.Stat(AppsDevDefaultSpecPath); err == nil {
 				appSpecPath = AppsDevDefaultSpecPath
-				charm.TemplatePrint(heredoc.Doc(`
+				template.Print(heredoc.Doc(`
 					{{success checkmark}} using app spec at {{highlight .}}{{nl}}`,
 				), AppsDevDefaultSpecPath)
 			}
@@ -199,10 +200,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
-	buildingComponentLine := charm.TemplateString(heredoc.Doc(`
+	buildingComponentLine := template.String(heredoc.Doc(`
 		building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
 	), componentSpec)
-	charm.TemplatePrint(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
+	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
 
 	if componentSpec.GetSourceDir() != "" {
 		sd := componentSpec.GetSourceDir()
@@ -323,8 +324,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	if err != nil {
 		return err
 	} else if res.ExitCode == 0 {
-		charm.TemplateBuffered(
-			charm.NewTextBox().Success(),
+		template.Buffered(
+			textbox.New().Success(),
 			`{{success checkmark}} successfully built {{success .img}} in {{warning (duration .dur)}}`,
 			map[string]any{
 				"img": res.Image,
@@ -332,8 +333,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			},
 		)
 	} else {
-		charm.TemplateBuffered(
-			charm.NewTextBox().Error(),
+		template.Buffered(
+			textbox.New().Error(),
 			`{{error crossmark}} build container exited with code {{highlight .code}} after {{warning (duration .dur)}}`,
 			map[string]any{
 				"code": res.ExitCode,

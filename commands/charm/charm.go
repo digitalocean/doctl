@@ -35,20 +35,16 @@ func (s Style) Copy() Style {
 // Inherit returns a copy of the original style with the properties from another style inherited.
 // This follows lipgloss's inheritance behavior so margins, padding, and underlying string values are not inherited.
 func (s Style) Inherit(o Style) Style {
-	c := s.Copy()
-	c.style = c.style.Inherit(o.style)
-	return c
+	return s.InheritLipgloss(o.style)
 }
 
-// NOTE is this actually needed
-// // Inherit inherits properties from another style in-place.
-// // This follows lipgloss's inheritance behavior so margins, padding, and underlying string values are not inherited.
-// //
-// // NOTE: this is an internal method that overwrites the original style.
-// func (s *Style) inherit(o Style) *Style {
-// 	s.style = s.style.Inherit(o.style)
-// 	return s
-// }
+// Inherit returns a copy of the original style with the properties from a lipgloss.Style inherited.
+// This follows lipgloss's inheritance behavior so margins, padding, and underlying string values are not inherited.
+func (s Style) InheritLipgloss(o lipgloss.Style) Style {
+	c := s.Copy()
+	c.style = c.style.Inherit(o)
+	return c
+}
 
 // Sprintf formats the specified text with the style applied.
 func (s Style) Sprintf(format string, a ...any) string {
