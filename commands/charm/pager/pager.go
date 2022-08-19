@@ -1,4 +1,4 @@
-package charm
+package pager
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/digitalocean/doctl/commands/charm"
 )
 
 type WriterStringer interface {
@@ -26,9 +27,9 @@ type Pager struct {
 	model   *pagerModel
 }
 
-type PagerOpt func(*Pager)
+type Option func(*Pager)
 
-func NewPager(opts ...PagerOpt) (*Pager, error) {
+func New(opts ...Option) (*Pager, error) {
 	p := &Pager{
 		title:   "Output",
 		bufSize: 3 << (10 * 2), // 3MB
@@ -44,13 +45,13 @@ func NewPager(opts ...PagerOpt) (*Pager, error) {
 	return p, nil
 }
 
-func PagerWithBufferSize(size int64) PagerOpt {
+func WithBufferSize(size int64) Option {
 	return func(p *Pager) {
 		p.bufSize = size
 	}
 }
 
-func PagerWithTitle(title string) PagerOpt {
+func WithTitle(title string) Option {
 	return func(p *Pager) {
 		p.title = title
 	}
@@ -72,7 +73,12 @@ func (p *Pager) Start(ctx context.Context) error {
 	p.prog = prog
 
 	err := prog.Start()
-	fmt.Fprintln(Indent(4), p.buffer.String())
+	content := p.buffer.String()
+	fmt.Fprintln(charm.Indent(4), content)
+	if len(content) > 0 && content[len(content)-1] != '\n' {
+		// TODO: conditional newline
+	}
+	fmt.Print("\n")
 	return err
 }
 
@@ -123,9 +129,9 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if k := msg.String(); k == "ctrl+c" {
-			TemplateBuffered(
+			charm.TemplateBuffered(
 				m.buffer,
-				`{{nl}}{{error (join " " crossmark "got ctrl-c, cancelling build")}}{{nl}}`,
+				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling build")}}{{nl}}`,
 				nil,
 			)
 			m.cancel()
@@ -147,12 +153,6 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport.YPosition = headerHeight
 			m.viewport.SetContent(m.buffer.String())
 			m.ready = true
-
-			// This is only necessary for high performance rendering, which in
-			// most cases you won't need.
-			//
-			// Render the viewport one line below the header.
-			m.viewport.YPosition = headerHeight + 1
 		} else {
 			m.viewport.Width = msg.Width
 			m.viewport.Height = msg.Height - verticalMarginHeight
