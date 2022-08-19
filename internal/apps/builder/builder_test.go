@@ -12,7 +12,7 @@ func TestNewBuilderComponent(t *testing.T) {
 	builderFactory := DefaultComponentBuilderFactory{}
 
 	t.Run("no component argument provided", func(t *testing.T) {
-		_, err := builderFactory.NewComponentBuilder(nil, &godo.AppSpec{
+		_, err := builderFactory.NewComponentBuilder(nil, ".", &godo.AppSpec{
 			Services: []*godo.AppServiceSpec{{
 				Name: "web",
 			}},
@@ -24,7 +24,7 @@ func TestNewBuilderComponent(t *testing.T) {
 
 	t.Run("component does not exist", func(t *testing.T) {
 		missingComponent := "missing-component"
-		_, err := builderFactory.NewComponentBuilder(nil, &godo.AppSpec{
+		_, err := builderFactory.NewComponentBuilder(nil, ".", &godo.AppSpec{
 			Services: []*godo.AppServiceSpec{{
 				Name: "web",
 			}},
@@ -35,7 +35,7 @@ func TestNewBuilderComponent(t *testing.T) {
 	})
 
 	t.Run("cnb builder", func(t *testing.T) {
-		builder, err := builderFactory.NewComponentBuilder(nil, &godo.AppSpec{
+		builder, err := builderFactory.NewComponentBuilder(nil, ".", &godo.AppSpec{
 			Services: []*godo.AppServiceSpec{{
 				Name: "web",
 			}},
@@ -47,7 +47,7 @@ func TestNewBuilderComponent(t *testing.T) {
 	})
 
 	t.Run("dockerfile builder", func(t *testing.T) {
-		builder, err := builderFactory.NewComponentBuilder(nil, &godo.AppSpec{
+		builder, err := builderFactory.NewComponentBuilder(nil, ".", &godo.AppSpec{
 			Services: []*godo.AppServiceSpec{{
 				Name:           "web",
 				DockerfilePath: ".",

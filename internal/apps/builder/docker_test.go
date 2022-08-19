@@ -71,7 +71,7 @@ func TestDockerComponentBuild(t *testing.T) {
 			},
 		}
 
-		mockClient := NewMockContainerEngineClient(ctrl)
+		mockClient := NewMockDockerEngineClient(ctrl)
 		builder := &DockerComponentBuilder{
 			baseComponentBuilder: baseComponentBuilder{
 				cli:       mockClient,

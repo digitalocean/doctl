@@ -250,7 +250,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 	}
 
-	cli, err := c.Doit.GetContainerEngineClient()
+	cli, err := c.Doit.GetDockerEngineClient()
 	if err != nil {
 		return err
 	}
@@ -290,7 +290,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	var res builder.ComponentBuilderResult
 	err = func() error {
 		defer cancel()
-		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, spec, builder.NewBuilderOpts{
+
+		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, conf.contextDir, spec, builder.NewBuilderOpts{
 			Component:            component,
 			Registry:             registryName,
 			EnvOverride:          envs,

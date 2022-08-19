@@ -3,7 +3,10 @@ package builder
 import (
 	"bufio"
 	"context"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -16,7 +19,6 @@ import (
 
 func TestCNBComponentBuild(t *testing.T) {
 	ctx := context.Background()
-	ctrl := gomock.NewController(t)
 
 	t.Run("no component", func(t *testing.T) {
 		builder := &CNBComponentBuilder{}
@@ -25,6 +27,7 @@ func TestCNBComponentBuild(t *testing.T) {
 	})
 
 	t.Run("happy path", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
 		service := &godo.AppServiceSpec{
 			SourceDir: "./subdir",
 			Name:      "web",
@@ -72,7 +75,7 @@ func TestCNBComponentBuild(t *testing.T) {
 			},
 		}
 
-		mockClient := NewMockContainerEngineClient(ctrl)
+		mockClient := NewMockDockerEngineClient(ctrl)
 		builder := &CNBComponentBuilder{
 			baseComponentBuilder: baseComponentBuilder{
 				cli:       mockClient,
@@ -129,6 +132,77 @@ func TestCNBComponentBuild(t *testing.T) {
 		}, nil)
 
 		_, err := builder.Build(ctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("copy on write", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		service := &godo.AppServiceSpec{
+			SourceDir: "./subdir",
+			Name:      "web",
+		}
+		spec := &godo.AppSpec{
+			Services: []*godo.AppServiceSpec{service},
+		}
+
+		file, err := ioutil.TempFile("", "dev-config.*.yaml")
+		require.NoError(t, err, "creating temp file")
+		t.Cleanup(func() {
+			file.Close()
+			os.Remove(file.Name())
+		})
+
+		mockClient := NewMockDockerEngineClient(ctrl)
+		builder := &CNBComponentBuilder{
+			baseComponentBuilder: baseComponentBuilder{
+				cli:                  mockClient,
+				spec:                 spec,
+				component:            service,
+				contextDir:           filepath.Dir(file.Name()),
+				copyOnWriteSemantics: true,
+			},
+		}
+
+		buildID := "build-id"
+		mockClient.EXPECT().ContainerCreate(ctx, gomock.Any(), gomock.Any(), nil, nil, "").Return(container.ContainerCreateCreatedBody{
+			ID: buildID,
+		}, nil)
+
+		mockClient.EXPECT().ContainerRemove(ctx, buildID, types.ContainerRemoveOptions{
+			Force: true,
+		}).Return(nil)
+		mockClient.EXPECT().ContainerStart(ctx, buildID, types.ContainerStartOptions{}).Return(nil)
+
+		mockClient.EXPECT().CopyToContainer(ctx, buildID, filepath.Clean("/"), gomock.Any(), gomock.Any()).Return(nil)
+
+		execID := "exec-id"
+		mockClient.EXPECT().ContainerExecCreate(ctx, buildID, types.ExecConfig{
+			AttachStderr: true,
+			AttachStdout: true,
+			Env: []string{
+				"APP_IMAGE_URL=" + builder.ImageOutputName(),
+				"APP_PLATFORM_COMPONENT_TYPE=" + string(service.GetType()),
+				"SOURCE_DIR=" + service.GetSourceDir(),
+			},
+			Cmd: []string{"sh", "-c", "/.app_platform/build.sh"},
+		}).Return(types.IDResponse{
+			ID: execID,
+		}, nil)
+
+		// NOTE: we use net.Pipe as a simple way to create an in-memory
+		// net.Conn resource so we can safley validate the HijackedResponse.
+		c1, c2 := net.Pipe()
+		defer c2.Close()
+		mockClient.EXPECT().ContainerExecAttach(ctx, execID, types.ExecStartCheck{}).Return(types.HijackedResponse{
+			Reader: bufio.NewReader(strings.NewReader("")),
+			Conn:   c1,
+		}, nil)
+
+		mockClient.EXPECT().ContainerExecInspect(ctx, execID).Return(types.ContainerExecInspect{
+			ExitCode: 0,
+		}, nil)
+
+		_, err = builder.Build(ctx)
 		require.NoError(t, err)
 	})
 }

@@ -177,7 +177,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient(trace bool, accessToken string) (*godo.Client, error)
-	GetContainerEngineClient() (builder.ContainerEngineClient, error)
+	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
 	Set(ns, key string, val interface{})
@@ -235,8 +235,8 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 	return godo.New(oauthClient, args...)
 }
 
-// GetContainerEngineClient returns a container engine client.
-func (c *LiveConfig) GetContainerEngineClient() (builder.ContainerEngineClient, error) {
+// GetDockerEngineClient returns a container engine client.
+func (c *LiveConfig) GetDockerEngineClient() (builder.DockerEngineClient, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
@@ -405,11 +405,11 @@ func isRequired(key string) bool {
 
 // TestConfig is an implementation of Config for testing.
 type TestConfig struct {
-	SSHFn                 func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	ListenFn              func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
-	v                     *viper.Viper
-	IsSetMap              map[string]bool
-	ContainerEngineClient builder.ContainerEngineClient
+	SSHFn              func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	ListenFn           func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
+	v                  *viper.Viper
+	IsSetMap           map[string]bool
+	DockerEngineClient builder.DockerEngineClient
 }
 
 var _ Config = &TestConfig{}
@@ -434,10 +434,10 @@ func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 	return &godo.Client{}, nil
 }
 
-// GetContainerEngineClient mocks a GetContainerEngineClient call. The returned client will
+// GetDockerEngineClient mocks a GetDockerEngineClient call. The returned client will
 // be nil unless configured in the test config.
-func (c *TestConfig) GetContainerEngineClient() (builder.ContainerEngineClient, error) {
-	return c.ContainerEngineClient, nil
+func (c *TestConfig) GetDockerEngineClient() (builder.DockerEngineClient, error) {
+	return c.DockerEngineClient, nil
 }
 
 // SSH returns a mock SSH runner.
