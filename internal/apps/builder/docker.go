@@ -10,8 +10,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/digitalocean/godo"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 )
@@ -58,7 +56,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		Tags: []string{
 			b.ImageOutputName(),
 		},
-		BuildArgs: getBuildArgs(b.spec, b.component, b.envOverrides),
+		BuildArgs: b.getBuildArgs(),
 	}
 	dockerRes, err := b.cli.ImageBuild(ctx, tar, opts)
 	if err != nil {
@@ -73,47 +71,13 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	return res, nil
 }
 
-// TODO(ntate) doesn't handle encrypted secrets
-func getBuildArgs(spec *godo.AppSpec, component godo.AppBuildableComponentSpec, userEnv map[string]string) map[string]*string {
+func (b *DockerComponentBuilder) getBuildArgs() map[string]*string {
+	envMap := b.getEnvMap()
 	args := map[string]*string{}
 
-	if spec != nil {
-		for _, e := range spec.Envs {
-			if e.Type == godo.AppVariableType_Secret {
-				fmt.Printf("--> Ignoring SECRET variable %s\n", e.Key)
-				continue
-			}
-			if e.Scope != godo.AppVariableScope_RunTime {
-				val := e.Value
-				args[e.Key] = &val
-			}
-		}
-	}
-
-	for _, e := range component.GetEnvs() {
-		if e.Type == godo.AppVariableType_Secret {
-			fmt.Printf("--> Ignoring SECRET variable %s\n", e.Key)
-			continue
-		}
-		if e.Scope != godo.AppVariableScope_RunTime {
-			val := e.Value
-			args[e.Key] = &val
-		}
-	}
-
-	for k, v := range userEnv {
+	for k, v := range envMap {
 		v := v
-		if _, ok := args[k]; ok {
-			fmt.Printf("--> Overwriting %s with provided env value...\n", k)
-		}
 		args[k] = &v
-	}
-
-	cType := string(component.GetType())
-	args["APP_PLATFORM_COMPONENT_TYPE"] = &cType
-	if component.GetSourceDir() != "" {
-		dir := component.GetSourceDir()
-		args["SOURCE_DIR"] = &dir
 	}
 
 	return args
