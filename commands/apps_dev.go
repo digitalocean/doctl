@@ -12,10 +12,10 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/confirm"
+	"github.com/digitalocean/doctl/commands/charm/list"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/digitalocean/godo"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -170,8 +170,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			components = append(components, componentListItem{c})
 			return nil
 		})
-		list := charm.NewList(components)
-		list.Fullscreen = true
+		list := list.New(components)
 		list.Model().Title = "select a component"
 		list.Model().SetStatusBarItemName("component", "components")
 		selected, err := list.Select()
@@ -198,6 +197,11 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
+	charm.TemplatePrint(heredoc.Doc(`
+		{{success checkmark}} building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}{{nl}}{{nl}}`,
+	), componentSpec)
+
 	if componentSpec.GetSourceDir() != "" {
 		sd := componentSpec.GetSourceDir()
 		stat, err := os.Stat(sd)
@@ -241,6 +245,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		choice, err := confirm.New(
 			"start build?",
 			confirm.WithDefaultChoice(confirm.Yes),
+			confirm.WithDisplayResult(confirm.DisplayResultEphemeralYes),
 		).Prompt()
 		if err != nil {
 			return err
@@ -282,10 +287,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	} else {
 		logWriter = os.Stdout
 	}
-
-	charm.TemplatePrint(heredoc.Doc(`
-		{{success checkmark}} building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}{{nl}}{{nl}}`,
-	), componentSpec)
 
 	var res builder.ComponentBuilderResult
 	err = func() error {

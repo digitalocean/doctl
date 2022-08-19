@@ -9,3 +9,9 @@ func Margin(i ...int) Style {
 func Indent(level int) Style {
 	return Margin(0, 0, 0, level)
 }
+
+func Factory[T any](x T) func() T {
+	return func() T {
+		return x
+	}
+}

@@ -88,9 +88,3 @@ func (s Style) WithString(str string) Style {
 func (s Style) String() string {
 	return s.style.String()
 }
-
-func factory[T any](x T) func() T {
-	return func() T {
-		return x
-	}
-}
