@@ -79,6 +79,7 @@ the contents to the cloud incrementally as it detects changes.`,
 	AddStringFlag(watch, "exclude", "", "", "Functions and/or packages to exclude")
 	AddBoolFlag(watch, "remote-build", "", false, "Run builds remotely")
 	AddBoolFlag(getMetadata, "project-reader", "", false, "Test new project reader service")
+	getMetadata.Flags().MarkHidden("project-reader")
 }
 
 // RunServerlessExtraCreate supports the 'serverless init' command
