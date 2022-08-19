@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
+	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/godo"
 )
 
@@ -49,6 +51,56 @@ func (b baseComponentBuilder) getLogWriter() io.Writer {
 		return os.Stdout
 	}
 	return b.logWriter
+}
+
+func (b baseComponentBuilder) getEnvMap() map[string]string {
+	envs := map[string]string{}
+
+	charm.TemplatePrint(heredoc.Doc(`
+		{{success checkmark}} configuring build environment variables... {{nl}}{{nl}}`,
+	), nil)
+
+	if b.spec != nil {
+		for _, e := range b.spec.Envs {
+			if e.Type == godo.AppVariableType_Secret {
+				charm.TemplatePrint(heredoc.Doc(`
+					=> Ignoring SECRET variable {{highlight .GetKey}}{{nl}}`,
+				), e)
+				continue
+			}
+			if e.Scope != godo.AppVariableScope_RunTime {
+				val := e.Value
+				envs[e.Key] = val
+			}
+		}
+	}
+
+	for _, e := range b.component.GetEnvs() {
+		if e.Type == godo.AppVariableType_Secret {
+			charm.TemplatePrint(heredoc.Doc(`
+					=> Ignoring SECRET variable {{highlight .GetKey}}{{nl}}`,
+			), e)
+			continue
+		}
+		if e.Scope != godo.AppVariableScope_RunTime {
+			val := e.Value
+			envs[e.Key] = val
+		}
+	}
+
+	for k, v := range b.envOverrides {
+		v := v
+		if _, ok := envs[k]; ok {
+			charm.TemplatePrint(heredoc.Doc(`
+					=> Overwriting {{highlight .}} with provided env value{{nl}}`,
+			), k)
+		}
+		envs[k] = v
+	}
+
+	charm.TemplatePrint(heredoc.Doc(`{{nl}}`), nil)
+
+	return envs
 }
 
 // NewBuilderOpts ...

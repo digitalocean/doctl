@@ -94,10 +94,11 @@ func TestCNBComponentBuild(t *testing.T) {
 			Env: []string{
 				"APP_IMAGE_URL=" + builder.ImageOutputName(),
 				"APP_PLATFORM_COMPONENT_TYPE=" + string(service.GetType()),
+				appVarAllowListKey + "=build-arg-1,override-1,run-build-arg-1",
+				appVarPrefix + "build-arg-1=build-val-1",
+				appVarPrefix + "override-1=newval",
+				appVarPrefix + "run-build-arg-1=run-build-val-1",
 				"SOURCE_DIR=" + service.GetSourceDir(),
-				"build-arg-1=build-val-1",
-				"override-1=newval",
-				"run-build-arg-1=run-build-val-1",
 			},
 			Cmd: []string{"sh", "-c", "/.app_platform/build.sh"},
 		}).Return(types.IDResponse{
