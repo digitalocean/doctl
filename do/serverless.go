@@ -133,8 +133,11 @@ type Annotation struct {
 
 // ServerlessProject ...
 type ServerlessProject struct {
-	ProjectPath string `json:"project_path"`
-	ConfigPath  string `json:"config_path"`
+	ProjectPath string   `json:"project_path"`
+	ConfigPath  string   `json:"config"`
+	Packages    string   `json:"packages"`
+	Env         string   `json:"env"`
+	Strays      []string `json:"strays"`
 }
 
 // ProjectSpec describes a project.yml spec
@@ -206,7 +209,7 @@ type ServerlessService interface {
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	GetConnectedAPIHost() (string, error)
-	ReadProject(ServerlessProject) (string, error)
+	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
 	WriteProject(ServerlessProject) (string, error)
 }
 
@@ -680,14 +683,18 @@ func (s *serverlessService) GetConnectedAPIHost() (string, error) {
 // ReadProject takes the path where projec lies and validates the project.yml.
 // once project.yml is validated it reads the directory for all the files and sub-directory
 // and returns the struct of the files
-func (s *serverlessService) ReadProject(project ServerlessProject) (string, error) {
-	// projectSpec
-	_, err := readProjectConfig(project.ConfigPath)
+func (s *serverlessService) ReadProject(project *ServerlessProject, args []string) (ServerlessOutput, error) {
+	err := readTopLevel(project)
 	if err != nil {
-		return "", err
+		return ServerlessOutput{}, err
 	}
-
-	return "", nil
+	_, err = readProjectConfig(project.ConfigPath)
+	if err != nil {
+		return ServerlessOutput{}, err
+	}
+	return ServerlessOutput{
+		Error: err.Error(),
+	}, nil
 }
 
 // WriteProject ...
@@ -696,34 +703,56 @@ func (s *serverlessService) WriteProject(project ServerlessProject) (string, err
 	return "", nil
 }
 
-func readProjectConfig(configPath string) (ProjectSpec, error) {
+func readTopLevel(project *ServerlessProject) error {
+	const (
+		Config   = "project.yaml"
+		Packages = "packages"
+	)
+	files, err := ioutil.ReadDir(project.ProjectPath)
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		if f.Name() == Config && !f.IsDir() {
+			project.ConfigPath = project.ProjectPath + "/" + f.Name()
+		} else if f.Name() == Packages && f.IsDir() {
+			project.Packages = project.ProjectPath + "/" + f.Name()
+		} else if f.Name() == ".nimbella" || f.Name() == ".deployed" {
+			// Ignore
+		} else if f.Name() == ".env" && !f.IsDir() {
+			project.Env = project.ProjectPath + "/" + f.Name()
+		} else {
+			project.Strays = append(project.Strays, project.ProjectPath+"/"+f.Name())
+		}
+	}
+	return nil
+}
+
+func readProjectConfig(configPath string) (*ProjectSpec, error) {
 	spec := ProjectSpec{}
 	// reading config file content
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		return spec, err
+		return nil, err
 	}
-
 	if strings.HasSuffix(configPath, ".json") {
 		// unmarshal project.json
 		err = json.Unmarshal([]byte(content), &spec)
 		if err != nil {
-			return spec, err
+			return nil, err
 		}
 	} else {
 		// unmarshal project.yml
 		err = yaml.Unmarshal([]byte(content), &spec)
 		if err != nil {
-			return spec, err
+			return nil, err
 		}
 	}
-
 	err = validateConfig(&spec)
 	if err != nil {
-		return spec, err
+		return nil, err
 	}
-
-	return spec, nil
+	return &spec, nil
 }
 
 func validateConfig(config *ProjectSpec) error {

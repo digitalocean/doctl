@@ -73,4 +73,5 @@ const (
 	flagJSON           = "json"
 	projectWatch       = "project/watch"
 	keywordWeb         = "web"
+	flagProjectReader  = "project-reader"
 )
