@@ -2,13 +2,24 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/confirm"
+	"github.com/digitalocean/doctl/commands/charm/input"
 )
 
 func main() {
+	p, err := confirm.New("proceed?", confirm.WithDefaultChoice(confirm.Yes)).Prompt()
+	spew.Dump(p, err)
+	i := input.New("app name:", input.WithRequired())
+	res, err := i.Prompt()
+	spew.Dump(res, err)
+	os.Exit(0)
+
 	fmt.Println(
 		charm.Checkmark, charm.CheckmarkSuccess,
 	)

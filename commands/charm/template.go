@@ -16,15 +16,22 @@ func TemplateFuncs(colors ColorScheme) template.FuncMap {
 		"checkmark":    factory(Checkmark),
 		"crossmark":    factory(Crossmark),
 		"promptPrefix": factory(PromptPrefix),
-		"newTextBox":   NewTextBox,
+		"pointerUp":    factory(PointerUp),
+		"pointerRight": factory(PointerRight),
+		"pointerDown":  factory(PointerDown),
+		"pointerLeft":  factory(PointerLeft),
+		"nl":           factory("\n"),
+
+		"newTextBox": NewTextBox,
 
 		"success":   TextSuccess.S,
 		"warning":   TextWarning.S,
 		"error":     TextError.S,
 		"highlight": TextHighlight.S,
+		"muted":     TextMuted.S,
+
 		"bold":      TextBold.S,
 		"underline": TextUnderline.S,
-		"nl":        factory("\n"),
 
 		"lower":        strings.ToLower,
 		"snakeToTitle": SnakeToTitle,
