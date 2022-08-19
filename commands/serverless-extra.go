@@ -155,15 +155,7 @@ func RunServerlessExtraGetMetadata(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	args := getFlatArgsArray(c, []string{flagJSON, flagProjectReader}, []string{flagEnv, flagInclude, flagExclude})
-	r := false
-
-	for _, x := range args {
-		if strings.Contains(x, flagProjectReader) {
-			r = true
-			break
-		}
-	}
+	r, _ := c.Doit.GetBool(c.NS, flagProjectReader)
 
 	var output do.ServerlessOutput
 	project := do.ServerlessProject{
