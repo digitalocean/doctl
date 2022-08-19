@@ -22,10 +22,11 @@ import (
 
 const (
 	// CNBBuilderImage represents the local cnb builder.
-	CNBBuilderImage = "digitaloceanapps/cnb-local-builder:dev"
+	CNBBuilderImage = "digitaloceanapps/cnb-local-builder:v0.46.0"
 
 	appVarAllowListKey = "APP_VARS"
 	appVarPrefix       = "APP_VAR_"
+	cnbCacheDir        = "/cnb/cache"
 )
 
 // CNBComponentBuilder represents a CNB builder.
@@ -56,7 +57,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		return res, err
 	}
 
-	env, err := b.cnbEnv()
+	env, err := b.cnbEnv(ctx)
 	if err != nil {
 		return res, fmt.Errorf("configuring environment variables: %w", err)
 	}
@@ -71,6 +72,14 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 			Type:   mount.TypeBind,
 			Source: cwd,
 			Target: "/workspace",
+		})
+	}
+
+	if b.localCacheDir != "" {
+		mounts = append(mounts, mount.Mount{
+			Type:   mount.TypeBind,
+			Source: b.localCacheDir,
+			Target: cnbCacheDir,
 		})
 	}
 
@@ -174,14 +183,14 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	return res, nil
 }
 
-func (b *CNBComponentBuilder) cnbEnv() ([]string, error) {
+func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
+	envs := []string{}
+	appVars := []string{}
+
 	envMap, err := b.getEnvMap()
 	if err != nil {
 		return nil, err
 	}
-	envs := []string{}
-
-	appVars := []string{}
 	for k, v := range envMap {
 		envs = append(envs, appVarPrefix+k+"="+v)
 		appVars = append(appVars, k)
@@ -217,6 +226,16 @@ func (b *CNBComponentBuilder) cnbEnv() ([]string, error) {
 		envs = append(envs, "VERSION_PINNING_LIST="+string(versioningJSON))
 	}
 
+	if b.localCacheDir != "" {
+		if exists, err := b.imageExists(ctx, b.ImageOutputName()); err != nil {
+			return nil, err
+		} else if exists {
+			envs = append(envs, "PREVIOUS_APP_IMAGE_URL="+b.ImageOutputName())
+			envs = append(envs, "APP_CACHE_DIR="+cnbCacheDir)
+		}
+	}
+
 	sort.Strings(envs)
+
 	return envs, nil
 }

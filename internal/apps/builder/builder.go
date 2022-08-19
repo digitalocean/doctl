@@ -13,6 +13,8 @@ import (
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 )
 
 // ComponentBuilderFactory is the interface for creating a component builder.
@@ -35,6 +37,7 @@ type ComponentBuilderResult struct {
 type baseComponentBuilder struct {
 	cli                  DockerEngineClient
 	contextDir           string
+	localCacheDir        string
 	spec                 *godo.AppSpec
 	component            godo.AppBuildableComponentSpec
 	registry             string
@@ -99,6 +102,19 @@ func (b baseComponentBuilder) getEnvMap() (map[string]string, error) {
 	return envMap, nil
 }
 
+func (b *baseComponentBuilder) imageExists(ctx context.Context, ref string) (bool, error) {
+	images, err := b.cli.ImageList(ctx, types.ImageListOptions{
+		Filters: filters.NewArgs(filters.Arg("reference", ref)),
+	})
+	if err != nil {
+		return false, err
+	}
+	if len(images) < 1 {
+		return false, nil
+	}
+	return true, nil
+}
+
 // NewBuilderOpts ...
 type NewBuilderOpts struct {
 	Component            string
@@ -106,6 +122,7 @@ type NewBuilderOpts struct {
 	EnvOverride          map[string]string
 	BuildCommandOverride string
 	LogWriter            io.Writer
+	LocalCacheDir        string
 	Versioning           Versioning
 }
 
@@ -150,6 +167,7 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 			baseComponentBuilder: baseComponentBuilder{
 				cli,
 				contextDir,
+				opts.LocalCacheDir,
 				spec,
 				component,
 				opts.Registry,
@@ -166,6 +184,7 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 		baseComponentBuilder: baseComponentBuilder{
 			cli,
 			contextDir,
+			opts.LocalCacheDir,
 			spec,
 			component,
 			opts.Registry,

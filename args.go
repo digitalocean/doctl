@@ -66,6 +66,8 @@ const (
 	ArgClusterNodePool = "node-pool"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
 	ArgClusterUpdateKubeconfig = "update-kubeconfig"
+	// ArgNoCache represents whether or not to omit the cache on the next command.
+	ArgNoCache = "no-cache"
 	// ArgNodePoolName is a cluster's node pool name argument.
 	ArgNodePoolName = "name"
 	// ArgNodePoolCount is a cluster's node pool count argument.
