@@ -9,6 +9,7 @@ var (
 	TextWarning   = Style{lipgloss.NewStyle().Foreground(Colors.Warning)}
 	TextError     = Style{lipgloss.NewStyle().Foreground(Colors.Error)}
 	TextHighlight = Style{lipgloss.NewStyle().Foreground(Colors.Highlight)}
+	TextMuted     = Style{lipgloss.NewStyle().Foreground(Colors.Muted)}
 
 	TextBold      = Style{lipgloss.NewStyle().Bold(true)}
 	TextUnderline = Style{lipgloss.NewStyle().Underline(true)}
@@ -16,11 +17,19 @@ var (
 
 const (
 	// CheckmarkCharacter is the checkmark character.
-	CheckmarkCharacter = "✓"
+	CheckmarkCharacter = "✔"
 	// CrossmarkCharacter is the crossmark character.
 	CrossmarkCharacter = "✘"
 	// PromptPrefixCharacter is the > prompt character.
 	PromptPrefixCharacter = "❯"
+	// PointerUpCharacter is an up pointer character.
+	PointerUpCharacter = "▴"
+	// PointerRightCharacter is a right pointer character.
+	PointerRightCharacter = "▸"
+	// PointerDownCharacter is a down pointer character.
+	PointerDownCharacter = "▾"
+	// PointerLeftCharacter is a left pointer character.
+	PointerLeftCharacter = "◂"
 )
 
 var (
@@ -42,4 +51,13 @@ var (
 	PromptPrefixError = PromptPrefix.Inherit(TextError)
 	// PromptPrefixHighlight is a highlighted prompt-prefix icon.
 	PromptPrefixHighlight = PromptPrefix.Inherit(TextHighlight)
+
+	// PointerUpCharacter is an up pointer icon.
+	PointerUp = Style{lipgloss.NewStyle().SetString(PointerUpCharacter)}
+	// PointerRightCharacter is a right pointer icon.
+	PointerRight = Style{lipgloss.NewStyle().SetString(PointerRightCharacter)}
+	// PointerDownCharacter is a down pointer icon.
+	PointerDown = Style{lipgloss.NewStyle().SetString(PointerDownCharacter)}
+	// PointerLeftCharacter is a left pointer icon.
+	PointerLeft = Style{lipgloss.NewStyle().SetString(PointerLeftCharacter)}
 )

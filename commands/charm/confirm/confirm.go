@@ -60,11 +60,11 @@ func New(text string, opts ...Option) *Prompt {
 }
 
 var promptTemplate = `
-{{- highlight promptPrefix }} {{ Bold .Prompt -}}
+{{- highlight promptPrefix }} {{ .Prompt -}}
 {{ if .YesSelected -}}
-	{{- print (Bold " ▸yes ") " no" -}}
+	{{- print (bold (print " " pointerRight "yes ")) " no" -}}
 {{- else if .NoSelected -}}
-	{{- print "  yes " (Bold "▸no") -}}
+	{{- print "  yes " (bold (print pointerRight "no")) -}}
 {{- else -}}
 	{{- "  yes  no" -}}
 {{- end -}}
