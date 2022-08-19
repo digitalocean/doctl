@@ -40,6 +40,10 @@ func TestCNBComponentBuild(t *testing.T) {
 					Value: "newval",
 				},
 				{
+					Key:   "useroverride-1",
+					Value: "newval",
+				},
+				{
 					Key:   "run-build-arg-1",
 					Value: "run-build-val-1",
 					Type:  godo.AppVariableType_General,
@@ -74,6 +78,10 @@ func TestCNBComponentBuild(t *testing.T) {
 				cli:       mockClient,
 				spec:      spec,
 				component: service,
+				envOverrides: map[string]string{
+					"useroverride-1": "newval",
+				},
+				buildCommandOverride: "custom build command",
 			},
 		}
 
@@ -94,10 +102,12 @@ func TestCNBComponentBuild(t *testing.T) {
 			Env: []string{
 				"APP_IMAGE_URL=" + builder.ImageOutputName(),
 				"APP_PLATFORM_COMPONENT_TYPE=" + string(service.GetType()),
-				appVarAllowListKey + "=build-arg-1,override-1,run-build-arg-1",
+				appVarAllowListKey + "=build-arg-1,override-1,run-build-arg-1,useroverride-1",
 				appVarPrefix + "build-arg-1=build-val-1",
 				appVarPrefix + "override-1=newval",
 				appVarPrefix + "run-build-arg-1=run-build-val-1",
+				appVarPrefix + "useroverride-1=newval",
+				"BUILD_COMMAND=" + builder.buildCommandOverride,
 				"SOURCE_DIR=" + service.GetSourceDir(),
 			},
 			Cmd: []string{"sh", "-c", "/.app_platform/build.sh"},

@@ -43,7 +43,9 @@ const (
 	// ArgAppDeployment is the deployment ID.
 	ArgAppDeployment = "deployment"
 	// ArgAppDevConfig is the path to the app dev link config.
-	ArgAppDevConfig = "appdev-config"
+	ArgAppDevConfig = "dev-config"
+	// ArgAppDevBuildCommand is an optional build command to set for local development.
+	ArgAppDevBuildCommand = "build-command"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.

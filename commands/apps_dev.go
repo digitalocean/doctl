@@ -73,6 +73,12 @@ func AppsDev() *Command {
 		"Additional environment variables to inject into the build.",
 	)
 
+	AddStringFlag(
+		build, doctl.ArgAppDevBuildCommand,
+		"", "",
+		"Optional build command override for local development.",
+	)
+
 	AddDurationFlag(
 		build, doctl.ArgTimeout,
 		"", 0,
@@ -222,6 +228,14 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if registryName == "" {
+		return errors.New("registry-name is required")
+	}
+
+	buildOverrride, err := conf.GetString(doctl.ArgAppDevBuildCommand)
+	if err != nil {
+		return err
+	}
 
 	if Interactive {
 		choice, err := confirm.New(
@@ -277,10 +291,11 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	err = func() error {
 		defer cancel()
 		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, spec, builder.NewBuilderOpts{
-			Component: component,
-			Registry:  registryName,
-			Envs:      envs,
-			LogWriter: logWriter,
+			Component:            component,
+			Registry:             registryName,
+			EnvOverride:          envs,
+			BuildCommandOverride: buildOverrride,
+			LogWriter:            logWriter,
 		})
 		if err != nil {
 			return err
