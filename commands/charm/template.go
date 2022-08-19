@@ -20,7 +20,13 @@ func TemplateFuncs(colors ColorScheme) template.FuncMap {
 		"pointerRight": Factory(PointerRight),
 		"pointerDown":  Factory(PointerDown),
 		"pointerLeft":  Factory(PointerLeft),
-		"nl":           Factory("\n"),
+		"nl": func(n ...int) string {
+			count := 1
+			if len(n) > 0 {
+				count = n[0]
+			}
+			return strings.Repeat("\n", count)
+		},
 
 		"newTextBox": NewTextBox,
 

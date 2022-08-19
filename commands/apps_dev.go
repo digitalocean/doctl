@@ -13,6 +13,7 @@ import (
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/confirm"
 	"github.com/digitalocean/doctl/commands/charm/list"
+	"github.com/digitalocean/doctl/commands/charm/pager"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 
@@ -198,9 +199,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
-	charm.TemplatePrint(heredoc.Doc(`
-		{{success checkmark}} building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}{{nl}}{{nl}}`,
+	buildingComponentLine := charm.TemplateString(heredoc.Doc(`
+		building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
 	), componentSpec)
+	charm.TemplatePrint(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
 
 	if componentSpec.GetSourceDir() != "" {
 		sd := componentSpec.GetSourceDir()
@@ -268,8 +270,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		logWriter io.Writer
 	)
 	if Interactive {
-		pager, err := charm.NewPager(
-			charm.PagerWithTitle("Building " + component),
+		logPager, err := pager.New(
+			pager.WithTitle(buildingComponentLine),
 		)
 		if err != nil {
 			return fmt.Errorf("starting log pager: %w", err)
@@ -278,12 +280,12 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		go func() {
 			defer cancel()
 			defer wg.Done()
-			err := pager.Start(ctx)
+			err := logPager.Start(ctx)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "pager error: %v\n", err)
 			}
 		}()
-		logWriter = pager
+		logWriter = logPager
 	} else {
 		logWriter = os.Stdout
 	}
@@ -310,6 +312,14 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}()
 	// allow the pager to exit cleanly
 	wg.Wait()
+
+	// TODO: differentiate between user-initiated cancel and cancel due to build failure
+	// if err == nil {
+	// 	err = ctx.Err()
+	// 	if errors.Is(err, context.Canceled) {
+	// 		err = fmt.Errorf("cancelled")
+	// 	}
+	// }
 
 	if err != nil {
 		return err
