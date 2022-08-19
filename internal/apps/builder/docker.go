@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
+	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 )
@@ -35,6 +37,12 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	res := ComponentBuilderResult{}
 	if b.component == nil {
 		return res, errors.New("no component was provided for the build")
+	}
+
+	if b.buildCommandOverride != "" {
+		charm.TemplatePrint(heredoc.Doc(`
+			{{warning "=> Build command overrides are ignored for Dockerfile based builds..."}}{{nl}}`,
+		), b.buildCommandOverride)
 	}
 
 	buildContext := filepath.Clean(b.component.GetSourceDir())
