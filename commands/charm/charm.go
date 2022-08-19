@@ -34,15 +34,21 @@ func (s Style) Copy() Style {
 
 // Inherit returns a copy of the original style with the properties from another style inherited.
 // This follows lipgloss's inheritance behavior so margins, padding, and underlying string values are not inherited.
-func (s Style) Inherit(o Style) Style {
-	return s.InheritLipgloss(o.style)
+func (s Style) Inherit(styles ...Style) Style {
+	c := s.Copy()
+	for _, style := range styles {
+		c.style = c.style.Inherit(style.style)
+	}
+	return c
 }
 
 // Inherit returns a copy of the original style with the properties from a lipgloss.Style inherited.
 // This follows lipgloss's inheritance behavior so margins, padding, and underlying string values are not inherited.
-func (s Style) InheritLipgloss(o lipgloss.Style) Style {
+func (s Style) InheritLipgloss(styles ...lipgloss.Style) Style {
 	c := s.Copy()
-	c.style = c.style.Inherit(o)
+	for _, style := range styles {
+		c.style = c.style.Inherit(style)
+	}
 	return c
 }
 

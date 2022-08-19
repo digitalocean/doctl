@@ -101,7 +101,7 @@ func (i *Input) Prompt() (string, error) {
 		{{- highlight promptPrefix }} {{ muted .Prompt }} {{ .Input -}}
 		{{- with .ValidationError -}}
 			{{- if eq ErrRequired . -}}
-				{{- error " ✱ required" -}}
+				{{- error (printf " %s required" asterisk) -}}
 			{{- else -}}
 				{{- error (printf " %s %v" crossmark .) -}}
 			{{- end -}}
