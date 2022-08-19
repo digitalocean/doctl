@@ -19,20 +19,27 @@ const (
 	CheckmarkCharacter = "✓"
 	// CrossmarkCharacter is the crossmark character.
 	CrossmarkCharacter = "✘"
+	// PromptPrefixCharacter is the > prompt character.
+	PromptPrefixCharacter = "❯"
 )
 
 var (
 	// Checkmark is a checkmark icon.
 	Checkmark = Style{lipgloss.NewStyle().SetString(CheckmarkCharacter)}
-	// CheckmarkSuccess is a green checkmark that implements fmt.Stringer.
-	//
-	// Example: fmt.Printf("%s success!", charm.CheckmarkSuccess)
+	// CheckmarkSuccess is a green checkmark icon.
 	CheckmarkSuccess = Checkmark.Inherit(TextSuccess)
 
 	// Crossmark is a crossmark icon.
 	Crossmark = Style{lipgloss.NewStyle().SetString(CrossmarkCharacter)}
-	// CrossmarkSuccess is a green crossmark that implements fmt.Stringer.
-	//
-	// Example: fmt.Printf("%s success!", charm.CrossmarkError)
+	// CrossmarkSuccess is a green crossmark icon.
 	CrossmarkError = Crossmark.Inherit(TextError)
+
+	// PromptPrefix is a prompt-prefix icon.
+	PromptPrefix = Style{lipgloss.NewStyle().SetString(PromptPrefixCharacter)}
+	// PromptPrefixSuccess is a green prompt-prefix icon.
+	PromptPrefixSuccess = PromptPrefix.Inherit(TextSuccess)
+	// PromptPrefixError is a red prompt-prefix icon.
+	PromptPrefixError = PromptPrefix.Inherit(TextError)
+	// PromptPrefixHighlight is a highlighted prompt-prefix icon.
+	PromptPrefixHighlight = PromptPrefix.Inherit(TextHighlight)
 )

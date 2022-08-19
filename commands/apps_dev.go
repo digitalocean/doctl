@@ -11,6 +11,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/confirm"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 
@@ -181,7 +182,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 
 	if component == "" {
-		if Interactive {
+		if !Interactive {
 			return errors.New("component name is required when running non-interactively")
 		}
 		return errors.New("component name is required")
@@ -217,6 +218,24 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 	}
 
+	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistryName)
+	if err != nil {
+		return err
+	}
+
+	if Interactive {
+		choice, err := confirm.New(
+			"start build?",
+			confirm.WithDefaultChoice(confirm.Yes),
+		).Prompt()
+		if err != nil {
+			return err
+		}
+		if choice != confirm.Yes {
+			return fmt.Errorf("cancelled")
+		}
+	}
+
 	cli, err := c.Doit.GetContainerEngineClient()
 	if err != nil {
 		return err
@@ -248,14 +267,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		logWriter = pager
 	} else {
 		logWriter = os.Stdout
-	}
-
-	registryName, err := conf.GetString(doctl.ArgRegistryName)
-	if err != nil {
-		return err
-	}
-	if registryName == "" {
-		return errors.New("registry-name is required")
 	}
 
 	charm.TemplatePrint(heredoc.Doc(`
