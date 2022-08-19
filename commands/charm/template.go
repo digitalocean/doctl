@@ -13,14 +13,14 @@ import (
 // TemplateFuncs returns template helpers.
 func TemplateFuncs(colors ColorScheme) template.FuncMap {
 	return template.FuncMap{
-		"checkmark":    factory(Checkmark),
-		"crossmark":    factory(Crossmark),
-		"promptPrefix": factory(PromptPrefix),
-		"pointerUp":    factory(PointerUp),
-		"pointerRight": factory(PointerRight),
-		"pointerDown":  factory(PointerDown),
-		"pointerLeft":  factory(PointerLeft),
-		"nl":           factory("\n"),
+		"checkmark":    Factory(Checkmark),
+		"crossmark":    Factory(Crossmark),
+		"promptPrefix": Factory(PromptPrefix),
+		"pointerUp":    Factory(PointerUp),
+		"pointerRight": Factory(PointerRight),
+		"pointerDown":  Factory(PointerDown),
+		"pointerLeft":  Factory(PointerLeft),
+		"nl":           Factory("\n"),
 
 		"newTextBox": NewTextBox,
 
