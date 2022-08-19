@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
 )
 
@@ -22,7 +23,7 @@ func (i componentListItem) Description() string {
 
 	if buildable, ok := i.spec.(godo.AppBuildableComponentSpec); ok {
 		if sourceDir := buildable.GetSourceDir(); sourceDir != "" {
-			desc = append(desc, "located in ./"+charm.TextHighlight.S(sourceDir))
+			desc = append(desc, template.String(`located in ./{{highlight .}}`, sourceDir))
 		}
 	}
 
