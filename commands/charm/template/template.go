@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/commands/charm/textbox"
 )
 
@@ -18,14 +19,14 @@ type FuncMap = template.FuncMap
 // Funcs returns template helpers.
 func Funcs(colors charm.ColorScheme) template.FuncMap {
 	return template.FuncMap{
-		"checkmark":    charm.Factory(charm.Checkmark),
-		"crossmark":    charm.Factory(charm.Crossmark),
-		"asterisk":     charm.Factory(charm.Astreisk),
-		"promptPrefix": charm.Factory(charm.PromptPrefix),
-		"pointerUp":    charm.Factory(charm.PointerUp),
-		"pointerRight": charm.Factory(charm.PointerRight),
-		"pointerDown":  charm.Factory(charm.PointerDown),
-		"pointerLeft":  charm.Factory(charm.PointerLeft),
+		"checkmark":    charm.Factory(text.Checkmark),
+		"crossmark":    charm.Factory(text.Crossmark),
+		"asterisk":     charm.Factory(text.Astreisk),
+		"promptPrefix": charm.Factory(text.PromptPrefix),
+		"pointerUp":    charm.Factory(text.PointerUp),
+		"pointerRight": charm.Factory(text.PointerRight),
+		"pointerDown":  charm.Factory(text.PointerDown),
+		"pointerLeft":  charm.Factory(text.PointerLeft),
 		"nl": func(n ...int) string {
 			count := 1
 			if len(n) > 0 {
@@ -36,14 +37,14 @@ func Funcs(colors charm.ColorScheme) template.FuncMap {
 
 		"newTextBox": textbox.New,
 
-		"success":   charm.TextSuccess.S,
-		"warning":   charm.TextWarning.S,
-		"error":     charm.TextError.S,
-		"highlight": charm.TextHighlight.S,
-		"muted":     charm.TextMuted.S,
+		"success":   text.Success.S,
+		"warning":   text.Warning.S,
+		"error":     text.Error.S,
+		"highlight": text.Highlight.S,
+		"muted":     text.Muted.S,
 
-		"bold":      charm.TextBold.S,
-		"underline": charm.TextUnderline.S,
+		"bold":      text.Bold.S,
+		"underline": text.Underline.S,
 
 		"lower":        strings.ToLower,
 		"snakeToTitle": charm.SnakeToTitle,
@@ -100,7 +101,7 @@ func BufferedE(w io.Writer, content string, data any) error {
 func Buffered(w io.Writer, content string, data any) {
 	err := BufferedE(w, content, data)
 	if err != nil {
-		fmt.Fprintf(w, "%s", charm.TextError.S(err))
+		fmt.Fprintf(w, "%s", text.Error.S(err))
 	}
 }
 
@@ -132,6 +133,6 @@ func PrintE(content string, data any) error {
 func Print(content string, data any) {
 	err := Render(os.Stdout, content, data)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", charm.TextError.S(err))
+		fmt.Fprintf(os.Stderr, "%s\n", text.Error.S(err))
 	}
 }

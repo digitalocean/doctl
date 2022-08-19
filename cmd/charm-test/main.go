@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/confirm"
 	"github.com/digitalocean/doctl/commands/charm/input"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/commands/charm/textbox"
 )
 
@@ -25,12 +25,12 @@ func main() {
 	}
 
 	fmt.Println(
-		charm.Checkmark,
-		charm.Checkmark.Inherit(charm.TextSuccess),
+		text.Checkmark,
+		text.Checkmark.Inherit(text.Success),
 	)
 
 	fmt.Println(
-		charm.TextSuccess.WithString("woo!"), charm.TextSuccess.S("woo 2!"),
+		text.Success.WithString("woo!"), text.Success.S("woo 2!"),
 	)
 
 	if err := template.PrintE(heredoc.Doc(`
@@ -65,9 +65,9 @@ func main() {
 	fmt.Fprintf(
 		textbox.New().Success(),
 		"%s Successfully built %s in %s",
-		charm.Checkmark.Success(),
-		charm.TextSuccess.S(img),
-		charm.TextWarning.S(dur.Truncate(time.Second).String()),
+		text.Checkmark.Success(),
+		text.Success.S(img),
+		text.Warning.S(dur.Truncate(time.Second).String()),
 	)
 
 	if err := template.BufferedE(textbox.New().Success(), heredoc.Doc(`

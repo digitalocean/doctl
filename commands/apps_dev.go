@@ -99,7 +99,11 @@ func AppsDev() *Command {
 // RunAppsDevBuild builds an app component locally.
 func RunAppsDevBuild(c *CmdConfig) error {
 	ctx := context.Background()
-	if timeout, _ := c.Doit.GetDuration(c.NS, doctl.ArgTimeout); timeout > 0 {
+	timeout, err := c.Doit.GetDuration(c.NS, doctl.ArgTimeout)
+	if err != nil {
+		return err
+	}
+	if timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
