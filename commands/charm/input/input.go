@@ -68,11 +68,7 @@ func WithInitialValue(s string) Option {
 var templateFuncs template.FuncMap
 
 func init() {
-	ctf := template.Funcs(charm.Colors)
-	templateFuncs = make(template.FuncMap, len(ctf))
-	for k, v := range ctf {
-		templateFuncs[k] = v
-	}
+	templateFuncs = template.Funcs(charm.Colors)
 	templateFuncs["ErrRequired"] = func() error { return ErrRequired }
 }
 
@@ -98,7 +94,7 @@ func (i *Input) Prompt() (string, error) {
 	in.ExtendedTemplateFuncs = templateFuncs
 
 	in.Template = `
-		{{- highlight promptPrefix }} {{ muted .Prompt }} {{ .Input -}}
+		{{- highlight promptPrefix }} {{ bold .Prompt }} {{ .Input -}}
 		{{- with .ValidationError -}}
 			{{- if eq ErrRequired . -}}
 				{{- error (printf " %s required" asterisk) -}}
@@ -112,14 +108,14 @@ func (i *Input) Prompt() (string, error) {
 	`
 
 	in.ResultTemplate = `
-		{{- success promptPrefix }} {{ muted .Prompt }} {{ Mask .FinalValue -}}{{nl -}}
+		{{- success promptPrefix }} {{ bold .Prompt }} {{ Mask .FinalValue -}}{{nl -}}
 	`
 
 	res, err := in.RunPrompt()
 	if err != nil {
 		if errors.Is(err, promptkit.ErrAborted) {
 			template.Print(`
-			{{- error promptPrefix }} {{ muted . }} {{ error "cancelled" }}{{nl -}}
+			{{- error promptPrefix }} {{ bold . }} {{ error "cancelled" }}{{nl -}}
 		`, i.text)
 		}
 		return "", err

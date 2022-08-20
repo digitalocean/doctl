@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -14,12 +15,19 @@ import (
 
 func main() {
 	var err error
-	i := input.New("app name:", input.WithRequired())
-	_, err = i.Prompt()
+	choice, err := confirm.New("wanna see a magic trick?",
+		confirm.WithDefaultChoice(confirm.Yes),
+		confirm.WithPersistPrompt(confirm.PersistPromptIfNo),
+	).Prompt()
 	if err != nil {
 		fmt.Println(err)
 	}
-	_, err = confirm.New("proceed?", confirm.WithDefaultChoice(confirm.Yes)).Prompt()
+	if choice == confirm.Yes {
+		fmt.Println("👻")
+	}
+	os.Exit(1)
+	i := input.New("app name:", input.WithRequired())
+	_, err = i.Prompt()
 	if err != nil {
 		fmt.Println(err)
 	}
