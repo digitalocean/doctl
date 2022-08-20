@@ -252,7 +252,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		choice, err := confirm.New(
 			"start build?",
 			confirm.WithDefaultChoice(confirm.Yes),
-			confirm.WithDisplayResult(confirm.DisplayResultEphemeralYes),
+			confirm.WithPersistPrompt(confirm.PersistPromptIfNo),
 		).Prompt()
 		if err != nil {
 			return err

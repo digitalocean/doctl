@@ -6,11 +6,15 @@ import (
 	"github.com/erikgeiser/promptkit/confirmation"
 )
 
+// Choice describes a prompt choice.
 type Choice string
 
 const (
-	Yes       Choice = "yes"
-	No        Choice = "no"
+	// Yes represents the "yes" choice.
+	Yes Choice = "yes"
+	// No represents the "no" choice.
+	No Choice = "no"
+	// Undecided is returned if the user was unable to make a choice.
 	Undecided Choice = "undecided"
 )
 
@@ -37,35 +41,43 @@ func fromChoice(v Choice) confirmation.Value {
 	}
 }
 
+// Prompt describes a confirmation prompt.
 type Prompt struct {
 	text          string
 	choice        Choice
-	displayResult DisplayResult
+	persistPrompt PersistPrompt
 }
 
+// Option configures an option on a prompt.
 type Option func(*Prompt)
 
+// WithDefaultChoice sets the default choice on the prompt.
 func WithDefaultChoice(c Choice) Option {
 	return func(p *Prompt) {
 		p.choice = c
 	}
 }
 
-type DisplayResult int
+// PersistPrompt describes the behavior of the prompt after a choice is made.
+type PersistPrompt int
 
 const (
-	DisplayResultNormal DisplayResult = iota
-	DisplayResultEphemeral
-	DisplayResultEphemeralYes
-	DisplayResultEphemeralNo
+	// PersistPromptAlways always persists the prompt on the screen regardless of the choice.
+	PersistPromptAlways PersistPrompt = iota
+	// PersistPromptIfYes only persists the prompt on the screen if the choice is Yes.
+	PersistPromptIfYes
+	// PersistPromptIfNo only persists the prompt on the screen if the choice is No.
+	PersistPromptIfNo
 )
 
-func WithDisplayResult(v DisplayResult) Option {
+// WithPersistPrompt configures the prompt persistance behavior.
+func WithPersistPrompt(v PersistPrompt) Option {
 	return func(p *Prompt) {
-		p.displayResult = v
+		p.persistPrompt = v
 	}
 }
 
+// New creates a new prompt.
 func New(text string, opts ...Option) *Prompt {
 	p := &Prompt{
 		text: text,
@@ -89,7 +101,7 @@ var promptTemplate = `
 
 var resultTemplate = `
 {{- if RenderResult .FinalValue -}}
-{{- if.FinalValue -}}{{success promptPrefix}}{{else}}{{error promptPrefix}}{{end}}
+{{- if .FinalValue -}}{{success promptPrefix}}{{else}}{{error promptPrefix}}{{end}}
 {{- print " " .Prompt " " -}}
 	{{- if .FinalValue -}}
 		{{- success "yes" -}}
@@ -99,15 +111,22 @@ var resultTemplate = `
 {{- end -}}
 `
 
+// Prompt renders the prompt on the screen.
 func (p *Prompt) Prompt() (Choice, error) {
 	input := confirmation.New(p.text, fromChoice(p.choice))
 	tfs := template.Funcs(charm.Colors)
-	tfs["RenderResult"] = func(finalValue bool) bool {
-		switch p.displayResult {
-		case DisplayResultEphemeralNo:
-			return finalValue
-		case DisplayResultEphemeralYes:
-			return !finalValue
+	tfs["RenderResult"] = func(choice bool) bool {
+		switch p.persistPrompt {
+		case PersistPromptAlways:
+			return true
+		case PersistPromptIfNo:
+			// the prompt should only be persisted if the choice is `no`
+			// render only if choice == false
+			return !choice
+		case PersistPromptIfYes:
+			// the prompt should only be persisted if the choice is `yes`
+			// render only if choice == true
+			return choice
 		default:
 			return true
 		}
