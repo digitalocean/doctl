@@ -34,18 +34,6 @@ func TestNewBuilderComponent(t *testing.T) {
 		require.ErrorContains(t, err, fmt.Sprintf("component %s not found", missingComponent))
 	})
 
-	t.Run("cnb builder", func(t *testing.T) {
-		builder, err := builderFactory.NewComponentBuilder(nil, ".", &godo.AppSpec{
-			Services: []*godo.AppServiceSpec{{
-				Name: "web",
-			}},
-		}, NewBuilderOpts{
-			Component: "web",
-		})
-		require.NoError(t, err)
-		require.IsTypef(t, &CNBComponentBuilder{}, builder, "expected CNBComponentBuilder but was %T", builder)
-	})
-
 	t.Run("dockerfile builder", func(t *testing.T) {
 		builder, err := builderFactory.NewComponentBuilder(nil, ".", &godo.AppSpec{
 			Services: []*godo.AppServiceSpec{{
@@ -57,5 +45,64 @@ func TestNewBuilderComponent(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.IsTypef(t, &DockerComponentBuilder{}, builder, "expected DockerComponentBuilder but was %T", builder)
+	})
+}
+
+func TestNewBuilderComponent_CNB(t *testing.T) {
+	builderFactory := DefaultComponentBuilderFactory{}
+
+	t.Run("happy path", func(t *testing.T) {
+		builder, err := builderFactory.NewComponentBuilder(nil, ".", &godo.AppSpec{
+			Services: []*godo.AppServiceSpec{{
+				Name: "web",
+			}},
+		}, NewBuilderOpts{
+			Component: "web",
+		})
+		require.NoError(t, err)
+		require.IsTypef(t, &CNBComponentBuilder{}, builder, "expected CNBComponentBuilder but was %T", builder)
+
+		cnbBuilder := builder.(*CNBComponentBuilder)
+		// no buildpacks in builder opts
+		require.Equal(t, CNBVersioning{}, cnbBuilder.versioning)
+	})
+
+	t.Run("buildpack versioning", func(t *testing.T) {
+		builder, err := builderFactory.NewComponentBuilder(nil, ".", &godo.AppSpec{
+			Services: []*godo.AppServiceSpec{{
+				Name: "web",
+			}},
+		}, NewBuilderOpts{
+			Component: "web",
+			Versioning: Versioning{
+				CNB: &godo.AppBuildConfigCNBVersioning{
+					Buildpacks: []*godo.Buildpack{
+						{
+							ID:           "digitalocean/node",
+							MajorVersion: 1,
+						},
+						{
+							ID:           "digitalocean/go",
+							MajorVersion: 2,
+						},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+		cnbBuilder, ok := builder.(*CNBComponentBuilder)
+		require.True(t, ok, "expected CNBComponentBuilder but was %T", builder)
+		require.Equal(t, CNBVersioning{
+			Buildpacks: []*Buildpack{
+				{
+					ID:      "digitalocean/node",
+					Version: "1.0.0",
+				},
+				{
+					ID:      "digitalocean/go",
+					Version: "2.0.0",
+				},
+			},
+		}, cnbBuilder.versioning)
 	})
 }

@@ -1,14 +1,17 @@
 package builder
 
 import (
+	"bytes"
 	"context"
 	"io/ioutil"
 	"strings"
 	"testing"
 
+	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/godo"
 	"github.com/docker/docker/api/types"
 	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,11 +75,14 @@ func TestDockerComponentBuild(t *testing.T) {
 		}
 
 		mockClient := NewMockDockerEngineClient(ctrl)
+		var logBuf bytes.Buffer
 		builder := &DockerComponentBuilder{
 			baseComponentBuilder: baseComponentBuilder{
-				cli:       mockClient,
-				spec:      spec,
-				component: service,
+				cli:                  mockClient,
+				spec:                 spec,
+				component:            service,
+				buildCommandOverride: "test",
+				logWriter:            &logBuf,
 			},
 		}
 
@@ -96,5 +102,16 @@ func TestDockerComponentBuild(t *testing.T) {
 
 		_, err := builder.Build(ctx)
 		require.NoError(t, err)
+
+		assert.Contains(t, logBuf.String(), text.Crossmark.String()+" build command overrides are ignored for Dockerfile based builds")
 	})
+}
+
+type logWriter struct {
+	t *testing.T
+}
+
+func (lw logWriter) Write(data []byte) (int, error) {
+	lw.t.Log(string(data))
+	return len(data), nil
 }

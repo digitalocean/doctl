@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
@@ -39,14 +38,21 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		return res, errors.New("no component was provided for the build")
 	}
 
+	lw := b.getLogWriter()
 	if b.buildCommandOverride != "" {
-		template.Print(heredoc.Doc(`
-			{{warning "=> Build command overrides are ignored for Dockerfile based builds..."}}{{nl}}`,
-		), b.buildCommandOverride)
+		template.Render(lw,
+			`{{warning (print crossmark " build command overrides are ignored for Dockerfile based builds")}}{{nl 2}}`,
+			b.buildCommandOverride,
+		)
+	}
+
+	buildArgs, err := b.getBuildArgs()
+	if err != nil {
+		return res, fmt.Errorf("configuring environment variables: %w", err)
 	}
 
 	buildContext := filepath.Clean(b.component.GetSourceDir())
-	buildContext, err := filepath.Rel(".", buildContext)
+	buildContext, err = filepath.Rel(".", buildContext)
 	if err != nil {
 		return res, err
 	}
@@ -64,7 +70,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		Tags: []string{
 			b.ImageOutputName(),
 		},
-		BuildArgs: b.getBuildArgs(),
+		BuildArgs: buildArgs,
 	}
 	dockerRes, err := b.cli.ImageBuild(ctx, tar, opts)
 	if err != nil {
@@ -72,15 +78,18 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		return res, err
 	}
 	defer dockerRes.Body.Close()
-	print(dockerRes.Body, b.getLogWriter())
+	print(dockerRes.Body, lw)
 	res.Image = b.ImageOutputName()
 	res.BuildDuration = time.Since(start)
 	res.ExitCode = 0
 	return res, nil
 }
 
-func (b *DockerComponentBuilder) getBuildArgs() map[string]*string {
-	envMap := b.getEnvMap()
+func (b *DockerComponentBuilder) getBuildArgs() (map[string]*string, error) {
+	envMap, err := b.getEnvMap()
+	if err != nil {
+		return nil, err
+	}
 	args := map[string]*string{}
 
 	for k, v := range envMap {
@@ -88,7 +97,7 @@ func (b *DockerComponentBuilder) getBuildArgs() map[string]*string {
 		args[k] = &v
 	}
 
-	return args
+	return args, nil
 }
 
 type dockerBuildOut struct {

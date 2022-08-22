@@ -2,13 +2,16 @@ package builder
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
+	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -25,9 +28,21 @@ const (
 	appVarPrefix       = "APP_VAR_"
 )
 
-// CNBComponentBuilder represents a CNB builder
+// CNBComponentBuilder represents a CNB builder.
 type CNBComponentBuilder struct {
 	baseComponentBuilder
+	versioning CNBVersioning
+}
+
+// CNBVersioning contains CNB versioning config.
+type CNBVersioning struct {
+	Buildpacks []*Buildpack
+}
+
+// Buildpack represents a CNB buildpack.
+type Buildpack struct {
+	ID      string `json:"id,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // Build attempts to build the requested component using the CNB Builder.
@@ -39,6 +54,11 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	cwd, err := os.Getwd()
 	if err != nil {
 		return res, err
+	}
+
+	env, err := b.cnbEnv()
+	if err != nil {
+		return res, fmt.Errorf("configuring environment variables: %w", err)
 	}
 
 	mounts := []mount.Mount{{
@@ -113,7 +133,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	execRes, err := b.cli.ContainerExecCreate(ctx, buildContainer.ID, types.ExecConfig{
 		AttachStderr: true,
 		AttachStdout: true,
-		Env:          b.cnbEnv(),
+		Env:          env,
 		Cmd:          []string{"sh", "-c", "/.app_platform/build.sh"},
 	})
 	if err != nil {
@@ -154,8 +174,11 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	return res, nil
 }
 
-func (b *CNBComponentBuilder) cnbEnv() []string {
-	envMap := b.getEnvMap()
+func (b *CNBComponentBuilder) cnbEnv() ([]string, error) {
+	envMap, err := b.getEnvMap()
+	if err != nil {
+		return nil, err
+	}
 	envs := []string{}
 
 	appVars := []string{}
@@ -168,6 +191,7 @@ func (b *CNBComponentBuilder) cnbEnv() []string {
 		envs = append(envs, appVarAllowListKey+"="+strings.Join(appVars, ","))
 	}
 
+	envs = append(envs, "CNB_UPLOAD_RETRY=1")
 	envs = append(envs, "APP_IMAGE_URL="+b.ImageOutputName())
 	envs = append(envs, "APP_PLATFORM_COMPONENT_TYPE="+string(b.component.GetType()))
 	if b.component.GetSourceDir() != "" {
@@ -175,15 +199,24 @@ func (b *CNBComponentBuilder) cnbEnv() []string {
 	}
 
 	if b.buildCommandOverride != "" {
-		template.Print(heredoc.Doc(`
-				=> Overriding default build command with custom command: {{highlight .}}{{nl}}`,
-		), b.buildCommandOverride)
+		template.Render(b.getLogWriter(), heredoc.Doc(`
+			{{success checkmark}} overriding default build command with custom command:
+			{{highlight .}}
+		`,
+		), charm.IndentString(4, b.buildCommandOverride))
 		envs = append(envs, "BUILD_COMMAND="+b.buildCommandOverride)
 	} else if b.component.GetBuildCommand() != "" {
 		envs = append(envs, "BUILD_COMMAND="+b.component.GetBuildCommand())
 	}
 
-	sort.Strings(envs)
+	if len(b.versioning.Buildpacks) > 0 {
+		versioningJSON, err := json.Marshal(b.versioning.Buildpacks)
+		if err != nil {
+			return nil, fmt.Errorf("computing buildpack versioning: %w", err)
+		}
+		envs = append(envs, "VERSION_PINNING_LIST="+string(versioningJSON))
+	}
 
-	return envs
+	sort.Strings(envs)
+	return envs, nil
 }

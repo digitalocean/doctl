@@ -60,7 +60,9 @@ func WithTitle(title string) Option {
 
 func (p *Pager) Write(b []byte) (int, error) {
 	n, err := p.buffer.Write(b)
-	p.prog.Send(msgUpdate{})
+	if p.prog != nil {
+		p.prog.Send(msgUpdate{})
+	}
 	return n, err
 }
 

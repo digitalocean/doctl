@@ -111,6 +111,7 @@ func TestCNBComponentBuild(t *testing.T) {
 				appVarPrefix + "run-build-arg-1=run-build-val-1",
 				appVarPrefix + "useroverride-1=newval",
 				"BUILD_COMMAND=" + builder.buildCommandOverride,
+				"CNB_UPLOAD_RETRY=1",
 				"SOURCE_DIR=" + service.GetSourceDir(),
 			},
 			Cmd: []string{"sh", "-c", "/.app_platform/build.sh"},
@@ -182,6 +183,7 @@ func TestCNBComponentBuild(t *testing.T) {
 			Env: []string{
 				"APP_IMAGE_URL=" + builder.ImageOutputName(),
 				"APP_PLATFORM_COMPONENT_TYPE=" + string(service.GetType()),
+				"CNB_UPLOAD_RETRY=1",
 				"SOURCE_DIR=" + service.GetSourceDir(),
 			},
 			Cmd: []string{"sh", "-c", "/.app_platform/build.sh"},
@@ -204,5 +206,39 @@ func TestCNBComponentBuild(t *testing.T) {
 
 		_, err = builder.Build(ctx)
 		require.NoError(t, err)
+	})
+
+	t.Run("override unrecognized env", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		service := &godo.AppServiceSpec{
+			SourceDir: "./subdir",
+			Name:      "web",
+			Envs: []*godo.AppVariableDefinition{
+				{
+					Key:   "build-arg-1",
+					Value: "build-val-1",
+					Type:  godo.AppVariableType_General,
+					Scope: godo.AppVariableScope_BuildTime,
+				},
+			},
+		}
+		spec := &godo.AppSpec{
+			Services: []*godo.AppServiceSpec{service},
+		}
+
+		mockClient := NewMockDockerEngineClient(ctrl)
+		builder := &CNBComponentBuilder{
+			baseComponentBuilder: baseComponentBuilder{
+				cli:       mockClient,
+				spec:      spec,
+				component: service,
+				envOverrides: map[string]string{
+					"useroverride-1": "newval",
+				},
+			},
+		}
+
+		_, err := builder.Build(ctx)
+		require.EqualError(t, err, "configuring environment variables: variable not in found in app spec: useroverride-1")
 	})
 }
