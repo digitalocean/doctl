@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"sync"
 
@@ -311,6 +312,11 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 		res, err = builder.Build(ctx)
 		if err != nil {
+			_, isSnap := os.LookupEnv("SNAP")
+			if errors.Is(err, fs.ErrPermission) && isSnap {
+				template.Buffered(logWriter, `{{warning "Using the doctl Snap? Grant access to the doctl:app-dev-build plug to use this command with: sudo snap connect doctl:app-dev-build docker:docker-daemon"}}{{nl}}`, nil)
+				return err
+			}
 			return err
 		}
 		return nil
