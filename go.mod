@@ -52,6 +52,7 @@ require (
 	github.com/charmbracelet/lipgloss v0.5.0
 	github.com/erikgeiser/promptkit v0.7.0
 	github.com/joho/godotenv v1.4.0
+	github.com/muesli/reflow v0.3.0
 )
 
 require (
@@ -88,7 +89,6 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/muesli/ansi v0.0.0-20211031195517-c9f0611b6c70 // indirect
 	github.com/muesli/cancelreader v0.2.1 // indirect
-	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.12.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect

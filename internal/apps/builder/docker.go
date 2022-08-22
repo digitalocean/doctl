@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 )
@@ -40,7 +40,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	}
 
 	if b.buildCommandOverride != "" {
-		charm.TemplatePrint(heredoc.Doc(`
+		template.Print(heredoc.Doc(`
 			{{warning "=> Build command overrides are ignored for Dockerfile based builds..."}}{{nl}}`,
 		), b.buildCommandOverride)
 	}

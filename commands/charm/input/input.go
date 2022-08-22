@@ -3,9 +3,9 @@ package input
 import (
 	"errors"
 	"fmt"
-	"text/template"
 
 	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/erikgeiser/promptkit"
 	"github.com/erikgeiser/promptkit/textinput"
 )
@@ -68,11 +68,7 @@ func WithInitialValue(s string) Option {
 var templateFuncs template.FuncMap
 
 func init() {
-	ctf := charm.TemplateFuncs(charm.Colors)
-	templateFuncs = make(template.FuncMap, len(ctf))
-	for k, v := range ctf {
-		templateFuncs[k] = v
-	}
+	templateFuncs = template.Funcs(charm.Colors)
 	templateFuncs["ErrRequired"] = func() error { return ErrRequired }
 }
 
@@ -98,10 +94,10 @@ func (i *Input) Prompt() (string, error) {
 	in.ExtendedTemplateFuncs = templateFuncs
 
 	in.Template = `
-		{{- highlight promptPrefix }} {{ muted .Prompt }} {{ .Input -}}
+		{{- highlight promptPrefix }} {{ bold .Prompt }} {{ .Input -}}
 		{{- with .ValidationError -}}
 			{{- if eq ErrRequired . -}}
-				{{- error " ✱ required" -}}
+				{{- error (printf " %s required" asterisk) -}}
 			{{- else -}}
 				{{- error (printf " %s %v" crossmark .) -}}
 			{{- end -}}
@@ -112,14 +108,14 @@ func (i *Input) Prompt() (string, error) {
 	`
 
 	in.ResultTemplate = `
-		{{- success promptPrefix }} {{ muted .Prompt }} {{ Mask .FinalValue -}}{{nl -}}
+		{{- success promptPrefix }} {{ bold .Prompt }} {{ Mask .FinalValue -}}{{nl -}}
 	`
 
 	res, err := in.RunPrompt()
 	if err != nil {
 		if errors.Is(err, promptkit.ErrAborted) {
-			charm.TemplatePrint(`
-			{{- error promptPrefix }} {{ muted . }} {{ error "cancelled" }}{{nl -}}
+			template.Print(`
+			{{- error promptPrefix }} {{ bold . }} {{ error "cancelled" }}{{nl -}}
 		`, i.text)
 		}
 		return "", err

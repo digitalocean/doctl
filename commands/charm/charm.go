@@ -34,21 +34,23 @@ func (s Style) Copy() Style {
 
 // Inherit returns a copy of the original style with the properties from another style inherited.
 // This follows lipgloss's inheritance behavior so margins, padding, and underlying string values are not inherited.
-func (s Style) Inherit(o Style) Style {
+func (s Style) Inherit(styles ...Style) Style {
 	c := s.Copy()
-	c.style = c.style.Inherit(o.style)
+	for _, style := range styles {
+		c.style = c.style.Inherit(style.style)
+	}
 	return c
 }
 
-// NOTE is this actually needed
-// // Inherit inherits properties from another style in-place.
-// // This follows lipgloss's inheritance behavior so margins, padding, and underlying string values are not inherited.
-// //
-// // NOTE: this is an internal method that overwrites the original style.
-// func (s *Style) inherit(o Style) *Style {
-// 	s.style = s.style.Inherit(o.style)
-// 	return s
-// }
+// Inherit returns a copy of the original style with the properties from a lipgloss.Style inherited.
+// This follows lipgloss's inheritance behavior so margins, padding, and underlying string values are not inherited.
+func (s Style) InheritLipgloss(styles ...lipgloss.Style) Style {
+	c := s.Copy()
+	for _, style := range styles {
+		c.style = c.style.Inherit(style)
+	}
+	return c
+}
 
 // Sprintf formats the specified text with the style applied.
 func (s Style) Sprintf(format string, a ...any) string {
@@ -87,10 +89,4 @@ func (s Style) WithString(str string) Style {
 // String implements the fmt.Stringer interface.
 func (s Style) String() string {
 	return s.style.String()
-}
-
-func factory[T any](x T) func() T {
-	return func() T {
-		return x
-	}
 }

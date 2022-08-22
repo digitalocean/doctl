@@ -1,24 +1,27 @@
-package charm
+package list
 
 import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/digitalocean/doctl/commands/charm"
 )
 
 var (
 	// ListDefaultStyle is the default list style.
-	ListDefaultStyle = Style{lipgloss.NewStyle().Margin(1, 1)}
+	ListDefaultStyle = charm.NewStyle(lipgloss.NewStyle().Margin(1, 1))
 )
+
+type Item list.Item
 
 // List is a component used to select an item from a list.
 type List struct {
-	Fullscreen bool
-	Style      Style
+	fullscreen bool
+	style      charm.Style
 
-	items    []list.Item
-	selected list.Item
+	items    []Item
+	selected Item
 
 	model list.Model
 }
@@ -26,19 +29,45 @@ type List struct {
 // listModel implements the bubbletea.Model interface.
 type listModel List
 
-// NewList creates a new list.
-func NewList(items []list.Item) *List {
+type Option func(*List)
+
+// New creates a new list.
+func New(items []Item, opts ...Option) *List {
 	delegate := list.NewDefaultDelegate()
 	// TODO: accept an optional sample item for the height
 	delegate.SetHeight(3)
 
-	model := list.New(items, delegate, 0, 0)
+	teaItems := make([]list.Item, len(items))
+	for i, item := range items {
+		teaItems[i] = list.Item(item)
+	}
+	model := list.New(teaItems, delegate, 0, 0)
 	model.Paginator.Type = paginator.Arabic
 	model.Paginator.ArabicFormat = "page %d of %d"
 
-	return &List{
-		model: model,
-		Style: ListDefaultStyle,
+	l := &List{
+		model:      model,
+		style:      ListDefaultStyle,
+		fullscreen: true,
+	}
+
+	for _, opt := range opts {
+		opt(l)
+	}
+
+	return l
+}
+
+func WithStyle(s charm.Style) Option {
+	return func(l *List) {
+		l.style = s
+	}
+}
+
+// TODO: export once this is fully implemented.
+func withFullscreen(v bool) Option {
+	return func(l *List) {
+		l.fullscreen = v
 	}
 }
 
@@ -48,14 +77,14 @@ func (l *List) Model() *list.Model {
 }
 
 func (l *List) teaOptions() (opts []tea.ProgramOption) {
-	if l.Fullscreen {
+	if l.fullscreen {
 		opts = append(opts, tea.WithAltScreen())
 	}
 	return opts
 }
 
 // Select displays the list and prompts the user to select an item.
-func (l *List) Select() (list.Item, error) {
+func (l *List) Select() (Item, error) {
 	p := tea.NewProgram((*listModel)(l), l.teaOptions()...)
 	if err := p.Start(); err != nil {
 		return nil, err
@@ -81,12 +110,12 @@ func (l *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return l, tea.Quit
 		}
 	case tea.WindowSizeMsg:
-		w, h := l.Style.style.GetFrameSize()
+		w, h := l.style.Lipgloss().GetFrameSize()
 		w = msg.Width - w
-		if l.Fullscreen {
+		if l.fullscreen {
 			h = msg.Height - h
 		} else {
-			// TODO: finish this
+			// TODO: what should we set this to
 			h = 10
 		}
 		l.model.SetSize(w, h)
@@ -99,5 +128,5 @@ func (l *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // Update implements bubbletea.Model.
 func (l *listModel) View() string {
-	return l.Style.style.Render(l.model.View())
+	return l.style.Lipgloss().Render(l.model.View())
 }

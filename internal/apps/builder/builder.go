@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
-	"github.com/digitalocean/doctl/commands/charm"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
 )
 
@@ -58,15 +58,16 @@ func (b baseComponentBuilder) getLogWriter() io.Writer {
 
 func (b baseComponentBuilder) getEnvMap() map[string]string {
 	envs := map[string]string{}
+	lw := b.getLogWriter()
 
-	charm.TemplatePrint(heredoc.Doc(`
-		{{success checkmark}} configuring build environment variables... {{nl}}{{nl}}`,
+	template.Render(lw, heredoc.Doc(`
+		{{success checkmark}} configuring build environment variables... {{nl 2}}`,
 	), nil)
 
 	if b.spec != nil {
 		for _, e := range b.spec.Envs {
 			if e.Type == godo.AppVariableType_Secret {
-				charm.TemplatePrint(heredoc.Doc(`
+				template.Render(lw, heredoc.Doc(`
 					=> Ignoring SECRET variable {{highlight .GetKey}}{{nl}}`,
 				), e)
 				continue
@@ -80,7 +81,7 @@ func (b baseComponentBuilder) getEnvMap() map[string]string {
 
 	for _, e := range b.component.GetEnvs() {
 		if e.Type == godo.AppVariableType_Secret {
-			charm.TemplatePrint(heredoc.Doc(`
+			template.Render(lw, heredoc.Doc(`
 					=> Ignoring SECRET variable {{highlight .GetKey}}{{nl}}`,
 			), e)
 			continue
@@ -94,14 +95,14 @@ func (b baseComponentBuilder) getEnvMap() map[string]string {
 	for k, v := range b.envOverrides {
 		v := v
 		if _, ok := envs[k]; ok {
-			charm.TemplatePrint(heredoc.Doc(`
+			template.Render(lw, heredoc.Doc(`
 					=> Overwriting {{highlight .}} with provided env value{{nl}}`,
 			), k)
 		}
 		envs[k] = v
 	}
 
-	charm.TemplatePrint(heredoc.Doc(`{{nl}}`), nil)
+	fmt.Fprint(lw, "\n")
 
 	return envs
 }

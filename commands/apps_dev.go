@@ -10,12 +10,14 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/confirm"
+	"github.com/digitalocean/doctl/commands/charm/list"
+	"github.com/digitalocean/doctl/commands/charm/pager"
+	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/commands/charm/textbox"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/digitalocean/godo"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
@@ -97,7 +99,11 @@ func AppsDev() *Command {
 // RunAppsDevBuild builds an app component locally.
 func RunAppsDevBuild(c *CmdConfig) error {
 	ctx := context.Background()
-	if timeout, _ := c.Doit.GetDuration(c.NS, doctl.ArgTimeout); timeout > 0 {
+	timeout, err := c.Doit.GetDuration(c.NS, doctl.ArgTimeout)
+	if err != nil {
+		return err
+	}
+	if timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
@@ -133,7 +139,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		if appSpecPath == "" {
 			if _, err := os.Stat(AppsDevDefaultSpecPath); err == nil {
 				appSpecPath = AppsDevDefaultSpecPath
-				charm.TemplatePrint(heredoc.Doc(`
+				template.Print(heredoc.Doc(`
 					{{success checkmark}} using app spec at {{highlight .}}{{nl}}`,
 				), AppsDevDefaultSpecPath)
 			}
@@ -170,8 +176,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			components = append(components, componentListItem{c})
 			return nil
 		})
-		list := charm.NewList(components)
-		list.Fullscreen = true
+		list := list.New(components)
 		list.Model().Title = "select a component"
 		list.Model().SetStatusBarItemName("component", "components")
 		selected, err := list.Select()
@@ -198,6 +203,12 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
+	buildingComponentLine := template.String(heredoc.Doc(`
+		building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
+	), componentSpec)
+	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
+
 	if componentSpec.GetSourceDir() != "" {
 		sd := componentSpec.GetSourceDir()
 		stat, err := os.Stat(sd)
@@ -241,6 +252,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		choice, err := confirm.New(
 			"start build?",
 			confirm.WithDefaultChoice(confirm.Yes),
+			confirm.WithPersistPrompt(confirm.PersistPromptIfNo),
 		).Prompt()
 		if err != nil {
 			return err
@@ -263,8 +275,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		logWriter io.Writer
 	)
 	if Interactive {
-		pager, err := charm.NewPager(
-			charm.PagerWithTitle("Building " + component),
+		logPager, err := pager.New(
+			pager.WithTitle(buildingComponentLine),
 		)
 		if err != nil {
 			return fmt.Errorf("starting log pager: %w", err)
@@ -273,19 +285,15 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		go func() {
 			defer cancel()
 			defer wg.Done()
-			err := pager.Start(ctx)
+			err := logPager.Start(ctx)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "pager error: %v\n", err)
 			}
 		}()
-		logWriter = pager
+		logWriter = logPager
 	} else {
 		logWriter = os.Stdout
 	}
-
-	charm.TemplatePrint(heredoc.Doc(`
-		{{success checkmark}} building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}{{nl}}{{nl}}`,
-	), componentSpec)
 
 	var res builder.ComponentBuilderResult
 	err = func() error {
@@ -310,11 +318,19 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// allow the pager to exit cleanly
 	wg.Wait()
 
+	// TODO: differentiate between user-initiated cancel and cancel due to build failure
+	// if err == nil {
+	// 	err = ctx.Err()
+	// 	if errors.Is(err, context.Canceled) {
+	// 		err = fmt.Errorf("cancelled")
+	// 	}
+	// }
+
 	if err != nil {
 		return err
 	} else if res.ExitCode == 0 {
-		charm.TemplateBuffered(
-			charm.NewTextBox().Success(),
+		template.Buffered(
+			textbox.New().Success(),
 			`{{success checkmark}} successfully built {{success .img}} in {{warning (duration .dur)}}`,
 			map[string]any{
 				"img": res.Image,
@@ -322,8 +338,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			},
 		)
 	} else {
-		charm.TemplateBuffered(
-			charm.NewTextBox().Error(),
+		template.Buffered(
+			textbox.New().Error(),
 			`{{error crossmark}} build container exited with code {{highlight .code}} after {{warning (duration .dur)}}`,
 			map[string]any{
 				"code": res.ExitCode,
