@@ -64,6 +64,8 @@ parts:
       bin/doctl: bin/doctl.real
 
 plugs:
+  app-dev-build:
+    interface: docker
   dot-docker:
     interface: personal-files
     write:
@@ -88,3 +90,4 @@ apps:
       - dot-docker
       - doctl-config
       - kube-config
+      - app-dev-build
