@@ -94,7 +94,7 @@ func RunAppsDevConfigSet(c *CmdConfig) error {
 	}
 
 	for _, arg := range c.Args {
-		split := strings.Split(arg, "=")
+		split := strings.SplitN(arg, "=", 2)
 		if len(split) != 2 {
 			return errors.New("unexpected arg: " + arg)
 		}
@@ -223,7 +223,7 @@ func newAppDevConfig(cmdConfig *CmdConfig) (*appDevConfig, error) {
 		if err := ensureStringInFile(devConfigFilePath, ""); err != nil {
 			return nil, err
 		}
-		if err := ensureStringInFile(filepath.Join(configDir, ".gitignore"), "dev-config.yaml"); err != nil {
+		if err := ensureStringInFile(filepath.Join(configDir, ".gitignore"), DefaultDevConfigFile); err != nil {
 			return nil, err
 		}
 	} else if _, err := os.Stat(devConfigFilePath); err != nil {

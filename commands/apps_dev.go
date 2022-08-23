@@ -112,10 +112,13 @@ func RunAppsDevBuild(c *CmdConfig) error {
 
 	conf, err := newAppDevConfig(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("initializing config: %w", err)
 	}
 
-	var spec *godo.AppSpec
+	var (
+		spec          *godo.AppSpec
+		cnbVersioning *godo.AppBuildConfigCNBVersioning
+	)
 	appID, err := conf.GetString(doctl.ArgApp)
 	if err != nil {
 		return err
@@ -124,11 +127,13 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// TODO: if this is the user's first time running dev build, ask them if they'd like to
 	// link an existing app.
 	if appID != "" {
+		template.Print(`{{success checkmark}} fetching app details{{nl}}`, AppsDevDefaultSpecPath)
 		app, err := c.Apps().Get(appID)
 		if err != nil {
 			return err
 		}
 		spec = app.Spec
+		cnbVersioning = app.GetBuildConfig().GetCNBVersioning()
 	}
 
 	appSpecPath, err := conf.GetString(doctl.ArgAppSpec)
@@ -136,20 +141,16 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
-	if spec == nil {
-		if appSpecPath == "" {
-			if _, err := os.Stat(AppsDevDefaultSpecPath); err == nil {
-				appSpecPath = AppsDevDefaultSpecPath
-				template.Print(heredoc.Doc(`
-					{{success checkmark}} using app spec at {{highlight .}}{{nl}}`,
-				), AppsDevDefaultSpecPath)
-			}
+	if spec == nil && appSpecPath == "" {
+		if _, err := os.Stat(AppsDevDefaultSpecPath); err == nil {
+			appSpecPath = AppsDevDefaultSpecPath
+			template.Print(`{{success checkmark}} using app spec at {{highlight .}}{{nl}}`, AppsDevDefaultSpecPath)
 		}
-		if appSpecPath != "" {
-			spec, err = readAppSpec(os.Stdin, appSpecPath)
-			if err != nil {
-				return err
-			}
+	}
+	if appSpecPath != "" {
+		spec, err = readAppSpec(os.Stdin, appSpecPath)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -171,26 +172,31 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	if len(c.Args) >= 1 {
 		component = c.Args[0]
 	}
-	if Interactive && component == "" {
+	if component == "" {
 		var components []list.Item
 		_ = godo.ForEachAppSpecComponent(spec, func(c godo.AppBuildableComponentSpec) error {
 			components = append(components, componentListItem{c})
 			return nil
 		})
-		list := list.New(components)
-		list.Model().Title = "select a component"
-		list.Model().SetStatusBarItemName("component", "components")
-		selected, err := list.Select()
-		if err != nil {
-			return err
-		} else if selected == nil {
-			return fmt.Errorf("cancelled")
+
+		if len(components) == 1 {
+			component = components[0].(componentListItem).spec.GetName()
+		} else if len(components) > 1 && Interactive {
+			list := list.New(components)
+			list.Model().Title = "select a component"
+			list.Model().SetStatusBarItemName("component", "components")
+			selected, err := list.Select()
+			if err != nil {
+				return err
+			} else if selected == nil {
+				return fmt.Errorf("cancelled")
+			}
+			selectedComponent, ok := selected.(componentListItem)
+			if !ok {
+				return fmt.Errorf("unexpected item type %T", selectedComponent)
+			}
+			component = selectedComponent.spec.GetName()
 		}
-		selectedComponent, ok := selected.(componentListItem)
-		if !ok {
-			return fmt.Errorf("unexpected item type %T", selectedComponent)
-		}
-		component = selectedComponent.spec.GetName()
 	}
 
 	if component == "" {
@@ -205,9 +211,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
-	buildingComponentLine := template.String(heredoc.Doc(`
-		building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
-	), componentSpec)
+	buildingComponentLine := template.String(
+		`building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
+		componentSpec,
+	)
 	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
 
 	if componentSpec.GetSourceDir() != "" {
@@ -239,9 +246,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistryName)
 	if err != nil {
 		return err
-	}
-	if registryName == "" {
-		return errors.New("registry-name is required")
 	}
 
 	buildOverrride, err := conf.GetString(doctl.ArgAppDevBuildCommand)
@@ -306,6 +310,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			EnvOverride:          envs,
 			BuildCommandOverride: buildOverrride,
 			LogWriter:            logWriter,
+			Versioning:           builder.Versioning{CNB: cnbVersioning},
 		})
 		if err != nil {
 			return err
