@@ -18,6 +18,10 @@ func Indent(level uint) io.Writer {
 	return indent.NewWriterPipe(os.Stdout, level, nil)
 }
 
+func IndentWriter(w io.Writer, level uint) io.Writer {
+	return indent.NewWriterPipe(w, level, nil)
+}
+
 func IndentString(level uint, str string) string {
 	return indent.String(str, level)
 }
