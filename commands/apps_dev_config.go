@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -138,12 +139,6 @@ func RunAppsDevConfigUnset(c *CmdConfig) error {
 	return nil
 }
 
-type appDevConfig struct {
-	contextDir string
-	cmdConfig  *CmdConfig
-	viper      *viper.Viper
-}
-
 var validAppDevKeys = map[string]bool{
 	doctl.ArgApp:                true,
 	doctl.ArgAppSpec:            true,
@@ -159,6 +154,29 @@ func outputValidAppDevKeys() string {
 	}
 	sort.Strings(keys)
 	return strings.Join(keys, ", ")
+}
+
+type appDevConfig struct {
+	contextDir string
+	cmdConfig  *CmdConfig
+	viper      *viper.Viper
+}
+
+func (c *appDevConfig) CacheDir(component string) string {
+	return filepath.Join(c.contextDir, ".do", "cache", component)
+}
+
+func (c *appDevConfig) EnsureCacheDir(ctx context.Context, component string) error {
+	err := os.MkdirAll(filepath.Join(c.contextDir, ".do", "cache", component), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	return ensureStringInFile(filepath.Join(c.contextDir, ".do", ".gitignore"), "/cache")
+}
+
+func (c *appDevConfig) ClearCacheDir(ctx context.Context, component string) error {
+	return os.RemoveAll(filepath.Join(c.contextDir, ".do", "cache", component))
 }
 
 func (c *appDevConfig) WriteConfig() error {

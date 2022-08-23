@@ -83,6 +83,7 @@ func TestDockerComponentBuild(t *testing.T) {
 				component:            service,
 				buildCommandOverride: "test",
 				logWriter:            &logBuf,
+				noCache:              true,
 			},
 		}
 
@@ -96,6 +97,7 @@ func TestDockerComponentBuild(t *testing.T) {
 				"override-1":      strPtr("newval"),
 				"run-build-arg-1": strPtr("run-build-val-1"),
 			},
+			NoCache: true,
 		}).Return(types.ImageBuildResponse{
 			Body: ioutil.NopCloser(strings.NewReader("")),
 		}, nil)

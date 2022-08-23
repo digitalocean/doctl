@@ -76,6 +76,12 @@ func AppsDev() *Command {
 		"Additional environment variables to inject into the build.",
 	)
 
+	AddBoolFlag(
+		build, doctl.ArgNoCache,
+		"", false,
+		"Whether or not to omit the cache for the build.",
+	)
+
 	AddStringFlag(
 		build, doctl.ArgAppDevBuildCommand,
 		"", "",
@@ -100,6 +106,10 @@ func AppsDev() *Command {
 // RunAppsDevBuild builds an app component locally.
 func RunAppsDevBuild(c *CmdConfig) error {
 	ctx := context.Background()
+	noCache, err := c.Doit.GetBool(c.NS, doctl.ArgNoCache)
+	if err != nil {
+		return err
+	}
 	timeout, err := c.Doit.GetDuration(c.NS, doctl.ArgTimeout)
 	if err != nil {
 		return err
@@ -253,6 +263,17 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
+	if noCache {
+		err = conf.ClearCacheDir(ctx, component)
+		if err != nil {
+			return err
+		}
+	}
+	err = conf.EnsureCacheDir(ctx, component)
+	if err != nil {
+		return err
+	}
+
 	if Interactive {
 		choice, err := confirm.New(
 			"start build?",
@@ -306,6 +327,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 
 		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, conf.contextDir, spec, builder.NewBuilderOpts{
 			Component:            component,
+			LocalCacheDir:        conf.CacheDir(component),
+			NoCache:              noCache,
 			Registry:             registryName,
 			EnvOverride:          envs,
 			BuildCommandOverride: buildOverrride,

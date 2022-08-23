@@ -13,6 +13,8 @@ import (
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 )
 
 // ComponentBuilderFactory is the interface for creating a component builder.
@@ -41,6 +43,7 @@ type baseComponentBuilder struct {
 	envOverrides         map[string]string
 	buildCommandOverride string
 	copyOnWriteSemantics bool
+	noCache              bool
 
 	logWriter io.Writer
 }
@@ -99,6 +102,19 @@ func (b baseComponentBuilder) getEnvMap() (map[string]string, error) {
 	return envMap, nil
 }
 
+func (b *baseComponentBuilder) imageExists(ctx context.Context, ref string) (bool, error) {
+	images, err := b.cli.ImageList(ctx, types.ImageListOptions{
+		Filters: filters.NewArgs(filters.Arg("reference", ref)),
+	})
+	if err != nil {
+		return false, err
+	}
+	if len(images) < 1 {
+		return false, nil
+	}
+	return true, nil
+}
+
 // NewBuilderOpts ...
 type NewBuilderOpts struct {
 	Component            string
@@ -107,6 +123,8 @@ type NewBuilderOpts struct {
 	BuildCommandOverride string
 	LogWriter            io.Writer
 	Versioning           Versioning
+	LocalCacheDir        string
+	NoCache              bool
 }
 
 type Versioning struct {
@@ -156,9 +174,11 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 				opts.EnvOverride,
 				opts.BuildCommandOverride,
 				copyOnWriteSemantics,
+				opts.NoCache,
 				opts.LogWriter,
 			},
-			versioning: cnbVersioning,
+			versioning:    cnbVersioning,
+			localCacheDir: opts.LocalCacheDir,
 		}, nil
 	}
 
@@ -172,6 +192,7 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 			opts.EnvOverride,
 			opts.BuildCommandOverride,
 			copyOnWriteSemantics,
+			opts.NoCache,
 			opts.LogWriter,
 		},
 	}, nil

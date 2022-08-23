@@ -23,6 +23,7 @@ type DockerEngineClient interface {
 	ContainerExecCreate(ctx context.Context, container string, config types.ExecConfig) (types.IDResponse, error)
 	ContainerExecStart(ctx context.Context, execID string, config types.ExecStartCheck) error
 	ContainerExecInspect(ctx context.Context, execID string) (types.ContainerExecInspect, error)
-	ImageBuild(ctx context.Context, context io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
 	CopyToContainer(ctx context.Context, container, path string, content io.Reader, options types.CopyToContainerOptions) error
+	ImageBuild(ctx context.Context, context io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
+	ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error)
 }
