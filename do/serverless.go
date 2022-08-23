@@ -680,7 +680,7 @@ func (s *serverlessService) GetConnectedAPIHost() (string, error) {
 	return s.owClient.Config.Host, nil
 }
 
-// ReadProject takes the path where projec lies and validates the project.yml.
+// ReadProject takes the path where project lies and validates the project.yml.
 // once project.yml is validated it reads the directory for all the files and sub-directory
 // and returns the struct of the files
 func (s *serverlessService) ReadProject(project *ServerlessProject, args []string) (ServerlessOutput, error) {
@@ -692,7 +692,7 @@ func (s *serverlessService) ReadProject(project *ServerlessProject, args []strin
 	if err != nil {
 		return ServerlessOutput{}, err
 	}
-	return ServerlessOutput{}, nil
+	return ServerlessOutput{}, fmt.Errorf("not implemented")
 }
 
 // WriteProject ...
