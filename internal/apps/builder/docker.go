@@ -71,7 +71,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 			b.ImageOutputName(),
 		},
 		BuildArgs: buildArgs,
-		NoCache:   b.localCacheDir == "",
+		NoCache:   b.noCache,
 	}
 	dockerRes, err := b.cli.ImageBuild(ctx, tar, opts)
 	if err != nil {

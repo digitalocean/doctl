@@ -263,6 +263,12 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
+	if noCache {
+		err = conf.ClearCacheDir(ctx, component)
+		if err != nil {
+			return err
+		}
+	}
 	err = conf.EnsureCacheDir(ctx, component)
 	if err != nil {
 		return err
@@ -319,14 +325,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	err = func() error {
 		defer cancel()
 
-		var localCacheDir string
-		if !noCache {
-			localCacheDir = conf.CacheDir(component)
-		}
-
 		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, conf.contextDir, spec, builder.NewBuilderOpts{
 			Component:            component,
-			LocalCacheDir:        localCacheDir,
+			LocalCacheDir:        conf.CacheDir(component),
+			NoCache:              noCache,
 			Registry:             registryName,
 			EnvOverride:          envs,
 			BuildCommandOverride: buildOverrride,

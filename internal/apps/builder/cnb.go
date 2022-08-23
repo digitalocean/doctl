@@ -32,7 +32,8 @@ const (
 // CNBComponentBuilder represents a CNB builder.
 type CNBComponentBuilder struct {
 	baseComponentBuilder
-	versioning CNBVersioning
+	versioning    CNBVersioning
+	localCacheDir string
 }
 
 // CNBVersioning contains CNB versioning config.
@@ -226,13 +227,14 @@ func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
 		envs = append(envs, "VERSION_PINNING_LIST="+string(versioningJSON))
 	}
 
+	if exists, err := b.imageExists(ctx, b.ImageOutputName()); err != nil {
+		return nil, err
+	} else if exists {
+		envs = append(envs, "PREVIOUS_APP_IMAGE_URL="+b.ImageOutputName())
+	}
+
 	if b.localCacheDir != "" {
-		if exists, err := b.imageExists(ctx, b.ImageOutputName()); err != nil {
-			return nil, err
-		} else if exists {
-			envs = append(envs, "PREVIOUS_APP_IMAGE_URL="+b.ImageOutputName())
-			envs = append(envs, "APP_CACHE_DIR="+cnbCacheDir)
-		}
+		envs = append(envs, "APP_CACHE_DIR="+cnbCacheDir)
 	}
 
 	sort.Strings(envs)

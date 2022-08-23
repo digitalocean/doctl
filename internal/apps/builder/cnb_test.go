@@ -86,8 +86,8 @@ func TestCNBComponentBuild(t *testing.T) {
 					"useroverride-1": "newval",
 				},
 				buildCommandOverride: "custom build command",
-				localCacheDir:        "/cache",
 			},
+			localCacheDir: "/cache",
 		}
 
 		buildID := "build-id"
@@ -182,6 +182,10 @@ func TestCNBComponentBuild(t *testing.T) {
 		mockClient.EXPECT().ContainerStart(ctx, buildID, types.ContainerStartOptions{}).Return(nil)
 
 		mockClient.EXPECT().CopyToContainer(ctx, buildID, filepath.Clean("/"), gomock.Any(), gomock.Any()).Return(nil)
+
+		mockClient.EXPECT().ImageList(ctx, types.ImageListOptions{
+			Filters: filters.NewArgs(filters.Arg("reference", builder.ImageOutputName())),
+		}).Return([]types.ImageSummary{ /*no entries*/ }, nil)
 
 		execID := "exec-id"
 		mockClient.EXPECT().ContainerExecCreate(ctx, buildID, types.ExecConfig{

@@ -172,7 +172,7 @@ func (c *appDevConfig) EnsureCacheDir(ctx context.Context, component string) err
 		return err
 	}
 
-	return ensureStringInFile(filepath.Join(c.contextDir, ".do", "cache", ".gitignore"), "./...")
+	return ensureStringInFile(filepath.Join(c.contextDir, ".do", ".gitignore"), "/cache")
 }
 
 func (c *appDevConfig) ClearCacheDir(ctx context.Context, component string) error {

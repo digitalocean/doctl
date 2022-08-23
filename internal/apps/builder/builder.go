@@ -37,13 +37,13 @@ type ComponentBuilderResult struct {
 type baseComponentBuilder struct {
 	cli                  DockerEngineClient
 	contextDir           string
-	localCacheDir        string
 	spec                 *godo.AppSpec
 	component            godo.AppBuildableComponentSpec
 	registry             string
 	envOverrides         map[string]string
 	buildCommandOverride string
 	copyOnWriteSemantics bool
+	noCache              bool
 
 	logWriter io.Writer
 }
@@ -122,8 +122,9 @@ type NewBuilderOpts struct {
 	EnvOverride          map[string]string
 	BuildCommandOverride string
 	LogWriter            io.Writer
-	LocalCacheDir        string
 	Versioning           Versioning
+	LocalCacheDir        string
+	NoCache              bool
 }
 
 type Versioning struct {
@@ -167,16 +168,17 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 			baseComponentBuilder: baseComponentBuilder{
 				cli,
 				contextDir,
-				opts.LocalCacheDir,
 				spec,
 				component,
 				opts.Registry,
 				opts.EnvOverride,
 				opts.BuildCommandOverride,
 				copyOnWriteSemantics,
+				opts.NoCache,
 				opts.LogWriter,
 			},
-			versioning: cnbVersioning,
+			versioning:    cnbVersioning,
+			localCacheDir: opts.LocalCacheDir,
 		}, nil
 	}
 
@@ -184,13 +186,13 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 		baseComponentBuilder: baseComponentBuilder{
 			cli,
 			contextDir,
-			opts.LocalCacheDir,
 			spec,
 			component,
 			opts.Registry,
 			opts.EnvOverride,
 			opts.BuildCommandOverride,
 			copyOnWriteSemantics,
+			opts.NoCache,
 			opts.LogWriter,
 		},
 	}, nil
