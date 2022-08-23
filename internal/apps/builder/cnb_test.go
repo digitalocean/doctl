@@ -13,6 +13,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -86,6 +87,7 @@ func TestCNBComponentBuild(t *testing.T) {
 				},
 				buildCommandOverride: "custom build command",
 			},
+			localCacheDir: "/cache",
 		}
 
 		buildID := "build-id"
@@ -97,12 +99,16 @@ func TestCNBComponentBuild(t *testing.T) {
 			Force: true,
 		}).Return(nil)
 		mockClient.EXPECT().ContainerStart(ctx, buildID, types.ContainerStartOptions{}).Return(nil)
+		mockClient.EXPECT().ImageList(ctx, types.ImageListOptions{
+			Filters: filters.NewArgs(filters.Arg("reference", builder.ImageOutputName())),
+		}).Return([]types.ImageSummary{{ /*single entry*/ }}, nil)
 
 		execID := "exec-id"
 		mockClient.EXPECT().ContainerExecCreate(ctx, buildID, types.ExecConfig{
 			AttachStderr: true,
 			AttachStdout: true,
 			Env: []string{
+				"APP_CACHE_DIR=" + cnbCacheDir,
 				"APP_IMAGE_URL=" + builder.ImageOutputName(),
 				"APP_PLATFORM_COMPONENT_TYPE=" + string(service.GetType()),
 				appVarAllowListKey + "=build-arg-1,override-1,run-build-arg-1,useroverride-1",
@@ -112,6 +118,7 @@ func TestCNBComponentBuild(t *testing.T) {
 				appVarPrefix + "useroverride-1=newval",
 				"BUILD_COMMAND=" + builder.buildCommandOverride,
 				"CNB_UPLOAD_RETRY=1",
+				"PREVIOUS_APP_IMAGE_URL=" + builder.ImageOutputName(),
 				"SOURCE_DIR=" + service.GetSourceDir(),
 			},
 			Cmd: []string{"sh", "-c", "/.app_platform/build.sh"},
@@ -175,6 +182,10 @@ func TestCNBComponentBuild(t *testing.T) {
 		mockClient.EXPECT().ContainerStart(ctx, buildID, types.ContainerStartOptions{}).Return(nil)
 
 		mockClient.EXPECT().CopyToContainer(ctx, buildID, filepath.Clean("/"), gomock.Any(), gomock.Any()).Return(nil)
+
+		mockClient.EXPECT().ImageList(ctx, types.ImageListOptions{
+			Filters: filters.NewArgs(filters.Arg("reference", builder.ImageOutputName())),
+		}).Return([]types.ImageSummary{ /*no entries*/ }, nil)
 
 		execID := "exec-id"
 		mockClient.EXPECT().ContainerExecCreate(ctx, buildID, types.ExecConfig{

@@ -199,3 +199,18 @@ func (mr *MockDockerEngineClientMockRecorder) ImageBuild(ctx, context, options i
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImageBuild", reflect.TypeOf((*MockDockerEngineClient)(nil).ImageBuild), ctx, context, options)
 }
+
+// ImageList mocks base method.
+func (m *MockDockerEngineClient) ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ImageList", ctx, options)
+	ret0, _ := ret[0].([]types.ImageSummary)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ImageList indicates an expected call of ImageList.
+func (mr *MockDockerEngineClientMockRecorder) ImageList(ctx, options interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImageList", reflect.TypeOf((*MockDockerEngineClient)(nil).ImageList), ctx, options)
+}
