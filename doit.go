@@ -396,7 +396,10 @@ func (c *LiveConfig) GetDuration(ns, key string) (time.Duration, error) {
 }
 
 func nskey(ns, key string) string {
-	return fmt.Sprintf("%s.%s", ns, key)
+	if ns != "" {
+		key = fmt.Sprintf("%s.%s", ns, key)
+	}
+	return key
 }
 
 func isRequired(key string) bool {
@@ -452,7 +455,7 @@ func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.Schema
 
 // Set sets a config key.
 func (c *TestConfig) Set(ns, key string, val interface{}) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	c.v.Set(nskey, val)
 	c.IsSetMap[key] = true
 }
@@ -465,21 +468,21 @@ func (c *TestConfig) IsSet(key string) bool {
 // GetString returns the string value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetString(ns, key string) (string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetString(nskey), nil
 }
 
 // GetInt returns the int value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetInt(ns, key string) (int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetInt(nskey), nil
 }
 
 // GetIntPtr returns the int value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	if !c.v.IsSet(nskey) {
 		return nil, nil
 	}
@@ -491,7 +494,7 @@ func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
 // namespace. Because this is a mock implementation, and error will never be
 // returned.
 func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetStringSlice(nskey), nil
 }
 
@@ -499,21 +502,21 @@ func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
 // given namespace. Because this is a mock implementation, and error will never
 // be returned.
 func (c *TestConfig) GetStringMapString(ns, key string) (map[string]string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetStringMapString(nskey), nil
 }
 
 // GetBool returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBool(ns, key string) (bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetBool(nskey), nil
 }
 
 // GetBoolPtr returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	if !c.v.IsSet(nskey) {
 		return nil, nil
 	}
@@ -524,7 +527,7 @@ func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
 // GetDuration returns the duration value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetDuration(ns, key string) (time.Duration, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetDuration(nskey), nil
 }
 
