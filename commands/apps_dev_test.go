@@ -2,6 +2,8 @@ package commands
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -25,20 +27,22 @@ func TestRunAppsDevBuild(t *testing.T) {
 
 	t.Run("with local app spec", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			setTempWorkingDir(t)
+
 			specJSON, err := json.Marshal(sampleSpec)
 			require.NoError(t, err, "marshalling sample spec")
 			specFile := testTempFile(t, []byte(specJSON))
 
 			config.Args = append(config.Args, component)
 			config.Doit.Set(config.NS, doctl.ArgAppSpec, specFile)
-			config.Doit.Set(config.NS, doctl.ArgRegistryName, registryName)
+			config.Doit.Set(config.NS, doctl.ArgRegistry, registryName)
 			config.Doit.Set(config.NS, doctl.ArgInteractive, false)
 
 			conf, err := newAppDevConfig(config)
 			require.NoError(t, err)
 
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
-			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), conf.contextDir, sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
+			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), conf.ContextDir(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
 
 			err = RunAppsDevBuild(config)
 			require.NoError(t, err)
@@ -47,9 +51,11 @@ func TestRunAppsDevBuild(t *testing.T) {
 
 	t.Run("with appID", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			setTempWorkingDir(t)
+
 			conf, err := newAppDevConfig(config)
 			require.NoError(t, err)
-			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), conf.contextDir, sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
+			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), conf.ContextDir(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
 
 			tm.apps.EXPECT().Get(appID).Times(1).Return(&godo.App{
@@ -58,11 +64,23 @@ func TestRunAppsDevBuild(t *testing.T) {
 
 			config.Args = append(config.Args, component)
 			config.Doit.Set(config.NS, doctl.ArgApp, appID)
-			config.Doit.Set(config.NS, doctl.ArgRegistryName, registryName)
+			config.Doit.Set(config.NS, doctl.ArgRegistry, registryName)
 			config.Doit.Set(config.NS, doctl.ArgInteractive, false)
 
 			err = RunAppsDevBuild(config)
 			require.NoError(t, err)
 		})
 	})
+}
+
+func setTempWorkingDir(t *testing.T) {
+	tmp := t.TempDir()
+	err := os.Mkdir(filepath.Join(tmp, ".git"), os.ModePerm)
+	require.NoError(t, err)
+	oldCwd, err := os.Getwd()
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		os.Chdir(oldCwd)
+	})
+	os.Chdir(tmp)
 }
