@@ -353,8 +353,8 @@ const (
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
-	// ArgRegistryName indicates the name of the registry.
-	ArgRegistryName = "registry-name"
+	// ArgRegistry indicates the name of the registry.
+	ArgRegistry = "registry"
 	// ArgRegistryExpirySeconds indicates the length of time the token will be valid in seconds.
 	ArgRegistryExpirySeconds = "expiry-seconds"
 	// ArgSubscriptionTier is a subscription tier slug.

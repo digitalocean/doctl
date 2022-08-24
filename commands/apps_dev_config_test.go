@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/internal/apps/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,12 +19,12 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 		os.Remove(file.Name())
 	})
 
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+	withTestClient(t, func(cmdConfig *CmdConfig, tm *tcMocks) {
 		tcs := []struct {
 			name      string
 			args      []string
 			expectErr error
-			expect    func(*testing.T, *appDevConfig)
+			expect    func(*testing.T, *config.AppDev)
 		}{
 			{
 				name:      "no args",
@@ -36,38 +37,33 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 				expectErr: errors.New("unexpected arg: only-key"),
 			},
 			{
-				name:      "unknown key",
-				args:      []string{"unknown=value"},
-				expectErr: &appDevUnknownKeyErr{"unknown"},
-			},
-			{
 				name: "single key",
 				args: []string{"app=12345"},
-				expect: func(t *testing.T, c *appDevConfig) {
-					require.Equal(t, "12345", c.viper.Get("app"), "app-id")
+				expect: func(t *testing.T, c *config.AppDev) {
+					require.Equal(t, "12345", c.GetString("app"), "app-id")
 				},
 			},
 			{
 				name: "multiple keys",
 				args: []string{"app=value1", "spec=value2"},
-				expect: func(t *testing.T, c *appDevConfig) {
-					require.Equal(t, "value1", c.viper.Get("app"), "app-id")
-					require.Equal(t, "value2", c.viper.Get("spec"), "spec")
+				expect: func(t *testing.T, c *config.AppDev) {
+					require.Equal(t, "value1", c.GetString("app"), "app-id")
+					require.Equal(t, "value2", c.GetString("spec"), "spec")
 				},
 			},
 		}
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				config.Args = tc.args
-				config.Doit.Set(config.NS, doctl.ArgAppDevConfig, file.Name())
-				err = RunAppsDevConfigSet(config)
+				cmdConfig.Args = tc.args
+				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file.Name())
+				err = RunAppsDevConfigSet(cmdConfig)
 				if tc.expectErr != nil {
 					require.EqualError(t, err, tc.expectErr.Error())
 					return
 				}
 				require.NoError(t, err, "running command")
-				devConf, err := newAppDevConfig(config)
+				devConf, err := newAppDevConfig(cmdConfig)
 				require.NoError(t, err, "getting dev config")
 				if tc.expect != nil {
 					tc.expect(t, devConf)
@@ -85,13 +81,13 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 		os.Remove(file.Name())
 	})
 
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+	withTestClient(t, func(cmdConfig *CmdConfig, tm *tcMocks) {
 		tcs := []struct {
 			name      string
 			args      []string
-			pre       func(*testing.T, *appDevConfig)
+			pre       func(*testing.T, *config.AppDev)
 			expectErr error
-			expect    func(*testing.T, *appDevConfig)
+			expect    func(*testing.T, *config.AppDev)
 		}{
 			{
 				name:      "no args",
@@ -99,49 +95,44 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 				expectErr: errors.New("you must provide at least one argument"),
 			},
 			{
-				name:      "unknown key",
-				args:      []string{"unknown"},
-				expectErr: &appDevUnknownKeyErr{"unknown"},
-			},
-			{
 				name: "single key",
 				args: []string{"app"},
-				pre: func(t *testing.T, c *appDevConfig) {
-					c.viper.Set("app", "value")
-					err := c.viper.WriteConfig()
+				pre: func(t *testing.T, c *config.AppDev) {
+					c.Set("app", "value")
+					err := c.WriteConfig()
 					require.NoError(t, err, "setting up default values")
 				},
-				expect: func(t *testing.T, c *appDevConfig) {
-					require.Equal(t, "", c.viper.Get("app"), "app-id")
+				expect: func(t *testing.T, c *config.AppDev) {
+					require.Equal(t, "", c.GetString("app"), "app-id")
 				},
 			},
 			{
 				name: "multiple keys",
 				args: []string{"app", "spec"},
-				pre: func(t *testing.T, c *appDevConfig) {
-					c.viper.Set("app", "value")
-					c.viper.Set("spec", "value")
-					err := c.viper.WriteConfig()
+				pre: func(t *testing.T, c *config.AppDev) {
+					c.Set("app", "value")
+					c.Set("spec", "value")
+					err := c.WriteConfig()
 					require.NoError(t, err, "setting up default values")
 				},
-				expect: func(t *testing.T, c *appDevConfig) {
-					require.Equal(t, "", c.viper.Get("app"), "app-id")
-					require.Equal(t, "", c.viper.Get("spec"), "spec")
+				expect: func(t *testing.T, c *config.AppDev) {
+					require.Equal(t, "", c.GetString("app"), "app-id")
+					require.Equal(t, "", c.GetString("spec"), "spec")
 				},
 			},
 		}
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				devConf, err := newAppDevConfig(config)
+				devConf, err := newAppDevConfig(cmdConfig)
 				require.NoError(t, err, "getting dev config")
 				if tc.pre != nil {
 					tc.pre(t, devConf)
 				}
 
-				config.Args = tc.args
-				config.Doit.Set(config.NS, doctl.ArgAppDevConfig, file.Name())
-				err = RunAppsDevConfigUnset(config)
+				cmdConfig.Args = tc.args
+				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file.Name())
+				err = RunAppsDevConfigUnset(cmdConfig)
 				if tc.expectErr != nil {
 					require.EqualError(t, err, tc.expectErr.Error())
 					return
@@ -149,7 +140,7 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 				require.NoError(t, err, "running command")
 
 				if tc.expect != nil {
-					devConf, err = newAppDevConfig(config)
+					devConf, err = newAppDevConfig(cmdConfig)
 					require.NoError(t, err, "getting dev config")
 					tc.expect(t, devConf)
 				}

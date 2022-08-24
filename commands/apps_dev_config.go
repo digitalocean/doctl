@@ -2,34 +2,23 @@ package commands
 
 import (
 	"bytes"
-	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/internal/apps/config"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 const (
 	// DefaultDevConfigFile is the name of the default dev configuration file.
 	DefaultDevConfigFile = "dev-config.yaml"
 )
-
-type appDevUnknownKeyErr struct {
-	key string
-}
-
-func (e *appDevUnknownKeyErr) Error() string {
-	return fmt.Sprintf("unknown key: %s\nvalid keys: %s", e.key, outputValidAppDevKeys())
-}
 
 // AppsDevConfig creates the apps dev config command subtree.
 func AppsDevConfig() *Command {
@@ -47,12 +36,12 @@ func AppsDevConfig() *Command {
 		RunAppsDevConfigSet,
 		"set KEY=VALUE...",
 		"Set dev configuration settings.",
-		fmt.Sprintf(`Set dev configuration settings for a build.
+		"Set dev configuration settings for a build.",
+		// 		fmt.Sprintf(`Set dev configuration settings for a build.
 
-Valid Keys: %s
-`, outputValidAppDevKeys()),
+		// Valid Keys: %s
+		// `, config.ValidAppDevKeys()),
 		Writer,
-		displayerType(&displayers.Apps{}),
 	)
 
 	AddStringFlag(
@@ -66,12 +55,12 @@ Valid Keys: %s
 		RunAppsDevConfigUnset,
 		"unset KEY...",
 		"Unset dev configuration settings.",
-		fmt.Sprintf(`Unset dev configuration settings for a build.
-		
-Valid Keys: %s
-`, outputValidAppDevKeys()),
+		"Unset dev configuration settings for a build.",
+		// 		fmt.Sprintf(`Unset dev configuration settings for a build.
+
+		// Valid Keys: %s
+		// `, config.ValidAppDevKeys()),
 		Writer,
-		displayerType(&displayers.Apps{}),
 	)
 
 	AddStringFlag(
@@ -103,6 +92,7 @@ func RunAppsDevConfigSet(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
+		template.Print(`{{success checkmark}} set new value for {{highlight .}}{{nl}}`, split[0])
 	}
 
 	err = dev.WriteConfig()
@@ -113,7 +103,7 @@ func RunAppsDevConfigSet(c *CmdConfig) error {
 	return nil
 }
 
-// RunAppsDevConfigUnset runs the set configuration command.
+// RunAppsDevConfigUnset runs the unset configuration command.
 func RunAppsDevConfigUnset(c *CmdConfig) error {
 	if len(c.Args) == 0 {
 		return errors.New("you must provide at least one argument")
@@ -129,6 +119,8 @@ func RunAppsDevConfigUnset(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
+
+		template.Print(`{{success checkmark}} unset {{highlight .}}{{nl}}`, arg)
 	}
 
 	err = dev.WriteConfig()
@@ -139,123 +131,12 @@ func RunAppsDevConfigUnset(c *CmdConfig) error {
 	return nil
 }
 
-var validAppDevKeys = map[string]bool{
-	doctl.ArgApp:                true,
-	doctl.ArgAppSpec:            true,
-	doctl.ArgEnvFile:            true,
-	doctl.ArgRegistryName:       true,
-	doctl.ArgAppDevBuildCommand: true,
-}
-
-func outputValidAppDevKeys() string {
-	keys := []string{}
-	for k := range validAppDevKeys {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return strings.Join(keys, ", ")
-}
-
-type appDevConfig struct {
-	contextDir string
-	cmdConfig  *CmdConfig
-	viper      *viper.Viper
-}
-
-func (c *appDevConfig) CacheDir(component string) string {
-	return filepath.Join(c.contextDir, ".do", "cache", component)
-}
-
-func (c *appDevConfig) EnsureCacheDir(ctx context.Context, component string) error {
-	err := os.MkdirAll(filepath.Join(c.contextDir, ".do", "cache", component), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	return ensureStringInFile(filepath.Join(c.contextDir, ".do", ".gitignore"), "/cache")
-}
-
-func (c *appDevConfig) ClearCacheDir(ctx context.Context, component string) error {
-	return os.RemoveAll(filepath.Join(c.contextDir, ".do", "cache", component))
-}
-
-func (c *appDevConfig) WriteConfig() error {
-	return c.viper.WriteConfig()
-}
-
-func (c *appDevConfig) Set(key string, value string) error {
-	if !validAppDevKeys[key] {
-		return &appDevUnknownKeyErr{key}
-	}
-	c.viper.Set(key, value)
-	return nil
-}
-
-func (c *appDevConfig) GetString(key string) (string, error) {
-	if !validAppDevKeys[key] {
-		return "", &appDevUnknownKeyErr{key}
-	}
-	if c.cmdConfig != nil {
-		if v, err := c.cmdConfig.Doit.GetString(c.cmdConfig.NS, key); v != "" {
-			return v, nil
-		} else if err != nil {
-			return "", err
-		}
-	}
-	return c.viper.GetString(key), nil
-}
-
-func newAppDevConfig(cmdConfig *CmdConfig) (*appDevConfig, error) {
-	config := &appDevConfig{
-		cmdConfig: cmdConfig,
-		viper:     viper.New(),
-	}
-
+func newAppDevConfig(cmdConfig *CmdConfig) (*config.AppDev, error) {
 	devConfigFilePath, err := cmdConfig.Doit.GetString(cmdConfig.NS, doctl.ArgAppDevConfig)
 	if err != nil {
 		return nil, err
 	}
-
-	config.contextDir, err = os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	gitRoot, err := findTopLevelGitDir(config.contextDir)
-	if err != nil && !errors.Is(err, errNoGitRepo) {
-		return nil, err
-	}
-	if gitRoot != "" {
-		config.contextDir = gitRoot
-	}
-
-	if devConfigFilePath == "" {
-		if gitRoot == "" {
-			return nil, errNoGitRepo
-		}
-		configDir := filepath.Join(gitRoot, ".do")
-		err = os.MkdirAll(configDir, os.ModePerm)
-		if err != nil {
-			return nil, err
-		}
-		devConfigFilePath = filepath.Join(configDir, DefaultDevConfigFile)
-		if err := ensureStringInFile(devConfigFilePath, ""); err != nil {
-			return nil, err
-		}
-		if err := ensureStringInFile(filepath.Join(configDir, ".gitignore"), DefaultDevConfigFile); err != nil {
-			return nil, err
-		}
-	} else if _, err := os.Stat(devConfigFilePath); err != nil {
-		return nil, err
-	}
-
-	config.viper.SetConfigType("yaml")
-	config.viper.SetConfigFile(devConfigFilePath)
-
-	if err := config.viper.ReadInConfig(); err != nil {
-		return nil, err
-	}
-
-	return config, nil
+	return config.New(devConfigFilePath)
 }
 
 func ensureStringInFile(file string, val string) error {
