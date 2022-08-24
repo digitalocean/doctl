@@ -15,8 +15,12 @@ package displayers
 
 import (
 	"io"
+	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 )
 
 type Databases struct {
@@ -297,6 +301,180 @@ func (dr *DatabaseReplicas) KV() []map[string]interface{} {
 		out = append(out, o)
 	}
 
+	return out
+}
+
+type DatabaseOptions struct {
+	DatabaseOptions do.DatabaseOptions
+}
+
+var _ Displayable = &DatabaseOptions{}
+
+func (do *DatabaseOptions) JSON(out io.Writer) error {
+	return writeJSON(do.DatabaseOptions, out)
+}
+
+func (do *DatabaseOptions) Cols() []string {
+	return []string{
+		"Engine",
+	}
+}
+
+func (do *DatabaseOptions) ColMap() map[string]string {
+	return map[string]string{
+		"Engine": "Engine",
+	}
+}
+
+func (do *DatabaseOptions) KV() []map[string]interface{} {
+	engines := make([]string, 0)
+	if &do.DatabaseOptions.MongoDBOptions != nil {
+		engines = append(engines, "mongodb")
+	}
+	if &do.DatabaseOptions.RedisOptions != nil {
+		engines = append(engines, "redis")
+	}
+	if &do.DatabaseOptions.MySQLOptions != nil {
+		engines = append(engines, "mysql")
+	}
+	if &do.DatabaseOptions.PostgresSQLOptions != nil {
+		engines = append(engines, "pg")
+	}
+
+	out := make([]map[string]interface{}, 0, len(engines))
+	for _, eng := range engines {
+		o := map[string]interface{}{
+			"Engine": eng,
+		}
+		out = append(out, o)
+	}
+	return out
+}
+
+type DatabaseRegionOptions struct {
+	RegionMap map[string][]string
+}
+
+var _ Displayable = &DatabaseRegionOptions{}
+
+func (dbr *DatabaseRegionOptions) JSON(out io.Writer) error {
+	return writeJSON(dbr.RegionMap, out)
+}
+
+func (dbr *DatabaseRegionOptions) Cols() []string {
+	return []string{
+		"Region",
+		"Engines",
+	}
+}
+
+func (dbr *DatabaseRegionOptions) ColMap() map[string]string {
+	return map[string]string{
+		"Engines": "Engines",
+		"Region":  "Region",
+	}
+}
+
+func (dbr *DatabaseRegionOptions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0)
+	regionEngineMap := make(map[string][]string, 0)
+	for eng, regions := range dbr.RegionMap {
+		for _, r := range regions {
+			regionEngineMap[r] = append(regionEngineMap[r], eng)
+		}
+	}
+	for r, engines := range regionEngineMap {
+		o := map[string]interface{}{
+			"Region":  r,
+			"Engines": "[" + strings.Join(engines, ",") + "]",
+		}
+		out = append(out, o)
+	}
+	return out
+}
+
+type DatabaseVersionOptions struct {
+	VersionMap map[string][]string
+}
+
+var _ Displayable = &DatabaseVersionOptions{}
+
+func (dbv *DatabaseVersionOptions) JSON(out io.Writer) error {
+	return writeJSON(dbv.VersionMap, out)
+}
+
+func (dbv *DatabaseVersionOptions) Cols() []string {
+	return []string{
+		"Engine",
+		"Versions",
+	}
+}
+
+func (dbv *DatabaseVersionOptions) ColMap() map[string]string {
+	return map[string]string{
+		"Engine":   "Engine",
+		"Versions": "Versions",
+	}
+}
+
+func (dbv *DatabaseVersionOptions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0)
+	for eng, versions := range dbv.VersionMap {
+		o := map[string]interface{}{
+			"Engine":   eng,
+			"Versions": "[" + strings.Join(versions, ",") + "]",
+		}
+		out = append(out, o)
+	}
+	return out
+}
+
+type DatabaseLayoutOptions struct {
+	Layouts []godo.DatabaseLayout
+}
+
+var _ Displayable = &DatabaseLayoutOptions{}
+
+func (dbl *DatabaseLayoutOptions) JSON(out io.Writer) error {
+	return writeJSON(dbl.Layouts, out)
+}
+
+func (dbl *DatabaseLayoutOptions) Cols() []string {
+	return []string{
+		"Slug",
+		"NodeNums",
+	}
+}
+
+func (dbl *DatabaseLayoutOptions) ColMap() map[string]string {
+	return map[string]string{
+		"Slug":     "Slug",
+		"NodeNums": "NodeNums",
+	}
+}
+
+func (dbl *DatabaseLayoutOptions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0)
+	slugNodeMap := make(map[string][]string, 0)
+	for _, layout := range dbl.Layouts {
+		for _, s := range layout.Sizes {
+			slugNodeMap[s] = append(slugNodeMap[s], strconv.Itoa(layout.NodeNum))
+		}
+	}
+	keys := make([]string, 0)
+	for k, _ := range slugNodeMap {
+		keys = append(keys, k)
+	}
+	// sort keys to have deterministic ordering
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		o := map[string]interface{}{
+			"Slug":     k,
+			"NodeNums": "[" + strings.Join(slugNodeMap[k], ",") + "]",
+		}
+		out = append(out, o)
+	}
 	return out
 }
 

@@ -5,10 +5,10 @@ go 1.18
 require (
 	github.com/Microsoft/hcsshim v0.9.2 // indirect
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/containerd/continuity v0.2.2 // indirect
+	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.81.0
-	github.com/docker/cli v20.10.14+incompatible
+	github.com/digitalocean/godo v1.83.0
+	github.com/docker/cli v20.10.17+incompatible
 	github.com/docker/docker v17.12.0-ce-rc1.0.20200531234253-77e06fda0c94+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/dustin/go-humanize v1.0.0
@@ -24,7 +24,7 @@ require (
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/natefinch/pie v0.0.0-20170715172608-9a0d72014007
 	github.com/opencontainers/image-spec v1.0.2 // indirect
-	github.com/opencontainers/runc v1.1.0 // indirect
+	github.com/opencontainers/runc v1.1.3 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/sclevine/spec v1.3.0
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644

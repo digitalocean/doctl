@@ -44,7 +44,7 @@ func Databases() *Command {
 			Use:     "databases",
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
-			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, and PostgreSQL database services.",
+			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, PostgreSQL, and MongoDB database services.",
 		},
 	}
 
@@ -52,12 +52,12 @@ func Databases() *Command {
 
 - The database ID, in UUID format
 - The name you gave the database cluster
-- The database engine (e.g. ` + "`" + `redis` + "`" + `, ` + "`" + `pg` + "`" + `, ` + "`" + `mysql` + "`" + `)
-- The engine version (e.g. ` + "`" + `11` + "`" + ` for PostgreSQL version 11)
+- The database engine (e.g. ` + "`redis`, `pg`, `mysql` , or `mongodb`" + `)
+- The engine version (e.g. ` + "`14`" + ` for PostgreSQL version 14)
 - The number of nodes in the database cluster
-- The region the database cluster resides in (e.g. ` + "`" + `sfo2` + "`" + `, ` + "`" + `nyc1` + "`" + `)
-- The current status of the database cluster (e.g. ` + "`" + `online` + "`" + `)
-- The size of the machine running the database instance (e.g. ` + "`" + `db-s-1vcpu-1gb` + "`" + `)`
+- The region the database cluster resides in (e.g. ` + "`sfo2`, " + "`nyc1`" + `)
+- The current status of the database cluster (e.g. ` + "`online`" + `)
+- The size of the machine running the database instance (e.g. ` + "`db-s-1vcpu-1gb`" + `)`
 
 	CmdBuilder(cmd, RunDatabaseList, "list", "List your database clusters", `This command lists the database clusters associated with your account. The following details are provided:`+clusterDetails, Writer, aliasOpt("ls"), displayerType(&displayers.Databases{}))
 	CmdBuilder(cmd, RunDatabaseGet, "get <database-id>", "Get details for a database cluster", `This command retrieves the following details about the specified database cluster: `+clusterDetails+`
@@ -73,8 +73,8 @@ There are a number of flags that customize the configuration, all of which are o
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseNumNodes, "", defaultDatabaseNodeCount, nodeNumberDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The region where the database cluster will be created, e.g. `nyc1` or `sfo2`")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, and `redis`.")
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 11 for PostgreSQL version 11")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, and `mongodb`.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
@@ -106,7 +106,7 @@ The list contains the size in GB, and the date and time the backup was taken.`, 
 You must specify the desired number of nodes and size of the nodes. For example:
 
 	doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb
-			
+
 Database nodes cannot be resized to smaller sizes due to the risk of data loss.`, Writer,
 		aliasOpt("rs"))
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
@@ -124,6 +124,7 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 	cmd.AddCommand(databasePool())
 	cmd.AddCommand(sqlMode())
 	cmd.AddCommand(databaseFirewalls())
+	cmd.AddCommand(databaseOptions())
 
 	return cmd
 }
@@ -628,6 +629,165 @@ func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
 	return c.Display(item)
 }
 
+func databaseOptions() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "options",
+			Aliases: []string{"o"},
+			Short:   `Display available database options (regions, version, layouts, etc.) for all available database engines`,
+			Long:    `The subcommands under ` + "`" + `doctl databases options` + "`" + ` enable the navigation of available options under each database engine`,
+		},
+	}
+	databaseOptionEngines := `
+This command lists the available database engines:
+
+- The key of the database engine. Possible values are: "pg" for PostgreSQL, "mysql"" for MySQL, "redis"" for Redis, and "mongodb" for MongoDB
+`
+	databaseOptionRegions := `
+- The region of the database engine.
+`
+	databaseOptionVersions := `
+- The version of the database engine.
+`
+	databaseOptionSlugs := `
+- The slug of the database engine. These are prefixed with "db" for basic nodes, "gd" for general purpose nodes, "sol" for storage optimized nodes, and "m" for memory optimized nodes
+`
+	CmdBuilder(cmd, RunDatabaseEngineOptions, "engines", "Retrieves a list of the available database engines", databaseOptionEngines,
+		Writer, aliasOpt("eng"))
+
+	cmdRegionOptions := CmdBuilder(cmd, RunDatabaseRegionOptions, "regions", "Retrieves a list of the available regions for a given database engine", databaseOptionEngines+databaseOptionRegions,
+		Writer, aliasOpt("r"))
+	AddStringFlag(cmdRegionOptions, doctl.ArgDatabaseEngine, "",
+		"", "The database engine")
+
+	cmdVersionOptions := CmdBuilder(cmd, RunDatabaseVersionOptions, "versions", "Retrieves a list of the available versions for a given database engine", databaseOptionEngines+databaseOptionVersions,
+		Writer, aliasOpt("v"))
+	AddStringFlag(cmdVersionOptions, doctl.ArgDatabaseEngine, "",
+		"", "The database engine")
+
+	cmdSlugOptions := CmdBuilder(cmd, RunDatabaseSlugOptions, "slugs", "Retrieves a list of the available slugs for a given database engine", databaseOptionEngines+databaseOptionSlugs,
+		Writer, aliasOpt("s"))
+	AddStringFlag(cmdSlugOptions, doctl.ArgDatabaseEngine, "",
+		"", "The database engine", requiredOpt())
+
+	return cmd
+}
+
+// RunDatabaseEngineOptions retrieves a list of the available database engines
+func RunDatabaseEngineOptions(c *CmdConfig) error {
+	options, err := c.Databases().ListOptions()
+	if err != nil {
+		return err
+	}
+
+	return displayDatabaseEngineOptions(c, options)
+}
+
+func displayDatabaseEngineOptions(c *CmdConfig, options *do.DatabaseOptions) error {
+	item := &displayers.DatabaseOptions{DatabaseOptions: *options}
+	return c.Display(item)
+}
+
+func displayDatabaseRegionOptions(c *CmdConfig, regions map[string][]string) error {
+	item := &displayers.DatabaseRegionOptions{RegionMap: regions}
+	return c.Display(item)
+}
+
+func displayDatabaseVersionOptions(c *CmdConfig, versions map[string][]string) error {
+	item := &displayers.DatabaseVersionOptions{VersionMap: versions}
+	return c.Display(item)
+}
+
+func displayDatabaseLayoutOptions(c *CmdConfig, layouts []godo.DatabaseLayout) error {
+	item := &displayers.DatabaseLayoutOptions{Layouts: layouts}
+	return c.Display(item)
+}
+
+// RunDatabaseRegionOptions retrieves a list of the available regions for a given database engine
+func RunDatabaseRegionOptions(c *CmdConfig) error {
+	engine, _ := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+
+	options, err := c.Databases().ListOptions()
+	if err != nil {
+		return err
+	}
+
+	regions := make(map[string][]string, 0)
+	switch engine {
+	case "mongodb":
+		regions["mongodb"] = options.MongoDBOptions.Regions
+	case "mysql":
+		regions["mysql"] = options.MySQLOptions.Regions
+	case "pg":
+		regions["pg"] = options.PostgresSQLOptions.Regions
+	case "redis":
+		regions["redis"] = options.RedisOptions.Regions
+	case "":
+		regions["mongodb"] = options.MongoDBOptions.Regions
+		regions["mysql"] = options.MySQLOptions.Regions
+		regions["pg"] = options.PostgresSQLOptions.Regions
+		regions["redis"] = options.RedisOptions.Regions
+	}
+
+	return displayDatabaseRegionOptions(c, regions)
+}
+
+// RunDatabaseVersionOptions retrieves a list of the available versions for a given database engine
+func RunDatabaseVersionOptions(c *CmdConfig) error {
+	engine, _ := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+
+	options, err := c.Databases().ListOptions()
+	if err != nil {
+		return err
+	}
+
+	versions := make(map[string][]string, 0)
+	switch engine {
+	case "mongodb":
+		versions["mongodb"] = options.MongoDBOptions.Versions
+	case "mysql":
+		versions["mysql"] = options.MySQLOptions.Versions
+	case "pg":
+		versions["pg"] = options.PostgresSQLOptions.Versions
+	case "redis":
+		versions["redis"] = options.RedisOptions.Versions
+	case "":
+		versions["mongodb"] = options.MongoDBOptions.Versions
+		versions["mysql"] = options.MySQLOptions.Versions
+		versions["pg"] = options.PostgresSQLOptions.Versions
+		versions["redis"] = options.RedisOptions.Versions
+	}
+
+	return displayDatabaseVersionOptions(c, versions)
+}
+
+// RunDatabaseSlugOptions retrieves a list of the available slugs for a given database engine
+func RunDatabaseSlugOptions(c *CmdConfig) error {
+	engine, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+	if err != nil {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	options, err := c.Databases().ListOptions()
+	if err != nil {
+		return err
+	}
+
+	layouts := make([]godo.DatabaseLayout, 0)
+	switch engine {
+	case "mongodb":
+		layouts = options.MongoDBOptions.Layouts
+	case "mysql":
+		layouts = options.MySQLOptions.Layouts
+	case "pg":
+		layouts = options.PostgresSQLOptions.Layouts
+	case "redis":
+		layouts = options.RedisOptions.Layouts
+	}
+
+	return displayDatabaseLayoutOptions(c, layouts)
+}
+
 func databasePool() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
@@ -649,7 +809,7 @@ Connection pools can be created and deleted with these commands, or you can simp
 
 	connectionPoolDetails := `
 
-- The username of the database user account that the connection pool uses
+- The database user that the connection pool uses. When excluded, all connections to the database use the inbound user.
 - The name of the connection pool
 - The size of the connection pool, i.e. the number of connections that will be allocated
 - The database within the cluster for which the connection pool is used
@@ -690,7 +850,7 @@ We recommend starting with a pool size of about half your available connections 
 	AddIntFlag(cmdDatabasePoolCreate, doctl.ArgSizeSlug, "", 0, "pool size",
 		requiredOpt())
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolUserName, "", "",
-		"The username for the database user", requiredOpt())
+		"The username for the database user")
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolDBName, "", "",
 		"The name of the specific database within the database cluster", requiredOpt())
 
@@ -1202,14 +1362,14 @@ This command requires the ID of a database cluster, which you can retrieve by ca
 	databaseFirewallUpdateDetails := `
 Use this command to replace the firewall rules of a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
 
-	doctl databases list 
-	
+	doctl databases list
+
 This command also requires a --rule flag. You can pass in multiple --rule flags. Each rule passed in to the --rule flag must be of format type:value
 	- "type" is the type of resource that the firewall rule allows to access the database cluster. The possible values for type are:  "droplet", "k8s", "ip_addr", "tag", or "app"
 	- "value" is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster
 
 For example:
-	
+
 	doctl databases firewalls replace d1234-1c12-1234-b123-12345c4789 --rule tag:backend --rule ip_addr:0.0.0.0
 
 	or
