@@ -30,3 +30,8 @@ func (t TextBox) Error() TextBox {
 	t.Style = t.Style.InheritLipgloss(lipgloss.NewStyle().BorderForeground(charm.Colors.Error))
 	return t
 }
+
+func (t TextBox) Warning() TextBox {
+	t.Style = t.Style.InheritLipgloss(lipgloss.NewStyle().BorderForeground(charm.Colors.Warning))
+	return t
+}

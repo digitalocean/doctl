@@ -2,6 +2,7 @@ package charm
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/charmbracelet/lipgloss"
@@ -14,12 +15,13 @@ var (
 
 // Style is a styled component.
 type Style struct {
-	style lipgloss.Style
+	style  lipgloss.Style
+	output io.Writer
 }
 
 // NewStyle creates a new styled component.
 func NewStyle(style lipgloss.Style) Style {
-	return Style{style.Copy()}
+	return Style{style: style.Copy()}
 }
 
 // Lipgloss returns a copy of the underlying lipgloss.Style.
@@ -29,7 +31,10 @@ func (s Style) Lipgloss() lipgloss.Style {
 
 // Copy returns a copy of the style.
 func (s Style) Copy() Style {
-	return Style{style: s.style.Copy()}
+	return Style{
+		style:  s.style.Copy(),
+		output: s.output,
+	}
 }
 
 // Inherit returns a copy of the original style with the properties from another style inherited.
@@ -67,15 +72,20 @@ func (s Style) S(str any) string {
 	return s.Sprint(str)
 }
 
-// Printf formats the specified text with the style applied and prints it to stdout.
-func (s Style) Printf(format string, a ...any) (int, error) {
-	return fmt.Fprint(os.Stdout, s.Sprintf(format, a...))
+// Print applies the style to the specified text and prints it to the output writer.
+func (s Style) Print(str any) (int, error) {
+	return fmt.Fprint(s, str)
 }
 
-// Write implements the io.Writer interface and prints to stdout.
+// Printf formats the specified text with the style applied and prints it to the output writer.
+func (s Style) Printf(format string, a ...any) (int, error) {
+	return fmt.Fprintf(s, format, a...)
+}
+
+// Write implements the io.Writer interface and prints to the output writer.
 func (s Style) Write(b []byte) (n int, err error) {
 	n = len(b)
-	_, err = s.Printf(string(b))
+	_, err = fmt.Fprint(s.writer(), s.Sprint(string(b)))
 	return
 }
 
@@ -86,7 +96,20 @@ func (s Style) WithString(str string) Style {
 	return c
 }
 
+// WithOutput sets the output writer.
+func (s Style) WithOutput(output io.Writer) Style {
+	s.output = output
+	return s
+}
+
 // String implements the fmt.Stringer interface.
 func (s Style) String() string {
 	return s.style.String()
+}
+
+func (s Style) writer() io.Writer {
+	if s.output != nil {
+		return s.output
+	}
+	return os.Stdout
 }
