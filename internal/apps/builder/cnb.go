@@ -1,11 +1,15 @@
 package builder
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -13,6 +17,7 @@ import (
 	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/godo"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -22,7 +27,7 @@ import (
 
 const (
 	// CNBBuilderImage represents the local cnb builder.
-	CNBBuilderImage = "digitaloceanapps/cnb-local-builder:v0.46.0"
+	CNBBuilderImage = "digitaloceanapps/cnb-local-builder:v0.49.0"
 
 	appVarAllowListKey = "APP_VARS"
 	appVarPrefix       = "APP_VAR_"
@@ -63,9 +68,14 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		return res, fmt.Errorf("configuring environment variables: %w", err)
 	}
 
+	sourceDockerSock, err := filepath.EvalSymlinks("/var/run/docker.sock")
+	if err != nil {
+		return res, err
+	}
+
 	mounts := []mount.Mount{{
 		Type:   mount.TypeBind,
-		Source: "/var/run/docker.sock",
+		Source: sourceDockerSock,
 		Target: "/var/run/docker.sock",
 	}}
 	if !b.copyOnWriteSemantics {
@@ -140,26 +150,180 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		}
 	}
 
-	execRes, err := b.cli.ContainerExecCreate(ctx, buildContainer.ID, types.ExecConfig{
-		AttachStderr: true,
-		AttachStdout: true,
-		Env:          env,
-		Cmd:          []string{"sh", "-c", "/.app_platform/build.sh"},
-	})
+	err = b.runExec(
+		ctx,
+		buildContainer.ID,
+		[]string{"sh", "-c", "/.app_platform/build.sh"},
+		env,
+		b.getLogWriter(),
+	)
 	if err != nil {
 		return res, err
 	}
+
+	if b.component.GetType() == godo.AppComponentTypeStaticSite {
+		var workspacePathB bytes.Buffer
+		err = b.runExec(
+			ctx,
+			buildContainer.ID,
+			[]string{"sh", "-c", "cat /.app_platform/local/WORKSPACE_PATH"},
+			nil,
+			&workspacePathB,
+		)
+		if err != nil {
+			return res, err
+		}
+		workspacePath := workspacePathB.String()
+		template.Render(b.getLogWriter(), heredoc.Doc(`
+			{{success checkmark}} workspace path
+			{{highlight .}}
+		`,
+		), charm.IndentString(4, workspacePath))
+
+		var assetsPathB bytes.Buffer
+		err = b.runExec(
+			ctx,
+			buildContainer.ID,
+			[]string{"sh", "-c", "cat /.app_platform/local/ASSETS_PATH"},
+			nil,
+			&assetsPathB,
+		)
+		if err != nil {
+			return res, err
+		}
+		assetsPath := assetsPathB.String()
+		template.Render(b.getLogWriter(), heredoc.Doc(`
+			{{success checkmark}} assets path
+			{{highlight .}}
+		`,
+		), charm.IndentString(4, assetsPath))
+
+		err = b.runExec(
+			ctx,
+			buildContainer.ID,
+			[]string{"sh", "-c", `cat << EOF > "/workspace/nginx.conf"
+server {
+	listen 8080;
+	listen [::]:8080;
+
+	resolver 127.0.0.11;
+	autoindex off;
+
+	server_name _;
+	server_tokens off;
+
+	root /www;
+	gzip_static on;
+}
+EOF`,
+			},
+			nil,
+			ioutil.Discard,
+		)
+
+		var nginxConf bytes.Buffer
+		err = b.runExec(
+			ctx,
+			buildContainer.ID,
+			[]string{"sh", "-c", "cat /workspace/nginx.conf"},
+			nil,
+			&nginxConf,
+		)
+		if err != nil {
+			return res, err
+		}
+		template.Render(b.getLogWriter(), heredoc.Doc(`
+			{{success checkmark}} nginxConf
+			{{highlight .}}
+		`,
+		), charm.IndentString(4, nginxConf.String()))
+
+		assetsPath = strings.TrimPrefix(assetsPath, workspacePath)
+		if assetsPath == "" {
+			assetsPath = "."
+		} else {
+			assetsPath = "./" + assetsPath
+		}
+		err = b.runExec(
+			ctx,
+			buildContainer.ID,
+			[]string{"sh", "-c", fmt.Sprintf(`cat << EOF > "/workspace/Dockerfile.static"
+FROM nginx:alpine
+
+COPY %s /www
+RUN rm -f /www/nginx.conf
+
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+EOF`, assetsPath),
+			},
+			nil,
+			ioutil.Discard,
+		)
+		if err != nil {
+			return res, err
+		}
+
+		var dockerStatic bytes.Buffer
+		err = b.runExec(
+			ctx,
+			buildContainer.ID,
+			[]string{"sh", "-c", "cat /workspace/Dockerfile.static"},
+			nil,
+			&nginxConf,
+		)
+		if err != nil {
+			return res, err
+		}
+		template.Render(b.getLogWriter(), heredoc.Doc(`
+			{{success checkmark}} dockerSTatic
+			{{highlight .}}
+		`,
+		), charm.IndentString(4, dockerStatic.String()))
+
+		err = b.runExec(
+			ctx,
+			buildContainer.ID,
+			[]string{
+				"sh", "-c",
+				fmt.Sprintf(
+					"docker build -t %s -f %s %s",
+					b.ImageOutputName()+"-static-builder",
+					workspacePath+"/Dockerfile.static",
+					workspacePath,
+				),
+			},
+			nil,
+			b.getLogWriter(),
+		)
+		if err != nil {
+			return res, err
+		}
+	}
+
+	return res, nil
+}
+
+func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, command, env []string, w io.Writer) error {
+	execRes, err := b.cli.ContainerExecCreate(ctx, containerID, types.ExecConfig{
+		AttachStderr: true,
+		AttachStdout: true,
+		Env:          env,
+		Cmd:          command,
+	})
+	if err != nil {
+		return err
+	}
 	defer func() {
 		ctx := context.Background()
-		execInspectRes, err := b.cli.ContainerExecInspect(ctx, execRes.ID)
-		if err == nil {
-			res.ExitCode = execInspectRes.ExitCode
+		_, err := b.cli.ContainerExecInspect(ctx, execRes.ID)
+		if err != nil {
+			b.logWriter.Write([]byte(err.Error()))
 		}
 	}()
 
 	attachRes, err := b.cli.ContainerExecAttach(ctx, execRes.ID, types.ExecStartCheck{})
 	if err != nil {
-		return res, err
+		return err
 	}
 	defer attachRes.Close()
 
@@ -168,20 +332,20 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 
 	go func() {
 		// StdCopy demultiplexes the stream into two buffers
-		_, err := stdcopy.StdCopy(b.getLogWriter(), b.getLogWriter(), attachRes.Reader)
+		_, err := stdcopy.StdCopy(w, w, attachRes.Reader)
 		outputDone <- err
 	}()
 
 	select {
 	case err := <-outputDone:
 		if err != nil {
-			return res, err
+			return err
 		}
-		res.Image = b.ImageOutputName()
 	case <-ctx.Done():
-		return res, ctx.Err()
+		return nil
 	}
-	return res, nil
+
+	return nil
 }
 
 func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
