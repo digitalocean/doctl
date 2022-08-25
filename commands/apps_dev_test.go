@@ -38,11 +38,11 @@ func TestRunAppsDevBuild(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgRegistry, registryName)
 			config.Doit.Set(config.NS, doctl.ArgInteractive, false)
 
-			conf, err := newAppDevConfig(config)
-			require.NoError(t, err)
+			ws, err := appDevWorkspace(config)
+			require.NoError(t, err, "getting workspace")
 
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
-			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), conf.ContextDir(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
+			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), ws.Context(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
 
 			err = RunAppsDevBuild(config)
 			require.NoError(t, err)
@@ -53,9 +53,9 @@ func TestRunAppsDevBuild(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			setTempWorkingDir(t)
 
-			conf, err := newAppDevConfig(config)
-			require.NoError(t, err)
-			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), conf.ContextDir(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
+			ws, err := appDevWorkspace(config)
+			require.NoError(t, err, "getting workspace")
+			tm.appBuilderFactory.EXPECT().NewComponentBuilder(gomock.Any(), ws.Context(), sampleSpec, gomock.Any()).Return(tm.appBuilder, nil)
 			tm.appBuilder.EXPECT().Build(gomock.Any()).Return(builder.ComponentBuilderResult{}, nil)
 
 			tm.apps.EXPECT().Get(appID).Times(1).Return(&godo.App{

@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/MakeNowJust/heredoc"
@@ -20,6 +19,7 @@ import (
 	"github.com/digitalocean/doctl/commands/charm/textbox"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/doctl/internal/apps/config"
+	"github.com/digitalocean/doctl/internal/apps/workspace"
 
 	"github.com/digitalocean/godo"
 	"github.com/joho/godotenv"
@@ -110,23 +110,12 @@ func AppsDev() *Command {
 func RunAppsDevBuild(c *CmdConfig) error {
 	ctx := context.Background()
 
-	conf, err := newAppDevConfig(c)
+	ws, err := appDevWorkspace(c)
 	if err != nil {
-		return fmt.Errorf("initializing config: %w", err)
+		return fmt.Errorf("preparing workspace: %w", err)
 	}
 
-	var (
-		// doctlConfig is the CLI config source.
-		doctlConfig = config.DoctlConfigSource(c.Doit, c.NS)
-		// appsDevConfig is the dev-config.yaml config source.
-		appsDevConfig = appsDevFlagConfigCompat(conf)
-		// globalConfig contains global config vars with cli flags as the first priority.
-		globalConfig = config.Multi(
-			doctlConfig,
-			appsDevConfig,
-		)
-	)
-
+	globalConfig := ws.Config.Global(true)
 	timeout := globalConfig.GetDuration(doctl.ArgTimeout)
 	if timeout > 0 {
 		var cancel context.CancelFunc
@@ -223,7 +212,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 
 	if componentSpec.GetSourceDir() != "" {
 		sd := componentSpec.GetSourceDir()
-		stat, err := os.Stat(conf.ContextPath(sd))
+		stat, err := os.Stat(ws.Context(sd))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("source dir %s does not exist. please make sure you are running doctl in your app directory", sd)
@@ -235,25 +224,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 	}
 
-	var (
-		// componentConfig is the per-component config source.
-		componentConfig = appsDevFlagConfigCompat(conf.Components(component))
-		// componentGlobalConfig is per-component config that can be overridden at the global/app level as well as via cli flags.
-		componentGlobalConfig = config.Multi(
-			doctlConfig,
-			componentConfig,
-			appsDevFlagConfigCompat(conf),
-		)
-		// componentArgConfig is per-component config that can be overridden via cli flags.
-		componentArgConfig = config.Multi(
-			doctlConfig,
-			componentConfig,
-		)
-	)
-
+	componentConfig, componentGlobalConfig := ws.Config.Component(component, true)
 	var envs map[string]string
 	envFile := componentGlobalConfig.GetString(doctl.ArgEnvFile)
-	if envFile == "" && Interactive && fileExists(conf.ContextPath(AppsDevDefaultEnvFile)) {
+	if envFile == "" && Interactive && fileExists(ws.Context(AppsDevDefaultEnvFile)) {
 		choice, err := confirm.New(
 			template.String(`{{highlight .}} exists, use it for env var values?`, AppsDevDefaultEnvFile),
 			confirm.WithDefaultChoice(confirm.No),
@@ -262,10 +236,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			return err
 		}
 		if choice == confirm.Yes {
-			envFile = conf.ContextPath(AppsDevDefaultEnvFile)
+			envFile = ws.Context(AppsDevDefaultEnvFile)
 		}
 	} else if envFile != "" {
-		envFile = conf.ContextPath(envFile)
+		envFile = ws.Context(envFile)
 	}
 	if envFile != "" {
 		envs, err = godotenv.Read(envFile)
@@ -274,16 +248,16 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 	}
 
-	registryName := globalConfig.GetString(doctl.ArgRegistry)
+	registry := globalConfig.GetString(doctl.ArgRegistry)
 	noCache := globalConfig.GetBool(doctl.ArgNoCache)
 	if noCache {
 		template.Render(text.Warning, `{{crossmark}} build caching disabled{{nl}}`, nil)
-		err = conf.ClearCacheDir(ctx, component)
+		err = ws.ClearCacheDir(ctx, component)
 		if err != nil {
 			return err
 		}
 	}
-	err = conf.EnsureCacheDir(ctx, component)
+	err = ws.EnsureCacheDir(ctx, component)
 	if err != nil {
 		return err
 	}
@@ -345,13 +319,13 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	err = func() error {
 		defer cancel()
 
-		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, conf.ContextDir(), spec, builder.NewBuilderOpts{
+		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, ws.Context(), spec, builder.NewBuilderOpts{
 			Component:            component,
-			LocalCacheDir:        conf.CacheDir(component),
+			LocalCacheDir:        ws.CacheDir(component),
 			NoCache:              noCache,
-			Registry:             registryName,
+			Registry:             registry,
 			EnvOverride:          envs,
-			BuildCommandOverride: componentArgConfig.GetString(doctl.ArgAppDevBuildCommand),
+			BuildCommandOverride: componentConfig.GetString(doctl.ArgAppDevBuildCommand),
 			LogWriter:            logWriter,
 			Versioning:           builder.Versioning{CNB: cnbVersioning},
 		})
@@ -414,13 +388,12 @@ func fileExists(path string) bool {
 	return err == nil
 }
 
-func dashToUnderscore(key string) string {
-	return strings.ReplaceAll(key, "-", "_")
-}
+func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
+	devConfigFilePath, err := cmdConfig.Doit.GetString(cmdConfig.NS, doctl.ArgAppDevConfig)
+	if err != nil {
+		return nil, err
+	}
+	doctlConfig := config.DoctlConfigSource(cmdConfig.Doit, cmdConfig.NS)
 
-// appsDevFlagConfigCompat replaces dashes with underscores in the key to keep compatibility with doctl.Arg* keys
-// while keeping the config file keys consistent with the app spec naming convention.
-// for example: --no-cache on the CLI will map to no_cache in the config file.
-func appsDevFlagConfigCompat(cs config.ConfigSource) config.ConfigSource {
-	return config.MutatingConfigSource(cs, dashToUnderscore)
+	return workspace.NewAppDev(devConfigFilePath, doctlConfig)
 }

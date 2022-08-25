@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -30,7 +29,7 @@ func TestMutatingConfigSource(t *testing.T) {
 			"2": "two",
 			"3": "three",
 		}[key]
-	})
+	}, nil)
 	for _, k := range []string{"one", "two", "three"} {
 		assert.False(t, mcs.IsSet(k), k)
 	}
@@ -43,25 +42,14 @@ func TestMutatingConfigSource(t *testing.T) {
 	assert.Equal(t, "hello", mcs.GetString("3"))
 }
 
-func TestNamespacedConfigSource(t *testing.T) {
-	cs := NewTestConfigSource(map[string]any{
-		"config.key1": true,
-		"config.key2": time.Minute,
-		"config.key3": "hello",
-	})
-	for i := 1; i <= 3; i++ {
-		assert.True(t, cs.IsSet(fmt.Sprintf("config.key%d", i)))
-		assert.False(t, cs.IsSet(fmt.Sprintf("key%d", i)))
-	}
+func TestKeyNamespaceMutator(t *testing.T) {
+	empty := KeyNamespaceMutator("")
+	assert.Equal(t, "", empty(""))
+	assert.Equal(t, "key", empty("key"))
 
-	mcs := NamespacedConfigSource(cs, "config")
-	for i := 1; i <= 3; i++ {
-		assert.False(t, mcs.IsSet(fmt.Sprintf("config.key%d", i)))
-		assert.True(t, mcs.IsSet(fmt.Sprintf("key%d", i)))
-	}
-	assert.Equal(t, true, mcs.GetBool("key1"))
-	assert.Equal(t, time.Minute, mcs.GetDuration("key2"))
-	assert.Equal(t, "hello", mcs.GetString("key3"))
+	ns := KeyNamespaceMutator("namespace")
+	assert.Equal(t, "namespace.", ns(""))
+	assert.Equal(t, "namespace.key", ns("key"))
 }
 
 func TestMulti(t *testing.T) {
