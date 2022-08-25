@@ -14,55 +14,55 @@ type ConfigSource interface {
 }
 
 type mutatingConfigSource struct {
-	cs          ConfigSource
-	mutateKey   func(key string) string
-	mutateIsSet bool // some config sources except IsSet to _not_ include the namespace
+	cs        ConfigSource
+	mutateKey func(key string) string
+	// excludeMethods is a list of methods that should receive the original non-mutated input. example: "IsSet".
+	excludeMethods map[string]bool
 }
 
-func (s *mutatingConfigSource) key(key string) string {
-	if s.mutateKey != nil {
+func (s *mutatingConfigSource) key(method string, key string) string {
+	if !s.excludeMethods[method] && s.mutateKey != nil {
 		key = s.mutateKey(key)
 	}
 	return key
 }
 
 func (s *mutatingConfigSource) IsSet(key string) bool {
-	if s.mutateIsSet {
-		key = s.key(key)
-	}
-	return s.cs.IsSet(key)
+	return s.cs.IsSet(s.key("IsSet", key))
 }
 
 func (s *mutatingConfigSource) GetString(key string) string {
-	return s.cs.GetString(s.key(key))
+	return s.cs.GetString(s.key("GetString", key))
 }
 
 func (s *mutatingConfigSource) GetBool(key string) bool {
-	return s.cs.GetBool(s.key(key))
+	return s.cs.GetBool(s.key("GetBool", key))
 }
 
 func (s *mutatingConfigSource) GetDuration(key string) time.Duration {
-	return s.cs.GetDuration(s.key(key))
+	return s.cs.GetDuration(s.key("GetDuration", key))
 }
 
-func MutatingConfigSource(cs ConfigSource, mutateKey func(key string) string) ConfigSource {
+func MutatingConfigSource(cs ConfigSource, mutateKey func(key string) string, excludeMethods []string) ConfigSource {
+	excludeMethodsMap := make(map[string]bool)
+	for _, m := range excludeMethods {
+		excludeMethodsMap[m] = true
+	}
 	return &mutatingConfigSource{
-		cs:          cs,
-		mutateKey:   mutateKey,
-		mutateIsSet: true,
+		cs:             cs,
+		mutateKey:      mutateKey,
+		excludeMethods: excludeMethodsMap,
 	}
 }
 
-// NamespacedConfigSource accepts a ConfigSource and configures a default namespace that is prefixed to the key on all
-// Get* calls.
-func NamespacedConfigSource(cs ConfigSource, ns string) ConfigSource {
-	var mutateKey func(string) string
-	if ns != "" {
-		mutateKey = func(key string) string {
-			return nsKey(ns, key)
+// KeyNamespaceMutator returns a mutator that prefixes a namespace to the key with a `.` delimiter.
+func KeyNamespaceMutator(ns string) func(key string) string {
+	return func(key string) string {
+		if ns == "" {
+			return key
 		}
+		return nsKey(ns, key)
 	}
-	return MutatingConfigSource(cs, mutateKey)
 }
 
 // Multi returns a config source that wraps multiple config sources.

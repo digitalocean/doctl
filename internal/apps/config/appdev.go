@@ -2,11 +2,9 @@ package config
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"regexp"
 	"time"
 
@@ -47,26 +45,7 @@ const (
 // }
 
 type AppDev struct {
-	contextDir  string
-	doctlConfig ConfigSource
-	viper       *viper.Viper
-}
-
-func (c *AppDev) CacheDir(component string) string {
-	return c.ContextPath(".do", "cache", component)
-}
-
-func (c *AppDev) EnsureCacheDir(ctx context.Context, component string) error {
-	err := os.MkdirAll(c.ContextPath(".do", "cache", component), os.ModePerm)
-	if err != nil {
-		return err
-	}
-
-	return ensureStringInFile(c.ContextPath(".do", ".gitignore"), "/cache")
-}
-
-func (c *AppDev) ClearCacheDir(ctx context.Context, component string) error {
-	return os.RemoveAll(c.ContextPath(".do", "cache", component))
+	viper *viper.Viper
 }
 
 func (c *AppDev) WriteConfig() error {
@@ -82,15 +61,7 @@ func (c *AppDev) Set(key string, value any) error {
 }
 
 func (c *AppDev) Components(component string) ConfigSource {
-	return NamespacedConfigSource(c, nsKey(nsComponents, component))
-}
-
-func (c *AppDev) ContextDir() string {
-	return c.contextDir
-}
-
-func (c *AppDev) ContextPath(path ...string) string {
-	return filepath.Join(append([]string{c.contextDir}, path...)...)
+	return MutatingConfigSource(c, KeyNamespaceMutator(nsKey(nsComponents, component)), nil)
 }
 
 func (c *AppDev) IsSet(key string) bool {
@@ -110,48 +81,19 @@ func (c *AppDev) GetDuration(key string) time.Duration {
 }
 
 func New(path string) (*AppDev, error) {
-	config := &AppDev{
-		viper: viper.New(),
-	}
-
-	var err error
-	config.contextDir, err = os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	gitRoot, err := findTopLevelGitDir(config.contextDir)
-	if err != nil && !errors.Is(err, errNoGitRepo) {
-		return nil, err
-	}
-	if gitRoot != "" {
-		config.contextDir = gitRoot
-	}
-
-	if path == "" {
-		configDir := config.ContextPath(".do")
-		err = os.MkdirAll(configDir, os.ModePerm)
-		if err != nil {
-			return nil, err
-		}
-		path = filepath.Join(configDir, DefaultDevConfigFile)
-		if err := ensureStringInFile(path, ""); err != nil {
-			return nil, err
-		}
-		if err := ensureStringInFile(filepath.Join(configDir, ".gitignore"), DefaultDevConfigFile); err != nil {
-			return nil, err
-		}
-	} else if _, err := os.Stat(path); err != nil {
+	viper := viper.New()
+	if _, err := os.Stat(path); err != nil {
 		return nil, err
 	}
 
-	config.viper.SetConfigType("yaml")
-	config.viper.SetConfigFile(path)
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(path)
 
-	if err := config.viper.ReadInConfig(); err != nil {
+	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
 
-	return config, nil
+	return &AppDev{viper}, nil
 }
 
 func ensureStringInFile(file string, val string) error {
@@ -198,26 +140,4 @@ func ensureStringInFile(file string, val string) error {
 	}
 
 	return nil
-}
-
-var errNoGitRepo = errors.New("no git repository found")
-
-// findTopLevelGitDir ...
-func findTopLevelGitDir(workingDir string) (string, error) {
-	dir, err := filepath.Abs(workingDir)
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return dir, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", errors.New("no git repository found")
-		}
-		dir = parent
-	}
 }

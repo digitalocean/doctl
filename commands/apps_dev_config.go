@@ -1,17 +1,14 @@
 package commands
 
 import (
-	"bytes"
 	"errors"
-	"io/ioutil"
+	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
-	"github.com/digitalocean/doctl/internal/apps/config"
 	"github.com/spf13/cobra"
 )
 
@@ -78,9 +75,9 @@ func RunAppsDevConfigSet(c *CmdConfig) error {
 		return errors.New("you must provide at least one argument")
 	}
 
-	dev, err := newAppDevConfig(c)
+	ws, err := appDevWorkspace(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("preparing workspace: %w", err)
 	}
 
 	for _, arg := range c.Args {
@@ -88,14 +85,14 @@ func RunAppsDevConfigSet(c *CmdConfig) error {
 		if len(split) != 2 {
 			return errors.New("unexpected arg: " + arg)
 		}
-		err := dev.Set(split[0], split[1])
+		err := ws.Config.Set(split[0], split[1])
 		if err != nil {
 			return err
 		}
 		template.Print(`{{success checkmark}} set new value for {{highlight .}}{{nl}}`, split[0])
 	}
 
-	err = dev.WriteConfig()
+	err = ws.Config.Write()
 	if err != nil {
 		return err
 	}
@@ -109,13 +106,13 @@ func RunAppsDevConfigUnset(c *CmdConfig) error {
 		return errors.New("you must provide at least one argument")
 	}
 
-	dev, err := newAppDevConfig(c)
+	ws, err := appDevWorkspace(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("preparing workspace: %w", err)
 	}
 
 	for _, arg := range c.Args {
-		err = dev.Set(arg, "")
+		err = ws.Config.Set(arg, "")
 		if err != nil {
 			return err
 		}
@@ -123,62 +120,8 @@ func RunAppsDevConfigUnset(c *CmdConfig) error {
 		template.Print(`{{success checkmark}} unset {{highlight .}}{{nl}}`, arg)
 	}
 
-	err = dev.WriteConfig()
+	err = ws.Config.Write()
 	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func newAppDevConfig(cmdConfig *CmdConfig) (*config.AppDev, error) {
-	devConfigFilePath, err := cmdConfig.Doit.GetString(cmdConfig.NS, doctl.ArgAppDevConfig)
-	if err != nil {
-		return nil, err
-	}
-	return config.New(devConfigFilePath)
-}
-
-func ensureStringInFile(file string, val string) error {
-	if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
-		f, err := os.OpenFile(
-			file,
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
-			0644,
-		)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		_, err = f.WriteString(val)
-		return err
-	} else if err != nil {
-		return err
-	}
-
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		return err
-	}
-
-	if exists, err := regexp.Match(regexp.QuoteMeta(val), b); err != nil {
-		return err
-	} else if !exists {
-		f, err := os.OpenFile(
-			file,
-			os.O_APPEND|os.O_WRONLY,
-			0644,
-		)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-
-		if !bytes.HasSuffix(b, []byte("\n")) {
-			val = "\n" + val
-		}
-
-		_, err = f.WriteString(val)
 		return err
 	}
 

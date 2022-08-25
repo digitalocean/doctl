@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/internal/apps/config"
+	"github.com/digitalocean/doctl/internal/apps/workspace"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,7 +24,7 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 			name      string
 			args      []string
 			expectErr error
-			expect    func(*testing.T, *config.AppDev)
+			expect    func(*testing.T, *workspace.AppDev)
 		}{
 			{
 				name:      "no args",
@@ -39,34 +39,38 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 			{
 				name: "single key",
 				args: []string{"app=12345"},
-				expect: func(t *testing.T, c *config.AppDev) {
-					require.Equal(t, "12345", c.GetString("app"), "app-id")
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					require.Equal(t, "12345", ws.Config.Global(false).GetString("app"), "app-id")
 				},
 			},
 			{
 				name: "multiple keys",
 				args: []string{"app=value1", "spec=value2"},
-				expect: func(t *testing.T, c *config.AppDev) {
-					require.Equal(t, "value1", c.GetString("app"), "app-id")
-					require.Equal(t, "value2", c.GetString("spec"), "spec")
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					require.Equal(t, "value1", ws.Config.Global(false).GetString("app"), "app-id")
+					require.Equal(t, "value2", ws.Config.Global(false).GetString("spec"), "spec")
 				},
 			},
 		}
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				cmdConfig.Args = tc.args
 				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file.Name())
+
+				ws, err := appDevWorkspace(cmdConfig)
+				require.NoError(t, err, "getting workspace")
+				cmdConfig.Args = tc.args
 				err = RunAppsDevConfigSet(cmdConfig)
 				if tc.expectErr != nil {
 					require.EqualError(t, err, tc.expectErr.Error())
 					return
 				}
 				require.NoError(t, err, "running command")
-				devConf, err := newAppDevConfig(cmdConfig)
-				require.NoError(t, err, "getting dev config")
+
+				ws, err = appDevWorkspace(cmdConfig)
+				require.NoError(t, err, "getting workspace")
 				if tc.expect != nil {
-					tc.expect(t, devConf)
+					tc.expect(t, ws)
 				}
 			})
 		}
@@ -85,9 +89,9 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 		tcs := []struct {
 			name      string
 			args      []string
-			pre       func(*testing.T, *config.AppDev)
+			pre       func(*testing.T, *workspace.AppDev)
 			expectErr error
-			expect    func(*testing.T, *config.AppDev)
+			expect    func(*testing.T, *workspace.AppDev)
 		}{
 			{
 				name:      "no args",
@@ -97,41 +101,42 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 			{
 				name: "single key",
 				args: []string{"app"},
-				pre: func(t *testing.T, c *config.AppDev) {
-					c.Set("app", "value")
-					err := c.WriteConfig()
+				pre: func(t *testing.T, ws *workspace.AppDev) {
+					ws.Config.Set("app", "value")
+					err := ws.Config.Write()
 					require.NoError(t, err, "setting up default values")
 				},
-				expect: func(t *testing.T, c *config.AppDev) {
-					require.Equal(t, "", c.GetString("app"), "app-id")
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					require.Equal(t, "", ws.Config.Global(false).GetString("app"), "app-id")
 				},
 			},
 			{
 				name: "multiple keys",
 				args: []string{"app", "spec"},
-				pre: func(t *testing.T, c *config.AppDev) {
-					c.Set("app", "value")
-					c.Set("spec", "value")
-					err := c.WriteConfig()
+				pre: func(t *testing.T, ws *workspace.AppDev) {
+					ws.Config.Set("app", "value")
+					ws.Config.Set("spec", "value")
+					err := ws.Config.Write()
 					require.NoError(t, err, "setting up default values")
 				},
-				expect: func(t *testing.T, c *config.AppDev) {
-					require.Equal(t, "", c.GetString("app"), "app-id")
-					require.Equal(t, "", c.GetString("spec"), "spec")
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					require.Equal(t, "", ws.Config.Global(false).GetString("app"), "app-id")
+					require.Equal(t, "", ws.Config.Global(false).GetString("spec"), "spec")
 				},
 			},
 		}
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				devConf, err := newAppDevConfig(cmdConfig)
-				require.NoError(t, err, "getting dev config")
+				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file.Name())
+
+				ws, err := appDevWorkspace(cmdConfig)
+				require.NoError(t, err, "getting workspace")
 				if tc.pre != nil {
-					tc.pre(t, devConf)
+					tc.pre(t, ws)
 				}
 
 				cmdConfig.Args = tc.args
-				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file.Name())
 				err = RunAppsDevConfigUnset(cmdConfig)
 				if tc.expectErr != nil {
 					require.EqualError(t, err, tc.expectErr.Error())
@@ -139,82 +144,12 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 				}
 				require.NoError(t, err, "running command")
 
+				ws, err = appDevWorkspace(cmdConfig)
+				require.NoError(t, err, "getting workspace")
 				if tc.expect != nil {
-					devConf, err = newAppDevConfig(cmdConfig)
-					require.NoError(t, err, "getting dev config")
-					tc.expect(t, devConf)
+					tc.expect(t, ws)
 				}
 			})
 		}
 	})
-}
-
-func Test_ensureStringInFile(t *testing.T) {
-	ensureValue := "newvalue"
-
-	tcs := []struct {
-		name   string
-		pre    func(t *testing.T, fname string)
-		expect []byte
-	}{
-		{
-			name:   "no pre-existing file",
-			pre:    func(t *testing.T, fname string) {},
-			expect: []byte(ensureValue),
-		},
-		{
-			name: "pre-existing file with value",
-			pre: func(t *testing.T, fname string) {
-				f, err := os.OpenFile(fname, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-				require.NoError(t, err)
-				f.WriteString("line1\n" + ensureValue)
-				f.Close()
-			},
-			expect: []byte("line1\n" + ensureValue),
-		},
-		{
-			name: "pre-existing file without value",
-			pre: func(t *testing.T, fname string) {
-				f, err := os.OpenFile(fname, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-				require.NoError(t, err)
-				f.WriteString("line1\n")
-				f.Close()
-			},
-			expect: []byte("line1\n" + ensureValue),
-		},
-		{
-			name: "pre-existing file without value or newline",
-			pre: func(t *testing.T, fname string) {
-				f, err := os.OpenFile(fname, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-				require.NoError(t, err)
-				f.WriteString("line1")
-				f.Close()
-			},
-			expect: []byte("line1\n" + ensureValue),
-		},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			file, err := ioutil.TempFile("", "dev-config.*.yaml")
-			require.NoError(t, err, "creating temp file")
-			file.Close()
-
-			// allow the test to dictate existence; we just use this
-			// to get a valid temporary filename that is unique
-			err = os.Remove(file.Name())
-			require.NoError(t, err, "deleting temp file")
-
-			if tc.pre != nil {
-				tc.pre(t, file.Name())
-			}
-
-			err = ensureStringInFile(file.Name(), ensureValue)
-			require.NoError(t, err, "ensuring string in file")
-
-			b, err := ioutil.ReadFile(file.Name())
-			require.NoError(t, err)
-			require.Equal(t, string(tc.expect), string(b))
-		})
-	}
 }

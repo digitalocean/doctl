@@ -38,8 +38,7 @@ func DoctlConfigSource(config doctl.Config, ns string) ConfigSource {
 			return nsKey(ns, key)
 		}
 	}
-	return &mutatingConfigSource{
-		cs:        &doctlConfigSource{config},
-		mutateKey: mutateKey,
-	}
+
+	// doctl expects the namespace to be present on all calls except IsSet.
+	return MutatingConfigSource(&doctlConfigSource{config}, mutateKey, []string{"IsSet"})
 }
