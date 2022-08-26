@@ -528,68 +528,6 @@ var validAppSpec = &godo.AppSpec{
 	},
 }
 
-func Test_parseAppSpec(t *testing.T) {
-	expectedSpec := validAppSpec
-
-	t.Run("json", func(t *testing.T) {
-		spec, err := parseAppSpec([]byte(validJSONSpec))
-		require.NoError(t, err)
-		assert.Equal(t, expectedSpec, spec)
-	})
-	t.Run("yaml", func(t *testing.T) {
-		spec, err := parseAppSpec([]byte(validYAMLSpec))
-		require.NoError(t, err)
-		assert.Equal(t, expectedSpec, spec)
-	})
-	t.Run("invalid", func(t *testing.T) {
-		_, err := parseAppSpec([]byte("invalid spec"))
-		require.Error(t, err)
-	})
-	t.Run("unknown fields", func(t *testing.T) {
-		_, err := parseAppSpec([]byte(unknownFieldSpec))
-		require.Error(t, err)
-	})
-}
-
-func Test_readAppSpec(t *testing.T) {
-	tcs := []struct {
-		name  string
-		setup func(t *testing.T) (path string, stdin io.Reader)
-
-		wantSpec *godo.AppSpec
-		wantErr  error
-	}{
-		{
-			name: "stdin",
-			setup: func(t *testing.T) (string, io.Reader) {
-				return "-", bytes.NewBufferString(validYAMLSpec)
-			},
-			wantSpec: validAppSpec,
-		},
-		{
-			name: "file yaml",
-			setup: func(t *testing.T) (string, io.Reader) {
-				return testTempFile(t, []byte(validJSONSpec)), nil
-			},
-			wantSpec: validAppSpec,
-		},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			path, stdin := tc.setup(t)
-			spec, err := readAppSpec(stdin, path)
-			if tc.wantErr != nil {
-				require.Equal(t, tc.wantErr, err)
-			} else {
-				require.NoError(t, err)
-			}
-
-			assert.Equal(t, tc.wantSpec, spec)
-		})
-	}
-}
-
 func testTempFile(t *testing.T, data []byte) string {
 	t.Helper()
 	file := t.TempDir() + "/file"

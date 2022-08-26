@@ -10,32 +10,49 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/apps"
 	"github.com/digitalocean/doctl/internal/apps/config"
+	"github.com/digitalocean/godo"
+	"github.com/joho/godotenv"
 )
 
 const (
 	// DefaultDevConfigFile is the name of the default dev configuration file.
 	DefaultDevConfigFile = "dev-config.yaml"
+	// DefaultSpecPath is the default spec path for an app.
+	DefaultSpecPath = ".do/app.yaml"
 )
+
+type NewAppDevOpts struct {
+	// DevConfigFilePath is an optional path to the config file. Defaults to <workspace context>/.do/<DefaultDevConfigFile>.
+	DevConfigFilePath string
+	// DoctlConfig is the doctl CLI config source. Use config.DoctlConfigSource(...) to create it.
+	DoctlConfig config.ConfigSource
+	// AppsService is the apps API service.
+	AppsService do.AppsService
+}
 
 // NewAppDev creates a new AppDev workspace.
 //
-// If devConfigFilePath is empty, it defaults to <workspace context>/.do/<DefaultDevConfigFile>.
-func NewAppDev(devConfigFilePath string, doctlConfig config.ConfigSource) (*AppDev, error) {
+func NewAppDev(opts NewAppDevOpts) (*AppDev, error) {
 	contextDir, err := findContextDir()
 	if err != nil {
 		return nil, err
 	}
 
-	if devConfigFilePath == "" {
+	if opts.DevConfigFilePath == "" {
 		configDir := filepath.Join(contextDir, ".do")
 		err = os.MkdirAll(configDir, os.ModePerm)
 		if err != nil {
 			return nil, err
 		}
-		devConfigFilePath = filepath.Join(configDir, DefaultDevConfigFile)
-		if err := ensureStringInFile(devConfigFilePath, ""); err != nil {
+		opts.DevConfigFilePath = filepath.Join(configDir, DefaultDevConfigFile)
+		if err := ensureStringInFile(opts.DevConfigFilePath, ""); err != nil {
 			return nil, err
 		}
 		if err := ensureStringInFile(filepath.Join(configDir, ".gitignore"), DefaultDevConfigFile); err != nil {
@@ -43,17 +60,19 @@ func NewAppDev(devConfigFilePath string, doctlConfig config.ConfigSource) (*AppD
 		}
 	}
 
-	c, err := config.New(devConfigFilePath)
+	appDevConfig, err := config.New(opts.DevConfigFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("initializing config: %w", err)
+	}
+
+	config, err := NewAppDevConfig(appDevConfig, opts.DoctlConfig, opts.AppsService)
 	if err != nil {
 		return nil, fmt.Errorf("initializing config: %w", err)
 	}
 
 	return &AppDev{
 		contextDir: contextDir,
-		Config: &AppDevConfig{
-			appDevConfig: c,
-			doctlConfig:  doctlConfig,
-		},
+		Config:     config,
 	}, nil
 }
 
@@ -81,13 +100,148 @@ func (c *AppDev) ClearCacheDir(ctx context.Context, component string) error {
 
 // Context returns a path relative to the workspace context.
 // A call with no arguments returns the workspace context path.
+// If an absolute path is given it is returned as-is.
 func (ws *AppDev) Context(path ...string) string {
-	return filepath.Join(append([]string{ws.contextDir}, path...)...)
+	p := filepath.Join(path...)
+	if filepath.IsAbs(p) {
+		return p
+	}
+	return filepath.Join(ws.contextDir, p)
 }
 
 type AppDevConfig struct {
+	// AppSpec is the app spec for the workspace sourced from either AppSpecPath or AppID.
+	AppSpec *godo.AppSpec
+	// AppSpecPath is the path to the app spec on disk.
+	// It can be empty if only a linked production app's spec is used.
+	AppSpecPath string
+
+	// AppID is an optional production app id to link the workspace to.
+	AppID string
+	// App is the production app resource if AppID is set.
+	App *godo.App
+
+	Registry string
+	Timeout  time.Duration
+	NoCache  bool
+
+	// Components contains component-specific configuration keyed by component name.
+	Components map[string]*AppDevConfigComponent
+
 	appDevConfig *config.AppDev
 	doctlConfig  config.ConfigSource
+	appsService  do.AppsService
+}
+
+type AppDevConfigComponent struct {
+	Spec         godo.AppComponentSpec
+	EnvFile      string
+	Envs         map[string]string
+	BuildCommand string
+}
+
+// NewAppDevConfig populates an AppDevConfig instance with values sourced from *config.AppDev and doctl.Config.
+func NewAppDevConfig(appDevConfig *config.AppDev, doctlConfig config.ConfigSource, appsService do.AppsService) (*AppDevConfig, error) {
+	c := &AppDevConfig{
+		appDevConfig: appDevConfig,
+		doctlConfig:  doctlConfig,
+		appsService:  appsService,
+	}
+
+	err := c.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.validate()
+	if err != nil {
+		return nil, fmt.Errorf("validating config: %w", err)
+	}
+
+	return c, nil
+}
+
+// Load loads the config.
+func (c *AppDevConfig) Load() error {
+	// ws - workspace config w/ CLI overrides
+	ws := c.Workspace(true)
+
+	c.Timeout = ws.GetDuration(doctl.ArgTimeout)
+	c.AppID = ws.GetString(doctl.ArgApp)
+	c.AppSpecPath = ws.GetString(doctl.ArgAppSpec)
+	c.Registry = ws.GetString(doctl.ArgRegistry)
+	c.NoCache = ws.GetBool(doctl.ArgNoCache)
+
+	err := c.loadAppSpec()
+	if err != nil {
+		return err
+	}
+
+	c.Components = make(map[string]*AppDevConfigComponent)
+	_ = godo.ForEachAppSpecComponent(c.AppSpec, func(spec godo.AppBuildableComponentSpec) error {
+		name := spec.GetName()
+		// component - component config w/ CLI overrides
+		// componentWS - component config w/ workspace and CLI overrides
+		component, componentWS := c.Component(name, true)
+		cc := &AppDevConfigComponent{
+			Spec:         spec,
+			BuildCommand: component.GetString(doctl.ArgBuildCommand),
+		}
+		cc.LoadEnvFile(componentWS.GetString(doctl.ArgEnvFile))
+
+		c.Components[name] = cc
+		return nil
+	})
+
+	return nil
+}
+
+// LoadEnvFile loads the given file into the component config.
+func (c *AppDevConfigComponent) LoadEnvFile(path string) error {
+	if path == "" {
+		return nil
+	}
+
+	envs, err := godotenv.Read(path)
+	if err != nil {
+		return fmt.Errorf("reading env file: %w", err)
+	}
+
+	c.EnvFile = path
+	c.Envs = envs
+	return nil
+}
+
+// loadAppSpec loads the app spec from disk or from godo based on the AppID and AppSpecPath configs.
+func (c *AppDevConfig) loadAppSpec() error {
+	var err error
+
+	if c.AppID != "" {
+		template.Print(`{{success checkmark}} fetching app details{{nl}}`, nil)
+		c.App, err = c.appsService.Get(c.AppID)
+		if err != nil {
+			return fmt.Errorf("fetching app %s: %w", c.AppID, err)
+		}
+		template.Print(`{{success checkmark}} loading config from app {{highlight .}}{{nl}}`, c.App.GetSpec().GetName())
+		c.AppSpec = c.App.GetSpec()
+	} else if c.AppSpecPath == "" && fileExists(DefaultSpecPath) {
+		c.AppSpecPath = DefaultSpecPath
+	}
+
+	if c.AppSpecPath != "" {
+		template.Print(`{{success checkmark}} using app spec at {{highlight .}}{{nl}}`, c.AppSpecPath)
+		c.AppSpec, err = apps.ReadAppSpec(nil, c.AppSpecPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validate runs validation checks.
+func (c *AppDevConfig) validate() error {
+	return nil
 }
 
 // Write writes the current dev-config.yaml to disk.
@@ -95,16 +249,16 @@ func (c *AppDevConfig) Write() error {
 	return c.appDevConfig.WriteConfig()
 }
 
-// Doctl returns doctl's CLI config.
-func (c *AppDevConfig) Doctl() config.ConfigSource {
+// doctl returns doctl's CLI config.
+func (c *AppDevConfig) doctl() config.ConfigSource {
 	return c.doctlConfig
 }
 
-// Global returns the dev-config.yaml config with an optional CLI override.
-func (c *AppDevConfig) Global(cliOverride bool) config.ConfigSource {
+// Workspace returns the dev-config.yaml config with an optional CLI override.
+func (c *AppDevConfig) Workspace(cliOverride bool) config.ConfigSource {
 	var cliConfig config.ConfigSource
 	if cliOverride {
-		cliConfig = c.Doctl()
+		cliConfig = c.doctl()
 	}
 
 	return config.Multi(
@@ -130,7 +284,7 @@ func (c *AppDevConfig) Set(key string, value any) error {
 func (c *AppDevConfig) Component(component string, cliOverride bool) (componentOnly, componentGlobal config.ConfigSource) {
 	var cliConfig config.ConfigSource
 	if cliOverride {
-		cliConfig = c.Doctl()
+		cliConfig = c.doctl()
 	}
 
 	componentOnly = config.Multi(
@@ -139,7 +293,7 @@ func (c *AppDevConfig) Component(component string, cliOverride bool) (componentO
 	)
 	componentGlobal = config.Multi(
 		componentOnly,
-		c.Global(false), // cliOverride is false because it's already accounted for in componentOnly.
+		c.Workspace(false), // cliOverride is false because it's already accounted for in componentOnly.
 	)
 	return
 }
@@ -227,7 +381,7 @@ func findTopLevelGitDir(workingDir string) (string, error) {
 	}
 
 	for {
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+		if fileExists(dir, ".git"); err == nil {
 			return dir, nil
 		}
 
@@ -237,4 +391,9 @@ func findTopLevelGitDir(workingDir string) (string, error) {
 		}
 		dir = parent
 	}
+}
+
+func fileExists(path ...string) bool {
+	_, err := os.Stat(filepath.Join(path...))
+	return err == nil
 }

@@ -44,8 +44,8 @@ const (
 	ArgAppDeployment = "deployment"
 	// ArgAppDevConfig is the path to the app dev link config.
 	ArgAppDevConfig = "dev-config"
-	// ArgAppDevBuildCommand is an optional build command to set for local development.
-	ArgAppDevBuildCommand = "build-command"
+	// ArgBuildCommand is an optional build command to set for local development.
+	ArgBuildCommand = "build-command"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.

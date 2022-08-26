@@ -2,9 +2,10 @@ package commands
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/apps/workspace"
@@ -12,13 +13,6 @@ import (
 )
 
 func TestRunAppsDevConfigSet(t *testing.T) {
-	file, err := ioutil.TempFile("", "dev-config.*.yaml")
-	require.NoError(t, err, "creating temp file")
-	t.Cleanup(func() {
-		file.Close()
-		os.Remove(file.Name())
-	})
-
 	withTestClient(t, func(cmdConfig *CmdConfig, tm *tcMocks) {
 		tcs := []struct {
 			name      string
@@ -38,27 +32,27 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 			},
 			{
 				name: "single key",
-				args: []string{"app=12345"},
+				args: []string{"registry=docker-registry"},
 				expect: func(t *testing.T, ws *workspace.AppDev) {
-					require.Equal(t, "12345", ws.Config.Global(false).GetString("app"), "app-id")
+					require.Equal(t, "docker-registry", ws.Config.Registry, "registry")
 				},
 			},
 			{
 				name: "multiple keys",
-				args: []string{"app=value1", "spec=value2"},
+				args: []string{"registry=docker-registry", "timeout=5m"},
 				expect: func(t *testing.T, ws *workspace.AppDev) {
-					require.Equal(t, "value1", ws.Config.Global(false).GetString("app"), "app-id")
-					require.Equal(t, "value2", ws.Config.Global(false).GetString("spec"), "spec")
+					require.Equal(t, "docker-registry", ws.Config.Registry, "registry")
+					require.Equal(t, 5*time.Minute, ws.Config.Timeout, "timeout")
 				},
 			},
 		}
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file.Name())
-
-				ws, err := appDevWorkspace(cmdConfig)
-				require.NoError(t, err, "getting workspace")
+				file := filepath.Join(t.TempDir(), "dev-config.yaml")
+				_, err := os.Create(file)
+				require.NoError(t, err)
+				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file)
 				cmdConfig.Args = tc.args
 				err = RunAppsDevConfigSet(cmdConfig)
 				if tc.expectErr != nil {
@@ -67,7 +61,7 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 				}
 				require.NoError(t, err, "running command")
 
-				ws, err = appDevWorkspace(cmdConfig)
+				ws, err := appDevWorkspace(cmdConfig)
 				require.NoError(t, err, "getting workspace")
 				if tc.expect != nil {
 					tc.expect(t, ws)
@@ -78,13 +72,6 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 }
 
 func TestRunAppsDevConfigUnset(t *testing.T) {
-	file, err := ioutil.TempFile("", "dev-config.*.yaml")
-	require.NoError(t, err, "creating temp file")
-	t.Cleanup(func() {
-		file.Close()
-		os.Remove(file.Name())
-	})
-
 	withTestClient(t, func(cmdConfig *CmdConfig, tm *tcMocks) {
 		tcs := []struct {
 			name      string
@@ -100,35 +87,39 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 			},
 			{
 				name: "single key",
-				args: []string{"app"},
+				args: []string{"registry"},
 				pre: func(t *testing.T, ws *workspace.AppDev) {
-					ws.Config.Set("app", "value")
+					ws.Config.Set("registry", "docker-registry")
 					err := ws.Config.Write()
 					require.NoError(t, err, "setting up default values")
 				},
 				expect: func(t *testing.T, ws *workspace.AppDev) {
-					require.Equal(t, "", ws.Config.Global(false).GetString("app"), "app-id")
+					require.Equal(t, "", ws.Config.Registry, "registry")
 				},
 			},
 			{
 				name: "multiple keys",
-				args: []string{"app", "spec"},
+				args: []string{"registry", "timeout"},
 				pre: func(t *testing.T, ws *workspace.AppDev) {
-					ws.Config.Set("app", "value")
-					ws.Config.Set("spec", "value")
+					ws.Config.Set("registry", "docker-registry")
+					ws.Config.Set("timeout", 5*time.Minute)
 					err := ws.Config.Write()
 					require.NoError(t, err, "setting up default values")
 				},
 				expect: func(t *testing.T, ws *workspace.AppDev) {
-					require.Equal(t, "", ws.Config.Global(false).GetString("app"), "app-id")
-					require.Equal(t, "", ws.Config.Global(false).GetString("spec"), "spec")
+					require.Equal(t, "", ws.Config.Registry, "registry")
+					require.Equal(t, time.Duration(0), ws.Config.Timeout, "timeout")
 				},
 			},
 		}
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file.Name())
+				file := filepath.Join(t.TempDir(), "dev-config.yaml")
+				_, err := os.Create(file)
+				require.NoError(t, err)
+
+				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file)
 
 				ws, err := appDevWorkspace(cmdConfig)
 				require.NoError(t, err, "getting workspace")
