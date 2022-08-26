@@ -7,10 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/godo"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 )
@@ -80,6 +83,66 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	}
 	defer dockerRes.Body.Close()
 	print(dockerRes.Body, lw)
+
+	if b.component.GetType() == godo.AppComponentTypeStaticSite {
+		// TODO: cleanup dir and file
+		tmpDir, err := ioutil.TempDir("", "static-*")
+		if err != nil {
+			return res, err
+		}
+		dockerfileStatic, err := os.OpenFile(filepath.Join(tmpDir, "Dockerfile.static"), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+		if err != nil {
+			return res, err
+		}
+		defer dockerfileStatic.Close()
+
+		nginxConf, err := os.OpenFile(filepath.Join(tmpDir, "nginx.conf"), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+		if err != nil {
+			return res, err
+		}
+		defer nginxConf.Close()
+		nginxConf.WriteString(`
+server {
+	listen 8080;
+	listen [::]:8080;
+
+	resolver 127.0.0.11;
+	autoindex off;
+
+	server_name _;
+	server_tokens off;
+
+	root /www;
+	gzip_static on;
+}`)
+
+		assetsCopyPath := b.component.(*godo.AppStaticSiteSpec).GetOutputDir()
+		dockerfileStatic.WriteString(fmt.Sprintf(`
+FROM %s	as content
+FROM nginx:alpine
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=content %s /www
+		`, b.ImageOutputName(), assetsCopyPath))
+
+		tar, err := archive.TarWithOptions(tmpDir, &archive.TarOptions{})
+		if err != nil {
+			return res, err
+		}
+		dockerRes, err := b.cli.ImageBuild(ctx, tar, types.ImageBuildOptions{
+			Dockerfile: "./Dockerfile.static",
+			Tags: []string{
+				b.ImageOutputName() + "-static",
+			},
+		})
+		if err != nil {
+			res.ExitCode = 1
+			return res, err
+		}
+		defer dockerRes.Body.Close()
+		print(dockerRes.Body, lw)
+	}
+
 	res.Image = b.ImageOutputName()
 	res.BuildDuration = time.Since(start)
 	res.ExitCode = 0
