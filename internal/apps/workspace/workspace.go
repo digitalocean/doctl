@@ -163,7 +163,7 @@ func NewAppDevConfig(appDevConfig *config.AppDev, doctlConfig config.ConfigSourc
 // Load loads the config.
 func (c *AppDevConfig) Load() error {
 	// ws - workspace config w/ CLI overrides
-	ws := c.Workspace(true)
+	ws := c.workspace(true)
 
 	c.Timeout = ws.GetDuration(doctl.ArgTimeout)
 	c.appID = ws.GetString(doctl.ArgApp)
@@ -181,7 +181,7 @@ func (c *AppDevConfig) Load() error {
 		name := spec.GetName()
 		// component - component config w/ CLI overrides
 		// componentWS - component config w/ workspace and CLI overrides
-		component, componentWS := c.Component(name, true)
+		component, componentWS := c.component(name, true)
 		cc := &AppDevConfigComponent{
 			Spec:         spec,
 			BuildCommand: component.GetString(doctl.ArgBuildCommand),
@@ -253,8 +253,8 @@ func (c *AppDevConfig) doctl() config.ConfigSource {
 	return c.doctlConfig
 }
 
-// Workspace returns the dev-config.yaml config with an optional CLI override.
-func (c *AppDevConfig) Workspace(cliOverride bool) config.ConfigSource {
+// workspace returns the dev-config.yaml config with an optional CLI override.
+func (c *AppDevConfig) workspace(cliOverride bool) config.ConfigSource {
 	var cliConfig config.ConfigSource
 	if cliOverride {
 		cliConfig = c.doctl()
@@ -271,7 +271,7 @@ func (c *AppDevConfig) Set(key string, value any) error {
 	return c.appDevConfig.Set(key, value)
 }
 
-// Component returns per-component config.
+// component returns per-component config.
 //
 // componentOnly: in order of priority:
 //		1. CLI config (if requested).
@@ -280,7 +280,7 @@ func (c *AppDevConfig) Set(key string, value any) error {
 //		1. CLI config (if requested).
 //		2. the component's config.
 //		3. global config.
-func (c *AppDevConfig) Component(component string, cliOverride bool) (componentOnly, componentGlobal config.ConfigSource) {
+func (c *AppDevConfig) component(component string, cliOverride bool) (componentOnly, componentGlobal config.ConfigSource) {
 	var cliConfig config.ConfigSource
 	if cliOverride {
 		cliConfig = c.doctl()
@@ -292,7 +292,7 @@ func (c *AppDevConfig) Component(component string, cliOverride bool) (componentO
 	)
 	componentGlobal = config.Multi(
 		componentOnly,
-		c.Workspace(false), // cliOverride is false because it's already accounted for in componentOnly.
+		c.workspace(false), // cliOverride is false because it's already accounted for in componentOnly.
 	)
 	return
 }
