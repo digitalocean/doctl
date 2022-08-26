@@ -110,14 +110,13 @@ func (ws *AppDev) Context(path ...string) string {
 }
 
 type AppDevConfig struct {
-	// AppSpec is the app spec for the workspace sourced from either AppSpecPath or AppID.
+	// appSpecPath is the path to the app spec on disk.
+	appSpecPath string
+	// AppSpec is the app spec for the workspace.
 	AppSpec *godo.AppSpec
-	// AppSpecPath is the path to the app spec on disk.
-	// It can be empty if only a linked production app's spec is used.
-	AppSpecPath string
 
-	// AppID is an optional production app id to link the workspace to.
-	AppID string
+	// appID is an optional production app id to link the workspace to.
+	appID string
 	// App is the production app resource if AppID is set.
 	App *godo.App
 
@@ -167,8 +166,8 @@ func (c *AppDevConfig) Load() error {
 	ws := c.Workspace(true)
 
 	c.Timeout = ws.GetDuration(doctl.ArgTimeout)
-	c.AppID = ws.GetString(doctl.ArgApp)
-	c.AppSpecPath = ws.GetString(doctl.ArgAppSpec)
+	c.appID = ws.GetString(doctl.ArgApp)
+	c.appSpecPath = ws.GetString(doctl.ArgAppSpec)
 	c.Registry = ws.GetString(doctl.ArgRegistry)
 	c.NoCache = ws.GetBool(doctl.ArgNoCache)
 
@@ -216,21 +215,21 @@ func (c *AppDevConfigComponent) LoadEnvFile(path string) error {
 func (c *AppDevConfig) loadAppSpec() error {
 	var err error
 
-	if c.AppID != "" {
+	if c.appID != "" {
 		template.Print(`{{success checkmark}} fetching app details{{nl}}`, nil)
-		c.App, err = c.appsService.Get(c.AppID)
+		c.App, err = c.appsService.Get(c.appID)
 		if err != nil {
-			return fmt.Errorf("fetching app %s: %w", c.AppID, err)
+			return fmt.Errorf("fetching app %s: %w", c.appID, err)
 		}
 		template.Print(`{{success checkmark}} loading config from app {{highlight .}}{{nl}}`, c.App.GetSpec().GetName())
 		c.AppSpec = c.App.GetSpec()
-	} else if c.AppSpecPath == "" && fileExists(DefaultSpecPath) {
-		c.AppSpecPath = DefaultSpecPath
+	} else if c.appSpecPath == "" && fileExists(DefaultSpecPath) {
+		c.appSpecPath = DefaultSpecPath
 	}
 
-	if c.AppSpecPath != "" {
-		template.Print(`{{success checkmark}} using app spec at {{highlight .}}{{nl}}`, c.AppSpecPath)
-		c.AppSpec, err = apps.ReadAppSpec(nil, c.AppSpecPath)
+	if c.appSpecPath != "" {
+		template.Print(`{{success checkmark}} using app spec at {{highlight .}}{{nl}}`, c.appSpecPath)
+		c.AppSpec, err = apps.ReadAppSpec(nil, c.appSpecPath)
 		if err != nil {
 			return err
 		}
