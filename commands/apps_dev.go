@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/MakeNowJust/heredoc"
@@ -22,13 +23,10 @@ import (
 	"github.com/digitalocean/doctl/internal/apps/workspace"
 
 	"github.com/digitalocean/godo"
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
 const (
-	// AppsDevDefaultSpecPath is the default spec path for an app.
-	AppsDevDefaultSpecPath = ".do/app.yaml"
 	// AppsDevDefaultEnvFile is the default env file path.
 	AppsDevDefaultEnvFile = ".env"
 )
@@ -86,7 +84,7 @@ func AppsDev() *Command {
 	)
 
 	AddStringFlag(
-		build, doctl.ArgAppDevBuildCommand,
+		build, doctl.ArgBuildCommand,
 		"", "",
 		"Optional build command override for local development.",
 	)
@@ -115,51 +113,22 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return fmt.Errorf("preparing workspace: %w", err)
 	}
 
-	globalConfig := ws.Config.Global(true)
-	timeout := globalConfig.GetDuration(doctl.ArgTimeout)
-	if timeout > 0 {
+	if ws.Config.Timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
+		ctx, cancel = context.WithTimeout(ctx, ws.Config.Timeout)
 		defer cancel()
 	}
 
-	var (
-		spec          *godo.AppSpec
-		cnbVersioning *godo.AppBuildConfigCNBVersioning
-	)
-	appID := globalConfig.GetString(doctl.ArgApp)
-
 	// TODO: if this is the user's first time running dev build, ask them if they'd like to
 	// link an existing app.
-	if appID != "" {
-		template.Print(`{{success checkmark}} fetching app details{{nl}}`, AppsDevDefaultSpecPath)
-		app, err := c.Apps().Get(appID)
-		if err != nil {
-			return err
-		}
-		spec = app.Spec
-		cnbVersioning = app.GetBuildConfig().GetCNBVersioning()
-	}
 
-	appSpecPath := globalConfig.GetString(doctl.ArgAppSpec)
-	if spec == nil && appSpecPath == "" && fileExists(AppsDevDefaultSpecPath) {
-		appSpecPath = AppsDevDefaultSpecPath
-		template.Print(`{{success checkmark}} using app spec at {{highlight .}}{{nl}}`, AppsDevDefaultSpecPath)
-	}
-	if appSpecPath != "" {
-		spec, err = readAppSpec(os.Stdin, appSpecPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	if spec == nil {
+	if ws.Config.AppSpec == nil {
 		// TODO(ntate); allow app-detect build to remove requirement
 		return errors.New("app spec is required for component build")
 	}
 
 	var hasBuildableComponents bool
-	_ = godo.ForEachAppSpecComponent(spec, func(c godo.AppBuildableComponentSpec) error {
+	_ = godo.ForEachAppSpecComponent(ws.Config.AppSpec, func(c godo.AppBuildableComponentSpec) error {
 		hasBuildableComponents = true
 		return fmt.Errorf("stop")
 	})
@@ -167,19 +136,19 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return fmt.Errorf("the specified app spec does not contain any buildable components")
 	}
 
-	var component string
+	var componentName string
 	if len(c.Args) >= 1 {
-		component = c.Args[0]
+		componentName = c.Args[0]
 	}
-	if component == "" {
+	if componentName == "" {
 		var components []list.Item
-		_ = godo.ForEachAppSpecComponent(spec, func(c godo.AppBuildableComponentSpec) error {
+		_ = godo.ForEachAppSpecComponent(ws.Config.AppSpec, func(c godo.AppBuildableComponentSpec) error {
 			components = append(components, componentListItem{c})
 			return nil
 		})
 
 		if len(components) == 1 {
-			component = components[0].(componentListItem).spec.GetName()
+			componentName = components[0].(componentListItem).spec.GetName()
 		} else if len(components) > 1 && Interactive {
 			list := list.New(components)
 			list.Model().Title = "select a component"
@@ -194,22 +163,26 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			if !ok {
 				return fmt.Errorf("unexpected item type %T", selectedComponent)
 			}
-			component = selectedComponent.spec.GetName()
+			componentName = selectedComponent.spec.GetName()
 		}
 	}
 
-	if component == "" {
+	if componentName == "" {
 		if !Interactive {
 			return errors.New("component name is required when running non-interactively")
 		}
-		return errors.New("component name is required")
+		return errors.New("component is required")
 	}
 
-	componentSpec, err := godo.GetAppSpecComponent[godo.AppBuildableComponentSpec](spec, component)
-	if err != nil {
-		return err
+	component := ws.Config.Components[componentName]
+	if component == nil {
+		// TODO: add support for building without an app spec via app detection
+		return fmt.Errorf("component %s does not exist in app spec", componentName)
 	}
-
+	componentSpec, ok := component.Spec.(godo.AppBuildableComponentSpec)
+	if !ok {
+		return fmt.Errorf("cannot build component %s", componentName)
+	}
 	if componentSpec.GetSourceDir() != "" {
 		sd := componentSpec.GetSourceDir()
 		stat, err := os.Stat(ws.Context(sd))
@@ -224,10 +197,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 	}
 
-	componentConfig, componentGlobalConfig := ws.Config.Component(component, true)
-	var envs map[string]string
-	envFile := componentGlobalConfig.GetString(doctl.ArgEnvFile)
-	if envFile == "" && Interactive && fileExists(ws.Context(AppsDevDefaultEnvFile)) {
+	if component.EnvFile != "" {
+		template.Print(`{{success checkmark}} using envs from {{highlight .}}{{nl}}`, component.EnvFile)
+	} else if Interactive && fileExists(ws.Context(AppsDevDefaultEnvFile)) {
+		// TODO: persist env file path to dev config
 		choice, err := confirm.New(
 			template.String(`{{highlight .}} exists, use it for env var values?`, AppsDevDefaultEnvFile),
 			confirm.WithDefaultChoice(confirm.No),
@@ -236,28 +209,21 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			return err
 		}
 		if choice == confirm.Yes {
-			envFile = ws.Context(AppsDevDefaultEnvFile)
-		}
-	} else if envFile != "" {
-		envFile = ws.Context(envFile)
-	}
-	if envFile != "" {
-		envs, err = godotenv.Read(envFile)
-		if err != nil {
-			return fmt.Errorf("reading env file: %w", err)
+			err := component.LoadEnvFile(ws.Context(AppsDevDefaultEnvFile))
+			if err != nil {
+				return fmt.Errorf("reading env file: %w", err)
+			}
 		}
 	}
 
-	registry := globalConfig.GetString(doctl.ArgRegistry)
-	noCache := globalConfig.GetBool(doctl.ArgNoCache)
-	if noCache {
+	if ws.Config.NoCache {
 		template.Render(text.Warning, `{{crossmark}} build caching disabled{{nl}}`, nil)
-		err = ws.ClearCacheDir(ctx, component)
+		err = ws.ClearCacheDir(ctx, componentName)
 		if err != nil {
 			return err
 		}
 	}
-	err = ws.EnsureCacheDir(ctx, component)
+	err = ws.EnsureCacheDir(ctx, componentName)
 	if err != nil {
 		return err
 	}
@@ -319,15 +285,15 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	err = func() error {
 		defer cancel()
 
-		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, ws.Context(), spec, builder.NewBuilderOpts{
-			Component:            component,
-			LocalCacheDir:        ws.CacheDir(component),
-			NoCache:              noCache,
-			Registry:             registry,
-			EnvOverride:          envs,
-			BuildCommandOverride: componentConfig.GetString(doctl.ArgAppDevBuildCommand),
+		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, ws.Context(), ws.Config.AppSpec, builder.NewBuilderOpts{
+			Component:            componentName,
+			LocalCacheDir:        ws.CacheDir(componentName),
+			NoCache:              ws.Config.NoCache,
+			Registry:             ws.Config.Registry,
+			EnvOverride:          component.Envs,
+			BuildCommandOverride: component.BuildCommand,
 			LogWriter:            logWriter,
-			Versioning:           builder.Versioning{CNB: cnbVersioning},
+			Versioning:           builder.Versioning{CNB: ws.Config.App.GetBuildConfig().GetCNBVersioning()},
 		})
 		if err != nil {
 			return err
@@ -383,8 +349,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	return nil
 }
 
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
+func fileExists(path ...string) bool {
+	_, err := os.Stat(filepath.Join(path...))
 	return err == nil
 }
 
@@ -395,5 +361,9 @@ func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
 	}
 	doctlConfig := config.DoctlConfigSource(cmdConfig.Doit, cmdConfig.NS)
 
-	return workspace.NewAppDev(devConfigFilePath, doctlConfig)
+	return workspace.NewAppDev(workspace.NewAppDevOpts{
+		DevConfigFilePath: devConfigFilePath,
+		DoctlConfig:       doctlConfig,
+		AppsService:       cmdConfig.Apps(),
+	})
 }
