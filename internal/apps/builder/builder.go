@@ -115,6 +115,22 @@ func (b *baseComponentBuilder) imageExists(ctx context.Context, ref string) (boo
 	return true, nil
 }
 
+func (b *baseComponentBuilder) getStaticNginxConfig() string {
+	return `server {
+listen 8080;
+listen [::]:8080;
+
+resolver 127.0.0.11;
+autoindex off;
+
+server_name _;
+server_tokens off;
+
+root /www;
+gzip_static on;
+}`
+}
+
 // NewBuilderOpts ...
 type NewBuilderOpts struct {
 	Component            string
