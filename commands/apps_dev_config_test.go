@@ -49,12 +49,10 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				file := filepath.Join(t.TempDir(), "dev-config.yaml")
-				_, err := os.Create(file)
-				require.NoError(t, err)
+				file := tempFile(t, "dev-config.yaml")
 				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file)
 				cmdConfig.Args = tc.args
-				err = RunAppsDevConfigSet(cmdConfig)
+				err := RunAppsDevConfigSet(cmdConfig)
 				if tc.expectErr != nil {
 					require.EqualError(t, err, tc.expectErr.Error())
 					return
@@ -115,10 +113,7 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				file := filepath.Join(t.TempDir(), "dev-config.yaml")
-				_, err := os.Create(file)
-				require.NoError(t, err)
-
+				file := tempFile(t, "dev-config.yaml")
 				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file)
 
 				ws, err := appDevWorkspace(cmdConfig)
@@ -143,4 +138,12 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 			})
 		}
 	})
+}
+
+func tempFile(t *testing.T, name string) (path string) {
+	file := filepath.Join(t.TempDir(), name)
+	f, err := os.Create(file)
+	require.NoError(t, err)
+	f.Close()
+	return file
 }
