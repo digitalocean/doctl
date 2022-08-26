@@ -121,7 +121,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 
 	// TODO: if this is the user's first time running dev build, ask them if they'd like to
 	// link an existing app.
-
 	if ws.Config.AppSpec == nil {
 		// TODO(ntate); allow app-detect build to remove requirement
 		return errors.New("app spec is required for component build")
