@@ -1,5 +1,5 @@
 # Step 1: Build
-FROM golang:1.16-alpine AS build
+FROM golang:1.18-alpine AS build
 
 ARG GOARCH=amd64
 ENV OUT_D /out

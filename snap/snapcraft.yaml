@@ -40,6 +40,8 @@ parts:
       version=$(scripts/version.sh --snap)
       snapcraftctl set-version ${version}
 
+      echo "==> Building doctl ${version} using $(go version)"
+
       short=${version#v}
       short=${short%+*}
       short=${short%-*}

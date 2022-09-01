@@ -15,8 +15,8 @@ github.com/blang/semver
 # github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21
 ## explicit
 github.com/cloudfoundry/jibber_jabber
-# github.com/containerd/continuity v0.2.2
-## explicit; go 1.13
+# github.com/containerd/continuity v0.3.0
+## explicit; go 1.17
 github.com/containerd/continuity/pathdriver
 # github.com/cpuguy83/go-md2man/v2 v2.0.1
 ## explicit; go 1.11
@@ -27,12 +27,12 @@ github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.81.0
+# github.com/digitalocean/godo v1.83.0
 ## explicit; go 1.18
 github.com/digitalocean/godo
 github.com/digitalocean/godo/metrics
 github.com/digitalocean/godo/util
-# github.com/docker/cli v20.10.14+incompatible
+# github.com/docker/cli v20.10.17+incompatible
 ## explicit
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
@@ -173,7 +173,7 @@ github.com/opencontainers/go-digest
 ## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.1.0
+# github.com/opencontainers/runc v1.1.3
 ## explicit; go 1.16
 github.com/opencontainers/runc/libcontainer/user
 # github.com/pelletier/go-toml v1.9.4
