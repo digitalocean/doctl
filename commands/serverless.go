@@ -68,10 +68,10 @@ Other ` + "`" + `doctl serverless` + "`" + ` commands are used to develop and te
 		},
 	}
 
-	CmdBuilder(cmd, RunServerlessInstall, "install", "Installs the serverless support",
+	cmdBuilderWithInit(cmd, RunServerlessInstall, "install", "Installs the serverless support",
 		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other serverless commands work.
 The install operation is long-running, and a network connection is required.`,
-		Writer)
+		Writer, false)
 
 	CmdBuilder(cmd, RunServerlessUpgrade, "upgrade", "Upgrades serverless support to match this version of doctl",
 		`This command upgrades the serverless support software under `+"`"+`doctl`+"`"+` by installing over the existing version.
@@ -114,9 +114,28 @@ the entire packages are removed.`, Writer)
 
 // RunServerlessInstall performs the network installation of the 'nim' adjunct to support serverless development
 func RunServerlessInstall(c *CmdConfig) error {
-	credsLeafDir := hashAccessToken(c)
-	serverless := c.Serverless()
-	status := serverless.CheckServerlessStatus(credsLeafDir)
+	var (
+		serverless   do.ServerlessService
+		credsLeafDir string
+		status       error
+	)
+
+	// When building the snap package, we need to install the serverless plugin
+	// without a fully configured and authenticated doctl. So we only fully init
+	// the service if SNAP_SANDBOX_INSTALL is not set.
+	_, isSnapInstall := os.LookupEnv("SNAP_SANDBOX_INSTALL")
+	if isSnapInstall {
+		serverlessDir := os.Getenv("OVERRIDE_SANDBOX_DIR")
+		serverless = do.NewServerlessService(nil, serverlessDir, "")
+		status = do.ErrServerlessNotInstalled
+	} else {
+		if err := c.initServices(c); err != nil {
+			return err
+		}
+		credsLeafDir = hashAccessToken(c)
+		serverless = c.Serverless()
+		status = serverless.CheckServerlessStatus(credsLeafDir)
+	}
 	switch status {
 	case nil:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
