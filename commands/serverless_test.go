@@ -14,13 +14,15 @@ limitations under the License.
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"context"
-	"fmt"
+	"errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/digitalocean/doctl/do"
@@ -28,22 +30,117 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSandboxConnect(t *testing.T) {
+func TestServerlessConnect(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		creds := do.SandboxCredentials{Namespace: "hello", APIHost: "https://api.example.com"}
-		tm.sandbox.EXPECT().GetSandboxNamespace(context.TODO()).Return(creds, nil)
-		tm.sandbox.EXPECT().WriteCredentials(creds).Return(nil)
+		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotConnected)
+		creds := do.ServerlessCredentials{Namespace: "hello", APIHost: "https://api.example.com"}
+		tm.serverless.EXPECT().GetServerlessNamespace(context.TODO()).Return(creds, nil)
+		tm.serverless.EXPECT().WriteCredentials(creds).Return(nil)
 
-		err := RunSandboxConnect(config)
+		err := RunServerlessConnect(config)
 		require.NoError(t, err)
 		assert.Equal(t, "Connected to functions namespace 'hello' on API host 'https://api.example.com'\n\n", buf.String())
 	})
 }
 
-func TestSandboxStatusWhenConnected(t *testing.T) {
+func TestServerlessConnectBeta(t *testing.T) {
+	tests := []struct {
+		name           string
+		namespaceList  []do.OutputNamespace
+		expectedOutput string
+		expectedError  error
+		doctlArg       string
+	}{
+		{
+			name:          "no namespaces",
+			namespaceList: []do.OutputNamespace{},
+			expectedError: errors.New("you must create a namespace with `doctl namespace create`, specifying a region and label"),
+		},
+		{
+			name: "one namespace",
+			namespaceList: []do.OutputNamespace{
+				{
+					Namespace: "ns1",
+					Region:    "nyc1",
+					Label:     "something",
+				},
+			},
+			expectedOutput: "Connected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+		},
+		{
+			name: "two namespaces",
+			namespaceList: []do.OutputNamespace{
+				{
+					Namespace: "ns1",
+					Region:    "nyc1",
+					Label:     "something",
+				},
+				{
+					Namespace: "ns2",
+					Region:    "lon1",
+					Label:     "another",
+				},
+			},
+			expectedOutput: "0: ns1 in nyc1, label=something\n1: ns2 in lon1, label=another\nChoose a namespace by number or 'x' to exit\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+		},
+		{
+			name: "use argument",
+			namespaceList: []do.OutputNamespace{
+				{
+					Namespace: "ns1",
+					Region:    "nyc1",
+					Label:     "something",
+				},
+				{
+					Namespace: "ns2",
+					Region:    "lon1",
+					Label:     "another",
+				},
+			},
+			doctlArg:       "thing",
+			expectedOutput: "Connected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				buf := &bytes.Buffer{}
+				config.Out = buf
+				if tt.doctlArg != "" {
+					config.Args = append(config.Args, tt.doctlArg)
+				}
+				config.Doit.Set(config.NS, "beta", true)
+				connectChoiceReader = bufio.NewReader(strings.NewReader("0\n"))
+				nsResponse := do.NamespaceListResponse{Namespaces: tt.namespaceList}
+				creds := do.ServerlessCredentials{Namespace: "ns1", APIHost: "https://api.example.com"}
+
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotConnected)
+				ctx := context.TODO()
+				tm.serverless.EXPECT().ListNamespaces(ctx).Return(nsResponse, nil)
+				if tt.expectedError == nil {
+					tm.serverless.EXPECT().GetNamespace(ctx, "ns1").Return(creds, nil)
+					tm.serverless.EXPECT().WriteCredentials(creds).Return(nil)
+				}
+
+				err := RunServerlessConnect(config)
+				if tt.expectedError != nil {
+					assert.Equal(t, tt.expectedError, err)
+				} else {
+					require.NoError(t, err)
+				}
+				if tt.expectedOutput != "" {
+					assert.Equal(t, tt.expectedOutput, buf.String())
+				}
+
+			})
+		})
+	}
+}
+
+func TestServerlessStatusWhenConnected(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
@@ -51,21 +148,22 @@ func TestSandboxStatusWhenConnected(t *testing.T) {
 			Stdout: config.Out,
 		}
 
-		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
+		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 			Entity: map[string]interface{}{
 				"name":    "hello",
 				"apihost": "https://api.example.com",
 			},
 		}, nil)
 
-		err := RunSandboxStatus(config)
+		err := RunServerlessStatus(config)
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), "Connected to functions namespace 'hello' on API host 'https://api.example.com'\nServerless software version is")
 	})
 }
 
-func TestSandboxStatusWithLanguages(t *testing.T) {
+func TestServerlessStatusWithLanguages(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
@@ -102,178 +200,144 @@ func TestSandboxStatusWithLanguages(t *testing.T) {
     go:1.22 (go:default)
 `
 
-		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
+		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 			Entity: map[string]interface{}{
 				"name":    "hello",
 				"apihost": "https://api.example.com",
 			},
 		}, nil)
-		tm.sandbox.EXPECT().GetHostInfo("https://api.example.com").Return(fakeHostInfo, nil)
-		err := RunSandboxStatus(config)
+		tm.serverless.EXPECT().GetHostInfo("https://api.example.com").Return(fakeHostInfo, nil)
+		err := RunServerlessStatus(config)
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), expectedDisplay)
 	})
 }
 
-func TestSandboxStatusWhenNotConnected(t *testing.T) {
+func TestServerlessStatusWhenNotConnected(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		fakeCmd := &exec.Cmd{
 			Stdout: config.Out,
 		}
 
-		tm.sandbox.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
+		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 			Error: "403",
 		}, nil)
 
-		err := RunSandboxStatus(config)
+		err := RunServerlessStatus(config)
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrSandboxNotConnected)
+		assert.ErrorIs(t, err, do.ErrServerlessNotConnected)
 	})
 }
 
-func TestSandboxStatusWhenNotInstalled(t *testing.T) {
+func TestServerlessStatusWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNotInstalled
-		}
+		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotInstalled)
 
-		err := RunSandboxStatus(config)
+		err := RunServerlessStatus(config)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrSandboxNotInstalled)
+		assert.ErrorIs(t, err, do.ErrServerlessNotInstalled)
 	})
 }
 
-func TestSandboxStatusWhenNotUpToDate(t *testing.T) {
+func TestServerlessStatusWhenNotUpToDate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNeedsUpgrade
-		}
+		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNeedsUpgrade)
 
-		err := RunSandboxStatus(config)
+		err := RunServerlessStatus(config)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, ErrSandboxNeedsUpgrade)
+		assert.ErrorIs(t, err, do.ErrServerlessNeedsUpgrade)
 	})
 }
 
-func TestSandboxInstallFromScratch(t *testing.T) {
+func TestServerlessInstallFromScratch(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNotInstalled
-		}
+		credsToken := hashAccessToken(config)
+		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNotInstalled)
+		tm.serverless.EXPECT().InstallServerless(credsToken, false).Return(nil)
 
-		err := RunSandboxInstall(config)
+		err := RunServerlessInstall(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Installed with upgrade false\n", buf.String())
 	})
 }
 
-func TestSandboxInstallWhenInstalledNotCurrent(t *testing.T) {
+func TestServerlessInstallWhenInstalledNotCurrent(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNeedsUpgrade
-		}
+		credsToken := hashAccessToken(config)
+		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNeedsUpgrade)
 
-		err := RunSandboxInstall(config)
+		err := RunServerlessInstall(config)
 		require.NoError(t, err)
 		assert.Equal(t, "Serverless support is already installed, but needs an upgrade for this version of `doctl`.\nUse `doctl serverless upgrade` to upgrade the support.\n", buf.String())
 	})
 }
 
-func TestSandboxInstallWhenInstalledAndCurrent(t *testing.T) {
+func TestServerlessInstallWhenInstalledAndCurrent(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return nil
-		}
+		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
 
-		err := RunSandboxInstall(config)
+		err := RunServerlessInstall(config)
 		require.NoError(t, err)
 		assert.Equal(t, "Serverless support is already installed at an appropriate version.  No action needed.\n", buf.String())
 	})
 }
 
-func TestSandboxUpgradeWhenNotInstalled(t *testing.T) {
+func TestServerlessUpgradeWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNotInstalled
-		}
+		credsToken := hashAccessToken(config)
+		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNotInstalled)
 
-		err := RunSandboxUpgrade(config)
+		err := RunServerlessUpgrade(config)
 		require.NoError(t, err)
 		assert.Equal(t, "Serverless support was never installed.  Use `doctl serverless install`.\n", buf.String())
 	})
 }
 
-func TestSandboxUpgradeWhenInstalledAndCurrent(t *testing.T) {
+func TestServerlessUpgradeWhenInstalledAndCurrent(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return nil
-		}
+		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
 
-		err := RunSandboxUpgrade(config)
+		err := RunServerlessUpgrade(config)
 		require.NoError(t, err)
 		assert.Equal(t, "Serverless support is already installed at an appropriate version.  No action needed.\n", buf.String())
 	})
 }
 
-func TestSandboxUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
+func TestServerlessUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		config.installSandbox = func(c *CmdConfig, dir string, upgrade bool) error {
-			fmt.Fprintf(config.Out, "Installed with upgrade %v\n", upgrade)
-			return nil
-		}
-		config.checkSandboxStatus = func(*CmdConfig) error {
-			return ErrSandboxNeedsUpgrade
-		}
+		credsToken := hashAccessToken(config)
+		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNeedsUpgrade)
+		tm.serverless.EXPECT().InstallServerless(credsToken, true).Return(nil)
 
-		err := RunSandboxUpgrade(config)
+		err := RunServerlessUpgrade(config)
 		require.NoError(t, err)
-		assert.Equal(t, "Installed with upgrade true\n", buf.String())
 	})
 }
 
-func TestSandboxInit(t *testing.T) {
+func TestServerlessInit(t *testing.T) {
 	tests := []struct {
 		name            string
 		doctlArgs       string
@@ -326,12 +390,13 @@ func TestSandboxInit(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().Cmd("project/create", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("project/create", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 					Entity: tt.out,
 				}, nil)
 
-				err := RunSandboxExtraCreate(config)
+				err := RunServerlessExtraCreate(config)
 				require.NoError(t, err)
 				assert.Equal(t, `A local functions project directory 'foo' was created for you.
 You may deploy it by running the command shown on the next line:
@@ -341,7 +406,7 @@ You may deploy it by running the command shown on the next line:
 	}
 }
 
-func TestSandboxDeploy(t *testing.T) {
+func TestServerlessDeploy(t *testing.T) {
 	tests := []struct {
 		name            string
 		doctlArgs       string
@@ -389,17 +454,18 @@ func TestSandboxDeploy(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().Cmd("project/deploy", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("project/deploy", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
-				err := RunSandboxExtraDeploy(config)
+				err := RunServerlessExtraDeploy(config)
 				require.NoError(t, err)
 			})
 		})
 	}
 }
 
-func TestSandboxUndeploy(t *testing.T) {
+func TestServerlessUndeploy(t *testing.T) {
 	type testNimCmd struct {
 		cmd  string
 		args []string
@@ -493,11 +559,14 @@ func TestSandboxUndeploy(t *testing.T) {
 					}
 				}
 
-				for i := range tt.expectedNimCmds {
-					tm.sandbox.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
-					tm.sandbox.EXPECT().Exec(fakeCmd).Return(do.SandboxOutput{}, nil)
+				if tt.expectedError == nil {
+					tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
 				}
-				err := RunSandboxUndeploy(config)
+				for i := range tt.expectedNimCmds {
+					tm.serverless.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
+					tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
+				}
+				err := RunServerlessUndeploy(config)
 				if tt.expectedError != nil {
 					require.Error(t, err)
 					assert.ErrorIs(t, err, tt.expectedError)
@@ -509,7 +578,7 @@ func TestSandboxUndeploy(t *testing.T) {
 	}
 }
 
-func TestSandboxWatch(t *testing.T) {
+func TestServerlessWatch(t *testing.T) {
 	tests := []struct {
 		name            string
 		doctlArgs       string
@@ -545,10 +614,11 @@ func TestSandboxWatch(t *testing.T) {
 					}
 				}
 
-				tm.sandbox.EXPECT().Cmd("nocapture", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.sandbox.EXPECT().Stream(fakeCmd).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().Cmd("nocapture", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Stream(fakeCmd).Return(nil)
 
-				err := RunSandboxExtraWatch(config)
+				err := RunServerlessExtraWatch(config)
 				require.NoError(t, err)
 			})
 		})
@@ -583,7 +653,7 @@ func TestGetCredentialDirectory(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				config.getContextAccessToken = tt.tokenFunc
 
-				out := getCredentialDirectory(config, testDir)
+				out := do.GetCredentialDirectory(hashAccessToken(config), testDir)
 				require.Equal(t, tt.expected, out)
 			})
 		})
@@ -600,12 +670,12 @@ func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
 		}()
 
 		// Set up "existing" creds in the "sandbox" dir
-		sandboxDir := filepath.Join(tmp, "sandbox")
-		sandboxCredsDir := filepath.Join(sandboxDir, "creds", "d5b388f2")
-		err = os.MkdirAll(sandboxCredsDir, os.FileMode(0755))
+		serverlessDir := filepath.Join(tmp, "sandbox")
+		serverlessCredsDir := filepath.Join(serverlessDir, "creds", "d5b388f2")
+		err = os.MkdirAll(serverlessCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
-		sandboxCreds := filepath.Join(sandboxCredsDir, "credentials.json")
-		creds, err := os.Create(sandboxCreds)
+		serverlessCreds := filepath.Join(serverlessCredsDir, "credentials.json")
+		creds, err := os.Create(serverlessCreds)
 		require.NoError(t, err)
 		creds.Close()
 
@@ -614,7 +684,7 @@ func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
 		err = os.MkdirAll(stagingDir, os.FileMode(0755))
 		require.NoError(t, err)
 
-		err = preserveCreds(config, stagingDir, sandboxDir)
+		err = do.PreserveCreds(hashAccessToken(config), stagingDir, serverlessDir)
 		require.NoError(t, err)
 
 		stagingCreds := filepath.Join(stagingDir, "creds", "d5b388f2", "credentials.json")
@@ -638,8 +708,8 @@ func TestPreserveCredsMovesLegacyCreds(t *testing.T) {
 		}()
 
 		// Set up "existing" legacy creds in the "sandbox" dir
-		sandboxDir := filepath.Join(tmp, "sandbox")
-		legacyCredsDir := filepath.Join(sandboxDir, ".nimbella")
+		serverlessDir := filepath.Join(tmp, "sandbox")
+		legacyCredsDir := filepath.Join(serverlessDir, ".nimbella")
 		err = os.MkdirAll(legacyCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
 		legacyCreds := filepath.Join(legacyCredsDir, "credentials.json")
@@ -651,7 +721,7 @@ func TestPreserveCredsMovesLegacyCreds(t *testing.T) {
 		err = os.MkdirAll(stagingDir, os.FileMode(0755))
 		require.NoError(t, err)
 
-		err = preserveCreds(config, stagingDir, sandboxDir)
+		err = do.PreserveCreds(hashAccessToken(config), stagingDir, serverlessDir)
 		require.NoError(t, err)
 
 		stagingCreds := filepath.Join(stagingDir, "creds", "3785870f", "credentials.json")
