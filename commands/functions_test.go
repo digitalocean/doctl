@@ -173,40 +173,50 @@ func TestFunctionsGet(t *testing.T) {
 
 func TestFunctionsInvoke(t *testing.T) {
 	tests := []struct {
-		name            string
-		doctlArgs       string
-		doctlFlags      map[string]interface{}
-		expectedNimArgs []string
+		name          string
+		doctlArgs     string
+		doctlFlags    map[string]interface{}
+		requestResult bool
+		passedParams  interface{}
 	}{
 		{
-			name:            "no flags",
-			doctlArgs:       "hello",
-			expectedNimArgs: []string{"hello"},
+			name:          "no flags",
+			doctlArgs:     "hello",
+			requestResult: true,
+			passedParams:  nil,
 		},
 		{
-			name:            "full flag",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]interface{}{"full": ""},
-			expectedNimArgs: []string{"hello", "--full"},
+			name:          "full flag",
+			doctlArgs:     "hello",
+			doctlFlags:    map[string]interface{}{"full": ""},
+			requestResult: false,
+			passedParams:  nil,
 		},
 		{
-			name:            "param flag",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]interface{}{"param": "name:world"},
-			expectedNimArgs: []string{"hello", "--param", "name", "world"},
+			name:          "param flag",
+			doctlArgs:     "hello",
+			doctlFlags:    map[string]interface{}{"param": "name:world"},
+			requestResult: true,
+			passedParams:  map[string]interface{}{"name": "world"},
 		},
 		{
-			name:            "param flag list",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]interface{}{"param": []string{"name:world", "address:everywhere"}},
-			expectedNimArgs: []string{"hello", "--param", "name", "world", "--param", "address", "everywhere"},
+			name:          "param flag list",
+			doctlArgs:     "hello",
+			doctlFlags:    map[string]interface{}{"param": []string{"name:world", "address:everywhere"}},
+			requestResult: true,
+			passedParams:  map[string]interface{}{"name": "world", "address": "everywhere"},
 		},
 		{
-			name:            "param flag colon-value",
-			doctlArgs:       "hello",
-			doctlFlags:      map[string]interface{}{"param": []string{"url:https://example.com"}},
-			expectedNimArgs: []string{"hello", "--param", "url", "https://example.com"},
+			name:          "param flag colon-value",
+			doctlArgs:     "hello",
+			doctlFlags:    map[string]interface{}{"param": []string{"url:https://example.com"}},
+			requestResult: true,
+			passedParams:  map[string]interface{}{"url": "https://example.com"},
 		},
+	}
+
+	expectedRemoteResult := map[string]interface{}{
+		"body": "Hello world!",
 	}
 
 	for _, tt := range tests {
@@ -214,9 +224,6 @@ func TestFunctionsInvoke(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				buf := &bytes.Buffer{}
 				config.Out = buf
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
 
 				config.Args = append(config.Args, tt.doctlArgs)
 				if tt.doctlFlags != nil {
@@ -229,11 +236,7 @@ func TestFunctionsInvoke(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("action/invoke", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-					Entity: map[string]interface{}{"body": "Hello world!"},
-				}, nil)
+				tm.serverless.EXPECT().InvokeFunction(tt.doctlArgs, tt.passedParams, true, tt.requestResult).Return(expectedRemoteResult, nil)
 				expectedOut := `{
   "body": "Hello world!"
 }

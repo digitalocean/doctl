@@ -200,6 +200,35 @@ func (mr *MockServerlessServiceMockRecorder) InstallServerless(arg0, arg1 interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallServerless", reflect.TypeOf((*MockServerlessService)(nil).InstallServerless), arg0, arg1)
 }
 
+// InvokeFunction mocks base method.
+func (m *MockServerlessService) InvokeFunction(arg0 string, arg1 interface{}, arg2, arg3 bool) (map[string]interface{}, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InvokeFunction", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(map[string]interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// InvokeFunction indicates an expected call of InvokeFunction.
+func (mr *MockServerlessServiceMockRecorder) InvokeFunction(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeFunction", reflect.TypeOf((*MockServerlessService)(nil).InvokeFunction), arg0, arg1, arg2, arg3)
+}
+
+// InvokeFunctionViaWeb mocks base method.
+func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 map[string]interface{}) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InvokeFunctionViaWeb", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InvokeFunctionViaWeb indicates an expected call of InvokeFunctionViaWeb.
+func (mr *MockServerlessServiceMockRecorder) InvokeFunctionViaWeb(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeFunctionViaWeb", reflect.TypeOf((*MockServerlessService)(nil).InvokeFunctionViaWeb), arg0, arg1)
+}
+
 // ListNamespaces mocks base method.
 func (m *MockServerlessService) ListNamespaces(arg0 context.Context) (do.NamespaceListResponse, error) {
 	m.ctrl.T.Helper()

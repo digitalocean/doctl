@@ -214,18 +214,33 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	// Assemble args and flags except for "param"
-	args := getFlatArgsArray(c, []string{flagWeb, flagFull, flagNoWait, flagResult}, []string{flagParamFile})
-	// Add "param" with special handling if present
-	args, err = appendParams(c, args)
+	paramFile, _ := c.Doit.GetString(c.NS, flagParamFile)
+	paramFlags, _ := c.Doit.GetStringSlice(c.NS, flagParam)
+	params, err := consolidateParams(paramFile, paramFlags)
 	if err != nil {
 		return err
 	}
-	output, err := ServerlessExec(c, actionInvoke, args...)
+	web, _ := c.Doit.GetBool(c.NS, flagWeb)
+	if web {
+		var mapParams map[string]interface{} = nil
+		if params != nil {
+			p, ok := params.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("cannot invoke via web: parameters do not form a dictionary")
+			}
+			mapParams = p
+		}
+		return c.Serverless().InvokeFunctionViaWeb(c.Args[0], mapParams)
+	}
+	full, _ := c.Doit.GetBool(c.NS, flagFull)
+	noWait, _ := c.Doit.GetBool(c.NS, flagNoWait)
+	blocking := !noWait
+	result := blocking && !full
+	response, err := c.Serverless().InvokeFunction(c.Args[0], params, blocking, result)
 	if err != nil {
 		return err
 	}
-
+	output := do.ServerlessOutput{Entity: response}
 	return c.PrintServerlessTextOutput(output)
 }
 
@@ -257,7 +272,7 @@ func RunFunctionsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	var formatted []do.FunctionInfo
+	var formatted []whisk.Action
 	err = json.Unmarshal(rawOutput, &formatted)
 	if err != nil {
 		return err
@@ -265,23 +280,30 @@ func RunFunctionsList(c *CmdConfig) error {
 	return c.Display(&displayers.Functions{Info: formatted})
 }
 
-// appendParams determines if there is a 'param' flag (value is a slice, elements
-// of the slice should be in KEY:VALUE form), if so, transforms it into the form
-// expected by 'nim' (each param is its own --param flag, KEY and VALUE are separate
-// tokens).   The 'args' argument is the result of getFlatArgsArray and is appended
-// to.
-func appendParams(c *CmdConfig, args []string) ([]string, error) {
-	params, err := c.Doit.GetStringSlice(c.NS, flagParam)
-	if err != nil || len(params) == 0 {
-		return args, nil // error here is not considered an error (and probably won't occur)
+// consolidateParams accepts parameters from a file, the command line, or both, and consolidates all
+// such parameters into a simple dictionary.
+func consolidateParams(paramFile string, params []string) (interface{}, error) {
+	consolidated := map[string]interface{}{}
+	if len(paramFile) > 0 {
+		contents, err := os.ReadFile(paramFile)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(contents, &consolidated)
+		if err != nil {
+			return nil, err
+		}
 	}
 	for _, param := range params {
 		parts := strings.Split(param, ":")
 		if len(parts) < 2 {
-			return args, errors.New("values for --params must have KEY:VALUE form")
+			return nil, fmt.Errorf("values for --params must have KEY:VALUE form")
 		}
 		parts1 := strings.Join(parts[1:], ":")
-		args = append(args, dashdashParam, parts[0], parts1)
+		consolidated[parts[0]] = parts1
 	}
-	return args, nil
+	if len(consolidated) > 0 {
+		return consolidated, nil
+	}
+	return nil, nil
 }
