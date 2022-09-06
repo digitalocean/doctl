@@ -59,8 +59,9 @@ parts:
       mv doctl $SNAPCRAFT_PART_INSTALL/bin/
 
       # Install the sandbox
+      mkdir -p $OVERRIDE_SANDBOX_DIR
       $SNAPCRAFT_PART_INSTALL/bin/doctl sandbox install
-      rm -r $XDG_CONFIG_HOME/doctl
+      rm -rf $XDG_CONFIG_HOME/doctl
     organize:
       bin/doctl: bin/doctl.real
 
