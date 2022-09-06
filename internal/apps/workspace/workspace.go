@@ -161,6 +161,9 @@ func NewAppDevConfig(appDevConfig *config.AppDev, doctlConfig config.ConfigSourc
 }
 
 // Load loads the config.
+//
+// Note: the .Components config structure is only loaded for components that are present in the app spec. Configuration
+// in dev-config.yaml for components that are not present in the app spec will be ignored.
 func (c *AppDevConfig) Load() error {
 	// ws - workspace config w/ CLI overrides
 	ws := c.workspace(true)
@@ -244,6 +247,8 @@ func (c *AppDevConfig) validate() error {
 }
 
 // Write writes the current dev-config.yaml to disk.
+// Note that modifying values in the AppDevConfig struct will not affect the contents of the dev-config.yaml file. Instead,
+// use the Set(...) method and then call Write().
 func (c *AppDevConfig) Write() error {
 	return c.appDevConfig.WriteConfig()
 }
@@ -267,6 +272,7 @@ func (c *AppDevConfig) workspace(cliOverride bool) config.ConfigSource {
 }
 
 // Set sets a value in dev-config.yaml.
+// Note that the configuration must be reloaded for the new values to be populated in AppDevConfig.
 func (c *AppDevConfig) Set(key string, value any) error {
 	return c.appDevConfig.Set(key, value)
 }
@@ -288,7 +294,7 @@ func (c *AppDevConfig) component(component string, cliOverride bool) (componentO
 
 	componentOnly = config.Multi(
 		cliConfig,
-		c.appDevConfig.Components(component),
+		appsDevFlagConfigCompat(c.appDevConfig.Components(component)),
 	)
 	componentGlobal = config.Multi(
 		componentOnly,
