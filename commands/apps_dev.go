@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/MakeNowJust/heredoc"
@@ -15,18 +16,19 @@ import (
 	"github.com/digitalocean/doctl/commands/charm/list"
 	"github.com/digitalocean/doctl/commands/charm/pager"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/commands/charm/textbox"
-	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/internal/apps/builder"
+	"github.com/digitalocean/doctl/internal/apps/config"
+	"github.com/digitalocean/doctl/internal/apps/workspace"
 
 	"github.com/digitalocean/godo"
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
 const (
-	// AppsDevDefaultSpecPath is the default spec path for an app.
-	AppsDevDefaultSpecPath = ".do/app.yaml"
+	// AppsDevDefaultEnvFile is the default env file path.
+	AppsDevDefaultEnvFile = ".env"
 )
 
 // AppsDev creates the apps dev command subtree.
@@ -54,7 +56,6 @@ func AppsDev() *Command {
 		),
 		Writer,
 		aliasOpt("b"),
-		displayerType(&displayers.Apps{}),
 	)
 	build.DisableFlagsInUseLine = true
 
@@ -83,7 +84,7 @@ func AppsDev() *Command {
 	)
 
 	AddStringFlag(
-		build, doctl.ArgAppDevBuildCommand,
+		build, doctl.ArgBuildCommand,
 		"", "",
 		"Optional build command override for local development.",
 	)
@@ -95,7 +96,7 @@ func AppsDev() *Command {
 	)
 
 	AddStringFlag(
-		build, doctl.ArgRegistryName,
+		build, doctl.ArgRegistry,
 		"", os.Getenv("APP_DEV_REGISTRY"),
 		"Registry name to build use for the component build.",
 	)
@@ -106,71 +107,27 @@ func AppsDev() *Command {
 // RunAppsDevBuild builds an app component locally.
 func RunAppsDevBuild(c *CmdConfig) error {
 	ctx := context.Background()
-	noCache, err := c.Doit.GetBool(c.NS, doctl.ArgNoCache)
+
+	ws, err := appDevWorkspace(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("preparing workspace: %w", err)
 	}
-	timeout, err := c.Doit.GetDuration(c.NS, doctl.ArgTimeout)
-	if err != nil {
-		return err
-	}
-	if timeout > 0 {
+
+	if ws.Config.Timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
+		ctx, cancel = context.WithTimeout(ctx, ws.Config.Timeout)
 		defer cancel()
-	}
-
-	conf, err := newAppDevConfig(c)
-	if err != nil {
-		return fmt.Errorf("initializing config: %w", err)
-	}
-
-	var (
-		spec          *godo.AppSpec
-		cnbVersioning *godo.AppBuildConfigCNBVersioning
-	)
-	appID, err := conf.GetString(doctl.ArgApp)
-	if err != nil {
-		return err
 	}
 
 	// TODO: if this is the user's first time running dev build, ask them if they'd like to
 	// link an existing app.
-	if appID != "" {
-		template.Print(`{{success checkmark}} fetching app details{{nl}}`, AppsDevDefaultSpecPath)
-		app, err := c.Apps().Get(appID)
-		if err != nil {
-			return err
-		}
-		spec = app.Spec
-		cnbVersioning = app.GetBuildConfig().GetCNBVersioning()
-	}
-
-	appSpecPath, err := conf.GetString(doctl.ArgAppSpec)
-	if err != nil {
-		return err
-	}
-
-	if spec == nil && appSpecPath == "" {
-		if _, err := os.Stat(AppsDevDefaultSpecPath); err == nil {
-			appSpecPath = AppsDevDefaultSpecPath
-			template.Print(`{{success checkmark}} using app spec at {{highlight .}}{{nl}}`, AppsDevDefaultSpecPath)
-		}
-	}
-	if appSpecPath != "" {
-		spec, err = readAppSpec(os.Stdin, appSpecPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	if spec == nil {
+	if ws.Config.AppSpec == nil {
 		// TODO(ntate); allow app-detect build to remove requirement
 		return errors.New("app spec is required for component build")
 	}
 
 	var hasBuildableComponents bool
-	_ = godo.ForEachAppSpecComponent(spec, func(c godo.AppBuildableComponentSpec) error {
+	_ = godo.ForEachAppSpecComponent(ws.Config.AppSpec, func(c godo.AppBuildableComponentSpec) error {
 		hasBuildableComponents = true
 		return fmt.Errorf("stop")
 	})
@@ -178,19 +135,19 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return fmt.Errorf("the specified app spec does not contain any buildable components")
 	}
 
-	var component string
+	var componentName string
 	if len(c.Args) >= 1 {
-		component = c.Args[0]
+		componentName = c.Args[0]
 	}
-	if component == "" {
+	if componentName == "" {
 		var components []list.Item
-		_ = godo.ForEachAppSpecComponent(spec, func(c godo.AppBuildableComponentSpec) error {
+		_ = godo.ForEachAppSpecComponent(ws.Config.AppSpec, func(c godo.AppBuildableComponentSpec) error {
 			components = append(components, componentListItem{c})
 			return nil
 		})
 
 		if len(components) == 1 {
-			component = components[0].(componentListItem).spec.GetName()
+			componentName = components[0].(componentListItem).spec.GetName()
 		} else if len(components) > 1 && Interactive {
 			list := list.New(components)
 			list.Model().Title = "select a component"
@@ -205,31 +162,29 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			if !ok {
 				return fmt.Errorf("unexpected item type %T", selectedComponent)
 			}
-			component = selectedComponent.spec.GetName()
+			componentName = selectedComponent.spec.GetName()
 		}
 	}
 
-	if component == "" {
+	if componentName == "" {
 		if !Interactive {
 			return errors.New("component name is required when running non-interactively")
 		}
-		return errors.New("component name is required")
+		return errors.New("component is required")
 	}
 
-	componentSpec, err := godo.GetAppSpecComponent[godo.AppBuildableComponentSpec](spec, component)
-	if err != nil {
-		return err
+	component := ws.Config.Components[componentName]
+	if component == nil {
+		// TODO: add support for building without an app spec via app detection
+		return fmt.Errorf("component %s does not exist in app spec", componentName)
 	}
-
-	buildingComponentLine := template.String(
-		`building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
-		componentSpec,
-	)
-	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
-
+	componentSpec, ok := component.Spec.(godo.AppBuildableComponentSpec)
+	if !ok {
+		return fmt.Errorf("cannot build component %s", componentName)
+	}
 	if componentSpec.GetSourceDir() != "" {
 		sd := componentSpec.GetSourceDir()
-		stat, err := os.Stat(sd)
+		stat, err := os.Stat(ws.Context(sd))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return fmt.Errorf("source dir %s does not exist. please make sure you are running doctl in your app directory", sd)
@@ -241,52 +196,50 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 	}
 
-	var envs map[string]string
-	envFile, err := conf.GetString(doctl.ArgEnvFile)
-	if err != nil {
-		return err
-	}
-	if envFile != "" {
-		envs, err = godotenv.Read(envFile)
-		if err != nil {
-			return err
-		}
-	}
-
-	registryName, err := c.Doit.GetString(c.NS, doctl.ArgRegistryName)
-	if err != nil {
-		return err
-	}
-
-	buildOverrride, err := conf.GetString(doctl.ArgAppDevBuildCommand)
-	if err != nil {
-		return err
-	}
-
-	if noCache {
-		err = conf.ClearCacheDir(ctx, component)
-		if err != nil {
-			return err
-		}
-	}
-	err = conf.EnsureCacheDir(ctx, component)
-	if err != nil {
-		return err
-	}
-
-	if Interactive {
+	if component.EnvFile != "" {
+		template.Print(`{{success checkmark}} using envs from {{highlight .}}{{nl}}`, component.EnvFile)
+	} else if Interactive && fileExists(ws.Context(AppsDevDefaultEnvFile)) {
+		// TODO: persist env file path to dev config
 		choice, err := confirm.New(
-			"start build?",
-			confirm.WithDefaultChoice(confirm.Yes),
-			confirm.WithPersistPrompt(confirm.PersistPromptIfNo),
+			template.String(`{{highlight .}} exists, use it for env var values?`, AppsDevDefaultEnvFile),
+			confirm.WithDefaultChoice(confirm.No),
 		).Prompt()
 		if err != nil {
 			return err
 		}
-		if choice != confirm.Yes {
-			return fmt.Errorf("cancelled")
+		if choice == confirm.Yes {
+			err := component.LoadEnvFile(ws.Context(AppsDevDefaultEnvFile))
+			if err != nil {
+				return fmt.Errorf("reading env file: %w", err)
+			}
 		}
 	}
+
+	if ws.Config.NoCache {
+		template.Render(text.Warning, `{{crossmark}} build caching disabled{{nl}}`, nil)
+		err = ws.ClearCacheDir(ctx, componentName)
+		if err != nil {
+			return err
+		}
+	}
+	err = ws.EnsureCacheDir(ctx, componentName)
+	if err != nil {
+		return err
+	}
+
+	// if Interactive {
+	// 	choice, err := confirm.New(
+	// 		"start build?",
+	// 		confirm.WithDefaultChoice(confirm.Yes),
+	// 		confirm.WithPersistPrompt(confirm.PersistPromptIfNo),
+	// 	).Prompt()
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	if choice != confirm.Yes {
+	// 		return fmt.Errorf("cancelled")
+	// 	}
+	// }
 
 	cli, err := c.Doit.GetDockerEngineClient()
 	if err != nil {
@@ -295,6 +248,12 @@ func RunAppsDevBuild(c *CmdConfig) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+
+	buildingComponentLine := template.String(
+		`building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
+		componentSpec,
+	)
+	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
 
 	var (
 		wg        sync.WaitGroup
@@ -325,15 +284,15 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	err = func() error {
 		defer cancel()
 
-		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, conf.contextDir, spec, builder.NewBuilderOpts{
-			Component:            component,
-			LocalCacheDir:        conf.CacheDir(component),
-			NoCache:              noCache,
-			Registry:             registryName,
-			EnvOverride:          envs,
-			BuildCommandOverride: buildOverrride,
+		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, ws.Context(), ws.Config.AppSpec, builder.NewBuilderOpts{
+			Component:            componentName,
+			LocalCacheDir:        ws.CacheDir(componentName),
+			NoCache:              ws.Config.NoCache,
+			Registry:             ws.Config.Registry,
+			EnvOverride:          component.Envs,
+			BuildCommandOverride: component.BuildCommand,
 			LogWriter:            logWriter,
-			Versioning:           builder.Versioning{CNB: cnbVersioning},
+			Versioning:           builder.Versioning{CNB: ws.Config.App.GetBuildConfig().GetCNBVersioning()},
 		})
 		if err != nil {
 			return err
@@ -342,7 +301,11 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		if err != nil {
 			_, isSnap := os.LookupEnv("SNAP")
 			if errors.Is(err, fs.ErrPermission) && isSnap {
-				template.Buffered(logWriter, `{{warning "Using the doctl Snap? Grant access to the doctl:app-dev-build plug to use this command with: sudo snap connect doctl:app-dev-build docker:docker-daemon"}}{{nl}}`, nil)
+				template.Buffered(
+					textbox.New().Warning().WithOutput(logWriter),
+					`Using the doctl Snap? Grant doctl access to Docker by running {{highlight "sudo snap connect doctl:app-dev-build docker:docker-daemon"}}`,
+					nil,
+				)
 				return err
 			}
 			return err
@@ -365,7 +328,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	} else if res.ExitCode == 0 {
 		template.Buffered(
 			textbox.New().Success(),
-			`{{success checkmark}} successfully built {{success .img}} in {{warning (duration .dur)}}`,
+			`{{success checkmark}} successfully built {{success .img}} in {{highlight (duration .dur)}}`,
 			map[string]any{
 				"img": res.Image,
 				"dur": res.BuildDuration,
@@ -374,7 +337,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	} else {
 		template.Buffered(
 			textbox.New().Error(),
-			`{{error crossmark}} build container exited with code {{highlight .code}} after {{warning (duration .dur)}}`,
+			`{{error crossmark}} build container exited with code {{error .code}} after {{highlight (duration .dur)}}`,
 			map[string]any{
 				"code": res.ExitCode,
 				"dur":  res.BuildDuration,
@@ -383,4 +346,23 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 	fmt.Print("\n")
 	return nil
+}
+
+func fileExists(path ...string) bool {
+	_, err := os.Stat(filepath.Join(path...))
+	return err == nil
+}
+
+func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
+	devConfigFilePath, err := cmdConfig.Doit.GetString(cmdConfig.NS, doctl.ArgAppDevConfig)
+	if err != nil {
+		return nil, err
+	}
+	doctlConfig := config.DoctlConfigSource(cmdConfig.Doit, cmdConfig.NS)
+
+	return workspace.NewAppDev(workspace.NewAppDevOpts{
+		DevConfigFilePath: devConfigFilePath,
+		DoctlConfig:       doctlConfig,
+		AppsService:       cmdConfig.Apps(),
+	})
 }

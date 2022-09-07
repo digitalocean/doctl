@@ -44,8 +44,8 @@ const (
 	ArgAppDeployment = "deployment"
 	// ArgAppDevConfig is the path to the app dev link config.
 	ArgAppDevConfig = "dev-config"
-	// ArgAppDevBuildCommand is an optional build command to set for local development.
-	ArgAppDevBuildCommand = "build-command"
+	// ArgBuildCommand is an optional build command to set for local development.
+	ArgBuildCommand = "build-command"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.
@@ -353,8 +353,8 @@ const (
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
-	// ArgRegistryName indicates the name of the registry.
-	ArgRegistryName = "registry-name"
+	// ArgRegistry indicates the name of the registry.
+	ArgRegistry = "registry"
 	// ArgRegistryExpirySeconds indicates the length of time the token will be valid in seconds.
 	ArgRegistryExpirySeconds = "expiry-seconds"
 	// ArgSubscriptionTier is a subscription tier slug.

@@ -4,26 +4,26 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/internal/apps/workspace"
+	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 )
 
 func TestRunAppsDevConfigSet(t *testing.T) {
-	file, err := ioutil.TempFile("", "dev-config.*.yaml")
-	require.NoError(t, err, "creating temp file")
-	t.Cleanup(func() {
-		file.Close()
-		os.Remove(file.Name())
-	})
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+	withTestClient(t, func(cmdConfig *CmdConfig, tm *tcMocks) {
 		tcs := []struct {
-			name      string
-			args      []string
+			name string
+			args []string
+			// appSpec is an optional app spec for the workspace
+			appSpec   *godo.AppSpec
 			expectErr error
-			expect    func(*testing.T, *appDevConfig)
+			expect    func(*testing.T, *workspace.AppDev)
 		}{
 			{
 				name:      "no args",
@@ -36,41 +36,59 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 				expectErr: errors.New("unexpected arg: only-key"),
 			},
 			{
-				name:      "unknown key",
-				args:      []string{"unknown=value"},
-				expectErr: &appDevUnknownKeyErr{"unknown"},
-			},
-			{
 				name: "single key",
-				args: []string{"app=12345"},
-				expect: func(t *testing.T, c *appDevConfig) {
-					require.Equal(t, "12345", c.viper.Get("app"), "app-id")
+				args: []string{"registry=docker-registry"},
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					require.Equal(t, "docker-registry", ws.Config.Registry, "registry")
 				},
 			},
 			{
 				name: "multiple keys",
-				args: []string{"app=value1", "spec=value2"},
-				expect: func(t *testing.T, c *appDevConfig) {
-					require.Equal(t, "value1", c.viper.Get("app"), "app-id")
-					require.Equal(t, "value2", c.viper.Get("spec"), "spec")
+				args: []string{"registry=docker-registry", "timeout=5m"},
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					require.Equal(t, "docker-registry", ws.Config.Registry, "registry")
+					require.Equal(t, 5*time.Minute, ws.Config.Timeout, "timeout")
+				},
+			},
+			{
+				name: "component setting",
+				appSpec: &godo.AppSpec{
+					// Note: the service name intentionally includes a dash to ensure that the appsDevFlagConfigCompat
+					// mutator works as expected -- i.e. only dashes in config options are mutated but not component names.
+					// `www-svc` remains `www-svc` but `build-command` becomes `build_command`.
+					Services: []*godo.AppServiceSpec{{Name: "www-svc"}},
+				},
+				args: []string{"components.www-svc.build_command=npm run start"},
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					cc := ws.Config.Components["www-svc"]
+					require.NotNil(t, cc, "component config exists")
+					require.Equal(t, "npm run start", cc.BuildCommand)
 				},
 			},
 		}
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				config.Args = tc.args
-				config.Doit.Set(config.NS, doctl.ArgAppDevConfig, file.Name())
-				err = RunAppsDevConfigSet(config)
+				configFile := tempFile(t, "dev-config.yaml")
+				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, configFile)
+				cmdConfig.Args = tc.args
+
+				if tc.appSpec != nil {
+					appSpecFile := tempAppSpec(t, tc.appSpec)
+					cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppSpec, appSpecFile)
+				}
+
+				err := RunAppsDevConfigSet(cmdConfig)
 				if tc.expectErr != nil {
 					require.EqualError(t, err, tc.expectErr.Error())
 					return
 				}
 				require.NoError(t, err, "running command")
-				devConf, err := newAppDevConfig(config)
-				require.NoError(t, err, "getting dev config")
+
+				ws, err := appDevWorkspace(cmdConfig)
+				require.NoError(t, err, "getting workspace")
 				if tc.expect != nil {
-					tc.expect(t, devConf)
+					tc.expect(t, ws)
 				}
 			})
 		}
@@ -78,20 +96,15 @@ func TestRunAppsDevConfigSet(t *testing.T) {
 }
 
 func TestRunAppsDevConfigUnset(t *testing.T) {
-	file, err := ioutil.TempFile("", "dev-config.*.yaml")
-	require.NoError(t, err, "creating temp file")
-	t.Cleanup(func() {
-		file.Close()
-		os.Remove(file.Name())
-	})
-
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+	withTestClient(t, func(cmdConfig *CmdConfig, tm *tcMocks) {
 		tcs := []struct {
-			name      string
-			args      []string
-			pre       func(*testing.T, *appDevConfig)
+			name string
+			args []string
+			// appSpec is an optional app spec for the workspace
+			appSpec   *godo.AppSpec
+			pre       func(*testing.T, *workspace.AppDev)
 			expectErr error
-			expect    func(*testing.T, *appDevConfig)
+			expect    func(*testing.T, *workspace.AppDev)
 		}{
 			{
 				name:      "no args",
@@ -99,131 +112,97 @@ func TestRunAppsDevConfigUnset(t *testing.T) {
 				expectErr: errors.New("you must provide at least one argument"),
 			},
 			{
-				name:      "unknown key",
-				args:      []string{"unknown"},
-				expectErr: &appDevUnknownKeyErr{"unknown"},
-			},
-			{
 				name: "single key",
-				args: []string{"app"},
-				pre: func(t *testing.T, c *appDevConfig) {
-					c.viper.Set("app", "value")
-					err := c.viper.WriteConfig()
+				args: []string{"registry"},
+				pre: func(t *testing.T, ws *workspace.AppDev) {
+					ws.Config.Set("registry", "docker-registry")
+					err := ws.Config.Write()
 					require.NoError(t, err, "setting up default values")
 				},
-				expect: func(t *testing.T, c *appDevConfig) {
-					require.Equal(t, "", c.viper.Get("app"), "app-id")
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					require.Equal(t, "", ws.Config.Registry, "registry")
 				},
 			},
 			{
 				name: "multiple keys",
-				args: []string{"app", "spec"},
-				pre: func(t *testing.T, c *appDevConfig) {
-					c.viper.Set("app", "value")
-					c.viper.Set("spec", "value")
-					err := c.viper.WriteConfig()
+				args: []string{"registry", "timeout"},
+				pre: func(t *testing.T, ws *workspace.AppDev) {
+					ws.Config.Set("registry", "docker-registry")
+					ws.Config.Set("timeout", 5*time.Minute)
+					err := ws.Config.Write()
 					require.NoError(t, err, "setting up default values")
 				},
-				expect: func(t *testing.T, c *appDevConfig) {
-					require.Equal(t, "", c.viper.Get("app"), "app-id")
-					require.Equal(t, "", c.viper.Get("spec"), "spec")
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					require.Equal(t, "", ws.Config.Registry, "registry")
+					require.Equal(t, time.Duration(0), ws.Config.Timeout, "timeout")
+				},
+			},
+			{
+				name: "component setting",
+				args: []string{"components.www-svc.build_command"},
+				appSpec: &godo.AppSpec{
+					Services: []*godo.AppServiceSpec{{Name: "www-svc"}},
+				},
+				pre: func(t *testing.T, ws *workspace.AppDev) {
+					ws.Config.Set("components.www-svc.build_command", "npm run start")
+					err := ws.Config.Write()
+					require.NoError(t, err, "setting up default values")
+				},
+				expect: func(t *testing.T, ws *workspace.AppDev) {
+					cc := ws.Config.Components["www-svc"]
+					require.NotNil(t, cc, "component config exists")
+					require.Equal(t, "", cc.BuildCommand)
 				},
 			},
 		}
 
 		for _, tc := range tcs {
 			t.Run(tc.name, func(t *testing.T) {
-				devConf, err := newAppDevConfig(config)
-				require.NoError(t, err, "getting dev config")
-				if tc.pre != nil {
-					tc.pre(t, devConf)
+				file := tempFile(t, "dev-config.yaml")
+				cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppDevConfig, file)
+
+				if tc.appSpec != nil {
+					appSpecFile := tempAppSpec(t, tc.appSpec)
+					cmdConfig.Doit.Set(cmdConfig.NS, doctl.ArgAppSpec, appSpecFile)
 				}
 
-				config.Args = tc.args
-				config.Doit.Set(config.NS, doctl.ArgAppDevConfig, file.Name())
-				err = RunAppsDevConfigUnset(config)
+				ws, err := appDevWorkspace(cmdConfig)
+				require.NoError(t, err, "getting workspace")
+				if tc.pre != nil {
+					tc.pre(t, ws)
+				}
+
+				cmdConfig.Args = tc.args
+				err = RunAppsDevConfigUnset(cmdConfig)
 				if tc.expectErr != nil {
 					require.EqualError(t, err, tc.expectErr.Error())
 					return
 				}
 				require.NoError(t, err, "running command")
 
+				ws, err = appDevWorkspace(cmdConfig)
+				require.NoError(t, err, "getting workspace")
 				if tc.expect != nil {
-					devConf, err = newAppDevConfig(config)
-					require.NoError(t, err, "getting dev config")
-					tc.expect(t, devConf)
+					tc.expect(t, ws)
 				}
 			})
 		}
 	})
 }
 
-func Test_ensureStringInFile(t *testing.T) {
-	ensureValue := "newvalue"
+func tempFile(t *testing.T, name string) (path string) {
+	file := filepath.Join(t.TempDir(), name)
+	f, err := os.Create(file)
+	require.NoError(t, err)
+	f.Close()
+	return file
+}
 
-	tcs := []struct {
-		name   string
-		pre    func(t *testing.T, fname string)
-		expect []byte
-	}{
-		{
-			name:   "no pre-existing file",
-			pre:    func(t *testing.T, fname string) {},
-			expect: []byte(ensureValue),
-		},
-		{
-			name: "pre-existing file with value",
-			pre: func(t *testing.T, fname string) {
-				f, err := os.OpenFile(fname, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-				require.NoError(t, err)
-				f.WriteString("line1\n" + ensureValue)
-				f.Close()
-			},
-			expect: []byte("line1\n" + ensureValue),
-		},
-		{
-			name: "pre-existing file without value",
-			pre: func(t *testing.T, fname string) {
-				f, err := os.OpenFile(fname, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-				require.NoError(t, err)
-				f.WriteString("line1\n")
-				f.Close()
-			},
-			expect: []byte("line1\n" + ensureValue),
-		},
-		{
-			name: "pre-existing file without value or newline",
-			pre: func(t *testing.T, fname string) {
-				f, err := os.OpenFile(fname, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-				require.NoError(t, err)
-				f.WriteString("line1")
-				f.Close()
-			},
-			expect: []byte("line1\n" + ensureValue),
-		},
-	}
-
-	for _, tc := range tcs {
-		t.Run(tc.name, func(t *testing.T) {
-			file, err := ioutil.TempFile("", "dev-config.*.yaml")
-			require.NoError(t, err, "creating temp file")
-			file.Close()
-
-			// allow the test to dictate existence; we just use this
-			// to get a valid temporary filename that is unique
-			err = os.Remove(file.Name())
-			require.NoError(t, err, "deleting temp file")
-
-			if tc.pre != nil {
-				tc.pre(t, file.Name())
-			}
-
-			err = ensureStringInFile(file.Name(), ensureValue)
-			require.NoError(t, err, "ensuring string in file")
-
-			b, err := ioutil.ReadFile(file.Name())
-			require.NoError(t, err)
-			require.Equal(t, string(tc.expect), string(b))
-		})
-	}
+func tempAppSpec(t *testing.T, spec *godo.AppSpec) (path string) {
+	path = tempFile(t, "app.yaml")
+	specYaml, err := yaml.Marshal(spec)
+	require.NoError(t, err, "marshaling app spec")
+	err = ioutil.WriteFile(path, specYaml, 0664)
+	require.NoError(t, err, "writing app spec to disk")
+	return
 }
