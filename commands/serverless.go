@@ -39,17 +39,16 @@ var (
 	// Note: this table has all languages for which we possess samples.  Only those with currently
 	// active runtimes will display.
 	languageKeywords map[string][]string = map[string][]string{
-		"nodejs":     {"javascript", "js"},
-		"deno":       {"deno"},
-		"go":         {"go", "golang"},
-		"java":       {"java"},
-		"php":        {"php"},
-		"python":     {"python", "py"},
-		"ruby":       {"ruby"},
-		"rust":       {"rust"},
-		"swift":      {"swift"},
-		"dotnet":     {"csharp", "cs"},
-		"typescript": {"typescript", "ts"},
+		"nodejs": {"javascript", "js", "typescript", "ts"},
+		"deno":   {"deno"},
+		"go":     {"go", "golang"},
+		"java":   {"java"},
+		"php":    {"php"},
+		"python": {"python", "py"},
+		"ruby":   {"ruby"},
+		"rust":   {"rust"},
+		"swift":  {"swift"},
+		"dotnet": {"csharp", "cs"},
 	}
 )
 
