@@ -155,19 +155,23 @@ func RunServerlessExtraGetMetadata(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	r, _ := c.Doit.GetBool(c.NS, flagProjectReader)
+	useProjectReader, _ := c.Doit.GetBool(c.NS, flagProjectReader)
 
 	var output do.ServerlessOutput
 	project := do.ServerlessProject{
 		ProjectPath: c.Args[0],
 	}
-	if r {
-		output, err = c.Serverless().ReadProject(&project, c.Args)
+	if useProjectReader {
+		spec, err := c.Serverless().ReadProject(&project)
+		if err != nil {
+			return err
+		}
+		output.Entity = spec
 	} else {
 		output, err = RunServerlessExec(projectGetMetadata, c, []string{flagJSON, flagProjectReader}, []string{flagEnv, flagInclude, flagExclude})
-	}
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
 	}
 	return c.PrintServerlessTextOutput(output)
 }

@@ -194,7 +194,7 @@ type ServerlessService interface {
 	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
 	InvokeFunctionViaWeb(string, map[string]interface{}) error
 	GetConnectedAPIHost() (string, error)
-	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
+	ReadProject(*ServerlessProject) (ProjectSpec, error)
 	WriteProject(ServerlessProject) (string, error)
 }
 
@@ -724,16 +724,17 @@ func (s *serverlessService) GetConnectedAPIHost() (string, error) {
 // ReadProject takes the path where project lies and validates the project.yml.
 // once project.yml is validated it reads the directory for all the files and sub-directory
 // and returns the struct of the files
-func (s *serverlessService) ReadProject(project *ServerlessProject, args []string) (ServerlessOutput, error) {
+func (s *serverlessService) ReadProject(project *ServerlessProject) (ProjectSpec, error) {
+	var ans ProjectSpec
 	err := readTopLevel(project)
 	if err != nil {
-		return ServerlessOutput{}, err
+		return ans, err
 	}
-	_, err = readProjectConfig(project.ConfigPath)
+	spec, err := readProjectConfig(project.ConfigPath)
 	if err != nil {
-		return ServerlessOutput{}, err
+		return ans, err
 	}
-	return ServerlessOutput{}, fmt.Errorf("not implemented")
+	return *spec, nil
 }
 
 // WriteProject ...
