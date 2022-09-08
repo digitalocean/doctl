@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/apache/openwhisk-client-go/whisk"
@@ -250,34 +251,48 @@ func RunFunctionsList(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
+	var pkg string
+	if argCount == 1 {
+		pkg = c.Args[0]
+	}
 	// Determine if '--count' is requested since we will use simple text output in that case.
 	// Count is mutually exclusive with the global format flag.
 	count, _ := c.Doit.GetBool(c.NS, flagCount)
 	if count && c.Doit.IsSet("format") {
 		return errors.New("the --count and --format flags are mutually exclusive")
 	}
-	// Add JSON flag so we can control output format
-	if !count {
-		c.Doit.Set(c.NS, flagJSON, true)
-	}
-	output, err := RunServerlessExec(actionList, c, []string{flagCount, flagNameSort, flagNameName, flagJSON}, []string{flagLimit, flagSkip})
+	// Retrieve other flags
+	skip, _ := c.Doit.GetInt(c.NS, flagSkip)
+	limit, _ := c.Doit.GetInt(c.NS, flagLimit)
+	nameSort, _ := c.Doit.GetBool(c.NS, flagNameSort)
+	nameName, _ := c.Doit.GetBool(c.NS, flagNameName)
+	// Get information from backend
+	list, err := c.Serverless().ListFunctions(pkg, skip, limit)
 	if err != nil {
 		return err
 	}
 	if count {
-		return c.PrintServerlessTextOutput(output)
+		plural := "s"
+		are := "are"
+		if len(list) == 1 {
+			plural = ""
+			are = "is"
+		}
+		fmt.Fprintf(c.Out, "There %s %d function%s in this namespace.\n", are, len(list), plural)
+		return nil
 	}
-	// Reparse the output to use a more specific type, which can then be passed to the displayer
-	rawOutput, err := json.Marshal(output.Entity)
-	if err != nil {
-		return err
+	if nameSort || nameName {
+		sortFunctionList(list)
 	}
-	var formatted []whisk.Action
-	err = json.Unmarshal(rawOutput, &formatted)
-	if err != nil {
-		return err
+	return c.Display(&displayers.Functions{Info: list})
+}
+
+// sortFunctionList performs a sort of a function list (by name)
+func sortFunctionList(list []whisk.Action) {
+	isLess := func(i, j int) bool {
+		return list[i].Name < list[j].Name
 	}
-	return c.Display(&displayers.Functions{Info: formatted})
+	sort.Slice(list, isLess)
 }
 
 // consolidateParams accepts parameters from a file, the command line, or both, and consolidates all

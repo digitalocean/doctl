@@ -16,7 +16,6 @@ package commands
 import (
 	"bytes"
 	"os"
-	"os/exec"
 	"sort"
 	"testing"
 
@@ -251,53 +250,124 @@ func TestFunctionsInvoke(t *testing.T) {
 
 func TestFunctionsList(t *testing.T) {
 	tests := []struct {
-		name            string
-		doctlArgs       string
-		doctlFlags      map[string]string
-		expectedNimArgs []string
+		name           string
+		doctlFlags     map[string]string
+		doctlArg       string
+		skip           int
+		limit          int
+		expectedOutput string
 	}{
 		{
-			name:            "no flags or args",
-			expectedNimArgs: []string{"--json"},
+			name:  "no flags or args",
+			skip:  0,
+			limit: 0,
+			expectedOutput: `01/20 12:50:10    0.0.1    nodejs:14    daily/hello
+01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
+01/20 12:50:30    0.0.3    nodejs:14    sometimes/meAgain
+`,
 		},
 		{
-			name:            "count flag",
-			doctlFlags:      map[string]string{"count": ""},
-			expectedNimArgs: []string{"--count"},
+			name:     "with package arg",
+			doctlArg: "daily",
+			skip:     0,
+			limit:    0,
+			expectedOutput: `01/20 12:50:10    0.0.1    nodejs:14    daily/hello
+01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
+`,
 		},
 		{
-			name:            "limit flag",
-			doctlFlags:      map[string]string{"limit": "1"},
-			expectedNimArgs: []string{"--json", "--limit", "1"},
+			name:           "count flag",
+			doctlFlags:     map[string]string{"count": ""},
+			skip:           0,
+			limit:          0,
+			expectedOutput: "There are 3 functions in this namespace.\n",
 		},
 		{
-			name:            "name flag",
-			doctlFlags:      map[string]string{"name": ""},
-			expectedNimArgs: []string{"--name", "--json"},
+			name:           "limit flag",
+			doctlFlags:     map[string]string{"limit": "1"},
+			skip:           0,
+			limit:          1,
+			expectedOutput: "01/20 12:50:10    0.0.1    nodejs:14    daily/hello\n",
 		},
 		{
-			name:            "name-sort flag",
-			doctlFlags:      map[string]string{"name-sort": ""},
-			expectedNimArgs: []string{"--name-sort", "--json"},
+			name:       "name flag",
+			doctlFlags: map[string]string{"name": ""},
+			skip:       0,
+			limit:      0,
+			expectedOutput: `01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
+01/20 12:50:10    0.0.1    nodejs:14    daily/hello
+01/20 12:50:30    0.0.3    nodejs:14    sometimes/meAgain
+`,
 		},
 		{
-			name:            "skip flag",
-			doctlFlags:      map[string]string{"skip": "1"},
-			expectedNimArgs: []string{"--json", "--skip", "1"},
+			name:       "name-sort flag",
+			doctlFlags: map[string]string{"name-sort": ""},
+			skip:       0,
+			limit:      0,
+			expectedOutput: `01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
+01/20 12:50:10    0.0.1    nodejs:14    daily/hello
+01/20 12:50:30    0.0.3    nodejs:14    sometimes/meAgain
+`,
+		},
+		{
+			name:       "skip flag",
+			doctlFlags: map[string]string{"skip": "1"},
+			skip:       1,
+			limit:      0,
+			expectedOutput: `01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
+01/20 12:50:30    0.0.3    nodejs:14    sometimes/meAgain
+`,
+		},
+	}
+
+	theList := []whisk.Action{
+		whisk.Action{
+			Name:      "hello",
+			Namespace: "theNamespace/daily",
+			Updated:   1662610000,
+			Version:   "0.0.1",
+			Annotations: whisk.KeyValueArr{
+				whisk.KeyValue{
+					Key:   "exec",
+					Value: "nodejs:14",
+				},
+			},
+		},
+		whisk.Action{
+			Name:      "goodbye",
+			Namespace: "theNamespace/daily",
+			Updated:   1662620000,
+			Version:   "0.0.2",
+			Annotations: whisk.KeyValueArr{
+				whisk.KeyValue{
+					Key:   "exec",
+					Value: "nodejs:14",
+				},
+			},
+		},
+		whisk.Action{
+			Name:      "meAgain",
+			Namespace: "theNamespace/sometimes",
+			Version:   "0.0.3",
+			Updated:   1662630000,
+			Annotations: whisk.KeyValueArr{
+				whisk.KeyValue{
+					Key:   "exec",
+					Value: "nodejs:14",
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
+				buf := &bytes.Buffer{}
+				config.Out = buf
 
-				if tt.doctlArgs != "" {
-					config.Args = append(config.Args, tt.doctlArgs)
+				if tt.doctlArg != "" {
+					config.Args = append(config.Args, tt.doctlArg)
 				}
-
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {
 						if v == "" {
@@ -307,14 +377,36 @@ func TestFunctionsList(t *testing.T) {
 						}
 					}
 				}
+				config.Doit.Set(config.NS, "no-header", true)
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("action/list", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
+				answer := selectPackage(theList, tt.doctlArg)[tt.skip:]
+				if tt.limit != 0 {
+					answer = answer[0:tt.limit]
+				}
+				tm.serverless.EXPECT().ListFunctions(tt.doctlArg, tt.skip, tt.limit).Return(answer, nil)
 
 				err := RunFunctionsList(config)
 				require.NoError(t, err)
+				assert.Equal(t, tt.expectedOutput, buf.String())
 			})
 		})
 	}
+}
+
+// selectPackage is a testing support utility to trim a master list of functions by package membership
+// Also ensures the array is copied, because the logic being tested may sort it in place.
+func selectPackage(masterList []whisk.Action, pkg string) []whisk.Action {
+	if pkg == "" {
+		copiedList := make([]whisk.Action, len(masterList))
+		copy(copiedList, masterList)
+		return copiedList
+	}
+	namespace := "theNamespace/" + pkg
+	answer := []whisk.Action{}
+	for _, action := range masterList {
+		if action.Namespace == namespace {
+			answer = append(answer, action)
+		}
+	}
+	return answer
 }

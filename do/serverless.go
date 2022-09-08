@@ -217,6 +217,7 @@ type ServerlessService interface {
 	CheckServerlessStatus(string) error
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
+	ListFunctions(string, int, int) ([]whisk.Action, error)
 	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
 	InvokeFunctionViaWeb(string, map[string]interface{}) error
 	GetConnectedAPIHost() (string, error)
@@ -695,6 +696,23 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 		}
 	}
 	return *action, parameters, nil
+}
+
+// ListFunctions lists the functions of the connected namespace
+func (s *serverlessService) ListFunctions(pkg string, skip int, limit int) ([]whisk.Action, error) {
+	err := initWhisk(s)
+	if err != nil {
+		return []whisk.Action{}, err
+	}
+	if limit == 0 {
+		limit = 30
+	}
+	options := &whisk.ActionListOptions{
+		Skip:  skip,
+		Limit: limit,
+	}
+	list, _, err := s.owClient.Actions.List(pkg, options)
+	return list, err
 }
 
 // InvokeFunction invokes a function via POST with authentication
