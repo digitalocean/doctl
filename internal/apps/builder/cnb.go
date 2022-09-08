@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -22,7 +21,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/kballard/go-shellquote"
 )
 
 const (
@@ -129,7 +128,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		}
 		srcArchive, err := archive.TarResource(srcInfo)
 		if err != nil {
-			return res, err
+			return res, fmt.Errorf("preparing build context: %w", err)
 		}
 		defer srcArchive.Close()
 		dstInfo := archive.CopyInfo{
@@ -285,10 +284,10 @@ EOF`, assetsPath),
 			buildContainer.ID,
 			[]string{
 				"sh", "-c",
-				fmt.Sprintf(
-					"docker build -t %s -f %s %s",
-					b.ImageOutputName()+"-static-builder",
-					workspacePath+"/Dockerfile.static",
+				shellquote.Join(
+					"docker", "build",
+					"-t", b.StaticSiteImageOutputName(),
+					"-f", workspacePath+"/Dockerfile.static",
 					workspacePath,
 				),
 			},
@@ -301,51 +300,6 @@ EOF`, assetsPath),
 	}
 
 	return res, nil
-}
-
-func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, command, env []string, w io.Writer) error {
-	execRes, err := b.cli.ContainerExecCreate(ctx, containerID, types.ExecConfig{
-		AttachStderr: true,
-		AttachStdout: true,
-		Env:          env,
-		Cmd:          command,
-	})
-	if err != nil {
-		return err
-	}
-	defer func() {
-		ctx := context.Background()
-		_, err := b.cli.ContainerExecInspect(ctx, execRes.ID)
-		if err != nil {
-			b.logWriter.Write([]byte(err.Error()))
-		}
-	}()
-
-	attachRes, err := b.cli.ContainerExecAttach(ctx, execRes.ID, types.ExecStartCheck{})
-	if err != nil {
-		return err
-	}
-	defer attachRes.Close()
-
-	// read the output
-	outputDone := make(chan error)
-
-	go func() {
-		// StdCopy demultiplexes the stream into two buffers
-		_, err := stdcopy.StdCopy(w, w, attachRes.Reader)
-		outputDone <- err
-	}()
-
-	select {
-	case err := <-outputDone:
-		if err != nil {
-			return err
-		}
-	case <-ctx.Done():
-		return nil
-	}
-
-	return nil
 }
 
 func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
@@ -366,7 +320,7 @@ func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
 	}
 
 	envs = append(envs, "CNB_UPLOAD_RETRY=1")
-	envs = append(envs, "APP_IMAGE_URL="+b.ImageOutputName())
+	envs = append(envs, "APP_IMAGE_URL="+b.AppImageOutputName())
 	envs = append(envs, "APP_PLATFORM_COMPONENT_TYPE="+string(b.component.GetType()))
 	if b.component.GetSourceDir() != "" {
 		envs = append(envs, "SOURCE_DIR="+b.component.GetSourceDir())
@@ -391,10 +345,10 @@ func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
 		envs = append(envs, "VERSION_PINNING_LIST="+string(versioningJSON))
 	}
 
-	if exists, err := b.imageExists(ctx, b.ImageOutputName()); err != nil {
+	if exists, err := b.imageExists(ctx, b.AppImageOutputName()); err != nil {
 		return nil, err
 	} else if exists {
-		envs = append(envs, "PREVIOUS_APP_IMAGE_URL="+b.ImageOutputName())
+		envs = append(envs, "PREVIOUS_APP_IMAGE_URL="+b.AppImageOutputName())
 	}
 
 	if b.localCacheDir != "" {
