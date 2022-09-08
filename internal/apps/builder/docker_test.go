@@ -15,10 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func strPtr(s string) *string {
-	return &s
-}
-
 func TestDockerComponentBuild(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
@@ -90,7 +86,7 @@ func TestDockerComponentBuild(t *testing.T) {
 		mockClient.EXPECT().ImageBuild(ctx, gomock.Any(), types.ImageBuildOptions{
 			Dockerfile: service.DockerfilePath,
 			Tags: []string{
-				builder.ImageOutputName(),
+				builder.AppImageOutputName(),
 			},
 			BuildArgs: map[string]*string{
 				"build-arg-1":     strPtr("build-val-1"),

@@ -100,7 +100,7 @@ func TestCNBComponentBuild(t *testing.T) {
 		}).Return(nil)
 		mockClient.EXPECT().ContainerStart(ctx, buildID, types.ContainerStartOptions{}).Return(nil)
 		mockClient.EXPECT().ImageList(ctx, types.ImageListOptions{
-			Filters: filters.NewArgs(filters.Arg("reference", builder.ImageOutputName())),
+			Filters: filters.NewArgs(filters.Arg("reference", builder.AppImageOutputName())),
 		}).Return([]types.ImageSummary{{ /*single entry*/ }}, nil)
 
 		execID := "exec-id"
@@ -109,7 +109,7 @@ func TestCNBComponentBuild(t *testing.T) {
 			AttachStdout: true,
 			Env: []string{
 				"APP_CACHE_DIR=" + cnbCacheDir,
-				"APP_IMAGE_URL=" + builder.ImageOutputName(),
+				"APP_IMAGE_URL=" + builder.AppImageOutputName(),
 				"APP_PLATFORM_COMPONENT_TYPE=" + string(service.GetType()),
 				appVarAllowListKey + "=build-arg-1,override-1,run-build-arg-1,useroverride-1",
 				appVarPrefix + "build-arg-1=build-val-1",
@@ -118,7 +118,7 @@ func TestCNBComponentBuild(t *testing.T) {
 				appVarPrefix + "useroverride-1=newval",
 				"BUILD_COMMAND=" + builder.buildCommandOverride,
 				"CNB_UPLOAD_RETRY=1",
-				"PREVIOUS_APP_IMAGE_URL=" + builder.ImageOutputName(),
+				"PREVIOUS_APP_IMAGE_URL=" + builder.AppImageOutputName(),
 				"SOURCE_DIR=" + service.GetSourceDir(),
 			},
 			Cmd: []string{"sh", "-c", "/.app_platform/build.sh"},
@@ -184,7 +184,7 @@ func TestCNBComponentBuild(t *testing.T) {
 		mockClient.EXPECT().CopyToContainer(ctx, buildID, filepath.Clean("/"), gomock.Any(), gomock.Any()).Return(nil)
 
 		mockClient.EXPECT().ImageList(ctx, types.ImageListOptions{
-			Filters: filters.NewArgs(filters.Arg("reference", builder.ImageOutputName())),
+			Filters: filters.NewArgs(filters.Arg("reference", builder.AppImageOutputName())),
 		}).Return([]types.ImageSummary{ /*no entries*/ }, nil)
 
 		execID := "exec-id"
@@ -192,7 +192,7 @@ func TestCNBComponentBuild(t *testing.T) {
 			AttachStderr: true,
 			AttachStdout: true,
 			Env: []string{
-				"APP_IMAGE_URL=" + builder.ImageOutputName(),
+				"APP_IMAGE_URL=" + builder.AppImageOutputName(),
 				"APP_PLATFORM_COMPONENT_TYPE=" + string(service.GetType()),
 				"CNB_UPLOAD_RETRY=1",
 				"SOURCE_DIR=" + service.GetSourceDir(),

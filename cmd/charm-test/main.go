@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/MakeNowJust/heredoc"
@@ -25,7 +24,6 @@ func main() {
 	if choice == confirm.Yes {
 		fmt.Println("👻")
 	}
-	os.Exit(1)
 	i := input.New("app name:", input.WithRequired())
 	_, err = i.Prompt()
 	if err != nil {

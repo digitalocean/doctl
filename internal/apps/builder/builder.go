@@ -15,6 +15,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/pkg/stdcopy"
 )
 
 // ComponentBuilderFactory is the interface for creating a component builder.
@@ -48,13 +49,17 @@ type baseComponentBuilder struct {
 	logWriter io.Writer
 }
 
-func (b baseComponentBuilder) ImageOutputName() string {
+func (b baseComponentBuilder) AppImageOutputName() string {
 	ref := fmt.Sprintf("%s:dev", b.component.GetName())
 	if b.registry != "" {
 		ref = fmt.Sprintf("%s/%s", b.registry, ref)
 	}
 
 	return ref
+}
+
+func (b baseComponentBuilder) StaticSiteImageOutputName() string {
+	return b.AppImageOutputName() + "-static"
 }
 
 func (b baseComponentBuilder) getLogWriter() io.Writer {
@@ -97,8 +102,6 @@ func (b baseComponentBuilder) getEnvMap() (map[string]string, error) {
 		envMap[k] = v
 	}
 
-	fmt.Fprint(lw, "\n")
-
 	return envMap, nil
 }
 
@@ -107,28 +110,90 @@ func (b *baseComponentBuilder) imageExists(ctx context.Context, ref string) (boo
 		Filters: filters.NewArgs(filters.Arg("reference", ref)),
 	})
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("checking if container image exists: %w", err)
 	}
-	if len(images) < 1 {
-		return false, nil
-	}
-	return true, nil
+	return len(images) > 0, nil
 }
 
 func (b *baseComponentBuilder) getStaticNginxConfig() string {
-	return `server {
-listen 8080;
-listen [::]:8080;
+	return `
+server {
+	listen 8080;
+	listen [::]:8080;
 
-resolver 127.0.0.11;
-autoindex off;
+	resolver 127.0.0.11;
+	autoindex off;
 
-server_name _;
-server_tokens off;
+	server_name _;
+	server_tokens off;
 
-root /www;
-gzip_static on;
-}`
+	root /www;
+	gzip_static on;
+}
+`
+}
+
+// ContainerExecError contains additional data on a container exec failure.
+type ContainerExecError struct {
+	Err      error
+	ExitCode int
+}
+
+func (e ContainerExecError) Error() string {
+	return e.Err.Error()
+}
+
+func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, command, env []string, w io.Writer) error {
+	execRes, err := b.cli.ContainerExecCreate(ctx, containerID, types.ExecConfig{
+		AttachStderr: true,
+		AttachStdout: true,
+		Env:          env,
+		Cmd:          command,
+	})
+	if err != nil {
+		return fmt.Errorf("creating container exec: %w", err)
+	}
+
+	// read the output
+	attachRes, err := b.cli.ContainerExecAttach(ctx, execRes.ID, types.ExecStartCheck{})
+	if err != nil {
+		return fmt.Errorf("attaching to container exec: %w", err)
+	}
+	defer attachRes.Close()
+	outputDone := make(chan error)
+
+	go func() {
+		// StdCopy demultiplexes the stream into two separate stdout and stderr buffers
+		_, err := stdcopy.StdCopy(w, w, attachRes.Reader)
+		outputDone <- err
+	}()
+
+	select {
+	case err = <-outputDone:
+	case <-ctx.Done():
+		err = ctx.Err()
+	}
+	if err != nil {
+		return err
+	}
+
+	// the exec process completed. check its exit code and return an error if it failed.
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	res, err := b.cli.ContainerExecInspect(ctx, execRes.ID)
+	if err != nil {
+		// graceful failure
+		template.Render(w, "{{warning crossmark}} inspecting container: {{warning .}}{{nl}}", err)
+		return nil
+	} else if res.ExitCode > 0 {
+		return ContainerExecError{
+			Err:      fmt.Errorf("command exited with a non-zero status code"),
+			ExitCode: res.ExitCode,
+		}
+	}
+
+	return nil
 }
 
 // NewBuilderOpts ...
@@ -153,7 +218,6 @@ type DefaultComponentBuilderFactory struct{}
 // NewComponentBuilder returns the correct builder type depending upon the provided
 // app and component.
 func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineClient, contextDir string, spec *godo.AppSpec, opts NewBuilderOpts) (ComponentBuilder, error) {
-	// TODO(ntate): handle DetectionBuilder and allow empty component
 	if opts.Component == "" {
 		return nil, errors.New("component is required")
 	}
@@ -171,6 +235,19 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 	// This may change in the future so we provide as an argument to the baseComponentBuilder.
 	copyOnWriteSemantics := true
 
+	base := baseComponentBuilder{
+		cli,
+		contextDir,
+		spec,
+		component,
+		opts.Registry,
+		opts.EnvOverride,
+		opts.BuildCommandOverride,
+		copyOnWriteSemantics,
+		opts.NoCache,
+		opts.LogWriter,
+	}
+
 	if component.GetDockerfilePath() == "" {
 		var cnbVersioning CNBVersioning
 		for _, bp := range opts.Versioning.CNB.GetBuildpacks() {
@@ -181,35 +258,11 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 		}
 
 		return &CNBComponentBuilder{
-			baseComponentBuilder: baseComponentBuilder{
-				cli,
-				contextDir,
-				spec,
-				component,
-				opts.Registry,
-				opts.EnvOverride,
-				opts.BuildCommandOverride,
-				copyOnWriteSemantics,
-				opts.NoCache,
-				opts.LogWriter,
-			},
-			versioning:    cnbVersioning,
-			localCacheDir: opts.LocalCacheDir,
+			baseComponentBuilder: base,
+			versioning:           cnbVersioning,
+			localCacheDir:        opts.LocalCacheDir,
 		}, nil
 	}
 
-	return &DockerComponentBuilder{
-		baseComponentBuilder: baseComponentBuilder{
-			cli,
-			contextDir,
-			spec,
-			component,
-			opts.Registry,
-			opts.EnvOverride,
-			opts.BuildCommandOverride,
-			copyOnWriteSemantics,
-			opts.NoCache,
-			opts.LogWriter,
-		},
-	}, nil
+	return &DockerComponentBuilder{base}, nil
 }

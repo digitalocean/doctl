@@ -56,7 +56,7 @@ func Funcs(colors charm.ColorScheme) template.FuncMap {
 			return strings.Join(strs, sep)
 		},
 		"duration": func(d time.Duration, precision ...string) string {
-			trunc := time.Second
+			var trunc time.Duration
 			if len(precision) > 0 {
 				switch strings.ToLower(precision[0]) {
 				case "us":
@@ -67,6 +67,16 @@ func Funcs(colors charm.ColorScheme) template.FuncMap {
 					trunc = time.Second
 				case "m":
 					trunc = time.Minute
+				}
+			}
+
+			if trunc == 0 {
+				switch {
+				case d < time.Millisecond:
+				case d < time.Second:
+					trunc = time.Millisecond
+				default:
+					trunc = time.Second
 				}
 			}
 			return d.Truncate(trunc).String()
