@@ -406,4 +406,13 @@ const (
 
 	// ArgAlertPolicySlackURLs are the Slack URLs to send alerts to.
 	ArgAlertPolicySlackURLs = "slack-urls"
+
+	// ArgCommitHash are the Git commit hash.
+	ArgCommitHash = "sha"
+	// ArgProjectSource is either git, github or gitlab.
+	ArgProjectSource = "source"
+	// ArgDeployOnPush allow auto deploy on project update.
+	ArgDeployOnPush = "deployonpush"
+	// ArgProjectBrach is git project branch.
+	ArgProjectBrach = "branch"
 )
