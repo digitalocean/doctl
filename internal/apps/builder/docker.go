@@ -20,19 +20,19 @@ import (
 
 const staticSiteNginxImage = "nginx:alpine"
 
-// DockerComponentBuilder ...
+// DockerComponentBuilder builds components using a Dockerfile.
 type DockerComponentBuilder struct {
 	baseComponentBuilder
 }
 
-// Build ...
+// Build executes the component build and tags the resulting container images.
 func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderResult, error) {
 	if b.component == nil {
 		return ComponentBuilderResult{}, errors.New("no component was provided for the build")
 	}
 
 	if c, ok := b.component.(*godo.AppStaticSiteSpec); ok && c.GetOutputDir() == "" {
-		return ComponentBuilderResult{}, errors.New("output_dir is required for dockerfile builds")
+		return ComponentBuilderResult{}, errors.New("output_dir is required for dockerfile-based static site builds")
 	}
 
 	lw := b.getLogWriter()
@@ -48,10 +48,9 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		return ComponentBuilderResult{}, fmt.Errorf("configuring environment variables: %w", err)
 	}
 
-	buildContext := filepath.Clean(b.component.GetSourceDir())
-	buildContext, err = filepath.Rel(".", buildContext)
-	if err != nil {
-		return ComponentBuilderResult{}, err
+	buildContext := b.contextDir
+	if sd := filepath.Clean(b.component.GetSourceDir()); sd != "." && sd != "/" {
+		buildContext = filepath.Join(buildContext, sd)
 	}
 	// TODO Dockerfile must be relative to the source dir.
 	// Make it relative and if it's outside the source dir add it to the archive.
@@ -157,15 +156,16 @@ func (b *DockerComponentBuilder) staticSiteDockerfile() (dockerfile []byte, buil
 	}
 
 	dockerfile = []byte(`
-	ARG app_image
-	ARG nginx_image
-	ARG output_dir
-	FROM ${app_image} as content
-	FROM ${nginx_image}
-	ARG output_dir
+ARG app_image
+ARG nginx_image
+ARG output_dir
+FROM ${app_image} as content
+FROM ${nginx_image}
+ARG output_dir
 
-	COPY nginx.conf /etc/nginx/conf.d/default.conf
-	COPY --from=content ${output_dir}/ /www`)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=content ${output_dir}/ /www
+`)
 
 	buildArgs = map[string]*string{
 		"app_image":   strPtr(b.AppImageOutputName()),
