@@ -133,12 +133,13 @@ server {
 `
 }
 
-// ContainerExecError contains additional data on a container exec failure.
+// ContainerExecError contains additional data on a container exec error.
 type ContainerExecError struct {
 	Err      error
 	ExitCode int
 }
 
+// Error returns the underlying error.
 func (e ContainerExecError) Error() string {
 	return e.Err.Error()
 }
@@ -208,6 +209,7 @@ type NewBuilderOpts struct {
 	NoCache              bool
 }
 
+// Versioning contains build versioning configuration.
 type Versioning struct {
 	CNB *godo.AppBuildConfigCNBVersioning
 }
