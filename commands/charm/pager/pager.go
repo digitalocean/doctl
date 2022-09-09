@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/commands/charm/text"
 )
 
 type WriterStringer interface {
@@ -144,7 +145,7 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if k := msg.String(); k == "ctrl+c" {
 			template.Buffered(
 				m.buffer,
-				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling build")}}{{nl}}`,
+				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling")}}{{nl}}`,
 				nil,
 			)
 			m.userCanceled = true
@@ -189,39 +190,32 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *pagerModel) View() string {
 	if !m.ready {
-		return "\n  Loading..."
+		return "\n  loading..."
 	}
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
+	return fmt.Sprintf("%s\n%s%s", m.headerView(), m.viewport.View(), m.footerView())
 }
 
 func (m *pagerModel) headerView() string {
-	title := m.titleStyle().Render(m.title)
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
-	line = lipgloss.NewStyle().Foreground(lipgloss.Color("#9B9B9B")).Render(line)
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
+	elapsed := fmt.Sprintf(
+		"%s%s%s",
+		text.Muted.S("["),
+		time.Since(m.start).Truncate(time.Second),
+		text.Muted.S("]─"),
+	)
+	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(elapsed)))
+	line = text.Muted.S(line)
+	title := lipgloss.NewStyle().Padding(1).PaddingBottom(0).Render(m.title)
+	return fmt.Sprintf("%s\n%s%s\n", title, line, elapsed)
 }
 
 func (m *pagerModel) footerView() string {
-	info := m.infoStyle().Render(time.Since(m.start).Truncate(time.Second).String())
+	if m.viewport.AtBottom() {
+		return ""
+	}
+
+	info := "┤ scroll down for new logs "
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
-	line = lipgloss.NewStyle().Foreground(lipgloss.Color("#9B9B9B")).Render(line)
-	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
-}
-
-func (m *pagerModel) titleStyle() lipgloss.Style {
-	b := lipgloss.RoundedBorder()
-	b.Right = "├"
-	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#dddddd")).
-		BorderStyle(b).
-		BorderForeground(lipgloss.Color("#9B9B9B")).
-		Padding(0, 1)
-}
-
-func (m *pagerModel) infoStyle() lipgloss.Style {
-	b := lipgloss.RoundedBorder()
-	b.Left = "┤"
-	return m.titleStyle().Copy().BorderStyle(b).Foreground(lipgloss.Color("#dddddd"))
+	return "\n" + text.Highlight.S(line+info)
 }
 
 func max(a, b int) int {
