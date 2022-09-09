@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ type Pager struct {
 	buffer  WriterStringer
 	prog    *tea.Program
 	model   *pagerModel
+	exited  bool
 }
 
 type Option func(*Pager)
@@ -59,6 +61,9 @@ func WithTitle(title string) Option {
 }
 
 func (p *Pager) Write(b []byte) (int, error) {
+	if p.exited {
+		return os.Stdout.Write(b)
+	}
 	n, err := p.buffer.Write(b)
 	if p.prog != nil {
 		p.prog.Send(msgUpdate{})
@@ -76,20 +81,29 @@ func (p *Pager) Start(ctx context.Context) error {
 	p.prog = prog
 
 	err := prog.Start()
-	content := p.buffer.String()
-	fmt.Fprintln(charm.Indent(4), content)
-	return err
+	p.exited = true
+	p.prog = nil
+
+	fmt.Fprint(charm.Indent(4), p.buffer.String())
+	if err != nil {
+		return err
+	} else if p.model.userCanceled {
+		return charm.ErrCanceled
+	}
+
+	return nil
 }
 
 type pagerModel struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	start    time.Time
-	title    string
-	buffer   WriterStringer
-	ready    bool
-	viewport viewport.Model
+	start        time.Time
+	title        string
+	buffer       WriterStringer
+	ready        bool
+	viewport     viewport.Model
+	userCanceled bool
 }
 
 func newPagerModel(ctx context.Context, buffer WriterStringer, title string) *pagerModel {
@@ -133,6 +147,7 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling build")}}{{nl}}`,
 				nil,
 			)
+			m.userCanceled = true
 			m.cancel()
 			return m, nil
 		}

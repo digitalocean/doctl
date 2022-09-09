@@ -12,6 +12,7 @@ import (
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/confirm"
 	"github.com/digitalocean/doctl/commands/charm/list"
 	"github.com/digitalocean/doctl/commands/charm/pager"
@@ -156,7 +157,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			if err != nil {
 				return err
 			} else if selected == nil {
-				return fmt.Errorf("cancelled")
+				return fmt.Errorf("canceled")
 			}
 			selectedComponent, ok := selected.(componentListItem)
 			if !ok {
@@ -255,16 +256,21 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	)
 	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
 
+	// TODO intercept ctrl-c and allow for graceful shutdown & container cleanup
+
 	var (
 		wg        sync.WaitGroup
 		logWriter io.Writer
+
+		// userCanceled indicates whether the context was canceled by user request
+		userCanceled bool
 	)
 	if Interactive {
 		logPager, err := pager.New(
 			pager.WithTitle(buildingComponentLine),
 		)
 		if err != nil {
-			return fmt.Errorf("starting log pager: %w", err)
+			return fmt.Errorf("creating log pager: %w", err)
 		}
 		wg.Add(1)
 		go func() {
@@ -272,7 +278,11 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			defer wg.Done()
 			err := logPager.Start(ctx)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "pager error: %v\n", err)
+				if errors.Is(err, charm.ErrCanceled) {
+					userCanceled = true
+				} else {
+					fmt.Fprintf(os.Stderr, "pager error: %v\n", err)
+				}
 			}
 		}()
 		logWriter = logPager
@@ -315,16 +325,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// allow the pager to exit cleanly
 	wg.Wait()
 
-	// TODO: differentiate between user-initiated cancel and cancel due to build failure
-	// if err == nil {
-	// 	err = ctx.Err()
-	// 	if errors.Is(err, context.Canceled) {
-	// 		err = fmt.Errorf("cancelled")
-	// 	}
-	// }
-
 	if err != nil {
 		return err
+	} else if userCanceled {
+		return fmt.Errorf("canceled")
 	} else if res.ExitCode == 0 {
 		template.Buffered(
 			textbox.New().Success(),

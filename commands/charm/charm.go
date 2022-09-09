@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	// ErrCancelled represents a user-initiated cancellation.
-	ErrCancelled = fmt.Errorf("cancelled")
+	// ErrCanceled represents a user-initiated cancellation.
+	ErrCanceled = fmt.Errorf("canceled")
 )
 
 // Style is a styled component.
