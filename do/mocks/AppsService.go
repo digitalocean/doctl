@@ -78,6 +78,21 @@ func (mr *MockAppsServiceMockRecorder) Delete(appID interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAppsService)(nil).Delete), appID)
 }
 
+// Detect mocks base method.
+func (m *MockAppsService) Detect(source, sha, name, branch string, autoDeploy bool) (*godo.AppSpec, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Detect", source, sha, name, branch, autoDeploy)
+	ret0, _ := ret[0].(*godo.AppSpec)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Detect indicates an expected call of Detect.
+func (mr *MockAppsServiceMockRecorder) Detect(source, sha, name, branch, autoDeploy interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Detect", reflect.TypeOf((*MockAppsService)(nil).Detect), source, sha, name, branch, autoDeploy)
+}
+
 // Get mocks base method.
 func (m *MockAppsService) Get(appID string) (*godo.App, error) {
 	m.ctrl.T.Helper()
