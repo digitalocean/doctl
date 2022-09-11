@@ -260,18 +260,18 @@ func (mr *MockServerlessServiceMockRecorder) ReadCredentials() *gomock.Call {
 }
 
 // ReadProject mocks base method.
-func (m *MockServerlessService) ReadProject(arg0 *do.ServerlessProject, arg1 []string) (do.ServerlessOutput, error) {
+func (m *MockServerlessService) ReadProject(arg0 *do.ServerlessProject) (do.ProjectSpec, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadProject", arg0, arg1)
-	ret0, _ := ret[0].(do.ServerlessOutput)
+	ret := m.ctrl.Call(m, "ReadProject", arg0)
+	ret0, _ := ret[0].(do.ProjectSpec)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ReadProject indicates an expected call of ReadProject.
-func (mr *MockServerlessServiceMockRecorder) ReadProject(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockServerlessServiceMockRecorder) ReadProject(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadProject", reflect.TypeOf((*MockServerlessService)(nil).ReadProject), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadProject", reflect.TypeOf((*MockServerlessService)(nil).ReadProject), arg0)
 }
 
 // Stream mocks base method.

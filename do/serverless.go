@@ -114,21 +114,63 @@ type ServerlessHostInfo struct {
 	Runtimes map[string][]ServerlessRuntime `json:"runtimes"`
 }
 
-// ServerlessProject ...
-type ServerlessProject struct {
-	ProjectPath string   `json:"project_path"`
-	ConfigPath  string   `json:"config"`
-	Packages    string   `json:"packages"`
-	Env         string   `json:"env"`
-	Strays      []string `json:"strays"`
+// FunctionInfo is the type of an individual function in the output
+// of doctl sls fn list.  Only relevant fields are unmarshaled.
+// Note: when we start replacing the sandbox plugin path with direct calls
+// to backend controller operations, this will be replaced by declarations
+// in the golang openwhisk client.
+type FunctionInfo struct {
+	Name        string       `json:"name"`
+	Namespace   string       `json:"namespace"`
+	Updated     int64        `json:"updated"`
+	Version     string       `json:"version"`
+	Annotations []Annotation `json:"annotations"`
 }
 
-// ProjectSpec describes a project.yml spec
+// Annotation is a key/value type suitable for individual annotations
+type Annotation struct {
+	Key   string      `json:"key"`
+	Value interface{} `json:"value"`
+}
+
+// ServerlessProject provides a "physical" view of a project (its files and directories).
+// The "logical" view is provided by the ProjectSpec, which is formed by parsing the file
+// at ConfigPath (if any), and by interpreting the structure in ServerlessProject.
+// This structure is never serialized.
+type ServerlessProject struct {
+	ProjectPath string                 `json:"project_path"`
+	ConfigPath  string                 `json:"config"`
+	Packages    []ServerlessPackageDir `json:"packages"`
+	EnvPath     string                 `json:"env_path"`
+	LibPath     string                 `json:"lib_path"`
+}
+
+// ServerlessPackageDir provides the contents of one package under ServerlessProject
+type ServerlessPackageDir struct {
+	Path      string
+	Functions []ServerlessFunctionSource
+}
+
+// FunctionSource provides the contents of one function in a PackageDir.
+// Because a function can be represented by either a directory or a (single-source) file,
+// we represent each function as a set of paths.   This may be one path (e.g. Name=foo,
+// Paths=[/path/to/foo.js].   Or multiples (e.g. Name=foo, Paths=[/path/to/foo/index.js,
+// /path/to/foo/package.json, /path/to/foo/.include, ...]).
+type ServerlessFunctionSource struct {
+	Name  string
+	Paths []string
+}
+
+// ProjectSpec describes a project.yml spec (both initially and as subsequently augmented by
+// structural information about the project).
 // reference: https://docs.nimbella.com/configuration/
+// TODO the FileStructure member is temporary, since the work to merge file/directory structure in
+// ServerlessProject with the spec information here is still pending.
 type ProjectSpec struct {
-	Parameters  map[string]interface{} `json:"parameters,omitempty"`
-	Environment map[string]interface{} `json:"environment,omitempty"`
-	Packages    []*ProjectSpecPackage  `json:"packages,omitempty"`
+	Parameters    map[string]interface{} `json:"parameters,omitempty"`
+	Environment   map[string]interface{} `json:"environment,omitempty"`
+	Packages      []*ProjectSpecPackage  `json:"packages,omitempty"`
+	FileStructure *ServerlessProject     `json:"file_sructure,omitempty"`
 }
 
 // ProjectSpecPackage ...
@@ -139,6 +181,7 @@ type ProjectSpecPackage struct {
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 	Annotations map[string]interface{} `json:"annotations,omitempty"`
 	Functions   []*ProjectSpecFunction `json:"functions,omitempty"`
+	Actions     []*ProjectSpecFunction `json:"actions,omitempty"` // support legacy projects
 }
 
 // ProjectSpecFunction ...
@@ -721,32 +764,53 @@ func (s *serverlessService) GetConnectedAPIHost() (string, error) {
 	return s.owClient.Config.Host, nil
 }
 
-// ReadProject takes the path where project lies and validates the project.yml.
-// once project.yml is validated it reads the directory for all the files and sub-directory
-// and returns the struct of the files
+// ReadProject takes the path where project lies and validates the project.yml and also
+// finds all the files and sub-directories of the project.  The information is merged
+// and returned as a ProjectSpec.
 func (s *serverlessService) ReadProject(project *ServerlessProject) (ProjectSpec, error) {
-	var ans ProjectSpec
-	err := readTopLevel(project)
+	var (
+		empty  ProjectSpec
+		answer ProjectSpec
+	)
+	err := readProjectStructure(project)
 	if err != nil {
-		return ans, err
+		return empty, err
 	}
-	spec, err := readProjectConfig(project.ConfigPath)
+	if project.ConfigPath != "" {
+		spec, err := readProjectConfig(project.ConfigPath)
+		if err != nil {
+			return empty, err
+		}
+		answer = *spec
+	}
+	answer, err = mergeProjectAndSpec(project, answer)
 	if err != nil {
-		return ans, err
+		return empty, err
 	}
-	return *spec, nil
+	return answer, nil
 }
 
-// WriteProject ...
+// mergeProjectAndSpec ... (placeholder)
+func mergeProjectAndSpec(project *ServerlessProject, spec ProjectSpec) (ProjectSpec, error) {
+	// TODO a real implementation that completely merges the information based on what the
+	// existing deployer does in 'project-reader.ts'
+	spec.FileStructure = project
+	return spec, nil
+}
+
+// WriteProject ... (placeholder)
 func (s *serverlessService) WriteProject(project ServerlessProject) (string, error) {
 	// TODO
 	return "", nil
 }
 
-func readTopLevel(project *ServerlessProject) error {
+// readProjectStructure reads and interprets the file/directory structure of a project
+func readProjectStructure(project *ServerlessProject) error {
 	const (
 		Config   = "project.yml"
 		Packages = "packages"
+		Lib      = "lib"
+		Env      = ".env"
 	)
 	files, err := ioutil.ReadDir(project.ProjectPath)
 	if err != nil {
@@ -754,20 +818,94 @@ func readTopLevel(project *ServerlessProject) error {
 	}
 	for _, f := range files {
 		if f.Name() == Config && !f.IsDir() {
-			project.ConfigPath = project.ProjectPath + "/" + f.Name()
+			project.ConfigPath = filepath.Join(project.ProjectPath, f.Name())
 		} else if f.Name() == Packages && f.IsDir() {
-			project.Packages = project.ProjectPath + "/" + f.Name()
-		} else if f.Name() == ".nimbella" || f.Name() == ".deployed" {
-			// Ignore
-		} else if f.Name() == ".env" && !f.IsDir() {
-			project.Env = project.ProjectPath + "/" + f.Name()
-		} else {
-			project.Strays = append(project.Strays, project.ProjectPath+"/"+f.Name())
+			pkgs, err := readPackages(filepath.Join(project.ProjectPath, f.Name()))
+			if err != nil {
+				return err
+			}
+			project.Packages = pkgs
+		} else if f.Name() == Lib && f.IsDir() {
+			project.LibPath = filepath.Join(project.ProjectPath, f.Name())
+		} else if f.Name() == Env && !f.IsDir() {
+			project.EnvPath = filepath.Join(project.ProjectPath, f.Name())
 		}
 	}
 	return nil
 }
 
+// readPackages reads all the package directories and interprets the functions found in each
+func readPackages(path string) ([]ServerlessPackageDir, error) {
+	answer := []ServerlessPackageDir{}
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return answer, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			pkgDir, err := readPackageDir(filepath.Join(path, f.Name()))
+			if err != nil {
+				return answer, err
+			}
+			answer = append(answer, pkgDir)
+		}
+	}
+	return answer, nil
+}
+
+// readPackageDir reads a package directory and interprets the functions found in it
+func readPackageDir(path string) (ServerlessPackageDir, error) {
+	answer := ServerlessPackageDir{Path: path, Functions: []ServerlessFunctionSource{}}
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return answer, err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			funcDir, err := readFunctionDirectory(filepath.Join(path, f.Name()))
+			if err != nil {
+				return answer, err
+			}
+			answer.Functions = append(answer.Functions, funcDir)
+		} else {
+			funcFile, err := readFunctionFile(filepath.Join(path, f.Name()))
+			if err != nil {
+				return answer, err
+			}
+			answer.Functions = append(answer.Functions, funcFile)
+		}
+	}
+	return answer, nil
+}
+
+// readFunctionDirectory identities the file system contents of a function within a project
+// known to be in the form of a directory
+func readFunctionDirectory(path string) (ServerlessFunctionSource, error) {
+	name := filepath.Base(path)
+	answer := ServerlessFunctionSource{Name: name, Paths: []string{}}
+	err := filepath.Walk(path,
+		func(funcPath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			answer.Paths = append(answer.Paths, filepath.Join(path, funcPath))
+			return nil
+		})
+	return answer, err
+}
+
+// readFunctionFile identities the file system contents of a function within a project
+// known to be in the form of a single source file
+func readFunctionFile(path string) (ServerlessFunctionSource, error) {
+	basename := filepath.Base(path)
+	ext := filepath.Ext(path)
+	name := strings.TrimSuffix(basename, ext)
+	answer := ServerlessFunctionSource{Name: name, Paths: []string{path}}
+	return answer, nil
+}
+
+// readProjectConfig is the utility that reads and parses a project.yml file.
+// It is a subroutine of ReadProject for those serverless projects that have such a file.
 func readProjectConfig(configPath string) (*ProjectSpec, error) {
 	spec := ProjectSpec{}
 	// reading config file content
@@ -786,6 +924,13 @@ func readProjectConfig(configPath string) (*ProjectSpec, error) {
 		err = yaml.Unmarshal([]byte(content), &spec)
 		if err != nil {
 			return nil, err
+		}
+	}
+	// Support "actions" as a legacy but don't use it internally or in any output.
+	for _, pkg := range spec.Packages {
+		if len(pkg.Actions) > 0 {
+			pkg.Functions = append(pkg.Functions, pkg.Actions...)
+			pkg.Actions = []*ProjectSpecFunction{}
 		}
 	}
 	err = validateConfig(&spec)
