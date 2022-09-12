@@ -199,6 +199,21 @@ func (mr *MockServerlessServiceMockRecorder) GetNamespace(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespace", reflect.TypeOf((*MockServerlessService)(nil).GetNamespace), arg0, arg1)
 }
 
+// GetNamespaceFromCluster mocks base method.
+func (m *MockServerlessService) GetNamespaceFromCluster(arg0, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNamespaceFromCluster", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNamespaceFromCluster indicates an expected call of GetNamespaceFromCluster.
+func (mr *MockServerlessServiceMockRecorder) GetNamespaceFromCluster(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespaceFromCluster", reflect.TypeOf((*MockServerlessService)(nil).GetNamespaceFromCluster), arg0, arg1)
+}
+
 // GetServerlessNamespace mocks base method.
 func (m *MockServerlessService) GetServerlessNamespace(arg0 context.Context) (do.ServerlessCredentials, error) {
 	m.ctrl.T.Helper()

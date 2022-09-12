@@ -83,7 +83,7 @@ The install operation is long-running, and a network connection is required.`,
 	CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
 		Writer)
 
-	CmdBuilder(cmd, RunServerlessConnect, "connect [<hint>]", "Connects local serverless support to a functions namespace",
+	connect := CmdBuilder(cmd, RunServerlessConnect, "connect [<hint>]", "Connects local serverless support to a functions namespace",
 		`This command connects `+"`"+`doctl serverless`+"`"+` support to a functions namespace of your choice.
 The optional argument should be a (complete or partial) match to a namespace label or id.
 If there is no argument, all namespaces are matched.  If the result is exactly one namespace,
@@ -91,6 +91,14 @@ you are connected to it.  If there are multiple namespaces, you have an opportun
 the one you want from a dialog.  Use `+"`"+`doctl serverless namespaces`+"`"+` to create, delete, and
 list your namespaces.`,
 		Writer)
+	AddBoolFlag(connect, "beta", "", false, "use beta features to connect when no namespace is specified")
+	connect.Flags().MarkHidden("beta")
+	// The apihost and auth flags will always be hidden.  They support testing using doctl on clusters that are not in production
+	// and hence are unknown to the portal.
+	AddStringFlag(connect, "apihost", "", "", "")
+	AddStringFlag(connect, "auth", "", "", "")
+	connect.Flags().MarkHidden("apihost")
+	connect.Flags().MarkHidden("auth")
 
 	status := CmdBuilder(cmd, RunServerlessStatus, "status", "Provide information about serverless support",
 		`This command reports the status of serverless support and some details concerning its connected functions namespace.
@@ -194,12 +202,33 @@ func RunServerlessConnect(c *CmdConfig) error {
 	var (
 		err error
 	)
+	sls := c.Serverless()
+
+	// Support the hidden capability to connect to non-production clusters to support various kinds of testing.
+	// The presence of 'auth' and 'apihost' flags trumps other parts of the syntax, but both must be present.
+	apihost, _ := c.Doit.GetString(c.NS, "apihost")
+	auth, _ := c.Doit.GetString(c.NS, "auth")
+	if len(apihost) > 0 && len(auth) > 0 {
+		namespace, err := sls.GetNamespaceFromCluster(apihost, auth)
+		if err != nil {
+			return err
+		}
+		credential := do.ServerlessCredential{Auth: auth}
+		creds := do.ServerlessCredentials{
+			APIHost:     apihost,
+			Namespace:   namespace,
+			Credentials: map[string]map[string]do.ServerlessCredential{apihost: {namespace: credential}},
+		}
+		return finishConnecting(sls, creds, "", c.Out)
+	}
+	if len(apihost) > 0 || len(auth) > 0 {
+		return fmt.Errorf("If either of 'apihost' or 'auth' is specified then both must be specified")
+	}
+	// Neither 'auth' nor 'apihost' was specified, so continue with other options.
 
 	if len(c.Args) > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-
-	sls := c.Serverless()
 
 	// Non-standard check for the connect command (only): it's ok to not be connected.
 	err = sls.CheckServerlessStatus(hashAccessToken(c))

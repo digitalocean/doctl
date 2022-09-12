@@ -206,6 +206,7 @@ type ServerlessService interface {
 	GetServerlessNamespace(context.Context) (ServerlessCredentials, error)
 	ListNamespaces(context.Context) (NamespaceListResponse, error)
 	GetNamespace(context.Context, string) (ServerlessCredentials, error)
+	GetNamespaceFromCluster(string, string) (string, error)
 	CreateNamespace(context.Context, string, string) (ServerlessCredentials, error)
 	DeleteNamespace(context.Context, string) error
 	ListTriggers(context.Context, string) ([]ServerlessTrigger, error)
@@ -634,6 +635,27 @@ func (s *serverlessService) GetNamespace(ctx context.Context, name string) (Serv
 		return ServerlessCredentials{}, err
 	}
 	return executeNamespaceRequest(ctx, s, req)
+}
+
+// GetNamespaceFromCluster obtains the namespace that uniquely owns a valid combination of API host and "auth"
+// (uuid:key).  This can be used to connect to clusters not known to the portal (e.g. dev clusters) or simply
+// to check that credentials are valid.
+func (s *serverlessService) GetNamespaceFromCluster(APIhost string, auth string) (string, error) {
+	// We do not use the shared client in serverlessService for this because it uses the stored
+	// credentials, not the passed ones.
+	config := whisk.Config{Host: APIhost, AuthToken: auth}
+	client, err := whisk.NewClient(http.DefaultClient, &config)
+	if err != nil {
+		return "", err
+	}
+	ns, _, err := client.Namespaces.List()
+	if err != nil {
+		return "", err
+	}
+	if len(ns) != 1 {
+		return "", fmt.Errorf("unexpected response when validating apihost and auth")
+	}
+	return ns[0].Name, nil
 }
 
 // CreateNamespace creates a new namespace and returns its credentials, given a label and region
