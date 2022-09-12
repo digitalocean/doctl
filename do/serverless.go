@@ -21,6 +21,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,6 +32,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/extract"
 	"github.com/digitalocean/godo"
+	"github.com/pkg/browser"
 	"gopkg.in/yaml.v3"
 )
 
@@ -112,25 +114,6 @@ type ServerlessHostInfo struct {
 	Runtimes map[string][]ServerlessRuntime `json:"runtimes"`
 }
 
-// FunctionInfo is the type of an individual function in the output
-// of doctl sls fn list.  Only relevant fields are unmarshaled.
-// Note: when we start replacing the sandbox plugin path with direct calls
-// to backend controller operations, this will be replaced by declarations
-// in the golang openwhisk client.
-type FunctionInfo struct {
-	Name        string       `json:"name"`
-	Namespace   string       `json:"namespace"`
-	Updated     int64        `json:"updated"`
-	Version     string       `json:"version"`
-	Annotations []Annotation `json:"annotations"`
-}
-
-// Annotation is a key/value type suitable for individual annotations
-type Annotation struct {
-	Key   string      `json:"key"`
-	Value interface{} `json:"value"`
-}
-
 // ServerlessProject ...
 type ServerlessProject struct {
 	ProjectPath string   `json:"project_path"`
@@ -208,6 +191,8 @@ type ServerlessService interface {
 	CheckServerlessStatus(string) error
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
+	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
+	InvokeFunctionViaWeb(string, map[string]interface{}) error
 	GetConnectedAPIHost() (string, error)
 	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
 	WriteProject(ServerlessProject) (string, error)
@@ -669,6 +654,62 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 		}
 	}
 	return *action, parameters, err
+}
+
+// InvokeFunction invokes a function via POST with authentication
+func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (map[string]interface{}, error) {
+	var empty map[string]interface{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Actions.Invoke(name, params, blocking, result)
+	return resp, err
+}
+
+// InvokeFunctionViaWeb invokes a function via GET using its web URL (or error if not a web function)
+func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]interface{}) error {
+	// Get the function so we can use its metadata in formulating the request
+	theFunction, _, err := s.GetFunction(name, false)
+	if err != nil {
+		return err
+	}
+	// Check that it's a web function
+	isWeb := false
+	for _, annot := range theFunction.Annotations {
+		if annot.Key == "web-export" {
+			isWeb = true
+			break
+		}
+	}
+	if !isWeb {
+		return fmt.Errorf("'%s' is not a web function", name)
+	}
+	// Formulate the invocation URL
+	host, err := s.GetConnectedAPIHost()
+	if err != nil {
+		return err
+	}
+	nsParts := strings.Split(theFunction.Namespace, "/")
+	namespace := nsParts[0]
+	pkg := "default"
+	if len(nsParts) > 1 {
+		pkg = nsParts[1]
+	}
+	theURL := fmt.Sprintf("%s/api/v1/web/%s/%s/%s", host, namespace, pkg, theFunction.Name)
+	// Add params, if any
+	if params != nil {
+		encoded := url.Values{}
+		for key, val := range params {
+			stringVal, ok := val.(string)
+			if !ok {
+				return fmt.Errorf("the value of '%s' is not a string; web invocation is not possible", key)
+			}
+			encoded.Add(key, stringVal)
+		}
+		theURL += "?" + encoded.Encode()
+	}
+	return browser.OpenURL(theURL)
 }
 
 // GetConnectedAPIHost retrieves the API host to which the service is currently connected
