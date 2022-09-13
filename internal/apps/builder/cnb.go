@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -17,8 +15,9 @@ import (
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
+	dockertypes "github.com/docker/docker/api/types"
+	container "github.com/docker/docker/api/types/container"
+	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/kballard/go-shellquote"
@@ -36,8 +35,9 @@ const (
 // CNBComponentBuilder represents a CNB builder.
 type CNBComponentBuilder struct {
 	baseComponentBuilder
-	versioning    CNBVersioning
-	localCacheDir string
+	versioning     CNBVersioning
+	localCacheDir  string
+	buildContainer containertypes.ContainerCreateCreatedBody
 }
 
 // CNBVersioning contains CNB versioning config.
@@ -51,15 +51,10 @@ type Buildpack struct {
 	Version string `json:"version,omitempty"`
 }
 
-// Build attempts to build the requested component using the CNB Builder.
+// Build attempts to build the requested component using the CNB Builder and tags the resulting container images.
 func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderResult, err error) {
 	if b.component == nil {
 		return res, errors.New("no component was provided for the build")
-	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return res, err
 	}
 
 	env, err := b.cnbEnv(ctx)
@@ -69,7 +64,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 
 	sourceDockerSock, err := filepath.EvalSymlinks("/var/run/docker.sock")
 	if err != nil {
-		return res, err
+		return res, fmt.Errorf("finding docker engine socket: %w", err)
 	}
 
 	mounts := []mount.Mount{{
@@ -80,7 +75,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	if !b.copyOnWriteSemantics {
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
-			Source: cwd,
+			Source: b.contextDir,
 			Target: "/workspace",
 		})
 	}
@@ -93,7 +88,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		})
 	}
 
-	buildContainer, err := b.cli.ContainerCreate(ctx, &container.Config{
+	b.buildContainer, err = b.cli.ContainerCreate(ctx, &containertypes.Config{
 		Image:        CNBBuilderImage,
 		Entrypoint:   []string{"sh", "-c", "sleep infinity"},
 		AttachStdout: true,
@@ -102,33 +97,37 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		Mounts: mounts,
 	}, nil, nil, "")
 	if err != nil {
-		return res, err
+		return res, fmt.Errorf("creating build container: %w", err)
 	}
 
 	start := time.Now()
 	defer func() {
 		res.BuildDuration = time.Since(start)
 		// we use context.Background() so we can remove the container if the original context is cancelled.
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-		err = b.cli.ContainerRemove(ctx, buildContainer.ID, types.ContainerRemoveOptions{
+		_ = b.cli.ContainerRemove(ctx, b.buildContainer.ID, dockertypes.ContainerRemoveOptions{
 			Force: true,
 		})
+		b.buildContainer = containertypes.ContainerCreateCreatedBody{}
 	}()
 
-	if err := b.cli.ContainerStart(ctx, buildContainer.ID, types.ContainerStartOptions{}); err != nil {
-		return res, err
+	if err := b.cli.ContainerStart(ctx, b.buildContainer.ID, dockertypes.ContainerStartOptions{}); err != nil {
+		return res, fmt.Errorf("starting build container: %w", err)
 	}
 
+	lw := b.getLogWriter()
 	if b.copyOnWriteSemantics {
+		template.Render(lw, "{{success checkmark}} mounting app workspace{{nl}}", nil)
 		// Prepare source copy info.
 		srcInfo, err := archive.CopyInfoSourcePath(b.contextDir, true)
 		if err != nil {
-			return res, err
+			return res, fmt.Errorf("preparing app workspace: %w", err)
 		}
 		srcArchive, err := archive.TarResource(srcInfo)
 		if err != nil {
-			return res, fmt.Errorf("preparing build context: %w", err)
+			return res, fmt.Errorf("preparing app workspace: %w", err)
 		}
 		defer srcArchive.Close()
 		dstInfo := archive.CopyInfo{
@@ -137,169 +136,164 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		}
 		archDir, preparedArchive, err := archive.PrepareArchiveCopy(srcArchive, srcInfo, dstInfo)
 		if err != nil {
-			return res, err
+			return res, fmt.Errorf("archiving app workspace: %w", err)
 		}
 		defer preparedArchive.Close()
-		err = b.cli.CopyToContainer(ctx, buildContainer.ID, archDir, preparedArchive, types.CopyToContainerOptions{
+		err = b.cli.CopyToContainer(ctx, b.buildContainer.ID, archDir, preparedArchive, dockertypes.CopyToContainerOptions{
 			AllowOverwriteDirWithFile: false,
 			CopyUIDGID:                false,
 		})
 		if err != nil {
-			return res, err
+			return res, fmt.Errorf("copying app workspace to build container: %w", err)
 		}
 	}
 
+	template.Render(lw, "{{success checkmark}} building{{nl 2}}", nil)
 	err = b.runExec(
 		ctx,
-		buildContainer.ID,
+		b.buildContainer.ID,
 		[]string{"sh", "-c", "/.app_platform/build.sh"},
 		env,
 		b.getLogWriter(),
+		nil,
 	)
 	if err != nil {
 		return res, err
 	}
+	res.Image = b.AppImageOutputName()
 
 	if b.component.GetType() == godo.AppComponentTypeStaticSite {
-		var workspacePathB bytes.Buffer
-		err = b.runExec(
-			ctx,
-			buildContainer.ID,
-			[]string{"sh", "-c", "cat /.app_platform/local/WORKSPACE_PATH"},
-			nil,
-			&workspacePathB,
-		)
-		if err != nil {
-			return res, err
-		}
-		workspacePath := workspacePathB.String()
-		template.Render(b.getLogWriter(), heredoc.Doc(`
-			{{success checkmark}} workspace path
-			{{highlight .}}
-		`,
-		), charm.IndentString(4, workspacePath))
-
-		var assetsPathB bytes.Buffer
-		err = b.runExec(
-			ctx,
-			buildContainer.ID,
-			[]string{"sh", "-c", "cat /.app_platform/local/ASSETS_PATH"},
-			nil,
-			&assetsPathB,
-		)
-		if err != nil {
-			return res, err
-		}
-		assetsPath := assetsPathB.String()
-		template.Render(b.getLogWriter(), heredoc.Doc(`
-			{{success checkmark}} assets path
-			{{highlight .}}
-		`,
-		), charm.IndentString(4, assetsPath))
-
-		err = b.runExec(
-			ctx,
-			buildContainer.ID,
-			[]string{"sh", "-c", `cat << EOF > "/workspace/nginx.conf"
-server {
-	listen 8080;
-	listen [::]:8080;
-
-	resolver 127.0.0.11;
-	autoindex off;
-
-	server_name _;
-	server_tokens off;
-
-	root /www;
-	gzip_static on;
-}
-EOF`,
-			},
-			nil,
-			ioutil.Discard,
-		)
-
-		var nginxConf bytes.Buffer
-		err = b.runExec(
-			ctx,
-			buildContainer.ID,
-			[]string{"sh", "-c", "cat /workspace/nginx.conf"},
-			nil,
-			&nginxConf,
-		)
-		if err != nil {
-			return res, err
-		}
-		template.Render(b.getLogWriter(), heredoc.Doc(`
-			{{success checkmark}} nginxConf
-			{{highlight .}}
-		`,
-		), charm.IndentString(4, nginxConf.String()))
-
-		assetsPath = strings.TrimPrefix(assetsPath, workspacePath)
-		if assetsPath == "" {
-			assetsPath = "."
-		} else {
-			assetsPath = "./" + assetsPath
-		}
-		err = b.runExec(
-			ctx,
-			buildContainer.ID,
-			[]string{"sh", "-c", fmt.Sprintf(`cat << EOF > "/workspace/Dockerfile.static"
-FROM nginx:alpine
-
-COPY %s /www
-RUN rm -f /www/nginx.conf
-
-COPY ./nginx.conf /etc/nginx/conf.d/default.conf
-EOF`, assetsPath),
-			},
-			nil,
-			ioutil.Discard,
-		)
-		if err != nil {
-			return res, err
-		}
-
-		var dockerStatic bytes.Buffer
-		err = b.runExec(
-			ctx,
-			buildContainer.ID,
-			[]string{"sh", "-c", "cat /workspace/Dockerfile.static"},
-			nil,
-			&nginxConf,
-		)
-		if err != nil {
-			return res, err
-		}
-		template.Render(b.getLogWriter(), heredoc.Doc(`
-			{{success checkmark}} dockerSTatic
-			{{highlight .}}
-		`,
-		), charm.IndentString(4, dockerStatic.String()))
-
-		err = b.runExec(
-			ctx,
-			buildContainer.ID,
-			[]string{
-				"sh", "-c",
-				shellquote.Join(
-					"docker", "build",
-					"-t", b.StaticSiteImageOutputName(),
-					"-f", workspacePath+"/Dockerfile.static",
-					workspacePath,
-				),
-			},
-			nil,
-			b.getLogWriter(),
-		)
+		err = b.buildStaticSiteImage(ctx)
 		if err != nil {
 			return res, err
 		}
 	}
 
 	return res, nil
+}
+
+func (b *CNBComponentBuilder) readFileFromContainer(ctx context.Context, path string) (string, error) {
+	var buf bytes.Buffer
+	err := b.runExec(
+		ctx,
+		b.buildContainer.ID,
+		[]string{"cat", path},
+		nil,
+		&buf,
+		nil,
+	)
+	if err != nil {
+		return buf.String(), err
+	}
+	return buf.String(), nil
+}
+
+func (b *CNBComponentBuilder) writeFileToContainer(ctx context.Context, path string, content []byte) error {
+	return b.runExec(
+		ctx,
+		b.buildContainer.ID,
+		[]string{"sh", "-c", "cat >" + shellquote.Join(path)},
+		nil,
+		nil,
+		bytes.NewReader(content),
+	)
+}
+
+func (b *CNBComponentBuilder) buildStaticSiteImage(ctx context.Context) error {
+	lw := b.getLogWriter()
+	workspacePath, err := b.readFileFromContainer(ctx, "/.app_platform/local/WORKSPACE_PATH")
+	// TODO: remove
+	template.Render(b.getLogWriter(), heredoc.Doc(`
+		{{success checkmark}} workspace path
+		{{highlight .}}
+	`,
+	), charm.IndentString(4, workspacePath))
+	if err != nil {
+		return err
+	}
+
+	assetsPath, err := b.readFileFromContainer(ctx, "/.app_platform/local/ASSETS_PATH")
+	if err != nil {
+		return err
+	}
+	// TODO: remove
+	template.Render(lw, heredoc.Doc(`
+		{{success checkmark}} assets path
+		{{highlight .}}
+	`,
+	), charm.IndentString(4, assetsPath))
+
+	assetsPath = strings.TrimPrefix(assetsPath, workspacePath)
+	if assetsPath == "" {
+		assetsPath = "./"
+	} else {
+		assetsPath = "./" + assetsPath + "/"
+	}
+
+	template.Render(lw, `{{success checkmark}} building static site image{{nl 2}}`, nil)
+
+	err = b.writeFileToContainer(ctx, workspacePath+"/nginx.conf", []byte(b.getStaticNginxConfig()))
+	if err != nil {
+		return fmt.Errorf("writing nginx config: %w", err)
+	}
+
+	dockerfile, buildArgs, err := b.staticSiteDockerfile(assetsPath)
+	if err != nil {
+		return err
+	}
+	err = b.writeFileToContainer(ctx, workspacePath+"/Dockerfile.static", dockerfile)
+	if err != nil {
+		return fmt.Errorf("writing static site config: %w", err)
+	}
+
+	// build the static site docker image within the build container
+	dockerBuildCmd := []string{
+		"docker", "build",
+		"-t", b.StaticSiteImageOutputName(),
+		"-f", workspacePath + "/Dockerfile.static",
+	}
+	for k, v := range buildArgs {
+		if v != nil {
+			dockerBuildCmd = append(dockerBuildCmd,
+				"--build-arg", fmt.Sprintf("%s=%s", k, *v),
+			)
+		}
+	}
+	dockerBuildCmd = append(dockerBuildCmd, workspacePath)
+	// TODO: remove
+	template.Buffered(lw, "docker cmd: {{nl}}{{warning .}}{{nl 2}}", dockerBuildCmd)
+	err = b.runExec(
+		ctx,
+		b.buildContainer.ID,
+		[]string{"sh", "-c", shellquote.Join(dockerBuildCmd...)},
+		nil,
+		lw,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (b *CNBComponentBuilder) staticSiteDockerfile(assetsPath string) (dockerfile []byte, buildArgs map[string]*string, err error) {
+	dockerfile = []byte(`
+ARG nginx_image
+ARG assets_path
+FROM ${nginx_image}
+
+COPY ${assets_path} /www
+RUN test -f /www/nginx.conf && rm -f /www/nginx.conf
+
+COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+`)
+
+	buildArgs = map[string]*string{
+		"nginx_image": strPtr(staticSiteNginxImage),
+		"assets_path": &assetsPath,
+	}
+	return
 }
 
 func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {

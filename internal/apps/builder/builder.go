@@ -144,10 +144,14 @@ func (e ContainerExecError) Error() string {
 	return e.Err.Error()
 }
 
-func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, command, env []string, w io.Writer) error {
+func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, command, env []string, output io.Writer, input io.Reader) error {
+	if output == nil {
+		output = io.Discard
+	}
 	execRes, err := b.cli.ContainerExecCreate(ctx, containerID, types.ExecConfig{
 		AttachStderr: true,
 		AttachStdout: true,
+		AttachStdin:  input != nil,
 		Env:          env,
 		Cmd:          command,
 	})
@@ -163,9 +167,15 @@ func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, 
 	defer attachRes.Close()
 	outputDone := make(chan error)
 
+	if input != nil {
+		go func() {
+			io.Copy(attachRes.Conn, input)
+			attachRes.CloseWrite()
+		}()
+	}
 	go func() {
 		// StdCopy demultiplexes the stream into two separate stdout and stderr buffers
-		_, err := stdcopy.StdCopy(w, w, attachRes.Reader)
+		_, err := stdcopy.StdCopy(output, output, attachRes.Reader)
 		outputDone <- err
 	}()
 
@@ -184,9 +194,7 @@ func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, 
 
 	res, err := b.cli.ContainerExecInspect(ctx, execRes.ID)
 	if err != nil {
-		// graceful failure
-		template.Render(w, "{{warning crossmark}} inspecting container: {{warning .}}{{nl}}", err)
-		return nil
+		return fmt.Errorf("inspecting container: %w", err)
 	} else if res.ExitCode > 0 {
 		return ContainerExecError{
 			Err:      fmt.Errorf("command exited with a non-zero status code"),
