@@ -123,7 +123,7 @@ func (b *DockerComponentBuilder) buildStaticSiteImage(ctx context.Context) error
 	}
 	err = os.WriteFile(filepath.Join(tmpDir, "Dockerfile.static"), dockerfile, 0644)
 	if err != nil {
-		return fmt.Errorf("writing nginx config: %w", err)
+		return fmt.Errorf("writing static site config: %w", err)
 	}
 
 	// TODO: pull down staticSiteNginxImage if needed or too old
