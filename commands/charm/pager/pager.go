@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/armon/circbuf"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -23,12 +24,13 @@ type WriterStringer interface {
 }
 
 type Pager struct {
-	title   string
-	bufSize int64
-	buffer  WriterStringer
-	prog    *tea.Program
-	model   *pagerModel
-	exited  bool
+	title        string
+	titleSpinner bool
+	bufSize      int64
+	buffer       WriterStringer
+	prog         *tea.Program
+	model        *pagerModel
+	exited       bool
 }
 
 type Option func(*Pager)
@@ -61,6 +63,12 @@ func WithTitle(title string) Option {
 	}
 }
 
+func WithTitleSpinner(spinner bool) Option {
+	return func(p *Pager) {
+		p.titleSpinner = spinner
+	}
+}
+
 func (p *Pager) Write(b []byte) (int, error) {
 	if p.exited {
 		return os.Stdout.Write(b)
@@ -73,7 +81,7 @@ func (p *Pager) Write(b []byte) (int, error) {
 }
 
 func (p *Pager) Start(ctx context.Context) error {
-	p.model = newPagerModel(ctx, p.buffer, p.title)
+	p.model = newPagerModel(ctx, p.buffer, p.title, p.titleSpinner)
 	prog := tea.NewProgram(
 		p.model,
 		tea.WithAltScreen(),       // use the full size of the terminal in its "alternate screen buffer"
@@ -105,15 +113,25 @@ type pagerModel struct {
 	ready        bool
 	viewport     viewport.Model
 	userCanceled bool
+	spinner      *spinner.Model
 }
 
-func newPagerModel(ctx context.Context, buffer WriterStringer, title string) *pagerModel {
+func newPagerModel(ctx context.Context, buffer WriterStringer, title string, titleSpinner bool) *pagerModel {
 	m := &pagerModel{
 		buffer: buffer,
 		title:  title,
 		start:  time.Now(),
 	}
 	m.ctx, m.cancel = context.WithCancel(ctx)
+
+	if titleSpinner {
+		s := spinner.New(
+			spinner.WithStyle(text.Muted.Lipgloss()),
+			spinner.WithSpinner(spinner.Dot),
+		)
+		m.spinner = &s
+	}
+
 	return m
 }
 
@@ -122,13 +140,19 @@ type msgUpdate struct{}
 type msgTick struct{}
 
 func (m *pagerModel) Init() tea.Cmd {
-	return tea.Batch(
+	cmds := []tea.Cmd{
 		m.timerTick(),
 		func() tea.Msg {
 			<-m.ctx.Done()
 			return msgQuit{}
 		},
-	)
+	}
+
+	if m.spinner != nil {
+		cmds = append(cmds, m.spinner.Tick)
+	}
+
+	return tea.Batch(cmds...)
 }
 
 func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -179,6 +203,10 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.ctx.Err() == nil {
 			cmds = append(cmds, m.timerTick())
 		}
+	case spinner.TickMsg:
+		sp, cmd := m.spinner.Update(msg)
+		m.spinner = &sp
+		cmds = append(cmds, cmd)
 	}
 
 	// Handle keyboard and mouse events in the viewport
@@ -196,6 +224,14 @@ func (m *pagerModel) View() string {
 }
 
 func (m *pagerModel) headerView() string {
+	// title line
+	title := m.title
+	if m.spinner != nil {
+		title = m.spinner.View() + title
+	}
+	title = lipgloss.NewStyle().Padding(1).PaddingBottom(0).Render(title)
+
+	// elapsed time + horizontal divider line
 	elapsed := fmt.Sprintf(
 		"%s%s%s",
 		text.Muted.S("["),
@@ -204,7 +240,7 @@ func (m *pagerModel) headerView() string {
 	)
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(elapsed)))
 	line = text.Muted.S(line)
-	title := lipgloss.NewStyle().Padding(1).PaddingBottom(0).Render(m.title)
+
 	return fmt.Sprintf("%s\n%s%s\n", title, line, elapsed)
 }
 

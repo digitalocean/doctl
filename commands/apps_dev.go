@@ -268,6 +268,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	if Interactive {
 		logPager, err := pager.New(
 			pager.WithTitle(buildingComponentLine),
+			pager.WithTitleSpinner(true),
 		)
 		if err != nil {
 			return fmt.Errorf("creating log pager: %w", err)
