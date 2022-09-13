@@ -35,6 +35,9 @@ var (
 	// errUndeployTooFewArgs is the error returned when neither --all nor args are specified on undeploy
 	errUndeployTooFewArgs = errors.New("either command line arguments or `--all` must be specified")
 
+	// errUndeployTrigPkg is the error returned when both --packages and --triggers are specified on undeploy
+	errUndeployTrigPkg = errors.New("the `--packages` and `--triggers` flags are mutually exclusive")
+
 	// languageKeywords maps the backend's runtime category names to keywords accepted as languages
 	// Note: this table has all languages for which we possess samples.  Only those with currently
 	// active runtimes will display.
@@ -100,11 +103,14 @@ Functions should be listed in `+"`"+`pkgName/fnName`+"`"+` form, or `+"`"+`fnNam
 The `+"`"+`--packages`+"`"+` flag causes arguments without slash separators to be intepreted as packages, in which case
 the entire packages are removed.`, Writer)
 	AddBoolFlag(undeploy, "packages", "p", false, "interpret simple name arguments as packages")
+	AddBoolFlag(undeploy, "triggers", "", false, "interpret all arguments as triggers")
 	AddBoolFlag(undeploy, "all", "", false, "remove all packages and functions")
+	undeploy.Flags().MarkHidden("triggers") // support is experimental at this point
 
 	cmd.AddCommand(Activations())
 	cmd.AddCommand(Functions())
 	cmd.AddCommand(Namespaces())
+	cmd.AddCommand(Triggers())
 	ServerlessExtras(cmd)
 	return cmd
 }
@@ -359,6 +365,7 @@ func showLanguageInfo(c *CmdConfig, APIHost string) error {
 func RunServerlessUndeploy(c *CmdConfig) error {
 	haveArgs := len(c.Args) > 0
 	pkgFlag, _ := c.Doit.GetBool(c.NS, "packages")
+	trigFlag, _ := c.Doit.GetBool(c.NS, "triggers")
 	all, _ := c.Doit.GetBool(c.NS, "all")
 	if haveArgs && all {
 		return errUndeployAllAndArgs
@@ -366,14 +373,28 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	if !haveArgs && !all {
 		return errUndeployTooFewArgs
 	}
+	if pkgFlag && trigFlag {
+		return errUndeployTrigPkg
+	}
+	if all && trigFlag {
+		return cleanTriggers(c)
+	}
 	if all {
 		return cleanNamespace(c)
 	}
 	var lastError error
 	errorCount := 0
+	var ctx context.Context
+	var sls do.ServerlessService
+	if trigFlag {
+		ctx = context.TODO()
+		sls = c.Serverless()
+	}
 	for _, arg := range c.Args {
 		var err error
-		if strings.Contains(arg, "/") || !pkgFlag {
+		if trigFlag {
+			err = sls.DeleteTrigger(ctx, arg)
+		} else if strings.Contains(arg, "/") || !pkgFlag {
 			err = deleteFunction(c, arg)
 		} else {
 			err = deletePackage(c, arg)

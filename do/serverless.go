@@ -174,6 +174,27 @@ type ProjectMetadata struct {
 	UnresolvedVariables []string `json:"unresolvedVariables,omitempty"`
 }
 
+// ServerlessTrigger describes structure the serverless triggers API uses to represent a trigger
+type ServerlessTrigger struct {
+	Name        string      `json:"triggerName,omitempty"`
+	Cron        string      `json:"cronExpression,omitempty"`
+	Interval    int         `json:"interval,omitempty"` // not yet implemeted in scheduler
+	Once        string      `json:"once,omitempty"`     // not yet implemented in scheduler
+	Function    string      `json:"function,omitempty"`
+	Enabled     bool        `json:"isEnabled"`
+	NextRun     string      `json:"nextRunAt,omitempty"`
+	Created     string      `json:"createdAt,omitempty"`
+	LastRun     string      `json:"lastRunAt,omitempty"`
+	RequestBody interface{} `json:"requestBody,omitempty"`
+}
+
+// ServerlessTriggerList is the form returned by the list triggers API
+// TODO we are using the temporary API here.  Subject to change when the permanent
+// API is available.
+type ServerlessTriggerList struct {
+	Items []ServerlessTrigger `json:"items,omitempty"`
+}
+
 // ServerlessService is an interface for interacting with the sandbox plugin,
 // with the namespaces service, and with the serverless cluster controller.
 type ServerlessService interface {
@@ -185,6 +206,11 @@ type ServerlessService interface {
 	GetNamespace(context.Context, string) (ServerlessCredentials, error)
 	CreateNamespace(context.Context, string, string) (ServerlessCredentials, error)
 	DeleteNamespace(context.Context, string) error
+	ListTriggers(context.Context, string) ([]ServerlessTrigger, error)
+	GetTrigger(context.Context, string) (ServerlessTrigger, error)
+	FireTrigger(context.Context, string) error
+	SetTriggerEnablement(context.Context, string, bool) (ServerlessTrigger, error)
+	DeleteTrigger(context.Context, string) error
 	WriteCredentials(ServerlessCredentials) error
 	ReadCredentials() (ServerlessCredentials, error)
 	GetHostInfo(string) (ServerlessHostInfo, error)
@@ -206,6 +232,7 @@ type serverlessService struct {
 	userAgent     string
 	client        *godo.Client
 	owClient      *whisk.Client
+	owClientSys   *whisk.Client // Temporary: allows invoking system actions
 }
 
 const (
@@ -300,9 +327,16 @@ func NewServerlessService(client *godo.Client, usualServerlessDir string, credsT
 }
 
 // InitWhisk is an on-demand initializer for the OpenWhisk client, called when that client
-// is needed.
-func initWhisk(s *serverlessService) error {
-	if s.owClient != nil {
+// is needed.  Temporarily, two clients are supported, the owClientSys is supported in order
+// to invoke the temporary API for triggers.  To be removed when the permanent API is available.
+func initWhisk(s *serverlessService, system bool) error {
+	var client *whisk.Client
+	if system {
+		client = s.owClientSys
+	} else {
+		client = s.owClient
+	}
+	if client != nil {
 		return nil
 	}
 	creds, err := s.ReadCredentials()
@@ -310,12 +344,21 @@ func initWhisk(s *serverlessService) error {
 		return err
 	}
 	credential := creds.Credentials[creds.APIHost][creds.Namespace]
-	config := whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
-	client, err := whisk.NewClient(http.DefaultClient, &config)
+	var config whisk.Config
+	if system {
+		config = whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth, Namespace: "nimbella"}
+	} else {
+		config = whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
+	}
+	client, err = whisk.NewClient(http.DefaultClient, &config)
 	if err != nil {
 		return err
 	}
-	s.owClient = client
+	if system {
+		s.owClientSys = client
+	} else {
+		s.owClient = client
+	}
 	return nil
 }
 
@@ -635,7 +678,7 @@ func (s *serverlessService) GetHostInfo(APIHost string) (ServerlessHostInfo, err
 
 // GetFunction returns the metadata and optionally the code of a deployer function
 func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Action, []FunctionParameter, error) {
-	err := initWhisk(s)
+	err := initWhisk(s, false)
 	if err != nil {
 		return whisk.Action{}, []FunctionParameter{}, err
 	}
@@ -662,7 +705,7 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 // InvokeFunction invokes a function via POST with authentication
 func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (map[string]interface{}, error) {
 	var empty map[string]interface{}
-	err := initWhisk(s)
+	err := initWhisk(s, false)
 	if err != nil {
 		return empty, err
 	}
@@ -717,7 +760,7 @@ func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]
 
 // GetConnectedAPIHost retrieves the API host to which the service is currently connected
 func (s *serverlessService) GetConnectedAPIHost() (string, error) {
-	err := initWhisk(s)
+	err := initWhisk(s, false)
 	if err != nil {
 		return "", err
 	}
@@ -743,6 +786,137 @@ func (s *serverlessService) ReadProject(project *ServerlessProject, args []strin
 func (s *serverlessService) WriteProject(project ServerlessProject) (string, error) {
 	// TODO
 	return "", nil
+}
+
+// ListTriggers lists the triggers in the connected namespace.  If 'fcn' is a non-empty
+// string it is assumed to be the package-qualified name of a function and only the triggers
+// of that function are listed.  If 'fcn' is empty all triggers are listed.
+func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]ServerlessTrigger, error) {
+	empty := []ServerlessTrigger{}
+	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
+	initWhisk(s, true)
+	var params interface{}
+	if fcn != "" {
+		params = map[string]interface{}{"function": fcn}
+	}
+	_, resp, err := s.owClientSys.Actions.Invoke("triggers/list", params, true, true)
+	if err != nil {
+		return empty, err
+	}
+	// The generic JSON parsing done by the OW client library is not useful so it's been
+	// ignored.  Instead, we parse the raw body with ServerlessTriggerList
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return empty, err
+	}
+	parsedResponse := ServerlessTriggerList{}
+	err = json.Unmarshal(body, &parsedResponse)
+	if err != nil {
+		return empty, err
+	}
+	items := parsedResponse.Items
+	// Omit seconds from the cron expression (if present: perhaps this should already have been done
+	// by the API).
+	for i, item := range items {
+		item.Cron = fixupCron(item.Cron)
+		items[i] = item
+	}
+	return items, nil
+}
+
+// GetTrigger gets the contents of a trigger for display
+func (s *serverlessService) GetTrigger(ctx context.Context, name string) (ServerlessTrigger, error) {
+	empty := ServerlessTrigger{}
+	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
+	initWhisk(s, true)
+	params := map[string]interface{}{
+		"triggerName": name,
+	}
+	_, resp, err := s.owClientSys.Actions.Invoke("triggers/get", params, true, true)
+	if err != nil {
+		return empty, err
+	}
+	// The generic JSON parsing done by the OW client library is not useful so it's been
+	// ignored.  Instead, we parse the raw body with ServerlessTrigger
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return empty, err
+	}
+	contents := ServerlessTrigger{}
+	err = json.Unmarshal(body, &contents)
+	if err != nil {
+		return empty, err
+	}
+	// Omit seconds from the cron expression (if present: perhaps this should already have been done
+	// by the API).
+	contents.Cron = fixupCron(contents.Cron)
+	return contents, nil
+}
+
+// FireTrigger fires a trigger
+func (s *serverlessService) FireTrigger(ctx context.Context, name string) error {
+	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
+	initWhisk(s, true)
+	params := map[string]interface{}{
+		"triggerName": name,
+	}
+	_, _, err := s.owClientSys.Actions.Invoke("triggers/fire", params, true, true)
+	return err
+}
+
+// SetTriggerEnablement sets the isEnabled property of a trigger
+func (s *serverlessService) SetTriggerEnablement(ctx context.Context, name string, enabled bool) (ServerlessTrigger, error) {
+	empty := ServerlessTrigger{}
+	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
+	initWhisk(s, true)
+	params := map[string]interface{}{
+		"triggerName": name,
+		"enabled":     enabled,
+	}
+	_, resp, err := s.owClientSys.Actions.Invoke("triggers/enablement", params, true, true)
+	if err != nil {
+		return empty, err
+	}
+	// The generic JSON parsing done by the OW client library is not useful so it's been
+	// ignored.  Instead, we parse the raw body with ServerlessTrigger
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return empty, err
+	}
+	contents := ServerlessTrigger{}
+	err = json.Unmarshal(body, &contents)
+	if err != nil {
+		return empty, err
+	}
+	// Omit seconds from the cron expression (if present: perhaps this should already have been done
+	// by the API).
+	contents.Cron = fixupCron(contents.Cron)
+	return contents, nil
+
+}
+
+// SetTriggerEnablement sets the isEnabled property of a trigger
+func (s *serverlessService) DeleteTrigger(ctx context.Context, name string) error {
+	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
+	initWhisk(s, true)
+	params := map[string]interface{}{
+		"triggerName": name,
+	}
+	_, _, err := s.owClientSys.Actions.Invoke("triggers/delete", params, true, true)
+	return err
+}
+
+// fixupCron detects the optional seconds field and removes it
+
+func fixupCron(cron string) string {
+	parts := strings.Split(cron, " ")
+	if len(parts) == 6 {
+		return strings.Join(parts[1:], " ")
+	}
+	return cron
 }
 
 func readTopLevel(project *ServerlessProject) error {
