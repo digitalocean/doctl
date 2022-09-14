@@ -115,7 +115,7 @@ func (i *Input) Prompt() (string, error) {
 	if err != nil {
 		if errors.Is(err, promptkit.ErrAborted) {
 			template.Print(`
-			{{- error promptPrefix }} {{ bold . }} {{ error "cancelled" }}{{nl -}}
+			{{- error promptPrefix }} {{ bold . }} {{ error "canceled" }}{{nl -}}
 		`, i.text)
 		}
 		return "", err
