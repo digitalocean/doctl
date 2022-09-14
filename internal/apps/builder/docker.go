@@ -14,7 +14,7 @@ import (
 
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
-	"github.com/docker/docker/api/types"
+	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 )
 
@@ -38,7 +38,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	lw := b.getLogWriter()
 	if b.buildCommandOverride != "" {
 		template.Render(lw,
-			`{{warning (print crossmark " build command overrides are ignored for Dockerfile based builds")}}{{nl}}`,
+			`{{warning (print crossmark " build command overrides are ignored for dockerfile-based builds")}}{{nl}}`,
 			b.buildCommandOverride,
 		)
 	}
@@ -63,7 +63,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	}
 
 	res := ComponentBuilderResult{}
-	dockerRes, err := b.cli.ImageBuild(ctx, tar, types.ImageBuildOptions{
+	dockerRes, err := b.cli.ImageBuild(ctx, tar, dockertypes.ImageBuildOptions{
 		Dockerfile: b.component.GetDockerfilePath(),
 		Tags: []string{
 			b.AppImageOutputName(),
@@ -132,7 +132,7 @@ func (b *DockerComponentBuilder) buildStaticSiteImage(ctx context.Context) error
 	if err != nil {
 		return fmt.Errorf("preparing build context: %w", err)
 	}
-	res, err := b.cli.ImageBuild(ctx, tar, types.ImageBuildOptions{
+	res, err := b.cli.ImageBuild(ctx, tar, dockertypes.ImageBuildOptions{
 		Dockerfile: "./Dockerfile.static",
 		Tags:       []string{b.StaticSiteImageOutputName()},
 		BuildArgs:  buildArgs,

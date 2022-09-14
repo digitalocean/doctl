@@ -16,7 +16,6 @@ import (
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
 	dockertypes "github.com/docker/docker/api/types"
-	container "github.com/docker/docker/api/types/container"
 	containertypes "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/pkg/archive"
@@ -93,7 +92,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		Entrypoint:   []string{"sh", "-c", "sleep infinity"},
 		AttachStdout: true,
 		AttachStderr: true,
-	}, &container.HostConfig{
+	}, &containertypes.HostConfig{
 		Mounts: mounts,
 	}, nil, nil, "")
 	if err != nil {
@@ -201,13 +200,8 @@ func (b *CNBComponentBuilder) writeFileToContainer(ctx context.Context, path str
 
 func (b *CNBComponentBuilder) buildStaticSiteImage(ctx context.Context) error {
 	lw := b.getLogWriter()
+
 	workspacePath, err := b.readFileFromContainer(ctx, "/.app_platform/local/WORKSPACE_PATH")
-	// TODO: remove
-	template.Render(b.getLogWriter(), heredoc.Doc(`
-		{{success checkmark}} workspace path
-		{{highlight .}}
-	`,
-	), charm.IndentString(4, workspacePath))
 	if err != nil {
 		return err
 	}
@@ -216,15 +210,8 @@ func (b *CNBComponentBuilder) buildStaticSiteImage(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// TODO: remove
-	template.Render(lw, heredoc.Doc(`
-		{{success checkmark}} assets path
-		{{highlight .}}
-	`,
-	), charm.IndentString(4, assetsPath))
-
-	assetsPath = strings.TrimPrefix(assetsPath, workspacePath)
-	if assetsPath == "" {
+	assetsPath, err = filepath.Rel(workspacePath, assetsPath)
+	if assetsPath == "." {
 		assetsPath = "./"
 	} else {
 		assetsPath = "./" + assetsPath + "/"
@@ -252,16 +239,9 @@ func (b *CNBComponentBuilder) buildStaticSiteImage(ctx context.Context) error {
 		"-t", b.StaticSiteImageOutputName(),
 		"-f", workspacePath + "/Dockerfile.static",
 	}
-	for k, v := range buildArgs {
-		if v != nil {
-			dockerBuildCmd = append(dockerBuildCmd,
-				"--build-arg", fmt.Sprintf("%s=%s", k, *v),
-			)
-		}
-	}
+	dockerBuildCmd = append(dockerBuildCmd, buildArgsToCmd(buildArgs)...)
 	dockerBuildCmd = append(dockerBuildCmd, workspacePath)
-	// TODO: remove
-	template.Buffered(lw, "docker cmd: {{nl}}{{warning .}}{{nl 2}}", dockerBuildCmd)
+
 	err = b.runExec(
 		ctx,
 		b.buildContainer.ID,
@@ -352,4 +332,22 @@ func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
 	sort.Strings(envs)
 
 	return envs, nil
+}
+
+func buildArgsToCmd(buildArgs map[string]*string) []string {
+	var (
+		cmd  []string
+		keys = make([]string, 0, len(buildArgs))
+	)
+	for k, v := range buildArgs {
+		if v != nil {
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		cmd = append(cmd, "--build-arg", k+"="+(*buildArgs[k]))
+	}
+	return cmd
 }
