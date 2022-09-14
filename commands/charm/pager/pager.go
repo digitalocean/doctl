@@ -169,11 +169,15 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if k := msg.String(); k == "ctrl+c" {
 			template.Buffered(
 				m.buffer,
-				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling")}}{{nl}}`,
+				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling. hit ctrl-c again to force exit.")}}{{nl}}`,
 				nil,
 			)
 			m.userCanceled = true
 			m.cancel()
+
+			// we don't need to do anything special to handle the second ctrl-c. the pager exits fairly quickly and once
+			// that's complete nothing will be intercepting interrupt syscalls and so the second ctrl-c will go directly to
+			// the go runtime.
 			return m, nil
 		}
 
