@@ -110,7 +110,7 @@ func TestDockerComponentBuild(t *testing.T) {
 		_, err := builder.Build(ctx)
 		require.NoError(t, err)
 
-		assert.Contains(t, logBuf.String(), text.Crossmark.String()+" build command overrides are ignored for Dockerfile based builds")
+		assert.Contains(t, logBuf.String(), text.Crossmark.String()+" build command overrides are ignored for dockerfile-based builds")
 	})
 
 	t.Run("static site - missing output dir", func(t *testing.T) {

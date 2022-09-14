@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/digitalocean/doctl/commands/charm"
@@ -167,8 +168,11 @@ func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, 
 	defer attachRes.Close()
 	outputDone := make(chan error)
 
+	var wg sync.WaitGroup
 	if input != nil {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			io.Copy(attachRes.Conn, input)
 			attachRes.CloseWrite()
 		}()
@@ -187,6 +191,8 @@ func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, 
 	if err != nil {
 		return err
 	}
+
+	wg.Wait()
 
 	// the exec process completed. check its exit code and return an error if it failed.
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
