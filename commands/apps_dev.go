@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
 
@@ -238,7 +239,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// 		return err
 	// 	}
 	// 	if choice != confirm.Yes {
-	// 		return fmt.Errorf("cancelled")
+	// 		return fmt.Errorf("canceled")
 	// 	}
 	// }
 
@@ -275,8 +276,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 		wg.Add(1)
 		go func() {
-			defer cancel()
 			defer wg.Done()
+			defer cancel()
 			err := logPager.Start(ctx)
 			if err != nil {
 				if errors.Is(err, charm.ErrCanceled) {
@@ -289,6 +290,27 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		logWriter = logPager
 	} else {
 		logWriter = os.Stdout
+		// In interactive mode, the pager handles ctrl-c. Here, we handle it manually instead.
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		go func() {
+			for range c {
+				if userCanceled {
+					template.Print(
+						`{{nl}}{{error (print crossmark " forcing unclean exit")}}{{nl}}`,
+						nil,
+					)
+					os.Exit(1)
+				}
+
+				cancel()
+				userCanceled = true
+				template.Print(
+					`{{nl}}{{error (print crossmark " got ctrl-c, cancelling. hit ctrl-c again to force exit.")}}{{nl}}`,
+					nil,
+				)
+			}
+		}()
 	}
 
 	var res builder.ComponentBuilderResult
@@ -311,14 +333,14 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		res, err = builder.Build(ctx)
 		if err != nil {
 			_, isSnap := os.LookupEnv("SNAP")
-			if errors.Is(err, fs.ErrPermission) && isSnap {
+			if isSnap && errors.Is(err, fs.ErrPermission) {
 				template.Buffered(
 					textbox.New().Warning().WithOutput(logWriter),
 					`Using the doctl Snap? Grant doctl access to Docker by running {{highlight "sudo snap connect doctl:app-dev-build docker:docker-daemon"}}`,
 					nil,
 				)
-				return err
 			}
+
 			return err
 		}
 		return nil
@@ -327,6 +349,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	wg.Wait()
 
 	if err != nil {
+		if errors.Is(err, context.Canceled) && userCanceled {
+			return fmt.Errorf("canceled")
+		}
+
 		return err
 	} else if userCanceled {
 		return fmt.Errorf("canceled")
