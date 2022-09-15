@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/armon/circbuf"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/commands/charm/text"
 )
 
 type WriterStringer interface {
@@ -21,11 +24,13 @@ type WriterStringer interface {
 }
 
 type Pager struct {
-	title   string
-	bufSize int64
-	buffer  WriterStringer
-	prog    *tea.Program
-	model   *pagerModel
+	title        string
+	titleSpinner bool
+	bufSize      int64
+	buffer       WriterStringer
+	prog         *tea.Program
+	model        *pagerModel
+	exited       bool
 }
 
 type Option func(*Pager)
@@ -58,7 +63,16 @@ func WithTitle(title string) Option {
 	}
 }
 
+func WithTitleSpinner(spinner bool) Option {
+	return func(p *Pager) {
+		p.titleSpinner = spinner
+	}
+}
+
 func (p *Pager) Write(b []byte) (int, error) {
+	if p.exited {
+		return os.Stdout.Write(b)
+	}
 	n, err := p.buffer.Write(b)
 	if p.prog != nil {
 		p.prog.Send(msgUpdate{})
@@ -67,7 +81,7 @@ func (p *Pager) Write(b []byte) (int, error) {
 }
 
 func (p *Pager) Start(ctx context.Context) error {
-	p.model = newPagerModel(ctx, p.buffer, p.title)
+	p.model = newPagerModel(ctx, p.buffer, p.title, p.titleSpinner)
 	prog := tea.NewProgram(
 		p.model,
 		tea.WithAltScreen(),       // use the full size of the terminal in its "alternate screen buffer"
@@ -76,29 +90,48 @@ func (p *Pager) Start(ctx context.Context) error {
 	p.prog = prog
 
 	err := prog.Start()
-	content := p.buffer.String()
-	fmt.Fprintln(charm.Indent(4), content)
-	return err
+	p.exited = true
+	p.prog = nil
+
+	fmt.Fprint(charm.Indent(4), p.buffer.String())
+	if err != nil {
+		return err
+	} else if p.model.userCanceled {
+		return charm.ErrCanceled
+	}
+
+	return nil
 }
 
 type pagerModel struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	start    time.Time
-	title    string
-	buffer   WriterStringer
-	ready    bool
-	viewport viewport.Model
+	start        time.Time
+	title        string
+	buffer       WriterStringer
+	ready        bool
+	viewport     viewport.Model
+	userCanceled bool
+	spinner      *spinner.Model
 }
 
-func newPagerModel(ctx context.Context, buffer WriterStringer, title string) *pagerModel {
+func newPagerModel(ctx context.Context, buffer WriterStringer, title string, titleSpinner bool) *pagerModel {
 	m := &pagerModel{
 		buffer: buffer,
 		title:  title,
 		start:  time.Now(),
 	}
 	m.ctx, m.cancel = context.WithCancel(ctx)
+
+	if titleSpinner {
+		s := spinner.New(
+			spinner.WithStyle(text.Muted.Lipgloss()),
+			spinner.WithSpinner(spinner.Dot),
+		)
+		m.spinner = &s
+	}
+
 	return m
 }
 
@@ -107,13 +140,19 @@ type msgUpdate struct{}
 type msgTick struct{}
 
 func (m *pagerModel) Init() tea.Cmd {
-	return tea.Batch(
+	cmds := []tea.Cmd{
 		m.timerTick(),
 		func() tea.Msg {
 			<-m.ctx.Done()
 			return msgQuit{}
 		},
-	)
+	}
+
+	if m.spinner != nil {
+		cmds = append(cmds, m.spinner.Tick)
+	}
+
+	return tea.Batch(cmds...)
 }
 
 func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -130,9 +169,10 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if k := msg.String(); k == "ctrl+c" {
 			template.Buffered(
 				m.buffer,
-				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling build")}}{{nl}}`,
+				`{{nl}}{{error (print crossmark " got ctrl-c, cancelling")}}{{nl}}`,
 				nil,
 			)
+			m.userCanceled = true
 			m.cancel()
 			return m, nil
 		}
@@ -163,6 +203,10 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.ctx.Err() == nil {
 			cmds = append(cmds, m.timerTick())
 		}
+	case spinner.TickMsg:
+		sp, cmd := m.spinner.Update(msg)
+		m.spinner = &sp
+		cmds = append(cmds, cmd)
 	}
 
 	// Handle keyboard and mouse events in the viewport
@@ -174,39 +218,40 @@ func (m *pagerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *pagerModel) View() string {
 	if !m.ready {
-		return "\n  Loading..."
+		return "\n  loading..."
 	}
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
+	return fmt.Sprintf("%s\n%s%s", m.headerView(), m.viewport.View(), m.footerView())
 }
 
 func (m *pagerModel) headerView() string {
-	title := m.titleStyle().Render(m.title)
-	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(title)))
-	line = lipgloss.NewStyle().Foreground(lipgloss.Color("#9B9B9B")).Render(line)
-	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
+	// title line
+	title := m.title
+	if m.spinner != nil {
+		title = m.spinner.View() + title
+	}
+	title = lipgloss.NewStyle().Padding(1).PaddingBottom(0).Render(title)
+
+	// elapsed time + horizontal divider line
+	elapsed := fmt.Sprintf(
+		"%s%s%s",
+		text.Muted.S("["),
+		time.Since(m.start).Truncate(time.Second),
+		text.Muted.S("]─"),
+	)
+	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(elapsed)))
+	line = text.Muted.S(line)
+
+	return fmt.Sprintf("%s\n%s%s\n", title, line, elapsed)
 }
 
 func (m *pagerModel) footerView() string {
-	info := m.infoStyle().Render(time.Since(m.start).Truncate(time.Second).String())
+	if m.viewport.AtBottom() {
+		return ""
+	}
+
+	info := "┤ scroll down for new logs "
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
-	line = lipgloss.NewStyle().Foreground(lipgloss.Color("#9B9B9B")).Render(line)
-	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
-}
-
-func (m *pagerModel) titleStyle() lipgloss.Style {
-	b := lipgloss.RoundedBorder()
-	b.Right = "├"
-	return lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#dddddd")).
-		BorderStyle(b).
-		BorderForeground(lipgloss.Color("#9B9B9B")).
-		Padding(0, 1)
-}
-
-func (m *pagerModel) infoStyle() lipgloss.Style {
-	b := lipgloss.RoundedBorder()
-	b.Left = "┤"
-	return m.titleStyle().Copy().BorderStyle(b).Foreground(lipgloss.Color("#dddddd"))
+	return "\n" + text.Highlight.S(line+info)
 }
 
 func max(a, b int) int {
