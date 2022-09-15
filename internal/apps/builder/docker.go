@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/digitalocean/doctl/commands/charm/template"
@@ -31,8 +32,15 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		return ComponentBuilderResult{}, errors.New("no component was provided for the build")
 	}
 
-	if c, ok := b.component.(*godo.AppStaticSiteSpec); ok && c.GetOutputDir() == "" {
-		return ComponentBuilderResult{}, errors.New("output_dir is required for dockerfile-based static site builds")
+	if c, ok := b.component.(*godo.AppStaticSiteSpec); ok {
+		outputDir := filepath.Clean(c.GetOutputDir())
+		if outputDir == "" || outputDir == "." {
+			return ComponentBuilderResult{}, errors.New("output_dir is required for dockerfile-based static site builds")
+		} else if outputDir == "/" {
+			return ComponentBuilderResult{}, errors.New("output_dir may not be /")
+		} else if !strings.HasPrefix(outputDir, "/") {
+			return ComponentBuilderResult{}, errors.New("output_dir must be an absolute path with dockerfile-based static site builds")
+		}
 	}
 
 	lw := b.getLogWriter()

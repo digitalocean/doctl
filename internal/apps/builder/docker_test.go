@@ -19,6 +19,67 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestDockerComponentBuild_validation(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("static site - missing output dir", func(t *testing.T) {
+		spec := &godo.AppSpec{
+			StaticSites: []*godo.AppStaticSiteSpec{{
+				DockerfilePath: "./Dockerfile",
+				SourceDir:      "./subdir",
+				Name:           "web",
+			}},
+		}
+		builder := &DockerComponentBuilder{
+			baseComponentBuilder: baseComponentBuilder{
+				spec:       spec,
+				component:  spec.StaticSites[0],
+				contextDir: t.TempDir(),
+			},
+		}
+		_, err := builder.Build(ctx)
+		require.EqualError(t, err, "output_dir is required for dockerfile-based static site builds")
+	})
+
+	t.Run("static site - output dir not absolute", func(t *testing.T) {
+		spec := &godo.AppSpec{
+			StaticSites: []*godo.AppStaticSiteSpec{{
+				Name:           "web",
+				DockerfilePath: "./Dockerfile",
+				OutputDir:      "test",
+			}},
+		}
+		builder := &DockerComponentBuilder{
+			baseComponentBuilder: baseComponentBuilder{
+				spec:       spec,
+				component:  spec.StaticSites[0],
+				contextDir: t.TempDir(),
+			},
+		}
+		_, err := builder.Build(ctx)
+		require.EqualError(t, err, "output_dir must be an absolute path with dockerfile-based static site builds")
+	})
+
+	t.Run("static site - output dir is /", func(t *testing.T) {
+		spec := &godo.AppSpec{
+			StaticSites: []*godo.AppStaticSiteSpec{{
+				Name:           "web",
+				DockerfilePath: "./Dockerfile",
+				OutputDir:      "/",
+			}},
+		}
+		builder := &DockerComponentBuilder{
+			baseComponentBuilder: baseComponentBuilder{
+				spec:       spec,
+				component:  spec.StaticSites[0],
+				contextDir: t.TempDir(),
+			},
+		}
+		_, err := builder.Build(ctx)
+		require.EqualError(t, err, "output_dir may not be /")
+	})
+}
+
 func TestDockerComponentBuild(t *testing.T) {
 	ctx := context.Background()
 	ctrl := gomock.NewController(t)
@@ -111,27 +172,6 @@ func TestDockerComponentBuild(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, logBuf.String(), text.Crossmark.String()+" build command overrides are ignored for dockerfile-based builds")
-	})
-
-	t.Run("static site - missing output dir", func(t *testing.T) {
-		site := &godo.AppStaticSiteSpec{
-			DockerfilePath: "./Dockerfile",
-			SourceDir:      "./subdir",
-			Name:           "web",
-		}
-		spec := &godo.AppSpec{
-			StaticSites: []*godo.AppStaticSiteSpec{site},
-		}
-
-		builder := &DockerComponentBuilder{
-			baseComponentBuilder: baseComponentBuilder{
-				spec:       spec,
-				component:  site,
-				contextDir: t.TempDir(),
-			},
-		}
-		_, err := builder.Build(ctx)
-		require.EqualError(t, err, "output_dir is required for dockerfile-based static site builds")
 	})
 
 	t.Run("happy path - static site", func(t *testing.T) {
