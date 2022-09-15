@@ -120,9 +120,9 @@ func TestTriggersList(t *testing.T) {
 				"no-header": "",
 			},
 			listResult: theList,
-			expectedOutput: `fireGC       * * * * *     misc/garbageCollect    true
-firePoll1    5 * * * *     misc/pollStatus        true
-firePoll2    10 * * * *    misc/pollStatus        false
+			expectedOutput: `fireGC       * * * * *     misc/garbageCollect    true     
+firePoll1    5 * * * *     misc/pollStatus        true     
+firePoll2    10 * * * *    misc/pollStatus        false    
 `,
 		},
 		{
@@ -133,8 +133,8 @@ firePoll2    10 * * * *    misc/pollStatus        false
 			},
 			listArg:    "misc/pollStatus",
 			listResult: theList[1:],
-			expectedOutput: `firePoll1    5 * * * *     misc/pollStatus    true
-firePoll2    10 * * * *    misc/pollStatus    false
+			expectedOutput: `firePoll1    5 * * * *     misc/pollStatus    true     
+firePoll2    10 * * * *    misc/pollStatus    false    
 `,
 		},
 	}

@@ -15,6 +15,7 @@ package displayers
 
 import (
 	"io"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 )
@@ -33,7 +34,7 @@ func (i *Triggers) JSON(out io.Writer) error {
 
 // Cols is the displayer Cols method specialized for triggers list
 func (i *Triggers) Cols() []string {
-	return []string{"Name", "Cron", "Function", "Enabled"}
+	return []string{"Name", "Cron", "Function", "Enabled", "LastRun"}
 }
 
 // ColMap is the displayer ColMap method specialized for triggers list
@@ -43,6 +44,7 @@ func (i *Triggers) ColMap() map[string]string {
 		"Cron":     "Cron Expression",
 		"Function": "Invokes",
 		"Enabled":  "Enabled",
+		"LastRun":  "Last Run At",
 	}
 }
 
@@ -50,11 +52,17 @@ func (i *Triggers) ColMap() map[string]string {
 func (i *Triggers) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(i.List))
 	for _, ii := range i.List {
+		lastRunTime, err := time.Parse(time.RFC3339, ii.LastRun)
+		var lastRun string
+		if err == nil {
+			lastRun = lastRunTime.Local().Format("01/02 03:04:05")
+		}
 		x := map[string]interface{}{
 			"Name":     ii.Name,
 			"Cron":     ii.Cron,
 			"Function": ii.Function,
 			"Enabled":  ii.Enabled,
+			"LastRun":  lastRun,
 		}
 		out = append(out, x)
 	}
