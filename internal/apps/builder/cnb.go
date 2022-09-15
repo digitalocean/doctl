@@ -31,6 +31,8 @@ const (
 	cnbCacheDir        = "/cnb/cache"
 )
 
+var dockerSocketPath = "/var/run/docker.sock"
+
 // CNBComponentBuilder represents a CNB builder.
 type CNBComponentBuilder struct {
 	baseComponentBuilder
@@ -61,7 +63,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		return res, fmt.Errorf("configuring environment variables: %w", err)
 	}
 
-	sourceDockerSock, err := filepath.EvalSymlinks("/var/run/docker.sock")
+	sourceDockerSock, err := filepath.EvalSymlinks(dockerSocketPath)
 	if err != nil {
 		return res, fmt.Errorf("finding docker engine socket: %w", err)
 	}
@@ -69,7 +71,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	mounts := []mount.Mount{{
 		Type:   mount.TypeBind,
 		Source: sourceDockerSock,
-		Target: "/var/run/docker.sock",
+		Target: dockerSocketPath,
 	}}
 	if !b.copyOnWriteSemantics {
 		mounts = append(mounts, mount.Mount{

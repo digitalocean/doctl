@@ -24,6 +24,8 @@ import (
 
 func TestCNBComponentBuild(t *testing.T) {
 	ctx := context.Background()
+	dockerSocketPath = filepath.Join(t.TempDir(), "docker.sock")
+	require.NoError(t, ioutil.WriteFile(dockerSocketPath, nil, 0644))
 
 	t.Run("no component", func(t *testing.T) {
 		builder := &CNBComponentBuilder{}
