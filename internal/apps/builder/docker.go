@@ -9,6 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -33,7 +34,9 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	}
 
 	if c, ok := b.component.(*godo.AppStaticSiteSpec); ok {
-		outputDir := filepath.Clean(c.GetOutputDir())
+		// NOTE(knasser): we use `path` instead of `filepath` because we want forward slash '/' separated path handling
+		// even on windows as the output_dir will be evaluated within the build container which is always linux-based.
+		outputDir := path.Clean(c.GetOutputDir())
 		if outputDir == "" || outputDir == "." {
 			return ComponentBuilderResult{}, errors.New("output_dir is required for dockerfile-based static site builds")
 		} else if outputDir == "/" {
