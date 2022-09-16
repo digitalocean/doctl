@@ -31,8 +31,8 @@ func Triggers() *Command {
 			Use:   "triggers",
 			Short: "Manage triggers associated with your functions",
 			Long: `When Functions are deployed by ` + "`" + `doctl serverless deploy` + "`" + `, they may have associated triggers.
-The subcommands of ` + "`" + `doctl serverless triggers` + "`" + ` are used to list, inspect, test-fire, enable,
-or disable triggers.  Each trigger has an event source type, and invokes its associated function
+The subcommands of ` + "`" + `doctl serverless triggers` + "`" + ` are used to list and inspect
+triggers.  Each trigger has an event source type, and invokes its associated function
 when events from that source type occur.  Currently, only the ` + "`" + `scheduler` + "`" + ` event source type is supported.`,
 			Aliases: []string{"trig"},
 			Hidden:  true, // trigger support is experimental and currently using a temporary prototype API
@@ -49,17 +49,17 @@ when events from that source type occur.  Currently, only the ` + "`" + `schedul
 
 	CmdBuilder(cmd, RunTriggersEnable, "enable <triggerName>", "Enable a trigger",
 		`Use `+"`"+`doctl serverless triggers enable <triggerName>`+"`"+` to enable the trigger <triggerName>.`,
-		Writer)
+		Writer, hiddenCmd())
 
 	CmdBuilder(cmd, RunTriggersDisable, "disable <triggerName>", "Disable a trigger",
 		`Use `+"`"+`doctl serverless triggers disable <triggerName>`+"`"+` to disable the trigger <triggerName>.
 When a trigger is disable it does not invoke its target function`,
-		Writer)
+		Writer, hiddenCmd())
 
 	CmdBuilder(cmd, RunTriggersFire, "fire <triggerName>", "Test-fire a trigger",
 		`Use `+"`"+`doctl serverless triggers fire <triggerName>`+"`"+` to invoke the function associated with a trigger using
 the same method and parameters that an event occurence would use`,
-		Writer)
+		Writer, hiddenCmd())
 
 	return cmd
 }
@@ -96,6 +96,8 @@ func RunTriggersGet(c *CmdConfig) error {
 }
 
 // RunTriggersEnable provides the logic for 'doctl sls trig enable'
+// This command is hidden.  It will work (if you know about it) when using the prototype API
+// but will not be supported in the real API at first.
 func RunTriggersEnable(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
@@ -112,6 +114,8 @@ func RunTriggersEnable(c *CmdConfig) error {
 }
 
 // RunTriggersDisable provides the logic for 'doctl sls trig disable'
+// This command is hidden.  It will work (if you know about it) when using the prototype API
+// but will not be supported in the real API at first.
 func RunTriggersDisable(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
@@ -128,6 +132,8 @@ func RunTriggersDisable(c *CmdConfig) error {
 }
 
 // RunTriggersFire provides the logic for 'doctl sls trig fire'
+// This command is hidden.  It will work (if you know about it) when using the prototype API
+// but will not be supported in the real API at first.
 func RunTriggersFire(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
