@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -63,9 +64,16 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		return res, fmt.Errorf("configuring environment variables: %w", err)
 	}
 
-	sourceDockerSock, err := filepath.EvalSymlinks(dockerSocketPath)
-	if err != nil {
-		return res, fmt.Errorf("finding docker engine socket: %w", err)
+	var sourceDockerSock string
+	switch runtime.GOOS {
+	case "darwin":
+		// mac docker-for-desktop includes the raw socket in the VM
+		sourceDockerSock = "/var/run/docker.sock.raw"
+	default:
+		sourceDockerSock, err = filepath.EvalSymlinks(dockerSocketPath)
+		if err != nil {
+			return res, fmt.Errorf("finding docker engine socket: %w", err)
+		}
 	}
 
 	mounts := []mount.Mount{{
