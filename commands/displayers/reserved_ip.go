@@ -32,13 +32,13 @@ func (rip *ReservedIP) JSON(out io.Writer) error {
 
 func (rip *ReservedIP) Cols() []string {
 	return []string{
-		"IP", "Region", "DropletID", "DropletName",
+		"IP", "Region", "DropletID", "DropletName", "ProjectID",
 	}
 }
 
 func (rip *ReservedIP) ColMap() map[string]string {
 	return map[string]string{
-		"IP": "IP", "Region": "Region", "DropletID": "Droplet ID", "DropletName": "Droplet Name",
+		"IP": "IP", "Region": "Region", "DropletID": "Droplet ID", "DropletName": "Droplet Name", "ProjectID": "Project ID",
 	}
 }
 
@@ -55,6 +55,7 @@ func (rip *ReservedIP) KV() []map[string]interface{} {
 		o := map[string]interface{}{
 			"IP": f.IP, "Region": f.Region.Slug,
 			"DropletID": dropletID, "DropletName": dropletName,
+			"ProjectID": f.ProjectID,
 		}
 
 		out = append(out, o)
