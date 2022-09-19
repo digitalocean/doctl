@@ -25,7 +25,7 @@ import (
 
 const (
 	// CNBBuilderImage represents the local cnb builder.
-	CNBBuilderImage = "digitaloceanapps/cnb-local-builder:v0.49.0"
+	CNBBuilderImage = "digitaloceanapps/cnb-local-builder:v0.50.2"
 
 	appVarAllowListKey = "APP_VARS"
 	appVarPrefix       = "APP_VAR_"
