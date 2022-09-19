@@ -1,6 +1,6 @@
 module github.com/digitalocean/doctl
 
-go 1.18
+go 1.19
 
 require (
 	github.com/Microsoft/hcsshim v0.9.2 // indirect
