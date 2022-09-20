@@ -66,8 +66,8 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 
 	var sourceDockerSock string
 	switch runtime.GOOS {
-	case "darwin":
-		// mac docker-for-desktop includes the raw socket in the VM
+	case "darwin", "windows":
+		// mac/windows docker-for-desktop includes the raw socket in the VM
 		sourceDockerSock = "/var/run/docker.sock.raw"
 	default:
 		sourceDockerSock, err = filepath.EvalSymlinks(dockerSocketPath)
