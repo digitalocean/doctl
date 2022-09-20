@@ -19,7 +19,7 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-//Action is a wrapper for godo.Action
+// Action is a wrapper for godo.Action
 type Action struct {
 	*godo.Action
 }
