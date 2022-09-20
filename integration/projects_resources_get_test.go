@@ -209,8 +209,8 @@ ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memor
 5555    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name                active    yes     remotes     some-volume-id
 `
 	projectsResourcesGetFloatingIPOutput = `
-IP             Region    Droplet ID    Droplet Name
-45.55.96.47    nyc3
+IP             Region    Droplet ID    Droplet Name    Project ID
+45.55.96.47    nyc3                                    c98374fa-35e2-11ed-870f-c7de97c5d5ed
 `
 	projectsResourcesGetFloatingIPResponse = `
 {
@@ -224,7 +224,8 @@ IP             Region    Droplet ID    Droplet Name
       "features": [ "metadata" ],
       "available": true
     },
-    "locked": false
+    "locked": false,
+	"project_id": "c98374fa-35e2-11ed-870f-c7de97c5d5ed"
   }
 }
 `
