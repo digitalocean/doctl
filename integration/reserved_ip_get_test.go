@@ -74,8 +74,8 @@ var _ = suite("compute/reserved-ip/get", func(t *testing.T, when spec.G, it spec
 
 const (
 	reservedIPGetOutput = `
-IP         Region    Droplet ID    Droplet Name
-1.1.1.1    nyc3
+IP         Region    Droplet ID    Droplet Name    Project ID
+1.1.1.1    nyc3                                    c98374fa-35e2-11ed-870f-c7de97c5d5ed
 `
 	reservedIPGetResponse = `
 {
@@ -89,7 +89,8 @@ IP         Region    Droplet ID    Droplet Name
       "features": [ "metadata" ],
       "available": true
     },
-    "locked": false
+    "locked": false,
+	"project_id": "c98374fa-35e2-11ed-870f-c7de97c5d5ed"
   }
 }
 `

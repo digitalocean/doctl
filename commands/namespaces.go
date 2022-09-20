@@ -45,7 +45,6 @@ func Namespaces() *Command {
 The subcommands of ` + "`" + `doctl serverless namespaces` + "`" + ` are used to manage multiple functions namespaces within your account.
 Use ` + "`" + `doctl serverless connect` + "`" + ` with an explicit argument to connect to a specific namespace.  You are connected to one namespace at a time.`,
 			Aliases: []string{"ns"},
-			Hidden:  true, // multiple namespace support is guarded by a feature flipper
 		},
 	}
 	create := CmdBuilder(cmd, RunNamespacesCreate, "create", "Creates a namespace",

@@ -73,9 +73,9 @@ var _ = suite("compute/reserved-ip/list", func(t *testing.T, when spec.G, it spe
 
 const (
 	reservedIPListOutput = `
-IP         Region    Droplet ID    Droplet Name
-8.8.8.8    nyc3      8888          hello
-1.1.1.1    nyc3      1111
+IP         Region    Droplet ID    Droplet Name    Project ID
+8.8.8.8    nyc3      8888          hello           c98374fa-35e2-11ed-870f-c7de97c5d5ed
+1.1.1.1    nyc3                                    476dea88-35ea-11ed-8e93-f7eb94d49952
 `
 	reservedIPListResponse = `
 {
@@ -90,11 +90,12 @@ IP         Region    Droplet ID    Droplet Name
         "features": [ "metadata" ],
         "available": true
       },
-      "locked": false
+      "locked": false,
+	  "project_id": "c98374fa-35e2-11ed-870f-c7de97c5d5ed"
     },
     {
       "ip": "1.1.1.1",
-      "droplet": {"id": 1111},
+      "droplet":null,
       "region": {
         "name": "New York 3",
         "slug": "nyc3",
@@ -102,7 +103,8 @@ IP         Region    Droplet ID    Droplet Name
         "features": [ "metadata" ],
         "available": true
       },
-      "locked": false
+      "locked": false,
+	  "project_id": "476dea88-35ea-11ed-8e93-f7eb94d49952"
     }
   ],
   "links": {},

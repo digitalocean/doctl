@@ -287,6 +287,8 @@ const (
 	// ArgOutboundRules is a list of outbound rules for the firewall.
 	ArgOutboundRules = "outbound-rules"
 
+	// ArgProjectID is the ID of a project.
+	ArgProjectID = "project-id"
 	// ArgProjectName is the name of a project.
 	ArgProjectName = "name"
 	// ArgProjectDescription is the description of a project.
