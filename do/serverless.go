@@ -794,7 +794,10 @@ func (s *serverlessService) WriteProject(project ServerlessProject) (string, err
 func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]ServerlessTrigger, error) {
 	empty := []ServerlessTrigger{}
 	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
-	initWhisk(s, true)
+	err := initWhisk(s, true)
+	if err != nil {
+		return empty, err
+	}
 	var params interface{}
 	if fcn != "" {
 		params = map[string]interface{}{"function": fcn}
@@ -829,7 +832,10 @@ func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]Ser
 func (s *serverlessService) GetTrigger(ctx context.Context, name string) (ServerlessTrigger, error) {
 	empty := ServerlessTrigger{}
 	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
-	initWhisk(s, true)
+	err := initWhisk(s, true)
+	if err != nil {
+		return empty, err
+	}
 	params := map[string]interface{}{
 		"triggerName": name,
 	}
@@ -858,11 +864,14 @@ func (s *serverlessService) GetTrigger(ctx context.Context, name string) (Server
 // FireTrigger fires a trigger
 func (s *serverlessService) FireTrigger(ctx context.Context, name string) error {
 	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
-	initWhisk(s, true)
+	err := initWhisk(s, true)
+	if err != nil {
+		return err
+	}
 	params := map[string]interface{}{
 		"triggerName": name,
 	}
-	_, _, err := s.owClientSys.Actions.Invoke("triggers/fire", params, true, true)
+	_, _, err = s.owClientSys.Actions.Invoke("triggers/fire", params, true, true)
 	return err
 }
 
@@ -870,7 +879,10 @@ func (s *serverlessService) FireTrigger(ctx context.Context, name string) error 
 func (s *serverlessService) SetTriggerEnablement(ctx context.Context, name string, enabled bool) (ServerlessTrigger, error) {
 	empty := ServerlessTrigger{}
 	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
-	initWhisk(s, true)
+	err := initWhisk(s, true)
+	if err != nil {
+		return empty, err
+	}
 	params := map[string]interface{}{
 		"triggerName": name,
 		"enabled":     enabled,
@@ -901,11 +913,14 @@ func (s *serverlessService) SetTriggerEnablement(ctx context.Context, name strin
 // SetTriggerEnablement sets the isEnabled property of a trigger
 func (s *serverlessService) DeleteTrigger(ctx context.Context, name string) error {
 	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
-	initWhisk(s, true)
+	err := initWhisk(s, true)
+	if err != nil {
+		return err
+	}
 	params := map[string]interface{}{
 		"triggerName": name,
 	}
-	_, _, err := s.owClientSys.Actions.Invoke("triggers/delete", params, true, true)
+	_, _, err = s.owClientSys.Actions.Invoke("triggers/delete", params, true, true)
 	return err
 }
 
