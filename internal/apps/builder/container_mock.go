@@ -214,3 +214,18 @@ func (mr *MockDockerEngineClientMockRecorder) ImageList(ctx, options interface{}
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImageList", reflect.TypeOf((*MockDockerEngineClient)(nil).ImageList), ctx, options)
 }
+
+// ImagePull mocks base method.
+func (m *MockDockerEngineClient) ImagePull(ctx context.Context, refStr string, options types.ImagePullOptions) (io.ReadCloser, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ImagePull", ctx, refStr, options)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ImagePull indicates an expected call of ImagePull.
+func (mr *MockDockerEngineClientMockRecorder) ImagePull(ctx, refStr, options interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImagePull", reflect.TypeOf((*MockDockerEngineClient)(nil).ImagePull), ctx, refStr, options)
+}

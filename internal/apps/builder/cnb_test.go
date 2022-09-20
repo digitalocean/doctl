@@ -451,7 +451,7 @@ COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 				"-t", builder.StaticSiteImageOutputName(),
 				"-f", "/workspace/Dockerfile.static",
 				"--build-arg", "assets_path=./public/",
-				"--build-arg", "nginx_image="+staticSiteNginxImage,
+				"--build-arg", "nginx_image="+StaticSiteNginxImage,
 				"/workspace",
 			)},
 		}).Return(types.IDResponse{

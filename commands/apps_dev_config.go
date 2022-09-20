@@ -24,7 +24,7 @@ func AppsDevConfig() *Command {
 			Use:     "config",
 			Aliases: []string{"c"},
 			Short:   "Display commands for working with app platform local development configuration files.",
-			Long:    `Display commands for working with app platform local development configuration files.`,
+			Long:    `[BETA] Display commands for working with app platform local development configuration files.`,
 		},
 	}
 
@@ -34,10 +34,6 @@ func AppsDevConfig() *Command {
 		"set KEY=VALUE...",
 		"Set dev configuration settings.",
 		"Set dev configuration settings for a build.",
-		// 		fmt.Sprintf(`Set dev configuration settings for a build.
-
-		// Valid Keys: %s
-		// `, config.ValidAppDevKeys()),
 		Writer,
 	)
 
@@ -53,10 +49,6 @@ func AppsDevConfig() *Command {
 		"unset KEY...",
 		"Unset dev configuration settings.",
 		"Unset dev configuration settings for a build.",
-		// 		fmt.Sprintf(`Unset dev configuration settings for a build.
-
-		// Valid Keys: %s
-		// `, config.ValidAppDevKeys()),
 		Writer,
 	)
 
