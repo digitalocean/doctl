@@ -81,11 +81,9 @@ The install operation is long-running, and a network connection is required.`,
 	CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
 		Writer)
 
-	connect := CmdBuilder(cmd, RunServerlessConnect, "connect", "Connects local serverless support to your functions namespace",
+	CmdBuilder(cmd, RunServerlessConnect, "connect", "Connects local serverless support to your functions namespace",
 		`This command connects `+"`"+`doctl serverless`+"`"+` to your functions namespace (needed for testing).`,
 		Writer)
-	AddBoolFlag(connect, "beta", "", false, "use beta features to connect when no namespace is specified")
-	connect.Flags().MarkHidden("beta")
 
 	status := CmdBuilder(cmd, RunServerlessStatus, "status", "Provide information about serverless support",
 		`This command reports the status of serverless support and some details concerning its connected functions namespace.
@@ -184,16 +182,10 @@ func RunServerlessUninstall(c *CmdConfig) error {
 // RunServerlessConnect implements the serverless connect command
 func RunServerlessConnect(c *CmdConfig) error {
 	var (
-		creds do.ServerlessCredentials
-		err   error
+		err error
 	)
 
-	beta, _ := c.Doit.GetBool(c.NS, "beta")
-	maxArgs := 0
-	if beta {
-		maxArgs = 1
-	}
-	if len(c.Args) > maxArgs {
+	if len(c.Args) > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
@@ -219,26 +211,14 @@ func RunServerlessConnect(c *CmdConfig) error {
 		}
 		return connectFromList(ctx, sls, list, c.Out)
 	}
-
-	// Handle the case where no namespace was specified (originally, this was the only supported behavior)
-	// If requested via the --beta flag, do it the "new way".
-	if beta {
-		list, err := getMatchingNamespaces(ctx, sls, "")
-		if err != nil {
-			return err
-		}
-		if len(list) == 0 {
-			return errors.New("you must create a namespace with `doctl namespace create`, specifying a region and label")
-		}
-		return connectFromList(ctx, sls, list, c.Out)
-	}
-
-	// Legacy path when there is no argument and --beta is not specified
-	creds, err = sls.GetServerlessNamespace(ctx)
+	list, err := getMatchingNamespaces(ctx, sls, "")
 	if err != nil {
 		return err
 	}
-	return finishConnecting(sls, creds, "", c.Out)
+	if len(list) == 0 {
+		return errors.New("you must create a namespace with `doctl namespace create`, specifying a region and label")
+	}
+	return connectFromList(ctx, sls, list, c.Out)
 }
 
 // connectFromList connects a namespace based on a non-empty list of namespaces.  If the list is
@@ -289,8 +269,7 @@ func chooseFromList(list []do.OutputNamespace, out io.Writer) do.OutputNamespace
 	}
 }
 
-// finishConnecting performs the final steps of 'doctl serverless connect' regardless of whether
-// the legacy behavior is chosen or the new behavior (via the 'connectFromList` function)
+// finishConnecting performs the final steps of 'doctl serverless connect'.
 func finishConnecting(sls do.ServerlessService, creds do.ServerlessCredentials, label string, out io.Writer) error {
 	// Store the credentials
 	err := sls.WriteCredentials(creds)
