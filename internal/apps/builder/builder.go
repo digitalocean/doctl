@@ -22,6 +22,8 @@ import (
 // StaticSiteNginxImage is the nginx image used for static site container images.
 const StaticSiteNginxImage = "nginx:alpine"
 
+var ErrNotFound = fmt.Errorf("image not found")
+
 // ComponentBuilderFactory is the interface for creating a component builder.
 type ComponentBuilderFactory interface {
 	NewComponentBuilder(DockerEngineClient, string, *godo.AppSpec, NewBuilderOpts) (ComponentBuilder, error)
@@ -109,14 +111,28 @@ func (b baseComponentBuilder) getEnvMap() (map[string]string, error) {
 	return envMap, nil
 }
 
-func ImageExists(ctx context.Context, cli DockerEngineClient, ref string) (bool, error) {
+func GetImage(ctx context.Context, cli DockerEngineClient, ref string) (*types.ImageSummary, error) {
 	images, err := cli.ImageList(ctx, types.ImageListOptions{
 		Filters: filters.NewArgs(filters.Arg("reference", ref)),
 	})
 	if err != nil {
-		return false, fmt.Errorf("checking if container image exists: %w", err)
+		return nil, err
 	}
-	return len(images) > 0, nil
+	if len(images) == 0 {
+		return nil, ErrNotFound
+	}
+	return &images[0], nil
+}
+
+func ImageExists(ctx context.Context, cli DockerEngineClient, ref string) (bool, error) {
+	image, err := GetImage(ctx, cli, ref)
+	if err != nil {
+		if err == ErrNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return image != nil, nil
 }
 
 func (b *baseComponentBuilder) getStaticNginxConfig() string {

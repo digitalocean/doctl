@@ -416,11 +416,18 @@ func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
 
 // PrepareEnvironment pulls required images, validates permissions, etc. in preparation for a component build.
 func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli builder.DockerEngineClient, componentSpec godo.AppBuildableComponentSpec) error {
-	cnbBuilderImage := builder.CNBBuilderImage
-	if ws.Config.CNBBuilderImage != "" {
-		cnbBuilderImage = ws.Config.CNBBuilderImage
+	var images []string
+	if componentSpec.GetDockerfilePath() == "" {
+		// CNB build
+		if ws.Config.CNBBuilderImage != "" {
+			images = append(images, ws.Config.CNBBuilderImage)
+		} else {
+			images = append(images, builder.CNBBuilderImage)
+		}
+
+		// TODO: get stack run image from builder image md after we pull it, see below
+		images = append(images, "digitaloceanapps/apps-run:7858f2c")
 	}
-	images := []string{cnbBuilderImage}
 
 	if componentSpec.GetType() == godo.AppComponentTypeStaticSite {
 		images = append(images, builder.StaticSiteNginxImage)
@@ -435,44 +442,58 @@ func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli bui
 		if !exists {
 			toPull = append(toPull, ref)
 		}
+		// TODO pull if image might be stale
 	}
 
-	if len(toPull) > 0 {
-		for _, ref := range toPull {
-			template.Print(`{{success checkmark}} pulling container image {{highlight .}}{{nl}}`, ref)
+	err := pullDockerImages(ctx, cli, toPull)
+	if err != nil {
+		return err
+	}
 
-			r, err := cli.ImagePull(ctx, ref, types.ImagePullOptions{})
-			if err != nil {
-				return fmt.Errorf("pulling container image %s: %w", ref, err)
-			}
-			defer r.Close()
+	// TODO: get stack run image from builder image md
+	// builderImage, err := builder.GetImage(ctx, cli, cnbBuilderImage)
+	// if err != nil {
+	// 	return err
+	// }
+	// builderImage.Labels["io.buildpacks.builder.metadata"]
 
-			dec := json.NewDecoder(r)
-			for {
-				var jm jsonmessage.JSONMessage
-				err := dec.Decode(&jm)
-				if err != nil {
-					if errors.Is(err, io.EOF) {
-						break
-					}
-					return err
-				}
+	return nil
+}
 
-				if jm.Error != nil {
-					return jm.Error
-				}
+func pullDockerImages(ctx context.Context, cli builder.DockerEngineClient, images []string) error {
+	for _, ref := range images {
+		template.Print(`{{success checkmark}} pulling container image {{highlight .}}{{nl}}`, ref)
 
-				if jm.Aux != nil {
-					continue
-				}
-
-				if jm.Progress != nil {
-					fmt.Printf("\r%s", charm.IndentString(2, text.Muted.S(jm.Progress.String()))) // go back to the start of the line and print the bar
-				}
-			}
-			fmt.Printf("\r%s\n", charm.IndentString(2, template.String(`{{success checkmark}} done`, nil)))
+		r, err := cli.ImagePull(ctx, ref, types.ImagePullOptions{})
+		if err != nil {
+			return fmt.Errorf("pulling container image %s: %w", ref, err)
 		}
-	}
+		defer r.Close()
 
+		dec := json.NewDecoder(r)
+		for {
+			var jm jsonmessage.JSONMessage
+			err := dec.Decode(&jm)
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				return err
+			}
+
+			if jm.Error != nil {
+				return jm.Error
+			}
+
+			if jm.Aux != nil {
+				continue
+			}
+
+			if jm.Progress != nil {
+				fmt.Printf("\r%s", charm.IndentString(2, text.Muted.S(jm.Progress.String()))) // go back to the start of the line and print the bar
+			}
+		}
+		fmt.Printf("\r%s\n", charm.IndentString(2, template.String(`{{success checkmark}} done`, nil)))
+	}
 	return nil
 }
