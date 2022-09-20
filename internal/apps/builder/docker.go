@@ -20,8 +20,6 @@ import (
 	"github.com/docker/docker/pkg/archive"
 )
 
-const staticSiteNginxImage = "nginx:alpine"
-
 // DockerComponentBuilder builds components using a Dockerfile.
 type DockerComponentBuilder struct {
 	baseComponentBuilder
@@ -137,8 +135,6 @@ func (b *DockerComponentBuilder) buildStaticSiteImage(ctx context.Context) error
 		return fmt.Errorf("writing static site config: %w", err)
 	}
 
-	// TODO: pull down staticSiteNginxImage if needed or too old
-
 	tar, err := archive.TarWithOptions(tmpDir, &archive.TarOptions{})
 	if err != nil {
 		return fmt.Errorf("preparing build context: %w", err)
@@ -180,7 +176,7 @@ COPY --from=content ${output_dir}/ /www
 
 	buildArgs = map[string]*string{
 		"app_image":   strPtr(b.AppImageOutputName()),
-		"nginx_image": strPtr(staticSiteNginxImage),
+		"nginx_image": strPtr(StaticSiteNginxImage),
 		"output_dir":  strPtr(c.GetOutputDir()),
 	}
 	return

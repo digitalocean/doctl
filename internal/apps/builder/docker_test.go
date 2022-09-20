@@ -241,7 +241,7 @@ func TestDockerComponentBuild(t *testing.T) {
 						assert.Equal(t, []string{builder.StaticSiteImageOutputName()}, options.Tags)
 						assert.Equal(t, map[string]*string{
 							"app_image":   strPtr(builder.AppImageOutputName()),
-							"nginx_image": strPtr(staticSiteNginxImage),
+							"nginx_image": strPtr(StaticSiteNginxImage),
 							"output_dir":  strPtr(site.GetOutputDir()),
 						}, options.BuildArgs)
 						return !t.Failed()

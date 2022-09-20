@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +24,8 @@ import (
 	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/doctl/internal/apps/config"
 	"github.com/digitalocean/doctl/internal/apps/workspace"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/pkg/jsonmessage"
 
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -39,8 +42,9 @@ func AppsDev() *Command {
 		Command: &cobra.Command{
 			Use:     "dev",
 			Aliases: []string{},
-			Short:   "Display commands for working with app platform local development.",
-			Long:    `Display commands for working with app platform local development.`,
+			Short:   "[BETA] Display commands for working with app platform local development.",
+			Long:    `[BETA] Display commands for working with app platform local development.`,
+			Hidden:  true,
 		},
 	}
 
@@ -52,7 +56,7 @@ func AppsDev() *Command {
 		"build [component name]",
 		"Build an app component",
 		heredoc.Doc(`
-			Build an app component locally.
+			[BETA] Build an app component locally.
 			
 			  The component name must be specified as an argument if running non-interactively.`,
 		),
@@ -198,6 +202,25 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		}
 	}
 
+	cli, err := c.Doit.GetDockerEngineClient()
+	if err != nil {
+		return err
+	}
+
+	err = appDevPrepareEnvironment(ctx, ws, cli, componentSpec)
+	if err != nil {
+		_, isSnap := os.LookupEnv("SNAP")
+		if isSnap && errors.Is(err, fs.ErrPermission) {
+			template.Buffered(
+				textbox.New().Warning(),
+				`Using the doctl Snap? Grant doctl access to Docker by running {{highlight "sudo snap connect doctl:app-dev-build docker:docker-daemon"}}`,
+				nil,
+			)
+		}
+
+		return fmt.Errorf("preparing build environment: %w", err)
+	}
+
 	if component.EnvFile != "" {
 		template.Print(`{{success checkmark}} using envs from {{highlight .}}{{nl}}`, component.EnvFile)
 	} else if Interactive && fileExists(ws.Context(AppsDevDefaultEnvFile)) {
@@ -243,21 +266,11 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// 	}
 	// }
 
-	cli, err := c.Doit.GetDockerEngineClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	buildingComponentLine := template.String(
 		`building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
 		componentSpec,
 	)
 	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
-
-	// TODO intercept ctrl-c and allow for graceful shutdown & container cleanup
 
 	var (
 		wg        sync.WaitGroup
@@ -266,6 +279,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		// userCanceled indicates whether the context was canceled by user request
 		userCanceled bool
 	)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	if Interactive {
 		logPager, err := pager.New(
 			pager.WithTitle(buildingComponentLine),
@@ -318,14 +333,15 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		defer cancel()
 
 		builder, err := c.componentBuilderFactory.NewComponentBuilder(cli, ws.Context(), ws.Config.AppSpec, builder.NewBuilderOpts{
-			Component:            componentName,
-			LocalCacheDir:        ws.CacheDir(componentName),
-			NoCache:              ws.Config.NoCache,
-			Registry:             ws.Config.Registry,
-			EnvOverride:          component.Envs,
-			BuildCommandOverride: component.BuildCommand,
-			LogWriter:            logWriter,
-			Versioning:           builder.Versioning{CNB: ws.Config.App.GetBuildConfig().GetCNBVersioning()},
+			Component:               componentName,
+			LocalCacheDir:           ws.CacheDir(componentName),
+			NoCache:                 ws.Config.NoCache,
+			Registry:                ws.Config.Registry,
+			EnvOverride:             component.Envs,
+			BuildCommandOverride:    component.BuildCommand,
+			CNBBuilderImageOverride: ws.Config.CNBBuilderImage,
+			LogWriter:               logWriter,
+			Versioning:              builder.Versioning{CNB: ws.Config.App.GetBuildConfig().GetCNBVersioning()},
 		})
 		if err != nil {
 			return err
@@ -396,4 +412,67 @@ func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
 		DoctlConfig:       doctlConfig,
 		AppsService:       cmdConfig.Apps(),
 	})
+}
+
+// PrepareEnvironment pulls required images, validates permissions, etc. in preparation for a component build.
+func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli builder.DockerEngineClient, componentSpec godo.AppBuildableComponentSpec) error {
+	cnbBuilderImage := builder.CNBBuilderImage
+	if ws.Config.CNBBuilderImage != "" {
+		cnbBuilderImage = ws.Config.CNBBuilderImage
+	}
+	images := []string{cnbBuilderImage}
+
+	if componentSpec.GetType() == godo.AppComponentTypeStaticSite {
+		images = append(images, builder.StaticSiteNginxImage)
+	}
+
+	var toPull []string
+	for _, ref := range images {
+		exists, err := builder.ImageExists(ctx, cli, ref)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			toPull = append(toPull, ref)
+		}
+	}
+
+	if len(toPull) > 0 {
+		for _, ref := range toPull {
+			template.Print(`{{success checkmark}} pulling container image {{highlight .}}{{nl}}`, ref)
+
+			r, err := cli.ImagePull(ctx, ref, types.ImagePullOptions{})
+			if err != nil {
+				return fmt.Errorf("pulling container image %s: %w", ref, err)
+			}
+			defer r.Close()
+
+			dec := json.NewDecoder(r)
+			for {
+				var jm jsonmessage.JSONMessage
+				err := dec.Decode(&jm)
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					return err
+				}
+
+				if jm.Error != nil {
+					return jm.Error
+				}
+
+				if jm.Aux != nil {
+					continue
+				}
+
+				if jm.Progress != nil {
+					fmt.Printf("\r%s", charm.IndentString(2, text.Muted.S(jm.Progress.String()))) // go back to the start of the line and print the bar
+				}
+			}
+			fmt.Printf("\r%s\n", charm.IndentString(2, template.String(`{{success checkmark}} done`, nil)))
+		}
+	}
+
+	return nil
 }

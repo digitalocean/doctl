@@ -19,31 +19,6 @@ const (
 	nsComponents = "components"
 )
 
-// type appDevUnknownKeyErr struct {
-// 	key string
-// }
-
-// func (e *appDevUnknownKeyErr) Error() string {
-// 	return fmt.Sprintf("unknown key: %s\nvalid keys: %s", e.key, ValidAppDevKeys())
-// }
-
-// var validAppDevKeys = map[string]bool{
-// 	doctl.ArgApp:                true,
-// 	doctl.ArgAppSpec:            true,
-// 	doctl.ArgEnvFile:            true,
-// 	doctl.ArgRegistry:       true,
-// 	doctl.ArgAppDevBuildCommand: true,
-// }
-
-// func ValidAppDevKeys() string {
-// 	keys := []string{}
-// 	for k := range validAppDevKeys {
-// 		keys = append(keys, k)
-// 	}
-// 	sort.Strings(keys)
-// 	return strings.Join(keys, ", ")
-// }
-
 type AppDev struct {
 	viper *viper.Viper
 }
@@ -53,9 +28,6 @@ func (c *AppDev) WriteConfig() error {
 }
 
 func (c *AppDev) Set(key string, value any) error {
-	// if !validAppDevKeys[key] {
-	// 	return &appDevUnknownKeyErr{key}
-	// }
 	c.viper.Set(key, value)
 	return nil
 }

@@ -37,9 +37,10 @@ var dockerSocketPath = "/var/run/docker.sock"
 // CNBComponentBuilder represents a CNB builder.
 type CNBComponentBuilder struct {
 	baseComponentBuilder
-	versioning     CNBVersioning
-	localCacheDir  string
-	buildContainer containertypes.ContainerCreateCreatedBody
+	versioning           CNBVersioning
+	localCacheDir        string
+	buildContainer       containertypes.ContainerCreateCreatedBody
+	builderImageOverride string
 }
 
 // CNBVersioning contains CNB versioning config.
@@ -98,7 +99,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	}
 
 	b.buildContainer, err = b.cli.ContainerCreate(ctx, &containertypes.Config{
-		Image:        CNBBuilderImage,
+		Image:        b.builderImage(),
 		Entrypoint:   []string{"sh", "-c", "sleep infinity"},
 		AttachStdout: true,
 		AttachStderr: true,
@@ -280,7 +281,7 @@ COPY ./nginx.conf /etc/nginx/conf.d/default.conf
 `)
 
 	buildArgs = map[string]*string{
-		"nginx_image": strPtr(staticSiteNginxImage),
+		"nginx_image": strPtr(StaticSiteNginxImage),
 		"assets_path": &assetsPath,
 	}
 	return
@@ -329,7 +330,7 @@ func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
 		envs = append(envs, "VERSION_PINNING_LIST="+string(versioningJSON))
 	}
 
-	if exists, err := b.imageExists(ctx, b.AppImageOutputName()); err != nil {
+	if exists, err := ImageExists(ctx, b.cli, b.AppImageOutputName()); err != nil {
 		return nil, err
 	} else if exists {
 		envs = append(envs, "PREVIOUS_APP_IMAGE_URL="+b.AppImageOutputName())
@@ -360,4 +361,12 @@ func buildArgsToCmd(buildArgs map[string]*string) []string {
 		cmd = append(cmd, "--build-arg", k+"="+(*buildArgs[k]))
 	}
 	return cmd
+}
+
+func (b *CNBComponentBuilder) builderImage() string {
+	if b.builderImageOverride != "" {
+		return b.builderImageOverride
+	}
+
+	return CNBBuilderImage
 }

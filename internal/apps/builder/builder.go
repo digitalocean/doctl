@@ -19,6 +19,9 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
+// StaticSiteNginxImage is the nginx image used for static site container images.
+const StaticSiteNginxImage = "nginx:alpine"
+
 // ComponentBuilderFactory is the interface for creating a component builder.
 type ComponentBuilderFactory interface {
 	NewComponentBuilder(DockerEngineClient, string, *godo.AppSpec, NewBuilderOpts) (ComponentBuilder, error)
@@ -106,8 +109,8 @@ func (b baseComponentBuilder) getEnvMap() (map[string]string, error) {
 	return envMap, nil
 }
 
-func (b *baseComponentBuilder) imageExists(ctx context.Context, ref string) (bool, error) {
-	images, err := b.cli.ImageList(ctx, types.ImageListOptions{
+func ImageExists(ctx context.Context, cli DockerEngineClient, ref string) (bool, error) {
+	images, err := cli.ImageList(ctx, types.ImageListOptions{
 		Filters: filters.NewArgs(filters.Arg("reference", ref)),
 	})
 	if err != nil {
@@ -213,14 +216,15 @@ func (b *baseComponentBuilder) runExec(ctx context.Context, containerID string, 
 
 // NewBuilderOpts ...
 type NewBuilderOpts struct {
-	Component            string
-	Registry             string
-	EnvOverride          map[string]string
-	BuildCommandOverride string
-	LogWriter            io.Writer
-	Versioning           Versioning
-	LocalCacheDir        string
-	NoCache              bool
+	Component               string
+	Registry                string
+	EnvOverride             map[string]string
+	BuildCommandOverride    string
+	CNBBuilderImageOverride string
+	LogWriter               io.Writer
+	Versioning              Versioning
+	LocalCacheDir           string
+	NoCache                 bool
 }
 
 // Versioning contains build versioning configuration.
@@ -277,6 +281,7 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 			baseComponentBuilder: base,
 			versioning:           cnbVersioning,
 			localCacheDir:        opts.LocalCacheDir,
+			builderImageOverride: opts.CNBBuilderImageOverride,
 		}, nil
 	}
 

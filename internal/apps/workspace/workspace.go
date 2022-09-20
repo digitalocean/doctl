@@ -38,7 +38,6 @@ type NewAppDevOpts struct {
 }
 
 // NewAppDev creates a new AppDev workspace.
-//
 func NewAppDev(opts NewAppDevOpts) (*AppDev, error) {
 	contextDir, err := findContextDir()
 	if err != nil {
@@ -120,9 +119,10 @@ type AppDevConfig struct {
 	// App is the production app resource if AppID is set.
 	App *godo.App
 
-	Registry string
-	Timeout  time.Duration
-	NoCache  bool
+	Registry        string
+	Timeout         time.Duration
+	NoCache         bool
+	CNBBuilderImage string
 
 	// Components contains component-specific configuration keyed by component name.
 	Components map[string]*AppDevConfigComponent
@@ -173,6 +173,7 @@ func (c *AppDevConfig) Load() error {
 	c.appSpecPath = ws.GetString(doctl.ArgAppSpec)
 	c.Registry = ws.GetString(doctl.ArgRegistry)
 	c.NoCache = ws.GetBool(doctl.ArgNoCache)
+	c.CNBBuilderImage = ws.GetString("cnb_builder_image")
 
 	err := c.loadAppSpec()
 	if err != nil {
@@ -280,12 +281,13 @@ func (c *AppDevConfig) Set(key string, value any) error {
 // component returns per-component config.
 //
 // componentOnly: in order of priority:
-//		1. CLI config (if requested).
-//		2. the component's config.
+//  1. CLI config (if requested).
+//  2. the component's config.
+//
 // componentGlobal: in order of priority:
-//		1. CLI config (if requested).
-//		2. the component's config.
-//		3. global config.
+//  1. CLI config (if requested).
+//  2. the component's config.
+//  3. global config.
 func (c *AppDevConfig) component(component string, cliOverride bool) (componentOnly, componentGlobal config.ConfigSource) {
 	var cliConfig config.ConfigSource
 	if cliOverride {
