@@ -129,7 +129,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// link an existing app.
 	if ws.Config.AppSpec == nil {
 		// TODO(ntate); allow app-detect build to remove requirement
-		return errors.New("app spec is required for component build")
+		return errors.New("please place an app spec at .do/app.yaml or link an existing app using the --app flag")
 	}
 
 	var hasBuildableComponents bool
