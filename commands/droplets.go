@@ -74,8 +74,7 @@ func Droplet() *Command {
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User-data to configure the Droplet on first boot")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "The path to a file containing user-data to configure the Droplet on first boot")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Wait for Droplet creation to complete before returning")
-	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A slug indicating the region where the Droplet will be created (e.g. `nyc1`). Run `doctl compute region list` for a list of valid regions.",
-		requiredOpt())
+	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A slug indicating the region where the Droplet will be created (e.g. `nyc1`). Run `doctl compute region list` for a list of valid regions.")
 	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug indicating the size of the Droplet (e.g. `s-1vcpu-1gb`). Run `doctl compute size list` for a list of valid sizes.",
 		requiredOpt())
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet")

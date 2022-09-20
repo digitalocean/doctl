@@ -49,8 +49,8 @@ type ServerlessCredential struct {
 	Auth string `json:"api_key"`
 }
 
-// The type of the "namespace" member of the response to /api/v2/functions/sandbox and
-// /api/v2/functions/namespaces APIs.  Only relevant fields unmarshalled
+// OutputNamespace is the type of the "namespace" member of the response to /api/v2/functions/sandbox
+// and /api/v2/functions/namespaces APIs.  Only relevant fields unmarshalled
 type OutputNamespace struct {
 	Namespace string `json:"namespace"`
 	APIHost   string `json:"api_host"`
@@ -637,11 +637,14 @@ func (s *serverlessService) GetHostInfo(APIHost string) (ServerlessHostInfo, err
 func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Action, []FunctionParameter, error) {
 	err := initWhisk(s)
 	if err != nil {
-		return whisk.Action{}, []FunctionParameter{}, nil
+		return whisk.Action{}, []FunctionParameter{}, err
 	}
 	action, resp, err := s.owClient.Actions.Get(name, fetchCode)
+	if err != nil {
+		return whisk.Action{}, []FunctionParameter{}, err
+	}
 	var parameters []FunctionParameter
-	if resp != nil && err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err == nil {
@@ -653,7 +656,7 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 			parameters = reparse.Parameters
 		}
 	}
-	return *action, parameters, err
+	return *action, parameters, nil
 }
 
 // InvokeFunction invokes a function via POST with authentication

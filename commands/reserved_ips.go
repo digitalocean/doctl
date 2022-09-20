@@ -43,6 +43,9 @@ A reserved IP address must be either assigned to a Droplet or reserved to a regi
 	AddStringFlag(cmdReservedIPCreate, doctl.ArgRegionSlug, "", "",
 		fmt.Sprintf("Region where to create the reserved IP address. (mutually exclusive with `--%s`)",
 			doctl.ArgDropletID))
+	AddStringFlag(cmdReservedIPCreate, doctl.ArgProjectID, "", "",
+		fmt.Sprintf("The ID of the project the reserved IP address will be assigned to. When excluded, it will be assigned to the default project. When using the `--%s` flag, it will be assigned to the project containing the Droplet.",
+			doctl.ArgDropletID))
 	AddIntFlag(cmdReservedIPCreate, doctl.ArgDropletID, "", 0,
 		fmt.Sprintf("The ID of the Droplet to assign the reserved IP to (mutually exclusive with `--%s`).",
 			doctl.ArgRegionSlug))
@@ -67,18 +70,24 @@ func RunReservedIPCreate(c *CmdConfig) error {
 	// ignore errors since we don't know which one is valid
 	region, _ := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
 	dropletID, _ := c.Doit.GetInt(c.NS, doctl.ArgDropletID)
+	projectID, _ := c.Doit.GetString(c.NS, doctl.ArgProjectID)
 
 	if region == "" && dropletID == 0 {
 		return doctl.NewMissingArgsErr("Region and Droplet ID can't both be blank.")
 	}
 
 	if region != "" && dropletID != 0 {
-		return fmt.Errorf("Specify region or Droplet ID when creating a reserved IP address.")
+		return fmt.Errorf("Only one of `--%s` or `--%s` may be specified when creating a reserved IP address.", doctl.ArgRegionSlug, doctl.ArgDropletID)
+	}
+
+	if projectID != "" && dropletID != 0 {
+		return fmt.Errorf("Only one of `--%s` or `--%s` may be specified when creating a reserved IP address.", doctl.ArgProjectID, doctl.ArgDropletID)
 	}
 
 	req := &godo.ReservedIPCreateRequest{
 		Region:    region,
 		DropletID: dropletID,
+		ProjectID: projectID,
 	}
 
 	ip, err := ris.Create(req)
