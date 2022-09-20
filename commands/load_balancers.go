@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 	"reflect"
@@ -26,6 +27,11 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
+)
+
+var (
+	//go:embed forwarding_detail.txt
+	forwardingDetail string
 )
 
 // LoadBalancer creates the load balancer command.
@@ -57,21 +63,13 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 - Whether HTTP request to the load balancer on port 80 will be redirected to HTTPS on port 443.
 - Whether the PROXY protocol is in use on the load balancer.
 `
-	forwardingDetail := `
 
-- ` + "`" + `entry_protocol` + "`" + `: The entry protocol used for traffic to the load balancer. Possible values are: ` + "`" + `http` + "`" + `, ` + "`" + `https` + "`" + `, ` + "`" + `http2` + "`" + `, or ` + "`" + `tcp` + "`" + `.
-- ` + "`" + `entry_port` + "`" + `: The entry port used for incoming traffic to the load balancer.
-- ` + "`" + `target_protocol` + "`" + `: The target protocol used for traffic from the load balancer to the backend Droplets. Possible values are: ` + "`" + `http` + "`" + `, ` + "`" + `https` + "`" + `, ` + "`" + `http2` + "`" + `, or ` + "`" + `tcp` + "`" + `.
-- ` + "`" + `target_port` + "`" + `: The target port used to send traffic from the load balancer to the backend Droplets.
-- ` + "`" + `certificate_id` + "`" + `: The ID of the TLS certificate used for SSL termination, if enabled. Can be obtained with ` + "`" + `doctl certificate list` + "`" + `
-- ` + "`" + `tls_passthrough` + "`" + `: Whether SSL passthrough is enabled on the load balancer.
-`
 	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, e.g.: `entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306`."
 	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:"+lbDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
 	cmdRecordCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
-		"Create a new load balancer", "Use this command to create a new load balancer on your account. Valid forwarding rules are:"+forwardingDetail, Writer, aliasOpt("c"))
+		"Create a new load balancer", "Use this command to create a new load balancer on your account. Valid forwarding rules are:\n"+forwardingDetail, Writer, aliasOpt("c"))
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "",
@@ -151,11 +149,11 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of IDs of Droplets to remove from the load balancer, example value: `12,33`")
 
 	cmdAddForwardingRules := CmdBuilder(cmd, RunLoadBalancerAddForwardingRules,
-		"add-forwarding-rules <id>", "Add forwarding rules to a load balancer", "Use this command to add forwarding rules to a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:"+forwardingDetail, Writer)
+		"add-forwarding-rules <id>", "Add forwarding rules to a load balancer", "Use this command to add forwarding rules to a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
 	AddStringFlag(cmdAddForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 
 	cmdRemoveForwardingRules := CmdBuilder(cmd, RunLoadBalancerRemoveForwardingRules,
-		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:"+forwardingDetail, Writer)
+		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
 	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 
 	return cmd
