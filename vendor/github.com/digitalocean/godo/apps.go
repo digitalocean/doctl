@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 )
 
 const (
@@ -493,43 +492,13 @@ func (s *AppFunctionsSpec) GetType() AppComponentType {
 	return AppComponentTypeFunctions
 }
 
-// GetKey returns the canonical representation of a github source.
-func (s *GitHubSourceSpec) GetKey() string {
-	return fmt.Sprintf("github/%s/%s", strings.ToLower(s.GetRepo()), s.GetBranch())
-}
-
-// GetKey returns the canonical representation of a github source.
-func (s *GitLabSourceSpec) GetKey() string {
-	return fmt.Sprintf("gitlab/%s/%s", strings.ToLower(s.GetRepo()), s.GetBranch())
-}
-
-// GetKey is the canonical representation of a git source.
-func (s *GitSourceSpec) GetKey() string {
-	repoCloneURL := strings.ToLower(s.GetRepoCloneURL())
-	return fmt.Sprintf("git/%s/%s", repoCloneURL, s.GetBranch())
-}
-
-// GetKey is the canonical representation of an image source.
-func (s *ImageSourceSpec) GetKey() string {
-	// Docker + OCI registry + repo names are required to be lower-case so no CI compare is needed.
-	key := fmt.Sprintf("image/%s", s.GetRegistryType())
-	if s.GetRegistry() != "" {
-		key = fmt.Sprintf("%s/%s", key, s.GetRegistry())
-	}
-	key = fmt.Sprintf("%s/%s", key, s.GetRepository())
-	if s.GetTag() != "" {
-		key = fmt.Sprintf("%s:%s", key, s.GetTag())
-	}
-	return key
-}
-
 // AppComponentSpec represents a component's spec.
 type AppComponentSpec interface {
 	GetName() string
 	GetType() AppComponentType
 }
 
-// AppBuildableComponentSpec is a component that needs to be built.
+// AppBuildableComponentSpec is a component that is buildable from source.
 type AppBuildableComponentSpec interface {
 	AppComponentSpec
 
@@ -565,9 +534,39 @@ type AppRoutableComponentSpec interface {
 	GetCORS() *AppCORSPolicy
 }
 
+// AppSourceType is an app source type.
+type AppSourceType string
+
+const (
+	AppSourceTypeGitHub AppSourceType = "github"
+	AppSourceTypeGitLab AppSourceType = "gitlab"
+	AppSourceTypeGit    AppSourceType = "git"
+	AppSourceTypeImage  AppSourceType = "image"
+)
+
 // SourceSpec represents a source.
 type SourceSpec interface {
-	GetKey() string
+	GetType() AppSourceType
+}
+
+// GetType returns the GitHub source type.
+func (s *GitHubSourceSpec) GetType() AppSourceType {
+	return AppSourceTypeGitHub
+}
+
+// GetType returns the GitLab source type.
+func (s *GitLabSourceSpec) GetType() AppSourceType {
+	return AppSourceTypeGitLab
+}
+
+// GetType returns the Git source type.
+func (s *GitSourceSpec) GetType() AppSourceType {
+	return AppSourceTypeGit
+}
+
+// GetType returns the Image source type.
+func (s *ImageSourceSpec) GetType() AppSourceType {
+	return AppSourceTypeImage
 }
 
 // VCSSourceSpec represents a VCS source.
@@ -577,9 +576,9 @@ type VCSSourceSpec interface {
 	GetBranch() string
 }
 
-// AppLoggableComponentSpec represents a component that can have log destinations.
-type AppLoggableComponentSpec interface {
-	GetLogDestinations() []*AppLogDestinationSpec
+// GetRepo allows GitSourceSpec to implement the SourceSpec interface.
+func (s *GitSourceSpec) GetRepo() string {
+	return s.RepoCloneURL
 }
 
 // ForEachAppComponentSpec iterates over each component spec in an app.
@@ -621,6 +620,13 @@ func (s *AppSpec) ForEachAppComponentSpec(fn func(component AppComponentSpec) er
 }
 
 // ForEachAppSpecComponent loops over each component spec that matches the provided interface type.
+// The type constraint is intentionally set to `any` to allow use of arbitrary interfaces to match the desired component types.
+//
+// Examples:
+//   - interface constraint
+//     godo.ForEachAppSpecComponent(spec, func(component godo.AppBuildableComponentSpec) error { ... })
+//   - struct type constraint
+//     godo.ForEachAppSpecComponent(spec, func(component *godo.AppStaticSiteSpec) error { ... })
 func ForEachAppSpecComponent[T any](s *AppSpec, fn func(component T) error) error {
 	return s.ForEachAppComponentSpec(func(component AppComponentSpec) error {
 		if c, ok := component.(T); ok {
@@ -633,7 +639,12 @@ func ForEachAppSpecComponent[T any](s *AppSpec, fn func(component T) error) erro
 }
 
 // GetAppSpecComponent returns an app spec component by type and name.
-// The ComponentSpec type can be used for no restriction on component type.
+//
+// Examples:
+//   - interface constraint
+//     godo.GetAppSpecComponent[godo.AppBuildableComponentSpec](spec, "component-name")
+//   - struct type constraint
+//     godo.GetAppSpecComponent[*godo.AppServiceSpec](spec, "component-name")
 func GetAppSpecComponent[T interface {
 	GetName() string
 }](s *AppSpec, name string) (T, error) {
@@ -650,9 +661,4 @@ func GetAppSpecComponent[T interface {
 		return c, nil
 	}
 	return c, fmt.Errorf("component %s not found", name)
-}
-
-// GetRepo allows GitSourceSpec to implement the SourceSpec interface.
-func (s *GitSourceSpec) GetRepo() string {
-	return s.RepoCloneURL
 }
