@@ -878,14 +878,6 @@ func (a *AppJobSpec) GetDockerfilePath() string {
 	return a.DockerfilePath
 }
 
-// GetEnvironmentSlug returns the EnvironmentSlug field.
-func (a *AppJobSpec) GetEnvironmentSlug() string {
-	if a == nil {
-		return ""
-	}
-	return a.EnvironmentSlug
-}
-
 // GetEnvs returns the Envs field.
 func (a *AppJobSpec) GetEnvs() []*AppVariableDefinition {
 	if a == nil {
@@ -1310,14 +1302,6 @@ func (a *AppServiceSpec) GetDockerfilePath() string {
 	return a.DockerfilePath
 }
 
-// GetEnvironmentSlug returns the EnvironmentSlug field.
-func (a *AppServiceSpec) GetEnvironmentSlug() string {
-	if a == nil {
-		return ""
-	}
-	return a.EnvironmentSlug
-}
-
 // GetEnvs returns the Envs field.
 func (a *AppServiceSpec) GetEnvs() []*AppVariableDefinition {
 	if a == nil {
@@ -1638,14 +1622,6 @@ func (a *AppStaticSiteSpec) GetDockerfilePath() string {
 	return a.DockerfilePath
 }
 
-// GetEnvironmentSlug returns the EnvironmentSlug field.
-func (a *AppStaticSiteSpec) GetEnvironmentSlug() string {
-	if a == nil {
-		return ""
-	}
-	return a.EnvironmentSlug
-}
-
 // GetEnvs returns the Envs field.
 func (a *AppStaticSiteSpec) GetEnvs() []*AppVariableDefinition {
 	if a == nil {
@@ -1836,14 +1812,6 @@ func (a *AppWorkerSpec) GetDockerfilePath() string {
 		return ""
 	}
 	return a.DockerfilePath
-}
-
-// GetEnvironmentSlug returns the EnvironmentSlug field.
-func (a *AppWorkerSpec) GetEnvironmentSlug() string {
-	if a == nil {
-		return ""
-	}
-	return a.EnvironmentSlug
 }
 
 // GetEnvs returns the Envs field.
@@ -2620,14 +2588,6 @@ func (d *DetectResponseComponent) GetDockerfiles() []string {
 		return nil
 	}
 	return d.Dockerfiles
-}
-
-// GetEnvironmentSlug returns the EnvironmentSlug field.
-func (d *DetectResponseComponent) GetEnvironmentSlug() string {
-	if d == nil {
-		return ""
-	}
-	return d.EnvironmentSlug
 }
 
 // GetEnvVars returns the EnvVars field.

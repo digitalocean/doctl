@@ -507,11 +507,22 @@ type AppBuildableComponentSpec interface {
 	GetGitLab() *GitLabSourceSpec
 
 	GetSourceDir() string
-	GetDockerfilePath() string
-	GetBuildCommand() string
-	GetEnvironmentSlug() string
 
 	GetEnvs() []*AppVariableDefinition
+}
+
+// AppDockerBuildableComponentSpec is a component that is buildable from source using Docker.
+type AppDockerBuildableComponentSpec interface {
+	AppBuildableComponentSpec
+
+	GetDockerfilePath() string
+}
+
+// AppCNBBuildableComponentSpec is a component that is buildable from source using cloud native buildpacks.
+type AppCNBBuildableComponentSpec interface {
+	AppBuildableComponentSpec
+
+	GetBuildCommand() string
 }
 
 // AppContainerComponentSpec is a component that runs in a cluster.
@@ -519,9 +530,7 @@ type AppContainerComponentSpec interface {
 	AppBuildableComponentSpec
 
 	GetImage() *ImageSourceSpec
-
 	GetRunCommand() string
-
 	GetInstanceSizeSlug() string
 	GetInstanceCount() int64
 }

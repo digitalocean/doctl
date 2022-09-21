@@ -1,5 +1,12 @@
 # Change Log
 
+## [v1.85.0] - 2022-09-21
+
+- #560 - @andrewsomething - Bump golang.org/x/net (fixes: #557).
+- #559 - @kamaln7 - apps: update component spec interfaces
+- #555 - @kamaln7 - apps: add accessor methods and spec helpers
+- #556 - @kamaln7 - update CI for go 1.18 & 1.19
+
 ## [v1.84.1] - 2022-09-16
 
 - #554 - @andrewsomething - reserved IPs: project_id should have omitempty in create req.
