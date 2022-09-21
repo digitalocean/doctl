@@ -55,6 +55,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/muesli/reflow v0.3.0
+	github.com/muesli/termenv v0.12.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -97,7 +98,6 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/muesli/ansi v0.0.0-20211031195517-c9f0611b6c70 // indirect
 	github.com/muesli/cancelreader v0.2.1 // indirect
-	github.com/muesli/termenv v0.12.0 // indirect
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect

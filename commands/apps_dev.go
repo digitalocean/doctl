@@ -191,6 +191,17 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	if !ok {
 		return fmt.Errorf("cannot build component %s", componentName)
 	}
+
+	if componentSpec.GetType() == godo.AppComponentTypeFunctions {
+		template.Print(heredoc.Doc(`
+
+			{{warning (print crossmark " functions builds are coming soon!")}}
+			  please use {{highlight "doctl serverless sls deploy"}} to build functions in the meantime.
+		
+		`), nil)
+		return fmt.Errorf("not supported")
+	}
+
 	if componentSpec.GetSourceDir() != "" {
 		sd := componentSpec.GetSourceDir()
 		stat, err := os.Stat(ws.Context(sd))
