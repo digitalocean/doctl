@@ -284,7 +284,11 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 		opts.LogWriter,
 	}
 
-	if component.GetDockerfilePath() == "" {
+	if dockerComponent, ok := component.(godo.AppDockerBuildableComponentSpec); ok && dockerComponent.GetDockerfilePath() != "" {
+		return &DockerComponentBuilder{base, dockerComponent}, nil
+	}
+
+	if cnbComponent, ok := component.(godo.AppCNBBuildableComponentSpec); ok {
 		var cnbVersioning CNBVersioning
 		for _, bp := range opts.Versioning.CNB.GetBuildpacks() {
 			cnbVersioning.Buildpacks = append(cnbVersioning.Buildpacks, &Buildpack{
@@ -295,11 +299,12 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 
 		return &CNBComponentBuilder{
 			baseComponentBuilder: base,
+			cnbComponent:         cnbComponent,
 			versioning:           cnbVersioning,
 			localCacheDir:        opts.LocalCacheDir,
 			builderImageOverride: opts.CNBBuilderImageOverride,
 		}, nil
 	}
 
-	return &DockerComponentBuilder{base}, nil
+	return nil, errors.New("component was not buildable by either Docker or CNB build system")
 }

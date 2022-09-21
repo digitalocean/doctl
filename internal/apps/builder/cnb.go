@@ -41,6 +41,7 @@ type CNBComponentBuilder struct {
 	localCacheDir        string
 	buildContainer       containertypes.ContainerCreateCreatedBody
 	builderImageOverride string
+	cnbComponent         godo.AppCNBBuildableComponentSpec
 }
 
 // CNBVersioning contains CNB versioning config.
@@ -318,8 +319,8 @@ func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
 		`,
 		), charm.IndentString(4, b.buildCommandOverride))
 		envs = append(envs, "BUILD_COMMAND="+b.buildCommandOverride)
-	} else if b.component.GetBuildCommand() != "" {
-		envs = append(envs, "BUILD_COMMAND="+b.component.GetBuildCommand())
+	} else if b.cnbComponent.GetBuildCommand() != "" {
+		envs = append(envs, "BUILD_COMMAND="+b.cnbComponent.GetBuildCommand())
 	}
 
 	if len(b.versioning.Buildpacks) > 0 {

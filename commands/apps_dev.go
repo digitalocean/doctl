@@ -417,7 +417,11 @@ func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
 // PrepareEnvironment pulls required images, validates permissions, etc. in preparation for a component build.
 func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli builder.DockerEngineClient, componentSpec godo.AppBuildableComponentSpec) error {
 	var images []string
-	if componentSpec.GetDockerfilePath() == "" {
+
+	_, isCNB := componentSpec.(godo.AppCNBBuildableComponentSpec)
+	dockerComponentSpec, isDocker := componentSpec.(godo.AppDockerBuildableComponentSpec)
+
+	if isCNB && (!isDocker || dockerComponentSpec.GetDockerfilePath() == "") {
 		// CNB build
 		if ws.Config.CNBBuilderImage != "" {
 			images = append(images, ws.Config.CNBBuilderImage)

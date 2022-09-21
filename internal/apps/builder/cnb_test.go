@@ -94,6 +94,7 @@ func TestCNBComponentBuild(t *testing.T) {
 				buildCommandOverride: "custom build command",
 				contextDir:           t.TempDir(),
 			},
+			cnbComponent:  service,
 			localCacheDir: "/cache",
 			versioning: CNBVersioning{
 				Buildpacks: []*Buildpack{{ID: "do/bp", Version: "1.0.0"}},
@@ -173,6 +174,7 @@ func TestCNBComponentBuild(t *testing.T) {
 				contextDir:           t.TempDir(),
 				copyOnWriteSemantics: true,
 			},
+			cnbComponent: service,
 		}
 
 		buildID := "build-id"
@@ -251,6 +253,7 @@ func TestCNBComponentBuild(t *testing.T) {
 					"useroverride-1": "newval",
 				},
 			},
+			cnbComponent: service,
 		}
 
 		_, err := builder.Build(ctx)
@@ -286,6 +289,7 @@ func TestCNBComponentBuild(t *testing.T) {
 				component:  site,
 				contextDir: t.TempDir(),
 			},
+			cnbComponent:  site,
 			localCacheDir: "/cache",
 		}
 

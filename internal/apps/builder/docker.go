@@ -23,6 +23,7 @@ import (
 // DockerComponentBuilder builds components using a Dockerfile.
 type DockerComponentBuilder struct {
 	baseComponentBuilder
+	dockerComponent godo.AppDockerBuildableComponentSpec
 }
 
 // Build executes the component build and tags the resulting container images.
@@ -64,7 +65,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	// TODO Dockerfile must be relative to the source dir.
 	// Make it relative and if it's outside the source dir add it to the archive.
 	// ref: https://github.com/docker/cli/blob/9400e3dbe8ebd0bede3ab7023f744a8d7f4397d2/cli/command/image/build.go#L280-L286
-	template.Render(lw, `{{success checkmark}} building image using dockerfile {{highlight .}}{{nl 2}}`, b.component.GetDockerfilePath())
+	template.Render(lw, `{{success checkmark}} building image using dockerfile {{highlight .}}{{nl 2}}`, b.dockerComponent.GetDockerfilePath())
 	start := time.Now()
 	tar, err := archive.TarWithOptions(buildContext, &archive.TarOptions{})
 	if err != nil {
@@ -73,7 +74,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 
 	res := ComponentBuilderResult{}
 	dockerRes, err := b.cli.ImageBuild(ctx, tar, dockertypes.ImageBuildOptions{
-		Dockerfile: b.component.GetDockerfilePath(),
+		Dockerfile: b.dockerComponent.GetDockerfilePath(),
 		Tags: []string{
 			b.AppImageOutputName(),
 		},

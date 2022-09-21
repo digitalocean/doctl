@@ -36,6 +36,7 @@ func TestDockerComponentBuild_validation(t *testing.T) {
 				component:  spec.StaticSites[0],
 				contextDir: t.TempDir(),
 			},
+			dockerComponent: spec.StaticSites[0],
 		}
 		_, err := builder.Build(ctx)
 		require.EqualError(t, err, "output_dir is required for dockerfile-based static site builds")
@@ -55,6 +56,7 @@ func TestDockerComponentBuild_validation(t *testing.T) {
 				component:  spec.StaticSites[0],
 				contextDir: t.TempDir(),
 			},
+			dockerComponent: spec.StaticSites[0],
 		}
 		_, err := builder.Build(ctx)
 		require.EqualError(t, err, "output_dir must be an absolute path with dockerfile-based static site builds")
@@ -74,6 +76,7 @@ func TestDockerComponentBuild_validation(t *testing.T) {
 				component:  spec.StaticSites[0],
 				contextDir: t.TempDir(),
 			},
+			dockerComponent: spec.StaticSites[0],
 		}
 		_, err := builder.Build(ctx)
 		require.EqualError(t, err, "output_dir may not be /")
@@ -151,6 +154,7 @@ func TestDockerComponentBuild(t *testing.T) {
 				noCache:              true,
 				contextDir:           t.TempDir(),
 			},
+			dockerComponent: service,
 		}
 
 		mockClient.EXPECT().ImageBuild(ctx, gomock.Any(), types.ImageBuildOptions{
@@ -209,6 +213,7 @@ func TestDockerComponentBuild(t *testing.T) {
 				logWriter:  &logBuf,
 				contextDir: t.TempDir(),
 			},
+			dockerComponent: site,
 		}
 
 		// app image build
