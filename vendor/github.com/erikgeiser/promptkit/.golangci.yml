@@ -27,3 +27,5 @@ linters-settings:
     default-signifies-exhaustive: true
 issues:
   exclude-use-default: false
+run:
+  skip-dirs-use-default: false

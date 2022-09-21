@@ -235,7 +235,7 @@ func (c *AppDevConfig) loadAppSpec() error {
 		template.Print(`{{success checkmark}} fetching app details{{nl}}`, nil)
 		c.App, err = c.appsService.Get(c.appID)
 		if err != nil {
-			return fmt.Errorf("fetching app %s: %w", c.appID, err)
+			return fmt.Errorf("fetching app with id %s: %w", c.appID, err)
 		}
 		template.Print(`{{success checkmark}} loading config from app {{highlight .}}{{nl}}`, c.App.GetSpec().GetName())
 		c.AppSpec = c.App.GetSpec()

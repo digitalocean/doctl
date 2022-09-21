@@ -12,6 +12,7 @@ import (
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/commands/charm/textbox"
+	"github.com/dustin/go-humanize"
 )
 
 type FuncMap = template.FuncMap
@@ -81,6 +82,7 @@ func Funcs(colors charm.ColorScheme) template.FuncMap {
 			}
 			return d.Truncate(trunc).String()
 		},
+		"timeAgo": humanize.Time,
 	}
 }
 

@@ -18,9 +18,11 @@ import (
 	"github.com/digitalocean/doctl/commands/charm/confirm"
 	"github.com/digitalocean/doctl/commands/charm/list"
 	"github.com/digitalocean/doctl/commands/charm/pager"
+	"github.com/digitalocean/doctl/commands/charm/selection"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/commands/charm/textbox"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/doctl/internal/apps/config"
 	"github.com/digitalocean/doctl/internal/apps/workspace"
@@ -126,11 +128,19 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		defer cancel()
 	}
 
-	// TODO: if this is the user's first time running dev build, ask them if they'd like to
-	// link an existing app.
 	if ws.Config.AppSpec == nil {
-		// TODO(ntate); allow app-detect build to remove requirement
-		return errors.New("please place an app spec at .do/app.yaml or link an existing app using the --app flag")
+		template.Print(`{{error (print crossmark " an app spec is required")}}{{nl 2}}`, nil)
+
+		err := appsDevBuildSpecRequired(ws, c.Apps())
+		if err != nil {
+			if err.Error() == "" {
+				os.Exit(1)
+			}
+			return err
+		}
+		if err := ws.Config.Load(); err != nil {
+			return fmt.Errorf("reloading config: %w", err)
+		}
 	}
 
 	var hasBuildableComponents bool
@@ -164,8 +174,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 			selected, err := list.Select()
 			if err != nil {
 				return err
-			} else if selected == nil {
-				return fmt.Errorf("canceled")
 			}
 			selectedComponent, ok := selected.(componentListItem)
 			if !ok {
@@ -532,4 +540,66 @@ func pullDockerImages(ctx context.Context, cli builder.DockerEngineClient, image
 		)
 	}
 	return nil
+}
+
+func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) error {
+	options := struct {
+		BringAppSpec string
+		LinkApp      string
+	}{
+		BringAppSpec: "I will place an app spec at .do/app.yaml",
+		LinkApp:      "I would like to link an app on my account and use its app spec",
+		// TODO: add support for app detection
+		// DetectApp: "I'm in my app project directory, auto-detect an app spec for me",
+	}
+	sel := selection.New(
+		[]string{options.BringAppSpec, options.LinkApp},
+		selection.WithFiltering(false),
+	)
+	opt, err := sel.Select()
+	if err != nil {
+		return err
+	}
+
+	switch opt {
+	case options.BringAppSpec:
+		return errors.New("")
+	case options.LinkApp:
+		app, err := appsDevSelectApp(appsService)
+		if err != nil {
+			return err
+		}
+
+		template.Print("{{success checkmark}} linking app {{highlight .}} to dev workspace{{nl}}", app.GetSpec().GetName())
+
+		ws.Config.Set("app", app.ID)
+		if err := ws.Config.Write(); err != nil {
+			return fmt.Errorf("writing app id to config: %w", err)
+		}
+		return nil
+	}
+
+	return errors.New("unrecognized option")
+}
+
+func appsDevSelectApp(appsService do.AppsService) (*godo.App, error) {
+	template.Print(`listing apps on your account...`, nil)
+	apps, err := appsService.List()
+	if err != nil {
+		return nil, fmt.Errorf("listing apps: %w", err)
+	}
+	// clear and reset the "listing apps..." line
+	termenv.ClearLine()
+	fmt.Print("\r")
+
+	listItems := make([]appListItem, len(apps))
+	for i, app := range apps {
+		listItems[i] = appListItem{app}
+	}
+	ll := list.New(list.Items(listItems))
+	selected, err := ll.Select()
+	if err != nil {
+		return nil, err
+	}
+	return selected.(appListItem).App, nil
 }
