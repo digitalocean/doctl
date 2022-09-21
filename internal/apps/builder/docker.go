@@ -96,6 +96,7 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 
 	if b.component.GetType() == godo.AppComponentTypeStaticSite {
 		err = b.buildStaticSiteImage(ctx)
+		res.Image = b.StaticSiteImageOutputName()
 		res.BuildDuration = time.Since(start)
 		if err != nil {
 			return res, err

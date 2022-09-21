@@ -401,10 +401,21 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	} else if res.ExitCode == 0 {
 		template.Buffered(
 			textbox.New().Success(),
-			`{{success checkmark}} successfully built {{success .img}} in {{highlight (duration .dur)}}`,
+			heredoc.Doc(`
+				{{success checkmark}} successfully built {{success .component}} in {{highlight (duration .dur)}}
+				{{success checkmark}} created container image {{success .img}}
+				
+				{{pointerRight}} push your image to a container registry using {{highlight "docker push"}}
+				{{pointerRight}} or run it locally using {{highlight "docker run"}}; for example:
+				  
+				   {{muted promptPrefix}} {{highlight (printf "docker run --rm -p 8080:8080 %s" .img)}}
+				
+				  and access your component at {{underline "http://localhost:8080"}}`,
+			),
 			map[string]any{
-				"img": res.Image,
-				"dur": res.BuildDuration,
+				"component": componentSpec.GetName(),
+				"img":       res.Image,
+				"dur":       res.BuildDuration,
 			},
 		)
 	} else {
@@ -463,6 +474,7 @@ func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli bui
 		images = append(images, builder.StaticSiteNginxImage)
 	}
 
+	// TODO: ImageExists can be slow. Look into batch fetching all images at once.
 	var toPull []string
 	for _, ref := range images {
 		exists, err := builder.ImageExists(ctx, cli, ref)
