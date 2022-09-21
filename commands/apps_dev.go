@@ -26,6 +26,7 @@ import (
 	"github.com/digitalocean/doctl/internal/apps/workspace"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/jsonmessage"
+	"github.com/muesli/termenv"
 
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
@@ -496,10 +497,24 @@ func pullDockerImages(ctx context.Context, cli builder.DockerEngineClient, image
 			}
 
 			if jm.Progress != nil {
-				fmt.Printf("\r%s", charm.IndentString(2, text.Muted.S(jm.Progress.String()))) // go back to the start of the line and print the bar
+				// clear the current line
+				termenv.ClearLine()
+				fmt.Printf("%s%s",
+					// move the cursor back to the beginning of the line
+					"\r",
+					// print the current bar
+					charm.IndentString(2, text.Muted.S(jm.Progress.String())),
+				)
 			}
 		}
-		fmt.Printf("\r%s\n", charm.IndentString(2, template.String(`{{success checkmark}} done`, nil)))
+		// clear the current line
+		termenv.ClearLine()
+		fmt.Printf("%s%s",
+			// move the cursor back to the beginning of the line
+			"\r",
+			// overwrite the latest progress bar with a success message
+			template.String(`{{success checkmark}} done{{nl}}`, nil),
+		)
 	}
 	return nil
 }
