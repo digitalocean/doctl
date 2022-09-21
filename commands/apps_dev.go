@@ -255,6 +255,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
+	if ws.Config.CNBBuilderImage != "" && componentSpec.GetDockerfilePath() == "" {
+		template.Render(text.Warning, `{{checkmark}} using custom builder image {{highlight .}}{{nl}}`, ws.Config.CNBBuilderImage)
+	}
+
 	// if Interactive {
 	// 	choice, err := confirm.New(
 	// 		"start build?",
