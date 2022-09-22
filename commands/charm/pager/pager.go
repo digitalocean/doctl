@@ -238,14 +238,14 @@ func (m *pagerModel) headerView() string {
 	// elapsed time + horizontal divider line
 	elapsed := fmt.Sprintf(
 		"%s%s%s",
-		text.Muted.S("["),
+		text.Muted.S("───["),
 		time.Since(m.start).Truncate(time.Second),
-		text.Muted.S("]─"),
+		text.Muted.S("]"),
 	)
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(elapsed)))
 	line = text.Muted.S(line)
 
-	return fmt.Sprintf("%s\n%s%s\n", title, line, elapsed)
+	return fmt.Sprintf("%s\n%s%s\n", title, elapsed, line)
 }
 
 func (m *pagerModel) footerView() string {

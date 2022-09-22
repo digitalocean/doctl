@@ -178,6 +178,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		if err != nil {
 			return res, err
 		}
+		res.Image = b.StaticSiteImageOutputName()
 	}
 
 	return res, nil

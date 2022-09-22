@@ -20,8 +20,7 @@ and many opportunities for heavy customization.
 
 **Disclaimers:**
 * The API of library is not yet stable. Expect significant changes in minor
-  versions before `v1.0.0`. The library will eventually require Go 1.18 and the
-  selection prompt will use generics.
+  versions before `v1.0.0`.
 * Windows is currently not explicitly supported because input events are dropped
   when running multiple prompts sequentially due to a bug in
   [bubbletea](https://github.com/charmbracelet/bubbletea). See

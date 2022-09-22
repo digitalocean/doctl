@@ -1,6 +1,8 @@
 package list
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/paginator"
 	tea "github.com/charmbracelet/bubbletea"
@@ -89,6 +91,9 @@ func (l *List) Select() (Item, error) {
 	if err := p.Start(); err != nil {
 		return nil, err
 	}
+	if l.selected == nil {
+		return nil, fmt.Errorf("canceled")
+	}
 	return l.selected, nil
 }
 
@@ -129,4 +134,13 @@ func (l *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // Update implements bubbletea.Model.
 func (l *listModel) View() string {
 	return l.style.Lipgloss().Render(l.model.View())
+}
+
+// Items converts a slice of items into a []Item type slice.
+func Items[T interface{ Item }](items []T) []Item {
+	l := make([]Item, len(items))
+	for i, item := range items {
+		l[i] = Item(item)
+	}
+	return l
 }

@@ -33,3 +33,30 @@ func (i componentListItem) Description() string {
 func (i componentListItem) FilterValue() string {
 	return i.spec.GetName()
 }
+
+type appListItem struct {
+	*godo.App
+}
+
+func (i appListItem) Title() string {
+	return i.GetSpec().GetName()
+}
+
+func (i appListItem) Description() string {
+	desc := []string{}
+
+	if i.LiveDomain != "" {
+		desc = append(desc, i.LiveDomain)
+	}
+	if !i.LastDeploymentActiveAt.IsZero() {
+		desc = append(desc, template.String(`last deployed {{timeAgo .}}`, i.LastDeploymentActiveAt))
+	} else {
+		desc = append(desc, template.String(`created {{timeAgo .}}`, i.CreatedAt))
+	}
+
+	return strings.Join(desc, "\n")
+}
+
+func (i appListItem) FilterValue() string {
+	return i.GetSpec().GetName()
+}
