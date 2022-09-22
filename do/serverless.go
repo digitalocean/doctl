@@ -15,6 +15,8 @@ package do
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -174,7 +176,9 @@ type ProjectMetadata struct {
 	UnresolvedVariables []string `json:"unresolvedVariables,omitempty"`
 }
 
-// ServerlessTrigger describes structure the serverless triggers API uses to represent a trigger
+// ServerlessTrigger describes a trigger internally and is also the form used by the
+// prototype API.  The production API is nearly semantically equivalent but different in
+// detail.
 type ServerlessTrigger struct {
 	Name        string      `json:"triggerName,omitempty"`
 	Cron        string      `json:"cronExpression,omitempty"`
@@ -188,11 +192,31 @@ type ServerlessTrigger struct {
 	RequestBody interface{} `json:"requestBody,omitempty"`
 }
 
-// ServerlessTriggerList is the form returned by the list triggers API
-// TODO we are using the temporary API here.  Subject to change when the permanent
-// API is available.
+// ServerlessTriggerList is the form returned by the prototype list triggers API
 type ServerlessTriggerList struct {
 	Items []ServerlessTrigger `json:"items,omitempty"`
+}
+
+// ServerlessTriggerListResponse is the form returned by the production list triggers API
+type ServerlessTriggerListResponse struct {
+	Triggers []ServerlessResponseTrigger `json:"Triggers,omitempty"`
+}
+
+// ServerlessTriggerGetResponse is the form returned by the production get trigger API
+type ServerlessTriggerGetResponse struct {
+	Trigger ServerlessResponseTrigger `json:"Trigger,omitempty"`
+}
+
+// ServerlessResponseTrigger is the form used in list and get responses by the production API
+// The fields are a subset of those in ServerlessTrigger but the json marshaling is different in
+// some cases.
+type ServerlessResponseTrigger struct {
+	Name        string      `json:"name,omitempty"`
+	Function    string      `json:"function,omitempty"`
+	Enabled     bool        `json:"is_enabled"`
+	Cron        string      `json:"cron,omitempty"`
+	Created     string      `json:"created_at,omitempty"`
+	RequestBody interface{} `json:"body,omitempty"`
 }
 
 // ServerlessService is an interface for interacting with the sandbox plugin,
@@ -230,6 +254,7 @@ type serverlessService struct {
 	credsDir      string
 	node          string
 	userAgent     string
+	accessToken   string
 	client        *godo.Client
 	owClient      *whisk.Client
 	owClientSys   *whisk.Client // Temporary: allows invoking system actions
@@ -239,7 +264,7 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "4.2.4-1.3.1"
+	minServerlessVersion = "4.2.5-1.3.1"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -291,6 +316,10 @@ var (
 
 	// ErrServerlessNotConnected is the error returned to users when the sandbox is not connected to a namespace
 	ErrServerlessNotConnected = errors.New("serverless support is installed but not connected to a functions namespace (use `doctl serverless connect`)")
+
+	// TEMPORARY: flag to use the prototype API for triggers rather than the real one (dev support, to be
+	// removed prior to release)
+	triggersUsePrototype = os.Getenv("TRIGGERS_USE_PROTOTYPE") != ""
 )
 
 // ServerlessOutput contains the output returned from calls to the sandbox plugin.
@@ -303,7 +332,7 @@ type ServerlessOutput struct {
 }
 
 // NewServerlessService returns a configured ServerlessService.
-func NewServerlessService(client *godo.Client, usualServerlessDir string, credsToken string) ServerlessService {
+func NewServerlessService(client *godo.Client, usualServerlessDir string, accessToken string) ServerlessService {
 	nodeBin := "node"
 	if runtime.GOOS == "windows" {
 		nodeBin = "node.exe"
@@ -315,6 +344,7 @@ func NewServerlessService(client *godo.Client, usualServerlessDir string, credsT
 	if serverlessDir == "" {
 		serverlessDir = usualServerlessDir
 	}
+	credsToken := HashAccessToken(accessToken)
 	return &serverlessService{
 		serverlessJs:  filepath.Join(serverlessDir, "sandbox.js"),
 		serverlessDir: serverlessDir,
@@ -323,12 +353,22 @@ func NewServerlessService(client *godo.Client, usualServerlessDir string, credsT
 		userAgent:     fmt.Sprintf("doctl/%s serverless/%s", doctl.DoitVersion.String(), minServerlessVersion),
 		client:        client,
 		owClient:      nil,
+		accessToken:   accessToken,
 	}
+}
+
+// HashAccessToken converts a DO access token string into a shorter but suitably random string
+// via hashing.  This is used to form part of the path for storing OpenWhisk credentials
+func HashAccessToken(token string) string {
+	hasher := sha1.New()
+	hasher.Write([]byte(token))
+	sha := hasher.Sum(nil)
+	return hex.EncodeToString(sha[:4])
 }
 
 // InitWhisk is an on-demand initializer for the OpenWhisk client, called when that client
 // is needed.  Temporarily, two clients are supported, the owClientSys is supported in order
-// to invoke the temporary API for triggers.  To be removed when the permanent API is available.
+// to support the prototype API for triggers.  This support will be removed prior to release.
 func initWhisk(s *serverlessService, system bool) error {
 	var client *whisk.Client
 	if system {
@@ -523,7 +563,7 @@ func (s *serverlessService) InstallServerless(leafCredsDir string, upgrading boo
 func (s *serverlessService) Cmd(command string, args []string) (*exec.Cmd, error) {
 	args = append([]string{s.serverlessJs, command}, args...)
 	cmd := exec.Command(s.node, args...)
-	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+s.credsDir, "NIM_USER_AGENT="+s.userAgent)
+	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+s.credsDir, "NIM_USER_AGENT="+s.userAgent, "DO_API_KEY="+s.accessToken)
 	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
 	// will continue to work for returning structured results.
 	if os.Getenv("DEBUG") != "" {
@@ -791,9 +831,54 @@ func (s *serverlessService) WriteProject(project ServerlessProject) (string, err
 // ListTriggers lists the triggers in the connected namespace.  If 'fcn' is a non-empty
 // string it is assumed to be the package-qualified name of a function and only the triggers
 // of that function are listed.  If 'fcn' is empty all triggers are listed.
+// TEMPORARY: to support development while the official API is reaching stability you can
+// alternatively use the "prototype API" (implemented via system functions in the serverless cluster).
+// To do this, set the environment variable TRIGGERS_USE_PROTOTYPE
 func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]ServerlessTrigger, error) {
+	if triggersUsePrototype {
+		return listTriggersPrototype(ctx, s, fcn)
+	}
 	empty := []ServerlessTrigger{}
-	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
+	creds, err := s.ReadCredentials()
+	if err != nil {
+		return empty, err
+	}
+	path := "v2/functions/triggers/" + creds.Namespace
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return empty, err
+	}
+	decoded := new(ServerlessTriggerListResponse)
+	_, err = s.client.Do(ctx, req, decoded)
+	if err != nil {
+		return empty, err
+	}
+	return adjustTriggerListType(decoded.Triggers), nil
+}
+
+func adjustTriggerListType(original []ServerlessResponseTrigger) []ServerlessTrigger {
+	answer := []ServerlessTrigger{}
+	for _, trig := range original {
+		answer = append(answer, adjustTriggerType(trig))
+	}
+	return answer
+}
+
+// adjustTriggerType overcomes an impedence mismatch between the prototype and production
+// APIs.  Probably temporary, to be eliminated when we drop support for the prototype API.
+func adjustTriggerType(original ServerlessResponseTrigger) ServerlessTrigger {
+	return ServerlessTrigger{
+		Name:        original.Name,
+		Function:    original.Function,
+		Enabled:     original.Enabled,
+		Cron:        original.Cron,
+		Created:     original.Created,
+		RequestBody: original.RequestBody,
+	}
+}
+
+func listTriggersPrototype(ctx context.Context, s *serverlessService, fcn string) ([]ServerlessTrigger, error) {
+	empty := []ServerlessTrigger{}
 	err := initWhisk(s, true)
 	if err != nil {
 		return empty, err
@@ -829,9 +914,33 @@ func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]Ser
 }
 
 // GetTrigger gets the contents of a trigger for display
+// TEMPORARY: to support development while the official API is reaching stability you can
+// alternatively use the "prototype API" (implemented via system functions in the serverless cluster).
+// To do this, set the environment variable TRIGGERS_USE_PROTOTYPE
 func (s *serverlessService) GetTrigger(ctx context.Context, name string) (ServerlessTrigger, error) {
+	if triggersUsePrototype {
+		return getTriggersPrototype(ctx, s, name)
+	}
 	empty := ServerlessTrigger{}
-	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
+	creds, err := s.ReadCredentials()
+	if err != nil {
+		return empty, err
+	}
+	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return empty, err
+	}
+	decoded := new(ServerlessTriggerGetResponse)
+	_, err = s.client.Do(ctx, req, decoded)
+	if err != nil {
+		return empty, err
+	}
+	return adjustTriggerType(decoded.Trigger), nil
+}
+
+func getTriggersPrototype(ctx context.Context, s *serverlessService, name string) (ServerlessTrigger, error) {
+	empty := ServerlessTrigger{}
 	err := initWhisk(s, true)
 	if err != nil {
 		return empty, err

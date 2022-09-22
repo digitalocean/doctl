@@ -14,8 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -112,11 +110,7 @@ func (c *CmdConfig) PrintServerlessTextOutput(output do.ServerlessOutput) error 
 }
 
 func hashAccessToken(c *CmdConfig) string {
-	token := c.getContextAccessToken()
-	hasher := sha1.New()
-	hasher.Write([]byte(token))
-	sha := hasher.Sum(nil)
-	return hex.EncodeToString(sha[:4])
+	return do.HashAccessToken(c.getContextAccessToken())
 }
 
 // Determines whether the serverless appears to be connected.  The purpose is
