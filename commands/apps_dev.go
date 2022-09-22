@@ -204,7 +204,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		template.Print(heredoc.Doc(`
 
 			{{warning (print crossmark " functions builds are coming soon!")}}
-			  please use {{highlight "doctl serverless sls deploy"}} to build functions in the meantime.
+			  please use {{highlight "doctl serverless deploy"}} to build functions in the meantime.
 		
 		`), nil)
 		return fmt.Errorf("not supported")
