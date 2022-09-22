@@ -130,6 +130,9 @@ type AppDevConfig struct {
 	appID string
 	// App is the production app resource if AppID is set.
 	App *godo.App
+	// AppName is the current spec's or linked app's name.
+	// For linked apps: the name is cached and available on subsequent runs before the latest *godo.App is fetched.
+	AppName string
 
 	Registry        string
 	Timeout         time.Duration
@@ -172,6 +175,16 @@ func NewAppDevConfig(appDevConfig *config.AppDev, doctlConfig config.ConfigSourc
 	return c, nil
 }
 
+func (c *AppDevConfig) SetLinkedApp(app *godo.App) error {
+	if err := c.Set("app", app.GetID()); err != nil {
+		return err
+	}
+	if err := c.Set("app_name", app.GetSpec().GetName()); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Load loads the config.
 //
 // Note: the .Components config structure is only loaded for components that are present in the app spec. Configuration
@@ -183,6 +196,7 @@ func (c *AppDevConfig) Load() error {
 	c.Timeout = ws.GetDuration(doctl.ArgTimeout)
 	c.appID = ws.GetString(doctl.ArgApp)
 	c.appSpecPath = ws.GetString(doctl.ArgAppSpec)
+	c.AppName = ws.GetString("app_name")
 	c.Registry = ws.GetString(doctl.ArgRegistry)
 	c.NoCache = ws.GetBool(doctl.ArgNoCache)
 	c.CNBBuilderImage = ws.GetString("cnb_builder_image")
@@ -253,6 +267,12 @@ func (c *AppDevConfig) loadAppSpec() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	if c.AppName != c.AppSpec.GetName() {
+		c.AppName = c.AppSpec.GetName()
+		c.Set("app_name", c.AppName)
+		_ = c.Write() // best effort
 	}
 
 	return nil

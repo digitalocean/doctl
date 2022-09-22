@@ -122,6 +122,8 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return fmt.Errorf("preparing workspace: %w", err)
 	}
 
+	template.Print("{{muted pointerRight}} current app dev workspace: {{muted .}}{{nl}}", ws.Context())
+
 	if ws.Config.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, ws.Config.Timeout)
@@ -129,8 +131,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 
 	if ws.Config.AppSpec == nil {
-		template.Print(`{{error (print crossmark " an app spec is required")}}{{nl 2}}`, nil)
-
 		err := appsDevBuildSpecRequired(ws, c.Apps())
 		if err != nil {
 			if err.Error() == "" {
@@ -263,7 +263,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 
 	if ws.Config.NoCache {
-		template.Render(text.Warning, `{{crossmark}} build caching disabled{{nl}}`, nil)
+		template.Render(text.Warning, `{{pointerRight}} build caching disabled{{nl}}`, nil)
 		err = ws.ClearCacheDir(ctx, componentName)
 		if err != nil {
 			return err
@@ -275,7 +275,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 
 	if ws.Config.CNBBuilderImage != "" && componentSpec.GetDockerfilePath() == "" {
-		template.Render(text.Warning, `{{checkmark}} using custom builder image {{highlight .}}{{nl}}`, ws.Config.CNBBuilderImage)
+		template.Render(text.Warning, `{{pointerRight}} using custom builder image {{highlight .}}{{nl}}`, ws.Config.CNBBuilderImage)
 	}
 
 	// if Interactive {
@@ -293,8 +293,11 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// }
 
 	buildingComponentLine := template.String(
-		`building {{lower (snakeToTitle .GetType)}} {{highlight .GetName}}`,
-		componentSpec,
+		`building {{lower (snakeToTitle .componentSpec.GetType)}} {{highlight .componentSpec.GetName}} {{muted print "(" .appName ")"}}`,
+		map[string]any{
+			"componentSpec": componentSpec,
+			"appName":       ws.Config.AppName,
+		},
 	)
 	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
 
@@ -410,7 +413,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 				  
 				   {{muted promptPrefix}} {{highlight (printf "docker run --rm -p 8080:8080 %s" .img)}}
 				
-				  and access your component at {{underline "http://localhost:8080"}}`,
+				  then access your component at {{underline "http://localhost:8080"}}`,
 			),
 			map[string]any{
 				"component": componentSpec.GetName(),
@@ -453,6 +456,7 @@ func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
 
 // PrepareEnvironment pulls required images, validates permissions, etc. in preparation for a component build.
 func appDevPrepareEnvironment(ctx context.Context, ws *workspace.AppDev, cli builder.DockerEngineClient, componentSpec godo.AppBuildableComponentSpec) error {
+	template.Print("{{success checkmark}} preparing app dev environment{{nl}}", nil)
 	var images []string
 
 	_, isCNB := componentSpec.(godo.AppCNBBuildableComponentSpec)
@@ -555,12 +559,19 @@ func pullDockerImages(ctx context.Context, cli builder.DockerEngineClient, image
 }
 
 func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) error {
+	template.Print(heredoc.Doc(`
+		{{error (print crossmark " no app spec found.")}}
+		  an app spec is required to start a local build. make sure doctl is run in the correct directory where your app code is.
+		
+		`,
+	), ws.Context())
+
 	options := struct {
 		BringAppSpec string
 		LinkApp      string
 	}{
-		BringAppSpec: "I will place an app spec at .do/app.yaml",
-		LinkApp:      "I would like to link an app on my account and use its app spec",
+		BringAppSpec: template.String(`i will place an app spec at {{highlight ".do/app.yaml"}}`, nil),
+		LinkApp:      "i would like to link an app from my DigitalOcean cloud account and use its app spec",
 		// TODO: add support for app detection
 		// DetectApp: "I'm in my app project directory, auto-detect an app spec for me",
 	}
@@ -572,9 +583,11 @@ func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) 
 	if err != nil {
 		return err
 	}
+	fmt.Print("\n")
 
 	switch opt {
 	case options.BringAppSpec:
+		template.Print(`place an app spec at {{highlight ".do/app.yaml"}} and re-run doctl.{{nl}}`, nil)
 		return errors.New("")
 	case options.LinkApp:
 		app, err := appsDevSelectApp(appsService)
@@ -582,11 +595,30 @@ func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) 
 			return err
 		}
 
+		choice, err := confirm.New(
+			template.String(
+				`link app {{highlight .app.GetSpec.GetName}} to app dev workspace at {{highlight .context}}?`,
+				map[string]any{
+					"context": ws.Context(),
+					"app":     app,
+				},
+			),
+			confirm.WithDefaultChoice(confirm.Yes),
+		).Prompt()
+		if err != nil {
+			return err
+		}
+		if choice != confirm.Yes {
+			return fmt.Errorf("canceled")
+		}
+
 		template.Print("{{success checkmark}} linking app {{highlight .}} to dev workspace{{nl}}", app.GetSpec().GetName())
 
-		ws.Config.Set("app", app.ID)
+		if err := ws.Config.SetLinkedApp(app); err != nil {
+			return fmt.Errorf("linking app: %w", err)
+		}
 		if err := ws.Config.Write(); err != nil {
-			return fmt.Errorf("writing app id to config: %w", err)
+			return fmt.Errorf("writing app link to config: %w", err)
 		}
 		return nil
 	}
@@ -595,6 +627,7 @@ func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) 
 }
 
 func appsDevSelectApp(appsService do.AppsService) (*godo.App, error) {
+	// TODO: consider updating the list component to accept an itemsFunc and displays its own loading screen
 	template.Print(`listing apps on your account...`, nil)
 	apps, err := appsService.List()
 	if err != nil {
@@ -609,6 +642,8 @@ func appsDevSelectApp(appsService do.AppsService) (*godo.App, error) {
 		listItems[i] = appListItem{app}
 	}
 	ll := list.New(list.Items(listItems))
+	ll.Model().Title = "select an app"
+	ll.Model().SetStatusBarItemName("app", "apps")
 	selected, err := ll.Select()
 	if err != nil {
 		return nil, err
