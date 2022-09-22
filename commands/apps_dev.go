@@ -274,7 +274,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		return err
 	}
 
-	if ws.Config.CNBBuilderImage != "" && componentSpec.GetDockerfilePath() == "" {
+	if builder.IsCNBBuild(componentSpec) && ws.Config.CNBBuilderImage != "" {
 		template.Render(text.Warning, `{{pointerRight}} using custom builder image {{highlight .}}{{nl}}`, ws.Config.CNBBuilderImage)
 	}
 

@@ -308,3 +308,17 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 
 	return nil, errors.New("component was not buildable by either Docker or CNB build system")
 }
+
+// IsCNBBuild indicates whether the component will be built using the CNB builder.
+func IsCNBBuild(spec godo.AppBuildableComponentSpec) bool {
+	_, cnbBuildable := spec.(godo.AppCNBBuildableComponentSpec)
+	if !cnbBuildable {
+		return false
+	}
+
+	if dockerBuildable, ok := spec.(godo.AppDockerBuildableComponentSpec); ok && dockerBuildable.GetDockerfilePath() != "" {
+		return false
+	}
+
+	return true
+}
