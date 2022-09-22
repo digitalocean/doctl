@@ -7,6 +7,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/internal/apps/workspace"
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +22,13 @@ func AppsDevConfig() *Command {
 		Command: &cobra.Command{
 			Use:     "config",
 			Aliases: []string{"c"},
-			Short:   "Display commands for working with app platform local development configuration files.",
-			Long:    `[BETA] Display commands for working with app platform local development configuration files.`,
+			Short:   "Display commands for working with app platform local development configuration settings.",
+			Long: fmt.Sprintf(`[BETA] Display commands for working with app platform local development configuration settings.
+
+Configuration Format:
+%s
+
+`, workspace.SampleDevConfigFile),
 		},
 	}
 
@@ -30,8 +36,16 @@ func AppsDevConfig() *Command {
 		cmd,
 		RunAppsDevConfigSet,
 		"set KEY=VALUE...",
-		"Set dev configuration settings.",
-		"Set dev configuration settings for a build.",
+		"Set a value in the local development configuration settings.",
+		fmt.Sprintf(`Set a value in the local development configuration settings.
+
+KEY is the name of a configuration option, for example: spec=/path/to/app.yaml
+Nested component KEY(s) can also be set, for example: my-component.build-command="go build ."
+		
+Configuration Format:
+%s
+
+`, workspace.SampleDevConfigFile),
 		Writer,
 	)
 
@@ -45,8 +59,16 @@ func AppsDevConfig() *Command {
 		cmd,
 		RunAppsDevConfigUnset,
 		"unset KEY...",
-		"Unset dev configuration settings.",
-		"Unset dev configuration settings for a build.",
+		"Unset a value in the local development configuration settings.",
+		fmt.Sprintf(`Unset a value in the local development configuration settings.
+
+KEY is the name of a configuration option to unset, for example: spec
+Nested component KEY(s) can also be unset, for example: my-component.build-command
+		
+Configuration Format:
+%s
+
+`, workspace.SampleDevConfigFile),
 		Writer,
 	)
 

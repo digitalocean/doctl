@@ -26,6 +26,18 @@ const (
 	DefaultDevConfigFile = "dev-config.yaml"
 	// DefaultSpecPath is the default spec path for an app.
 	DefaultSpecPath = ".do/app.yaml"
+
+	// SampleDevConfigFile represents a sample dev config file with all options and descriptions.
+	SampleDevConfigFile = `
+	timeout: duration until command is cancelled
+	app: ID of an App Platform App to load the AppSpec from
+	spec: Path to the AppSpec to load
+	registry: Registry name to use for build image output
+	no-cache: Boolean to determine whether or not to use the build cache
+	[component-name]:
+		build-command: Custom build command override for a given component.
+		env-file: Path to an env file to override envs for a given component.
+`
 )
 
 type NewAppDevOpts struct {
