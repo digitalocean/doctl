@@ -3,8 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/digitalocean/doctl"
@@ -118,26 +116,4 @@ func RunAppsDevConfigUnset(c *CmdConfig) error {
 	}
 
 	return nil
-}
-
-var errNoGitRepo = errors.New("no git repository found")
-
-// findTopLevelGitDir ...
-func findTopLevelGitDir(workingDir string) (string, error) {
-	dir, err := filepath.Abs(workingDir)
-	if err != nil {
-		return "", err
-	}
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
-			return dir, nil
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return "", errors.New("no git repository found")
-		}
-		dir = parent
-	}
 }

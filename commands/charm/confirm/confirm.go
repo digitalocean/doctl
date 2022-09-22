@@ -140,7 +140,7 @@ func (p *Prompt) Prompt() (Choice, error) {
 		if err.Error() == "no decision was made" {
 			return Undecided, err
 		}
-		return "", nil
+		return "", err
 	}
 	return toChoice(&v), nil
 }

@@ -232,8 +232,12 @@ func (c *AppDevConfig) loadAppSpec() error {
 	}
 
 	if c.appSpecPath != "" {
-		template.Print(`{{success checkmark}} using app spec at {{highlight .}}{{nl}}`, c.appSpecPath)
-		c.AppSpec, err = apps.ReadAppSpec(nil, c.appSpecPath)
+		tmplPath := c.appSpecPath
+		if tmplPath == "-" {
+			tmplPath = "stdin"
+		}
+		template.Print(`{{success checkmark}} using app spec from {{highlight .}}{{nl}}`, tmplPath)
+		c.AppSpec, err = apps.ReadAppSpec(os.Stdin, c.appSpecPath)
 		if err != nil {
 			return err
 		}

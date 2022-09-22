@@ -135,7 +135,9 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	var hasBuildableComponents bool
 	_ = godo.ForEachAppSpecComponent(ws.Config.AppSpec, func(c godo.AppBuildableComponentSpec) error {
 		hasBuildableComponents = true
-		return fmt.Errorf("stop")
+		// Returning an error short-circuits the component iteration.
+		// We just want to assert that atleast one buildable component spec exists.
+		return fmt.Errorf("short-circuit")
 	})
 	if !hasBuildableComponents {
 		return fmt.Errorf("the specified app spec does not contain any buildable components")

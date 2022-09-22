@@ -158,6 +158,7 @@ snap:
 mocks:
 	@echo "==> update mocks"
 	@echo ""
+	@go generate ./...
 	@scripts/regenmocks.sh
 
 .PHONY: _upgrade_godo
