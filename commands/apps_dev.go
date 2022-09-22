@@ -293,7 +293,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// }
 
 	buildingComponentLine := template.String(
-		`building {{lower (snakeToTitle .componentSpec.GetType)}} {{highlight .componentSpec.GetName}} {{muted print "(" .appName ")"}}`,
+		`building {{lower (snakeToTitle .componentSpec.GetType)}} {{highlight .componentSpec.GetName}} {{muted (print "(" .appName ")")}}`,
 		map[string]any{
 			"componentSpec": componentSpec,
 			"appName":       ws.Config.AppName,
