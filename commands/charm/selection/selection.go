@@ -11,11 +11,15 @@ type Selection struct {
 type Option func(*Selection)
 
 func New(options []string, opts ...Option) *Selection {
-	return &Selection{
+	s := &Selection{
 		options:   options,
 		filtering: true,
-		prompt:    "Selection:",
+		prompt:    "selection:",
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 func WithFiltering(v bool) Option {
