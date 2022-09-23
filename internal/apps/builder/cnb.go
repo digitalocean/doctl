@@ -129,8 +129,14 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 	}
 
 	lw := b.getLogWriter()
-	if b.copyOnWriteSemantics {
+	if !b.copyOnWriteSemantics {
 		template.Render(lw, "{{success checkmark}} mounting app workspace{{nl}}", nil)
+	} else {
+		template.Render(lw, heredoc.Doc(`
+			{{success checkmark}} copying local app workspace to build container
+			  {{muted (print "    local: " .)}}
+			  {{muted "container: /workspace"}}
+		`), b.contextDir)
 		// Prepare source copy info.
 		srcInfo, err := archive.CopyInfoSourcePath(b.contextDir, true)
 		if err != nil {
