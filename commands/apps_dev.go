@@ -71,7 +71,7 @@ func AppsDev() *Command {
 	AddStringFlag(
 		build, doctl.ArgAppSpec,
 		"", "",
-		`Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`,
+		`Path to an app spec in JSON or YAML format.`,
 	)
 
 	AddStringFlag(
