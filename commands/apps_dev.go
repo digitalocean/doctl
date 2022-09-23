@@ -402,23 +402,45 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	} else if userCanceled {
 		return fmt.Errorf("canceled")
 	} else if res.ExitCode == 0 {
-		template.Buffered(
-			textbox.New().Success(),
-			heredoc.Doc(`
+		var portEnv string
+		var portArg string
+		if componentSpec.GetType() == godo.AppComponentTypeService {
+			svc := componentSpec.(*godo.AppServiceSpec)
+			port := 8080
+			if svc.HTTPPort != 0 {
+				port = int(svc.HTTPPort)
+			}
+			portEnv = fmt.Sprintf("-e PORT=%d ", port)
+			portArg = fmt.Sprintf("-p 8080:%d ", port)
+		} else if componentSpec.GetType() == godo.AppComponentTypeStaticSite {
+			// static site config is hard-coded in nginx to 8080 currently
+			portArg = "-p 8080:8080 "
+		}
+
+		tmpl := `
 				{{success checkmark}} successfully built {{success .component}} in {{highlight (duration .dur)}}
 				{{success checkmark}} created container image {{success .img}}
 				
 				{{pointerRight}} push your image to a container registry using {{highlight "docker push"}}
 				{{pointerRight}} or run it locally using {{highlight "docker run"}}; for example:
 				  
-				   {{muted promptPrefix}} {{highlight (printf "docker run --rm -p 8080:8080 %s" .img)}}
-				
-				  then access your component at {{underline "http://localhost:8080"}}`,
-			),
+				   {{muted promptPrefix}} {{highlight (printf "docker run %s--rm %s%s" .port_env .port_arg .img)}}`
+
+		if _, ok := componentSpec.(godo.AppRoutableComponentSpec); ok {
+			tmpl += `
+
+				then access your component at {{underline "http://localhost:8080"}}`
+		}
+
+		template.Buffered(
+			textbox.New().Success(),
+			heredoc.Doc(tmpl),
 			map[string]any{
 				"component": componentSpec.GetName(),
 				"img":       res.Image,
 				"dur":       res.BuildDuration,
+				"port_arg":  portArg,
+				"port_env":  portEnv,
 			},
 		)
 	} else {
