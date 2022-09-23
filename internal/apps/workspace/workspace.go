@@ -26,18 +26,22 @@ const (
 	DefaultDevConfigFile = "dev-config.yaml"
 	// DefaultSpecPath is the default spec path for an app.
 	DefaultSpecPath = ".do/app.yaml"
+)
 
+var (
 	// SampleDevConfigFile represents a sample dev config file with all options and descriptions.
-	SampleDevConfigFile = `
-	timeout: duration until command is cancelled
-	app: ID of an App Platform App to load the AppSpec from
-	spec: Path to the AppSpec to load
-	registry: Registry name to use for build image output
-	no-cache: Boolean to determine whether or not to use the build cache
-	[component-name]:
-		build-command: Custom build command override for a given component.
-		env-file: Path to an env file to override envs for a given component.
-`
+	SampleDevConfigFile = template.String(`
+	timeout: {{muted "Duration until command is cancelled."}}
+	app: {{muted "ID of an App Platform App to load the AppSpec from."}}
+	spec: {{muted "Path to the AppSpec to load."}}
+	registry: {{muted "Registry name to use for build image output."}}
+	no_cache: {{muted "Boolean to determine whether to disable the build cache."}}
+	components:
+	  {{muted "# Per-component configuration"}}
+	  {{muted "component-name"}}: 
+	    build_command: {{muted "Custom build command override for a given component."}}
+	    env_file: {{muted "Path to an env file to override envs for a given component."}}
+`, nil)
 )
 
 type NewAppDevOpts struct {
@@ -51,7 +55,12 @@ type NewAppDevOpts struct {
 
 // NewAppDev creates a new AppDev workspace.
 func NewAppDev(opts NewAppDevOpts) (*AppDev, error) {
-	contextDir, err := findContextDir()
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	contextDir, err := findContextDir(cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -394,25 +403,23 @@ func appsDevFlagConfigCompat(cs config.ConfigSource) config.ConfigSource {
 	return config.MutatingConfigSource(cs, dashToUnderscore, nil)
 }
 
-func findContextDir() (string, error) {
-	contextDir, err := os.Getwd()
+func findContextDir(cwd string) (string, error) {
+	contextDir := cwd
+
+	gitRoot, err := findTopLevelGitDir(contextDir)
 	if err != nil {
 		return "", err
 	}
-	gitRoot, err := findTopLevelGitDir(contextDir)
-	if err != nil && !errors.Is(err, errNoGitRepo) {
-		return "", err
-	}
-	if gitRoot != "" {
-		contextDir = gitRoot
-	}
+	contextDir = gitRoot
 
-	return contextDir, nil
+	return contextDir, err
 }
 
-var errNoGitRepo = errors.New("no git repository found")
+// ErrNoGitRepo indicates that a .git worktree could not be found.
+var ErrNoGitRepo = errors.New("no git repository found")
 
-// findTopLevelGitDir ...
+// findTopLevelGitDir finds the root of the git worktree that workingDir is in. An error is returned if no git worktree
+// was found.
 func findTopLevelGitDir(workingDir string) (string, error) {
 	dir, err := filepath.Abs(workingDir)
 	if err != nil {
@@ -420,13 +427,13 @@ func findTopLevelGitDir(workingDir string) (string, error) {
 	}
 
 	for {
-		if fileExists(dir, ".git"); err == nil {
+		if fileExists(dir, ".git") {
 			return dir, nil
 		}
 
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			return "", errNoGitRepo
+			return "", ErrNoGitRepo
 		}
 		dir = parent
 	}
