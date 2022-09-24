@@ -340,9 +340,7 @@ func HashAccessToken(token string) string {
 // InitWhisk is an on-demand initializer for the OpenWhisk client, called when that client
 // is needed.
 func initWhisk(s *serverlessService) error {
-	var client *whisk.Client
-	client = s.owClient
-	if client != nil {
+	if s.owClient != nil {
 		return nil
 	}
 	creds, err := s.ReadCredentials()
@@ -351,7 +349,7 @@ func initWhisk(s *serverlessService) error {
 	}
 	credential := creds.Credentials[creds.APIHost][creds.Namespace]
 	config := whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
-	client, err = whisk.NewClient(http.DefaultClient, &config)
+	client, err := whisk.NewClient(http.DefaultClient, &config)
 	if err != nil {
 		return err
 	}
