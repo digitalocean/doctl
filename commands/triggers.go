@@ -76,7 +76,7 @@ func RunTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(json))
+	fmt.Fprintln(c.Out, string(json))
 	return nil
 }
 

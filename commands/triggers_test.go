@@ -27,7 +27,7 @@ import (
 func TestTriggersCommand(t *testing.T) {
 	cmd := Triggers()
 	assert.NotNil(t, cmd)
-	expected := []string{"disable", "enable", "fire", "get", "list"}
+	expected := []string{"get", "list"}
 
 	names := []string{}
 	for _, c := range cmd.Commands() {
@@ -39,50 +39,33 @@ func TestTriggersCommand(t *testing.T) {
 	assert.Equal(t, expected, names)
 }
 
-func TestTriggersDisable(t *testing.T) {
+func TestTriggersGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 		config.Args = append(config.Args, "aTrigger")
 
-		disabledTrigger := do.ServerlessTrigger{Enabled: false}
-		tm.serverless.EXPECT().SetTriggerEnablement(context.TODO(), "aTrigger", false).Return(disabledTrigger, nil)
-
-		err := RunTriggersDisable(config)
-
-		require.NoError(t, err)
-		assert.Equal(t, "", buf.String())
-	})
+		theTrigger := do.ServerlessTrigger{
+			Name:     "firePoll1",
+			Function: "misc/pollStatus",
+			Cron:     "5 * * * *",
+			Enabled:  true,
+			LastRun:  "_",
+		}
+		expect := `{
+  "name": "firePoll1",
+  "function": "misc/pollStatus",
+  "is_enabled": true,
+  "cron": "5 * * * *",
+  "last_run_at": "_"
 }
+`
+		tm.serverless.EXPECT().GetTrigger(context.TODO(), "aTrigger").Return(theTrigger, nil)
 
-func TestTriggersEnable(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		buf := &bytes.Buffer{}
-		config.Out = buf
-		config.Args = append(config.Args, "aTrigger")
-
-		enabledTrigger := do.ServerlessTrigger{Enabled: true}
-		tm.serverless.EXPECT().SetTriggerEnablement(context.TODO(), "aTrigger", true).Return(enabledTrigger, nil)
-
-		err := RunTriggersEnable(config)
+		err := RunTriggersGet(config)
 
 		require.NoError(t, err)
-		assert.Equal(t, "", buf.String())
-	})
-}
-
-func TestTriggersFire(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		buf := &bytes.Buffer{}
-		config.Out = buf
-		config.Args = append(config.Args, "aTrigger")
-
-		tm.serverless.EXPECT().FireTrigger(context.TODO(), "aTrigger")
-
-		err := RunTriggersFire(config)
-
-		require.NoError(t, err)
-		assert.Equal(t, "", buf.String())
+		assert.Equal(t, expect, buf.String())
 	})
 }
 
@@ -120,9 +103,9 @@ func TestTriggersList(t *testing.T) {
 				"no-header": "",
 			},
 			listResult: theList,
-			expectedOutput: `fireGC       * * * * *     misc/garbageCollect    true     
-firePoll1    5 * * * *     misc/pollStatus        true     
-firePoll2    10 * * * *    misc/pollStatus        false    
+			expectedOutput: `fireGC       * * * * *     misc/garbageCollect    true     _
+firePoll1    5 * * * *     misc/pollStatus        true     _
+firePoll2    10 * * * *    misc/pollStatus        false    _
 `,
 		},
 		{
@@ -133,8 +116,8 @@ firePoll2    10 * * * *    misc/pollStatus        false
 			},
 			listArg:    "misc/pollStatus",
 			listResult: theList[1:],
-			expectedOutput: `firePoll1    5 * * * *     misc/pollStatus    true     
-firePoll2    10 * * * *    misc/pollStatus    false    
+			expectedOutput: `firePoll1    5 * * * *     misc/pollStatus    true     _
+firePoll2    10 * * * *    misc/pollStatus    false    _
 `,
 		},
 	}
