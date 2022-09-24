@@ -16,7 +16,6 @@ package commands
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/digitalocean/doctl"
@@ -46,20 +45,6 @@ when events from that source type occur.  Currently, only the ` + "`" + `schedul
 	CmdBuilder(cmd, RunTriggersGet, "get <triggerName>", "Get the details for a trigger",
 		`Use `+"`"+`doctl serverless triggers get <triggerName>`+"`"+` for details about <triggerName>.`,
 		Writer)
-
-	CmdBuilder(cmd, RunTriggersEnable, "enable <triggerName>", "Enable a trigger",
-		`Use `+"`"+`doctl serverless triggers enable <triggerName>`+"`"+` to enable the trigger <triggerName>.`,
-		Writer, hiddenCmd())
-
-	CmdBuilder(cmd, RunTriggersDisable, "disable <triggerName>", "Disable a trigger",
-		`Use `+"`"+`doctl serverless triggers disable <triggerName>`+"`"+` to disable the trigger <triggerName>.
-When a trigger is disable it does not invoke its target function`,
-		Writer, hiddenCmd())
-
-	CmdBuilder(cmd, RunTriggersFire, "fire <triggerName>", "Test-fire a trigger",
-		`Use `+"`"+`doctl serverless triggers fire <triggerName>`+"`"+` to invoke the function associated with a trigger using
-the same method and parameters that an event occurence would use`,
-		Writer, hiddenCmd())
 
 	return cmd
 }
@@ -93,53 +78,6 @@ func RunTriggersGet(c *CmdConfig) error {
 	}
 	fmt.Println(string(json))
 	return nil
-}
-
-// RunTriggersEnable provides the logic for 'doctl sls trig enable'
-// This command is hidden.  It will work (if you know about it) when using the prototype API
-// but will not be supported in the real API at first.
-func RunTriggersEnable(c *CmdConfig) error {
-	err := ensureOneArg(c)
-	if err != nil {
-		return err
-	}
-	newContent, err := c.Serverless().SetTriggerEnablement(context.TODO(), c.Args[0], true)
-	if err != nil {
-		return err
-	}
-	if !newContent.Enabled {
-		return errors.New("failed to enable trigger (cause unknown)")
-	}
-	return nil
-}
-
-// RunTriggersDisable provides the logic for 'doctl sls trig disable'
-// This command is hidden.  It will work (if you know about it) when using the prototype API
-// but will not be supported in the real API at first.
-func RunTriggersDisable(c *CmdConfig) error {
-	err := ensureOneArg(c)
-	if err != nil {
-		return err
-	}
-	newContent, err := c.Serverless().SetTriggerEnablement(context.TODO(), c.Args[0], false)
-	if err != nil {
-		return err
-	}
-	if newContent.Enabled {
-		return errors.New("failed to disable trigger (cause unknown)")
-	}
-	return nil
-}
-
-// RunTriggersFire provides the logic for 'doctl sls trig fire'
-// This command is hidden.  It will work (if you know about it) when using the prototype API
-// but will not be supported in the real API at first.
-func RunTriggersFire(c *CmdConfig) error {
-	err := ensureOneArg(c)
-	if err != nil {
-		return err
-	}
-	return c.Serverless().FireTrigger(context.TODO(), c.Args[0])
 }
 
 // cleanTriggers is the subroutine of undeploy that removes all the triggers of a namespace

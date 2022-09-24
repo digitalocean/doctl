@@ -53,7 +53,7 @@ func (i *Triggers) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(i.List))
 	for _, ii := range i.List {
 		lastRunTime, err := time.Parse(time.RFC3339, ii.LastRun)
-		var lastRun string
+		lastRun := "_"
 		if err == nil {
 			lastRun = lastRunTime.Local().Format("01/02 03:04:05")
 		}

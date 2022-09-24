@@ -176,46 +176,24 @@ type ProjectMetadata struct {
 	UnresolvedVariables []string `json:"unresolvedVariables,omitempty"`
 }
 
-// ServerlessTrigger describes a trigger internally and is also the form used by the
-// prototype API.  The production API is nearly semantically equivalent but different in
-// detail.
-type ServerlessTrigger struct {
-	Name        string      `json:"triggerName,omitempty"`
-	Cron        string      `json:"cronExpression,omitempty"`
-	Interval    int         `json:"interval,omitempty"` // not yet implemeted in scheduler
-	Once        string      `json:"once,omitempty"`     // not yet implemented in scheduler
-	Function    string      `json:"function,omitempty"`
-	Enabled     bool        `json:"isEnabled"`
-	NextRun     string      `json:"nextRunAt,omitempty"`
-	Created     string      `json:"createdAt,omitempty"`
-	LastRun     string      `json:"lastRunAt,omitempty"`
-	RequestBody interface{} `json:"requestBody,omitempty"`
-}
-
-// ServerlessTriggerList is the form returned by the prototype list triggers API
-type ServerlessTriggerList struct {
-	Items []ServerlessTrigger `json:"items,omitempty"`
-}
-
-// ServerlessTriggerListResponse is the form returned by the production list triggers API
+// ServerlessTriggerListResponse is the form returned by the list triggers API
 type ServerlessTriggerListResponse struct {
-	Triggers []ServerlessResponseTrigger `json:"Triggers,omitempty"`
+	Triggers []ServerlessTrigger `json:"Triggers,omitempty"`
 }
 
-// ServerlessTriggerGetResponse is the form returned by the production get trigger API
+// ServerlessTriggerGetResponse is the form returned by the get trigger API
 type ServerlessTriggerGetResponse struct {
-	Trigger ServerlessResponseTrigger `json:"Trigger,omitempty"`
+	Trigger ServerlessTrigger `json:"Trigger,omitempty"`
 }
 
-// ServerlessResponseTrigger is the form used in list and get responses by the production API
-// The fields are a subset of those in ServerlessTrigger but the json marshaling is different in
-// some cases.
-type ServerlessResponseTrigger struct {
+// ServerlessTrigger is the form used in list and get responses by the triggers API
+type ServerlessTrigger struct {
 	Name        string      `json:"name,omitempty"`
 	Function    string      `json:"function,omitempty"`
 	Enabled     bool        `json:"is_enabled"`
 	Cron        string      `json:"cron,omitempty"`
 	Created     string      `json:"created_at,omitempty"`
+	LastRun     string      `json:"last_run_at,omitempty"`
 	RequestBody interface{} `json:"body,omitempty"`
 }
 
@@ -232,8 +210,6 @@ type ServerlessService interface {
 	DeleteNamespace(context.Context, string) error
 	ListTriggers(context.Context, string) ([]ServerlessTrigger, error)
 	GetTrigger(context.Context, string) (ServerlessTrigger, error)
-	FireTrigger(context.Context, string) error
-	SetTriggerEnablement(context.Context, string, bool) (ServerlessTrigger, error)
 	DeleteTrigger(context.Context, string) error
 	WriteCredentials(ServerlessCredentials) error
 	ReadCredentials() (ServerlessCredentials, error)
@@ -257,7 +233,6 @@ type serverlessService struct {
 	accessToken   string
 	client        *godo.Client
 	owClient      *whisk.Client
-	owClientSys   *whisk.Client // Temporary: allows invoking system actions
 }
 
 const (
@@ -316,10 +291,6 @@ var (
 
 	// ErrServerlessNotConnected is the error returned to users when the sandbox is not connected to a namespace
 	ErrServerlessNotConnected = errors.New("serverless support is installed but not connected to a functions namespace (use `doctl serverless connect`)")
-
-	// TEMPORARY: flag to use the prototype API for triggers rather than the real one (dev support, to be
-	// removed prior to release)
-	triggersUsePrototype = os.Getenv("TRIGGERS_USE_PROTOTYPE") != ""
 )
 
 // ServerlessOutput contains the output returned from calls to the sandbox plugin.
@@ -367,15 +338,10 @@ func HashAccessToken(token string) string {
 }
 
 // InitWhisk is an on-demand initializer for the OpenWhisk client, called when that client
-// is needed.  Temporarily, two clients are supported, the owClientSys is supported in order
-// to support the prototype API for triggers.  This support will be removed prior to release.
-func initWhisk(s *serverlessService, system bool) error {
+// is needed.
+func initWhisk(s *serverlessService) error {
 	var client *whisk.Client
-	if system {
-		client = s.owClientSys
-	} else {
-		client = s.owClient
-	}
+	client = s.owClient
 	if client != nil {
 		return nil
 	}
@@ -384,21 +350,12 @@ func initWhisk(s *serverlessService, system bool) error {
 		return err
 	}
 	credential := creds.Credentials[creds.APIHost][creds.Namespace]
-	var config whisk.Config
-	if system {
-		config = whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth, Namespace: "nimbella"}
-	} else {
-		config = whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
-	}
+	config := whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
 	client, err = whisk.NewClient(http.DefaultClient, &config)
 	if err != nil {
 		return err
 	}
-	if system {
-		s.owClientSys = client
-	} else {
-		s.owClient = client
-	}
+	s.owClient = client
 	return nil
 }
 
@@ -718,7 +675,7 @@ func (s *serverlessService) GetHostInfo(APIHost string) (ServerlessHostInfo, err
 
 // GetFunction returns the metadata and optionally the code of a deployer function
 func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Action, []FunctionParameter, error) {
-	err := initWhisk(s, false)
+	err := initWhisk(s)
 	if err != nil {
 		return whisk.Action{}, []FunctionParameter{}, err
 	}
@@ -745,7 +702,7 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 // InvokeFunction invokes a function via POST with authentication
 func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (map[string]interface{}, error) {
 	var empty map[string]interface{}
-	err := initWhisk(s, false)
+	err := initWhisk(s)
 	if err != nil {
 		return empty, err
 	}
@@ -800,7 +757,7 @@ func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]
 
 // GetConnectedAPIHost retrieves the API host to which the service is currently connected
 func (s *serverlessService) GetConnectedAPIHost() (string, error) {
-	err := initWhisk(s, false)
+	err := initWhisk(s)
 	if err != nil {
 		return "", err
 	}
@@ -831,13 +788,7 @@ func (s *serverlessService) WriteProject(project ServerlessProject) (string, err
 // ListTriggers lists the triggers in the connected namespace.  If 'fcn' is a non-empty
 // string it is assumed to be the package-qualified name of a function and only the triggers
 // of that function are listed.  If 'fcn' is empty all triggers are listed.
-// TEMPORARY: to support development while the official API is reaching stability you can
-// alternatively use the "prototype API" (implemented via system functions in the serverless cluster).
-// To do this, set the environment variable TRIGGERS_USE_PROTOTYPE
 func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]ServerlessTrigger, error) {
-	if triggersUsePrototype {
-		return listTriggersPrototype(ctx, s, fcn)
-	}
 	empty := []ServerlessTrigger{}
 	creds, err := s.ReadCredentials()
 	if err != nil {
@@ -853,74 +804,31 @@ func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]Ser
 	if err != nil {
 		return empty, err
 	}
-	return adjustTriggerListType(decoded.Triggers), nil
+	ans := fixBaseDates(decoded.Triggers)
+	return ans, nil
 }
 
-func adjustTriggerListType(original []ServerlessResponseTrigger) []ServerlessTrigger {
-	answer := []ServerlessTrigger{}
-	for _, trig := range original {
-		answer = append(answer, adjustTriggerType(trig))
+// fixBaseDates applies fixBaseDate to an array of triggers
+func fixBaseDates(list []ServerlessTrigger) []ServerlessTrigger {
+	ans := []ServerlessTrigger{}
+	for _, trigger := range list {
+		ans = append(ans, fixBaseDate(trigger))
 	}
-	return answer
+	return ans
 }
 
-// adjustTriggerType overcomes an impedence mismatch between the prototype and production
-// APIs.  Probably temporary, to be eliminated when we drop support for the prototype API.
-func adjustTriggerType(original ServerlessResponseTrigger) ServerlessTrigger {
-	return ServerlessTrigger{
-		Name:        original.Name,
-		Function:    original.Function,
-		Enabled:     original.Enabled,
-		Cron:        original.Cron,
-		Created:     original.Created,
-		RequestBody: original.RequestBody,
+// fixBaseDate fixes up the LastRun field of a trigger that has never been run.
+// It should properly contain blank but sometimes contain an encoding of the base date (a string
+// starting with "000").
+func fixBaseDate(trigger ServerlessTrigger) ServerlessTrigger {
+	if strings.HasPrefix(trigger.LastRun, "000") {
+		trigger.LastRun = "_"
 	}
-}
-
-func listTriggersPrototype(ctx context.Context, s *serverlessService, fcn string) ([]ServerlessTrigger, error) {
-	empty := []ServerlessTrigger{}
-	err := initWhisk(s, true)
-	if err != nil {
-		return empty, err
-	}
-	var params interface{}
-	if fcn != "" {
-		params = map[string]interface{}{"function": fcn}
-	}
-	_, resp, err := s.owClientSys.Actions.Invoke("triggers/list", params, true, true)
-	if err != nil {
-		return empty, err
-	}
-	// The generic JSON parsing done by the OW client library is not useful so it's been
-	// ignored.  Instead, we parse the raw body with ServerlessTriggerList
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return empty, err
-	}
-	parsedResponse := ServerlessTriggerList{}
-	err = json.Unmarshal(body, &parsedResponse)
-	if err != nil {
-		return empty, err
-	}
-	items := parsedResponse.Items
-	// Omit seconds from the cron expression (if present: perhaps this should already have been done
-	// by the API).
-	for i, item := range items {
-		item.Cron = fixupCron(item.Cron)
-		items[i] = item
-	}
-	return items, nil
+	return trigger
 }
 
 // GetTrigger gets the contents of a trigger for display
-// TEMPORARY: to support development while the official API is reaching stability you can
-// alternatively use the "prototype API" (implemented via system functions in the serverless cluster).
-// To do this, set the environment variable TRIGGERS_USE_PROTOTYPE
 func (s *serverlessService) GetTrigger(ctx context.Context, name string) (ServerlessTrigger, error) {
-	if triggersUsePrototype {
-		return getTriggersPrototype(ctx, s, name)
-	}
 	empty := ServerlessTrigger{}
 	creds, err := s.ReadCredentials()
 	if err != nil {
@@ -936,105 +844,24 @@ func (s *serverlessService) GetTrigger(ctx context.Context, name string) (Server
 	if err != nil {
 		return empty, err
 	}
-	return adjustTriggerType(decoded.Trigger), nil
+	ans := fixBaseDate(decoded.Trigger)
+	return ans, nil
 }
 
-func getTriggersPrototype(ctx context.Context, s *serverlessService, name string) (ServerlessTrigger, error) {
-	empty := ServerlessTrigger{}
-	err := initWhisk(s, true)
-	if err != nil {
-		return empty, err
-	}
-	params := map[string]interface{}{
-		"triggerName": name,
-	}
-	_, resp, err := s.owClientSys.Actions.Invoke("triggers/get", params, true, true)
-	if err != nil {
-		return empty, err
-	}
-	// The generic JSON parsing done by the OW client library is not useful so it's been
-	// ignored.  Instead, we parse the raw body with ServerlessTrigger
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return empty, err
-	}
-	contents := ServerlessTrigger{}
-	err = json.Unmarshal(body, &contents)
-	if err != nil {
-		return empty, err
-	}
-	// Omit seconds from the cron expression (if present: perhaps this should already have been done
-	// by the API).
-	contents.Cron = fixupCron(contents.Cron)
-	return contents, nil
-}
-
-// FireTrigger fires a trigger
-func (s *serverlessService) FireTrigger(ctx context.Context, name string) error {
-	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
-	err := initWhisk(s, true)
-	if err != nil {
-		return err
-	}
-	params := map[string]interface{}{
-		"triggerName": name,
-	}
-	_, _, err = s.owClientSys.Actions.Invoke("triggers/fire", params, true, true)
-	return err
-}
-
-// SetTriggerEnablement sets the isEnabled property of a trigger
-func (s *serverlessService) SetTriggerEnablement(ctx context.Context, name string, enabled bool) (ServerlessTrigger, error) {
-	empty := ServerlessTrigger{}
-	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
-	err := initWhisk(s, true)
-	if err != nil {
-		return empty, err
-	}
-	params := map[string]interface{}{
-		"triggerName": name,
-		"enabled":     enabled,
-	}
-	_, resp, err := s.owClientSys.Actions.Invoke("triggers/enablement", params, true, true)
-	if err != nil {
-		return empty, err
-	}
-	// The generic JSON parsing done by the OW client library is not useful so it's been
-	// ignored.  Instead, we parse the raw body with ServerlessTrigger
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return empty, err
-	}
-	contents := ServerlessTrigger{}
-	err = json.Unmarshal(body, &contents)
-	if err != nil {
-		return empty, err
-	}
-	// Omit seconds from the cron expression (if present: perhaps this should already have been done
-	// by the API).
-	contents.Cron = fixupCron(contents.Cron)
-	return contents, nil
-
-}
-
-// SetTriggerEnablement sets the isEnabled property of a trigger
+// Delete Trigger deletes a trigger from the namespace (used when undeploying triggers explicitly,
+// not part of a more general undeploy; when undeploying a function or the entire namespace we rely
+// on the deployer to delete associated triggers).
 func (s *serverlessService) DeleteTrigger(ctx context.Context, name string) error {
-	// TODO eventually this must be replaced by a call to the permanent API in DigitalOcean edge
-	err := initWhisk(s, true)
+	creds, err := s.ReadCredentials()
 	if err != nil {
 		return err
 	}
-	params := map[string]interface{}{
-		"triggerName": name,
-	}
-	_, _, err = s.owClientSys.Actions.Invoke("triggers/delete", params, true, true)
+	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
+	_, err = s.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	return err
 }
 
 // fixupCron detects the optional seconds field and removes it
-
 func fixupCron(cron string) string {
 	parts := strings.Split(cron, " ")
 	if len(parts) == 6 {
