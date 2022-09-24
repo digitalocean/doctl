@@ -802,8 +802,18 @@ func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]Ser
 	if err != nil {
 		return empty, err
 	}
-	ans := fixBaseDates(decoded.Triggers)
-	return ans, nil
+	triggers := decoded.Triggers
+	// The API does not filter by function; that is done here.
+	if fcn != "" {
+		filtered := []ServerlessTrigger{}
+		for _, trigger := range triggers {
+			if trigger.Function == fcn {
+				filtered = append(filtered, trigger)
+			}
+		}
+		triggers = filtered
+	}
+	return fixBaseDates(triggers), nil
 }
 
 // fixBaseDates applies fixBaseDate to an array of triggers
@@ -842,8 +852,7 @@ func (s *serverlessService) GetTrigger(ctx context.Context, name string) (Server
 	if err != nil {
 		return empty, err
 	}
-	ans := fixBaseDate(decoded.Trigger)
-	return ans, nil
+	return fixBaseDate(decoded.Trigger), nil
 }
 
 // Delete Trigger deletes a trigger from the namespace (used when undeploying triggers explicitly,
