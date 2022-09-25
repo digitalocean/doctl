@@ -864,7 +864,11 @@ func (s *serverlessService) DeleteTrigger(ctx context.Context, name string) erro
 		return err
 	}
 	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
-	_, err = s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.Do(ctx, req, nil)
 	return err
 }
 
