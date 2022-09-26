@@ -45,9 +45,14 @@ func AppsDev() *Command {
 		Command: &cobra.Command{
 			Use:     "dev",
 			Aliases: []string{},
-			Short:   "[BETA] Display commands for working with app platform local development.",
-			Long:    `[BETA] Display commands for working with app platform local development.`,
-			Hidden:  true,
+			Short:   "[BETA] Display commands for working with App Platform local development.",
+			Long: heredoc.Docf(`
+				[BETA] Display commands for working with App Platform local development.
+
+				  To get started, run %s.`,
+				"`doctl app dev build`",
+			),
+			Hidden: true,
 		},
 	}
 
@@ -58,10 +63,14 @@ func AppsDev() *Command {
 		RunAppsDevBuild,
 		"build [component name]",
 		"Build an app component",
-		heredoc.Doc(`
+		heredoc.Docf(`
 			[BETA] Build an app component locally.
 			
-			  The component name must be specified as an argument if running non-interactively.`,
+			  The component name is optional unless running non-interactively.
+
+			  All command line flags as optional. You may specify flags to be applied to the current build
+			  or use the command %s to permanently configure default values.`,
+			"`doctl app dev config`",
 		),
 		Writer,
 		aliasOpt("b"),
@@ -71,7 +80,7 @@ func AppsDev() *Command {
 	AddStringFlag(
 		build, doctl.ArgAppSpec,
 		"", "",
-		`Path to an app spec in JSON or YAML format.`,
+		`An optional path to an app spec in JSON or YAML format. Default: .do/app.yaml.`,
 	)
 
 	AddStringFlag(
@@ -83,31 +92,31 @@ func AppsDev() *Command {
 	AddStringFlag(
 		build, doctl.ArgEnvFile,
 		"", "",
-		"Additional environment variables to inject into the build.",
+		"An optional path to a .env file with overrides for values of app spec environment variables.",
 	)
 
 	AddBoolFlag(
 		build, doctl.ArgNoCache,
 		"", false,
-		"Whether or not to omit the cache for the build.",
+		"Set to disable build caching.",
 	)
 
 	AddStringFlag(
 		build, doctl.ArgBuildCommand,
 		"", "",
-		"Optional build command override for local development.",
+		"An optional build command override for local development.",
 	)
 
 	AddDurationFlag(
 		build, doctl.ArgTimeout,
 		"", 0,
-		"An optional timeout duration for the build",
+		`An optional timeout duration for the build. Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". Example: 15m30s`,
 	)
 
 	AddStringFlag(
 		build, doctl.ArgRegistry,
 		"", os.Getenv("APP_DEV_REGISTRY"),
-		"Registry name to build use for the component build.",
+		"An optional registry name to tag built container images with.",
 	)
 
 	return cmd
@@ -115,7 +124,8 @@ func AppsDev() *Command {
 
 // RunAppsDevBuild builds an app component locally.
 func RunAppsDevBuild(c *CmdConfig) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	ws, err := appDevWorkspace(c)
 	if err != nil {
@@ -138,12 +148,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 
 	template.Print("{{muted pointerRight}} current app dev workspace: {{muted .}}{{nl}}", ws.Context())
-
-	if ws.Config.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, ws.Config.Timeout)
-		defer cancel()
-	}
 
 	if ws.Config.AppSpec == nil {
 		err := appsDevBuildSpecRequired(ws, c.Apps())
@@ -287,7 +291,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	}
 
 	if builder.IsCNBBuild(componentSpec) && ws.Config.CNBBuilderImage != "" {
-		template.Render(text.Warning, `{{pointerRight}} using custom builder image {{highlight .}}{{nl}}`, ws.Config.CNBBuilderImage)
+		template.Render(text.Warning, `{{checkmark}} using custom builder image {{highlight .}}{{nl}}`, ws.Config.CNBBuilderImage)
 	}
 
 	// if Interactive {
@@ -303,7 +307,12 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	// 		return fmt.Errorf("canceled")
 	// 	}
 	// }
-
+	if ws.Config.Timeout > 0 {
+		template.Render(text.Warning, `{{checkmark}} restricting maximum build duration to {{highlight (duration .)}}{{nl}}`, ws.Config.Timeout)
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, ws.Config.Timeout)
+		defer cancel()
+	}
 	buildingComponentLine := template.String(
 		`building {{lower (snakeToTitle .componentSpec.GetType)}} {{highlight .componentSpec.GetName}} {{muted (print "(" .appName ")")}}`,
 		map[string]any{
@@ -320,8 +329,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		// userCanceled indicates whether the context was canceled by user request
 		userCanceled bool
 	)
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
 	if Interactive {
 		logPager, err := pager.New(
 			pager.WithTitle(buildingComponentLine),
