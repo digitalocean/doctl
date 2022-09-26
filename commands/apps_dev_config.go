@@ -40,8 +40,10 @@ Configuration Format:
 		fmt.Sprintf(`Set a value in the local development configuration settings.
 
 KEY is the name of a configuration option, for example: spec=/path/to/app.yaml
-Nested component KEY(s) can also be set, for example: my-component.build-command="go build ."
-		
+Nested component KEYs can also be set, for example: components.my-component.build_command="go build ."
+
+Multiple KEY=VALUE pairs may be specified separated by a space.
+
 Configuration Format:
 %s
 
@@ -63,8 +65,10 @@ Configuration Format:
 		fmt.Sprintf(`Unset a value in the local development configuration settings.
 
 KEY is the name of a configuration option to unset, for example: spec
-Nested component KEY(s) can also be unset, for example: my-component.build-command
-		
+Nested component KEYs can also be unset, for example: components.my-component.build_command
+
+Multiple KEYs may be specified separated by a space.
+
 Configuration Format:
 %s
 

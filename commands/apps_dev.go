@@ -129,6 +129,21 @@ func RunAppsDevBuild(c *CmdConfig) error {
 
 	ws, err := appDevWorkspace(c)
 	if err != nil {
+		if errors.Is(err, workspace.ErrNoGitRepo) {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			template.Print(heredoc.Doc(`
+				{{error (print crossmark " could not find git worktree.")}}
+
+				local builds must be run within git repositories. doctl was run in {{muted .}}
+				however this directory is not inside a git worktree.
+
+				make sure you run doctl in the correct app directory where your source code is located.
+			`), cwd)
+			return ErrExitSilently
+		}
 		return fmt.Errorf("preparing workspace: %w", err)
 	}
 
@@ -137,9 +152,6 @@ func RunAppsDevBuild(c *CmdConfig) error {
 	if ws.Config.AppSpec == nil {
 		err := appsDevBuildSpecRequired(ws, c.Apps())
 		if err != nil {
-			if err.Error() == "" {
-				os.Exit(1)
-			}
 			return err
 		}
 		if err := ws.Config.Load(); err != nil {
@@ -593,19 +605,21 @@ func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) 
 		  an app spec is required to start a local build. make sure doctl is run in the correct directory where your app code is.
 		
 		`,
-	), ws.Context())
+	), nil)
 
 	options := struct {
 		BringAppSpec string
 		LinkApp      string
+		Chdir        string
 	}{
 		BringAppSpec: template.String(`i will place an app spec at {{highlight ".do/app.yaml"}}`, nil),
 		LinkApp:      "i would like to link an app from my DigitalOcean cloud account and use its app spec",
+		Chdir:        "i ran doctl in the wrong directory",
 		// TODO: add support for app detection
-		// DetectApp: "I'm in my app project directory, auto-detect an app spec for me",
+		// DetectApp: "i'm in my app project directory, auto-detect an app spec for me",
 	}
 	sel := selection.New(
-		[]string{options.BringAppSpec, options.LinkApp},
+		[]string{options.BringAppSpec, options.LinkApp, options.Chdir},
 		selection.WithFiltering(false),
 	)
 	opt, err := sel.Select()
@@ -617,7 +631,10 @@ func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) 
 	switch opt {
 	case options.BringAppSpec:
 		template.Print(`place an app spec at {{highlight ".do/app.yaml"}} and re-run doctl.{{nl}}`, nil)
-		return errors.New("")
+		return ErrExitSilently
+	case options.Chdir:
+		template.Print(`cd to the correct directory and re-run doctl.{{nl}}`, nil)
+		return ErrExitSilently
 	case options.LinkApp:
 		app, err := appsDevSelectApp(appsService)
 		if err != nil {
