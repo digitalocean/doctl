@@ -127,18 +127,20 @@ func TestServerlessStatusWhenConnected(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
-		fakeCmd := &exec.Cmd{
-			Stdout: config.Out,
-		}
 
 		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-			Entity: map[string]interface{}{
-				"name":    "hello",
-				"apihost": "https://api.example.com",
+		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "hello",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"hello": do.ServerlessCredential{
+						Auth: "here-are-some-credentials",
+					},
+				},
 			},
 		}, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "here-are-some-credentials").Return("hello", nil)
 
 		err := RunServerlessStatus(config)
 		require.NoError(t, err)
@@ -151,9 +153,6 @@ func TestServerlessStatusWithLanguages(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 		config.Doit.Set(config.NS, "languages", true)
-		fakeCmd := &exec.Cmd{
-			Stdout: config.Out,
-		}
 		fakeHostInfo := do.ServerlessHostInfo{
 			Runtimes: map[string][]do.ServerlessRuntime{
 				"go": {
@@ -184,14 +183,20 @@ func TestServerlessStatusWithLanguages(t *testing.T) {
 `
 
 		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-			Entity: map[string]interface{}{
-				"name":    "hello",
-				"apihost": "https://api.example.com",
+		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "hello",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"hello": do.ServerlessCredential{
+						Auth: "here-are-some-credentials",
+					},
+				},
 			},
 		}, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "here-are-some-credentials").Return("hello", nil)
 		tm.serverless.EXPECT().GetHostInfo("https://api.example.com").Return(fakeHostInfo, nil)
+
 		err := RunServerlessStatus(config)
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), expectedDisplay)
@@ -200,15 +205,20 @@ func TestServerlessStatusWithLanguages(t *testing.T) {
 
 func TestServerlessStatusWhenNotConnected(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		fakeCmd := &exec.Cmd{
-			Stdout: config.Out,
-		}
 
 		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-			Error: "403",
+		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "hello",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"hello": do.ServerlessCredential{
+						Auth: "here-are-some-credentials",
+					},
+				},
+			},
 		}, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "here-are-some-credentials").Return("not-hello", errors.New("an error"))
 
 		err := RunServerlessStatus(config)
 		require.Error(t, err)
