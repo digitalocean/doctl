@@ -17,7 +17,9 @@ import (
 	"bytes"
 	"os"
 	"sort"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl/do"
@@ -249,6 +251,16 @@ func TestFunctionsInvoke(t *testing.T) {
 }
 
 func TestFunctionsList(t *testing.T) {
+	// The displayer for function list is time-zone sensitive so we need to pre-convert the timestamps using the local
+	// time-zone to get exact matches.
+	timestamps := []int64{1662610000, 1662620000, 1662630000}
+	symbols := []string{"%DATE1%", "%DATE2%", "%DATE3%"}
+	dates := []string{
+		time.UnixMilli(timestamps[0]).Format("01/02 03:04:05"),
+		time.UnixMilli(timestamps[1]).Format("01/02 03:04:05"),
+		time.UnixMilli(timestamps[2]).Format("01/02 03:04:05"),
+	}
+
 	tests := []struct {
 		name           string
 		doctlFlags     map[string]string
@@ -261,9 +273,9 @@ func TestFunctionsList(t *testing.T) {
 			name:  "no flags or args",
 			skip:  0,
 			limit: 0,
-			expectedOutput: `01/20 12:50:10    0.0.1    nodejs:14    daily/hello
-01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
-01/20 12:50:30    0.0.3    nodejs:14    sometimes/meAgain
+			expectedOutput: `%DATE1%    0.0.1    nodejs:14    daily/hello
+%DATE2%    0.0.2    nodejs:14    daily/goodbye
+%DATE3%    0.0.3    nodejs:14    sometimes/meAgain
 `,
 		},
 		{
@@ -271,8 +283,8 @@ func TestFunctionsList(t *testing.T) {
 			doctlArg: "daily",
 			skip:     0,
 			limit:    0,
-			expectedOutput: `01/20 12:50:10    0.0.1    nodejs:14    daily/hello
-01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
+			expectedOutput: `%DATE1%    0.0.1    nodejs:14    daily/hello
+%DATE2%    0.0.2    nodejs:14    daily/goodbye
 `,
 		},
 		{
@@ -287,16 +299,16 @@ func TestFunctionsList(t *testing.T) {
 			doctlFlags:     map[string]string{"limit": "1"},
 			skip:           0,
 			limit:          1,
-			expectedOutput: "01/20 12:50:10    0.0.1    nodejs:14    daily/hello\n",
+			expectedOutput: "%DATE1%    0.0.1    nodejs:14    daily/hello\n",
 		},
 		{
 			name:       "name flag",
 			doctlFlags: map[string]string{"name": ""},
 			skip:       0,
 			limit:      0,
-			expectedOutput: `01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
-01/20 12:50:10    0.0.1    nodejs:14    daily/hello
-01/20 12:50:30    0.0.3    nodejs:14    sometimes/meAgain
+			expectedOutput: `%DATE2%    0.0.2    nodejs:14    daily/goodbye
+%DATE1%    0.0.1    nodejs:14    daily/hello
+%DATE3%    0.0.3    nodejs:14    sometimes/meAgain
 `,
 		},
 		{
@@ -304,9 +316,9 @@ func TestFunctionsList(t *testing.T) {
 			doctlFlags: map[string]string{"name-sort": ""},
 			skip:       0,
 			limit:      0,
-			expectedOutput: `01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
-01/20 12:50:10    0.0.1    nodejs:14    daily/hello
-01/20 12:50:30    0.0.3    nodejs:14    sometimes/meAgain
+			expectedOutput: `%DATE2%    0.0.2    nodejs:14    daily/goodbye
+%DATE1%    0.0.1    nodejs:14    daily/hello
+%DATE3%    0.0.3    nodejs:14    sometimes/meAgain
 `,
 		},
 		{
@@ -314,8 +326,8 @@ func TestFunctionsList(t *testing.T) {
 			doctlFlags: map[string]string{"skip": "1"},
 			skip:       1,
 			limit:      0,
-			expectedOutput: `01/20 12:50:20    0.0.2    nodejs:14    daily/goodbye
-01/20 12:50:30    0.0.3    nodejs:14    sometimes/meAgain
+			expectedOutput: `%DATE2%    0.0.2    nodejs:14    daily/goodbye
+%DATE3%    0.0.3    nodejs:14    sometimes/meAgain
 `,
 		},
 	}
@@ -324,7 +336,7 @@ func TestFunctionsList(t *testing.T) {
 		whisk.Action{
 			Name:      "hello",
 			Namespace: "theNamespace/daily",
-			Updated:   1662610000,
+			Updated:   timestamps[0],
 			Version:   "0.0.1",
 			Annotations: whisk.KeyValueArr{
 				whisk.KeyValue{
@@ -336,7 +348,7 @@ func TestFunctionsList(t *testing.T) {
 		whisk.Action{
 			Name:      "goodbye",
 			Namespace: "theNamespace/daily",
-			Updated:   1662620000,
+			Updated:   timestamps[1],
 			Version:   "0.0.2",
 			Annotations: whisk.KeyValueArr{
 				whisk.KeyValue{
@@ -349,7 +361,7 @@ func TestFunctionsList(t *testing.T) {
 			Name:      "meAgain",
 			Namespace: "theNamespace/sometimes",
 			Version:   "0.0.3",
-			Updated:   1662630000,
+			Updated:   timestamps[2],
 			Annotations: whisk.KeyValueArr{
 				whisk.KeyValue{
 					Key:   "exec",
@@ -387,7 +399,11 @@ func TestFunctionsList(t *testing.T) {
 
 				err := RunFunctionsList(config)
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedOutput, buf.String())
+				expected := tt.expectedOutput
+				for i := range symbols {
+					expected = strings.Replace(expected, symbols[i], dates[i], 1)
+				}
+				assert.Equal(t, expected, buf.String())
 			})
 		})
 	}
