@@ -788,6 +788,10 @@ func (s *serverlessService) WriteProject(project ServerlessProject) (string, err
 // of that function are listed.  If 'fcn' is empty all triggers are listed.
 func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]ServerlessTrigger, error) {
 	empty := []ServerlessTrigger{}
+	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	if err != nil {
+		return empty, err
+	}
 	creds, err := s.ReadCredentials()
 	if err != nil {
 		return empty, err
@@ -838,6 +842,10 @@ func fixBaseDate(trigger ServerlessTrigger) ServerlessTrigger {
 // GetTrigger gets the contents of a trigger for display
 func (s *serverlessService) GetTrigger(ctx context.Context, name string) (ServerlessTrigger, error) {
 	empty := ServerlessTrigger{}
+	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	if err != nil {
+		return empty, err
+	}
 	creds, err := s.ReadCredentials()
 	if err != nil {
 		return empty, err
