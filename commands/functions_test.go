@@ -333,7 +333,7 @@ func TestFunctionsList(t *testing.T) {
 	}
 
 	theList := []whisk.Action{
-		whisk.Action{
+		{
 			Name:      "hello",
 			Namespace: "theNamespace/daily",
 			Updated:   timestamps[0],
@@ -345,7 +345,7 @@ func TestFunctionsList(t *testing.T) {
 				},
 			},
 		},
-		whisk.Action{
+		{
 			Name:      "goodbye",
 			Namespace: "theNamespace/daily",
 			Updated:   timestamps[1],
@@ -357,7 +357,7 @@ func TestFunctionsList(t *testing.T) {
 				},
 			},
 		},
-		whisk.Action{
+		{
 			Name:      "meAgain",
 			Namespace: "theNamespace/sometimes",
 			Version:   "0.0.3",

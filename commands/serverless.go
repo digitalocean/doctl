@@ -327,7 +327,8 @@ func finishConnecting(sls do.ServerlessService, creds do.ServerlessCredentials, 
 
 // RunServerlessStatus gives a report on the status of the serverless (installed, up to date, connected)
 func RunServerlessStatus(c *CmdConfig) error {
-	status := c.Serverless().CheckServerlessStatus(hashAccessToken(c))
+	sls := c.Serverless()
+	status := sls.CheckServerlessStatus(hashAccessToken(c))
 	if status == do.ErrServerlessNotInstalled {
 		return status
 	}
@@ -350,20 +351,20 @@ func RunServerlessStatus(c *CmdConfig) error {
 	}
 	// Check the connected state more deeply (since this is a status command we want to
 	// be more accurate; the connected check in checkServerlessStatus is lightweight and heuristic).
-	result, err := ServerlessExec(c, "auth/current", "--apihost", "--name")
-	if err != nil || len(result.Error) > 0 {
+	creds, err := sls.ReadCredentials()
+	if err != nil {
+		return nil
+	}
+	auth := creds.Credentials[creds.APIHost][creds.Namespace].Auth
+	checkNS, err := sls.GetNamespaceFromCluster(creds.APIHost, auth)
+	if err != nil || checkNS != creds.Namespace {
 		return do.ErrServerlessNotConnected
 	}
-	if result.Entity == nil {
-		return errors.New("Could not retrieve information about the connected namespace")
-	}
-	mapResult := result.Entity.(map[string]interface{})
-	apiHost := mapResult["apihost"].(string)
-	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["name"], apiHost)
+	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", creds.Namespace, creds.APIHost)
 	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", do.GetMinServerlessVersion())
 	languages, _ := c.Doit.GetBool(c.NS, "languages")
 	if languages {
-		return showLanguageInfo(c, apiHost)
+		return showLanguageInfo(c, creds.APIHost)
 	}
 	return nil
 }
