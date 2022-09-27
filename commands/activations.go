@@ -14,6 +14,9 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+
+	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
 	"github.com/spf13/cobra"
 )
@@ -85,12 +88,45 @@ func RunActivationsGet(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	replaceFunctionWithAction(c)
-	output, err := RunServerlessExec(activationGet, c, []string{flagLast, flagLogs, flagResult, flagQuiet}, []string{flagSkip, flagAction})
-	if err != nil {
-		return err
+	var id string
+	if argCount > 0 {
+		id = c.Args[0]
 	}
-	return c.PrintServerlessTextOutput(output)
+	logsFlag, _ := c.Doit.GetBool(c.NS, flagLogs)
+	resultFlag, _ := c.Doit.GetBool(c.NS, flagResult)
+	flagSkip, _ := c.Doit.GetInt(c.NS, flagSkip) // 0 if not there
+	functionFlag, _ := c.Doit.GetString(c.NS, flagFunction)
+	sls := c.Serverless()
+	if id == "" {
+		options := whisk.ActivationListOptions{Limit: 1, Skip: flagSkip}
+		if functionFlag != "" {
+			options.Name = functionFlag
+		}
+		list, err := sls.ListActivations(options)
+		if err != nil {
+			return err
+		}
+		if len(list) == 0 {
+			return fmt.Errorf("no activations were returned")
+		}
+		activation := list[0]
+		id = activation.ActivationID
+	}
+	if logFlag {
+		result, err := sls.GetActivationLogs(id)
+		if err != nil {
+			return err
+		}
+		if len(result.Logs) == 0 {
+			return fmt.Errorf("no logs available")
+		}
+		printLogs(result)
+	} else if resultFlag {
+
+	} else {
+
+	}
+	return nil // TODO write the rest
 }
 
 // RunActivationsList supports the 'activations list' command
