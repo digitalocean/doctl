@@ -52,7 +52,6 @@ func AppsDev() *Command {
 				  To get started, run %s.`,
 				"`doctl app dev build`",
 			),
-			Hidden: true,
 		},
 	}
 
@@ -110,7 +109,7 @@ func AppsDev() *Command {
 	AddDurationFlag(
 		build, doctl.ArgTimeout,
 		"", 0,
-		`An optional timeout duration for the build. Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". Example: 15m30s`,
+		`An optional timeout duration for the build. Valid time units are "s", "m", "h". Example: 15m30s`,
 	)
 
 	AddStringFlag(

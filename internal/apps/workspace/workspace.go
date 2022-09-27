@@ -31,11 +31,11 @@ const (
 var (
 	// SampleDevConfigFile represents a sample dev config file with all options and descriptions.
 	SampleDevConfigFile = template.String(`
-	timeout: {{muted "Duration until command is cancelled."}}
+	timeout: {{muted "An optional timeout duration for the build. Valid time units are 's', 'm', 'h'. Example: 15m30s"}}
 	app: {{muted "ID of an App Platform App to load the AppSpec from."}}
-	spec: {{muted "Path to the AppSpec to load."}}
-	registry: {{muted "Registry name to use for build image output."}}
-	no_cache: {{muted "Boolean to determine whether to disable the build cache."}}
+	spec: {{muted "Path to an AppSpec to load for builds."}}
+	registry: {{muted "An optional registry name used to tag built container images."}}
+	no_cache: {{muted "Boolean set to disable build caching."}}
 	components:
 	  {{muted "# Per-component configuration"}}
 	  {{muted "component-name"}}: 
