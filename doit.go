@@ -28,14 +28,18 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/blang/semver"
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
 	"github.com/digitalocean/godo"
+	"github.com/docker/docker/client"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
+
+	"github.com/digitalocean/doctl/internal/apps/builder"
 )
 
 const (
@@ -173,6 +177,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 // Config is an interface that represent doit's config.
 type Config interface {
 	GetGodoClient(trace bool, accessToken string) (*godo.Client, error)
+	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
 	Set(ns, key string, val interface{})
@@ -184,6 +189,7 @@ type Config interface {
 	GetIntPtr(ns, key string) (*int, error)
 	GetStringSlice(ns, key string) ([]string, error)
 	GetStringMapString(ns, key string) (map[string]string, error)
+	GetDuration(ns, key string) (time.Duration, error)
 }
 
 // LiveConfig is an implementation of Config for live values.
@@ -227,6 +233,15 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 	}
 
 	return godo.New(oauthClient, args...)
+}
+
+// GetDockerEngineClient returns a container engine client.
+func (c *LiveConfig) GetDockerEngineClient() (builder.DockerEngineClient, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return nil, err
+	}
+	return cli, nil
 }
 
 func userAgent() string {
@@ -375,8 +390,16 @@ func (c *LiveConfig) GetStringMapString(ns, key string) (map[string]string, erro
 	return vals, nil
 }
 
+// GetDuration returns a config value as a duration.
+func (c *LiveConfig) GetDuration(ns, key string) (time.Duration, error) {
+	return viper.GetDuration(nskey(ns, key)), nil
+}
+
 func nskey(ns, key string) string {
-	return fmt.Sprintf("%s.%s", ns, key)
+	if ns != "" {
+		key = fmt.Sprintf("%s.%s", ns, key)
+	}
+	return key
 }
 
 func isRequired(key string) bool {
@@ -385,10 +408,11 @@ func isRequired(key string) bool {
 
 // TestConfig is an implementation of Config for testing.
 type TestConfig struct {
-	SSHFn    func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	ListenFn func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
-	v        *viper.Viper
-	IsSetMap map[string]bool
+	SSHFn              func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
+	ListenFn           func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
+	v                  *viper.Viper
+	IsSetMap           map[string]bool
+	DockerEngineClient builder.DockerEngineClient
 }
 
 var _ Config = &TestConfig{}
@@ -413,6 +437,12 @@ func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 	return &godo.Client{}, nil
 }
 
+// GetDockerEngineClient mocks a GetDockerEngineClient call. The returned client will
+// be nil unless configured in the test config.
+func (c *TestConfig) GetDockerEngineClient() (builder.DockerEngineClient, error) {
+	return c.DockerEngineClient, nil
+}
+
 // SSH returns a mock SSH runner.
 func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner {
 	return c.SSHFn(user, host, keyPath, port, opts)
@@ -425,7 +455,7 @@ func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.Schema
 
 // Set sets a config key.
 func (c *TestConfig) Set(ns, key string, val interface{}) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	c.v.Set(nskey, val)
 	c.IsSetMap[key] = true
 }
@@ -438,21 +468,21 @@ func (c *TestConfig) IsSet(key string) bool {
 // GetString returns the string value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetString(ns, key string) (string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetString(nskey), nil
 }
 
 // GetInt returns the int value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetInt(ns, key string) (int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetInt(nskey), nil
 }
 
 // GetIntPtr returns the int value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	if !c.v.IsSet(nskey) {
 		return nil, nil
 	}
@@ -464,7 +494,7 @@ func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
 // namespace. Because this is a mock implementation, and error will never be
 // returned.
 func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetStringSlice(nskey), nil
 }
 
@@ -472,26 +502,33 @@ func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
 // given namespace. Because this is a mock implementation, and error will never
 // be returned.
 func (c *TestConfig) GetStringMapString(ns, key string) (map[string]string, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetStringMapString(nskey), nil
 }
 
 // GetBool returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBool(ns, key string) (bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	return c.v.GetBool(nskey), nil
 }
 
 // GetBoolPtr returns the bool value for the key in the given namespace. Because
 // this is a mock implementation, and error will never be returned.
 func (c *TestConfig) GetBoolPtr(ns, key string) (*bool, error) {
-	nskey := fmt.Sprintf("%s-%s", ns, key)
+	nskey := nskey(ns, key)
 	if !c.v.IsSet(nskey) {
 		return nil, nil
 	}
 	val := c.v.GetBool(nskey)
 	return &val, nil
+}
+
+// GetDuration returns the duration value for the key in the given namespace. Because
+// this is a mock implementation, and error will never be returned.
+func (c *TestConfig) GetDuration(ns, key string) (time.Duration, error) {
+	nskey := nskey(ns, key)
+	return c.v.GetDuration(nskey), nil
 }
 
 // This is needed because an empty StringSlice flag returns `"[]"`

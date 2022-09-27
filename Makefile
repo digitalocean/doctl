@@ -88,7 +88,7 @@ docker_build:
 test_unit:
 	@echo "==> run unit tests"
 	@echo ""
-	go test -mod=vendor ./commands/... ./do/... ./pkg/... .
+	go test -mod=vendor ./commands/... ./do/... ./pkg/... ./internal/... .
 
 .PHONY: test_integration
 test_integration:
@@ -158,6 +158,7 @@ snap:
 mocks:
 	@echo "==> update mocks"
 	@echo ""
+	@go generate ./...
 	@scripts/regenmocks.sh
 
 .PHONY: _upgrade_godo
