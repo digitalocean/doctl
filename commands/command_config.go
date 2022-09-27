@@ -118,7 +118,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
 			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
 			c.Serverless = func() do.ServerlessService {
-				return do.NewServerlessService(godoClient, getServerlessDirectory(), hashAccessToken(c))
+				return do.NewServerlessService(godoClient, getServerlessDirectory(), accessToken)
 			}
 
 			return nil
