@@ -18,12 +18,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/digitalocean/doctl/do"
+	"github.com/apache/openwhisk-client-go/whisk"
 )
 
 // Functions is the type of the displayer for functions list
 type Functions struct {
-	Info []do.FunctionInfo
+	Info []whisk.Action
 }
 
 var _ Displayable = &Functions{}
@@ -67,7 +67,7 @@ func (i *Functions) KV() []map[string]interface{} {
 }
 
 // findRuntime finds the runtime string amongst the annotations of a function
-func findRuntime(annots []do.Annotation) string {
+func findRuntime(annots whisk.KeyValueArr) string {
 	for i := range annots {
 		if annots[i].Key == "exec" {
 			return annots[i].Value.(string)

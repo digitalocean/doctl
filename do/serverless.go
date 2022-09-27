@@ -15,12 +15,15 @@ package do
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,6 +34,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/extract"
 	"github.com/digitalocean/godo"
+	"github.com/pkg/browser"
 	"gopkg.in/yaml.v3"
 )
 
@@ -112,25 +116,6 @@ type ServerlessHostInfo struct {
 	Runtimes map[string][]ServerlessRuntime `json:"runtimes"`
 }
 
-// FunctionInfo is the type of an individual function in the output
-// of doctl sls fn list.  Only relevant fields are unmarshaled.
-// Note: when we start replacing the sandbox plugin path with direct calls
-// to backend controller operations, this will be replaced by declarations
-// in the golang openwhisk client.
-type FunctionInfo struct {
-	Name        string       `json:"name"`
-	Namespace   string       `json:"namespace"`
-	Updated     int64        `json:"updated"`
-	Version     string       `json:"version"`
-	Annotations []Annotation `json:"annotations"`
-}
-
-// Annotation is a key/value type suitable for individual annotations
-type Annotation struct {
-	Key   string      `json:"key"`
-	Value interface{} `json:"value"`
-}
-
 // ServerlessProject ...
 type ServerlessProject struct {
 	ProjectPath string   `json:"project_path"`
@@ -191,6 +176,27 @@ type ProjectMetadata struct {
 	UnresolvedVariables []string `json:"unresolvedVariables,omitempty"`
 }
 
+// ServerlessTriggerListResponse is the form returned by the list triggers API
+type ServerlessTriggerListResponse struct {
+	Triggers []ServerlessTrigger `json:"Triggers,omitempty"`
+}
+
+// ServerlessTriggerGetResponse is the form returned by the get trigger API
+type ServerlessTriggerGetResponse struct {
+	Trigger ServerlessTrigger `json:"Trigger,omitempty"`
+}
+
+// ServerlessTrigger is the form used in list and get responses by the triggers API
+type ServerlessTrigger struct {
+	Name        string      `json:"name,omitempty"`
+	Function    string      `json:"function,omitempty"`
+	Enabled     bool        `json:"is_enabled"`
+	Cron        string      `json:"cron,omitempty"`
+	Created     string      `json:"created_at,omitempty"`
+	LastRun     string      `json:"last_run_at,omitempty"`
+	RequestBody interface{} `json:"body,omitempty"`
+}
+
 // ServerlessService is an interface for interacting with the sandbox plugin,
 // with the namespaces service, and with the serverless cluster controller.
 type ServerlessService interface {
@@ -202,12 +208,17 @@ type ServerlessService interface {
 	GetNamespace(context.Context, string) (ServerlessCredentials, error)
 	CreateNamespace(context.Context, string, string) (ServerlessCredentials, error)
 	DeleteNamespace(context.Context, string) error
+	ListTriggers(context.Context, string) ([]ServerlessTrigger, error)
+	GetTrigger(context.Context, string) (ServerlessTrigger, error)
+	DeleteTrigger(context.Context, string) error
 	WriteCredentials(ServerlessCredentials) error
 	ReadCredentials() (ServerlessCredentials, error)
 	GetHostInfo(string) (ServerlessHostInfo, error)
 	CheckServerlessStatus(string) error
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
+	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
+	InvokeFunctionViaWeb(string, map[string]interface{}) error
 	GetConnectedAPIHost() (string, error)
 	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
 	WriteProject(ServerlessProject) (string, error)
@@ -219,6 +230,7 @@ type serverlessService struct {
 	credsDir      string
 	node          string
 	userAgent     string
+	accessToken   string
 	client        *godo.Client
 	owClient      *whisk.Client
 }
@@ -227,7 +239,7 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "4.1.0-1.3.1"
+	minServerlessVersion = "4.2.6-1.3.1"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -291,7 +303,7 @@ type ServerlessOutput struct {
 }
 
 // NewServerlessService returns a configured ServerlessService.
-func NewServerlessService(client *godo.Client, usualServerlessDir string, credsToken string) ServerlessService {
+func NewServerlessService(client *godo.Client, usualServerlessDir string, accessToken string) ServerlessService {
 	nodeBin := "node"
 	if runtime.GOOS == "windows" {
 		nodeBin = "node.exe"
@@ -303,6 +315,7 @@ func NewServerlessService(client *godo.Client, usualServerlessDir string, credsT
 	if serverlessDir == "" {
 		serverlessDir = usualServerlessDir
 	}
+	credsToken := HashAccessToken(accessToken)
 	return &serverlessService{
 		serverlessJs:  filepath.Join(serverlessDir, "sandbox.js"),
 		serverlessDir: serverlessDir,
@@ -311,7 +324,17 @@ func NewServerlessService(client *godo.Client, usualServerlessDir string, credsT
 		userAgent:     fmt.Sprintf("doctl/%s serverless/%s", doctl.DoitVersion.String(), minServerlessVersion),
 		client:        client,
 		owClient:      nil,
+		accessToken:   accessToken,
 	}
+}
+
+// HashAccessToken converts a DO access token string into a shorter but suitably random string
+// via hashing.  This is used to form part of the path for storing OpenWhisk credentials
+func HashAccessToken(token string) string {
+	hasher := sha1.New()
+	hasher.Write([]byte(token))
+	sha := hasher.Sum(nil)
+	return hex.EncodeToString(sha[:4])
 }
 
 // InitWhisk is an on-demand initializer for the OpenWhisk client, called when that client
@@ -495,7 +518,7 @@ func (s *serverlessService) InstallServerless(leafCredsDir string, upgrading boo
 func (s *serverlessService) Cmd(command string, args []string) (*exec.Cmd, error) {
 	args = append([]string{s.serverlessJs, command}, args...)
 	cmd := exec.Command(s.node, args...)
-	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+s.credsDir, "NIM_USER_AGENT="+s.userAgent)
+	cmd.Env = append(os.Environ(), "NIMBELLA_DIR="+s.credsDir, "NIM_USER_AGENT="+s.userAgent, "DO_API_KEY="+s.accessToken)
 	// If DEBUG is specified, we need to open up stderr for that stream.  The stdout stream
 	// will continue to work for returning structured results.
 	if os.Getenv("DEBUG") != "" {
@@ -674,6 +697,62 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 	return *action, parameters, nil
 }
 
+// InvokeFunction invokes a function via POST with authentication
+func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (map[string]interface{}, error) {
+	var empty map[string]interface{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Actions.Invoke(name, params, blocking, result)
+	return resp, err
+}
+
+// InvokeFunctionViaWeb invokes a function via GET using its web URL (or error if not a web function)
+func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]interface{}) error {
+	// Get the function so we can use its metadata in formulating the request
+	theFunction, _, err := s.GetFunction(name, false)
+	if err != nil {
+		return err
+	}
+	// Check that it's a web function
+	isWeb := false
+	for _, annot := range theFunction.Annotations {
+		if annot.Key == "web-export" {
+			isWeb = true
+			break
+		}
+	}
+	if !isWeb {
+		return fmt.Errorf("'%s' is not a web function", name)
+	}
+	// Formulate the invocation URL
+	host, err := s.GetConnectedAPIHost()
+	if err != nil {
+		return err
+	}
+	nsParts := strings.Split(theFunction.Namespace, "/")
+	namespace := nsParts[0]
+	pkg := "default"
+	if len(nsParts) > 1 {
+		pkg = nsParts[1]
+	}
+	theURL := fmt.Sprintf("%s/api/v1/web/%s/%s/%s", host, namespace, pkg, theFunction.Name)
+	// Add params, if any
+	if params != nil {
+		encoded := url.Values{}
+		for key, val := range params {
+			stringVal, ok := val.(string)
+			if !ok {
+				return fmt.Errorf("the value of '%s' is not a string; web invocation is not possible", key)
+			}
+			encoded.Add(key, stringVal)
+		}
+		theURL += "?" + encoded.Encode()
+	}
+	return browser.OpenURL(theURL)
+}
+
 // GetConnectedAPIHost retrieves the API host to which the service is currently connected
 func (s *serverlessService) GetConnectedAPIHost() (string, error) {
 	err := initWhisk(s)
@@ -702,6 +781,112 @@ func (s *serverlessService) ReadProject(project *ServerlessProject, args []strin
 func (s *serverlessService) WriteProject(project ServerlessProject) (string, error) {
 	// TODO
 	return "", nil
+}
+
+// ListTriggers lists the triggers in the connected namespace.  If 'fcn' is a non-empty
+// string it is assumed to be the package-qualified name of a function and only the triggers
+// of that function are listed.  If 'fcn' is empty all triggers are listed.
+func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]ServerlessTrigger, error) {
+	empty := []ServerlessTrigger{}
+	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	if err != nil {
+		return empty, err
+	}
+	creds, err := s.ReadCredentials()
+	if err != nil {
+		return empty, err
+	}
+	path := "v2/functions/triggers/" + creds.Namespace
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return empty, err
+	}
+	decoded := new(ServerlessTriggerListResponse)
+	_, err = s.client.Do(ctx, req, decoded)
+	if err != nil {
+		return empty, err
+	}
+	triggers := decoded.Triggers
+	// The API does not filter by function; that is done here.
+	if fcn != "" {
+		filtered := []ServerlessTrigger{}
+		for _, trigger := range triggers {
+			if trigger.Function == fcn {
+				filtered = append(filtered, trigger)
+			}
+		}
+		triggers = filtered
+	}
+	return fixBaseDates(triggers), nil
+}
+
+// fixBaseDates applies fixBaseDate to an array of triggers
+func fixBaseDates(list []ServerlessTrigger) []ServerlessTrigger {
+	ans := []ServerlessTrigger{}
+	for _, trigger := range list {
+		ans = append(ans, fixBaseDate(trigger))
+	}
+	return ans
+}
+
+// fixBaseDate fixes up the LastRun field of a trigger that has never been run.
+// It should properly contain blank but sometimes contain an encoding of the base date (a string
+// starting with "000").
+func fixBaseDate(trigger ServerlessTrigger) ServerlessTrigger {
+	if strings.HasPrefix(trigger.LastRun, "000") {
+		trigger.LastRun = "_"
+	}
+	return trigger
+}
+
+// GetTrigger gets the contents of a trigger for display
+func (s *serverlessService) GetTrigger(ctx context.Context, name string) (ServerlessTrigger, error) {
+	empty := ServerlessTrigger{}
+	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	if err != nil {
+		return empty, err
+	}
+	creds, err := s.ReadCredentials()
+	if err != nil {
+		return empty, err
+	}
+	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
+	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return empty, err
+	}
+	decoded := new(ServerlessTriggerGetResponse)
+	_, err = s.client.Do(ctx, req, decoded)
+	if err != nil {
+		return empty, err
+	}
+	return fixBaseDate(decoded.Trigger), nil
+}
+
+// Delete Trigger deletes a trigger from the namespace (used when undeploying triggers explicitly,
+// not part of a more general undeploy; when undeploying a function or the entire namespace we rely
+// on the deployer to delete associated triggers).
+func (s *serverlessService) DeleteTrigger(ctx context.Context, name string) error {
+	creds, err := s.ReadCredentials()
+	if err != nil {
+		return err
+	}
+	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
+	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
+	if err != nil {
+		return err
+	}
+	_, err = s.client.Do(ctx, req, nil)
+	return err
+}
+
+// fixupCron detects the optional seconds field and removes it
+func fixupCron(cron string) string {
+	parts := strings.Split(cron, " ")
+	if len(parts) == 6 {
+		return strings.Join(parts[1:], " ")
+	}
+	return cron
 }
 
 func readTopLevel(project *ServerlessProject) error {

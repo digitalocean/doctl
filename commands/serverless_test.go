@@ -455,11 +455,13 @@ func TestServerlessUndeploy(t *testing.T) {
 	}
 
 	tests := []struct {
-		name            string
-		doctlArgs       []string
-		doctlFlags      map[string]string
-		expectedNimCmds []testNimCmd
-		expectedError   error
+		name                 string
+		doctlArgs            []string
+		doctlFlags           map[string]string
+		expectedNimCmds      []testNimCmd
+		expectedError        error
+		expectTriggerDeletes []string
+		expectTriggerList    bool
 	}{
 		{
 			name:            "no arguments or flags",
@@ -519,6 +521,30 @@ func TestServerlessUndeploy(t *testing.T) {
 			expectedNimCmds: nil,
 			expectedError:   errUndeployAllAndArgs,
 		},
+		{
+			name:            "--triggers and --packages",
+			doctlArgs:       []string{"foo/bar", "baz"},
+			doctlFlags:      map[string]string{"triggers": "", "packages": ""},
+			expectedNimCmds: nil,
+			expectedError:   errUndeployTrigPkg,
+		},
+		{
+			name:                 "--triggers and args",
+			doctlArgs:            []string{"fire1", "fire2"},
+			doctlFlags:           map[string]string{"triggers": ""},
+			expectedNimCmds:      nil,
+			expectedError:        nil,
+			expectTriggerDeletes: []string{"fire1", "fire2"},
+		},
+		{
+			name:                 "--triggers and --all",
+			doctlArgs:            nil,
+			doctlFlags:           map[string]string{"triggers": "", "all": ""},
+			expectedNimCmds:      nil,
+			expectedError:        nil,
+			expectTriggerDeletes: []string{"fireA", "fireB"},
+			expectTriggerList:    true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -526,6 +552,10 @@ func TestServerlessUndeploy(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				fakeCmd := &exec.Cmd{
 					Stdout: config.Out,
+				}
+				cannedTriggerList := []do.ServerlessTrigger{
+					{Name: "fireA"},
+					{Name: "fireB"},
 				}
 
 				if len(tt.doctlArgs) > 0 {
@@ -542,12 +572,18 @@ func TestServerlessUndeploy(t *testing.T) {
 					}
 				}
 
-				if tt.expectedError == nil {
+				if tt.expectedError == nil && len(tt.expectedNimCmds) > 0 {
 					tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				}
+				if tt.expectTriggerList {
+					tm.serverless.EXPECT().ListTriggers(context.TODO(), "").Return(cannedTriggerList, nil)
 				}
 				for i := range tt.expectedNimCmds {
 					tm.serverless.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
 					tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
+				}
+				for _, trig := range tt.expectTriggerDeletes {
+					tm.serverless.EXPECT().DeleteTrigger(context.TODO(), trig)
 				}
 				err := RunServerlessUndeploy(config)
 				if tt.expectedError != nil {
