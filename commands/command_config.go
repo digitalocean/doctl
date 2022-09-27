@@ -20,6 +20,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/spf13/viper"
 )
 
@@ -30,10 +31,11 @@ type CmdConfig struct {
 	Out  io.Writer
 	Args []string
 
-	initServices          func(*CmdConfig) error
-	getContextAccessToken func() string
-	setContextAccessToken func(string)
-	removeContext         func(string) error
+	initServices            func(*CmdConfig) error
+	getContextAccessToken   func() string
+	setContextAccessToken   func(string)
+	removeContext           func(string) error
+	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
 	Keys              func() do.KeysService
@@ -180,6 +182,8 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 
 			return nil
 		},
+
+		componentBuilderFactory: &builder.DefaultComponentBuilderFactory{},
 	}
 
 	if initGodo {

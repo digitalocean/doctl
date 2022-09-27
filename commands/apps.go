@@ -28,6 +28,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/apps"
 	"github.com/digitalocean/godo"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
@@ -44,6 +45,8 @@ func Apps() *Command {
 			Long:    "The subcommands of `doctl app` manage your App Platform apps. For documentation on app specs used by multiple commands, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec.",
 		},
 	}
+
+	cmd.AddCommand(AppsDev())
 
 	create := CmdBuilder(
 		cmd,
@@ -235,7 +238,7 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
-	appSpec, err := readAppSpec(os.Stdin, specPath)
+	appSpec, err := apps.ReadAppSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
@@ -332,7 +335,7 @@ func RunAppsUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	appSpec, err := readAppSpec(os.Stdin, specPath)
+	appSpec, err := apps.ReadAppSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
@@ -633,7 +636,7 @@ func RunAppsPropose(c *CmdConfig) error {
 		return err
 	}
 
-	appSpec, err := readAppSpec(os.Stdin, specPath)
+	appSpec, err := apps.ReadAppSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
@@ -649,52 +652,6 @@ func RunAppsPropose(c *CmdConfig) error {
 	}
 
 	return c.Display(displayers.AppProposeResponse{Res: res})
-}
-
-func readAppSpec(stdin io.Reader, path string) (*godo.AppSpec, error) {
-	var spec io.Reader
-	if path == "-" {
-		spec = stdin
-	} else {
-		specFile, err := os.Open(path) // guardrails-disable-line
-		if err != nil {
-			if os.IsNotExist(err) {
-				return nil, fmt.Errorf("opening app spec: %s does not exist", path)
-			}
-			return nil, fmt.Errorf("opening app spec: %w", err)
-		}
-		defer specFile.Close()
-		spec = specFile
-	}
-
-	byt, err := ioutil.ReadAll(spec)
-	if err != nil {
-		return nil, fmt.Errorf("reading app spec: %w", err)
-	}
-
-	s, err := parseAppSpec(byt)
-	if err != nil {
-		return nil, fmt.Errorf("parsing app spec: %w", err)
-	}
-
-	return s, nil
-}
-
-func parseAppSpec(spec []byte) (*godo.AppSpec, error) {
-	jsonSpec, err := yaml.YAMLToJSON(spec)
-	if err != nil {
-		return nil, err
-	}
-
-	dec := json.NewDecoder(bytes.NewReader(jsonSpec))
-	dec.DisallowUnknownFields()
-
-	var appSpec godo.AppSpec
-	if err := dec.Decode(&appSpec); err != nil {
-		return nil, err
-	}
-
-	return &appSpec, nil
 }
 
 func appsSpec() *Command {
@@ -776,7 +733,7 @@ func RunAppsSpecValidate(c *CmdConfig) error {
 	}
 
 	specPath := c.Args[0]
-	appSpec, err := readAppSpec(os.Stdin, specPath)
+	appSpec, err := apps.ReadAppSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}

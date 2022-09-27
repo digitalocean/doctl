@@ -60,12 +60,12 @@ func Serverless() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "serverless",
-			Short: "Develop and test serverless functions",
-			Long: `The ` + "`" + `doctl serverless` + "`" + ` commands provide an environment for developing and testing serverless functions.
-One or more local file system areas are employed, along with a 'functions namespace' in the cloud.
+			Short: "Develop, test, and deploy serverless functions",
+			Long: `The ` + "`" + `doctl serverless` + "`" + ` commands provide an environment for developing, testing, and deploying serverless functions.
+One or more local file system areas are employed, along with one or more 'functions namespaces' in the cloud.
 A one-time install of the serverless software is needed (use ` + "`" + `doctl serverless install` + "`" + ` to install the software,
-then ` + "`" + `doctl serverless connect` + "`" + ` to connect to a functions namespace provided with your account).
-Other ` + "`" + `doctl serverless` + "`" + ` commands are used to develop and test.`,
+then ` + "`" + `doctl serverless connect` + "`" + ` to connect to a functions namespace associated with your account).
+Other ` + "`" + `doctl serverless` + "`" + ` commands are used to develop, test, and deploy.`,
 			Aliases: []string{"sandbox", "sbx", "sls"},
 		},
 	}
@@ -83,8 +83,13 @@ The install operation is long-running, and a network connection is required.`,
 	CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
 		Writer)
 
-	CmdBuilder(cmd, RunServerlessConnect, "connect", "Connects local serverless support to your functions namespace",
-		`This command connects `+"`"+`doctl serverless`+"`"+` to your functions namespace (needed for testing).`,
+	CmdBuilder(cmd, RunServerlessConnect, "connect [<hint>]", "Connects local serverless support to a functions namespace",
+		`This command connects `+"`"+`doctl serverless`+"`"+` support to a functions namespace of your choice.
+The optional argument should be a (complete or partial) match to a namespace label or id.
+If there is no argument, all namespaces are matched.  If the result is exactly one namespace,
+you are connected to it.  If there are multiple namespaces, you have an opportunity to choose
+the one you want from a dialog.  Use `+"`"+`doctl serverless namespaces`+"`"+` to create, delete, and
+list your namespaces.`,
 		Writer)
 
 	status := CmdBuilder(cmd, RunServerlessStatus, "status", "Provide information about serverless support",

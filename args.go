@@ -42,6 +42,10 @@ const (
 	ArgAppLogType = "type"
 	// ArgAppDeployment is the deployment ID.
 	ArgAppDeployment = "deployment"
+	// ArgAppDevConfig is the path to the app dev link config.
+	ArgAppDevConfig = "dev-config"
+	// ArgBuildCommand is an optional build command to set for local development.
+	ArgBuildCommand = "build-command"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.
@@ -62,6 +66,8 @@ const (
 	ArgClusterNodePool = "node-pool"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
 	ArgClusterUpdateKubeconfig = "update-kubeconfig"
+	// ArgNoCache represents whether or not to omit the cache on the next command.
+	ArgNoCache = "no-cache"
 	// ArgNodePoolName is a cluster's node pool name argument.
 	ArgNodePoolName = "name"
 	// ArgNodePoolCount is a cluster's node pool count argument.
@@ -110,10 +116,14 @@ const (
 	ArgImagePublic = "public"
 	// ArgImageSlug is an image slug argument.
 	ArgImageSlug = "image-slug"
+	// ArgInteractive is the argument to enable an interactive CLI.
+	ArgInteractive = "interactive"
 	// ArgIPAddress is an IP address argument.
 	ArgIPAddress = "ip-address"
 	// ArgDropletName is a droplet name argument.
 	ArgDropletName = "droplet-name"
+	// ArgEnvFile is an environment file to load variables from.
+	ArgEnvFile = "env-file"
 	// ArgResizeDisk is a resize disk argument.
 	ArgResizeDisk = "resize-disk"
 	// ArgSnapshotName is a snapshot name argument.
@@ -212,6 +222,8 @@ const (
 	ArgTag = "tag"
 	//ArgTemplate is template format
 	ArgTemplate = "template"
+	// ArgTimeout is a timeout duration
+	ArgTimeout = "timeout"
 	// ArgVersion is the version of the command to use
 	ArgVersion = "version"
 	// ArgVerbose enables verbose output
@@ -343,6 +355,8 @@ const (
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
+	// ArgRegistry indicates the name of the registry.
+	ArgRegistry = "registry"
 	// ArgRegistryExpirySeconds indicates the length of time the token will be valid in seconds.
 	ArgRegistryExpirySeconds = "expiry-seconds"
 	// ArgSubscriptionTier is a subscription tier slug.
