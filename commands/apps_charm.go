@@ -5,6 +5,7 @@ import (
 
 	"github.com/digitalocean/doctl/commands/charm"
 	"github.com/digitalocean/doctl/commands/charm/template"
+	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/godo"
 )
 
@@ -22,6 +23,12 @@ func (i componentListItem) Description() string {
 	}
 
 	if buildable, ok := i.spec.(godo.AppBuildableComponentSpec); ok {
+		if builder.IsDockerBuild(buildable) {
+			desc[0] += " [dockerfile]"
+		} else if builder.IsCNBBuild(buildable) {
+			desc[0] += " [buildpacks]"
+		}
+
 		if sourceDir := buildable.GetSourceDir(); sourceDir != "" {
 			desc = append(desc, template.String(`located in ./{{highlight .}}`, sourceDir))
 		}
