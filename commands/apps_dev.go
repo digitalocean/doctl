@@ -316,7 +316,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		`building {{lower (snakeToTitle .componentSpec.GetType)}} {{highlight .componentSpec.GetName}} {{muted (print "(" .appName ")")}}`,
 		map[string]any{
 			"componentSpec": componentSpec,
-			"appName":       ws.Config.AppName,
+			"appName":       ws.Config.AppSpec.GetName(),
 		},
 	)
 	template.Print(`{{success checkmark}} {{.}}{{nl 2}}`, buildingComponentLine)
