@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
 	dockertypes "github.com/docker/docker/api/types"
@@ -58,23 +59,26 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		return ComponentBuilderResult{}, fmt.Errorf("configuring environment variables: %w", err)
 	}
 
-	buildContext := b.contextDir
-	if sd := filepath.Clean(b.component.GetSourceDir()); sd != "." && sd != "/" {
-		buildContext = filepath.Join(buildContext, sd)
-	}
-	// TODO Dockerfile must be relative to the source dir.
-	// Make it relative and if it's outside the source dir add it to the archive.
-	// ref: https://github.com/docker/cli/blob/9400e3dbe8ebd0bede3ab7023f744a8d7f4397d2/cli/command/image/build.go#L280-L286
-	template.Render(lw, `{{success checkmark}} building image using dockerfile {{highlight .}}{{nl 2}}`, b.dockerComponent.GetDockerfilePath())
+	template.Render(lw, heredoc.Doc(`
+		{{success checkmark}} building image using dockerfile {{highlight .dockerfile}}
+		  docker build context: {{highlight .context}}
+		
+		`),
+		map[string]any{
+			"dockerfile": b.dockerComponent.GetDockerfilePath(),
+			"context":    filepath.Join(b.contextDir, b.dockerComponent.GetSourceDir()),
+		},
+	)
 	start := time.Now()
-	tar, err := archive.TarWithOptions(buildContext, &archive.TarOptions{})
+
+	imageBuildContext, imageBuildDockerfile, err := b.getImageBuildContext(ctx)
 	if err != nil {
 		return ComponentBuilderResult{}, fmt.Errorf("preparing build context: %w", err)
 	}
 
 	res := ComponentBuilderResult{}
-	dockerRes, err := b.cli.ImageBuild(ctx, tar, dockertypes.ImageBuildOptions{
-		Dockerfile: b.dockerComponent.GetDockerfilePath(),
+	dockerRes, err := b.cli.ImageBuild(ctx, imageBuildContext, dockertypes.ImageBuildOptions{
+		Dockerfile: imageBuildDockerfile,
 		Tags: []string{
 			b.AppImageOutputName(),
 		},
@@ -104,6 +108,34 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	}
 
 	return res, nil
+}
+
+func (b *DockerComponentBuilder) getImageBuildContext(ctx context.Context) (io.Reader, string, error) {
+	absSourceDir, err := filepath.Abs(filepath.Join(b.contextDir, b.dockerComponent.GetSourceDir()))
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing source_dir: %w", err)
+	}
+	absDockerfile, err := filepath.Abs(filepath.Join(b.contextDir, b.dockerComponent.GetDockerfilePath()))
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing dockerfile_path: %w", err)
+	}
+	relDockerfile, err := filepath.Rel(absSourceDir, absDockerfile)
+	if err != nil {
+		return nil, "", err
+	}
+
+	tar, err := archive.TarWithOptions(absSourceDir, &archive.TarOptions{})
+	if err != nil {
+		return nil, "", fmt.Errorf("preparing build context: %w", err)
+	}
+
+	if !strings.HasPrefix(relDockerfile, ".."+string(filepath.Separator)) {
+		// dockerfile_path is inside of source_dir, ImageBuild can handle this as is
+		return tar, relDockerfile, nil
+	}
+
+	// TODO: remove this limitation
+	return nil, "", fmt.Errorf("dockerfile_path must be within source_dir")
 }
 
 // buildStaticSiteImage builds a container image that runs a webserver hosting the static site content
