@@ -91,8 +91,6 @@ you are connected to it.  If there are multiple namespaces, you have an opportun
 the one you want from a dialog.  Use `+"`"+`doctl serverless namespaces`+"`"+` to create, delete, and
 list your namespaces.`,
 		Writer)
-	AddBoolFlag(connect, "beta", "", false, "use beta features to connect when no namespace is specified")
-	connect.Flags().MarkHidden("beta")
 	// The apihost and auth flags will always be hidden.  They support testing using doctl on clusters that are not in production
 	// and hence are unknown to the portal.
 	AddStringFlag(connect, "apihost", "", "", "")
