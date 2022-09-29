@@ -34,7 +34,6 @@ The subcommands of ` + "`" + `doctl serverless triggers` + "`" + ` are used to l
 triggers.  Each trigger has an event source type, and invokes its associated function
 when events from that source type occur.  Currently, only the ` + "`" + `scheduler` + "`" + ` event source type is supported.`,
 			Aliases: []string{"trig"},
-			Hidden:  true, // trigger support uses APIs that are not yet universally available
 		},
 	}
 	list := CmdBuilder(cmd, RunTriggersList, "list", "Lists your triggers",

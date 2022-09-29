@@ -110,7 +110,6 @@ the entire packages are removed.`, Writer)
 	AddBoolFlag(undeploy, "packages", "p", false, "interpret simple name arguments as packages")
 	AddBoolFlag(undeploy, "triggers", "", false, "interpret all arguments as triggers")
 	AddBoolFlag(undeploy, "all", "", false, "remove all packages and functions")
-	undeploy.Flags().MarkHidden("triggers") // support is experimental at this point
 
 	cmd.AddCommand(Activations())
 	cmd.AddCommand(Functions())

@@ -239,7 +239,7 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "4.2.6-1.3.1"
+	minServerlessVersion = "4.2.7-1.3.1"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
