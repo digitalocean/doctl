@@ -1,5 +1,5 @@
-# github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78
-## explicit
+# github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1
+## explicit; go 1.16
 github.com/Azure/go-ansiterm
 github.com/Azure/go-ansiterm/winterm
 # github.com/MakeNowJust/heredoc v1.0.0
@@ -70,9 +70,8 @@ github.com/containerd/cgroups/stats/v1
 # github.com/containerd/console v1.0.3
 ## explicit; go 1.13
 github.com/containerd/console
-# github.com/containerd/containerd v1.5.13
+# github.com/containerd/containerd v1.6.3-0.20220401172941-5ff8fce1fcc6
 ## explicit; go 1.17
-github.com/containerd/containerd/log
 github.com/containerd/containerd/pkg/userns
 github.com/containerd/containerd/sys
 # github.com/containerd/continuity v0.3.0
@@ -93,6 +92,7 @@ github.com/digitalocean/godo/metrics
 github.com/digitalocean/godo/util
 # github.com/docker/cli v20.10.17+incompatible
 ## explicit
+github.com/docker/cli/cli/command/image/build
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
 github.com/docker/cli/cli/config/credentials
@@ -119,6 +119,7 @@ github.com/docker/docker/api/types/swarm/runtime
 github.com/docker/docker/api/types/time
 github.com/docker/docker/api/types/versions
 github.com/docker/docker/api/types/volume
+github.com/docker/docker/builder/remotecontext/git
 github.com/docker/docker/client
 github.com/docker/docker/errdefs
 github.com/docker/docker/pkg/archive
@@ -129,7 +130,10 @@ github.com/docker/docker/pkg/ioutils
 github.com/docker/docker/pkg/jsonmessage
 github.com/docker/docker/pkg/longpath
 github.com/docker/docker/pkg/pools
+github.com/docker/docker/pkg/progress
 github.com/docker/docker/pkg/stdcopy
+github.com/docker/docker/pkg/streamformatter
+github.com/docker/docker/pkg/stringid
 github.com/docker/docker/pkg/system
 # github.com/docker/docker-credential-helpers v0.6.4
 ## explicit; go 1.13
@@ -268,13 +272,19 @@ github.com/mitchellh/mapstructure
 # github.com/mitchellh/reflectwalk v1.0.0
 ## explicit
 github.com/mitchellh/reflectwalk
+# github.com/moby/buildkit v0.10.4
+## explicit; go 1.17
+github.com/moby/buildkit/frontend/dockerfile/dockerignore
 # github.com/moby/sys/mount v0.3.3
 ## explicit; go 1.16
 github.com/moby/sys/mount
 # github.com/moby/sys/mountinfo v0.6.2
 ## explicit; go 1.16
 github.com/moby/sys/mountinfo
-# github.com/moby/term v0.0.0-20200312100748-672ec06f55cd
+# github.com/moby/sys/symlink v0.2.0
+## explicit; go 1.16
+github.com/moby/sys/symlink
+# github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
 ## explicit; go 1.13
 github.com/moby/term
 github.com/moby/term/windows
@@ -316,7 +326,7 @@ github.com/nicksnyder/go-i18n/i18n/translation
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
-# github.com/opencontainers/image-spec v1.0.2
+# github.com/opencontainers/image-spec v1.0.3-0.20211202183452-c5a74bcca799
 ## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
