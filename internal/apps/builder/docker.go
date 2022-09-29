@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
 	"github.com/docker/cli/cli/command/image/build"
@@ -106,6 +107,12 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 }
 
 func (b *DockerComponentBuilder) getImageBuildContext(ctx context.Context) (io.Reader, string, error) {
+	// this assembles the build context in a way that fits cli.ImageBuild's expectations around
+	// dockerfiles and .dockerignore.
+	// much of this logic is copied from the `docker` cli implementation:
+	//   https://github.com/docker/cli/blob/9400e3dbe8ebd0bede3ab7023f744a8d7f4397d2/cli/command/image/build.go#L180
+	//   specifically the "build context is a local directory" flow.
+
 	absSourceDir, err := filepath.Abs(filepath.Join(b.contextDir, b.dockerComponent.GetSourceDir()))
 	if err != nil {
 		return nil, "", fmt.Errorf("parsing source_dir: %w", err)
@@ -139,6 +146,7 @@ func (b *DockerComponentBuilder) getImageBuildContext(ctx context.Context) (io.R
 		return nil, "", fmt.Errorf("preparing build context: %w", err)
 	}
 
+	spew.Dump(absSourceDir, absDockerfile, relDockerfile, string(filepath.Separator))
 	if strings.HasPrefix(relDockerfile, ".."+string(filepath.Separator)) {
 		dockerfileReader, err := os.Open(absDockerfile)
 		if err != nil {
