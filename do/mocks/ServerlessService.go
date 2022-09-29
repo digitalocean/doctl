@@ -199,6 +199,21 @@ func (mr *MockServerlessServiceMockRecorder) GetNamespace(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespace", reflect.TypeOf((*MockServerlessService)(nil).GetNamespace), arg0, arg1)
 }
 
+// GetNamespaceFromCluster mocks base method.
+func (m *MockServerlessService) GetNamespaceFromCluster(arg0, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNamespaceFromCluster", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNamespaceFromCluster indicates an expected call of GetNamespaceFromCluster.
+func (mr *MockServerlessServiceMockRecorder) GetNamespaceFromCluster(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespaceFromCluster", reflect.TypeOf((*MockServerlessService)(nil).GetNamespaceFromCluster), arg0, arg1)
+}
+
 // GetServerlessNamespace mocks base method.
 func (m *MockServerlessService) GetServerlessNamespace(arg0 context.Context) (do.ServerlessCredentials, error) {
 	m.ctrl.T.Helper()
@@ -270,6 +285,21 @@ func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 map[strin
 func (mr *MockServerlessServiceMockRecorder) InvokeFunctionViaWeb(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeFunctionViaWeb", reflect.TypeOf((*MockServerlessService)(nil).InvokeFunctionViaWeb), arg0, arg1)
+}
+
+// ListFunctions mocks base method.
+func (m *MockServerlessService) ListFunctions(arg0 string, arg1, arg2 int) ([]whisk.Action, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFunctions", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]whisk.Action)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFunctions indicates an expected call of ListFunctions.
+func (mr *MockServerlessServiceMockRecorder) ListFunctions(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFunctions", reflect.TypeOf((*MockServerlessService)(nil).ListFunctions), arg0, arg1, arg2)
 }
 
 // ListNamespaces mocks base method.

@@ -83,7 +83,7 @@ The install operation is long-running, and a network connection is required.`,
 	CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
 		Writer)
 
-	CmdBuilder(cmd, RunServerlessConnect, "connect [<hint>]", "Connects local serverless support to a functions namespace",
+	connect := CmdBuilder(cmd, RunServerlessConnect, "connect [<hint>]", "Connects local serverless support to a functions namespace",
 		`This command connects `+"`"+`doctl serverless`+"`"+` support to a functions namespace of your choice.
 The optional argument should be a (complete or partial) match to a namespace label or id.
 If there is no argument, all namespaces are matched.  If the result is exactly one namespace,
@@ -91,6 +91,12 @@ you are connected to it.  If there are multiple namespaces, you have an opportun
 the one you want from a dialog.  Use `+"`"+`doctl serverless namespaces`+"`"+` to create, delete, and
 list your namespaces.`,
 		Writer)
+	// The apihost and auth flags will always be hidden.  They support testing using doctl on clusters that are not in production
+	// and hence are unknown to the portal.
+	AddStringFlag(connect, "apihost", "", "", "")
+	AddStringFlag(connect, "auth", "", "", "")
+	connect.Flags().MarkHidden("apihost")
+	connect.Flags().MarkHidden("auth")
 
 	status := CmdBuilder(cmd, RunServerlessStatus, "status", "Provide information about serverless support",
 		`This command reports the status of serverless support and some details concerning its connected functions namespace.
@@ -194,12 +200,33 @@ func RunServerlessConnect(c *CmdConfig) error {
 	var (
 		err error
 	)
+	sls := c.Serverless()
+
+	// Support the hidden capability to connect to non-production clusters to support various kinds of testing.
+	// The presence of 'auth' and 'apihost' flags trumps other parts of the syntax, but both must be present.
+	apihost, _ := c.Doit.GetString(c.NS, "apihost")
+	auth, _ := c.Doit.GetString(c.NS, "auth")
+	if len(apihost) > 0 && len(auth) > 0 {
+		namespace, err := sls.GetNamespaceFromCluster(apihost, auth)
+		if err != nil {
+			return err
+		}
+		credential := do.ServerlessCredential{Auth: auth}
+		creds := do.ServerlessCredentials{
+			APIHost:     apihost,
+			Namespace:   namespace,
+			Credentials: map[string]map[string]do.ServerlessCredential{apihost: {namespace: credential}},
+		}
+		return finishConnecting(sls, creds, "", c.Out)
+	}
+	if len(apihost) > 0 || len(auth) > 0 {
+		return fmt.Errorf("If either of 'apihost' or 'auth' is specified then both must be specified")
+	}
+	// Neither 'auth' nor 'apihost' was specified, so continue with other options.
 
 	if len(c.Args) > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-
-	sls := c.Serverless()
 
 	// Non-standard check for the connect command (only): it's ok to not be connected.
 	err = sls.CheckServerlessStatus(hashAccessToken(c))
@@ -298,7 +325,8 @@ func finishConnecting(sls do.ServerlessService, creds do.ServerlessCredentials, 
 
 // RunServerlessStatus gives a report on the status of the serverless (installed, up to date, connected)
 func RunServerlessStatus(c *CmdConfig) error {
-	status := c.Serverless().CheckServerlessStatus(hashAccessToken(c))
+	sls := c.Serverless()
+	status := sls.CheckServerlessStatus(hashAccessToken(c))
 	if status == do.ErrServerlessNotInstalled {
 		return status
 	}
@@ -321,20 +349,20 @@ func RunServerlessStatus(c *CmdConfig) error {
 	}
 	// Check the connected state more deeply (since this is a status command we want to
 	// be more accurate; the connected check in checkServerlessStatus is lightweight and heuristic).
-	result, err := ServerlessExec(c, "auth/current", "--apihost", "--name")
-	if err != nil || len(result.Error) > 0 {
+	creds, err := sls.ReadCredentials()
+	if err != nil {
+		return nil
+	}
+	auth := creds.Credentials[creds.APIHost][creds.Namespace].Auth
+	checkNS, err := sls.GetNamespaceFromCluster(creds.APIHost, auth)
+	if err != nil || checkNS != creds.Namespace {
 		return do.ErrServerlessNotConnected
 	}
-	if result.Entity == nil {
-		return errors.New("Could not retrieve information about the connected namespace")
-	}
-	mapResult := result.Entity.(map[string]interface{})
-	apiHost := mapResult["apihost"].(string)
-	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["name"], apiHost)
+	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", creds.Namespace, creds.APIHost)
 	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", do.GetMinServerlessVersion())
 	languages, _ := c.Doit.GetBool(c.NS, "languages")
 	if languages {
-		return showLanguageInfo(c, apiHost)
+		return showLanguageInfo(c, creds.APIHost)
 	}
 	return nil
 }

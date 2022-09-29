@@ -206,6 +206,7 @@ type ServerlessService interface {
 	GetServerlessNamespace(context.Context) (ServerlessCredentials, error)
 	ListNamespaces(context.Context) (NamespaceListResponse, error)
 	GetNamespace(context.Context, string) (ServerlessCredentials, error)
+	GetNamespaceFromCluster(string, string) (string, error)
 	CreateNamespace(context.Context, string, string) (ServerlessCredentials, error)
 	DeleteNamespace(context.Context, string) error
 	ListTriggers(context.Context, string) ([]ServerlessTrigger, error)
@@ -217,6 +218,7 @@ type ServerlessService interface {
 	CheckServerlessStatus(string) error
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
+	ListFunctions(string, int, int) ([]whisk.Action, error)
 	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
 	InvokeFunctionViaWeb(string, map[string]interface{}) error
 	GetConnectedAPIHost() (string, error)
@@ -239,7 +241,7 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "4.2.6-1.3.1"
+	minServerlessVersion = "4.2.7-1.3.1"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -635,6 +637,27 @@ func (s *serverlessService) GetNamespace(ctx context.Context, name string) (Serv
 	return executeNamespaceRequest(ctx, s, req)
 }
 
+// GetNamespaceFromCluster obtains the namespace that uniquely owns a valid combination of API host and "auth"
+// (uuid:key).  This can be used to connect to clusters not known to the portal (e.g. dev clusters) or simply
+// to check that credentials are valid.
+func (s *serverlessService) GetNamespaceFromCluster(APIhost string, auth string) (string, error) {
+	// We do not use the shared client in serverlessService for this because it uses the stored
+	// credentials, not the passed ones.
+	config := whisk.Config{Host: APIhost, AuthToken: auth}
+	client, err := whisk.NewClient(http.DefaultClient, &config)
+	if err != nil {
+		return "", err
+	}
+	ns, _, err := client.Namespaces.List()
+	if err != nil {
+		return "", err
+	}
+	if len(ns) != 1 {
+		return "", fmt.Errorf("unexpected response when validating apihost and auth")
+	}
+	return ns[0].Name, nil
+}
+
 // CreateNamespace creates a new namespace and returns its credentials, given a label and region
 func (s *serverlessService) CreateNamespace(ctx context.Context, label string, region string) (ServerlessCredentials, error) {
 	reqBody := newNamespaceRequest{Namespace: inputNamespace{Label: label, Region: region}}
@@ -695,6 +718,23 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 		}
 	}
 	return *action, parameters, nil
+}
+
+// ListFunctions lists the functions of the connected namespace
+func (s *serverlessService) ListFunctions(pkg string, skip int, limit int) ([]whisk.Action, error) {
+	err := initWhisk(s)
+	if err != nil {
+		return []whisk.Action{}, err
+	}
+	if limit == 0 {
+		limit = 30
+	}
+	options := &whisk.ActionListOptions{
+		Skip:  skip,
+		Limit: limit,
+	}
+	list, _, err := s.owClient.Actions.List(pkg, options)
+	return list, err
 }
 
 // InvokeFunction invokes a function via POST with authentication
