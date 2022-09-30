@@ -64,7 +64,7 @@ You can provide inputs and inspect outputs.`,
 
 	list := CmdBuilder(cmd, RunFunctionsList, "list [<packageName>]", "Lists the functions in your functions namespace",
 		`Use `+"`"+`doctl serverless functions list`+"`"+` to list the functions in your functions namespace.`,
-		Writer, displayerType(&displayers.Functions{}))
+		Writer, aliasOpt("ls"), displayerType(&displayers.Functions{}))
 	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of functions (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of functions from the result")
 	AddBoolFlag(list, "count", "", false, "show only the total number of functions")
