@@ -18,20 +18,19 @@ func Extract(source, target string) error {
 	if _, err := os.Stat(target); os.IsNotExist(err) {
 		return errors.New("target directory does not exist")
 	}
+
 	if _, err := os.Stat(source); os.IsNotExist(err) {
 		return errors.New("source archive does not exist")
 	}
 
 	switch filepath.Ext(source) {
 	case ".gz":
-		err := extractTarGz(source, target)
-		if err != nil {
+		if err := extractTarGz(source, target); err != nil {
 			return err
 		}
 
 	case ".zip":
-		err := extractZip(source, target)
-		if err != nil {
+		if err := extractZip(source, target); err != nil {
 			return err
 		}
 
@@ -43,26 +42,27 @@ func Extract(source, target string) error {
 }
 
 func extractTarGz(source, target string) error {
-	s, err := os.Open(source)
-	if err != nil {
-		return err
+	s, openErr := os.Open(source)
+	if openErr != nil {
+		return openErr
 	}
 	defer s.Close()
 
-	gzReader, err := gzip.NewReader(s)
-	if err != nil {
-		return err
+	gzReader, gzReaderErr := gzip.NewReader(s)
+	if gzReaderErr != nil {
+		return gzReaderErr
 	}
 	defer gzReader.Close()
 
 	tarReader := tar.NewReader(gzReader)
 	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
+		header, rNextErr := tarReader.Next()
+		if rNextErr != nil {
+			if errors.Is(rNextErr, io.EOF) {
+				break
+			}
+
+			return rNextErr
 		}
 
 		info := header.FileInfo()
@@ -73,8 +73,7 @@ func extractTarGz(source, target string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			err := os.MkdirAll(path, info.Mode())
-			if err != nil {
+			if err := os.MkdirAll(path, info.Mode()); err != nil {
 				return err
 			}
 
@@ -83,18 +82,16 @@ func extractTarGz(source, target string) error {
 				os.MkdirAll(filepath.Dir(path), 0700)
 			}
 
-			f, err := os.Create(path)
-			if err != nil {
+			f, createErr := os.Create(path)
+			if createErr != nil {
+				return createErr
+			}
+
+			if err := f.Chmod(info.Mode()); err != nil {
 				return err
 			}
 
-			f.Chmod(info.Mode())
-			if err != nil {
-				return err
-			}
-
-			_, err = io.Copy(f, tarReader)
-			if err != nil {
+			if _, err := io.Copy(f, tarReader); err != nil {
 				return err
 			}
 			f.Close()
@@ -114,9 +111,9 @@ func extractTarGz(source, target string) error {
 }
 
 func extractZip(source, target string) error {
-	zReader, err := zip.OpenReader(source)
-	if err != nil {
-		return err
+	zReader, openReaderErr := zip.OpenReader(source)
+	if openReaderErr != nil {
+		return openReaderErr
 	}
 	defer zReader.Close()
 
@@ -137,23 +134,21 @@ func extractZip(source, target string) error {
 			os.MkdirAll(filepath.Dir(path), 0700)
 		}
 
-		f, err := os.Create(path)
-		if err != nil {
+		f, createErr := os.Create(path)
+		if createErr != nil {
+			return createErr
+		}
+
+		if err := f.Chmod(zf.Mode()); err != nil {
 			return err
 		}
 
-		f.Chmod(zf.Mode())
-		if err != nil {
-			return err
+		zippedFile, openErr := zf.Open()
+		if openErr != nil {
+			return openErr
 		}
 
-		zippedFile, err := zf.Open()
-		if err != nil {
-			return err
-		}
-
-		_, err = io.Copy(f, zippedFile)
-		if err != nil {
+		if _, err := io.Copy(f, zippedFile); err != nil {
 			return err
 		}
 		f.Close()
