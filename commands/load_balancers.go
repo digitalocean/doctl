@@ -15,9 +15,11 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -98,6 +100,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3`")
 	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "",
 		forwardingRulesTxt)
+	AddBoolFlag(cmdRecordCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer.`, Writer, aliasOpt("u"))
@@ -200,6 +203,28 @@ func RunLoadBalancerCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		lbs := c.LoadBalancers()
+		notice("Load balancer creation is in progress, waiting for load balancer to become active")
+
+		err := waitForActiveLoadBalancer(lbs, lb.ID)
+		if err != nil {
+			return fmt.Errorf(
+				"load balancer couldn't enter `active` state: %v",
+				err,
+			)
+		}
+
+		lb, _ = lbs.Get(lb.ID)
+	}
+
+	notice("Load balancer created")
 
 	item := &displayers.LoadBalancer{LoadBalancers: do.LoadBalancers{*lb}}
 	return c.Display(item)
@@ -512,4 +537,38 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	r.ForwardingRules = forwardingRules
 
 	return nil
+}
+
+func waitForActiveLoadBalancer(lbs do.LoadBalancersService, lbID string) error {
+	const maxAttempts = 180
+	const wantStatus = "active"
+	attempts := 0
+	printNewLineSet := false
+
+	for i := 0; i < maxAttempts; i++ {
+		if attempts != 0 {
+			fmt.Fprint(os.Stderr, ".")
+			if !printNewLineSet {
+				printNewLineSet = true
+				defer fmt.Fprintln(os.Stderr)
+			}
+		}
+
+		lb, err := lbs.Get(lbID)
+		if err != nil {
+			return err
+		}
+
+		if lb.Status == wantStatus {
+			return nil
+		}
+
+		attempts++
+		time.Sleep(10 * time.Second)
+	}
+
+	return fmt.Errorf(
+		"timeout waiting for load balancer (%s) to become active",
+		lbID,
+	)
 }
