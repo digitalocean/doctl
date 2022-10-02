@@ -349,6 +349,10 @@ func initWhisk(s *serverlessService) error {
 	if s.owClient != nil {
 		return nil
 	}
+	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	if err != nil {
+		return err
+	}
 	creds, err := s.ReadCredentials()
 	if err != nil {
 		return err

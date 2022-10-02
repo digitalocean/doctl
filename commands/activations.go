@@ -108,13 +108,13 @@ func RunActivationsGet(c *CmdConfig) error {
 	// order to get a "banner" (additional informational line)  when requesting logs or
 	// result only.  This seems pointless and we will always display the banner for a
 	// single logs or result output unless --quiet is specified.
-	flagSkip, _ := c.Doit.GetInt(c.NS, flagSkip) // 0 if not there
+	skipFlag, _ := c.Doit.GetInt(c.NS, flagSkip) // 0 if not there
 	functionFlag, _ := c.Doit.GetString(c.NS, flagFunction)
 	sls := c.Serverless()
 	if id == "" {
 		// If there is no id, the convention is to retrieve the last activation, subject to possible
 		// filtering or skipping
-		options := whisk.ActivationListOptions{Limit: 1, Skip: flagSkip}
+		options := whisk.ActivationListOptions{Limit: 1, Skip: skipFlag}
 		if functionFlag != "" {
 			options.Name = functionFlag
 		}
@@ -282,12 +282,53 @@ func RunActivationsResult(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	replaceFunctionWithAction(c)
-	output, err := RunServerlessExec(activationResult, c, []string{flagLast, flagQuiet}, []string{flagLimit, flagSkip, flagAction})
-	if err != nil {
-		return err
+	var id string
+	if argCount > 0 {
+		id = c.Args[0]
 	}
-	return c.PrintServerlessTextOutput(output)
+	quietFlag, _ := c.Doit.GetBool(c.NS, flagQuiet)
+	skipFlag, _ := c.Doit.GetInt(c.NS, flagSkip)   // 0 if not there
+	limitFlag, _ := c.Doit.GetInt(c.NS, flagLimit) // 0 if not there
+	functionFlag, _ := c.Doit.GetString(c.NS, flagFunction)
+	limit := 1
+	if limitFlag > 200 {
+		limit = 200
+	} else if limitFlag > 0 {
+		limit = limitFlag
+	}
+	options := whisk.ActivationListOptions{Limit: limit, Skip: skipFlag}
+	sls := c.Serverless()
+	var activations []whisk.Activation
+	if id == "" {
+		if functionFlag != "" {
+			options.Name = functionFlag
+		}
+		actv, err := sls.ListActivations(options)
+		if err != nil {
+			return err
+		}
+		activations = actv
+	} else {
+		activations = []whisk.Activation{
+			{ActivationID: id},
+		}
+	}
+	reversed := make([]whisk.Activation, len(activations))
+	for i, activation := range activations {
+		response, err := sls.GetActivationResult(activation.ActivationID)
+		if err != nil {
+			return err
+		}
+		activation.Result = response.Result
+		reversed[len(activations)-i-1] = activation
+	}
+	for _, activation := range reversed {
+		if !quietFlag {
+			makeBanner(c.Out, activation)
+		}
+		printResult(c.Out, activation.Result)
+	}
+	return nil
 }
 
 // replaceFunctionWithAction detects that --function was specified and renames it to --action (which is what nim
