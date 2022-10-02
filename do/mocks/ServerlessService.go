@@ -124,18 +124,49 @@ func (mr *MockServerlessServiceMockRecorder) Exec(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockServerlessService)(nil).Exec), arg0)
 }
 
-// FireTrigger mocks base method.
-func (m *MockServerlessService) FireTrigger(arg0 context.Context, arg1 string) error {
+// GetActivation mocks base method.
+func (m *MockServerlessService) GetActivation(arg0 string) (whisk.Activation, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FireTrigger", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "GetActivation", arg0)
+	ret0, _ := ret[0].(whisk.Activation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// FireTrigger indicates an expected call of FireTrigger.
-func (mr *MockServerlessServiceMockRecorder) FireTrigger(arg0, arg1 interface{}) *gomock.Call {
+// GetActivation indicates an expected call of GetActivation.
+func (mr *MockServerlessServiceMockRecorder) GetActivation(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FireTrigger", reflect.TypeOf((*MockServerlessService)(nil).FireTrigger), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivation", reflect.TypeOf((*MockServerlessService)(nil).GetActivation), arg0)
+}
+
+// GetActivationLogs mocks base method.
+func (m *MockServerlessService) GetActivationLogs(arg0 string) (whisk.Activation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActivationLogs", arg0)
+	ret0, _ := ret[0].(whisk.Activation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActivationLogs indicates an expected call of GetActivationLogs.
+func (mr *MockServerlessServiceMockRecorder) GetActivationLogs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivationLogs", reflect.TypeOf((*MockServerlessService)(nil).GetActivationLogs), arg0)
+}
+
+// GetActivationResult mocks base method.
+func (m *MockServerlessService) GetActivationResult(arg0 string) (whisk.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActivationResult", arg0)
+	ret0, _ := ret[0].(whisk.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActivationResult indicates an expected call of GetActivationResult.
+func (mr *MockServerlessServiceMockRecorder) GetActivationResult(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivationResult", reflect.TypeOf((*MockServerlessService)(nil).GetActivationResult), arg0)
 }
 
 // GetConnectedAPIHost mocks base method.
@@ -287,6 +318,21 @@ func (mr *MockServerlessServiceMockRecorder) InvokeFunctionViaWeb(arg0, arg1 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeFunctionViaWeb", reflect.TypeOf((*MockServerlessService)(nil).InvokeFunctionViaWeb), arg0, arg1)
 }
 
+// ListActivations mocks base method.
+func (m *MockServerlessService) ListActivations(arg0 whisk.ActivationListOptions) ([]whisk.Activation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActivations", arg0)
+	ret0, _ := ret[0].([]whisk.Activation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListActivations indicates an expected call of ListActivations.
+func (mr *MockServerlessServiceMockRecorder) ListActivations(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActivations", reflect.TypeOf((*MockServerlessService)(nil).ListActivations), arg0)
+}
+
 // ListFunctions mocks base method.
 func (m *MockServerlessService) ListFunctions(arg0 string, arg1, arg2 int) ([]whisk.Action, error) {
 	m.ctrl.T.Helper()
@@ -360,21 +406,6 @@ func (m *MockServerlessService) ReadProject(arg0 *do.ServerlessProject, arg1 []s
 func (mr *MockServerlessServiceMockRecorder) ReadProject(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadProject", reflect.TypeOf((*MockServerlessService)(nil).ReadProject), arg0, arg1)
-}
-
-// SetTriggerEnablement mocks base method.
-func (m *MockServerlessService) SetTriggerEnablement(arg0 context.Context, arg1 string, arg2 bool) (do.ServerlessTrigger, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetTriggerEnablement", arg0, arg1, arg2)
-	ret0, _ := ret[0].(do.ServerlessTrigger)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SetTriggerEnablement indicates an expected call of SetTriggerEnablement.
-func (mr *MockServerlessServiceMockRecorder) SetTriggerEnablement(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTriggerEnablement", reflect.TypeOf((*MockServerlessService)(nil).SetTriggerEnablement), arg0, arg1, arg2)
 }
 
 // Stream mocks base method.
