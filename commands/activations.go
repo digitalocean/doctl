@@ -26,6 +26,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ShownActivation is what is actually shown as an activation ... it adds a date field which is a human-readable
+// version of the start field.
+type ShownActivation struct {
+	whisk.Activation
+	Date string `json:"date,omitempty"`
+}
+
 // Activations generates the serverless 'activations' subtree for addition to the doctl command
 func Activations() *Command {
 	cmd := &Command{
@@ -193,7 +200,7 @@ func printLogs(writer io.Writer, strip bool, activation whisk.Activation) {
 		if strip {
 			log = stripLog(log)
 		}
-		fmt.Println(log)
+		fmt.Fprintln(writer, log)
 	}
 }
 
@@ -224,7 +231,9 @@ func printResult(writer io.Writer, result *whisk.Result) {
 // printActivationRecord is a subroutine for printing the entire activation record
 func printActivationRecord(writer io.Writer, activation whisk.Activation) {
 	var msg string
-	bytes, err := json.MarshalIndent(activation, "", "  ")
+	date := time.UnixMilli(activation.Start).Format("2006-01-02 03:04:05")
+	toShow := ShownActivation{Activation: activation, Date: date}
+	bytes, err := json.MarshalIndent(toShow, "", "  ")
 	if err == nil {
 		msg = string(bytes)
 	} else {
@@ -323,7 +332,7 @@ func RunActivationsResult(c *CmdConfig) error {
 		reversed[len(activations)-i-1] = activation
 	}
 	for _, activation := range reversed {
-		if !quietFlag {
+		if !quietFlag && id == "" {
 			makeBanner(c.Out, activation)
 		}
 		printResult(c.Out, activation.Result)
