@@ -57,7 +57,7 @@ func Snapshot() *Command {
 
 	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id>...",
 		"Delete a snapshot of a Droplet or volume", "Delete a snapshot of a Droplet or volume by specifying its ID.",
-		Writer, aliasOpt("d"), displayerType(&displayers.Snapshot{}))
+		Writer, aliasOpt("d", "rm"), displayerType(&displayers.Snapshot{}))
 	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the snapshot without confirmation")
 
 	return cmd

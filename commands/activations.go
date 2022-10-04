@@ -46,7 +46,7 @@ logs.`,
 	list := CmdBuilder(cmd, RunActivationsList, "list [<activation_name>]", "Lists Activations for which records exist",
 		`Use `+"`"+`doctl serverless activations list`+"`"+` to list the activation records that are present in the cloud for previously
 invoked functions.`,
-		Writer)
+		Writer, aliasOpt("ls"))
 	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of activations (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of activations from the result")
 	AddStringFlag(list, "since", "", "", "return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970")
