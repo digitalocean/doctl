@@ -253,7 +253,7 @@ func TestFunctionsInvoke(t *testing.T) {
 func TestFunctionsList(t *testing.T) {
 	// The displayer for function list is time-zone sensitive so we need to pre-convert the timestamps using the local
 	// time-zone to get exact matches.
-	timestamps := []int64{1662610000, 1662620000, 1662630000}
+	timestamps := []int64{1664538810000, 1664538820000, 1664538830000}
 	symbols := []string{"%DATE1%", "%DATE2%", "%DATE3%"}
 	dates := []string{
 		time.UnixMilli(timestamps[0]).Format("01/02 03:04:05"),
