@@ -50,7 +50,7 @@ resources attribute with information about resources that have been tagged.`,
 
 	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>...", "Delete a tag", `Use this command to delete a tag.
 
-Deleting a tag also removes the tag from all the resources that had been tagged with it.`, Writer)
+Deleting a tag also removes the tag from all the resources that had been tagged with it.`, Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete tag without confirmation prompt")
 
 	cmdApplyTag := CmdBuilder(cmd, RunCmdApplyTag, "apply <tag-name> --resource=<urn> [--resource=<urn> ...]", "Apply a tag to resources", `Use this command to tag one or more resources. Resources must be specified as URNs ("do:<resource_type>:<identifier>").`, Writer)
