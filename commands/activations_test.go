@@ -18,6 +18,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,55 +39,123 @@ func TestActivationsCommand(t *testing.T) {
 	assert.Equal(t, expected, names)
 }
 
+// theActivations is the set of activation assumed to be present, used to mock whisk API behavior
+var theActivations = []whisk.Activation{
+	{
+		Namespace:    "my-namespace",
+		Name:         "hello1",
+		Version:      "0.0.1",
+		ActivationID: "activation-1",
+		Start:        1664538810000,
+		End:          1664538820000,
+		Response: whisk.Response{
+			Status:     "success",
+			StatusCode: 0,
+			Success:    true,
+			Result: &whisk.Result{
+				"body": "Hello stranger!",
+			},
+		},
+		Logs: []string{
+			"2022-09-30T11:53:50.567914279Z stdout: Hello stranger!",
+		},
+	},
+	{
+		Namespace:    "my-namespace",
+		Name:         "hello2",
+		Version:      "0.0.2",
+		ActivationID: "activation-2",
+		Start:        1664538830000,
+		End:          1664538840000,
+		Response: whisk.Response{
+			Status:     "success",
+			StatusCode: 0,
+			Success:    true,
+			Result: &whisk.Result{
+				"body": "Hello Archie!",
+			},
+		},
+		Logs: []string{
+			"2022-09-30T11:53:50.567914279Z stdout: Hello stranger!",
+		},
+	},
+	{
+		Namespace:    "my-namespace",
+		Name:         "hello3",
+		Version:      "0.0.3",
+		ActivationID: "activation-3",
+		Start:        1664538850000,
+		End:          1664538860000,
+		Response: whisk.Response{
+			Result: &whisk.Result{
+				"error": "Missing main/no code to execute.",
+			},
+			Status:  "developer error",
+			Success: false,
+		},
+	},
+}
+
+// findActivation finds the activation with a given id (in these tests, assumed to be present)
+func findActivation(id string) whisk.Activation {
+	for _, activation := range theActivations {
+		if activation.ActivationID == id {
+			return activation
+		}
+	}
+	// Should not happen
+	panic("could not find " + id)
+}
+
 func TestActivationsGet(t *testing.T) {
 	tests := []struct {
-		name            string
-		doctlArgs       string
-		doctlFlags      map[string]string
-		expectedNimArgs []string
+		name        string
+		doctlArgs   string
+		doctlFlags  map[string]string
+		listOptions whisk.ActivationListOptions
 	}{
 		{
-			name:            "no flags with ID",
-			doctlArgs:       "activationid",
-			expectedNimArgs: []string{"activationid"},
+			name:      "no flags with ID",
+			doctlArgs: "activation-2",
 		},
 		{
-			name:            "no flags or args",
-			expectedNimArgs: []string{},
+			name:        "no flags or args",
+			listOptions: whisk.ActivationListOptions{Limit: 1},
 		},
 		{
-			name:            "last flag",
-			doctlArgs:       "activationid",
-			doctlFlags:      map[string]string{"last": ""},
-			expectedNimArgs: []string{"activationid", "--last"},
+			name:        "logs flag",
+			doctlFlags:  map[string]string{"logs": ""},
+			listOptions: whisk.ActivationListOptions{Limit: 1},
 		},
 		{
-			name:            "logs flag",
-			doctlArgs:       "activationid",
-			doctlFlags:      map[string]string{"logs": ""},
-			expectedNimArgs: []string{"activationid", "--logs"},
+			name:        "result flag",
+			doctlFlags:  map[string]string{"result": ""},
+			listOptions: whisk.ActivationListOptions{Limit: 1},
 		},
 		{
-			name:            "skip flag",
-			doctlArgs:       "activationid",
-			doctlFlags:      map[string]string{"skip": "10"},
-			expectedNimArgs: []string{"activationid", "--skip", "10"},
+			name:        "skip flag",
+			doctlFlags:  map[string]string{"skip": "2"},
+			listOptions: whisk.ActivationListOptions{Limit: 1, Skip: 2},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
-
 				if tt.doctlArgs != "" {
 					config.Args = append(config.Args, tt.doctlArgs)
 				}
 
+				logs := false
+				result := false
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {
+						if k == "logs" {
+							logs = true
+						}
+						if k == "result" {
+							result = true
+						}
 						if v == "" {
 							config.Doit.Set(config.NS, k, true)
 						} else {
@@ -95,9 +164,25 @@ func TestActivationsGet(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("activation/get", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
+				id := tt.doctlArgs
+				var activation whisk.Activation
+				if id != "" {
+					activation = findActivation(id)
+				}
+				if tt.listOptions.Limit > 0 {
+					fst := tt.listOptions.Skip
+					lnth := tt.listOptions.Limit + fst
+					tm.serverless.EXPECT().ListActivations(tt.listOptions).Return(theActivations[fst:lnth], nil)
+					activation = theActivations[fst]
+					id = activation.ActivationID
+				}
+				if logs {
+					tm.serverless.EXPECT().GetActivationLogs(id).Return(activation, nil)
+				} else if result {
+					tm.serverless.EXPECT().GetActivationResult(id).Return(activation.Response, nil)
+				} else {
+					tm.serverless.EXPECT().GetActivation(id).Return(activation, nil)
+				}
 
 				err := RunActivationsGet(config)
 				require.NoError(t, err)
@@ -276,48 +361,39 @@ func TestActivationsLogs(t *testing.T) {
 
 func TestActivationsResult(t *testing.T) {
 	tests := []struct {
-		name            string
-		doctlArgs       string
-		doctlFlags      map[string]string
-		expectedNimArgs []string
+		name        string
+		doctlArgs   string
+		doctlFlags  map[string]string
+		listOptions whisk.ActivationListOptions
 	}{
 		{
-			name:            "no flags or args",
-			expectedNimArgs: []string{},
+			name:        "no flags or args",
+			listOptions: whisk.ActivationListOptions{Limit: 1},
 		},
 		{
-			name:            "no flags with ID",
-			doctlArgs:       "activationid",
-			expectedNimArgs: []string{"activationid"},
+			name:      "no flags with ID",
+			doctlArgs: "activation-1",
 		},
 		{
-			name:            "last flag",
-			doctlFlags:      map[string]string{"last": ""},
-			expectedNimArgs: []string{"--last"},
+			name:        "limit flag",
+			doctlFlags:  map[string]string{"limit": "10"},
+			listOptions: whisk.ActivationListOptions{Limit: 10},
 		},
 		{
-			name:            "limit flag",
-			doctlFlags:      map[string]string{"limit": "10"},
-			expectedNimArgs: []string{"--limit", "10"},
+			name:        "quiet flag",
+			doctlFlags:  map[string]string{"quiet": ""},
+			listOptions: whisk.ActivationListOptions{Limit: 1},
 		},
 		{
-			name:            "quiet flag",
-			doctlFlags:      map[string]string{"quiet": ""},
-			expectedNimArgs: []string{"--quiet"},
-		},
-		{
-			name:            "skip flag",
-			doctlFlags:      map[string]string{"skip": "1"},
-			expectedNimArgs: []string{"--skip", "1"},
+			name:        "skip flag",
+			doctlFlags:  map[string]string{"skip": "1"},
+			listOptions: whisk.ActivationListOptions{Limit: 1, Skip: 1},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
 
 				if tt.doctlArgs != "" {
 					config.Args = append(config.Args, tt.doctlArgs)
@@ -333,10 +409,32 @@ func TestActivationsResult(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("activation/result", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
-
+				var ids []string
+				var activations []whisk.Activation
+				if tt.doctlArgs != "" {
+					ids = []string{tt.doctlArgs}
+					activations = []whisk.Activation{findActivation(ids[0])}
+				}
+				limit := tt.listOptions.Limit
+				if limit > 0 {
+					if limit > len(theActivations) {
+						limit = len(theActivations)
+					}
+					fst := tt.listOptions.Skip
+					lnth := limit + fst
+					// The command reverses the returned list in asking for the responses
+					chosen := theActivations[fst:lnth]
+					ids = make([]string, len(chosen))
+					activations = make([]whisk.Activation, len(chosen))
+					for i, activation := range chosen {
+						activations[len(chosen)-i-1] = activation
+						ids[len(chosen)-i-1] = activation.ActivationID
+					}
+					tm.serverless.EXPECT().ListActivations(tt.listOptions).Return(chosen, nil)
+				}
+				for i, id := range ids {
+					tm.serverless.EXPECT().GetActivationResult(id).Return(activations[i].Response, nil)
+				}
 				err := RunActivationsResult(config)
 				require.NoError(t, err)
 			})
