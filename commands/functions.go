@@ -123,7 +123,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	return c.PrintServerlessTextOutput(output)
 }
 
-// doSaveFunctionCode performs the save operations for code and for environment variables.
+// doSaveFunctionCode performs the save operations for code
 func doSaveFunctionCode(action whisk.Action, save bool, saveAs string) error {
 	var extension string // used only when save and !saveAs
 	var data []byte
