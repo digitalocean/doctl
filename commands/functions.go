@@ -125,7 +125,6 @@ func RunFunctionsGet(c *CmdConfig) error {
 
 // doSaveFunctionCode performs the save operations for code and for environment variables.
 func doSaveFunctionCode(action whisk.Action, save bool, saveAs string) error {
-	// First process save and saveAs
 	var extension string // used only when save and !saveAs
 	var data []byte
 	if *action.Exec.Binary {
