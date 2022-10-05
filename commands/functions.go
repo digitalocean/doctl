@@ -34,7 +34,7 @@ func Functions() *Command {
 		Command: &cobra.Command{
 			Use:   "functions",
 			Short: "Work with the functions in your namespace",
-			Long: `The subcommands of ` + "`" + `doctl serverless functions` + "`" + ` operate on your functions namespace. 
+			Long: `The subcommands of ` + "`" + `doctl serverless functions` + "`" + ` operate on your functions namespace.
 You are able to inspect and list these functions to know what is deployed.  You can also invoke functions to test them.`,
 			Aliases: []string{"fn"},
 		},
@@ -87,11 +87,13 @@ func RunFunctionsGet(c *CmdConfig) error {
 	saveEnvFlag, _ := c.Doit.GetString(c.NS, flagSaveEnv)
 	saveEnvJSONFlag, _ := c.Doit.GetString(c.NS, flagSaveEnvJSON)
 	fetchCode := codeFlag || saveFlag || saveAsFlag != ""
+
 	sls := c.Serverless()
 	action, parms, err := sls.GetFunction(c.Args[0], fetchCode)
 	if err != nil {
 		return err
 	}
+
 	if urlFlag {
 		host, err := sls.GetConnectedAPIHost()
 		if err != nil {
@@ -99,22 +101,30 @@ func RunFunctionsGet(c *CmdConfig) error {
 		}
 		_, err = fmt.Fprintln(c.Out, computeURL(action, host))
 		return err
-	} else if saveFlag || saveAsFlag != "" || saveEnvFlag != "" || saveEnvJSONFlag != "" {
-		return doSavingForFunctionGet(action, saveFlag, saveAsFlag, saveEnvFlag, saveEnvJSONFlag, parms)
-	} else if codeFlag {
+	}
+
+	if saveFlag || saveAsFlag != "" {
+		return doSaveFunctionCode(action, saveFlag, saveAsFlag)
+	}
+
+	if saveEnvFlag != "" || saveEnvJSONFlag != "" {
+		return doSaveFunctionEnvironment(saveEnvFlag, saveEnvJSONFlag, parms)
+	}
+
+	if codeFlag {
 		if !*action.Exec.Binary {
 			_, err = fmt.Fprintln(c.Out, *action.Exec.Code)
 			return err
 		}
 		return errors.New("Binary code cannot be displayed on the console")
 	}
+
 	output := do.ServerlessOutput{Entity: action}
 	return c.PrintServerlessTextOutput(output)
 }
 
-// doSavingForFunctionGet performs the save operations for code and for environment variables.
-func doSavingForFunctionGet(action whisk.Action, save bool, saveAs string, saveEnv string, saveEnvJSON string,
-	parms []do.FunctionParameter) error {
+// doSaveFunctionCode performs the save operations for code and for environment variables.
+func doSaveFunctionCode(action whisk.Action, save bool, saveAs string) error {
 	// First process save and saveAs
 	var extension string // used only when save and !saveAs
 	var data []byte
@@ -138,35 +148,42 @@ func doSavingForFunctionGet(action whisk.Action, save bool, saveAs string, saveE
 			return err
 		}
 	}
-	// Process saveEnv and saveEnvJSON.  Could do both if both are specified.
-	if saveEnv != "" || saveEnvJSON != "" {
-		keyVals := []string{}
-		envMap := map[string]string{}
-		for _, parm := range parms {
-			if parm.Init {
-				keyVal := parm.Key + "=" + parm.Value
-				keyVals = append(keyVals, keyVal)
-				envMap[parm.Key] = parm.Value
-			}
-		}
-		if saveEnv != "" {
-			data := []byte(strings.Join(keyVals, "\n"))
-			err := os.WriteFile(saveEnv, data, 0666)
-			if err != nil {
-				return err
-			}
-		}
-		if saveEnvJSON != "" {
-			data, err := json.MarshalIndent(&envMap, "", "  ")
-			if err != nil {
-				return err
-			}
-			err = os.WriteFile(saveEnvJSON, data, 0666)
-			if err != nil {
-				return err
-			}
+
+	return nil
+}
+
+// doSaveFunctionEnvironment saves the environment variables for a function to file,
+// either as key-value pairs or JSON.  Could do both if both are specified.
+func doSaveFunctionEnvironment(saveEnv string, saveEnvJSON string, parms []do.FunctionParameter) error {
+	keyVals := []string{}
+	envMap := map[string]string{}
+	for _, parm := range parms {
+		if parm.Init {
+			keyVal := parm.Key + "=" + parm.Value
+			keyVals = append(keyVals, keyVal)
+			envMap[parm.Key] = parm.Value
 		}
 	}
+
+	if saveEnv != "" {
+		data := []byte(strings.Join(keyVals, "\n"))
+		err := os.WriteFile(saveEnv, data, 0666)
+		if err != nil {
+			return err
+		}
+	}
+
+	if saveEnvJSON != "" {
+		data, err := json.MarshalIndent(&envMap, "", "  ")
+		if err != nil {
+			return err
+		}
+		err = os.WriteFile(saveEnvJSON, data, 0666)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
