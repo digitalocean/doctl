@@ -542,6 +542,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 func waitForActiveLoadBalancer(lbs do.LoadBalancersService, lbID string) error {
 	const maxAttempts = 180
 	const wantStatus = "active"
+	const errStatus = "errored"
 	attempts := 0
 	printNewLineSet := false
 
@@ -557,6 +558,13 @@ func waitForActiveLoadBalancer(lbs do.LoadBalancersService, lbID string) error {
 		lb, err := lbs.Get(lbID)
 		if err != nil {
 			return err
+		}
+
+		if lb.Status == errStatus {
+			return fmt.Errorf(
+				"load balancer (%s) entered status `errored`",
+				lbID,
+			)
 		}
 
 		if lb.Status == wantStatus {
