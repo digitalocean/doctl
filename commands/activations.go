@@ -248,10 +248,16 @@ func printActivationRecord(writer io.Writer, activation whisk.Activation) {
 // RunActivationsList supports the 'activations list' command
 func RunActivationsList(c *CmdConfig) error {
 	argCount := len(c.Args)
+
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 	sls := c.Serverless()
+
+	var name string
+	if argCount > 0 {
+		name = c.Args[0]
+	}
 
 	countFlags, _ := c.Doit.GetBool(c.NS, flagCount)
 	fullFlag, _ := c.Doit.GetBool(c.NS, flagFull)
@@ -268,16 +274,21 @@ func RunActivationsList(c *CmdConfig) error {
 	}
 
 	if countFlags {
-		options := whisk.ActivationListOptions{Count: true, Since: int64(sinceFlag), Upto: int64(upToFlag)}
+		options := whisk.ActivationListOptions{Count: true, Since: int64(sinceFlag), Upto: int64(upToFlag), Name: name}
 		count, err := sls.GetActivationCount(options)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("You have %d activations in this namespace \n", count.Activations)
+
+		if name != "" {
+			fmt.Fprintf(c.Out, "You have %d activations in this namespace for function %s \n", count.Activations, name)
+		} else {
+			fmt.Fprintf(c.Out, "You have %d activations in this namespace \n", count.Activations)
+		}
 		return nil
 	}
 
-	options := whisk.ActivationListOptions{Limit: limit, Skip: skipFlag, Since: int64(sinceFlag), Upto: int64(upToFlag), Docs: fullFlag}
+	options := whisk.ActivationListOptions{Limit: limit, Skip: skipFlag, Since: int64(sinceFlag), Upto: int64(upToFlag), Docs: fullFlag, Name: name}
 
 	actv, err := sls.ListActivations(options)
 	if err != nil {
