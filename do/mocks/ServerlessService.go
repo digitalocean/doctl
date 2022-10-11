@@ -139,6 +139,21 @@ func (mr *MockServerlessServiceMockRecorder) GetActivation(arg0 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivation", reflect.TypeOf((*MockServerlessService)(nil).GetActivation), arg0)
 }
 
+// GetActivationCount mocks base method.
+func (m *MockServerlessService) GetActivationCount(arg0 whisk.ActivationListOptions) (whisk.ActivationCount, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActivationCount", arg0)
+	ret0, _ := ret[0].(whisk.ActivationCount)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActivationCount indicates an expected call of GetActivationCount.
+func (mr *MockServerlessServiceMockRecorder) GetActivationCount(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivationCount", reflect.TypeOf((*MockServerlessService)(nil).GetActivationCount), arg0)
+}
+
 // GetActivationLogs mocks base method.
 func (m *MockServerlessService) GetActivationLogs(arg0 string) (whisk.Activation, error) {
 	m.ctrl.T.Helper()
