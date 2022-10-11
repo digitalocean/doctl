@@ -222,6 +222,7 @@ type ServerlessService interface {
 	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
 	InvokeFunctionViaWeb(string, map[string]interface{}) error
 	ListActivations(whisk.ActivationListOptions) ([]whisk.Activation, error)
+	GetActivationCount(whisk.ActivationListOptions) (whisk.ActivationCount, error)
 	GetActivation(string) (whisk.Activation, error)
 	GetActivationLogs(string) (whisk.Activation, error)
 	GetActivationResult(string) (whisk.Response, error)
@@ -810,6 +811,17 @@ func (s *serverlessService) ListActivations(options whisk.ActivationListOptions)
 	}
 	resp, _, err := s.owClient.Activations.List(&options)
 	return resp, err
+}
+
+// GetActivationCount drives the OpenWhisk API for getting the total number of activations in namespace
+func (s *serverlessService) GetActivationCount(options whisk.ActivationListOptions) (whisk.ActivationCount, error) {
+	err := initWhisk(s)
+	empty := whisk.ActivationCount{}
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Count(&options)
+	return *resp, err
 }
 
 // GetActivation drives the OpenWhisk API getting an activation

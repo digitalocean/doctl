@@ -23,6 +23,7 @@ import (
 	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/text"
+	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/spf13/cobra"
 )
 
@@ -61,8 +62,10 @@ logs.`,
 	list := CmdBuilder(cmd, RunActivationsList, "list [<activation_name>]", "Lists Activations for which records exist",
 		`Use `+"`"+`doctl serverless activations list`+"`"+` to list the activation records that are present in the cloud for previously
 invoked functions.`,
-		Writer)
-	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of activations (default 30, max 200)")
+		Writer,
+		displayerType(&displayers.Activation{}),
+	)
+	AddIntFlag(list, "limit", "l", 30, "only return LIMIT number of activations (default 30, max 200)")
 	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of activations from the result")
 	AddStringFlag(list, "since", "", "", "return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970")
 	AddStringFlag(list, "upto", "", "", "return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970")
@@ -248,11 +251,39 @@ func RunActivationsList(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	output, err := RunServerlessExec(activationList, c, []string{flagCount, flagFull}, []string{flagLimit, flagSkip, flagSince, flagUpto})
+	sls := c.Serverless()
+
+	countFlags, _ := c.Doit.GetBool(c.NS, flagCount)
+	fullFlag, _ := c.Doit.GetBool(c.NS, flagFull)
+	skipFlag, _ := c.Doit.GetInt(c.NS, flagSkip)
+	sinceFlag, _ := c.Doit.GetInt(c.NS, flagSince)
+	upToFlag, _ := c.Doit.GetInt(c.NS, flagUpto)
+	limitFlag, _ := c.Doit.GetInt(c.NS, flagLimit)
+
+	limit := limitFlag
+	if limitFlag > 200 {
+		limit = 200
+	} else if limitFlag > 0 {
+		limit = limitFlag
+	}
+
+	if countFlags {
+		options := whisk.ActivationListOptions{Count: true, Since: int64(sinceFlag), Upto: int64(upToFlag)}
+		count, err := sls.GetActivationCount(options)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("You have %d activations in this namespace \n", count.Activations)
+		return nil
+	}
+
+	options := whisk.ActivationListOptions{Limit: limit, Skip: skipFlag, Since: int64(sinceFlag), Upto: int64(upToFlag), Docs: fullFlag}
+
+	actv, err := sls.ListActivations(options)
 	if err != nil {
 		return err
 	}
-	return c.PrintServerlessTextOutput(output)
+	return c.Display(&displayers.Activation{Activations: actv})
 }
 
 // RunActivationsLogs supports the 'activations logs' command
