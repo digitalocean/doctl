@@ -57,7 +57,7 @@ func (a *Activation) KV() []map[string]interface{} {
 	for _, actv := range a.Activations {
 		o := map[string]interface{}{
 			"Datetime":     time.UnixMilli(actv.Start).Format("01/02 03:04:05"),
-			"Status":       getActivationStatus(actv),
+			"Status":       getActivationStatus(actv.StatusCode),
 			"Kind":         getActivationAnnotationValue(actv, "kind"),
 			"Version":      actv.Version,
 			"ActivationId": actv.ActivationID,
@@ -99,8 +99,9 @@ func getActivationAnnotationValue(a whisk.Activation, key string) interface{} {
 	return a.Annotations.GetValue(key)
 }
 
-func getActivationStatus(a whisk.Activation) string {
-	switch a.StatusCode {
+// converts numeric status codes to typical string
+func getActivationStatus(statusCode int) string {
+	switch statusCode {
 	case 0:
 		return "success"
 	case 1:

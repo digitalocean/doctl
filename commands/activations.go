@@ -175,26 +175,10 @@ func RunActivationsGet(c *CmdConfig) error {
 func makeBanner(writer io.Writer, activation whisk.Activation) {
 	end := time.UnixMilli(activation.End).Format("01/02 03:04:05")
 	init := text.NewStyled("=== ").Muted()
-	body := fmt.Sprintf("%s %s %s %s:%s", activation.ActivationID, statusToString(activation.StatusCode),
+	body := fmt.Sprintf("%s %s %s %s:%s", activation.ActivationID, getActivationStatus(activation.StatusCode),
 		end, activation.Name, activation.Version)
 	msg := text.NewStyled(body).Highlight()
 	fmt.Fprintln(writer, init.String()+msg.String())
-}
-
-// statusToString converts numeric status codes to typical string
-func statusToString(statusCode int) string {
-	switch statusCode {
-	case 0:
-		return "success"
-	case 1:
-		return "application error"
-	case 2:
-		return "developer error"
-	case 3:
-		return "system error"
-	default:
-		return "??"
-	}
 }
 
 // printLog is a subroutine for printing just the logs of an activation
