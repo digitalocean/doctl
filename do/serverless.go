@@ -221,6 +221,10 @@ type ServerlessService interface {
 	ListFunctions(string, int, int) ([]whisk.Action, error)
 	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
 	InvokeFunctionViaWeb(string, map[string]interface{}) error
+	ListActivations(whisk.ActivationListOptions) ([]whisk.Activation, error)
+	GetActivation(string) (whisk.Activation, error)
+	GetActivationLogs(string) (whisk.Activation, error)
+	GetActivationResult(string) (whisk.Response, error)
 	GetConnectedAPIHost() (string, error)
 	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
 	WriteProject(ServerlessProject) (string, error)
@@ -344,6 +348,10 @@ func HashAccessToken(token string) string {
 func initWhisk(s *serverlessService) error {
 	if s.owClient != nil {
 		return nil
+	}
+	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	if err != nil {
+		return err
 	}
 	creds, err := s.ReadCredentials()
 	if err != nil {
@@ -793,6 +801,50 @@ func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]
 	return browser.OpenURL(theURL)
 }
 
+// ListActivations drives the OpenWhisk API for listing activations
+func (s *serverlessService) ListActivations(options whisk.ActivationListOptions) ([]whisk.Activation, error) {
+	empty := []whisk.Activation{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.List(&options)
+	return resp, err
+}
+
+// GetActivation drives the OpenWhisk API getting an activation
+func (s *serverlessService) GetActivation(id string) (whisk.Activation, error) {
+	empty := whisk.Activation{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Get(id)
+	return *resp, err
+}
+
+// GetActivationLogs drives the OpenWhisk API getting the logs of an activation
+func (s *serverlessService) GetActivationLogs(id string) (whisk.Activation, error) {
+	empty := whisk.Activation{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Logs(id)
+	return *resp, err
+}
+
+// GetActivationResult drives the OpenWhisk API getting the result of an activation
+func (s *serverlessService) GetActivationResult(id string) (whisk.Response, error) {
+	empty := whisk.Response{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Result(id)
+	return *resp, err
+}
+
 // GetConnectedAPIHost retrieves the API host to which the service is currently connected
 func (s *serverlessService) GetConnectedAPIHost() (string, error) {
 	err := initWhisk(s)
@@ -1041,8 +1093,8 @@ func (s *serverlessService) ReadCredentials() (ServerlessCredentials, error) {
 	return creds, err
 }
 
-// Determines whether the serverlessUptodate appears to be connected.  The purpose is
-// to fail fast (when feasible) on sandboxes that are clearly not connected.
+// Determines whether the serverless support appears to be connected.  The purpose is
+// to fail fast (when feasible) when it clearly is not connected.
 // However, it is important not to add excessive overhead on each call (e.g.
 // asking the plugin to validate credentials), so the test is not foolproof.
 // It merely tests whether a credentials directory has been created for the
@@ -1054,15 +1106,15 @@ func isServerlessConnected(leafCredsDir string, serverlessDir string) bool {
 	return !os.IsNotExist(err)
 }
 
-// serverlessUptodate answers whether the installed version of the serverlessUptodate is at least
+// serverlessUptodate answers whether the installed version of the serverless support is at least
 // what is required by doctl
 func serverlessUptodate(serverlessDir string) bool {
 	return GetCurrentServerlessVersion(serverlessDir) >= GetMinServerlessVersion()
 }
 
-// GetCurrentServerlessVersion gets the version of the current serverless.
-// To be called only when serverless is known to exist.
-// Returns "0" if the installed serverless pre-dates the versioning system
+// GetCurrentServerlessVersion gets the version of the current plugin.
+// To be called only when the plugin is known to exist.
+// Returns "0" if the installed plugin pre-dates the versioning system
 // Otherwise, returns the version string stored in the serverless directory.
 func GetCurrentServerlessVersion(serverlessDir string) string {
 	versionFile := filepath.Join(serverlessDir, "version")

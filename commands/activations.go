@@ -14,9 +14,24 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"regexp"
+	"time"
+
+	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/spf13/cobra"
 )
+
+// ShownActivation is what is actually shown as an activation ... it adds a date field which is a human-readable
+// version of the start field.
+type ShownActivation struct {
+	whisk.Activation
+	Date string `json:"date,omitempty"`
+}
 
 // Activations generates the serverless 'activations' subtree for addition to the doctl command
 func Activations() *Command {
@@ -85,12 +100,146 @@ func RunActivationsGet(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	replaceFunctionWithAction(c)
-	output, err := RunServerlessExec(activationGet, c, []string{flagLast, flagLogs, flagResult, flagQuiet}, []string{flagSkip, flagAction})
-	if err != nil {
-		return err
+	var id string
+	if argCount > 0 {
+		id = c.Args[0]
 	}
-	return c.PrintServerlessTextOutput(output)
+	logsFlag, _ := c.Doit.GetBool(c.NS, flagLogs)
+	resultFlag, _ := c.Doit.GetBool(c.NS, flagResult)
+	quietFlag, _ := c.Doit.GetBool(c.NS, flagQuiet)
+	// There is also a 'last' flag, which is historical.  Since it's behavior is the
+	// default, and the past convention was to ignore it if a single id was specified,
+	// (rather than indicating an error), it is completely ignored here but accepted for
+	// backward compatibility.  In the aio implementation (incorporated in nim, previously
+	// incorporated here), the flag had to be set explicitly (rather than just implied) in
+	// order to get a "banner" (additional informational line)  when requesting logs or
+	// result only.  This seems pointless and we will always display the banner for a
+	// single logs or result output unless --quiet is specified.
+	skipFlag, _ := c.Doit.GetInt(c.NS, flagSkip) // 0 if not there
+	functionFlag, _ := c.Doit.GetString(c.NS, flagFunction)
+	sls := c.Serverless()
+	if id == "" {
+		// If there is no id, the convention is to retrieve the last activation, subject to possible
+		// filtering or skipping
+		options := whisk.ActivationListOptions{Limit: 1, Skip: skipFlag}
+		if functionFlag != "" {
+			options.Name = functionFlag
+		}
+		list, err := sls.ListActivations(options)
+		if err != nil {
+			return err
+		}
+		if len(list) == 0 {
+			return fmt.Errorf("no activations were returned")
+		}
+		activation := list[0]
+		id = activation.ActivationID
+		if !quietFlag && (logsFlag || resultFlag) {
+			makeBanner(c.Out, activation)
+		}
+	}
+	if logsFlag {
+		activation, err := sls.GetActivationLogs(id)
+		if err != nil {
+			return err
+		}
+		if len(activation.Logs) == 0 {
+			return fmt.Errorf("no logs available")
+		}
+		printLogs(c.Out, true, activation)
+	} else if resultFlag {
+		response, err := sls.GetActivationResult(id)
+		if err != nil {
+			return err
+		}
+		if response.Result == nil {
+			return fmt.Errorf("no result available")
+		}
+		printResult(c.Out, response.Result)
+	} else {
+		activation, err := sls.GetActivation(id)
+		if err != nil {
+			return err
+		}
+		printActivationRecord(c.Out, activation)
+	}
+	return nil
+}
+
+// makeBanner is a subroutine that prints a single "banner" line summarizing information about an
+// activation.  This is done in conjunction with a request to print only logs or only the result, since,
+// otherwise, it is difficult to know what activation is being talked about.
+func makeBanner(writer io.Writer, activation whisk.Activation) {
+	end := time.UnixMilli(activation.End).Format("01/02 03:04:05")
+	init := text.NewStyled("=== ").Muted()
+	body := fmt.Sprintf("%s %s %s %s:%s", activation.ActivationID, statusToString(activation.StatusCode),
+		end, activation.Name, activation.Version)
+	msg := text.NewStyled(body).Highlight()
+	fmt.Fprintln(writer, init.String()+msg.String())
+}
+
+// statusToString converts numeric status codes to typical string
+func statusToString(statusCode int) string {
+	switch statusCode {
+	case 0:
+		return "success"
+	case 1:
+		return "application error"
+	case 2:
+		return "developer error"
+	case 3:
+		return "system error"
+	default:
+		return "??"
+	}
+}
+
+// printLog is a subroutine for printing just the logs of an activation
+func printLogs(writer io.Writer, strip bool, activation whisk.Activation) {
+	for _, log := range activation.Logs {
+		if strip {
+			log = stripLog(log)
+		}
+		fmt.Fprintln(writer, log)
+	}
+}
+
+// dtsRegex is a regular expression that matches the prefix of some activation log entries.
+// It is used by stripLog to remove that prefix
+var dtsRegex = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:.*: `)
+
+// stripLog strips the prefix from log entries
+func stripLog(entry string) string {
+	// `2019-10-11T19:08:57.298Z       stdout: login-success ::  { code: ...`
+	// should become: `login-success ::  { code: ...`
+	found := dtsRegex.FindString(entry)
+	return entry[len(found):]
+}
+
+// printResult is a subroutine for printing just the result of an activation
+func printResult(writer io.Writer, result *whisk.Result) {
+	var msg string
+	bytes, err := json.MarshalIndent(result, "", "  ")
+	if err == nil {
+		msg = string(bytes)
+	} else {
+		msg = "<unable to represent the result as JSON>"
+	}
+	fmt.Fprintln(writer, msg)
+}
+
+// printActivationRecord is a subroutine for printing the entire activation record
+func printActivationRecord(writer io.Writer, activation whisk.Activation) {
+	var msg string
+	date := time.UnixMilli(activation.Start).Format("2006-01-02 03:04:05")
+	toShow := ShownActivation{Activation: activation, Date: date}
+	bytes, err := json.MarshalIndent(toShow, "", "  ")
+	if err == nil {
+		msg = string(bytes)
+	} else {
+		msg = "<unable to represent the activation as JSON>"
+	}
+	fmt.Fprintln(writer, msg)
 }
 
 // RunActivationsList supports the 'activations list' command
@@ -142,12 +291,53 @@ func RunActivationsResult(c *CmdConfig) error {
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	replaceFunctionWithAction(c)
-	output, err := RunServerlessExec(activationResult, c, []string{flagLast, flagQuiet}, []string{flagLimit, flagSkip, flagAction})
-	if err != nil {
-		return err
+	var id string
+	if argCount > 0 {
+		id = c.Args[0]
 	}
-	return c.PrintServerlessTextOutput(output)
+	quietFlag, _ := c.Doit.GetBool(c.NS, flagQuiet)
+	skipFlag, _ := c.Doit.GetInt(c.NS, flagSkip)   // 0 if not there
+	limitFlag, _ := c.Doit.GetInt(c.NS, flagLimit) // 0 if not there
+	functionFlag, _ := c.Doit.GetString(c.NS, flagFunction)
+	limit := 1
+	if limitFlag > 200 {
+		limit = 200
+	} else if limitFlag > 0 {
+		limit = limitFlag
+	}
+	options := whisk.ActivationListOptions{Limit: limit, Skip: skipFlag}
+	sls := c.Serverless()
+	var activations []whisk.Activation
+	if id == "" {
+		if functionFlag != "" {
+			options.Name = functionFlag
+		}
+		actv, err := sls.ListActivations(options)
+		if err != nil {
+			return err
+		}
+		activations = actv
+	} else {
+		activations = []whisk.Activation{
+			{ActivationID: id},
+		}
+	}
+	reversed := make([]whisk.Activation, len(activations))
+	for i, activation := range activations {
+		response, err := sls.GetActivationResult(activation.ActivationID)
+		if err != nil {
+			return err
+		}
+		activation.Result = response.Result
+		reversed[len(activations)-i-1] = activation
+	}
+	for _, activation := range reversed {
+		if !quietFlag && id == "" {
+			makeBanner(c.Out, activation)
+		}
+		printResult(c.Out, activation.Result)
+	}
+	return nil
 }
 
 // replaceFunctionWithAction detects that --function was specified and renames it to --action (which is what nim
