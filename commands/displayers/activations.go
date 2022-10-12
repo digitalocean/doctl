@@ -57,7 +57,7 @@ func (a *Activation) KV() []map[string]interface{} {
 	for _, actv := range a.Activations {
 		o := map[string]interface{}{
 			"Datetime":     time.UnixMilli(actv.Start).Format("01/02 03:04:05"),
-			"Status":       getActivationStatus(actv.StatusCode),
+			"Status":       GetActivationStatus(actv.StatusCode),
 			"Kind":         getActivationAnnotationValue(actv, "kind"),
 			"Version":      actv.Version,
 			"ActivationId": actv.ActivationID,
@@ -78,15 +78,16 @@ func getActivationStartType(a whisk.Activation) string {
 	return "warm"
 }
 
+// Gets the full function name for the activation.
 func getActivationFunctionName(a whisk.Activation) string {
 	name := a.Name
-	path := getActivationAnnotationValue(a, "path").(string)
+	path := getActivationAnnotationValue(a, "path")
 
-	if path == "" {
+	if path == nil {
 		return name
 	}
 
-	parts := strings.Split(path, "/")
+	parts := strings.Split(path.(string), "/")
 
 	if len(parts) == 3 {
 		return parts[1] + "/" + name
@@ -96,11 +97,14 @@ func getActivationFunctionName(a whisk.Activation) string {
 }
 
 func getActivationAnnotationValue(a whisk.Activation, key string) interface{} {
+	if a.Annotations == nil {
+		return nil
+	}
 	return a.Annotations.GetValue(key)
 }
 
 // converts numeric status codes to typical string
-func getActivationStatus(statusCode int) string {
+func GetActivationStatus(statusCode int) string {
 	switch statusCode {
 	case 0:
 		return "success"

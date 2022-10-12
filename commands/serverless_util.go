@@ -163,19 +163,3 @@ func getFlatArgsArray(c *CmdConfig, booleanFlags []string, stringFlags []string)
 func getServerlessDirectory() string {
 	return filepath.Join(defaultConfigHome(), "sandbox")
 }
-
-// converts numeric status codes to typical string
-func getActivationStatus(statusCode int) string {
-	switch statusCode {
-	case 0:
-		return "success"
-	case 1:
-		return "application error"
-	case 2:
-		return "developer error"
-	case 3:
-		return "system error"
-	default:
-		return "unknown"
-	}
-}

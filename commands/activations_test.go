@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -97,6 +98,29 @@ var theActivations = []whisk.Activation{
 			Success: false,
 		},
 	},
+	{
+		Namespace:    "my-namespace",
+		Name:         "hello4",
+		Version:      "0.0.3",
+		ActivationID: "activation-3",
+		Annotations: whisk.KeyValueArr{
+			{Key: "kind", Value: "nodejs:default"},
+			{Key: "path", Value: "my-namespace/my-package/hello4"},
+		},
+		Start: 1664538850000,
+		End:   1664538860000,
+		Response: whisk.Response{
+			Result: &whisk.Result{
+				"error": "Missing main/no code to execute.",
+			},
+			Status:  "developer error",
+			Success: false,
+		},
+	},
+}
+
+var theActivationCount = whisk.ActivationCount{
+	Activations: 1738,
 }
 
 // Timestamps in the activations are converted to dates using local time so, to make this test capable of running
@@ -312,65 +336,68 @@ Hello stranger!
 
 func TestActivationsList(t *testing.T) {
 	tests := []struct {
-		name            string
-		doctlArgs       string
-		doctlFlags      map[string]string
-		expectedNimArgs []string
+		name       string
+		doctlArgs  string
+		doctlFlags map[string]string
 	}{
 		{
-			name:            "no flags or args",
-			expectedNimArgs: []string{},
+			name:      "no flags or args",
+			doctlArgs: "",
 		},
 		{
-			name:            "full flag",
-			doctlFlags:      map[string]string{"full": ""},
-			expectedNimArgs: []string{"--full"},
+			name:      "function name argument",
+			doctlArgs: "my-package/hello4",
 		},
 		{
-			name:            "count flag",
-			doctlFlags:      map[string]string{"count": ""},
-			expectedNimArgs: []string{"--count"},
+			name:       "count flag",
+			doctlArgs:  "",
+			doctlFlags: map[string]string{"count": "true", "limit": "10"},
 		},
 		{
-			name:            "limit flag",
-			doctlFlags:      map[string]string{"limit": "10"},
-			expectedNimArgs: []string{"--limit", "10"},
-		},
-		{
-			name:            "since flag",
-			doctlFlags:      map[string]string{"since": "1644866670085"},
-			expectedNimArgs: []string{"--since", "1644866670085"},
-		},
-		{
-			name:            "skip flag",
-			doctlFlags:      map[string]string{"skip": "1"},
-			expectedNimArgs: []string{"--skip", "1"},
-		},
-		{
-			name:            "upto flag",
-			doctlFlags:      map[string]string{"upto": "1644866670085"},
-			expectedNimArgs: []string{"--upto", "1644866670085"},
-		},
-		{
-			name:            "multiple flags",
-			doctlFlags:      map[string]string{"limit": "10", "count": ""},
-			expectedNimArgs: []string{"--count", "--limit", "10"},
+			name:       "multiple flags and arg",
+			doctlArgs:  "",
+			doctlFlags: map[string]string{"limit": "10", "skip": "100", "since": "1664538750000", "upto": "1664538850000"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
+				buf := &bytes.Buffer{}
+				config.Out = buf
 
 				if tt.doctlArgs != "" {
 					config.Args = append(config.Args, tt.doctlArgs)
 				}
 
+				count := false
+				var limit interface{}
+				var since interface{}
+				var upto interface{}
+				var skip interface{}
+
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {
+						if k == "count" {
+							count = true
+						}
+
+						if k == "limit" {
+							limit, _ = strconv.ParseInt(v, 0, 64)
+						}
+
+						if k == "since" {
+							since, _ = strconv.ParseInt(v, 0, 64)
+						}
+
+						if k == "upto" {
+							upto, _ = strconv.ParseInt(v, 0, 64)
+						}
+
+						if k == "skip" {
+							skip, _ = strconv.ParseInt(v, 0, 64)
+						}
+
 						if v == "" {
 							config.Doit.Set(config.NS, k, true)
 						} else {
@@ -379,9 +406,32 @@ func TestActivationsList(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("activation/list", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
+				expectedListOptions := whisk.ActivationListOptions{}
+				if since != nil {
+					expectedListOptions.Since = since.(int64)
+				}
+
+				if upto != nil {
+					expectedListOptions.Upto = upto.(int64)
+				}
+
+				if len(config.Args) == 1 {
+					expectedListOptions.Name = config.Args[0]
+				}
+
+				if count {
+					expectedListOptions.Count = true
+					tm.serverless.EXPECT().GetActivationCount(expectedListOptions).Return(theActivationCount, nil)
+				} else {
+					if limit != nil {
+						expectedListOptions.Limit = int(limit.(int64))
+					}
+
+					if skip != nil {
+						expectedListOptions.Skip = int(skip.(int64))
+					}
+					tm.serverless.EXPECT().ListActivations(expectedListOptions).Return(theActivations, nil)
+				}
 
 				err := RunActivationsList(config)
 				require.NoError(t, err)

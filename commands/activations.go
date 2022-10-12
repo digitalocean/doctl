@@ -66,7 +66,7 @@ invoked functions.`,
 		displayerType(&displayers.Activation{}),
 	)
 	AddIntFlag(list, "limit", "l", 30, "only return LIMIT number of activations (default 30, max 200)")
-	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of activations from the result")
+	AddIntFlag(list, "skip", "s", 0, "exclude the first SKIP number of activations from the result")
 	AddStringFlag(list, "since", "", "", "return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970")
 	AddStringFlag(list, "upto", "", "", "return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970")
 	AddBoolFlag(list, "count", "", false, "show only the total number of activations")
@@ -175,7 +175,7 @@ func RunActivationsGet(c *CmdConfig) error {
 func makeBanner(writer io.Writer, activation whisk.Activation) {
 	end := time.UnixMilli(activation.End).Format("01/02 03:04:05")
 	init := text.NewStyled("=== ").Muted()
-	body := fmt.Sprintf("%s %s %s %s:%s", activation.ActivationID, getActivationStatus(activation.StatusCode),
+	body := fmt.Sprintf("%s %s %s %s:%s", activation.ActivationID, displayers.GetActivationStatus(activation.StatusCode),
 		end, activation.Name, activation.Version)
 	msg := text.NewStyled(body).Highlight()
 	fmt.Fprintln(writer, init.String()+msg.String())
@@ -253,8 +253,6 @@ func RunActivationsList(c *CmdConfig) error {
 	limit := limitFlag
 	if limitFlag > 200 {
 		limit = 200
-	} else if limitFlag > 0 {
-		limit = limitFlag
 	}
 
 	if countFlags {
