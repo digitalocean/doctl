@@ -323,6 +323,7 @@ This command updates the specified configuration values for the specified Kubern
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
 		"Boolean specifying whether to enable the highly-available control plane for the cluster")
+	cmdKubeClusterUpdate.Flags().MarkHidden(doctl.ArgHA) // support is experimental at this point
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Boolean specifying whether to update the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
