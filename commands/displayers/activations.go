@@ -47,7 +47,7 @@ func (a *Activation) Cols() []string {
 
 // JSON implements Displayable
 func (a *Activation) JSON(out io.Writer) error {
-	return writeJSON(a, out)
+	return writeJSON(a.Activations, out)
 }
 
 // KV implements Displayable

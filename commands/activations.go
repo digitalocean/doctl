@@ -276,7 +276,13 @@ func RunActivationsList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return c.Display(&displayers.Activation{Activations: actv})
+
+	items := &displayers.Activation{Activations: actv}
+	if fullFlag {
+		return items.JSON(c.Out)
+	}
+
+	return c.Display(items)
 }
 
 // RunActivationsLogs supports the 'activations logs' command
