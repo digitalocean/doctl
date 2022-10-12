@@ -5,8 +5,8 @@ import (
 	"sort"
 	"testing"
 
-        "github.com/digitalocean/doctl"
-        "github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
