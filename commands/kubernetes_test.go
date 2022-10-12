@@ -5,13 +5,14 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 )
 
 var (
@@ -549,6 +550,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: boolPtr(false),
+			HA:          true,
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -557,6 +559,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
+		config.Doit.Set(config.NS, doctl.ArgHA, true)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)

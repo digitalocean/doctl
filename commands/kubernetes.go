@@ -26,13 +26,14 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/displayers"
-	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -320,6 +321,8 @@ This command updates the specified configuration values for the specified Kubern
 		"A boolean flag indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window (default false). To enable automatic upgrade, supply --auto-upgrade(=true).")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSurgeUpgrade, "", false,
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
+		"Boolean specifying whether to enable the highly-available control plane for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Boolean specifying whether to update the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
@@ -1690,6 +1693,11 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	}
 	r.SurgeUpgrade = surgeUpgrade
 
+	ha, err := c.Doit.GetBool(c.NS, doctl.ArgHA)
+	if err != nil {
+		return err
+	}
+	r.HA = ha
 	return nil
 }
 
