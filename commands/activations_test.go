@@ -98,25 +98,6 @@ var theActivations = []whisk.Activation{
 			Success: false,
 		},
 	},
-	{
-		Namespace:    "my-namespace",
-		Name:         "hello4",
-		Version:      "0.0.3",
-		ActivationID: "activation-3",
-		Annotations: whisk.KeyValueArr{
-			{Key: "kind", Value: "nodejs:default"},
-			{Key: "path", Value: "my-namespace/my-package/hello4"},
-		},
-		Start: 1664538850000,
-		End:   1664538860000,
-		Response: whisk.Response{
-			Result: &whisk.Result{
-				"error": "Missing main/no code to execute.",
-			},
-			Status:  "developer error",
-			Success: false,
-		},
-	},
 }
 
 var theActivationCount = whisk.ActivationCount{
