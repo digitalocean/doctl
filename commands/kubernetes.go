@@ -24,16 +24,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+        "github.com/digitalocean/doctl"
+        "github.com/digitalocean/doctl/commands/displayers"
+        "github.com/digitalocean/doctl/do"
 	"github.com/blang/semver"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/displayers"
-	"github.com/digitalocean/doctl/do"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -1694,7 +1692,7 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	}
 	r.SurgeUpgrade = surgeUpgrade
 
-	ha, err := c.Doit.GetBool(c.NS, doctl.ArgHA)
+	ha, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgHA)
 	if err != nil {
 		return err
 	}

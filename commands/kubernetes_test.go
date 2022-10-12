@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"sort"
 	"testing"
-
+        "github.com/digitalocean/doctl"
+        "github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/do"
 )
 
 var (
