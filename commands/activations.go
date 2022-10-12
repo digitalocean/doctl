@@ -59,7 +59,7 @@ logs.`,
 	AddStringFlag(get, "function", "f", "", "Fetch activations for a specific function")
 	AddBoolFlag(get, "quiet", "q", false, "Suppress last activation information header")
 
-	list := CmdBuilder(cmd, RunActivationsList, "list [<activation_name>]", "Lists Activations for which records exist",
+	list := CmdBuilder(cmd, RunActivationsList, "list [<function_name>]", "Lists Activations for which records exist",
 		`Use `+"`"+`doctl serverless activations list`+"`"+` to list the activation records that are present in the cloud for previously
 invoked functions.`,
 		Writer,
