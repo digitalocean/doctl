@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"testing"
+
         "github.com/digitalocean/doctl"
         "github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
