@@ -7,7 +7,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.86.0
+	github.com/digitalocean/godo v1.87.0
 	github.com/docker/cli v20.10.17+incompatible
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
@@ -33,10 +33,10 @@ require (
 	github.com/spf13/viper v1.11.0
 	github.com/stretchr/testify v1.7.2
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
-	golang.org/x/net v0.0.0-20220921155015-db77216a4ee9 // indirect
-	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5
+	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458 // indirect
+	golang.org/x/oauth2 v0.0.0-20221006150949-b44042a4b9c1
 	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.22.5
 	k8s.io/apimachinery v0.22.5
@@ -78,7 +78,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.7 // indirect
+	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
@@ -118,7 +118,7 @@ require (
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/term v0.0.0-20220526004731-065cf7ba2467 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
+	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	golang.org/x/tools v0.1.5 // indirect
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	google.golang.org/appengine v1.6.7 // indirect
