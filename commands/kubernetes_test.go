@@ -549,7 +549,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: boolPtr(false),
-			HA:          true,
+			HA:          boolPtr(true),
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
