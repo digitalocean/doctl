@@ -256,7 +256,7 @@ func RunActivationsList(c *CmdConfig) error {
 	}
 
 	if countFlags {
-		options := whisk.ActivationListOptions{Count: true, Since: int64(sinceFlag), Upto: int64(upToFlag), Name: name}
+		options := whisk.ActivationCountOptions{Since: int64(sinceFlag), Upto: int64(upToFlag), Name: name}
 		count, err := sls.GetActivationCount(options)
 		if err != nil {
 			return err

@@ -140,7 +140,7 @@ func (mr *MockServerlessServiceMockRecorder) GetActivation(arg0 interface{}) *go
 }
 
 // GetActivationCount mocks base method.
-func (m *MockServerlessService) GetActivationCount(arg0 whisk.ActivationListOptions) (whisk.ActivationCount, error) {
+func (m *MockServerlessService) GetActivationCount(arg0 whisk.ActivationCountOptions) (whisk.ActivationCount, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetActivationCount", arg0)
 	ret0, _ := ret[0].(whisk.ActivationCount)
@@ -305,10 +305,10 @@ func (mr *MockServerlessServiceMockRecorder) InstallServerless(arg0, arg1 interf
 }
 
 // InvokeFunction mocks base method.
-func (m *MockServerlessService) InvokeFunction(arg0 string, arg1 interface{}, arg2, arg3 bool) (map[string]interface{}, error) {
+func (m *MockServerlessService) InvokeFunction(arg0 string, arg1 interface{}, arg2, arg3 bool) (interface{}, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvokeFunction", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(map[string]interface{})
+	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -320,7 +320,7 @@ func (mr *MockServerlessServiceMockRecorder) InvokeFunction(arg0, arg1, arg2, ar
 }
 
 // InvokeFunctionViaWeb mocks base method.
-func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 map[string]interface{}) error {
+func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvokeFunctionViaWeb", arg0, arg1)
 	ret0, _ := ret[0].(error)

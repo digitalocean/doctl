@@ -66,7 +66,7 @@ type Response struct {
 	Result     *Result `json:"result,omitempty"`
 }
 
-type Result map[string]interface{}
+type Result interface{}
 
 type ActivationListOptions struct {
 	Name  string `url:"name,omitempty"`
@@ -75,6 +75,13 @@ type ActivationListOptions struct {
 	Since int64  `url:"since,omitempty"`
 	Upto  int64  `url:"upto,omitempty"`
 	Docs  bool   `url:"docs,omitempty"`
+}
+
+type ActivationCountOptions struct {
+	Name  string `url:"name,omitempty"`
+	Skip  int    `url:"skip"`
+	Since int64  `url:"since,omitempty"`
+	Upto  int64  `url:"upto,omitempty"`
 	Count bool   `url:"count,omitempty"`
 }
 
@@ -197,10 +204,12 @@ func (s *ActivationService) List(options *ActivationListOptions) ([]Activation, 
 	return activations, resp, nil
 }
 
-func (s *ActivationService) Count(options *ActivationListOptions) (*ActivationCount, *http.Response, error) {
+func (s *ActivationService) Count(options *ActivationCountOptions) (*ActivationCount, *http.Response, error) {
 	// TODO :: for some reason /activations only works with "_" as namespace
 	s.client.Namespace = "_"
 	route := "activations"
+
+	options.Count = true
 	routeUrl, err := addRouteOptions(route, options)
 
 	if err != nil {

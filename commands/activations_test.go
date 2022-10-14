@@ -43,6 +43,18 @@ func TestActivationsCommand(t *testing.T) {
 	assert.Equal(t, expected, names)
 }
 
+var hello1Result = whisk.Result(map[string]interface{}{
+	"body": "Hello stranger!",
+})
+
+var hello2Result = whisk.Result(map[string]interface{}{
+	"body": "Hello Archie!",
+})
+
+var hello3Result = whisk.Result(map[string]interface{}{
+	"error": "Missing main/no code to execute.",
+})
+
 // theActivations is the set of activation assumed to be present, used to mock whisk API behavior
 var theActivations = []whisk.Activation{
 	{
@@ -56,9 +68,7 @@ var theActivations = []whisk.Activation{
 			Status:     "success",
 			StatusCode: 0,
 			Success:    true,
-			Result: &whisk.Result{
-				"body": "Hello stranger!",
-			},
+			Result:     &hello1Result,
 		},
 		Logs: []string{
 			"2022-09-30T11:53:50.567914279Z stdout: Hello stranger!",
@@ -75,9 +85,7 @@ var theActivations = []whisk.Activation{
 			Status:     "success",
 			StatusCode: 0,
 			Success:    true,
-			Result: &whisk.Result{
-				"body": "Hello Archie!",
-			},
+			Result:     &hello2Result,
 		},
 		Logs: []string{
 			"2022-09-30T11:53:50.567914279Z stdout: Hello Archie!",
@@ -91,9 +99,7 @@ var theActivations = []whisk.Activation{
 		Start:        1664538850000,
 		End:          1664538860000,
 		Response: whisk.Response{
-			Result: &whisk.Result{
-				"error": "Missing main/no code to execute.",
-			},
+			Result:  &hello3Result,
 			Status:  "developer error",
 			Success: false,
 		},
@@ -387,23 +393,30 @@ func TestActivationsList(t *testing.T) {
 					}
 				}
 
-				expectedListOptions := whisk.ActivationListOptions{}
-				if since != nil {
-					expectedListOptions.Since = since.(int64)
-				}
-
-				if upto != nil {
-					expectedListOptions.Upto = upto.(int64)
-				}
-
-				if len(config.Args) == 1 {
-					expectedListOptions.Name = config.Args[0]
-				}
-
 				if count {
-					expectedListOptions.Count = true
+					expectedListOptions := whisk.ActivationCountOptions{}
+					if since != nil {
+						expectedListOptions.Since = since.(int64)
+					}
+
+					if upto != nil {
+						expectedListOptions.Upto = upto.(int64)
+					}
+
 					tm.serverless.EXPECT().GetActivationCount(expectedListOptions).Return(theActivationCount, nil)
 				} else {
+					expectedListOptions := whisk.ActivationListOptions{}
+					if since != nil {
+						expectedListOptions.Since = since.(int64)
+					}
+
+					if upto != nil {
+						expectedListOptions.Upto = upto.(int64)
+					}
+
+					if len(config.Args) == 1 {
+						expectedListOptions.Name = config.Args[0]
+					}
 					if limit != nil {
 						expectedListOptions.Limit = int(limit.(int64))
 					}
