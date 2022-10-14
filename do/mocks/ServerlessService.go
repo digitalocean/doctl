@@ -139,6 +139,21 @@ func (mr *MockServerlessServiceMockRecorder) GetActivation(arg0 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivation", reflect.TypeOf((*MockServerlessService)(nil).GetActivation), arg0)
 }
 
+// GetActivationCount mocks base method.
+func (m *MockServerlessService) GetActivationCount(arg0 whisk.ActivationCountOptions) (whisk.ActivationCount, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActivationCount", arg0)
+	ret0, _ := ret[0].(whisk.ActivationCount)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActivationCount indicates an expected call of GetActivationCount.
+func (mr *MockServerlessServiceMockRecorder) GetActivationCount(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivationCount", reflect.TypeOf((*MockServerlessService)(nil).GetActivationCount), arg0)
+}
+
 // GetActivationLogs mocks base method.
 func (m *MockServerlessService) GetActivationLogs(arg0 string) (whisk.Activation, error) {
 	m.ctrl.T.Helper()
@@ -290,10 +305,10 @@ func (mr *MockServerlessServiceMockRecorder) InstallServerless(arg0, arg1 interf
 }
 
 // InvokeFunction mocks base method.
-func (m *MockServerlessService) InvokeFunction(arg0 string, arg1 interface{}, arg2, arg3 bool) (map[string]interface{}, error) {
+func (m *MockServerlessService) InvokeFunction(arg0 string, arg1 interface{}, arg2, arg3 bool) (interface{}, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvokeFunction", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(map[string]interface{})
+	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -305,7 +320,7 @@ func (mr *MockServerlessServiceMockRecorder) InvokeFunction(arg0, arg1, arg2, ar
 }
 
 // InvokeFunctionViaWeb mocks base method.
-func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 map[string]interface{}) error {
+func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvokeFunctionViaWeb", arg0, arg1)
 	ret0, _ := ret[0].(error)

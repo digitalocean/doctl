@@ -33,7 +33,7 @@ github.com/Microsoft/hcsshim/internal/vmcompute
 github.com/Microsoft/hcsshim/internal/wclayer
 github.com/Microsoft/hcsshim/internal/winapi
 github.com/Microsoft/hcsshim/osversion
-# github.com/apache/openwhisk-client-go v0.0.0-20211007130743-38709899040b
+# github.com/apache/openwhisk-client-go v0.0.0-20221014112704-1ca897633f2d
 ## explicit; go 1.15
 github.com/apache/openwhisk-client-go/whisk
 github.com/apache/openwhisk-client-go/wski18n

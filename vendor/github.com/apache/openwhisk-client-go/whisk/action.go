@@ -287,8 +287,8 @@ func (s *ActionService) Delete(actionName string) (*http.Response, error) {
 	return resp, nil
 }
 
-func (s *ActionService) Invoke(actionName string, payload interface{}, blocking bool, result bool) (map[string]interface{}, *http.Response, error) {
-	var res map[string]interface{}
+func (s *ActionService) Invoke(actionName string, payload interface{}, blocking bool, result bool) (interface{}, *http.Response, error) {
+	var res interface{}
 
 	// Encode resource name as a path (with no query params) before inserting it into the URI
 	// This way any '?' chars in the name won't be treated as the beginning of the query params

@@ -219,9 +219,10 @@ type ServerlessService interface {
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	ListFunctions(string, int, int) ([]whisk.Action, error)
-	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
-	InvokeFunctionViaWeb(string, map[string]interface{}) error
+	InvokeFunction(string, interface{}, bool, bool) (interface{}, error)
+	InvokeFunctionViaWeb(string, interface{}) error
 	ListActivations(whisk.ActivationListOptions) ([]whisk.Activation, error)
+	GetActivationCount(whisk.ActivationCountOptions) (whisk.ActivationCount, error)
 	GetActivation(string) (whisk.Activation, error)
 	GetActivationLogs(string) (whisk.Activation, error)
 	GetActivationResult(string) (whisk.Response, error)
@@ -746,7 +747,7 @@ func (s *serverlessService) ListFunctions(pkg string, skip int, limit int) ([]wh
 }
 
 // InvokeFunction invokes a function via POST with authentication
-func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (map[string]interface{}, error) {
+func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (interface{}, error) {
 	var empty map[string]interface{}
 	err := initWhisk(s)
 	if err != nil {
@@ -757,7 +758,7 @@ func (s *serverlessService) InvokeFunction(name string, params interface{}, bloc
 }
 
 // InvokeFunctionViaWeb invokes a function via GET using its web URL (or error if not a web function)
-func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]interface{}) error {
+func (s *serverlessService) InvokeFunctionViaWeb(name string, params interface{}) error {
 	// Get the function so we can use its metadata in formulating the request
 	theFunction, _, err := s.GetFunction(name, false)
 	if err != nil {
@@ -789,7 +790,7 @@ func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]
 	// Add params, if any
 	if params != nil {
 		encoded := url.Values{}
-		for key, val := range params {
+		for key, val := range params.(map[string]interface{}) {
 			stringVal, ok := val.(string)
 			if !ok {
 				return fmt.Errorf("the value of '%s' is not a string; web invocation is not possible", key)
@@ -810,6 +811,17 @@ func (s *serverlessService) ListActivations(options whisk.ActivationListOptions)
 	}
 	resp, _, err := s.owClient.Activations.List(&options)
 	return resp, err
+}
+
+// GetActivationCount drives the OpenWhisk API for getting the total number of activations in namespace
+func (s *serverlessService) GetActivationCount(options whisk.ActivationCountOptions) (whisk.ActivationCount, error) {
+	err := initWhisk(s)
+	empty := whisk.ActivationCount{}
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Count(&options)
+	return *resp, err
 }
 
 // GetActivation drives the OpenWhisk API getting an activation
