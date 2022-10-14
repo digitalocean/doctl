@@ -17,13 +17,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"os/signal"
 	"regexp"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
 
@@ -176,7 +181,7 @@ func makeBanner(writer io.Writer, activation whisk.Activation) {
 	end := time.UnixMilli(activation.End).Format("01/02 03:04:05")
 	init := text.NewStyled("=== ").Muted()
 	body := fmt.Sprintf("%s %s %s %s:%s", activation.ActivationID, displayers.GetActivationStatus(activation.StatusCode),
-		end, activation.Name, activation.Version)
+		end, displayers.GetActivationFunctionName(activation), activation.Version)
 	msg := text.NewStyled(body).Highlight()
 	fmt.Fprintln(writer, init.String()+msg.String())
 }
@@ -193,7 +198,7 @@ func printLogs(writer io.Writer, strip bool, activation whisk.Activation) {
 
 // dtsRegex is a regular expression that matches the prefix of some activation log entries.
 // It is used by stripLog to remove that prefix
-var dtsRegex = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:.*: `)
+var dtsRegex = regexp.MustCompile(`(?U)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:.*: `)
 
 // stripLog strips the prefix from log entries
 func stripLog(entry string) string {
@@ -288,31 +293,121 @@ func RunActivationsList(c *CmdConfig) error {
 // RunActivationsLogs supports the 'activations logs' command
 func RunActivationsLogs(c *CmdConfig) error {
 	argCount := len(c.Args)
+
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	replaceFunctionWithAction(c)
-	augmentPackageWithDeployed(c)
-	if isWatching(c) {
-		return RunServerlessExecStreaming(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
+
+	var activationId string
+	if argCount == 1 {
+		activationId = c.Args[0]
 	}
-	output, err := RunServerlessExec(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
+
+	sls := c.Serverless()
+
+	limitFlag, _ := c.Doit.GetInt(c.NS, flagLimit)
+	stripFlag, _ := c.Doit.GetBool(c.NS, flagStrip)
+	followFlag, _ := c.Doit.GetBool(c.NS, flagFollow)
+	lastFlag, _ := c.Doit.GetBool(c.NS, flagLast)
+	functionFlag, _ := c.Doit.GetString(c.NS, flagFunction)
+	packageFlag, _ := c.Doit.GetString(c.NS, flagPackage)
+
+	limit := limitFlag
+	if limitFlag > 200 {
+		limit = 200
+	}
+
+	if lastFlag {
+		limit = 1
+	}
+
+	if activationId != "" {
+		actv, err := sls.GetActivationLogs(activationId)
+		if err != nil {
+			return err
+		}
+		printLogs(c.Out, stripFlag, actv)
+		return nil
+
+	} else if followFlag {
+		var wg sync.WaitGroup
+		sigChannel := make(chan os.Signal, 1)
+		signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
+
+		wg.Add(1)
+		go pollActivations(&wg, sls, c.Out, functionFlag)
+
+		go func() {
+			<-sigChannel
+			fmt.Fprintf(c.Out, "\r")
+			wg.Done()
+		}()
+
+		wg.Wait()
+		return nil
+	}
+
+	listOptions := whisk.ActivationListOptions{Limit: limit, Name: functionFlag, Docs: true}
+	actvs, err := sls.ListActivations(listOptions)
+
 	if err != nil {
 		return err
 	}
-	return c.PrintServerlessTextOutput(output)
+
+	for _, a := range actvs {
+		pkg := displayers.GetActivationPackageName(a)
+
+		if (packageFlag != "") && (pkg != "") && (pkg != packageFlag) {
+			break
+		}
+
+		makeBanner(c.Out, a)
+		printLogs(c.Out, stripFlag, a)
+		fmt.Fprintln(c.Out)
+	}
+	return nil
 }
 
-// isWatching (1) modifies the config replacing the "follow" flag (significant to doctl) with the
-// "watch" flag (significant to nim)  (2) Returns whether the command should be run in streaming mode
-// (will be true iff follow/watch is true).
-func isWatching(c *CmdConfig) bool {
-	yes, err := c.Doit.GetBool(c.NS, flagFollow)
-	if yes && err == nil {
-		c.Doit.Set(c.NS, flagWatch, true)
-		return true
+func pollActivations(wg *sync.WaitGroup, sls do.ServerlessService, writer io.Writer, name string) {
+	defer wg.Done()
+	ticker := time.NewTicker(time.Second * 1).C
+
+	var lastActivationTimestamp int64 = 0
+	requestLimit := 1
+
+	// There seems to be a race condition where functions invocation that start before lastActivationTimestamp
+	// but is not completed by the time we make the list activation request will display twice. So prevent this issue
+	// we keep track of the activation ids displayed, so we don't display the logs twice.
+	printedActivations := map[string]int64{}
+
+	for {
+		select {
+		case <-ticker:
+			options := whisk.ActivationListOptions{Limit: requestLimit, Since: lastActivationTimestamp, Docs: true, Name: name}
+			actv, err := sls.ListActivations(options)
+
+			if err != nil {
+				return
+			}
+
+			if len(actv) > 0 {
+				for _, activation := range actv {
+					if _, ok := printedActivations[activation.ActivationID]; ok {
+						break
+					}
+					printedActivations[activation.ActivationID] = activation.Start
+
+					makeBanner(writer, activation)
+					printLogs(writer, false, activation)
+					fmt.Fprintln(writer)
+				}
+
+				lastItem := actv[len(actv)-1]
+				lastActivationTimestamp = lastItem.Start + 100
+				requestLimit = 0
+			}
+		}
 	}
-	return false
 }
 
 // RunActivationsResult supports the 'activations result' command
@@ -368,24 +463,4 @@ func RunActivationsResult(c *CmdConfig) error {
 		printResult(c.Out, activation.Result)
 	}
 	return nil
-}
-
-// replaceFunctionWithAction detects that --function was specified and renames it to --action (which is what nim
-// will expect to see).
-func replaceFunctionWithAction(c *CmdConfig) {
-	value, err := c.Doit.GetString(c.NS, flagFunction)
-	if err == nil && value != "" {
-		c.Doit.Set(c.NS, flagFunction, "")
-		c.Doit.Set(c.NS, flagAction, value)
-	}
-}
-
-// augmentPackageWithDeployed detects that --package was specified and adds the --deployed flag if so.
-// The code in 'nim' (inherited from Adobe I/O) will otherwise look for a deployment manifest which we
-// don't want to support here.
-func augmentPackageWithDeployed(c *CmdConfig) {
-	value, err := c.Doit.GetString(c.NS, flagPackage)
-	if err == nil && value != "" {
-		c.Doit.Set(c.NS, flagDeployed, true)
-	}
 }
