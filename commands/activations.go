@@ -67,8 +67,8 @@ invoked functions.`,
 	)
 	AddIntFlag(list, "limit", "l", 30, "only return LIMIT number of activations (default 30, max 200)")
 	AddIntFlag(list, "skip", "s", 0, "exclude the first SKIP number of activations from the result")
-	AddStringFlag(list, "since", "", "", "return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970")
-	AddStringFlag(list, "upto", "", "", "return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970")
+	AddIntFlag(list, "since", "", 0, "return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970")
+	AddIntFlag(list, "upto", "", 0, "return activations with timestamps earlier than UPTO; measured in milliseconds since Th, 01, Jan 1970")
 	AddBoolFlag(list, "count", "", false, "show only the total number of activations")
 	AddBoolFlag(list, "full", "f", false, "include full activation description")
 
