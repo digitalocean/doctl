@@ -368,6 +368,7 @@ func RunActivationsLogs(c *CmdConfig) error {
 	return nil
 }
 
+// Polls the ActivationList API at an interval and prints the results.
 func pollActivations(wg *sync.WaitGroup, sls do.ServerlessService, writer io.Writer, name string) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Second * 1).C
