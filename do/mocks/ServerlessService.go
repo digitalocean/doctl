@@ -124,20 +124,6 @@ func (mr *MockServerlessServiceMockRecorder) Exec(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockServerlessService)(nil).Exec), arg0)
 }
 
-// FireTrigger mocks base method.
-func (m *MockServerlessService) FireTrigger(arg0 context.Context, arg1 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "FireTrigger", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// FireTrigger indicates an expected call of FireTrigger.
-func (mr *MockServerlessServiceMockRecorder) FireTrigger(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FireTrigger", reflect.TypeOf((*MockServerlessService)(nil).FireTrigger), arg0, arg1)
-}
-
 // GetConnectedAPIHost mocks base method.
 func (m *MockServerlessService) GetConnectedAPIHost() (string, error) {
 	m.ctrl.T.Helper()
@@ -330,21 +316,6 @@ func (m *MockServerlessService) ReadProject(arg0 *do.ServerlessProject, arg1 []s
 func (mr *MockServerlessServiceMockRecorder) ReadProject(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadProject", reflect.TypeOf((*MockServerlessService)(nil).ReadProject), arg0, arg1)
-}
-
-// SetTriggerEnablement mocks base method.
-func (m *MockServerlessService) SetTriggerEnablement(arg0 context.Context, arg1 string, arg2 bool) (do.ServerlessTrigger, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetTriggerEnablement", arg0, arg1, arg2)
-	ret0, _ := ret[0].(do.ServerlessTrigger)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SetTriggerEnablement indicates an expected call of SetTriggerEnablement.
-func (mr *MockServerlessServiceMockRecorder) SetTriggerEnablement(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTriggerEnablement", reflect.TypeOf((*MockServerlessService)(nil).SetTriggerEnablement), arg0, arg1, arg2)
 }
 
 // Stream mocks base method.
