@@ -15,7 +15,7 @@ package commands
 
 import (
 	"bytes"
-	"os/exec"
+	"errors"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/apache/openwhisk-client-go/whisk"
-	"github.com/digitalocean/doctl/do"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -436,67 +435,57 @@ func TestActivationsList(t *testing.T) {
 
 func TestActivationsLogs(t *testing.T) {
 	tests := []struct {
-		name            string
-		doctlArgs       string
-		doctlFlags      map[string]string
-		expectedNimArgs []string
-		expectStream    bool
+		name       string
+		doctlArgs  string
+		doctlFlags map[string]string
 	}{
 		{
-			name:            "no flags or args",
-			expectedNimArgs: []string{},
+			name: "no flags or args",
 		},
 		{
-			name:            "no flags with ID",
-			doctlArgs:       "activationid",
-			expectedNimArgs: []string{"activationid"},
+			name:      "no flags with ID",
+			doctlArgs: "123-abc",
 		},
 		{
-			name:            "last flag",
-			doctlFlags:      map[string]string{"last": ""},
-			expectedNimArgs: []string{"--last"},
+			name:       "multiple limit flags",
+			doctlFlags: map[string]string{"limit": "10", "function": "hello1"},
 		},
 		{
-			name:            "limit flag",
-			doctlFlags:      map[string]string{"limit": "10"},
-			expectedNimArgs: []string{"--limit", "10"},
-		},
-		{
-			name:            "function flag",
-			doctlFlags:      map[string]string{"function": "sample"},
-			expectedNimArgs: []string{"--action", "sample"},
-		},
-		{
-			name:            "package flag",
-			doctlFlags:      map[string]string{"package": "sample"},
-			expectedNimArgs: []string{"--deployed", "--package", "sample"},
-		},
-		{
-			name:            "follow flag",
-			doctlFlags:      map[string]string{"follow": ""},
-			expectedNimArgs: []string{"--watch"},
-			expectStream:    true,
-		},
-		{
-			name:            "strip flag",
-			doctlFlags:      map[string]string{"strip": ""},
-			expectedNimArgs: []string{"--strip"},
+			name:       "follow flag",
+			doctlFlags: map[string]string{"follow": ""},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
-
 				if tt.doctlArgs != "" {
 					config.Args = append(config.Args, tt.doctlArgs)
 				}
 
+				follow := false
+				activationId := ""
+				if len(config.Args) == 1 {
+					activationId = config.Args[0]
+				}
+
+				var limit interface{}
+				var funcName interface{}
+
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {
+						if k == "limit" {
+							limit, _ = strconv.ParseInt(v, 0, 64)
+						}
+
+						if k == "follow" {
+							follow = true
+						}
+
+						if k == "function" {
+							funcName = v
+						}
+
 						if v == "" {
 							config.Doit.Set(config.NS, k, true)
 						} else {
@@ -505,18 +494,29 @@ func TestActivationsLogs(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				if tt.expectStream {
-					expectedArgs := append([]string{"activation/logs"}, tt.expectedNimArgs...)
-					tm.serverless.EXPECT().Cmd("nocapture", expectedArgs).Return(fakeCmd, nil)
-					tm.serverless.EXPECT().Stream(fakeCmd).Return(nil)
-				} else {
-					tm.serverless.EXPECT().Cmd("activation/logs", tt.expectedNimArgs).Return(fakeCmd, nil)
-					tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
-				}
+				if activationId != "" {
+					tm.serverless.EXPECT().GetActivationLogs(activationId).Return(theActivations[0], nil)
+					err := RunActivationsLogs(config)
+					require.NoError(t, err)
+				} else if follow {
+					expectedListOptions := whisk.ActivationListOptions{Limit: 1, Docs: true}
+					tm.serverless.EXPECT().ListActivations(expectedListOptions).Return(nil, errors.New("Something went wrong"))
+					err := RunActivationsLogs(config)
+					require.Error(t, err)
 
-				err := RunActivationsLogs(config)
-				require.NoError(t, err)
+				} else {
+					expectedListOptions := whisk.ActivationListOptions{Docs: true}
+					if limit != nil {
+						expectedListOptions.Limit = int(limit.(int64))
+					}
+
+					if funcName != nil {
+						expectedListOptions.Name = funcName.(string)
+					}
+					tm.serverless.EXPECT().ListActivations(expectedListOptions).Return(theActivations, nil)
+					err := RunActivationsLogs(config)
+					require.NoError(t, err)
+				}
 			})
 		})
 	}

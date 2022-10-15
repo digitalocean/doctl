@@ -329,12 +329,12 @@ func RunActivationsLogs(c *CmdConfig) error {
 		return nil
 
 	} else if followFlag {
-		var err error
 		var wg sync.WaitGroup
 		sigChannel := make(chan os.Signal, 1)
-		errChannel := make(chan error, 1)
-
 		signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
+
+		errChannel := make(chan error, 1)
+		var err error
 
 		wg.Add(1)
 		go pollActivations(&wg, errChannel, sls, c.Out, functionFlag, packageFlag)
@@ -363,7 +363,6 @@ func RunActivationsLogs(c *CmdConfig) error {
 	}
 
 	for _, a := range reverseActivations(actvs) {
-
 		if !belongsToPackage(a, packageFlag) {
 			continue
 		}
@@ -377,9 +376,8 @@ func RunActivationsLogs(c *CmdConfig) error {
 
 // Polls the ActivationList API at an interval and prints the results.
 func pollActivations(wg *sync.WaitGroup, ec chan error, sls do.ServerlessService, writer io.Writer, functionFlag string, packageFlag string) {
-	defer wg.Done()
-	ticker := time.NewTicker(time.Second * 1).C
-
+	ticker := time.NewTicker(time.Second * 1)
+	tc := ticker.C
 	var lastActivationTimestamp int64 = 0
 	requestLimit := 1
 
@@ -390,12 +388,13 @@ func pollActivations(wg *sync.WaitGroup, ec chan error, sls do.ServerlessService
 
 	for {
 		select {
-		case <-ticker:
+		case <-tc:
 			options := whisk.ActivationListOptions{Limit: requestLimit, Since: lastActivationTimestamp, Docs: true, Name: functionFlag}
 			actv, err := sls.ListActivations(options)
 
 			if err != nil {
 				ec <- err
+				ticker.Stop()
 				break
 			}
 
