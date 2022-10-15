@@ -183,6 +183,7 @@ func RunDatabaseCreate(c *CmdConfig) error {
 	}
 
 	if wait {
+		connection := db.Connection
 		dbs := c.Databases()
 		notice("Database creation is in progress, waiting for database to be online")
 
@@ -195,6 +196,7 @@ func RunDatabaseCreate(c *CmdConfig) error {
 		}
 
 		db, _ = dbs.Get(db.ID)
+		db.Connection = connection
 	}
 
 	notice("Database created")
