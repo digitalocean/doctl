@@ -91,7 +91,7 @@ for new arrivals.`,
 
 	// This is the default behavior, so we want to prevent users from explicitly using this flag. We don't want to remove it
 	// to maintain backwards compatibility
-	logs.Flag("last").Hidden = true
+	logs.Flags().MarkHidden("last")
 
 	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
 		`Use `+"`"+`doctl serverless activations result`+"`"+` to retrieve just the results portion
