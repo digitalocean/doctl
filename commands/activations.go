@@ -89,6 +89,10 @@ for new arrivals.`,
 	AddBoolFlag(logs, "strip", "r", false, "strip timestamp information and output first line only")
 	AddBoolFlag(logs, "follow", "", false, "Fetch logs continuously")
 
+	// This is the default behavior, so we want to prevent users from explicitly using this flag. We don't want to remove it
+	// to maintain backwards compatibility
+	logs.Flag("last").Hidden = true
+
 	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
 		`Use `+"`"+`doctl serverless activations result`+"`"+` to retrieve just the results portion
 of one or more activation records.`,
@@ -308,17 +312,12 @@ func RunActivationsLogs(c *CmdConfig) error {
 	limitFlag, _ := c.Doit.GetInt(c.NS, flagLimit)
 	stripFlag, _ := c.Doit.GetBool(c.NS, flagStrip)
 	followFlag, _ := c.Doit.GetBool(c.NS, flagFollow)
-	lastFlag, _ := c.Doit.GetBool(c.NS, flagLast)
 	functionFlag, _ := c.Doit.GetString(c.NS, flagFunction)
 	packageFlag, _ := c.Doit.GetString(c.NS, flagPackage)
 
 	limit := limitFlag
 	if limitFlag > 200 {
 		limit = 200
-	}
-
-	if lastFlag {
-		limit = 1
 	}
 
 	if activationId != "" {
@@ -330,21 +329,30 @@ func RunActivationsLogs(c *CmdConfig) error {
 		return nil
 
 	} else if followFlag {
+		var err error
 		var wg sync.WaitGroup
 		sigChannel := make(chan os.Signal, 1)
+		errChannel := make(chan error, 1)
+
 		signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 
 		wg.Add(1)
-		go pollActivations(&wg, sls, c.Out, functionFlag)
+		go pollActivations(&wg, errChannel, sls, c.Out, functionFlag, packageFlag)
 
 		go func() {
-			<-sigChannel
-			fmt.Fprintf(c.Out, "\r")
-			wg.Done()
+			select {
+			case <-sigChannel:
+				fmt.Fprintf(c.Out, "\r")
+				wg.Done()
+			case e := <-errChannel:
+				err = e
+				fmt.Fprintf(c.Out, "\r")
+				wg.Done()
+			}
 		}()
 
 		wg.Wait()
-		return nil
+		return err
 	}
 
 	listOptions := whisk.ActivationListOptions{Limit: limit, Name: functionFlag, Docs: true}
@@ -354,11 +362,10 @@ func RunActivationsLogs(c *CmdConfig) error {
 		return err
 	}
 
-	for _, a := range actvs {
-		pkg := displayers.GetActivationPackageName(a)
+	for _, a := range reverseActivations(actvs) {
 
-		if (packageFlag != "") && (pkg != "") && (pkg != packageFlag) {
-			break
+		if !belongsToPackage(a, packageFlag) {
+			continue
 		}
 
 		makeBanner(c.Out, a)
@@ -369,7 +376,7 @@ func RunActivationsLogs(c *CmdConfig) error {
 }
 
 // Polls the ActivationList API at an interval and prints the results.
-func pollActivations(wg *sync.WaitGroup, sls do.ServerlessService, writer io.Writer, name string) {
+func pollActivations(wg *sync.WaitGroup, ec chan error, sls do.ServerlessService, writer io.Writer, functionFlag string, packageFlag string) {
 	defer wg.Done()
 	ticker := time.NewTicker(time.Second * 1).C
 
@@ -384,18 +391,22 @@ func pollActivations(wg *sync.WaitGroup, sls do.ServerlessService, writer io.Wri
 	for {
 		select {
 		case <-ticker:
-			options := whisk.ActivationListOptions{Limit: requestLimit, Since: lastActivationTimestamp, Docs: true, Name: name}
+			options := whisk.ActivationListOptions{Limit: requestLimit, Since: lastActivationTimestamp, Docs: true, Name: functionFlag}
 			actv, err := sls.ListActivations(options)
 
 			if err != nil {
-				return
+				ec <- err
+				break
 			}
 
 			if len(actv) > 0 {
-				for _, activation := range actv {
-					if _, ok := printedActivations[activation.ActivationID]; ok {
-						break
+				for _, activation := range reverseActivations(actv) {
+					_, knownActivation := printedActivations[activation.ActivationID]
+
+					if knownActivation || !belongsToPackage(activation, packageFlag) {
+						continue
 					}
+
 					printedActivations[activation.ActivationID] = activation.Start
 
 					makeBanner(writer, activation)
@@ -407,8 +418,27 @@ func pollActivations(wg *sync.WaitGroup, sls do.ServerlessService, writer io.Wri
 				lastActivationTimestamp = lastItem.Start + 100
 				requestLimit = 0
 			}
+
+			time.Sleep(time.Second * 5)
 		}
 	}
+}
+
+func belongsToPackage(actv whisk.Activation, packageName string) bool {
+	pkg := displayers.GetActivationPackageName(actv)
+	return (packageName == "") || (pkg != "") || pkg == packageName
+}
+
+func reverseActivations(actv []whisk.Activation) []whisk.Activation {
+	a := make([]whisk.Activation, len(actv))
+	copy(a, actv)
+
+	for i := len(a)/2 - 1; i >= 0; i-- {
+		opp := len(a) - 1 - i
+		a[i], a[opp] = a[opp], a[i]
+	}
+
+	return a
 }
 
 // RunActivationsResult supports the 'activations result' command
