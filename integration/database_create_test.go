@@ -77,7 +77,7 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
-				w.Write([]byte(databaseWaitGetResponse))
+				w.Write([]byte(databaseWaitGetResponseNoConnection))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -113,7 +113,7 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	when("all flags are passed including wait", func() {
-		it("creates the databases", func() {
+		it("creates the databases and outputs the correct URI", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -141,14 +141,14 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 const (
 	databasesCreateOutput = `
 Notice: Database created
-ID         Name                Engine    Version         Number of Nodes    Region    Status      Size       URI    Created At
-some-id    my-database-name    mysql     what-version    100                nyc3      creating    biggest           2019-01-11 18:37:36 +0000 UTC
+ID         Name                Engine    Version         Number of Nodes    Region    Status      Size       URI                                                                                     Created At
+some-id    my-database-name    mysql     what-version    100                nyc3      creating    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC
 `
 	databasesWaitCreateOutput = `
 Notice: Database creation is in progress, waiting for database to be online
 Notice: Database created
-ID         Name                Engine    Version         Number of Nodes    Region    Status    Size       URI    Created At
-some-id    my-database-name    mysql     what-version    100                nyc3      online    biggest           2019-01-11 18:37:36 +0000 UTC
+ID         Name                Engine    Version         Number of Nodes    Region    Status    Size       URI                                                                                     Created At
+some-id    my-database-name    mysql     what-version    100                nyc3      online    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC
 `
 	databaseCreateResponse = `
 {
@@ -157,7 +157,9 @@ some-id    my-database-name    mysql     what-version    100                nyc3
     "name": "{{.Name}}",
     "engine": "{{.Engine}}",
     "version": "{{.Version}}",
-    "connection": {},
+    "connection": {
+      "uri": "{{.Engine}}://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb"
+    },
     "private_connection": {},
     "users": null,
     "db_names": null,
@@ -173,7 +175,7 @@ some-id    my-database-name    mysql     what-version    100                nyc3
   }
 }`
 
-	databaseWaitGetResponse = `
+	databaseWaitGetResponseNoConnection = `
 {
   "database": {
     "id": "some-id",
