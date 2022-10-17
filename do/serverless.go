@@ -820,7 +820,11 @@ func (s *serverlessService) GetActivationCount(options whisk.ActivationCountOpti
 	if err != nil {
 		return empty, err
 	}
+
 	resp, _, err := s.owClient.Activations.Count(&options)
+	if err != nil {
+		return empty, err
+	}
 	return *resp, err
 }
 
@@ -831,7 +835,11 @@ func (s *serverlessService) GetActivation(id string) (whisk.Activation, error) {
 	if err != nil {
 		return empty, err
 	}
+
 	resp, _, err := s.owClient.Activations.Get(id)
+	if err != nil {
+		return empty, err
+	}
 	return *resp, err
 }
 
@@ -842,7 +850,12 @@ func (s *serverlessService) GetActivationLogs(id string) (whisk.Activation, erro
 	if err != nil {
 		return empty, err
 	}
+
 	resp, _, err := s.owClient.Activations.Logs(id)
+	if err != nil {
+		return empty, err
+	}
+
 	return *resp, err
 }
 
@@ -853,7 +866,11 @@ func (s *serverlessService) GetActivationResult(id string) (whisk.Response, erro
 	if err != nil {
 		return empty, err
 	}
+
 	resp, _, err := s.owClient.Activations.Result(id)
+	if err != nil {
+		return empty, err
+	}
 	return *resp, err
 }
 

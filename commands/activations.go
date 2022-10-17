@@ -362,11 +362,11 @@ func RunActivationsLogs(c *CmdConfig) error {
 		return err
 	}
 
-	for _, a := range reverseActivations(actvs) {
-		if !belongsToPackage(a, packageFlag) {
-			continue
-		}
+	if packageFlag != "" {
+		actvs = filterPackages(actvs, packageFlag)
+	}
 
+	for _, a := range reverseActivations(actvs) {
 		makeBanner(c.Out, a)
 		printLogs(c.Out, stripFlag, a)
 		fmt.Fprintln(c.Out)
@@ -376,7 +376,7 @@ func RunActivationsLogs(c *CmdConfig) error {
 
 // Polls the ActivationList API at an interval and prints the results.
 func pollActivations(wg *sync.WaitGroup, ec chan error, sls do.ServerlessService, writer io.Writer, functionFlag string, packageFlag string) {
-	ticker := time.NewTicker(time.Second * 1)
+	ticker := time.NewTicker(time.Second * 5)
 	tc := ticker.C
 	var lastActivationTimestamp int64 = 0
 	requestLimit := 1
@@ -398,11 +398,15 @@ func pollActivations(wg *sync.WaitGroup, ec chan error, sls do.ServerlessService
 				break
 			}
 
+			if packageFlag != "" {
+				actv = filterPackages(actv, packageFlag)
+			}
+
 			if len(actv) > 0 {
 				for _, activation := range reverseActivations(actv) {
 					_, knownActivation := printedActivations[activation.ActivationID]
 
-					if knownActivation || !belongsToPackage(activation, packageFlag) {
+					if knownActivation {
 						continue
 					}
 
@@ -417,15 +421,21 @@ func pollActivations(wg *sync.WaitGroup, ec chan error, sls do.ServerlessService
 				lastActivationTimestamp = lastItem.Start + 100
 				requestLimit = 0
 			}
-
-			time.Sleep(time.Second * 5)
 		}
 	}
 }
 
-func belongsToPackage(actv whisk.Activation, packageName string) bool {
-	pkg := displayers.GetActivationPackageName(actv)
-	return (packageName == "") || (pkg != "") || pkg == packageName
+// Filters the activations to only return activations belonging to the package.
+func filterPackages(activations []whisk.Activation, packageName string) []whisk.Activation {
+	filteredActv := []whisk.Activation{}
+
+	for _, activation := range activations {
+		inPackage := displayers.GetActivationPackageName(activation) == packageName
+		if inPackage {
+			filteredActv = append(filteredActv, activation)
+		}
+	}
+	return filteredActv
 }
 
 func reverseActivations(actv []whisk.Activation) []whisk.Activation {
