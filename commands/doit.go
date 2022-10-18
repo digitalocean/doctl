@@ -224,7 +224,7 @@ func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...fla
 	// app dev config set/unset --dev-config flag to be nested deeper.
 	// i.e dev.config.set.dev-config over config.set.dev-config
 	// This prevents a conflict with the base config setting.
-	if name == doctl.ArgAppDevConfig {
+	if name == doctl.ArgAppDevConfig && !strings.HasPrefix(fn, appDevConfigFileNamespace+".") {
 		fn = fmt.Sprintf("%s.%s", appDevConfigFileNamespace, fn)
 	}
 
