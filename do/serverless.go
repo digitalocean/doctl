@@ -1010,7 +1010,9 @@ func (s *serverlessService) ReadCredentials() (ServerlessCredentials, error) {
 func isServerlessConnected(credsDir string) bool {
 	credsFile := filepath.Join(credsDir, CredentialsFile)
 	_, err := os.Stat(credsFile)
-	return !os.IsNotExist(err)
+	// We used to test specifically for "not found" here but in fact any error is enough to
+	// prevent connections from working.
+	return err == nil
 }
 
 // serverlessUptodate answers whether the installed version of the serverlessUptodate is at least
