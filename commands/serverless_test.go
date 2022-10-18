@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -22,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/digitalocean/doctl/do"
@@ -96,7 +94,6 @@ func TestServerlessConnect(t *testing.T) {
 				if tt.doctlArg != "" {
 					config.Args = append(config.Args, tt.doctlArg)
 				}
-				connectChoiceReader = bufio.NewReader(strings.NewReader("0\n"))
 				nsResponse := do.NamespaceListResponse{Namespaces: tt.namespaceList}
 				creds := do.ServerlessCredentials{Namespace: "ns1", APIHost: "https://api.example.com"}
 

@@ -37,7 +37,10 @@ func New(opts ...Option) SpinningLoader {
 func (sl *SpinningLoader) Start() error {
 	p := tea.NewProgram((*SpinningLoader)(sl))
 	sl.prog = p
-	p.Start()
+
+	if err := p.Start(); err != nil {
+		return err
+	}
 
 	if sl.cancel {
 		os.Exit(1)
@@ -46,7 +49,9 @@ func (sl *SpinningLoader) Start() error {
 }
 
 func (sl *SpinningLoader) Stop() {
-	sl.prog.Kill()
+	if sl.prog != nil {
+		sl.prog.Kill()
+	}
 }
 
 // Init implements bubbletea.Model.
