@@ -38,17 +38,17 @@ func (m *MockServerlessService) EXPECT() *MockServerlessServiceMockRecorder {
 }
 
 // CheckServerlessStatus mocks base method.
-func (m *MockServerlessService) CheckServerlessStatus(arg0 string) error {
+func (m *MockServerlessService) CheckServerlessStatus() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckServerlessStatus", arg0)
+	ret := m.ctrl.Call(m, "CheckServerlessStatus")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CheckServerlessStatus indicates an expected call of CheckServerlessStatus.
-func (mr *MockServerlessServiceMockRecorder) CheckServerlessStatus(arg0 interface{}) *gomock.Call {
+func (mr *MockServerlessServiceMockRecorder) CheckServerlessStatus() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckServerlessStatus", reflect.TypeOf((*MockServerlessService)(nil).CheckServerlessStatus), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckServerlessStatus", reflect.TypeOf((*MockServerlessService)(nil).CheckServerlessStatus))
 }
 
 // Cmd mocks base method.
