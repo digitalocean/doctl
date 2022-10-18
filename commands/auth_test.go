@@ -85,8 +85,19 @@ func TestAuthInitConfig(t *testing.T) {
 		err = yaml.Unmarshal(buf.Bytes(), &configFile)
 		assert.NoError(t, err)
 		defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
-
 		assert.Equal(t, configFile["config"], defaultCfgFile, "unexpected setting for 'config'")
+
+		// Ensure that the dev.config.set.dev-config setting is correct to prevent
+		// a conflict with the base config setting.
+		devConfig := configFile["dev"]
+		devConfigSetting := devConfig.(map[interface{}]interface{})["config"]
+		expectedConfigSetting := map[interface{}]interface{}(
+			map[interface{}]interface{}{
+				"set":   map[interface{}]interface{}{"dev-config": ""},
+				"unset": map[interface{}]interface{}{"dev-config": ""},
+			},
+		)
+		assert.Equal(t, devConfigSetting, expectedConfigSetting, "unexpected setting for 'dev.config'")
 	})
 }
 
