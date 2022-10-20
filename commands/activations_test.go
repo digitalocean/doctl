@@ -505,7 +505,7 @@ func TestActivationsLogs(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 				if tt.expectStream {
 					expectedArgs := append([]string{"activation/logs"}, tt.expectedNimArgs...)
 					tm.serverless.EXPECT().Cmd("nocapture", expectedArgs).Return(fakeCmd, nil)
