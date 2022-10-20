@@ -19,7 +19,6 @@ import (
 	"sort"
 	"strings"
 
-	s "github.com/charmbracelet/bubbles/spinner"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/spinner"
 
@@ -229,8 +228,7 @@ func getValidRegion(value string) string {
 // get the Namespaces that match a pattern, where the "pattern" has no wildcards but can be a
 // prefix, infix, or suffix match to a namespace ID or label.
 func getMatchingNamespaces(ctx context.Context, ss do.ServerlessService, pattern string) ([]do.OutputNamespace, error) {
-	loader := spinner.New(spinner.WithSpinner(s.Dot))
-	loader.Message = "Loading namespaces ..."
+	loader := spinner.New("Loading namespaces ...")
 	go loader.Start()
 
 	ans := []do.OutputNamespace{}

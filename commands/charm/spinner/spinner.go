@@ -12,19 +12,19 @@ type SpinningLoader struct {
 	model   s.Model
 	prog    *tea.Program
 	cancel  bool
-	Message string
+	message string
 }
 
 type Option func(*SpinningLoader)
 
 // New creates a new spinning loader.
-func New(opts ...Option) SpinningLoader {
+func New(message string, opts ...Option) SpinningLoader {
 	sm := s.New()
 	sm.Spinner = s.Dot
 
 	l := SpinningLoader{
 		model:   sm,
-		Message: "",
+		message: "",
 	}
 
 	for _, opt := range opts {
@@ -80,7 +80,7 @@ func (sl *SpinningLoader) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View implements bubbletea.Model.
 func (sl *SpinningLoader) View() string {
-	return fmt.Sprintf("%s %s", sl.model.View(), sl.Message)
+	return fmt.Sprintf("%s %s", sl.model.View(), sl.message)
 }
 
 // Model returns the underlying SpinningLoader.model
