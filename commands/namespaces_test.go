@@ -244,11 +244,6 @@ func TestNamespacesDelete(t *testing.T) {
 						APIHost:   "https://sgp1.example.com",
 					},
 				}}
-				// Confirmation dialog can't be fully mocked but it can be replaced
-				// (as in confirmation_test.go).
-				retrieveUserInput = func(string) (string, error) {
-					return "no", nil
-				}
 
 				ctx := context.TODO()
 				tm.serverless.EXPECT().ListNamespaces(ctx).Return(listForMatching, nil)

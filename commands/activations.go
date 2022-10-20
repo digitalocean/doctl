@@ -64,7 +64,7 @@ logs.`,
 invoked functions.`,
 		Writer,
 		displayerType(&displayers.Activation{}),
-	)
+		aliasOpt("ls"))
 	AddIntFlag(list, "limit", "l", 30, "only return LIMIT number of activations (default 30, max 200)")
 	AddIntFlag(list, "skip", "s", 0, "exclude the first SKIP number of activations from the result")
 	AddIntFlag(list, "since", "", 0, "return activations with timestamps later than SINCE; measured in milliseconds since Th, 01, Jan 1970")

@@ -16,8 +16,10 @@ import (
 
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/godo"
+	"github.com/docker/cli/cli/command/image/build"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/idtools"
 )
 
 // DockerComponentBuilder builds components using a Dockerfile.
@@ -58,23 +60,20 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 		return ComponentBuilderResult{}, fmt.Errorf("configuring environment variables: %w", err)
 	}
 
-	buildContext := b.contextDir
-	if sd := filepath.Clean(b.component.GetSourceDir()); sd != "." && sd != "/" {
-		buildContext = filepath.Join(buildContext, sd)
-	}
-	// TODO Dockerfile must be relative to the source dir.
-	// Make it relative and if it's outside the source dir add it to the archive.
-	// ref: https://github.com/docker/cli/blob/9400e3dbe8ebd0bede3ab7023f744a8d7f4397d2/cli/command/image/build.go#L280-L286
-	template.Render(lw, `{{success checkmark}} building image using dockerfile {{highlight .}}{{nl 2}}`, b.dockerComponent.GetDockerfilePath())
+	template.Render(lw,
+		`{{success checkmark}} building image using dockerfile {{highlight .}}{{nl 2}}`,
+		b.dockerComponent.GetDockerfilePath(),
+	)
 	start := time.Now()
-	tar, err := archive.TarWithOptions(buildContext, &archive.TarOptions{})
+
+	imageBuildContext, imageBuildDockerfile, err := b.getImageBuildContext(ctx)
 	if err != nil {
 		return ComponentBuilderResult{}, fmt.Errorf("preparing build context: %w", err)
 	}
 
 	res := ComponentBuilderResult{}
-	dockerRes, err := b.cli.ImageBuild(ctx, tar, dockertypes.ImageBuildOptions{
-		Dockerfile: b.dockerComponent.GetDockerfilePath(),
+	dockerRes, err := b.cli.ImageBuild(ctx, imageBuildContext, dockertypes.ImageBuildOptions{
+		Dockerfile: imageBuildDockerfile,
 		Tags: []string{
 			b.AppImageOutputName(),
 		},
@@ -104,6 +103,65 @@ func (b *DockerComponentBuilder) Build(ctx context.Context) (ComponentBuilderRes
 	}
 
 	return res, nil
+}
+
+func (b *DockerComponentBuilder) getImageBuildContext(ctx context.Context) (io.Reader, string, error) {
+	// this assembles the build context in a way that fits cli.ImageBuild's expectations around
+	// dockerfiles and .dockerignore.
+	// much of this logic is copied from the `docker` cli implementation:
+	//   https://github.com/docker/cli/blob/9400e3dbe8ebd0bede3ab7023f744a8d7f4397d2/cli/command/image/build.go#L180
+	//   specifically the "build context is a local directory" flow.
+
+	absSourceDir, err := filepath.Abs(filepath.Join(b.contextDir, b.dockerComponent.GetSourceDir()))
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing source_dir: %w", err)
+	}
+	absDockerfile, err := filepath.Abs(filepath.Join(b.contextDir, b.dockerComponent.GetDockerfilePath()))
+	if err != nil {
+		return nil, "", fmt.Errorf("parsing dockerfile_path: %w", err)
+	}
+	relDockerfile, err := filepath.Rel(absSourceDir, absDockerfile)
+	if err != nil {
+		return nil, "", err
+	}
+
+	excludes, err := build.ReadDockerignore(absSourceDir)
+	if err != nil {
+		return nil, "", fmt.Errorf("reading .dockerignore: %w", err)
+	}
+
+	if err := build.ValidateContextDirectory(absSourceDir, excludes); err != nil {
+		return nil, "", err
+	}
+
+	// canonicalize dockerfile name to a platform-independent one
+	relDockerfile = archive.CanonicalTarNameForPath(relDockerfile)
+	excludes = build.TrimBuildFilesFromExcludes(excludes, relDockerfile, false)
+	tar, err := archive.TarWithOptions(absSourceDir, &archive.TarOptions{
+		ExcludePatterns: excludes,
+		ChownOpts:       &idtools.Identity{UID: 0, GID: 0},
+	})
+	if err != nil {
+		return nil, "", fmt.Errorf("preparing build context: %w", err)
+	}
+
+	// NOTE: archive.CanonicalTarNameForPath normalizes path separators so the relative path will use /
+	// even on windows.
+	if strings.HasPrefix(relDockerfile, "../") {
+		dockerfileReader, err := os.Open(absDockerfile)
+		if err != nil {
+			return nil, "", fmt.Errorf("opening dockerfile: %w", err)
+		}
+		defer dockerfileReader.Close()
+		// dockerfile_path is outside of source_dir. we need to copy it inside the build context
+		// so that the docker engine can access it.
+		tar, relDockerfile, err = build.AddDockerfileToBuildContext(dockerfileReader, tar)
+		if err != nil {
+			return nil, "", fmt.Errorf("copying external dockerfile inside build context: %w", err)
+		}
+	}
+
+	return tar, relDockerfile, nil
 }
 
 // buildStaticSiteImage builds a container image that runs a webserver hosting the static site content
