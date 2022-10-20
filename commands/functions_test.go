@@ -308,7 +308,7 @@ func TestFunctionsList(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 				tm.serverless.EXPECT().Cmd("action/list", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
