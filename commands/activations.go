@@ -20,7 +20,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"sync"
 	"syscall"
 	"time"
 
@@ -329,30 +328,19 @@ func RunActivationsLogs(c *CmdConfig) error {
 		return nil
 
 	} else if followFlag {
-		var wg sync.WaitGroup
 		sigChannel := make(chan os.Signal, 1)
 		signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
-
 		errChannel := make(chan error, 1)
-		var err error
 
-		wg.Add(1)
-		go pollActivations(&wg, errChannel, sls, c.Out, functionFlag, packageFlag)
+		go pollActivations(errChannel, sls, c.Out, functionFlag, packageFlag)
 
-		go func() {
-			select {
-			case <-sigChannel:
-				fmt.Fprintf(c.Out, "\r")
-				wg.Done()
-			case e := <-errChannel:
-				err = e
-				fmt.Fprintf(c.Out, "\r")
-				wg.Done()
-			}
-		}()
-
-		wg.Wait()
-		return err
+		select {
+		case <-sigChannel:
+			fmt.Fprintf(c.Out, "\r")
+			return nil
+		case e := <-errChannel:
+			return e
+		}
 	}
 
 	listOptions := whisk.ActivationListOptions{Limit: limit, Name: functionFlag, Docs: true}
@@ -375,7 +363,7 @@ func RunActivationsLogs(c *CmdConfig) error {
 }
 
 // Polls the ActivationList API at an interval and prints the results.
-func pollActivations(wg *sync.WaitGroup, ec chan error, sls do.ServerlessService, writer io.Writer, functionFlag string, packageFlag string) {
+func pollActivations(ec chan error, sls do.ServerlessService, writer io.Writer, functionFlag string, packageFlag string) {
 	ticker := time.NewTicker(time.Second * 5)
 	tc := ticker.C
 	var lastActivationTimestamp int64 = 0
