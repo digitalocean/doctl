@@ -110,7 +110,7 @@ var _ = suite("compute/tags/delete", func(t *testing.T, when spec.G, it spec.S) 
 	})
 
 	when("deleting one tag without force flag", func() {
-		it("correctly prompts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -122,12 +122,12 @@ var _ = suite("compute/tags/delete", func(t *testing.T, when spec.G, it spec.S) 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(tagDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
 	when("deleting two tags without force flag", func() {
-		it("correctly prompts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -140,12 +140,7 @@ var _ = suite("compute/tags/delete", func(t *testing.T, when spec.G, it spec.S) 
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(multiTagDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
-
-const (
-	tagDelOutput      = "Warning: Are you sure you want to delete this tag? (y/N) ? Error: Operation aborted."
-	multiTagDelOutput = "Warning: Are you sure you want to delete 2 tags? (y/N) ? Error: Operation aborted."
-)

@@ -57,7 +57,7 @@ You can use flags to specify the volume size, region, description, filesystem ty
 	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "Tags to apply to the volume; comma separate or repeat `--tag` to add multiple tags at once")
 
 	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "Delete a block storage volume", `Use this command to delete a block storage volume by ID, destroying all of its data and removing it from your account.`, Writer,
-		aliasOpt("rm", "d"))
+		aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force volume delete")
 
 	CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing block storage volume", `Use this command to retrieve information about a block storage volume using its ID.`, Writer, aliasOpt("g"),

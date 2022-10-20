@@ -322,3 +322,13 @@ func IsCNBBuild(spec godo.AppBuildableComponentSpec) bool {
 
 	return true
 }
+
+// IsDockerBuild indicates whether the component will be built using the Docker builder.
+func IsDockerBuild(spec godo.AppBuildableComponentSpec) bool {
+	dockerBuildable, ok := spec.(godo.AppDockerBuildableComponentSpec)
+	if !ok {
+		return false
+	}
+
+	return dockerBuildable.GetDockerfilePath() != ""
+}
