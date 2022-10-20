@@ -114,7 +114,7 @@ func TestNamespacesCreate(t *testing.T) {
 					tm.serverless.EXPECT().ListNamespaces(ctx).Return(initialList, nil)
 				}
 				if tt.willConnect {
-					tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
+					tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 					creds := do.ServerlessCredentials{Namespace: "hello", APIHost: "https://api.example.com"}
 					tm.serverless.EXPECT().WriteCredentials(creds).Return(nil)
 				}
