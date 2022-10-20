@@ -66,7 +66,7 @@ func TestServerlessConnect(t *testing.T) {
 					Label:     "another",
 				},
 			},
-			expectedOutput: "0: ns1 in nyc1, label=something\n1: ns2 in lon1, label=another\nChoose a namespace by number or 'x' to exit\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+			expectedError: errors.New("Namespace is required when running non-interactively"),
 		},
 		{
 			name: "use argument",

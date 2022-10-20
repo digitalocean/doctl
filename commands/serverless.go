@@ -242,11 +242,8 @@ func RunServerlessConnect(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
-
 		if len(list) == 0 {
 			return fmt.Errorf("you have no namespaces matching '%s'", c.Args[0])
-		} else if len(list) == 1 {
-
 		}
 		return connectFromList(ctx, sls, list, c.Out)
 	}
@@ -264,6 +261,18 @@ func RunServerlessConnect(c *CmdConfig) error {
 // singular that determines the namespace that will be connected.  Otherwise, this is determined
 // via a prompt.
 func connectFromList(ctx context.Context, sls do.ServerlessService, l []do.OutputNamespace, out io.Writer) error {
+	if len(l) == 1 {
+		creds, err := sls.GetNamespace(ctx, l[0].Namespace)
+		if err != nil {
+			return err
+		}
+		return finishConnecting(sls, creds, l[0].Label, out)
+	}
+
+	if !Interactive {
+		return errors.New("Namespace is required when running non-interactively")
+	}
+
 	var nsItems []list.Item
 
 	for _, ns := range l {
@@ -274,15 +283,9 @@ func connectFromList(ctx context.Context, sls do.ServerlessService, l []do.Outpu
 	listItems.Model().Title = "select a namespace"
 	listItems.Model().SetStatusBarItemName("namespace", "namespaces")
 
-	var selected list.Item
-	if len(nsItems) == 1 {
-		selected = nsItems[0]
-	} else {
-		var err error
-		selected, err = listItems.Select()
-		if err != nil {
-			return err
-		}
+	selected, err := listItems.Select()
+	if err != nil {
+		return err
 	}
 
 	selectedNs := selected.(nsListItem).ns

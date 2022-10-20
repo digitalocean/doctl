@@ -20,8 +20,8 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/charm/spinner"
 
+	"github.com/digitalocean/doctl/commands/charm/spinner"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
@@ -228,20 +228,27 @@ func getValidRegion(value string) string {
 // get the Namespaces that match a pattern, where the "pattern" has no wildcards but can be a
 // prefix, infix, or suffix match to a namespace ID or label.
 func getMatchingNamespaces(ctx context.Context, ss do.ServerlessService, pattern string) ([]do.OutputNamespace, error) {
-	loader := spinner.New("Loading namespaces ...")
-	go loader.Start()
+	var loader spinner.SpinningLoader
+	if Interactive {
+		loader = spinner.New("Loading namespaces ...")
+		go loader.Start()
+	}
 
 	ans := []do.OutputNamespace{}
 	list, err := ss.ListNamespaces(ctx)
 
-	loader.Stop()
+	if Interactive {
+		loader.Stop()
+	}
 
 	if err != nil {
 		return ans, err
 	}
+
 	if pattern == "" {
 		return list.Namespaces, nil
 	}
+
 	for _, ns := range list.Namespaces {
 		if strings.Contains(ns.Namespace, pattern) || strings.Contains(ns.Label, pattern) {
 			ans = append(ans, ns)

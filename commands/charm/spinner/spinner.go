@@ -24,7 +24,7 @@ func New(message string, opts ...Option) SpinningLoader {
 
 	l := SpinningLoader{
 		model:   sm,
-		message: "",
+		message: message,
 	}
 
 	for _, opt := range opts {
@@ -33,7 +33,7 @@ func New(message string, opts ...Option) SpinningLoader {
 	return l
 }
 
-// New creates a new list.
+// New creates a new spinner.
 func (sl *SpinningLoader) Start() error {
 	p := tea.NewProgram((*SpinningLoader)(sl))
 	sl.prog = p
