@@ -36,7 +36,8 @@ import (
 
 const (
 	// AppsDevDefaultEnvFile is the default env file path.
-	AppsDevDefaultEnvFile = ".env"
+	AppsDevDefaultEnvFile     = ".env"
+	appDevConfigFileNamespace = "dev"
 )
 
 // AppsDev creates the apps dev command subtree.
@@ -64,7 +65,7 @@ func AppsDev() *Command {
 		"Build an app component",
 		heredoc.Docf(`
 			[BETA] Build an app component locally.
-			
+
 			  The component name is optional unless running non-interactively.
 
 			  All command line flags as optional. You may specify flags to be applied to the current build
@@ -220,7 +221,7 @@ func RunAppsDevBuild(c *CmdConfig) error {
 
 			{{warning (print crossmark " functions builds are coming soon!")}}
 			  please use {{highlight "doctl serverless deploy"}} to build functions in the meantime.
-		
+
 		`), nil)
 		return fmt.Errorf("not supported")
 	}
@@ -438,10 +439,10 @@ func RunAppsDevBuild(c *CmdConfig) error {
 		tmpl := `
 				{{success checkmark}} successfully built {{success .component}} in {{highlight (duration .dur)}}
 				{{success checkmark}} created container image {{success .img}}
-				
+
 				{{pointerRight}} push your image to a container registry using {{highlight "docker push"}}
 				{{pointerRight}} or run it locally using {{highlight "docker run"}}; for example:
-				  
+
 				   {{muted promptPrefix}} {{highlight (printf "docker run %s--rm %s%s" .port_env .port_arg .img)}}`
 
 		if _, ok := componentSpec.(godo.AppRoutableComponentSpec); ok {
@@ -481,7 +482,10 @@ func fileExists(path ...string) bool {
 }
 
 func appDevWorkspace(cmdConfig *CmdConfig) (*workspace.AppDev, error) {
-	devConfigFilePath, err := cmdConfig.Doit.GetString(cmdConfig.NS, doctl.ArgAppDevConfig)
+	// The setting is nested under the "dev" namespace, i.e. dev.config.set.dev-config
+	// This is needed to prevent a conflict with the base config setting.
+	ns := fmt.Sprintf("%s.%s", appDevConfigFileNamespace, cmdConfig.NS)
+	devConfigFilePath, err := cmdConfig.Doit.GetString(ns, doctl.ArgAppDevConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -602,7 +606,7 @@ func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) 
 	template.Print(heredoc.Doc(`
 		{{error (print crossmark " no app spec found.")}}
 		  an app spec is required to start a local build. make sure doctl is run in the correct directory where your app code is.
-		
+
 		`,
 	), nil)
 

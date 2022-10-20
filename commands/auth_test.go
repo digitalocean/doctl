@@ -14,9 +14,11 @@ limitations under the License.
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"errors"
@@ -25,6 +27,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestAuthCommand(t *testing.T) {
@@ -51,6 +54,50 @@ func TestAuthInit(t *testing.T) {
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestAuthInitConfig(t *testing.T) {
+	cfw := cfgFileWriter
+	viper.Set(doctl.ArgAccessToken, nil)
+	defer func() {
+		cfgFileWriter = cfw
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "valid-token", nil
+	}
+
+	var buf bytes.Buffer
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		return &nopWriteCloser{
+			Writer: bufio.NewWriter(&buf),
+		}, nil
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.NoError(t, err)
+
+		var configFile testConfig
+		err = yaml.Unmarshal(buf.Bytes(), &configFile)
+		assert.NoError(t, err)
+		defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
+		assert.Equal(t, configFile["config"], defaultCfgFile, "unexpected setting for 'config'")
+
+		// Ensure that the dev.config.set.dev-config setting is correct to prevent
+		// a conflict with the base config setting.
+		devConfig := configFile["dev"]
+		devConfigSetting := devConfig.(map[interface{}]interface{})["config"]
+		expectedConfigSetting := map[interface{}]interface{}(
+			map[interface{}]interface{}{
+				"set":   map[interface{}]interface{}{"dev-config": ""},
+				"unset": map[interface{}]interface{}{"dev-config": ""},
+			},
+		)
+		assert.Equal(t, devConfigSetting, expectedConfigSetting, "unexpected setting for 'dev.config'")
 	})
 }
 
@@ -140,6 +187,8 @@ func Test_displayAuthContexts(t *testing.T) {
 		})
 	}
 }
+
+type testConfig map[string]interface{}
 
 type nopWriteCloser struct {
 	io.Writer
