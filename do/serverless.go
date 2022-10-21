@@ -206,6 +206,7 @@ type ServerlessService interface {
 	GetServerlessNamespace(context.Context) (ServerlessCredentials, error)
 	ListNamespaces(context.Context) (NamespaceListResponse, error)
 	GetNamespace(context.Context, string) (ServerlessCredentials, error)
+	GetNamespaceFromCluster(string, string) (string, error)
 	CreateNamespace(context.Context, string, string) (ServerlessCredentials, error)
 	DeleteNamespace(context.Context, string) error
 	ListTriggers(context.Context, string) ([]ServerlessTrigger, error)
@@ -217,8 +218,14 @@ type ServerlessService interface {
 	CheckServerlessStatus() error
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
-	InvokeFunction(string, interface{}, bool, bool) (map[string]interface{}, error)
-	InvokeFunctionViaWeb(string, map[string]interface{}) error
+	ListFunctions(string, int, int) ([]whisk.Action, error)
+	InvokeFunction(string, interface{}, bool, bool) (interface{}, error)
+	InvokeFunctionViaWeb(string, interface{}) error
+	ListActivations(whisk.ActivationListOptions) ([]whisk.Activation, error)
+	GetActivationCount(whisk.ActivationCountOptions) (whisk.ActivationCount, error)
+	GetActivation(string) (whisk.Activation, error)
+	GetActivationLogs(string) (whisk.Activation, error)
+	GetActivationResult(string) (whisk.Response, error)
 	GetConnectedAPIHost() (string, error)
 	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
 	WriteProject(ServerlessProject) (string, error)
@@ -342,6 +349,10 @@ func HashAccessToken(token string) string {
 func initWhisk(s *serverlessService) error {
 	if s.owClient != nil {
 		return nil
+	}
+	err := s.CheckServerlessStatus()
+	if err != nil {
+		return err
 	}
 	creds, err := s.ReadCredentials()
 	if err != nil {
@@ -635,6 +646,27 @@ func (s *serverlessService) GetNamespace(ctx context.Context, name string) (Serv
 	return executeNamespaceRequest(ctx, s, req)
 }
 
+// GetNamespaceFromCluster obtains the namespace that uniquely owns a valid combination of API host and "auth"
+// (uuid:key).  This can be used to connect to clusters not known to the portal (e.g. dev clusters) or simply
+// to check that credentials are valid.
+func (s *serverlessService) GetNamespaceFromCluster(APIhost string, auth string) (string, error) {
+	// We do not use the shared client in serverlessService for this because it uses the stored
+	// credentials, not the passed ones.
+	config := whisk.Config{Host: APIhost, AuthToken: auth}
+	client, err := whisk.NewClient(http.DefaultClient, &config)
+	if err != nil {
+		return "", err
+	}
+	ns, _, err := client.Namespaces.List()
+	if err != nil {
+		return "", err
+	}
+	if len(ns) != 1 {
+		return "", fmt.Errorf("unexpected response when validating apihost and auth")
+	}
+	return ns[0].Name, nil
+}
+
 // CreateNamespace creates a new namespace and returns its credentials, given a label and region
 func (s *serverlessService) CreateNamespace(ctx context.Context, label string, region string) (ServerlessCredentials, error) {
 	reqBody := newNamespaceRequest{Namespace: inputNamespace{Label: label, Region: region}}
@@ -697,8 +729,25 @@ func (s *serverlessService) GetFunction(name string, fetchCode bool) (whisk.Acti
 	return *action, parameters, nil
 }
 
+// ListFunctions lists the functions of the connected namespace
+func (s *serverlessService) ListFunctions(pkg string, skip int, limit int) ([]whisk.Action, error) {
+	err := initWhisk(s)
+	if err != nil {
+		return []whisk.Action{}, err
+	}
+	if limit == 0 {
+		limit = 30
+	}
+	options := &whisk.ActionListOptions{
+		Skip:  skip,
+		Limit: limit,
+	}
+	list, _, err := s.owClient.Actions.List(pkg, options)
+	return list, err
+}
+
 // InvokeFunction invokes a function via POST with authentication
-func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (map[string]interface{}, error) {
+func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (interface{}, error) {
 	var empty map[string]interface{}
 	err := initWhisk(s)
 	if err != nil {
@@ -709,7 +758,7 @@ func (s *serverlessService) InvokeFunction(name string, params interface{}, bloc
 }
 
 // InvokeFunctionViaWeb invokes a function via GET using its web URL (or error if not a web function)
-func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]interface{}) error {
+func (s *serverlessService) InvokeFunctionViaWeb(name string, params interface{}) error {
 	// Get the function so we can use its metadata in formulating the request
 	theFunction, _, err := s.GetFunction(name, false)
 	if err != nil {
@@ -741,7 +790,7 @@ func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]
 	// Add params, if any
 	if params != nil {
 		encoded := url.Values{}
-		for key, val := range params {
+		for key, val := range params.(map[string]interface{}) {
 			stringVal, ok := val.(string)
 			if !ok {
 				return fmt.Errorf("the value of '%s' is not a string; web invocation is not possible", key)
@@ -751,6 +800,61 @@ func (s *serverlessService) InvokeFunctionViaWeb(name string, params map[string]
 		theURL += "?" + encoded.Encode()
 	}
 	return browser.OpenURL(theURL)
+}
+
+// ListActivations drives the OpenWhisk API for listing activations
+func (s *serverlessService) ListActivations(options whisk.ActivationListOptions) ([]whisk.Activation, error) {
+	empty := []whisk.Activation{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.List(&options)
+	return resp, err
+}
+
+// GetActivationCount drives the OpenWhisk API for getting the total number of activations in namespace
+func (s *serverlessService) GetActivationCount(options whisk.ActivationCountOptions) (whisk.ActivationCount, error) {
+	err := initWhisk(s)
+	empty := whisk.ActivationCount{}
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Count(&options)
+	return *resp, err
+}
+
+// GetActivation drives the OpenWhisk API getting an activation
+func (s *serverlessService) GetActivation(id string) (whisk.Activation, error) {
+	empty := whisk.Activation{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Get(id)
+	return *resp, err
+}
+
+// GetActivationLogs drives the OpenWhisk API getting the logs of an activation
+func (s *serverlessService) GetActivationLogs(id string) (whisk.Activation, error) {
+	empty := whisk.Activation{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Logs(id)
+	return *resp, err
+}
+
+// GetActivationResult drives the OpenWhisk API getting the result of an activation
+func (s *serverlessService) GetActivationResult(id string) (whisk.Response, error) {
+	empty := whisk.Response{}
+	err := initWhisk(s)
+	if err != nil {
+		return empty, err
+	}
+	resp, _, err := s.owClient.Activations.Result(id)
+	return *resp, err
 }
 
 // GetConnectedAPIHost retrieves the API host to which the service is currently connected
@@ -1001,8 +1105,8 @@ func (s *serverlessService) ReadCredentials() (ServerlessCredentials, error) {
 	return creds, err
 }
 
-// Determines whether the serverlessUptodate appears to be connected.  The purpose is
-// to fail fast (when feasible) on sandboxes that are clearly not connected.
+// Determines whether the serverless support appears to be connected.  The purpose is
+// to fail fast (when feasible) when it clearly is not connected.
 // However, it is important not to add excessive overhead on each call (e.g.
 // asking the plugin to validate credentials), so the test is not foolproof.
 // It merely tests whether a credentials directory has been created for the
@@ -1015,15 +1119,15 @@ func isServerlessConnected(credsDir string) bool {
 	return err == nil
 }
 
-// serverlessUptodate answers whether the installed version of the serverlessUptodate is at least
+// serverlessUptodate answers whether the installed version of the serverless support is at least
 // what is required by doctl
 func serverlessUptodate(serverlessDir string) bool {
 	return GetCurrentServerlessVersion(serverlessDir) >= GetMinServerlessVersion()
 }
 
-// GetCurrentServerlessVersion gets the version of the current serverless.
-// To be called only when serverless is known to exist.
-// Returns "0" if the installed serverless pre-dates the versioning system
+// GetCurrentServerlessVersion gets the version of the current plugin.
+// To be called only when the plugin is known to exist.
+// Returns "0" if the installed plugin pre-dates the versioning system
 // Otherwise, returns the version string stored in the serverless directory.
 func GetCurrentServerlessVersion(serverlessDir string) string {
 	versionFile := filepath.Join(serverlessDir, "version")

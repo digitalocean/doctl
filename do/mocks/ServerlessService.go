@@ -124,6 +124,66 @@ func (mr *MockServerlessServiceMockRecorder) Exec(arg0 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exec", reflect.TypeOf((*MockServerlessService)(nil).Exec), arg0)
 }
 
+// GetActivation mocks base method.
+func (m *MockServerlessService) GetActivation(arg0 string) (whisk.Activation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActivation", arg0)
+	ret0, _ := ret[0].(whisk.Activation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActivation indicates an expected call of GetActivation.
+func (mr *MockServerlessServiceMockRecorder) GetActivation(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivation", reflect.TypeOf((*MockServerlessService)(nil).GetActivation), arg0)
+}
+
+// GetActivationCount mocks base method.
+func (m *MockServerlessService) GetActivationCount(arg0 whisk.ActivationCountOptions) (whisk.ActivationCount, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActivationCount", arg0)
+	ret0, _ := ret[0].(whisk.ActivationCount)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActivationCount indicates an expected call of GetActivationCount.
+func (mr *MockServerlessServiceMockRecorder) GetActivationCount(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivationCount", reflect.TypeOf((*MockServerlessService)(nil).GetActivationCount), arg0)
+}
+
+// GetActivationLogs mocks base method.
+func (m *MockServerlessService) GetActivationLogs(arg0 string) (whisk.Activation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActivationLogs", arg0)
+	ret0, _ := ret[0].(whisk.Activation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActivationLogs indicates an expected call of GetActivationLogs.
+func (mr *MockServerlessServiceMockRecorder) GetActivationLogs(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivationLogs", reflect.TypeOf((*MockServerlessService)(nil).GetActivationLogs), arg0)
+}
+
+// GetActivationResult mocks base method.
+func (m *MockServerlessService) GetActivationResult(arg0 string) (whisk.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetActivationResult", arg0)
+	ret0, _ := ret[0].(whisk.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetActivationResult indicates an expected call of GetActivationResult.
+func (mr *MockServerlessServiceMockRecorder) GetActivationResult(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetActivationResult", reflect.TypeOf((*MockServerlessService)(nil).GetActivationResult), arg0)
+}
+
 // GetConnectedAPIHost mocks base method.
 func (m *MockServerlessService) GetConnectedAPIHost() (string, error) {
 	m.ctrl.T.Helper()
@@ -185,6 +245,21 @@ func (mr *MockServerlessServiceMockRecorder) GetNamespace(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespace", reflect.TypeOf((*MockServerlessService)(nil).GetNamespace), arg0, arg1)
 }
 
+// GetNamespaceFromCluster mocks base method.
+func (m *MockServerlessService) GetNamespaceFromCluster(arg0, arg1 string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNamespaceFromCluster", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetNamespaceFromCluster indicates an expected call of GetNamespaceFromCluster.
+func (mr *MockServerlessServiceMockRecorder) GetNamespaceFromCluster(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNamespaceFromCluster", reflect.TypeOf((*MockServerlessService)(nil).GetNamespaceFromCluster), arg0, arg1)
+}
+
 // GetServerlessNamespace mocks base method.
 func (m *MockServerlessService) GetServerlessNamespace(arg0 context.Context) (do.ServerlessCredentials, error) {
 	m.ctrl.T.Helper()
@@ -230,10 +305,10 @@ func (mr *MockServerlessServiceMockRecorder) InstallServerless(arg0, arg1 interf
 }
 
 // InvokeFunction mocks base method.
-func (m *MockServerlessService) InvokeFunction(arg0 string, arg1 interface{}, arg2, arg3 bool) (map[string]interface{}, error) {
+func (m *MockServerlessService) InvokeFunction(arg0 string, arg1 interface{}, arg2, arg3 bool) (interface{}, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvokeFunction", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(map[string]interface{})
+	ret0, _ := ret[0].(interface{})
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -245,7 +320,7 @@ func (mr *MockServerlessServiceMockRecorder) InvokeFunction(arg0, arg1, arg2, ar
 }
 
 // InvokeFunctionViaWeb mocks base method.
-func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 map[string]interface{}) error {
+func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InvokeFunctionViaWeb", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -256,6 +331,36 @@ func (m *MockServerlessService) InvokeFunctionViaWeb(arg0 string, arg1 map[strin
 func (mr *MockServerlessServiceMockRecorder) InvokeFunctionViaWeb(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InvokeFunctionViaWeb", reflect.TypeOf((*MockServerlessService)(nil).InvokeFunctionViaWeb), arg0, arg1)
+}
+
+// ListActivations mocks base method.
+func (m *MockServerlessService) ListActivations(arg0 whisk.ActivationListOptions) ([]whisk.Activation, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListActivations", arg0)
+	ret0, _ := ret[0].([]whisk.Activation)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListActivations indicates an expected call of ListActivations.
+func (mr *MockServerlessServiceMockRecorder) ListActivations(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListActivations", reflect.TypeOf((*MockServerlessService)(nil).ListActivations), arg0)
+}
+
+// ListFunctions mocks base method.
+func (m *MockServerlessService) ListFunctions(arg0 string, arg1, arg2 int) ([]whisk.Action, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFunctions", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]whisk.Action)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListFunctions indicates an expected call of ListFunctions.
+func (mr *MockServerlessServiceMockRecorder) ListFunctions(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFunctions", reflect.TypeOf((*MockServerlessService)(nil).ListFunctions), arg0, arg1, arg2)
 }
 
 // ListNamespaces mocks base method.
