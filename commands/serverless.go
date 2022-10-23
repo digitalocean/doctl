@@ -400,6 +400,9 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	pkgFlag, _ := c.Doit.GetBool(c.NS, "packages")
 	trigFlag, _ := c.Doit.GetBool(c.NS, "triggers")
 	all, _ := c.Doit.GetBool(c.NS, "all")
+
+	sls := c.Serverless()
+
 	if haveArgs && all {
 		return errUndeployAllAndArgs
 	}
@@ -413,30 +416,34 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 		return cleanTriggers(c)
 	}
 	if all {
-		return cleanNamespace(c)
+		return sls.CleanNamespace()
 	}
 	var lastError error
 	errorCount := 0
 	var ctx context.Context
-	var sls do.ServerlessService
+
 	if trigFlag {
 		ctx = context.TODO()
-		sls = c.Serverless()
 	}
+
 	for _, arg := range c.Args {
 		var err error
 		if trigFlag {
+			// TODO: should we display a confirmation
 			err = sls.DeleteTrigger(ctx, arg)
 		} else if strings.Contains(arg, "/") || !pkgFlag {
-			err = deleteFunction(c, arg)
+			// TODO: Should we display a confirmation
+			err = sls.DeleteFunction(arg)
 		} else {
-			err = deletePackage(c, arg)
+			// TODO: Should we display a confirmation here
+			err = sls.DeletePackage(arg, true)
 		}
 		if err != nil {
 			lastError = err
 			errorCount++
 		}
 	}
+
 	if errorCount > 0 {
 		return fmt.Errorf("there were %d errors detected, e.g.: %w", errorCount, lastError)
 	}
@@ -449,37 +456,13 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 }
 
 // cleanNamespace is a subroutine of RunServerlessDeploy for clearing the entire namespace
-func cleanNamespace(c *CmdConfig) error {
-	result, err := ServerlessExec(c, "namespace/clean", "--force")
-	if err != nil {
-		return err
-	}
-	if result.Error != "" {
-		return fmt.Errorf(result.Error)
-	}
-	return nil
-}
-
-// deleteFunction is a subroutine of RunServerlessDeploy for deleting one function
-func deleteFunction(c *CmdConfig, fn string) error {
-	result, err := ServerlessExec(c, "action/delete", fn)
-	if err != nil {
-		return err
-	}
-	if result.Error != "" {
-		return fmt.Errorf(result.Error)
-	}
-	return nil
-}
-
-// deletePackage is a subroutine of RunServerlessDeploy for deleting a package
-func deletePackage(c *CmdConfig, pkg string) error {
-	result, err := ServerlessExec(c, "package/delete", pkg, "--recursive")
-	if err != nil {
-		return err
-	}
-	if result.Error != "" {
-		return fmt.Errorf(result.Error)
-	}
-	return nil
-}
+// func cleanNamespace(c *CmdConfig) error {
+// 	result, err := ServerlessExec(c, "namespace/clean", "--force")
+// 	if err != nil {
+// 		return err
+// 	}
+// 	if result.Error != "" {
+// 		return fmt.Errorf(result.Error)
+// 	}
+// 	return nil
+// }

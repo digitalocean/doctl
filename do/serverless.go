@@ -198,6 +198,7 @@ type ServerlessService interface {
 	GetNamespaceFromCluster(string, string) (string, error)
 	CreateNamespace(context.Context, string, string) (ServerlessCredentials, error)
 	DeleteNamespace(context.Context, string) error
+	CleanNamespace() error
 	ListTriggers(context.Context, string) ([]ServerlessTrigger, error)
 	GetTrigger(context.Context, string) (ServerlessTrigger, error)
 	DeleteTrigger(context.Context, string) error
@@ -206,8 +207,10 @@ type ServerlessService interface {
 	GetHostInfo(string) (ServerlessHostInfo, error)
 	CheckServerlessStatus() error
 	InstallServerless(string, bool) error
+	DeletePackage(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	ListFunctions(string, int, int) ([]whisk.Action, error)
+	DeleteFunction(string) error
 	InvokeFunction(string, interface{}, bool, bool) (interface{}, error)
 	InvokeFunctionViaWeb(string, interface{}) error
 	ListActivations(whisk.ActivationListOptions) ([]whisk.Activation, error)
@@ -678,6 +681,43 @@ func (s *serverlessService) DeleteNamespace(ctx context.Context, name string) er
 	return err
 }
 
+func (s *serverlessService) CleanNamespace() error {
+	// Deletes all triggers
+	// ctx := context.TODO()
+	// triggers, err := s.ListTriggers(ctx, "")
+
+	// if err != nil {
+	// 	return err
+	// }
+
+	// for _, trig := range triggers {
+	// 	err = s.DeleteTrigger(ctx, trig.Name)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+
+	fns, err := s.ListFunctions("", 0, 0)
+	if err != nil {
+		return err
+	}
+
+	for _, fn := range fns {
+		name := fn.Name
+		pkg := strings.Split(fn.Namespace, "/")
+		if len(pkg) == 2 {
+			name = pkg[1] + "/" + fn.Name
+		}
+		fmt.Println(name)
+		// err := s.DeleteFunction(fn.Name)
+		// if err != nil {
+		// 	return err
+		// }
+	}
+
+	return nil
+}
+
 // GetHostInfo returns the HostInfo structure of the provided API host
 func (s *serverlessService) GetHostInfo(APIHost string) (ServerlessHostInfo, error) {
 	endpoint := APIHost + "/api/v1"
@@ -733,6 +773,47 @@ func (s *serverlessService) ListFunctions(pkg string, skip int, limit int) ([]wh
 	}
 	list, _, err := s.owClient.Actions.List(pkg, options)
 	return list, err
+}
+
+// DeleteFunction removes a function from the namespace
+func (s *serverlessService) DeleteFunction(name string) error {
+	err := initWhisk(s)
+	if err != nil {
+		return err
+	}
+
+	_, e := s.owClient.Actions.Delete(name)
+
+	return e
+}
+
+// DeletePackage removes a package and all its namespace from the package from the namespace
+// If force is set to true, it will remove all functions in the package.
+func (s *serverlessService) DeletePackage(name string, force bool) error {
+	err := initWhisk(s)
+	if err != nil {
+		return err
+	}
+
+	if force {
+		pkg, _, err := s.owClient.Packages.Get(name)
+		if err != nil {
+			return err
+		}
+
+		for _, fn := range pkg.Actions {
+			funcName := name + "/" + fn.Name
+			_, err = s.owClient.Actions.Delete(funcName)
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, err = s.owClient.Packages.Delete(name)
+
+	return err
 }
 
 // InvokeFunction invokes a function via POST with authentication
