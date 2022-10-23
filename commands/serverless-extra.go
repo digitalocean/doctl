@@ -95,6 +95,9 @@ func RunServerlessExtraCreate(c *CmdConfig) error {
 
 	// Determine the kind and sample
 	kind, sample, ts, err := languageToKindAndSample(c, language)
+	if err != nil {
+		return err
+	}
 
 	// Make the config and various paths
 	config := configTemplate()
@@ -367,6 +370,11 @@ func configTemplate() do.ServerlessSpec {
 // determine if that runtime exists.  It returns false only if it succeeds in
 // contacting the host and is told the runtime does not exist.
 func validateRuntime(c *CmdConfig, runtime string) bool {
+	if runtime == "nodejs" {
+		// As long as we are using a default language of 'javascript' we must necessarily assume
+		// that the 'nodejs' runtime is valid.  No need to go through the overhead of checking.
+		return true
+	}
 	sls := c.Serverless()
 	err := sls.CheckServerlessStatus()
 	if err != nil {
