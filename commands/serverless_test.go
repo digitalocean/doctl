@@ -333,28 +333,28 @@ func TestServerlessInit(t *testing.T) {
 		name            string
 		doctlArgs       string
 		doctlFlags      map[string]string
-		expectedNimArgs []string
 		out             map[string]interface{}
+		expectCheck     bool
+		expectOverwrite bool
 	}{
 		{
-			name:            "no flags",
-			doctlArgs:       "path/to/foo",
-			expectedNimArgs: []string{"path/to/foo"},
-			out:             map[string]interface{}{"project": "foo"},
+			name:      "no flags",
+			doctlArgs: "path/to/foo",
+			out:       map[string]interface{}{"project": "foo"},
 		},
 		{
 			name:            "overwrite",
-			doctlArgs:       "path/to/project",
+			doctlArgs:       "path/to/foo",
 			doctlFlags:      map[string]string{"overwrite": ""},
-			expectedNimArgs: []string{"path/to/project", "--overwrite"},
 			out:             map[string]interface{}{"project": "foo"},
+			expectOverwrite: true,
 		},
 		{
-			name:            "language flag",
-			doctlArgs:       "path/to/project",
-			doctlFlags:      map[string]string{"language": "go"},
-			expectedNimArgs: []string{"path/to/project", "--language", "go"},
-			out:             map[string]interface{}{"project": "foo"},
+			name:        "language flag",
+			doctlArgs:   "path/to/foo",
+			doctlFlags:  map[string]string{"language": "go"},
+			out:         map[string]interface{}{"project": "foo"},
+			expectCheck: true,
 		},
 	}
 
@@ -363,9 +363,6 @@ func TestServerlessInit(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				buf := &bytes.Buffer{}
 				config.Out = buf
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
 
 				if tt.doctlArgs != "" {
 					config.Args = append(config.Args, tt.doctlArgs)
@@ -381,17 +378,36 @@ func TestServerlessInit(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("project/create", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-					Entity: tt.out,
-				}, nil)
+				sawOverwrite := false
+				// Grab the overrideable commands so they can be mocked
+				writeAFile = func(path string, contents []byte) error {
+					return nil
+				}
+				doMkdir = func(path string, parents bool) error {
+					return nil
+				}
+				prepareProjectArea = func(project string, overwrite bool) error {
+					sawOverwrite = overwrite
+					return nil
+				}
 
+				if tt.expectCheck {
+					tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
+					creds := do.ServerlessCredentials{APIHost: "https://example.com"}
+					tm.serverless.EXPECT().ReadCredentials().Return(creds, nil)
+					hostInfo := do.ServerlessHostInfo{
+						Runtimes: map[string][]do.ServerlessRuntime{
+							"go": []do.ServerlessRuntime{},
+						},
+					}
+					tm.serverless.EXPECT().GetHostInfo("https://example.com").Return(hostInfo, nil)
+				}
 				err := RunServerlessExtraCreate(config)
 				require.NoError(t, err)
-				assert.Equal(t, `A local functions project directory 'foo' was created for you.
+				assert.Equal(t, tt.expectOverwrite, sawOverwrite)
+				assert.Equal(t, `A local functions project directory 'path/to/foo' was created for you.
 You may deploy it by running the command shown on the next line:
-  doctl serverless deploy foo`+"\n\n", buf.String())
+  doctl serverless deploy path/to/foo`+"\n", buf.String())
 			})
 		})
 	}
