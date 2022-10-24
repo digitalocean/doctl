@@ -24,7 +24,7 @@ type Image struct {
 	*godo.Image
 }
 
-// Images is a slice of Droplet.
+// Images is a slice of Image.
 type Images []Image
 
 // ImagesService is the godo ImagesService interface.
