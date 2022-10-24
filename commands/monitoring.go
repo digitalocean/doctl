@@ -84,7 +84,7 @@ func alertPolicies() *Command {
 	CmdBuilder(cmd, RunCmdAlertPolicyList, "list", "List all alert policies", `Use this command to retrieve a list of all the alert policies in your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.AlertPolicy{}))
 
-	cmdRunAlertPolicyDelete := CmdBuilder(cmd, RunCmdAlertPolicyDelete, "delete <alert-policy-uuid>...", "Delete an alert policy", `Use this command to delete an alert policy.`, Writer)
+	cmdRunAlertPolicyDelete := CmdBuilder(cmd, RunCmdAlertPolicyDelete, "delete <alert-policy-uuid>...", "Delete an alert policy", `Use this command to delete an alert policy.`, Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdRunAlertPolicyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete an alert policy without confirmation prompt")
 
 	return cmd

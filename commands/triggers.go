@@ -39,7 +39,7 @@ when events from that source type occur.  Currently, only the ` + "`" + `schedul
 	}
 	list := CmdBuilder(cmd, RunTriggersList, "list", "Lists your triggers",
 		`Use `+"`"+`doctl serverless triggers list`+"`"+` to list your triggers.`,
-		Writer, displayerType(&displayers.Triggers{}))
+		Writer, aliasOpt("ls"), displayerType(&displayers.Triggers{}))
 	AddStringFlag(list, "function", "f", "", "list only triggers for the chosen function")
 
 	CmdBuilder(cmd, RunTriggersGet, "get <triggerName>", "Get the details for a trigger",

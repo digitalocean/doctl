@@ -215,7 +215,7 @@ type ServerlessService interface {
 	WriteCredentials(ServerlessCredentials) error
 	ReadCredentials() (ServerlessCredentials, error)
 	GetHostInfo(string) (ServerlessHostInfo, error)
-	CheckServerlessStatus(string) error
+	CheckServerlessStatus() error
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	ListFunctions(string, int, int) ([]whisk.Action, error)
@@ -246,7 +246,7 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "4.2.7-1.3.1"
+	minServerlessVersion = "4.2.8-1.3.1"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -350,7 +350,7 @@ func initWhisk(s *serverlessService) error {
 	if s.owClient != nil {
 		return nil
 	}
-	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	err := s.CheckServerlessStatus()
 	if err != nil {
 		return err
 	}
@@ -368,7 +368,7 @@ func initWhisk(s *serverlessService) error {
 	return nil
 }
 
-func (s *serverlessService) CheckServerlessStatus(leafCredsDir string) error {
+func (s *serverlessService) CheckServerlessStatus() error {
 	_, err := os.Stat(s.serverlessDir)
 	if os.IsNotExist(err) {
 		return ErrServerlessNotInstalled
@@ -376,7 +376,7 @@ func (s *serverlessService) CheckServerlessStatus(leafCredsDir string) error {
 	if !serverlessUptodate(s.serverlessDir) {
 		return ErrServerlessNeedsUpgrade
 	}
-	if !isServerlessConnected(leafCredsDir, s.serverlessDir) {
+	if !isServerlessConnected(s.credsDir) {
 		return ErrServerlessNotConnected
 	}
 	return nil
@@ -909,7 +909,7 @@ func (s *serverlessService) WriteProject(project ServerlessProject) (string, err
 // of that function are listed.  If 'fcn' is empty all triggers are listed.
 func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]ServerlessTrigger, error) {
 	empty := []ServerlessTrigger{}
-	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	err := s.CheckServerlessStatus()
 	if err != nil {
 		return empty, err
 	}
@@ -963,7 +963,7 @@ func fixBaseDate(trigger ServerlessTrigger) ServerlessTrigger {
 // GetTrigger gets the contents of a trigger for display
 func (s *serverlessService) GetTrigger(ctx context.Context, name string) (ServerlessTrigger, error) {
 	empty := ServerlessTrigger{}
-	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	err := s.CheckServerlessStatus()
 	if err != nil {
 		return empty, err
 	}
@@ -1128,11 +1128,12 @@ func (s *serverlessService) ReadCredentials() (ServerlessCredentials, error) {
 // asking the plugin to validate credentials), so the test is not foolproof.
 // It merely tests whether a credentials directory has been created for the
 // current doctl access token and appears to have a credentials.json in it.
-func isServerlessConnected(leafCredsDir string, serverlessDir string) bool {
-	creds := GetCredentialDirectory(leafCredsDir, serverlessDir)
-	credsFile := filepath.Join(creds, CredentialsFile)
+func isServerlessConnected(credsDir string) bool {
+	credsFile := filepath.Join(credsDir, CredentialsFile)
 	_, err := os.Stat(credsFile)
-	return !os.IsNotExist(err)
+	// We used to test specifically for "not found" here but in fact any error is enough to
+	// prevent connections from working.
+	return err == nil
 }
 
 // serverlessUptodate answers whether the installed version of the serverless support is at least

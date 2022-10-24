@@ -112,7 +112,7 @@ Only basic information is included with the text output format. For complete app
 
 This permanently deletes the app and all its associated deployments.`,
 		Writer,
-		aliasOpt("d"),
+		aliasOpt("d", "rm"),
 	)
 	AddBoolFlag(deleteApp, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the App without a confirmation prompt")
 
@@ -787,7 +787,7 @@ func appsTier() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunAppsTierList, "list", "List all app tiers", `Use this command to list all the available app tiers.`, Writer)
+	CmdBuilder(cmd, RunAppsTierList, "list", "List all app tiers", `Use this command to list all the available app tiers.`, Writer, aliasOpt("ls"))
 	CmdBuilder(cmd, RunAppsTierGet, "get <tier slug>", "Retrieve an app tier", `Use this command to retrieve information about a specific app tier.`, Writer)
 
 	cmd.AddCommand(appsTierInstanceSize())
@@ -830,7 +830,7 @@ func appsTierInstanceSize() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunAppsTierInstanceSizeList, "list", "List all app instance sizes", `Use this command to list all the available app instance sizes.`, Writer)
+	CmdBuilder(cmd, RunAppsTierInstanceSizeList, "list", "List all app instance sizes", `Use this command to list all the available app instance sizes.`, Writer, aliasOpt("ls"))
 	CmdBuilder(cmd, RunAppsTierInstanceSizeGet, "get <instance size slug>", "Retrieve an app instance size", `Use this command to retrieve information about a specific app instance size.`, Writer)
 
 	return cmd

@@ -100,7 +100,7 @@ func TestServerlessConnect(t *testing.T) {
 				nsResponse := do.NamespaceListResponse{Namespaces: tt.namespaceList}
 				creds := do.ServerlessCredentials{Namespace: "ns1", APIHost: "https://api.example.com"}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotConnected)
+				tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotConnected)
 				ctx := context.TODO()
 				tm.serverless.EXPECT().ListNamespaces(ctx).Return(nsResponse, nil)
 				if tt.expectedError == nil {
@@ -128,7 +128,7 @@ func TestServerlessStatusWhenConnected(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
 			APIHost:   "https://api.example.com",
 			Namespace: "hello",
@@ -182,7 +182,7 @@ func TestServerlessStatusWithLanguages(t *testing.T) {
     go:1.22 (go:default)
 `
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
 			APIHost:   "https://api.example.com",
 			Namespace: "hello",
@@ -206,7 +206,7 @@ func TestServerlessStatusWithLanguages(t *testing.T) {
 func TestServerlessStatusWhenNotConnected(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
 			APIHost:   "https://api.example.com",
 			Namespace: "hello",
@@ -228,7 +228,7 @@ func TestServerlessStatusWhenNotConnected(t *testing.T) {
 
 func TestServerlessStatusWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotInstalled)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotInstalled)
 
 		err := RunServerlessStatus(config)
 
@@ -239,7 +239,7 @@ func TestServerlessStatusWhenNotInstalled(t *testing.T) {
 
 func TestServerlessStatusWhenNotUpToDate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNeedsUpgrade)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNeedsUpgrade)
 
 		err := RunServerlessStatus(config)
 
@@ -254,7 +254,7 @@ func TestServerlessInstallFromScratch(t *testing.T) {
 		config.Out = buf
 
 		credsToken := hashAccessToken(config)
-		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNotInstalled)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotInstalled)
 		tm.serverless.EXPECT().InstallServerless(credsToken, false).Return(nil)
 
 		err := RunServerlessInstall(config)
@@ -267,8 +267,7 @@ func TestServerlessInstallWhenInstalledNotCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		credsToken := hashAccessToken(config)
-		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNeedsUpgrade)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNeedsUpgrade)
 
 		err := RunServerlessInstall(config)
 		require.NoError(t, err)
@@ -281,7 +280,7 @@ func TestServerlessInstallWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 
 		err := RunServerlessInstall(config)
 		require.NoError(t, err)
@@ -294,8 +293,7 @@ func TestServerlessUpgradeWhenNotInstalled(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		credsToken := hashAccessToken(config)
-		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNotInstalled)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotInstalled)
 
 		err := RunServerlessUpgrade(config)
 		require.NoError(t, err)
@@ -308,7 +306,7 @@ func TestServerlessUpgradeWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 
 		err := RunServerlessUpgrade(config)
 		require.NoError(t, err)
@@ -322,7 +320,7 @@ func TestServerlessUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
 		config.Out = buf
 
 		credsToken := hashAccessToken(config)
-		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNeedsUpgrade)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNeedsUpgrade)
 		tm.serverless.EXPECT().InstallServerless(credsToken, true).Return(nil)
 
 		err := RunServerlessUpgrade(config)
@@ -383,7 +381,7 @@ func TestServerlessInit(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 				tm.serverless.EXPECT().Cmd("project/create", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
 					Entity: tt.out,
@@ -447,7 +445,7 @@ func TestServerlessDeploy(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 				tm.serverless.EXPECT().Cmd("project/deploy", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
@@ -583,7 +581,10 @@ func TestServerlessUndeploy(t *testing.T) {
 				}
 
 				if tt.expectedError == nil && len(tt.expectedNimCmds) > 0 {
-					tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+					tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
+				}
+				if tt.expectTriggerList {
+					tm.serverless.EXPECT().ListTriggers(context.TODO(), "").Return(cannedTriggerList, nil)
 				}
 				if tt.expectTriggerList {
 					tm.serverless.EXPECT().ListTriggers(context.TODO(), "").Return(cannedTriggerList, nil)
@@ -643,7 +644,7 @@ func TestServerlessWatch(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 				tm.serverless.EXPECT().Cmd("nocapture", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.serverless.EXPECT().Stream(fakeCmd).Return(nil)
 

@@ -220,6 +220,14 @@ func requiredOpt() flagOpt {
 // AddStringFlag adds a string flag to a command.
 func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
+	// flagName only supports nesting three levels deep. We need to force the
+	// app dev config set/unset --dev-config flag to be nested deeper.
+	// i.e dev.config.set.dev-config over config.set.dev-config
+	// This prevents a conflict with the base config setting.
+	if name == doctl.ArgAppDevConfig && !strings.HasPrefix(fn, appDevConfigFileNamespace+".") {
+		fn = fmt.Sprintf("%s.%s", appDevConfigFileNamespace, fn)
+	}
+
 	cmd.Flags().StringP(name, shorthand, dflt, desc)
 
 	for _, o := range opts {

@@ -16,7 +16,9 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -76,6 +78,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, and `mongodb`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
+	AddBoolFlag(cmdDatabaseCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
 
@@ -167,10 +170,36 @@ func RunDatabaseCreate(c *CmdConfig) error {
 		return err
 	}
 
-	db, err := c.Databases().Create(r)
+	dbs := c.Databases()
+
+	db, err := dbs.Create(r)
 	if err != nil {
 		return err
 	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		connection := db.Connection
+		dbs := c.Databases()
+		notice("Database creation is in progress, waiting for database to be online")
+
+		err := waitForDatabaseReady(dbs, db.ID)
+		if err != nil {
+			return fmt.Errorf(
+				"database couldn't enter the `online` state: %v",
+				err,
+			)
+		}
+
+		db, _ = dbs.Get(db.ID)
+		db.Connection = connection
+	}
+
+	notice("Database created")
 
 	return displayDatabases(c, false, *db)
 }
@@ -1635,4 +1664,40 @@ func RunDatabaseFirewallRulesRemove(c *CmdConfig) error {
 	}
 
 	return displayDatabaseFirewallRules(c, true, databaseID)
+}
+
+func waitForDatabaseReady(dbs do.DatabasesService, dbID string) error {
+	const (
+		maxAttempts = 180
+		wantStatus  = "online"
+	)
+	attempts := 0
+	printNewLineSet := false
+
+	for i := 0; i < maxAttempts; i++ {
+		if attempts != 0 {
+			fmt.Fprint(os.Stderr, ".")
+			if !printNewLineSet {
+				printNewLineSet = true
+				defer fmt.Fprintln(os.Stderr)
+			}
+		}
+
+		db, err := dbs.Get(dbID)
+		if err != nil {
+			return err
+		}
+
+		if db.Status == wantStatus {
+			return nil
+		}
+
+		attempts++
+		time.Sleep(10 * time.Second)
+	}
+
+	return fmt.Errorf(
+		"timeout waiting for database (%s) to enter `online` state",
+		dbID,
+	)
 }

@@ -148,7 +148,7 @@ func RunServerlessInstall(c *CmdConfig) error {
 		}
 		credsLeafDir = hashAccessToken(c)
 		serverless = c.Serverless()
-		status = serverless.CheckServerlessStatus(credsLeafDir)
+		status = serverless.CheckServerlessStatus()
 	}
 	switch status {
 	case nil:
@@ -170,7 +170,7 @@ func RunServerlessInstall(c *CmdConfig) error {
 func RunServerlessUpgrade(c *CmdConfig) error {
 	credsLeafDir := hashAccessToken(c)
 	serverless := c.Serverless()
-	status := serverless.CheckServerlessStatus(credsLeafDir)
+	status := serverless.CheckServerlessStatus()
 	switch status {
 	case nil:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
@@ -188,7 +188,7 @@ func RunServerlessUpgrade(c *CmdConfig) error {
 
 // RunServerlessUninstall removes the serverless support and any stored credentials
 func RunServerlessUninstall(c *CmdConfig) error {
-	err := c.Serverless().CheckServerlessStatus(hashAccessToken(c))
+	err := c.Serverless().CheckServerlessStatus()
 	if err == do.ErrServerlessNotInstalled {
 		return errors.New("Nothing to uninstall: no serverless support was found")
 	}
@@ -229,7 +229,7 @@ func RunServerlessConnect(c *CmdConfig) error {
 	}
 
 	// Non-standard check for the connect command (only): it's ok to not be connected.
-	err = sls.CheckServerlessStatus(hashAccessToken(c))
+	err = sls.CheckServerlessStatus()
 	if err != nil && err != do.ErrServerlessNotConnected {
 		return err
 	}
@@ -326,7 +326,7 @@ func finishConnecting(sls do.ServerlessService, creds do.ServerlessCredentials, 
 // RunServerlessStatus gives a report on the status of the serverless (installed, up to date, connected)
 func RunServerlessStatus(c *CmdConfig) error {
 	sls := c.Serverless()
-	status := sls.CheckServerlessStatus(hashAccessToken(c))
+	status := sls.CheckServerlessStatus()
 	if status == do.ErrServerlessNotInstalled {
 		return status
 	}

@@ -67,6 +67,7 @@ logs.`,
 		`Use `+"`"+`doctl serverless activations list`+"`"+` to list the activation records that are present in the cloud for previously
 invoked functions.`,
 		Writer,
+		aliasOpt("ls"),
 		displayerType(&displayers.Activation{}),
 	)
 	AddIntFlag(list, "limit", "l", 30, "only return LIMIT number of activations (default 30, max 200)")
