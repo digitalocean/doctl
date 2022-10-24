@@ -586,9 +586,6 @@ func TestServerlessUndeploy(t *testing.T) {
 				if tt.expectTriggerList {
 					tm.serverless.EXPECT().ListTriggers(context.TODO(), "").Return(cannedTriggerList, nil)
 				}
-				if tt.expectTriggerList {
-					tm.serverless.EXPECT().ListTriggers(context.TODO(), "").Return(cannedTriggerList, nil)
-				}
 				for i := range tt.expectedNimCmds {
 					tm.serverless.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
 					tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
