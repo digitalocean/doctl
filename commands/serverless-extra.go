@@ -251,6 +251,9 @@ var prepareProjectArea = func(project string, overwrite bool) error {
 	if os.IsNotExist(err) {
 		return nil
 	}
+	if err != nil {
+		return err
+	}
 	// project exists in the file system
 	if !overwrite {
 		return fmt.Errorf("%s already exists; use '--overwrite' to replace", project)

@@ -76,13 +76,13 @@ var (
 	goSample = `package main
 
 func Main(args map[string]interface{}) map[string]interface{} {
-\tname, ok := args["name"].(string)
-\tif !ok {
-\t\tname = "stranger"
-\t}
-\tmsg := make(map[string]interface{})
-\tmsg["body"] = "Hello " + name + "!"
-\treturn msg
+	name, ok := args["name"].(string)
+	if !ok {
+		name = "stranger"
+	}
+	msg := make(map[string]interface{})
+	msg["body"] = "Hello " + name + "!"
+	return msg
 }
 `
 	rustSample = `extern crate serde_json;
