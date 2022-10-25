@@ -125,54 +125,43 @@ type ServerlessProject struct {
 	Strays      []string `json:"strays"`
 }
 
-// ProjectSpec describes a project.yml spec
+// ServerlessSpec describes a project.yml spec
 // reference: https://docs.nimbella.com/configuration/
-type ProjectSpec struct {
+type ServerlessSpec struct {
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 	Environment map[string]interface{} `json:"environment,omitempty"`
-	Packages    []*ProjectSpecPackage  `json:"packages,omitempty"`
+	Packages    []*ServerlessPackage   `json:"packages,omitempty"`
 }
 
-// ProjectSpecPackage ...
-type ProjectSpecPackage struct {
+// ServerlessPackage ...
+type ServerlessPackage struct {
 	Name        string                 `json:"name,omitempty"`
 	Shared      bool                   `json:"shared,omitempty"`
 	Environment map[string]interface{} `json:"environment,omitempty"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 	Annotations map[string]interface{} `json:"annotations,omitempty"`
-	Functions   []*ProjectSpecFunction `json:"functions,omitempty"`
+	Functions   []*ServerlessFunction  `json:"functions,omitempty"`
 }
 
-// ProjectSpecFunction ...
-type ProjectSpecFunction struct {
+// ServerlessFunction ...
+type ServerlessFunction struct {
 	Name    string `json:"name,omitempty"`
-	Package string `json:"package,omitempty"`
 	Binary  bool   `json:"binary,omitempty"`
 	Main    string `json:"main,omitempty"`
 	Runtime string `json:"runtime,omitempty"`
 	// `web` can be either true or "raw". We use interface{} to support both types. If we start consuming the value we
 	// should probably define a custom type with proper validation.
-	Web         interface{}               `json:"web,omitempty"`
-	WebSecure   interface{}               `json:"webSecure,omitempty"`
-	Sequence    []string                  `json:"sequence,omitempty"`
-	Parameters  map[string]interface{}    `json:"parameters,omitempty"`
-	Environment map[string]interface{}    `json:"environment,omitempty"`
-	Annotations map[string]interface{}    `json:"annotations,omitempty"`
-	Limits      ProjectSpecFunctionLimits `json:"limits,omitempty"`
-}
-
-// ProjectSpecFunctionLimits ...
-// ref: https://github.com/apache/openwhisk-client-js/blob/1aba396e8a59afd5a90acb8157f2009746d7a714/lib/main.d.ts#L263-L268
-type ProjectSpecFunctionLimits struct {
-	Timeout     int `json:"timeout,omitempty"`
-	Memory      int `json:"memory,omitempty"`
-	Logs        int `json:"logs,omitempty"`
-	Concurrency int `json:"concurrency,omitempty"`
+	Web         interface{}            `json:"web,omitempty"`
+	WebSecure   interface{}            `json:"webSecure,omitempty"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+	Environment map[string]interface{} `json:"environment,omitempty"`
+	Annotations map[string]interface{} `json:"annotations,omitempty"`
+	Limits      map[string]int         `json:"limits,omitempty"`
 }
 
 // ProjectMetadata describes the nim project:get-metadata output structure.
 type ProjectMetadata struct {
-	ProjectSpec
+	ServerlessSpec
 	UnresolvedVariables []string `json:"unresolvedVariables,omitempty"`
 }
 
@@ -1035,8 +1024,8 @@ func readTopLevel(project *ServerlessProject) error {
 	return nil
 }
 
-func readProjectConfig(configPath string) (*ProjectSpec, error) {
-	spec := ProjectSpec{}
+func readProjectConfig(configPath string) (*ServerlessSpec, error) {
+	spec := ServerlessSpec{}
 	// reading config file content
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
@@ -1062,7 +1051,7 @@ func readProjectConfig(configPath string) (*ProjectSpec, error) {
 	return &spec, nil
 }
 
-func validateConfig(config *ProjectSpec) error {
+func validateConfig(config *ServerlessSpec) error {
 	forbiddenConfigs, err := ListForbiddenConfigs(config)
 
 	if err != nil {
@@ -1241,7 +1230,7 @@ func PreserveCreds(leafDir string, stagingDir string, serverlessDir string) erro
 }
 
 // ListForbiddenConfigs returns a list of forbidden config values in a project spec.
-func ListForbiddenConfigs(serverlessProject *ProjectSpec) ([]string, error) {
+func ListForbiddenConfigs(serverlessProject *ServerlessSpec) ([]string, error) {
 	var forbiddenConfigs []string
 
 	// validate package-level configs
@@ -1266,7 +1255,7 @@ func ListForbiddenConfigs(serverlessProject *ProjectSpec) ([]string, error) {
 
 // ListInvalidWebsecureValues returns a list of forbidden websecure values for an action in a project spec.
 // a valid websecure value is any string other than "true"
-func ListInvalidWebsecureValues(serverlessProject *ProjectSpec) ([]string, error) {
+func ListInvalidWebsecureValues(serverlessProject *ServerlessSpec) ([]string, error) {
 	var invalidValues = []string{}
 
 	for _, p := range serverlessProject.Packages {
@@ -1274,12 +1263,12 @@ func ListInvalidWebsecureValues(serverlessProject *ProjectSpec) ([]string, error
 			switch value := f.WebSecure.(type) {
 			case string:
 				if strings.ToLower(value) == "true" { /* "true" is not a valid value */
-					invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, f.Package, value))
+					invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, p.Name, value))
 				}
 				// any other value is fine
 			default: // bool or any other type
 				/* "web-action" must be a string */
-				invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, f.Package, value))
+				invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, p.Name, value))
 			}
 		}
 	}
@@ -1288,7 +1277,7 @@ func ListInvalidWebsecureValues(serverlessProject *ProjectSpec) ([]string, error
 }
 
 // validate project-level forbidden configs
-func validateProjectLevelFields(serverlessPackage *ProjectSpecPackage) ([]string, error) {
+func validateProjectLevelFields(serverlessPackage *ServerlessPackage) ([]string, error) {
 	var forbiddenConfigs []string
 
 	if serverlessPackage.Shared {
@@ -1307,12 +1296,8 @@ func validateProjectLevelFields(serverlessPackage *ProjectSpecPackage) ([]string
 }
 
 // validate project-level forbidden configs
-func validateFunctionLevelFields(serverlessAction *ProjectSpecFunction) ([]string, error) {
+func validateFunctionLevelFields(serverlessAction *ServerlessFunction) ([]string, error) {
 	var forbiddenConfigs []string
-
-	if serverlessAction.Sequence != nil {
-		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigSequence)
-	}
 
 	if _, ok := serverlessAction.Annotations[ForbiddenAnnotationProvideAPIKey]; ok {
 		forbiddenConfigs = append(forbiddenConfigs, ForbiddenAnnotationProvideAPIKey)
