@@ -683,19 +683,17 @@ func (s *serverlessService) DeleteNamespace(ctx context.Context, name string) er
 
 func (s *serverlessService) CleanNamespace() error {
 	// Deletes all triggers
-	// ctx := context.TODO()
-	// triggers, err := s.ListTriggers(ctx, "")
+	ctx := context.TODO()
+	triggers, err := s.ListTriggers(ctx, "")
 
-	// if err != nil {
-	// 	return err
-	// }
-
-	// for _, trig := range triggers {
-	// 	err = s.DeleteTrigger(ctx, trig.Name)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+	if err == nil {
+		for _, trig := range triggers {
+			err = s.DeleteTrigger(ctx, trig.Name)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	// Deletes all functions
 	fns, err := s.ListFunctions("", 0, 0)
@@ -787,14 +785,12 @@ func (s *serverlessService) DeleteFunction(name string, deleteTriggers bool) err
 		ctx := context.TODO()
 		triggers, err := s.ListTriggers(ctx, name)
 
-		if err != nil {
-			return err
-		}
-
-		for _, trig := range triggers {
-			err = s.DeleteTrigger(ctx, trig.Name)
-			if err != nil {
-				return err
+		if err == nil {
+			for _, trig := range triggers {
+				err = s.DeleteTrigger(ctx, trig.Name)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -821,7 +817,7 @@ func (s *serverlessService) DeletePackage(name string, force bool) error {
 		for _, fn := range pkg.Actions {
 			funcName := name + "/" + fn.Name
 
-			err = s.DeleteFunction(funcName, false)
+			err = s.DeleteFunction(funcName, true)
 
 			if err != nil {
 				return err
