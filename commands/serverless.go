@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
@@ -116,6 +117,7 @@ the entire packages are removed.`, Writer)
 	AddBoolFlag(undeploy, "packages", "p", false, "interpret simple name arguments as packages")
 	AddBoolFlag(undeploy, "triggers", "", false, "interpret all arguments as triggers")
 	AddBoolFlag(undeploy, "all", "", false, "remove all packages and functions")
+	AddBoolFlag(undeploy, doctl.ArgForce, doctl.ArgShortForce, false, "Delete namespace resources without confirmation prompt")
 	undeploy.Flags().MarkHidden("triggers") // support is experimental at this point
 
 	cmd.AddCommand(Activations())
@@ -399,6 +401,8 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	haveArgs := len(c.Args) > 0
 	pkgFlag, _ := c.Doit.GetBool(c.NS, "packages")
 	trigFlag, _ := c.Doit.GetBool(c.NS, "triggers")
+	forceFlag, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+
 	all, _ := c.Doit.GetBool(c.NS, "all")
 
 	sls := c.Serverless()
@@ -415,9 +419,23 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	if all && trigFlag {
 		return cleanTriggers(c)
 	}
+
 	if all {
-		return sls.CleanNamespace()
+		if !forceFlag {
+			err = AskForConfirm("Are you sure you want to delete all resources in this namespace.")
+			if err != nil {
+				return err
+			}
+		}
+
+		err = sls.CleanNamespace()
+		if err != nil {
+			return err
+		}
+		template.Print(`{{success checkmark}} All resources in the namespace have been undeployed.{{nl}}`, nil)
+		return nil
 	}
+
 	var lastError error
 	errorCount := 0
 	var ctx context.Context
@@ -429,15 +447,13 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	for _, arg := range c.Args {
 		var err error
 		if trigFlag {
-			// TODO: should we display a confirmation
 			err = sls.DeleteTrigger(ctx, arg)
 		} else if strings.Contains(arg, "/") || !pkgFlag {
-			// TODO: Should we display a confirmation
-			err = sls.DeleteFunction(arg)
+			err = sls.DeleteFunction(arg, false)
 		} else {
-			// TODO: Should we display a confirmation here
 			err = sls.DeletePackage(arg, true)
 		}
+
 		if err != nil {
 			lastError = err
 			errorCount++
@@ -447,22 +463,6 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	if errorCount > 0 {
 		return fmt.Errorf("there were %d errors detected, e.g.: %w", errorCount, lastError)
 	}
-	if all {
-		fmt.Fprintln(c.Out, "All resources in the functions namespace have been undeployed")
-	} else {
-		fmt.Fprintln(c.Out, "The requested resources have been undeployed")
-	}
+	template.Print(`{{success checkmark}} The requested resources have been undeployed.{{nl}}`, nil)
 	return nil
 }
-
-// cleanNamespace is a subroutine of RunServerlessDeploy for clearing the entire namespace
-// func cleanNamespace(c *CmdConfig) error {
-// 	result, err := ServerlessExec(c, "namespace/clean", "--force")
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if result.Error != "" {
-// 		return fmt.Errorf(result.Error)
-// 	}
-// 	return nil
-// }

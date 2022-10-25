@@ -210,7 +210,7 @@ type ServerlessService interface {
 	DeletePackage(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	ListFunctions(string, int, int) ([]whisk.Action, error)
-	DeleteFunction(string) error
+	DeleteFunction(string, bool) error
 	InvokeFunction(string, interface{}, bool, bool) (interface{}, error)
 	InvokeFunctionViaWeb(string, interface{}) error
 	ListActivations(whisk.ActivationListOptions) ([]whisk.Activation, error)
@@ -697,6 +697,7 @@ func (s *serverlessService) CleanNamespace() error {
 	// 	}
 	// }
 
+	// Deletes all functions
 	fns, err := s.ListFunctions("", 0, 0)
 	if err != nil {
 		return err
@@ -708,11 +709,11 @@ func (s *serverlessService) CleanNamespace() error {
 		if len(pkg) == 2 {
 			name = pkg[1] + "/" + fn.Name
 		}
-		fmt.Println(name)
-		// err := s.DeleteFunction(fn.Name)
-		// if err != nil {
-		// 	return err
-		// }
+
+		err := s.DeleteFunction(name, false)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -776,10 +777,26 @@ func (s *serverlessService) ListFunctions(pkg string, skip int, limit int) ([]wh
 }
 
 // DeleteFunction removes a function from the namespace
-func (s *serverlessService) DeleteFunction(name string) error {
+func (s *serverlessService) DeleteFunction(name string, deleteTriggers bool) error {
 	err := initWhisk(s)
 	if err != nil {
 		return err
+	}
+
+	if deleteTriggers {
+		ctx := context.TODO()
+		triggers, err := s.ListTriggers(ctx, name)
+
+		if err != nil {
+			return err
+		}
+
+		for _, trig := range triggers {
+			err = s.DeleteTrigger(ctx, trig.Name)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	_, e := s.owClient.Actions.Delete(name)
@@ -803,7 +820,8 @@ func (s *serverlessService) DeletePackage(name string, force bool) error {
 
 		for _, fn := range pkg.Actions {
 			funcName := name + "/" + fn.Name
-			_, err = s.owClient.Actions.Delete(funcName)
+
+			err = s.DeleteFunction(funcName, false)
 
 			if err != nil {
 				return err
