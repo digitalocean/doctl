@@ -686,6 +686,8 @@ func (s *serverlessService) CleanNamespace() error {
 	ctx := context.TODO()
 	triggers, err := s.ListTriggers(ctx, "")
 
+	// Intentionally ignore errors when listing triggers, the trigger API is behind a
+	// feature flag and may will return an error for users not enabled.
 	if err == nil {
 		for _, trig := range triggers {
 			err = s.DeleteTrigger(ctx, trig.Name)
@@ -708,6 +710,7 @@ func (s *serverlessService) CleanNamespace() error {
 			name = pkg[1] + "/" + fn.Name
 		}
 
+		// All triggers for the namespace are deleted above so we don't need to remove the trigger for each individual function.
 		err := s.DeleteFunction(name, false)
 		if err != nil {
 			return err
@@ -785,6 +788,8 @@ func (s *serverlessService) DeleteFunction(name string, deleteTriggers bool) err
 		ctx := context.TODO()
 		triggers, err := s.ListTriggers(ctx, name)
 
+		// Intentionally ignore errors when listing triggers, the trigger API is behind a
+		// feature flag and may will return an error for users not enabled.
 		if err == nil {
 			for _, trig := range triggers {
 				err = s.DeleteTrigger(ctx, trig.Name)

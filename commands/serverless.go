@@ -118,6 +118,7 @@ the entire packages are removed.`, Writer)
 	AddBoolFlag(undeploy, "triggers", "", false, "interpret all arguments as triggers")
 	AddBoolFlag(undeploy, "all", "", false, "remove all packages and functions")
 	AddBoolFlag(undeploy, doctl.ArgForce, doctl.ArgShortForce, false, "Delete namespace resources without confirmation prompt")
+	undeploy.Flags().MarkHidden(doctl.ArgForce)
 	undeploy.Flags().MarkHidden("triggers") // support is experimental at this point
 
 	cmd.AddCommand(Activations())
@@ -401,7 +402,6 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	haveArgs := len(c.Args) > 0
 	pkgFlag, _ := c.Doit.GetBool(c.NS, "packages")
 	trigFlag, _ := c.Doit.GetBool(c.NS, "triggers")
-	forceFlag, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 
 	all, _ := c.Doit.GetBool(c.NS, "all")
 
@@ -421,14 +421,7 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	}
 
 	if all {
-		if !forceFlag {
-			err = AskForConfirm("Are you sure you want to delete all resources in this namespace.")
-			if err != nil {
-				return err
-			}
-		}
-
-		err = sls.CleanNamespace()
+		err := sls.CleanNamespace()
 		if err != nil {
 			return err
 		}

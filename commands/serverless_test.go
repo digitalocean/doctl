@@ -476,11 +476,6 @@ func TestServerlessDeploy(t *testing.T) {
 }
 
 func TestServerlessUndeploy(t *testing.T) {
-	type testNimCmd struct {
-		cmd  string
-		args []string
-	}
-
 	tests := []struct {
 		name          string
 		doctlArgs     []string
@@ -496,7 +491,7 @@ func TestServerlessUndeploy(t *testing.T) {
 		{
 			name:          "with --all flag only",
 			doctlArgs:     nil,
-			doctlFlags:    map[string]string{"all": "", "force": ""},
+			doctlFlags:    map[string]string{"all": ""},
 			expectedError: nil,
 		},
 		{
@@ -549,7 +544,6 @@ func TestServerlessUndeploy(t *testing.T) {
 					config.Args = append(config.Args, tt.doctlArgs...)
 				}
 
-				// var force bool
 				var pkg bool = false
 				var trig bool = false
 				var all bool = false
