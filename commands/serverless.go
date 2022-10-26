@@ -449,7 +449,7 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 		if trigFlag {
 			err = sls.DeleteTrigger(ctx, arg)
 		} else if strings.Contains(arg, "/") || !pkgFlag {
-			err = sls.DeleteFunction(arg, false)
+			err = sls.DeleteFunction(arg, true)
 		} else {
 			err = sls.DeletePackage(arg, true)
 		}

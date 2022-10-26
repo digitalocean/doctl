@@ -51,6 +51,20 @@ func (mr *MockServerlessServiceMockRecorder) CheckServerlessStatus() *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckServerlessStatus", reflect.TypeOf((*MockServerlessService)(nil).CheckServerlessStatus))
 }
 
+// CleanNamespace mocks base method.
+func (m *MockServerlessService) CleanNamespace() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CleanNamespace")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CleanNamespace indicates an expected call of CleanNamespace.
+func (mr *MockServerlessServiceMockRecorder) CleanNamespace() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanNamespace", reflect.TypeOf((*MockServerlessService)(nil).CleanNamespace))
+}
+
 // Cmd mocks base method.
 func (m *MockServerlessService) Cmd(arg0 string, arg1 []string) (*exec.Cmd, error) {
 	m.ctrl.T.Helper()
@@ -81,6 +95,20 @@ func (mr *MockServerlessServiceMockRecorder) CreateNamespace(arg0, arg1, arg2 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNamespace", reflect.TypeOf((*MockServerlessService)(nil).CreateNamespace), arg0, arg1, arg2)
 }
 
+// DeleteFunction mocks base method.
+func (m *MockServerlessService) DeleteFunction(arg0 string, arg1 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteFunction", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteFunction indicates an expected call of DeleteFunction.
+func (mr *MockServerlessServiceMockRecorder) DeleteFunction(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteFunction", reflect.TypeOf((*MockServerlessService)(nil).DeleteFunction), arg0, arg1)
+}
+
 // DeleteNamespace mocks base method.
 func (m *MockServerlessService) DeleteNamespace(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
@@ -93,6 +121,20 @@ func (m *MockServerlessService) DeleteNamespace(arg0 context.Context, arg1 strin
 func (mr *MockServerlessServiceMockRecorder) DeleteNamespace(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNamespace", reflect.TypeOf((*MockServerlessService)(nil).DeleteNamespace), arg0, arg1)
+}
+
+// DeletePackage mocks base method.
+func (m *MockServerlessService) DeletePackage(arg0 string, arg1 bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePackage", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePackage indicates an expected call of DeletePackage.
+func (mr *MockServerlessServiceMockRecorder) DeletePackage(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePackage", reflect.TypeOf((*MockServerlessService)(nil).DeletePackage), arg0, arg1)
 }
 
 // DeleteTrigger mocks base method.
