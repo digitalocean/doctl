@@ -125,54 +125,43 @@ type ServerlessProject struct {
 	Strays      []string `json:"strays"`
 }
 
-// ProjectSpec describes a project.yml spec
+// ServerlessSpec describes a project.yml spec
 // reference: https://docs.nimbella.com/configuration/
-type ProjectSpec struct {
+type ServerlessSpec struct {
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 	Environment map[string]interface{} `json:"environment,omitempty"`
-	Packages    []*ProjectSpecPackage  `json:"packages,omitempty"`
+	Packages    []*ServerlessPackage   `json:"packages,omitempty"`
 }
 
-// ProjectSpecPackage ...
-type ProjectSpecPackage struct {
+// ServerlessPackage ...
+type ServerlessPackage struct {
 	Name        string                 `json:"name,omitempty"`
 	Shared      bool                   `json:"shared,omitempty"`
 	Environment map[string]interface{} `json:"environment,omitempty"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 	Annotations map[string]interface{} `json:"annotations,omitempty"`
-	Functions   []*ProjectSpecFunction `json:"functions,omitempty"`
+	Functions   []*ServerlessFunction  `json:"functions,omitempty"`
 }
 
-// ProjectSpecFunction ...
-type ProjectSpecFunction struct {
+// ServerlessFunction ...
+type ServerlessFunction struct {
 	Name    string `json:"name,omitempty"`
-	Package string `json:"package,omitempty"`
 	Binary  bool   `json:"binary,omitempty"`
 	Main    string `json:"main,omitempty"`
 	Runtime string `json:"runtime,omitempty"`
 	// `web` can be either true or "raw". We use interface{} to support both types. If we start consuming the value we
 	// should probably define a custom type with proper validation.
-	Web         interface{}               `json:"web,omitempty"`
-	WebSecure   interface{}               `json:"webSecure,omitempty"`
-	Sequence    []string                  `json:"sequence,omitempty"`
-	Parameters  map[string]interface{}    `json:"parameters,omitempty"`
-	Environment map[string]interface{}    `json:"environment,omitempty"`
-	Annotations map[string]interface{}    `json:"annotations,omitempty"`
-	Limits      ProjectSpecFunctionLimits `json:"limits,omitempty"`
-}
-
-// ProjectSpecFunctionLimits ...
-// ref: https://github.com/apache/openwhisk-client-js/blob/1aba396e8a59afd5a90acb8157f2009746d7a714/lib/main.d.ts#L263-L268
-type ProjectSpecFunctionLimits struct {
-	Timeout     int `json:"timeout,omitempty"`
-	Memory      int `json:"memory,omitempty"`
-	Logs        int `json:"logs,omitempty"`
-	Concurrency int `json:"concurrency,omitempty"`
+	Web         interface{}            `json:"web,omitempty"`
+	WebSecure   interface{}            `json:"webSecure,omitempty"`
+	Parameters  map[string]interface{} `json:"parameters,omitempty"`
+	Environment map[string]interface{} `json:"environment,omitempty"`
+	Annotations map[string]interface{} `json:"annotations,omitempty"`
+	Limits      map[string]int         `json:"limits,omitempty"`
 }
 
 // ProjectMetadata describes the nim project:get-metadata output structure.
 type ProjectMetadata struct {
-	ProjectSpec
+	ServerlessSpec
 	UnresolvedVariables []string `json:"unresolvedVariables,omitempty"`
 }
 
@@ -215,7 +204,7 @@ type ServerlessService interface {
 	WriteCredentials(ServerlessCredentials) error
 	ReadCredentials() (ServerlessCredentials, error)
 	GetHostInfo(string) (ServerlessHostInfo, error)
-	CheckServerlessStatus(string) error
+	CheckServerlessStatus() error
 	InstallServerless(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	ListFunctions(string, int, int) ([]whisk.Action, error)
@@ -246,7 +235,7 @@ const (
 	// Minimum required version of the sandbox plugin code.  The first part is
 	// the version of the incorporated Nimbella CLI and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "4.2.7-1.3.1"
+	minServerlessVersion = "4.2.8-1.3.1"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -350,7 +339,7 @@ func initWhisk(s *serverlessService) error {
 	if s.owClient != nil {
 		return nil
 	}
-	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	err := s.CheckServerlessStatus()
 	if err != nil {
 		return err
 	}
@@ -368,7 +357,7 @@ func initWhisk(s *serverlessService) error {
 	return nil
 }
 
-func (s *serverlessService) CheckServerlessStatus(leafCredsDir string) error {
+func (s *serverlessService) CheckServerlessStatus() error {
 	_, err := os.Stat(s.serverlessDir)
 	if os.IsNotExist(err) {
 		return ErrServerlessNotInstalled
@@ -376,7 +365,7 @@ func (s *serverlessService) CheckServerlessStatus(leafCredsDir string) error {
 	if !serverlessUptodate(s.serverlessDir) {
 		return ErrServerlessNeedsUpgrade
 	}
-	if !isServerlessConnected(leafCredsDir, s.serverlessDir) {
+	if !isServerlessConnected(s.credsDir) {
 		return ErrServerlessNotConnected
 	}
 	return nil
@@ -820,7 +809,11 @@ func (s *serverlessService) GetActivationCount(options whisk.ActivationCountOpti
 	if err != nil {
 		return empty, err
 	}
+
 	resp, _, err := s.owClient.Activations.Count(&options)
+	if err != nil {
+		return empty, err
+	}
 	return *resp, err
 }
 
@@ -831,7 +824,11 @@ func (s *serverlessService) GetActivation(id string) (whisk.Activation, error) {
 	if err != nil {
 		return empty, err
 	}
+
 	resp, _, err := s.owClient.Activations.Get(id)
+	if err != nil {
+		return empty, err
+	}
 	return *resp, err
 }
 
@@ -842,7 +839,12 @@ func (s *serverlessService) GetActivationLogs(id string) (whisk.Activation, erro
 	if err != nil {
 		return empty, err
 	}
+
 	resp, _, err := s.owClient.Activations.Logs(id)
+	if err != nil {
+		return empty, err
+	}
+
 	return *resp, err
 }
 
@@ -853,7 +855,11 @@ func (s *serverlessService) GetActivationResult(id string) (whisk.Response, erro
 	if err != nil {
 		return empty, err
 	}
+
 	resp, _, err := s.owClient.Activations.Result(id)
+	if err != nil {
+		return empty, err
+	}
 	return *resp, err
 }
 
@@ -892,7 +898,7 @@ func (s *serverlessService) WriteProject(project ServerlessProject) (string, err
 // of that function are listed.  If 'fcn' is empty all triggers are listed.
 func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]ServerlessTrigger, error) {
 	empty := []ServerlessTrigger{}
-	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	err := s.CheckServerlessStatus()
 	if err != nil {
 		return empty, err
 	}
@@ -946,7 +952,7 @@ func fixBaseDate(trigger ServerlessTrigger) ServerlessTrigger {
 // GetTrigger gets the contents of a trigger for display
 func (s *serverlessService) GetTrigger(ctx context.Context, name string) (ServerlessTrigger, error) {
 	empty := ServerlessTrigger{}
-	err := s.CheckServerlessStatus(HashAccessToken(s.accessToken))
+	err := s.CheckServerlessStatus()
 	if err != nil {
 		return empty, err
 	}
@@ -1018,8 +1024,8 @@ func readTopLevel(project *ServerlessProject) error {
 	return nil
 }
 
-func readProjectConfig(configPath string) (*ProjectSpec, error) {
-	spec := ProjectSpec{}
+func readProjectConfig(configPath string) (*ServerlessSpec, error) {
+	spec := ServerlessSpec{}
 	// reading config file content
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
@@ -1045,7 +1051,7 @@ func readProjectConfig(configPath string) (*ProjectSpec, error) {
 	return &spec, nil
 }
 
-func validateConfig(config *ProjectSpec) error {
+func validateConfig(config *ServerlessSpec) error {
 	forbiddenConfigs, err := ListForbiddenConfigs(config)
 
 	if err != nil {
@@ -1111,11 +1117,12 @@ func (s *serverlessService) ReadCredentials() (ServerlessCredentials, error) {
 // asking the plugin to validate credentials), so the test is not foolproof.
 // It merely tests whether a credentials directory has been created for the
 // current doctl access token and appears to have a credentials.json in it.
-func isServerlessConnected(leafCredsDir string, serverlessDir string) bool {
-	creds := GetCredentialDirectory(leafCredsDir, serverlessDir)
-	credsFile := filepath.Join(creds, CredentialsFile)
+func isServerlessConnected(credsDir string) bool {
+	credsFile := filepath.Join(credsDir, CredentialsFile)
 	_, err := os.Stat(credsFile)
-	return !os.IsNotExist(err)
+	// We used to test specifically for "not found" here but in fact any error is enough to
+	// prevent connections from working.
+	return err == nil
 }
 
 // serverlessUptodate answers whether the installed version of the serverless support is at least
@@ -1223,7 +1230,7 @@ func PreserveCreds(leafDir string, stagingDir string, serverlessDir string) erro
 }
 
 // ListForbiddenConfigs returns a list of forbidden config values in a project spec.
-func ListForbiddenConfigs(serverlessProject *ProjectSpec) ([]string, error) {
+func ListForbiddenConfigs(serverlessProject *ServerlessSpec) ([]string, error) {
 	var forbiddenConfigs []string
 
 	// validate package-level configs
@@ -1248,7 +1255,7 @@ func ListForbiddenConfigs(serverlessProject *ProjectSpec) ([]string, error) {
 
 // ListInvalidWebsecureValues returns a list of forbidden websecure values for an action in a project spec.
 // a valid websecure value is any string other than "true"
-func ListInvalidWebsecureValues(serverlessProject *ProjectSpec) ([]string, error) {
+func ListInvalidWebsecureValues(serverlessProject *ServerlessSpec) ([]string, error) {
 	var invalidValues = []string{}
 
 	for _, p := range serverlessProject.Packages {
@@ -1256,12 +1263,12 @@ func ListInvalidWebsecureValues(serverlessProject *ProjectSpec) ([]string, error
 			switch value := f.WebSecure.(type) {
 			case string:
 				if strings.ToLower(value) == "true" { /* "true" is not a valid value */
-					invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, f.Package, value))
+					invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, p.Name, value))
 				}
 				// any other value is fine
 			default: // bool or any other type
 				/* "web-action" must be a string */
-				invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, f.Package, value))
+				invalidValues = append(invalidValues, fmt.Sprintf("function %s in package %s configures an invalid value for webSecure: %v", f.Name, p.Name, value))
 			}
 		}
 	}
@@ -1270,7 +1277,7 @@ func ListInvalidWebsecureValues(serverlessProject *ProjectSpec) ([]string, error
 }
 
 // validate project-level forbidden configs
-func validateProjectLevelFields(serverlessPackage *ProjectSpecPackage) ([]string, error) {
+func validateProjectLevelFields(serverlessPackage *ServerlessPackage) ([]string, error) {
 	var forbiddenConfigs []string
 
 	if serverlessPackage.Shared {
@@ -1289,12 +1296,8 @@ func validateProjectLevelFields(serverlessPackage *ProjectSpecPackage) ([]string
 }
 
 // validate project-level forbidden configs
-func validateFunctionLevelFields(serverlessAction *ProjectSpecFunction) ([]string, error) {
+func validateFunctionLevelFields(serverlessAction *ServerlessFunction) ([]string, error) {
 	var forbiddenConfigs []string
-
-	if serverlessAction.Sequence != nil {
-		forbiddenConfigs = append(forbiddenConfigs, ForbiddenConfigSequence)
-	}
 
 	if _, ok := serverlessAction.Annotations[ForbiddenAnnotationProvideAPIKey]; ok {
 		forbiddenConfigs = append(forbiddenConfigs, ForbiddenAnnotationProvideAPIKey)

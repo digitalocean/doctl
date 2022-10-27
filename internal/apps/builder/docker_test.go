@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -100,7 +103,6 @@ func TestDockerComponentBuild(t *testing.T) {
 	t.Run("happy path - service", func(t *testing.T) {
 		service := &godo.AppServiceSpec{
 			DockerfilePath: "./Dockerfile",
-			SourceDir:      "./subdir",
 			Name:           "web",
 			Envs: []*godo.AppVariableDefinition{
 				{
@@ -158,7 +160,7 @@ func TestDockerComponentBuild(t *testing.T) {
 		}
 
 		mockClient.EXPECT().ImageBuild(ctx, gomock.Any(), types.ImageBuildOptions{
-			Dockerfile: service.DockerfilePath,
+			Dockerfile: "Dockerfile",
 			Tags: []string{
 				builder.AppImageOutputName(),
 			},
@@ -180,8 +182,8 @@ func TestDockerComponentBuild(t *testing.T) {
 
 	t.Run("happy path - static site", func(t *testing.T) {
 		site := &godo.AppStaticSiteSpec{
-			DockerfilePath: "./Dockerfile",
-			SourceDir:      "./subdir",
+			DockerfilePath: "Dockerfile",
+			SourceDir:      "subdir",
 			Name:           "web",
 			OutputDir:      "/app/public",
 			Envs: []*godo.AppVariableDefinition{
@@ -205,59 +207,78 @@ func TestDockerComponentBuild(t *testing.T) {
 
 		mockClient := NewMockDockerEngineClient(ctrl)
 		logBuf := newLoggableBuffer(t)
+		contextDir := t.TempDir()
+		err := os.Mkdir(filepath.Join(contextDir, "subdir"), 0775)
+		require.NoError(t, err)
+		// Dockerfile is outside of source_dir
+		err = ioutil.WriteFile(filepath.Join(contextDir, "Dockerfile"), []byte("FROM scratch"), 0664)
+		require.NoError(t, err)
+
 		builder := &DockerComponentBuilder{
 			baseComponentBuilder: baseComponentBuilder{
 				cli:        mockClient,
 				spec:       spec,
 				component:  site,
 				logWriter:  &logBuf,
-				contextDir: t.TempDir(),
+				contextDir: contextDir,
 			},
 			dockerComponent: site,
 		}
 
-		// app image build
-		appImageBuild := mockClient.EXPECT().ImageBuild(ctx, gomock.Any(), types.ImageBuildOptions{
-			Dockerfile: site.DockerfilePath,
-			Tags: []string{
-				builder.AppImageOutputName(),
-			},
-			BuildArgs: map[string]*string{
-				"build-arg-1": strPtr("build-val-1"),
-				"override-1":  strPtr("override-1"),
-			},
-		}).Return(types.ImageBuildResponse{
-			Body: io.NopCloser(strings.NewReader("")),
-		}, nil)
+		gomock.InOrder(
+			// app image build
+			mockClient.EXPECT().ImageBuild(ctx, gomock.Any(), &delegatedMatcher{
+				Description: "matches app container image build options",
+				MatchesFunc: func(x any) bool {
+					options, ok := x.(types.ImageBuildOptions)
+					if !ok {
+						return false
+					}
+					t := &testingT{}
+					assert.Equal(t, []string{builder.AppImageOutputName()}, options.Tags)
+					assert.Equal(t, map[string]*string{
+						"build-arg-1": strPtr("build-val-1"),
+						"override-1":  strPtr("override-1"),
+					}, options.BuildArgs)
+					return !t.Failed()
+				},
+			}).
+				DoAndReturn(func(ctx context.Context, context io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error) {
+					// options.Dockerfile is added to the archive as a fake .dockerfile.{random} path as it's outside the source dir
+					assert.Regexp(t, regexp.MustCompile(`^\.dockerfile\.[a-z0-9]+$`), options.Dockerfile)
+					return types.ImageBuildResponse{
+						Body: io.NopCloser(strings.NewReader("")),
+					}, nil
+				}),
 
-		// static site build
-		mockClient.EXPECT().
-			ImageBuild(ctx, gomock.Any(),
-				&delegatedMatcher{
-					Description: "matches static site image build options",
-					MatchesFunc: func(x any) bool {
-						options, ok := x.(types.ImageBuildOptions)
-						if !ok {
-							return false
-						}
+			// static site build
+			mockClient.EXPECT().
+				ImageBuild(ctx, gomock.Any(),
+					&delegatedMatcher{
+						Description: "matches static site image build options",
+						MatchesFunc: func(x any) bool {
+							options, ok := x.(types.ImageBuildOptions)
+							if !ok {
+								return false
+							}
 
-						t := &testingT{}
-						assert.Equal(t, "./Dockerfile.static", options.Dockerfile)
-						assert.Equal(t, []string{builder.StaticSiteImageOutputName()}, options.Tags)
-						assert.Equal(t, map[string]*string{
-							"app_image":   strPtr(builder.AppImageOutputName()),
-							"nginx_image": strPtr(StaticSiteNginxImage),
-							"output_dir":  strPtr(site.GetOutputDir()),
-						}, options.BuildArgs)
-						return !t.Failed()
-					},
-				}).
-			DoAndReturn(func(ctx context.Context, context io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error) {
-				// assert the contents of the archive
-				t.Run("static site archive", func(t *testing.T) {
-					assertArchiveContents(t, context, map[string]func(t *testing.T, h *tar.Header, c []byte){
-						"Dockerfile.static": func(t *testing.T, h *tar.Header, c []byte) {
-							assert.Equal(t, `
+							t := &testingT{}
+							assert.Equal(t, "./Dockerfile.static", options.Dockerfile)
+							assert.Equal(t, []string{builder.StaticSiteImageOutputName()}, options.Tags)
+							assert.Equal(t, map[string]*string{
+								"app_image":   strPtr(builder.AppImageOutputName()),
+								"nginx_image": strPtr(StaticSiteNginxImage),
+								"output_dir":  strPtr(site.GetOutputDir()),
+							}, options.BuildArgs)
+							return !t.Failed()
+						},
+					}).
+				DoAndReturn(func(ctx context.Context, context io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error) {
+					// assert the contents of the archive
+					t.Run("static site archive", func(t *testing.T) {
+						assertArchiveContents(t, context, map[string]func(t *testing.T, h *tar.Header, c []byte){
+							"Dockerfile.static": func(t *testing.T, h *tar.Header, c []byte) {
+								assert.Equal(t, `
 ARG app_image
 ARG nginx_image
 ARG output_dir
@@ -268,10 +289,10 @@ ARG output_dir
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=content ${output_dir}/ /www
 `,
-								string(c))
-						},
-						"nginx.conf": func(t *testing.T, h *tar.Header, c []byte) {
-							assert.Equal(t, `
+									string(c))
+							},
+							"nginx.conf": func(t *testing.T, h *tar.Header, c []byte) {
+								assert.Equal(t, `
 server {
 	listen 8080;
 	listen [::]:8080;
@@ -286,18 +307,18 @@ server {
 	gzip_static on;
 }
 `,
-								string(c))
-						},
+									string(c))
+							},
+						})
 					})
-				})
 
-				return types.ImageBuildResponse{
-					Body: io.NopCloser(strings.NewReader("")),
-				}, nil
-			}).
-			After(appImageBuild)
+					return types.ImageBuildResponse{
+						Body: io.NopCloser(strings.NewReader("")),
+					}, nil
+				}),
+		)
 
-		_, err := builder.Build(ctx)
+		_, err = builder.Build(ctx)
 		require.NoError(t, err)
 	})
 }

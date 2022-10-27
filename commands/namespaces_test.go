@@ -114,7 +114,7 @@ func TestNamespacesCreate(t *testing.T) {
 					tm.serverless.EXPECT().ListNamespaces(ctx).Return(initialList, nil)
 				}
 				if tt.willConnect {
-					tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
+					tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 					creds := do.ServerlessCredentials{Namespace: "hello", APIHost: "https://api.example.com"}
 					tm.serverless.EXPECT().WriteCredentials(creds).Return(nil)
 				}
@@ -244,11 +244,6 @@ func TestNamespacesDelete(t *testing.T) {
 						APIHost:   "https://sgp1.example.com",
 					},
 				}}
-				// Confirmation dialog can't be fully mocked but it can be replaced
-				// (as in confirmation_test.go).
-				retrieveUserInput = func(string) (string, error) {
-					return "no", nil
-				}
 
 				ctx := context.TODO()
 				tm.serverless.EXPECT().ListNamespaces(ctx).Return(listForMatching, nil)

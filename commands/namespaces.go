@@ -61,12 +61,12 @@ Both a region and a label must be specified.`,
 		`Use `+"`"+`doctl serverless namespaces delete`+"`"+` to delete a functions namespace.
 The full label or full id of the namespace is required as an argument.
 You are prompted for confirmation unless `+"`"+`--force`+"`"+` is specified.`,
-		Writer)
+		Writer, aliasOpt("rm"))
 	AddBoolFlag(delete, "force", "f", false, "Just do it, omitting confirmatory prompt")
 
 	CmdBuilder(cmd, RunNamespacesList, "list", "Lists your namespaces",
 		`Use `+"`"+`doctl serverless namespaces list`+"`"+` to list your functions namespaces.`,
-		Writer, displayerType(&displayers.Namespaces{}))
+		Writer, aliasOpt("ls"), displayerType(&displayers.Namespaces{}))
 
 	CmdBuilder(cmd, RunNamespacesListRegions, "list-regions", "Lists the accepted 'region' values",
 		`Use `+"`"+`doctl serverless namespaces list-regions`+"`"+` to list the values that are accepted
@@ -97,7 +97,7 @@ func RunNamespacesCreate(c *CmdConfig) error {
 	if !uniq {
 		return fmt.Errorf("you are using  label '%s' for another namespace; labels should be unique", label)
 	}
-	if !skipConnect && ss.CheckServerlessStatus(hashAccessToken(c)) == do.ErrServerlessNotInstalled {
+	if !skipConnect && ss.CheckServerlessStatus() == do.ErrServerlessNotInstalled {
 		skipConnect = true
 		fmt.Fprintln(c.Out, "Warning: namespace will be created but not connected (serverless software is not installed)")
 	}

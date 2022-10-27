@@ -21,6 +21,10 @@ var (
 	builtBinaryPath string
 )
 
+const (
+	confirmNonInteractiveOutput = "Warning: Requires confirmation. Use the `--force` flag to continue without confirmation.\nError: Operation aborted."
+)
+
 func TestRun(t *testing.T) {
 	suite.Run(t)
 }

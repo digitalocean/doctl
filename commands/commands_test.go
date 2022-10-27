@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"github.com/spf13/cobra"
 	"io/ioutil"
 	"sort"
 	"testing"
@@ -284,4 +285,30 @@ func withTestClient(t *testing.T, tFn testFn) {
 	}
 
 	tFn(config, tm)
+}
+
+func assertCommandAliases(t *testing.T, cmd *cobra.Command) {
+	for _, c := range cmd.Commands() {
+		if c.Name() == "list" {
+			assert.Contains(t, c.Aliases, "ls", "Missing 'ls' alias for 'list' command.")
+		}
+		if c.Name() == "delete" {
+			assert.Contains(t, c.Aliases, "rm", "Missing 'rm' alias for 'delete' command.")
+		}
+	}
+}
+
+func recurseCommand(t *testing.T, cmd *cobra.Command) {
+	t.Run(cmd.Name(), func(t *testing.T) {
+		assertCommandAliases(t, cmd)
+	})
+	for _, c := range cmd.Commands() {
+		recurseCommand(t, c)
+	}
+}
+
+func TestCommandAliases(t *testing.T) {
+	for _, cmd := range DoitCmd.Commands() {
+		recurseCommand(t, cmd)
+	}
 }

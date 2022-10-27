@@ -17,13 +17,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"os/signal"
 	"regexp"
+	"syscall"
 	"time"
 
 	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
 
@@ -63,6 +67,7 @@ logs.`,
 		`Use `+"`"+`doctl serverless activations list`+"`"+` to list the activation records that are present in the cloud for previously
 invoked functions.`,
 		Writer,
+		aliasOpt("ls"),
 		displayerType(&displayers.Activation{}),
 	)
 	AddIntFlag(list, "limit", "l", 30, "only return LIMIT number of activations (default 30, max 200)")
@@ -83,6 +88,10 @@ for new arrivals.`,
 	AddIntFlag(logs, "limit", "n", 1, "Fetch the last LIMIT activation logs (up to 200)")
 	AddBoolFlag(logs, "strip", "r", false, "strip timestamp information and output first line only")
 	AddBoolFlag(logs, "follow", "", false, "Fetch logs continuously")
+
+	// This is the default behavior, so we want to prevent users from explicitly using this flag. We don't want to remove it
+	// to maintain backwards compatibility
+	logs.Flags().MarkHidden("last")
 
 	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the Results for an Activation",
 		`Use `+"`"+`doctl serverless activations result`+"`"+` to retrieve just the results portion
@@ -176,7 +185,7 @@ func makeBanner(writer io.Writer, activation whisk.Activation) {
 	end := time.UnixMilli(activation.End).Format("01/02 03:04:05")
 	init := text.NewStyled("=== ").Muted()
 	body := fmt.Sprintf("%s %s %s %s:%s", activation.ActivationID, displayers.GetActivationStatus(activation.StatusCode),
-		end, activation.Name, activation.Version)
+		end, displayers.GetActivationFunctionName(activation), activation.Version)
 	msg := text.NewStyled(body).Highlight()
 	fmt.Fprintln(writer, init.String()+msg.String())
 }
@@ -193,7 +202,7 @@ func printLogs(writer io.Writer, strip bool, activation whisk.Activation) {
 
 // dtsRegex is a regular expression that matches the prefix of some activation log entries.
 // It is used by stripLog to remove that prefix
-var dtsRegex = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:.*: `)
+var dtsRegex = regexp.MustCompile(`(?U)\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:.*: `)
 
 // stripLog strips the prefix from log entries
 func stripLog(entry string) string {
@@ -288,31 +297,146 @@ func RunActivationsList(c *CmdConfig) error {
 // RunActivationsLogs supports the 'activations logs' command
 func RunActivationsLogs(c *CmdConfig) error {
 	argCount := len(c.Args)
+
 	if argCount > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
-	replaceFunctionWithAction(c)
-	augmentPackageWithDeployed(c)
-	if isWatching(c) {
-		return RunServerlessExecStreaming(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
+
+	var activationId string
+	if argCount == 1 {
+		activationId = c.Args[0]
 	}
-	output, err := RunServerlessExec(activationLogs, c, []string{flagLast, flagStrip, flagWatch, flagDeployed}, []string{flagAction, flagPackage, flagLimit})
+
+	sls := c.Serverless()
+
+	limitFlag, _ := c.Doit.GetInt(c.NS, flagLimit)
+	stripFlag, _ := c.Doit.GetBool(c.NS, flagStrip)
+	followFlag, _ := c.Doit.GetBool(c.NS, flagFollow)
+	functionFlag, _ := c.Doit.GetString(c.NS, flagFunction)
+	packageFlag, _ := c.Doit.GetString(c.NS, flagPackage)
+
+	limit := limitFlag
+	if limitFlag > 200 {
+		limit = 200
+	}
+
+	if activationId != "" {
+		actv, err := sls.GetActivationLogs(activationId)
+		if err != nil {
+			return err
+		}
+		printLogs(c.Out, stripFlag, actv)
+		return nil
+
+	} else if followFlag {
+		sigChannel := make(chan os.Signal, 1)
+		signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
+		errChannel := make(chan error, 1)
+
+		go pollActivations(errChannel, sls, c.Out, functionFlag, packageFlag)
+
+		select {
+		case <-sigChannel:
+			fmt.Fprintf(c.Out, "\r")
+			return nil
+		case e := <-errChannel:
+			return e
+		}
+	}
+
+	listOptions := whisk.ActivationListOptions{Limit: limit, Name: functionFlag, Docs: true}
+	actvs, err := sls.ListActivations(listOptions)
+
 	if err != nil {
 		return err
 	}
-	return c.PrintServerlessTextOutput(output)
+
+	if packageFlag != "" {
+		actvs = filterPackages(actvs, packageFlag)
+	}
+
+	for _, a := range reverseActivations(actvs) {
+		makeBanner(c.Out, a)
+		printLogs(c.Out, stripFlag, a)
+		fmt.Fprintln(c.Out)
+	}
+	return nil
 }
 
-// isWatching (1) modifies the config replacing the "follow" flag (significant to doctl) with the
-// "watch" flag (significant to nim)  (2) Returns whether the command should be run in streaming mode
-// (will be true iff follow/watch is true).
-func isWatching(c *CmdConfig) bool {
-	yes, err := c.Doit.GetBool(c.NS, flagFollow)
-	if yes && err == nil {
-		c.Doit.Set(c.NS, flagWatch, true)
-		return true
+// Polls the ActivationList API at an interval and prints the results.
+func pollActivations(ec chan error, sls do.ServerlessService, writer io.Writer, functionFlag string, packageFlag string) {
+	ticker := time.NewTicker(time.Second * 5)
+	tc := ticker.C
+	var lastActivationTimestamp int64 = 0
+	requestLimit := 1
+
+	// There seems to be a race condition where functions invocation that start before lastActivationTimestamp
+	// but is not completed by the time we make the list activation request will display twice. So prevent this issue
+	// we keep track of the activation ids displayed, so we don't display the logs twice.
+	printedActivations := map[string]int64{}
+
+	for {
+		select {
+		case <-tc:
+			options := whisk.ActivationListOptions{Limit: requestLimit, Since: lastActivationTimestamp, Docs: true, Name: functionFlag}
+			actv, err := sls.ListActivations(options)
+
+			if err != nil {
+				ec <- err
+				ticker.Stop()
+				break
+			}
+
+			if packageFlag != "" {
+				actv = filterPackages(actv, packageFlag)
+			}
+
+			if len(actv) > 0 {
+				for _, activation := range reverseActivations(actv) {
+					_, knownActivation := printedActivations[activation.ActivationID]
+
+					if knownActivation {
+						continue
+					}
+
+					printedActivations[activation.ActivationID] = activation.Start
+
+					makeBanner(writer, activation)
+					printLogs(writer, false, activation)
+					fmt.Fprintln(writer)
+				}
+
+				lastItem := actv[len(actv)-1]
+				lastActivationTimestamp = lastItem.Start + 100
+				requestLimit = 0
+			}
+		}
 	}
-	return false
+}
+
+// Filters the activations to only return activations belonging to the package.
+func filterPackages(activations []whisk.Activation, packageName string) []whisk.Activation {
+	filteredActv := []whisk.Activation{}
+
+	for _, activation := range activations {
+		inPackage := displayers.GetActivationPackageName(activation) == packageName
+		if inPackage {
+			filteredActv = append(filteredActv, activation)
+		}
+	}
+	return filteredActv
+}
+
+func reverseActivations(actv []whisk.Activation) []whisk.Activation {
+	a := make([]whisk.Activation, len(actv))
+	copy(a, actv)
+
+	for i := len(a)/2 - 1; i >= 0; i-- {
+		opp := len(a) - 1 - i
+		a[i], a[opp] = a[opp], a[i]
+	}
+
+	return a
 }
 
 // RunActivationsResult supports the 'activations result' command
@@ -368,24 +492,4 @@ func RunActivationsResult(c *CmdConfig) error {
 		printResult(c.Out, activation.Result)
 	}
 	return nil
-}
-
-// replaceFunctionWithAction detects that --function was specified and renames it to --action (which is what nim
-// will expect to see).
-func replaceFunctionWithAction(c *CmdConfig) {
-	value, err := c.Doit.GetString(c.NS, flagFunction)
-	if err == nil && value != "" {
-		c.Doit.Set(c.NS, flagFunction, "")
-		c.Doit.Set(c.NS, flagAction, value)
-	}
-}
-
-// augmentPackageWithDeployed detects that --package was specified and adds the --deployed flag if so.
-// The code in 'nim' (inherited from Adobe I/O) will otherwise look for a deployment manifest which we
-// don't want to support here.
-func augmentPackageWithDeployed(c *CmdConfig) {
-	value, err := c.Doit.GetString(c.NS, flagPackage)
-	if err == nil && value != "" {
-		c.Doit.Set(c.NS, flagDeployed, true)
-	}
 }

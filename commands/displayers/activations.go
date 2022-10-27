@@ -64,7 +64,7 @@ func (a *Activation) KV() []map[string]interface{} {
 			"Start":        getActivationStartType(actv),
 			"Wait":         getActivationAnnotationValue(actv, "waitTime"),
 			"Duration":     fmt.Sprintf("%dms", actv.Duration),
-			"Function":     getActivationFunctionName(actv),
+			"Function":     GetActivationFunctionName(actv),
 		}
 		out = append(out, o)
 	}
@@ -79,7 +79,7 @@ func getActivationStartType(a whisk.Activation) string {
 }
 
 // Gets the full function name for the activation.
-func getActivationFunctionName(a whisk.Activation) string {
+func GetActivationFunctionName(a whisk.Activation) string {
 	name := a.Name
 	path := getActivationAnnotationValue(a, "path")
 
@@ -96,6 +96,27 @@ func getActivationFunctionName(a whisk.Activation) string {
 	return name
 }
 
+func GetActivationPackageName(a whisk.Activation) string {
+	name := a.Name
+
+	if a.Annotations == nil {
+		return ""
+	}
+
+	path := a.Annotations.GetValue("path")
+
+	if path == nil {
+		return name
+	}
+
+	parts := strings.Split(path.(string), "/")
+
+	if len(parts) == 3 {
+		return parts[1]
+	}
+
+	return ""
+}
 func getActivationAnnotationValue(a whisk.Activation, key string) interface{} {
 	if a.Annotations == nil {
 		return nil
