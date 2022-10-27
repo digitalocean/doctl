@@ -24,6 +24,7 @@ import (
 
 	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
@@ -254,9 +255,18 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 	blocking := !noWait
 	result := blocking && !full
 	response, err := c.Serverless().InvokeFunction(c.Args[0], params, blocking, result)
+
 	if err != nil {
+		if response != nil {
+			activationResponse := response.(map[string]interface{})
+			template.Print(`Request accepted, but processing not completed yet. {{nl}}All functions invocation >= 30s will get demoted to an asynchronous invocation. Use {{highlight "--no-wait"}} flag to immediately return the activation id. {{nl}}
+Use this command to view the results.
+{{bold "doctl sls activations result" }} {{bold .}} {{nl 2}}`, activationResponse["activationId"])
+			return nil
+		}
 		return err
 	}
+
 	output := do.ServerlessOutput{Entity: response}
 	return c.PrintServerlessTextOutput(output)
 }
