@@ -476,110 +476,65 @@ func TestServerlessDeploy(t *testing.T) {
 }
 
 func TestServerlessUndeploy(t *testing.T) {
-	type testNimCmd struct {
-		cmd  string
-		args []string
-	}
-
 	tests := []struct {
-		name                 string
-		doctlArgs            []string
-		doctlFlags           map[string]string
-		expectedNimCmds      []testNimCmd
-		expectedError        error
-		expectTriggerDeletes []string
-		expectTriggerList    bool
+		name          string
+		doctlArgs     []string
+		doctlFlags    map[string]string
+		expectedError error
 	}{
 		{
-			name:            "no arguments or flags",
-			doctlArgs:       nil,
-			doctlFlags:      nil,
-			expectedNimCmds: nil,
-			expectedError:   errUndeployTooFewArgs,
+			name:          "no arguments or flags",
+			doctlArgs:     nil,
+			doctlFlags:    nil,
+			expectedError: errUndeployTooFewArgs,
 		},
 		{
-			name:       "with --all flag only",
-			doctlArgs:  nil,
-			doctlFlags: map[string]string{"all": ""},
-			expectedNimCmds: []testNimCmd{
-				{
-					cmd:  "namespace/clean",
-					args: []string{"--force"},
-				},
-			},
+			name:          "with --all flag only",
+			doctlArgs:     nil,
+			doctlFlags:    map[string]string{"all": ""},
 			expectedError: nil,
 		},
 		{
-			name:       "mixed args, no flags",
-			doctlArgs:  []string{"foo/bar", "baz"},
-			doctlFlags: nil,
-			expectedNimCmds: []testNimCmd{
-				{
-					cmd:  "action/delete",
-					args: []string{"foo/bar"},
-				},
-				{
-					cmd:  "action/delete",
-					args: []string{"baz"},
-				},
-			},
+			name:          "mixed args, no flags",
+			doctlArgs:     []string{"foo/bar", "baz"},
+			doctlFlags:    nil,
 			expectedError: nil,
 		},
 		{
-			name:       "mixed args, --packages flag",
-			doctlArgs:  []string{"foo/bar", "baz"},
-			doctlFlags: map[string]string{"packages": ""},
-			expectedNimCmds: []testNimCmd{
-				{
-					cmd:  "action/delete",
-					args: []string{"foo/bar"},
-				},
-				{
-					cmd:  "package/delete",
-					args: []string{"baz", "--recursive"},
-				},
-			},
+			name:          "mixed args, --packages flag",
+			doctlArgs:     []string{"foo/bar", "baz"},
+			doctlFlags:    map[string]string{"packages": ""},
 			expectedError: nil,
 		},
 		{
-			name:            "mixed args, --all flag",
-			doctlArgs:       []string{"foo/bar", "baz"},
-			doctlFlags:      map[string]string{"all": ""},
-			expectedNimCmds: nil,
-			expectedError:   errUndeployAllAndArgs,
+			name:          "mixed args, --all flag",
+			doctlArgs:     []string{"foo/bar", "baz"},
+			doctlFlags:    map[string]string{"all": ""},
+			expectedError: errUndeployAllAndArgs,
 		},
 		{
-			name:            "--triggers and --packages",
-			doctlArgs:       []string{"foo/bar", "baz"},
-			doctlFlags:      map[string]string{"triggers": "", "packages": ""},
-			expectedNimCmds: nil,
-			expectedError:   errUndeployTrigPkg,
+			name:          "--triggers and --packages",
+			doctlArgs:     []string{"foo/bar", "baz"},
+			doctlFlags:    map[string]string{"triggers": "", "packages": ""},
+			expectedError: errUndeployTrigPkg,
 		},
 		{
-			name:                 "--triggers and args",
-			doctlArgs:            []string{"fire1", "fire2"},
-			doctlFlags:           map[string]string{"triggers": ""},
-			expectedNimCmds:      nil,
-			expectedError:        nil,
-			expectTriggerDeletes: []string{"fire1", "fire2"},
+			name:          "--triggers and args",
+			doctlArgs:     []string{"fire1", "fire2"},
+			doctlFlags:    map[string]string{"triggers": ""},
+			expectedError: nil,
 		},
 		{
-			name:                 "--triggers and --all",
-			doctlArgs:            nil,
-			doctlFlags:           map[string]string{"triggers": "", "all": ""},
-			expectedNimCmds:      nil,
-			expectedError:        nil,
-			expectTriggerDeletes: []string{"fireA", "fireB"},
-			expectTriggerList:    true,
+			name:          "--triggers and --all",
+			doctlArgs:     nil,
+			doctlFlags:    map[string]string{"triggers": "", "all": ""},
+			expectedError: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
 				cannedTriggerList := []do.ServerlessTrigger{
 					{Name: "fireA"},
 					{Name: "fireB"},
@@ -589,8 +544,24 @@ func TestServerlessUndeploy(t *testing.T) {
 					config.Args = append(config.Args, tt.doctlArgs...)
 				}
 
+				var pkg bool = false
+				var trig bool = false
+				var all bool = false
+
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {
+						if k == "all" {
+							all = true
+						}
+
+						if k == "packages" {
+							pkg = true
+						}
+
+						if k == "triggers" {
+							trig = true
+						}
+
 						if v == "" {
 							config.Doit.Set(config.NS, k, true)
 						} else {
@@ -599,20 +570,29 @@ func TestServerlessUndeploy(t *testing.T) {
 					}
 				}
 
-				if tt.expectedError == nil && len(tt.expectedNimCmds) > 0 {
-					tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
-				}
-				if tt.expectTriggerList {
+				if all && !trig && !pkg && len(config.Args) == 0 {
+					tm.serverless.EXPECT().CleanNamespace().Return(nil)
+				} else if all && trig && len(config.Args) == 0 {
 					tm.serverless.EXPECT().ListTriggers(context.TODO(), "").Return(cannedTriggerList, nil)
-				}
-				for i := range tt.expectedNimCmds {
-					tm.serverless.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
-					tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
-				}
-				for _, trig := range tt.expectTriggerDeletes {
-					tm.serverless.EXPECT().DeleteTrigger(context.TODO(), trig)
+					for _, st := range cannedTriggerList {
+						tm.serverless.EXPECT().DeleteTrigger(context.TODO(), st.Name)
+					}
+
+				} else if !all && !trig && len(config.Args) > 0 {
+					for _, arg := range config.Args {
+						if !pkg || strings.Contains(arg, "/") {
+							tm.serverless.EXPECT().DeleteFunction(arg, true).Return(nil)
+						} else {
+							tm.serverless.EXPECT().DeletePackage(arg, true).Return(nil)
+						}
+					}
+				} else if !all && trig && !pkg && len(config.Args) > 0 {
+					for _, t := range config.Args {
+						tm.serverless.EXPECT().DeleteTrigger(context.TODO(), t)
+					}
 				}
 				err := RunServerlessUndeploy(config)
+
 				if tt.expectedError != nil {
 					require.Error(t, err)
 					assert.ErrorIs(t, err, tt.expectedError)
