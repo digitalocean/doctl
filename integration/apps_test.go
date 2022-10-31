@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -1281,5 +1282,81 @@ var _ = suite("apps/list-buildpacks", func(t *testing.T, when spec.G, it spec.S)
 			Name    ID                 Version    Documentation
 			Go      digitalocean/go    1.2.3      ftp://docs/go
 		`), string(output))
+	})
+})
+
+var _ = suite("apps/upgrade-buildpack", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Add("content-type", "application/json")
+
+			switch req.URL.Path {
+			case fmt.Sprintf("/v2/apps/%s/upgrade_buildpack", testAppUUID):
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				var r godo.UpgradeBuildpackOptions
+				err := json.NewDecoder(req.Body).Decode(&r)
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				assert.Equal(t, godo.UpgradeBuildpackOptions{
+					BuildpackID:       "digitalocean/go",
+					MajorVersion:      3,
+					TriggerDeployment: true,
+				}, r)
+
+				json.NewEncoder(w).Encode(&godo.UpgradeBuildpackResponse{
+					AffectedComponents: []string{"api", "www"},
+					Deployment:         testDeployment,
+				})
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	it("upgrades buildpacks", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps",
+			"upgrade-buildpack",
+			"--buildpack", "digitalocean/go",
+			"--major-version", "3",
+			testAppUUID,
+		)
+
+		output, err := cmd.CombinedOutput()
+
+		expect.Equal(heredoc.Doc(`
+			upgraded buildpack digitalocean/go. 2 components were affected: [api www].
+			triggered a new deployment to apply the upgrade:
+			
+			ID                                      Cause     Progress    Created At                       Updated At
+			f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC
+		`), string(output))
+		expect.NoError(err)
 	})
 })

@@ -237,6 +237,22 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.Buildpacks{}),
 	)
 
+	upgradeBuildpack := CmdBuilder(
+		cmd,
+		RunAppUpgradeBuildpack,
+		"upgrade-buildpack <app id>",
+		"Upgrade buildpack",
+		`Upgrade a buildpack for an app`,
+		Writer,
+		displayerType(&displayers.Deployments{}),
+	)
+	AddStringFlag(upgradeBuildpack,
+		doctl.ArgBuildpack, "", "", "The ID of the buildpack to upgrade", requiredOpt())
+	AddIntFlag(upgradeBuildpack,
+		doctl.ArgMajorVersion, "", 0, "The major version to upgrade to. If empty, will upgrade to the latest available.")
+	AddBoolFlag(upgradeBuildpack,
+		doctl.ArgTriggerDeployment, "", true, "Whether to trigger a new deployment to apply the upgrade")
+
 	cmd.AddCommand(appsSpec())
 	cmd.AddCommand(appsTier())
 
@@ -976,6 +992,45 @@ func RunAppListBuildpacks(c *CmdConfig) error {
 		return err
 	}
 	return c.Display(displayers.Buildpacks(bps))
+}
+
+// RunAppUpgradeBuildpack upgrades a buildpack for an app
+func RunAppUpgradeBuildpack(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	appID := c.Args[0]
+	buildpack, err := c.Doit.GetString(c.NS, doctl.ArgBuildpack)
+	if err != nil {
+		return err
+	}
+	majorVersion, err := c.Doit.GetInt(c.NS, doctl.ArgMajorVersion)
+	if err != nil {
+		return err
+	}
+	triggerDeployment, err := c.Doit.GetBool(c.NS, doctl.ArgTriggerDeployment)
+	if err != nil {
+		return err
+	}
+
+	components, dep, err := c.Apps().UpgradeBuildpack(appID, godo.UpgradeBuildpackOptions{
+		BuildpackID:       buildpack,
+		MajorVersion:      int32(majorVersion),
+		TriggerDeployment: triggerDeployment,
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "upgraded buildpack %s. %d components were affected: %v.\n", buildpack, len(components), components)
+
+	if dep != nil {
+		fmt.Fprint(os.Stderr, "triggered a new deployment to apply the upgrade:\n\n")
+		return c.Display(displayers.Deployments([]*godo.Deployment{dep}))
+	}
+
+	return nil
 }
 
 func getIDByName(apps []*godo.App, name string) (string, error) {

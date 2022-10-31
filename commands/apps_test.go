@@ -39,6 +39,7 @@ func TestAppsCommand(t *testing.T) {
 		"list-alerts",
 		"update-alert-destinations",
 		"list-buildpacks",
+		"upgrade-buildpack",
 	)
 }
 
@@ -792,6 +793,31 @@ func TestRunAppsListBuildpacks(t *testing.T) {
 		tm.apps.EXPECT().ListBuildpacks().Times(1).Return([]*godo.Buildpack{testBuildpack}, nil)
 
 		err := RunAppListBuildpacks(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsUpgradeBuildpack(t *testing.T) {
+	deployment := &godo.Deployment{
+		ID:        uuid.New().String(),
+		Spec:      &testAppSpec,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		tm.apps.EXPECT().UpgradeBuildpack(appID, godo.UpgradeBuildpackOptions{
+			BuildpackID:       "buildpack-id",
+			MajorVersion:      3,
+			TriggerDeployment: true,
+		}).Times(1).Return([]string{"www", "api"}, deployment, nil)
+
+		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgBuildpack, "buildpack-id")
+		config.Doit.Set(config.NS, doctl.ArgMajorVersion, 3)
+		config.Doit.Set(config.NS, doctl.ArgTriggerDeployment, true)
+		err := RunAppUpgradeBuildpack(config)
 		require.NoError(t, err)
 	})
 }

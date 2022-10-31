@@ -46,6 +46,7 @@ type AppsService interface {
 	UpdateAlertDestinations(appID, alertID string, update *godo.AlertDestinationUpdateRequest) (*godo.AppAlert, error)
 
 	ListBuildpacks() ([]*godo.Buildpack, error)
+	UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) (affectedComponents []string, deployment *godo.Deployment, err error)
 }
 
 type appsService struct {
@@ -247,4 +248,12 @@ func (s *appsService) ListBuildpacks() ([]*godo.Buildpack, error) {
 		return nil, err
 	}
 	return bps, nil
+}
+
+func (s *appsService) UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) ([]string, *godo.Deployment, error) {
+	res, _, err := s.client.Apps.UpgradeBuildpack(s.ctx, appID, options)
+	if err != nil {
+		return nil, nil, err
+	}
+	return res.AffectedComponents, res.Deployment, nil
 }

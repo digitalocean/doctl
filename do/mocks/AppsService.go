@@ -302,3 +302,19 @@ func (mr *MockAppsServiceMockRecorder) UpdateAlertDestinations(appID, alertID, u
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAlertDestinations", reflect.TypeOf((*MockAppsService)(nil).UpdateAlertDestinations), appID, alertID, update)
 }
+
+// UpgradeBuildpack mocks base method.
+func (m *MockAppsService) UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) ([]string, *godo.Deployment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpgradeBuildpack", appID, options)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*godo.Deployment)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// UpgradeBuildpack indicates an expected call of UpgradeBuildpack.
+func (mr *MockAppsServiceMockRecorder) UpgradeBuildpack(appID, options interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeBuildpack", reflect.TypeOf((*MockAppsService)(nil).UpgradeBuildpack), appID, options)
+}

@@ -102,9 +102,13 @@ func (d Deployments) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, len(d))
 
 	for i, deployment := range d {
-		progress := fmt.Sprintf("%d/%d", deployment.Progress.SuccessSteps, deployment.Progress.TotalSteps)
-		if deployment.Progress.ErrorSteps > 0 {
-			progress = fmt.Sprintf("%s (errors: %d)", progress, deployment.Progress.ErrorSteps)
+		var progress string
+		if deployment.Progress != nil {
+			p := deployment.Progress
+			progress = fmt.Sprintf("%d/%d", p.SuccessSteps, p.TotalSteps)
+			if p.ErrorSteps > 0 {
+				progress = fmt.Sprintf("%s (errors: %d)", progress, p.ErrorSteps)
+			}
 		}
 
 		out[i] = map[string]interface{}{
