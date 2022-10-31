@@ -38,6 +38,7 @@ func TestAppsCommand(t *testing.T) {
 		"tier",
 		"list-alerts",
 		"update-alert-destinations",
+		"list-buildpacks",
 	)
 }
 
@@ -113,6 +114,16 @@ var (
 				Channel: "channel name",
 			},
 		},
+	}
+
+	testBuildpack = &godo.Buildpack{
+		Name:         "Go",
+		ID:           "digitalocean/go",
+		Version:      "1.2.3",
+		MajorVersion: 1,
+		Latest:       true,
+		DocsLink:     "ftp://docs/go",
+		Description:  []string{"Install Go"},
 	}
 )
 
@@ -772,6 +783,15 @@ func TestRunAppsUpdateAlertDestinations(t *testing.T) {
 		config.Args = append(config.Args, appID, testAlert.ID)
 		config.Doit.Set(config.NS, doctl.ArgAppAlertDestinations, destinationsFile.Name())
 		err = RunAppUpdateAlertDestinations(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsListBuildpacks(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.apps.EXPECT().ListBuildpacks().Times(1).Return([]*godo.Buildpack{testBuildpack}, nil)
+
+		err := RunAppListBuildpacks(config)
 		require.NoError(t, err)
 	})
 }

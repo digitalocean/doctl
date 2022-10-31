@@ -44,6 +44,8 @@ type AppsService interface {
 
 	ListAlerts(appID string) ([]*godo.AppAlert, error)
 	UpdateAlertDestinations(appID, alertID string, update *godo.AlertDestinationUpdateRequest) (*godo.AppAlert, error)
+
+	ListBuildpacks() ([]*godo.Buildpack, error)
 }
 
 type appsService struct {
@@ -237,4 +239,12 @@ func (s *appsService) UpdateAlertDestinations(appID, alertID string, update *god
 		return nil, err
 	}
 	return alert, nil
+}
+
+func (s *appsService) ListBuildpacks() ([]*godo.Buildpack, error) {
+	bps, _, err := s.client.Apps.ListBuildpacks(s.ctx)
+	if err != nil {
+		return nil, err
+	}
+	return bps, nil
 }

@@ -227,6 +227,16 @@ Only basic information is included with the text output format. For complete app
 	)
 	AddStringFlag(updateAlertDestinations, doctl.ArgAppAlertDestinations, "", "", "Path to an alert destinations file in JSON or YAML format.")
 
+	CmdBuilder(
+		cmd,
+		RunAppListBuildpacks,
+		"list-buildpacks",
+		"List buildpacks",
+		`List all buildpacks available on App Platform`,
+		Writer,
+		displayerType(&displayers.Buildpacks{}),
+	)
+
 	cmd.AddCommand(appsSpec())
 	cmd.AddCommand(appsTier())
 
@@ -957,6 +967,15 @@ func parseAppAlert(destinations []byte) (*godo.AlertDestinationUpdateRequest, er
 	}
 
 	return &alertDestinations, nil
+}
+
+// RunAppListBuildpacks lists buildpacks
+func RunAppListBuildpacks(c *CmdConfig) error {
+	bps, err := c.Apps().ListBuildpacks()
+	if err != nil {
+		return err
+	}
+	return c.Display(displayers.Buildpacks(bps))
 }
 
 func getIDByName(apps []*godo.App, name string) (string, error) {

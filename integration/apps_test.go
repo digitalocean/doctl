@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/godo"
 	"github.com/gorilla/websocket"
 	"github.com/sclevine/spec"
@@ -99,6 +100,15 @@ var (
 		InProgressDeployment: testDeployment,
 		CreatedAt:            testAppTime,
 		UpdatedAt:            testAppTime,
+	}
+	testBuildpack = &godo.Buildpack{
+		Name:         "Go",
+		ID:           "digitalocean/go",
+		Version:      "1.2.3",
+		MajorVersion: 1,
+		Latest:       true,
+		DocsLink:     "ftp://docs/go",
+		Description:  []string{"Install Go"},
 	}
 	testAppResponse = struct {
 		App *godo.App `json:"app"`
@@ -1212,5 +1222,64 @@ services:
 
 		expectedOutput := "Error: parsing app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []*godo.AppServiceSpec"
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+})
+
+var _ = suite("apps/list-buildpacks", func(t *testing.T, when spec.G, it spec.S) {
+	var (
+		expect *require.Assertions
+		server *httptest.Server
+	)
+
+	it.Before(func() {
+		expect = require.New(t)
+
+		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Add("content-type", "application/json")
+
+			switch req.URL.Path {
+			case "/v2/apps/buildpacks":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				json.NewEncoder(w).Encode(struct {
+					Buildpacks []*godo.Buildpack `json:"buildpacks"`
+				}{
+					Buildpacks: []*godo.Buildpack{testBuildpack},
+				})
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
+		}))
+	})
+
+	it("lists buildpacks", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps",
+			"list-buildpacks",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expect.Equal(heredoc.Doc(`
+			Name    ID                 Version    Documentation
+			Go      digitalocean/go    1.2.3      ftp://docs/go
+		`), string(output))
 	})
 })
