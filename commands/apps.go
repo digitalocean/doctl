@@ -62,6 +62,7 @@ func Apps() *Command {
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
 	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
+	AddStringFlag(create, doctl.ArgProjectID, "", "", "The id of the project to assign the created app and resources to. If not provided, the default project will be used.")
 
 	CmdBuilder(
 		cmd,
@@ -76,7 +77,7 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.Apps{}),
 	)
 
-	CmdBuilder(
+	list := CmdBuilder(
 		cmd,
 		RunAppsList,
 		"list",
@@ -88,6 +89,7 @@ Only basic information is included with the text output format. For complete app
 		aliasOpt("ls"),
 		displayerType(&displayers.Apps{}),
 	)
+	AddBoolFlag(list, doctl.ArgWithProjects, "", false, "Boolean that specifies whether project ids should be fetched along with listed apps")
 
 	update := CmdBuilder(
 		cmd,
@@ -253,7 +255,7 @@ func RunAppsCreate(c *CmdConfig) error {
 		if gerr, ok := err.(*godo.ErrorResponse); ok && gerr.Response.StatusCode == 409 && upsert {
 			notice("App already exists, updating")
 
-			apps, err := c.Apps().List()
+			apps, err := c.Apps().List(false)
 			if err != nil {
 				return err
 			}
@@ -315,7 +317,12 @@ func RunAppsGet(c *CmdConfig) error {
 
 // RunAppsList lists all apps.
 func RunAppsList(c *CmdConfig) error {
-	apps, err := c.Apps().List()
+	withProjects, err := c.Doit.GetBool(c.NS, doctl.ArgWithProjects)
+	if err != nil {
+		return err
+	}
+
+	apps, err := c.Apps().List(withProjects)
 	if err != nil {
 		return err
 	}

@@ -23,7 +23,7 @@ import (
 type AppsService interface {
 	Create(req *godo.AppCreateRequest) (*godo.App, error)
 	Get(appID string) (*godo.App, error)
-	List() ([]*godo.App, error)
+	List(withProjects bool) ([]*godo.App, error)
 	Update(appID string, req *godo.AppUpdateRequest) (*godo.App, error)
 	Delete(appID string) error
 	Propose(req *godo.AppProposeRequest) (*godo.AppProposeResponse, error)
@@ -77,8 +77,9 @@ func (s *appsService) Get(appID string) (*godo.App, error) {
 	return app, nil
 }
 
-func (s *appsService) List() ([]*godo.App, error) {
+func (s *appsService) List(withProjects bool) ([]*godo.App, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		opt.WithProjects = withProjects
 		list, resp, err := s.client.Apps.List(s.ctx, opt)
 		if err != nil {
 			return nil, nil, err
