@@ -250,7 +250,13 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
-	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
+	projectID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
+	if err != nil {
+		return err
+	}
+
+	// Do this
+	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec, ProjectID: projectID})
 	if err != nil {
 		if gerr, ok := err.(*godo.ErrorResponse); ok && gerr.Response.StatusCode == 409 && upsert {
 			notice("App already exists, updating")
