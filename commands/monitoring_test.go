@@ -100,7 +100,7 @@ func TestAlertPolicyCreate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
-func TestAlertPolicyCreate_InvalidTypes(t *testing.T) {
+func TestAlertPolicyCreate_ValidTypes(t *testing.T) {
 	tests := []struct {
 		alertType   string
 		expectedErr error
