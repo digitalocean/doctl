@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
@@ -83,7 +84,7 @@ The install operation is long-running, and a network connection is required.`,
 	CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
 		Writer)
 
-	CmdBuilder(cmd, RunServerlessConnect, "connect [<hint>]", "Connects local serverless support to a functions namespace",
+	connect := CmdBuilder(cmd, RunServerlessConnect, "connect [<hint>]", "Connects local serverless support to a functions namespace",
 		`This command connects `+"`"+`doctl serverless`+"`"+` support to a functions namespace of your choice.
 The optional argument should be a (complete or partial) match to a namespace label or id.
 If there is no argument, all namespaces are matched.  If the result is exactly one namespace,
@@ -91,6 +92,12 @@ you are connected to it.  If there are multiple namespaces, you have an opportun
 the one you want from a dialog.  Use `+"`"+`doctl serverless namespaces`+"`"+` to create, delete, and
 list your namespaces.`,
 		Writer)
+	// The apihost and auth flags will always be hidden.  They support testing using doctl on clusters that are not in production
+	// and hence are unknown to the portal.
+	AddStringFlag(connect, "apihost", "", "", "")
+	AddStringFlag(connect, "auth", "", "", "")
+	connect.Flags().MarkHidden("apihost")
+	connect.Flags().MarkHidden("auth")
 
 	status := CmdBuilder(cmd, RunServerlessStatus, "status", "Provide information about serverless support",
 		`This command reports the status of serverless support and some details concerning its connected functions namespace.
@@ -110,6 +117,8 @@ the entire packages are removed.`, Writer)
 	AddBoolFlag(undeploy, "packages", "p", false, "interpret simple name arguments as packages")
 	AddBoolFlag(undeploy, "triggers", "", false, "interpret all arguments as triggers")
 	AddBoolFlag(undeploy, "all", "", false, "remove all packages and functions")
+	AddBoolFlag(undeploy, doctl.ArgForce, doctl.ArgShortForce, false, "Delete namespace resources without confirmation prompt")
+	undeploy.Flags().MarkHidden(doctl.ArgForce)
 	undeploy.Flags().MarkHidden("triggers") // support is experimental at this point
 
 	cmd.AddCommand(Activations())
@@ -142,7 +151,7 @@ func RunServerlessInstall(c *CmdConfig) error {
 		}
 		credsLeafDir = hashAccessToken(c)
 		serverless = c.Serverless()
-		status = serverless.CheckServerlessStatus(credsLeafDir)
+		status = serverless.CheckServerlessStatus()
 	}
 	switch status {
 	case nil:
@@ -164,7 +173,7 @@ func RunServerlessInstall(c *CmdConfig) error {
 func RunServerlessUpgrade(c *CmdConfig) error {
 	credsLeafDir := hashAccessToken(c)
 	serverless := c.Serverless()
-	status := serverless.CheckServerlessStatus(credsLeafDir)
+	status := serverless.CheckServerlessStatus()
 	switch status {
 	case nil:
 		fmt.Fprintln(c.Out, "Serverless support is already installed at an appropriate version.  No action needed.")
@@ -182,7 +191,7 @@ func RunServerlessUpgrade(c *CmdConfig) error {
 
 // RunServerlessUninstall removes the serverless support and any stored credentials
 func RunServerlessUninstall(c *CmdConfig) error {
-	err := c.Serverless().CheckServerlessStatus(hashAccessToken(c))
+	err := c.Serverless().CheckServerlessStatus()
 	if err == do.ErrServerlessNotInstalled {
 		return errors.New("Nothing to uninstall: no serverless support was found")
 	}
@@ -194,15 +203,36 @@ func RunServerlessConnect(c *CmdConfig) error {
 	var (
 		err error
 	)
+	sls := c.Serverless()
+
+	// Support the hidden capability to connect to non-production clusters to support various kinds of testing.
+	// The presence of 'auth' and 'apihost' flags trumps other parts of the syntax, but both must be present.
+	apihost, _ := c.Doit.GetString(c.NS, "apihost")
+	auth, _ := c.Doit.GetString(c.NS, "auth")
+	if len(apihost) > 0 && len(auth) > 0 {
+		namespace, err := sls.GetNamespaceFromCluster(apihost, auth)
+		if err != nil {
+			return err
+		}
+		credential := do.ServerlessCredential{Auth: auth}
+		creds := do.ServerlessCredentials{
+			APIHost:     apihost,
+			Namespace:   namespace,
+			Credentials: map[string]map[string]do.ServerlessCredential{apihost: {namespace: credential}},
+		}
+		return finishConnecting(sls, creds, "", c.Out)
+	}
+	if len(apihost) > 0 || len(auth) > 0 {
+		return fmt.Errorf("If either of 'apihost' or 'auth' is specified then both must be specified")
+	}
+	// Neither 'auth' nor 'apihost' was specified, so continue with other options.
 
 	if len(c.Args) > 1 {
 		return doctl.NewTooManyArgsErr(c.NS)
 	}
 
-	sls := c.Serverless()
-
 	// Non-standard check for the connect command (only): it's ok to not be connected.
-	err = sls.CheckServerlessStatus(hashAccessToken(c))
+	err = sls.CheckServerlessStatus()
 	if err != nil && err != do.ErrServerlessNotConnected {
 		return err
 	}
@@ -298,7 +328,8 @@ func finishConnecting(sls do.ServerlessService, creds do.ServerlessCredentials, 
 
 // RunServerlessStatus gives a report on the status of the serverless (installed, up to date, connected)
 func RunServerlessStatus(c *CmdConfig) error {
-	status := c.Serverless().CheckServerlessStatus(hashAccessToken(c))
+	sls := c.Serverless()
+	status := sls.CheckServerlessStatus()
 	if status == do.ErrServerlessNotInstalled {
 		return status
 	}
@@ -321,20 +352,20 @@ func RunServerlessStatus(c *CmdConfig) error {
 	}
 	// Check the connected state more deeply (since this is a status command we want to
 	// be more accurate; the connected check in checkServerlessStatus is lightweight and heuristic).
-	result, err := ServerlessExec(c, "auth/current", "--apihost", "--name")
-	if err != nil || len(result.Error) > 0 {
+	creds, err := sls.ReadCredentials()
+	if err != nil {
+		return nil
+	}
+	auth := creds.Credentials[creds.APIHost][creds.Namespace].Auth
+	checkNS, err := sls.GetNamespaceFromCluster(creds.APIHost, auth)
+	if err != nil || checkNS != creds.Namespace {
 		return do.ErrServerlessNotConnected
 	}
-	if result.Entity == nil {
-		return errors.New("Could not retrieve information about the connected namespace")
-	}
-	mapResult := result.Entity.(map[string]interface{})
-	apiHost := mapResult["apihost"].(string)
-	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", mapResult["name"], apiHost)
+	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", creds.Namespace, creds.APIHost)
 	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", do.GetMinServerlessVersion())
 	languages, _ := c.Doit.GetBool(c.NS, "languages")
 	if languages {
-		return showLanguageInfo(c, apiHost)
+		return showLanguageInfo(c, creds.APIHost)
 	}
 	return nil
 }
@@ -371,7 +402,11 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	haveArgs := len(c.Args) > 0
 	pkgFlag, _ := c.Doit.GetBool(c.NS, "packages")
 	trigFlag, _ := c.Doit.GetBool(c.NS, "triggers")
+
 	all, _ := c.Doit.GetBool(c.NS, "all")
+
+	sls := c.Serverless()
+
 	if haveArgs && all {
 		return errUndeployAllAndArgs
 	}
@@ -384,74 +419,43 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	if all && trigFlag {
 		return cleanTriggers(c)
 	}
+
 	if all {
-		return cleanNamespace(c)
+		err := sls.CleanNamespace()
+		if err != nil {
+			return err
+		}
+		template.Print(`{{success checkmark}} All resources in the namespace have been undeployed.{{nl}}`, nil)
+		return nil
 	}
+
 	var lastError error
 	errorCount := 0
 	var ctx context.Context
-	var sls do.ServerlessService
+
 	if trigFlag {
 		ctx = context.TODO()
-		sls = c.Serverless()
 	}
+
 	for _, arg := range c.Args {
 		var err error
 		if trigFlag {
 			err = sls.DeleteTrigger(ctx, arg)
 		} else if strings.Contains(arg, "/") || !pkgFlag {
-			err = deleteFunction(c, arg)
+			err = sls.DeleteFunction(arg, true)
 		} else {
-			err = deletePackage(c, arg)
+			err = sls.DeletePackage(arg, true)
 		}
+
 		if err != nil {
 			lastError = err
 			errorCount++
 		}
 	}
+
 	if errorCount > 0 {
 		return fmt.Errorf("there were %d errors detected, e.g.: %w", errorCount, lastError)
 	}
-	if all {
-		fmt.Fprintln(c.Out, "All resources in the functions namespace have been undeployed")
-	} else {
-		fmt.Fprintln(c.Out, "The requested resources have been undeployed")
-	}
-	return nil
-}
-
-// cleanNamespace is a subroutine of RunServerlessDeploy for clearing the entire namespace
-func cleanNamespace(c *CmdConfig) error {
-	result, err := ServerlessExec(c, "namespace/clean", "--force")
-	if err != nil {
-		return err
-	}
-	if result.Error != "" {
-		return fmt.Errorf(result.Error)
-	}
-	return nil
-}
-
-// deleteFunction is a subroutine of RunServerlessDeploy for deleting one function
-func deleteFunction(c *CmdConfig, fn string) error {
-	result, err := ServerlessExec(c, "action/delete", fn)
-	if err != nil {
-		return err
-	}
-	if result.Error != "" {
-		return fmt.Errorf(result.Error)
-	}
-	return nil
-}
-
-// deletePackage is a subroutine of RunServerlessDeploy for deleting a package
-func deletePackage(c *CmdConfig, pkg string) error {
-	result, err := ServerlessExec(c, "package/delete", pkg, "--recursive")
-	if err != nil {
-		return err
-	}
-	if result.Error != "" {
-		return fmt.Errorf(result.Error)
-	}
+	template.Print(`{{success checkmark}} The requested resources have been undeployed.{{nl}}`, nil)
 	return nil
 }

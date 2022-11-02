@@ -320,6 +320,9 @@ This command updates the specified configuration values for the specified Kubern
 		"A boolean flag indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window (default false). To enable automatic upgrade, supply --auto-upgrade(=true).")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSurgeUpgrade, "", false,
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
+		"Boolean specifying whether to enable the highly-available control plane for the cluster")
+	cmdKubeClusterUpdate.Flags().MarkHidden(doctl.ArgHA) // disabled until HA enablement launch
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Boolean specifying whether to update the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
@@ -1690,6 +1693,11 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	}
 	r.SurgeUpgrade = surgeUpgrade
 
+	ha, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgHA)
+	if err != nil {
+		return err
+	}
+	r.HA = ha
 	return nil
 }
 

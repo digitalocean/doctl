@@ -20,11 +20,12 @@ package whisk
 import (
 	"errors"
 	"fmt"
-	"github.com/apache/openwhisk-client-go/wski18n"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/apache/openwhisk-client-go/wski18n"
 )
 
 type ActivationService struct {
@@ -48,6 +49,10 @@ type Activation struct {
 	Publish      *bool       `json:"publish,omitempty"`
 }
 
+type ActivationCount struct {
+	Activations int64 `json:"activations"`
+}
+
 type ActivationFilteredRow struct {
 	Row       Activation
 	HeaderFmt string
@@ -61,7 +66,7 @@ type Response struct {
 	Result     *Result `json:"result,omitempty"`
 }
 
-type Result map[string]interface{}
+type Result interface{}
 
 type ActivationListOptions struct {
 	Name  string `url:"name,omitempty"`
@@ -72,7 +77,15 @@ type ActivationListOptions struct {
 	Docs  bool   `url:"docs,omitempty"`
 }
 
-//MWD - This structure may no longer be needed as the log format is now a string and not JSON
+type ActivationCountOptions struct {
+	Name  string `url:"name,omitempty"`
+	Skip  int    `url:"skip"`
+	Since int64  `url:"since,omitempty"`
+	Upto  int64  `url:"upto,omitempty"`
+	Count bool   `url:"count,omitempty"`
+}
+
+// MWD - This structure may no longer be needed as the log format is now a string and not JSON
 type Log struct {
 	Log    string `json:"log,omitempty"`
 	Stream string `json:"stream,omitempty"`
@@ -118,7 +131,9 @@ func TruncateStr(str string, maxlen int) string {
 }
 
 // ToSummaryRowString() returns a compound string of required parameters for printing
-//   from CLI command `wsk activation list`.
+//
+//	from CLI command `wsk activation list`.
+//
 // ***Method of type Sortable***
 func (activation ActivationFilteredRow) ToSummaryRowString() string {
 	s := time.Unix(0, activation.Row.Start*1000000)
@@ -187,6 +202,44 @@ func (s *ActivationService) List(options *ActivationListOptions) ([]Activation, 
 	}
 
 	return activations, resp, nil
+}
+
+func (s *ActivationService) Count(options *ActivationCountOptions) (*ActivationCount, *http.Response, error) {
+	// TODO :: for some reason /activations only works with "_" as namespace
+	s.client.Namespace = "_"
+	route := "activations"
+
+	options.Count = true
+	routeUrl, err := addRouteOptions(route, options)
+
+	if err != nil {
+		Debug(DbgError, "addRouteOptions(%s, %#v) error: '%s'\n", route, options, err)
+		errStr := wski18n.T("Unable to append options '{{.options}}' to URL route '{{.route}}': {{.err}}",
+			map[string]interface{}{"options": fmt.Sprintf("%#v", options), "route": route, "err": err})
+		werr := MakeWskErrorFromWskError(errors.New(errStr), err, EXIT_CODE_ERR_GENERAL, DISPLAY_MSG, NO_DISPLAY_USAGE)
+		return nil, nil, werr
+	}
+
+	req, err := s.client.NewRequestUrl("GET", routeUrl, nil, IncludeNamespaceInUrl, AppendOpenWhiskPathPrefix, EncodeBodyAsJson, AuthRequired)
+	if err != nil {
+		Debug(DbgError, "http.NewRequestUrl(GET, %s, nil, IncludeNamespaceInUrl, AppendOpenWhiskPathPrefix, EncodeBodyAsJson, AuthRequired) error: '%s'\n", route, err)
+		errStr := wski18n.T("Unable to create HTTP request for GET '{{.route}}': {{.err}}",
+			map[string]interface{}{"route": route, "err": err})
+		werr := MakeWskErrorFromWskError(errors.New(errStr), err, EXIT_CODE_ERR_GENERAL, DISPLAY_MSG, NO_DISPLAY_USAGE)
+		return nil, nil, werr
+	}
+
+	Debug(DbgInfo, "Sending HTTP request - URL '%s'; req %#v\n", req.URL.String(), req)
+
+	count := new(ActivationCount)
+	resp, err := s.client.Do(req, &count, ExitWithSuccessOnTimeout)
+
+	if err != nil {
+		Debug(DbgError, "s.client.Do() error - HTTP req %s; error '%s'\n", req.URL.String(), err)
+		return nil, resp, err
+	}
+
+	return count, resp, nil
 }
 
 func (s *ActivationService) Get(activationID string) (*Activation, *http.Response, error) {

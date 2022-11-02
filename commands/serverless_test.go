@@ -100,7 +100,7 @@ func TestServerlessConnect(t *testing.T) {
 				nsResponse := do.NamespaceListResponse{Namespaces: tt.namespaceList}
 				creds := do.ServerlessCredentials{Namespace: "ns1", APIHost: "https://api.example.com"}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotConnected)
+				tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotConnected)
 				ctx := context.TODO()
 				tm.serverless.EXPECT().ListNamespaces(ctx).Return(nsResponse, nil)
 				if tt.expectedError == nil {
@@ -127,18 +127,20 @@ func TestServerlessStatusWhenConnected(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
-		fakeCmd := &exec.Cmd{
-			Stdout: config.Out,
-		}
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-			Entity: map[string]interface{}{
-				"name":    "hello",
-				"apihost": "https://api.example.com",
+		tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "hello",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"hello": do.ServerlessCredential{
+						Auth: "here-are-some-credentials",
+					},
+				},
 			},
 		}, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "here-are-some-credentials").Return("hello", nil)
 
 		err := RunServerlessStatus(config)
 		require.NoError(t, err)
@@ -151,9 +153,6 @@ func TestServerlessStatusWithLanguages(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 		config.Doit.Set(config.NS, "languages", true)
-		fakeCmd := &exec.Cmd{
-			Stdout: config.Out,
-		}
 		fakeHostInfo := do.ServerlessHostInfo{
 			Runtimes: map[string][]do.ServerlessRuntime{
 				"go": {
@@ -183,15 +182,21 @@ func TestServerlessStatusWithLanguages(t *testing.T) {
     go:1.22 (go:default)
 `
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-			Entity: map[string]interface{}{
-				"name":    "hello",
-				"apihost": "https://api.example.com",
+		tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "hello",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"hello": do.ServerlessCredential{
+						Auth: "here-are-some-credentials",
+					},
+				},
 			},
 		}, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "here-are-some-credentials").Return("hello", nil)
 		tm.serverless.EXPECT().GetHostInfo("https://api.example.com").Return(fakeHostInfo, nil)
+
 		err := RunServerlessStatus(config)
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), expectedDisplay)
@@ -200,15 +205,20 @@ func TestServerlessStatusWithLanguages(t *testing.T) {
 
 func TestServerlessStatusWhenNotConnected(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		fakeCmd := &exec.Cmd{
-			Stdout: config.Out,
-		}
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-		tm.serverless.EXPECT().Cmd("auth/current", []string{"--apihost", "--name"}).Return(fakeCmd, nil)
-		tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-			Error: "403",
+		tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "hello",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"hello": do.ServerlessCredential{
+						Auth: "here-are-some-credentials",
+					},
+				},
+			},
 		}, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "here-are-some-credentials").Return("not-hello", errors.New("an error"))
 
 		err := RunServerlessStatus(config)
 		require.Error(t, err)
@@ -218,7 +228,7 @@ func TestServerlessStatusWhenNotConnected(t *testing.T) {
 
 func TestServerlessStatusWhenNotInstalled(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNotInstalled)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotInstalled)
 
 		err := RunServerlessStatus(config)
 
@@ -229,7 +239,7 @@ func TestServerlessStatusWhenNotInstalled(t *testing.T) {
 
 func TestServerlessStatusWhenNotUpToDate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(do.ErrServerlessNeedsUpgrade)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNeedsUpgrade)
 
 		err := RunServerlessStatus(config)
 
@@ -244,7 +254,7 @@ func TestServerlessInstallFromScratch(t *testing.T) {
 		config.Out = buf
 
 		credsToken := hashAccessToken(config)
-		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNotInstalled)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotInstalled)
 		tm.serverless.EXPECT().InstallServerless(credsToken, false).Return(nil)
 
 		err := RunServerlessInstall(config)
@@ -257,8 +267,7 @@ func TestServerlessInstallWhenInstalledNotCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		credsToken := hashAccessToken(config)
-		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNeedsUpgrade)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNeedsUpgrade)
 
 		err := RunServerlessInstall(config)
 		require.NoError(t, err)
@@ -271,7 +280,7 @@ func TestServerlessInstallWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 
 		err := RunServerlessInstall(config)
 		require.NoError(t, err)
@@ -284,8 +293,7 @@ func TestServerlessUpgradeWhenNotInstalled(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		credsToken := hashAccessToken(config)
-		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNotInstalled)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotInstalled)
 
 		err := RunServerlessUpgrade(config)
 		require.NoError(t, err)
@@ -298,7 +306,7 @@ func TestServerlessUpgradeWhenInstalledAndCurrent(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).Return(nil)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
 
 		err := RunServerlessUpgrade(config)
 		require.NoError(t, err)
@@ -312,7 +320,7 @@ func TestServerlessUpgradeWhenInstalledAndNotCurrent(t *testing.T) {
 		config.Out = buf
 
 		credsToken := hashAccessToken(config)
-		tm.serverless.EXPECT().CheckServerlessStatus(credsToken).Return(do.ErrServerlessNeedsUpgrade)
+		tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNeedsUpgrade)
 		tm.serverless.EXPECT().InstallServerless(credsToken, true).Return(nil)
 
 		err := RunServerlessUpgrade(config)
@@ -325,28 +333,31 @@ func TestServerlessInit(t *testing.T) {
 		name            string
 		doctlArgs       string
 		doctlFlags      map[string]string
-		expectedNimArgs []string
 		out             map[string]interface{}
+		expectCheck     bool
+		expectOverwrite bool
 	}{
 		{
-			name:            "no flags",
-			doctlArgs:       "path/to/foo",
-			expectedNimArgs: []string{"path/to/foo"},
-			out:             map[string]interface{}{"project": "foo"},
+			name:      "no flags",
+			doctlArgs: "path/to/foo",
+			// The language flag has a default normally applied by cobra
+			doctlFlags: map[string]string{"language": "javascript"},
+			out:        map[string]interface{}{"project": "foo"},
 		},
 		{
-			name:            "overwrite",
-			doctlArgs:       "path/to/project",
-			doctlFlags:      map[string]string{"overwrite": ""},
-			expectedNimArgs: []string{"path/to/project", "--overwrite"},
+			name:      "overwrite",
+			doctlArgs: "path/to/foo",
+			// The language flag has a default normally applied by cobra
+			doctlFlags:      map[string]string{"overwrite": "", "language": "javascript"},
 			out:             map[string]interface{}{"project": "foo"},
+			expectOverwrite: true,
 		},
 		{
-			name:            "language flag",
-			doctlArgs:       "path/to/project",
-			doctlFlags:      map[string]string{"language": "go"},
-			expectedNimArgs: []string{"path/to/project", "--language", "go"},
-			out:             map[string]interface{}{"project": "foo"},
+			name:        "language flag",
+			doctlArgs:   "path/to/foo",
+			doctlFlags:  map[string]string{"language": "go"},
+			out:         map[string]interface{}{"project": "foo"},
+			expectCheck: true,
 		},
 	}
 
@@ -355,9 +366,6 @@ func TestServerlessInit(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				buf := &bytes.Buffer{}
 				config.Out = buf
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
 
 				if tt.doctlArgs != "" {
 					config.Args = append(config.Args, tt.doctlArgs)
@@ -373,17 +381,36 @@ func TestServerlessInit(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("project/create", tt.expectedNimArgs).Return(fakeCmd, nil)
-				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{
-					Entity: tt.out,
-				}, nil)
+				sawOverwrite := false
+				// Grab the overrideable commands so they can be mocked
+				writeAFile = func(path string, contents []byte) error {
+					return nil
+				}
+				doMkdir = func(path string, parents bool) error {
+					return nil
+				}
+				prepareProjectArea = func(project string, overwrite bool) error {
+					sawOverwrite = overwrite
+					return nil
+				}
 
+				if tt.expectCheck {
+					tm.serverless.EXPECT().CheckServerlessStatus().Return(nil)
+					creds := do.ServerlessCredentials{APIHost: "https://example.com"}
+					tm.serverless.EXPECT().ReadCredentials().Return(creds, nil)
+					hostInfo := do.ServerlessHostInfo{
+						Runtimes: map[string][]do.ServerlessRuntime{
+							"go": []do.ServerlessRuntime{},
+						},
+					}
+					tm.serverless.EXPECT().GetHostInfo("https://example.com").Return(hostInfo, nil)
+				}
 				err := RunServerlessExtraCreate(config)
 				require.NoError(t, err)
-				assert.Equal(t, `A local functions project directory 'foo' was created for you.
+				assert.Equal(t, tt.expectOverwrite, sawOverwrite)
+				assert.Equal(t, `A local functions project directory 'path/to/foo' was created for you.
 You may deploy it by running the command shown on the next line:
-  doctl serverless deploy foo`+"\n\n", buf.String())
+  doctl serverless deploy path/to/foo`+"\n", buf.String())
 			})
 		})
 	}
@@ -437,7 +464,7 @@ func TestServerlessDeploy(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 				tm.serverless.EXPECT().Cmd("project/deploy", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
@@ -449,110 +476,65 @@ func TestServerlessDeploy(t *testing.T) {
 }
 
 func TestServerlessUndeploy(t *testing.T) {
-	type testNimCmd struct {
-		cmd  string
-		args []string
-	}
-
 	tests := []struct {
-		name                 string
-		doctlArgs            []string
-		doctlFlags           map[string]string
-		expectedNimCmds      []testNimCmd
-		expectedError        error
-		expectTriggerDeletes []string
-		expectTriggerList    bool
+		name          string
+		doctlArgs     []string
+		doctlFlags    map[string]string
+		expectedError error
 	}{
 		{
-			name:            "no arguments or flags",
-			doctlArgs:       nil,
-			doctlFlags:      nil,
-			expectedNimCmds: nil,
-			expectedError:   errUndeployTooFewArgs,
+			name:          "no arguments or flags",
+			doctlArgs:     nil,
+			doctlFlags:    nil,
+			expectedError: errUndeployTooFewArgs,
 		},
 		{
-			name:       "with --all flag only",
-			doctlArgs:  nil,
-			doctlFlags: map[string]string{"all": ""},
-			expectedNimCmds: []testNimCmd{
-				{
-					cmd:  "namespace/clean",
-					args: []string{"--force"},
-				},
-			},
+			name:          "with --all flag only",
+			doctlArgs:     nil,
+			doctlFlags:    map[string]string{"all": ""},
 			expectedError: nil,
 		},
 		{
-			name:       "mixed args, no flags",
-			doctlArgs:  []string{"foo/bar", "baz"},
-			doctlFlags: nil,
-			expectedNimCmds: []testNimCmd{
-				{
-					cmd:  "action/delete",
-					args: []string{"foo/bar"},
-				},
-				{
-					cmd:  "action/delete",
-					args: []string{"baz"},
-				},
-			},
+			name:          "mixed args, no flags",
+			doctlArgs:     []string{"foo/bar", "baz"},
+			doctlFlags:    nil,
 			expectedError: nil,
 		},
 		{
-			name:       "mixed args, --packages flag",
-			doctlArgs:  []string{"foo/bar", "baz"},
-			doctlFlags: map[string]string{"packages": ""},
-			expectedNimCmds: []testNimCmd{
-				{
-					cmd:  "action/delete",
-					args: []string{"foo/bar"},
-				},
-				{
-					cmd:  "package/delete",
-					args: []string{"baz", "--recursive"},
-				},
-			},
+			name:          "mixed args, --packages flag",
+			doctlArgs:     []string{"foo/bar", "baz"},
+			doctlFlags:    map[string]string{"packages": ""},
 			expectedError: nil,
 		},
 		{
-			name:            "mixed args, --all flag",
-			doctlArgs:       []string{"foo/bar", "baz"},
-			doctlFlags:      map[string]string{"all": ""},
-			expectedNimCmds: nil,
-			expectedError:   errUndeployAllAndArgs,
+			name:          "mixed args, --all flag",
+			doctlArgs:     []string{"foo/bar", "baz"},
+			doctlFlags:    map[string]string{"all": ""},
+			expectedError: errUndeployAllAndArgs,
 		},
 		{
-			name:            "--triggers and --packages",
-			doctlArgs:       []string{"foo/bar", "baz"},
-			doctlFlags:      map[string]string{"triggers": "", "packages": ""},
-			expectedNimCmds: nil,
-			expectedError:   errUndeployTrigPkg,
+			name:          "--triggers and --packages",
+			doctlArgs:     []string{"foo/bar", "baz"},
+			doctlFlags:    map[string]string{"triggers": "", "packages": ""},
+			expectedError: errUndeployTrigPkg,
 		},
 		{
-			name:                 "--triggers and args",
-			doctlArgs:            []string{"fire1", "fire2"},
-			doctlFlags:           map[string]string{"triggers": ""},
-			expectedNimCmds:      nil,
-			expectedError:        nil,
-			expectTriggerDeletes: []string{"fire1", "fire2"},
+			name:          "--triggers and args",
+			doctlArgs:     []string{"fire1", "fire2"},
+			doctlFlags:    map[string]string{"triggers": ""},
+			expectedError: nil,
 		},
 		{
-			name:                 "--triggers and --all",
-			doctlArgs:            nil,
-			doctlFlags:           map[string]string{"triggers": "", "all": ""},
-			expectedNimCmds:      nil,
-			expectedError:        nil,
-			expectTriggerDeletes: []string{"fireA", "fireB"},
-			expectTriggerList:    true,
+			name:          "--triggers and --all",
+			doctlArgs:     nil,
+			doctlFlags:    map[string]string{"triggers": "", "all": ""},
+			expectedError: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-				fakeCmd := &exec.Cmd{
-					Stdout: config.Out,
-				}
 				cannedTriggerList := []do.ServerlessTrigger{
 					{Name: "fireA"},
 					{Name: "fireB"},
@@ -562,8 +544,24 @@ func TestServerlessUndeploy(t *testing.T) {
 					config.Args = append(config.Args, tt.doctlArgs...)
 				}
 
+				var pkg bool = false
+				var trig bool = false
+				var all bool = false
+
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {
+						if k == "all" {
+							all = true
+						}
+
+						if k == "packages" {
+							pkg = true
+						}
+
+						if k == "triggers" {
+							trig = true
+						}
+
 						if v == "" {
 							config.Doit.Set(config.NS, k, true)
 						} else {
@@ -572,20 +570,29 @@ func TestServerlessUndeploy(t *testing.T) {
 					}
 				}
 
-				if tt.expectedError == nil && len(tt.expectedNimCmds) > 0 {
-					tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
-				}
-				if tt.expectTriggerList {
+				if all && !trig && !pkg && len(config.Args) == 0 {
+					tm.serverless.EXPECT().CleanNamespace().Return(nil)
+				} else if all && trig && len(config.Args) == 0 {
 					tm.serverless.EXPECT().ListTriggers(context.TODO(), "").Return(cannedTriggerList, nil)
-				}
-				for i := range tt.expectedNimCmds {
-					tm.serverless.EXPECT().Cmd(tt.expectedNimCmds[i].cmd, tt.expectedNimCmds[i].args).Return(fakeCmd, nil)
-					tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
-				}
-				for _, trig := range tt.expectTriggerDeletes {
-					tm.serverless.EXPECT().DeleteTrigger(context.TODO(), trig)
+					for _, st := range cannedTriggerList {
+						tm.serverless.EXPECT().DeleteTrigger(context.TODO(), st.Name)
+					}
+
+				} else if !all && !trig && len(config.Args) > 0 {
+					for _, arg := range config.Args {
+						if !pkg || strings.Contains(arg, "/") {
+							tm.serverless.EXPECT().DeleteFunction(arg, true).Return(nil)
+						} else {
+							tm.serverless.EXPECT().DeletePackage(arg, true).Return(nil)
+						}
+					}
+				} else if !all && trig && !pkg && len(config.Args) > 0 {
+					for _, t := range config.Args {
+						tm.serverless.EXPECT().DeleteTrigger(context.TODO(), t)
+					}
 				}
 				err := RunServerlessUndeploy(config)
+
 				if tt.expectedError != nil {
 					require.Error(t, err)
 					assert.ErrorIs(t, err, tt.expectedError)
@@ -633,7 +640,7 @@ func TestServerlessWatch(t *testing.T) {
 					}
 				}
 
-				tm.serverless.EXPECT().CheckServerlessStatus(hashAccessToken(config)).MinTimes(1).Return(nil)
+				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
 				tm.serverless.EXPECT().Cmd("nocapture", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.serverless.EXPECT().Stream(fakeCmd).Return(nil)
 
