@@ -342,6 +342,14 @@ func validateAlertPolicyType(t string) error {
 	case godo.DropletFifteenMinuteLoadAverage:
 		fallthrough
 	case godo.DropletPublicOutboundBandwidthRate:
+		fallthrough
+	case godo.DbaasFifteenMinuteLoadAverage:
+		fallthrough
+	case godo.DbaasMemoryUtilizationPercent:
+		fallthrough
+	case godo.DbaasDiskUtilizationPercent:
+		fallthrough
+	case godo.DbaasCPUUtilizationPercent:
 		return nil
 	default:
 		return errors.New(fmt.Sprintf("'%s' is not a valid alert policy type", t))

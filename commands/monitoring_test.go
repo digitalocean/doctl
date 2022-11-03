@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -98,6 +99,113 @@ func TestAlertPolicyCreate(t *testing.T) {
 		err := RunCmdAlertPolicyCreate(config)
 		assert.NoError(t, err)
 	})
+}
+func TestAlertPolicyCreate_ValidTypes(t *testing.T) {
+	tests := []struct {
+		alertType   string
+		expectedErr error
+	}{
+		{
+			alertType: godo.DropletCPUUtilizationPercent,
+		},
+		{
+			alertType: godo.DropletMemoryUtilizationPercent,
+		},
+		{
+			alertType: godo.DropletDiskUtilizationPercent,
+		},
+		{
+			alertType: godo.DropletDiskReadRate,
+		},
+		{
+			alertType: godo.DropletDiskWriteRate,
+		},
+		{
+			alertType: godo.DropletOneMinuteLoadAverage,
+		},
+		{
+			alertType: godo.DropletFiveMinuteLoadAverage,
+		},
+		{
+			alertType: godo.DropletFifteenMinuteLoadAverage,
+		},
+		{
+			alertType: godo.DropletPublicOutboundBandwidthRate,
+		},
+		{
+			alertType: godo.DbaasFifteenMinuteLoadAverage,
+		},
+		{
+			alertType: godo.DbaasMemoryUtilizationPercent,
+		},
+		{
+			alertType: godo.DbaasDiskUtilizationPercent,
+		},
+		{
+			alertType: godo.DbaasCPUUtilizationPercent,
+		},
+		{
+			alertType:   "InvalidAlertType",
+			expectedErr: errors.New("'InvalidAlertType' is not a valid alert policy type"),
+		},
+	}
+
+	for _, tt := range tests {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			ap := do.AlertPolicy{
+				AlertPolicy: &godo.AlertPolicy{
+					Description: testAlertPolicy.Description,
+					Compare:     testAlertPolicy.Compare,
+					Value:       testAlertPolicy.Value,
+					Window:      testAlertPolicy.Window,
+					Entities:    testAlertPolicy.Entities,
+					Tags:        testAlertPolicy.Tags,
+					Alerts:      testAlertPolicy.Alerts,
+					Enabled:     testAlertPolicy.Enabled,
+					Type:        tt.alertType,
+				},
+			}
+			apcr := godo.AlertPolicyCreateRequest{
+				Type:        tt.alertType,
+				Description: testAlertPolicy.Description,
+				Compare:     testAlertPolicy.Compare,
+				Value:       testAlertPolicy.Value,
+				Window:      testAlertPolicy.Window,
+				Entities:    testAlertPolicy.Entities,
+				Tags:        testAlertPolicy.Tags,
+				Alerts:      testAlertPolicy.Alerts,
+				Enabled:     &testAlertPolicy.Enabled,
+			}
+
+			if tt.expectedErr == nil {
+				tm.monitoring.EXPECT().CreateAlertPolicy(&apcr).Return(&ap, nil)
+			}
+
+			emails := strings.Join(testAlertPolicy.Alerts.Email, ",")
+			slackChannels := make([]string, 0)
+			slackURLs := make([]string, 0)
+			for _, v := range testAlertPolicy.Alerts.Slack {
+				slackURLs = append(slackURLs, v.URL)
+				slackChannels = append(slackChannels, v.Channel)
+			}
+			slackChannelsStr := strings.Join(slackChannels, ",")
+			slackURLsStr := strings.Join(slackURLs, ",")
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyDescription, testAlertPolicy.Description)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyType, tt.alertType)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyValue, testAlertPolicy.Value)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyWindow, testAlertPolicy.Window)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyTags, testAlertPolicy.Tags)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyEntities, testAlertPolicy.Entities)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyEnabled, testAlertPolicy.Enabled)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyCompare, "LessThan")
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicyEmails, emails)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicySlackChannels, slackChannelsStr)
+			config.Doit.Set(config.NS, doctl.ArgAlertPolicySlackURLs, slackURLsStr)
+
+			err := RunCmdAlertPolicyCreate(config)
+			assert.Equal(t, err, tt.expectedErr)
+		})
+	}
 }
 
 func TestAlertPolicyUpdate(t *testing.T) {
