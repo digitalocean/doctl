@@ -36,6 +36,8 @@ const (
 	ArgActionType = "action-type"
 	// ArgApp is the app ID.
 	ArgApp = "app"
+	// ArgAppWithProjects will determine whether project ids should be fetched along with listed apps.
+	ArgAppWithProjects = "with-projects"
 	// ArgAppSpec is a path to an app spec.
 	ArgAppSpec = "spec"
 	// ArgAppLogType the type of log.

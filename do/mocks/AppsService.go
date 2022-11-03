@@ -154,18 +154,18 @@ func (mr *MockAppsServiceMockRecorder) GetTier(slug interface{}) *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockAppsService) List() ([]*godo.App, error) {
+func (m *MockAppsService) List(withProjects bool) ([]*godo.App, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
+	ret := m.ctrl.Call(m, "List", withProjects)
 	ret0, _ := ret[0].([]*godo.App)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockAppsServiceMockRecorder) List() *gomock.Call {
+func (mr *MockAppsServiceMockRecorder) List(withProjects interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAppsService)(nil).List))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAppsService)(nil).List), withProjects)
 }
 
 // ListAlerts mocks base method.
