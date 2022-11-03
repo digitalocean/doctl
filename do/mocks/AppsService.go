@@ -154,18 +154,18 @@ func (mr *MockAppsServiceMockRecorder) GetTier(slug interface{}) *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockAppsService) List() ([]*godo.App, error) {
+func (m *MockAppsService) List(withProjects bool) ([]*godo.App, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
+	ret := m.ctrl.Call(m, "List", withProjects)
 	ret0, _ := ret[0].([]*godo.App)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockAppsServiceMockRecorder) List() *gomock.Call {
+func (mr *MockAppsServiceMockRecorder) List(withProjects interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAppsService)(nil).List))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAppsService)(nil).List), withProjects)
 }
 
 // ListAlerts mocks base method.
@@ -181,6 +181,21 @@ func (m *MockAppsService) ListAlerts(appID string) ([]*godo.AppAlert, error) {
 func (mr *MockAppsServiceMockRecorder) ListAlerts(appID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAlerts", reflect.TypeOf((*MockAppsService)(nil).ListAlerts), appID)
+}
+
+// ListBuildpacks mocks base method.
+func (m *MockAppsService) ListBuildpacks() ([]*godo.Buildpack, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBuildpacks")
+	ret0, _ := ret[0].([]*godo.Buildpack)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBuildpacks indicates an expected call of ListBuildpacks.
+func (mr *MockAppsServiceMockRecorder) ListBuildpacks() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBuildpacks", reflect.TypeOf((*MockAppsService)(nil).ListBuildpacks))
 }
 
 // ListDeployments mocks base method.
@@ -286,4 +301,20 @@ func (m *MockAppsService) UpdateAlertDestinations(appID, alertID string, update 
 func (mr *MockAppsServiceMockRecorder) UpdateAlertDestinations(appID, alertID, update interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAlertDestinations", reflect.TypeOf((*MockAppsService)(nil).UpdateAlertDestinations), appID, alertID, update)
+}
+
+// UpgradeBuildpack mocks base method.
+func (m *MockAppsService) UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) ([]string, *godo.Deployment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpgradeBuildpack", appID, options)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*godo.Deployment)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// UpgradeBuildpack indicates an expected call of UpgradeBuildpack.
+func (mr *MockAppsServiceMockRecorder) UpgradeBuildpack(appID, options interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeBuildpack", reflect.TypeOf((*MockAppsService)(nil).UpgradeBuildpack), appID, options)
 }

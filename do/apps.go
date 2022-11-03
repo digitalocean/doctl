@@ -23,7 +23,7 @@ import (
 type AppsService interface {
 	Create(req *godo.AppCreateRequest) (*godo.App, error)
 	Get(appID string) (*godo.App, error)
-	List() ([]*godo.App, error)
+	List(withProjects bool) ([]*godo.App, error)
 	Update(appID string, req *godo.AppUpdateRequest) (*godo.App, error)
 	Delete(appID string) error
 	Propose(req *godo.AppProposeRequest) (*godo.AppProposeResponse, error)
@@ -44,6 +44,9 @@ type AppsService interface {
 
 	ListAlerts(appID string) ([]*godo.AppAlert, error)
 	UpdateAlertDestinations(appID, alertID string, update *godo.AlertDestinationUpdateRequest) (*godo.AppAlert, error)
+
+	ListBuildpacks() ([]*godo.Buildpack, error)
+	UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) (affectedComponents []string, deployment *godo.Deployment, err error)
 }
 
 type appsService struct {
@@ -77,8 +80,9 @@ func (s *appsService) Get(appID string) (*godo.App, error) {
 	return app, nil
 }
 
-func (s *appsService) List() ([]*godo.App, error) {
+func (s *appsService) List(withProjects bool) ([]*godo.App, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		opt.WithProjects = withProjects
 		list, resp, err := s.client.Apps.List(s.ctx, opt)
 		if err != nil {
 			return nil, nil, err
@@ -236,4 +240,20 @@ func (s *appsService) UpdateAlertDestinations(appID, alertID string, update *god
 		return nil, err
 	}
 	return alert, nil
+}
+
+func (s *appsService) ListBuildpacks() ([]*godo.Buildpack, error) {
+	bps, _, err := s.client.Apps.ListBuildpacks(s.ctx)
+	if err != nil {
+		return nil, err
+	}
+	return bps, nil
+}
+
+func (s *appsService) UpgradeBuildpack(appID string, options godo.UpgradeBuildpackOptions) ([]string, *godo.Deployment, error) {
+	res, _, err := s.client.Apps.UpgradeBuildpack(s.ctx, appID, options)
+	if err != nil {
+		return nil, nil, err
+	}
+	return res.AffectedComponents, res.Deployment, nil
 }

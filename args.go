@@ -36,6 +36,8 @@ const (
 	ArgActionType = "action-type"
 	// ArgApp is the app ID.
 	ArgApp = "app"
+	// ArgAppWithProjects will determine whether project ids should be fetched along with listed apps.
+	ArgAppWithProjects = "with-projects"
 	// ArgAppSpec is a path to an app spec.
 	ArgAppSpec = "spec"
 	// ArgAppLogType the type of log.
@@ -46,6 +48,8 @@ const (
 	ArgAppDevConfig = "dev-config"
 	// ArgBuildCommand is an optional build command to set for local development.
 	ArgBuildCommand = "build-command"
+	// ArgBuildpack is a buildpack id.
+	ArgBuildpack = "buildpack"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.
@@ -82,6 +86,8 @@ const (
 	ArgNodePoolNodeIDs = "node-ids"
 	// ArgMaintenanceWindow is a cluster's maintenance window argument
 	ArgMaintenanceWindow = "maintenance-window"
+	// ArgMajorVersion is a major version number.
+	ArgMajorVersion = "major-version"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
 	// ArgHA is a cluster's highly available control plane argument.
@@ -224,6 +230,8 @@ const (
 	ArgTemplate = "template"
 	// ArgTimeout is a timeout duration
 	ArgTimeout = "timeout"
+	// ArgTriggerDeployment indicates whether to trigger a deployment
+	ArgTriggerDeployment = "trigger-deployment"
 	// ArgVersion is the version of the command to use
 	ArgVersion = "version"
 	// ArgVerbose enables verbose output

@@ -62,6 +62,7 @@ func Apps() *Command {
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
 	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
+	AddStringFlag(create, doctl.ArgProjectID, "", "", "The ID of the project to assign the created app and resources to. If not provided, the default project will be used.")
 
 	CmdBuilder(
 		cmd,
@@ -76,7 +77,7 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.Apps{}),
 	)
 
-	CmdBuilder(
+	list := CmdBuilder(
 		cmd,
 		RunAppsList,
 		"list",
@@ -88,6 +89,7 @@ Only basic information is included with the text output format. For complete app
 		aliasOpt("ls"),
 		displayerType(&displayers.Apps{}),
 	)
+	AddBoolFlag(list, doctl.ArgAppWithProjects, "", false, "Boolean that specifies whether project ids should be fetched along with listed apps")
 
 	update := CmdBuilder(
 		cmd,
@@ -225,6 +227,32 @@ Only basic information is included with the text output format. For complete app
 	)
 	AddStringFlag(updateAlertDestinations, doctl.ArgAppAlertDestinations, "", "", "Path to an alert destinations file in JSON or YAML format.")
 
+	CmdBuilder(
+		cmd,
+		RunAppListBuildpacks,
+		"list-buildpacks",
+		"List buildpacks",
+		`List all buildpacks available on App Platform`,
+		Writer,
+		displayerType(&displayers.Buildpacks{}),
+	)
+
+	upgradeBuildpack := CmdBuilder(
+		cmd,
+		RunAppUpgradeBuildpack,
+		"upgrade-buildpack <app id>",
+		"Upgrade buildpack",
+		`Upgrade a buildpack for an app`,
+		Writer,
+		displayerType(&displayers.Deployments{}),
+	)
+	AddStringFlag(upgradeBuildpack,
+		doctl.ArgBuildpack, "", "", "The ID of the buildpack to upgrade. Use the list-buildpacks command to list available buildpacks.", requiredOpt())
+	AddIntFlag(upgradeBuildpack,
+		doctl.ArgMajorVersion, "", 0, "The major version to upgrade to. If empty, will upgrade to the latest available.")
+	AddBoolFlag(upgradeBuildpack,
+		doctl.ArgTriggerDeployment, "", true, "Whether to trigger a new deployment to apply the upgrade")
+
 	cmd.AddCommand(appsSpec())
 	cmd.AddCommand(appsTier())
 
@@ -248,12 +276,17 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
-	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec})
+	projectID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
+	if err != nil {
+		return err
+	}
+
+	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec, ProjectID: projectID})
 	if err != nil {
 		if gerr, ok := err.(*godo.ErrorResponse); ok && gerr.Response.StatusCode == 409 && upsert {
 			notice("App already exists, updating")
 
-			apps, err := c.Apps().List()
+			apps, err := c.Apps().List(false)
 			if err != nil {
 				return err
 			}
@@ -315,7 +348,12 @@ func RunAppsGet(c *CmdConfig) error {
 
 // RunAppsList lists all apps.
 func RunAppsList(c *CmdConfig) error {
-	apps, err := c.Apps().List()
+	withProjects, err := c.Doit.GetBool(c.NS, doctl.ArgAppWithProjects)
+	if err != nil {
+		return err
+	}
+
+	apps, err := c.Apps().List(withProjects)
 	if err != nil {
 		return err
 	}
@@ -945,6 +983,54 @@ func parseAppAlert(destinations []byte) (*godo.AlertDestinationUpdateRequest, er
 	}
 
 	return &alertDestinations, nil
+}
+
+// RunAppListBuildpacks lists buildpacks
+func RunAppListBuildpacks(c *CmdConfig) error {
+	bps, err := c.Apps().ListBuildpacks()
+	if err != nil {
+		return err
+	}
+	return c.Display(displayers.Buildpacks(bps))
+}
+
+// RunAppUpgradeBuildpack upgrades a buildpack for an app
+func RunAppUpgradeBuildpack(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	appID := c.Args[0]
+	buildpack, err := c.Doit.GetString(c.NS, doctl.ArgBuildpack)
+	if err != nil {
+		return err
+	}
+	majorVersion, err := c.Doit.GetInt(c.NS, doctl.ArgMajorVersion)
+	if err != nil {
+		return err
+	}
+	triggerDeployment, err := c.Doit.GetBool(c.NS, doctl.ArgTriggerDeployment)
+	if err != nil {
+		return err
+	}
+
+	components, dep, err := c.Apps().UpgradeBuildpack(appID, godo.UpgradeBuildpackOptions{
+		BuildpackID:       buildpack,
+		MajorVersion:      int32(majorVersion),
+		TriggerDeployment: triggerDeployment,
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(os.Stderr, "upgraded buildpack %s. %d components were affected: %v.\n", buildpack, len(components), components)
+
+	if dep != nil {
+		fmt.Fprint(os.Stderr, "triggered a new deployment to apply the upgrade:\n\n")
+		return c.Display(displayers.Deployments([]*godo.Deployment{dep}))
+	}
+
+	return nil
 }
 
 func getIDByName(apps []*godo.App, name string) (string, error) {
