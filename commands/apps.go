@@ -255,7 +255,6 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
-	// Do this
 	app, err := c.Apps().Create(&godo.AppCreateRequest{Spec: appSpec, ProjectID: projectID})
 	if err != nil {
 		if gerr, ok := err.(*godo.ErrorResponse); ok && gerr.Response.StatusCode == 409 && upsert {
