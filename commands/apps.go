@@ -62,7 +62,7 @@ func Apps() *Command {
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
 	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
-	AddStringFlag(create, doctl.ArgProjectID, "", "", "The id of the project to assign the created app and resources to. If not provided, the default project will be used.")
+	AddStringFlag(create, doctl.ArgProjectID, "", "", "The ID of the project to assign the created app and resources to. If not provided, the default project will be used.")
 
 	CmdBuilder(
 		cmd,
