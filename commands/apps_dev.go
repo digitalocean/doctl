@@ -678,7 +678,7 @@ func appsDevBuildSpecRequired(ws *workspace.AppDev, appsService do.AppsService) 
 func appsDevSelectApp(appsService do.AppsService) (*godo.App, error) {
 	// TODO: consider updating the list component to accept an itemsFunc and displays its own loading screen
 	template.Print(`listing apps on your account...`, nil)
-	apps, err := appsService.List()
+	apps, err := appsService.List(false)
 	if err != nil {
 		return nil, fmt.Errorf("listing apps: %w", err)
 	}

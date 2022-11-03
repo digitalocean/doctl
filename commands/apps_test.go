@@ -174,7 +174,7 @@ func TestRunAppsList(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}}
 
-		tm.apps.EXPECT().List().Times(1).Return(apps, nil)
+		tm.apps.EXPECT().List(false).Times(1).Return(apps, nil)
 
 		err := RunAppsList(config)
 		require.NoError(t, err)
