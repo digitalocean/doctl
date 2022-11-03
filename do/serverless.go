@@ -235,10 +235,10 @@ type serverlessService struct {
 }
 
 const (
-	// Minimum required version of the sandbox plugin code.  The first part is
-	// the version of the incorporated Nimbella CLI and the second part is the
+	// Minimum required version of the serverless plugin code.  The first part is
+	// the version of the incorporated functions deployer and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "4.2.8-1.3.1"
+	minServerlessVersion = "5.0.12-2.0.0"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
