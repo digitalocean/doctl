@@ -465,7 +465,7 @@ func TestServerlessDeploy(t *testing.T) {
 				}
 
 				tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
-				tm.serverless.EXPECT().Cmd("project/deploy", tt.expectedNimArgs).Return(fakeCmd, nil)
+				tm.serverless.EXPECT().Cmd("deploy", tt.expectedNimArgs).Return(fakeCmd, nil)
 				tm.serverless.EXPECT().Exec(fakeCmd).Return(do.ServerlessOutput{}, nil)
 
 				err := RunServerlessExtraDeploy(config)
@@ -614,7 +614,7 @@ func TestServerlessWatch(t *testing.T) {
 		{
 			name:            "no flags with path",
 			doctlArgs:       "path/to/project",
-			expectedNimArgs: []string{"project/watch", "path/to/project", "--exclude", "web"},
+			expectedNimArgs: []string{"watch", "path/to/project", "--exclude", "web"},
 		},
 		// TODO: Add additional scenarios for other flags, etc.
 	}
