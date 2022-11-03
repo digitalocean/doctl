@@ -102,9 +102,13 @@ func (d Deployments) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, len(d))
 
 	for i, deployment := range d {
-		progress := fmt.Sprintf("%d/%d", deployment.Progress.SuccessSteps, deployment.Progress.TotalSteps)
-		if deployment.Progress.ErrorSteps > 0 {
-			progress = fmt.Sprintf("%s (errors: %d)", progress, deployment.Progress.ErrorSteps)
+		var progress string
+		if deployment.Progress != nil {
+			p := deployment.Progress
+			progress = fmt.Sprintf("%d/%d", p.SuccessSteps, p.TotalSteps)
+			if p.ErrorSteps > 0 {
+				progress = fmt.Sprintf("%s (errors: %d)", progress, p.ErrorSteps)
+			}
 		}
 
 		out[i] = map[string]interface{}{
@@ -452,4 +456,46 @@ func (a AppAlerts) JSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
 	return e.Encode(a)
+}
+
+type Buildpacks []*godo.Buildpack
+
+var _ Displayable = (*Buildpacks)(nil)
+
+func (b Buildpacks) Cols() []string {
+	return []string{
+		"Name",
+		"ID",
+		"Version",
+		"Documentation",
+	}
+}
+
+func (b Buildpacks) ColMap() map[string]string {
+	return map[string]string{
+		"Name":          "Name",
+		"ID":            "ID",
+		"Version":       "Version",
+		"Documentation": "Documentation",
+	}
+}
+
+func (b Buildpacks) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, len(b))
+
+	for i, bp := range b {
+		out[i] = map[string]interface{}{
+			"Name":          bp.Name,
+			"ID":            bp.ID,
+			"Version":       bp.Version,
+			"Documentation": bp.DocsLink,
+		}
+	}
+	return out
+}
+
+func (b Buildpacks) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(b)
 }

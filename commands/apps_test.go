@@ -38,6 +38,8 @@ func TestAppsCommand(t *testing.T) {
 		"tier",
 		"list-alerts",
 		"update-alert-destinations",
+		"list-buildpacks",
+		"upgrade-buildpack",
 	)
 }
 
@@ -113,6 +115,16 @@ var (
 				Channel: "channel name",
 			},
 		},
+	}
+
+	testBuildpack = &godo.Buildpack{
+		Name:         "Go",
+		ID:           "digitalocean/go",
+		Version:      "1.2.3",
+		MajorVersion: 1,
+		Latest:       true,
+		DocsLink:     "ftp://docs/go",
+		Description:  []string{"Install Go"},
 	}
 )
 
@@ -772,6 +784,40 @@ func TestRunAppsUpdateAlertDestinations(t *testing.T) {
 		config.Args = append(config.Args, appID, testAlert.ID)
 		config.Doit.Set(config.NS, doctl.ArgAppAlertDestinations, destinationsFile.Name())
 		err = RunAppUpdateAlertDestinations(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsListBuildpacks(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.apps.EXPECT().ListBuildpacks().Times(1).Return([]*godo.Buildpack{testBuildpack}, nil)
+
+		err := RunAppListBuildpacks(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsUpgradeBuildpack(t *testing.T) {
+	deployment := &godo.Deployment{
+		ID:        uuid.New().String(),
+		Spec:      &testAppSpec,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		tm.apps.EXPECT().UpgradeBuildpack(appID, godo.UpgradeBuildpackOptions{
+			BuildpackID:       "buildpack-id",
+			MajorVersion:      3,
+			TriggerDeployment: true,
+		}).Times(1).Return([]string{"www", "api"}, deployment, nil)
+
+		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgBuildpack, "buildpack-id")
+		config.Doit.Set(config.NS, doctl.ArgMajorVersion, 3)
+		config.Doit.Set(config.NS, doctl.ArgTriggerDeployment, true)
+		err := RunAppUpgradeBuildpack(config)
 		require.NoError(t, err)
 	})
 }

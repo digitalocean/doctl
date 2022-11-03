@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # regenerated generated mocks
 
@@ -6,7 +6,7 @@ set -euo pipefail
 
 cd "do"
 
-GO111MODULE=off go get -u github.com/golang/mock/mockgen
+go install -mod=readonly github.com/golang/mock/mockgen@latest
 
 mockgen -source account.go -package=mocks AccountService > mocks/AccountService.go
 mockgen -source actions.go -package=mocks ActionService > mocks/ActionService.go
