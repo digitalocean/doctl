@@ -89,7 +89,7 @@ Only basic information is included with the text output format. For complete app
 		aliasOpt("ls"),
 		displayerType(&displayers.Apps{}),
 	)
-	AddBoolFlag(list, doctl.ArgWithProjects, "", false, "Boolean that specifies whether project ids should be fetched along with listed apps")
+	AddBoolFlag(list, doctl.ArgAppWithProjects, "", false, "Boolean that specifies whether project ids should be fetched along with listed apps")
 
 	update := CmdBuilder(
 		cmd,
@@ -322,7 +322,7 @@ func RunAppsGet(c *CmdConfig) error {
 
 // RunAppsList lists all apps.
 func RunAppsList(c *CmdConfig) error {
-	withProjects, err := c.Doit.GetBool(c.NS, doctl.ArgWithProjects)
+	withProjects, err := c.Doit.GetBool(c.NS, doctl.ArgAppWithProjects)
 	if err != nil {
 		return err
 	}
