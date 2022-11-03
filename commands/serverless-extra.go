@@ -168,7 +168,7 @@ func RunServerlessExtraDeploy(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	output, err := RunServerlessExec(projectDeploy, c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild, flagIncremental},
+	output, err := RunServerlessExec("deploy", c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild, flagIncremental},
 		[]string{flagEnv, flagBuildEnv, flagApihost, flagAuth, flagInclude, flagExclude})
 	if err != nil && len(output.Captured) == 0 {
 		// Just an error, nothing in 'Captured'
@@ -223,7 +223,7 @@ func RunServerlessExtraGetMetadata(c *CmdConfig) error {
 	if r {
 		output, err = c.Serverless().ReadProject(&project, c.Args)
 	} else {
-		output, err = RunServerlessExec(projectGetMetadata, c, []string{flagJSON, flagProjectReader}, []string{flagEnv, flagInclude, flagExclude})
+		output, err = RunServerlessExec("get-metadata", c, []string{flagJSON, flagProjectReader}, []string{flagEnv, flagInclude, flagExclude})
 	}
 	if err != nil {
 		return err
@@ -239,7 +239,7 @@ func RunServerlessExtraWatch(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return RunServerlessExecStreaming(projectWatch, c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild},
+	return RunServerlessExecStreaming("watch", c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild},
 		[]string{flagEnv, flagBuildEnv, flagApihost, flagAuth, flagInclude, flagExclude})
 }
 
