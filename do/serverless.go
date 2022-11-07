@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
@@ -177,13 +178,33 @@ type ServerlessTriggerGetResponse struct {
 
 // ServerlessTrigger is the form used in list and get responses by the triggers API
 type ServerlessTrigger struct {
-	Name        string      `json:"name,omitempty"`
-	Function    string      `json:"function,omitempty"`
-	Enabled     bool        `json:"is_enabled"`
-	Cron        string      `json:"cron,omitempty"`
-	Created     string      `json:"created_at,omitempty"`
-	LastRun     string      `json:"last_run_at,omitempty"`
-	RequestBody interface{} `json:"body,omitempty"`
+	Namespace        string                   `json:"namespace,omitempty"`
+	Function         string                   `json:"function,omitempty"`
+	Type             string                   `json:"type,omitempty"`
+	Name             string                   `json:"name,omitempty"`
+	IsEnabled        bool                     `json:"is_enabled,omitempty"`
+	CreatedAt        time.Time                `json:"created_at,omitempty"`
+	UpdatedAt        time.Time                `json:"updated_at,omitempty"`
+	ScheduledDetails *TriggerScheduledDetails `json:"scheduled_details,omitempty"`
+	ScheduledRuns    *TriggerScheduledRuns    `json:"scheduled_runs,omitempty"`
+}
+
+type TriggerScheduledDetails struct {
+	Cron string                 `json:"cron,omitempty"`
+	Body map[string]interface{} `json:"body,omitempty"`
+}
+
+type TriggerScheduledRuns struct {
+	LastRunAt *time.Time `json:"last_run_at,omitempty"`
+	NextRunAt *time.Time `json:"next_run_at,omitempty"`
+}
+
+type FunctionsTriggerCreateOptions struct {
+	Name             string                   `json:"name"`
+	Type             string                   `json:"type"`
+	Function         string                   `json:"function"`
+	IsEnabled        bool                     `json:"is_enabled,omitempty"`
+	ScheduledDetails *TriggerScheduledDetails `json:"scheduled_details,omitempty"`
 }
 
 // ServerlessService is an interface for interacting with the sandbox plugin,
@@ -1006,7 +1027,7 @@ func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]Ser
 	if err != nil {
 		return empty, err
 	}
-	path := "v2/functions/triggers/" + creds.Namespace
+	path := fmt.Sprintf("v2/functions/namespaces/%s/triggers", creds.Namespace)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return empty, err
@@ -1027,26 +1048,7 @@ func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]Ser
 		}
 		triggers = filtered
 	}
-	return fixBaseDates(triggers), nil
-}
-
-// fixBaseDates applies fixBaseDate to an array of triggers
-func fixBaseDates(list []ServerlessTrigger) []ServerlessTrigger {
-	ans := []ServerlessTrigger{}
-	for _, trigger := range list {
-		ans = append(ans, fixBaseDate(trigger))
-	}
-	return ans
-}
-
-// fixBaseDate fixes up the LastRun field of a trigger that has never been run.
-// It should properly contain blank but sometimes contain an encoding of the base date (a string
-// starting with "000").
-func fixBaseDate(trigger ServerlessTrigger) ServerlessTrigger {
-	if strings.HasPrefix(trigger.LastRun, "000") {
-		trigger.LastRun = "_"
-	}
-	return trigger
+	return triggers, nil
 }
 
 // GetTrigger gets the contents of a trigger for display
@@ -1060,7 +1062,7 @@ func (s *serverlessService) GetTrigger(ctx context.Context, name string) (Server
 	if err != nil {
 		return empty, err
 	}
-	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
+	path := fmt.Sprintf("v2/functions/namespaces/%s/triggers/%s", creds.Namespace, name)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return empty, err
@@ -1070,7 +1072,7 @@ func (s *serverlessService) GetTrigger(ctx context.Context, name string) (Server
 	if err != nil {
 		return empty, err
 	}
-	return fixBaseDate(decoded.Trigger), nil
+	return decoded.Trigger, nil
 }
 
 // Delete Trigger deletes a trigger from the namespace (used when undeploying triggers explicitly,
@@ -1081,22 +1083,13 @@ func (s *serverlessService) DeleteTrigger(ctx context.Context, name string) erro
 	if err != nil {
 		return err
 	}
-	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
+	path := fmt.Sprintf("v2/functions/namespaces/%s/triggers/%s", creds.Namespace, name)
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return err
 	}
 	_, err = s.client.Do(ctx, req, nil)
 	return err
-}
-
-// fixupCron detects the optional seconds field and removes it
-func fixupCron(cron string) string {
-	parts := strings.Split(cron, " ")
-	if len(parts) == 6 {
-		return strings.Join(parts[1:], " ")
-	}
-	return cron
 }
 
 func readTopLevel(project *ServerlessProject) error {
