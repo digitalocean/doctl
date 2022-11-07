@@ -16,6 +16,7 @@ package commands
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -105,6 +106,11 @@ With the `+"`"+`--languages flag, it will report the supported languages.
 With the `+"`"+`--version flag, it will show just version information about the serverless component`, Writer)
 	AddBoolFlag(status, "languages", "l", false, "show available languages (if connected to the cloud)")
 	AddBoolFlag(status, "version", "", false, "just show the version, don't check status")
+	AddBoolFlag(status, "credentials", "", false, "")
+	// The --credentials flag is needed when working on clusters that are not in production.
+	// It captures the current credentials to be restored later using 'connect --apihost --auth'.
+	// It is hidden since this kind of low level manipulation should not normally be necessary.
+	status.Flags().MarkHidden("credentials")
 
 	undeploy := CmdBuilder(cmd, RunServerlessUndeploy, "undeploy [<package|function>...]",
 		"Removes resources from your functions namespace",
@@ -120,6 +126,12 @@ the entire packages are removed.`, Writer)
 	AddBoolFlag(undeploy, doctl.ArgForce, doctl.ArgShortForce, false, "Delete namespace resources without confirmation prompt")
 	undeploy.Flags().MarkHidden(doctl.ArgForce)
 	undeploy.Flags().MarkHidden("triggers") // support is experimental at this point
+	// The apihost and auth flags will always be hidden.  They support testing using doctl on clusters that are not in production
+	// and hence are unknown to the portal.
+	AddStringFlag(undeploy, "apihost", "", "", "")
+	AddStringFlag(undeploy, "auth", "", "", "")
+	undeploy.Flags().MarkHidden("apihost")
+	undeploy.Flags().MarkHidden("auth")
 
 	cmd.AddCommand(Activations())
 	cmd.AddCommand(Functions())
@@ -361,6 +373,24 @@ func RunServerlessStatus(c *CmdConfig) error {
 	if err != nil || checkNS != creds.Namespace {
 		return do.ErrServerlessNotConnected
 	}
+	// Before doing the normal display, check for the --credentials flag, which requests return of the
+	// 'creds' value as JSON.
+	credentials, _ := c.Doit.GetBool(c.NS, "credentials")
+	if credentials {
+		type showCreds struct {
+			Auth      string `json:auth`
+			APIHost   string `json:apihost`
+			Namespace string `json:namespace`
+		}
+		toShow := showCreds{Auth: auth, APIHost: creds.APIHost, Namespace: creds.Namespace}
+		credsOutput, err := json.MarshalIndent(toShow, "", "  ")
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(credsOutput))
+		return nil
+	}
+
 	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", creds.Namespace, creds.APIHost)
 	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", do.GetMinServerlessVersion())
 	languages, _ := c.Doit.GetBool(c.NS, "languages")
@@ -418,6 +448,15 @@ func RunServerlessUndeploy(c *CmdConfig) error {
 	}
 	if all && trigFlag {
 		return cleanTriggers(c)
+	}
+
+	// Permit cleanup of arbitrary namespaces (needed in some administrative uses)
+	auth, _ := c.Doit.GetString(c.NS, "auth")
+	apihost, _ := c.Doit.GetString(c.NS, "apihost")
+	if auth != "" && apihost != "" {
+		sls.SetEffectiveCredentials(auth, apihost)
+	} else if auth != "" || apihost != "" {
+		return errors.New("the --auth and --apihost flags must be specified together")
 	}
 
 	if all {

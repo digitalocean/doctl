@@ -465,6 +465,18 @@ func (mr *MockServerlessServiceMockRecorder) ReadProject(arg0, arg1 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadProject", reflect.TypeOf((*MockServerlessService)(nil).ReadProject), arg0, arg1)
 }
 
+// SetEffectiveCredentials mocks base method.
+func (m *MockServerlessService) SetEffectiveCredentials(auth, apihost string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetEffectiveCredentials", auth, apihost)
+}
+
+// SetEffectiveCredentials indicates an expected call of SetEffectiveCredentials.
+func (mr *MockServerlessServiceMockRecorder) SetEffectiveCredentials(auth, apihost interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetEffectiveCredentials", reflect.TypeOf((*MockServerlessService)(nil).SetEffectiveCredentials), auth, apihost)
+}
+
 // Stream mocks base method.
 func (m *MockServerlessService) Stream(arg0 *exec.Cmd) error {
 	m.ctrl.T.Helper()
