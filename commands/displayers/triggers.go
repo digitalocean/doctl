@@ -53,7 +53,7 @@ func (i *Triggers) KV() []map[string]interface{} {
 	for _, ii := range i.List {
 		lastRun := "_"
 		if ii.ScheduledRuns != nil && ii.ScheduledRuns.LastRunAt != nil && !ii.ScheduledRuns.LastRunAt.IsZero() {
-			lastRun = ii.ScheduledRuns.LastRunAt.Local().Format("01/02 03:04:05")
+			lastRun = ii.ScheduledRuns.LastRunAt.Format("01/02 03:04:05")
 		}
 
 		x := map[string]interface{}{
