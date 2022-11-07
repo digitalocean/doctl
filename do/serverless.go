@@ -199,14 +199,6 @@ type TriggerScheduledRuns struct {
 	NextRunAt *time.Time `json:"next_run_at,omitempty"`
 }
 
-type FunctionsTriggerCreateOptions struct {
-	Name             string                   `json:"name"`
-	Type             string                   `json:"type"`
-	Function         string                   `json:"function"`
-	IsEnabled        bool                     `json:"is_enabled,omitempty"`
-	ScheduledDetails *TriggerScheduledDetails `json:"scheduled_details,omitempty"`
-}
-
 // ServerlessService is an interface for interacting with the sandbox plugin,
 // with the namespaces service, and with the serverless cluster controller.
 type ServerlessService interface {
