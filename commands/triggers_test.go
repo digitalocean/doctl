@@ -145,7 +145,7 @@ func TestTriggersList(t *testing.T) {
 				"no-header": "",
 			},
 			listResult: theList,
-			expectedOutput: `fireGC       * * * * *     misc/garbageCollect    true     11/03 01:03:02
+			expectedOutput: `fireGC       * * * * *     misc/garbageCollect    true     2022-11-03 17:03:02 +0000 UTC
 firePoll1    5 * * * *     misc/pollStatus        true     _
 firePoll2    10 * * * *    misc/pollStatus        false    _
 `,
