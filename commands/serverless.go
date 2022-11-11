@@ -381,8 +381,9 @@ func RunServerlessStatus(c *CmdConfig) error {
 			Auth      string `json:auth`
 			APIHost   string `json:apihost`
 			Namespace string `json:namespace`
+			Path      string `json:path`
 		}
-		toShow := showCreds{Auth: auth, APIHost: creds.APIHost, Namespace: creds.Namespace}
+		toShow := showCreds{Auth: auth, APIHost: creds.APIHost, Namespace: creds.Namespace, Path: sls.CredentialsPath()}
 		credsOutput, err := json.MarshalIndent(toShow, "", "  ")
 		if err != nil {
 			return err

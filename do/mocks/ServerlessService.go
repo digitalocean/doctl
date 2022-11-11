@@ -95,6 +95,20 @@ func (mr *MockServerlessServiceMockRecorder) CreateNamespace(arg0, arg1, arg2 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNamespace", reflect.TypeOf((*MockServerlessService)(nil).CreateNamespace), arg0, arg1, arg2)
 }
 
+// CredentialsPath mocks base method.
+func (m *MockServerlessService) CredentialsPath() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CredentialsPath")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// CredentialsPath indicates an expected call of CredentialsPath.
+func (mr *MockServerlessServiceMockRecorder) CredentialsPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CredentialsPath", reflect.TypeOf((*MockServerlessService)(nil).CredentialsPath))
+}
+
 // DeleteFunction mocks base method.
 func (m *MockServerlessService) DeleteFunction(arg0 string, arg1 bool) error {
 	m.ctrl.T.Helper()

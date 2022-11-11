@@ -222,6 +222,7 @@ type ServerlessService interface {
 	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
 	WriteProject(ServerlessProject) (string, error)
 	SetEffectiveCredentials(auth string, apihost string)
+	CredentialsPath() string
 }
 
 type serverlessService struct {
@@ -1211,6 +1212,11 @@ func (s *serverlessService) WriteCredentials(creds ServerlessCredentials) error 
 		return err
 	}
 	return os.WriteFile(credsPath, bytes, 0600)
+}
+
+// CredentialsPath simply returns the directory path where credentials are stored
+func (s *serverlessService) CredentialsPath() string {
+	return s.credsDir
 }
 
 // ReadCredentials reads the current serverless credentials from the appropriate 'creds' diretory
