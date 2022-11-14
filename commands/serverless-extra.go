@@ -168,6 +168,11 @@ func RunServerlessExtraDeploy(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	// In a snap, local build will not work so ensure that builds (if any) will run remotely
+	_, isSnap := os.LookupEnv("SNAP")
+	if isSnap {
+		c.Doit.Set(c.NS, flagRemoteBuild, true)
+	}
 	output, err := RunServerlessExec("deploy", c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild, flagIncremental},
 		[]string{flagEnv, flagBuildEnv, flagApihost, flagAuth, flagInclude, flagExclude})
 	if err != nil && len(output.Captured) == 0 {
