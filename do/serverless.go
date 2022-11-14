@@ -221,6 +221,8 @@ type ServerlessService interface {
 	GetConnectedAPIHost() (string, error)
 	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
 	WriteProject(ServerlessProject) (string, error)
+	SetEffectiveCredentials(auth string, apihost string)
+	CredentialsPath() string
 }
 
 type serverlessService struct {
@@ -232,6 +234,7 @@ type serverlessService struct {
 	accessToken   string
 	client        *godo.Client
 	owClient      *whisk.Client
+	owConfig      *whisk.Config
 }
 
 const (
@@ -342,22 +345,34 @@ func initWhisk(s *serverlessService) error {
 	if s.owClient != nil {
 		return nil
 	}
-	err := s.CheckServerlessStatus()
-	if err != nil {
-		return err
+	var config *whisk.Config
+	if s.owConfig != nil {
+		config = s.owConfig
+	} else {
+		err := s.CheckServerlessStatus()
+		if err != nil {
+			return err
+		}
+		creds, err := s.ReadCredentials()
+		if err != nil {
+			return err
+		}
+		credential := creds.Credentials[creds.APIHost][creds.Namespace]
+		config = &whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
 	}
-	creds, err := s.ReadCredentials()
-	if err != nil {
-		return err
-	}
-	credential := creds.Credentials[creds.APIHost][creds.Namespace]
-	config := whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
-	client, err := whisk.NewClient(http.DefaultClient, &config)
+	client, err := whisk.NewClient(http.DefaultClient, config)
 	if err != nil {
 		return err
 	}
 	s.owClient = client
 	return nil
+}
+
+// SetEffectiveCredentials is used in low-level scenarios when we want to bypass normal credentialing.
+// For example, doing things to serverless clusters that are not yet in full production.
+func (s *serverlessService) SetEffectiveCredentials(auth string, apihost string) {
+	s.owConfig = &whisk.Config{Host: apihost, AuthToken: auth}
+	s.owClient = nil // ensure fresh initialization next time
 }
 
 func (s *serverlessService) CheckServerlessStatus() error {
@@ -1197,6 +1212,11 @@ func (s *serverlessService) WriteCredentials(creds ServerlessCredentials) error 
 		return err
 	}
 	return os.WriteFile(credsPath, bytes, 0600)
+}
+
+// CredentialsPath simply returns the directory path where credentials are stored
+func (s *serverlessService) CredentialsPath() string {
+	return s.credsDir
 }
 
 // ReadCredentials reads the current serverless credentials from the appropriate 'creds' diretory
