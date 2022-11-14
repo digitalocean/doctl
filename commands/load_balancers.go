@@ -32,6 +32,9 @@ import (
 var (
 	//go:embed forwarding_detail.txt
 	forwardingDetail string
+
+	//go:embed lb_detail.txt
+	lbDetail string
 )
 
 // LoadBalancer creates the load balancer command.
@@ -45,27 +48,9 @@ func LoadBalancer() *Command {
 With the load-balancer command, you can list, create, or delete load balancers, and manage their configuration details.`,
 		},
 	}
-	lbDetail := `
-
-- The load balancer's ID
-- The load balancer's name
-- The load balancer's IP address
-- The load balancer's traffic algorithm. Must
-  be either ` + "`" + `round_robin` + "`" + ` or ` + "`" + `least_connections` + "`" + `
-- The current state of the load balancer. This can be ` + "`" + `new` + "`" + `, ` + "`" + `active` + "`" + `, or ` + "`" + `errored` + "`" + `.
-- The load balancer's creation date, in ISO8601 combined date and time format.
-- The load balancer's forwarding rules. See ` + "`" + `doctl compute load-balancer add-forwarding-rules --help` + "`" + ` for a list.
-- The ` + "`" + `health_check` + "`" + ` settings for the load balancer.
-- The ` + "`" + `sticky_sessions` + "`" + ` settings for the load balancer.
-- The datacenter region the load balancer is located in.
-- The Droplet tag corresponding to the Droplets assigned to the load balancer.
-- The IDs of the Droplets assigned to the load balancer.
-- Whether HTTP request to the load balancer on port 80 will be redirected to HTTPS on port 443.
-- Whether the PROXY protocol is in use on the load balancer.
-`
 
 	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, e.g.: `entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306`."
-	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:"+lbDetail, Writer,
+	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:\n\n"+lbDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
 	cmdRecordCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
@@ -130,7 +115,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
 		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
 
-	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:"+lbDetail, Writer,
+	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>",

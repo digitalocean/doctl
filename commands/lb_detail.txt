@@ -1,0 +1,15 @@
+- The load balancer's ID
+- The load balancer's name
+- The load balancer's IP address
+- The load balancer's traffic algorithm. Must
+  be either `round_robin` or `least_connections`
+- The current state of the load balancer. This can be `new`, `active`, or `errored`.
+- The load balancer's creation date, in ISO8601 combined date and time format.
+- The load balancer's forwarding rules. See `doctl compute load-balancer add-forwarding-rules --help` for a list.
+- The `health_check` settings for the load balancer.
+- The `sticky_sessions` settings for the load balancer.
+- The datacenter region the load balancer is located in.
+- The Droplet tag corresponding to the Droplets assigned to the load balancer.
+- The IDs of the Droplets assigned to the load balancer.
+- Whether HTTP request to the load balancer on port 80 will be redirected to HTTPS on port 443.
+- Whether the PROXY protocol is in use on the load balancer.
