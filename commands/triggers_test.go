@@ -18,6 +18,7 @@ import (
 	"context"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 	"github.com/stretchr/testify/assert"
@@ -45,19 +46,42 @@ func TestTriggersGet(t *testing.T) {
 		config.Out = buf
 		config.Args = append(config.Args, "aTrigger")
 
+		nextRunAt := time.Date(2022, 11, 3, 17, 3, 2, 0, time.UTC)
 		theTrigger := do.ServerlessTrigger{
-			Name:     "firePoll1",
-			Function: "misc/pollStatus",
-			Cron:     "5 * * * *",
-			Enabled:  true,
-			LastRun:  "_",
+			Name:      "firePoll1",
+			Namespace: "123-456",
+			Function:  "misc/pollStatus",
+			Type:      "SCHEDULED",
+			IsEnabled: true,
+			CreatedAt: time.Date(2022, 10, 5, 13, 46, 59, 0, time.UTC),
+			UpdatedAt: time.Date(2022, 10, 17, 18, 41, 30, 0, time.UTC),
+			ScheduledDetails: &do.TriggerScheduledDetails{
+				Cron: "5 * * * *",
+				Body: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
+			ScheduledRuns: &do.TriggerScheduledRuns{
+				NextRunAt: &nextRunAt,
+			},
 		}
 		expect := `{
-  "name": "firePoll1",
+  "namespace": "123-456",
   "function": "misc/pollStatus",
+  "type": "SCHEDULED",
+  "name": "firePoll1",
   "is_enabled": true,
-  "cron": "5 * * * *",
-  "last_run_at": "_"
+  "created_at": "2022-10-05T13:46:59Z",
+  "updated_at": "2022-10-17T18:41:30Z",
+  "scheduled_details": {
+    "cron": "5 * * * *",
+    "body": {
+      "foo": "bar"
+    }
+  },
+  "scheduled_runs": {
+    "next_run_at": "2022-11-03T17:03:02Z"
+  }
 }
 `
 		tm.serverless.EXPECT().GetTrigger(context.TODO(), "aTrigger").Return(theTrigger, nil)
@@ -70,24 +94,42 @@ func TestTriggersGet(t *testing.T) {
 }
 
 func TestTriggersList(t *testing.T) {
+	lastRunAt0 := time.Date(2022, 11, 3, 17, 3, 2, 0, time.UTC)
+
 	theList := []do.ServerlessTrigger{
 		{
-			Name:     "fireGC",
-			Function: "misc/garbageCollect",
-			Cron:     "* * * * *",
-			Enabled:  true,
+			Name:      "fireGC",
+			Namespace: "123-456",
+			Function:  "misc/garbageCollect",
+			Type:      "SCHEDULED",
+			ScheduledDetails: &do.TriggerScheduledDetails{
+				Cron: "* * * * *",
+				Body: map[string]interface{}{},
+			},
+			IsEnabled: true,
+			CreatedAt: time.Date(2022, 10, 5, 13, 46, 59, 0, time.UTC),
+			UpdatedAt: time.Date(2022, 10, 17, 18, 41, 30, 0, time.UTC),
+			ScheduledRuns: &do.TriggerScheduledRuns{
+				LastRunAt: &lastRunAt0,
+			},
 		},
 		{
 			Name:     "firePoll1",
 			Function: "misc/pollStatus",
-			Cron:     "5 * * * *",
-			Enabled:  true,
+			ScheduledDetails: &do.TriggerScheduledDetails{
+				Cron: "5 * * * *",
+			},
+			IsEnabled: true,
+			CreatedAt: time.Date(2022, 10, 5, 13, 46, 59, 0, time.UTC),
+			UpdatedAt: time.Date(2022, 10, 17, 18, 41, 30, 0, time.UTC),
 		},
 		{
 			Name:     "firePoll2",
 			Function: "misc/pollStatus",
-			Cron:     "10 * * * *",
-			Enabled:  false,
+			ScheduledDetails: &do.TriggerScheduledDetails{
+				Cron: "10 * * * *",
+			},
+			IsEnabled: false,
 		},
 	}
 	tests := []struct {
@@ -103,7 +145,7 @@ func TestTriggersList(t *testing.T) {
 				"no-header": "",
 			},
 			listResult: theList,
-			expectedOutput: `fireGC       * * * * *     misc/garbageCollect    true     _
+			expectedOutput: `fireGC       * * * * *     misc/garbageCollect    true     2022-11-03 17:03:02 +0000 UTC
 firePoll1    5 * * * *     misc/pollStatus        true     _
 firePoll2    10 * * * *    misc/pollStatus        false    _
 `,

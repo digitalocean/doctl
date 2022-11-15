@@ -29,6 +29,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/apache/openwhisk-client-go/whisk"
 	"github.com/digitalocean/doctl"
@@ -177,13 +178,25 @@ type ServerlessTriggerGetResponse struct {
 
 // ServerlessTrigger is the form used in list and get responses by the triggers API
 type ServerlessTrigger struct {
-	Name        string      `json:"name,omitempty"`
-	Function    string      `json:"function,omitempty"`
-	Enabled     bool        `json:"is_enabled"`
-	Cron        string      `json:"cron,omitempty"`
-	Created     string      `json:"created_at,omitempty"`
-	LastRun     string      `json:"last_run_at,omitempty"`
-	RequestBody interface{} `json:"body,omitempty"`
+	Namespace        string                   `json:"namespace,omitempty"`
+	Function         string                   `json:"function,omitempty"`
+	Type             string                   `json:"type,omitempty"`
+	Name             string                   `json:"name,omitempty"`
+	IsEnabled        bool                     `json:"is_enabled,omitempty"`
+	CreatedAt        time.Time                `json:"created_at,omitempty"`
+	UpdatedAt        time.Time                `json:"updated_at,omitempty"`
+	ScheduledDetails *TriggerScheduledDetails `json:"scheduled_details,omitempty"`
+	ScheduledRuns    *TriggerScheduledRuns    `json:"scheduled_runs,omitempty"`
+}
+
+type TriggerScheduledDetails struct {
+	Cron string                 `json:"cron,omitempty"`
+	Body map[string]interface{} `json:"body,omitempty"`
+}
+
+type TriggerScheduledRuns struct {
+	LastRunAt *time.Time `json:"last_run_at,omitempty"`
+	NextRunAt *time.Time `json:"next_run_at,omitempty"`
 }
 
 // ServerlessService is an interface for interacting with the sandbox plugin,
@@ -221,6 +234,8 @@ type ServerlessService interface {
 	GetConnectedAPIHost() (string, error)
 	ReadProject(*ServerlessProject, []string) (ServerlessOutput, error)
 	WriteProject(ServerlessProject) (string, error)
+	SetEffectiveCredentials(auth string, apihost string)
+	CredentialsPath() string
 }
 
 type serverlessService struct {
@@ -232,13 +247,14 @@ type serverlessService struct {
 	accessToken   string
 	client        *godo.Client
 	owClient      *whisk.Client
+	owConfig      *whisk.Config
 }
 
 const (
 	// Minimum required version of the serverless plugin code.  The first part is
 	// the version of the incorporated functions deployer and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "5.0.12-2.0.0"
+	minServerlessVersion = "5.0.14-2.0.0"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -342,22 +358,34 @@ func initWhisk(s *serverlessService) error {
 	if s.owClient != nil {
 		return nil
 	}
-	err := s.CheckServerlessStatus()
-	if err != nil {
-		return err
+	var config *whisk.Config
+	if s.owConfig != nil {
+		config = s.owConfig
+	} else {
+		err := s.CheckServerlessStatus()
+		if err != nil {
+			return err
+		}
+		creds, err := s.ReadCredentials()
+		if err != nil {
+			return err
+		}
+		credential := creds.Credentials[creds.APIHost][creds.Namespace]
+		config = &whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
 	}
-	creds, err := s.ReadCredentials()
-	if err != nil {
-		return err
-	}
-	credential := creds.Credentials[creds.APIHost][creds.Namespace]
-	config := whisk.Config{Host: creds.APIHost, AuthToken: credential.Auth}
-	client, err := whisk.NewClient(http.DefaultClient, &config)
+	client, err := whisk.NewClient(http.DefaultClient, config)
 	if err != nil {
 		return err
 	}
 	s.owClient = client
 	return nil
+}
+
+// SetEffectiveCredentials is used in low-level scenarios when we want to bypass normal credentialing.
+// For example, doing things to serverless clusters that are not yet in full production.
+func (s *serverlessService) SetEffectiveCredentials(auth string, apihost string) {
+	s.owConfig = &whisk.Config{Host: apihost, AuthToken: auth}
+	s.owClient = nil // ensure fresh initialization next time
 }
 
 func (s *serverlessService) CheckServerlessStatus() error {
@@ -1006,7 +1034,7 @@ func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]Ser
 	if err != nil {
 		return empty, err
 	}
-	path := "v2/functions/triggers/" + creds.Namespace
+	path := fmt.Sprintf("v2/functions/namespaces/%s/triggers", creds.Namespace)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return empty, err
@@ -1027,26 +1055,7 @@ func (s *serverlessService) ListTriggers(ctx context.Context, fcn string) ([]Ser
 		}
 		triggers = filtered
 	}
-	return fixBaseDates(triggers), nil
-}
-
-// fixBaseDates applies fixBaseDate to an array of triggers
-func fixBaseDates(list []ServerlessTrigger) []ServerlessTrigger {
-	ans := []ServerlessTrigger{}
-	for _, trigger := range list {
-		ans = append(ans, fixBaseDate(trigger))
-	}
-	return ans
-}
-
-// fixBaseDate fixes up the LastRun field of a trigger that has never been run.
-// It should properly contain blank but sometimes contain an encoding of the base date (a string
-// starting with "000").
-func fixBaseDate(trigger ServerlessTrigger) ServerlessTrigger {
-	if strings.HasPrefix(trigger.LastRun, "000") {
-		trigger.LastRun = "_"
-	}
-	return trigger
+	return triggers, nil
 }
 
 // GetTrigger gets the contents of a trigger for display
@@ -1060,7 +1069,7 @@ func (s *serverlessService) GetTrigger(ctx context.Context, name string) (Server
 	if err != nil {
 		return empty, err
 	}
-	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
+	path := fmt.Sprintf("v2/functions/namespaces/%s/triggers/%s", creds.Namespace, name)
 	req, err := s.client.NewRequest(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return empty, err
@@ -1070,7 +1079,7 @@ func (s *serverlessService) GetTrigger(ctx context.Context, name string) (Server
 	if err != nil {
 		return empty, err
 	}
-	return fixBaseDate(decoded.Trigger), nil
+	return decoded.Trigger, nil
 }
 
 // Delete Trigger deletes a trigger from the namespace (used when undeploying triggers explicitly,
@@ -1081,22 +1090,13 @@ func (s *serverlessService) DeleteTrigger(ctx context.Context, name string) erro
 	if err != nil {
 		return err
 	}
-	path := "v2/functions/trigger/" + creds.Namespace + "/" + name
+	path := fmt.Sprintf("v2/functions/namespaces/%s/triggers/%s", creds.Namespace, name)
 	req, err := s.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return err
 	}
 	_, err = s.client.Do(ctx, req, nil)
 	return err
-}
-
-// fixupCron detects the optional seconds field and removes it
-func fixupCron(cron string) string {
-	parts := strings.Split(cron, " ")
-	if len(parts) == 6 {
-		return strings.Join(parts[1:], " ")
-	}
-	return cron
 }
 
 func readTopLevel(project *ServerlessProject) error {
@@ -1197,6 +1197,11 @@ func (s *serverlessService) WriteCredentials(creds ServerlessCredentials) error 
 		return err
 	}
 	return os.WriteFile(credsPath, bytes, 0600)
+}
+
+// CredentialsPath simply returns the directory path where credentials are stored
+func (s *serverlessService) CredentialsPath() string {
+	return s.credsDir
 }
 
 // ReadCredentials reads the current serverless credentials from the appropriate 'creds' diretory

@@ -95,6 +95,20 @@ func (mr *MockServerlessServiceMockRecorder) CreateNamespace(arg0, arg1, arg2 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateNamespace", reflect.TypeOf((*MockServerlessService)(nil).CreateNamespace), arg0, arg1, arg2)
 }
 
+// CredentialsPath mocks base method.
+func (m *MockServerlessService) CredentialsPath() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CredentialsPath")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// CredentialsPath indicates an expected call of CredentialsPath.
+func (mr *MockServerlessServiceMockRecorder) CredentialsPath() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CredentialsPath", reflect.TypeOf((*MockServerlessService)(nil).CredentialsPath))
+}
+
 // DeleteFunction mocks base method.
 func (m *MockServerlessService) DeleteFunction(arg0 string, arg1 bool) error {
 	m.ctrl.T.Helper()
@@ -463,6 +477,18 @@ func (m *MockServerlessService) ReadProject(arg0 *do.ServerlessProject, arg1 []s
 func (mr *MockServerlessServiceMockRecorder) ReadProject(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadProject", reflect.TypeOf((*MockServerlessService)(nil).ReadProject), arg0, arg1)
+}
+
+// SetEffectiveCredentials mocks base method.
+func (m *MockServerlessService) SetEffectiveCredentials(auth, apihost string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetEffectiveCredentials", auth, apihost)
+}
+
+// SetEffectiveCredentials indicates an expected call of SetEffectiveCredentials.
+func (mr *MockServerlessServiceMockRecorder) SetEffectiveCredentials(auth, apihost interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetEffectiveCredentials", reflect.TypeOf((*MockServerlessService)(nil).SetEffectiveCredentials), auth, apihost)
 }
 
 // Stream mocks base method.

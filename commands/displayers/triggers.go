@@ -15,7 +15,6 @@ package displayers
 
 import (
 	"io"
-	"time"
 
 	"github.com/digitalocean/doctl/do"
 )
@@ -52,16 +51,16 @@ func (i *Triggers) ColMap() map[string]string {
 func (i *Triggers) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(i.List))
 	for _, ii := range i.List {
-		lastRunTime, err := time.Parse(time.RFC3339, ii.LastRun)
 		lastRun := "_"
-		if err == nil {
-			lastRun = lastRunTime.Local().Format("01/02 03:04:05")
+		if ii.ScheduledRuns != nil && ii.ScheduledRuns.LastRunAt != nil && !ii.ScheduledRuns.LastRunAt.IsZero() {
+			lastRun = ii.ScheduledRuns.LastRunAt.String()
 		}
+
 		x := map[string]interface{}{
 			"Name":     ii.Name,
-			"Cron":     ii.Cron,
+			"Cron":     ii.ScheduledDetails.Cron,
 			"Function": ii.Function,
-			"Enabled":  ii.Enabled,
+			"Enabled":  ii.IsEnabled,
 			"LastRun":  lastRun,
 		}
 		out = append(out, x)
