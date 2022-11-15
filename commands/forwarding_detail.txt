@@ -1,0 +1,6 @@
+- `entry_protocol`: The entry protocol used for traffic to the load balancer. Possible values are: `http`, `https`, `http2`, `http3`, `tcp`, or `udp`.
+- `entry_port`: The entry port used for incoming traffic to the load balancer.
+- `target_protocol`: The target protocol used for traffic from the load balancer to the backend Droplets. Possible values are: `http`, `https`, `http2`, `http3`, `tcp`, or `udp`.
+- `target_port`: The target port used to send traffic from the load balancer to the backend Droplets.
+- `certificate_id`: The ID of the TLS certificate used for SSL termination, if enabled. Can be obtained with `doctl certificate list`
+- `tls_passthrough`: Whether SSL passthrough is enabled on the load balancer.
