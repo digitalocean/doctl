@@ -107,7 +107,8 @@ func TestLoadBalancerCreate(t *testing.T) {
 					TlsPassthrough: true,
 				},
 			},
-			VPCUUID: vpcUUID,
+			VPCUUID:   vpcUUID,
+			ProjectID: "project-id-uuid",
 		}
 		disableLetsEncryptDNSRecords := true
 		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
@@ -122,6 +123,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,check_interval_seconds:4,response_timeout_seconds:23,healthy_threshold:5,unhealthy_threshold:10")
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306,tls_passthrough:true")
 		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
+		config.Doit.Set(config.NS, doctl.ArgProjectID, "project-id-uuid")
 
 		err := RunLoadBalancerCreate(config)
 		assert.NoError(t, err)
@@ -157,6 +159,7 @@ func TestLoadBalancerUpdate(t *testing.T) {
 					TargetPort:     80,
 				},
 			},
+			ProjectID: "project-id-uuid",
 		}
 		disableLetsEncryptDNSRecords := true
 		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
@@ -172,6 +175,7 @@ func TestLoadBalancerUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,check_interval_seconds:4,response_timeout_seconds:23,healthy_threshold:5,unhealthy_threshold:10")
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80")
 		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
+		config.Doit.Set(config.NS, doctl.ArgProjectID, "project-id-uuid")
 
 		err := RunLoadBalancerUpdate(config)
 		assert.NoError(t, err)
