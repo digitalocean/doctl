@@ -84,6 +84,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "",
 		forwardingRulesTxt)
 	AddBoolFlag(cmdRecordCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
+	AddStringFlag(cmdRecordCreate, doctl.ArgProjectID, "", "", "Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer.`, Writer, aliasOpt("u"))
@@ -114,6 +115,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
 		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgProjectID, "", "",
+		"Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
@@ -518,6 +521,13 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		return err
 	}
 	r.ForwardingRules = forwardingRules
+
+	projectID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
+	if err != nil {
+		return err
+	}
+
+	r.ProjectID = projectID
 
 	return nil
 }
