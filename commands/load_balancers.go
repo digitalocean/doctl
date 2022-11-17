@@ -524,7 +524,6 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	r.ForwardingRules = forwardingRules
 
 	projectID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
-
 	if err != nil {
 		return err
 	}
@@ -532,14 +531,11 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	r.ProjectID = projectID
 
 	httpIdleTimeout, err := c.Doit.GetInt(c.NS, doctl.ArgHTTPIdleTimeoutSeconds)
-
 	if err != nil {
 		return err
 	}
 
-	if httpIdleTimeout == 0 {
-		r.HTTPIdleTimeoutSeconds = nil
-	} else {
+	if httpIdleTimeout != 0 {
 		t := uint64(httpIdleTimeout)
 		r.HTTPIdleTimeoutSeconds = &t
 	}
