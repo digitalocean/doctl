@@ -324,56 +324,39 @@ func getComparator(compareStr string) (godo.AlertPolicyComp, error) {
 }
 
 func validateAlertPolicyType(t string) error {
-	switch t {
-	case godo.DropletCPUUtilizationPercent:
-		fallthrough
-	case godo.DropletMemoryUtilizationPercent:
-		fallthrough
-	case godo.DropletDiskUtilizationPercent:
-		fallthrough
-	case godo.DropletDiskReadRate:
-		fallthrough
-	case godo.DropletDiskWriteRate:
-		fallthrough
-	case godo.DropletOneMinuteLoadAverage:
-		fallthrough
-	case godo.DropletFiveMinuteLoadAverage:
-		fallthrough
-	case godo.DropletFifteenMinuteLoadAverage:
-		fallthrough
-	case godo.DropletPublicOutboundBandwidthRate:
-		fallthrough
-	case godo.DbaasFifteenMinuteLoadAverage:
-		fallthrough
-	case godo.DbaasMemoryUtilizationPercent:
-		fallthrough
-	case godo.DbaasDiskUtilizationPercent:
-		fallthrough
-	case godo.DbaasCPUUtilizationPercent:
-		return nil
-	case godo.LoadBalancerCPUUtilizationPercent:
-		return nil
-	case godo.LoadBalancerDropletHealth:
-		return nil
-	case godo.LoadBalancerTLSUtilizationPercent:
-		return nil
-	case godo.LoadBalancerConnectionUtilizationPercent:
-		return nil
-	case godo.LoadBalancerIncreaseInHTTPErrorRatePercentage:
-		return nil
-	case godo.LoadBalancerIncreaseInHTTPErrorRateCount:
-		return nil
-	case godo.LoadBalancerHighHttpResponseTime:
-		return nil
-	case godo.LoadBalancerHighHttpResponseTime50P:
-		return nil
-	case godo.LoadBalancerHighHttpResponseTime95P:
-		return nil
-	case godo.LoadBalancerHighHttpResponseTime99P:
-		return nil
-	default:
+	validAlertPolicyTypes := map[string]struct{}{
+		godo.DropletCPUUtilizationPercent:                  {},
+		godo.DropletMemoryUtilizationPercent:               {},
+		godo.DropletDiskUtilizationPercent:                 {},
+		godo.DropletDiskReadRate:                           {},
+		godo.DropletDiskWriteRate:                          {},
+		godo.DropletOneMinuteLoadAverage:                   {},
+		godo.DropletFiveMinuteLoadAverage:                  {},
+		godo.DropletFifteenMinuteLoadAverage:               {},
+		godo.DropletPublicOutboundBandwidthRate:            {},
+		godo.DbaasFifteenMinuteLoadAverage:                 {},
+		godo.DbaasMemoryUtilizationPercent:                 {},
+		godo.DbaasDiskUtilizationPercent:                   {},
+		godo.DbaasCPUUtilizationPercent:                    {},
+		godo.LoadBalancerCPUUtilizationPercent:             {},
+		godo.LoadBalancerDropletHealth:                     {},
+		godo.LoadBalancerTLSUtilizationPercent:             {},
+		godo.LoadBalancerConnectionUtilizationPercent:      {},
+		godo.LoadBalancerIncreaseInHTTPErrorRatePercentage: {},
+		godo.LoadBalancerIncreaseInHTTPErrorRateCount:      {},
+		godo.LoadBalancerHighHttpResponseTime:              {},
+		godo.LoadBalancerHighHttpResponseTime50P:           {},
+		godo.LoadBalancerHighHttpResponseTime95P:           {},
+		godo.LoadBalancerHighHttpResponseTime99P:           {},
+	}
+
+	_, ok := validAlertPolicyTypes[t]
+
+	if !ok {
 		return errors.New(fmt.Sprintf("'%s' is not a valid alert policy type", t))
 	}
+
+	return nil
 }
 
 func validateAlertPolicyWindow(w string) error {
