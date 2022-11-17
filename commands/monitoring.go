@@ -351,6 +351,26 @@ func validateAlertPolicyType(t string) error {
 		fallthrough
 	case godo.DbaasCPUUtilizationPercent:
 		return nil
+	case godo.LoadBalancerCPUUtilizationPercent:
+		return nil
+	case godo.LoadBalancerDropletHealth:
+		return nil
+	case godo.LoadBalancerTLSUtilizationPercent:
+		return nil
+	case godo.LoadBalancerConnectionUtilizationPercent:
+		return nil
+	case godo.LoadBalancerIncreaseInHTTPErrorRatePercentage:
+		return nil
+	case godo.LoadBalancerIncreaseInHTTPErrorRateCount:
+		return nil
+	case godo.LoadBalancerHighHttpResponseTime:
+		return nil
+	case godo.LoadBalancerHighHttpResponseTime50P:
+		return nil
+	case godo.LoadBalancerHighHttpResponseTime95P:
+		return nil
+	case godo.LoadBalancerHighHttpResponseTime99P:
+		return nil
 	default:
 		return errors.New(fmt.Sprintf("'%s' is not a valid alert policy type", t))
 	}
