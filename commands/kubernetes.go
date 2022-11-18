@@ -647,7 +647,19 @@ func (s *KubernetesCommandService) RunKubernetesClusterList(c *CmdConfig) error 
 		return err
 	}
 
-	return displayClusters(c, true, list...)
+	// Check the format flag to determine if the displayer should use the short
+	// layout of the cluster display. List uses the short version, but to format
+	// output that includes columns not in the short layout we need the full version.
+	var short = true
+	format, err := c.Doit.GetStringSlice(c.NS, doctl.ArgFormat)
+	if err != nil {
+		return err
+	}
+	if len(format) > 0 {
+		short = false
+	}
+
+	return displayClusters(c, short, list...)
 }
 
 // RunKubernetesClusterGetUpgrades retrieves available upgrade versions for a cluster.
