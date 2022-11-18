@@ -82,6 +82,7 @@ func TestLoadBalancerCreateWithMalformedForwardingRulesArgs(t *testing.T) {
 func TestLoadBalancerCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		vpcUUID := "00000000-0000-4000-8000-000000000000"
+		timeout := uint64(120)
 		r := godo.LoadBalancerRequest{
 			Name:       "lb-name",
 			Region:     "nyc1",
@@ -107,8 +108,9 @@ func TestLoadBalancerCreate(t *testing.T) {
 					TlsPassthrough: true,
 				},
 			},
-			VPCUUID:   vpcUUID,
-			ProjectID: "project-id-uuid",
+			VPCUUID:                vpcUUID,
+			ProjectID:              "project-id-uuid",
+			HTTPIdleTimeoutSeconds: &timeout,
 		}
 		disableLetsEncryptDNSRecords := true
 		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
@@ -124,6 +126,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306,tls_passthrough:true")
 		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
 		config.Doit.Set(config.NS, doctl.ArgProjectID, "project-id-uuid")
+		config.Doit.Set(config.NS, doctl.ArgHTTPIdleTimeoutSeconds, 120)
 
 		err := RunLoadBalancerCreate(config)
 		assert.NoError(t, err)
@@ -133,6 +136,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 func TestLoadBalancerUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
+		timeout := uint64(120)
 		r := godo.LoadBalancerRequest{
 			Name:       "lb-name",
 			Region:     "nyc1",
@@ -159,7 +163,8 @@ func TestLoadBalancerUpdate(t *testing.T) {
 					TargetPort:     80,
 				},
 			},
-			ProjectID: "project-id-uuid",
+			ProjectID:              "project-id-uuid",
+			HTTPIdleTimeoutSeconds: &timeout,
 		}
 		disableLetsEncryptDNSRecords := true
 		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
@@ -176,6 +181,7 @@ func TestLoadBalancerUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80")
 		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
 		config.Doit.Set(config.NS, doctl.ArgProjectID, "project-id-uuid")
+		config.Doit.Set(config.NS, doctl.ArgHTTPIdleTimeoutSeconds, 120)
 
 		err := RunLoadBalancerUpdate(config)
 		assert.NoError(t, err)

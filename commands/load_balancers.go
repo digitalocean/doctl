@@ -85,6 +85,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		forwardingRulesTxt)
 	AddBoolFlag(cmdRecordCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
 	AddStringFlag(cmdRecordCreate, doctl.ArgProjectID, "", "", "Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
+	AddIntFlag(cmdRecordCreate, doctl.ArgHTTPIdleTimeoutSeconds, "", 0, "HTTP idle timeout that configures the idle timeout for http connections on the load balancer")
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer.`, Writer, aliasOpt("u"))
@@ -528,6 +529,16 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	r.ProjectID = projectID
+
+	httpIdleTimeout, err := c.Doit.GetInt(c.NS, doctl.ArgHTTPIdleTimeoutSeconds)
+	if err != nil {
+		return err
+	}
+
+	if httpIdleTimeout != 0 {
+		t := uint64(httpIdleTimeout)
+		r.HTTPIdleTimeoutSeconds = &t
+	}
 
 	return nil
 }

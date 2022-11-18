@@ -299,6 +299,8 @@ const (
 	ArgHealthCheck = "health-check"
 	// ArgForwardingRules is a list of forwarding rules for the load balancer.
 	ArgForwardingRules = "forwarding-rules"
+	// ArgHTTPIdleTimeoutSeconds is the http idle time out configuration for the load balancer
+	ArgHTTPIdleTimeoutSeconds = "http-idle-timeout-seconds"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
