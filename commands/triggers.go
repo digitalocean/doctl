@@ -20,6 +20,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
 
@@ -41,6 +42,12 @@ when events from that source type occur.  Currently, only the ` + "`" + `schedul
 		`Use `+"`"+`doctl serverless triggers list`+"`"+` to list your triggers.`,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Triggers{}))
 	AddStringFlag(list, "function", "f", "", "list only triggers for the chosen function")
+
+	enable := CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>", "Enable a trigger", "Use `doctl serverless triggers enable <triggerName>` to enable a trigger", Writer)
+	AddStringFlag(enable, "output", "o", "", "Desired output format [text|json] (default \"text\")")
+
+	disable := CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>", "Disable a trigger", "Use `doctl serverless triggers disable <triggerName>` to disable a trigger", Writer)
+	AddStringFlag(disable, "output", "o", "", "Desired output format [text|json] (default \"text\")")
 
 	CmdBuilder(cmd, RunTriggersGet, "get <triggerName>", "Get the details for a trigger",
 		`Use `+"`"+`doctl serverless triggers get <triggerName>`+"`"+` for details about <triggerName>.`,
@@ -78,6 +85,42 @@ func RunTriggersGet(c *CmdConfig) error {
 	}
 	fmt.Fprintln(c.Out, string(json))
 	return nil
+}
+
+// RunTriggerToggle provides the logic for 'doctl sls trig enabled/disabled'
+func RunTriggerToggle(isEnabled bool) func(*CmdConfig) error {
+	return func(c *CmdConfig) error {
+		err := ensureOneArg(c)
+
+		if err != nil {
+			return err
+		}
+		outputFlag, _ := c.Doit.GetString(c.NS, "output")
+
+		trigger, err := c.Serverless().UpdateTrigger(context.TODO(), c.Args[0], &do.UpdateTriggerRequest{IsEnabled: isEnabled})
+
+		if err != nil {
+			return err
+		}
+
+		if outputFlag == "json" {
+			json, err := json.MarshalIndent(&trigger, "", "  ")
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprintln(c.Out, string(json))
+			return nil
+		}
+
+		msg := "Trigger %s %s \n"
+		if isEnabled {
+			fmt.Fprintf(c.Out, msg, trigger.Name, "enabled")
+		} else {
+			fmt.Fprintf(c.Out, msg, trigger.Name, "disabled")
+		}
+		return nil
+	}
 }
 
 // cleanTriggers is the subroutine of undeploy that removes all the triggers of a namespace

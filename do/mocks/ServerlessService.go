@@ -505,6 +505,21 @@ func (mr *MockServerlessServiceMockRecorder) Stream(arg0 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stream", reflect.TypeOf((*MockServerlessService)(nil).Stream), arg0)
 }
 
+// UpdateTrigger mocks base method.
+func (m *MockServerlessService) UpdateTrigger(arg0 context.Context, arg1 string, arg2 *do.UpdateTriggerRequest) (do.ServerlessTrigger, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTrigger", arg0, arg1, arg2)
+	ret0, _ := ret[0].(do.ServerlessTrigger)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateTrigger indicates an expected call of UpdateTrigger.
+func (mr *MockServerlessServiceMockRecorder) UpdateTrigger(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTrigger", reflect.TypeOf((*MockServerlessService)(nil).UpdateTrigger), arg0, arg1, arg2)
+}
+
 // WriteCredentials mocks base method.
 func (m *MockServerlessService) WriteCredentials(arg0 do.ServerlessCredentials) error {
 	m.ctrl.T.Helper()

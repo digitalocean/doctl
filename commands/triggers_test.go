@@ -28,7 +28,7 @@ import (
 func TestTriggersCommand(t *testing.T) {
 	cmd := Triggers()
 	assert.NotNil(t, cmd)
-	expected := []string{"get", "list"}
+	expected := []string{"get", "list", "enable", "disable"}
 
 	names := []string{}
 	for _, c := range cmd.Commands() {
