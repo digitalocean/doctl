@@ -15,8 +15,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -43,12 +41,16 @@ when events from that source type occur.  Currently, only the ` + "`" + `schedul
 		Writer, aliasOpt("ls"), displayerType(&displayers.Triggers{}))
 	AddStringFlag(list, "function", "f", "", "list only triggers for the chosen function")
 
-	CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>", "Enable a trigger", "Use `doctl serverless triggers enable <triggerName>` to enable a trigger", Writer)
-	CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>", "Disable a trigger", "Use `doctl serverless triggers disable <triggerName>` to disable a trigger", Writer)
+	CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>",
+		"Enable a trigger", "Use `doctl serverless triggers enable <triggerName>` to enable a trigger",
+		Writer, displayerType(&displayers.Triggers{}))
+	CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>",
+		"Disable a trigger", "Use `doctl serverless triggers disable <triggerName>` to disable a trigger",
+		Writer, displayerType(&displayers.Triggers{}))
 
 	CmdBuilder(cmd, RunTriggersGet, "get <triggerName>", "Get the details for a trigger",
 		`Use `+"`"+`doctl serverless triggers get <triggerName>`+"`"+` for details about <triggerName>.`,
-		Writer)
+		Writer, displayerType(&displayers.Triggers{}))
 
 	return cmd
 }
@@ -76,12 +78,8 @@ func RunTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(&trigger, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(c.Out, string(json))
-	return nil
+
+	return c.Display(&displayers.Triggers{List: []do.ServerlessTrigger{trigger}})
 }
 
 // RunTriggerToggle provides the logic for 'doctl sls trig enabled/disabled'
