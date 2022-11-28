@@ -103,23 +103,7 @@ func RunTriggerToggle(isEnabled bool) func(*CmdConfig) error {
 			return err
 		}
 
-		if outputFlag == "json" {
-			json, err := json.MarshalIndent(&trigger, "", "  ")
-			if err != nil {
-				return err
-			}
-
-			fmt.Fprintln(c.Out, string(json))
-			return nil
-		}
-
-		msg := "Trigger %s %s \n"
-		if isEnabled {
-			fmt.Fprintf(c.Out, msg, trigger.Name, "enabled")
-		} else {
-			fmt.Fprintf(c.Out, msg, trigger.Name, "disabled")
-		}
-		return nil
+		return c.Display(&displayers.Triggers{List: []do.ServerlessTrigger{trigger}})
 	}
 }
 
