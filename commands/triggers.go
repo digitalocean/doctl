@@ -41,12 +41,16 @@ when events from that source type occur.  Currently, only the ` + "`" + `schedul
 		Writer, aliasOpt("ls"), displayerType(&displayers.Triggers{}))
 	AddStringFlag(list, "function", "f", "", "list only triggers for the chosen function")
 
-	CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>", "Enable a trigger", "Use `doctl serverless triggers enable <triggerName>` to enable a trigger", Writer)
-	CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>", "Disable a trigger", "Use `doctl serverless triggers disable <triggerName>` to disable a trigger", Writer)
+	CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>",
+		"Enable a trigger", "Use `doctl serverless triggers enable <triggerName>` to enable a trigger",
+		Writer, displayerType(&displayers.Triggers{}))
+	CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>",
+		"Disable a trigger", "Use `doctl serverless triggers disable <triggerName>` to disable a trigger",
+		Writer, displayerType(&displayers.Triggers{}))
 
 	CmdBuilder(cmd, RunTriggersGet, "get <triggerName>", "Get the details for a trigger",
 		`Use `+"`"+`doctl serverless triggers get <triggerName>`+"`"+` for details about <triggerName>.`,
-		Writer)
+		Writer, displayerType(&displayers.Triggers{}))
 
 	return cmd
 }
