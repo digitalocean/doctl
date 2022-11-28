@@ -43,11 +43,8 @@ when events from that source type occur.  Currently, only the ` + "`" + `schedul
 		Writer, aliasOpt("ls"), displayerType(&displayers.Triggers{}))
 	AddStringFlag(list, "function", "f", "", "list only triggers for the chosen function")
 
-	enable := CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>", "Enable a trigger", "Use `doctl serverless triggers enable <triggerName>` to enable a trigger", Writer)
-	AddStringFlag(enable, "output", "o", "", "Desired output format [text|json] (default \"text\")")
-
-	disable := CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>", "Disable a trigger", "Use `doctl serverless triggers disable <triggerName>` to disable a trigger", Writer)
-	AddStringFlag(disable, "output", "o", "", "Desired output format [text|json] (default \"text\")")
+	CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>", "Enable a trigger", "Use `doctl serverless triggers enable <triggerName>` to enable a trigger", Writer)
+	CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>", "Disable a trigger", "Use `doctl serverless triggers disable <triggerName>` to disable a trigger", Writer)
 
 	CmdBuilder(cmd, RunTriggersGet, "get <triggerName>", "Get the details for a trigger",
 		`Use `+"`"+`doctl serverless triggers get <triggerName>`+"`"+` for details about <triggerName>.`,
@@ -95,7 +92,6 @@ func RunTriggerToggle(isEnabled bool) func(*CmdConfig) error {
 		if err != nil {
 			return err
 		}
-		outputFlag, _ := c.Doit.GetString(c.NS, "output")
 
 		trigger, err := c.Serverless().UpdateTrigger(context.TODO(), c.Args[0], &do.UpdateTriggerRequest{IsEnabled: isEnabled})
 
