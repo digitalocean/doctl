@@ -15,8 +15,6 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -76,12 +74,8 @@ func RunTriggersGet(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	json, err := json.MarshalIndent(&trigger, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Fprintln(c.Out, string(json))
-	return nil
+
+	return c.Display(&displayers.Triggers{List: []do.ServerlessTrigger{trigger}})
 }
 
 // RunTriggerToggle provides the logic for 'doctl sls trig enabled/disabled'
