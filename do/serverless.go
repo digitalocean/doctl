@@ -176,13 +176,18 @@ type ServerlessTriggerGetResponse struct {
 	Trigger ServerlessTrigger `json:"Trigger,omitempty"`
 }
 
+type UpdateTriggerRequest struct {
+	IsEnabled        bool                     `json:"is_enabled"`
+	ScheduledDetails *TriggerScheduledDetails `json:"scheduled_details,omitempty"`
+}
+
 // ServerlessTrigger is the form used in list and get responses by the triggers API
 type ServerlessTrigger struct {
 	Namespace        string                   `json:"namespace,omitempty"`
 	Function         string                   `json:"function,omitempty"`
 	Type             string                   `json:"type,omitempty"`
 	Name             string                   `json:"name,omitempty"`
-	IsEnabled        bool                     `json:"is_enabled,omitempty"`
+	IsEnabled        bool                     `json:"is_enabled"`
 	CreatedAt        time.Time                `json:"created_at,omitempty"`
 	UpdatedAt        time.Time                `json:"updated_at,omitempty"`
 	ScheduledDetails *TriggerScheduledDetails `json:"scheduled_details,omitempty"`
@@ -214,6 +219,7 @@ type ServerlessService interface {
 	CleanNamespace() error
 	ListTriggers(context.Context, string) ([]ServerlessTrigger, error)
 	GetTrigger(context.Context, string) (ServerlessTrigger, error)
+	UpdateTrigger(context.Context, string, *UpdateTriggerRequest) (ServerlessTrigger, error)
 	DeleteTrigger(context.Context, string) error
 	WriteCredentials(ServerlessCredentials) error
 	ReadCredentials() (ServerlessCredentials, error)
@@ -254,7 +260,7 @@ const (
 	// Minimum required version of the serverless plugin code.  The first part is
 	// the version of the incorporated functions deployer and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "5.0.14-2.0.0"
+	minServerlessVersion = "5.0.16-2.0.0"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -1074,6 +1080,32 @@ func (s *serverlessService) GetTrigger(ctx context.Context, name string) (Server
 	if err != nil {
 		return empty, err
 	}
+	decoded := new(ServerlessTriggerGetResponse)
+	_, err = s.client.Do(ctx, req, decoded)
+	if err != nil {
+		return empty, err
+	}
+	return decoded.Trigger, nil
+}
+
+func (s *serverlessService) UpdateTrigger(ctx context.Context, trigger string, opts *UpdateTriggerRequest) (ServerlessTrigger, error) {
+	empty := ServerlessTrigger{}
+	err := s.CheckServerlessStatus()
+	if err != nil {
+		return empty, err
+	}
+	creds, err := s.ReadCredentials()
+	if err != nil {
+		return empty, err
+	}
+
+	path := fmt.Sprintf("v2/functions/namespaces/%s/triggers/%s", creds.Namespace, trigger)
+	req, err := s.client.NewRequest(ctx, http.MethodPut, path, opts)
+
+	if err != nil {
+		return empty, err
+	}
+
 	decoded := new(ServerlessTriggerGetResponse)
 	_, err = s.client.Do(ctx, req, decoded)
 	if err != nil {

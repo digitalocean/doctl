@@ -28,7 +28,7 @@ import (
 func TestTriggersCommand(t *testing.T) {
 	cmd := Triggers()
 	assert.NotNil(t, cmd)
-	expected := []string{"get", "list"}
+	expected := []string{"get", "list", "enable", "disable"}
 
 	names := []string{}
 	for _, c := range cmd.Commands() {
@@ -65,24 +65,8 @@ func TestTriggersGet(t *testing.T) {
 				NextRunAt: &nextRunAt,
 			},
 		}
-		expect := `{
-  "namespace": "123-456",
-  "function": "misc/pollStatus",
-  "type": "SCHEDULED",
-  "name": "firePoll1",
-  "is_enabled": true,
-  "created_at": "2022-10-05T13:46:59Z",
-  "updated_at": "2022-10-17T18:41:30Z",
-  "scheduled_details": {
-    "cron": "5 * * * *",
-    "body": {
-      "foo": "bar"
-    }
-  },
-  "scheduled_runs": {
-    "next_run_at": "2022-11-03T17:03:02Z"
-  }
-}
+		expect := `Name         Cron Expression    Invokes            Enabled    Last Run At
+firePoll1    5 * * * *          misc/pollStatus    true       _
 `
 		tm.serverless.EXPECT().GetTrigger(context.TODO(), "aTrigger").Return(theTrigger, nil)
 
