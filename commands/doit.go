@@ -307,5 +307,8 @@ func cmdNS(cmd *cobra.Command) string {
 }
 
 func isTerminal(f *os.File) bool {
+	if os.Getenv("TERM") == "dumb" {
+		return false
+	}
 	return isatty.IsTerminal(f.Fd()) || isatty.IsCygwinTerminal(f.Fd())
 }

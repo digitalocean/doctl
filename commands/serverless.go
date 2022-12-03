@@ -14,17 +14,16 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/charm/list"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
@@ -276,49 +275,40 @@ func RunServerlessConnect(c *CmdConfig) error {
 // connectFromList connects a namespace based on a non-empty list of namespaces.  If the list is
 // singular that determines the namespace that will be connected.  Otherwise, this is determined
 // via a prompt.
-func connectFromList(ctx context.Context, sls do.ServerlessService, list []do.OutputNamespace, out io.Writer) error {
-	var ns do.OutputNamespace
-	if len(list) == 1 {
-		ns = list[0]
-	} else {
-		ns = chooseFromList(list, out)
-		if ns.Namespace == "" {
-			return nil
+func connectFromList(ctx context.Context, sls do.ServerlessService, l []do.OutputNamespace, out io.Writer) error {
+	if len(l) == 1 {
+		creds, err := sls.GetNamespace(ctx, l[0].Namespace)
+		if err != nil {
+			return err
 		}
+		return finishConnecting(sls, creds, l[0].Label, out)
 	}
-	creds, err := sls.GetNamespace(ctx, ns.Namespace)
+
+	if !Interactive {
+		return errors.New("Namespace is required when running non-interactively")
+	}
+
+	var nsItems []list.Item
+
+	for _, ns := range l {
+		nsItems = append(nsItems, nsListItem{ns: ns})
+	}
+
+	listItems := list.New(nsItems)
+	listItems.Model().Title = "select a namespace"
+	listItems.Model().SetStatusBarItemName("namespace", "namespaces")
+
+	selected, err := listItems.Select()
 	if err != nil {
 		return err
 	}
-	return finishConnecting(sls, creds, ns.Label, out)
-}
 
-// connectChoiceReader is the bufio.Reader for reading the user's response to the prompt to choose
-// a namespace.  It can be replaced for testing.
-var connectChoiceReader *bufio.Reader = bufio.NewReader(os.Stdin)
-
-// chooseFromList displays a list of namespaces (label, region, id) assigning each one a number.
-// The user can than respond to a prompt that chooses from the list by number.  The response 'x' is
-// also accepted and exits the command.
-func chooseFromList(list []do.OutputNamespace, out io.Writer) do.OutputNamespace {
-	for i, ns := range list {
-		fmt.Fprintf(out, "%d: %s in %s, label=%s\n", i, ns.Namespace, ns.Region, ns.Label)
+	selectedNs := selected.(nsListItem).ns
+	creds, err := sls.GetNamespace(ctx, selectedNs.Namespace)
+	if err != nil {
+		return err
 	}
-	for {
-		fmt.Fprintln(out, "Choose a namespace by number or 'x' to exit")
-		choice, err := connectChoiceReader.ReadString('\n')
-		if err != nil {
-			continue
-		}
-		choice = strings.TrimSpace(choice)
-		if choice == "x" {
-			return do.OutputNamespace{}
-		}
-		i, err := strconv.Atoi(choice)
-		if err == nil && i >= 0 && i < len(list) {
-			return list[i]
-		}
-	}
+	return finishConnecting(sls, creds, selectedNs.Label, out)
 }
 
 // finishConnecting performs the final steps of 'doctl serverless connect'.

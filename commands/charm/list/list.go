@@ -131,7 +131,7 @@ func (l *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return l, cmd
 }
 
-// Update implements bubbletea.Model.
+// View implements bubbletea.Model.
 func (l *listModel) View() string {
 	return l.style.Lipgloss().Render(l.model.View())
 }

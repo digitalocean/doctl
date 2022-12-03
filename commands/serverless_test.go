@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -68,7 +67,7 @@ func TestServerlessConnect(t *testing.T) {
 					Label:     "another",
 				},
 			},
-			expectedOutput: "0: ns1 in nyc1, label=something\n1: ns2 in lon1, label=another\nChoose a namespace by number or 'x' to exit\nConnected to functions namespace 'ns1' on API host 'https://api.example.com' (label=something)\n\n",
+			expectedError: errors.New("Namespace is required when running non-interactively"),
 		},
 		{
 			name: "use argument",
@@ -96,7 +95,6 @@ func TestServerlessConnect(t *testing.T) {
 				if tt.doctlArg != "" {
 					config.Args = append(config.Args, tt.doctlArg)
 				}
-				connectChoiceReader = bufio.NewReader(strings.NewReader("0\n"))
 				nsResponse := do.NamespaceListResponse{Namespaces: tt.namespaceList}
 				creds := do.ServerlessCredentials{Namespace: "ns1", APIHost: "https://api.example.com"}
 
