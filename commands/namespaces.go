@@ -32,7 +32,7 @@ import (
 // actually host Functions).
 var validRegions = map[string]string{
 	"ams": "ams3", "blr": "blr1", "fra": "fra1", "lon": "lon1",
-	"nyc": "nyc1", "sfo": "sfo3", "sgp": "sgp1", "tor": "tor1",
+	"nyc": "nyc1", "sfo": "sfo3", "sgp": "sgp1", "syd": "syd1", "tor": "tor1",
 }
 
 // Namespaces generates the serverless 'namespaces' subtree for addition to the doctl command
