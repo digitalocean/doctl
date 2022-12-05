@@ -145,7 +145,7 @@ func TestNamespacesListRegions(t *testing.T) {
 		buf := &bytes.Buffer{}
 		config.Out = buf
 
-		expectedOutput := "[ams ams3 blr blr1 fra fra1 lon lon1 nyc nyc1 sfo sfo3 sgp sgp1 tor tor1]\n"
+		expectedOutput := "[ams ams3 blr blr1 fra fra1 lon lon1 nyc nyc1 sfo sfo3 sgp sgp1 syd syd1 tor tor1]\n"
 
 		err := RunNamespacesListRegions(config)
 
