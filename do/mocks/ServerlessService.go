@@ -434,6 +434,21 @@ func (mr *MockServerlessServiceMockRecorder) ListNamespaces(arg0 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListNamespaces", reflect.TypeOf((*MockServerlessService)(nil).ListNamespaces), arg0)
 }
 
+// ListPackages mocks base method.
+func (m *MockServerlessService) ListPackages() ([]whisk.Package, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPackages")
+	ret0, _ := ret[0].([]whisk.Package)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPackages indicates an expected call of ListPackages.
+func (mr *MockServerlessServiceMockRecorder) ListPackages() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPackages", reflect.TypeOf((*MockServerlessService)(nil).ListPackages))
+}
+
 // ListTriggers mocks base method.
 func (m *MockServerlessService) ListTriggers(arg0 context.Context, arg1 string) ([]do.ServerlessTrigger, error) {
 	m.ctrl.T.Helper()
