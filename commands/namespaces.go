@@ -44,7 +44,7 @@ func Namespaces() *Command {
 			Long: `Functions namespaces (in the cloud) contain the result of deploying packages and functions with ` + "`" + `doctl serverless deploy` + "`" + `.
 The subcommands of ` + "`" + `doctl serverless namespaces` + "`" + ` are used to manage multiple functions namespaces within your account.
 Use ` + "`" + `doctl serverless connect` + "`" + ` with an explicit argument to connect to a specific namespace.  You are connected to one namespace at a time.`,
-			Aliases: []string{"ns"},
+			Aliases: []string{"namespace", "ns"},
 		},
 	}
 	create := CmdBuilder(cmd, RunNamespacesCreate, "create", "Creates a namespace",
