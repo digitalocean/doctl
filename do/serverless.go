@@ -44,6 +44,7 @@ import (
 type ServerlessCredentials struct {
 	APIHost     string                                     `json:"currentHost"`
 	Namespace   string                                     `json:"currentNamespace"`
+	Label       string                                     `json:"label"`
 	Credentials map[string]map[string]ServerlessCredential `json:"credentials"`
 }
 
@@ -627,6 +628,7 @@ func executeNamespaceRequest(ctx context.Context, s *serverlessService, req *htt
 	ans := ServerlessCredentials{
 		APIHost:     host,
 		Namespace:   namespace,
+		Label:       decoded.Namespace.Label,
 		Credentials: map[string]map[string]ServerlessCredential{host: {namespace: credential}},
 	}
 	return ans, nil

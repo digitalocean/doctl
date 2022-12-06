@@ -98,7 +98,7 @@ func TestServerlessConnect(t *testing.T) {
 				}
 				connectChoiceReader = bufio.NewReader(strings.NewReader("0\n"))
 				nsResponse := do.NamespaceListResponse{Namespaces: tt.namespaceList}
-				creds := do.ServerlessCredentials{Namespace: "ns1", APIHost: "https://api.example.com"}
+				creds := do.ServerlessCredentials{Namespace: "ns1", APIHost: "https://api.example.com", Label: "something"}
 
 				tm.serverless.EXPECT().CheckServerlessStatus().Return(do.ErrServerlessNotConnected)
 				ctx := context.TODO()
