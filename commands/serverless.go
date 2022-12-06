@@ -232,7 +232,7 @@ func RunServerlessConnect(c *CmdConfig) error {
 			Namespace:   namespace,
 			Credentials: map[string]map[string]do.ServerlessCredential{apihost: {namespace: credential}},
 		}
-		return finishConnecting(sls, creds, "", c.Out)
+		return finishConnecting(sls, creds, c.Out)
 	}
 	if len(apihost) > 0 || len(auth) > 0 {
 		return fmt.Errorf("If either of 'apihost' or 'auth' is specified then both must be specified")
@@ -290,7 +290,7 @@ func connectFromList(ctx context.Context, sls do.ServerlessService, list []do.Ou
 	if err != nil {
 		return err
 	}
-	return finishConnecting(sls, creds, ns.Label, out)
+	return finishConnecting(sls, creds, out)
 }
 
 // connectChoiceReader is the bufio.Reader for reading the user's response to the prompt to choose
@@ -322,20 +322,25 @@ func chooseFromList(list []do.OutputNamespace, out io.Writer) do.OutputNamespace
 }
 
 // finishConnecting performs the final steps of 'doctl serverless connect'.
-func finishConnecting(sls do.ServerlessService, creds do.ServerlessCredentials, label string, out io.Writer) error {
+func finishConnecting(sls do.ServerlessService, creds do.ServerlessCredentials, out io.Writer) error {
 	// Store the credentials
 	err := sls.WriteCredentials(creds)
 	if err != nil {
 		return err
 	}
 
-	labelTag := ""
-	if label != "" {
-		labelTag = " (label=" + label + ")"
-	}
-	fmt.Fprintf(out, "Connected to functions namespace '%s' on API host '%s'%s\n", creds.Namespace, creds.APIHost, labelTag)
+	fmt.Fprintln(out, getConnectedMessage(creds))
 	fmt.Fprintln(out)
 	return nil
+}
+
+// getConnectedMessage formats the output message for being connected to a specific namespace (with optional label)
+func getConnectedMessage(creds do.ServerlessCredentials) string {
+	labelTag := ""
+	if creds.Label != "" {
+		labelTag = " (label=" + creds.Label + ")"
+	}
+	return fmt.Sprintf("Connected to functions namespace '%s' on API host '%s'%s", creds.Namespace, creds.APIHost, labelTag)
 }
 
 // RunServerlessStatus gives a report on the status of the serverless (installed, up to date, connected)
@@ -392,7 +397,7 @@ func RunServerlessStatus(c *CmdConfig) error {
 		return nil
 	}
 
-	fmt.Fprintf(c.Out, "Connected to functions namespace '%s' on API host '%s'\n", creds.Namespace, creds.APIHost)
+	fmt.Fprintln(c.Out, getConnectedMessage(creds))
 	fmt.Fprintf(c.Out, "Serverless software version is %s\n\n", do.GetMinServerlessVersion())
 	languages, _ := c.Doit.GetBool(c.NS, "languages")
 	if languages {
