@@ -38,7 +38,7 @@ func Functions() *Command {
 			Short: "Work with the functions in your namespace",
 			Long: `The subcommands of ` + "`" + `doctl serverless functions` + "`" + ` operate on your functions namespace.
 You are able to inspect and list these functions to know what is deployed.  You can also invoke functions to test them.`,
-			Aliases: []string{"fn"},
+			Aliases: []string{"function", "fn"},
 		},
 	}
 

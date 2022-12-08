@@ -46,7 +46,7 @@ func Activations() *Command {
 			Short: "Work with activation records",
 			Long: `The subcommands of ` + "`" + `doctl serverless activations` + "`" + ` will list or retrieve results, logs, or complete
 "activation records" which result from invoking functions deployed to your functions namespace.`,
-			Aliases: []string{"actv"},
+			Aliases: []string{"activation", "actv"},
 		},
 	}
 
