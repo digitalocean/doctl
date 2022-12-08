@@ -227,6 +227,7 @@ type ServerlessService interface {
 	GetHostInfo(string) (ServerlessHostInfo, error)
 	CheckServerlessStatus() error
 	InstallServerless(string, bool) error
+	ListPackages() ([]whisk.Package, error)
 	DeletePackage(string, bool) error
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	ListFunctions(string, int, int) ([]whisk.Action, error)
@@ -734,7 +735,7 @@ func (s *serverlessService) CleanNamespace() error {
 	}
 
 	// Deletes all functions
-	fns, err := s.ListFunctions("", 0, 0)
+	fns, err := s.ListFunctions("", 0, 200)
 	if err != nil {
 		return err
 	}
@@ -748,6 +749,19 @@ func (s *serverlessService) CleanNamespace() error {
 
 		// All triggers for the namespace are deleted above so we don't need to remove the trigger for each individual function.
 		err := s.DeleteFunction(name, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Now delete all packages.  Since the functions are presumably gone, the packages can be deleted non-recursively.
+	pkgs, err := s.ListPackages()
+	if err != nil {
+		return err
+	}
+
+	for _, pkg := range pkgs {
+		err := s.DeletePackage(pkg.Name, false)
 		if err != nil {
 			return err
 		}
@@ -841,15 +855,26 @@ func (s *serverlessService) DeleteFunction(name string, deleteTriggers bool) err
 	return e
 }
 
-// DeletePackage removes a package and all its namespace from the package from the namespace
-// If force is set to true, it will remove all functions in the package.
-func (s *serverlessService) DeletePackage(name string, force bool) error {
+// ListPackages lists the packages of the namespace
+func (s *serverlessService) ListPackages() ([]whisk.Package, error) {
+	err := initWhisk(s)
+	if err != nil {
+		return []whisk.Package{}, err
+	}
+	options := whisk.PackageListOptions{Limit: 200} // 200 is the max and we are also treating it as a safe-enough value here
+	list, _, err := s.owClient.Packages.List(&options)
+	return list, err
+}
+
+// DeletePackage removes a package from the namespace.
+// If recursive is set to true, it will remove all functions in the package.
+func (s *serverlessService) DeletePackage(name string, recursive bool) error {
 	err := initWhisk(s)
 	if err != nil {
 		return err
 	}
 
-	if force {
+	if recursive {
 		pkg, _, err := s.owClient.Packages.Get(name)
 		if err != nil {
 			return err
