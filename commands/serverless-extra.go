@@ -56,15 +56,13 @@ component.  The `+"`"+`doctl serverless init`+"`"+` command will create a proper
 	AddBoolFlag(deploy, "remote-build", "", false, "Run builds remotely")
 	AddBoolFlag(deploy, "incremental", "", false, "Deploy only changes since last deploy")
 
-	getMetadata := CmdBuilder(cmd, RunServerlessExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a functions project",
+	getMetadata := cmdBuilderWithInit(cmd, RunServerlessExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a functions project",
 		`The `+"`"+`doctl serverless get-metadata`+"`"+` command produces a JSON structure that summarizes the contents of a functions
 project (a directory you have designated for functions development).  This can be useful for feeding into other tools.`,
-		Writer)
+		Writer, false)
 	AddStringFlag(getMetadata, "env", "", "", "Path to environment file")
 	AddStringFlag(getMetadata, "include", "", "", "Functions or packages to include")
 	AddStringFlag(getMetadata, "exclude", "", "", "Functions or packages to exclude")
-	AddBoolFlag(getMetadata, "project-reader", "", false, "Test new project reader service")
-	getMetadata.Flags().MarkHidden("project-reader")
 
 	watch := CmdBuilder(cmd, RunServerlessExtraWatch, "watch <directory>", "Watch a functions project directory, deploying incrementally on change",
 		`Type `+"`"+`doctl serverless watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
@@ -219,17 +217,13 @@ func RunServerlessExtraGetMetadata(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	r, _ := c.Doit.GetBool(c.NS, flagProjectReader)
 
-	var output do.ServerlessOutput
-	project := do.ServerlessProject{
-		ProjectPath: c.Args[0],
-	}
-	if r {
-		output, err = c.Serverless().ReadProject(&project, c.Args)
-	} else {
-		output, err = RunServerlessExec("get-metadata", c, []string{flagJSON, flagProjectReader}, []string{flagEnv, flagInclude, flagExclude})
-	}
+	// The get-metadata command is purely local and does not require any services from either godo or openwhisk.   So, the serverless
+	// service is not initialized and we create the necessary object manually.  This permits execution with no credentials as needed
+	// in some contexts (e.g. App Platform detection).
+	args := getFlatArgsArray(c, []string{flagJSON}, []string{flagEnv, flagInclude, flagExclude})
+	sls := do.NewServerlessService(nil, getServerlessDirectory(), "")
+	output, err := serverlessExecNoCheck(sls, "get-metadata", args)
 	if err != nil {
 		return err
 	}

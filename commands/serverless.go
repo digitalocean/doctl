@@ -151,10 +151,18 @@ func RunServerlessInstall(c *CmdConfig) error {
 
 	// When building the snap package, we need to install the serverless plugin
 	// without a fully configured and authenticated doctl. So we only fully init
-	// the service if SNAP_SANDBOX_INSTALL is not set.
+	// the service if SNAP_SANDBOX_INSTALL is not set.  We also do the same thing
+	// when installing doctl in a docker image build, where we know there is no
+	// previous install and we don't want to expose a DO API token.
 	_, isSnapInstall := os.LookupEnv("SNAP_SANDBOX_INSTALL")
-	if isSnapInstall {
-		serverlessDir := os.Getenv("OVERRIDE_SANDBOX_DIR")
+	_, isDockerInstall := os.LookupEnv("DOCKER_SANDBOX_INSTALL")
+	if isSnapInstall || isDockerInstall {
+		var serverlessDir string
+		if isSnapInstall {
+			serverlessDir = os.Getenv("OVERRIDE_SANDBOX_DIR")
+		} else {
+			serverlessDir = getServerlessDirectory()
+		}
 		serverless = do.NewServerlessService(nil, serverlessDir, "")
 		status = do.ErrServerlessNotInstalled
 	} else {

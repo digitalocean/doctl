@@ -419,6 +419,7 @@ func (s *serverlessService) InstallServerless(leafCredsDir string, upgrading boo
 	// that might be on a separate file system, meaning that the final install step
 	// will require an additional copy rather than a simple rename.
 
+	os.Mkdir(filepath.Dir(serverlessDir), 0700) // in case using config dir and it doesn't exist yet
 	tmp, err := ioutil.TempDir(filepath.Dir(serverlessDir), "sbx-install")
 	if err != nil {
 		return err
