@@ -262,7 +262,7 @@ const (
 	// Minimum required version of the serverless plugin code.  The first part is
 	// the version of the incorporated functions deployer and the second part is the
 	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "5.0.16-2.0.0"
+	minServerlessVersion = "5.0.18-2.0.0"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
