@@ -23,6 +23,7 @@ func TestAppsCommand(t *testing.T) {
 	require.NotNil(t, cmd)
 	assertCommandNames(t, cmd,
 		"create",
+		"detect",
 		"get",
 		"list",
 		"update",

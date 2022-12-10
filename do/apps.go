@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+	"strings"
 
 	"github.com/digitalocean/godo"
 )
@@ -26,6 +27,7 @@ type AppsService interface {
 	List(withProjects bool) ([]*godo.App, error)
 	Update(appID string, req *godo.AppUpdateRequest) (*godo.App, error)
 	Delete(appID string) error
+	Detect(source string, sha string, name string, branch string, autoDeploy bool) (*godo.AppSpec, error)
 	Propose(req *godo.AppProposeRequest) (*godo.AppProposeResponse, error)
 
 	CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error)
@@ -121,6 +123,86 @@ func (s *appsService) Update(appID string, req *godo.AppUpdateRequest) (*godo.Ap
 func (s *appsService) Delete(appID string) error {
 	_, err := s.client.Apps.Delete(s.ctx, appID)
 	return err
+}
+
+func (s *appsService) Detect(source string, sha string, name string, branch string, autoDeploy bool) (*godo.AppSpec, error) {
+	var dr godo.DetectRequest
+	if strings.Contains(source, "github") {
+		dr.GitHub = &godo.GitHubSourceSpec{
+			Repo:         verifyGitSource(source, "github"),
+			Branch:       branch,
+			DeployOnPush: autoDeploy,
+		}
+	} else if strings.Contains(source, "gitlab") {
+		dr.GitLab = &godo.GitLabSourceSpec{
+			Repo:         verifyGitSource(source, "gitlab"),
+			Branch:       branch,
+			DeployOnPush: autoDeploy,
+		}
+	} else {
+		dr.Git = &godo.GitSourceSpec{
+			RepoCloneURL: source,
+			Branch:       branch,
+		}
+	}
+	dr.SourceDir = "/"
+	dr.CommitSHA = sha
+
+	resp, _, err := s.client.Apps.Detect(context.Background(), &dr)
+	if err != nil {
+		return nil, err
+	}
+
+	var appSpec godo.AppSpec
+
+	appSpec.Name = name
+	var funcSpecArray []*godo.AppFunctionsSpec
+	for _, component := range resp.Components {
+
+		if component.Strategy == "SERVERLESS" {
+			for _, serverlessPackage := range component.ServerlessPackages {
+				var functionSpec godo.AppFunctionsSpec
+				functionSpec.Name = serverlessPackage.Name
+				if strings.Contains(source, "github") {
+					functionSpec.GitHub = &godo.GitHubSourceSpec{
+						Repo:         verifyGitSource(source, "github"),
+						Branch:       branch,
+						DeployOnPush: autoDeploy,
+					}
+				} else if strings.Contains(source, "gitlab") {
+					functionSpec.GitLab = &godo.GitLabSourceSpec{
+						Repo:         verifyGitSource(source, "gitlab"),
+						Branch:       branch,
+						DeployOnPush: autoDeploy,
+					}
+				} else {
+					functionSpec.Git = &godo.GitSourceSpec{
+						RepoCloneURL: source,
+						Branch:       branch,
+					}
+				}
+				functionSpec.SourceDir = "/"
+				functionSpec.Routes = []*godo.AppRouteSpec{
+					{
+						Path:               "/",
+						PreservePathPrefix: false,
+					},
+				}
+				funcSpecArray = append(funcSpecArray, &functionSpec)
+
+			}
+		}
+		appSpec.Functions = funcSpecArray
+	}
+	return &appSpec, nil
+}
+
+func verifyGitSource(s string, splitter string) string {
+	x := strings.Split(s, splitter+".com/")
+	if strings.Contains(x[1], ".git") {
+		x = strings.Split(x[1], ".")
+	}
+	return x[0]
 }
 
 func (s *appsService) Propose(req *godo.AppProposeRequest) (*godo.AppProposeResponse, error) {

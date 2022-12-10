@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -117,6 +118,15 @@ This permanently deletes the app and all its associated deployments.`,
 		aliasOpt("d", "rm"),
 	)
 	AddBoolFlag(deleteApp, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the App without a confirmation prompt")
+
+	// output is global flag
+	detect := CmdBuilder(cmd,
+		RunAppsDetect, "detect", "Detect functions", "Detect functions project and convert it into apps project by adding the AppSpec.", Writer, aliasOpt("dt"))
+	AddStringFlag(detect, doctl.ArgProjectSource, "", "", `Project source.`)
+	AddStringFlag(detect, doctl.ArgCommitHash, "", "", `Git commit hash`) // not sure if need to support commit hash?
+	AddStringFlag(detect, doctl.ArgProjectName, "", "", `App name to be used`)
+	AddStringFlag(detect, doctl.ArgProjectBrach, "", "", `Project branch to be used`)
+	AddBoolFlag(detect, doctl.ArgDeployOnPush, "", *boolPtr(true), `Auto deploy on project update.`)
 
 	deploymentCreate := CmdBuilder(
 		cmd,
@@ -432,6 +442,69 @@ func RunAppsDelete(c *CmdConfig) error {
 	notice("App deleted")
 
 	return nil
+}
+
+// RunAppsDetect detects an function project and converts it into apps project.
+func RunAppsDetect(c *CmdConfig) error {
+	source, err := c.Doit.GetString(c.NS, doctl.ArgProjectSource)
+	if err != nil {
+		return err
+	}
+	if len(source) == 0 {
+		return fmt.Errorf("source cannot be empty")
+	}
+
+	sha, err := c.Doit.GetString(c.NS, doctl.ArgCommitHash)
+	if err != nil {
+		return err
+	}
+
+	name, err := c.Doit.GetString(c.NS, doctl.ArgProjectName)
+	if err != nil {
+		return err
+	}
+	if len(name) == 0 {
+		return fmt.Errorf("name cannot be empty")
+	}
+
+	branch, err := c.Doit.GetString(c.NS, doctl.ArgProjectBrach)
+	if err != nil {
+		return err
+	}
+	if len(branch) == 0 {
+		return fmt.Errorf("branch cannot be empty")
+	}
+
+	// Need to check, How user value will be overrided
+	autoDeploy, err := c.Doit.GetBool(c.NS, doctl.ArgDeployOnPush)
+	if err != nil {
+		return err
+	}
+	if len(c.Args) > 0 {
+		fmt.Println(c.Args[0])
+		x, err := strconv.ParseBool(c.Args[0])
+		if err == nil {
+			autoDeploy = x
+		} else {
+			return fmt.Errorf("expected true/false for deployonpush, received : %s", c.Args[0])
+		}
+	}
+
+	spec, err := c.Apps().Detect(source, sha, name, branch, autoDeploy)
+	if err != nil {
+		return err
+	}
+
+	switch Output {
+	case "json":
+		e := json.NewEncoder(c.Out)
+		e.SetIndent("", "  ")
+		return e.Encode(spec)
+	case "text":
+		return nil
+	default:
+		return fmt.Errorf("unknown output type")
+	}
 }
 
 // RunAppsCreateDeployment creates a deployment for an app.
