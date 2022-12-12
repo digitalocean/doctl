@@ -55,16 +55,18 @@ component.  The `+"`"+`doctl serverless init`+"`"+` command will create a proper
 	AddStringFlag(deploy, "exclude", "", "", "Functions and/or packages to exclude")
 	AddBoolFlag(deploy, "remote-build", "", false, "Run builds remotely")
 	AddBoolFlag(deploy, "incremental", "", false, "Deploy only changes since last deploy")
+	AddBoolFlag(deploy, "no-triggers", "", false, "")
+	deploy.Flags().MarkHidden("no-triggers")
 
-	getMetadata := CmdBuilder(cmd, RunServerlessExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a functions project",
+	getMetadata := cmdBuilderWithInit(cmd, RunServerlessExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a functions project",
 		`The `+"`"+`doctl serverless get-metadata`+"`"+` command produces a JSON structure that summarizes the contents of a functions
 project (a directory you have designated for functions development).  This can be useful for feeding into other tools.`,
-		Writer)
+		Writer, false)
 	AddStringFlag(getMetadata, "env", "", "", "Path to environment file")
 	AddStringFlag(getMetadata, "include", "", "", "Functions or packages to include")
 	AddStringFlag(getMetadata, "exclude", "", "", "Functions or packages to exclude")
-	AddBoolFlag(getMetadata, "project-reader", "", false, "Test new project reader service")
-	getMetadata.Flags().MarkHidden("project-reader")
+	AddBoolFlag(getMetadata, "no-triggers", "", false, "")
+	deploy.Flags().MarkHidden("no-triggers")
 
 	watch := CmdBuilder(cmd, RunServerlessExtraWatch, "watch <directory>", "Watch a functions project directory, deploying incrementally on change",
 		`Type `+"`"+`doctl serverless watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
@@ -173,7 +175,7 @@ func RunServerlessExtraDeploy(c *CmdConfig) error {
 	if isSnap {
 		c.Doit.Set(c.NS, flagRemoteBuild, true)
 	}
-	output, err := RunServerlessExec("deploy", c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild, flagIncremental},
+	output, err := RunServerlessExec(cmdDeploy, c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild, flagIncremental, flagNoTriggers},
 		[]string{flagEnv, flagBuildEnv, flagApihost, flagAuth, flagInclude, flagExclude})
 	if err != nil && len(output.Captured) == 0 {
 		// Just an error, nothing in 'Captured'
@@ -219,17 +221,13 @@ func RunServerlessExtraGetMetadata(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	r, _ := c.Doit.GetBool(c.NS, flagProjectReader)
 
-	var output do.ServerlessOutput
-	project := do.ServerlessProject{
-		ProjectPath: c.Args[0],
-	}
-	if r {
-		output, err = c.Serverless().ReadProject(&project, c.Args)
-	} else {
-		output, err = RunServerlessExec("get-metadata", c, []string{flagJSON, flagProjectReader}, []string{flagEnv, flagInclude, flagExclude})
-	}
+	// The get-metadata command is purely local and does not require any services from either godo or openwhisk.   So, the serverless
+	// service is not initialized and we create the necessary object manually.  This permits execution with no credentials as needed
+	// in some contexts (e.g. App Platform detection).
+	args := getFlatArgsArray(c, []string{flagJSON, flagNoTriggers}, []string{flagEnv, flagInclude, flagExclude})
+	sls := do.NewServerlessService(nil, getServerlessDirectory(), "")
+	output, err := serverlessExecNoCheck(sls, cmdGetMetadata, args)
 	if err != nil {
 		return err
 	}
@@ -244,7 +242,7 @@ func RunServerlessExtraWatch(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	return RunServerlessExecStreaming("watch", c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild},
+	return RunServerlessExecStreaming(cmdWatch, c, []string{flagInsecure, flagVerboseBuild, flagVerboseZip, flagYarn, flagRemoteBuild},
 		[]string{flagEnv, flagBuildEnv, flagApihost, flagAuth, flagInclude, flagExclude})
 }
 

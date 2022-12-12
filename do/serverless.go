@@ -259,10 +259,8 @@ type serverlessService struct {
 }
 
 const (
-	// Minimum required version of the serverless plugin code.  The first part is
-	// the version of the incorporated functions deployer and the second part is the
-	// version of the bridge code in the sandbox plugin repository.
-	minServerlessVersion = "5.0.16-2.0.0"
+	// Minimum required version of the functions deployer plugin code.
+	minServerlessVersion = "5.0.18"
 
 	// The version of nodejs to download alongsize the plugin download.
 	nodeVersion = "v16.13.0"
@@ -419,6 +417,7 @@ func (s *serverlessService) InstallServerless(leafCredsDir string, upgrading boo
 	// that might be on a separate file system, meaning that the final install step
 	// will require an additional copy rather than a simple rename.
 
+	os.Mkdir(filepath.Dir(serverlessDir), 0700) // in case using config dir and it doesn't exist yet
 	tmp, err := ioutil.TempDir(filepath.Dir(serverlessDir), "sbx-install")
 	if err != nil {
 		return err
