@@ -301,6 +301,10 @@ const (
 	ArgForwardingRules = "forwarding-rules"
 	// ArgHTTPIdleTimeoutSeconds is the http idle time out configuration for the load balancer
 	ArgHTTPIdleTimeoutSeconds = "http-idle-timeout-seconds"
+	// ArgAllowList is the list of firewall rules for ALLOWING traffic to the loadbalancer
+	ArgAllowList = "allow-list"
+	// ArgDenyList is a list of firewall rules for DENYING traffic to the loadbalancer
+	ArgDenyList = "deny-list"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
