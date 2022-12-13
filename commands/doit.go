@@ -218,6 +218,12 @@ func requiredOpt() flagOpt {
 	}
 }
 
+func hiddenFlag() flagOpt {
+	return func(c *Command, name, key string) {
+		c.Flags().MarkHidden(name)
+	}
+}
+
 // AddStringFlag adds a string flag to a command.
 func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)

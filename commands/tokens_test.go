@@ -147,6 +147,40 @@ func TestTokensCreate(t *testing.T) {
 	})
 }
 
+func TestTokensCreateWithDuration(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		createReq := &godo.TokenCreateRequest{
+			Name:          testToken.Name,
+			ExpirySeconds: godo.PtrTo(86400),
+			Scopes:        testToken.Scopes,
+		}
+		tm.tokens.EXPECT().Create(createReq).Return(&testTokenCreateResp, nil)
+
+		config.Args = append(config.Args, testToken.Name)
+		config.Doit.Set(config.NS, doctl.ArgTokenExpiresIn, "24h")
+		config.Doit.Set(config.NS, doctl.ArgTokenScopes, "droplet:read")
+
+		err := RunTokenCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestTokensCreateNoExpiration(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		createReq := &godo.TokenCreateRequest{
+			Name:   testToken.Name,
+			Scopes: testToken.Scopes,
+		}
+		tm.tokens.EXPECT().Create(createReq).Return(&testTokenCreateResp, nil)
+
+		config.Args = append(config.Args, testToken.Name)
+		config.Doit.Set(config.NS, doctl.ArgTokenScopes, "droplet:read")
+
+		err := RunTokenCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestTokensCreateHasAccessToken(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
@@ -175,6 +209,19 @@ func TestTokensCreateMissingRequiredArg(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		config.Doit.Set(config.NS, doctl.ArgTokenExpirySeconds, "3600")
 		config.Doit.Set(config.NS, doctl.ArgTokenScopes, "droplet:read")
+
+		err := RunTokenCreate(config)
+		assert.Error(t, err)
+	})
+}
+
+func TestTokensCreateMutuallyExclusiveArg(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgTokenExpirySeconds, "3600")
+		config.Doit.Set(config.NS, doctl.ArgTokenExpiresIn, "3600s")
+		config.Doit.Set(config.NS, doctl.ArgTokenScopes, "droplet:read")
+
+		config.Args = append(config.Args, testToken.Name)
 
 		err := RunTokenCreate(config)
 		assert.Error(t, err)

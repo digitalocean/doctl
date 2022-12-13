@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/MakeNowJust/heredoc"
 	"github.com/digitalocean/doctl"
@@ -62,13 +63,18 @@ func Tokens() *Command {
 		    doctl token create droplet-service-token --scopes droplet:create,droplet:read,droplet:delete,droplet:operate
 
 		By default, tokens will expire in 30 days (2592000 seconds) by default. The maximum
-		expiration for a token is 90 day (7776000 seconds). Use the %s flag to customize the
+		expiration for a token is 90 days (7776000 seconds). Use the %s flag to customize the
 		expiration time.`,
-		"`doctl token list-scopes`", "`--expiry-seconds`")
+		"`doctl token list-scopes`", "`--expires-in`")
 	createTokenCmd := CmdBuilder(cmd, RunTokenCreate, "create <name>",
 		"Create a new DigitalOcean API token", tokensCreateDesc,
 		Writer, aliasOpt("c", "issue"), displayerType(&displayers.Tokens{}))
-	AddIntFlag(createTokenCmd, doctl.ArgTokenExpirySeconds, "", 0, "Number of seconds from created at in which the token will expire")
+	// We hide this by default to prefer --expires-in which accepts a duration,
+	// but we still offer --expiry-seconds for compatibility with other commands.
+	AddIntFlag(createTokenCmd, doctl.ArgTokenExpirySeconds, "", 0,
+		"Number of seconds from created at in which the token will expire", hiddenFlag())
+	AddStringFlag(createTokenCmd, doctl.ArgTokenExpiresIn, "", "",
+		`Duration (e.g. 24h, 60m, or 3600s) from now until the token will expire. Valid units are: "h", "m", "s".`)
 	AddStringSliceFlag(createTokenCmd, doctl.ArgTokenScopes, "", nil,
 		`Scopes to assign to the to token (e.g. droplet:read)`, requiredOpt())
 
@@ -158,6 +164,23 @@ func RunTokenCreate(c *CmdConfig) error {
 	expiry, err := c.Doit.GetIntPtr(c.NS, doctl.ArgTokenExpirySeconds)
 	if err != nil {
 		return err
+	}
+
+	expiration, err := c.Doit.GetString(c.NS, doctl.ArgTokenExpiresIn)
+	if err != nil {
+		return err
+	}
+
+	if expiry != nil && expiration != "" {
+		return errors.New("the `--expiration` and `--expiry-seconds` flags are mutually exclusive")
+	}
+
+	if expiration != "" {
+		expirationDur, err := time.ParseDuration(expiration)
+		if err != nil {
+			return err
+		}
+		expiry = godo.PtrTo(int(expirationDur.Seconds()))
 	}
 
 	createRequest := &godo.TokenCreateRequest{
