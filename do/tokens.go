@@ -136,5 +136,6 @@ func (t *tokensService) ListScopes(namespace string) ([]TokenScope, error) {
 		scope := si[i].(godo.TokenScope)
 		list[i] = TokenScope{TokenScope: &scope}
 	}
+
 	return list, nil
 }
