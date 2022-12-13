@@ -116,8 +116,8 @@ var _ = suite("tokens/create", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	tokensCreateOutput = `
-ID     Name               Scopes                          Expiry Seconds    Access Token
-123    droplets-reader    [account:read  droplet:read]    2592000           dop_v1_shhhhhh
+ID     Name               Scopes                          Expires At                       Access Token
+123    droplets-reader    [account:read  droplet:read]    2023-01-11 19:21:53 +0000 UTC    dop_v1_shhhhhh
 `
 
 	tokensCreateFormattedOutput = `

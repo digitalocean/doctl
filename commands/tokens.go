@@ -34,7 +34,7 @@ func Tokens() *Command {
 	- The ID of the token
 	- The name of the token
 	- The scopes applied to the token
-	- The number of seconds from when the token was created that it will expire
+	- The timestamp for when the token will expire
 	- The date that it was last used
 	- The timestamp for when it was created
 	`)

@@ -82,15 +82,16 @@ var _ = suite("tokens/list", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	tokensListOutput = `
-ID     Name                Scopes                            Expiry Seconds    Last Used At    Created At
-123    droplets-reader     [account:read  droplet:read]      2592000           2022-12-12      2022-12-12 19:21:53 +0000 UTC
-456    droplets-creator    [droplet:create  droplet:read]    2592000           2022-12-12      2022-12-12 19:21:53 +0000 UTC
-`
+ID     Name                Scopes                           Expires At                       Last Used At    Created At
+123    droplets-reader     [account:read droplet:read]      2023-01-11 19:21:53 +0000 UTC    2022-12-12      2022-12-12 19:21:53 +0000 UTC
+456    droplets-creator    [droplet:create droplet:read]    2023-01-11 19:21:53 +0000 UTC    2022-12-12      2022-12-12 19:21:53 +0000 UTC
+789    legacy              [read write]                     Never                            2022-12-12      2022-12-12 19:21:53 +0000 UTC`
 
 	tokensListFormattedOutput = `
 Name                Last Used At
 droplets-reader     2022-12-12
 droplets-creator    2022-12-12
+legacy              2022-12-12
 `
 
 	tokensListResponse = `
@@ -99,7 +100,7 @@ droplets-creator    2022-12-12
 		{
 			"id":123,
 			"name":"droplets-reader",
-			"scopes":["account:read ","droplet:read"],
+			"scopes":["account:read","droplet:read"],
 			"created_at":"2022-12-12T19:21:53Z",
 			"last_used_at":"2022-12-12",
 			"expiry_seconds":2592000
@@ -107,10 +108,17 @@ droplets-creator    2022-12-12
 		{
 			"id":456,
 			"name":"droplets-creator",
-			"scopes":["droplet:create ","droplet:read"],
+			"scopes":["droplet:create","droplet:read"],
 			"created_at":"2022-12-12T19:21:53Z",
 			"last_used_at":"2022-12-12",
 			"expiry_seconds":2592000
+		},
+		{
+			"id":789,
+			"name":"legacy",
+			"scopes":["read","write"],
+			"created_at":"2022-12-12T19:21:53Z",
+			"last_used_at":"2022-12-12"
 		}
 	],
 	"links": {

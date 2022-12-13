@@ -2,6 +2,7 @@ package displayers
 
 import (
 	"io"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 )
@@ -19,7 +20,7 @@ func (t *Tokens) JSON(out io.Writer) error {
 
 func (t *Tokens) Cols() []string {
 	cols := []string{
-		"ID", "Name", "Scopes", "ExpirySeconds",
+		"ID", "Name", "Scopes", "ExpiresAt",
 	}
 
 	// We only return the the access token in the recreate response.
@@ -34,13 +35,13 @@ func (t *Tokens) Cols() []string {
 
 func (t *Tokens) ColMap() map[string]string {
 	return map[string]string{
-		"ID":            "ID",
-		"Name":          "Name",
-		"Scopes":        "Scopes",
-		"ExpirySeconds": "Expiry Seconds",
-		"CreatedAt":     "Created At",
-		"LastUsedAt":    "Last Used At",
-		"AccessToken":   "Access Token",
+		"ID":          "ID",
+		"Name":        "Name",
+		"Scopes":      "Scopes",
+		"ExpiresAt":   "Expires At",
+		"CreatedAt":   "Created At",
+		"LastUsedAt":  "Last Used At",
+		"AccessToken": "Access Token",
 	}
 }
 
@@ -49,17 +50,17 @@ func (t *Tokens) KV() []map[string]interface{} {
 
 	for _, t := range t.Tokens {
 		m := map[string]interface{}{
-			"ID":            t.ID,
-			"Name":          t.Name,
-			"Scopes":        t.Scopes,
-			"ExpirySeconds": 0,
-			"CreatedAt":     t.CreatedAt.String(),
-			"LastUsedAt":    t.LastUsedAt,
-			"AccessToken":   t.AccessToken,
+			"ID":          t.ID,
+			"Name":        t.Name,
+			"Scopes":      t.Scopes,
+			"ExpiresAt":   "Never",
+			"CreatedAt":   t.CreatedAt.String(),
+			"LastUsedAt":  t.LastUsedAt,
+			"AccessToken": t.AccessToken,
 		}
 
 		if t.ExpirySeconds != nil {
-			m["ExpirySeconds"] = *t.ExpirySeconds
+			m["ExpiresAt"] = t.CreatedAt.Add(time.Duration(*t.ExpirySeconds) * time.Second)
 		}
 		out = append(out, m)
 	}

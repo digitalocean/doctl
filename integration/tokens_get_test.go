@@ -113,8 +113,8 @@ var _ = suite("tokens/get", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	tokensGetOutput = `
-ID     Name               Scopes                          Expiry Seconds    Last Used At    Created At
-123    droplets-reader    [account:read  droplet:read]    2592000           2022-12-12      2022-12-12 19:21:53 +0000 UTC
+ID     Name               Scopes                          Expires At                       Last Used At    Created At
+123    droplets-reader    [account:read  droplet:read]    2023-01-11 19:21:53 +0000 UTC    2022-12-12      2022-12-12 19:21:53 +0000 UTC
 `
 
 	tokensGetFormattedOutput = `
