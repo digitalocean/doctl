@@ -111,6 +111,10 @@ func TestLoadBalancerCreate(t *testing.T) {
 			VPCUUID:                vpcUUID,
 			ProjectID:              "project-id-uuid",
 			HTTPIdleTimeoutSeconds: &timeout,
+			Firewall: &godo.LBFirewall{
+				Deny:  []string{"cidr:1.2.0.0/16"},
+				Allow: []string{"ip:1.2.3.4", "ip:1.2.3.5"},
+			},
 		}
 		disableLetsEncryptDNSRecords := true
 		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
@@ -127,6 +131,8 @@ func TestLoadBalancerCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
 		config.Doit.Set(config.NS, doctl.ArgProjectID, "project-id-uuid")
 		config.Doit.Set(config.NS, doctl.ArgHTTPIdleTimeoutSeconds, 120)
+		config.Doit.Set(config.NS, doctl.ArgDenyList, []string{"cidr:1.2.0.0/16"})
+		config.Doit.Set(config.NS, doctl.ArgAllowList, []string{"ip:1.2.3.4", "ip:1.2.3.5"})
 
 		err := RunLoadBalancerCreate(config)
 		assert.NoError(t, err)
@@ -165,6 +171,10 @@ func TestLoadBalancerUpdate(t *testing.T) {
 			},
 			ProjectID:              "project-id-uuid",
 			HTTPIdleTimeoutSeconds: &timeout,
+			Firewall: &godo.LBFirewall{
+				Deny:  []string{"cidr:1.2.0.0/16"},
+				Allow: []string{"ip:1.2.3.4", "ip:1.2.3.5"},
+			},
 		}
 		disableLetsEncryptDNSRecords := true
 		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
@@ -182,6 +192,8 @@ func TestLoadBalancerUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
 		config.Doit.Set(config.NS, doctl.ArgProjectID, "project-id-uuid")
 		config.Doit.Set(config.NS, doctl.ArgHTTPIdleTimeoutSeconds, 120)
+		config.Doit.Set(config.NS, doctl.ArgDenyList, []string{"cidr:1.2.0.0/16"})
+		config.Doit.Set(config.NS, doctl.ArgAllowList, []string{"ip:1.2.3.4", "ip:1.2.3.5"})
 
 		err := RunLoadBalancerUpdate(config)
 		assert.NoError(t, err)

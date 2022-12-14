@@ -86,6 +86,10 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddBoolFlag(cmdRecordCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
 	AddStringFlag(cmdRecordCreate, doctl.ArgProjectID, "", "", "Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
 	AddIntFlag(cmdRecordCreate, doctl.ArgHTTPIdleTimeoutSeconds, "", 0, "HTTP idle timeout that configures the idle timeout for http connections on the load balancer")
+	AddStringSliceFlag(cmdRecordCreate, doctl.ArgAllowList, "", []string{},
+		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDenyList, "", []string{},
+		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer.`, Writer, aliasOpt("u"))
@@ -118,6 +122,10 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgProjectID, "", "",
 		"Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgAllowList, "", []string{},
+		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", []string{},
+		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
@@ -538,6 +546,23 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	if httpIdleTimeout != 0 {
 		t := uint64(httpIdleTimeout)
 		r.HTTPIdleTimeoutSeconds = &t
+	}
+
+	allowRules, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAllowList)
+	if err != nil {
+		return err
+	}
+
+	denyRules, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDenyList)
+	if err != nil {
+		return err
+	}
+
+	if len(allowRules) > 0 || len(denyRules) > 0 {
+		firewall := new(godo.LBFirewall)
+		firewall.Allow = allowRules
+		firewall.Deny = denyRules
+		r.Firewall = firewall
 	}
 
 	return nil
