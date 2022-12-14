@@ -7,7 +7,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.91.1
+	github.com/digitalocean/godo v1.92.0
 	github.com/docker/cli v20.10.17+incompatible
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
@@ -33,9 +33,9 @@ require (
 	github.com/spf13/viper v1.11.0
 	github.com/stretchr/testify v1.7.2
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
-	golang.org/x/net v0.2.0 // indirect
-	golang.org/x/oauth2 v0.2.0
-	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/net v0.4.0 // indirect
+	golang.org/x/oauth2 v0.3.0
+	golang.org/x/sys v0.3.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.22.5
@@ -116,9 +116,9 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/term v0.2.0 // indirect
-	golang.org/x/text v0.4.0 // indirect
-	golang.org/x/time v0.2.0 // indirect
+	golang.org/x/term v0.3.0 // indirect
+	golang.org/x/text v0.5.0 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
