@@ -146,7 +146,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
 		}
 
-		if _, err := c.Account().Get(); err != nil {
+		if _, err := c.OAuth().TokenInfo(); err != nil {
 			fmt.Fprintln(c.Out, "invalid token")
 			fmt.Fprintln(c.Out)
 			return fmt.Errorf("Unable to use supplied token to access API: %s", err)

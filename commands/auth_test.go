@@ -50,7 +50,7 @@ func TestAuthInit(t *testing.T) {
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
+		tm.oauth.EXPECT().TokenInfo().Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
@@ -76,7 +76,7 @@ func TestAuthInitConfig(t *testing.T) {
 	}
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
+		tm.oauth.EXPECT().TokenInfo().Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
@@ -116,7 +116,7 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
+		tm.oauth.EXPECT().TokenInfo().Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)

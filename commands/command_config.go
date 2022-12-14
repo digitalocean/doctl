@@ -70,6 +70,7 @@ type CmdConfig struct {
 	Apps              func() do.AppsService
 	Monitoring        func() do.MonitoringService
 	Serverless        func() do.ServerlessService
+	OAuth             func() do.OAuthService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -122,6 +123,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Serverless = func() do.ServerlessService {
 				return do.NewServerlessService(godoClient, getServerlessDirectory(), accessToken)
 			}
+			c.OAuth = func() do.OAuthService { return do.NewOAuthService(godoClient) }
 
 			return nil
 		},
