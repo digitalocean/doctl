@@ -286,6 +286,8 @@ github.com/digitalocean/godo v1.91.1 h1:1o30VOCu1aC6488qBd0SkQiBeAZ35RSTvLwCA1pQ
 github.com/digitalocean/godo v1.91.1/go.mod h1:NRpFznZFvhHjBoqZAaOD3khVzsJ3EibzKqFL4R60dmA=
 github.com/digitalocean/godo v1.91.2-0.20221209163753-d8d6ec42f6f2 h1:/sjXBM7IYbeXH0/2FhYjNJZsLiCIr3HwW6bS8taKX9A=
 github.com/digitalocean/godo v1.91.2-0.20221209163753-d8d6ec42f6f2/go.mod h1:NRpFznZFvhHjBoqZAaOD3khVzsJ3EibzKqFL4R60dmA=
+github.com/digitalocean/godo v1.92.0 h1:eK9DgdLcjozZbywjh/9k2NF++ttbcidASOoCGRu48yQ=
+github.com/digitalocean/godo v1.92.0/go.mod h1:NRpFznZFvhHjBoqZAaOD3khVzsJ3EibzKqFL4R60dmA=
 github.com/dnaeon/go-vcr v1.0.1/go.mod h1:aBB1+wY4s93YsC3HHjMBMrwTj2R9FHDzUr9KyGc8n1E=
 github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017/go.mod h1:JLrzqnKDaYBop7H2jaqPtU4hHvMKP+vjCwu2uszcLI8=
 github.com/docker/cli v20.10.17+incompatible h1:eO2KS7ZFeov5UJeaDmIs1NFEDRf32PaqRpvoEkKBy5M=
