@@ -14,10 +14,11 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"sort"
 	"testing"
+
+	"github.com/spf13/cobra"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -185,6 +186,7 @@ type tcMocks struct {
 	appBuilderFactory     *builder.MockComponentBuilderFactory
 	appBuilder            *builder.MockComponentBuilder
 	appDockerEngineClient *builder.MockDockerEngineClient
+	oauth                 *domocks.MockOAuthService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -229,6 +231,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		appBuilderFactory:     builder.NewMockComponentBuilderFactory(ctrl),
 		appBuilder:            builder.NewMockComponentBuilder(ctrl),
 		appDockerEngineClient: builder.NewMockDockerEngineClient(ctrl),
+		oauth:                 domocks.NewMockOAuthService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -282,6 +285,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Apps:              func() do.AppsService { return tm.apps },
 		Monitoring:        func() do.MonitoringService { return tm.monitoring },
 		Serverless:        func() do.ServerlessService { return tm.serverless },
+		OAuth:             func() do.OAuthService { return tm.oauth },
 	}
 
 	tFn(config, tm)

@@ -34,11 +34,11 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			w.Header().Add("content-type", "application/json")
 
 			switch req.URL.Path {
-			case "/v2/account":
+			case "/v1/oauth/token/info":
 				auth := req.Header.Get("Authorization")
 
 				if auth == "Bearer first-token" || auth == "Bearer second-token" || auth == "Bearer some-magic-token" {
-					w.Write([]byte(`{ "account":{}}`))
+					w.Write([]byte(`{"resource_owner_id":123}`))
 					return
 				}
 
@@ -73,6 +73,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 				"--config", testConfig,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)
@@ -109,6 +110,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 				"auth",
 				"init",
 				"--access-token", "some-magic-token",
+				"--token-validation-server", server.URL,
 			)
 
 			_, err := cmd.CombinedOutput()
@@ -135,6 +137,7 @@ context: default
 				"auth",
 				"init",
 				"--access-token", "some-magic-token",
+				"--token-validation-server", server.URL,
 			)
 
 			_, err := cmd.CombinedOutput()
@@ -153,6 +156,7 @@ context: default
 				"-u", server.URL,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)
@@ -194,6 +198,7 @@ context: default
 				"--config", testConfig,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)
@@ -210,7 +215,7 @@ context: default
 			ptmx.Close()
 
 			expect.Contains(buf.String(), "Validating token... invalid token")
-			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v2/account: 401", server.URL))
+			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v1/oauth/token/info: 401", server.URL))
 		})
 	})
 

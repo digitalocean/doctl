@@ -25,6 +25,7 @@ mockgen -source images.go -package=mocks ImageService > mocks/ImageService.go
 mockgen -source invoices.go -package=mocks InvoicesService > mocks/InvoicesService.go
 mockgen -source kubernetes.go -package=mocks KubernetesService > mocks/KubernetesService.go
 mockgen -source load_balancers.go -package=mocks LoadBalancersService > mocks/LoadBalancersService.go
+mockgen -source oauth.go -package=mocks OAuthService > mocks/OAuthService.go
 mockgen -source projects.go -package=mocks ProjectsService > mocks/ProjectsService.go
 mockgen -source regions.go -package=mocks RegionsService > mocks/RegionsService.go
 mockgen -source registry.go -package=mocks RegistryService > mocks/RegistryService.go
