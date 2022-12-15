@@ -18,8 +18,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/spf13/cobra"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
