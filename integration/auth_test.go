@@ -73,6 +73,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 				"--config", testConfig,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)
@@ -109,6 +110,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 				"auth",
 				"init",
 				"--access-token", "some-magic-token",
+				"--token-validation-server", server.URL,
 			)
 
 			_, err := cmd.CombinedOutput()
@@ -135,6 +137,7 @@ context: default
 				"auth",
 				"init",
 				"--access-token", "some-magic-token",
+				"--token-validation-server", server.URL,
 			)
 
 			_, err := cmd.CombinedOutput()
@@ -153,6 +156,7 @@ context: default
 				"-u", server.URL,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)
@@ -194,6 +198,7 @@ context: default
 				"--config", testConfig,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)

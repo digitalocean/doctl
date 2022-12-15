@@ -25,6 +25,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/golang/mock/gomock"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
@@ -50,7 +51,7 @@ func TestAuthInit(t *testing.T) {
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.oauth.EXPECT().TokenInfo().Return(&do.OAuthTokenInfo{}, nil)
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
@@ -76,7 +77,7 @@ func TestAuthInitConfig(t *testing.T) {
 	}
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.oauth.EXPECT().TokenInfo().Return(&do.OAuthTokenInfo{}, nil)
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
@@ -116,7 +117,7 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.oauth.EXPECT().TokenInfo().Return(&do.OAuthTokenInfo{}, nil)
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)

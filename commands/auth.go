@@ -32,6 +32,11 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+const (
+	// TokenValidationServer is the default server used to validate an OAuth token
+	TokenValidationServer = "https://cloud.digitalocean.com"
+)
+
 // ErrUnknownTerminal signifies an unknown terminal. It is returned when doit
 // can't ascertain the current terminal type with requesting an auth token.
 var (
@@ -83,7 +88,7 @@ To remove accounts from the configuration file, you can run ` + "`" + `doctl aut
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "Initialize doctl to use a specific account", `This command allows you to initialize doctl with a token that allows it to query and manage your account details and resources.
+	cmdAuthInit := cmdBuilderWithInit(cmd, RunAuthInit(retrieveUserTokenFromCommandLine), "init", "Initialize doctl to use a specific account", `This command allows you to initialize doctl with a token that allows it to query and manage your account details and resources.
 
 You will need an API token, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
@@ -92,6 +97,8 @@ You can provide a name to this initialization via the `+"`"+`--context`+"`"+` fl
 If the `+"`"+`--context`+"`"+` flag is not specified, a default authentication context will be created during initialization.
 
 If doctl is never initialized, you will need to specify an API token whenever you use a `+"`"+`doctl`+"`"+` command via the `+"`"+`--access-token`+"`"+` flag.`, Writer, false)
+	AddStringFlag(cmdAuthInit, doctl.ArgTokenValidationServer, "", TokenValidationServer, "The server used to validate a token")
+
 	cmdAuthSwitch := cmdBuilderWithInit(cmd, RunAuthSwitch, "switch", "Switches between authentication contexts", `This command allows you to switch between accounts with authentication contexts you've already created.
 
 To see a list of available authentication contexts, call `+"`"+`doctl auth list`+"`"+`.
@@ -146,7 +153,12 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			return fmt.Errorf("Unable to initialize DigitalOcean API client with new token: %s", err)
 		}
 
-		if _, err := c.OAuth().TokenInfo(); err != nil {
+		server, err := c.Doit.GetString(c.NS, doctl.ArgTokenValidationServer)
+		if err != nil {
+			return err
+		}
+
+		if _, err := c.OAuth().TokenInfo(server); err != nil {
 			fmt.Fprintln(c.Out, "invalid token")
 			fmt.Fprintln(c.Out)
 			return fmt.Errorf("Unable to use supplied token to access API: %s", err)

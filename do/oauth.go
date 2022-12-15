@@ -21,9 +21,8 @@ import (
 )
 
 const (
-	oauthBase      = "https://cloud.digitalocean.com"
-	apiDefaultBase = "https://api.digitalocean.com/"
-	tokenInfoPath  = "/v1/oauth/token/info"
+	oauthBaseURL  = "https://cloud.digitalocean.com"
+	tokenInfoPath = "/v1/oauth/token/info"
 )
 
 // OAuthTokenInfo contains information about an OAuth token
@@ -42,11 +41,12 @@ type OAuthApplication struct {
 
 // OAuthService is an interface for interacting with DigitalOcean's account api.
 type OAuthService interface {
-	TokenInfo() (*OAuthTokenInfo, error)
+	TokenInfo(string) (*OAuthTokenInfo, error)
 }
 
 type oauthService struct {
 	client *godo.Client
+	server string
 }
 
 var _ OAuthService = &oauthService{}
@@ -58,13 +58,10 @@ func NewOAuthService(godoClient *godo.Client) OAuthService {
 	}
 }
 
-func (oa *oauthService) TokenInfo() (*OAuthTokenInfo, error) {
-	// If the godo client is using the default API URL, we use the default OAuth
-	// URL for the request. If not, we use the provided --api-url. This allows
-	// us to mock the integration tests as needed.
-	tokenInfoURI := oa.client.BaseURL.String() + tokenInfoPath
-	if oa.client.BaseURL.String() == apiDefaultBase {
-		tokenInfoURI = oauthBase + tokenInfoPath
+func (oa *oauthService) TokenInfo(server string) (*OAuthTokenInfo, error) {
+	tokenInfoURI := oauthBaseURL + tokenInfoPath
+	if server != "" {
+		tokenInfoURI = server + tokenInfoPath
 	}
 
 	ctx := context.TODO()

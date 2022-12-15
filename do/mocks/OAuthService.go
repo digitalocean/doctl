@@ -35,16 +35,16 @@ func (m *MockOAuthService) EXPECT() *MockOAuthServiceMockRecorder {
 }
 
 // TokenInfo mocks base method.
-func (m *MockOAuthService) TokenInfo() (*do.OAuthTokenInfo, error) {
+func (m *MockOAuthService) TokenInfo(arg0 string) (*do.OAuthTokenInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "TokenInfo")
+	ret := m.ctrl.Call(m, "TokenInfo", arg0)
 	ret0, _ := ret[0].(*do.OAuthTokenInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // TokenInfo indicates an expected call of TokenInfo.
-func (mr *MockOAuthServiceMockRecorder) TokenInfo() *gomock.Call {
+func (mr *MockOAuthServiceMockRecorder) TokenInfo(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TokenInfo", reflect.TypeOf((*MockOAuthService)(nil).TokenInfo))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TokenInfo", reflect.TypeOf((*MockOAuthService)(nil).TokenInfo), arg0)
 }

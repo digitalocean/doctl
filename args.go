@@ -436,4 +436,7 @@ const (
 
 	// ArgAlertPolicySlackURLs are the Slack URLs to send alerts to.
 	ArgAlertPolicySlackURLs = "slack-urls"
+
+	// ArgTokenValidationServer is the server used to validate an OAuth token
+	ArgTokenValidationServer = "token-validation-server"
 )
