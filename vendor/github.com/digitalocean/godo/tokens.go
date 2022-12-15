@@ -164,8 +164,8 @@ func (c TokensServiceOp) Update(ctx context.Context, tokenID int, updateRequest 
 }
 
 // Revoke a specific DigitalOcean API access token.
-func (c TokensServiceOp) Revoke(ctx context.Context, id int) (*Response, error) {
-	path := fmt.Sprintf("%s/%d", accessTokensBasePath, id)
+func (c TokensServiceOp) Revoke(ctx context.Context, tokenID int) (*Response, error) {
+	path := fmt.Sprintf("%s/%d", accessTokensBasePath, tokenID)
 	req, err := c.client.NewRequest(ctx, http.MethodDelete, path, nil)
 	if err != nil {
 		return nil, err
