@@ -42,7 +42,7 @@ func Tokens() *Command {
 
 	CmdBuilder(cmd, RunTokenGet, "get <id|name>",
 		"Retrieve information about a DigitalOcean API token",
-		heredoc.Docf(`Display the details for a specific DigitalOcean API tokens on your account. This includes:
+		heredoc.Docf(`Display the details for a specific DigitalOcean API token on your account. This includes:
 
 		%s`, tokenDetails),
 		Writer, aliasOpt("g"), displayerType(&displayers.Tokens{}))
@@ -56,13 +56,13 @@ func Tokens() *Command {
 
 	tokensCreateDesc := heredoc.Docf(`Create a new DigitalOcean API token with granular scopes.
 
-		You can find all of the scopes that are available to be applied to a tokens using the
+		You can find all of the scopes that are available to be applied to a token using the
 		%s sub-command. For example, to create a token that can be used to create and manage
 		Droplets, use:
 
 		    doctl token create droplet-service-token --scopes droplet:create,droplet:read,droplet:delete,droplet:operate
 
-		By default, tokens will expire in 30 days (2592000 seconds) by default. The maximum
+		By default, tokens will expire in 30 days (2592000 seconds). The maximum
 		expiration for a token is 90 days (7776000 seconds). Use the %s flag to customize the
 		expiration time.`,
 		"`doctl token list-scopes`", "`--expires-in`")
@@ -82,7 +82,7 @@ func Tokens() *Command {
 		"Update an existing DigitalOcean API token",
 		heredoc.Docf(`Update the name or scopes for an existing DigitalOcean API token.
 
-		You can find all of the scopes that are available to be applied to a tokens using the
+		You can find all of the scopes that are available to be applied to a token using the
 		%s sub-command.`, "`doctl token list-scopes`"),
 		Writer, aliasOpt("u"), displayerType(&displayers.Tokens{}))
 	AddStringSliceFlag(updateTokenCmd, doctl.ArgTokenScopes, "", nil,
@@ -113,7 +113,7 @@ func Tokens() *Command {
 	return cmd
 }
 
-// RunTokenGet returns a single of token.
+// RunTokenGet returns a single API token.
 func RunTokenGet(c *CmdConfig) error {
 	err := ensureOneArg(c)
 	if err != nil {
