@@ -439,4 +439,15 @@ const (
 
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
+
+	// ArgTokenScopeNamespace is the namespace for a scope
+	ArgTokenScopeNamespace = "namespace"
+	// ArgTokenExpirySeconds is the number of seconds from when a token was create that it will expire
+	ArgTokenExpirySeconds = "expiry-seconds"
+	// ArgTokenExpiresIn is the duration until a token expires
+	ArgTokenExpiresIn = "expires-in"
+	// ArgTokenScopes is a list of token scopes
+	ArgTokenScopes = "scopes"
+	// ArgTokenUpdatedName is the name to used to update a token
+	ArgTokenUpdatedName = "updated-name"
 )

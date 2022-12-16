@@ -164,6 +164,7 @@ func addCommands() {
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Serverless())
+	DoitCmd.AddCommand(Tokens())
 }
 
 func computeCmd() *Command {
@@ -214,6 +215,12 @@ func requiredOpt() flagOpt {
 
 		u := c.Flag(name).Usage
 		c.Flag(name).Usage = fmt.Sprintf("%s %s", u, requiredColor("(required)"))
+	}
+}
+
+func hiddenFlag() flagOpt {
+	return func(c *Command, name, key string) {
+		c.Flags().MarkHidden(name)
 	}
 }
 

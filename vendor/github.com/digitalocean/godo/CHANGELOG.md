@@ -1,6 +1,10 @@
 # Change Log
 
-## [v1.92.0] - 2022-12-08
+## [v1.93.0] - 2022-12-15
+
+- #591 - @andrewsomething - tokens: Add initial support for new API.
+
+## [v1.92.0] - 2022-12-14
 
 - #589 - @wez470 - load-balancers: Minor doc fixup
 - #585 - @StephenVarela - Add firewall support for load balancers

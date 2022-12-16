@@ -533,7 +533,7 @@ func (c *TestConfig) GetDuration(ns, key string) (time.Duration, error) {
 
 // This is needed because an empty StringSlice flag returns `"[]"`
 func emptyStringSlice(s []string) bool {
-	return len(s) == 1 && s[0] == "[]"
+	return (len(s) == 1 && s[0] == "[]") || len(s) == 0
 }
 
 // CommandName returns the name by which doctl was invoked

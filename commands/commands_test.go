@@ -18,14 +18,13 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/spf13/cobra"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/godo"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -187,6 +186,7 @@ type tcMocks struct {
 	appBuilder            *builder.MockComponentBuilder
 	appDockerEngineClient *builder.MockDockerEngineClient
 	oauth                 *domocks.MockOAuthService
+	tokens                *domocks.MockTokensService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -232,6 +232,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		appBuilder:            builder.NewMockComponentBuilder(ctrl),
 		appDockerEngineClient: builder.NewMockDockerEngineClient(ctrl),
 		oauth:                 domocks.NewMockOAuthService(ctrl),
+		tokens:                domocks.NewMockTokensService(ctrl),
 	}
 
 	testConfig := doctl.NewTestConfig()
@@ -286,6 +287,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Monitoring:        func() do.MonitoringService { return tm.monitoring },
 		Serverless:        func() do.ServerlessService { return tm.serverless },
 		OAuth:             func() do.OAuthService { return tm.oauth },
+		Tokens:            func() do.TokensService { return tm.tokens },
 	}
 
 	tFn(config, tm)
