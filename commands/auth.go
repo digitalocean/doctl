@@ -139,6 +139,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			}
 			token = strings.TrimSpace(in)
 		} else {
+			fmt.Fprintf(c.Out, "Using token [%v]", token)
 			fmt.Fprintln(c.Out)
 		}
 
