@@ -1,8 +1,6 @@
 - The load balancer's ID
 - The load balancer's name
 - The load balancer's IP address
-- The load balancer's traffic algorithm. Must
-  be either `round_robin` or `least_connections`
 - The current state of the load balancer. This can be `new`, `active`, or `errored`.
 - The load balancer's creation date, in ISO8601 combined date and time format.
 - The load balancer's forwarding rules. See `doctl compute load-balancer add-forwarding-rules --help` for a list.
