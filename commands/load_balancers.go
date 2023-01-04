@@ -94,9 +94,9 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerName, "", "",
-		"The load balancer's name", requiredOpt())
+		"The load balancer's name")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "",
-		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
+		"The load balancer's region, e.g.: `nyc1`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgSizeSlug, "", "",
 		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdRecordUpdate, doctl.ArgSizeUnit, "", 0,
