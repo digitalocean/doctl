@@ -92,6 +92,7 @@ var (
 
 	testDBReplica = do.DatabaseReplica{
 		DatabaseReplica: &godo.DatabaseReplica{
+			ID:                 "a09a5484-8ad7-4541-a42a-21481f7b55df",
 			Name:               "sunny-db-replica",
 			Connection:         testGODOConnection,
 			Region:             "nyc1",

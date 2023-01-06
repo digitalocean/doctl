@@ -255,6 +255,7 @@ func (dr *DatabaseReplicas) Cols() []string {
 	if dr.Short {
 		return []string{
 			"Name",
+			"ID",
 			"Region",
 			"Status",
 		}
@@ -262,6 +263,7 @@ func (dr *DatabaseReplicas) Cols() []string {
 
 	return []string{
 		"Name",
+		"ID",
 		"Region",
 		"Status",
 		"URI",
@@ -273,6 +275,7 @@ func (dr *DatabaseReplicas) ColMap() map[string]string {
 	if dr.Short {
 		return map[string]string{
 			"Name":   "Name",
+			"ID":     "ID",
 			"Region": "Region",
 			"Status": "Status",
 		}
@@ -280,6 +283,7 @@ func (dr *DatabaseReplicas) ColMap() map[string]string {
 
 	return map[string]string{
 		"Name":    "Name",
+		"ID":      "ID",
 		"Region":  "Region",
 		"Status":  "Status",
 		"URI":     "URI",
@@ -293,6 +297,7 @@ func (dr *DatabaseReplicas) KV() []map[string]interface{} {
 	for _, r := range dr.DatabaseReplicas {
 		o := map[string]interface{}{
 			"Name":    r.Name,
+			"ID":      r.ID,
 			"Region":  r.Region,
 			"Status":  r.Status,
 			"URI":     r.Connection.URI,
