@@ -21,20 +21,23 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 
 	"github.com/digitalocean/doctl"
-
-	"golang.org/x/crypto/ssh/terminal"
+	"github.com/digitalocean/doctl/commands/charm/input"
+	"github.com/digitalocean/doctl/commands/charm/template"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/term"
 	yaml "gopkg.in/yaml.v2"
 )
 
 const (
 	// TokenValidationServer is the default server used to validate an OAuth token
 	TokenValidationServer = "https://cloud.digitalocean.com"
+
+	legacyTokenLength = 64
+	v1TokenLength     = 71
 )
 
 // ErrUnknownTerminal signifies an unknown terminal. It is returned when doit
@@ -47,18 +50,30 @@ var (
 // retrieveUserTokenFromCommandLine is a function that can retrieve a token. By default,
 // it will prompt the user. In test, you can replace this with code that returns the appropriate response.
 func retrieveUserTokenFromCommandLine() (string, error) {
-	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
 		return "", ErrUnknownTerminal
 	}
 
-	fmt.Print("Please authenticate doctl for use with your DigitalOcean account. You can generate a token in the control panel at https://cloud.digitalocean.com/account/api/tokens\n\n")
-	fmt.Print("Enter your access token: ")
-	passwdBytes, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return "", err
-	}
+	template.Print(
+		`Please authenticate doctl for use with your DigitalOcean account. You can generate a token in the control panel at {{underline "https://cloud.digitalocean.com/account/api/tokens"}}{{nl}}{{nl}}`,
+		nil,
+	)
 
-	return string(passwdBytes), nil
+	prompt := input.New("Enter your access token: ",
+		input.WithHidden(),
+		input.WithRequired(),
+		input.WithValidator(tokenInputValidator),
+	)
+
+	return prompt.Prompt()
+}
+
+// tokenInputValidator is used to do basic validation of a token while it is being typed.
+func tokenInputValidator(input string) error {
+	if len(input) == legacyTokenLength || (strings.HasPrefix(input, "do") && len(input) == v1TokenLength) {
+		return nil
+	}
+	return errors.New("")
 }
 
 // UnknownSchemeError signifies an unknown HTTP scheme.
@@ -131,6 +146,10 @@ To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer
 func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig) error {
 	return func(c *CmdConfig) error {
 		token := c.getContextAccessToken()
+		context := Context
+		if context == "" {
+			context = viper.GetString("context")
+		}
 
 		if token == "" {
 			in, err := retrieveUserTokenFunc()
@@ -139,14 +158,12 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 			}
 			token = strings.TrimSpace(in)
 		} else {
-			fmt.Fprintf(c.Out, "Using token [%v]", token)
-			fmt.Fprintln(c.Out)
+			template.Render(c.Out, `Using token for context {{highlight .}}{{nl}}`, context)
 		}
 
 		c.setContextAccessToken(token)
 
-		fmt.Fprintln(c.Out)
-		fmt.Fprint(c.Out, "Validating token... ")
+		template.Render(c.Out, `{{nl}}Validating token... `, nil)
 
 		// need to initial the godo client since we've changed the configuration.
 		if err := c.initServices(c); err != nil {
@@ -159,13 +176,11 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 		}
 
 		if _, err := c.OAuth().TokenInfo(server); err != nil {
-			fmt.Fprintln(c.Out, "invalid token")
-			fmt.Fprintln(c.Out)
+			template.Render(c.Out, `{{error crossmark}}{{nl}}{{nl}}`, nil)
 			return fmt.Errorf("Unable to use supplied token to access API: %s", err)
 		}
 
-		fmt.Fprintln(c.Out, "OK")
-		fmt.Fprintln(c.Out)
+		template.Render(c.Out, `{{success checkmark}}{{nl}}{{nl}}`, nil)
 
 		return writeConfig()
 	}

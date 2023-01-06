@@ -189,6 +189,63 @@ func Test_displayAuthContexts(t *testing.T) {
 	}
 }
 
+func TestTokenInputValidator(t *testing.T) {
+	tests := []struct {
+		name  string
+		token string
+		valid bool
+	}{
+		{
+			name:  "valid legacy token",
+			token: "53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84",
+			valid: true,
+		},
+		{
+			name:  "valid v1 pat",
+			token: "dop_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84",
+			valid: true,
+		},
+		{
+			name:  "valid v1 oauth",
+			token: "doo_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84",
+			valid: true,
+		},
+		{
+			name:  "too short legacy token",
+			token: "53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adca",
+		},
+		{
+			name:  "too long legacy token",
+			token: "53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84a2d45",
+		},
+		{
+			name:  "too short v1 pat",
+			token: "dop_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae",
+		},
+		{
+			name:  "too short v1 oauth",
+			token: "doo_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adc84",
+		},
+		{
+			name:  "too long v1 pat",
+			token: "dop_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84sdsd",
+		},
+		{
+			name:  "too long v1 oauth",
+			token: "doo_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84sd",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.valid {
+				assert.NoError(t, tokenInputValidator(tt.token))
+			} else {
+				assert.Error(t, tokenInputValidator(tt.name))
+			}
+		})
+	}
+}
+
 type testConfig map[string]interface{}
 
 type nopWriteCloser struct {

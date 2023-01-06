@@ -19,6 +19,7 @@ import (
 	"github.com/creack/pty"
 	"github.com/sclevine/spec"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/term"
 )
 
 var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
@@ -37,7 +38,8 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			case "/v1/oauth/token/info":
 				auth := req.Header.Get("Authorization")
 
-				if auth == "Bearer first-token" || auth == "Bearer second-token" || auth == "Bearer some-magic-token" {
+				if auth == "Bearer first-token" || auth == "Bearer second-token" ||
+					auth == "Bearer some-magic-token" || auth == "Bearer some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1" {
 					w.Write([]byte(`{"resource_owner_id":123}`))
 					return
 				}
@@ -79,22 +81,30 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			ptmx, err := pty.Start(cmd)
 			expect.NoError(err)
 
+			// Set the terminal to raw mode so that we can send the carriage return
+			fd := int(ptmx.Fd())
+			oldState, err := term.MakeRaw(fd)
+			if err != nil {
+				panic(err)
+			}
+			defer func() { _ = term.Restore(fd, oldState) }()
+
 			go func() {
-				ptmx.Write([]byte("some-magic-token\n"))
+				ptmx.Write([]byte("some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1\r"))
 			}()
 
 			buf := bytes.NewBuffer([]byte{})
 
 			count, _ := io.Copy(buf, ptmx) // yes, ignore error intentionally
 			expect.NotZero(count)
-			ptmx.Close()
 
-			expect.Contains(buf.String(), "Validating token... OK")
+			expect.Contains(buf.String(), "Validating token...")
+			expect.Contains(buf.String(), "✔")
 
 			fileBytes, err := ioutil.ReadFile(testConfig)
 			expect.NoError(err)
 
-			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+			expect.Contains(string(fileBytes), "access-token: some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1")
 		})
 	})
 
@@ -161,9 +171,16 @@ context: default
 
 			ptmx, err := pty.Start(cmd)
 			expect.NoError(err)
+			// Set the terminal to raw mode so that we can send the carriage return
+			fd := int(ptmx.Fd())
+			oldState, err := term.MakeRaw(fd)
+			if err != nil {
+				panic(err)
+			}
+			defer func() { _ = term.Restore(fd, oldState) }()
 
 			go func() {
-				ptmx.Write([]byte("some-magic-token\n"))
+				ptmx.Write([]byte("some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1\r"))
 			}()
 
 			buf := bytes.NewBuffer([]byte{})
@@ -172,7 +189,8 @@ context: default
 			expect.NotZero(count)
 			ptmx.Close()
 
-			expect.Contains(buf.String(), "Validating token... OK")
+			expect.Contains(buf.String(), "Validating token...")
+			expect.Contains(buf.String(), "✔")
 
 			location, err := getDefaultConfigLocation()
 			expect.NoError(err)
@@ -180,7 +198,7 @@ context: default
 			fileBytes, err := ioutil.ReadFile(location)
 			expect.NoError(err)
 
-			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+			expect.Contains(string(fileBytes), "access-token: some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1")
 
 			err = os.Remove(location)
 			expect.NoError(err)
@@ -203,9 +221,16 @@ context: default
 
 			ptmx, err := pty.Start(cmd)
 			expect.NoError(err)
+			// Set the terminal to raw mode so that we can send the carriage return
+			fd := int(ptmx.Fd())
+			oldState, err := term.MakeRaw(fd)
+			if err != nil {
+				panic(err)
+			}
+			defer func() { _ = term.Restore(fd, oldState) }()
 
 			go func() {
-				ptmx.Write([]byte("some-bad-token\n"))
+				ptmx.Write([]byte("some-bad-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1a1\r"))
 			}()
 
 			buf := bytes.NewBuffer([]byte{})
@@ -214,7 +239,8 @@ context: default
 			expect.NotZero(count)
 			ptmx.Close()
 
-			expect.Contains(buf.String(), "Validating token... invalid token")
+			expect.Contains(buf.String(), "Validating token...")
+			expect.Contains(buf.String(), "✘")
 			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v1/oauth/token/info: 401", server.URL))
 		})
 	})
