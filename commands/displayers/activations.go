@@ -72,10 +72,10 @@ func (a *Activation) KV() []map[string]interface{} {
 }
 
 func getActivationStartType(a whisk.Activation) string {
-	if getActivationAnnotationValue(a, "init") == "" {
-		return "cold"
+	if getActivationAnnotationValue(a, "initTime") == nil {
+		return "warm"
 	}
-	return "warm"
+	return "cold"
 }
 
 // Gets the full function name for the activation.
