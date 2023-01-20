@@ -154,7 +154,7 @@ type ServerlessFunction struct {
 	// `web` can be either true or "raw". We use interface{} to support both types. If we start consuming the value we
 	// should probably define a custom type with proper validation.
 	Web         interface{}            `json:"web,omitempty"`
-	WebSecure   interface{}            `json:"webSecure,omitempty"`
+	WebSecure   interface{}            `json:"webSecure,omitempty" yaml:"webSecure"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 	Environment map[string]interface{} `json:"environment,omitempty"`
 	Annotations map[string]interface{} `json:"annotations,omitempty"`
