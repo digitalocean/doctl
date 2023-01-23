@@ -41,7 +41,7 @@ func TestServerlessConnect(t *testing.T) {
 		{
 			name:          "no namespaces",
 			namespaceList: []do.OutputNamespace{},
-			expectedError: errors.New("you must create a namespace with `doctl namespace create`, specifying a region and label"),
+			expectedError: errors.New("you must create a namespace with `doctl serverless namespaces create`, specifying a region and label"),
 		},
 		{
 			name: "one namespace",

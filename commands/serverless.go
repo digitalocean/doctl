@@ -276,7 +276,7 @@ func RunServerlessConnect(c *CmdConfig) error {
 		return err
 	}
 	if len(list) == 0 {
-		return errors.New("you must create a namespace with `doctl namespace create`, specifying a region and label")
+		return errors.New("you must create a namespace with `doctl serverless namespaces create`, specifying a region and label")
 	}
 	return connectFromList(ctx, sls, list, c.Out)
 }
