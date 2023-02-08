@@ -36,6 +36,11 @@ var (
 		Hour: "10:00",
 	}
 
+	testBackUpRestore = &godo.DatabaseBackupRestore{
+		DatabaseName:    "sunny-db-cluster",
+		BackupCreatedAt: time.Now().UTC().Format("2006-01-02T15:04:05Z07:00"),
+	}
+
 	// doctl mocks
 
 	testDBCluster = do.Database{
@@ -872,6 +877,36 @@ func TestDatabaseDBCreate(t *testing.T) {
 
 		config.Args = append(config.Args, testDBCluster.ID, testDB.Name)
 		err := RunDatabaseDBCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasesCreateFromBackUp(t *testing.T) {
+	r := &godo.DatabaseCreateRequest{
+		Name:          "replica-db",
+		BackupRestore: testBackUpRestore,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(r).Return(&testDBCluster, nil)
+
+		config.Args = append(config.Args, "replica-db")
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromCluster, testBackUpRestore.DatabaseName)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromTimestamp, testBackUpRestore.BackupCreatedAt)
+
+		err := RunDatabaseCreate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateRequest{}),
+		).Return(nil, errTest)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		err := RunDatabaseCreate(config)
 		assert.EqualError(t, err, "error")
 	})
 }
