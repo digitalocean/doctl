@@ -87,6 +87,7 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 					"create",
 					"new-db-name",
 					"--restore-from-cluster", "old-db-name",
+					"--restore-from-timestamp", "2023-02-01 17:32:15 +0000 UTC",
 					"--engine", "mysql",
 					"--num-nodes", "100",
 					"--region", "nyc3",
@@ -100,9 +101,33 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 			}
 		})
 	})
+
+	when("the wrong time format is passed", func() {
+		it("errors out with wrong time format", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"databases",
+				"create",
+				"new-db-name",
+				"--restore-from-cluster", "old-db-name",
+				"--restore-from-timestamp", "2009-11-10T23:00:00Z",
+				"--engine", "mysql",
+				"--num-nodes", "100",
+				"--region", "nyc3",
+				"--size", "biggest",
+				"--version", "what-version",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.Error(err)
+			expect.Equal(strings.TrimSpace(restoreFromTimestampError), strings.TrimSpace(string(output)))
+		})
+	})
 })
 
 const (
+	restoreFromTimestampError          = "Error: Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC"
 	databasesCreateRestoreBackUpOutput = `
 Notice: Database created
 ID         Name           Engine    Version         Number of Nodes    Region    Status      Size       URI                                                                                     Created At
