@@ -1140,3 +1140,12 @@ func TestDatabaseListOptions(t *testing.T) {
 		assert.EqualError(t, err, errTest.Error())
 	})
 }
+
+func TestConvertUTCtoISO8601(t *testing.T) {
+	utcTime := "2023-02-01 17:32:15 +0000 UTC"
+	isoTime, err := convertUTCtoISO8601(utcTime)
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, "2023-02-01T17:32:15Z", isoTime)
+}

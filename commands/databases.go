@@ -258,12 +258,10 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 			return nil, err
 		}
 		if restoreFromTimestamp != "" {
-			// accepts UTC time format from user (to match db list output) and converts it to ISO8601 for api parity.
-			date, error := time.Parse("2006-01-02 15:04:05 +0000 UTC", restoreFromTimestamp)
-			if error != nil {
-				return nil, fmt.Errorf("Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
+			dateFormatted, err := convertUTCtoISO8601(restoreFromTimestamp)
+			if err != nil {
+				return nil, err
 			}
-			dateFormatted := date.Format(time.RFC3339)
 			backUpRestore.BackupCreatedAt = dateFormatted
 		}
 		r.BackupRestore = backUpRestore
@@ -272,6 +270,17 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 	r.PrivateNetworkUUID = privateNetworkUUID
 
 	return r, nil
+}
+
+func convertUTCtoISO8601(restoreFromTimestamp string) (string, error) {
+	// accepts UTC time format from user (to match db list output) and converts it to ISO8601 for api parity.
+	date, error := time.Parse("2006-01-02 15:04:05 +0000 UTC", restoreFromTimestamp)
+	if error != nil {
+		return "", fmt.Errorf("Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
+	}
+	dateFormatted := date.Format(time.RFC3339)
+
+	return dateFormatted, nil
 }
 
 // RunDatabaseDelete deletes a database cluster
