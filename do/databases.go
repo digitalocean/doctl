@@ -130,6 +130,7 @@ type DatabasesService interface {
 	ListReplicas(string) (DatabaseReplicas, error)
 	CreateReplica(string, *godo.DatabaseCreateReplicaRequest) (*DatabaseReplica, error)
 	DeleteReplica(string, string) error
+	PromoteReplica(string, string) error
 	GetReplicaConnection(string, string) (*DatabaseConnection, error)
 
 	GetSQLMode(string) ([]string, error)
@@ -486,6 +487,12 @@ func (ds *databasesService) CreateReplica(databaseID string, req *godo.DatabaseC
 
 func (ds *databasesService) DeleteReplica(databaseID string, replicaID string) error {
 	_, err := ds.client.Databases.DeleteReplica(context.TODO(), databaseID, replicaID)
+
+	return err
+}
+
+func (ds *databasesService) PromoteReplica(databaseID string, replicaID string) error {
+	_, err := ds.client.Databases.PromoteReplicaToPrimary(context.TODO(), databaseID, replicaID)
 
 	return err
 }
