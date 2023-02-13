@@ -315,7 +315,7 @@ func RunAppsCreate(c *CmdConfig) error {
 	if wait {
 		apps := c.Apps()
 		notice("App creation is in progress, waiting for app to be running")
-		err := waitForActiveDeployment(apps, app.ID, "")
+		err := waitForActiveDeployment(apps, app.ID, app.GetPendingDeployment().GetID())
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
 			if err := c.Display(displayers.Apps{app}); err != nil {
@@ -393,7 +393,7 @@ func RunAppsUpdate(c *CmdConfig) error {
 	if wait {
 		apps := c.Apps()
 		notice("App update is in progress, waiting for app to be running")
-		err := waitForActiveDeployment(apps, app.ID, "")
+		err := waitForActiveDeployment(apps, app.ID, app.GetPendingDeployment().GetID())
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
 			if err := c.Display(displayers.Apps{app}); err != nil {
