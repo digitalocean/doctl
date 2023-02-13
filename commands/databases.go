@@ -78,6 +78,8 @@ There are a number of flags that customize the configuration, all of which are o
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, and `mongodb`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromCluster, "", "", "The name of an existing database cluster from which the backup will be restored.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
 	AddBoolFlag(cmdDatabaseCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
@@ -243,7 +245,42 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 	}
 	r.PrivateNetworkUUID = privateNetworkUUID
 
+	restoreFromCluster, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromCluster)
+	if err != nil {
+		return nil, err
+	}
+	if restoreFromCluster != "" {
+		backUpRestore := &godo.DatabaseBackupRestore{}
+		backUpRestore.DatabaseName = restoreFromCluster
+		// only set the restore-from-timestamp if restore-from-cluster is set.
+		restoreFromTimestamp, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromTimestamp)
+		if err != nil {
+			return nil, err
+		}
+		if restoreFromTimestamp != "" {
+			dateFormatted, err := convertUTCtoISO8601(restoreFromTimestamp)
+			if err != nil {
+				return nil, err
+			}
+			backUpRestore.BackupCreatedAt = dateFormatted
+		}
+		r.BackupRestore = backUpRestore
+	}
+
+	r.PrivateNetworkUUID = privateNetworkUUID
+
 	return r, nil
+}
+
+func convertUTCtoISO8601(restoreFromTimestamp string) (string, error) {
+	// accepts UTC time format from user (to match db list output) and converts it to ISO8601 for api parity.
+	date, error := time.Parse("2006-01-02 15:04:05 +0000 UTC", restoreFromTimestamp)
+	if error != nil {
+		return "", fmt.Errorf("Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
+	}
+	dateFormatted := date.Format(time.RFC3339)
+
+	return dateFormatted, nil
 }
 
 // RunDatabaseDelete deletes a database cluster
