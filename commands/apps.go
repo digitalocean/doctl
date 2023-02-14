@@ -315,7 +315,7 @@ func RunAppsCreate(c *CmdConfig) error {
 	if wait {
 		apps := c.Apps()
 		notice("App creation is in progress, waiting for app to be running")
-		err := waitForActiveDeployment(apps, app.ID, "")
+		err := waitForActiveDeployment(apps, app.ID, app.GetPendingDeployment().GetID())
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
 			if err := c.Display(displayers.Apps{app}); err != nil {
@@ -393,7 +393,7 @@ func RunAppsUpdate(c *CmdConfig) error {
 	if wait {
 		apps := c.Apps()
 		notice("App update is in progress, waiting for app to be running")
-		err := waitForActiveDeployment(apps, app.ID, "")
+		err := waitForActiveDeployment(apps, app.ID, app.GetPendingDeployment().GetID())
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
 			if err := c.Display(displayers.Apps{app}); err != nil {
@@ -490,35 +490,18 @@ func waitForActiveDeployment(apps do.AppsService, appID string, deploymentID str
 			}
 		}
 
-		if deploymentID == "" {
-			deployments, err := apps.ListDeployments(appID)
-			if err != nil {
-				return err
-			}
+		deployment, err := apps.GetDeployment(appID, deploymentID)
+		if err != nil {
+			return err
+		}
 
-			// We could find no deployments if both of the following are true:
-			// - The deployment isn't created in the backend synchronously with the create/update request.
-			// - This is the first ever deployment of the app.
-			// Note that if the first is ever true we will do the wrong thing here and test the status of
-			// a previous deployment, however there's no better way to correlate a deployment with the
-			// request that triggered it.
-			if len(deployments) > 0 {
-				deploymentID = deployments[0].ID
-			}
-		} else {
-			deployment, err := apps.GetDeployment(appID, deploymentID)
-			if err != nil {
-				return err
-			}
+		allSuccessful := deployment.Progress.SuccessSteps == deployment.Progress.TotalSteps
+		if allSuccessful {
+			return nil
+		}
 
-			allSuccessful := deployment.Progress.SuccessSteps == deployment.Progress.TotalSteps
-			if allSuccessful {
-				return nil
-			}
-
-			if deployment.Progress.ErrorSteps > 0 {
-				return fmt.Errorf("error deploying app (%s) (deployment ID: %s):\n%s", appID, deployment.ID, godo.Stringify(deployment.Progress))
-			}
+		if deployment.Progress.ErrorSteps > 0 {
+			return fmt.Errorf("error deploying app (%s) (deployment ID: %s):\n%s", appID, deployment.ID, godo.Stringify(deployment.Progress))
 		}
 		attempts++
 		time.Sleep(10 * time.Second)
