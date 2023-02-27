@@ -78,7 +78,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, and `mongodb`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromCluster, "", "", "The name of an existing database cluster from which the backup will be restored.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster from which the backup will be restored.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
 	AddBoolFlag(cmdDatabaseCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
@@ -121,6 +121,13 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, e.g. `sfo2` or `nyc3`.", requiredOpt())
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
+
+	cmdDatabaseFork := CmdBuilder(cmd, RunDatabaseFork, "fork <name>", "Create a new database cluster by forking an existing database cluster.", `This command forks a database cluster from an existing cluster. example:
+	
+	doctl databases fork new_db_name --restore-from-cluster-id=original-cluster-id`, Writer, aliasOpt("f"))
+	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromClusterID, "", "", "The ID of an existing database cluster from which the new database will be forked from", requiredOpt())
+	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
+	AddBoolFlag(cmdDatabaseFork, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
 	cmd.AddCommand(databaseReplica())
 	cmd.AddCommand(databaseMaintenanceWindow())
@@ -245,7 +252,7 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 	}
 	r.PrivateNetworkUUID = privateNetworkUUID
 
-	restoreFromCluster, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromCluster)
+	restoreFromCluster, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromClusterName)
 	if err != nil {
 		return nil, err
 	}
@@ -268,6 +275,93 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 	}
 
 	r.PrivateNetworkUUID = privateNetworkUUID
+
+	return r, nil
+}
+
+// RunDatabaseFork creates a database cluster by forking an existing cluster.
+func RunDatabaseFork(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	r, err := buildDatabaseForkRequest(c)
+	if err != nil {
+		return err
+	}
+
+	dbs := c.Databases()
+
+	db, err := dbs.Create(r)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		connection := db.Connection
+		dbs := c.Databases()
+		notice("Database forking is in progress, waiting for database to be online")
+
+		err := waitForDatabaseReady(dbs, db.ID)
+		if err != nil {
+			return fmt.Errorf(
+				"database couldn't enter the `online` state: %v",
+				err,
+			)
+		}
+
+		db, _ = dbs.Get(db.ID)
+		db.Connection = connection
+	}
+
+	//time.Sleep(30 * time.Second)
+
+	notice("Database created")
+
+	return displayDatabases(c, false, *db)
+}
+
+func buildDatabaseForkRequest(c *CmdConfig) (*godo.DatabaseCreateRequest, error) {
+	r := &godo.DatabaseCreateRequest{Name: c.Args[0]}
+
+	existingDatabaseID, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromClusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	existingDatabase, err := c.Databases().Get(existingDatabaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	backUpRestore := &godo.DatabaseBackupRestore{}
+	backUpRestore.DatabaseName = existingDatabase.Name
+	restoreFromTimestamp, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	if restoreFromTimestamp != "" {
+		dateFormatted, err := convertUTCtoISO8601(restoreFromTimestamp)
+		if err != nil {
+			return nil, err
+		}
+		backUpRestore.BackupCreatedAt = dateFormatted
+	}
+
+	r.BackupRestore = backUpRestore
+	r.EngineSlug = existingDatabase.EngineSlug
+	r.NumNodes = existingDatabase.NumNodes
+	r.SizeSlug = existingDatabase.SizeSlug
+	r.Region = existingDatabase.RegionSlug
+	r.Version = existingDatabase.VersionSlug
+	r.PrivateNetworkUUID = existingDatabase.PrivateNetworkUUID
+	r.Tags = existingDatabase.Tags
+	r.ProjectID = existingDatabase.ProjectID
 
 	return r, nil
 }
