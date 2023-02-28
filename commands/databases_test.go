@@ -191,6 +191,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"migrate",
 		"resize",
 		"firewalls",
+		"fork"
 		"backups",
 		"replica",
 		"options",
