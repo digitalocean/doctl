@@ -79,7 +79,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster from which the backup will be restored.")
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
 	AddBoolFlag(cmdDatabaseCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
@@ -126,7 +126,7 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 	
 	doctl databases fork new_db_name --restore-from-cluster-id=original-cluster-id`, Writer, aliasOpt("f"))
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromClusterID, "", "", "The ID of an existing database cluster from which the new database will be forked from", requiredOpt())
-	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
+	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
 	AddBoolFlag(cmdDatabaseFork, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
 	cmd.AddCommand(databaseReplica())

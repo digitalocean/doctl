@@ -330,7 +330,7 @@ const (
 
 	// ArgDatabaseRestoreFromClusterName is a flag for specifying the name of an existing database cluster from which the backup will be restored.
 	ArgDatabaseRestoreFromClusterName = "restore-from-cluster-name"
-	// ArgDatabaseRestoreFromClusterID is a flag for specifying the id of an existing database cluster from which the backup will be restored.
+	// ArgDatabaseRestoreFromClusterID is a flag for specifying the id of an existing database cluster from which the new database will be forked from.
 	ArgDatabaseRestoreFromClusterID = "restore-from-cluster-id"
 	// ArgDatabaseRestoreFromTimestamp is a flag for specifying the timestamp of an existing database cluster backup in ISO8601 combined date and time format. The most recent backup will be used if excluded.
 	ArgDatabaseRestoreFromTimestamp = "restore-from-timestamp"
