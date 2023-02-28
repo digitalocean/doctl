@@ -319,8 +319,6 @@ func RunDatabaseFork(c *CmdConfig) error {
 		db.Connection = connection
 	}
 
-	//time.Sleep(30 * time.Second)
-
 	notice("Database created")
 
 	return displayDatabases(c, false, *db)
