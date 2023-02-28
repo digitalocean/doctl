@@ -405,13 +405,14 @@ func TestDatabasesForkDatabase(t *testing.T) {
 
 	// Successful call
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
 		tm.databases.EXPECT().Create(r).Return(&testDBCluster, nil)
 
 		config.Args = append(config.Args, testDBCluster.Name)
-		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromClusterID, testBackUpRestore.DatabaseName)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromClusterID, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromTimestamp, "2023-02-01 17:32:15 +0000 UTC")
 
-		err := RunDatabaseCreate(config)
+		err := RunDatabaseFork(config)
 		assert.NoError(t, err)
 	})
 

@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("database/create/fork", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -64,6 +64,19 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 				expect.NoError(err)
 
 				w.Write(buffer.Bytes())
+			case "/v2/databases/some-id":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(databaseRestoreBackUpCreateResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -84,15 +97,10 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"databases",
-					"create",
+					"fork",
 					"new-db-name",
-					"--restore-from-cluster-name", "old-db-name",
+					"--restore-from-cluster-id", "some-id",
 					"--restore-from-timestamp", "2023-02-01 17:32:15 +0000 UTC",
-					"--engine", "mysql",
-					"--num-nodes", "100",
-					"--region", "nyc3",
-					"--size", "biggest",
-					"--version", "what-version",
 				)
 
 				output, err := cmd.CombinedOutput()
@@ -108,15 +116,10 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"databases",
-				"create",
+				"fork",
 				"new-db-name",
-				"--restore-from-cluster-name", "old-db-name",
+				"--restore-from-cluster-id", "some-id",
 				"--restore-from-timestamp", "2009-11-10T23:00:00Z",
-				"--engine", "mysql",
-				"--num-nodes", "100",
-				"--region", "nyc3",
-				"--size", "biggest",
-				"--version", "what-version",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -125,47 +128,3 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 		})
 	})
 })
-
-const (
-	restoreFromTimestampError          = "Error: Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC"
-	databasesCreateRestoreBackUpOutput = `
-Notice: Database created
-ID         Name           Engine    Version         Number of Nodes    Region    Status      Size       URI                                                                                     Created At
-some-id    new-db-name    mysql     what-version    100                nyc3      creating    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC
-`
-	databaseRestoreBackUpCreateRequestBody = `{
-	"name":"new-db-name",
-	"engine": "mysql",
-	"num_nodes": "100",
-	"region": "nyc3",
-	"size": "biggest",
-	"backup_restore":{
-	  "database_name":"old-db-name"
-	}
-  }`
-
-	databaseRestoreBackUpCreateResponse = `
-  {
-	"database": {
-	  "id": "some-id",
-	  "name": "new-db-name",
-	  "engine": "mysql",
-	  "version": "what-version",
-	  "connection": {
-		"uri": "mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb"
-	  },
-	  "private_connection": {},
-	  "users": null,
-	  "db_names": null,
-	  "num_nodes": 100,
-	  "region": "nyc3",
-	  "status": "creating",
-	  "created_at": "2019-01-11T18:37:36Z",
-	  "maintenance_window": null,
-	  "size": "biggest",
-	  "tags": [
-		"production"
-	  ]
-	}
-  }`
-)
