@@ -191,6 +191,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"migrate",
 		"resize",
 		"firewalls",
+		"fork",
 		"backups",
 		"replica",
 		"options",
@@ -366,7 +367,7 @@ func TestDatabasesCreateRestoreFromBackUp(t *testing.T) {
 
 		config.Args = append(config.Args, testDBCluster.Name)
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testDBCluster.RegionSlug)
-		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromCluster, testBackUpRestore.DatabaseName)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromClusterName, testBackUpRestore.DatabaseName)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromTimestamp, "2023-02-01 17:32:15 +0000 UTC")
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
 		config.Doit.Set(config.NS, doctl.ArgVersion, testDBCluster.VersionSlug)
@@ -375,6 +376,44 @@ func TestDatabasesCreateRestoreFromBackUp(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
 
 		err := RunDatabaseCreate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateRequest{}),
+		).Return(nil, errTest)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		err := RunDatabaseCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasesForkDatabase(t *testing.T) {
+	r := &godo.DatabaseCreateRequest{
+		Name:               testDBCluster.Name,
+		BackupRestore:      testBackUpRestore,
+		Region:             testDBCluster.RegionSlug,
+		Version:            testDBCluster.VersionSlug,
+		EngineSlug:         testDBCluster.EngineSlug,
+		NumNodes:           testDBCluster.NumNodes,
+		SizeSlug:           testDBCluster.SizeSlug,
+		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
+		Tags:               testDBCluster.Tags,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
+		tm.databases.EXPECT().Create(r).Return(&testDBCluster, nil)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromClusterID, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromTimestamp, "2023-02-01 17:32:15 +0000 UTC")
+
+		err := RunDatabaseFork(config)
 		assert.NoError(t, err)
 	})
 
