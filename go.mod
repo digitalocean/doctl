@@ -3,9 +3,8 @@ module github.com/digitalocean/doctl
 go 1.19
 
 require (
-	github.com/Microsoft/hcsshim v0.9.2 // indirect
+	github.com/Microsoft/hcsshim v0.9.6 // indirect
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/containerd/continuity v0.3.0 // indirect
 	github.com/creack/pty v1.1.11
 	github.com/digitalocean/godo v1.97.0
 	github.com/docker/cli v20.10.17+incompatible
@@ -66,9 +65,9 @@ require (
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21 // indirect
-	github.com/containerd/cgroups v1.0.3 // indirect
+	github.com/containerd/cgroups v1.0.4 // indirect
 	github.com/containerd/console v1.0.3 // indirect
-	github.com/containerd/containerd v1.6.3-0.20220401172941-5ff8fce1fcc6 // indirect
+	github.com/containerd/containerd v1.6.18 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
@@ -104,7 +103,7 @@ require (
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/pelletier/go-toml v1.9.4 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.0-beta.8 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
