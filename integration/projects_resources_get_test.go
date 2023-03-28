@@ -89,7 +89,7 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 				}
 
 				w.Write([]byte(projectsResourcesGetVolumeResponse))
-			case "/v2/kubernetes/1111":
+			case "/v2/kubernetes/clusters":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -101,7 +101,7 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 					return
 				}
 
-				w.Write([]byte(projectsResourcesGetKubernetesResponse))
+				w.Write([]byte(projectsResourcesListKubernetesOutput))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -345,6 +345,60 @@ ID                                      Name       Size      Region    Filesyste
 	projectsResourcesGetKubernetesOutput = `
 ID      Name                    Region    Version        Auto Upgrade    Status          Endpoint  IPv4            Cluster Subnet  Service Subnet    Tags   Created At                       Updated At                       Node Pools
 5555    some-kubernetes-name    nyc1      1.19.3-do.3    false           provisioning              192.0.2.255                                       yes    2021-01-29 16:02:02 +0000 UTC    2021-01-29 16:02:02 +0000 UTC    test-get-cluster
+`
+	projectsResourcesListKubernetesOutput = `
+	{
+		"kubernetes_clusters": [
+		  {
+			"uuid": 5555,
+			"name": "some-kubernetes-name",
+			"region_slug": "nyc1",
+			"version_slug": "1.19.3-do.3",
+			"auto_upgrade": "False",
+			"node_pools": [
+			  {
+				"uuid": "5556",
+				"name": "pool-test",
+				"version_slug": "1.19.3-do.3",
+				"droplet_size": "s-2vcpu-4gb",
+				"count": 3,
+				"node_statuses": [
+				  "provisioning",
+				  "provisioning",
+				  "provisioning"
+				],
+				"status": {
+				  "state": "provisioning"
+				},
+				"tags": [
+				  {
+					"name": "k8s"
+				  },
+				  {
+					"name": "k8s:5555"
+				  },
+				  {
+					"name": "k8s:worker"
+				  }
+				]
+			  }
+			],
+			"tags": [
+			  {
+				"name": "k8s"
+			  }
+			],
+			"status": {
+			  "state": "provisioning",
+			  "message": "provisioning",
+			  "pending_event": true
+			},
+			"pending": true,
+			"ready": false,
+			"created_at": "2021-01-29T16:02:02Z"
+		  }
+		]
+	  }
 `
 	projectsResourcesGetKubernetesResponse = `
 {
