@@ -268,6 +268,9 @@ func RunProjectResourcesGet(c *CmdConfig) error {
 		return RunDomainGet(c)
 	case "volume":
 		return RunVolumeGet(c)
+	case "kubernetes":
+		k8sCmdService := kubernetesCommandService()
+		return k8sCmdService.RunKubernetesClusterGet(c)
 	case "app":
 		return RunAppsGet(c)
 	default:
