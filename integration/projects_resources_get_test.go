@@ -343,21 +343,20 @@ ID                                      Name       Size      Region    Filesyste
 }
 `
 	projectsResourcesGetKubernetesOutput = `
-ID      Name                    Region    Version        Auto Upgrade    Status          Endpoint  IPv4            Cluster Subnet  Service Subnet    Tags   Created At                       Updated At                       Node Pools
-5555    some-kubernetes-name    nyc1      1.19.3-do.3    false           provisioning              192.0.2.255                                       yes    2021-01-29 16:02:02 +0000 UTC    2021-01-29 16:02:02 +0000 UTC    test-get-cluster
+ID    Name    Region    Version    Auto Upgrade    HA Control Plane    Status          Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags    Created At                       Updated At                       Node Pools
+      1111                         false           false               provisioning                                                            k8s     2021-01-29 16:02:02 +0000 UTC    0001-01-01 00:00:00 +0000 UTC    pool-test
 `
 	projectsResourcesListKubernetesOutput = `
 	{
 		"kubernetes_clusters": [
 		  {
-			"uuid": 5555,
-			"name": "some-kubernetes-name",
+			"uuid": 1111,
+			"name": "1111",
 			"region_slug": "nyc1",
 			"version_slug": "1.19.3-do.3",
-			"auto_upgrade": "False",
 			"node_pools": [
 			  {
-				"uuid": "5556",
+				"uuid": "1111",
 				"name": "pool-test",
 				"version_slug": "1.19.3-do.3",
 				"droplet_size": "s-2vcpu-4gb",
@@ -371,22 +370,14 @@ ID      Name                    Region    Version        Auto Upgrade    Status 
 				  "state": "provisioning"
 				},
 				"tags": [
-				  {
-					"name": "k8s"
-				  },
-				  {
-					"name": "k8s:5555"
-				  },
-				  {
-					"name": "k8s:worker"
-				  }
+					"k8s:worker",
+					"k8s",
+					"k8s:1111"
 				]
 			  }
 			],
 			"tags": [
-			  {
-				"name": "k8s"
-			  }
+				"k8s"
 			],
 			"status": {
 			  "state": "provisioning",
@@ -395,6 +386,7 @@ ID      Name                    Region    Version        Auto Upgrade    Status 
 			},
 			"pending": true,
 			"ready": false,
+			"auto_upgrade": false,
 			"created_at": "2021-01-29T16:02:02Z"
 		  }
 		]
@@ -403,14 +395,14 @@ ID      Name                    Region    Version        Auto Upgrade    Status 
 	projectsResourcesGetKubernetesResponse = `
 {
   "kubernetes_cluster": {
-    "uuid": 5555,
-    "name": "some-kubernetes-name",
+    "uuid": 1111,
+    "name": "1111",
     "region_slug": "nyc1",
 	"version_slug": "1.19.3-do.3",
 	"auto_upgrade": "false",
 	"node_pools": [
 		{
-		"uuid": "5556",
+		"uuid": "1111",
 		"name": "pool-test",
 		"version_slug": "1.19.3-do.3",
 		"droplet_size": "s-2vcpu-4gb",
@@ -428,7 +420,7 @@ ID      Name                    Region    Version        Auto Upgrade    Status 
 			"name": "k8s"
 			},
 			{
-			"name": "k8s:5555"
+			"name": "k8s:1111"
 			},
 			{
 			"name": "k8s:worker"
