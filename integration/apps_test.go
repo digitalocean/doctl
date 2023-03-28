@@ -89,11 +89,12 @@ var (
 	}
 	testAppUUID = "93a37175-f520-4a12-a7ad-26e63491dbf4"
 	testApp     = &godo.App{
-		ID:               testAppUUID,
-		Spec:             &testAppSpec,
-		ActiveDeployment: testDeployment,
-		CreatedAt:        testAppTime,
-		UpdatedAt:        testAppTime,
+		ID:                testAppUUID,
+		Spec:              &testAppSpec,
+		ActiveDeployment:  testDeployment,
+		PendingDeployment: testDeployment,
+		CreatedAt:         testAppTime,
+		UpdatedAt:         testAppTime,
 	}
 	testAppInProgress = &godo.App{
 		ID:                   testAppUUID,
@@ -294,7 +295,7 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 			)
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err)
-			expectedOutput := "Notice: App creation is in progress, waiting for app to be running\n..\nNotice: App created\n" + testAppsOutput
+			expectedOutput := "Notice: App creation is in progress, waiting for app to be running\n.\nNotice: App created\n" + testAppsOutput
 			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 		})
 	})
@@ -658,7 +659,7 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 			)
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err)
-			expectedOutput := "Notice: App update is in progress, waiting for app to be running\n..\nNotice: App updated\n" + testAppsOutput
+			expectedOutput := "Notice: App update is in progress, waiting for app to be running\n.\nNotice: App updated\n" + testAppsOutput
 			expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 		})
 	})

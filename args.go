@@ -328,6 +328,12 @@ const (
 	// ArgProjectResource is a flag for your resource URNs
 	ArgProjectResource = "resource"
 
+	// ArgDatabaseRestoreFromClusterName is a flag for specifying the name of an existing database cluster from which the backup will be restored.
+	ArgDatabaseRestoreFromClusterName = "restore-from-cluster-name"
+	// ArgDatabaseRestoreFromClusterID is a flag for specifying the id of an existing database cluster from which the new database will be forked from.
+	ArgDatabaseRestoreFromClusterID = "restore-from-cluster-id"
+	// ArgDatabaseRestoreFromTimestamp is a flag for specifying the timestamp of an existing database cluster backup in ISO8601 combined date and time format. The most recent backup will be used if excluded.
+	ArgDatabaseRestoreFromTimestamp = "restore-from-timestamp"
 	// ArgDatabaseEngine is a flag for specifying which database engine to use
 	ArgDatabaseEngine = "engine"
 	// ArgDatabaseNumNodes is the number of nodes in the database cluster
