@@ -445,7 +445,7 @@ func RunAppsDetect(c *CmdConfig) error {
 		if err == nil {
 			autoDeploy = x
 		} else {
-			return fmt.Errorf("expected true/false for deployonpush, received : %s", c.Args[0])
+			return fmt.Errorf("expected true/false for deploy-on-push, received : %s", c.Args[0])
 		}
 	}
 
