@@ -414,5 +414,5 @@ const (
 	// ArgDeployOnPush allow auto deploy on project update.
 	ArgDeployOnPush = "deploy-on-push"
 	// ArgProjectBrach is git project branch.
-	ArgProjectBrach = "branch"
+	ArgProjectBranch = "branch"
 )
