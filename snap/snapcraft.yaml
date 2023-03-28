@@ -1,5 +1,5 @@
 name: doctl
-version: git
+adopt-info: doctl
 summary: The official DigitalOcean command line interface
 description: |
   doctl allows you to interact with the DigitalOcean API via the command line.
@@ -29,13 +29,22 @@ parts:
     after: [launcher]
     source: .
     plugin: go
+    build-environment:
+    # Results in installation to /snap/doctl/current/opt/sandbox
+    - OVERRIDE_SANDBOX_DIR: "$SNAPCRAFT_PART_INSTALL/opt/sandbox"
+    - SNAP_SANDBOX_INSTALL: "true"
+    # Override to prevent 'invalid cross-device link' calling doctl
+    - XDG_CONFIG_HOME: "$SNAPCRAFT_PART_INSTALL/tmp/.config"
     override-pull: |
       git clone https://github.com/digitalocean/doctl.git .
     override-build: |
-      version=$(scripts/version.sh)
+      version=$(scripts/version.sh --snap)
       snapcraftctl set-version ${version}
 
-      short=${version%+*}
+      echo "==> Building doctl ${version} using $(go version)"
+
+      short=${version#v}
+      short=${short%+*}
       short=${short%-*}
       baseFlag="-X github.com/digitalocean/doctl"
       ldFlags="${baseFlag}.Label=release ${baseFlag}.Build=$(git rev-parse --short HEAD)"
@@ -43,15 +52,22 @@ parts:
       ldFlags="${ldFlags} ${baseFlag}.Minor=$(echo ${short} | cut -d'.' -f2)"
       ldFlags="${ldFlags} ${baseFlag}.Patch=$(echo ${short} | cut -d'.' -f3 | cut -d'+' -f1)"
 
-      GO111MODULE=on CGO_ENABLED=0 go build -ldflags "${ldFlags}" -mod=vendor -o doctl cmd/doctl/main.go
+      GO111MODULE=on CGO_ENABLED=0 go build -trimpath -ldflags "${ldFlags}" -mod=vendor -o doctl cmd/doctl/main.go
 
       chmod +x doctl
       mkdir -p $SNAPCRAFT_PART_INSTALL/bin
       mv doctl $SNAPCRAFT_PART_INSTALL/bin/
+
+      # Install the sandbox
+      mkdir -p $OVERRIDE_SANDBOX_DIR
+      $SNAPCRAFT_PART_INSTALL/bin/doctl sandbox install
+      rm -rf $XDG_CONFIG_HOME/doctl
     organize:
       bin/doctl: bin/doctl.real
 
 plugs:
+  app-dev-build:
+    interface: docker
   dot-docker:
     interface: personal-files
     write:
@@ -76,3 +92,4 @@ apps:
       - dot-docker
       - doctl-config
       - kube-config
+      - app-dev-build

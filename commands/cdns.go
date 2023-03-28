@@ -15,7 +15,6 @@ package commands
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -247,7 +246,7 @@ func RunCDNDelete(c *CmdConfig) error {
 		return c.CDNs().Delete(id)
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 // RunCDNFlushCache flushes the cache of an individual cdn

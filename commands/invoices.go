@@ -59,17 +59,17 @@ Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the
 	CmdBuilder(cmd, RunInvoicesSummary, "summary <invoice-uuid>", "Get a summary of an invoice",
 		invoiceSummaryDesc, Writer, aliasOpt("s"), displayerType(&displayers.Invoice{}))
 
-	pdfInoviceDesc := `This command downloads a PDF summary of a specific invoice to the provided location.
+	pdfInvoiceDesc := `This command downloads a PDF summary of a specific invoice to the provided location.
 
 Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
 	CmdBuilder(cmd, RunInvoicesGetPDF, "pdf <invoice-uuid> <output-file.pdf>", "Download a PDF file of an invoice",
-		pdfInoviceDesc, Writer, aliasOpt("p"))
+		pdfInvoiceDesc, Writer, aliasOpt("p"))
 
-	csvInoviceDesc := `This command downloads a CSV formatted file for a specific invoice to the provided location.
+	csvInvoiceDesc := `This command downloads a CSV formatted file for a specific invoice to the provided location.
 
 Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the invoice to retrieve.`
 	CmdBuilder(cmd, RunInvoicesGetCSV, "csv <invoice-uuid> <output-file.csv>", "Download a CSV file of an invoice",
-		csvInoviceDesc, Writer, aliasOpt("c"))
+		csvInvoiceDesc, Writer, aliasOpt("c"))
 
 	return cmd
 }

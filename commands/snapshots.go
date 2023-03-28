@@ -57,7 +57,7 @@ func Snapshot() *Command {
 
 	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id>...",
 		"Delete a snapshot of a Droplet or volume", "Delete a snapshot of a Droplet or volume by specifying its ID.",
-		Writer, aliasOpt("d"), displayerType(&displayers.Snapshot{}))
+		Writer, aliasOpt("d", "rm"), displayerType(&displayers.Snapshot{}))
 	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the snapshot without confirmation")
 
 	return cmd
@@ -78,7 +78,7 @@ func RunSnapshotList(c *CmdConfig) error {
 		return err
 	}
 
-	matches := []glob.Glob{}
+	matches := make([]glob.Glob, 0, len(c.Args))
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
 		if err != nil {
@@ -153,7 +153,7 @@ func RunSnapshotGet(c *CmdConfig) error {
 	ss := c.Snapshots()
 	ids := c.Args
 
-	var matchedList []do.Snapshot
+	matchedList := make([]do.Snapshot, 0, len(ids))
 
 	for _, id := range ids {
 		s, err := ss.Get(id)
@@ -188,7 +188,7 @@ func RunSnapshotDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 	return nil
 }

@@ -35,19 +35,19 @@ func (m *MockRegistryService) EXPECT() *MockRegistryServiceMockRecorder {
 	return m.recorder
 }
 
-// Get mocks base method.
-func (m *MockRegistryService) Get() (*do.Registry, error) {
+// CancelGarbageCollection mocks base method.
+func (m *MockRegistryService) CancelGarbageCollection(arg0, arg1 string) (*do.GarbageCollection, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get")
-	ret0, _ := ret[0].(*do.Registry)
+	ret := m.ctrl.Call(m, "CancelGarbageCollection", arg0, arg1)
+	ret0, _ := ret[0].(*do.GarbageCollection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get.
-func (mr *MockRegistryServiceMockRecorder) Get() *gomock.Call {
+// CancelGarbageCollection indicates an expected call of CancelGarbageCollection.
+func (mr *MockRegistryServiceMockRecorder) CancelGarbageCollection(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRegistryService)(nil).Get))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).CancelGarbageCollection), arg0, arg1)
 }
 
 // Create mocks base method.
@@ -79,49 +79,18 @@ func (mr *MockRegistryServiceMockRecorder) Delete() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRegistryService)(nil).Delete))
 }
 
-// DockerCredentials mocks base method.
-func (m *MockRegistryService) DockerCredentials(arg0 *godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error) {
+// DeleteManifest mocks base method.
+func (m *MockRegistryService) DeleteManifest(arg0, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DockerCredentials", arg0)
-	ret0, _ := ret[0].(*godo.DockerCredentials)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "DeleteManifest", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// DockerCredentials indicates an expected call of DockerCredentials.
-func (mr *MockRegistryServiceMockRecorder) DockerCredentials(arg0 interface{}) *gomock.Call {
+// DeleteManifest indicates an expected call of DeleteManifest.
+func (mr *MockRegistryServiceMockRecorder) DeleteManifest(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DockerCredentials", reflect.TypeOf((*MockRegistryService)(nil).DockerCredentials), arg0)
-}
-
-// ListRepositoryTags mocks base method.
-func (m *MockRegistryService) ListRepositoryTags(arg0, arg1 string) ([]do.RepositoryTag, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListRepositoryTags", arg0, arg1)
-	ret0, _ := ret[0].([]do.RepositoryTag)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListRepositoryTags indicates an expected call of ListRepositoryTags.
-func (mr *MockRegistryServiceMockRecorder) ListRepositoryTags(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoryTags", reflect.TypeOf((*MockRegistryService)(nil).ListRepositoryTags), arg0, arg1)
-}
-
-// ListRepositories mocks base method.
-func (m *MockRegistryService) ListRepositories(arg0 string) ([]do.Repository, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListRepositories", arg0)
-	ret0, _ := ret[0].([]do.Repository)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListRepositories indicates an expected call of ListRepositories.
-func (mr *MockRegistryServiceMockRecorder) ListRepositories(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositories", reflect.TypeOf((*MockRegistryService)(nil).ListRepositories), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManifest", reflect.TypeOf((*MockRegistryService)(nil).DeleteManifest), arg0, arg1, arg2)
 }
 
 // DeleteTag mocks base method.
@@ -138,18 +107,19 @@ func (mr *MockRegistryServiceMockRecorder) DeleteTag(arg0, arg1, arg2 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTag", reflect.TypeOf((*MockRegistryService)(nil).DeleteTag), arg0, arg1, arg2)
 }
 
-// DeleteManifest mocks base method.
-func (m *MockRegistryService) DeleteManifest(arg0, arg1, arg2 string) error {
+// DockerCredentials mocks base method.
+func (m *MockRegistryService) DockerCredentials(arg0 *godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteManifest", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "DockerCredentials", arg0)
+	ret0, _ := ret[0].(*godo.DockerCredentials)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// DeleteManifest indicates an expected call of DeleteManifest.
-func (mr *MockRegistryServiceMockRecorder) DeleteManifest(arg0, arg1, arg2 interface{}) *gomock.Call {
+// DockerCredentials indicates an expected call of DockerCredentials.
+func (mr *MockRegistryServiceMockRecorder) DockerCredentials(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteManifest", reflect.TypeOf((*MockRegistryService)(nil).DeleteManifest), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DockerCredentials", reflect.TypeOf((*MockRegistryService)(nil).DockerCredentials), arg0)
 }
 
 // Endpoint mocks base method.
@@ -166,19 +136,34 @@ func (mr *MockRegistryServiceMockRecorder) Endpoint() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Endpoint", reflect.TypeOf((*MockRegistryService)(nil).Endpoint))
 }
 
-// StartGarbageCollection mocks base method.
-func (m *MockRegistryService) StartGarbageCollection(arg0 string, arg1 *godo.StartGarbageCollectionRequest) (*do.GarbageCollection, error) {
+// Get mocks base method.
+func (m *MockRegistryService) Get() (*do.Registry, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartGarbageCollection", arg0, arg1)
-	ret0, _ := ret[0].(*do.GarbageCollection)
+	ret := m.ctrl.Call(m, "Get")
+	ret0, _ := ret[0].(*do.Registry)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// StartGarbageCollection indicates an expected call of StartGarbageCollection.
-func (mr *MockRegistryServiceMockRecorder) StartGarbageCollection(arg0, arg1 interface{}) *gomock.Call {
+// Get indicates an expected call of Get.
+func (mr *MockRegistryServiceMockRecorder) Get() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).StartGarbageCollection), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRegistryService)(nil).Get))
+}
+
+// GetAvailableRegions mocks base method.
+func (m *MockRegistryService) GetAvailableRegions() ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAvailableRegions")
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAvailableRegions indicates an expected call of GetAvailableRegions.
+func (mr *MockRegistryServiceMockRecorder) GetAvailableRegions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableRegions", reflect.TypeOf((*MockRegistryService)(nil).GetAvailableRegions))
 }
 
 // GetGarbageCollection mocks base method.
@@ -196,6 +181,21 @@ func (mr *MockRegistryServiceMockRecorder) GetGarbageCollection(arg0 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).GetGarbageCollection), arg0)
 }
 
+// GetSubscriptionTiers mocks base method.
+func (m *MockRegistryService) GetSubscriptionTiers() ([]do.RegistrySubscriptionTier, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSubscriptionTiers")
+	ret0, _ := ret[0].([]do.RegistrySubscriptionTier)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSubscriptionTiers indicates an expected call of GetSubscriptionTiers.
+func (mr *MockRegistryServiceMockRecorder) GetSubscriptionTiers() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionTiers", reflect.TypeOf((*MockRegistryService)(nil).GetSubscriptionTiers))
+}
+
 // ListGarbageCollections mocks base method.
 func (m *MockRegistryService) ListGarbageCollections(arg0 string) ([]do.GarbageCollection, error) {
 	m.ctrl.T.Helper()
@@ -211,32 +211,91 @@ func (mr *MockRegistryServiceMockRecorder) ListGarbageCollections(arg0 interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGarbageCollections", reflect.TypeOf((*MockRegistryService)(nil).ListGarbageCollections), arg0)
 }
 
-// CancelGarbageCollection mocks base method.
-func (m *MockRegistryService) CancelGarbageCollection(arg0, arg1 string) (*do.GarbageCollection, error) {
+// ListRepositories mocks base method.
+func (m *MockRegistryService) ListRepositories(arg0 string) ([]do.Repository, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CancelGarbageCollection", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListRepositories", arg0)
+	ret0, _ := ret[0].([]do.Repository)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositories indicates an expected call of ListRepositories.
+func (mr *MockRegistryServiceMockRecorder) ListRepositories(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositories", reflect.TypeOf((*MockRegistryService)(nil).ListRepositories), arg0)
+}
+
+// ListRepositoriesV2 mocks base method.
+func (m *MockRegistryService) ListRepositoriesV2(arg0 string) ([]do.RepositoryV2, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRepositoriesV2", arg0)
+	ret0, _ := ret[0].([]do.RepositoryV2)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositoriesV2 indicates an expected call of ListRepositoriesV2.
+func (mr *MockRegistryServiceMockRecorder) ListRepositoriesV2(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoriesV2", reflect.TypeOf((*MockRegistryService)(nil).ListRepositoriesV2), arg0)
+}
+
+// ListRepositoryManifests mocks base method.
+func (m *MockRegistryService) ListRepositoryManifests(arg0, arg1 string) ([]do.RepositoryManifest, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRepositoryManifests", arg0, arg1)
+	ret0, _ := ret[0].([]do.RepositoryManifest)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositoryManifests indicates an expected call of ListRepositoryManifests.
+func (mr *MockRegistryServiceMockRecorder) ListRepositoryManifests(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoryManifests", reflect.TypeOf((*MockRegistryService)(nil).ListRepositoryManifests), arg0, arg1)
+}
+
+// ListRepositoryTags mocks base method.
+func (m *MockRegistryService) ListRepositoryTags(arg0, arg1 string) ([]do.RepositoryTag, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRepositoryTags", arg0, arg1)
+	ret0, _ := ret[0].([]do.RepositoryTag)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositoryTags indicates an expected call of ListRepositoryTags.
+func (mr *MockRegistryServiceMockRecorder) ListRepositoryTags(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoryTags", reflect.TypeOf((*MockRegistryService)(nil).ListRepositoryTags), arg0, arg1)
+}
+
+// RevokeOAuthToken mocks base method.
+func (m *MockRegistryService) RevokeOAuthToken(token, endpoint string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeOAuthToken", token, endpoint)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeOAuthToken indicates an expected call of RevokeOAuthToken.
+func (mr *MockRegistryServiceMockRecorder) RevokeOAuthToken(token, endpoint interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeOAuthToken", reflect.TypeOf((*MockRegistryService)(nil).RevokeOAuthToken), token, endpoint)
+}
+
+// StartGarbageCollection mocks base method.
+func (m *MockRegistryService) StartGarbageCollection(arg0 string, arg1 *godo.StartGarbageCollectionRequest) (*do.GarbageCollection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartGarbageCollection", arg0, arg1)
 	ret0, _ := ret[0].(*do.GarbageCollection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CancelGarbageCollection indicates an expected call of CancelGarbageCollection.
-func (mr *MockRegistryServiceMockRecorder) CancelGarbageCollection(arg0, arg1 interface{}) *gomock.Call {
+// StartGarbageCollection indicates an expected call of StartGarbageCollection.
+func (mr *MockRegistryServiceMockRecorder) StartGarbageCollection(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CancelGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).CancelGarbageCollection), arg0, arg1)
-}
-
-// GetSubscriptionTiers mocks base method.
-func (m *MockRegistryService) GetSubscriptionTiers() ([]do.RegistrySubscriptionTier, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSubscriptionTiers")
-	ret0, _ := ret[0].([]do.RegistrySubscriptionTier)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetSubscriptionTiers indicates an expected call of GetSubscriptionTiers.
-func (mr *MockRegistryServiceMockRecorder) GetSubscriptionTiers() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubscriptionTiers", reflect.TypeOf((*MockRegistryService)(nil).GetSubscriptionTiers))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).StartGarbageCollection), arg0, arg1)
 }

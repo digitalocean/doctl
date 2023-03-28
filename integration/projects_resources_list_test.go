@@ -49,7 +49,7 @@ var _ = suite("projects/resources/list", func(t *testing.T, when spec.G, it spec
 	})
 
 	when("all required flags are passed", func() {
-		it("list resources for the proejct", func() {
+		it("list resources for the project", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -61,7 +61,7 @@ var _ = suite("projects/resources/list", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(projcetsResourcesListOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(projectsResourcesListOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -79,7 +79,7 @@ var _ = suite("projects/resources/list", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(projcetsResourcesListNoHeaderOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(projectsResourcesListNoHeaderOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -97,22 +97,22 @@ var _ = suite("projects/resources/list", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(projcetsResourcesListFormatOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(projectsResourcesListFormatOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
 
 const (
-	projcetsResourcesListOutput = `
+	projectsResourcesListOutput = `
 URN                Assigned At             Status
 do:droplet:1       2018-09-28T19:26:37Z    ok
 do:floatingip:1    2018-09-28T19:26:38Z    ok
 `
-	projcetsResourcesListNoHeaderOutput = `
+	projectsResourcesListNoHeaderOutput = `
 do:droplet:1       2018-09-28T19:26:37Z    ok
 do:floatingip:1    2018-09-28T19:26:38Z    ok
 `
-	projcetsResourcesListFormatOutput = `
+	projectsResourcesListFormatOutput = `
 URN                Status
 do:droplet:1       ok
 do:floatingip:1    ok

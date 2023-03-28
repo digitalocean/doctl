@@ -78,7 +78,7 @@ func TestCertificatesCreate(t *testing.T) {
 		},
 
 		{
-			desc:           "creates custom cerftificate without specifying chain",
+			desc:           "creates custom certificate without specifying chain",
 			certName:       "cert-without-chain",
 			privateKeyPath: filepath.Join(os.TempDir(), "cer-key.crt"),
 			certLeafPath:   filepath.Join(os.TempDir(), "leaf-cer.crt"),
@@ -90,7 +90,7 @@ func TestCertificatesCreate(t *testing.T) {
 			},
 		},
 		{
-			desc:     "creates lets_encrypt cerftificate",
+			desc:     "creates lets_encrypt certificate",
 			certName: "lets-encrypt-cert",
 			DNSNames: []string{"sampledomain.org", "api.sampledomain.org"},
 			certType: "lets_encrypt",

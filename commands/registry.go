@@ -39,9 +39,13 @@ type dockerConfig struct {
 	} `json:"auths"`
 }
 
-// DOSecretOperatorAnnotation is the annotation key so that dosecret operator can do it's magic
-// and help users pull private images automatically in their DOKS clusters
-const DOSecretOperatorAnnotation = "digitalocean.com/dosecret-identifier"
+const (
+	// DOSecretOperatorAnnotation is the annotation key so that dosecret operator can do it's magic
+	// and help users pull private images automatically in their DOKS clusters
+	DOSecretOperatorAnnotation = "digitalocean.com/dosecret-identifier"
+
+	oauthTokenRevokeEndpoint = "https://cloud.digitalocean.com/v1/oauth/revoke"
+)
 
 // Registry creates the registry command
 func Registry() *Command {
@@ -63,6 +67,8 @@ func Registry() *Command {
 		"Create a private container registry", createRegDesc, Writer)
 	AddStringFlag(cmdRunRegistryCreate, doctl.ArgSubscriptionTier, "", "basic",
 		"Subscription tier for the new registry. Possible values: see `doctl registry options subscription-tiers`", requiredOpt())
+	AddStringFlag(cmdRunRegistryCreate, doctl.ArgRegionSlug, "", "",
+		"Region for the new registry. Possible values: see `doctl registry options available-regions`")
 
 	getRegDesc := "This command retrieves details about a private container registry including its name and the endpoint used to access it."
 	CmdBuilder(cmd, RunRegistryGet, "get", "Retrieve details about a container registry",
@@ -80,8 +86,9 @@ func Registry() *Command {
 		"The length of time the registry credentials will be valid for in seconds. By default, the credentials do not expire.")
 
 	logoutRegDesc := "This command logs Docker out of the private container registry, revoking access to it."
-	CmdBuilder(cmd, RunRegistryLogout, "logout", "Log out Docker from a container registry",
+	cmdRunRegistryLogout := CmdBuilder(cmd, RunRegistryLogout, "logout", "Log out Docker from a container registry",
 		logoutRegDesc, Writer)
+	AddStringFlag(cmdRunRegistryLogout, doctl.ArgRegistryAuthorizationServerEndpoint, "", oauthTokenRevokeEndpoint, "The endpoint of the OAuth authorization server used to revoke credentials on logout.")
 
 	kubeManifestDesc := `This command outputs a YAML-formatted Kubernetes secret manifest that can be used to grant a Kubernetes cluster pull access to your private container registry.
 
@@ -137,6 +144,22 @@ func Repository() *Command {
 		RunListRepositories, "list",
 		"List repositories for a container registry", listRepositoriesDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Repository{}),
+		hiddenCmd(),
+	)
+
+	listRepositoriesV2Desc := `This command retrieves information about repositories in a registry, including:
+  - The repository name
+  - The latest manifest of the repository
+  - The latest manifest's latest tag, if any
+  - The number of tags in the repository
+  - The number of manifests in the repository
+`
+
+	CmdBuilder(
+		cmd,
+		RunListRepositoriesV2, "list-v2",
+		"List repositories for a container registry", listRepositoriesV2Desc,
+		Writer, aliasOpt("ls2"), displayerType(&displayers.Repository{}),
 	)
 
 	listRepositoryTagsDesc := `This command retrieves information about tags in a repository, including:
@@ -163,6 +186,21 @@ func Repository() *Command {
 		aliasOpt("dt"),
 	)
 	AddBoolFlag(cmdRunRepositoryDeleteTag, doctl.ArgForce, doctl.ArgShortForce, false, "Force tag deletion")
+
+	listRepositoryManifests := `This command retrieves information about manifests in a repository, including:
+  - The manifest digest
+  - The compressed size
+  - The uncompressed size
+  - The last updated timestamp
+  - The manifest tags
+  - The manifest blobs (available in detailed output only)
+`
+	CmdBuilder(
+		cmd,
+		RunListRepositoryManifests, "list-manifests <repository>",
+		"List manifests for a repository in a container registry", listRepositoryManifests,
+		Writer, aliasOpt("lm"), displayerType(&displayers.RepositoryManifest{}),
+	)
 
 	deleteManifestDesc := "This command permanently deletes one or more repository manifests by digest."
 	cmdRunRepositoryDeleteManifest := CmdBuilder(
@@ -268,6 +306,8 @@ func RegistryOptions() *Command {
 
 	tiersDesc := "List available container registry subscription tiers"
 	CmdBuilder(cmd, RunRegistryOptionsTiers, "subscription-tiers", tiersDesc, tiersDesc, Writer, aliasOpt("tiers"))
+	regionsDesc := "List available container registry regions"
+	CmdBuilder(cmd, RunGetRegistryOptionsRegions, "available-regions", regionsDesc, regionsDesc, Writer, aliasOpt("regions"))
 
 	return cmd
 }
@@ -286,12 +326,17 @@ func RunRegistryCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
 
 	rs := c.Registry()
 
 	rcr := &godo.RegistryCreateRequest{
 		Name:                 name,
 		SubscriptionTierSlug: subscriptionTier,
+		Region:               region,
 	}
 	r, err := rs.Create(rcr)
 	if err != nil {
@@ -386,7 +431,10 @@ func RunRegistryLogin(c *CmdConfig) error {
 			return err
 		}
 
-		cf.Save()
+		err = cf.Save()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -483,12 +531,22 @@ func RunDockerConfig(c *CmdConfig) error {
 
 // RunRegistryLogout logs Docker out of the registry
 func RunRegistryLogout(c *CmdConfig) error {
+	endpoint, err := c.Doit.GetString(c.NS, doctl.ArgRegistryAuthorizationServerEndpoint)
+	if err != nil {
+		return err
+	}
+
 	server := c.Registry().Endpoint()
 	fmt.Printf("Removing login credentials for %s\n", server)
 
 	cf := dockerconf.LoadDefaultConfigFile(os.Stderr)
 	dockerCreds := cf.GetCredentialsStore(server)
-	err := dockerCreds.Erase(server)
+	authConfig, err := dockerCreds.Get(server)
+	if err != nil {
+		return err
+	}
+
+	err = dockerCreds.Erase(server)
 	if err != nil {
 		_, isSnap := os.LookupEnv("SNAP")
 		if os.IsPermission(err) && isSnap {
@@ -499,7 +557,7 @@ func RunRegistryLogout(c *CmdConfig) error {
 		return err
 	}
 
-	return nil
+	return c.Registry().RevokeOAuthToken(authConfig.Password, endpoint)
 }
 
 // Repository Run Commands
@@ -517,6 +575,21 @@ func RunListRepositories(c *CmdConfig) error {
 	}
 
 	return displayRepositories(c, repositories...)
+}
+
+// RunListRepositoriesV2 lists repositories for the registry
+func RunListRepositoriesV2(c *CmdConfig) error {
+	registry, err := c.Registry().Get()
+	if err != nil {
+		return fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	repositories, err := c.Registry().ListRepositoriesV2(registry.Name)
+	if err != nil {
+		return err
+	}
+
+	return displayRepositoriesV2(c, repositories...)
 }
 
 // RunListRepositoryTags lists tags for the repository in a registry
@@ -537,6 +610,26 @@ func RunListRepositoryTags(c *CmdConfig) error {
 	}
 
 	return displayRepositoryTags(c, tags...)
+}
+
+// RunListRepositoryManifests lists manifests for the repository in a registry
+func RunListRepositoryManifests(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+
+	registry, err := c.Registry().Get()
+	if err != nil {
+		return fmt.Errorf("failed to get registry: %w", err)
+	}
+
+	manifests, err := c.Registry().ListRepositoryManifests(registry.Name, c.Args[0])
+	if err != nil {
+		return err
+	}
+
+	return displayRepositoryManifests(c, manifests...)
 }
 
 // RunRepositoryDeleteTag deletes one or more repository tags
@@ -627,9 +720,23 @@ func displayRepositories(c *CmdConfig, repositories ...do.Repository) error {
 	return c.Display(item)
 }
 
+func displayRepositoriesV2(c *CmdConfig, repositories ...do.RepositoryV2) error {
+	item := &displayers.RepositoryV2{
+		Repositories: repositories,
+	}
+	return c.Display(item)
+}
+
 func displayRepositoryTags(c *CmdConfig, tags ...do.RepositoryTag) error {
 	item := &displayers.RepositoryTag{
 		Tags: tags,
+	}
+	return c.Display(item)
+}
+
+func displayRepositoryManifests(c *CmdConfig, manifests ...do.RepositoryManifest) error {
+	item := &displayers.RepositoryManifest{
+		Manifests: manifests,
 	}
 	return c.Display(item)
 }
@@ -685,7 +792,7 @@ func RunStartGarbageCollection(c *CmdConfig) error {
 	msg := "run garbage collection -- this will put your registry in read-only mode until it finishes"
 
 	if !force && AskForConfirm(msg) != nil {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	gc, err := c.Registry().StartGarbageCollection(registryName, gcStartRequest)
@@ -805,6 +912,18 @@ func RunRegistryOptionsTiers(c *CmdConfig) error {
 
 	item := &displayers.RegistrySubscriptionTiers{
 		SubscriptionTiers: tiers,
+	}
+	return c.Display(item)
+}
+
+func RunGetRegistryOptionsRegions(c *CmdConfig) error {
+	regions, err := c.Registry().GetAvailableRegions()
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.RegistryAvailableRegions{
+		Regions: regions,
 	}
 	return c.Display(item)
 }

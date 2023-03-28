@@ -34,16 +34,30 @@ const (
 	ArgActionStatus = "status"
 	// ArgActionType is an action type argument.
 	ArgActionType = "action-type"
+	// ArgApp is the app ID.
+	ArgApp = "app"
+	// ArgAppWithProjects will determine whether project ids should be fetched along with listed apps.
+	ArgAppWithProjects = "with-projects"
 	// ArgAppSpec is a path to an app spec.
 	ArgAppSpec = "spec"
 	// ArgAppLogType the type of log.
 	ArgAppLogType = "type"
 	// ArgAppDeployment is the deployment ID.
 	ArgAppDeployment = "deployment"
+	// ArgAppDevConfig is the path to the app dev link config.
+	ArgAppDevConfig = "dev-config"
+	// ArgBuildCommand is an optional build command to set for local development.
+	ArgBuildCommand = "build-command"
+	// ArgBuildpack is a buildpack id.
+	ArgBuildpack = "buildpack"
 	// ArgAppLogFollow follow logs.
 	ArgAppLogFollow = "follow"
+	// ArgAppLogTail tail logs.
+	ArgAppLogTail = "tail"
 	// ArgAppForceRebuild forces a deployment rebuild
 	ArgAppForceRebuild = "force-rebuild"
+	// ArgAppAlertDestinations is a path to an app alert destination file.
+	ArgAppAlertDestinations = "app-alert-destinations"
 	// ArgClusterName is a cluster name argument.
 	ArgClusterName = "cluster-name"
 	// ArgClusterVersionSlug is a cluster version argument.
@@ -56,6 +70,8 @@ const (
 	ArgClusterNodePool = "node-pool"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
 	ArgClusterUpdateKubeconfig = "update-kubeconfig"
+	// ArgNoCache represents whether or not to omit the cache on the next command.
+	ArgNoCache = "no-cache"
 	// ArgNodePoolName is a cluster's node pool name argument.
 	ArgNodePoolName = "name"
 	// ArgNodePoolCount is a cluster's node pool count argument.
@@ -70,10 +86,16 @@ const (
 	ArgNodePoolNodeIDs = "node-ids"
 	// ArgMaintenanceWindow is a cluster's maintenance window argument
 	ArgMaintenanceWindow = "maintenance-window"
+	// ArgMajorVersion is a major version number.
+	ArgMajorVersion = "major-version"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
+	// ArgHA is a cluster's highly available control plane argument.
+	ArgHA = "ha"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
+	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
+	ArgCommandUpsert = "upsert"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
@@ -82,12 +104,14 @@ const (
 	ArgDropletID = "droplet-id"
 	// ArgDropletIDs is a list of droplet IDs.
 	ArgDropletIDs = "droplet-ids"
-	// ArgKernelID is a ekrnel id argument.
+	// ArgKernelID is a kernel id argument.
 	ArgKernelID = "kernel-id"
 	// ArgKubernetesLabel is a Kubernetes label argument.
 	ArgKubernetesLabel = "label"
 	// ArgKubernetesTaint is a Kubernetes taint argument.
 	ArgKubernetesTaint = "taint"
+	// ArgKubernetesAlias is a Kubernetes alias argument that saves authentication information under the specified context.
+	ArgKubernetesAlias = "alias"
 	// ArgKubeConfigExpirySeconds indicates the length of time the token in a kubeconfig will be valid in seconds.
 	ArgKubeConfigExpirySeconds = "expiry-seconds"
 	// ArgImage is an image argument.
@@ -96,12 +120,16 @@ const (
 	ArgImageID = "image-id"
 	// ArgImagePublic is a public image argument.
 	ArgImagePublic = "public"
-	// ArgImageSlug is an image slug argment.
+	// ArgImageSlug is an image slug argument.
 	ArgImageSlug = "image-slug"
+	// ArgInteractive is the argument to enable an interactive CLI.
+	ArgInteractive = "interactive"
 	// ArgIPAddress is an IP address argument.
 	ArgIPAddress = "ip-address"
 	// ArgDropletName is a droplet name argument.
 	ArgDropletName = "droplet-name"
+	// ArgEnvFile is an environment file to load variables from.
+	ArgEnvFile = "env-file"
 	// ArgResizeDisk is a resize disk argument.
 	ArgResizeDisk = "resize-disk"
 	// ArgSnapshotName is a snapshot name argument.
@@ -118,6 +146,8 @@ const (
 	ArgPrivateNetworking = "enable-private-networking"
 	// ArgMonitoring is an enable monitoring argument.
 	ArgMonitoring = "enable-monitoring"
+	// ArgDropletAgent is an argument for enabling/disabling the Droplet agent.
+	ArgDropletAgent = "droplet-agent"
 	// ArgRecordData is a record data argument.
 	ArgRecordData = "record-data"
 	// ArgRecordID is a record id argument.
@@ -140,8 +170,12 @@ const (
 	ArgRecordTag = "record-tag"
 	// ArgRegionSlug is a region slug argument.
 	ArgRegionSlug = "region"
+	// ArgSchemaOnly is a schema only argument.
+	ArgSchemaOnly = "schema-only"
 	// ArgSizeSlug is a size slug argument.
 	ArgSizeSlug = "size"
+	// ArgSizeUnit is a size unit argument.
+	ArgSizeUnit = "size-unit"
 	// ArgsSSHKeyPath is a ssh argument.
 	ArgsSSHKeyPath = "ssh-key-path"
 	// ArgSSHKeys is a ssh key argument.
@@ -176,7 +210,7 @@ const (
 	ArgKeyPublicKeyFile = "public-key-file"
 	// ArgSSHUser is a SSH user argument.
 	ArgSSHUser = "ssh-user"
-	// ArgFormat is columns to include in output argment.
+	// ArgFormat is columns to include in output argument.
 	ArgFormat = "format"
 	// ArgNoHeader hides the output header.
 	ArgNoHeader = "no-header"
@@ -194,6 +228,10 @@ const (
 	ArgTag = "tag"
 	//ArgTemplate is template format
 	ArgTemplate = "template"
+	// ArgTimeout is a timeout duration
+	ArgTimeout = "timeout"
+	// ArgTriggerDeployment indicates whether to trigger a deployment
+	ArgTriggerDeployment = "trigger-deployment"
 	// ArgVersion is the version of the command to use
 	ArgVersion = "version"
 	// ArgVerbose enables verbose output
@@ -251,6 +289,8 @@ const (
 	ArgRedirectHTTPToHTTPS = "redirect-http-to-https"
 	// ArgEnableProxyProtocol is a flag that indicates whether PROXY protocol should be enabled on the load balancer.
 	ArgEnableProxyProtocol = "enable-proxy-protocol"
+	// ArgDisableLetsEncryptDNSRecords is a flag that when set will disable the creation of DNS records pointing to the load balancer IP from the apex domain in the cert.
+	ArgDisableLetsEncryptDNSRecords = "disable-lets-encrypt-dns-records"
 	// ArgEnableBackendKeepalive is a flag that indicates whether keepalive connections should be enabled to target droplets from the load balancer.
 	ArgEnableBackendKeepalive = "enable-backend-keepalive"
 	// ArgStickySessions is a list of sticky sessions settings for the load balancer.
@@ -259,6 +299,12 @@ const (
 	ArgHealthCheck = "health-check"
 	// ArgForwardingRules is a list of forwarding rules for the load balancer.
 	ArgForwardingRules = "forwarding-rules"
+	// ArgHTTPIdleTimeoutSeconds is the http idle time out configuration for the load balancer
+	ArgHTTPIdleTimeoutSeconds = "http-idle-timeout-seconds"
+	// ArgAllowList is the list of firewall rules for ALLOWING traffic to the loadbalancer
+	ArgAllowList = "allow-list"
+	// ArgDenyList is a list of firewall rules for DENYING traffic to the loadbalancer
+	ArgDenyList = "deny-list"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
@@ -267,6 +313,8 @@ const (
 	// ArgOutboundRules is a list of outbound rules for the firewall.
 	ArgOutboundRules = "outbound-rules"
 
+	// ArgProjectID is the ID of a project.
+	ArgProjectID = "project-id"
 	// ArgProjectName is the name of a project.
 	ArgProjectName = "name"
 	// ArgProjectDescription is the description of a project.
@@ -280,6 +328,12 @@ const (
 	// ArgProjectResource is a flag for your resource URNs
 	ArgProjectResource = "resource"
 
+	// ArgDatabaseRestoreFromClusterName is a flag for specifying the name of an existing database cluster from which the backup will be restored.
+	ArgDatabaseRestoreFromClusterName = "restore-from-cluster-name"
+	// ArgDatabaseRestoreFromClusterID is a flag for specifying the id of an existing database cluster from which the new database will be forked from.
+	ArgDatabaseRestoreFromClusterID = "restore-from-cluster-id"
+	// ArgDatabaseRestoreFromTimestamp is a flag for specifying the timestamp of an existing database cluster backup in ISO8601 combined date and time format. The most recent backup will be used if excluded.
+	ArgDatabaseRestoreFromTimestamp = "restore-from-timestamp"
 	// ArgDatabaseEngine is a flag for specifying which database engine to use
 	ArgDatabaseEngine = "engine"
 	// ArgDatabaseNumNodes is the number of nodes in the database cluster
@@ -321,6 +375,8 @@ const (
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
+	// ArgRegistry indicates the name of the registry.
+	ArgRegistry = "registry"
 	// ArgRegistryExpirySeconds indicates the length of time the token will be valid in seconds.
 	ArgRegistryExpirySeconds = "expiry-seconds"
 	// ArgSubscriptionTier is a subscription tier slug.
@@ -331,6 +387,9 @@ const (
 	// ArgGCExcludeUnreferencedBlobs indicates that a garbage collection should
 	// not delete unreferenced blobs.
 	ArgGCExcludeUnreferencedBlobs = "exclude-unreferenced-blobs"
+	// ArgRegistryAuthorizationServerEndpoint is the endpoint of the OAuth authorization server
+	// used to revoke credentials on logout.
+	ArgRegistryAuthorizationServerEndpoint = "authorization-server-endpoint"
 
 	// 1-Click Args
 
@@ -348,4 +407,53 @@ const (
 
 	// ArgDatabaseFirewallRuleUUID is the UUID for the firewall rules.
 	ArgDatabaseFirewallRuleUUID = "uuid"
+
+	// Monitoring Args
+
+	// ArgAlertPolicyDescription is the flag to pass in the alert policy description.
+	ArgAlertPolicyDescription = "description"
+
+	// ArgAlertPolicyType is the alert policy type.
+	ArgAlertPolicyType = "type"
+
+	// ArgAlertPolicyValue is the alert policy value.
+	ArgAlertPolicyValue = "value"
+
+	// ArgAlertPolicyWindow is the alert policy window.
+	ArgAlertPolicyWindow = "window"
+
+	// ArgAlertPolicyTags is the alert policy tags.
+	ArgAlertPolicyTags = "tags"
+
+	// ArgAlertPolicyEntities is the alert policy entities.
+	ArgAlertPolicyEntities = "entities"
+
+	// ArgAlertPolicyEnabled is whether the alert policy is enabled.
+	ArgAlertPolicyEnabled = "enabled"
+
+	// ArgAlertPolicyCompare is the alert policy comparator.
+	ArgAlertPolicyCompare = "compare"
+
+	// ArgAlertPolicyEmails are the emails to send alerts to.
+	ArgAlertPolicyEmails = "emails"
+
+	// ArgAlertPolicySlackChannels are the Slack channels to send alerts to.
+	ArgAlertPolicySlackChannels = "slack-channels"
+
+	// ArgAlertPolicySlackURLs are the Slack URLs to send alerts to.
+	ArgAlertPolicySlackURLs = "slack-urls"
+
+	// ArgTokenValidationServer is the server used to validate an OAuth token
+	ArgTokenValidationServer = "token-validation-server"
+
+	// ArgTokenScopeNamespace is the namespace for a scope
+	ArgTokenScopeNamespace = "namespace"
+	// ArgTokenExpirySeconds is the number of seconds from when a token was create that it will expire
+	ArgTokenExpirySeconds = "expiry-seconds"
+	// ArgTokenExpiresIn is the duration until a token expires
+	ArgTokenExpiresIn = "expires-in"
+	// ArgTokenScopes is a list of token scopes
+	ArgTokenScopes = "scopes"
+	// ArgTokenUpdatedName is the name to used to update a token
+	ArgTokenUpdatedName = "updated-name"
 )

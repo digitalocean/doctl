@@ -19,9 +19,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/fatih/color"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -53,6 +55,8 @@ var (
 	Trace bool
 	//Verbose toggle verbose output on and off
 	Verbose bool
+	//Interactive toggle interactive behavior
+	Interactive bool
 
 	requiredColor = color.New(color.Bold).SprintfFunc()
 )
@@ -77,8 +81,20 @@ func init() {
 	viper.BindPFlag("output", rootPFlagSet.Lookup(doctl.ArgOutput))
 
 	rootPFlagSet.StringVarP(&Context, doctl.ArgContext, "", "", "Specify a custom authentication context name")
+	DoitCmd.RegisterFlagCompletionFunc(doctl.ArgContext, func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		return getAuthContextList(), cobra.ShellCompDirectiveNoFileComp
+	})
+
 	rootPFlagSet.BoolVarP(&Trace, "trace", "", false, "Show a log of network activity while performing a command")
 	rootPFlagSet.BoolVarP(&Verbose, doctl.ArgVerbose, "v", false, "Enable verbose output")
+
+	interactive := isTerminal(os.Stdout) && isTerminal(os.Stderr)
+	interactiveHelpText := "Enable interactive behavior. Defaults to true if the terminal supports it"
+	if !interactive {
+		// this is automatically added if interactive == true
+		interactiveHelpText += " (default false)"
+	}
+	rootPFlagSet.BoolVarP(&Interactive, doctl.ArgInteractive, "", interactive, interactiveHelpText)
 
 	addCommands()
 
@@ -123,7 +139,9 @@ func configHome() string {
 // Execute executes the current command using DoitCmd.
 func Execute() {
 	if err := DoitCmd.Execute(); err != nil {
-		fmt.Println(err)
+		if !strings.Contains(err.Error(), "unknown command") {
+			fmt.Println(err)
+		}
 		os.Exit(-1)
 	}
 }
@@ -136,7 +154,6 @@ func addCommands() {
 	DoitCmd.AddCommand(Balance())
 	DoitCmd.AddCommand(BillingHistory())
 	DoitCmd.AddCommand(Invoices())
-	DoitCmd.AddCommand(Completion())
 	DoitCmd.AddCommand(computeCmd())
 	DoitCmd.AddCommand(Kubernetes())
 	DoitCmd.AddCommand(Databases())
@@ -145,6 +162,9 @@ func addCommands() {
 	DoitCmd.AddCommand(Registry())
 	DoitCmd.AddCommand(VPCs())
 	DoitCmd.AddCommand(OneClicks())
+	DoitCmd.AddCommand(Monitoring())
+	DoitCmd.AddCommand(Serverless())
+	DoitCmd.AddCommand(Tokens())
 }
 
 func computeCmd() *Command {
@@ -163,8 +183,8 @@ func computeCmd() *Command {
 	cmd.AddCommand(Droplet())
 	cmd.AddCommand(Domain())
 	cmd.AddCommand(Firewall())
-	cmd.AddCommand(FloatingIP())
-	cmd.AddCommand(FloatingIPAction())
+	cmd.AddCommand(ReservedIP())
+	cmd.AddCommand(ReservedIPAction())
 	cmd.AddCommand(Images())
 	cmd.AddCommand(ImageAction())
 	cmd.AddCommand(LoadBalancer())
@@ -198,9 +218,23 @@ func requiredOpt() flagOpt {
 	}
 }
 
+func hiddenFlag() flagOpt {
+	return func(c *Command, name, key string) {
+		c.Flags().MarkHidden(name)
+	}
+}
+
 // AddStringFlag adds a string flag to a command.
 func AddStringFlag(cmd *Command, name, shorthand, dflt, desc string, opts ...flagOpt) {
 	fn := flagName(cmd, name)
+	// flagName only supports nesting three levels deep. We need to force the
+	// app dev config set/unset --dev-config flag to be nested deeper.
+	// i.e dev.config.set.dev-config over config.set.dev-config
+	// This prevents a conflict with the base config setting.
+	if name == doctl.ArgAppDevConfig && !strings.HasPrefix(fn, appDevConfigFileNamespace+".") {
+		fn = fmt.Sprintf("%s.%s", appDevConfigFileNamespace, fn)
+	}
+
 	cmd.Flags().StringP(name, shorthand, dflt, desc)
 
 	for _, o := range opts {
@@ -254,6 +288,17 @@ func AddStringMapStringFlag(cmd *Command, name, shorthand string, def map[string
 	}
 }
 
+// AddDurationFlag adds a duration flag to a command.
+func AddDurationFlag(cmd *Command, name, shorthand string, def time.Duration, desc string, opts ...flagOpt) {
+	fn := flagName(cmd, name)
+	cmd.Flags().DurationP(name, shorthand, def, desc)
+	viper.BindPFlag(fn, cmd.Flags().Lookup(name))
+
+	for _, o := range opts {
+		o(cmd, name, fn)
+	}
+}
+
 func flagName(cmd *Command, name string) string {
 	if cmd.Parent() != nil {
 		return fmt.Sprintf("%s.%s.%s", cmd.Parent().Name(), cmd.Name(), name)
@@ -266,4 +311,8 @@ func cmdNS(cmd *cobra.Command) string {
 		return fmt.Sprintf("%s.%s", cmd.Parent().Name(), cmd.Name())
 	}
 	return fmt.Sprintf("%s", cmd.Name())
+}
+
+func isTerminal(f *os.File) bool {
+	return isatty.IsTerminal(f.Fd()) || isatty.IsCygwinTerminal(f.Fd())
 }

@@ -35,36 +35,6 @@ func (m *MockDomainsService) EXPECT() *MockDomainsServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockDomainsService) List() (do.Domains, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].(do.Domains)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List.
-func (mr *MockDomainsServiceMockRecorder) List() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDomainsService)(nil).List))
-}
-
-// Get mocks base method.
-func (m *MockDomainsService) Get(arg0 string) (*do.Domain, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0)
-	ret0, _ := ret[0].(*do.Domain)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get.
-func (mr *MockDomainsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDomainsService)(nil).Get), arg0)
-}
-
 // Create mocks base method.
 func (m *MockDomainsService) Create(arg0 *godo.DomainCreateRequest) (*do.Domain, error) {
 	m.ctrl.T.Helper()
@@ -80,6 +50,21 @@ func (mr *MockDomainsServiceMockRecorder) Create(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDomainsService)(nil).Create), arg0)
 }
 
+// CreateRecord mocks base method.
+func (m *MockDomainsService) CreateRecord(arg0 string, arg1 *do.DomainRecordEditRequest) (*do.DomainRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateRecord", arg0, arg1)
+	ret0, _ := ret[0].(*do.DomainRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateRecord indicates an expected call of CreateRecord.
+func (mr *MockDomainsServiceMockRecorder) CreateRecord(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecord", reflect.TypeOf((*MockDomainsService)(nil).CreateRecord), arg0, arg1)
+}
+
 // Delete mocks base method.
 func (m *MockDomainsService) Delete(arg0 string) error {
 	m.ctrl.T.Helper()
@@ -92,36 +77,6 @@ func (m *MockDomainsService) Delete(arg0 string) error {
 func (mr *MockDomainsServiceMockRecorder) Delete(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDomainsService)(nil).Delete), arg0)
-}
-
-// Records mocks base method.
-func (m *MockDomainsService) Records(arg0 string) (do.DomainRecords, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Records", arg0)
-	ret0, _ := ret[0].(do.DomainRecords)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Records indicates an expected call of Records.
-func (mr *MockDomainsServiceMockRecorder) Records(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Records", reflect.TypeOf((*MockDomainsService)(nil).Records), arg0)
-}
-
-// Record mocks base method.
-func (m *MockDomainsService) Record(arg0 string, arg1 int) (*do.DomainRecord, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Record", arg0, arg1)
-	ret0, _ := ret[0].(*do.DomainRecord)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Record indicates an expected call of Record.
-func (mr *MockDomainsServiceMockRecorder) Record(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Record", reflect.TypeOf((*MockDomainsService)(nil).Record), arg0, arg1)
 }
 
 // DeleteRecord mocks base method.
@@ -153,17 +108,62 @@ func (mr *MockDomainsServiceMockRecorder) EditRecord(arg0, arg1, arg2 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EditRecord", reflect.TypeOf((*MockDomainsService)(nil).EditRecord), arg0, arg1, arg2)
 }
 
-// CreateRecord mocks base method.
-func (m *MockDomainsService) CreateRecord(arg0 string, arg1 *do.DomainRecordEditRequest) (*do.DomainRecord, error) {
+// Get mocks base method.
+func (m *MockDomainsService) Get(arg0 string) (*do.Domain, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateRecord", arg0, arg1)
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*do.Domain)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockDomainsServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDomainsService)(nil).Get), arg0)
+}
+
+// List mocks base method.
+func (m *MockDomainsService) List() (do.Domains, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].(do.Domains)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockDomainsServiceMockRecorder) List() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDomainsService)(nil).List))
+}
+
+// Record mocks base method.
+func (m *MockDomainsService) Record(arg0 string, arg1 int) (*do.DomainRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Record", arg0, arg1)
 	ret0, _ := ret[0].(*do.DomainRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CreateRecord indicates an expected call of CreateRecord.
-func (mr *MockDomainsServiceMockRecorder) CreateRecord(arg0, arg1 interface{}) *gomock.Call {
+// Record indicates an expected call of Record.
+func (mr *MockDomainsServiceMockRecorder) Record(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRecord", reflect.TypeOf((*MockDomainsService)(nil).CreateRecord), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Record", reflect.TypeOf((*MockDomainsService)(nil).Record), arg0, arg1)
+}
+
+// Records mocks base method.
+func (m *MockDomainsService) Records(arg0 string) (do.DomainRecords, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Records", arg0)
+	ret0, _ := ret[0].(do.DomainRecords)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Records indicates an expected call of Records.
+func (mr *MockDomainsServiceMockRecorder) Records(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Records", reflect.TypeOf((*MockDomainsService)(nil).Records), arg0)
 }

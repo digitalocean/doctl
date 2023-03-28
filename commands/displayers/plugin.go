@@ -43,7 +43,7 @@ func (p *Plugin) ColMap() map[string]string {
 }
 
 func (p *Plugin) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(p.Plugins))
 
 	for _, plug := range p.Plugins {
 		o := map[string]interface{}{

@@ -32,24 +32,26 @@ func (si *Size) JSON(out io.Writer) error {
 
 func (si *Size) Cols() []string {
 	return []string{
-		"Slug", "Memory", "VCPUs", "Disk", "PriceMonthly", "PriceHourly",
+		"Slug", "Description", "Memory", "VCPUs", "Disk", "PriceMonthly", "PriceHourly",
 	}
 }
 
 func (si *Size) ColMap() map[string]string {
 	return map[string]string{
-		"Slug": "Slug", "Memory": "Memory", "VCPUs": "VCPUs",
+		"Slug": "Slug", "Description": "Description",
+		"Memory": "Memory", "VCPUs": "VCPUs",
 		"Disk": "Disk", "PriceMonthly": "Price Monthly",
 		"PriceHourly": "Price Hourly",
 	}
 }
 
 func (si *Size) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(si.Sizes))
 
 	for _, s := range si.Sizes {
 		o := map[string]interface{}{
-			"Slug": s.Slug, "Memory": s.Memory, "VCPUs": s.Vcpus,
+			"Slug": s.Slug, "Description": s.Description,
+			"Memory": s.Memory, "VCPUs": s.Vcpus,
 			"Disk": s.Disk, "PriceMonthly": fmt.Sprintf("%0.2f", s.PriceMonthly),
 			"PriceHourly": s.PriceHourly,
 		}

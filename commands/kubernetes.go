@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,6 +30,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -76,7 +76,7 @@ func errNoClusterByName(name string) error {
 	return fmt.Errorf("no cluster goes by the name %q", name)
 }
 
-func errAmbigousClusterName(name string, ids []string) error {
+func errAmbiguousClusterName(name string, ids []string) error {
 	return fmt.Errorf("many clusters go by the name %q, they have the following IDs: %v", name, ids)
 }
 
@@ -84,7 +84,7 @@ func errNoPoolByName(name string) error {
 	return fmt.Errorf("No node pool goes by the name %q", name)
 }
 
-func errAmbigousPoolName(name string, ids []string) error {
+func errAmbiguousPoolName(name string, ids []string) error {
 	return fmt.Errorf("Many node pools go by the name %q, they have the following IDs: %v", name, ids)
 }
 
@@ -92,7 +92,7 @@ func errNoClusterNodeByName(name string) error {
 	return fmt.Errorf("No node goes by the name %q", name)
 }
 
-func errAmbigousClusterNodeName(name string, ids []string) error {
+func errAmbiguousClusterNodeName(name string, ids []string) error {
 	return fmt.Errorf("Many nodes go by the name %q, they have the following IDs: %v", name, ids)
 }
 
@@ -143,7 +143,7 @@ func (p *kubeconfigProvider) Remote(kube do.KubernetesService, clusterID string,
 	return clientcmd.Load(kubeconfig)
 }
 
-// Read reads the kubeconfig from the user's local kubeconfig file.
+// Local reads the kubeconfig from the user's local kubeconfig file.
 func (p *kubeconfigProvider) Local() (*clientcmdapi.Config, error) {
 	config, err := p.pathOptions.GetStartingConfig()
 	if err != nil {
@@ -153,7 +153,7 @@ func (p *kubeconfigProvider) Local() (*clientcmdapi.Config, error) {
 			for _, err := range a.Errors() {
 				// this should NOT be a contains check but they are formatting the
 				// error without implementing an unwrap (so the original permission
-				// error type is lost.
+				// error type is lost).
 				if strings.Contains(err.Error(), "permission denied") && isSnap {
 					warn("Using the doctl Snap? Grant access to the doctl:kube-config plug to use this command with: sudo snap connect doctl:kube-config")
 					return nil, err
@@ -227,7 +227,7 @@ func kubernetesCluster() *Command {
 
 	cmd.AddCommand(kubernetesRegistryIntegration())
 
-	nodePoolDeatils := `- A list of node pools available inside the cluster`
+	nodePoolDetails := `- A list of node pools available inside the cluster`
 	clusterDetails := `
 
 - A unique ID for the cluster
@@ -245,10 +245,10 @@ This command retrieves the following details about a Kubernetes cluster: `+clust
 - An array of tags applied to the Kubernetes cluster. All clusters are automatically tagged `+"`"+`k8s`+"`"+` and `+"`"+`k8s:$K8S_CLUSTER_ID`+"`"+`.
 - A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was created.
 - A time value given in ISO8601 combined date and time format that represents when the Kubernetes cluster was last updated.
-`+nodePoolDeatils,
+`+nodePoolDetails,
 		Writer, aliasOpt("g"), displayerType(&displayers.KubernetesClusters{}))
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterList, "list", "Retrieve the list of Kubernetes clusters for your account", `
-This command retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDeatils,
+This command retrieves the following details about all Kubernetes clusters that are on your account:`+clusterDetails+nodePoolDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.KubernetesClusters{}))
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterGetUpgrades, "get-upgrades <id|name>",
 		"Retrieve a list of available Kubernetes version upgrades", `
@@ -273,6 +273,8 @@ After creating a cluster, a configuration context will be added to kubectl and m
 		"A boolean flag indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window (default false). To enable automatic upgrade, supply --auto-upgrade(=true).")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
+		"A boolean flag indicating whether the cluster will be configured with a highly-available control plane (default false). To enable the HA control plane, supply --ha(=true).")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"Comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -318,6 +320,8 @@ This command updates the specified configuration values for the specified Kubern
 		"A boolean flag indicating whether the cluster will be automatically upgraded to new patch releases during its maintenance window (default false). To enable automatic upgrade, supply --auto-upgrade(=true).")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSurgeUpgrade, "", false,
 		"Boolean specifying whether to enable surge-upgrade for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
+		"Boolean specifying whether to enable the highly-available control plane for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Boolean specifying whether to update the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
@@ -392,11 +396,12 @@ This command prints out the raw YAML for the specified cluster's kubeconfig.	`, 
 	AddStringFlag(cmdExecCredential, doctl.ArgVersion, "", "", "")
 
 	cmdSaveConfig := CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigSave, "save <cluster-id|cluster-name>", "Save a cluster's credentials to your local kubeconfig", `
-This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage your
+This command adds the credentials for the specified cluster to your local kubeconfig. After this, your kubectl installation can directly manage the specified cluster.
 		`, Writer, aliasOpt("s"))
 	AddBoolFlag(cmdSaveConfig, doctl.ArgSetCurrentContext, "", true, "Boolean indicating whether to set the current kubectl context to that of the new cluster")
 	AddIntFlag(cmdSaveConfig, doctl.ArgKubeConfigExpirySeconds, "", 0,
 		"The length of time the cluster credentials will be valid for in seconds. By default, the credentials are automatically renewed as needed.")
+	AddStringFlag(cmdSaveConfig, doctl.ArgKubernetesAlias, "", "", "An alias for the cluster context name. Defaults to 'do-<region>-<cluster-name>'.")
 
 	CmdBuilder(cmd, k8sCmdService.RunKubernetesKubeconfigRemove, "remove <cluster-id|cluster-name>", "Remove a cluster's credentials from your local kubeconfig", `
 This command removes the specified cluster's credentials from your local kubeconfig. After running this command, you will not be able to use `+"`"+`kubectl`+"`"+` to interact with your cluster.
@@ -634,7 +639,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterGet(c *CmdConfig) error {
 	return displayClusters(c, false, *cluster)
 }
 
-// RunKubernetesClusterList lists kubernetess.
+// RunKubernetesClusterList lists kubernetes.
 func (s *KubernetesCommandService) RunKubernetesClusterList(c *CmdConfig) error {
 	kube := c.Kubernetes()
 	list, err := kube.List()
@@ -642,7 +647,19 @@ func (s *KubernetesCommandService) RunKubernetesClusterList(c *CmdConfig) error 
 		return err
 	}
 
-	return displayClusters(c, true, list...)
+	// Check the format flag to determine if the displayer should use the short
+	// layout of the cluster display. List uses the short version, but to format
+	// output that includes columns not in the short layout we need the full version.
+	var short = true
+	format, err := c.Doit.GetStringSlice(c.NS, doctl.ArgFormat)
+	if err != nil {
+		return err
+	}
+	if len(format) > 0 {
+		short = false
+	}
+
+	return displayClusters(c, short, list...)
 }
 
 // RunKubernetesClusterGetUpgrades retrieves available upgrade versions for a cluster.
@@ -1015,7 +1032,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		return err
 	}
 
-	var volIDs, snapshotIDs, lbIDs []string
+	volIDs := make([]string, 0, len(volumes))
 	for _, v := range volumes {
 		volumeID, err := iDize(c, v, "volume", cluster.RegionSlug)
 		if err != nil {
@@ -1023,6 +1040,8 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		}
 		volIDs = append(volIDs, volumeID)
 	}
+
+	snapshotIDs := make([]string, 0, len(volSnapshots))
 	for _, s := range volSnapshots {
 		snapID, err := iDize(c, s, "volume_snapshot", cluster.RegionSlug)
 		if err != nil {
@@ -1030,6 +1049,8 @@ func (s *KubernetesCommandService) RunKubernetesClusterDeleteSelective(c *CmdCon
 		}
 		snapshotIDs = append(snapshotIDs, snapID)
 	}
+
+	lbIDs := make([]string, 0, len(loadBalancers))
 	for _, l := range loadBalancers {
 		lbID, err := iDize(c, l, "load_balancer", "")
 		if err != nil {
@@ -1254,6 +1275,17 @@ func (s *KubernetesCommandService) RunKubernetesKubeconfigSave(c *CmdConfig) err
 		return err
 	}
 
+	alias, err := c.Doit.GetString(c.NS, doctl.ArgKubernetesAlias)
+	if err != nil {
+		return err
+	}
+
+	if alias != "" {
+		remoteKubeconfig.Contexts[alias] = remoteKubeconfig.Contexts[remoteKubeconfig.CurrentContext]
+		delete(remoteKubeconfig.Contexts, remoteKubeconfig.CurrentContext)
+		remoteKubeconfig.CurrentContext = alias
+	}
+
 	setCurrentContext, err := c.Doit.GetBool(c.NS, doctl.ArgSetCurrentContext)
 	if err != nil {
 		return err
@@ -1424,7 +1456,7 @@ func (s *KubernetesCommandService) RunKubernetesNodePoolDelete(c *CmdConfig) err
 			return err
 		}
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 	return nil
 }
@@ -1464,7 +1496,7 @@ func kubernetesNodeDelete(replace bool, c *CmdConfig) error {
 	}
 
 	if !(force || AskForConfirm(msg) == nil) {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	skipDrain, err := c.Doit.GetBool(c.NS, "skip-drain")
@@ -1516,7 +1548,7 @@ func (s *KubernetesCommandService) RunKubernetesRegistryAdd(c *CmdConfig) error 
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	var clusterUUIDs []string
+	clusterUUIDs := make([]string, 0, len(c.Args))
 	for _, arg := range c.Args {
 		clusterID, err := clusterIDize(c, arg)
 		if err != nil {
@@ -1535,7 +1567,7 @@ func (s *KubernetesCommandService) RunKubernetesRegistryRemove(c *CmdConfig) err
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
-	var clusterUUIDs []string
+	clusterUUIDs := make([]string, 0, len(c.Args))
 	for _, arg := range c.Args {
 		clusterID, err := clusterIDize(c, arg)
 		if err != nil {
@@ -1581,6 +1613,12 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		return err
 	}
 	r.SurgeUpgrade = surgeUpgrade
+
+	ha, err := c.Doit.GetBool(c.NS, doctl.ArgHA)
+	if err != nil {
+		return err
+	}
+	r.HA = ha
 
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
@@ -1666,6 +1704,11 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	}
 	r.SurgeUpgrade = surgeUpgrade
 
+	ha, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgHA)
+	if err != nil {
+		return err
+	}
+	r.HA = ha
 	return nil
 }
 
@@ -1683,7 +1726,7 @@ func buildNodePoolRecycleRequestFromArgs(c *CmdConfig, clusterID, poolID string,
 	if allUUIDs {
 		r.Nodes = nodeIDorNames
 	} else {
-		// at least some of the args weren't UUIDs, so assume that they're all names
+		// at least some args weren't UUIDs, so assume that they're all names
 		nodes, err := nodesByNames(c.Kubernetes(), clusterID, poolID, nodeIDorNames)
 		if err != nil {
 			return err
@@ -1720,7 +1763,8 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 		Labels: map[string]string{},
 		Taints: []godo.Taint{},
 	}
-	for _, arg := range strings.Split(nodePool, argSeparator) {
+	trimmedPool := strings.TrimSuffix(nodePool, argSeparator)
+	for _, arg := range strings.Split(trimmedPool, argSeparator) {
 		kvs := strings.SplitN(arg, kvSeparator, 2)
 		if len(kvs) < 2 {
 			return nil, fmt.Errorf("A node pool string argument must be of the form `key=value`. Provided KVs: %v", kvs)
@@ -1995,7 +2039,7 @@ func mergeKubeconfig(clusterID string, remote, local *clientcmdapi.Config, setCu
 
 // removeKubeconfig removes a remote cluster's config file from a local config file,
 // assuming that the current context in the remote config file points to the
-// cluster details to reomve from the local config.
+// cluster details to remove from the local config.
 func removeKubeconfig(remote, local *clientcmdapi.Config) error {
 	remoteCtx, ok := remote.Contexts[remote.CurrentContext]
 	if !ok {
@@ -2094,7 +2138,7 @@ func clusterByIDorName(kube do.KubernetesService, idOrName string) (*do.Kubernet
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, errAmbigousClusterName(idOrName, ids)
+		return nil, errAmbiguousClusterName(idOrName, ids)
 	default:
 		if len(out) != 1 {
 			panic("The default case should always have len(out) == 1.")
@@ -2215,7 +2259,7 @@ func poolByIDorName(kube do.KubernetesService, clusterID, idOrName string) (*do.
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, errAmbigousPoolName(idOrName, ids)
+		return nil, errAmbiguousPoolName(idOrName, ids)
 	default:
 		if len(out) != 1 {
 			panic("The default case should always have len(out) == 1.")
@@ -2245,7 +2289,7 @@ func poolIDize(kube do.KubernetesService, clusterID, idOrName string) (string, e
 	case len(ids) == 0:
 		return "", errNoPoolByName(idOrName)
 	case len(ids) > 1:
-		return "", errAmbigousPoolName(idOrName, ids)
+		return "", errAmbiguousPoolName(idOrName, ids)
 	default:
 		if len(ids) != 1 {
 			panic("The default case should always have len(ids) == 1.")
@@ -2261,7 +2305,7 @@ func nodesByNames(kube do.KubernetesService, clusterID, poolID string, nodeNames
 	if err != nil {
 		return nil, err
 	}
-	var out []*godo.KubernetesNode
+	out := make([]*godo.KubernetesNode, 0, len(nodeNames))
 	for _, name := range nodeNames {
 		node, err := nodeByName(name, nodePool.Nodes)
 		if err != nil {
@@ -2288,7 +2332,7 @@ func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode
 		for _, c := range out {
 			ids = append(ids, c.ID)
 		}
-		return nil, errAmbigousClusterNodeName(name, ids)
+		return nil, errAmbiguousClusterNodeName(name, ids)
 	default:
 		if len(out) != 1 {
 			panic("The default case should always have len(out) == 1.")
@@ -2298,8 +2342,13 @@ func nodeByName(name string, nodes []*godo.KubernetesNode) (*godo.KubernetesNode
 }
 
 func looksLikeUUID(str string) bool {
-	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[1-4][a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
-	return r.MatchString(str)
+	_, err := uuid.Parse(str)
+	if err != nil {
+		return false
+	}
+
+	// support only hyphenated UUIDs
+	return strings.Contains(str, "-")
 }
 
 func getVersionOrLatest(c *CmdConfig) (string, error) {
@@ -2357,7 +2406,7 @@ func latestReleases(versions []do.KubernetesVersion) ([]do.KubernetesVersion, er
 		return v.KubernetesVersion.KubernetesVersion
 	})
 
-	var out []do.KubernetesVersion
+	out := make([]do.KubernetesVersion, 0, len(versionsByK8S))
 	for _, versions := range versionsByK8S {
 		i, err := versionMaxBy(versions, func(v do.KubernetesVersion) string {
 			return v.Slug
@@ -2405,7 +2454,7 @@ func versionMaxBy(versions []do.KubernetesVersion, selector func(do.KubernetesVe
 	if err != nil {
 		return max, err
 	}
-	// NOTE: We have to iterate over all of versions here even though we know
+	// NOTE: We have to iterate over all versions here even though we know
 	// versions[0] won't be greater than maxSV so that the index i will be a
 	// valid index into versions rather than into versions[1:].
 	for i, v := range versions {

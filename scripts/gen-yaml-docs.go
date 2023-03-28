@@ -65,14 +65,14 @@ func writeDocs(cmd *cobra.Command, dir string) error {
 	defer f.Close()
 
 	// Call Cobra's GenYaml command, passing in the created file
-	doc.GenYaml(cmd, f)
-	// Append usage information to the standard YAML output
-	usage := fmt.Sprintf("usage: %s\n", cmd.UseLine())
+	err = doc.GenYaml(cmd, f)
+	if err != nil {
+		return err
+	}
 	// Append alias information to the standard YAML output
 	aliases := fmt.Sprintf("aliases: %s\n", strings.Join(cmd.Aliases, ", "))
 
-	lines := usage + aliases
-	if _, err := f.WriteString(lines); err != nil {
+	if _, err := f.WriteString(aliases); err != nil {
 		return err
 	}
 	return nil

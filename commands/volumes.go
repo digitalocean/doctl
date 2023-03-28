@@ -57,7 +57,7 @@ You can use flags to specify the volume size, region, description, filesystem ty
 	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "Tags to apply to the volume; comma separate or repeat `--tag` to add multiple tags at once")
 
 	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "Delete a block storage volume", `Use this command to delete a block storage volume by ID, destroying all of its data and removing it from your account.`, Writer,
-		aliasOpt("rm", "d"))
+		aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force volume delete")
 
 	CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing block storage volume", `Use this command to retrieve information about a block storage volume using its ID.`, Writer, aliasOpt("g"),
@@ -85,7 +85,7 @@ func RunVolumeList(c *CmdConfig) error {
 		return nil
 	}
 
-	matches := []glob.Glob{}
+	matches := make([]glob.Glob, 0, len(c.Args))
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
 		if err != nil {
@@ -219,7 +219,7 @@ func RunVolumeDelete(c *CmdConfig) error {
 		id := c.Args[0]
 		return c.Volumes().DeleteVolume(id)
 	}
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 // RunVolumeGet gets a volume.

@@ -63,7 +63,7 @@ func Droplet() *Command {
 	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "List Droplet backups", `Use this command to list Droplet backups.`, Writer,
 		aliasOpt("b"), displayerType(&displayers.Image{}))
 
-	dropletCreateLongDesc := `Use this command to create a new Droplet. Required values are name, region, size, and image. For example, to create an Ubuntu 20.04 with 1 vCPU and 1 GB of RAM in the NYC1 datacenter region, run:
+	dropletCreateLongDesc := `Use this command to create a new Droplet. Required values are name, size, and image. For example, to create an Ubuntu 20.04 with 1 vCPU and 1 GB of RAM in the NYC1 datacenter region, run:
 
 	doctl compute droplet create --image ubuntu-20-04-x64 --size s-1vcpu-1gb --region nyc1 example.com
 `
@@ -74,8 +74,7 @@ func Droplet() *Command {
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User-data to configure the Droplet on first boot")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "The path to a file containing user-data to configure the Droplet on first boot")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Wait for Droplet creation to complete before returning")
-	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A slug indicating the region where the Droplet will be created (e.g. `nyc1`). Run `doctl compute region list` for a list of valid regions.",
-		requiredOpt())
+	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A slug indicating the region where the Droplet will be created (e.g. `nyc1`). Run `doctl compute region list` for a list of valid regions.")
 	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug indicating the size of the Droplet (e.g. `s-1vcpu-1gb`). Run `doctl compute size list` for a list of valid sizes.",
 		requiredOpt())
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet")
@@ -87,6 +86,7 @@ func Droplet() *Command {
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "A tag name to be applied to the Droplet")
 	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of a non-default VPC to create the Droplet in")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to be applied to the Droplet")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "By default, the agent is installed on new Droplets but installation errors are ignored. Set --droplet-agent=false to prevent installation. Set `true` to make installation errors fatal.")
 
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "A list of block storage volume IDs to attach to the Droplet")
 
@@ -199,6 +199,11 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	agent, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDropletAgent)
+	if err != nil {
+		return err
+	}
+
 	keys, err := c.Doit.GetStringSlice(c.NS, doctl.ArgSSHKeys)
 	if err != nil {
 		return err
@@ -284,6 +289,10 @@ func RunDropletCreate(c *CmdConfig) error {
 			Tags:              tagNames,
 		}
 
+		if agent != nil {
+			dcr.WithDropletAgent = agent
+		}
+
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -308,9 +317,8 @@ func RunDropletCreate(c *CmdConfig) error {
 			return err
 		}
 	}
-	c.Display(item)
 
-	return nil
+	return c.Display(item)
 }
 
 // RunDropletTag adds a tag to a droplet.
@@ -432,7 +440,7 @@ func extractVolumes(volumeList []string) []godo.DropletCreateVolume {
 }
 
 func allInt(in []string) ([]int, error) {
-	out := []int{}
+	out := make([]int, 0, len(in))
 	seen := map[string]bool{}
 
 	for _, i := range in {
@@ -493,7 +501,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		if force || AskForConfirm(fmt.Sprintf("delete %d %s tagged \"%s\"? [affected %s: %s]", len(list), resourceType, tagName, resourceType, affectedIDs)) == nil {
 			return ds.DeleteByTag(tagName)
 		}
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	if force || AskForConfirmDelete("Droplet", len(c.Args)) == nil {
@@ -508,7 +516,7 @@ func RunDropletDelete(c *CmdConfig) error {
 		}
 		return matchDroplets(c.Args, ds, fn)
 	}
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 type matchDropletsFn func(ids []int) error
@@ -545,7 +553,7 @@ func matchDroplets(ids []string, ds do.DropletsService, fn matchDropletsFn) erro
 		matchedMap[id] = true
 	}
 
-	var extractedIDs []int
+	extractedIDs := make([]int, 0, len(matchedMap))
 	for id := range matchedMap {
 		extractedIDs = append(extractedIDs, id)
 	}
@@ -625,7 +633,7 @@ func RunDropletList(c *CmdConfig) error {
 		return err
 	}
 
-	matches := []glob.Glob{}
+	matches := make([]glob.Glob, 0, len(c.Args))
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
 		if err != nil {
@@ -750,8 +758,8 @@ func dropletOneClicks() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "1-click",
-			Short: "Display commands that pertain to droplet 1-click applications",
-			Long:  "The commands under `doctl kubernetes 1-click` are for interacting with DigitalOcean Droplet 1-Click applications.",
+			Short: "Display commands that pertain to Droplet 1-click applications",
+			Long:  "The commands under `doctl compute droplet 1-click` are for interacting with DigitalOcean Droplet 1-Click applications.",
 		},
 	}
 

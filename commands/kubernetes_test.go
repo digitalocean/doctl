@@ -29,6 +29,7 @@ var (
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: true,
+			HA:          true,
 		},
 	}
 
@@ -289,7 +290,7 @@ func TestKubernetesGet(t *testing.T) {
 		tm.kubernetes.EXPECT().List().Return(clustersWithDups, nil)
 		config.Args = append(config.Args, name)
 		err := testK8sCmdService().RunKubernetesClusterGet(config)
-		assert.EqualError(t, err, errAmbigousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
+		assert.EqualError(t, err, errAmbiguousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
 	})
 }
 
@@ -436,7 +437,7 @@ func TestKubernetesCreate(t *testing.T) {
 		"key1": "value1",
 		"key2": "value2",
 	}
-	var inputLabels []string
+	inputLabels := make([]string, 0, len(testNodePool.Labels))
 	for key, val := range testNodePool.Labels {
 		inputLabels = append(inputLabels, fmt.Sprintf("%s=%s", key, val))
 	}
@@ -454,7 +455,7 @@ func TestKubernetesCreate(t *testing.T) {
 			Effect: "NoExecute",
 		},
 	}
-	var inputTaints []string
+	inputTaints := make([]string, 0, len(testNodePool.Taints))
 	for _, taint := range testNodePool.Taints {
 		inputTaints = append(inputTaints, taint.String())
 	}
@@ -495,6 +496,7 @@ func TestKubernetesCreate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: true,
+			HA:          true,
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -513,6 +515,7 @@ func TestKubernetesCreate(t *testing.T) {
 			),
 		})
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
+		config.Doit.Set(config.NS, doctl.ArgHA, testCluster.HA)
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -546,6 +549,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: boolPtr(false),
+			HA:          boolPtr(true),
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -554,6 +558,7 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
+		config.Doit.Set(config.NS, doctl.ArgHA, true)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -648,7 +653,7 @@ func TestKubernetesUpgrade(t *testing.T) {
 
 func TestKubernetesDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		// should'nt call `DeleteNodePool` so we don't set any expectations
+		// shouldn't call `DeleteNodePool` so we don't set any expectations
 		config.Doit.Set(config.NS, doctl.ArgForce, "false")
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -707,7 +712,7 @@ func TestKubernetesDelete(t *testing.T) {
 
 func TestKubernetesDeleteSelective(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		// should'nt call `DeleteNodePool` so we don't set any expectations
+		// shouldn't call `DeleteNodePool` so we don't set any expectations
 		config.Doit.Set(config.NS, doctl.ArgForce, "false")
 		config.Args = append(config.Args, testCluster.ID)
 
@@ -805,7 +810,7 @@ func TestKubernetesListAssociatedResources(t *testing.T) {
 		tm.kubernetes.EXPECT().List().Return(clustersWithDups, nil)
 		config.Args = append(config.Args, name)
 		err := testK8sCmdService().RunKubernetesClusterListAssociatedResources(config)
-		assert.EqualError(t, err, errAmbigousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
+		assert.EqualError(t, err, errAmbiguousClusterName(name, []string{testCluster.ID, testClusterWithSameName.ID}).Error())
 	})
 }
 
@@ -864,7 +869,7 @@ func TestKubernetesNodePool_Get(t *testing.T) {
 		tm.kubernetes.EXPECT().ListNodePools(testCluster.ID).Return(nodePoolsWithDups, nil)
 		config.Args = append(config.Args, testCluster.ID, name)
 		err := testK8sCmdService().RunKubernetesNodePoolGet(config)
-		assert.EqualError(t, err, errAmbigousPoolName(name, []string{testNodePool.ID, testNodePoolWithSameName.ID}).Error())
+		assert.EqualError(t, err, errAmbiguousPoolName(name, []string{testNodePool.ID, testNodePoolWithSameName.ID}).Error())
 	})
 }
 
@@ -1177,7 +1182,7 @@ func TestKubernetesNodePool_Recycle(t *testing.T) {
 
 func TestKubernetesNodePool_Delete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		// should'nt call `DeleteNodePool` so we don't set any expectations
+		// shouldn't call `DeleteNodePool` so we don't set any expectations
 		config.Doit.Set(config.NS, doctl.ArgForce, "false")
 		config.Args = append(config.Args, testCluster.ID, testNodePool.ID)
 

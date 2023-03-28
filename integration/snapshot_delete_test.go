@@ -110,7 +110,7 @@ var _ = suite("compute/snapshot/delete", func(t *testing.T, when spec.G, it spec
 	})
 
 	when("deleting one snapshot without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -122,12 +122,12 @@ var _ = suite("compute/snapshot/delete", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(snapshotDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
 	when("deleting two snapshots without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -140,12 +140,7 @@ var _ = suite("compute/snapshot/delete", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(multiSnapshotDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
-
-const (
-	snapshotDelOutput      = "Warning: Are you sure you want to delete this snapshot? (y/N) ? Error: Operation aborted."
-	multiSnapshotDelOutput = "Warning: Are you sure you want to delete 2 snapshots? (y/N) ? Error: Operation aborted."
-)

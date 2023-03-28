@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	k8sapiv1 "k8s.io/api/core/v1"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
@@ -32,6 +34,7 @@ import (
 
 var (
 	testRegistryName     = "container-registry"
+	testRegistryRegion   = "r1"
 	testSubscriptionTier = "basic"
 	invalidRegistryName  = "invalid-container-registry"
 	testRegistry         = do.Registry{Registry: &godo.Registry{Name: testRegistryName}}
@@ -47,12 +50,72 @@ var (
 			UpdatedAt:           time.Now(),
 		},
 	}
+	testRepositoryManifest = do.RepositoryManifest{
+		RepositoryManifest: &godo.RepositoryManifest{
+			RegistryName:        testRegistryName,
+			Repository:          testRepoName,
+			Digest:              "sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b",
+			CompressedSizeBytes: 50,
+			SizeBytes:           100,
+			UpdatedAt:           time.Now(),
+			Tags:                []string{"v1", "v2"},
+			Blobs: []*godo.Blob{
+				{
+					Digest:              "sha256:123",
+					CompressedSizeBytes: 123,
+				},
+				{
+					Digest:              "sha256:456",
+					CompressedSizeBytes: 456,
+				},
+			},
+		},
+	}
+	testRepositoryManifestNoTags = do.RepositoryManifest{
+		RepositoryManifest: &godo.RepositoryManifest{
+			RegistryName:        testRegistryName,
+			Repository:          testRepoName,
+			Digest:              "sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b",
+			CompressedSizeBytes: 50,
+			SizeBytes:           100,
+			UpdatedAt:           time.Now(),
+			Tags:                []string{ /* I don't need any tags! */ },
+			Blobs: []*godo.Blob{
+				{
+					Digest:              "sha256:123",
+					CompressedSizeBytes: 123,
+				},
+				{
+					Digest:              "sha256:456",
+					CompressedSizeBytes: 456,
+				},
+			},
+		},
+	}
 	testRepository = do.Repository{
 		Repository: &godo.Repository{
 			RegistryName: testRegistryName,
 			Name:         testRegistryName,
 			TagCount:     5,
 			LatestTag:    testRepositoryTag.RepositoryTag,
+		},
+	}
+	testRepositoryV2 = do.RepositoryV2{
+		RepositoryV2: &godo.RepositoryV2{
+			RegistryName:   testRegistryName,
+			Name:           testRegistryName,
+			TagCount:       2,
+			ManifestCount:  1,
+			LatestManifest: testRepositoryManifest.RepositoryManifest,
+		},
+	}
+	testRepositoryV2NoTags = do.RepositoryV2{
+		RepositoryV2: &godo.RepositoryV2{
+			RegistryName:   testRegistryName,
+			Name:           testRegistryName,
+			TagCount:       0,
+			ManifestCount:  1,
+			LatestManifest: testRepositoryManifestNoTags.RepositoryManifest,
 		},
 	}
 	testDockerCredentials = &godo.DockerCredentials{
@@ -87,7 +150,7 @@ func TestRegistryCommand(t *testing.T) {
 func TestRepositoryCommand(t *testing.T) {
 	cmd := Repository()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "list", "list-tags", "delete-manifest", "delete-tag")
+	assertCommandNames(t, cmd, "list", "list-v2", "list-manifests", "list-tags", "delete-manifest", "delete-tag")
 }
 
 func TestGarbageCollectionCommand(t *testing.T) {
@@ -97,17 +160,36 @@ func TestGarbageCollectionCommand(t *testing.T) {
 }
 
 func TestRegistryCreate(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		rcr := godo.RegistryCreateRequest{
-			Name:                 testRegistryName,
-			SubscriptionTierSlug: testSubscriptionTier,
-		}
-		tm.registry.EXPECT().Create(&rcr).Return(&testRegistry, nil)
-		config.Args = append(config.Args, testRegistryName)
-		config.Doit.Set(config.NS, doctl.ArgSubscriptionTier, "basic")
+	t.Run("success", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			rcr := godo.RegistryCreateRequest{
+				Name:                 testRegistryName,
+				SubscriptionTierSlug: testSubscriptionTier,
+				Region:               testRegistryRegion,
+			}
+			tm.registry.EXPECT().Create(&rcr).Return(&testRegistry, nil)
+			config.Args = append(config.Args, testRegistryName)
+			config.Doit.Set(config.NS, doctl.ArgSubscriptionTier, testSubscriptionTier)
+			config.Doit.Set(config.NS, doctl.ArgRegionSlug, testRegistryRegion)
 
-		err := RunRegistryCreate(config)
-		assert.NoError(t, err)
+			err := RunRegistryCreate(config)
+			assert.NoError(t, err)
+		})
+	})
+
+	t.Run("region omitted", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			rcr := godo.RegistryCreateRequest{
+				Name:                 testRegistryName,
+				SubscriptionTierSlug: testSubscriptionTier,
+			}
+			tm.registry.EXPECT().Create(&rcr).Return(&testRegistry, nil)
+			config.Args = append(config.Args, testRegistryName)
+			config.Doit.Set(config.NS, doctl.ArgSubscriptionTier, testSubscriptionTier)
+
+			err := RunRegistryCreate(config)
+			assert.NoError(t, err)
+		})
 	})
 }
 
@@ -212,6 +294,45 @@ func TestRepositoryList(t *testing.T) {
 
 		err := RunListRepositories(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestRepositoryListV2(t *testing.T) {
+	t.Run("with latest tag", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+			tm.registry.EXPECT().ListRepositoriesV2(testRepositoryV2.RegistryName).Return([]do.RepositoryV2{testRepositoryV2}, nil)
+
+			var buf bytes.Buffer
+			config.Out = &buf
+			err := RunListRepositoriesV2(config)
+			assert.NoError(t, err)
+
+			output := buf.String()
+			// instead of trying to match the output, do some basic content checks
+			assert.True(t, strings.Contains(output, testRepositoryV2.Name))
+			assert.True(t, strings.Contains(output, testRepositoryV2.LatestManifest.Digest))
+			// basic text format doesn't include blob data
+			assert.False(t, strings.Contains(output, testRepositoryV2.LatestManifest.Blobs[0].Digest))
+		})
+	})
+	t.Run("with <none> latest tag", func(t *testing.T) {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+			tm.registry.EXPECT().ListRepositoriesV2(testRepositoryV2NoTags.RegistryName).Return([]do.RepositoryV2{testRepositoryV2NoTags}, nil)
+
+			var buf bytes.Buffer
+			config.Out = &buf
+			err := RunListRepositoriesV2(config)
+			assert.NoError(t, err)
+
+			output := buf.String()
+			// instead of trying to match the output, do some basic content checks
+			assert.True(t, strings.Contains(output, testRepositoryV2NoTags.Name))
+			assert.True(t, strings.Contains(output, "<none>")) // default value when latest manifest has no tags
+			// basic text format doesn't include blob data
+			assert.False(t, strings.Contains(output, testRepositoryV2NoTags.LatestManifest.Blobs[0].Digest))
+		})
 	})
 }
 
@@ -324,6 +445,30 @@ func TestRepositoryDeleteTag(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestRepositoryListManifests(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.registry.EXPECT().Get().Return(&testRegistry, nil)
+		tm.registry.EXPECT().ListRepositoryManifests(
+			testRepositoryManifest.RegistryName,
+			testRepositoryManifest.Repository,
+		).Return([]do.RepositoryManifest{testRepositoryManifest}, nil)
+
+		var buf bytes.Buffer
+		config.Out = &buf
+		config.Args = append(config.Args, testRepositoryManifest.Repository)
+
+		err := RunListRepositoryManifests(config)
+		assert.NoError(t, err)
+
+		output := buf.String()
+		// instead of trying to match the output, do some basic content checks
+		assert.True(t, strings.Contains(output, testRepositoryManifest.Digest))
+		assert.True(t, strings.Contains(output, fmt.Sprintf("%s", testRepositoryManifest.Tags)))
+		// basic text format doesn't include blob data
+		assert.False(t, strings.Contains(output, testRepositoryManifest.Blobs[0].Digest))
+	})
 }
 
 func TestRepositoryDeleteManifest(t *testing.T) {
@@ -538,7 +683,9 @@ func TestRegistryLogin(t *testing.T) {
 
 func TestRegistryLogout(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgRegistryAuthorizationServerEndpoint, "http://example.com")
 		tm.registry.EXPECT().Endpoint().Return(do.RegistryHostname)
+		tm.registry.EXPECT().RevokeOAuthToken(gomock.Any(), "http://example.com").Times(1).Return(nil)
 
 		config.Out = os.Stderr
 		err := RunRegistryLogout(config)
@@ -636,7 +783,7 @@ func TestGarbageCollectionStart(t *testing.T) {
 				testRegistryName,
 			},
 			expect:      func(m *mocks.MockRegistryService, config *CmdConfig) {},
-			expectError: fmt.Errorf("Operation aborted."),
+			expectError: errOperationAborted,
 		},
 	}
 	for _, test := range tests {
@@ -897,4 +1044,19 @@ func TestGarbageCollectionUpdate(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestGetAvailableRegions(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		t.Run("success", func(t *testing.T) {
+			tm.registry.EXPECT().GetAvailableRegions().Return([]string{"fra1", "sfo2", "blr1"}, nil)
+			err := RunGetRegistryOptionsRegions(config)
+			assert.NoError(t, err)
+		})
+		t.Run("error", func(t *testing.T) {
+			tm.registry.EXPECT().GetAvailableRegions().Return(nil, errors.New("whoops"))
+			err := RunGetRegistryOptionsRegions(config)
+			assert.Error(t, err)
+		})
+	})
 }

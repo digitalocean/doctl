@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # regenerated generated mocks
 
@@ -6,7 +6,7 @@ set -euo pipefail
 
 cd "do"
 
-GO111MODULE=off go get -u github.com/golang/mock/mockgen
+go install -mod=readonly github.com/golang/mock/mockgen@latest
 
 mockgen -source account.go -package=mocks AccountService > mocks/AccountService.go
 mockgen -source actions.go -package=mocks ActionService > mocks/ActionService.go
@@ -20,13 +20,12 @@ mockgen -source domains.go -package=mocks DomainService > mocks/DomainService.go
 mockgen -source droplet_actions.go -package=mocks DropletActionsService > mocks/DropletActionService.go
 mockgen -source droplets.go -package=mocks DropletsService > mocks/DropletsService.go
 mockgen -source firewalls.go -package=mocks FirewallsService > mocks/FirewallsService.go
-mockgen -source floating_ip_actions.go -package=mocks FloatingIPActionsService > mocks/FloatingIPActionsService.go
-mockgen -source floating_ips.go -package=mocks FloatingIPsService > mocks/FloatingIPsService.go
 mockgen -source image_actions.go -package=mocks ImageActionsService > mocks/ImageActionsService.go
 mockgen -source images.go -package=mocks ImageService > mocks/ImageService.go
 mockgen -source invoices.go -package=mocks InvoicesService > mocks/InvoicesService.go
 mockgen -source kubernetes.go -package=mocks KubernetesService > mocks/KubernetesService.go
 mockgen -source load_balancers.go -package=mocks LoadBalancersService > mocks/LoadBalancersService.go
+mockgen -source oauth.go -package=mocks OAuthService > mocks/OAuthService.go
 mockgen -source projects.go -package=mocks ProjectsService > mocks/ProjectsService.go
 mockgen -source regions.go -package=mocks RegionsService > mocks/RegionsService.go
 mockgen -source registry.go -package=mocks RegistryService > mocks/RegistryService.go
@@ -40,3 +39,8 @@ mockgen -source vpcs.go -package=mocks VPCsService > mocks/VPCsService.go
 mockgen -source 1_clicks.go -package=mocks OneClickService > mocks/OneClickService.go
 mockgen -source ../pkg/runner/runner.go -package=mocks Runner > mocks/Runner.go
 mockgen -source ../pkg/listen/listen.go -package=mocks Listen > mocks/Listen.go
+mockgen -source monitoring.go -package=mocks MonitoringService > mocks/MonitoringService.go
+mockgen -source reserved_ip_actions.go -package=mocks ReservedIPActionsService > mocks/ReservedIPActionsService.go
+mockgen -source reserved_ips.go -package=mocks ReservedIPsService > mocks/ReservedIPsService.go
+mockgen -source serverless.go -package=mocks ServerlessService > mocks/ServerlessService.go
+mockgen -source tokens.go -package=mocks TokensService > mocks/TokensService.go

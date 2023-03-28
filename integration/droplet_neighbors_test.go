@@ -26,12 +26,11 @@ var _ = suite("compute/droplet/neighbors", func(t *testing.T, when spec.G, it sp
 	it.Before(func() {
 		expect = require.New(t)
 
-		dir, err := ioutil.TempDir("", "doct-integration-tests")
-		expect.NoError(err)
+		dir := t.TempDir()
 
 		configPath = filepath.Join(dir, "config.yaml")
 
-		err = ioutil.WriteFile(configPath, []byte(dropletNeighborsConfig), 0644)
+		err := ioutil.WriteFile(configPath, []byte(dropletNeighborsConfig), 0644)
 		expect.NoError(err)
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

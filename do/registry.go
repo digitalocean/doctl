@@ -15,7 +15,11 @@ package do
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/digitalocean/godo"
 )
@@ -31,6 +35,16 @@ type Registry struct {
 // Repository wraps a godo Repository
 type Repository struct {
 	*godo.Repository
+}
+
+// RepositoryV2 wraps a godo RepositoryV2
+type RepositoryV2 struct {
+	*godo.RepositoryV2
+}
+
+// RepositoryManifest wraps a godo RepositoryManifest
+type RepositoryManifest struct {
+	*godo.RepositoryManifest
 }
 
 // RepositoryTag wraps a godo RepositoryTag
@@ -60,7 +74,9 @@ type RegistryService interface {
 	Delete() error
 	DockerCredentials(*godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error)
 	ListRepositoryTags(string, string) ([]RepositoryTag, error)
+	ListRepositoryManifests(string, string) ([]RepositoryManifest, error)
 	ListRepositories(string) ([]Repository, error)
+	ListRepositoriesV2(string) ([]RepositoryV2, error)
 	DeleteTag(string, string, string) error
 	DeleteManifest(string, string, string) error
 	Endpoint() string
@@ -69,6 +85,8 @@ type RegistryService interface {
 	ListGarbageCollections(string) ([]GarbageCollection, error)
 	CancelGarbageCollection(string, string) (*GarbageCollection, error)
 	GetSubscriptionTiers() ([]RegistrySubscriptionTier, error)
+	GetAvailableRegions() ([]string, error)
+	RevokeOAuthToken(token string, endpoint string) error
 }
 
 type registryService struct {
@@ -147,6 +165,39 @@ func (rs *registryService) ListRepositories(registry string) ([]Repository, erro
 	return list, nil
 }
 
+func (rs *registryService) ListRepositoriesV2(registry string) ([]RepositoryV2, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := rs.client.Registry.ListRepositoriesV2(rs.ctx, registry, &godo.TokenListOptions{
+			Page:    opt.Page,
+			PerPage: opt.PerPage,
+			// there's an opportunity for optimization here by using page token instead of page
+		})
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]RepositoryV2, len(si))
+	for i := range si {
+		a := si[i].(*godo.RepositoryV2)
+		list[i] = RepositoryV2{RepositoryV2: a}
+	}
+
+	return list, nil
+}
+
 func (rs *registryService) ListRepositoryTags(registry, repository string) ([]RepositoryTag, error) {
 	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
 		list, resp, err := rs.client.Registry.ListRepositoryTags(rs.ctx, registry, repository, opt)
@@ -171,6 +222,35 @@ func (rs *registryService) ListRepositoryTags(registry, repository string) ([]Re
 	for i := range si {
 		a := si[i].(*godo.RepositoryTag)
 		list[i] = RepositoryTag{RepositoryTag: a}
+	}
+
+	return list, nil
+}
+
+func (rs *registryService) ListRepositoryManifests(registry, repository string) ([]RepositoryManifest, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := rs.client.Registry.ListRepositoryManifests(rs.ctx, registry, repository, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]RepositoryManifest, len(si))
+	for i := range si {
+		a := si[i].(*godo.RepositoryManifest)
+		list[i] = RepositoryManifest{RepositoryManifest: a}
 	}
 
 	return list, nil
@@ -261,4 +341,36 @@ func (rs *registryService) GetSubscriptionTiers() ([]RegistrySubscriptionTier, e
 	}
 
 	return ret, nil
+}
+
+func (rs *registryService) GetAvailableRegions() ([]string, error) {
+	opts, _, err := rs.client.Registry.GetOptions(rs.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return opts.AvailableRegions, nil
+}
+
+func (rs *registryService) RevokeOAuthToken(token string, endpoint string) error {
+	data := url.Values{}
+	data.Set("token", token)
+	req, err := http.NewRequest(http.MethodPost, endpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := http.Client{}
+
+	resp, err := client.Do(req)
+	if resp == nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("error revoking token: " + http.StatusText(resp.StatusCode))
+	}
+
+	return err
 }

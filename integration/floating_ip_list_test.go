@@ -25,7 +25,7 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/floating_ips":
+			case "/v2/reserved_ips":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -73,13 +73,13 @@ var _ = suite("compute/floating-ip/list", func(t *testing.T, when spec.G, it spe
 
 const (
 	floatingIPListOutput = `
-IP         Region    Droplet ID    Droplet Name
-8.8.8.8    nyc3      8888          hello
-1.1.1.1    nyc3      1111
+IP         Region    Droplet ID    Droplet Name    Project ID
+8.8.8.8    nyc3      8888          hello           c98374fa-35e2-11ed-870f-c7de97c5d5ed
+1.1.1.1    nyc3                                    476dea88-35ea-11ed-8e93-f7eb94d49952
 `
 	floatingIPListResponse = `
 {
-  "floating_ips": [
+  "reserved_ips": [
     {
       "ip": "8.8.8.8",
       "droplet": {"id": 8888, "name": "hello"},
@@ -90,11 +90,12 @@ IP         Region    Droplet ID    Droplet Name
         "features": [ "metadata" ],
         "available": true
       },
-      "locked": false
+      "locked": false,
+	  "project_id": "c98374fa-35e2-11ed-870f-c7de97c5d5ed"
     },
     {
       "ip": "1.1.1.1",
-      "droplet": {"id": 1111},
+      "droplet":null,
       "region": {
         "name": "New York 3",
         "slug": "nyc3",
@@ -102,7 +103,8 @@ IP         Region    Droplet ID    Droplet Name
         "features": [ "metadata" ],
         "available": true
       },
-      "locked": false
+      "locked": false,
+	  "project_id": "476dea88-35ea-11ed-8e93-f7eb94d49952"
     }
   ],
   "links": {},

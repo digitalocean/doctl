@@ -34,6 +34,7 @@ func (r *Registry) Cols() []string {
 	return []string{
 		"Name",
 		"Endpoint",
+		"Region",
 	}
 }
 
@@ -41,16 +42,18 @@ func (r *Registry) ColMap() map[string]string {
 	return map[string]string{
 		"Name":     "Name",
 		"Endpoint": "Endpoint",
+		"Region":   "Region slug",
 	}
 }
 
 func (r *Registry) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(r.Registries))
 
 	for _, reg := range r.Registries {
 		m := map[string]interface{}{
 			"Name":     reg.Name,
 			"Endpoint": reg.Endpoint(),
+			"Region":   reg.Region,
 		}
 
 		out = append(out, m)
@@ -88,7 +91,7 @@ func (r *Repository) ColMap() map[string]string {
 }
 
 func (r *Repository) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(r.Repositories))
 
 	for _, reg := range r.Repositories {
 		m := map[string]interface{}{
@@ -96,6 +99,61 @@ func (r *Repository) KV() []map[string]interface{} {
 			"LatestTag": reg.LatestTag.Tag,
 			"TagCount":  reg.TagCount,
 			"UpdatedAt": reg.LatestTag.UpdatedAt,
+		}
+
+		out = append(out, m)
+	}
+
+	return out
+}
+
+type RepositoryV2 struct {
+	Repositories []do.RepositoryV2
+}
+
+var _ Displayable = &Repository{}
+
+func (r *RepositoryV2) JSON(out io.Writer) error {
+	return writeJSON(r.Repositories, out)
+}
+
+func (r *RepositoryV2) Cols() []string {
+	return []string{
+		"Name",
+		"LatestManifest",
+		"LatestTag",
+		"TagCount",
+		"ManifestCount",
+		"UpdatedAt",
+	}
+}
+
+func (r *RepositoryV2) ColMap() map[string]string {
+	return map[string]string{
+		"Name":           "Name",
+		"LatestManifest": "Latest Manifest",
+		"LatestTag":      "Latest Tag",
+		"TagCount":       "Tag Count",
+		"ManifestCount":  "Manifest Count",
+		"UpdatedAt":      "Updated At",
+	}
+}
+
+func (r *RepositoryV2) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(r.Repositories))
+
+	for _, reg := range r.Repositories {
+		latestTag := "<none>" // default when latest manifest has no tags
+		if len(reg.LatestManifest.Tags) > 0 {
+			latestTag = reg.LatestManifest.Tags[0]
+		}
+		m := map[string]interface{}{
+			"Name":           reg.Name,
+			"LatestManifest": reg.LatestManifest.Digest,
+			"LatestTag":      latestTag,
+			"TagCount":       reg.TagCount,
+			"ManifestCount":  reg.ManifestCount,
+			"UpdatedAt":      reg.LatestManifest.UpdatedAt,
 		}
 
 		out = append(out, m)
@@ -133,14 +191,62 @@ func (r *RepositoryTag) ColMap() map[string]string {
 }
 
 func (r *RepositoryTag) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(r.Tags))
 
 	for _, tag := range r.Tags {
 		m := map[string]interface{}{
 			"Tag":                 tag.Tag,
-			"CompressedSizeBytes": BytesToHumanReadibleUnit(tag.CompressedSizeBytes),
+			"CompressedSizeBytes": BytesToHumanReadableUnit(tag.CompressedSizeBytes),
 			"UpdatedAt":           tag.UpdatedAt,
 			"ManifestDigest":      tag.ManifestDigest,
+		}
+
+		out = append(out, m)
+	}
+
+	return out
+}
+
+type RepositoryManifest struct {
+	Manifests []do.RepositoryManifest
+}
+
+var _ Displayable = &RepositoryManifest{}
+
+func (r *RepositoryManifest) JSON(out io.Writer) error {
+	return writeJSON(r.Manifests, out)
+}
+
+func (r *RepositoryManifest) Cols() []string {
+	return []string{
+		"Digest",
+		"CompressedSizeBytes",
+		"SizeBytes",
+		"UpdatedAt",
+		"Tags",
+	}
+}
+
+func (r *RepositoryManifest) ColMap() map[string]string {
+	return map[string]string{
+		"Digest":              "Manifest Digest",
+		"CompressedSizeBytes": "Compressed Size",
+		"SizeBytes":           "Uncompressed Size",
+		"UpdatedAt":           "Updated At",
+		"Tags":                "Tags",
+	}
+}
+
+func (r *RepositoryManifest) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(r.Manifests))
+
+	for _, manifest := range r.Manifests {
+		m := map[string]interface{}{
+			"Digest":              manifest.Digest,
+			"CompressedSizeBytes": BytesToHumanReadableUnit(manifest.CompressedSizeBytes),
+			"SizeBytes":           BytesToHumanReadableUnit(manifest.SizeBytes),
+			"UpdatedAt":           manifest.UpdatedAt,
+			"Tags":                manifest.Tags,
 		}
 
 		out = append(out, m)
@@ -184,7 +290,7 @@ func (g *GarbageCollection) ColMap() map[string]string {
 }
 
 func (g *GarbageCollection) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(g.GarbageCollections))
 
 	for _, gc := range g.GarbageCollections {
 		out = append(out, map[string]interface{}{
@@ -238,19 +344,51 @@ func (t *RegistrySubscriptionTiers) ColMap() map[string]string {
 }
 
 func (t *RegistrySubscriptionTiers) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(t.SubscriptionTiers))
 
 	for _, tier := range t.SubscriptionTiers {
 		out = append(out, map[string]interface{}{
 			"Name":                   tier.Name,
 			"Slug":                   tier.Slug,
 			"IncludedRepositories":   tier.IncludedRepositories,
-			"IncludedStorageBytes":   BytesToHumanReadibleUnit(tier.IncludedStorageBytes),
+			"IncludedStorageBytes":   BytesToHumanReadableUnit(tier.IncludedStorageBytes),
 			"AllowStorageOverage":    tier.AllowStorageOverage,
-			"IncludedBandwidthBytes": BytesToHumanReadibleUnit(tier.IncludedBandwidthBytes),
+			"IncludedBandwidthBytes": BytesToHumanReadableUnit(tier.IncludedBandwidthBytes),
 			"MonthlyPriceInCents":    fmt.Sprintf("$%d", tier.MonthlyPriceInCents/100),
 			"Eligible":               tier.Eligible,
 			"EligibilityReasons":     tier.EligibilityReasons,
+		})
+	}
+
+	return out
+}
+
+type RegistryAvailableRegions struct {
+	Regions []string
+}
+
+func (t *RegistryAvailableRegions) JSON(out io.Writer) error {
+	return writeJSON(t, out)
+}
+
+func (t *RegistryAvailableRegions) Cols() []string {
+	return []string{
+		"Slug",
+	}
+}
+
+func (t *RegistryAvailableRegions) ColMap() map[string]string {
+	return map[string]string{
+		"Slug": "Region Slug",
+	}
+}
+
+func (t *RegistryAvailableRegions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(t.Regions))
+
+	for _, region := range t.Regions {
+		out = append(out, map[string]interface{}{
+			"Slug": region,
 		})
 	}
 

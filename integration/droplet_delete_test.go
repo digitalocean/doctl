@@ -136,7 +136,7 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 	})
 
 	when("deleting one Droplet without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -148,30 +148,12 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(dropletDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
-	when("deleting two Droplet without force flag", func() {
-		it("correctly promts for confirmation", func() {
-			cmd := exec.Command(builtBinaryPath,
-				"-t", "some-magic-token",
-				"-u", server.URL,
-				"compute",
-				"droplet",
-				"delete",
-				"some-droplet-name",
-				"another-droplet-name",
-			)
-
-			output, err := cmd.CombinedOutput()
-			expect.Error(err)
-			expect.Equal(strings.TrimSpace(multiDropletDelOutput), strings.TrimSpace(string(output)))
-		})
-	})
-
-	when("deleting one Droplet by tag without force flag", func() {
-		it("correctly promts for confirmation", func() {
+	when("deleting Droplet by tag without force flag", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -183,12 +165,12 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(tagDropletDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
 	when("deleting two Droplet by tag without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -200,14 +182,7 @@ var _ = suite("compute/droplet/delete", func(t *testing.T, when spec.G, it spec.
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(tagMultiDropletDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
-
-const (
-	dropletDelOutput         = "Warning: Are you sure you want to delete this Droplet? (y/N) ? Error: Operation aborted."
-	multiDropletDelOutput    = "Warning: Are you sure you want to delete 2 Droplets? (y/N) ? Error: Operation aborted."
-	tagDropletDelOutput      = `Warning: Are you sure you want to delete 1 Droplet tagged "one"? [affected Droplet: 1337] (y/N) ? Error: Operation aborted.`
-	tagMultiDropletDelOutput = `Warning: Are you sure you want to delete 2 Droplets tagged "two"? [affected Droplets: 1337 7331] (y/N) ? Error: Operation aborted.`
-)

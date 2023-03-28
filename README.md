@@ -25,17 +25,19 @@ Usage:
 Available Commands:
   1-click         Display commands that pertain to 1-click applications
   account         Display commands that retrieve account details
+  apps            Display commands for working with apps
   auth            Display commands for authenticating doctl with an account
   balance         Display commands for retrieving your account balance
   billing-history Display commands for retrieving your billing history
   completion      Modify your shell so doctl commands autocomplete with TAB
   compute         Display commands that manage infrastructure
   databases       Display commands that manage databases
-  help            Help with any command
+  help            Help about any command
   invoice         Display commands for retrieving invoices for your account
   kubernetes      Displays commands to manage Kubernetes clusters and configurations
+  monitoring      [Beta] Display commands to manage monitoring
   projects        Manage projects and assign resources to them
-  registry        [EA] Display commands for working with container registries
+  registry        Display commands for working with container registries
   version         Show the current version
   vpcs            Display commands that manage VPCs
 
@@ -54,32 +56,33 @@ Use "doctl [command] --help" for more information about a command.
 
 See the [full reference documentation](https://www.digitalocean.com/docs/apis-clis/doctl/reference/) for information about each available command.
 
-- [doctl](#doctl---)
-    - [Installing `doctl`](#installing-doctl)
-        - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)
-            - [MacOS](#macos)
-            - [Snap supported OS](#snap-supported-os)
-                - [Use with `kubectl`](#use-with-kubectl)
-                - [Using `doctl compute ssh`](#using-doctl-compute-ssh)
-            - [Arch Linux](#arch-linux)
-            - [Nix supported OS](#nix-supported-os)
-        - [Docker Hub](#docker-hub)
-        - [Downloading a Release from GitHub](#downloading-a-release-from-github)
-        - [Building with Docker](#building-with-docker)
-        - [Building the Development Version from Source](#building-the-development-version-from-source)
-            - [Dependencies](#dependencies)
-    - [Authenticating with DigitalOcean](#authenticating-with-digitalocean)
-        - [Logging in to multiple DigitalOcean accounts](#logging-in-to-multiple-digitalocean-accounts)
-    - [Configuring Default Values](#configuring-default-values)
-    - [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
-        - [Linux](#linux-auto-completion)
-        - [macOS](#macos-auto-completion)
-    - [Uninstalling `doctl`](#uninstalling-doctl)
-      - [Using a Package Manager](#using-a-package-manager)
-        - [macOS](#macos-uninstall)
-    - [Examples](#examples)
-    - [Tutorials](#tutorials)
-    - [doctl Releases](https://github.com/digitalocean/doctl/releases)
+- [Installing `doctl`](#installing-doctl)
+  - [Using a Package Manager (Preferred)](#using-a-package-manager-preferred)
+    - [MacOS](#macos)
+    - [Snap supported OS](#snap-supported-os)
+      - [Use with `kubectl`](#use-with-kubectl)
+      - [Using `doctl compute ssh`](#using-doctl-compute-ssh)
+      - [Use with Docker](#use-with-docker)
+    - [Arch Linux](#arch-linux)
+    - [Fedora](#fedora)
+    - [Nix supported OS](#nix-supported-os)
+  - [Docker Hub](#docker-hub)
+  - [Downloading a Release from GitHub](#downloading-a-release-from-github)
+  - [Building with Docker](#building-with-docker)
+  - [Building the Development Version from Source](#building-the-development-version-from-source)
+  - [Dependencies](#dependencies)
+- [Authenticating with DigitalOcean](#authenticating-with-digitalocean)
+  - [Logging into multiple DigitalOcean accounts](#logging-into-multiple-digitalocean-accounts)
+- [Configuring Default Values](#configuring-default-values)
+  - [Environment Variables](#environment-variables)
+- [Enabling Shell Auto-Completion](#enabling-shell-auto-completion)
+  - [Linux Auto Completion](#linux-auto-completion)
+  - [MacOS](#macos-1)
+- [Uninstalling `doctl`](#uninstalling-doctl)
+  - [Using a Package Manager](#using-a-package-manager)
+    - [MacOS Uninstall](#macos-uninstall)
+- [Examples](#examples)
+- [Tutorials](#tutorials)
 
 
 ## Installing `doctl`
@@ -136,7 +139,11 @@ This allows `doctl` to add DigitalOcean container registry credentials to your D
 
     sudo pacman -S doctl
 
-As an alternative, you can install it from the [AUR](https://aur.archlinux.org/packages/doctl-bin/).
+#### Fedora
+
+`doctl` is available in the official Fedora repository:
+
+    sudo dnf install doctl
 
 #### Nix supported OS
 
@@ -223,7 +230,7 @@ configured, you can install the development version of `doctl` from
 the command line.
 
 ```
-go get github.com/digitalocean/doctl/cmd/doctl
+go install github.com/digitalocean/doctl/cmd/doctl@latest
 ```
 
 While the development version is a good way to take a peek at
@@ -265,7 +272,7 @@ This will create the necessary directory structure and configuration file to sto
 
 `doctl` allows you to log in to multiple DigitalOcean accounts at the same time and easily switch between them with the use of authentication contexts.
 
-By default, a context named `default` is used. To create a new context, run `doctl auth init --context <new-context-name>`. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` environment variable. You will be prompted for your API access token which will be associated with the new context.
+By default, a context named `default` is used. To create a new context, run `doctl auth init --context <new-context-name>`. You may also pass the new context's name using the `DIGITALOCEAN_CONTEXT` [environment variable](#environment-variables). You will be prompted for your API access token which will be associated with the new context.
 
 To use a non-default context, pass the context name to any `doctl` command. For example:
 
@@ -275,7 +282,7 @@ doctl compute droplet list --context <new-context-name>
 
 To set a new default context, run `doctl auth switch --context <new-context-name>`. This command will save the current context to the config file and use it for all commands by default if a context is not specified.
 
-The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` variable are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
+The `--access-token` flag or `DIGITALOCEAN_ACCESS_TOKEN` [environment variable](#environment-variables) are acknowledged only if the `default` context is used. Otherwise, they will have no effect on what API access token is used. To temporarily override the access token if a different context is set as default, use `doctl --context default --access-token your_DO_token ...`.
 
 ## Configuring Default Values
 
@@ -297,6 +304,20 @@ compute.ssh.ssh-user: sammy
 
 Save and close the file. The next time you use `doctl`, the new default values you set will be in effect. In this example, that means that it will SSH as the **sammy** user (instead of the default **root** user) next time you log into a Droplet.
 
+### Environment variables
+
+In addition to specifying configuration using `config.yaml` file or program arguments, it is also possible to override values just for the given session with environment variables:
+
+```
+# Use instead of --context argument
+DIGITALOCEAN_CONTEXT=my-context doctl auth list
+```
+
+```
+# Use instead of --access-token argument
+DIGITALOCEAN_ACCESS_TOKEN=my-do-token doctl
+```
+
 ## Enabling Shell Auto-Completion
 
 `doctl` also has auto-completion support. It can be set up so that if you partially type a command and then press `TAB`, the rest of the command is automatically filled in. For example, if you type `doctl comp<TAB><TAB> drop<TAB><TAB>` with auto-completion enabled, you'll see `doctl compute droplet` appear on your command prompt.
@@ -313,6 +334,12 @@ The most common way to use the `completion` command is by adding a line to your 
 
 ```
 source <(doctl completion your_shell_here)
+```
+
+If you are using ZSH, add this line to your `~/.zshrc` file:
+
+```
+compdef _doctl doctl
 ```
 
 Then refresh your profile.
@@ -359,7 +386,7 @@ brew uninstall -f doctl
 To completely remove the configuration, also remove the following directory:
 
 ```
-rm -rf $HOME/Library/Application Support/doctl
+rm -rf "$HOME/Library/Application Support/doctl"
 ```
 
 

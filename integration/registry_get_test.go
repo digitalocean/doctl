@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -14,8 +15,9 @@ import (
 
 var _ = suite("registry/get", func(t *testing.T, when spec.G, it spec.S) {
 	var (
-		expect *require.Assertions
-		server *httptest.Server
+		expect         *require.Assertions
+		server         *httptest.Server
+		expectedRegion string
 	)
 
 	it.Before(func() {
@@ -56,11 +58,12 @@ var _ = suite("registry/get", func(t *testing.T, when spec.G, it spec.S) {
 			"registry",
 			"get",
 		)
+		expectedRegion = "r1"
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Equal(strings.TrimSpace(registryGetOutput), strings.TrimSpace(string(output)))
+		expect.Equal(strings.TrimSpace(fmt.Sprintf(registryGetOutput, expectedRegion)), strings.TrimSpace(string(output)))
 	})
 })
 
@@ -68,11 +71,13 @@ const (
 	registryGetResponse = `
 {
 	"registry": {
-		"name": "my-registry"
+		"name": "my-registry",
+		"region": "r1"
 	}
 }`
+	// note: used by tests in registry_create_test.go as well
 	registryGetOutput = `
-Name           Endpoint
-my-registry    registry.digitalocean.com/my-registry
+Name           Endpoint                                 Region slug
+my-registry    registry.digitalocean.com/my-registry    %s
 `
 )

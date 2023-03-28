@@ -19,6 +19,8 @@ var _ = suite("registry/create", func(t *testing.T, when spec.G, it spec.S) {
 		expect           *require.Assertions
 		server           *httptest.Server
 		expectedTierSlug string
+		reqRegion        string // region provided in http create req
+		expectedRegion   string // region in response
 	)
 
 	it.Before(func() {
@@ -43,10 +45,15 @@ var _ = suite("registry/create", func(t *testing.T, when spec.G, it spec.S) {
 				reqBody, err := ioutil.ReadAll(req.Body)
 				expect.NoError(err)
 
-				expectedJSON := fmt.Sprintf(registryCreateRequest, expectedTierSlug)
+				var expectedJSON string
+				if reqRegion == "" {
+					expectedJSON = fmt.Sprintf(registryCreateRequest, expectedTierSlug)
+				} else {
+					expectedJSON = fmt.Sprintf(registryCreateRequestWithRegion, expectedTierSlug, reqRegion)
+				}
 				expect.JSONEq(expectedJSON, string(reqBody))
 				w.WriteHeader(http.StatusCreated)
-				w.Write([]byte(registryCreateResponse))
+				w.Write([]byte(fmt.Sprintf(registryCreateResponse, expectedRegion)))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -67,11 +74,13 @@ var _ = suite("registry/create", func(t *testing.T, when spec.G, it spec.S) {
 			"my-registry",
 		)
 		expectedTierSlug = "basic"
+		reqRegion = ""
+		expectedRegion = "default"
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Equal(strings.TrimSpace(registryGetOutput), strings.TrimSpace(string(output)))
+		expect.Equal(strings.TrimSpace(fmt.Sprintf(registryGetOutput, expectedRegion)), strings.TrimSpace(string(output)))
 	})
 
 	it("creates a registry with subscription tier specified", func() {
@@ -84,11 +93,32 @@ var _ = suite("registry/create", func(t *testing.T, when spec.G, it spec.S) {
 			"--subscription-tier", "starter",
 		)
 		expectedTierSlug = "starter"
+		reqRegion = ""
+		expectedRegion = "default"
 
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expect.Equal(strings.TrimSpace(registryGetOutput), strings.TrimSpace(string(output)))
+		expect.Equal(strings.TrimSpace(fmt.Sprintf(registryGetOutput, expectedRegion)), strings.TrimSpace(string(output)))
+	})
+
+	it("creates a registry with region specified", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"registry",
+			"create",
+			"my-registry",
+			"--region", "r1",
+		)
+		expectedTierSlug = "basic"
+		reqRegion = "r1"
+		expectedRegion = "r1"
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expect.Equal(strings.TrimSpace(fmt.Sprintf(registryGetOutput, expectedRegion)), strings.TrimSpace(string(output)))
 	})
 })
 
@@ -99,20 +129,18 @@ const (
 	"subscription_tier_slug": "%s"
 }
 `
-	registryCreateRequestWithTier = `
+	registryCreateRequestWithRegion = `
 {
 	"name": "my-registry",
-	"subscription_tier_slug": "basic"
+	"subscription_tier_slug": "%s",
+	"region": "%s"
 }
 `
 	registryCreateResponse = `
 {
 	"registry": {
-		"name": "my-registry"
+		"name": "my-registry",
+		"region": "%s"
 	}
 }`
-	registryCreateOutput = `
-Name           Endpoint
-my-registry    registry.digitalocean.com/my-registry
-`
 )

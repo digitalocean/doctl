@@ -35,19 +35,33 @@ func (m *MockKeysService) EXPECT() *MockKeysServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockKeysService) List() (do.SSHKeys, error) {
+// Create mocks base method.
+func (m *MockKeysService) Create(kcr *godo.KeyCreateRequest) (*do.SSHKey, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List")
-	ret0, _ := ret[0].(do.SSHKeys)
+	ret := m.ctrl.Call(m, "Create", kcr)
+	ret0, _ := ret[0].(*do.SSHKey)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// List indicates an expected call of List.
-func (mr *MockKeysServiceMockRecorder) List() *gomock.Call {
+// Create indicates an expected call of Create.
+func (mr *MockKeysServiceMockRecorder) Create(kcr interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockKeysService)(nil).List))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockKeysService)(nil).Create), kcr)
+}
+
+// Delete mocks base method.
+func (m *MockKeysService) Delete(id string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockKeysServiceMockRecorder) Delete(id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockKeysService)(nil).Delete), id)
 }
 
 // Get mocks base method.
@@ -65,19 +79,19 @@ func (mr *MockKeysServiceMockRecorder) Get(id interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockKeysService)(nil).Get), id)
 }
 
-// Create mocks base method.
-func (m *MockKeysService) Create(kcr *godo.KeyCreateRequest) (*do.SSHKey, error) {
+// List mocks base method.
+func (m *MockKeysService) List() (do.SSHKeys, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", kcr)
-	ret0, _ := ret[0].(*do.SSHKey)
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].(do.SSHKeys)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Create indicates an expected call of Create.
-func (mr *MockKeysServiceMockRecorder) Create(kcr interface{}) *gomock.Call {
+// List indicates an expected call of List.
+func (mr *MockKeysServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockKeysService)(nil).Create), kcr)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockKeysService)(nil).List))
 }
 
 // Update mocks base method.
@@ -93,18 +107,4 @@ func (m *MockKeysService) Update(id string, kur *godo.KeyUpdateRequest) (*do.SSH
 func (mr *MockKeysServiceMockRecorder) Update(id, kur interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockKeysService)(nil).Update), id, kur)
-}
-
-// Delete mocks base method.
-func (m *MockKeysService) Delete(id string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockKeysServiceMockRecorder) Delete(id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockKeysService)(nil).Delete), id)
 }

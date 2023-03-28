@@ -5,26 +5,30 @@
 **Table of Contents**
 
 - [Contributing to doctl](#contributing-to-doctl)
-    - [Issues](#issues)
-        - [Reporting an Issue](#reporting-an-issue)
-        - [Issue Lifecycle](#issue-lifecycle)
-    - [Developing](#developing)
-        - [Go environment](#go-environment)
-        - [Docker](#docker)
-        - [Testing](#testing)
-            - [Writing Tests](#writing-tests)
-              - [Unit tests](#unit-tests)
-              - [Integration tests](#integration-tests)
-            - [`godo` mocks](#godo-mocks)
-            - [Build Scripts](#build-scripts)
-    - [Releasing](#releasing)
-        - [Tagging a release](#tagging-a-release)
-        - [Oops! Something went wrong! What now?](#oops-something-went-wrong-what-now)
-            - [Github Releases & Dockerhub](#github-releases--dockerhub)
-                - [Prerequisites](#prerequisites)
-            - [Snap](#snap)
-                - [Prerequisites](#prerequisites-1)
-        - [Updating Homebrew](#updating-homebrew)
+  - [Issues](#issues)
+    - [Reporting an Issue](#reporting-an-issue)
+    - [Issue Lifecycle](#issue-lifecycle)
+  - [Pull Requests](#pull-requests)
+  - [Developing](#developing)
+  - [Documenting](#documenting)
+    - [Go environment](#go-environment)
+    - [Docker](#docker)
+    - [Testing](#testing)
+      - [Writing Tests](#writing-tests)
+        - [Unit tests](#unit-tests)
+        - [Integration tests](#integration-tests)
+      - [`godo` mocks](#godo-mocks)
+      - [Build Scripts](#build-scripts)
+  - [Releasing](#releasing)
+    - [Tagging a release](#tagging-a-release)
+        - [Prerequisites](#prerequisites)
+    - [If a release fails](#if-a-release-fails)
+      - [Github Releases & Dockerhub](#github-releases--dockerhub)
+        - [Prerequisites](#prerequisites-1)
+      - [Snap](#snap)
+        - [Prerequisites](#prerequisites-2)
+        - [Building a new snap base image](#building-a-new-snap-base-image)
+    - [Updating Homebrew](#updating-homebrew)
 
 <!-- markdown-toc end -->
 
@@ -191,14 +195,11 @@ to do so. Travis also runs shellcheck.
 
 ## Releasing
 
-To cut a release, push a new tag (versioning discussed below). The actual release is orchestrated
-by [Travis CI](https://docs.travis-ci.com/user/deployment/).
+To cut a release, push a new tag (versioning discussed below).
 
 ### Tagging a release
 
 ##### Prerequisites
-
-* [github-changelog-generator](https://github.com/digitalocean/github-changelog-generator)
 
 1. Run `make changes` to review the changes since the last
    release. Based on the changes, decide what kind of release you are
@@ -213,44 +214,6 @@ by [Travis CI](https://docs.travis-ci.com/user/deployment/).
    do so by setting `ORIGIN=(preferred remote name)`.
 
 The new tag triggers the release.
-
-### If a release fails
-
-If part of a release fails, you can run the target for that part of the release yourself.
-
-#### Github Releases & Dockerhub
-
-`make release` releases the most recent tag to github releases and
-dockerhub images. If `make release` fails, you can always fall back to
-`goreleaser` itself.
-
-##### Prerequisites
-
-* [goreleaser](https://goreleaser.com/install/)
-* [docker](https://docs.docker.com/install/)
-* a valid `GITHUB_TOKEN` environment variable with access to the
-  `digitalocean/doctl` repo. You can generate a token
-  [here](https://github.com/settings/tokens), it needs the `public_repo`
-  access.
-* a valid [Docker Hub](dockerhub.com) login with access to the `digitalocean` account. Post
-  in #it_support to request access.
-
-#### Snap
-
-`make snap` builds and pushes a snap for the most recent tag to the
-snap store.  Specify the release channel using the environment
-variable `CHANNEL`, which defaults to `stable`:
-
-    CHANNEL=candidate make _snap
-
-If `make snap` fails, you can fall back to building and pushing the
-snap manually.
-
-##### Prerequisites
-
-* [docker](https://docs.docker.com/install/)
-* a valid [ubuntu one](https://login.ubuntu.com) login with access to the `digitalocean` snapcraft account.
-  Post in #it_support to request access.
 
 ##### Building a new snap base image
 

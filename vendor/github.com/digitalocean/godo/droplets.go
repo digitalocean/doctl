@@ -14,9 +14,10 @@ var errNoNetworks = errors.New("no networks have been defined")
 
 // DropletsService is an interface for interfacing with the Droplet
 // endpoints of the DigitalOcean API
-// See: https://developers.digitalocean.com/documentation/v2#droplets
+// See: https://docs.digitalocean.com/reference/api/api-reference/#tag/Droplets
 type DropletsService interface {
 	List(context.Context, *ListOptions) ([]Droplet, *Response, error)
+	ListByName(context.Context, string, *ListOptions) ([]Droplet, *Response, error)
 	ListByTag(context.Context, string, *ListOptions) ([]Droplet, *Response, error)
 	Get(context.Context, int) (*Droplet, *Response, error)
 	Create(context.Context, *DropletCreateRequest) (*Droplet, *Response, error)
@@ -180,7 +181,7 @@ func (d DropletCreateImage) MarshalJSON() ([]byte, error) {
 // DropletCreateVolume identifies a volume to attach for the create request.
 type DropletCreateVolume struct {
 	ID string
-	// Deprecated: You must pass a the volume's ID when creating a Droplet.
+	// Deprecated: You must pass the volume's ID when creating a Droplet.
 	Name string
 }
 
@@ -229,6 +230,7 @@ type DropletCreateRequest struct {
 	Volumes           []DropletCreateVolume `json:"volumes,omitempty"`
 	Tags              []string              `json:"tags"`
 	VPCUUID           string                `json:"vpc_uuid,omitempty"`
+	WithDropletAgent  *bool                 `json:"with_droplet_agent,omitempty"`
 }
 
 // DropletMultiCreateRequest is a request to create multiple Droplets.
@@ -245,6 +247,7 @@ type DropletMultiCreateRequest struct {
 	UserData          string                `json:"user_data,omitempty"`
 	Tags              []string              `json:"tags"`
 	VPCUUID           string                `json:"vpc_uuid,omitempty"`
+	WithDropletAgent  *bool                 `json:"with_droplet_agent,omitempty"`
 }
 
 func (d DropletCreateRequest) String() string {
@@ -310,6 +313,18 @@ func (s *DropletsServiceOp) list(ctx context.Context, path string) ([]Droplet, *
 // List all Droplets.
 func (s *DropletsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Droplet, *Response, error) {
 	path := dropletBasePath
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return s.list(ctx, path)
+}
+
+// ListByName lists all Droplets filtered by name returning only exact matches.
+// It is case-insensitive
+func (s *DropletsServiceOp) ListByName(ctx context.Context, name string, opt *ListOptions) ([]Droplet, *Response, error) {
+	path := fmt.Sprintf("%s?name=%s", dropletBasePath, name)
 	path, err := addOptions(path, opt)
 	if err != nil {
 		return nil, nil, err

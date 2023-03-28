@@ -27,13 +27,19 @@ func TestAppsCommand(t *testing.T) {
 		"list",
 		"update",
 		"delete",
+		"dev",
 		"create-deployment",
 		"get-deployment",
 		"list-deployments",
 		"list-regions",
 		"logs",
+		"propose",
 		"spec",
 		"tier",
+		"list-alerts",
+		"update-alert-destinations",
+		"list-buildpacks",
+		"upgrade-buildpack",
 	)
 }
 
@@ -69,6 +75,56 @@ var (
 		TierSlug:        "basic",
 		TierUpgradeTo:   "professional-xs",
 		TierDowngradeTo: "basic-xxxs",
+	}
+
+	testAlerts = []*godo.AppAlert{
+		{
+			ID: "c586fc0d-e8e2-4c50-9bf6-6c0a6b2ed2a7",
+			Spec: &godo.AppAlertSpec{
+				Rule: godo.AppAlertSpecRule_DeploymentFailed,
+			},
+			Emails: []string{"test@example.com", "test2@example.com"},
+			SlackWebhooks: []*godo.AppAlertSlackWebhook{
+				{
+					URL:     "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+					Channel: "channel name",
+				},
+			},
+		},
+	}
+
+	testAlert = godo.AppAlert{
+		ID: "c586fc0d-e8e2-4c50-9bf6-6c0a6b2ed2a7",
+		Spec: &godo.AppAlertSpec{
+			Rule: godo.AppAlertSpecRule_DeploymentFailed,
+		},
+		Emails: []string{"test@example.com", "test2@example.com"},
+		SlackWebhooks: []*godo.AppAlertSlackWebhook{
+			{
+				URL:     "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+				Channel: "channel name",
+			},
+		},
+	}
+
+	testAlertUpdate = godo.AlertDestinationUpdateRequest{
+		Emails: []string{"test@example.com", "test2@example.com"},
+		SlackWebhooks: []*godo.AppAlertSlackWebhook{
+			{
+				URL:     "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+				Channel: "channel name",
+			},
+		},
+	}
+
+	testBuildpack = &godo.Buildpack{
+		Name:         "Go",
+		ID:           "digitalocean/go",
+		Version:      "1.2.3",
+		MajorVersion: 1,
+		Latest:       true,
+		DocsLink:     "ftp://docs/go",
+		Description:  []string{"Install Go"},
 	}
 )
 
@@ -130,7 +186,7 @@ func TestRunAppsList(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}}
 
-		tm.apps.EXPECT().List().Times(1).Return(apps, nil)
+		tm.apps.EXPECT().List(false).Times(1).Return(apps, nil)
 
 		err := RunAppsList(config)
 		require.NoError(t, err)
@@ -266,7 +322,7 @@ func TestRunAppsCreateDeploymentWithWait(t *testing.T) {
 			Progress: &godo.DeploymentProgress{
 				PendingSteps: 1,
 				RunningSteps: 0,
-				SuccessSteps: 0,
+				SuccessSteps: 1,
 				ErrorSteps:   0,
 				TotalSteps:   1,
 
@@ -281,7 +337,7 @@ func TestRunAppsCreateDeploymentWithWait(t *testing.T) {
 		}
 
 		tm.apps.EXPECT().CreateDeployment(appID, false).Times(1).Return(deployment, nil)
-		tm.apps.EXPECT().GetDeployment(appID, deployment.ID).Times(1).Return(activeDeployment, nil)
+		tm.apps.EXPECT().GetDeployment(appID, deployment.ID).Times(2).Return(activeDeployment, nil)
 
 		config.Args = append(config.Args, appID)
 		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
@@ -378,7 +434,7 @@ func TestRunAppsGetLogs(t *testing.T) {
 
 	for typeStr, logType := range types {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true, 1).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
 			tm.listen.EXPECT().Start().Times(1).Return(nil)
 
 			tc := config.Doit.(*doctl.TestConfig)
@@ -392,6 +448,7 @@ func TestRunAppsGetLogs(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
 			config.Doit.Set(config.NS, doctl.ArgAppLogType, typeStr)
 			config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
+			config.Doit.Set(config.NS, doctl.ArgAppLogTail, 1)
 
 			err := RunAppsGetLogs(config)
 			require.NoError(t, err)
@@ -426,18 +483,17 @@ const (
 		}
 	]
 }`
-	validYAMLSpec = `
-name: test
+	validYAMLSpec = `name: test
 services:
-- name: web
-  github:
+- github:
+    branch: main
     repo: digitalocean/sample-golang
-    branch: main
+  name: web
 static_sites:
-- name: static
-  git:
-    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
+- git:
     branch: main
+    repo_clone_url: git@github.com:digitalocean/sample-gatsby.git
+  name: static
   routes:
   - path: /static
 `
@@ -459,108 +515,104 @@ static_sites:
 `
 )
 
-func Test_parseAppSpec(t *testing.T) {
-	expectedSpec := &godo.AppSpec{
-		Name: "test",
-		Services: []*godo.AppServiceSpec{
-			{
-				Name: "web",
-				GitHub: &godo.GitHubSourceSpec{
-					Repo:   "digitalocean/sample-golang",
-					Branch: "main",
-				},
+var validAppSpec = &godo.AppSpec{
+	Name: "test",
+	Services: []*godo.AppServiceSpec{
+		{
+			Name: "web",
+			GitHub: &godo.GitHubSourceSpec{
+				Repo:   "digitalocean/sample-golang",
+				Branch: "main",
 			},
 		},
-		StaticSites: []*godo.AppStaticSiteSpec{
-			{
-				Name: "static",
-				Git: &godo.GitSourceSpec{
-					RepoCloneURL: "git@github.com:digitalocean/sample-gatsby.git",
-					Branch:       "main",
-				},
-				Routes: []*godo.AppRouteSpec{
-					{Path: "/static"},
-				},
+	},
+	StaticSites: []*godo.AppStaticSiteSpec{
+		{
+			Name: "static",
+			Git: &godo.GitSourceSpec{
+				RepoCloneURL: "git@github.com:digitalocean/sample-gatsby.git",
+				Branch:       "main",
+			},
+			Routes: []*godo.AppRouteSpec{
+				{Path: "/static"},
 			},
 		},
-	}
+	},
+}
 
-	t.Run("json", func(t *testing.T) {
-		spec, err := parseAppSpec([]byte(validJSONSpec))
-		require.NoError(t, err)
-		assert.Equal(t, expectedSpec, spec)
-	})
-	t.Run("yaml", func(t *testing.T) {
-		spec, err := parseAppSpec([]byte(validYAMLSpec))
-		require.NoError(t, err)
-		assert.Equal(t, expectedSpec, spec)
-	})
-	t.Run("invalid", func(t *testing.T) {
-		_, err := parseAppSpec([]byte("invalid spec"))
-		require.Error(t, err)
-	})
-	t.Run("unknown fields", func(t *testing.T) {
-		_, err := parseAppSpec([]byte(unknownFieldSpec))
-		require.Error(t, err)
-	})
+func testTempFile(t *testing.T, data []byte) string {
+	t.Helper()
+	file := t.TempDir() + "/file"
+	err := ioutil.WriteFile(file, data, 0644)
+	require.NoError(t, err, "writing temp file")
+	return file
 }
 
 func TestRunAppSpecValidate(t *testing.T) {
-	validYAMLSpec := ``
-
 	tcs := []struct {
-		name   string
-		testFn testFn
+		name       string
+		spec       string
+		schemaOnly bool
+		mock       func(tm *tcMocks)
+
+		wantError string
+		wantOut   string
 	}{
 		{
-			name: "stdin yaml",
-			testFn: func(config *CmdConfig, tm *tcMocks) {
-				config.Args = append(config.Args, "-")
-
-				err := RunAppsSpecValidate(bytes.NewBufferString(validYAMLSpec))(config)
-				require.NoError(t, err)
-			},
+			name:       "valid yaml",
+			spec:       validYAMLSpec,
+			schemaOnly: true,
+			wantOut:    validYAMLSpec,
 		},
 		{
-			name: "stdin json",
-			testFn: func(config *CmdConfig, tm *tcMocks) {
-				config.Args = append(config.Args, "-")
-
-				err := RunAppsSpecValidate(bytes.NewBufferString(validJSONSpec))(config)
-				require.NoError(t, err)
-			},
+			name:       "valid json",
+			spec:       validJSONSpec,
+			schemaOnly: true,
+			wantOut:    validYAMLSpec,
 		},
 		{
-			name: "file yaml",
-			testFn: func(config *CmdConfig, tm *tcMocks) {
-				file, err := ioutil.TempFile("", "doctl-test")
-				require.NoError(t, err)
-				defer func() {
-					_ = os.Remove(file.Name())
-				}()
-				config.Args = append(config.Args, file.Name())
-
-				_, err = file.WriteString(validYAMLSpec)
-				require.NoError(t, err)
-
-				err = RunAppsSpecValidate(nil)(config)
-				require.NoError(t, err)
+			name: "valid json with ProposeApp req",
+			spec: validJSONSpec,
+			mock: func(tm *tcMocks) {
+				tm.apps.EXPECT().Propose(&godo.AppProposeRequest{
+					Spec: validAppSpec,
+				}).Return(&godo.AppProposeResponse{
+					Spec: &godo.AppSpec{
+						Name: "validated-spec",
+					},
+				}, nil)
 			},
+			wantOut: "name: validated-spec\n",
 		},
 		{
-			name: "stdin invalid",
-			testFn: func(config *CmdConfig, tm *tcMocks) {
-				config.Args = append(config.Args, "-")
-
-				err := RunAppsSpecValidate(bytes.NewBufferString("hello"))(config)
-				require.Error(t, err)
-			},
+			name:       "invalid",
+			spec:       "hello",
+			schemaOnly: true,
+			wantError:  "parsing app spec: json: cannot unmarshal string into Go value of type godo.AppSpec",
 		},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			withTestClient(t, tc.testFn)
+			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+				config.Args = append(config.Args, testTempFile(t, []byte(tc.spec)))
+				config.Doit.Set(config.NS, doctl.ArgSchemaOnly, tc.schemaOnly)
+				var buf bytes.Buffer
+				config.Out = &buf
+
+				if tc.mock != nil {
+					tc.mock(tm)
+				}
+
+				err := RunAppsSpecValidate(config)
+				if tc.wantError != "" {
+					require.Equal(t, tc.wantError, err.Error())
+					return
+				}
+
+				require.NoError(t, err)
+				assert.Equal(t, tc.wantOut, buf.String())
+			})
 		})
 	}
 }
@@ -700,6 +752,72 @@ func TestRunAppsTierInstanceSizeGet(t *testing.T) {
 
 		config.Args = append(config.Args, testAppInstanceSize.Slug)
 		err := RunAppsTierInstanceSizeGet(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsListAlerts(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		tm.apps.EXPECT().ListAlerts(appID).Times(1).Return(testAlerts, nil)
+
+		config.Args = append(config.Args, appID)
+		err := RunAppListAlerts(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsUpdateAlertDestinations(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		destinationsFile, err := ioutil.TempFile("", "dest")
+		require.NoError(t, err)
+		defer func() {
+			os.Remove(destinationsFile.Name())
+			destinationsFile.Close()
+		}()
+
+		err = json.NewEncoder(destinationsFile).Encode(&testAlertUpdate)
+		require.NoError(t, err)
+		appID := uuid.New().String()
+		tm.apps.EXPECT().UpdateAlertDestinations(appID, testAlert.ID, &testAlertUpdate).Times(1).Return(&testAlert, nil)
+
+		config.Args = append(config.Args, appID, testAlert.ID)
+		config.Doit.Set(config.NS, doctl.ArgAppAlertDestinations, destinationsFile.Name())
+		err = RunAppUpdateAlertDestinations(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsListBuildpacks(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.apps.EXPECT().ListBuildpacks().Times(1).Return([]*godo.Buildpack{testBuildpack}, nil)
+
+		err := RunAppListBuildpacks(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsUpgradeBuildpack(t *testing.T) {
+	deployment := &godo.Deployment{
+		ID:        uuid.New().String(),
+		Spec:      &testAppSpec,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		tm.apps.EXPECT().UpgradeBuildpack(appID, godo.UpgradeBuildpackOptions{
+			BuildpackID:       "buildpack-id",
+			MajorVersion:      3,
+			TriggerDeployment: true,
+		}).Times(1).Return([]string{"www", "api"}, deployment, nil)
+
+		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgBuildpack, "buildpack-id")
+		config.Doit.Set(config.NS, doctl.ArgMajorVersion, 3)
+		config.Doit.Set(config.NS, doctl.ArgTriggerDeployment, true)
+		err := RunAppUpgradeBuildpack(config)
 		require.NoError(t, err)
 	})
 }

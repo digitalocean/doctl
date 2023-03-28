@@ -57,7 +57,7 @@ type DomainRecordEditRequest struct {
 // DomainRecords is a slice of DomainRecord.
 type DomainRecords []DomainRecord
 
-// DomainsService is the godo DOmainsService interface.
+// DomainsService is the godo DomainsService interface.
 type DomainsService interface {
 	List() (Domains, error)
 	Get(string) (*Domain, error)
@@ -198,7 +198,7 @@ func (ds *domainsService) EditRecord(domain string, id int, drer *DomainRecordEd
 	}
 
 	path := fmt.Sprintf(domainRecordPath, domain, id)
-	req, err := ds.client.NewRequest(context.TODO(), http.MethodPut, path, drer)
+	req, err := ds.client.NewRequest(context.TODO(), http.MethodPatch, path, drer)
 	if err != nil {
 		return nil, err
 	}

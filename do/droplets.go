@@ -23,7 +23,7 @@ import (
 // DropletIPTable is a table of interface IPS.
 type DropletIPTable map[InterfaceType]string
 
-// InterfaceType is a an interface type.
+// InterfaceType is an interface type.
 type InterfaceType string
 
 const (
@@ -179,7 +179,7 @@ func (ds *dropletsService) CreateMultiple(dmcr *godo.DropletMultiCreateRequest) 
 		return nil, err
 	}
 
-	var droplets Droplets
+	droplets := make(Droplets, 0, len(godoDroplets))
 	for _, d := range godoDroplets {
 		droplets = append(droplets, Droplet{Droplet: &d})
 	}

@@ -410,7 +410,7 @@ func RunDropletActionRestore(c *CmdConfig) error {
 	return performAction(c, fn)
 }
 
-// RunDropletActionResize resizesx a droplet giving a size slug and
+// RunDropletActionResize resizes a droplet giving a size slug and
 // optionally expands the disk.
 func RunDropletActionResize(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {

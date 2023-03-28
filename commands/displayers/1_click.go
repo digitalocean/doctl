@@ -31,7 +31,7 @@ func (oc *OneClick) JSON(out io.Writer) error {
 	return writeJSON(oc.OneClicks, out)
 }
 
-// Cols are the colums returned in the json
+// Cols are the columns returned in the json
 func (oc *OneClick) Cols() []string {
 	return []string{
 		"SLUG",
@@ -49,7 +49,7 @@ func (oc *OneClick) ColMap() map[string]string {
 
 // KV maps the values of a 1-click to an output
 func (oc *OneClick) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(oc.OneClicks))
 
 	for _, oneClick := range oc.OneClicks {
 		o := map[string]interface{}{

@@ -25,7 +25,7 @@ var _ = suite("compute/floating-ip/get", func(t *testing.T, when spec.G, it spec
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/floating_ips/1.1.1.1":
+			case "/v2/reserved_ips/1.1.1.1":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -74,12 +74,12 @@ var _ = suite("compute/floating-ip/get", func(t *testing.T, when spec.G, it spec
 
 const (
 	floatingIPGetOutput = `
-IP         Region    Droplet ID    Droplet Name
-1.1.1.1    nyc3
+IP         Region    Droplet ID    Droplet Name    Project ID
+1.1.1.1    nyc3                                    c98374fa-35e2-11ed-870f-c7de97c5d5ed
 `
 	floatingIPGetResponse = `
 {
-  "floating_ip": {
+  "reserved_ip": {
     "ip": "1.1.1.1",
     "droplet": null,
     "region": {
@@ -89,7 +89,8 @@ IP         Region    Droplet ID    Droplet Name
       "features": [ "metadata" ],
       "available": true
     },
-    "locked": false
+    "locked": false,
+	"project_id": "c98374fa-35e2-11ed-870f-c7de97c5d5ed"
   }
 }
 `

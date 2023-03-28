@@ -86,8 +86,8 @@ var _ = suite("compute/load-balancer/get", func(t *testing.T, when spec.G, it sp
 
 const (
 	lbGetOutput = `
-ID            IP                 Name             Status    Created At              Algorithm      Region    Size        VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                            Forwarding Rules
-find-lb-id    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    round_robin    nyc3      lb-small    00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0
+ID            IP                 Name             Status    Created At              Region    Size        Size Unit    VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                            Forwarding Rules    Disable Lets Encrypt DNS Records
+find-lb-id    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    nyc3      lb-small    <nil>        00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0                        false
 `
 	lbGetResponse = `
 {
@@ -100,6 +100,7 @@ find-lb-id    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z
     "created_at": "2017-02-01T22:22:58Z",
     "forwarding_rules": [],
     "health_check": {},
+	"disable_lets_encrypt_dns_records": false,
     "sticky_sessions": {
       "type": "none"
 	},

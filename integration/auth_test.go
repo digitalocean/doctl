@@ -1,3 +1,4 @@
+//go:build !windows
 // +build !windows
 
 package integration
@@ -18,6 +19,7 @@ import (
 	"github.com/creack/pty"
 	"github.com/sclevine/spec"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/term"
 )
 
 var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
@@ -33,11 +35,12 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			w.Header().Add("content-type", "application/json")
 
 			switch req.URL.Path {
-			case "/v2/account":
+			case "/v1/oauth/token/info":
 				auth := req.Header.Get("Authorization")
 
-				if auth == "Bearer first-token" || auth == "Bearer second-token" || auth == "Bearer some-magic-token" {
-					w.Write([]byte(`{ "account":{}}`))
+				if auth == "Bearer first-token" || auth == "Bearer second-token" ||
+					auth == "Bearer some-magic-token" || auth == "Bearer some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1" {
+					w.Write([]byte(`{"resource_owner_id":123}`))
 					return
 				}
 
@@ -63,8 +66,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 
 	when("a custom config is provided", func() {
 		it("validates and saves the provided auth token", func() {
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 
@@ -73,22 +75,83 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 				"--config", testConfig,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)
 			expect.NoError(err)
 
+			// Set the terminal to raw mode so that we can send the carriage return
+			fd := int(ptmx.Fd())
+			oldState, err := term.MakeRaw(fd)
+			if err != nil {
+				panic(err)
+			}
+			defer func() { _ = term.Restore(fd, oldState) }()
+
 			go func() {
-				ptmx.Write([]byte("some-magic-token\n"))
+				ptmx.Write([]byte("some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1\r"))
 			}()
 
 			buf := bytes.NewBuffer([]byte{})
 
 			count, _ := io.Copy(buf, ptmx) // yes, ignore error intentionally
 			expect.NotZero(count)
-			ptmx.Close()
 
-			expect.Contains(buf.String(), "Validating token... OK")
+			expect.Contains(buf.String(), "Validating token...")
+			expect.Contains(buf.String(), "✔")
+
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+
+			expect.Contains(string(fileBytes), "access-token: some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1")
+		})
+	})
+
+	when("the --access-token flag is used", func() {
+		it("validates and saves the provided token non-interactively", func() {
+			tmpDir := t.TempDir()
+
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", testConfig,
+				"auth",
+				"init",
+				"--access-token", "some-magic-token",
+				"--token-validation-server", server.URL,
+			)
+
+			_, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+
+			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+		})
+
+		it("validates and overwrites an existing token non-interactively", func() {
+			var testConfigBytes = []byte(`access-token: first-token
+context: default
+`)
+
+			tmpDir := t.TempDir()
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"--config", testConfig,
+				"auth",
+				"init",
+				"--access-token", "some-magic-token",
+				"--token-validation-server", server.URL,
+			)
+
+			_, err := cmd.CombinedOutput()
+			expect.NoError(err)
 
 			fileBytes, err := ioutil.ReadFile(testConfig)
 			expect.NoError(err)
@@ -103,13 +166,21 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 				"-u", server.URL,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)
 			expect.NoError(err)
+			// Set the terminal to raw mode so that we can send the carriage return
+			fd := int(ptmx.Fd())
+			oldState, err := term.MakeRaw(fd)
+			if err != nil {
+				panic(err)
+			}
+			defer func() { _ = term.Restore(fd, oldState) }()
 
 			go func() {
-				ptmx.Write([]byte("some-magic-token\n"))
+				ptmx.Write([]byte("some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1\r"))
 			}()
 
 			buf := bytes.NewBuffer([]byte{})
@@ -118,7 +189,8 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			expect.NotZero(count)
 			ptmx.Close()
 
-			expect.Contains(buf.String(), "Validating token... OK")
+			expect.Contains(buf.String(), "Validating token...")
+			expect.Contains(buf.String(), "✔")
 
 			location, err := getDefaultConfigLocation()
 			expect.NoError(err)
@@ -126,7 +198,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			fileBytes, err := ioutil.ReadFile(location)
 			expect.NoError(err)
 
-			expect.Contains(string(fileBytes), "access-token: some-magic-token")
+			expect.Contains(string(fileBytes), "access-token: some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1")
 
 			err = os.Remove(location)
 			expect.NoError(err)
@@ -135,8 +207,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 
 	when("a token cannot be validated", func() {
 		it("exits non-zero with an error", func() {
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 
@@ -145,13 +216,21 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 				"--config", testConfig,
 				"auth",
 				"init",
+				"--token-validation-server", server.URL,
 			)
 
 			ptmx, err := pty.Start(cmd)
 			expect.NoError(err)
+			// Set the terminal to raw mode so that we can send the carriage return
+			fd := int(ptmx.Fd())
+			oldState, err := term.MakeRaw(fd)
+			if err != nil {
+				panic(err)
+			}
+			defer func() { _ = term.Restore(fd, oldState) }()
 
 			go func() {
-				ptmx.Write([]byte("some-bad-token\n"))
+				ptmx.Write([]byte("some-bad-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1a1\r"))
 			}()
 
 			buf := bytes.NewBuffer([]byte{})
@@ -160,8 +239,9 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			expect.NotZero(count)
 			ptmx.Close()
 
-			expect.Contains(buf.String(), "Validating token... invalid token")
-			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v2/account: 401", server.URL))
+			expect.Contains(buf.String(), "Validating token...")
+			expect.Contains(buf.String(), "✘")
+			expect.Contains(buf.String(), fmt.Sprintf("Unable to use supplied token to access API: GET %s/v1/oauth/token/info: 401", server.URL))
 		})
 	})
 
@@ -175,8 +255,7 @@ auth-contexts:
 context: default
 `)
 
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
 
@@ -188,7 +267,7 @@ context: default
 				"--context",
 				nextContext,
 			)
-			_, err = cmd.CombinedOutput()
+			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
 			fileBytes, err := ioutil.ReadFile(testConfig)
@@ -213,6 +292,36 @@ context: default
 		})
 	})
 
+	when("switching contexts containing a period", func() {
+		it("does not mangle that context", func() {
+			var testConfigBytes = []byte(`access-token: first-token
+auth-contexts:
+  test@example.com: second-token
+context: default
+`)
+
+			tmpDir := t.TempDir()
+			testConfig := filepath.Join(tmpDir, "test-config.yml")
+			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+
+			cmd := exec.Command(builtBinaryPath,
+				"-u", server.URL,
+				"auth",
+				"switch",
+				"--config", testConfig,
+			)
+			_, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(testConfig)
+			expect.NoError(err)
+			expect.Contains(string(fileBytes), "test@example.com: second-token")
+
+			err = os.Remove(testConfig)
+			expect.NoError(err)
+		})
+	})
+
 	when("the DIGITALOCEAN_CONTEXT variable is set", func() {
 		it("uses that context for commands", func() {
 			var testConfigBytes = []byte(`access-token: first-token
@@ -221,8 +330,7 @@ auth-contexts:
 context: default
 `)
 
-			tmpDir, err := ioutil.TempDir("", "")
-			expect.NoError(err)
+			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
 			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
 

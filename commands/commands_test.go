@@ -21,8 +21,10 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
+	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/godo"
 	"github.com/golang/mock/gomock"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -97,14 +99,14 @@ var (
 	testPrivateDropletList = do.Droplets{testPrivateDroplet}
 	testKernel             = do.Kernel{Kernel: &godo.Kernel{ID: 1}}
 	testKernelList         = do.Kernels{testKernel}
-	testFloatingIP         = do.FloatingIP{
-		FloatingIP: &godo.FloatingIP{
+	testReservedIP         = do.ReservedIP{
+		ReservedIP: &godo.ReservedIP{
 			Droplet: testDroplet.Droplet,
 			Region:  testDroplet.Region,
 			IP:      "127.0.0.1",
 		},
 	}
-	testFloatingIPList = do.FloatingIPs{testFloatingIP}
+	testReservedIPList = do.ReservedIPs{testReservedIP}
 
 	testSnapshot = do.Snapshot{
 		Snapshot: &godo.Snapshot{
@@ -146,38 +148,45 @@ func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
 type testFn func(c *CmdConfig, tm *tcMocks)
 
 type tcMocks struct {
-	account           *domocks.MockAccountService
-	actions           *domocks.MockActionsService
-	apps              *domocks.MockAppsService
-	balance           *domocks.MockBalanceService
-	billingHistory    *domocks.MockBillingHistoryService
-	databases         *domocks.MockDatabasesService
-	dropletActions    *domocks.MockDropletActionsService
-	droplets          *domocks.MockDropletsService
-	keys              *domocks.MockKeysService
-	sizes             *domocks.MockSizesService
-	regions           *domocks.MockRegionsService
-	images            *domocks.MockImagesService
-	imageActions      *domocks.MockImageActionsService
-	invoices          *domocks.MockInvoicesService
-	floatingIPs       *domocks.MockFloatingIPsService
-	floatingIPActions *domocks.MockFloatingIPActionsService
-	domains           *domocks.MockDomainsService
-	volumes           *domocks.MockVolumesService
-	volumeActions     *domocks.MockVolumeActionsService
-	tags              *domocks.MockTagsService
-	snapshots         *domocks.MockSnapshotsService
-	certificates      *domocks.MockCertificatesService
-	loadBalancers     *domocks.MockLoadBalancersService
-	firewalls         *domocks.MockFirewallsService
-	cdns              *domocks.MockCDNsService
-	projects          *domocks.MockProjectsService
-	kubernetes        *domocks.MockKubernetesService
-	registry          *domocks.MockRegistryService
-	sshRunner         *domocks.MockRunner
-	vpcs              *domocks.MockVPCsService
-	oneClick          *domocks.MockOneClickService
-	listen            *domocks.MockListenerService
+	account               *domocks.MockAccountService
+	actions               *domocks.MockActionsService
+	apps                  *domocks.MockAppsService
+	balance               *domocks.MockBalanceService
+	billingHistory        *domocks.MockBillingHistoryService
+	databases             *domocks.MockDatabasesService
+	dropletActions        *domocks.MockDropletActionsService
+	droplets              *domocks.MockDropletsService
+	keys                  *domocks.MockKeysService
+	sizes                 *domocks.MockSizesService
+	regions               *domocks.MockRegionsService
+	images                *domocks.MockImagesService
+	imageActions          *domocks.MockImageActionsService
+	invoices              *domocks.MockInvoicesService
+	reservedIPs           *domocks.MockReservedIPsService
+	reservedIPActions     *domocks.MockReservedIPActionsService
+	domains               *domocks.MockDomainsService
+	volumes               *domocks.MockVolumesService
+	volumeActions         *domocks.MockVolumeActionsService
+	tags                  *domocks.MockTagsService
+	snapshots             *domocks.MockSnapshotsService
+	certificates          *domocks.MockCertificatesService
+	loadBalancers         *domocks.MockLoadBalancersService
+	firewalls             *domocks.MockFirewallsService
+	cdns                  *domocks.MockCDNsService
+	projects              *domocks.MockProjectsService
+	kubernetes            *domocks.MockKubernetesService
+	registry              *domocks.MockRegistryService
+	sshRunner             *domocks.MockRunner
+	vpcs                  *domocks.MockVPCsService
+	oneClick              *domocks.MockOneClickService
+	listen                *domocks.MockListenerService
+	monitoring            *domocks.MockMonitoringService
+	serverless            *domocks.MockServerlessService
+	appBuilderFactory     *builder.MockComponentBuilderFactory
+	appBuilder            *builder.MockComponentBuilder
+	appDockerEngineClient *builder.MockDockerEngineClient
+	oauth                 *domocks.MockOAuthService
+	tokens                *domocks.MockTokensService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -185,43 +194,53 @@ func withTestClient(t *testing.T, tFn testFn) {
 	defer ctrl.Finish()
 
 	tm := &tcMocks{
-		account:           domocks.NewMockAccountService(ctrl),
-		actions:           domocks.NewMockActionsService(ctrl),
-		apps:              domocks.NewMockAppsService(ctrl),
-		balance:           domocks.NewMockBalanceService(ctrl),
-		billingHistory:    domocks.NewMockBillingHistoryService(ctrl),
-		keys:              domocks.NewMockKeysService(ctrl),
-		sizes:             domocks.NewMockSizesService(ctrl),
-		regions:           domocks.NewMockRegionsService(ctrl),
-		images:            domocks.NewMockImagesService(ctrl),
-		imageActions:      domocks.NewMockImageActionsService(ctrl),
-		invoices:          domocks.NewMockInvoicesService(ctrl),
-		floatingIPs:       domocks.NewMockFloatingIPsService(ctrl),
-		floatingIPActions: domocks.NewMockFloatingIPActionsService(ctrl),
-		droplets:          domocks.NewMockDropletsService(ctrl),
-		dropletActions:    domocks.NewMockDropletActionsService(ctrl),
-		domains:           domocks.NewMockDomainsService(ctrl),
-		tags:              domocks.NewMockTagsService(ctrl),
-		volumes:           domocks.NewMockVolumesService(ctrl),
-		volumeActions:     domocks.NewMockVolumeActionsService(ctrl),
-		snapshots:         domocks.NewMockSnapshotsService(ctrl),
-		certificates:      domocks.NewMockCertificatesService(ctrl),
-		loadBalancers:     domocks.NewMockLoadBalancersService(ctrl),
-		firewalls:         domocks.NewMockFirewallsService(ctrl),
-		cdns:              domocks.NewMockCDNsService(ctrl),
-		projects:          domocks.NewMockProjectsService(ctrl),
-		kubernetes:        domocks.NewMockKubernetesService(ctrl),
-		databases:         domocks.NewMockDatabasesService(ctrl),
-		registry:          domocks.NewMockRegistryService(ctrl),
-		sshRunner:         domocks.NewMockRunner(ctrl),
-		vpcs:              domocks.NewMockVPCsService(ctrl),
-		oneClick:          domocks.NewMockOneClickService(ctrl),
-		listen:            domocks.NewMockListenerService(ctrl),
+		account:               domocks.NewMockAccountService(ctrl),
+		actions:               domocks.NewMockActionsService(ctrl),
+		apps:                  domocks.NewMockAppsService(ctrl),
+		balance:               domocks.NewMockBalanceService(ctrl),
+		billingHistory:        domocks.NewMockBillingHistoryService(ctrl),
+		keys:                  domocks.NewMockKeysService(ctrl),
+		sizes:                 domocks.NewMockSizesService(ctrl),
+		regions:               domocks.NewMockRegionsService(ctrl),
+		images:                domocks.NewMockImagesService(ctrl),
+		imageActions:          domocks.NewMockImageActionsService(ctrl),
+		invoices:              domocks.NewMockInvoicesService(ctrl),
+		reservedIPs:           domocks.NewMockReservedIPsService(ctrl),
+		reservedIPActions:     domocks.NewMockReservedIPActionsService(ctrl),
+		droplets:              domocks.NewMockDropletsService(ctrl),
+		dropletActions:        domocks.NewMockDropletActionsService(ctrl),
+		domains:               domocks.NewMockDomainsService(ctrl),
+		tags:                  domocks.NewMockTagsService(ctrl),
+		volumes:               domocks.NewMockVolumesService(ctrl),
+		volumeActions:         domocks.NewMockVolumeActionsService(ctrl),
+		snapshots:             domocks.NewMockSnapshotsService(ctrl),
+		certificates:          domocks.NewMockCertificatesService(ctrl),
+		loadBalancers:         domocks.NewMockLoadBalancersService(ctrl),
+		firewalls:             domocks.NewMockFirewallsService(ctrl),
+		cdns:                  domocks.NewMockCDNsService(ctrl),
+		projects:              domocks.NewMockProjectsService(ctrl),
+		kubernetes:            domocks.NewMockKubernetesService(ctrl),
+		databases:             domocks.NewMockDatabasesService(ctrl),
+		registry:              domocks.NewMockRegistryService(ctrl),
+		sshRunner:             domocks.NewMockRunner(ctrl),
+		vpcs:                  domocks.NewMockVPCsService(ctrl),
+		oneClick:              domocks.NewMockOneClickService(ctrl),
+		listen:                domocks.NewMockListenerService(ctrl),
+		monitoring:            domocks.NewMockMonitoringService(ctrl),
+		serverless:            domocks.NewMockServerlessService(ctrl),
+		appBuilderFactory:     builder.NewMockComponentBuilderFactory(ctrl),
+		appBuilder:            builder.NewMockComponentBuilder(ctrl),
+		appDockerEngineClient: builder.NewMockDockerEngineClient(ctrl),
+		oauth:                 domocks.NewMockOAuthService(ctrl),
+		tokens:                domocks.NewMockTokensService(ctrl),
 	}
+
+	testConfig := doctl.NewTestConfig()
+	testConfig.DockerEngineClient = tm.appDockerEngineClient
 
 	config := &CmdConfig{
 		NS:   "test",
-		Doit: doctl.NewTestConfig(),
+		Doit: testConfig,
 		Out:  ioutil.Discard,
 
 		// can stub this out, since the return is dictated by the mocks.
@@ -233,13 +252,15 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 		setContextAccessToken: func(token string) {},
 
+		componentBuilderFactory: tm.appBuilderFactory,
+
 		Keys:              func() do.KeysService { return tm.keys },
 		Sizes:             func() do.SizesService { return tm.sizes },
 		Regions:           func() do.RegionsService { return tm.regions },
 		Images:            func() do.ImagesService { return tm.images },
 		ImageActions:      func() do.ImageActionsService { return tm.imageActions },
-		FloatingIPs:       func() do.FloatingIPsService { return tm.floatingIPs },
-		FloatingIPActions: func() do.FloatingIPActionsService { return tm.floatingIPActions },
+		ReservedIPs:       func() do.ReservedIPsService { return tm.reservedIPs },
+		ReservedIPActions: func() do.ReservedIPActionsService { return tm.reservedIPActions },
 		Droplets:          func() do.DropletsService { return tm.droplets },
 		DropletActions:    func() do.DropletActionsService { return tm.dropletActions },
 		Domains:           func() do.DomainsService { return tm.domains },
@@ -263,7 +284,37 @@ func withTestClient(t *testing.T, tFn testFn) {
 		VPCs:              func() do.VPCsService { return tm.vpcs },
 		OneClicks:         func() do.OneClickService { return tm.oneClick },
 		Apps:              func() do.AppsService { return tm.apps },
+		Monitoring:        func() do.MonitoringService { return tm.monitoring },
+		Serverless:        func() do.ServerlessService { return tm.serverless },
+		OAuth:             func() do.OAuthService { return tm.oauth },
+		Tokens:            func() do.TokensService { return tm.tokens },
 	}
 
 	tFn(config, tm)
+}
+
+func assertCommandAliases(t *testing.T, cmd *cobra.Command) {
+	for _, c := range cmd.Commands() {
+		if c.Name() == "list" {
+			assert.Contains(t, c.Aliases, "ls", "Missing 'ls' alias for 'list' command.")
+		}
+		if c.Name() == "delete" {
+			assert.Contains(t, c.Aliases, "rm", "Missing 'rm' alias for 'delete' command.")
+		}
+	}
+}
+
+func recurseCommand(t *testing.T, cmd *cobra.Command) {
+	t.Run(cmd.Name(), func(t *testing.T) {
+		assertCommandAliases(t, cmd)
+	})
+	for _, c := range cmd.Commands() {
+		recurseCommand(t, c)
+	}
+}
+
+func TestCommandAliases(t *testing.T) {
+	for _, cmd := range DoitCmd.Commands() {
+		recurseCommand(t, cmd)
+	}
 }

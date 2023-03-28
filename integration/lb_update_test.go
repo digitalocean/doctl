@@ -97,7 +97,7 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 })
 
 // Formatting of responses from server looks very similar
-// easier for us to reuse said resonses from get request.
+// easier for us to reuse said responses from get request.
 // If / when they materially differ we should feel free
 // to make these custom.
 const (
@@ -113,6 +113,7 @@ const (
     "sticky_sessions":{},
     "droplet_ids":[1,2,3,4],
     "tag":"some-tag",
+    "disable_lets_encrypt_dns_records": false,
     "vpc_uuid": "00000000-0000-4000-8000-000000000000"
 }`
 )

@@ -37,6 +37,7 @@ func (clusters *KubernetesClusters) Cols() []string {
 		"Region",
 		"Version",
 		"AutoUpgrade",
+		"HAControlPlane",
 		"Status",
 		"Endpoint",
 		"IPv4",
@@ -62,20 +63,21 @@ func (clusters *KubernetesClusters) ColMap() map[string]string {
 		}
 	}
 	return map[string]string{
-		"ID":            "ID",
-		"Name":          "Name",
-		"Region":        "Region",
-		"Version":       "Version",
-		"AutoUpgrade":   "Auto Upgrade",
-		"ClusterSubnet": "Cluster Subnet",
-		"ServiceSubnet": "Service Subnet",
-		"IPv4":          "IPv4",
-		"Endpoint":      "Endpoint",
-		"Tags":          "Tags",
-		"Status":        "Status",
-		"Created":       "Created At",
-		"Updated":       "Updated At",
-		"NodePools":     "Node Pools",
+		"ID":             "ID",
+		"Name":           "Name",
+		"Region":         "Region",
+		"Version":        "Version",
+		"AutoUpgrade":    "Auto Upgrade",
+		"HAControlPlane": "HA Control Plane",
+		"ClusterSubnet":  "Cluster Subnet",
+		"ServiceSubnet":  "Service Subnet",
+		"IPv4":           "IPv4",
+		"Endpoint":       "Endpoint",
+		"Tags":           "Tags",
+		"Status":         "Status",
+		"Created":        "Created At",
+		"Updated":        "Updated At",
+		"NodePools":      "Node Pools",
 	}
 }
 
@@ -93,20 +95,21 @@ func (clusters *KubernetesClusters) KV() []map[string]interface{} {
 		}
 
 		o := map[string]interface{}{
-			"ID":            cluster.ID,
-			"Name":          cluster.Name,
-			"Region":        cluster.RegionSlug,
-			"Version":       cluster.VersionSlug,
-			"AutoUpgrade":   cluster.AutoUpgrade,
-			"ClusterSubnet": cluster.ClusterSubnet,
-			"ServiceSubnet": cluster.ServiceSubnet,
-			"IPv4":          cluster.IPv4,
-			"Endpoint":      cluster.Endpoint,
-			"Tags":          tags,
-			"Status":        cluster.Status.State,
-			"Created":       cluster.CreatedAt,
-			"Updated":       cluster.UpdatedAt,
-			"NodePools":     strings.Join(nodePools, " "),
+			"ID":             cluster.ID,
+			"Name":           cluster.Name,
+			"Region":         cluster.RegionSlug,
+			"Version":        cluster.VersionSlug,
+			"AutoUpgrade":    cluster.AutoUpgrade,
+			"HAControlPlane": cluster.HA,
+			"ClusterSubnet":  cluster.ClusterSubnet,
+			"ServiceSubnet":  cluster.ServiceSubnet,
+			"IPv4":           cluster.IPv4,
+			"Endpoint":       cluster.Endpoint,
+			"Tags":           tags,
+			"Status":         cluster.Status.State,
+			"Created":        cluster.CreatedAt,
+			"Updated":        cluster.UpdatedAt,
+			"NodePools":      strings.Join(nodePools, " "),
 		}
 		out = append(out, o)
 	}
@@ -190,6 +193,7 @@ func (versions *KubernetesVersions) Cols() []string {
 	return []string{
 		"Slug",
 		"KubernetesVersion",
+		"SupportedFeatures",
 	}
 }
 
@@ -197,6 +201,7 @@ func (versions *KubernetesVersions) ColMap() map[string]string {
 	return map[string]string{
 		"Slug":              "Slug",
 		"KubernetesVersion": "Kubernetes Version",
+		"SupportedFeatures": "Supported Features",
 	}
 }
 
@@ -208,6 +213,7 @@ func (versions *KubernetesVersions) KV() []map[string]interface{} {
 		o := map[string]interface{}{
 			"Slug":              version.KubernetesVersion.Slug,
 			"KubernetesVersion": version.KubernetesVersion.KubernetesVersion,
+			"SupportedFeatures": strings.Join(version.KubernetesVersion.SupportedFeatures, ", "),
 		}
 		out = append(out, o)
 	}
@@ -320,15 +326,12 @@ func (ar *KubernetesAssociatedResources) ColMap() map[string]string {
 }
 
 func (ar *KubernetesAssociatedResources) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, 1)
-
 	o := map[string]interface{}{
 		"Volumes":         flattenAssociatedResourceIDs(ar.KubernetesAssociatedResources.Volumes),
 		"VolumeSnapshots": flattenAssociatedResourceIDs(ar.KubernetesAssociatedResources.VolumeSnapshots),
 		"LoadBalancers":   flattenAssociatedResourceIDs(ar.KubernetesAssociatedResources.LoadBalancers),
 	}
-	out = append(out, o)
-	return out
+	return []map[string]interface{}{o}
 }
 
 func flattenAssociatedResourceIDs(resources []*godo.AssociatedResource) (out []string) {

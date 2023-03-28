@@ -54,7 +54,7 @@ func (a *Volume) ColMap() map[string]string {
 }
 
 func (a *Volume) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(a.Volumes))
 	for _, volume := range a.Volumes {
 		m := map[string]interface{}{
 			"ID":               volume.ID,

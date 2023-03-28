@@ -35,64 +35,33 @@ func (m *MockImagesService) EXPECT() *MockImagesServiceMockRecorder {
 	return m.recorder
 }
 
-// List mocks base method.
-func (m *MockImagesService) List(public bool) (do.Images, error) {
+// Create mocks base method.
+func (m *MockImagesService) Create(icr *godo.CustomImageCreateRequest) (*do.Image, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", public)
-	ret0, _ := ret[0].(do.Images)
+	ret := m.ctrl.Call(m, "Create", icr)
+	ret0, _ := ret[0].(*do.Image)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// List indicates an expected call of List.
-func (mr *MockImagesServiceMockRecorder) List(public interface{}) *gomock.Call {
+// Create indicates an expected call of Create.
+func (mr *MockImagesServiceMockRecorder) Create(icr interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockImagesService)(nil).List), public)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockImagesService)(nil).Create), icr)
 }
 
-// ListDistribution mocks base method.
-func (m *MockImagesService) ListDistribution(public bool) (do.Images, error) {
+// Delete mocks base method.
+func (m *MockImagesService) Delete(id int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListDistribution", public)
-	ret0, _ := ret[0].(do.Images)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "Delete", id)
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
-// ListDistribution indicates an expected call of ListDistribution.
-func (mr *MockImagesServiceMockRecorder) ListDistribution(public interface{}) *gomock.Call {
+// Delete indicates an expected call of Delete.
+func (mr *MockImagesServiceMockRecorder) Delete(id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDistribution", reflect.TypeOf((*MockImagesService)(nil).ListDistribution), public)
-}
-
-// ListApplication mocks base method.
-func (m *MockImagesService) ListApplication(public bool) (do.Images, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListApplication", public)
-	ret0, _ := ret[0].(do.Images)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListApplication indicates an expected call of ListApplication.
-func (mr *MockImagesServiceMockRecorder) ListApplication(public interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplication", reflect.TypeOf((*MockImagesService)(nil).ListApplication), public)
-}
-
-// ListUser mocks base method.
-func (m *MockImagesService) ListUser(public bool) (do.Images, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListUser", public)
-	ret0, _ := ret[0].(do.Images)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListUser indicates an expected call of ListUser.
-func (mr *MockImagesServiceMockRecorder) ListUser(public interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUser", reflect.TypeOf((*MockImagesService)(nil).ListUser), public)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockImagesService)(nil).Delete), id)
 }
 
 // GetByID mocks base method.
@@ -125,6 +94,66 @@ func (mr *MockImagesServiceMockRecorder) GetBySlug(slug interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBySlug", reflect.TypeOf((*MockImagesService)(nil).GetBySlug), slug)
 }
 
+// List mocks base method.
+func (m *MockImagesService) List(public bool) (do.Images, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", public)
+	ret0, _ := ret[0].(do.Images)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockImagesServiceMockRecorder) List(public interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockImagesService)(nil).List), public)
+}
+
+// ListApplication mocks base method.
+func (m *MockImagesService) ListApplication(public bool) (do.Images, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListApplication", public)
+	ret0, _ := ret[0].(do.Images)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListApplication indicates an expected call of ListApplication.
+func (mr *MockImagesServiceMockRecorder) ListApplication(public interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplication", reflect.TypeOf((*MockImagesService)(nil).ListApplication), public)
+}
+
+// ListDistribution mocks base method.
+func (m *MockImagesService) ListDistribution(public bool) (do.Images, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDistribution", public)
+	ret0, _ := ret[0].(do.Images)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDistribution indicates an expected call of ListDistribution.
+func (mr *MockImagesServiceMockRecorder) ListDistribution(public interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDistribution", reflect.TypeOf((*MockImagesService)(nil).ListDistribution), public)
+}
+
+// ListUser mocks base method.
+func (m *MockImagesService) ListUser(public bool) (do.Images, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListUser", public)
+	ret0, _ := ret[0].(do.Images)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListUser indicates an expected call of ListUser.
+func (mr *MockImagesServiceMockRecorder) ListUser(public interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUser", reflect.TypeOf((*MockImagesService)(nil).ListUser), public)
+}
+
 // Update mocks base method.
 func (m *MockImagesService) Update(id int, iur *godo.ImageUpdateRequest) (*do.Image, error) {
 	m.ctrl.T.Helper()
@@ -138,33 +167,4 @@ func (m *MockImagesService) Update(id int, iur *godo.ImageUpdateRequest) (*do.Im
 func (mr *MockImagesServiceMockRecorder) Update(id, iur interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockImagesService)(nil).Update), id, iur)
-}
-
-// Delete mocks base method.
-func (m *MockImagesService) Delete(id int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockImagesServiceMockRecorder) Delete(id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockImagesService)(nil).Delete), id)
-}
-
-// Create mocks base method.
-func (m *MockImagesService) Create(icr *godo.CustomImageCreateRequest) (*do.Image, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", icr)
-	ret0, _ := ret[0].(*do.Image)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Create indicates an expected call of Create.
-func (mr *MockImagesServiceMockRecorder) Create(icr interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockImagesService)(nil).Create), icr)
 }

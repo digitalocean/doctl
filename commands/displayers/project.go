@@ -60,7 +60,7 @@ func (p *Project) ColMap() map[string]string {
 }
 
 func (p *Project) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(p.Projects))
 
 	for _, pr := range p.Projects {
 		o := map[string]interface{}{
@@ -108,7 +108,7 @@ func (p *ProjectResource) ColMap() map[string]string {
 }
 
 func (p *ProjectResource) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(p.ProjectResources))
 
 	for _, pr := range p.ProjectResources {
 		assignedAt := pr.AssignedAt

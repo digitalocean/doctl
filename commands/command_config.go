@@ -20,6 +20,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/spf13/viper"
 )
 
@@ -30,9 +31,11 @@ type CmdConfig struct {
 	Out  io.Writer
 	Args []string
 
-	initServices          func(*CmdConfig) error
-	getContextAccessToken func() string
-	setContextAccessToken func(string)
+	initServices            func(*CmdConfig) error
+	getContextAccessToken   func() string
+	setContextAccessToken   func(string)
+	removeContext           func(string) error
+	componentBuilderFactory builder.ComponentBuilderFactory
 
 	// services
 	Keys              func() do.KeysService
@@ -41,8 +44,8 @@ type CmdConfig struct {
 	Images            func() do.ImagesService
 	ImageActions      func() do.ImageActionsService
 	LoadBalancers     func() do.LoadBalancersService
-	FloatingIPs       func() do.FloatingIPsService
-	FloatingIPActions func() do.FloatingIPActionsService
+	ReservedIPs       func() do.ReservedIPsService
+	ReservedIPActions func() do.ReservedIPActionsService
 	Droplets          func() do.DropletsService
 	DropletActions    func() do.DropletActionsService
 	Domains           func() do.DomainsService
@@ -65,6 +68,10 @@ type CmdConfig struct {
 	VPCs              func() do.VPCsService
 	OneClicks         func() do.OneClickService
 	Apps              func() do.AppsService
+	Monitoring        func() do.MonitoringService
+	Serverless        func() do.ServerlessService
+	OAuth             func() do.OAuthService
+	Tokens            func() do.TokensService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -88,8 +95,8 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Regions = func() do.RegionsService { return do.NewRegionsService(godoClient) }
 			c.Images = func() do.ImagesService { return do.NewImagesService(godoClient) }
 			c.ImageActions = func() do.ImageActionsService { return do.NewImageActionsService(godoClient) }
-			c.FloatingIPs = func() do.FloatingIPsService { return do.NewFloatingIPsService(godoClient) }
-			c.FloatingIPActions = func() do.FloatingIPActionsService { return do.NewFloatingIPActionsService(godoClient) }
+			c.ReservedIPs = func() do.ReservedIPsService { return do.NewReservedIPsService(godoClient) }
+			c.ReservedIPActions = func() do.ReservedIPActionsService { return do.NewReservedIPActionsService(godoClient) }
 			c.Droplets = func() do.DropletsService { return do.NewDropletsService(godoClient) }
 			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
 			c.Domains = func() do.DomainsService { return do.NewDomainsService(godoClient) }
@@ -113,6 +120,12 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.VPCs = func() do.VPCsService { return do.NewVPCsService(godoClient) }
 			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(godoClient) }
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }
+			c.Monitoring = func() do.MonitoringService { return do.NewMonitoringService(godoClient) }
+			c.Serverless = func() do.ServerlessService {
+				return do.NewServerlessService(godoClient, getServerlessDirectory(), accessToken)
+			}
+			c.OAuth = func() do.OAuthService { return do.NewOAuthService(godoClient) }
+			c.Tokens = func() do.TokensService { return do.NewTokensService(godoClient) }
 
 			return nil
 		},
@@ -152,6 +165,29 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				viper.Set("auth-contexts", contexts)
 			}
 		},
+
+		removeContext: func(context string) error {
+			if context == "default" {
+				viper.Set("access-token", "")
+				return nil
+			}
+
+			contexts := viper.GetStringMapString("auth-contexts")
+
+			_, ok := contexts[context]
+
+			if !ok {
+				return fmt.Errorf("Context not found")
+			}
+
+			delete(contexts, context)
+
+			viper.Set("auth-contexts", contexts)
+
+			return nil
+		},
+
+		componentBuilderFactory: &builder.DefaultComponentBuilderFactory{},
 	}
 
 	if initGodo {

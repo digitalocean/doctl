@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"fmt"
 	"io/ioutil"
 
 	"github.com/digitalocean/doctl"
@@ -61,7 +60,7 @@ Note that importing a key to your account will not add it to any Droplets`, Writ
 	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "Permanently delete an SSH key from your account", `Use this command to permanently delete an SSH key from your account.
 
 Note that this does not delete an SSH key from any Droplets.`, Writer,
-		aliasOpt("d"))
+		aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the key without a confirmation prompt")
 
 	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "Update an SSH key's name", `Use this command to update the name of an SSH key.`, Writer,
@@ -197,7 +196,7 @@ func RunKeyDelete(c *CmdConfig) error {
 		return ks.Delete(rawKey)
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 // RunKeyUpdate updates a key.

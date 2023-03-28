@@ -25,7 +25,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/floating_ips/77/actions/66":
+			case "/v2/reserved_ips/77/actions/66":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -38,7 +38,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 				}
 
 				w.Write([]byte(floatingIPActionResponse))
-			case "/v2/floating_ips/1/actions":
+			case "/v2/reserved_ips/1/actions":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -56,7 +56,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 				expect.JSONEq(`{"type":"unassign"}`, string(reqBody))
 
 				w.Write([]byte(floatingIPActionResponse))
-			case "/v2/floating_ips/1313/actions":
+			case "/v2/reserved_ips/1313/actions":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)

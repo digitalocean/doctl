@@ -6,7 +6,7 @@ import (
 )
 
 func extractDropletIDs(s []string) ([]int, error) {
-	dropletIDs := []int{}
+	dropletIDs := make([]int, 0, len(s))
 
 	for _, e := range s {
 		i, err := strconv.Atoi(e)

@@ -43,7 +43,7 @@ func (s *Snapshot) ColMap() map[string]string {
 }
 
 func (s *Snapshot) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(s.Snapshots))
 
 	for _, ss := range s.Snapshots {
 		o := map[string]interface{}{

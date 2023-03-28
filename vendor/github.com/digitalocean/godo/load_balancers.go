@@ -12,7 +12,7 @@ const forwardingRulesPath = "forwarding_rules"
 const dropletsPath = "droplets"
 
 // LoadBalancersService is an interface for managing load balancers with the DigitalOcean API.
-// See: https://developers.digitalocean.com/documentation/v2#load-balancers
+// See: https://docs.digitalocean.com/reference/api/api-reference/#tag/Load-Balancers
 type LoadBalancersService interface {
 	Get(context.Context, string) (*LoadBalancer, *Response, error)
 	List(context.Context, *ListOptions) ([]LoadBalancer, *Response, error)
@@ -28,24 +28,32 @@ type LoadBalancersService interface {
 // LoadBalancer represents a DigitalOcean load balancer configuration.
 // Tags can only be provided upon the creation of a Load Balancer.
 type LoadBalancer struct {
-	ID                     string           `json:"id,omitempty"`
-	Name                   string           `json:"name,omitempty"`
-	IP                     string           `json:"ip,omitempty"`
-	SizeSlug               string           `json:"size,omitempty"`
-	Algorithm              string           `json:"algorithm,omitempty"`
-	Status                 string           `json:"status,omitempty"`
-	Created                string           `json:"created_at,omitempty"`
-	ForwardingRules        []ForwardingRule `json:"forwarding_rules,omitempty"`
-	HealthCheck            *HealthCheck     `json:"health_check,omitempty"`
-	StickySessions         *StickySessions  `json:"sticky_sessions,omitempty"`
-	Region                 *Region          `json:"region,omitempty"`
-	DropletIDs             []int            `json:"droplet_ids,omitempty"`
-	Tag                    string           `json:"tag,omitempty"`
-	Tags                   []string         `json:"tags,omitempty"`
-	RedirectHttpToHttps    bool             `json:"redirect_http_to_https,omitempty"`
-	EnableProxyProtocol    bool             `json:"enable_proxy_protocol,omitempty"`
-	EnableBackendKeepalive bool             `json:"enable_backend_keepalive,omitempty"`
-	VPCUUID                string           `json:"vpc_uuid,omitempty"`
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+	IP   string `json:"ip,omitempty"`
+	// SizeSlug is mutually exclusive with SizeUnit. Only one should be specified
+	SizeSlug string `json:"size,omitempty"`
+	// SizeUnit is mutually exclusive with SizeSlug. Only one should be specified
+	SizeUnit                     uint32           `json:"size_unit,omitempty"`
+	Algorithm                    string           `json:"algorithm,omitempty"`
+	Status                       string           `json:"status,omitempty"`
+	Created                      string           `json:"created_at,omitempty"`
+	ForwardingRules              []ForwardingRule `json:"forwarding_rules,omitempty"`
+	HealthCheck                  *HealthCheck     `json:"health_check,omitempty"`
+	StickySessions               *StickySessions  `json:"sticky_sessions,omitempty"`
+	Region                       *Region          `json:"region,omitempty"`
+	DropletIDs                   []int            `json:"droplet_ids,omitempty"`
+	Tag                          string           `json:"tag,omitempty"`
+	Tags                         []string         `json:"tags,omitempty"`
+	RedirectHttpToHttps          bool             `json:"redirect_http_to_https,omitempty"`
+	EnableProxyProtocol          bool             `json:"enable_proxy_protocol,omitempty"`
+	EnableBackendKeepalive       bool             `json:"enable_backend_keepalive,omitempty"`
+	VPCUUID                      string           `json:"vpc_uuid,omitempty"`
+	DisableLetsEncryptDNSRecords *bool            `json:"disable_lets_encrypt_dns_records,omitempty"`
+	ValidateOnly                 bool             `json:"validate_only,omitempty"`
+	ProjectID                    string           `json:"project_id,omitempty"`
+	HTTPIdleTimeoutSeconds       *uint64          `json:"http_idle_timeout_seconds,omitempty"`
+	Firewall                     *LBFirewall      `json:"firewall,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancer.
@@ -62,17 +70,26 @@ func (l LoadBalancer) URN() string {
 // Modifying the returned LoadBalancerRequest will not modify the original LoadBalancer.
 func (l LoadBalancer) AsRequest() *LoadBalancerRequest {
 	r := LoadBalancerRequest{
-		Name:                   l.Name,
-		Algorithm:              l.Algorithm,
-		SizeSlug:               l.SizeSlug,
-		ForwardingRules:        append([]ForwardingRule(nil), l.ForwardingRules...),
-		DropletIDs:             append([]int(nil), l.DropletIDs...),
-		Tag:                    l.Tag,
-		RedirectHttpToHttps:    l.RedirectHttpToHttps,
-		EnableProxyProtocol:    l.EnableProxyProtocol,
-		EnableBackendKeepalive: l.EnableBackendKeepalive,
-		HealthCheck:            l.HealthCheck,
-		VPCUUID:                l.VPCUUID,
+		Name:                         l.Name,
+		Algorithm:                    l.Algorithm,
+		SizeSlug:                     l.SizeSlug,
+		SizeUnit:                     l.SizeUnit,
+		ForwardingRules:              append([]ForwardingRule(nil), l.ForwardingRules...),
+		DropletIDs:                   append([]int(nil), l.DropletIDs...),
+		Tag:                          l.Tag,
+		RedirectHttpToHttps:          l.RedirectHttpToHttps,
+		EnableProxyProtocol:          l.EnableProxyProtocol,
+		EnableBackendKeepalive:       l.EnableBackendKeepalive,
+		HealthCheck:                  l.HealthCheck,
+		VPCUUID:                      l.VPCUUID,
+		DisableLetsEncryptDNSRecords: l.DisableLetsEncryptDNSRecords,
+		ValidateOnly:                 l.ValidateOnly,
+		ProjectID:                    l.ProjectID,
+		HTTPIdleTimeoutSeconds:       l.HTTPIdleTimeoutSeconds,
+	}
+
+	if l.DisableLetsEncryptDNSRecords != nil {
+		*r.DisableLetsEncryptDNSRecords = *l.DisableLetsEncryptDNSRecords
 	}
 
 	if l.HealthCheck != nil {
@@ -86,6 +103,11 @@ func (l LoadBalancer) AsRequest() *LoadBalancerRequest {
 	if l.Region != nil {
 		r.Region = l.Region.Slug
 	}
+
+	if l.Firewall != nil {
+		r.Firewall = l.Firewall.deepCopy()
+	}
+
 	return &r
 }
 
@@ -132,22 +154,57 @@ func (s StickySessions) String() string {
 	return Stringify(s)
 }
 
+// LBFirewall holds the allow and deny rules for a loadbalancer's firewall.
+// Currently, allow and deny rules support cidrs and ips.
+// Please use the helper methods (IPSourceFirewall/CIDRSourceFirewall) to format the allow/deny rules.
+type LBFirewall struct {
+	Allow []string `json:"allow,omitempty"`
+	Deny  []string `json:"deny,omitempty"`
+}
+
+func (lbf *LBFirewall) deepCopy() *LBFirewall {
+	return &LBFirewall{
+		Allow: append([]string(nil), lbf.Allow...),
+		Deny:  append([]string(nil), lbf.Deny...),
+	}
+}
+
+// IPSourceFirewall takes an IP (string) and returns a formatted ip source firewall rule
+func IPSourceFirewall(ip string) string { return fmt.Sprintf("ip:%s", ip) }
+
+// CIDRSourceFirewall takes a CIDR notation IP address and prefix length string
+// like "192.0.2.0/24" and returns a formatted cidr source firewall rule
+func CIDRSourceFirewall(cidr string) string { return fmt.Sprintf("cidr:%s", cidr) }
+
+// String creates a human-readable description of an LBFirewall instance.
+func (f LBFirewall) String() string {
+	return Stringify(f)
+}
+
 // LoadBalancerRequest represents the configuration to be applied to an existing or a new load balancer.
 type LoadBalancerRequest struct {
-	Name                   string           `json:"name,omitempty"`
-	Algorithm              string           `json:"algorithm,omitempty"`
-	Region                 string           `json:"region,omitempty"`
-	SizeSlug               string           `json:"size,omitempty"`
-	ForwardingRules        []ForwardingRule `json:"forwarding_rules,omitempty"`
-	HealthCheck            *HealthCheck     `json:"health_check,omitempty"`
-	StickySessions         *StickySessions  `json:"sticky_sessions,omitempty"`
-	DropletIDs             []int            `json:"droplet_ids,omitempty"`
-	Tag                    string           `json:"tag,omitempty"`
-	Tags                   []string         `json:"tags,omitempty"`
-	RedirectHttpToHttps    bool             `json:"redirect_http_to_https,omitempty"`
-	EnableProxyProtocol    bool             `json:"enable_proxy_protocol,omitempty"`
-	EnableBackendKeepalive bool             `json:"enable_backend_keepalive,omitempty"`
-	VPCUUID                string           `json:"vpc_uuid,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Algorithm string `json:"algorithm,omitempty"`
+	Region    string `json:"region,omitempty"`
+	// SizeSlug is mutually exclusive with SizeUnit. Only one should be specified
+	SizeSlug string `json:"size,omitempty"`
+	// SizeUnit is mutually exclusive with SizeSlug. Only one should be specified
+	SizeUnit                     uint32           `json:"size_unit,omitempty"`
+	ForwardingRules              []ForwardingRule `json:"forwarding_rules,omitempty"`
+	HealthCheck                  *HealthCheck     `json:"health_check,omitempty"`
+	StickySessions               *StickySessions  `json:"sticky_sessions,omitempty"`
+	DropletIDs                   []int            `json:"droplet_ids,omitempty"`
+	Tag                          string           `json:"tag,omitempty"`
+	Tags                         []string         `json:"tags,omitempty"`
+	RedirectHttpToHttps          bool             `json:"redirect_http_to_https,omitempty"`
+	EnableProxyProtocol          bool             `json:"enable_proxy_protocol,omitempty"`
+	EnableBackendKeepalive       bool             `json:"enable_backend_keepalive,omitempty"`
+	VPCUUID                      string           `json:"vpc_uuid,omitempty"`
+	DisableLetsEncryptDNSRecords *bool            `json:"disable_lets_encrypt_dns_records,omitempty"`
+	ValidateOnly                 bool             `json:"validate_only,omitempty"`
+	ProjectID                    string           `json:"project_id,omitempty"`
+	HTTPIdleTimeoutSeconds       *uint64          `json:"http_idle_timeout_seconds,omitempty"`
+	Firewall                     *LBFirewall      `json:"firewall,omitempty"`
 }
 
 // String creates a human-readable description of a LoadBalancerRequest.

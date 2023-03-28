@@ -36,12 +36,38 @@ var (
 		Hour: "10:00",
 	}
 
+	testBackUpRestore = &godo.DatabaseBackupRestore{
+		DatabaseName:    "sunny-db-cluster",
+		BackupCreatedAt: "2023-02-01T17:32:15Z",
+	}
+
 	// doctl mocks
 
 	testDBCluster = do.Database{
 		Database: &godo.Database{
 			ID:                "ea4652de-4fe0-11e9-b7ab-df1ef30eab9e",
 			Name:              "sunny-db-cluster",
+			RegionSlug:        "nyc1",
+			EngineSlug:        "pg",
+			VersionSlug:       "11",
+			NumNodes:          3,
+			SizeSlug:          "db-s-1vcpu-2gb",
+			DBNames:           []string{"defaultdb"},
+			CreatedAt:         time.Now(),
+			Status:            "online",
+			Connection:        testGODOConnection,
+			MaintenanceWindow: testGODOMainWindow,
+			Users: []godo.DatabaseUser{
+				*testGODOUser,
+			},
+			PrivateNetworkUUID: "1fe49b6c-ac8e-11e9-98cb-3bec94f411bc",
+		},
+	}
+
+	testDBBackUpCluster = do.Database{
+		Database: &godo.Database{
+			ID:                "ea4652de-4fe0-11e9-b7ab-df1ef30eab9e",
+			Name:              "db-replica",
 			RegionSlug:        "nyc1",
 			EngineSlug:        "pg",
 			VersionSlug:       "11",
@@ -92,6 +118,7 @@ var (
 
 	testDBReplica = do.DatabaseReplica{
 		DatabaseReplica: &godo.DatabaseReplica{
+			ID:                 "a09a5484-8ad7-4541-a42a-21481f7b55df",
 			Name:               "sunny-db-replica",
 			Connection:         testGODOConnection,
 			Region:             "nyc1",
@@ -145,6 +172,10 @@ var (
 		godo.SQLModeNoTableOptions,
 	}
 
+	testDBEngineOptions = &do.DatabaseOptions{
+		DatabaseOptions: &godo.DatabaseOptions{},
+	}
+
 	errTest = errors.New("error")
 )
 
@@ -160,8 +191,10 @@ func TestDatabasesCommand(t *testing.T) {
 		"migrate",
 		"resize",
 		"firewalls",
+		"fork",
 		"backups",
 		"replica",
+		"options",
 		"maintenance-window",
 		"user",
 		"pool",
@@ -222,6 +255,17 @@ func TestDatabaseReplicaCommand(t *testing.T) {
 		"create",
 		"delete",
 		"connection",
+	)
+}
+
+func TestDatabaseOptionsCommand(t *testing.T) {
+	cmd := databaseOptions()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd,
+		"engines",
+		"regions",
+		"slugs",
+		"versions",
 	)
 }
 
@@ -290,6 +334,86 @@ func TestDatabasesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
 
 		err := RunDatabaseCreate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateRequest{}),
+		).Return(nil, errTest)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		err := RunDatabaseCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasesCreateRestoreFromBackUp(t *testing.T) {
+	r := &godo.DatabaseCreateRequest{
+		Name:               testDBCluster.Name,
+		BackupRestore:      testBackUpRestore,
+		Region:             testDBCluster.RegionSlug,
+		Version:            testDBCluster.VersionSlug,
+		EngineSlug:         testDBCluster.EngineSlug,
+		NumNodes:           testDBCluster.NumNodes,
+		SizeSlug:           testDBCluster.SizeSlug,
+		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(r).Return(&testDBCluster, nil)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testDBCluster.RegionSlug)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromClusterName, testBackUpRestore.DatabaseName)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromTimestamp, "2023-02-01 17:32:15 +0000 UTC")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
+		config.Doit.Set(config.NS, doctl.ArgVersion, testDBCluster.VersionSlug)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, testDBCluster.EngineSlug)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
+		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
+
+		err := RunDatabaseCreate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateRequest{}),
+		).Return(nil, errTest)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		err := RunDatabaseCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasesForkDatabase(t *testing.T) {
+	r := &godo.DatabaseCreateRequest{
+		Name:               testDBCluster.Name,
+		BackupRestore:      testBackUpRestore,
+		Region:             testDBCluster.RegionSlug,
+		Version:            testDBCluster.VersionSlug,
+		EngineSlug:         testDBCluster.EngineSlug,
+		NumNodes:           testDBCluster.NumNodes,
+		SizeSlug:           testDBCluster.SizeSlug,
+		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
+		Tags:               testDBCluster.Tags,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
+		tm.databases.EXPECT().Create(r).Return(&testDBCluster, nil)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromClusterID, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromTimestamp, "2023-02-01 17:32:15 +0000 UTC")
+
+		err := RunDatabaseFork(config)
 		assert.NoError(t, err)
 	})
 
@@ -567,14 +691,23 @@ func TestDatabaseUserCreate(t *testing.T) {
 }
 
 func TestDatabaseResetUserAuth(t *testing.T) {
-	r := &godo.DatabaseResetUserAuthRequest{
-		MySQLSettings: &godo.DatabaseMySQLUserSettings{
-			AuthPlugin: godo.SQLAuthPluginCachingSHA2,
-		},
-	}
-
-	// Successful call
+	// Successful mysql call
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.DatabaseResetUserAuthRequest{
+			MySQLSettings: &godo.DatabaseMySQLUserSettings{
+				AuthPlugin: godo.SQLAuthPluginCachingSHA2,
+			},
+		}
+
+		var mysqlTestDb godo.Database
+		mysqlTestDb = *testDBCluster.Database
+		mysqlTestDb.EngineSlug = "mysql"
+
+		mysqlTestDbCluster := do.Database{
+			Database: &mysqlTestDb,
+		}
+
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&mysqlTestDbCluster, nil)
 		tm.databases.EXPECT().ResetUserAuth(testDBCluster.ID, testDBUser.Name, r).Return(&testDBUser, nil)
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name, godo.SQLAuthPluginCachingSHA2)
@@ -583,8 +716,21 @@ func TestDatabaseResetUserAuth(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Successful pg call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.DatabaseResetUserAuthRequest{}
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
+		tm.databases.EXPECT().ResetUserAuth(testDBCluster.ID, testDBUser.Name, r).Return(&testDBUser, nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+
+		err := RunDatabaseUserResetAuth(config)
+		assert.NoError(t, err)
+	})
+
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
 		tm.databases.EXPECT().ResetUserAuth(
 			testDBCluster.ID,
 			testDBUser.Name,
@@ -686,6 +832,43 @@ func TestDatabasePoolCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDatabasePoolMode, testDBPool.Mode)
 		config.Doit.Set(config.NS, doctl.ArgDatabasePoolSize, testDBPool.Size)
 		config.Doit.Set(config.NS, doctl.ArgDatabasePoolUserName, testDBUser.Name)
+
+		err := RunDatabasePoolCreate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().CreatePool(
+			testDBCluster.ID,
+			gomock.AssignableToTypeOf(&godo.DatabaseCreatePoolRequest{}),
+		).Return(nil, errTest)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
+		err := RunDatabasePoolCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasePoolCreate_InboundUser(t *testing.T) {
+	pool := *(testDBPool.DatabasePool)
+	pool.Connection = nil
+
+	r := &godo.DatabaseCreatePoolRequest{
+		Name:     pool.Name,
+		Mode:     pool.Mode,
+		Size:     pool.Size,
+		Database: pool.Database,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().CreatePool(testDBCluster.ID, r).Return(&testDBPool, nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolDBName, testDB.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolMode, testDBPool.Mode)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolSize, testDBPool.Size)
 
 		err := RunDatabasePoolCreate(config)
 		assert.NoError(t, err)
@@ -951,7 +1134,7 @@ func TestDatabaseGetSQLModes(t *testing.T) {
 }
 
 func TestDatabaseSetSQLModes(t *testing.T) {
-	testSQLModesInterface := []interface{}{}
+	testSQLModesInterface := make([]interface{}, 0, len(testSQLModes))
 	for _, sqlMode := range testSQLModes {
 		testSQLModesInterface = append(testSQLModesInterface, sqlMode)
 	}
@@ -979,4 +1162,29 @@ func TestDatabaseSetSQLModes(t *testing.T) {
 			assert.Error(t, err)
 		})
 	})
+}
+
+func TestDatabaseListOptions(t *testing.T) {
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().ListOptions().Return(testDBEngineOptions, nil)
+		err := RunDatabaseEngineOptions(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().ListOptions().Return(nil, errTest)
+		err := RunDatabaseEngineOptions(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestConvertUTCtoISO8601(t *testing.T) {
+	utcTime := "2023-02-01 17:32:15 +0000 UTC"
+	isoTime, err := convertUTCtoISO8601(utcTime)
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, "2023-02-01T17:32:15Z", isoTime)
 }

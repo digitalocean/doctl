@@ -40,7 +40,7 @@ func (d *Domain) ColMap() map[string]string {
 }
 
 func (d *Domain) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(d.Domains))
 
 	for _, do := range d.Domains {
 		o := map[string]interface{}{
@@ -74,7 +74,7 @@ func (dr *DomainRecord) ColMap() map[string]string {
 }
 
 func (dr *DomainRecord) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(dr.DomainRecords))
 
 	for _, d := range dr.DomainRecords {
 		o := map[string]interface{}{

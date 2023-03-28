@@ -151,7 +151,6 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 		}{
 			{desc: "missing all", err: fmt.Sprintf(baseErr, ""), args: base},
 			{desc: "missing only name", err: fmt.Sprintf(baseErr, ""), args: append(base, []string{"--size", "test", "--region", "test", "--image", "test"}...)},
-			{desc: "missing only region", err: fmt.Sprintf(baseErr, ".region"), args: append(base, []string{"some-name", "--size", "test", "--image", "test"}...)},
 			{desc: "missing only size", err: fmt.Sprintf(baseErr, ".size"), args: append(base, []string{"some-name", "--image", "test", "--region", "test"}...)},
 			{desc: "missing only image", err: fmt.Sprintf(baseErr, ".image"), args: append(base, []string{"some-name", "--size", "test", "--region", "test"}...)},
 		}

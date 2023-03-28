@@ -83,7 +83,8 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 		displayerType(&displayers.Image{}))
 	AddStringFlag(cmdImagesUpdate, doctl.ArgImageName, "", "", "Image name", requiredOpt())
 
-	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Permanently delete an image from your account", `This command deletes the specified image from your account. This is irreversible.`, Writer)
+	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Permanently delete an image from your account", `This command deletes the specified image from your account. This is irreversible.`, Writer,
+		aliasOpt("rm"))
 	AddBoolFlag(cmdRunImagesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force image delete")
 
 	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create <image-name>", "Create custom image", `This command creates an image in your DigitalOcean account. You can specify a URL for the image contents, the region at which to store the image, and image metadata.`, Writer)
@@ -137,7 +138,7 @@ func RunImagesListDistribution(c *CmdConfig) error {
 
 }
 
-// RunImagesListApplication lists application iamges.
+// RunImagesListApplication lists application images.
 func RunImagesListApplication(c *CmdConfig) error {
 	is := c.Images()
 
@@ -262,7 +263,7 @@ func RunImagesDelete(c *CmdConfig) error {
 		}
 
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	return nil

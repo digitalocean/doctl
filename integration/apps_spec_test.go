@@ -13,6 +13,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/mitchellh/copystructure"
 	"github.com/sclevine/spec"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -127,12 +128,53 @@ var _ = suite("apps/spec/validate", func(t *testing.T, when spec.G, it spec.S) {
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Add("content-type", "application/json")
 
-			dump, err := httputil.DumpRequest(req, true)
-			if err != nil {
-				t.Fatal("failed to dump request")
-			}
+			switch req.URL.Path {
+			case "/v2/apps/propose":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
 
-			t.Fatalf("received unknown request: %s", dump)
+				if req.Method != http.MethodPost {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				var r godo.AppProposeRequest
+				err := json.NewDecoder(req.Body).Decode(&r)
+				if err != nil {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				assert.Empty(t, r.AppID)
+				assert.Equal(t, &testAppSpec, r.Spec)
+
+				json.NewEncoder(w).Encode(&godo.AppProposeResponse{
+					Spec: &godo.AppSpec{
+						Name: "test",
+						Services: []*godo.AppServiceSpec{
+							{
+								Name: "service",
+								GitHub: &godo.GitHubSourceSpec{
+									Repo:   "digitalocean/doctl",
+									Branch: "main",
+								},
+								Routes: []*godo.AppRouteSpec{{
+									Path: "/",
+								}},
+							},
+						},
+					},
+				})
+			default:
+				dump, err := httputil.DumpRequest(req, true)
+				if err != nil {
+					t.Fatal("failed to dump request")
+				}
+
+				t.Fatalf("received unknown request: %s", dump)
+			}
 		}))
 	})
 
@@ -140,7 +182,8 @@ var _ = suite("apps/spec/validate", func(t *testing.T, when spec.G, it spec.S) {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
-			"apps", "spec", "validate", "-",
+			"apps", "spec", "validate",
+			"--schema-only", "-",
 		)
 		byt, err := json.Marshal(testAppSpec)
 		expect.NoError(err)
@@ -150,7 +193,26 @@ var _ = suite("apps/spec/validate", func(t *testing.T, when spec.G, it spec.S) {
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err)
 
-		expectedOutput := "The spec is valid."
+		expectedOutput := "name: test\nservices:\n- github:\n    branch: main\n    repo: digitalocean/doctl\n  name: service"
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+
+	it("calls proposeapp", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "some-magic-token",
+			"-u", server.URL,
+			"apps", "spec", "validate",
+			"-",
+		)
+		byt, err := json.Marshal(testAppSpec)
+		expect.NoError(err)
+
+		cmd.Stdin = bytes.NewReader(byt)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := "name: test\nservices:\n- github:\n    branch: main\n    repo: digitalocean/doctl\n  name: service\n  routes:\n  - path: /"
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 
@@ -158,7 +220,8 @@ var _ = suite("apps/spec/validate", func(t *testing.T, when spec.G, it spec.S) {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",
 			"-u", server.URL,
-			"apps", "spec", "validate", "-",
+			"apps", "spec", "validate",
+			"--schema-only", "-",
 		)
 		testSpec := `name: test
 services:
@@ -171,7 +234,7 @@ services:
 		output, err := cmd.CombinedOutput()
 		expect.Equal("exit status 1", err.Error())
 
-		expectedOutput := "Error: Failed to parse app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []*godo.AppServiceSpec"
+		expectedOutput := "Error: parsing app spec: json: cannot unmarshal object into Go struct field AppSpec.services of type []*godo.AppServiceSpec"
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 })

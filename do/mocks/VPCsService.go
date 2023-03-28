@@ -35,6 +35,35 @@ func (m *MockVPCsService) EXPECT() *MockVPCsServiceMockRecorder {
 	return m.recorder
 }
 
+// Create mocks base method.
+func (m *MockVPCsService) Create(vpcr *godo.VPCCreateRequest) (*do.VPC, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", vpcr)
+	ret0, _ := ret[0].(*do.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockVPCsServiceMockRecorder) Create(vpcr interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockVPCsService)(nil).Create), vpcr)
+}
+
+// Delete mocks base method.
+func (m *MockVPCsService) Delete(vpcUUID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", vpcUUID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockVPCsServiceMockRecorder) Delete(vpcUUID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockVPCsService)(nil).Delete), vpcUUID)
+}
+
 // Get mocks base method.
 func (m *MockVPCsService) Get(vpcUUID string) (*do.VPC, error) {
 	m.ctrl.T.Helper()
@@ -65,36 +94,6 @@ func (mr *MockVPCsServiceMockRecorder) List() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVPCsService)(nil).List))
 }
 
-// Create mocks base method.
-func (m *MockVPCsService) Create(vpcr *godo.VPCCreateRequest) (*do.VPC, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", vpcr)
-	ret0, _ := ret[0].(*do.VPC)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Create indicates an expected call of Create.
-func (mr *MockVPCsServiceMockRecorder) Create(vpcr interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockVPCsService)(nil).Create), vpcr)
-}
-
-// Update mocks base method.
-func (m *MockVPCsService) Update(vpcUUID string, vpcr *godo.VPCUpdateRequest) (*do.VPC, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", vpcUUID, vpcr)
-	ret0, _ := ret[0].(*do.VPC)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Update indicates an expected call of Update.
-func (mr *MockVPCsServiceMockRecorder) Update(vpcUUID, vpcr interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockVPCsService)(nil).Update), vpcUUID, vpcr)
-}
-
 // PartialUpdate mocks base method.
 func (m *MockVPCsService) PartialUpdate(vpcUUID string, options ...godo.VPCSetField) (*do.VPC, error) {
 	m.ctrl.T.Helper()
@@ -115,16 +114,17 @@ func (mr *MockVPCsServiceMockRecorder) PartialUpdate(vpcUUID interface{}, option
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PartialUpdate", reflect.TypeOf((*MockVPCsService)(nil).PartialUpdate), varargs...)
 }
 
-// Delete mocks base method.
-func (m *MockVPCsService) Delete(vpcUUID string) error {
+// Update mocks base method.
+func (m *MockVPCsService) Update(vpcUUID string, vpcr *godo.VPCUpdateRequest) (*do.VPC, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", vpcUUID)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "Update", vpcUUID, vpcr)
+	ret0, _ := ret[0].(*do.VPC)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// Delete indicates an expected call of Delete.
-func (mr *MockVPCsServiceMockRecorder) Delete(vpcUUID interface{}) *gomock.Call {
+// Update indicates an expected call of Update.
+func (mr *MockVPCsServiceMockRecorder) Update(vpcUUID, vpcr interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockVPCsService)(nil).Delete), vpcUUID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockVPCsService)(nil).Update), vpcUUID, vpcr)
 }

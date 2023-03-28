@@ -102,9 +102,13 @@ func (d Deployments) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, len(d))
 
 	for i, deployment := range d {
-		progress := fmt.Sprintf("%d/%d", deployment.Progress.SuccessSteps, deployment.Progress.TotalSteps)
-		if deployment.Progress.ErrorSteps > 0 {
-			progress = fmt.Sprintf("%s (errors: %d)", progress, deployment.Progress.ErrorSteps)
+		var progress string
+		if deployment.Progress != nil {
+			p := deployment.Progress
+			progress = fmt.Sprintf("%d/%d", p.SuccessSteps, p.TotalSteps)
+			if p.ErrorSteps > 0 {
+				progress = fmt.Sprintf("%s (errors: %d)", progress, p.ErrorSteps)
+			}
 		}
 
 		out[i] = map[string]interface{}{
@@ -205,7 +209,7 @@ func (t AppTiers) KV() []map[string]interface{} {
 		out[i] = map[string]interface{}{
 			"Name":                 tier.Name,
 			"Slug":                 tier.Slug,
-			"EgressBandwidthBytes": BytesToHumanReadibleUnitBinary(egressBandwidth),
+			"EgressBandwidthBytes": BytesToHumanReadableUnitBinary(egressBandwidth),
 			"BuildSeconds":         tier.BuildSeconds,
 		}
 	}
@@ -269,7 +273,7 @@ func (is AppInstanceSizes) KV() []map[string]interface{} {
 			"Name":                     instanceSize.Name,
 			"Slug":                     instanceSize.Slug,
 			"CPUs":                     cpus,
-			"Memory":                   BytesToHumanReadibleUnitBinary(memory),
+			"Memory":                   BytesToHumanReadableUnitBinary(memory),
 			"USDPerMonth":              instanceSize.USDPerMonth,
 			"USDPerSecond":             fmt.Sprintf("%.7f", usdPerSecond),
 			"TierSlug":                 instanceSize.TierSlug,
@@ -283,4 +287,215 @@ func (is AppInstanceSizes) JSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	e.SetIndent("", "  ")
 	return e.Encode(is)
+}
+
+type AppProposeResponse struct {
+	Res *godo.AppProposeResponse
+}
+
+var _ Displayable = (*AppProposeResponse)(nil)
+
+func (r AppProposeResponse) Cols() []string {
+	cols := []string{
+		"AppNameAvailable",
+	}
+
+	if r.Res.AppNameSuggestion != "" {
+		cols = append(cols, "AppNameSuggestion")
+	}
+
+	cols = append(cols, []string{
+		"AppIsStatic",
+		"StaticApps",
+		"AppCost",
+		"AppTierUpgradeCost",
+		"AppTierDowngradeCost",
+	}...)
+
+	return cols
+}
+
+func (r AppProposeResponse) ColMap() map[string]string {
+	return map[string]string{
+		"AppNameAvailable":     "App Name Available?",
+		"AppNameSuggestion":    "Suggested App Name",
+		"AppIsStatic":          "Is Static?",
+		"StaticApps":           "Static App Usage",
+		"AppCost":              "$/month",
+		"AppTierUpgradeCost":   "$/month on higher tier",
+		"AppTierDowngradeCost": "$/month on lower tier",
+	}
+}
+
+func (r AppProposeResponse) KV() []map[string]interface{} {
+	existingStatic, _ := strconv.ParseInt(r.Res.ExistingStaticApps, 10, 64)
+	maxFreeStatic, _ := strconv.ParseInt(r.Res.MaxFreeStaticApps, 10, 64)
+	var paidStatic int64
+	freeStatic := existingStatic
+	if existingStatic > maxFreeStatic {
+		paidStatic = existingStatic - maxFreeStatic
+		freeStatic = maxFreeStatic
+	}
+
+	staticApps := fmt.Sprintf("%d of %d free", freeStatic, maxFreeStatic)
+	if paidStatic > 0 {
+		staticApps = fmt.Sprintf("%s, %d paid", staticApps, paidStatic)
+	}
+
+	downgradeCost := "n/a"
+	upgradeCost := "n/a"
+
+	if r.Res.AppTierDowngradeCost > 0 {
+		downgradeCost = fmt.Sprintf("%0.2f", r.Res.AppTierDowngradeCost)
+	}
+	if r.Res.AppTierUpgradeCost > 0 {
+		upgradeCost = fmt.Sprintf("%0.2f", r.Res.AppTierUpgradeCost)
+	}
+
+	out := map[string]interface{}{
+		"AppNameAvailable":     boolToYesNo(r.Res.AppNameAvailable),
+		"AppIsStatic":          boolToYesNo(r.Res.AppIsStatic),
+		"StaticApps":           staticApps,
+		"AppCost":              fmt.Sprintf("%0.2f", r.Res.AppCost),
+		"AppTierUpgradeCost":   upgradeCost,
+		"AppTierDowngradeCost": downgradeCost,
+	}
+
+	if r.Res.AppNameSuggestion != "" {
+		out["AppNameSuggestion"] = r.Res.AppNameSuggestion
+	}
+
+	return []map[string]interface{}{out}
+}
+
+func (r AppProposeResponse) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(r.Res)
+}
+
+type AppAlerts []*godo.AppAlert
+
+var _ Displayable = (*AppAlerts)(nil)
+
+func (a AppAlerts) Cols() []string {
+	return []string{
+		"ID",
+		"Spec.Rule",
+		"Trigger",
+		"ComponentName",
+		"Emails",
+		"SlackWebhooks",
+		"Spec.Disabled",
+	}
+}
+
+func (a AppAlerts) ColMap() map[string]string {
+	return map[string]string{
+		"ID":            "ID",
+		"Spec.Rule":     "Alert Rule",
+		"Trigger":       "Alert Trigger",
+		"ComponentName": "Component Name",
+		"Emails":        "Number Of Emails",
+		"SlackWebhooks": "Number Of Slack Webhooks",
+		"Spec.Disabled": "Alert Disabled?",
+	}
+}
+
+func (a AppAlerts) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, len(a))
+
+	for i, alert := range a {
+		var trigger string
+		switch alert.Spec.Rule {
+		case godo.AppAlertSpecRule_UnspecifiedRule:
+			trigger = "Unknown"
+		case godo.AppAlertSpecRule_CPUUtilization, godo.AppAlertSpecRule_MemUtilization, godo.AppAlertSpecRule_RestartCount:
+			var operator, window string
+			switch alert.Spec.Operator {
+			case godo.AppAlertSpecOperator_GreaterThan:
+				operator = ">"
+			case godo.AppAlertSpecOperator_LessThan:
+				operator = "<"
+			default:
+				operator = "Unknown"
+			}
+			switch alert.Spec.Window {
+			case godo.AppAlertSpecWindow_FiveMinutes:
+				window = "5m"
+			case godo.AppAlertSpecWindow_TenMinutes:
+				window = "10m"
+			case godo.AppAlertSpecWindow_ThirtyMinutes:
+				window = "30M"
+			case godo.AppAlertSpecWindow_OneHour:
+				window = "1h"
+			default:
+				window = "Unknown"
+			}
+			trigger = fmt.Sprintf("%s %.2f for %s", operator, alert.Spec.Value, window)
+		case godo.AppAlertSpecRule_DeploymentFailed, godo.AppAlertSpecRule_DeploymentLive, godo.AppAlertSpecRule_DomainFailed, godo.AppAlertSpecRule_DomainLive:
+			trigger = "Event"
+		default:
+			trigger = "Unknown"
+		}
+
+		out[i] = map[string]interface{}{
+			"ID":            alert.ID,
+			"Spec.Rule":     alert.Spec.Rule,
+			"Trigger":       trigger,
+			"ComponentName": alert.ComponentName,
+			"Emails":        len(alert.Emails),
+			"SlackWebhooks": len(alert.SlackWebhooks),
+			"Spec.Disabled": alert.Spec.Disabled,
+		}
+	}
+	return out
+}
+
+func (a AppAlerts) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(a)
+}
+
+type Buildpacks []*godo.Buildpack
+
+var _ Displayable = (*Buildpacks)(nil)
+
+func (b Buildpacks) Cols() []string {
+	return []string{
+		"Name",
+		"ID",
+		"Version",
+		"Documentation",
+	}
+}
+
+func (b Buildpacks) ColMap() map[string]string {
+	return map[string]string{
+		"Name":          "Name",
+		"ID":            "ID",
+		"Version":       "Version",
+		"Documentation": "Documentation",
+	}
+}
+
+func (b Buildpacks) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, len(b))
+
+	for i, bp := range b {
+		out[i] = map[string]interface{}{
+			"Name":          bp.Name,
+			"ID":            bp.ID,
+			"Version":       bp.Version,
+			"Documentation": bp.DocsLink,
+		}
+	}
+	return out
+}
+
+func (b Buildpacks) JSON(w io.Writer) error {
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	return e.Encode(b)
 }

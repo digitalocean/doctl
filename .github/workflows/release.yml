@@ -1,0 +1,76 @@
+name: tagged-release
+
+on:
+  push:
+    tags:
+      - 'v[1-9].[0-9]+.[0-9]+'
+
+jobs:
+  github-release:
+    name: 'GitHub Release'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          # https://github.com/marketplace/actions/goreleaser-action#usage
+          # note the fetch-depth: 0 input in Checkout step. It is required for
+          # the changelog to work correctly
+          fetch-depth: 0
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.19.x
+
+      - name: Restore cache
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  snapcraft-stable:
+    name: 'Snapcraft: Stable Release'
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          # fetch-depth: 0 fetches all history for all branches and tags
+          fetch-depth: 0
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Buld snap
+        id: build
+        run: |
+          make _build_snap && \
+          find doctl_v*.snap -print -exec echo ::set-output name=snap::{} \;
+
+      - uses: snapcore/action-publish@master
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAP_TOKEN }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: stable

@@ -13,7 +13,7 @@ builds:
   - -X github.com/digitalocean/doctl.Major={{ .Major }}
   - -X github.com/digitalocean/doctl.Minor={{ .Minor }}
   - -X github.com/digitalocean/doctl.Patch={{ .Patch }}
-  - -X github.com/digitalocean/doctl.Label=release
+  - -X github.com/digitalocean/doctl.Label={{ if .IsSnapshot }}snapshot{{ else }}release{{ end }}
   goos:
   - windows
   - darwin
@@ -29,6 +29,10 @@ archives:
     format: zip
   files: [a-workaround-to-include-only-the-binary*]
   wrap_in_directory: false
+
+source:
+  enabled: true
+  name_template: 'doctl-{{ .Version }}-source'
 
 checksum:
   name_template: "doctl-{{ .Version }}-checksums.sha256"
@@ -46,4 +50,4 @@ release:
     name: doctl
 
 changelog:
-  skip: true
+  skip: false

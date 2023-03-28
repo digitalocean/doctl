@@ -34,7 +34,7 @@ type InvoiceSummary struct {
 	*godo.InvoiceSummary
 }
 
-// InvoiceList is a the results when listing invoices
+// InvoiceList is the results when listing invoices
 type InvoiceList struct {
 	*godo.InvoiceList
 }

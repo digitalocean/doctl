@@ -4,13 +4,15 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    branches:
+    - main
+    - feature/**
 
 jobs:
   test:
     strategy:
       matrix:
-        go-version: [ 1.15.x, 1.16.x]
+        go-version: [ 1.18.x, 1.19.x ]
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:

@@ -14,23 +14,27 @@ limitations under the License.
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"io"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"errors"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
+	"github.com/golang/mock/gomock"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	yaml "gopkg.in/yaml.v2"
 )
 
 func TestAuthCommand(t *testing.T) {
 	cmd := Auth()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "init", "list", "switch")
+	assertCommandNames(t, cmd, "init", "list", "remove", "switch")
 }
 
 func TestAuthInit(t *testing.T) {
@@ -47,10 +51,54 @@ func TestAuthInit(t *testing.T) {
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestAuthInitConfig(t *testing.T) {
+	cfw := cfgFileWriter
+	viper.Set(doctl.ArgAccessToken, nil)
+	defer func() {
+		cfgFileWriter = cfw
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "valid-token", nil
+	}
+
+	var buf bytes.Buffer
+	cfgFileWriter = func() (io.WriteCloser, error) {
+		return &nopWriteCloser{
+			Writer: bufio.NewWriter(&buf),
+		}, nil
+	}
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.NoError(t, err)
+
+		var configFile testConfig
+		err = yaml.Unmarshal(buf.Bytes(), &configFile)
+		assert.NoError(t, err)
+		defaultCfgFile := filepath.Join(defaultConfigHome(), defaultConfigName)
+		assert.Equal(t, configFile["config"], defaultCfgFile, "unexpected setting for 'config'")
+
+		// Ensure that the dev.config.set.dev-config setting is correct to prevent
+		// a conflict with the base config setting.
+		devConfig := configFile["dev"]
+		devConfigSetting := devConfig.(map[interface{}]interface{})["config"]
+		expectedConfigSetting := map[interface{}]interface{}(
+			map[interface{}]interface{}{
+				"set":   map[interface{}]interface{}{"dev-config": ""},
+				"unset": map[interface{}]interface{}{"dev-config": ""},
+			},
+		)
+		assert.Equal(t, devConfigSetting, expectedConfigSetting, "unexpected setting for 'dev.config'")
 	})
 }
 
@@ -69,7 +117,7 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.account.EXPECT().Get().Return(&do.Account{}, nil)
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
@@ -112,7 +160,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Expected: "default (current)\ntest\n",
 		},
 		{
-			Name:    "default context and additional context set to addditional context",
+			Name:    "default context and additional context set to additional context",
 			Out:     &bytes.Buffer{},
 			Context: "test",
 			Contexts: map[string]interface{}{
@@ -140,6 +188,65 @@ func Test_displayAuthContexts(t *testing.T) {
 		})
 	}
 }
+
+func TestTokenInputValidator(t *testing.T) {
+	tests := []struct {
+		name  string
+		token string
+		valid bool
+	}{
+		{
+			name:  "valid legacy token",
+			token: "53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84",
+			valid: true,
+		},
+		{
+			name:  "valid v1 pat",
+			token: "dop_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84",
+			valid: true,
+		},
+		{
+			name:  "valid v1 oauth",
+			token: "doo_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84",
+			valid: true,
+		},
+		{
+			name:  "too short legacy token",
+			token: "53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adca",
+		},
+		{
+			name:  "too long legacy token",
+			token: "53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84a2d45",
+		},
+		{
+			name:  "too short v1 pat",
+			token: "dop_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae",
+		},
+		{
+			name:  "too short v1 oauth",
+			token: "doo_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adc84",
+		},
+		{
+			name:  "too long v1 pat",
+			token: "dop_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84sdsd",
+		},
+		{
+			name:  "too long v1 oauth",
+			token: "doo_v1_53918d3cd735062ca6ea791427900af10cf595f18dc6016c1cb0c3a11adcae84sd",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.valid {
+				assert.NoError(t, tokenInputValidator(tt.token))
+			} else {
+				assert.Error(t, tokenInputValidator(tt.name))
+			}
+		})
+	}
+}
+
+type testConfig map[string]interface{}
 
 type nopWriteCloser struct {
 	io.Writer

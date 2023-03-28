@@ -37,7 +37,7 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 				}
 
 				w.Write([]byte(dropletGetResponse))
-			case "/v2/floating_ips/1111":
+			case "/v2/reserved_ips/1111":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
@@ -147,6 +147,23 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 		})
 	})
 
+	when("passing a reserved ip urn", func() {
+		it("gets that resource for the project", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"projects",
+				"resources",
+				"get",
+				"do:reservedip:1111",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(projectsResourcesGetFloatingIPOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
 	when("passing a loadbalancer urn", func() {
 		it("gets that resource for the project", func() {
 			cmd := exec.Command(builtBinaryPath,
@@ -223,12 +240,12 @@ ID      Name                 Public IPv4    Private IPv4    Public IPv6    Memor
 5555    some-droplet-name                                                  0         0        0       some-region-slug    some-distro some-image-name                active    yes     remotes     some-volume-id
 `
 	projectsResourcesGetFloatingIPOutput = `
-IP             Region    Droplet ID    Droplet Name
-45.55.96.47    nyc3
+IP             Region    Droplet ID    Droplet Name    Project ID
+45.55.96.47    nyc3                                    c98374fa-35e2-11ed-870f-c7de97c5d5ed
 `
 	projectsResourcesGetFloatingIPResponse = `
 {
-  "floating_ip": {
+  "reserved_ip": {
     "ip": "45.55.96.47",
     "droplet": null,
     "region": {
@@ -238,13 +255,14 @@ IP             Region    Droplet ID    Droplet Name
       "features": [ "metadata" ],
       "available": true
     },
-    "locked": false
+    "locked": false,
+	"project_id": "c98374fa-35e2-11ed-870f-c7de97c5d5ed"
   }
 }
 `
 	projectsResourcesGetLoadbalancerOutput = `
-ID                                      IP                 Name             Status    Created At              Algorithm      Region    Size        VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                            Forwarding Rules
-4de7ac8b-495b-4884-9a69-1050c6793cd6    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    round_robin    nyc3      lb-small    00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0    entry_protocol:https,entry_port:444,target_protocol:https,target_port:443,certificate_id:,tls_passthrough:true
+ID                                      IP                 Name             Status    Created At              Region    Size        Size Unit    VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                            Forwarding Rules                                                                                                  Disable Lets Encrypt DNS Records
+4de7ac8b-495b-4884-9a69-1050c6793cd6    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    nyc3      lb-small    <nil>        00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:,port:0,path:,check_interval_seconds:0,response_timeout_seconds:0,healthy_threshold:0,unhealthy_threshold:0    entry_protocol:https,entry_port:444,target_protocol:https,target_port:443,certificate_id:,tls_passthrough:true    false
 `
 	projectsResourcesGetLoadbalancerResponse = `
 {
@@ -282,7 +300,8 @@ ID                                      IP                 Name             Stat
     "vpc_uuid": "00000000-0000-4000-8000-000000000000",
     "droplet_ids": [ 3164445 ],
     "redirect_http_to_https": false,
-    "enable_proxy_protocol": false
+    "enable_proxy_protocol": false,
+    "disable_lets_encrypt_dns_records": false
   }
 }
 `

@@ -18,10 +18,10 @@ type Listener struct {
 	// URL is the url for the websocket. The schema should be "wss" or "ws"
 	URL *url.URL
 	// Token is used for authenticating with the websocket. It will be passed
-	// using the "token" query paramater.
+	// using the "token" query parameter.
 	Token string
 	// SchemaFunc is a function allowing you to customize the output. For example,
-	// this can be useful for unmarshal a JSON message and formating the output.
+	// this can be useful for unmarshal a JSON message and formatting the output.
 	// It should return an io.Reader. If set to nil, the raw message will be outputted.
 	SchemaFunc SchemaFunc
 	// Out is an io.Writer to output to.
@@ -104,7 +104,7 @@ func (l *Listener) Start() error {
 	}
 }
 
-// Stop signels the Listener to close the websocket connetion
+// Stop signals the Listener to close the websocket connection
 func (l *Listener) Stop() {
 	select {
 	case <-l.done:

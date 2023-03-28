@@ -98,7 +98,7 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 	})
 
 	when("deleting one image without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -110,12 +110,12 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(imageDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
 	when("deleting two images without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -128,12 +128,7 @@ var _ = suite("compute/image/delete", func(t *testing.T, when spec.G, it spec.S)
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(multiImageDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
-
-const (
-	imageDelOutput      = "Warning: Are you sure you want to delete this image? (y/N) ? Error: Operation aborted."
-	multiImageDelOutput = "Warning: Are you sure you want to delete 2 images? (y/N) ? Error: Operation aborted."
-)

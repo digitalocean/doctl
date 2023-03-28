@@ -56,7 +56,7 @@ func (v *VPC) ColMap() map[string]string {
 }
 
 func (v *VPC) KV() []map[string]interface{} {
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, 0, len(v.VPCs))
 
 	for _, v := range v.VPCs {
 		o := map[string]interface{}{

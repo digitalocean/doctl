@@ -73,7 +73,7 @@ func Domain() *Command {
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
 
 	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "Delete a DNS record", `Use this command to delete DNS records for a domain.`, Writer,
-		aliasOpt("d"))
+		aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete record without confirmation prompt")
 
 	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "Update a DNS record", `Use this command to update or change DNS records for a domain.`, Writer,
@@ -84,7 +84,7 @@ func Domain() *Command {
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "", "Record data; varies depending on record type")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, "", 0, "Record priority")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, "", 0, "The port value for an SRV record")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 1800, "The record's Time To Live value, in seconds")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 0, "The record's Time To Live value, in seconds")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "The weight value for an SRV record")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
@@ -181,7 +181,7 @@ func RunDomainDelete(c *CmdConfig) error {
 		return err
 	}
 
-	return fmt.Errorf("Operation aborted.")
+	return errOperationAborted
 }
 
 // RunRecordList list records for a domain.
@@ -320,7 +320,7 @@ func RunRecordDelete(c *CmdConfig) error {
 			}
 		}
 	} else {
-		return fmt.Errorf("Operation aborted.")
+		return errOperationAborted
 	}
 
 	return nil

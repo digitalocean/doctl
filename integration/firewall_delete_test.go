@@ -98,7 +98,7 @@ var _ = suite("compute/firewall/delete", func(t *testing.T, when spec.G, it spec
 	})
 
 	when("deleting one firewall without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -110,12 +110,12 @@ var _ = suite("compute/firewall/delete", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(fwDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
 	when("deleting two firewalls without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -128,12 +128,7 @@ var _ = suite("compute/firewall/delete", func(t *testing.T, when spec.G, it spec
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(multiFwDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
-
-const (
-	fwDelOutput      = "Warning: Are you sure you want to delete this firewall? (y/N) ? Error: Operation aborted."
-	multiFwDelOutput = "Warning: Are you sure you want to delete 2 firewalls? (y/N) ? Error: Operation aborted."
-)

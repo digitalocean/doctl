@@ -15,6 +15,8 @@ package do
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/digitalocean/godo"
 )
 
@@ -60,7 +62,9 @@ func (as *accountService) Get() (*Account, error) {
 func (as *accountService) RateLimit() (*RateLimit, error) {
 	_, resp, err := as.client.Account.Get(context.TODO())
 	if err != nil {
-		return nil, err
+		if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
+			return nil, err
+		}
 	}
 
 	rateLimit := &RateLimit{Rate: &resp.Rate}

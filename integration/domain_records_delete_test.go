@@ -114,7 +114,7 @@ var _ = suite("compute/domain/records/delete", func(t *testing.T, when spec.G, i
 	})
 
 	when("deleting one domain record without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -128,12 +128,12 @@ var _ = suite("compute/domain/records/delete", func(t *testing.T, when spec.G, i
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(domainRecDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
 	when("deleting two domain records without force flag", func() {
-		it("correctly promts for confirmation", func() {
+		it("errors without confirmation", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
@@ -148,12 +148,7 @@ var _ = suite("compute/domain/records/delete", func(t *testing.T, when spec.G, i
 
 			output, err := cmd.CombinedOutput()
 			expect.Error(err)
-			expect.Equal(strings.TrimSpace(multiDomainRecDelOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(confirmNonInteractiveOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
-
-const (
-	domainRecDelOutput      = "Warning: Are you sure you want to delete this domain record? (y/N) ? Error: Operation aborted."
-	multiDomainRecDelOutput = "Warning: Are you sure you want to delete 2 domain records? (y/N) ? Error: Operation aborted."
-)
