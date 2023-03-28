@@ -412,7 +412,7 @@ const (
 	// ArgProjectSource is either git, github or gitlab.
 	ArgProjectSource = "source"
 	// ArgDeployOnPush allow auto deploy on project update.
-	ArgDeployOnPush = "deployonpush"
+	ArgDeployOnPush = "deploy-on-push"
 	// ArgProjectBrach is git project branch.
 	ArgProjectBrach = "branch"
 )
