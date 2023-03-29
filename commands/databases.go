@@ -1297,6 +1297,11 @@ This command requires that you pass in the replica's name, which you can retriev
 	AddBoolFlag(cmdDatabaseReplicaDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "Deletes the replica without a confirmation prompt")
 
+	CmdBuilder(cmd, RunDatabaseReplicaPromote,
+		"promote <database-id> <replica-name>", "Promote a read-only database replica to become a primary cluster",
+		`Delete the specified read-only replica for the specified database cluster.`+howToGetReplica+databaseListDetails,
+		Writer, aliasOpt("rm"))
+
 	CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-id> <replica-name>",
 		"Retrieve information for connecting to a read-only database replica",
@@ -1402,6 +1407,17 @@ func RunDatabaseReplicaDelete(c *CmdConfig) error {
 	}
 
 	return errOperationAborted
+}
+
+// RunDatabaseReplicaPromote promotes a read-only replica to become a primary cluster
+func RunDatabaseReplicaPromote(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	replicaID := c.Args[1]
+	return c.Databases().PromoteReplica(databaseID, replicaID)
 }
 
 func displayDatabaseReplicas(c *CmdConfig, short bool, replicas ...do.DatabaseReplica) error {
