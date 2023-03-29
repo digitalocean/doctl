@@ -255,6 +255,7 @@ func TestDatabaseReplicaCommand(t *testing.T) {
 		"create",
 		"delete",
 		"connection",
+		"promote",
 	)
 }
 
@@ -1105,6 +1106,28 @@ func TestDatabasesReplicaDelete(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgForce, "true")
 
 		err := RunDatabaseReplicaDelete(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabasesReplicaPromote(t *testing.T) {
+	// Successful
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().PromoteReplica(testDBCluster.ID, testDBReplica.Name).Return(nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBReplica.Name)
+
+		err := RunDatabaseReplicaPromote(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().PromoteReplica(testDBCluster.ID, testDBReplica.Name).Return(errTest)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBReplica.Name)
+
+		err := RunDatabaseReplicaPromote(config)
 		assert.EqualError(t, err, errTest.Error())
 	})
 }

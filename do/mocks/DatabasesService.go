@@ -449,6 +449,20 @@ func (mr *MockDatabasesServiceMockRecorder) Migrate(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Migrate", reflect.TypeOf((*MockDatabasesService)(nil).Migrate), arg0, arg1)
 }
 
+// PromoteReplica mocks base method.
+func (m *MockDatabasesService) PromoteReplica(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromoteReplica", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PromoteReplica indicates an expected call of PromoteReplica.
+func (mr *MockDatabasesServiceMockRecorder) PromoteReplica(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromoteReplica", reflect.TypeOf((*MockDatabasesService)(nil).PromoteReplica), arg0, arg1)
+}
+
 // ResetUserAuth mocks base method.
 func (m *MockDatabasesService) ResetUserAuth(arg0, arg1 string, arg2 *godo.DatabaseResetUserAuthRequest) (*do.DatabaseUser, error) {
 	m.ctrl.T.Helper()
