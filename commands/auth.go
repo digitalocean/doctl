@@ -146,9 +146,9 @@ To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer
 func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig) error {
 	return func(c *CmdConfig) error {
 		token := c.getContextAccessToken()
-		context := Context
+		context := strings.ToLower(Context)
 		if context == "" {
-			context = viper.GetString("context")
+			context = strings.ToLower(viper.GetString("context"))
 		}
 
 		if token == "" {
@@ -188,7 +188,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 // RunAuthRemove remove available auth contexts from the user's doctl config.
 func RunAuthRemove(c *CmdConfig) error {
-	context := Context
+	context := strings.ToLower(Context)
 
 	if context == "" {
 		return fmt.Errorf("You must provide a context name")
@@ -243,9 +243,9 @@ func displayAuthContexts(out io.Writer, currentContext string, contexts map[stri
 // RunAuthSwitch changes the default context and writes it to the
 // configuration.
 func RunAuthSwitch(c *CmdConfig) error {
-	context := Context
+	context := strings.ToLower(Context)
 	if context == "" {
-		context = viper.GetString("context")
+		context = strings.ToLower(viper.GetString("context"))
 	}
 
 	// The two lines below aren't required for doctl specific functionality,
