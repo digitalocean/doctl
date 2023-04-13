@@ -112,6 +112,7 @@ func initConfig() {
 
 	viper.SetDefault("output", "text")
 	viper.SetDefault(doctl.ArgContext, doctl.ArgDefaultContext)
+	Context = strings.ToLower(Context)
 
 	if _, err := os.Stat(cfgFile); err == nil {
 		if err := viper.ReadInConfig(); err != nil {

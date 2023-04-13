@@ -124,6 +124,45 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 	})
 }
 
+func TestAuthForcesLowercase(t *testing.T) {
+	cfw := cfgFileWriter
+	viper.Set(doctl.ArgAccessToken, "valid-token")
+	defer func() {
+		cfgFileWriter = cfw
+		viper.Set(doctl.ArgAccessToken, nil)
+	}()
+
+	retrieveUserTokenFunc := func() (string, error) {
+		return "", errors.New("should not have called this")
+	}
+
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
+
+		contexts := map[string]interface{}{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
+		context := "TestCapitalCase"
+		viper.Set("auth-contexts", contexts)
+		viper.Set("context", context)
+
+		err := RunAuthInit(retrieveUserTokenFunc)(config)
+		assert.NoError(t, err)
+
+		contexts = map[string]interface{}{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
+		viper.Set("auth-contexts", contexts)
+		viper.Set("context", "contextDoesntExist")
+		err = RunAuthSwitch(config)
+		// should error because context doesn't exist
+		assert.Error(t, err)
+
+		viper.Set("context", "testcapitalcase")
+		err = RunAuthSwitch(config)
+		// should not error because context does exist
+		assert.NoError(t, err)
+	})
+}
+
 func TestAuthList(t *testing.T) {
 	buf := &bytes.Buffer{}
 	config := &CmdConfig{Out: buf}

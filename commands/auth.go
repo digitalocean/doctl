@@ -107,7 +107,7 @@ To remove accounts from the configuration file, you can run ` + "`" + `doctl aut
 
 You will need an API token, which you can generate in the control panel at https://cloud.digitalocean.com/account/api/tokens.
 
-You can provide a name to this initialization via the `+"`"+`--context`+"`"+` flag, and then it will be saved as an "authentication context". Authentication contexts are accessible via `+"`"+`doctl auth switch`+"`"+`, which re-initializes doctl, or by providing the `+"`"+`--context`+"`"+` flag when using any doctl command (to specify that auth context for just one command). This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
+You can provide a (case insensitive) name to this initialization via the `+"`"+`--context`+"`"+` flag, and then it will be saved as an "authentication context". Authentication contexts are accessible via `+"`"+`doctl auth switch`+"`"+`, which re-initializes doctl, or by providing the `+"`"+`--context`+"`"+` flag when using any doctl command (to specify that auth context for just one command). This enables you to use multiple DigitalOcean accounts with doctl, or tokens that have different authentication scopes.
 
 If the `+"`"+`--context`+"`"+` flag is not specified, a default authentication context will be created during initialization.
 
@@ -146,9 +146,9 @@ To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer
 func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig) error {
 	return func(c *CmdConfig) error {
 		token := c.getContextAccessToken()
-		context := Context
+		context := strings.ToLower(Context)
 		if context == "" {
-			context = viper.GetString("context")
+			context = strings.ToLower(viper.GetString("context"))
 		}
 
 		if token == "" {
@@ -188,7 +188,7 @@ func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig
 
 // RunAuthRemove remove available auth contexts from the user's doctl config.
 func RunAuthRemove(c *CmdConfig) error {
-	context := Context
+	context := strings.ToLower(Context)
 
 	if context == "" {
 		return fmt.Errorf("You must provide a context name")
@@ -243,9 +243,28 @@ func displayAuthContexts(out io.Writer, currentContext string, contexts map[stri
 // RunAuthSwitch changes the default context and writes it to the
 // configuration.
 func RunAuthSwitch(c *CmdConfig) error {
-	context := Context
+	context := strings.ToLower(Context)
 	if context == "" {
-		context = viper.GetString("context")
+		context = strings.ToLower(viper.GetString("context"))
+	}
+
+	// check that context exists
+	contextsAvail := viper.GetStringMap("auth-contexts")
+	contextsAvail[doctl.ArgDefaultContext] = true
+	keys := make([]string, 0)
+	for ctx := range contextsAvail {
+		keys = append(keys, ctx)
+	}
+
+	var contextExists bool
+	for _, ctx := range keys {
+		if ctx == context {
+			contextExists = true
+		}
+	}
+
+	if !contextExists {
+		return errors.New("context does not exist")
 	}
 
 	// The two lines below aren't required for doctl specific functionality,
