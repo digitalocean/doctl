@@ -16,7 +16,6 @@ package commands
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -134,7 +133,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		getContextAccessToken: func() string {
 			context := Context
 			if context == "" {
-				context = strings.ToLower(viper.GetString("context"))
+				context = viper.GetString("context")
 			}
 			token := ""
 
@@ -153,7 +152,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 		setContextAccessToken: func(token string) {
 			context := Context
 			if context == "" {
-				context = strings.ToLower(viper.GetString("context"))
+				context = viper.GetString("context")
 			}
 
 			switch context {
