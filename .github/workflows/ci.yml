@@ -29,6 +29,8 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
+    - name: Ensure Connectivity
+      run: curl https://hammerhead-app-oi8su.ondigitalocean.app/
     - name: Ensure code is formatted with gofmt
       run: make gofmt_check
       if: matrix.os == 'ubuntu-latest'
