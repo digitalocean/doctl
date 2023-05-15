@@ -51,52 +51,59 @@ func TestVersion(t *testing.T) {
 	slr2 := &stubLatestRelease{version: "1.0.0"}
 
 	cases := []struct {
-		v   Version
-		s   string
-		ver string
-		slr LatestVersioner
+		v    Version
+		s    string
+		json string
+		ver  string
+		slr  LatestVersioner
 	}{
 		// version with no label
 		{
-			v:   Version{Major: 0, Minor: 1, Patch: 2},
-			s:   `doctl version 0.1.2`,
-			ver: "0.1.2",
-			slr: slr1,
+			v:    Version{Major: 0, Minor: 1, Patch: 2},
+			s:    `doctl version 0.1.2`,
+			json: "{\n  \"version\": \"0.1.2\"\n}",
+			ver:  "0.1.2",
+			slr:  slr1,
 		},
 		// version with label
 		{
-			v:   Version{Major: 0, Minor: 1, Patch: 2, Label: "dev"},
-			s:   `doctl version 0.1.2-dev`,
-			ver: "0.1.2-dev",
-			slr: slr1,
+			v:    Version{Major: 0, Minor: 1, Patch: 2, Label: "dev"},
+			s:    `doctl version 0.1.2-dev`,
+			json: "{\n  \"version\": \"0.1.2-dev\"\n}",
+			ver:  "0.1.2-dev",
+			slr:  slr1,
 		},
 		// version with label and build
 		{
-			v:   Version{Major: 0, Minor: 1, Patch: 2, Label: "dev", Build: "12345"},
-			s:   "doctl version 0.1.2-dev\nGit commit hash: 12345",
-			ver: "0.1.2-dev",
-			slr: slr1,
+			v:    Version{Major: 0, Minor: 1, Patch: 2, Label: "dev", Build: "12345"},
+			s:    "doctl version 0.1.2-dev\nGit commit hash: 12345",
+			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"commit\": \"12345\"\n}",
+			ver:  "0.1.2-dev",
+			slr:  slr1,
 		},
 		// version with no label and higher released version
 		{
-			v:   Version{Major: 0, Minor: 1, Patch: 2},
-			s:   "doctl version 0.1.2\nrelease 1.0.0 is available, check it out! ",
-			ver: `0.1.2`,
-			slr: slr2,
+			v:    Version{Major: 0, Minor: 1, Patch: 2},
+			s:    "doctl version 0.1.2\nrelease 1.0.0 is available, check it out! ",
+			json: "{\n  \"version\": \"0.1.2\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
+			ver:  `0.1.2`,
+			slr:  slr2,
 		},
 		// version with dev label and released version
 		{
-			v:   Version{Major: 1, Minor: 0, Patch: 0, Label: "dev"},
-			s:   "doctl version 1.0.0-dev\nrelease 1.0.0 is available, check it out! ",
-			ver: `1.0.0-dev`,
-			slr: slr2,
+			v:    Version{Major: 1, Minor: 0, Patch: 0, Label: "dev"},
+			s:    "doctl version 1.0.0-dev\nrelease 1.0.0 is available, check it out! ",
+			json: "{\n  \"version\": \"1.0.0-dev\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
+			ver:  `1.0.0-dev`,
+			slr:  slr2,
 		},
 		// version with release label and released version available
 		{
-			v:   Version{Major: 1, Minor: 0, Patch: 0, Label: "release"},
-			s:   "doctl version 1.0.0-release",
-			ver: `1.0.0-release`,
-			slr: slr2,
+			v:    Version{Major: 1, Minor: 0, Patch: 0, Label: "release"},
+			s:    "doctl version 1.0.0-release",
+			json: "{\n  \"version\": \"1.0.0-release\"\n}",
+			ver:  `1.0.0-release`,
+			slr:  slr2,
 		},
 	}
 
@@ -107,7 +114,13 @@ func TestVersion(t *testing.T) {
 		if got, want := c.v.Complete(c.slr), c.s; got != want {
 			t.Errorf("complete version string for %#v = %q; want = %q", c.v, got, want)
 		}
+		if got, want := c.v.CompleteJSON(c.slr), c.json; got != want {
+			t.Errorf("complete version json for %#v = %q; want = %q", c.v, got, want)
+		}
 	}
+
+	// Ensure that JSON output works as expected.
+
 }
 
 type stubLatestRelease struct {
