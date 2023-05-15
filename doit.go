@@ -146,11 +146,8 @@ func (v Version) CompleteJSON(lv LatestVersioner) string {
 		Commit       string `json:"commit,omitempty"`
 		Notification string `json:"notification,omitempty"`
 	}{
-		Version: fmt.Sprintf("doctl version %s", v.String()),
-	}
-
-	if v.Build != "" {
-		versionInfo.Commit = fmt.Sprintf("\nGit commit hash: %s", v.Build)
+		Version: v.String(),
+		Commit:  v.Build,
 	}
 
 	if tagName, err := lv.LatestVersion(); err == nil {
