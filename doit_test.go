@@ -61,7 +61,7 @@ func TestVersion(t *testing.T) {
 		{
 			v:    Version{Major: 0, Minor: 1, Patch: 2},
 			s:    `doctl version 0.1.2`,
-			json: "{\n  \"version\": \"0.1.2\"\n}",
+			json: "{\n  \"version\": \"0.1.2\",\n  \"latestRelease\": \"0.1.0\"\n}",
 			ver:  "0.1.2",
 			slr:  slr1,
 		},
@@ -69,7 +69,7 @@ func TestVersion(t *testing.T) {
 		{
 			v:    Version{Major: 0, Minor: 1, Patch: 2, Label: "dev"},
 			s:    `doctl version 0.1.2-dev`,
-			json: "{\n  \"version\": \"0.1.2-dev\"\n}",
+			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"latestRelease\": \"0.1.0\"\n}",
 			ver:  "0.1.2-dev",
 			slr:  slr1,
 		},
@@ -77,7 +77,7 @@ func TestVersion(t *testing.T) {
 		{
 			v:    Version{Major: 0, Minor: 1, Patch: 2, Label: "dev", Build: "12345"},
 			s:    "doctl version 0.1.2-dev\nGit commit hash: 12345",
-			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"commit\": \"12345\"\n}",
+			json: "{\n  \"version\": \"0.1.2-dev\",\n  \"commit\": \"12345\",\n  \"latestRelease\": \"0.1.0\"\n}",
 			ver:  "0.1.2-dev",
 			slr:  slr1,
 		},
@@ -85,7 +85,7 @@ func TestVersion(t *testing.T) {
 		{
 			v:    Version{Major: 0, Minor: 1, Patch: 2},
 			s:    "doctl version 0.1.2\nrelease 1.0.0 is available, check it out! ",
-			json: "{\n  \"version\": \"0.1.2\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
+			json: "{\n  \"version\": \"0.1.2\",\n  \"latestRelease\": \"1.0.0\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
 			ver:  `0.1.2`,
 			slr:  slr2,
 		},
@@ -93,7 +93,7 @@ func TestVersion(t *testing.T) {
 		{
 			v:    Version{Major: 1, Minor: 0, Patch: 0, Label: "dev"},
 			s:    "doctl version 1.0.0-dev\nrelease 1.0.0 is available, check it out! ",
-			json: "{\n  \"version\": \"1.0.0-dev\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
+			json: "{\n  \"version\": \"1.0.0-dev\",\n  \"latestRelease\": \"1.0.0\",\n  \"notification\": \"release 1.0.0 is available, check it out!\"\n}",
 			ver:  `1.0.0-dev`,
 			slr:  slr2,
 		},
@@ -101,7 +101,7 @@ func TestVersion(t *testing.T) {
 		{
 			v:    Version{Major: 1, Minor: 0, Patch: 0, Label: "release"},
 			s:    "doctl version 1.0.0-release",
-			json: "{\n  \"version\": \"1.0.0-release\"\n}",
+			json: "{\n  \"version\": \"1.0.0-release\",\n  \"latestRelease\": \"1.0.0\"\n}",
 			ver:  `1.0.0-release`,
 			slr:  slr2,
 		},
@@ -118,9 +118,6 @@ func TestVersion(t *testing.T) {
 			t.Errorf("complete version json for %#v = %q; want = %q", c.v, got, want)
 		}
 	}
-
-	// Ensure that JSON output works as expected.
-
 }
 
 type stubLatestRelease struct {
