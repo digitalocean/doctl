@@ -142,15 +142,18 @@ func (v Version) Complete(lv LatestVersioner) string {
 // CompleteJSON is the complete version for doit, formatted as JSON.
 func (v Version) CompleteJSON(lv LatestVersioner) string {
 	versionInfo := &struct {
-		Version      string `json:"version,omitempty"`
-		Commit       string `json:"commit,omitempty"`
-		Notification string `json:"notification,omitempty"`
+		Version       string `json:"version,omitempty"`
+		Commit        string `json:"commit,omitempty"`
+		LatestRelease string `json:"latestRelease"`
+		Notification  string `json:"notification,omitempty"`
 	}{
 		Version: v.String(),
 		Commit:  v.Build,
 	}
 
 	if tagName, err := lv.LatestVersion(); err == nil {
+		versionInfo.LatestRelease = tagName
+
 		v0, err1 := semver.Make(tagName)
 		v1, err2 := semver.Make(v.String())
 
