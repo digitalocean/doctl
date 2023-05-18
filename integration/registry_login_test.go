@@ -47,11 +47,16 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 
+				readWriteParam := req.URL.Query().Get("read_write")
 				expiryParam := req.URL.Query().Get("expiry_seconds")
 				if expiryParam == "3600" {
 					w.Write([]byte(registryDockerCredentialsExpiryResponse))
 				} else if expiryParam == "" {
-					w.Write([]byte(registryDockerCredentialsResponse))
+					if readWriteParam == "false" {
+						w.Write([]byte(registryDockerCredentialsReadOnlyRegistryResponse))
+					} else {
+						w.Write([]byte(registryDockerCredentialsResponse))
+					}
 				} else {
 					t.Fatalf("received unknown value: %s", expiryParam)
 				}
@@ -131,8 +136,43 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			}
 		})
 	})
+
+	when("read-only flag is passed", func() {
+		it("add the correct query parameter", func() {
+			tmpDir := t.TempDir()
+
+			config := filepath.Join(tmpDir, "config.json")
+
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"registry",
+				"login",
+				"--read-only",
+				"true",
+			)
+			cmd.Env = os.Environ()
+			cmd.Env = append(cmd.Env, fmt.Sprintf("DOCKER_CONFIG=%s", tmpDir))
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err)
+
+			fileBytes, err := ioutil.ReadFile(config)
+			expect.NoError(err)
+
+			var dc dockerConfig
+			err = json.Unmarshal(fileBytes, &dc)
+			expect.NoError(err)
+
+			expect.Equal("Logging Docker in to registry.digitalocean.com\n", string(output))
+			for host := range dc.Auths {
+				expect.Equal("readonlyregistry.registry.com", host)
+			}
+		})
+	})
 })
 
 const (
-	registryDockerCredentialsExpiryResponse = `{"auths":{"expiring.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
+	registryDockerCredentialsExpiryResponse           = `{"auths":{"expiring.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
+	registryDockerCredentialsReadOnlyRegistryResponse = `{"auths":{"readonlyregistry.registry.com":{"auth":"Y3JlZGVudGlhbHM6dGhhdGV4cGlyZQ=="}}}`
 )
