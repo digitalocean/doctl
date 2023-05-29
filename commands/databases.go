@@ -1305,8 +1305,8 @@ This command requires that you pass in the replica's name, which you can retriev
 
 	CmdBuilder(cmd, RunDatabaseReplicaPromote,
 		"promote <database-id> <replica-name>", "Promote a read-only database replica to become a primary cluster",
-		`Delete the specified read-only replica for the specified database cluster.`+howToGetReplica+databaseListDetails,
-		Writer, aliasOpt("rm"))
+		`This command promotes a read-only database replica to become a primary cluster.`+howToGetReplica+databaseListDetails,
+		Writer, aliasOpt("p"))
 
 	CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-id> <replica-name>",
