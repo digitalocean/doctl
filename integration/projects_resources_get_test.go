@@ -89,6 +89,19 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 				}
 
 				w.Write([]byte(projectsResourcesGetVolumeResponse))
+			case "/v2/kubernetes/clusters":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusUnauthorized)
+					return
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(projectsResourcesListKubernetesOutput))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -201,6 +214,24 @@ var _ = suite("projects/resources/get", func(t *testing.T, when spec.G, it spec.
 			expect.Equal(strings.TrimSpace(projectsResourcesGetVolumeOutput), strings.TrimSpace(string(output)))
 		})
 	})
+
+	when("passing a kubernetes urn", func() {
+		it("gets that resource for the project", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"projects",
+				"resources",
+				"get",
+				"do:kubernetes:1111",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(projectsResourcesGetKubernetesOutput), strings.TrimSpace(string(output)))
+		})
+	})
+
 })
 
 const (
@@ -308,6 +339,108 @@ ID                                      Name       Size      Region    Filesyste
     "size_gigabytes": 10,
     "created_at": "2016-03-02T17:00:49Z",
     "tags": [ "aninterestingtag" ]
+  }
+}
+`
+	projectsResourcesGetKubernetesOutput = `
+ID    Name    Region    Version    Auto Upgrade    HA Control Plane    Status          Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags    Created At                       Updated At                       Node Pools
+      1111                         false           false               provisioning                                                            k8s     2021-01-29 16:02:02 +0000 UTC    0001-01-01 00:00:00 +0000 UTC    pool-test
+`
+	projectsResourcesListKubernetesOutput = `
+	{
+		"kubernetes_clusters": [
+		  {
+			"uuid": 1111,
+			"name": "1111",
+			"region_slug": "nyc1",
+			"version_slug": "1.19.3-do.3",
+			"node_pools": [
+			  {
+				"uuid": "1111",
+				"name": "pool-test",
+				"version_slug": "1.19.3-do.3",
+				"droplet_size": "s-2vcpu-4gb",
+				"count": 3,
+				"node_statuses": [
+				  "provisioning",
+				  "provisioning",
+				  "provisioning"
+				],
+				"status": {
+				  "state": "provisioning"
+				},
+				"tags": [
+					"k8s:worker",
+					"k8s",
+					"k8s:1111"
+				]
+			  }
+			],
+			"tags": [
+				"k8s"
+			],
+			"status": {
+			  "state": "provisioning",
+			  "message": "provisioning",
+			  "pending_event": true
+			},
+			"pending": true,
+			"ready": false,
+			"auto_upgrade": false,
+			"created_at": "2021-01-29T16:02:02Z"
+		  }
+		]
+	  }
+`
+	projectsResourcesGetKubernetesResponse = `
+{
+  "kubernetes_cluster": {
+    "uuid": 1111,
+    "name": "1111",
+    "region_slug": "nyc1",
+	"version_slug": "1.19.3-do.3",
+	"auto_upgrade": "false",
+	"node_pools": [
+		{
+		"uuid": "1111",
+		"name": "pool-test",
+		"version_slug": "1.19.3-do.3",
+		"droplet_size": "s-2vcpu-4gb",
+		"count": 3,
+		"node_statuses": [
+			"provisioning",
+			"provisioning",
+			"provisioning"
+		],
+		"status": {
+			"state": "provisioning"
+		},
+		"tags": [
+			{
+			"name": "k8s"
+			},
+			{
+			"name": "k8s:1111"
+			},
+			{
+			"name": "k8s:worker"
+			}
+		]
+		}
+	],
+	"tags": [
+      {
+        "name": "k8s"
+	  },
+	],
+	"status": {
+	  "state": "provisioning",
+	  "message": "provisioning",
+	  "pending_event": true
+	},
+	"pending": true,
+	"ready": false,
+	"created_at": "2021-01-29T16:02:02Z"
   }
 }
 `

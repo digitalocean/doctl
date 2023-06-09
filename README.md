@@ -348,7 +348,7 @@ Then refresh your profile.
 source ~/.profile
 ```
 
-### MacOS
+### MacOS (bash)
 
 macOS users will have to install the `bash-completion` framework to use the auto-completion feature.
 
@@ -356,7 +356,7 @@ macOS users will have to install the `bash-completion` framework to use the auto
 brew install bash-completion
 ```
 
-After it's installed, load `bash_completion` by adding the following line to your `.profile` or `.bashrc`/`.zshrc` file.
+After it's installed, load `bash_completion` by adding the following line to your `.profile` or `.bashrc` file.
 
 ```
 source $(brew --prefix)/etc/bash_completion
@@ -367,9 +367,17 @@ Then refresh your profile using the appropriate command for the bash configurati
 ```
 source ~/.profile
 source ~/.bashrc
-source ~/.zshrc
 ```
 
+### MacOS (zsh)
+
+Add the following line to your `~/.zshrc` file:
+
+```zsh
+autoload -U +X compinit; compinit
+```
+
+Then refresh your profile.
 
 ## Uninstalling `doctl`
 

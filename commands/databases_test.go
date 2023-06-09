@@ -36,12 +36,38 @@ var (
 		Hour: "10:00",
 	}
 
+	testBackUpRestore = &godo.DatabaseBackupRestore{
+		DatabaseName:    "sunny-db-cluster",
+		BackupCreatedAt: "2023-02-01T17:32:15Z",
+	}
+
 	// doctl mocks
 
 	testDBCluster = do.Database{
 		Database: &godo.Database{
 			ID:                "ea4652de-4fe0-11e9-b7ab-df1ef30eab9e",
 			Name:              "sunny-db-cluster",
+			RegionSlug:        "nyc1",
+			EngineSlug:        "pg",
+			VersionSlug:       "11",
+			NumNodes:          3,
+			SizeSlug:          "db-s-1vcpu-2gb",
+			DBNames:           []string{"defaultdb"},
+			CreatedAt:         time.Now(),
+			Status:            "online",
+			Connection:        testGODOConnection,
+			MaintenanceWindow: testGODOMainWindow,
+			Users: []godo.DatabaseUser{
+				*testGODOUser,
+			},
+			PrivateNetworkUUID: "1fe49b6c-ac8e-11e9-98cb-3bec94f411bc",
+		},
+	}
+
+	testDBBackUpCluster = do.Database{
+		Database: &godo.Database{
+			ID:                "ea4652de-4fe0-11e9-b7ab-df1ef30eab9e",
+			Name:              "db-replica",
 			RegionSlug:        "nyc1",
 			EngineSlug:        "pg",
 			VersionSlug:       "11",
@@ -165,6 +191,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"migrate",
 		"resize",
 		"firewalls",
+		"fork",
 		"backups",
 		"replica",
 		"options",
@@ -228,6 +255,7 @@ func TestDatabaseReplicaCommand(t *testing.T) {
 		"create",
 		"delete",
 		"connection",
+		"promote",
 	)
 }
 
@@ -307,6 +335,86 @@ func TestDatabasesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
 
 		err := RunDatabaseCreate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateRequest{}),
+		).Return(nil, errTest)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		err := RunDatabaseCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasesCreateRestoreFromBackUp(t *testing.T) {
+	r := &godo.DatabaseCreateRequest{
+		Name:               testDBCluster.Name,
+		BackupRestore:      testBackUpRestore,
+		Region:             testDBCluster.RegionSlug,
+		Version:            testDBCluster.VersionSlug,
+		EngineSlug:         testDBCluster.EngineSlug,
+		NumNodes:           testDBCluster.NumNodes,
+		SizeSlug:           testDBCluster.SizeSlug,
+		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(r).Return(&testDBCluster, nil)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testDBCluster.RegionSlug)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromClusterName, testBackUpRestore.DatabaseName)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromTimestamp, "2023-02-01 17:32:15 +0000 UTC")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
+		config.Doit.Set(config.NS, doctl.ArgVersion, testDBCluster.VersionSlug)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, testDBCluster.EngineSlug)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
+		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
+
+		err := RunDatabaseCreate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Create(
+			gomock.AssignableToTypeOf(&godo.DatabaseCreateRequest{}),
+		).Return(nil, errTest)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		err := RunDatabaseCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasesForkDatabase(t *testing.T) {
+	r := &godo.DatabaseCreateRequest{
+		Name:               testDBCluster.Name,
+		BackupRestore:      testBackUpRestore,
+		Region:             testDBCluster.RegionSlug,
+		Version:            testDBCluster.VersionSlug,
+		EngineSlug:         testDBCluster.EngineSlug,
+		NumNodes:           testDBCluster.NumNodes,
+		SizeSlug:           testDBCluster.SizeSlug,
+		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
+		Tags:               testDBCluster.Tags,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
+		tm.databases.EXPECT().Create(r).Return(&testDBCluster, nil)
+
+		config.Args = append(config.Args, testDBCluster.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromClusterID, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseRestoreFromTimestamp, "2023-02-01 17:32:15 +0000 UTC")
+
+		err := RunDatabaseFork(config)
 		assert.NoError(t, err)
 	})
 
@@ -1002,6 +1110,28 @@ func TestDatabasesReplicaDelete(t *testing.T) {
 	})
 }
 
+func TestDatabasesReplicaPromote(t *testing.T) {
+	// Successful
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().PromoteReplica(testDBCluster.ID, testDBReplica.Name).Return(nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBReplica.Name)
+
+		err := RunDatabaseReplicaPromote(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().PromoteReplica(testDBCluster.ID, testDBReplica.Name).Return(errTest)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBReplica.Name)
+
+		err := RunDatabaseReplicaPromote(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
 func TestDatabaseGetSQLModes(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
@@ -1071,4 +1201,13 @@ func TestDatabaseListOptions(t *testing.T) {
 		err := RunDatabaseEngineOptions(config)
 		assert.EqualError(t, err, errTest.Error())
 	})
+}
+
+func TestConvertUTCtoISO8601(t *testing.T) {
+	utcTime := "2023-02-01 17:32:15 +0000 UTC"
+	isoTime, err := convertUTCtoISO8601(utcTime)
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, "2023-02-01T17:32:15Z", isoTime)
 }

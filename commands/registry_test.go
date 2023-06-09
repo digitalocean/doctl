@@ -639,6 +639,7 @@ func TestRegistryLogin(t *testing.T) {
 	tests := []struct {
 		name          string
 		expirySeconds int
+		readOnly      bool
 		expect        func(m *mocks.MockRegistryService)
 	}{
 		{
@@ -662,6 +663,17 @@ func TestRegistryLogin(t *testing.T) {
 				}).Return(testDockerCredentials, nil)
 			},
 		},
+		{
+			name:          "with-read-only",
+			expirySeconds: 0,
+			readOnly:      true,
+			expect: func(m *mocks.MockRegistryService) {
+				m.EXPECT().Endpoint().Return(do.RegistryHostname)
+				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
+					ReadWrite: false,
+				}).Return(testDockerCredentials, nil)
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -672,6 +684,7 @@ func TestRegistryLogin(t *testing.T) {
 				}
 
 				config.Doit.Set(config.NS, doctl.ArgRegistryExpirySeconds, test.expirySeconds)
+				config.Doit.Set(config.NS, doctl.ArgRegistryReadOnly, test.readOnly)
 
 				config.Out = os.Stderr
 				err := RunRegistryLogin(config)

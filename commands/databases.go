@@ -78,6 +78,8 @@ There are a number of flags that customize the configuration, all of which are o
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, and `mongodb`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster from which the backup will be restored.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
 	AddBoolFlag(cmdDatabaseCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
@@ -119,6 +121,13 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, e.g. `sfo2` or `nyc3`.", requiredOpt())
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
+
+	cmdDatabaseFork := CmdBuilder(cmd, RunDatabaseFork, "fork <name>", "Create a new database cluster by forking an existing database cluster.", `This command forks a database cluster from an existing cluster. example:
+
+	doctl databases fork new_db_name --restore-from-cluster-id=original-cluster-id`, Writer, aliasOpt("f"))
+	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromClusterID, "", "", "The ID of an existing database cluster from which the new database will be forked from", requiredOpt())
+	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
+	AddBoolFlag(cmdDatabaseFork, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal.")
 
 	cmd.AddCommand(databaseReplica())
 	cmd.AddCommand(databaseMaintenanceWindow())
@@ -195,7 +204,13 @@ func RunDatabaseCreate(c *CmdConfig) error {
 			)
 		}
 
-		db, _ = dbs.Get(db.ID)
+		db, err = dbs.Get(db.ID)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to retrieve the new database: %v",
+				err,
+			)
+		}
 		db.Connection = connection
 	}
 
@@ -243,7 +258,127 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 	}
 	r.PrivateNetworkUUID = privateNetworkUUID
 
+	restoreFromCluster, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromClusterName)
+	if err != nil {
+		return nil, err
+	}
+	if restoreFromCluster != "" {
+		backUpRestore := &godo.DatabaseBackupRestore{}
+		backUpRestore.DatabaseName = restoreFromCluster
+		// only set the restore-from-timestamp if restore-from-cluster is set.
+		restoreFromTimestamp, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromTimestamp)
+		if err != nil {
+			return nil, err
+		}
+		if restoreFromTimestamp != "" {
+			dateFormatted, err := convertUTCtoISO8601(restoreFromTimestamp)
+			if err != nil {
+				return nil, err
+			}
+			backUpRestore.BackupCreatedAt = dateFormatted
+		}
+		r.BackupRestore = backUpRestore
+	}
+
+	r.PrivateNetworkUUID = privateNetworkUUID
+
 	return r, nil
+}
+
+// RunDatabaseFork creates a database cluster by forking an existing cluster.
+func RunDatabaseFork(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	r, err := buildDatabaseForkRequest(c)
+	if err != nil {
+		return err
+	}
+
+	dbs := c.Databases()
+
+	db, err := dbs.Create(r)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		connection := db.Connection
+		dbs := c.Databases()
+		notice("Database forking is in progress, waiting for database to be online")
+
+		err := waitForDatabaseReady(dbs, db.ID)
+		if err != nil {
+			return fmt.Errorf(
+				"database couldn't enter the `online` state: %v",
+				err,
+			)
+		}
+
+		db, _ = dbs.Get(db.ID)
+		db.Connection = connection
+	}
+
+	notice("Database created")
+
+	return displayDatabases(c, false, *db)
+}
+
+func buildDatabaseForkRequest(c *CmdConfig) (*godo.DatabaseCreateRequest, error) {
+	r := &godo.DatabaseCreateRequest{Name: c.Args[0]}
+
+	existingDatabaseID, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromClusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	existingDatabase, err := c.Databases().Get(existingDatabaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	backUpRestore := &godo.DatabaseBackupRestore{}
+	backUpRestore.DatabaseName = existingDatabase.Name
+	restoreFromTimestamp, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromTimestamp)
+	if err != nil {
+		return nil, err
+	}
+	if restoreFromTimestamp != "" {
+		dateFormatted, err := convertUTCtoISO8601(restoreFromTimestamp)
+		if err != nil {
+			return nil, err
+		}
+		backUpRestore.BackupCreatedAt = dateFormatted
+	}
+
+	r.BackupRestore = backUpRestore
+	r.EngineSlug = existingDatabase.EngineSlug
+	r.NumNodes = existingDatabase.NumNodes
+	r.SizeSlug = existingDatabase.SizeSlug
+	r.Region = existingDatabase.RegionSlug
+	r.Version = existingDatabase.VersionSlug
+	r.PrivateNetworkUUID = existingDatabase.PrivateNetworkUUID
+	r.Tags = existingDatabase.Tags
+	r.ProjectID = existingDatabase.ProjectID
+
+	return r, nil
+}
+
+func convertUTCtoISO8601(restoreFromTimestamp string) (string, error) {
+	// accepts UTC time format from user (to match db list output) and converts it to ISO8601 for api parity.
+	date, error := time.Parse("2006-01-02 15:04:05 +0000 UTC", restoreFromTimestamp)
+	if error != nil {
+		return "", fmt.Errorf("Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
+	}
+	dateFormatted := date.Format(time.RFC3339)
+
+	return dateFormatted, nil
 }
 
 // RunDatabaseDelete deletes a database cluster
@@ -1168,6 +1303,11 @@ This command requires that you pass in the replica's name, which you can retriev
 	AddBoolFlag(cmdDatabaseReplicaDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "Deletes the replica without a confirmation prompt")
 
+	CmdBuilder(cmd, RunDatabaseReplicaPromote,
+		"promote <database-id> <replica-name>", "Promote a read-only database replica to become a primary cluster",
+		`This command promotes a read-only database replica to become a primary cluster.`+howToGetReplica+databaseListDetails,
+		Writer, aliasOpt("p"))
+
 	CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-id> <replica-name>",
 		"Retrieve information for connecting to a read-only database replica",
@@ -1273,6 +1413,17 @@ func RunDatabaseReplicaDelete(c *CmdConfig) error {
 	}
 
 	return errOperationAborted
+}
+
+// RunDatabaseReplicaPromote promotes a read-only replica to become a primary cluster
+func RunDatabaseReplicaPromote(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	replicaID := c.Args[1]
+	return c.Databases().PromoteReplica(databaseID, replicaID)
 }
 
 func displayDatabaseReplicas(c *CmdConfig, short bool, replicas ...do.DatabaseReplica) error {
