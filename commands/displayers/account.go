@@ -46,7 +46,11 @@ func (a *Account) KV() []map[string]interface{} {
 	x := map[string]interface{}{
 		"Email": a.Email, "DropletLimit": a.DropletLimit,
 		"EmailVerified": a.EmailVerified, "UUID": a.UUID,
-		"Status": a.Status, "Team": a.Team.Name, "TeamUUID": a.Team.UUID,
+		"Status": a.Status,
+	}
+	if a.Team != nil {
+		x["Team"] = a.Team.Name
+		x["TeamUUID"] = a.Team.UUID
 	}
 
 	return []map[string]interface{}{x}
