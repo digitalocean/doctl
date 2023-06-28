@@ -123,7 +123,7 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
 
 	cmdDatabaseFork := CmdBuilder(cmd, RunDatabaseFork, "fork <name>", "Create a new database cluster by forking an existing database cluster.", `This command forks a database cluster from an existing cluster. example:
-	
+
 	doctl databases fork new_db_name --restore-from-cluster-id=original-cluster-id`, Writer, aliasOpt("f"))
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromClusterID, "", "", "The ID of an existing database cluster from which the new database will be forked from", requiredOpt())
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
@@ -204,7 +204,13 @@ func RunDatabaseCreate(c *CmdConfig) error {
 			)
 		}
 
-		db, _ = dbs.Get(db.ID)
+		db, err = dbs.Get(db.ID)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to retrieve the new database: %v",
+				err,
+			)
+		}
 		db.Connection = connection
 	}
 
@@ -1299,8 +1305,8 @@ This command requires that you pass in the replica's name, which you can retriev
 
 	CmdBuilder(cmd, RunDatabaseReplicaPromote,
 		"promote <database-id> <replica-name>", "Promote a read-only database replica to become a primary cluster",
-		`Delete the specified read-only replica for the specified database cluster.`+howToGetReplica+databaseListDetails,
-		Writer, aliasOpt("rm"))
+		`This command promotes a read-only database replica to become a primary cluster.`+howToGetReplica+databaseListDetails,
+		Writer, aliasOpt("p"))
 
 	CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-id> <replica-name>",

@@ -19,6 +19,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // Version creates a version command.
@@ -48,7 +49,14 @@ func Version() *Command {
 					doctl.DoitVersion.Label = doctl.Label
 				}
 
-				fmt.Println(doctl.DoitVersion.Complete(&doctl.GithubLatestVersioner{}))
+				var output string
+				if viper.GetString("output") == "json" {
+					output = doctl.DoitVersion.CompleteJSON(&doctl.GithubLatestVersioner{})
+				} else {
+					output = doctl.DoitVersion.Complete(&doctl.GithubLatestVersioner{})
+				}
+
+				fmt.Println(output)
 			},
 		},
 	}
