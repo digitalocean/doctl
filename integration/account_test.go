@@ -29,6 +29,10 @@ var _ = suite("account/get", func(t *testing.T, when spec.G, it spec.S) {
 			switch req.URL.Path {
 			case "/v2/account":
 				auth := req.Header.Get("Authorization")
+				if auth == "Bearer user-context-token" {
+					w.Write([]byte(userContextGetResponse))
+					return
+				}
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
@@ -80,6 +84,20 @@ var _ = suite("account/get", func(t *testing.T, when spec.G, it spec.S) {
 
 			expect.Equal(strings.TrimSpace(formattedAccountOutput), strings.TrimSpace(string(output)))
 		})
+	})
+
+	it("doesn't panic in a user context", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "user-context-token",
+			"-u", server.URL,
+			"account",
+			"get",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expect.Equal(strings.TrimSpace(userContextOutput), strings.TrimSpace(string(output)))
 	})
 })
 
@@ -183,9 +201,28 @@ const (
     }
   }
 }`
+
+	userContextGetResponse = `
+{
+  "account": {
+    "droplet_limit": 25,
+    "floating_ip_limit": 5,
+    "email": "sammy@digitalocean.com",
+    "uuid": "b6fr89dbf6d9156cace5f3c78dc9851d957381ef",
+    "email_verified": true,
+    "status": "active",
+    "status_message": ""
+  }
+}`
+
 	accountOutput = `
 User Email                Team       Droplet Limit    Email Verified    User UUID                                   Status
 sammy@digitalocean.com    My Team    25               true              b6fr89dbf6d9156cace5f3c78dc9851d957381ef    active
+`
+
+	userContextOutput = `
+User Email                Team     Droplet Limit    Email Verified    User UUID                                   Status
+sammy@digitalocean.com    <nil>    25               true              b6fr89dbf6d9156cace5f3c78dc9851d957381ef    active
 `
 
 	formattedAccountOutput = `
