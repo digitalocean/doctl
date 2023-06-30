@@ -165,6 +165,7 @@ func addCommands() {
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Serverless())
+	DoitCmd.AddCommand(UptimeCheck())
 }
 
 func computeCmd() *Command {
