@@ -150,9 +150,9 @@ func Execute() {
 // AddCommands adds sub commands to the base command.
 func addCommands() {
 
-	DoitCmd.AddGroup(&cobra.Group{ID: "manageResources", Title: "Manage DigitalOcean Resources"})
-	DoitCmd.AddGroup(&cobra.Group{ID: "configureDoctl", Title: "Configure doctl"})
-	DoitCmd.AddGroup(&cobra.Group{ID: "viewBilling", Title: "View Billing"})
+	DoitCmd.AddGroup(&cobra.Group{ID: "manageResources", Title: "Manage DigitalOcean Resources Commands:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: "configureDoctl", Title: "Configure doctl Commands:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: "viewBilling", Title: "View Billing Commands:"})
 
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Apps())
