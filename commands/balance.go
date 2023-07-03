@@ -25,7 +25,7 @@ func Balance() *Command {
 			Use:     "balance",
 			Short:   "Display commands for retrieving your account balance",
 			Long:    "The subcommands of `doctl balance` retrieve information about your account balance.",
-			GroupID: "viewBilling",
+			GroupID: viewBillingGroup,
 		},
 	}
 

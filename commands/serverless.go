@@ -69,7 +69,7 @@ A one-time install of the serverless software is needed (use ` + "`" + `doctl se
 then ` + "`" + `doctl serverless connect` + "`" + ` to connect to a functions namespace associated with your account).
 Other ` + "`" + `doctl serverless` + "`" + ` commands are used to develop, test, and deploy.`,
 			Aliases: []string{"sandbox", "sbx", "sls"},
-			GroupID: "manageResources",
+			GroupID: manageResourcesGroup,
 		},
 	}
 

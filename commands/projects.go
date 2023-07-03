@@ -49,7 +49,7 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 			Use:     "projects",
 			Short:   "Manage projects and assign resources to them",
 			Long:    "The subcommands of `doctl projects` allow you to create, manage, and assign resources to your projects." + projectsDesc,
-			GroupID: "manageResources",
+			GroupID: manageResourcesGroup,
 		},
 	}
 

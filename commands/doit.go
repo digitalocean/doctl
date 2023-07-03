@@ -29,7 +29,10 @@ import (
 )
 
 const (
-	defaultConfigName = "config.yaml" // default name of config file
+	defaultConfigName    = "config.yaml" // default name of config file
+	manageResourcesGroup = "manageResources"
+	configureDoctlGroup  = "configureDoctl"
+	viewBillingGroup     = "viewBilling"
 )
 
 var (
@@ -150,9 +153,9 @@ func Execute() {
 // AddCommands adds sub commands to the base command.
 func addCommands() {
 
-	DoitCmd.AddGroup(&cobra.Group{ID: "manageResources", Title: "Manage DigitalOcean Resources Commands:"})
-	DoitCmd.AddGroup(&cobra.Group{ID: "configureDoctl", Title: "Configure doctl Commands:"})
-	DoitCmd.AddGroup(&cobra.Group{ID: "viewBilling", Title: "View Billing Commands:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: manageResourcesGroup, Title: "Manage DigitalOcean Resources:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: configureDoctlGroup, Title: "Configure doctl:"})
+	DoitCmd.AddGroup(&cobra.Group{ID: viewBillingGroup, Title: "View Billing:"})
 
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Apps())
@@ -178,7 +181,7 @@ func computeCmd() *Command {
 			Use:     "compute",
 			Short:   "Display commands that manage infrastructure",
 			Long:    `The subcommands under ` + "`" + `doctl compute` + "`" + ` are for managing DigitalOcean resources.`,
-			GroupID: "manageResources",
+			GroupID: manageResourcesGroup,
 		},
 	}
 

@@ -29,7 +29,7 @@ func Invoices() *Command {
 			Use:     "invoice",
 			Short:   "Display commands for retrieving invoices for your account",
 			Long:    "The subcommands of `doctl invoice` retrieve details about invoices for your account.",
-			GroupID: "viewBilling",
+			GroupID: viewBillingGroup,
 		},
 	}
 

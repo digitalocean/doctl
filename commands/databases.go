@@ -47,7 +47,7 @@ func Databases() *Command {
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
 			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, PostgreSQL, and MongoDB database services.",
-			GroupID: "manageResources",
+			GroupID: manageResourcesGroup,
 		},
 	}
 
