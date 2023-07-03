@@ -152,7 +152,7 @@ func addCommands() {
 
 	DoitCmd.AddGroup(&cobra.Group{ID: "manageResources", Title: "Manage DigitalOcean Resources"})
 	DoitCmd.AddGroup(&cobra.Group{ID: "configureDoctl", Title: "Configure doctl"})
-	DoitCmd.AddGroup(&cobra.Group{ID: "viewBilling", Title: "View DigitalOcean Billing"})
+	DoitCmd.AddGroup(&cobra.Group{ID: "viewBilling", Title: "View Billing"})
 
 	DoitCmd.AddCommand(Account())
 	DoitCmd.AddCommand(Apps())
@@ -175,9 +175,10 @@ func addCommands() {
 func computeCmd() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "compute",
-			Short: "Display commands that manage infrastructure",
-			Long:  `The subcommands under ` + "`" + `doctl compute` + "`" + ` are for managing DigitalOcean resources.`,
+			Use:     "compute",
+			Short:   "Display commands that manage infrastructure",
+			Long:    `The subcommands under ` + "`" + `doctl compute` + "`" + ` are for managing DigitalOcean resources.`,
+			GroupID: "manageResources",
 		},
 	}
 

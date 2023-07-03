@@ -35,6 +35,7 @@ func Monitoring() *Command {
 
 An alert policy can be applied to resource(s) (currently Droplets)
 in order to alert on resource consumption.`,
+			GroupID: "manageResources",
 		},
 	}
 

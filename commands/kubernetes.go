@@ -104,6 +104,7 @@ func Kubernetes() *Command {
 			Aliases: []string{"kube", "k8s", "k"},
 			Short:   "Displays commands to manage Kubernetes clusters and configurations",
 			Long:    "The commands under `doctl kubernetes` are for managing Kubernetes clusters and viewing configuration options relating to clusters." + workflowDesc + optionsDesc,
+			GroupID: "manageResources",
 		},
 	}
 

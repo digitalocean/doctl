@@ -33,6 +33,7 @@ func VPCs() *Command {
 			Long: `The commands under ` + "`" + `doctl vpcs` + "`" + ` are for managing your VPCs.
 
 With the vpcs command, you can list, create, or delete VPCs, and manage their configuration details.`,
+			GroupID: "manageResources",
 		},
 	}
 

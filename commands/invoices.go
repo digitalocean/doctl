@@ -26,9 +26,10 @@ import (
 func Invoices() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "invoice",
-			Short: "Display commands for retrieving invoices for your account",
-			Long:  "The subcommands of `doctl invoice` retrieve details about invoices for your account.",
+			Use:     "invoice",
+			Short:   "Display commands for retrieving invoices for your account",
+			Long:    "The subcommands of `doctl invoice` retrieve details about invoices for your account.",
+			GroupID: "viewBilling",
 		},
 	}
 

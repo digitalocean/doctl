@@ -26,6 +26,7 @@ func BillingHistory() *Command {
 			Short:   "Display commands for retrieving your billing history",
 			Long:    "The subcommands of `doctl billing-history` are used to access the billing history for your DigitalOcean account.",
 			Aliases: []string{"bh"},
+			GroupID: "viewBilling",
 		},
 	}
 	listBillingHistoryDesc := `This command retrieves the following details for each event in your billing history:
