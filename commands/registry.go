@@ -55,6 +55,7 @@ func Registry() *Command {
 			Aliases: []string{"reg", "r"},
 			Short:   "Display commands for working with container registries",
 			Long:    "The subcommands of `doctl registry` create, manage, and allow access to your private container registry.",
+			GroupID: manageResourcesGroup,
 		},
 	}
 
