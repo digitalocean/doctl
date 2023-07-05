@@ -419,6 +419,9 @@ func RunRegistryLogin(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+	if expirySeconds == 0 && !neverExpire {
+		notice("Login valid for 30 days. Use the --expiry-seconds flag to set a shorter expiration or --never-expire for no expiration.")
+	}
 
 	var dc dockerConfig
 	err = json.Unmarshal(creds.DockerConfigJSON, &dc)
