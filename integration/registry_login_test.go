@@ -49,7 +49,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 
 				readWriteParam := req.URL.Query().Get("read_write")
 				expiryParam := req.URL.Query().Get("expiry_seconds")
-				if expiryParam == "3600" {
+				if expiryParam == "3600" || expiryParam == "2592000" {
 					w.Write([]byte(registryDockerCredentialsExpiryResponse))
 				} else if expiryParam == "" {
 					if readWriteParam == "false" {
@@ -137,7 +137,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 		})
 	})
 
-	when("read-only flag is passed", func() {
+	when("read-only flag is passed and the token doesn't expire", func() {
 		it("add the correct query parameter", func() {
 			tmpDir := t.TempDir()
 
@@ -149,6 +149,8 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 				"registry",
 				"login",
 				"--read-only",
+				"true",
+				"--never-expire",
 				"true",
 			)
 			cmd.Env = os.Environ()

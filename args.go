@@ -381,6 +381,8 @@ const (
 	ArgRegistryExpirySeconds = "expiry-seconds"
 	// ArgRegistryReadOnly indicates that a generated registry API token should be read-only.
 	ArgRegistryReadOnly = "read-only"
+	// ArgRegistryNeverExpire indicates that a generated registry API token should never expire.
+	ArgRegistryNeverExpire = "never-expire"
 	// ArgSubscriptionTier is a subscription tier slug.
 	ArgSubscriptionTier = "subscription-tier"
 	// ArgGCIncludeUntaggedManifests indicates that a garbage collection should delete
