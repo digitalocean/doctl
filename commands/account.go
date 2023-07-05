@@ -27,6 +27,7 @@ func Account() *Command {
 			Long: `The subcommands of ` + "`" + `doctl account` + "`" + ` retrieve information about DigitalOcean accounts.
 
 For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile details, and ` + "`" + `doctl account ratelimit` + "`" + ` retrieves API usage details.`,
+			GroupID: manageResourcesGroup,
 		},
 	}
 
