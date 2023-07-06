@@ -240,6 +240,17 @@ const (
 	// ArgOutput is an output type argument.
 	ArgOutput = "output"
 
+	// ArgUptimeCheckName is the name of an uptime check.
+	ArgUptimeCheckName = "name"
+	// ArgUptimeCheckType is the type of an uptime check.
+	ArgUptimeCheckType = "type"
+	// ArgUptimeCheckTarget is the target of an uptime check.
+	ArgUptimeCheckTarget = "target"
+	// ArgUptimeCheckRegions are the regions of an uptime check.
+	ArgUptimeCheckRegions = "regions"
+	// ArgUptimeCheckEnabled is whether or not an uptime check is enabled.
+	ArgUptimeCheckEnabled = "enabled"
+
 	// ArgVolumeSize is the size of a volume.
 	ArgVolumeSize = "size"
 	// ArgVolumeDesc is the description of a volume.
