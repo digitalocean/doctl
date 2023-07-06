@@ -40,6 +40,7 @@ in order to alert on resource consumption.`,
 	}
 
 	cmd.AddCommand(alertPolicies())
+	cmd.AddCommand(UptimeCheck())
 	return cmd
 }
 

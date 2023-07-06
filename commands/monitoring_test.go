@@ -36,7 +36,7 @@ var (
 func TestAlertPolicyCommand(t *testing.T) {
 	cmd := Monitoring()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "alert")
+	assertCommandNames(t, cmd, "alert", "uptime")
 	assertCommandNames(t, cmd.childCommands[0], "create", "delete", "get", "list", "update")
 }
 
