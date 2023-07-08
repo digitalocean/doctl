@@ -640,11 +640,14 @@ func TestRegistryLogin(t *testing.T) {
 		name          string
 		expirySeconds int
 		readOnly      bool
+		neverExpire   bool
+		err           error
 		expect        func(m *mocks.MockRegistryService)
 	}{
 		{
 			name:          "no-expiry",
 			expirySeconds: 0,
+			neverExpire:   true,
 			expect: func(m *mocks.MockRegistryService) {
 				m.EXPECT().Endpoint().Return(do.RegistryHostname)
 				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
@@ -670,9 +673,17 @@ func TestRegistryLogin(t *testing.T) {
 			expect: func(m *mocks.MockRegistryService) {
 				m.EXPECT().Endpoint().Return(do.RegistryHostname)
 				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
-					ReadWrite: false,
+					ReadWrite:     false,
+					ExpirySeconds: godo.Int(defaultRegistryAPITokenExpirySeconds),
 				}).Return(testDockerCredentials, nil)
 			},
+		},
+		{
+			name:          "with-expiry-and-never-expire",
+			expirySeconds: 3600,
+			neverExpire:   true,
+			err:           errExpiryTimeAndNeverExpire,
+			expect:        func(m *mocks.MockRegistryService) {},
 		},
 	}
 
@@ -684,11 +695,16 @@ func TestRegistryLogin(t *testing.T) {
 				}
 
 				config.Doit.Set(config.NS, doctl.ArgRegistryExpirySeconds, test.expirySeconds)
+				config.Doit.Set(config.NS, doctl.ArgRegistryNeverExpire, test.neverExpire)
 				config.Doit.Set(config.NS, doctl.ArgRegistryReadOnly, test.readOnly)
 
 				config.Out = os.Stderr
 				err := RunRegistryLogin(config)
-				assert.NoError(t, err)
+				if test.err != nil {
+					assert.Error(t, test.err, err)
+				} else {
+					assert.NoError(t, err)
+				}
 			})
 		})
 	}

@@ -33,6 +33,7 @@ mockgen -source snapshots.go -package=mocks SnapshotsService > mocks/SnapshotsSe
 mockgen -source sizes.go -package=mocks SizesService > mocks/SizesService.go
 mockgen -source sshkeys.go -package=mocks KeysService > mocks/KeysService.go
 mockgen -source tags.go -package=mocks TagsService > mocks/TagsService.go
+mockgen -source uptime_checks.go -package=mocks UptimeChecksService > mocks/UptimeChecksService.go
 mockgen -source volume_actions.go -package=mocks VolumeActionsService > mocks/VolumeActionsService.go
 mockgen -source volumes.go -package=mocks VolumesService > mocks/VolumesService.go
 mockgen -source vpcs.go -package=mocks VPCsService > mocks/VPCsService.go

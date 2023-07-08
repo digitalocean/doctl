@@ -35,10 +35,12 @@ func Monitoring() *Command {
 
 An alert policy can be applied to resource(s) (currently Droplets)
 in order to alert on resource consumption.`,
+			GroupID: manageResourcesGroup,
 		},
 	}
 
 	cmd.AddCommand(alertPolicies())
+	cmd.AddCommand(UptimeCheck())
 	return cmd
 }
 

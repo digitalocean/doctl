@@ -29,6 +29,8 @@ import (
 type Command struct {
 	*cobra.Command
 
+	*cobra.Group
+
 	fmtCols []string
 
 	childCommands []*Command
