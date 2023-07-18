@@ -82,6 +82,7 @@ var (
 	repositoryListV2Output = `
 Name      Latest Manifest                                                            Latest Tag    Tag Count    Manifest Count    Updated At
 repo-1    sha256:cb8a924afdf0229ef7515d9e5b3024e23b3eb03ddbba287f4a19c6ac90b8d221    v1            57           82                2021-04-09 23:54:25 +0000 UTC
+repo-2                                                                               <none>        57           82                <nil>
 `
 
 	repositoryListV2Response = `{
@@ -117,10 +118,16 @@ repo-1    sha256:cb8a924afdf0229ef7515d9e5b3024e23b3eb03ddbba287f4a19c6ac90b8d22
           }
         ]
       }
+    },
+    {
+      "registry_name": "example-no-latest-manifest",
+      "name": "repo-2",
+      "tag_count": 57,
+      "manifest_count": 82
     }
   ],
   "meta": {
-    "total": 1
+    "total": 2
   }
 }`
 )

@@ -16,6 +16,7 @@ package displayers
 import (
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/digitalocean/doctl/do"
 )
@@ -143,17 +144,25 @@ func (r *RepositoryV2) KV() []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(r.Repositories))
 
 	for _, reg := range r.Repositories {
+		var latestManifest string
 		latestTag := "<none>" // default when latest manifest has no tags
-		if len(reg.LatestManifest.Tags) > 0 {
-			latestTag = reg.LatestManifest.Tags[0]
+		var latestUpdate *time.Time
+
+		if reg.LatestManifest != nil {
+			latestManifest = reg.LatestManifest.Digest
+			if len(reg.LatestManifest.Tags) > 0 {
+				latestTag = reg.LatestManifest.Tags[0]
+			}
+			latestUpdate = &reg.LatestManifest.UpdatedAt
 		}
+
 		m := map[string]interface{}{
 			"Name":           reg.Name,
-			"LatestManifest": reg.LatestManifest.Digest,
+			"LatestManifest": latestManifest,
 			"LatestTag":      latestTag,
 			"TagCount":       reg.TagCount,
 			"ManifestCount":  reg.ManifestCount,
-			"UpdatedAt":      reg.LatestManifest.UpdatedAt,
+			"UpdatedAt":      latestUpdate,
 		}
 
 		out = append(out, m)
