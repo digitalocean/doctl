@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	do "github.com/digitalocean/doctl/do"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockSnapshotsService is a mock of SnapshotsService interface.

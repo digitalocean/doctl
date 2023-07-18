@@ -9,9 +9,9 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/godo"
-	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestRunAppsDevBuild(t *testing.T) {

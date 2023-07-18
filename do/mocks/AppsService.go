@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	godo "github.com/digitalocean/godo"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockAppsService is a mock of AppsService interface.

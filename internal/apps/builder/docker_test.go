@@ -17,9 +17,9 @@ import (
 	"github.com/digitalocean/doctl/commands/charm/text"
 	"github.com/digitalocean/godo"
 	"github.com/docker/docker/api/types"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestDockerComponentBuild_validation(t *testing.T) {

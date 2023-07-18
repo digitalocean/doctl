@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	do "github.com/digitalocean/doctl/do"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockOAuthService is a mock of OAuthService interface.

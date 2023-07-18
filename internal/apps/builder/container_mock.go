@@ -12,8 +12,8 @@ import (
 	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
 	network "github.com/docker/docker/api/types/network"
-	gomock "github.com/golang/mock/gomock"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockDockerEngineClient is a mock of DockerEngineClient interface.
