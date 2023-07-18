@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	godo "github.com/digitalocean/godo"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockComponentBuilderFactory is a mock of ComponentBuilderFactory interface.

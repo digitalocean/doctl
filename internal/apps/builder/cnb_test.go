@@ -17,9 +17,9 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/golang/mock/gomock"
 	"github.com/kballard/go-shellquote"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestCNBComponentBuild(t *testing.T) {

@@ -11,7 +11,7 @@ import (
 
 	whisk "github.com/apache/openwhisk-client-go/whisk"
 	do "github.com/digitalocean/doctl/do"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockServerlessService is a mock of ServerlessService interface.

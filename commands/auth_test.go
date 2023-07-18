@@ -25,9 +25,9 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
-	"github.com/golang/mock/gomock"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	yaml "gopkg.in/yaml.v2"
 )
 

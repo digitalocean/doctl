@@ -23,10 +23,10 @@ import (
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/doctl/internal/apps/builder"
 	"github.com/digitalocean/godo"
-	"github.com/golang/mock/gomock"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 )
 
 var (

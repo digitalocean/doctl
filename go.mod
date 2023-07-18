@@ -12,7 +12,6 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.13.0
 	github.com/gobwas/glob v0.2.3
-	github.com/golang/mock v1.6.0
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
@@ -55,6 +54,7 @@ require (
 	github.com/muesli/reflow v0.3.0
 	github.com/muesli/termenv v0.12.0
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
+	go.uber.org/mock v0.2.0
 	golang.org/x/term v0.5.0
 	gopkg.in/yaml.v3 v3.0.1
 )

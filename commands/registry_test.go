@@ -26,8 +26,8 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/godo"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 	k8sapiv1 "k8s.io/api/core/v1"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 )
