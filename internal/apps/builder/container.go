@@ -1,4 +1,4 @@
-//go:generate go run github.com/golang/mock/mockgen -source container.go -package builder -destination container_mock.go DockerEngineClient
+//go:generate go run go.uber.org/mock/mockgen -source container.go -package builder -destination container_mock.go DockerEngineClient
 
 package builder
 

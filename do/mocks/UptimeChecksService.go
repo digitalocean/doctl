@@ -9,7 +9,7 @@ import (
 
 	do "github.com/digitalocean/doctl/do"
 	godo "github.com/digitalocean/godo"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockUptimeChecksService is a mock of UptimeChecksService interface.

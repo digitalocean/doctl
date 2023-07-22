@@ -6,7 +6,7 @@ set -euo pipefail
 
 cd "do"
 
-go install -mod=readonly github.com/golang/mock/mockgen@latest
+go install -mod=readonly go.uber.org/mock/mockgen@latest
 
 mockgen -source account.go -package=mocks AccountService > mocks/AccountService.go
 mockgen -source actions.go -package=mocks ActionService > mocks/ActionService.go
