@@ -146,7 +146,14 @@ To create new contexts, see the help for `+"`"+`doctl auth init`+"`"+`.`, Writer
 // XDG_CONFIG_HOME is not set, use $HOME/.config. On Windows use %APPDATA%/doctl/config.
 func RunAuthInit(retrieveUserTokenFunc func() (string, error)) func(c *CmdConfig) error {
 	return func(c *CmdConfig) error {
-		token := c.getContextAccessToken()
+		token := viper.GetString(doctl.ArgAccessToken)
+
+		// if --access-token is passed, set the context.
+		if token != "" {
+			c.setContextAccessToken(token)
+		}
+
+		token = c.getContextAccessToken()
 		context := strings.ToLower(Context)
 		if context == "" {
 			context = strings.ToLower(viper.GetString("context"))
