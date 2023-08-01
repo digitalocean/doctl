@@ -37,7 +37,11 @@ endif
 ifeq ($(GOARCH),)
   GOARCH = amd64
   ifneq ($(UNAME_M), x86_64)
-    GOARCH = 386
+    ifeq ($(UNAME_M), arm64)
+      GOARCH = arm64
+    else
+      GOARCH = 386
+    endif
   endif
 endif
 
