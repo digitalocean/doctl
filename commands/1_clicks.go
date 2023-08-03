@@ -32,6 +32,14 @@ func OneClicks() *Command {
 
 	cmdOneClickList := CmdBuilder(cmd, RunOneClickList, "list", "Retrieve a list of 1-Click applications", "Use this command to retrieve a list of 1-Click applications. You can narrow it by type, current types: kubernetes, droplet", Writer,
 		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
+	cmdOneClickList.Example = `
+To list  Droplet 1-Click applications, run:
+
+    doctl 1-click list --type droplet
+
+To list  Kubernetes 1-Click applications, run:
+
+    doctl 1-click list --type kubernetes`
 
 	AddStringFlag(cmdOneClickList, doctl.ArgOneClickType, "", "", "The 1-Click type. Valid types are one of the following: kubernetes, droplet")
 
