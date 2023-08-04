@@ -87,7 +87,7 @@ Currently, you can only update the custom domain and its certificate ID with thi
 
 This is useful when you need to ensure that files which were recently changed on the origin server are immediately available via the CDN.
 
-To purge specific files, you can use the the `+"`"+`--files`+"`"+` flag and supply a path. The path may be for a single file or may contain a wildcard (`+"`"+`*`+"`"+`) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.`, Writer,
+To purge specific files, you can use the `+"`"+`--files`+"`"+` flag and supply a path. The path may be for a single file or may contain a wildcard (`+"`"+`*`+"`"+`) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.`, Writer,
 		aliasOpt("fc"))
 	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", []string{"*"}, "cdn files")
 
