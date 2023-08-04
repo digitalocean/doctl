@@ -1466,7 +1466,7 @@ func sqlMode() *Command {
 		},
 	}
 
-	getSqlModeDesc := "This command displays the the configured SQL modes for the specified MySQL database cluster."
+	getSqlModeDesc := "This command displays the configured SQL modes for the specified MySQL database cluster."
 	CmdBuilder(cmd, RunDatabaseGetSQLModes, "get <database-id>",
 		"Get a MySQL database cluster's SQL modes", getSqlModeDesc, Writer,
 		displayerType(&displayers.DatabaseSQLModes{}), aliasOpt("g"))
