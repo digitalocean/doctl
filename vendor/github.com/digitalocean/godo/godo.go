@@ -35,7 +35,7 @@ const (
 // Client manages communication with DigitalOcean V2 API.
 type Client struct {
 	// HTTP client used to communicate with the DO API.
-	client *http.Client
+	Client *http.Client
 
 	// Base URL for API requests.
 	BaseURL *url.URL
@@ -240,7 +240,7 @@ func NewClient(httpClient *http.Client) *Client {
 
 	baseURL, _ := url.Parse(defaultBaseURL)
 
-	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	c := &Client{Client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
 
 	c.Account = &AccountServiceOp{client: c}
 	c.Actions = &ActionsServiceOp{client: c}
@@ -308,15 +308,15 @@ func New(httpClient *http.Client, opts ...ClientOpt) (*Client, error) {
 		}
 
 		// if timeout is set, it is maintained before overwriting client with StandardClient()
-		retryableClient.HTTPClient.Timeout = c.client.Timeout
+		retryableClient.HTTPClient.Timeout = c.Client.Timeout
 
 		var source *oauth2.Transport
-		if _, ok := c.client.Transport.(*oauth2.Transport); ok {
-			source = c.client.Transport.(*oauth2.Transport)
+		if _, ok := c.Client.Transport.(*oauth2.Transport); ok {
+			source = c.Client.Transport.(*oauth2.Transport)
 		}
-		c.client = retryableClient.StandardClient()
-		c.client.Transport = &oauth2.Transport{
-			Base:   c.client.Transport,
+		c.Client = retryableClient.StandardClient()
+		c.Client.Transport = &oauth2.Transport{
+			Base:   c.Client.Transport,
 			Source: source.Source,
 		}
 
@@ -467,7 +467,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 		}
 	}
 
-	resp, err := DoRequestWithClient(ctx, c.client, req)
+	resp, err := DoRequestWithClient(ctx, c.Client, req)
 	if err != nil {
 		return nil, err
 	}
