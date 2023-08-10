@@ -239,25 +239,8 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
 	oauthClient := oauth2.NewClient(context.Background(), tokenSource)
 
-	args := []godo.ClientOpt{
-		godo.SetUserAgent(userAgent()),
-		godo.WithRetryAndBackoffs(godo.RetryConfig{
-			RetryMax: 20,
-		}),
-	}
-
-	apiURL := viper.GetString("api-url")
-	if apiURL != "" {
-		args = append(args, godo.SetBaseURL(apiURL))
-	}
-
-	client, err := godo.New(oauthClient, args...)
-	if err != nil {
-		return nil, err
-	}
-
 	if trace {
-		r := newRecorder(client.Client.Transport)
+		r := newRecorder(oauthClient.Transport)
 
 		go func() {
 			for {
@@ -270,10 +253,17 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 			}
 		}()
 
-		client.Client.Transport = r
+		oauthClient.Transport = r
 	}
 
-	return client, nil
+	args := []godo.ClientOpt{godo.SetUserAgent(userAgent())}
+
+	apiURL := viper.GetString("api-url")
+	if apiURL != "" {
+		args = append(args, godo.SetBaseURL(apiURL))
+	}
+
+	return godo.New(oauthClient, args...)
 }
 
 // GetDockerEngineClient returns a container engine client.
