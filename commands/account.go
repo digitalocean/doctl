@@ -23,7 +23,7 @@ func Account() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "account",
-			Short: "Display commands that retrieve account details",
+			Short: "Displays commands that retrieve account details",
 			Long: `The subcommands of ` + "`" + `doctl account` + "`" + ` retrieve information about DigitalOcean accounts.
 
 For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile details, and ` + "`" + `doctl account ratelimit` + "`" + ` retrieves API usage details.`,
@@ -31,20 +31,22 @@ For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile d
 		},
 	}
 
-	CmdBuilder(cmd, RunAccountGet, "get", "Retrieve account profile details", `Retrieve the following details from your account profile:
+	CmdBuilder(cmd, RunAccountGet, "get", "Retrieves account profile details", `Retrieves the following details from your account profile:
 
 - Email address
+- Team 
 - Account Droplet limit
 - Email verification status
-- Account status (active or disabled)
-- UUID for the account.`, Writer,
+- UUID for the account
+- Account status (active or disabled).`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Account{}))
 
-	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieve your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
+
+	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieves your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
 
 - The current limit on your account for API calls (5,000 per hour per OAuth token)
 - The number of API calls you have made in the last hour
-- When the API call count is due to reset to zero, which happens hourly
+- When the API call count will reset to zero, which happens hourly
 
 Note that these details are per OAuth token and are tied to the token you used when calling `+"`"+`doctl auth init`+"`"+` at setup time.`, Writer,
 		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))

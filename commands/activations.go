@@ -43,16 +43,15 @@ func Activations() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "activations",
-			Short: "Work with activation records",
-			Long: `The subcommands of ` + "`" + `doctl serverless activations` + "`" + ` will list or retrieve results, logs, or complete
-"activation records" which result from invoking functions deployed to your functions namespace.`,
+			Short: "Retrieve activation records",
+			Long: `The subcommands of ` + "`" + `doctl serverless activations` + "`" + ` retrieve results, logs, or complete
+activation records of functions deployed to your functions namespace.`,
 			Aliases: []string{"activation", "actv"},
 		},
 	}
 
 	get := CmdBuilder(cmd, RunActivationsGet, "get [<activationId>]", "Retrieves an Activation",
-		`Use `+"`"+`doctl serverless activations get`+"`"+` to retrieve the activation record for a previously invoked function.
-There are several options for specifying the activation you want.  You can limit output to the result
+		`Retrieves the activation record for a previously invoked function. You can limit output to the result
 or the logs.  The `+"`"+`doctl serverless activation logs`+"`"+` command has additional advanced capabilities for retrieving
 logs.`,
 		Writer)

@@ -30,9 +30,9 @@ func Actions() *Command {
 		Command: &cobra.Command{
 			Use:   "action",
 			Short: "Display commands for retrieving resource action history",
-			Long: `The sub-commands of ` + "`" + `doctl compute action` + "`" + ` retrieve the history of actions taken on your resources.
+			Long: `The sub-commands of ` + "`" + `doctl compute action` + "`" + ` retrieves the history of actions taken on your resources.
 
-This can be filtered to a specific action. For example, while ` + "`" + `doctl compute action list` + "`" + ` will list all of the actions taken on all of the resources in your account, ` + "`" + `doctl compute action get <action-id>` + "`" + ` will retrieve details for a specific action.`,
+You can filter to a specific action. For example, while ` + "`" + `doctl compute action list` + "`" + ` lists all of the actions taken on all of the resources in your account, ` + "`" + `doctl compute action get <action-id>` + "`" + ` retrieves details for a specific action.`,
 		},
 	}
 
@@ -47,10 +47,10 @@ This can be filtered to a specific action. For example, while ` + "`" + `doctl c
 - The resource type (Droplet, backend)
 - The region in which the action took place (nyc3, sfo2, etc)`
 
-	CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "Retrieve details about a specific action", `This command retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
+	CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "Retrieves details about a specific action", `Retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Action{}))
 
-	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "Retrieve a  list of all recent actions taken on your resources", `This command retrieves a list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
+	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "Retrieves a  list of all recent actions taken on your resources", `Retrieves a list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Action{}))
 	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", "Action resource type")
 	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", "Action region")
@@ -58,11 +58,17 @@ This can be filtered to a specific action. For example, while ` + "`" + `doctl c
 	AddStringFlag(cmdActionList, doctl.ArgActionBefore, "", "", "Action completed before in RFC3339 format")
 	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", "Action status")
 	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", "Action type")
+	cmdActionList.Example = `
+To list all actions taken on your account, run:
+	` + "`" + `doctl compute action list` + "`" + ``
 
-	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "Block thread until an action completes", `The command blocks the current thread, returning when an action completes.
+	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "Blocks thread until an action completes", `Blocks the current thread, returning when an action completes.
 
 For example, if you find an action when calling `+"`"+`doctl compute action list`+"`"+` that has a status of `+"`"+`in-progress`+"`"+`, you can note the action ID and call `+"`"+`doctl compute action wait <action-id>`+"`"+`, and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
 		aliasOpt("w"), displayerType(&displayers.Action{}))
+	cmdActionWait.Example = `
+To wait for an action with ID` + "`" + `12345678` + "`" + ` to complete, run:
+	` + "`" + `doctl compute action wait 12345678` + "`" + ``
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 
 	return cmd
