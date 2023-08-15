@@ -1,5 +1,11 @@
 # Change Log
 
+## [v1.102.0] - 2023-08-14
+
+- #624 - @danaelhe - Update README.md with Retryable Info
+- #626 - @andrewsomething - Allow configuring go-retryablehttp.Logger
+- #625 - @andrewsomething - Export the HTTP client
+
 ## [v1.101.0] - 2023-08-09
 
 - #619 - @danaelhe - Add retryablehttp Client Option

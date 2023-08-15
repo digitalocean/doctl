@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.101.0"
+	libraryVersion = "1.102.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -35,7 +35,7 @@ const (
 // Client manages communication with DigitalOcean V2 API.
 type Client struct {
 	// HTTP client used to communicate with the DO API.
-	client *http.Client
+	HTTPClient *http.Client
 
 	// Base URL for API requests.
 	BaseURL *url.URL
@@ -111,11 +111,12 @@ type Client struct {
 // to explicitly set the RetryWaitMin and RetryWaitMax values.
 //
 // Note: Opting to use the go-retryablehttp client will overwrite any custom HTTP client passed into New().
-// Only the custom HTTP client's custom transport and timeout will be maintained.
+// Only the oauth2.TokenSource and Timeout will be maintained.
 type RetryConfig struct {
 	RetryMax     int
-	RetryWaitMin *float64 // Minimum time to wait
-	RetryWaitMax *float64 // Maximum time to wait
+	RetryWaitMin *float64    // Minimum time to wait
+	RetryWaitMax *float64    // Maximum time to wait
+	Logger       interface{} // Customer logger instance. Must implement either go-retryablehttp.Logger or go-retryablehttp.LeveledLogger
 }
 
 // RequestCompletionCallback defines the type of the request callback function
@@ -240,7 +241,7 @@ func NewClient(httpClient *http.Client) *Client {
 
 	baseURL, _ := url.Parse(defaultBaseURL)
 
-	c := &Client{client: httpClient, BaseURL: baseURL, UserAgent: userAgent}
+	c := &Client{HTTPClient: httpClient, BaseURL: baseURL, UserAgent: userAgent}
 
 	c.Account = &AccountServiceOp{client: c}
 	c.Actions = &ActionsServiceOp{client: c}
@@ -307,16 +308,19 @@ func New(httpClient *http.Client, opts ...ClientOpt) (*Client, error) {
 			retryableClient.RetryWaitMax = time.Duration(*c.RetryConfig.RetryWaitMax * float64(time.Second))
 		}
 
+		// By default this is nil and does not log.
+		retryableClient.Logger = c.RetryConfig.Logger
+
 		// if timeout is set, it is maintained before overwriting client with StandardClient()
-		retryableClient.HTTPClient.Timeout = c.client.Timeout
+		retryableClient.HTTPClient.Timeout = c.HTTPClient.Timeout
 
 		var source *oauth2.Transport
-		if _, ok := c.client.Transport.(*oauth2.Transport); ok {
-			source = c.client.Transport.(*oauth2.Transport)
+		if _, ok := c.HTTPClient.Transport.(*oauth2.Transport); ok {
+			source = c.HTTPClient.Transport.(*oauth2.Transport)
 		}
-		c.client = retryableClient.StandardClient()
-		c.client.Transport = &oauth2.Transport{
-			Base:   c.client.Transport,
+		c.HTTPClient = retryableClient.StandardClient()
+		c.HTTPClient.Transport = &oauth2.Transport{
+			Base:   c.HTTPClient.Transport,
 			Source: source.Source,
 		}
 
@@ -373,6 +377,7 @@ func WithRetryAndBackoffs(retryConfig RetryConfig) ClientOpt {
 		c.RetryConfig.RetryMax = retryConfig.RetryMax
 		c.RetryConfig.RetryWaitMax = retryConfig.RetryWaitMax
 		c.RetryConfig.RetryWaitMin = retryConfig.RetryWaitMin
+		c.RetryConfig.Logger = retryConfig.Logger
 		return nil
 	}
 }
@@ -467,7 +472,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, v interface{}) (*Res
 		}
 	}
 
-	resp, err := DoRequestWithClient(ctx, c.client, req)
+	resp, err := DoRequestWithClient(ctx, c.HTTPClient, req)
 	if err != nil {
 		return nil, err
 	}
