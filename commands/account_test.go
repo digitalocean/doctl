@@ -59,6 +59,7 @@ func TestAccountGet(t *testing.T) {
 
 func TestAccountGetRateLimit(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		RetryMax = 0
 		now := time.Now()
 		testRateLimit.Reset = godo.Timestamp{Time: now}
 		tm.account.EXPECT().RateLimit().Return(testRateLimit, nil)

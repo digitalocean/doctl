@@ -85,7 +85,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 
 		initServices: func(c *CmdConfig) error {
 			accessToken := c.getContextAccessToken()
-			godoClient, err := c.Doit.GetGodoClient(Trace, accessToken)
+			godoClient, err := c.Doit.GetGodoClient(Trace, true, accessToken)
 			if err != nil {
 				return fmt.Errorf("Unable to initialize DigitalOcean API client: %s", err)
 			}
