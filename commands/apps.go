@@ -284,7 +284,7 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.Deployments{}),
 	)
 	AddStringFlag(upgradeBuildpack,
-		doctl.ArgBuildpack, "", "", "The ID of the buildpack to upgrade to. Use the " + "`" + `list-buildpacks` + "`" + " command to list available buildpacks.", requiredOpt())
+		doctl.ArgBuildpack, "", "", "The ID of the buildpack to upgrade to. Use the list-buildpacks command to list available buildpacks.", requiredOpt())
 	AddIntFlag(upgradeBuildpack,
 		doctl.ArgMajorVersion, "", 0, "The major version to upgrade to. If empty, the buildpack upgrades to the latest available version.")
 	AddBoolFlag(upgradeBuildpack,
