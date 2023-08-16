@@ -61,9 +61,7 @@ logs.`,
 	AddBoolFlag(get, "result", "r", false, "Retrieves only the resulting output of a function.")
 	AddStringFlag(get, "function", "f", "", "Retrieves activations for a specific function.")
 	AddBoolFlag(get, "quiet", "q", false, "Suppressed the last activation information header.")
-	get.Example = `
-	The following example retrieves the results for the most recent activation of a function named "yourFunction":
-	` + "`" + `doctl serverless activations get --function yourFunction --last --result` + "`" + ``
+	get.Example = `The following example retrieves the results for the most recent activation of a function named ` + "`" + `yourFunction` + "`" + `: doctl serverless activations get --function yourFunction --last --result`
 
 	list := CmdBuilder(cmd, RunActivationsList, "list [<function_name>]", "Lists Activations for which records exist.",
 		`Use `+"`"+`doctl serverless activations list`+"`"+` to list the activation records that are present in the cloud for previously
@@ -78,9 +76,7 @@ invoked functions.`,
 	AddIntFlag(list, "upto", "", 0, "Retrieves activations invoked before the specified date-time; in UNIX timestamp format measured in milliseconds.")
 	AddBoolFlag(list, "count", "", false, "Returns only the total number of activations.")
 	AddBoolFlag(list, "full", "f", false, "Includes the full activation description.")
-	list.Example = `
-	The following example lists all of the activations for a function named "yourFunction" since January 1, 2023:
-	` + "`" + `doctl serverless activations list --function yourFunction --since 1672549200000` + "`" + ``
+	list.Example = `The following example lists all of the activations for a function named ` + "`" + `yourFunction` + "`" + ` since January 1, 2023: doctl serverless activations list --function yourFunction --since 1672549200000`
 
 	logs := CmdBuilder(cmd, RunActivationsLogs, "logs [<activationId>]", "Retrieves the logs for an activation.",
 		`Use `+"`"+`doctl serverless activations logs`+"`"+` to retrieve the logs portion of one or more activation records
@@ -93,9 +89,7 @@ for new arrivals.`,
 	AddIntFlag(logs, "limit", "n", 1, "Limits the number of logs returned to the specified amount, up to 200.")
 	AddBoolFlag(logs, "strip", "r", false, "Returns only the first line of output in the log, stripped of time stamps.")
 	AddBoolFlag(logs, "follow", "", false, "Continuously returns log information.")
-	logs.Example = `
-	The following example retrieves the logs for the most recent activation of a function named "yourFunction":
-	` + "`" + `doctl serverless activations logs --function yourFunction --last` + "`" + ``
+	logs.Example = `The following example retrieves the logs for the most recent activation of a function named ` + "`" + `yourFunction` + "`" + `: doctl serverless activations logs --function yourFunction --last`
 
 	// This is the default behavior, so we want to prevent users from explicitly using this flag. We don't want to remove it
 	// to maintain backwards compatibility
@@ -110,9 +104,7 @@ of one or more activation records.`,
 	AddIntFlag(result, "skip", "s", 0, "SKIP number of activations")
 	AddStringFlag(result, "function", "f", "", "Retrieves the results for a specific function.")
 	AddBoolFlag(result, "quiet", "q", false, "Suppresses last activation information header.")
-	result.Example = `
-	The following example retrieves the results for the most recent activation of a function named "yourFunction":
-	` + "`" + `doctl serverless activations result --function yourFunction --last` + "`" + ``
+	result.Example = `The following example retrieves the results for the most recent activation of a function named ` + "`" + `yourFunction` + "`" + `: doctl serverless activations result --function yourFunction --last`
 	return cmd
 }
 
