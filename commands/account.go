@@ -40,9 +40,7 @@ For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile d
 - UUID for the account
 - Account status (active or disabled).`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Account{}))
-		cmdAccountGet.Example = `
-		The following example retrieves email addresses associated with the account:
-		` + "`" + `doctl account get --format Email` + "`" + ``
+		cmdAccountGet.Example = `The following ` + "`" + `example` + "`" + ` retrieves email addresses associated with the account: doctl account get --format Email`
 
 	cmdAccountRateLimit := CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieves your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
 
