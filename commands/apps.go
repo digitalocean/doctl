@@ -143,7 +143,7 @@ This permanently deletes the app and all of its associated deployments.`,
 		RunAppsGetDeployment,
 		"get-deployment <app id> <deployment id>",
 		"Get a deployment",
-		`Get information about a specific deployment for the given app, including when the app updated and what triggered the deployment (Cause).
+		`Gets information about a specific deployment for the given app, including when the app updated and what triggered the deployment (Cause).
 
 Only basic information is included with the text output format. For complete app details including an updated app spec, use the ` + "`" + `--output` + "`" + ` global flag and specify the JSON format.`,
 		Writer,

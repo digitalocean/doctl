@@ -50,44 +50,44 @@ activation records of functions deployed to your functions namespace.`,
 		},
 	}
 
-	get := CmdBuilder(cmd, RunActivationsGet, "get [<activationId>]", "Retrieves information about an activation.",
-		`Retrieves the activation record for a previously invoked function. You can limit output to the result
+	get := CmdBuilder(cmd, RunActivationsGet, "get [<activationId>]", "Retrieve information about an activation.",
+		`Retrieve the activation record for a previously invoked function. You can limit output to the result
 or the logs.  The `+"`"+`doctl serverless activation logs`+"`"+` command has additional advanced capabilities for retrieving
 logs.`,
 		Writer)
-	AddBoolFlag(get, "last", "l", false, "Retrieves the most recent activation (default). Does not return activations for web-invoked functions.")
+	AddBoolFlag(get, "last", "l", false, "Retrieve the most recent activation (default). Does not return activations for web-invoked functions.")
 	AddIntFlag(get, "skip", "s", 0, "SKIP number of activations.")
-	AddBoolFlag(get, "logs", "g", false, "Retrieves only the logs, stripped of time stamps and stream identifier.")
-	AddBoolFlag(get, "result", "r", false, "Retrieves only the resulting output of a function.")
-	AddStringFlag(get, "function", "f", "", "Retrieves activations for a specific function.")
-	AddBoolFlag(get, "quiet", "q", false, "Suppressed the last activation information header.")
+	AddBoolFlag(get, "logs", "g", false, "Retrieve only the logs, stripped of time stamps and stream identifier.")
+	AddBoolFlag(get, "result", "r", false, "Retrieve only the resulting output of a function.")
+	AddStringFlag(get, "function", "f", "", "Retrieve activations for a specific function.")
+	AddBoolFlag(get, "quiet", "q", false, "Suppress the last activation information header.")
 	get.Example = `The following example retrieves the results for the most recent activation of a function named ` + "`" + `yourFunction` + "`" + `: doctl serverless activations get --function yourFunction --last --result`
 
-	list := CmdBuilder(cmd, RunActivationsList, "list [<function_name>]", "Lists Activations for which records exist.",
+	list := CmdBuilder(cmd, RunActivationsList, "list [<function_name>]", "Lists activations for which records exist.",
 		`Use `+"`"+`doctl serverless activations list`+"`"+` to list the activation records that are present in the cloud for previously
 invoked functions.`,
 		Writer,
 		aliasOpt("ls"),
 		displayerType(&displayers.Activation{}),
 	)
-	AddIntFlag(list, "limit", "l", 30, "Limits the number of activations returned to the specified amount. Default: 30, Maximum: 200")
-	AddIntFlag(list, "skip", "s", 0, "Excludes the first SKIP number of activations from the result")
-	AddIntFlag(list, "since", "", 0, "Returns activations invoked after the specified date-time, in UNIX timestamp format measured in milliseconds.")
-	AddIntFlag(list, "upto", "", 0, "Retrieves activations invoked before the specified date-time; in UNIX timestamp format measured in milliseconds.")
-	AddBoolFlag(list, "count", "", false, "Returns only the total number of activations.")
-	AddBoolFlag(list, "full", "f", false, "Includes the full activation description.")
+	AddIntFlag(list, "limit", "l", 30, "Limit the number of activations returned to the specified amount. Default: 30, Maximum: 200")
+	AddIntFlag(list, "skip", "s", 0, "Exclude the first SKIP number of activations from the result")
+	AddIntFlag(list, "since", "", 0, "Retrieve activations invoked after the specified date-time, in UNIX timestamp format measured in milliseconds.")
+	AddIntFlag(list, "upto", "", 0, "Retrieve activations invoked before the specified date-time; in UNIX timestamp format measured in milliseconds.")
+	AddBoolFlag(list, "count", "", false, "Return only the total number of activations.")
+	AddBoolFlag(list, "full", "f", false, "Include the full activation description.")
 	list.Example = `The following example lists all of the activations for a function named ` + "`" + `yourFunction` + "`" + ` since January 1, 2023: doctl serverless activations list --function yourFunction --since 1672549200000`
 
-	logs := CmdBuilder(cmd, RunActivationsLogs, "logs [<activationId>]", "Retrieves the logs for an activation.",
+	logs := CmdBuilder(cmd, RunActivationsLogs, "logs [<activationId>]", "Retrieve the logs for an activation.",
 		`Use `+"`"+`doctl serverless activations logs`+"`"+` to retrieve the logs portion of one or more activation records
 with various options, such as selecting by package or function, and optionally watching continuously
 for new arrivals.`,
 		Writer)
-	AddStringFlag(logs, "function", "f", "", "Retrieves the logs for a specific function.")
-	AddStringFlag(logs, "package", "p", "", "Retrieves the logs for a specific package.")
-	AddBoolFlag(logs, "last", "l", false, "Retrieves logs for the most recent activation (default).")
-	AddIntFlag(logs, "limit", "n", 1, "Limits the number of logs returned to the specified amount, up to 200.")
-	AddBoolFlag(logs, "strip", "r", false, "Returns only the first line of output in the log, stripped of time stamps.")
+	AddStringFlag(logs, "function", "f", "", "Retrieve the logs for a specific function.")
+	AddStringFlag(logs, "package", "p", "", "Retrieve the logs for a specific package.")
+	AddBoolFlag(logs, "last", "l", false, "Retrieve logs for the most recent activation (default).")
+	AddIntFlag(logs, "limit", "n", 1, "Limit the number of logs returned to the specified amount, up to 200.")
+	AddBoolFlag(logs, "strip", "r", false, "Retrieves only the first line of output in the log, stripped of time stamps.")
 	AddBoolFlag(logs, "follow", "", false, "Continuously returns log information.")
 	logs.Example = `The following example retrieves the logs for the most recent activation of a function named ` + "`" + `yourFunction` + "`" + `: doctl serverless activations logs --function yourFunction --last`
 
@@ -95,15 +95,15 @@ for new arrivals.`,
 	// to maintain backwards compatibility
 	logs.Flags().MarkHidden("last")
 
-	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieves the output for an activation.",
+	result := CmdBuilder(cmd, RunActivationsResult, "result [<activationId>]", "Retrieve the output for an activation.",
 		`Retrieve just the results portion
 of one or more activation records.`,
 		Writer)
-	AddBoolFlag(result, "last", "l", false, "Retrieves the most recent activation result (default).")
-	AddIntFlag(result, "limit", "n", 1, "Limits the number of results return to the specified number. (default 30, max 200)")
+	AddBoolFlag(result, "last", "l", false, "Retrieve the most recent activation result (default).")
+	AddIntFlag(result, "limit", "n", 1, "Limit the number of results return to the specified number. (default 30, max 200)")
 	AddIntFlag(result, "skip", "s", 0, "SKIP number of activations")
-	AddStringFlag(result, "function", "f", "", "Retrieves the results for a specific function.")
-	AddBoolFlag(result, "quiet", "q", false, "Suppresses last activation information header.")
+	AddStringFlag(result, "function", "f", "", "Retrieve the results for a specific function.")
+	AddBoolFlag(result, "quiet", "q", false, "Suppress last activation information header.")
 	result.Example = `The following example retrieves the results for the most recent activation of a function named ` + "`" + `yourFunction` + "`" + `: doctl serverless activations result --function yourFunction --last`
 	return cmd
 }

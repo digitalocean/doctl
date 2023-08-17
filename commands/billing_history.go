@@ -39,8 +39,9 @@ func BillingHistory() *Command {
 
 `
 
-	CmdBuilder(cmd, RunBillingHistoryList, "list", "Retrieve a paginated billing history for a user",
+	listBillingHistory := CmdBuilder(cmd, RunBillingHistoryList, "list", "Retrieve a paginated billing history for a user",
 		listBillingHistoryDesc, Writer, aliasOpt("ls"), displayerType(&displayers.BillingHistory{}))
+	listBillingHistory.Example = `The following example uses the ` + "`" + `--format` + "`" + ` flag to display only the date and description of each event in your billing history: doctl billing-history list --format Date,Description`
 
 	return cmd
 }
