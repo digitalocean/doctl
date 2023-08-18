@@ -14,7 +14,10 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+
 	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 	"github.com/spf13/cobra"
 )
 
@@ -64,6 +67,20 @@ func RunAccountGet(c *CmdConfig) error {
 
 // RunAccountRateLimit retrieves API rate limits for the account.
 func RunAccountRateLimit(c *CmdConfig) error {
+	// We disable reties by replacing the HTTPClient as we only want the
+	// rate-limit headers regardless of response status. Without doing so,
+	// we would retry until retries were exhausted if rate-limited delaying a
+	// response for no purpose.
+	if RetryMax > 0 {
+		accessToken := c.getContextAccessToken()
+		godoClient, err := c.Doit.GetGodoClient(Trace, false, accessToken)
+		if err != nil {
+			return fmt.Errorf("Unable to initialize DigitalOcean API client: %s", err)
+		}
+
+		c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
+	}
+
 	rl, err := c.Account().RateLimit()
 	if err != nil {
 		return err

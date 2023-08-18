@@ -207,7 +207,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 
 // Config is an interface that represent doit's config.
 type Config interface {
-	GetGodoClient(trace bool, accessToken string) (*godo.Client, error)
+	GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error)
 	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
@@ -231,7 +231,7 @@ type LiveConfig struct {
 var _ Config = &LiveConfig{}
 
 // GetGodoClient returns a GodoClient.
-func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client, error) {
+func (c *LiveConfig) GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error) {
 	if accessToken == "" {
 		return nil, fmt.Errorf("access token is required. (hint: run 'doctl auth init')")
 	}
@@ -239,31 +239,63 @@ func (c *LiveConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: accessToken})
 	oauthClient := oauth2.NewClient(context.Background(), tokenSource)
 
-	if trace {
-		r := newRecorder(oauthClient.Transport)
-
-		go func() {
-			for {
-				select {
-				case msg := <-r.req:
-					log.Println("->", strconv.Quote(msg))
-				case msg := <-r.resp:
-					log.Println("<-", strconv.Quote(msg))
-				}
-			}
-		}()
-
-		oauthClient.Transport = r
+	args := []godo.ClientOpt{
+		godo.SetUserAgent(userAgent()),
 	}
 
-	args := []godo.ClientOpt{godo.SetUserAgent(userAgent())}
+	logger := log.New(os.Stderr, "doctl: ", log.LstdFlags)
+
+	retryMax := viper.GetInt("http-retry-max")
+	retryWaitMax := viper.GetInt("http-retry-wait-max")
+	retryWaitMin := viper.GetInt("http-retry-wait-min")
+	if retryMax > 0 && allowRetries {
+		retryConfig := godo.RetryConfig{
+			RetryMax: retryMax,
+		}
+
+		if retryWaitMax > 0 {
+			retryConfig.RetryWaitMax = godo.PtrTo(float64(retryWaitMax))
+		}
+
+		if retryWaitMin > 0 {
+			retryConfig.RetryWaitMin = godo.PtrTo(float64(retryWaitMin))
+		}
+
+		if trace {
+			retryConfig.Logger = logger
+		}
+
+		args = append(args, godo.WithRetryAndBackoffs(retryConfig))
+	}
 
 	apiURL := viper.GetString("api-url")
 	if apiURL != "" {
 		args = append(args, godo.SetBaseURL(apiURL))
 	}
 
-	return godo.New(oauthClient, args...)
+	client, err := godo.New(oauthClient, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	if trace {
+		r := newRecorder(client.HTTPClient.Transport)
+
+		go func() {
+			for {
+				select {
+				case msg := <-r.req:
+					logger.Println("->", strconv.Quote(msg))
+				case msg := <-r.resp:
+					logger.Println("<-", strconv.Quote(msg))
+				}
+			}
+		}()
+
+		client.HTTPClient.Transport = r
+	}
+
+	return client, nil
 }
 
 // GetDockerEngineClient returns a container engine client.
@@ -464,7 +496,7 @@ func NewTestConfig() *TestConfig {
 
 // GetGodoClient mocks a GetGodoClient call. The returned godo client will
 // be nil.
-func (c *TestConfig) GetGodoClient(trace bool, accessToken string) (*godo.Client, error) {
+func (c *TestConfig) GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error) {
 	return &godo.Client{}, nil
 }
 
