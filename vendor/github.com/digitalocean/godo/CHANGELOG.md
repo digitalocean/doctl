@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.102.1] - 2023-08-17
+
+- #629 - @andrewsomething - Provide a custom retryablehttp.ErrorHandler for more consistent returns using retries.
+
 ## [v1.102.0] - 2023-08-14
 
 - #624 - @danaelhe - Update README.md with Retryable Info
