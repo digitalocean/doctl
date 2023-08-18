@@ -1,5 +1,24 @@
 # Change Log
 
+## [v1.102.1] - 2023-08-17
+
+- #629 - @andrewsomething - Provide a custom retryablehttp.ErrorHandler for more consistent returns using retries.
+
+## [v1.102.0] - 2023-08-14
+
+- #624 - @danaelhe - Update README.md with Retryable Info
+- #626 - @andrewsomething - Allow configuring go-retryablehttp.Logger
+- #625 - @andrewsomething - Export the HTTP client
+
+## [v1.101.0] - 2023-08-09
+
+- #619 - @danaelhe - Add retryablehttp Client Option
+
+## [v1.100.0] - 2023-07-20
+
+- #618 - @asaha - load balancers: introduce new type field
+- #620 - @andrewsomething - account: add name field.
+
 ## [v1.99.0] - 2023-04-24
 
 - #616 - @bentranter - Bump CI version for Go 1.20
