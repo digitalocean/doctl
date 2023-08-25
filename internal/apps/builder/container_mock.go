@@ -40,10 +40,10 @@ func (m *MockDockerEngineClient) EXPECT() *MockDockerEngineClientMockRecorder {
 }
 
 // ContainerCreate mocks base method.
-func (m *MockDockerEngineClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *v1.Platform, containerName string) (container.ContainerCreateCreatedBody, error) {
+func (m *MockDockerEngineClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *v1.Platform, containerName string) (container.CreateResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerCreate", ctx, config, hostConfig, networkingConfig, platform, containerName)
-	ret0, _ := ret[0].(container.ContainerCreateCreatedBody)
+	ret0, _ := ret[0].(container.CreateResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -157,10 +157,10 @@ func (mr *MockDockerEngineClientMockRecorder) ContainerStart(ctx, containerName,
 }
 
 // ContainerWait mocks base method.
-func (m *MockDockerEngineClient) ContainerWait(ctx context.Context, containerName string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
+func (m *MockDockerEngineClient) ContainerWait(ctx context.Context, containerName string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ContainerWait", ctx, containerName, condition)
-	ret0, _ := ret[0].(<-chan container.ContainerWaitOKBody)
+	ret0, _ := ret[0].(<-chan container.WaitResponse)
 	ret1, _ := ret[1].(<-chan error)
 	return ret0, ret1
 }

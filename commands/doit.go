@@ -61,6 +61,11 @@ var (
 	//Interactive toggle interactive behavior
 	Interactive bool
 
+	// Retry settings to pass through to godo.RetryConfig
+	RetryMax     int
+	RetryWaitMax int
+	RetryWaitMin int
+
 	requiredColor = color.New(color.Bold).SprintfFunc()
 )
 
@@ -98,6 +103,17 @@ func init() {
 		interactiveHelpText += " (default false)"
 	}
 	rootPFlagSet.BoolVarP(&Interactive, doctl.ArgInteractive, "", interactive, interactiveHelpText)
+
+	rootPFlagSet.IntVar(&RetryMax, "http-retry-max", 5, "Set maximum number of retries for requests that fail with a 429 or 500-level error")
+	viper.BindPFlag("http-retry-max", rootPFlagSet.Lookup("http-retry-max"))
+
+	rootPFlagSet.IntVar(&RetryWaitMax, "http-retry-wait-max", 30, "Set the minimum number of seconds to wait before retrying a failed request")
+	viper.BindPFlag("http-retry-wait-max", rootPFlagSet.Lookup("http-retry-wait-max"))
+	DoitCmd.PersistentFlags().MarkHidden("http-retry-wait-max")
+
+	rootPFlagSet.IntVar(&RetryWaitMin, "http-retry-wait-min", 1, "Set the maximum number of seconds to wait before retrying a failed request")
+	viper.BindPFlag("http-retry-wait-min", rootPFlagSet.Lookup("http-retry-wait-min"))
+	DoitCmd.PersistentFlags().MarkHidden("http-retry-wait-min")
 
 	addCommands()
 
