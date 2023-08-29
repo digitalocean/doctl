@@ -63,6 +63,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdRecordCreate, doctl.ArgSizeUnit, "", 0,
 		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
+	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerType, "", "", "The type of load balancer")
 	AddStringFlag(cmdRecordCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "This field has been deprecated. You can no longer specify an algorithm for load balancers.")

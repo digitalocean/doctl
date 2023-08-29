@@ -87,6 +87,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 			Name:       "lb-name",
 			Region:     "nyc1",
 			SizeSlug:   "lb-small",
+			Type:       "REGIONAL",
 			DropletIDs: []int{1, 2},
 			StickySessions: &godo.StickySessions{
 				Type: "none",
@@ -123,6 +124,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "lb-small")
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerType, "REGIONAL")
 		config.Doit.Set(config.NS, doctl.ArgVPCUUID, vpcUUID)
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
 		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:none")

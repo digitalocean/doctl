@@ -42,6 +42,7 @@ func (lb *LoadBalancer) Cols() []string {
 		"Region",
 		"Size",
 		"SizeUnit",
+		"Type",
 		"VPCUUID",
 		"Tag",
 		"DropletIDs",
@@ -63,6 +64,7 @@ func (lb *LoadBalancer) ColMap() map[string]string {
 		"Region":                       "Region",
 		"Size":                         "Size",
 		"SizeUnit":                     "Size Unit",
+		"Type":                         "Type",
 		"VPCUUID":                      "VPC UUID",
 		"Tag":                          "Tag",
 		"DropletIDs":                   "Droplet IDs",
@@ -104,6 +106,9 @@ func (lb *LoadBalancer) KV() []map[string]interface{} {
 		}
 		if l.SizeUnit > 0 {
 			o["SizeUnit"] = l.SizeUnit
+		}
+		if l.Type != "" {
+			o["Type"] = l.Type
 		}
 		out = append(out, o)
 	}
