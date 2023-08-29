@@ -446,6 +446,12 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 	r.SizeUnit = uint32(sizeUnit)
 
+	lbType, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerType)
+	if err != nil {
+		return err
+	}
+	r.Type = lbType
+
 	algorithm, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerAlgorithm)
 	if err != nil {
 		return err
