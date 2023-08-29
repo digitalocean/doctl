@@ -76,7 +76,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"enable keepalive connections to backend target droplets")
 	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
 		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgTagName, "", "", "droplet tag name")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgTagName, "", "", "The name of a tag. All Droplets with this tag applied will be assigned to the load balancer.")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of Droplet IDs to add to the load balancer, e.g.: `12,33`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgStickySessions, "", "",
