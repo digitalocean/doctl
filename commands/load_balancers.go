@@ -41,8 +41,9 @@ var (
 func LoadBalancer() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "load-balancer",
-			Short: "Display commands to manage load balancers",
+			Use:     "load-balancer",
+			Short:   "Display commands to manage load balancers",
+			Aliases: []string{"lb"},
 			Long: `The sub-commands of ` + "`" + `doctl compute load-balancer` + "`" + ` manage your load balancers.
 
 With the load-balancer command, you can list, create, or delete load balancers, and manage their configuration details.`,
@@ -53,45 +54,45 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:\n\n"+lbDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
-	cmdRecordCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
+	cmdLoadBalancerCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
 		"Create a new load balancer", "Use this command to create a new load balancer on your account. Valid forwarding rules are:\n"+forwardingDetail, Writer, aliasOpt("c"))
-	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerName, "", "",
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
-	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "",
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgRegionSlug, "", "",
 		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
-	AddStringFlag(cmdRecordCreate, doctl.ArgSizeSlug, "", "",
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgSizeSlug, "", "",
 		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
-	AddIntFlag(cmdRecordCreate, doctl.ArgSizeUnit, "", 0,
+	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgSizeUnit, "", 0,
 		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
-	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerType, "", "", "The type of load balancer, e.g.: `REGIONAL` or `GLOBAL`")
-	AddStringFlag(cmdRecordCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
-	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerType, "", "", "The type of load balancer, e.g.: `REGIONAL` or `GLOBAL`")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "This field has been deprecated. You can no longer specify an algorithm for load balancers.")
-	AddBoolFlag(cmdRecordCreate, doctl.ArgRedirectHTTPToHTTPS, "", false,
+	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgRedirectHTTPToHTTPS, "", false,
 		"Redirects HTTP requests to the load balancer on port 80 to HTTPS on port 443")
-	AddBoolFlag(cmdRecordCreate, doctl.ArgEnableProxyProtocol, "", false,
+	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgEnableProxyProtocol, "", false,
 		"enable proxy protocol")
-	AddBoolFlag(cmdRecordCreate, doctl.ArgEnableBackendKeepalive, "", false,
+	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgEnableBackendKeepalive, "", false,
 		"enable keepalive connections to backend target droplets")
-	AddBoolFlag(cmdRecordCreate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
+	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
 		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
-	AddStringFlag(cmdRecordCreate, doctl.ArgTagName, "", "", "droplet tag name")
-	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDropletIDs, "", []string{},
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgTagName, "", "", "The name of a tag. All Droplets with this tag applied will be assigned to the load balancer.")
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of Droplet IDs to add to the load balancer, e.g.: `12,33`")
-	AddStringFlag(cmdRecordCreate, doctl.ArgStickySessions, "", "",
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgStickySessions, "", "",
 		"A comma-separated list of key-value pairs representing a list of active sessions, e.g.: `type:cookies, cookie_name:DO-LB, cookie_ttl_seconds:5`")
-	AddStringFlag(cmdRecordCreate, doctl.ArgHealthCheck, "", "",
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgHealthCheck, "", "",
 		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3`")
-	AddStringFlag(cmdRecordCreate, doctl.ArgForwardingRules, "", "",
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgForwardingRules, "", "",
 		forwardingRulesTxt)
-	AddBoolFlag(cmdRecordCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
-	AddStringFlag(cmdRecordCreate, doctl.ArgProjectID, "", "", "Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
-	AddIntFlag(cmdRecordCreate, doctl.ArgHTTPIdleTimeoutSeconds, "", 0, "HTTP idle timeout that configures the idle timeout for http connections on the load balancer")
-	AddStringSliceFlag(cmdRecordCreate, doctl.ArgAllowList, "", []string{},
+	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgProjectID, "", "", "Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
+	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgHTTPIdleTimeoutSeconds, "", 0, "HTTP idle timeout that configures the idle timeout for http connections on the load balancer")
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgAllowList, "", []string{},
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
-	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDenyList, "", []string{},
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDenyList, "", []string{},
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
-	cmdRecordCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
+	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer.`, Writer, aliasOpt("u"))
