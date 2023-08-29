@@ -316,6 +316,8 @@ const (
 	ArgAllowList = "allow-list"
 	// ArgDenyList is a list of firewall rules for DENYING traffic to the loadbalancer
 	ArgDenyList = "deny-list"
+	// ArgLoadBalancerType is the type of the load balancer.
+	ArgLoadBalancerType = "type"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
