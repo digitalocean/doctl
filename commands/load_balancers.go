@@ -63,7 +63,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdRecordCreate, doctl.ArgSizeUnit, "", 0,
 		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
-	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerType, "", "", "The type of load balancer")
+	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerType, "", "", "The type of load balancer, e.g.: `REGIONAL` or `GLOBAL`")
 	AddStringFlag(cmdRecordCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "This field has been deprecated. You can no longer specify an algorithm for load balancers.")
@@ -91,6 +91,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdRecordCreate, doctl.ArgDenyList, "", []string{},
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+	cmdRecordCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer.`, Writer, aliasOpt("u"))
@@ -450,7 +451,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	if err != nil {
 		return err
 	}
-	r.Type = lbType
+	r.Type = strings.ToUpper(lbType)
 
 	algorithm, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerAlgorithm)
 	if err != nil {
