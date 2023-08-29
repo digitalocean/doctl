@@ -41,8 +41,9 @@ var (
 func LoadBalancer() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "load-balancer",
-			Short: "Display commands to manage load balancers",
+			Use:     "load-balancer",
+			Short:   "Display commands to manage load balancers",
+			Aliases: []string{"lb"},
 			Long: `The sub-commands of ` + "`" + `doctl compute load-balancer` + "`" + ` manage your load balancers.
 
 With the load-balancer command, you can list, create, or delete load balancers, and manage their configuration details.`,
