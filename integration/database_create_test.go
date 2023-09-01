@@ -46,11 +46,12 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 				expect.NoError(err)
 
 				request := struct {
-					Name    string `json:"name"`
-					Engine  string `json:"engine"`
-					Version string `json:"version"`
-					Region  string `json:"region"`
-					Nodes   int    `json:"num_nodes"`
+					Name    string   `json:"name"`
+					Engine  string   `json:"engine"`
+					Version string   `json:"version"`
+					Region  string   `json:"region"`
+					Nodes   int      `json:"num_nodes"`
+					Tags    []string `json:"tags"`
 				}{}
 
 				err = json.Unmarshal(reqBody, &request)
@@ -103,6 +104,7 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 				"--region", "nyc3",
 				"--size", "biggest",
 				"--version", "what-version",
+				"--tag", "test",
 			)
 
 			output, err := cmd.CombinedOutput()
@@ -126,6 +128,7 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 				"--region", "nyc3",
 				"--size", "biggest",
 				"--version", "what-version",
+				"--tag", "test",
 				"--wait",
 			)
 
@@ -169,9 +172,7 @@ some-id    my-database-name    mysql     what-version    100                nyc3
     "created_at": "2019-01-11T18:37:36Z",
     "maintenance_window": null,
     "size": "biggest",
-    "tags": [
-      "production"
-    ]
+    "tags": ["{{.Tags}}"]
   }
 }`
 
@@ -193,7 +194,7 @@ some-id    my-database-name    mysql     what-version    100                nyc3
     "maintenance_window": null,
     "size": "biggest",
     "tags": [
-      "production"
+      "test"
     ]
   }
 }`
