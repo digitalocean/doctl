@@ -365,6 +365,8 @@ const (
 	ArgDatabasePoolMode = "mode"
 	// ArgDatabaseUserMySQLAuthPlugin is a flag for setting the MySQL user auth plugin
 	ArgDatabaseUserMySQLAuthPlugin = "mysql-auth-plugin"
+	// ArgDatabasePrivateConnectionBool determine if the private connection details should be shown
+	ArgDatabasePrivateConnectionBool = "private"
 
 	// ArgPrivateNetworkUUID is the flag for VPC UUID
 	ArgPrivateNetworkUUID = "private-network-uuid"

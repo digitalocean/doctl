@@ -90,7 +90,7 @@ To retrieve a list of your database clusters and their IDs, call `+"`"+`doctl da
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the database cluster without a confirmation prompt")
 
-	CmdBuilder(cmd, RunDatabaseConnectionGet, "connection <database-id>", "Retrieve connection details for a database cluster", `This command retrieves the following connection details for a database cluster:
+	cmdDatabaseGetConn := CmdBuilder(cmd, RunDatabaseConnectionGet, "connection <database-id>", "Retrieve connection details for a database cluster", `This command retrieves the following connection details for a database cluster:
 
 - The connection string for the database cluster
 - The default database name
@@ -102,6 +102,7 @@ To retrieve a list of your database clusters and their IDs, call `+"`"+`doctl da
 
 While these connection details will work, you may wish to use different connection details, such as the private hostname, a custom username, or a different database.`, Writer,
 		aliasOpt("conn"), displayerType(&displayers.DatabaseConnection{}))
+	AddBoolFlag(cmdDatabaseGetConn, doctl.ArgDatabasePrivateConnectionBool, "", false, "Provide connection details using the private hostname")
 
 	CmdBuilder(cmd, RunDatabaseBackupsList, "backups <database-id>", "List database cluster backups", `This command retrieves a list of backups created for the specified database cluster.
 
@@ -423,7 +424,12 @@ func RunDatabaseConnectionGet(c *CmdConfig) error {
 	}
 
 	id := c.Args[0]
-	connInfo, err := c.Databases().GetConnection(id)
+	private, err := c.Doit.GetBool(c.NS, doctl.ArgDatabasePrivateConnectionBool)
+	if err != nil {
+		return err
+	}
+
+	connInfo, err := c.Databases().GetConnection(id, private)
 	if err != nil {
 		return err
 	}
