@@ -34,7 +34,8 @@ func OneClicks() *Command {
 		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
 
 	AddStringFlag(cmdOneClickList, doctl.ArgOneClickType, "", "", "The 1-Click type. Valid types are one of the following: kubernetes, droplet")
-	cmdOneClickList.Example = `The following example retrieves a list of 1-Click applications available for Droplets: doctl 1-click list --type droplet`
+	cmdOneClickList.Example = `The following example retrieves a list of 1-Click applications available for Droplets: doctl 1-click list --type droplet 
+	The following example retrieves a list of 1-Click applications available for Kubernetes: doctl 1-click list --type kubernetes`
 
 	return cmd
 }
