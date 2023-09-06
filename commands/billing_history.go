@@ -36,7 +36,6 @@ func BillingHistory() *Command {
 - The amount of the event in USD
 - The invoice ID associated with the event, if applicable
 - The invoice UUID associated with the event, if applicable
-
 `
 
 	listBillingHistory := CmdBuilder(cmd, RunBillingHistoryList, "list", "Retrieve a paginated billing history for a user",

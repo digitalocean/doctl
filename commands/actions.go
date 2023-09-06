@@ -30,9 +30,9 @@ func Actions() *Command {
 		Command: &cobra.Command{
 			Use:   "action",
 			Short: "Display commands for retrieving resource action history",
-			Long: `The sub-commands of ` + "`" + `doctl compute action` + "`" + ` retrieves the history of actions taken on your resources.
+			Long: `The sub-commands of ` + "`" + `doctl compute action` + "`" + ` retrieve the history of actions taken on your resources.
 
-You can filter to a specific action using the ` + "`" + `--format` + "`" + ` flag. For example, while ` + "`" + `doctl compute action list` + "`" + ` lists all of the actions taken on all of the resources in your account, ` + "`" + `doctl compute action get <action-id>` + "`" + ` retrieves details for a specific action.`,
+You can retrieve information for a specific action by adding the action's ID as an argument. For example, while ` + "`" + `doctl compute action list` + "`" + ` lists all of the actions taken on all of the resources in your account, ` + "`" + `doctl compute action get <action-id>` + "`" + ` retrieves details for a specific action. Additionally, you can use ` + "`" + `--action-type` + "`" + ` flag to filter the list of actions by type. For example, ` + "`" + `doctl compute action list --action-type power_on` + "`" + ` lists all of the actions that powered on a resource. `,
 		},
 	}
 

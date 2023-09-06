@@ -56,7 +56,7 @@ or the logs.  The `+"`"+`doctl serverless activation logs`+"`"+` command has add
 logs.`,
 		Writer)
 	AddBoolFlag(get, "last", "l", false, "Retrieve the most recent activation (default). Does not return activations for web-invoked functions.")
-	AddIntFlag(get, "skip", "s", 0, "SKIP number of activations.")
+	AddIntFlag(get, "skip", "s", 0, "Exclude a specified number of activations from the returned list, starting with the most recent.")
 	AddBoolFlag(get, "logs", "g", false, "Retrieve only the logs, stripped of time stamps and stream identifier.")
 	AddBoolFlag(get, "result", "r", false, "Retrieve only the resulting output of a function.")
 	AddStringFlag(get, "function", "f", "", "Retrieve activations for a specific function.")
@@ -71,7 +71,7 @@ invoked functions.`,
 		displayerType(&displayers.Activation{}),
 	)
 	AddIntFlag(list, "limit", "l", 30, "Limit the number of activations returned to the specified amount. Default: 30, Maximum: 200")
-	AddIntFlag(list, "skip", "s", 0, "Exclude the first SKIP number of activations from the result")
+	AddIntFlag(list, "skip", "s", 0, "Exclude a specified number of activations from the returned list, starting with the most recent.")
 	AddIntFlag(list, "since", "", 0, "Retrieve activations invoked after the specified date-time, in UNIX timestamp format measured in milliseconds.")
 	AddIntFlag(list, "upto", "", 0, "Retrieve activations invoked before the specified date-time; in UNIX timestamp format measured in milliseconds.")
 	AddBoolFlag(list, "count", "", false, "Return only the total number of activations.")
@@ -88,7 +88,7 @@ for new arrivals.`,
 	AddBoolFlag(logs, "last", "l", false, "Retrieve logs for the most recent activation (default).")
 	AddIntFlag(logs, "limit", "n", 1, "Limit the number of logs returned to the specified amount, up to 200.")
 	AddBoolFlag(logs, "strip", "r", false, "Retrieves only the first line of output in the log, stripped of time stamps.")
-	AddBoolFlag(logs, "follow", "", false, "Continuously returns log information.")
+	AddBoolFlag(logs, "follow", "", false, "Continuously return log information.")
 	logs.Example = `The following example retrieves the logs for the most recent activation of a function named ` + "`" + `yourFunction` + "`" + `: doctl serverless activations logs --function yourFunction --last`
 
 	// This is the default behavior, so we want to prevent users from explicitly using this flag. We don't want to remove it
@@ -101,7 +101,7 @@ of one or more activation records.`,
 		Writer)
 	AddBoolFlag(result, "last", "l", false, "Retrieve the most recent activation result (default).")
 	AddIntFlag(result, "limit", "n", 1, "Limit the number of results return to the specified number. (default 30, max 200)")
-	AddIntFlag(result, "skip", "s", 0, "SKIP number of activations")
+	AddIntFlag(result, "skip", "s", 0, "Exclude a specified number of activations from the returned list, starting with the most recent.")
 	AddStringFlag(result, "function", "f", "", "Retrieve the results for a specific function.")
 	AddBoolFlag(result, "quiet", "q", false, "Suppress last activation information header.")
 	result.Example = `The following example retrieves the results for the most recent activation of a function named ` + "`" + `yourFunction` + "`" + `: doctl serverless activations result --function yourFunction --last`

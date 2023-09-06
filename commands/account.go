@@ -40,11 +40,11 @@ For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile d
 - UUID for the account
 - Account status (active or disabled).`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Account{}))
-		cmdAccountGet.Example = `Hi, John. The following example retrieves email addresses associated with the account: doctl account get --format Email`
+		cmdAccountGet.Example = `The following example retrieves email addresses associated with the account: doctl account get --format Email`
 
 	cmdAccountRateLimit := CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieve your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
 
-- The current limit on your account for API calls (5,000 per hour per OAuth token)
+- The current limit on your account for API calls (default is 5,000 per hour per OAuth token)
 - The number of API calls you have made in the last hour
 - When the API call count resets to zero, which happens hourly
 
