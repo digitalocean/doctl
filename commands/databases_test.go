@@ -538,7 +538,7 @@ func TestDatabaseListBackups(t *testing.T) {
 func TestDatabaseConnectionGet(t *testing.T) {
 	// Success
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().GetConnection(testDBCluster.ID).Return(&testDBConnection, nil)
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, false).Return(&testDBConnection, nil)
 		config.Args = append(config.Args, testDBCluster.ID)
 
 		err := RunDatabaseConnectionGet(config)
@@ -547,8 +547,30 @@ func TestDatabaseConnectionGet(t *testing.T) {
 
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().GetConnection(testDBCluster.ID).Return(nil, errTest)
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, false).Return(nil, errTest)
 		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseConnectionGet(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseConnectionGetPrivate(t *testing.T) {
+	// Success
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, true).Return(&testDBConnection, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePrivateConnectionBool, true)
+
+		err := RunDatabaseConnectionGet(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, true).Return(nil, errTest)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePrivateConnectionBool, true)
 
 		err := RunDatabaseConnectionGet(config)
 		assert.EqualError(t, err, errTest.Error())

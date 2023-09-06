@@ -196,18 +196,18 @@ func (mr *MockDatabasesServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
 }
 
 // GetConnection mocks base method.
-func (m *MockDatabasesService) GetConnection(arg0 string) (*do.DatabaseConnection, error) {
+func (m *MockDatabasesService) GetConnection(arg0 string, arg1 bool) (*do.DatabaseConnection, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetConnection", arg0)
+	ret := m.ctrl.Call(m, "GetConnection", arg0, arg1)
 	ret0, _ := ret[0].(*do.DatabaseConnection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetConnection indicates an expected call of GetConnection.
-func (mr *MockDatabasesServiceMockRecorder) GetConnection(arg0 interface{}) *gomock.Call {
+func (mr *MockDatabasesServiceMockRecorder) GetConnection(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnection", reflect.TypeOf((*MockDatabasesService)(nil).GetConnection), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConnection", reflect.TypeOf((*MockDatabasesService)(nil).GetConnection), arg0, arg1)
 }
 
 // GetDB mocks base method.
