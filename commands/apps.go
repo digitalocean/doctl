@@ -238,6 +238,7 @@ Only basic information is included with the text output format. For complete app
 		aliasOpt("uad"),
 		displayerType(&displayers.AppAlerts{}),
 	)
+	updateAlertDestinations.Example = `The following example updates the alert destinations for an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the alert ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps update-alert-destinations f81d4fae-7dec-11d0-a765-00a0c91e6bf6 f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --alert-destinations src/your-alert-destinations.yaml`
 	AddStringFlag(updateAlertDestinations, doctl.ArgAppAlertDestinations, "", "", "Path to an alert destinations file in JSON or YAML format.")
 
 
