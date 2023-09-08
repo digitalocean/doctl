@@ -167,7 +167,7 @@ var _ = suite("account/ratelimit", func(t *testing.T, when spec.G, it spec.S) {
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 
-	it("doesn't return an error when rate-limted", func() {
+	it("doesn't return an error when rate-limited", func() {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "token-with-ratelimit-exhausted",
 			"-u", server.URL,
@@ -176,11 +176,25 @@ var _ = suite("account/ratelimit", func(t *testing.T, when spec.G, it spec.S) {
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, string(output))
 
 		t := time.Unix(1565385881, 0)
 		expectedOutput := strings.TrimSpace(fmt.Sprintf(ratelimitExhaustedOutput, t))
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+
+	it("doesn't retry when rate-limited", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-t", "token-with-ratelimit-exhausted",
+			"-u", server.URL,
+			"account",
+			"ratelimit", "--trace",
+		)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err, string(output))
+
+		expect.NotContains(strings.TrimSpace(string(output)), "retrying in")
 	})
 })
 

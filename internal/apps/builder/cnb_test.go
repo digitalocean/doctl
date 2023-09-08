@@ -102,7 +102,7 @@ func TestCNBComponentBuild(t *testing.T) {
 		}
 
 		buildID := "build-id"
-		mockClient.EXPECT().ContainerCreate(ctx, gomock.Any(), gomock.Any(), nil, nil, "").Return(container.ContainerCreateCreatedBody{
+		mockClient.EXPECT().ContainerCreate(ctx, gomock.Any(), gomock.Any(), nil, nil, "").Return(container.CreateResponse{
 			ID: buildID,
 		}, nil)
 
@@ -178,7 +178,7 @@ func TestCNBComponentBuild(t *testing.T) {
 		}
 
 		buildID := "build-id"
-		mockClient.EXPECT().ContainerCreate(ctx, gomock.Any(), gomock.Any(), nil, nil, "").Return(container.ContainerCreateCreatedBody{
+		mockClient.EXPECT().ContainerCreate(ctx, gomock.Any(), gomock.Any(), nil, nil, "").Return(container.CreateResponse{
 			ID: buildID,
 		}, nil)
 
@@ -294,7 +294,7 @@ func TestCNBComponentBuild(t *testing.T) {
 		}
 
 		buildID := "build-id"
-		mockClient.EXPECT().ContainerCreate(ctx, gomock.Any(), gomock.Any(), nil, nil, "").Return(container.ContainerCreateCreatedBody{
+		mockClient.EXPECT().ContainerCreate(ctx, gomock.Any(), gomock.Any(), nil, nil, "").Return(container.CreateResponse{
 			ID: buildID,
 		}, nil)
 

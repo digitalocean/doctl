@@ -40,7 +40,7 @@ type CNBComponentBuilder struct {
 	baseComponentBuilder
 	versioning           CNBVersioning
 	localCacheDir        string
-	buildContainer       containertypes.ContainerCreateCreatedBody
+	buildContainer       containertypes.CreateResponse
 	builderImageOverride string
 	cnbComponent         godo.AppCNBBuildableComponentSpec
 }
@@ -122,7 +122,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		_ = b.cli.ContainerRemove(ctx, b.buildContainer.ID, dockertypes.ContainerRemoveOptions{
 			Force: true,
 		})
-		b.buildContainer = containertypes.ContainerCreateCreatedBody{}
+		b.buildContainer = containertypes.CreateResponse{}
 	}()
 
 	if err := b.cli.ContainerStart(ctx, b.buildContainer.ID, dockertypes.ContainerStartOptions{}); err != nil {

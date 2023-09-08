@@ -102,7 +102,7 @@ type DatabasesService interface {
 	Get(string) (*Database, error)
 	Create(*godo.DatabaseCreateRequest) (*Database, error)
 	Delete(string) error
-	GetConnection(string) (*DatabaseConnection, error)
+	GetConnection(string, bool) (*DatabaseConnection, error)
 	ListBackups(string) (DatabaseBackups, error)
 	Resize(string, *godo.DatabaseResizeRequest) error
 	Migrate(string, *godo.DatabaseMigrateRequest) error
@@ -207,10 +207,16 @@ func (ds *databasesService) Delete(databaseID string) error {
 	return err
 }
 
-func (ds *databasesService) GetConnection(databaseID string) (*DatabaseConnection, error) {
+func (ds *databasesService) GetConnection(databaseID string, private bool) (*DatabaseConnection, error) {
 	db, err := ds.Get(databaseID)
 	if err != nil {
 		return nil, err
+	}
+
+	if private {
+		return &DatabaseConnection{
+			DatabaseConnection: db.PrivateConnection,
+		}, nil
 	}
 
 	return &DatabaseConnection{

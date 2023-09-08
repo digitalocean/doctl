@@ -55,6 +55,7 @@ var _ = suite("projects/delete", func(t *testing.T, when spec.G, it spec.S) {
 				"test-project-1",
 				"test-project-2",
 				"-f",
+				"--http-retry-max", "0",
 			)
 
 			output, err := cmd.CombinedOutput()
