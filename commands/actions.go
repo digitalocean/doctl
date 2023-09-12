@@ -65,7 +65,7 @@ You can retrieve information for a specific action by adding the action's ID as 
 
 For example, if you find an action when calling `+"`"+`doctl compute action list`+"`"+` that has a status of `+"`"+`in-progress`+"`"+`, you can note the action ID and call `+"`"+`doctl compute action wait <action-id>`+"`"+`, and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
 		aliasOpt("w"), displayerType(&displayers.Action{}))
-	cmdActionWait.Example = `The following example waits for the action ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` to complete before allowing further commands to execute: doctl compute action wait 418b7972-fc67-41ea-ab4b-6f9477c4f7d8`
+	cmdActionWait.Example = `The following example waits for the action ` + "`" + `123456` + "`" + ` to complete before allowing further commands to execute: doctl compute action wait 123456`
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 
 	return cmd
