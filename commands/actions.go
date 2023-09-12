@@ -53,12 +53,12 @@ You can retrieve information for a specific action by adding the action's ID as 
 
 	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "Retrieve a  list of all recent actions taken on your resources", `Retrieve a list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Action{}))
-	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", `Filter by action resource type, such as ` + "`" + `droplet` + "`" + ``)
-	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", `Filter by a specified datacenter region, such as ` + "`" + `nyc` + "`" + ``)
+	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", `Filter by action resource type, such as `+"`"+`droplet`+"`"+``)
+	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", `Filter by a specified datacenter region, such as `+"`"+`nyc`+"`"+``)
 	AddStringFlag(cmdActionList, doctl.ArgActionAfter, "", "", "Filter actions taken after a specified date, in RFC3339 format.")
 	AddStringFlag(cmdActionList, doctl.ArgActionBefore, "", "", "Filter actions taken after a specified date, in RFC3339 format.")
-	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", `Filter by action status, such as ` + "`" + `completed` + "`" + ` or ` + "`" + `in-progress` + "`" + `.`)
-	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", `Filter by action type, such as ` + "`" + `create` + "`" + ` or ` + "`" + `destroy` + "`" + ``)
+	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", `Filter by action status, such as `+"`"+`completed`+"`"+` or `+"`"+`in-progress`+"`"+`.`)
+	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", `Filter by action type, such as `+"`"+`create`+"`"+` or `+"`"+`destroy`+"`"+``)
 	cmdActionList.Example = `The following command retrieves a list of all the destroy actions taken on the account after October 12, 2022 at 12:00:01 AM UTC, and displays the action ID and region: doctl compute action list --action-type destroy --after 2022-10-12T00:00:01.00Z --format ID,Region`
 
 	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "Block thread until an action completes", `Block the current thread, returning when an action completes.

@@ -43,7 +43,7 @@ For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile d
 - UUID for the account
 - Account status (active or disabled).`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Account{}))
-		cmdAccountGet.Example = `The following example retrieves email addresses associated with the account: doctl account get --format Email`
+	cmdAccountGet.Example = `The following example retrieves email addresses associated with the account: doctl account get --format Email`
 
 	cmdAccountRateLimit := CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieve your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
 
@@ -53,8 +53,7 @@ For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile d
 
 Note that these details are per OAuth token and are bound to the token you used when calling `+"`"+`doctl auth init`+"`"+` at setup time.`, Writer,
 		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))
-		cmdAccountRateLimit.Example = `The following example retrieves the number of API calls you have left for the hour: doctl account ratelimit --format Remaining`
-
+	cmdAccountRateLimit.Example = `The following example retrieves the number of API calls you have left for the hour: doctl account ratelimit --format Remaining`
 
 	return cmd
 }

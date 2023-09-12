@@ -86,7 +86,7 @@ Only basic information is included with the text output format. For complete app
 		"Lists all apps",
 		`Lists all apps associated with your account, including their ID, spec name, creation date, and other information.
 
-Only basic information is included with the text output format. For complete app details including an updated app spec, use the ` + "`" + `--output` + "`" + ` global flag and specify the JSON format.`,
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
 		aliasOpt("ls"),
 		displayerType(&displayers.Apps{}),
@@ -145,7 +145,7 @@ This permanently deletes the app and all of its associated deployments.`,
 		"Get a deployment",
 		`Gets information about a specific deployment for the given app, including when the app updated and what triggered the deployment (Cause).
 
-Only basic information is included with the text output format. For complete app details including an updated app spec, use the ` + "`" + `--output` + "`" + ` global flag and specify the JSON format.`,
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
 		aliasOpt("gd"),
 		displayerType(&displayers.Deployments{}),
@@ -206,7 +206,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 		"Proposes an app spec",
 		`Reviews and validates an app specification for a new or existing app. The request returns some information about the proposed app, including app cost and upgrade cost. If an existing app ID is specified, the app spec is treated as a proposed update to the existing app.
 
-Only basic information is included with the text output format. For complete app details including an updated app spec, use the ` + "`" + `--output` + "`" + ` global flag and specify the JSON format.`,
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
 		aliasOpt("c"),
 		displayerType(&displayers.Apps{}),
@@ -227,7 +227,6 @@ Only basic information is included with the text output format. For complete app
 	)
 	listAlerts.Example = `The following example lists all alerts associated to an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to specifically return the alert ID, trigger, and rule: doctl apps list-alerts f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Trigger,Spec.Rule`
 
-
 	updateAlertDestinations := CmdBuilder(
 		cmd,
 		RunAppUpdateAlertDestinations,
@@ -240,7 +239,6 @@ Only basic information is included with the text output format. For complete app
 	)
 	updateAlertDestinations.Example = `The following example updates the alert destinations for an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the alert ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps update-alert-destinations f81d4fae-7dec-11d0-a765-00a0c91e6bf6 f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --alert-destinations src/your-alert-destinations.yaml`
 	AddStringFlag(updateAlertDestinations, doctl.ArgAppAlertDestinations, "", "", "Path to an alert destinations file in JSON or YAML format.")
-
 
 	listBuildpacks := CmdBuilder(
 		cmd,
@@ -272,10 +270,9 @@ Only basic information is included with the text output format. For complete app
 
 	cmd.AddCommand(appsSpec())
 	cmd.AddCommand(appsTier())
-	
+
 	return cmd
 }
-
 
 // RunAppsCreate creates an app.
 func RunAppsCreate(c *CmdConfig) error {
