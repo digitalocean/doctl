@@ -82,7 +82,7 @@ func VolumeAction() *Command {
 
 Each volume can be attached to only one Droplet at a time. However, up to five volumes may be attached to a single Droplet.
 
-When you attach a pre-formatted volume to Ubuntu, Debian, Fedora, Fedora Atomic, and CentOS Droplets created on or after April 26, 2018, the volume will be automatically mounted. On older Droplets, additional configuration is required. Visit https://www.digitalocean.com/docs/volumes/how-to/format-and-mount/#mounting-the-filesystems for details`, Writer,
+When you attach a pre-formatted volume to Ubuntu, Debian, Fedora, Fedora Atomic, and CentOS Droplets created on or after April 26, 2018, the volume automatically mounts. On older Droplets, additional configuration is required. Visit https://docs.digitalocean.com/products/volumes/how-to/mount/ for details`, Writer,
 		aliasOpt("a"))
 	AddBoolFlag(cmdRunVolumeAttach, doctl.ArgCommandWait, "", false, "Wait for volume to attach")
 
