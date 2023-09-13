@@ -82,6 +82,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster from which the backup will be restored.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromTimestamp, "", "", "The timestamp of an existing database cluster backup in UTC combined date and time format (2006-01-02 15:04:05 +0000 UTC). The most recent backup will be used if excluded.")
 	AddBoolFlag(cmdDatabaseCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a database to complete before returning control to the terminal")
+	AddStringSliceFlag(cmdDatabaseCreate, doctl.ArgTag, "", nil, "Comma-separated list of tags to apply to the database cluster.")
 
 	cmdDatabaseDelete := CmdBuilder(cmd, RunDatabaseDelete, "delete <database-id>", "Delete a database cluster", `This command deletes the database cluster with the given ID.
 
@@ -89,7 +90,7 @@ To retrieve a list of your database clusters and their IDs, call `+"`"+`doctl da
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the database cluster without a confirmation prompt")
 
-	CmdBuilder(cmd, RunDatabaseConnectionGet, "connection <database-id>", "Retrieve connection details for a database cluster", `This command retrieves the following connection details for a database cluster:
+	cmdDatabaseGetConn := CmdBuilder(cmd, RunDatabaseConnectionGet, "connection <database-id>", "Retrieve connection details for a database cluster", `This command retrieves the following connection details for a database cluster:
 
 - The connection string for the database cluster
 - The default database name
@@ -101,6 +102,7 @@ To retrieve a list of your database clusters and their IDs, call `+"`"+`doctl da
 
 While these connection details will work, you may wish to use different connection details, such as the private hostname, a custom username, or a different database.`, Writer,
 		aliasOpt("conn"), displayerType(&displayers.DatabaseConnection{}))
+	AddBoolFlag(cmdDatabaseGetConn, doctl.ArgDatabasePrivateConnectionBool, "", false, "Provide connection details using the private hostname")
 
 	CmdBuilder(cmd, RunDatabaseBackupsList, "backups <database-id>", "List database cluster backups", `This command retrieves a list of backups created for the specified database cluster.
 
@@ -259,6 +261,12 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 	}
 	r.PrivateNetworkUUID = privateNetworkUUID
 
+	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
+	if err != nil {
+		return nil, err
+	}
+	r.Tags = tags
+
 	restoreFromCluster, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseRestoreFromClusterName)
 	if err != nil {
 		return nil, err
@@ -416,7 +424,12 @@ func RunDatabaseConnectionGet(c *CmdConfig) error {
 	}
 
 	id := c.Args[0]
-	connInfo, err := c.Databases().GetConnection(id)
+	private, err := c.Doit.GetBool(c.NS, doctl.ArgDatabasePrivateConnectionBool)
+	if err != nil {
+		return err
+	}
+
+	connInfo, err := c.Databases().GetConnection(id, private)
 	if err != nil {
 		return err
 	}

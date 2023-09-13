@@ -61,6 +61,7 @@ var (
 				*testGODOUser,
 			},
 			PrivateNetworkUUID: "1fe49b6c-ac8e-11e9-98cb-3bec94f411bc",
+			Tags:               []string{"testing"},
 		},
 	}
 
@@ -320,6 +321,7 @@ func TestDatabasesCreate(t *testing.T) {
 		NumNodes:           testDBCluster.NumNodes,
 		SizeSlug:           testDBCluster.SizeSlug,
 		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
+		Tags:               testDBCluster.Tags,
 	}
 
 	// Successful call
@@ -333,6 +335,7 @@ func TestDatabasesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, testDBCluster.EngineSlug)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
 		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
+		config.Doit.Set(config.NS, doctl.ArgTag, testDBCluster.Tags)
 
 		err := RunDatabaseCreate(config)
 		assert.NoError(t, err)
@@ -535,7 +538,7 @@ func TestDatabaseListBackups(t *testing.T) {
 func TestDatabaseConnectionGet(t *testing.T) {
 	// Success
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().GetConnection(testDBCluster.ID).Return(&testDBConnection, nil)
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, false).Return(&testDBConnection, nil)
 		config.Args = append(config.Args, testDBCluster.ID)
 
 		err := RunDatabaseConnectionGet(config)
@@ -544,8 +547,30 @@ func TestDatabaseConnectionGet(t *testing.T) {
 
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.databases.EXPECT().GetConnection(testDBCluster.ID).Return(nil, errTest)
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, false).Return(nil, errTest)
 		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseConnectionGet(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseConnectionGetPrivate(t *testing.T) {
+	// Success
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, true).Return(&testDBConnection, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePrivateConnectionBool, true)
+
+		err := RunDatabaseConnectionGet(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetConnection(testDBCluster.ID, true).Return(nil, errTest)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePrivateConnectionBool, true)
 
 		err := RunDatabaseConnectionGet(config)
 		assert.EqualError(t, err, errTest.Error())
