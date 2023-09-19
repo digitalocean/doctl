@@ -22,8 +22,8 @@ func AppsDevConfig() *Command {
 		Command: &cobra.Command{
 			Use:     "config",
 			Aliases: []string{"c"},
-			Short:   "Display commands for working with app platform local development configuration settings.",
-			Long: fmt.Sprintf(`[BETA] Display commands for working with app platform local development configuration settings.
+			Short:   "Displays commands for working with App Platform local development configuration settings.",
+			Long: fmt.Sprintf(`[BETA] Displays commands for working with App Platform local development configuration settings.
 
 Configuration Format:
 %s

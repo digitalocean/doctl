@@ -32,7 +32,7 @@ func Actions() *Command {
 			Short: "Display commands for retrieving resource action history",
 			Long: `The sub-commands of ` + "`" + `doctl compute action` + "`" + ` retrieve the history of actions taken on your resources.
 
-This can be filtered to a specific action. For example, while ` + "`" + `doctl compute action list` + "`" + ` will list all of the actions taken on all of the resources in your account, ` + "`" + `doctl compute action get <action-id>` + "`" + ` will retrieve details for a specific action.`,
+You can retrieve information for a specific action by adding the action's ID as an argument. For example, while ` + "`" + `doctl compute action list` + "`" + ` lists all of the actions taken on all of the resources in your account, ` + "`" + `doctl compute action get <action-id>` + "`" + ` retrieves details for a specific action. Additionally, you can use ` + "`" + `--action-type` + "`" + ` flag to filter the list of actions by type. For example, ` + "`" + `doctl compute action list --action-type power_on` + "`" + ` lists all of the actions that powered on a resource. `,
 		},
 	}
 
@@ -40,29 +40,32 @@ This can be filtered to a specific action. For example, while ` + "`" + `doctl c
 
 - The action ID
 - The action status (` + "`" + `pending` + "`" + `, ` + "`" + `completed` + "`" + `, etc)
-- The action type (` + "`" + `create` + "`" + `, ` + "`" + `destroy` + "`" + `, ` + "`" + `power_cycle` + "`" + `, ` + "`" + `power_off` + "`" + `, ` + "`" + `power_on` + "`" + `, ` + "`" + `backup` + "`" + `, ` + "`" + `migrate` + "`" + `, ` + "`" + `attach_volume` + "`" + `, etc)
+- The action type, such as: ` + "`" + `create` + "`" + `, ` + "`" + `destroy` + "`" + `, ` + "`" + `power_cycle` + "`" + `, ` + "`" + `power_off` + "`" + `, ` + "`" + `power_on` + "`" + `, ` + "`" + `backup` + "`" + `, ` + "`" + `migrate` + "`" + `, ` + "`" + `attach_volume` + "`" + `
 - The Date/Time when the action started, in RFC3339 format
 - The Date/Time when the action completed, in RFC3339 format
 - The resource ID of the resource upon which the action was taken
 - The resource type (Droplet, backend)
 - The region in which the action took place (nyc3, sfo2, etc)`
 
-	CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "Retrieve details about a specific action", `This command retrieves the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
+	cmdActionGet := CmdBuilder(cmd, RunCmdActionGet, "get <action-id>", "Retrieve details about a specific action", `Retrieve the following details about a specific action taken on one of your resources:`+actionDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Action{}))
+	cmdActionGet.Example = `The following example retrieves the action's ID, status, and resource type of the action with ID 123456: doctl compute action get 123456 --format ID,Status,ResourceType`
 
-	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "Retrieve a  list of all recent actions taken on your resources", `This command retrieves a list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
+	cmdActionList := CmdBuilder(cmd, RunCmdActionList, "list", "Retrieve a  list of all recent actions taken on your resources", `Retrieve a list of all actions taken on your resources. The following details are provided:`+actionDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Action{}))
-	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", "Action resource type")
-	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", "Action region")
-	AddStringFlag(cmdActionList, doctl.ArgActionAfter, "", "", "Action completed after in RFC3339 format")
-	AddStringFlag(cmdActionList, doctl.ArgActionBefore, "", "", "Action completed before in RFC3339 format")
-	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", "Action status")
-	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", "Action type")
+	AddStringFlag(cmdActionList, doctl.ArgActionResourceType, "", "", `Filter by action resource type, such as `+"`"+`droplet`+"`"+``)
+	AddStringFlag(cmdActionList, doctl.ArgActionRegion, "", "", `Filter by a specified datacenter region, such as `+"`"+`nyc`+"`"+``)
+	AddStringFlag(cmdActionList, doctl.ArgActionAfter, "", "", "Filter actions taken after a specified date, in RFC3339 format.")
+	AddStringFlag(cmdActionList, doctl.ArgActionBefore, "", "", "Filter actions taken after a specified date, in RFC3339 format.")
+	AddStringFlag(cmdActionList, doctl.ArgActionStatus, "", "", `Filter by action status, such as `+"`"+`completed`+"`"+` or `+"`"+`in-progress`+"`"+`.`)
+	AddStringFlag(cmdActionList, doctl.ArgActionType, "", "", `Filter by action type, such as `+"`"+`create`+"`"+` or `+"`"+`destroy`+"`"+``)
+	cmdActionList.Example = `The following command retrieves a list of all the destroy actions taken on the account after October 12, 2022 at 12:00:01 AM UTC, and displays the action ID and region: doctl compute action list --action-type destroy --after 2022-10-12T00:00:01.00Z --format ID,Region`
 
-	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "Block thread until an action completes", `The command blocks the current thread, returning when an action completes.
+	cmdActionWait := CmdBuilder(cmd, RunCmdActionWait, "wait <action-id>", "Block thread until an action completes", `Block the current thread, returning when an action completes.
 
 For example, if you find an action when calling `+"`"+`doctl compute action list`+"`"+` that has a status of `+"`"+`in-progress`+"`"+`, you can note the action ID and call `+"`"+`doctl compute action wait <action-id>`+"`"+`, and doctl will appear to "hang" until the action has completed. This can be useful for scripting purposes.`, Writer,
 		aliasOpt("w"), displayerType(&displayers.Action{}))
+	cmdActionWait.Example = `The following example waits for the action ` + "`" + `123456` + "`" + ` to complete before allowing further commands to execute: doctl compute action wait 123456`
 	AddIntFlag(cmdActionWait, doctl.ArgPollTime, "", 5, "Re-poll time in seconds")
 
 	return cmd

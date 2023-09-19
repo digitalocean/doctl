@@ -41,8 +41,8 @@ func Apps() *Command {
 		Command: &cobra.Command{
 			Use:     "apps",
 			Aliases: []string{"app", "a"},
-			Short:   "Display commands for working with apps",
-			Long:    "The subcommands of `doctl app` manage your App Platform apps. For documentation on app specs used by multiple commands, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec.",
+			Short:   "Displays commands for working with apps",
+			Long:    "The subcommands of `doctl app` manage your App Platform apps. For documentation on app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec).",
 			GroupID: manageResourcesGroup,
 		},
 	}
@@ -64,6 +64,7 @@ func Apps() *Command {
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
 	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
 	AddStringFlag(create, doctl.ArgProjectID, "", "", "The ID of the project to assign the created app and resources to. If not provided, the default project will be used.")
+	create.Example = `The following example creates an app in a project named ` + "`" + `example-project` + "`" + ` using an app spec located in a directory called ` + "`" + `/src/your-app.yaml` + "`" + `. Additionally, the command returns the new app's ID, ingress information, and creation date: doctl apps create --spec src/your-app.yaml --format ID,DefaultIngress,Created`
 
 	CmdBuilder(
 		cmd,
@@ -82,71 +83,74 @@ Only basic information is included with the text output format. For complete app
 		cmd,
 		RunAppsList,
 		"list",
-		"List all apps",
-		`List all apps.
+		"Lists all apps",
+		`Lists all apps associated with your account, including their ID, spec name, creation date, and other information.
 
-Only basic information is included with the text output format. For complete app details including the app specs, use the JSON format.`,
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
 		aliasOpt("ls"),
 		displayerType(&displayers.Apps{}),
 	)
 	AddBoolFlag(list, doctl.ArgAppWithProjects, "", false, "Boolean that specifies whether project ids should be fetched along with listed apps")
+	list.Example = `The following lists all apps in your account, but returns just their ID and creation date: doctl apps list --format ID,Created`
 
 	update := CmdBuilder(
 		cmd,
 		RunAppsUpdate,
 		"update <app id>",
-		"Update an app",
-		`Update the specified app with the given app spec. For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec`,
+		"Updates an app",
+		`Updates the specified app with the given app spec. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)`,
 		Writer,
 		aliasOpt("u"),
 		displayerType(&displayers.Apps{}),
 	)
 	AddStringFlag(update, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(update, doctl.ArgCommandWait, "", false,
-		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
+		"Boolean that specifies whether to wait for an app to complete updating before allowing further terminal input. This can be helpful for scripting.")
+	update.Example = `The following example updates an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` using an app spec located in a directory called ` + "`" + `/src/your-app.yaml` + "`" + `. Additionally, the command returns the updated app's ID, ingress information, and creation date: doctl apps update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --spec src/your-app.yaml --format ID,DefaultIngress,Created`
 
 	deleteApp := CmdBuilder(
 		cmd,
 		RunAppsDelete,
 		"delete <app id>",
 		"Deletes an app",
-		`Deletes an app with the provided id.
+		`Deletes the specified app.
 
-This permanently deletes the app and all its associated deployments.`,
+This permanently deletes the app and all of its associated deployments.`,
 		Writer,
 		aliasOpt("d", "rm"),
 	)
 	AddBoolFlag(deleteApp, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the App without a confirmation prompt")
+	deleteApp.Example = `The following example deletes an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	deploymentCreate := CmdBuilder(
 		cmd,
 		RunAppsCreateDeployment,
 		"create-deployment <app id>",
-		"Create a deployment",
-		`Create a deployment for an app.
-
-Creating an app deployment will pull the latest changes from your repository and schedule a new deployment for your app.`,
+		"Creates a deployment",
+		`Deploys the app with the latest changes from your repository.`,
 		Writer,
 		aliasOpt("cd"),
 		displayerType(&displayers.Deployments{}),
 	)
-	AddBoolFlag(deploymentCreate, doctl.ArgAppForceRebuild, "", false, "Force a re-build even if a previous build is eligible for reuse")
+	AddBoolFlag(deploymentCreate, doctl.ArgAppForceRebuild, "", false, "Force a re-build even if a previous build is eligible for reuse.")
 	AddBoolFlag(deploymentCreate, doctl.ArgCommandWait, "", false,
-		"Boolean that specifies whether to wait for apps deployment to complete before returning control to the terminal")
+		"Boolean that specifies whether to wait for the deployment to complete before allowing further terminal input. This can be helpful for scripting.")
+	deploymentCreate.Example = `The following example creates a deployment for an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. Additionally, the command returns the app's ID and status: doctl apps create-deployment f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Status`
 
-	CmdBuilder(
+	getDeployment := CmdBuilder(
 		cmd,
 		RunAppsGetDeployment,
 		"get-deployment <app id> <deployment id>",
 		"Get a deployment",
-		`Get a deployment for an app.
+		`Gets information about a specific deployment for the given app, including when the app updated and what triggered the deployment (Cause).
 
-Only basic information is included with the text output format. For complete app details including its app specs, use the JSON format.`,
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
 		aliasOpt("gd"),
 		displayerType(&displayers.Deployments{}),
 	)
+	getDeployment.Example = `The following example gets information about a deployment with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` for an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. Additionally, the command returns the deployment's ID, status, and cause: doctl apps get-deployment f81d4fae-7dec-11d0-a765-00a0c91e6bf6 418b7972-fc67-41ea-ab4b-6f9477c4f7d8 --format ID,Status,Cause`
 
 	CmdBuilder(
 		cmd,
@@ -165,94 +169,104 @@ Only basic information is included with the text output format. For complete app
 		cmd,
 		RunAppsGetLogs,
 		"logs <app id> <component name (defaults to all components)>",
-		"Get logs",
-		`Get component logs for a deployment of an app.
+		"Retrieves logs",
+		`Retrieves component logs for a deployment of an app.
 
-Three types of logs are supported and can be configured with --`+doctl.ArgAppLogType+`:
+Three types of logs are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
 - build
 - deploy
-- run `,
+- run 
+
+For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
+`,
 		Writer,
 		aliasOpt("l"),
 	)
-	AddStringFlag(logs, doctl.ArgAppDeployment, "", "", "The deployment ID. Defaults to current deployment.")
-	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "The type of logs.")
-	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Follow logs as they are emitted.")
-	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Number of lines to show from the end of the log.")
+	AddStringFlag(logs, doctl.ArgAppDeployment, "", "", "Retrieves logs for a specific deployment ID. Defaults to current deployment.")
+	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "Retrieves logs for a specific log type. Defaults to run logs.")
+	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Returns logs as they are emitted by the app.")
+	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Specifies the number of lines to show from the end of the log.")
+	logs.Example = `The following example retrieves the build logs for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps logs f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
 
-	CmdBuilder(
+	listRegions := CmdBuilder(
 		cmd,
 		RunAppsListRegions,
 		"list-regions",
-		"List App Platform regions",
-		`List all regions supported by App Platform including details about their current availability.`,
+		"Lists available App Platform regions",
+		`Lists all regions supported by App Platform, including details about their current availability.`,
 		Writer,
 		displayerType(&displayers.AppRegions{}),
 	)
+	listRegions.Example = `The following example lists all regions supported by App Platform, including details about their current availability: doctl apps list-regions --format DataCenters,Disabled,Reason`
 
 	propose := CmdBuilder(
 		cmd,
 		RunAppsPropose,
 		"propose",
-		"Propose an app spec",
+		"Proposes an app spec",
 		`Reviews and validates an app specification for a new or existing app. The request returns some information about the proposed app, including app cost and upgrade cost. If an existing app ID is specified, the app spec is treated as a proposed update to the existing app.
 
-Only basic information is included with the text output format. For complete app details including an updated app spec, use the JSON format.`,
+Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
 		aliasOpt("c"),
 		displayerType(&displayers.Apps{}),
 	)
-	AddStringFlag(propose, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see https://www.digitalocean.com/docs/app-platform/concepts/app-spec", requiredOpt())
-	AddStringFlag(propose, doctl.ArgApp, "", "", "An optional existing app ID. If specified, the app spec will be treated as a proposed update to the existing app.")
+	AddStringFlag(propose, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)", requiredOpt())
+	AddStringFlag(propose, doctl.ArgApp, "", "", "An optional existing app ID. If specified, App Platform treats the spec as a proposed update to the existing app.")
+	propose.Example = `The following example proposes an app spec from the file directory ` + "`" + `src/your-app.yaml` + "`" + ` for a new app: doctl apps propose --spec src/your-app.yaml`
 
-	CmdBuilder(
+	listAlerts := CmdBuilder(
 		cmd,
 		RunAppListAlerts,
 		"list-alerts <app id>",
-		"List alerts on an app",
-		`List all alerts associated to an app and its components`,
+		"Lists alerts on an app",
+		`Lists all alerts associated to an app and its component, such as deployment failures and domain failures.`,
 		Writer,
 		aliasOpt("la"),
 		displayerType(&displayers.AppAlerts{}),
 	)
+	listAlerts.Example = `The following example lists all alerts associated to an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to specifically return the alert ID, trigger, and rule: doctl apps list-alerts f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Trigger,Spec.Rule`
 
 	updateAlertDestinations := CmdBuilder(
 		cmd,
 		RunAppUpdateAlertDestinations,
 		"update-alert-destinations <app id> <alert id>",
-		"Update alert destinations",
-		`Update alert destinations`,
+		"Updates alert destinations",
+		`Updates alert destinations`,
 		Writer,
 		aliasOpt("uad"),
 		displayerType(&displayers.AppAlerts{}),
 	)
+	updateAlertDestinations.Example = `The following example updates the alert destinations for an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the alert ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps update-alert-destinations f81d4fae-7dec-11d0-a765-00a0c91e6bf6 f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --alert-destinations src/your-alert-destinations.yaml`
 	AddStringFlag(updateAlertDestinations, doctl.ArgAppAlertDestinations, "", "", "Path to an alert destinations file in JSON or YAML format.")
 
-	CmdBuilder(
+	listBuildpacks := CmdBuilder(
 		cmd,
 		RunAppListBuildpacks,
 		"list-buildpacks",
-		"List buildpacks",
-		`List all buildpacks available on App Platform`,
+		"Lists buildpacks",
+		`Lists all buildpacks available on App Platform`,
 		Writer,
 		displayerType(&displayers.Buildpacks{}),
 	)
+	listBuildpacks.Example = `The following example lists all buildpacks available on App Platform and uses the ` + "`" + `--format` + "`" + ` flag to specifically return the buildpack ID and version: doctl apps list-buildpacks --format ID,Version`
 
 	upgradeBuildpack := CmdBuilder(
 		cmd,
 		RunAppUpgradeBuildpack,
 		"upgrade-buildpack <app id>",
-		"Upgrade buildpack",
-		`Upgrade a buildpack for an app`,
+		"Upgrades app's buildpack",
+		`Upgrades an app's buildpack. For more information about buildpacks, see the [buildpack reference](https://docs.digitalocean.com/products/app-platform/reference/buildpacks/)`,
 		Writer,
 		displayerType(&displayers.Deployments{}),
 	)
 	AddStringFlag(upgradeBuildpack,
-		doctl.ArgBuildpack, "", "", "The ID of the buildpack to upgrade. Use the list-buildpacks command to list available buildpacks.", requiredOpt())
+		doctl.ArgBuildpack, "", "", "The ID of the buildpack to upgrade to. Use the list-buildpacks command to list available buildpacks.", requiredOpt())
 	AddIntFlag(upgradeBuildpack,
-		doctl.ArgMajorVersion, "", 0, "The major version to upgrade to. If empty, will upgrade to the latest available.")
+		doctl.ArgMajorVersion, "", 0, "The major version to upgrade to. If empty, the buildpack upgrades to the latest available version.")
 	AddBoolFlag(upgradeBuildpack,
-		doctl.ArgTriggerDeployment, "", true, "Whether to trigger a new deployment to apply the upgrade")
+		doctl.ArgTriggerDeployment, "", true, "Specifies whether to trigger a new deployment to apply the upgrade.")
+	upgradeBuildpack.Example = `The following example upgrades an app's buildpack with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to the latest available version: doctl apps upgrade-buildpack f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --buildpack f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmd.AddCommand(appsSpec())
 	cmd.AddCommand(appsTier())
