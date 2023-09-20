@@ -260,10 +260,10 @@ type serverlessService struct {
 
 const (
 	// Minimum required version of the functions deployer plugin code.
-	minServerlessVersion = "5.0.18"
+	minServerlessVersion = "5.0.19"
 
 	// The version of nodejs to download alongsize the plugin download.
-	nodeVersion = "v16.13.0"
+	nodeVersion = "v18.17.1"
 
 	// credsDir is the directory under the sandbox where all credentials are stored.
 	// It in turn has a subdirectory for each access token employed (formed as a prefix of the token).
