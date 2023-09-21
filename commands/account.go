@@ -34,23 +34,26 @@ For example, ` + "`" + `doctl account get` + "`" + ` retrieves account profile d
 		},
 	}
 
-	CmdBuilder(cmd, RunAccountGet, "get", "Retrieve account profile details", `Retrieve the following details from your account profile:
+	cmdAccountGet := CmdBuilder(cmd, RunAccountGet, "get", "Retrieve account profile details", `Retrieve the following details from your account profile:
 
 - Email address
+- Team 
 - Account Droplet limit
 - Email verification status
-- Account status (active or disabled)
-- UUID for the account.`, Writer,
+- UUID for the account
+- Account status (active or disabled).`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Account{}))
+	cmdAccountGet.Example = `The following example retrieves email addresses associated with the account: doctl account get --format Email`
 
-	CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieve your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
+	cmdAccountRateLimit := CmdBuilder(cmd, RunAccountRateLimit, "ratelimit", "Retrieve your API usage and the remaining quota", `Retrieve the following details about your account's API usage:
 
-- The current limit on your account for API calls (5,000 per hour per OAuth token)
+- The current limit on your account for API calls (default is 5,000 per hour per OAuth token)
 - The number of API calls you have made in the last hour
-- When the API call count is due to reset to zero, which happens hourly
+- When the API call count resets to zero, which happens hourly
 
-Note that these details are per OAuth token and are tied to the token you used when calling `+"`"+`doctl auth init`+"`"+` at setup time.`, Writer,
+Note that these details are per OAuth token and are bound to the token you used when calling `+"`"+`doctl auth init`+"`"+` at setup time.`, Writer,
 		aliasOpt("rl"), displayerType(&displayers.RateLimit{}))
+	cmdAccountRateLimit.Example = `The following example retrieves the number of API calls you have left for the hour: doctl account ratelimit --format Remaining`
 
 	return cmd
 }

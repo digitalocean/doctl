@@ -33,13 +33,14 @@ func Balance() *Command {
 
 - Your month-to-date balance including your account
   balance and month-to-date usage.
-- Your current balance as of your most recent billing activity.
+- Your current overall balance as of your most recent billing activity.
 - Your usage in the current billing period.
 - The time at which balances were most recently generated.
 `
 
-	CmdBuilder(cmd, RunBalanceGet, "get", "Retrieve your account balance",
+	getBalance := CmdBuilder(cmd, RunBalanceGet, "get", "Retrieve your account balance",
 		getBalanceDesc, Writer, aliasOpt("g"), displayerType(&displayers.Balance{}))
+	getBalance.Example = `The following example uses the ` + "`" + `--format` + "`" + ` flag to display only your month-to-date balance: doctl balance get --format MonthToDateUsage`
 
 	return cmd
 }
