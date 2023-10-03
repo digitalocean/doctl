@@ -66,7 +66,7 @@ jobs:
         id: build
         run: |
           make _build_snap && \
-          find doctl_v*.snap -exec echo "snap={}" >> $GITHUB_OUTPUT \;
+          find doctl_v*.snap -exec echo "snap={}" >> "$GITHUB_OUTPUT" \;
 
       - uses: snapcore/action-publish@master
         env:
