@@ -345,6 +345,9 @@ func (do *DatabaseOptions) KV() []map[string]interface{} {
 	if &do.DatabaseOptions.PostgresSQLOptions != nil {
 		engines = append(engines, "pg")
 	}
+	if &do.DatabaseOptions.KafkaOptions != nil {
+		engines = append(engines, "kafka")
+	}
 
 	out := make([]map[string]interface{}, 0, len(engines))
 	for _, eng := range engines {

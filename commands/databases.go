@@ -55,7 +55,7 @@ func Databases() *Command {
 
 - The database ID, in UUID format
 - The name you gave the database cluster
-- The database engine (e.g. ` + "`redis`, `pg`, `mysql` , or `mongodb`" + `)
+- The database engine (e.g. ` + "`redis`, `pg`, `mysql` , `mongodb`, or `kafka`" + `)
 - The engine version (e.g. ` + "`14`" + ` for PostgreSQL version 14)
 - The number of nodes in the database cluster
 - The region the database cluster resides in (e.g. ` + "`sfo2`, " + "`nyc1`" + `)
@@ -76,7 +76,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseNumNodes, "", defaultDatabaseNodeCount, nodeNumberDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The region where the database cluster will be created, e.g. `nyc1` or `sfo2`")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, and `mongodb`.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, `mongodb`, and `kafka`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster from which the backup will be restored.")
@@ -819,7 +819,7 @@ func databaseOptions() *Command {
 	databaseOptionEngines := `
 This command lists the available database engines:
 
-- The key of the database engine. Possible values are: "pg" for PostgreSQL, "mysql"" for MySQL, "redis"" for Redis, and "mongodb" for MongoDB
+- The key of the database engine. Possible values are: "pg" for PostgreSQL, "mysql" for MySQL, "redis" for Redis, "mongodb" for MongoDB, and "kafka" for Kafka
 `
 	databaseOptionRegions := `
 - The region of the database engine.
@@ -900,11 +900,14 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["pg"] = options.PostgresSQLOptions.Regions
 	case "redis":
 		regions["redis"] = options.RedisOptions.Regions
+	case "kafka":
+		regions["kafka"] = options.KafkaOptions.Regions
 	case "":
 		regions["mongodb"] = options.MongoDBOptions.Regions
 		regions["mysql"] = options.MySQLOptions.Regions
 		regions["pg"] = options.PostgresSQLOptions.Regions
 		regions["redis"] = options.RedisOptions.Regions
+		regions["kafka"] = options.KafkaOptions.Regions
 	}
 
 	return displayDatabaseRegionOptions(c, regions)
@@ -929,11 +932,14 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["pg"] = options.PostgresSQLOptions.Versions
 	case "redis":
 		versions["redis"] = options.RedisOptions.Versions
+	case "kafka":
+		versions["kafka"] = options.KafkaOptions.Versions
 	case "":
 		versions["mongodb"] = options.MongoDBOptions.Versions
 		versions["mysql"] = options.MySQLOptions.Versions
 		versions["pg"] = options.PostgresSQLOptions.Versions
 		versions["redis"] = options.RedisOptions.Versions
+		versions["kafka"] = options.KafkaOptions.Versions
 	}
 
 	return displayDatabaseVersionOptions(c, versions)
@@ -961,6 +967,8 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		layouts = options.PostgresSQLOptions.Layouts
 	case "redis":
 		layouts = options.RedisOptions.Layouts
+	case "kafka":
+		layouts = options.KafkaOptions.Layouts
 	}
 
 	return displayDatabaseLayoutOptions(c, layouts)
