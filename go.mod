@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.102.1
+	github.com/digitalocean/godo v1.103.0
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v24.0.5+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -28,7 +28,7 @@ require (
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.11.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.2.0
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.3.0
