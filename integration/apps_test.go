@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -249,12 +248,9 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	it("creates an app", func() {
-		specFile, err := ioutil.TempFile("", "spec")
+		specFile, err := os.CreateTemp(t.TempDir(), "spec")
 		require.NoError(t, err)
-		defer func() {
-			os.Remove(specFile.Name())
-			specFile.Close()
-		}()
+		defer specFile.Close()
 
 		err = json.NewEncoder(specFile).Encode(&testAppSpec)
 		require.NoError(t, err)
@@ -276,12 +272,10 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 	})
 	when("the wait flag is passed", func() {
 		it("creates an app and polls for status", func() {
-			specFile, err := ioutil.TempFile("", "spec")
+			specFile, err := os.CreateTemp(t.TempDir(), "spec")
 			require.NoError(t, err)
-			defer func() {
-				os.Remove(specFile.Name())
-				specFile.Close()
-			}()
+			defer specFile.Close()
+
 			err = json.NewEncoder(specFile).Encode(&testAppSpec)
 			require.NoError(t, err)
 			cmd := exec.Command(builtBinaryPath,
@@ -301,12 +295,10 @@ var _ = suite("apps/create", func(t *testing.T, when spec.G, it spec.S) {
 	})
 	when("the upsert flag is passed", func() {
 		it("creates an app or updates if already exists", func() {
-			specFile, err := ioutil.TempFile("", "spec")
+			specFile, err := os.CreateTemp(t.TempDir(), "spec")
 			require.NoError(t, err)
-			defer func() {
-				os.Remove(specFile.Name())
-				specFile.Close()
-			}()
+			defer specFile.Close()
+
 			err = json.NewEncoder(specFile).Encode(&testAppSpec)
 			require.NoError(t, err)
 			cmd := exec.Command(builtBinaryPath,
@@ -400,12 +392,9 @@ var _ = suite("apps/create-upsert", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	it("uses upsert to update existing app", func() {
-		specFile, err := ioutil.TempFile("", "spec")
+		specFile, err := os.CreateTemp(t.TempDir(), "spec")
 		require.NoError(t, err)
-		defer func() {
-			os.Remove(specFile.Name())
-			specFile.Close()
-		}()
+		defer specFile.Close()
 
 		err = json.NewEncoder(specFile).Encode(&testAppSpec)
 		require.NoError(t, err)
@@ -611,12 +600,9 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 	})
 
 	it("updates an app", func() {
-		specFile, err := ioutil.TempFile("", "spec")
+		specFile, err := os.CreateTemp(t.TempDir(), "spec")
 		require.NoError(t, err)
-		defer func() {
-			os.Remove(specFile.Name())
-			specFile.Close()
-		}()
+		defer specFile.Close()
 
 		err = json.NewEncoder(specFile).Encode(&testAppSpec)
 		require.NoError(t, err)
@@ -639,12 +625,10 @@ var _ = suite("apps/update", func(t *testing.T, when spec.G, it spec.S) {
 	})
 	when("the wait flag is passed", func() {
 		it("updates an app and polls for status", func() {
-			specFile, err := ioutil.TempFile("", "spec")
+			specFile, err := os.CreateTemp(t.TempDir(), "spec")
 			require.NoError(t, err)
-			defer func() {
-				os.Remove(specFile.Name())
-				specFile.Close()
-			}()
+			defer specFile.Close()
+
 			err = json.NewEncoder(specFile).Encode(&testAppSpec)
 			require.NoError(t, err)
 			cmd := exec.Command(builtBinaryPath,

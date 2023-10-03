@@ -3,7 +3,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -38,7 +38,7 @@ var _ = suite("projects/resources/assign", func(t *testing.T, when spec.G, it sp
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				request := struct {

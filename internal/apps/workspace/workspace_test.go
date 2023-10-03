@@ -1,7 +1,6 @@
 package workspace
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -55,7 +54,7 @@ func Test_ensureStringInFile(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			file, err := ioutil.TempFile("", "dev-config.*.yaml")
+			file, err := os.CreateTemp("", "dev-config.*.yaml")
 			require.NoError(t, err, "creating temp file")
 			file.Close()
 
@@ -71,7 +70,7 @@ func Test_ensureStringInFile(t *testing.T) {
 			err = ensureStringInFile(file.Name(), ensureValue)
 			require.NoError(t, err, "ensuring string in file")
 
-			b, err := ioutil.ReadFile(file.Name())
+			b, err := os.ReadFile(file.Name())
 			require.NoError(t, err)
 			require.Equal(t, string(tc.expect), string(b))
 		})

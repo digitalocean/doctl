@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,20 +15,12 @@ import (
 )
 
 func TestExtractTarGz(t *testing.T) {
-	tmp, err := ioutil.TempDir("", "test-materials")
-	require.NoError(t, err, "error creating tmp dir")
-	out, err := ioutil.TempDir("", "output")
-	require.NoError(t, err, "error creating out dir")
-	defer func() {
-		err := os.RemoveAll(tmp)
-		require.NoError(t, err, "error cleaning tmp dir")
-		err = os.RemoveAll(out)
-		require.NoError(t, err, "error cleaning out dir")
-	}()
+	tmp := t.TempDir()
+	out := t.TempDir()
 
 	files := []string{"test.txt", "test/test.txt"}
 	testTarGz := setUpTarGz(t, tmp, files)
-	err = Extract(testTarGz, out)
+	err := Extract(testTarGz, out)
 	require.NoError(t, err, "error extracting archive")
 
 	for _, f := range files {
@@ -40,20 +31,12 @@ func TestExtractTarGz(t *testing.T) {
 }
 
 func TestExtractZip(t *testing.T) {
-	tmp, err := ioutil.TempDir("", "test-materials")
-	require.NoError(t, err, "error creating tmp dir")
-	out, err := ioutil.TempDir("", "output")
-	require.NoError(t, err, "error creating out dir")
-	defer func() {
-		err := os.RemoveAll(tmp)
-		require.NoError(t, err, "error cleaning tmp dir")
-		err = os.RemoveAll(out)
-		require.NoError(t, err, "error cleaning out dir")
-	}()
+	tmp := t.TempDir()
+	out := t.TempDir()
 
 	files := []string{"test.txt", "test/test.txt"}
 	testZip := setUpZip(t, tmp, files)
-	err = Extract(testZip, out)
+	err := Extract(testZip, out)
 	require.NoError(t, err, "error extracting archive")
 
 	for _, f := range files {

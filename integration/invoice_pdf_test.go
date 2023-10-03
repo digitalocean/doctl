@@ -2,7 +2,6 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -59,7 +58,7 @@ var _ = suite("invoices/pdf", func(t *testing.T, when spec.G, it spec.S) {
 		expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 		expect.Equal(strings.TrimSpace(invoicePDFOutput), strings.TrimSpace(string(output)))
 
-		result, err := ioutil.ReadFile(fpath)
+		result, err := os.ReadFile(fpath)
 		expect.NoError(err)
 		expect.Equal([]byte(invoicePDFResponse), result)
 

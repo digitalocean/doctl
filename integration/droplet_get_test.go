@@ -2,7 +2,6 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -30,7 +29,7 @@ var _ = suite("compute/droplet/get", func(t *testing.T, when spec.G, it spec.S) 
 
 		configPath = filepath.Join(dir, "config.yaml")
 
-		err := ioutil.WriteFile(configPath, []byte(dropletGetConfig), 0644)
+		err := os.WriteFile(configPath, []byte(dropletGetConfig), 0644)
 		expect.NoError(err)
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {

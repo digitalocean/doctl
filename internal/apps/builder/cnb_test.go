@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -25,7 +25,7 @@ import (
 func TestCNBComponentBuild(t *testing.T) {
 	ctx := context.Background()
 	dockerSocketPath = filepath.Join(t.TempDir(), "docker.sock")
-	require.NoError(t, ioutil.WriteFile(dockerSocketPath, nil, 0644))
+	require.NoError(t, os.WriteFile(dockerSocketPath, nil, 0644))
 
 	t.Run("no component", func(t *testing.T) {
 		builder := &CNBComponentBuilder{}
@@ -386,7 +386,7 @@ func TestCNBComponentBuild(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			nginxConf, err := ioutil.ReadAll(nginxConfR)
+			nginxConf, err := io.ReadAll(nginxConfR)
 			require.NoError(t, err)
 			require.Equal(t, `
 server {
@@ -425,7 +425,7 @@ server {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			dockerfile, err := ioutil.ReadAll(dockerfileR)
+			dockerfile, err := io.ReadAll(dockerfileR)
 			require.NoError(t, err)
 			require.Equal(t, `
 ARG nginx_image

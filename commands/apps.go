@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -953,7 +952,7 @@ func readAppAlertDestination(stdin io.Reader, path string) (*godo.AlertDestinati
 		alertDestinations = alertDestinationsFile
 	}
 
-	byt, err := ioutil.ReadAll(alertDestinations)
+	byt, err := io.ReadAll(alertDestinations)
 	if err != nil {
 		return nil, fmt.Errorf("reading app alert destinations: %w", err)
 	}
