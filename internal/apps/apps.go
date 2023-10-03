@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/digitalocean/godo"
@@ -28,7 +27,7 @@ func ReadAppSpec(stdin io.Reader, path string) (*godo.AppSpec, error) {
 		spec = specFile
 	}
 
-	byt, err := ioutil.ReadAll(spec)
+	byt, err := io.ReadAll(spec)
 	if err != nil {
 		return nil, fmt.Errorf("reading app spec: %w", err)
 	}

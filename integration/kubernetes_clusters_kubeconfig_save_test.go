@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -57,10 +57,8 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 
 	when("passing defaults", func() {
 		it("creates a kubeconfig using exec-credentials", func() {
-			f, err := ioutil.TempFile("", "fake-kube-config")
+			f, err := os.CreateTemp(t.TempDir(), "fake-kube-config")
 			expect.NoError(err)
-
-			defer os.Remove(f.Name())
 
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
@@ -79,7 +77,7 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 
-			fileBytes, err := ioutil.ReadAll(f)
+			fileBytes, err := io.ReadAll(f)
 			expect.NoError(err)
 			err = f.Close()
 			expect.NoError(err)
@@ -89,10 +87,8 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 
 	when("passing expiry-seconds", func() {
 		it("creates a kubeconfig using a token", func() {
-			f, err := ioutil.TempFile("", "fake-kube-config")
+			f, err := os.CreateTemp(t.TempDir(), "fake-kube-config")
 			expect.NoError(err)
-
-			defer os.Remove(f.Name())
 
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
@@ -112,7 +108,7 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 
-			fileBytes, err := ioutil.ReadAll(f)
+			fileBytes, err := io.ReadAll(f)
 			expect.NoError(err)
 			err = f.Close()
 			expect.NoError(err)
@@ -121,10 +117,8 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 	})
 	when("passing alias", func() {
 		it("creates an alias for a config", func() {
-			f, err := ioutil.TempFile("", "fake-kube-config")
+			f, err := os.CreateTemp(t.TempDir(), "fake-kube-config")
 			expect.NoError(err)
-
-			defer os.Remove(f.Name())
 
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
@@ -145,7 +139,7 @@ var _ = suite("kubernetes/clusters/kubeconfig/save", func(t *testing.T, when spe
 
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 
-			fileBytes, err := ioutil.ReadAll(f)
+			fileBytes, err := io.ReadAll(f)
 			expect.NoError(err)
 			err = f.Close()
 			expect.NoError(err)

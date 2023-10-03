@@ -3,7 +3,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -58,7 +58,7 @@ var _ = suite("compute/tags/remove", func(t *testing.T, when spec.G, it spec.S) 
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				request := godo.UntagResourcesRequest{}
@@ -80,7 +80,7 @@ var _ = suite("compute/tags/remove", func(t *testing.T, when spec.G, it spec.S) 
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				request := godo.UntagResourcesRequest{}

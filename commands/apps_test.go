@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"testing"
@@ -130,12 +129,9 @@ var (
 
 func TestRunAppsCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		specFile, err := ioutil.TempFile("", "spec")
+		specFile, err := os.CreateTemp(t.TempDir(), "spec")
 		require.NoError(t, err)
-		defer func() {
-			os.Remove(specFile.Name())
-			specFile.Close()
-		}()
+		defer specFile.Close()
 
 		err = json.NewEncoder(specFile).Encode(&testAppSpec)
 		require.NoError(t, err)
@@ -195,12 +191,9 @@ func TestRunAppsList(t *testing.T) {
 
 func TestRunAppsUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		specFile, err := ioutil.TempFile("", "spec")
+		specFile, err := os.CreateTemp(t.TempDir(), "spec")
 		require.NoError(t, err)
-		defer func() {
-			os.Remove(specFile.Name())
-			specFile.Close()
-		}()
+		defer specFile.Close()
 
 		err = json.NewEncoder(specFile).Encode(&testAppSpec)
 		require.NoError(t, err)
@@ -543,7 +536,7 @@ var validAppSpec = &godo.AppSpec{
 func testTempFile(t *testing.T, data []byte) string {
 	t.Helper()
 	file := t.TempDir() + "/file"
-	err := ioutil.WriteFile(file, data, 0644)
+	err := os.WriteFile(file, data, 0644)
 	require.NoError(t, err, "writing temp file")
 	return file
 }
@@ -769,12 +762,9 @@ func TestRunAppsListAlerts(t *testing.T) {
 
 func TestRunAppsUpdateAlertDestinations(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		destinationsFile, err := ioutil.TempFile("", "dest")
+		destinationsFile, err := os.CreateTemp(t.TempDir(), "dest")
 		require.NoError(t, err)
-		defer func() {
-			os.Remove(destinationsFile.Name())
-			destinationsFile.Close()
-		}()
+		defer destinationsFile.Close()
 
 		err = json.NewEncoder(destinationsFile).Encode(&testAlertUpdate)
 		require.NoError(t, err)

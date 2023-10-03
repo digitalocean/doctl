@@ -4,7 +4,7 @@
 package integration
 
 import (
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
@@ -32,7 +32,7 @@ auth-contexts:
 context: default
 `)
 
-		expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+		expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
 
 	})
 
@@ -65,7 +65,7 @@ context: default
 			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(testConfig)
+			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
 			expect.NotContains(string(fileBytes), "first-token")
 		})
@@ -85,7 +85,7 @@ context: default
 			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(testConfig)
+			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
 			expect.NotContains(string(fileBytes), "second-token")
 		})

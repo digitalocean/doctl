@@ -3,7 +3,6 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -89,7 +88,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(config)
+			fileBytes, err := os.ReadFile(config)
 			expect.NoError(err)
 
 			var dc dockerConfig
@@ -123,7 +122,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(config)
+			fileBytes, err := os.ReadFile(config)
 			expect.NoError(err)
 
 			var dc dockerConfig
@@ -159,7 +158,7 @@ var _ = suite("registry/login", func(t *testing.T, when spec.G, it spec.S) {
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(config)
+			fileBytes, err := os.ReadFile(config)
 			expect.NoError(err)
 
 			var dc dockerConfig

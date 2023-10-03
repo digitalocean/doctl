@@ -3,7 +3,6 @@ package config
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
 	"os"
 	"regexp"
 	"time"
@@ -85,7 +84,7 @@ func ensureStringInFile(file string, val string) error {
 		return err
 	}
 
-	b, err := ioutil.ReadFile(file)
+	b, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}

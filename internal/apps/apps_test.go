@@ -3,7 +3,7 @@ package apps
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/digitalocean/godo"
@@ -160,7 +160,7 @@ var validAppSpec = &godo.AppSpec{
 func testTempFile(t *testing.T, data []byte) string {
 	t.Helper()
 	file := t.TempDir() + "/file"
-	err := ioutil.WriteFile(file, data, 0644)
+	err := os.WriteFile(file, data, 0644)
 	require.NoError(t, err, "writing temp file")
 	return file
 }

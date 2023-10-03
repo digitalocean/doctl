@@ -3,7 +3,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -48,7 +48,7 @@ var _ = suite("compute/droplet/tag", func(t *testing.T, when spec.G, it spec.S) 
 
 				w.Write([]byte(`{"droplets":[{"name":"some-droplet-name", "id": 1337}]}`))
 			case "/v2/tags/my-tag/resources":
-				body, err := ioutil.ReadAll(req.Body)
+				body, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				var tagRequest tagRequest

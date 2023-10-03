@@ -2,7 +2,6 @@ package commands
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -202,7 +201,7 @@ func tempAppSpec(t *testing.T, spec *godo.AppSpec) (path string) {
 	path = tempFile(t, "app.yaml")
 	specYaml, err := yaml.Marshal(spec)
 	require.NoError(t, err, "marshaling app spec")
-	err = ioutil.WriteFile(path, specYaml, 0664)
+	err = os.WriteFile(path, specYaml, 0664)
 	require.NoError(t, err, "writing app spec to disk")
 	return
 }

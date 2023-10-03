@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -39,7 +39,7 @@ var _ = suite("compute/load-balancer/update", func(t *testing.T, when spec.G, it
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				expect.JSONEq(lbUpdateRequest, string(reqBody))

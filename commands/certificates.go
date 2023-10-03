@@ -14,7 +14,7 @@ limitations under the License.
 package commands
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -217,7 +217,7 @@ func RunCertificateDelete(c *CmdConfig) error {
 }
 
 func readInputFromFile(path string) (string, error) {
-	fileBytes, err := ioutil.ReadFile(path)
+	fileBytes, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}

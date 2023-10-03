@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -173,7 +172,7 @@ func (b *DockerComponentBuilder) buildStaticSiteImage(ctx context.Context) error
 
 	lw := b.getLogWriter()
 	template.Render(lw, `{{success checkmark}} building static site image with built assets from {{highlight .}}{{nl 2}}`, c.GetOutputDir())
-	tmpDir, err := ioutil.TempDir("", "static-*")
+	tmpDir, err := os.MkdirTemp("", "static-*")
 	if err != nil {
 		return fmt.Errorf("creating temporary build directory: %w", err)
 	}

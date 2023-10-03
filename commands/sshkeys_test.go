@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -141,7 +140,7 @@ func TestKeysUpdateByFingerprint(t *testing.T) {
 func TestSSHPublicKeyImportWithName(t *testing.T) {
 	pubkey := "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCn6eZ8ve0ha04rPRZuoPXK1AQ/h21qslWCzoDcOciXn5OcyafkZw+31k/afaBTeW62D8fXd8e/1xWbFfp/2GqmslYpNCTPrtpNhsE8I0yKjJ8FxX9FfsCOu/Sv83dWgSpiT7pNWVKarZjW9KdKKRQljq1i+H5pX3r5Q9I1v+66mYTe7qsKGas9KWy0vkGoNSqmTCl+d+Y0286chtqBqBjSCUCI8oLKPnJB86Lj344tFGmzDIsJKXMVHTL0dF8n3u6iWN4qiRU+JvkoIkI3v0JvyZXxhR2uPIS1yUAY2GC+2O5mfxydJQzBdtag5Uw8Y7H5yYR1gar/h16bAy5XzRvp testkey"
 	path := filepath.Join(os.TempDir(), "key.pub")
-	err := ioutil.WriteFile(path, []byte(pubkey), 0600)
+	err := os.WriteFile(path, []byte(pubkey), 0600)
 	assert.NoError(t, err)
 	defer os.Remove(path)
 

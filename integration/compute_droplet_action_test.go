@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -72,7 +72,7 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 			}
 
 			if matchRequest.body != "{}" {
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				expect.JSONEq(matchRequest.body, string(reqBody))

@@ -15,7 +15,6 @@ package commands
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"testing"
@@ -163,9 +162,8 @@ coreos:
       command: start
 `
 
-		tmpFile, err := ioutil.TempFile(os.TempDir(), "doctlDropletsTest-*.yml")
+		tmpFile, err := os.CreateTemp(t.TempDir(), "doctlDropletsTest-*.yml")
 		assert.NoError(t, err)
-		defer os.Remove(tmpFile.Name())
 
 		_, err = tmpFile.WriteString(userData)
 		assert.NoError(t, err)
