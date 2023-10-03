@@ -432,8 +432,8 @@ func TestRunAppsGetLogs(t *testing.T) {
 
 			tc := config.Doit.(*doctl.TestConfig)
 			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
-				assert.Equal(t, token, "aa-bb-11-cc-33")
-				assert.Equal(t, url.String(), "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33")
+				assert.Equal(t, "aa-bb-11-cc-33", token)
+				assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
 				return tm.listen
 			}
 

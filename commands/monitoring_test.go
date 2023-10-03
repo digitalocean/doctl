@@ -203,7 +203,7 @@ func TestAlertPolicyCreate_ValidTypes(t *testing.T) {
 			config.Doit.Set(config.NS, doctl.ArgAlertPolicySlackURLs, slackURLsStr)
 
 			err := RunCmdAlertPolicyCreate(config)
-			assert.Equal(t, err, tt.expectedErr)
+			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
 }
