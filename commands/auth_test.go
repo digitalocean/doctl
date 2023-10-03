@@ -97,7 +97,7 @@ func TestAuthInitConfig(t *testing.T) {
 				"unset": map[interface{}]interface{}{"dev-config": ""},
 			},
 		)
-		assert.Equal(t, devConfigSetting, expectedConfigSetting, "unexpected setting for 'dev.config'")
+		assert.Equal(t, expectedConfigSetting, devConfigSetting, "unexpected setting for 'dev.config'")
 	})
 }
 
