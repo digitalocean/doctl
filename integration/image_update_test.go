@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -37,7 +37,7 @@ var _ = suite("compute/image/update", func(t *testing.T, when spec.G, it spec.S)
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				expect.JSONEq(imageUpdateRequest, string(reqBody))

@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -418,7 +417,7 @@ func (s *serverlessService) InstallServerless(leafCredsDir string, upgrading boo
 	// will require an additional copy rather than a simple rename.
 
 	os.Mkdir(filepath.Dir(serverlessDir), 0700) // in case using config dir and it doesn't exist yet
-	tmp, err := ioutil.TempDir(filepath.Dir(serverlessDir), "sbx-install")
+	tmp, err := os.MkdirTemp(filepath.Dir(serverlessDir), "sbx-install")
 	if err != nil {
 		return err
 	}
@@ -1162,7 +1161,7 @@ func readTopLevel(project *ServerlessProject) error {
 		Config   = "project.yml"
 		Packages = "packages"
 	)
-	files, err := ioutil.ReadDir(project.ProjectPath)
+	files, err := os.ReadDir(project.ProjectPath)
 	if err != nil {
 		return err
 	}
@@ -1185,7 +1184,7 @@ func readTopLevel(project *ServerlessProject) error {
 func readProjectConfig(configPath string) (*ServerlessSpec, error) {
 	spec := ServerlessSpec{}
 	// reading config file content
-	content, err := ioutil.ReadFile(configPath)
+	content, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -1300,7 +1299,7 @@ func serverlessUptodate(serverlessDir string) bool {
 // Otherwise, returns the version string stored in the serverless directory.
 func GetCurrentServerlessVersion(serverlessDir string) string {
 	versionFile := filepath.Join(serverlessDir, "version")
-	contents, err := ioutil.ReadFile(versionFile)
+	contents, err := os.ReadFile(versionFile)
 	if err != nil {
 		return "0"
 	}

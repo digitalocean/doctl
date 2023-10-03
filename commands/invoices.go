@@ -15,7 +15,7 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -145,7 +145,7 @@ func RunInvoicesGetPDF(c *CmdConfig) error {
 
 	outputFile := getOutputFileArg("pdf", c.Args)
 
-	err = ioutil.WriteFile(outputFile, pdf, 0644)
+	err = os.WriteFile(outputFile, pdf, 0644)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func RunInvoicesGetCSV(c *CmdConfig) error {
 
 	outputFile := getOutputFileArg("csv", c.Args)
 
-	err = ioutil.WriteFile(outputFile, csv, 0644)
+	err = os.WriteFile(outputFile, csv, 0644)
 	if err != nil {
 		return err
 	}

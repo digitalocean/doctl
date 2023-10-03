@@ -2,10 +2,11 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -38,7 +39,7 @@ var _ = suite("compute/certificate/create", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				matchedRequest := certCustomCreateJSONReq
@@ -85,7 +86,7 @@ var _ = suite("compute/certificate/create", func(t *testing.T, when spec.G, it s
 			dir := t.TempDir()
 
 			for _, f := range testFiles {
-				err := ioutil.WriteFile(filepath.Join(dir, f), []byte(f), 0600)
+				err := os.WriteFile(filepath.Join(dir, f), []byte(f), 0600)
 				expect.NoError(err)
 			}
 

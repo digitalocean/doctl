@@ -700,11 +700,7 @@ func TestRegistryLogin(t *testing.T) {
 
 				config.Out = os.Stderr
 				err := RunRegistryLogin(config)
-				if test.err != nil {
-					assert.Error(t, test.err, err)
-				} else {
-					assert.NoError(t, err)
-				}
+				assert.Equal(t, test.err, err)
 			})
 		})
 	}

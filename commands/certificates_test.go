@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -106,21 +105,21 @@ func TestCertificatesCreate(t *testing.T) {
 		t.Run(test.desc, func(t *testing.T) {
 			withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 				if test.privateKeyPath != "" {
-					pkErr := ioutil.WriteFile(test.privateKeyPath, []byte("-----BEGIN PRIVATE KEY-----"), 0600)
+					pkErr := os.WriteFile(test.privateKeyPath, []byte("-----BEGIN PRIVATE KEY-----"), 0600)
 					assert.NoError(t, pkErr)
 
 					defer os.Remove(test.privateKeyPath)
 				}
 
 				if test.certLeafPath != "" {
-					certErr := ioutil.WriteFile(test.certLeafPath, []byte("-----BEGIN CERTIFICATE-----"), 0600)
+					certErr := os.WriteFile(test.certLeafPath, []byte("-----BEGIN CERTIFICATE-----"), 0600)
 					assert.NoError(t, certErr)
 
 					defer os.Remove(test.certLeafPath)
 				}
 
 				if test.certChainPath != "" {
-					certErr := ioutil.WriteFile(test.certChainPath, []byte("-----BEGIN CERTIFICATE-----"), 0600)
+					certErr := os.WriteFile(test.certChainPath, []byte("-----BEGIN CERTIFICATE-----"), 0600)
 					assert.NoError(t, certErr)
 
 					defer os.Remove(test.certChainPath)

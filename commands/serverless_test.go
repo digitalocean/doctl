@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -688,17 +687,12 @@ func TestGetCredentialDirectory(t *testing.T) {
 
 func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tmp, err := ioutil.TempDir("", "test-dir")
-		require.NoError(t, err)
-		defer func() {
-			err := os.RemoveAll(tmp)
-			require.NoError(t, err, "error cleaning tmp dir")
-		}()
+		tmp := t.TempDir()
 
 		// Set up "existing" creds in the "sandbox" dir
 		serverlessDir := filepath.Join(tmp, "sandbox")
 		serverlessCredsDir := filepath.Join(serverlessDir, "creds", "d5b388f2")
-		err = os.MkdirAll(serverlessCredsDir, os.FileMode(0755))
+		err := os.MkdirAll(serverlessCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
 		serverlessCreds := filepath.Join(serverlessCredsDir, "credentials.json")
 		creds, err := os.Create(serverlessCreds)
@@ -726,17 +720,12 @@ func TestPreserveCredsMovesLegacyCreds(t *testing.T) {
 			return "a7bbe7e8af7411ec912e47a270a2ee78a7bbe7e8af7411ec912e47a270a2ee78"
 		}
 
-		tmp, err := ioutil.TempDir("", "test-dir")
-		require.NoError(t, err)
-		defer func() {
-			err := os.RemoveAll(tmp)
-			require.NoError(t, err, "error cleaning tmp dir")
-		}()
+		tmp := t.TempDir()
 
 		// Set up "existing" legacy creds in the "sandbox" dir
 		serverlessDir := filepath.Join(tmp, "sandbox")
 		legacyCredsDir := filepath.Join(serverlessDir, ".nimbella")
-		err = os.MkdirAll(legacyCredsDir, os.FileMode(0755))
+		err := os.MkdirAll(legacyCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
 		legacyCreds := filepath.Join(legacyCredsDir, "credentials.json")
 		creds, err := os.Create(legacyCreds)

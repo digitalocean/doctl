@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -101,7 +100,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			expect.Contains(buf.String(), "Validating token...")
 			expect.Contains(buf.String(), "✔")
 
-			fileBytes, err := ioutil.ReadFile(testConfig)
+			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
 
 			expect.Contains(string(fileBytes), "access-token: some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1")
@@ -126,7 +125,7 @@ var _ = suite("auth/init", func(t *testing.T, when spec.G, it spec.S) {
 			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(testConfig)
+			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
 
 			expect.Contains(string(fileBytes), "access-token: some-magic-token")
@@ -139,7 +138,7 @@ context: default
 
 			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
-			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+			expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
 
 			cmd := exec.Command(builtBinaryPath,
 				"-u", server.URL,
@@ -153,7 +152,7 @@ context: default
 			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(testConfig)
+			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
 
 			expect.Contains(string(fileBytes), "access-token: some-magic-token")
@@ -195,7 +194,7 @@ context: default
 			location, err := getDefaultConfigLocation()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(location)
+			fileBytes, err := os.ReadFile(location)
 			expect.NoError(err)
 
 			expect.Contains(string(fileBytes), "access-token: some-magic-token-that-is-64-characters-long-1a1a1a1a1a11a1a1a1a1")
@@ -257,7 +256,7 @@ context: default
 
 			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
-			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+			expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
 
 			cmd := exec.Command(builtBinaryPath,
 				"-u", server.URL,
@@ -270,7 +269,7 @@ context: default
 			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(testConfig)
+			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
 			expect.Contains(string(fileBytes), "context: next")
 
@@ -302,7 +301,7 @@ context: default
 
 			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
-			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+			expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
 
 			cmd := exec.Command(builtBinaryPath,
 				"-u", server.URL,
@@ -313,7 +312,7 @@ context: default
 			_, err := cmd.CombinedOutput()
 			expect.NoError(err)
 
-			fileBytes, err := ioutil.ReadFile(testConfig)
+			fileBytes, err := os.ReadFile(testConfig)
 			expect.NoError(err)
 			expect.Contains(string(fileBytes), "test@example.com: second-token")
 
@@ -332,7 +331,7 @@ context: default
 
 			tmpDir := t.TempDir()
 			testConfig := filepath.Join(tmpDir, "test-config.yml")
-			expect.NoError(ioutil.WriteFile(testConfig, testConfigBytes, 0644))
+			expect.NoError(os.WriteFile(testConfig, testConfigBytes, 0644))
 
 			cmd := exec.Command(builtBinaryPath,
 				"-u", server.URL,
