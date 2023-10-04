@@ -364,9 +364,10 @@ func (rs *registryService) RevokeOAuthToken(token string, endpoint string) error
 	client := http.Client{}
 
 	resp, err := client.Do(req)
-	if resp == nil {
+	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("error revoking token: " + http.StatusText(resp.StatusCode))
