@@ -1261,7 +1261,7 @@ func (s *serverlessService) CredentialsPath() string {
 	return s.credsDir
 }
 
-// ReadCredentials reads the current serverless credentials from the appropriate 'creds' diretory
+// ReadCredentials reads the current serverless credentials from the appropriate 'creds' directory
 func (s *serverlessService) ReadCredentials() (ServerlessCredentials, error) {
 	creds := ServerlessCredentials{}
 	credsPath := filepath.Join(s.credsDir, CredentialsFile)
