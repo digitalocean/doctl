@@ -70,7 +70,7 @@ const (
 	PersistPromptIfNo
 )
 
-// WithPersistPrompt configures the prompt persistance behavior.
+// WithPersistPrompt configures the prompt persistence behavior.
 func WithPersistPrompt(v PersistPrompt) Option {
 	return func(p *Prompt) {
 		p.persistPrompt = v

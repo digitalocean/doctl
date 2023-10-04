@@ -78,10 +78,10 @@ func setUpTarGz(t *testing.T, tmpDir string, files []string) string {
 			ModTime: info.ModTime(),
 		}
 		err = tarWriter.WriteHeader(header)
-		require.NoError(t, err, "error writting header")
+		require.NoError(t, err, "error writing header")
 
 		_, err = io.Copy(tarWriter, file)
-		require.NoError(t, err, "error writting tar")
+		require.NoError(t, err, "error writing tar")
 	}
 
 	return tarballPath
@@ -116,11 +116,11 @@ func setUpZip(t *testing.T, tmpDir string, files []string) string {
 		header.Name = f
 
 		writer, err := zipWriter.CreateHeader(header)
-		require.NoError(t, err, "error writting zip")
+		require.NoError(t, err, "error writing zip")
 
 		_, err = io.Copy(writer, file)
 
-		require.NoError(t, err, "error writting file to zip")
+		require.NoError(t, err, "error writing file to zip")
 	}
 
 	return zipPath

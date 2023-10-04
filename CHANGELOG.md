@@ -200,7 +200,7 @@ Changelog moved to Release Notes in [Github Releases](https://github.com/digital
 - #222 docs: improve package manager part in readme - @xmudrii
 
 ### Fixed
-- #198 Hiding public images by deault - @xmudrii
+- #198 Hiding public images by default - @xmudrii
 - #194 Use apk's --no-cache option instead of updating and removing cache - @cspicer
 - #201 fix vektra/{errors,mockery} to static vendoring instead submodule - @zchee
 - #223 completion: fix command description typos - @xmudrii
