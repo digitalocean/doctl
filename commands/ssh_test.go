@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSSHComand(t *testing.T) {
+func TestSSHCommand(t *testing.T) {
 	parent := &Command{
 		Command: &cobra.Command{
 			Use:   "compute",

@@ -177,7 +177,7 @@ func RunNamespacesListRegions(c *CmdConfig) error {
 	return nil
 }
 
-// getValidRegions returns all the region values that are accepted (region slugs and datacanter slugs)
+// getValidRegions returns all the region values that are accepted (region slugs and datacenter slugs)
 func getValidRegions() []string {
 	vrs := make([]string, len(validRegions)*2)
 	i := 0
