@@ -55,7 +55,7 @@ func alertPolicies() *Command {
 An alert policy can be applied to resource(s) (currently Droplets)
 in order to alert on resource consumption. 
 			
-If you'd like to alert on a specific URL or IP address, use ` + "`" + `doctl monitoring uptime alert` + "` instead",
+If you'd like to alert on the uptime of specific URL or IP address, use ` + "`" + `doctl monitoring uptime alert` + "` instead",
 		},
 	}
 
