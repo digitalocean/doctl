@@ -50,7 +50,12 @@ func alertPolicies() *Command {
 			Use:     "alert",
 			Aliases: []string{"alerts", "a"},
 			Short:   "Display commands for managing alert policies",
-			Long:    "The commands under `doctl monitoring alert` are for the management of alert policies.",
+			Long: `The commands under ` + "`" + `doctl monitoring alert` + "`" + ` are for the management of alert policies.
+
+An alert policy can be applied to resource(s) (currently Droplets)
+in order to alert on resource consumption. 
+			
+If you'd like to alert on the uptime of a specific URL or IP address, use ` + "`" + `doctl monitoring uptime alert` + "` instead",
 		},
 	}
 
