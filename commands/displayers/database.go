@@ -687,3 +687,679 @@ func (dr *DatabaseFirewallRules) KV() []map[string]interface{} {
 
 	return out
 }
+
+type MySQLConfiguration struct {
+	MySQLConfiguration do.MySQLConfig
+}
+
+var _ Displayable = &MySQLConfiguration{}
+
+func (dc *MySQLConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.MySQLConfiguration, out)
+}
+
+func (dc *MySQLConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *MySQLConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *MySQLConfiguration) KV() []map[string]interface{} {
+	c := dc.MySQLConfiguration
+	o := []map[string]interface{}{}
+	if c.ConnectTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "ConnectTimeout",
+			"value": *c.ConnectTimeout,
+		})
+	}
+	if c.DefaultTimeZone != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "DefaultTimeZone",
+			"value": *c.DefaultTimeZone,
+		})
+	}
+	if c.InnodbLogBufferSize != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InnodbLogBufferSize",
+			"value": *c.InnodbLogBufferSize,
+		})
+	}
+	if c.InnodbOnlineAlterLogMaxSize != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InnodbOnlineAlterLogMaxSize",
+			"value": *c.InnodbOnlineAlterLogMaxSize,
+		})
+	}
+	if c.InnodbLockWaitTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InnodbLockWaitTimeout",
+			"value": *c.InnodbLockWaitTimeout,
+		})
+	}
+	if c.InteractiveTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InteractiveTimeout",
+			"value": *c.InteractiveTimeout,
+		})
+	}
+	if c.MaxAllowedPacket != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxAllowedPacket",
+			"value": *c.MaxAllowedPacket,
+		})
+	}
+	if c.NetReadTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "NetReadTimeout",
+			"value": *c.NetReadTimeout,
+		})
+	}
+	if c.SortBufferSize != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "SortBufferSize",
+			"value": *c.SortBufferSize,
+		})
+	}
+	if c.SQLMode != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "SQLMode",
+			"value": *c.SQLMode,
+		})
+	}
+	if c.SQLRequirePrimaryKey != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "SQLRequirePrimaryKey",
+			"value": *c.SQLRequirePrimaryKey,
+		})
+	}
+	if c.WaitTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "WaitTimeout",
+			"value": *c.WaitTimeout,
+		})
+	}
+	if c.NetWriteTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "NetWriteTimeout",
+			"value": *c.NetWriteTimeout,
+		})
+	}
+	if c.GroupConcatMaxLen != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "GroupConcatMaxLen",
+			"value": *c.GroupConcatMaxLen,
+		})
+	}
+	if c.InformationSchemaStatsExpiry != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InformationSchemaStatsExpiry",
+			"value": *c.InformationSchemaStatsExpiry,
+		})
+	}
+	if c.InnodbFtMinTokenSize != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InnodbFtMinTokenSize",
+			"value": *c.InnodbFtMinTokenSize,
+		})
+	}
+	if c.InnodbFtServerStopwordTable != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InnodbFtServerStopwordTable",
+			"value": *c.InnodbFtServerStopwordTable,
+		})
+	}
+	if c.InnodbPrintAllDeadlocks != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InnodbPrintAllDeadlocks",
+			"value": *c.InnodbPrintAllDeadlocks,
+		})
+	}
+	if c.InnodbRollbackOnTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InnodbRollbackOnTimeout",
+			"value": *c.InnodbRollbackOnTimeout,
+		})
+	}
+	if c.InternalTmpMemStorageEngine != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "InternalTmpMemStorageEngine",
+			"value": *c.InternalTmpMemStorageEngine,
+		})
+	}
+	if c.MaxHeapTableSize != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxHeapTableSize",
+			"value": *c.MaxHeapTableSize,
+		})
+	}
+	if c.TmpTableSize != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "TmpTableSize",
+			"value": *c.TmpTableSize,
+		})
+	}
+	if c.SlowQueryLog != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "SlowQueryLog",
+			"value": *c.SlowQueryLog,
+		})
+	}
+	if c.LongQueryTime != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "LongQueryTime",
+			"value": *c.LongQueryTime,
+		})
+	}
+	if c.BackupHour != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BackupHour",
+			"value": *c.BackupHour,
+		})
+	}
+	if c.BackupMinute != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BackupMinute",
+			"value": *c.BackupMinute,
+		})
+	}
+	if c.BinlogRetentionPeriod != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BinlogRetentionPeriod",
+			"value": *c.BinlogRetentionPeriod,
+		})
+	}
+
+	return o
+}
+
+type PostgreSQLConfiguration struct {
+	PostgreSQLConfig do.PostgreSQLConfig
+}
+
+var _ Displayable = &PostgreSQLConfiguration{}
+
+func (dc *PostgreSQLConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.PostgreSQLConfig, out)
+}
+
+func (dc *PostgreSQLConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *PostgreSQLConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *PostgreSQLConfiguration) KV() []map[string]interface{} {
+	c := dc.PostgreSQLConfig
+	o := []map[string]interface{}{}
+	if c.AutovacuumFreezeMaxAge != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumFreezeMaxAge",
+			"value": *c.AutovacuumFreezeMaxAge,
+		})
+	}
+	if c.AutovacuumMaxWorkers != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumMaxWorkers",
+			"value": *c.AutovacuumMaxWorkers,
+		})
+	}
+	if c.AutovacuumNaptime != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumNaptime",
+			"value": *c.AutovacuumNaptime,
+		})
+	}
+	if c.AutovacuumVacuumThreshold != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumVacuumThreshold",
+			"value": *c.AutovacuumVacuumThreshold,
+		})
+	}
+	if c.AutovacuumAnalyzeThreshold != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumAnalyzeThreshold",
+			"value": *c.AutovacuumAnalyzeThreshold,
+		})
+	}
+	if c.AutovacuumVacuumScaleFactor != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumVacuumScaleFactor",
+			"value": *c.AutovacuumVacuumScaleFactor,
+		})
+	}
+	if c.AutovacuumAnalyzeScaleFactor != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumAnalyzeScaleFactor",
+			"value": *c.AutovacuumAnalyzeScaleFactor,
+		})
+	}
+	if c.AutovacuumVacuumCostDelay != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumVacuumCostDelay",
+			"value": *c.AutovacuumVacuumCostDelay,
+		})
+	}
+	if c.AutovacuumVacuumCostLimit != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "AutovacuumVacuumCostLimit",
+			"value": *c.AutovacuumVacuumCostLimit,
+		})
+	}
+	if c.BGWriterDelay != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BGWriterDelay",
+			"value": *c.BGWriterDelay,
+		})
+	}
+	if c.BGWriterFlushAfter != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BGWriterFlushAfter",
+			"value": *c.BGWriterFlushAfter,
+		})
+	}
+	if c.BGWriterLRUMaxpages != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BGWriterLRUMaxpages",
+			"value": *c.BGWriterLRUMaxpages,
+		})
+	}
+	if c.BGWriterLRUMultiplier != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BGWriterLRUMultiplier",
+			"value": *c.BGWriterLRUMultiplier,
+		})
+	}
+	if c.DeadlockTimeoutMillis != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "DeadlockTimeoutMillis",
+			"value": *c.DeadlockTimeoutMillis,
+		})
+	}
+	if c.DefaultToastCompression != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "DefaultToastCompression",
+			"value": *c.DefaultToastCompression,
+		})
+	}
+	if c.IdleInTransactionSessionTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "IdleInTransactionSessionTimeout",
+			"value": *c.IdleInTransactionSessionTimeout,
+		})
+	}
+	if c.JIT != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "JIT",
+			"value": *c.JIT,
+		})
+	}
+	if c.LogAutovacuumMinDuration != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "LogAutovacuumMinDuration",
+			"value": *c.LogAutovacuumMinDuration,
+		})
+	}
+	if c.LogErrorVerbosity != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "LogErrorVerbosity",
+			"value": *c.LogErrorVerbosity,
+		})
+	}
+	if c.LogLinePrefix != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "LogLinePrefix",
+			"value": *c.LogLinePrefix,
+		})
+	}
+	if c.LogMinDurationStatement != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "LogMinDurationStatement",
+			"value": *c.LogMinDurationStatement,
+		})
+	}
+	if c.MaxFilesPerProcess != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxFilesPerProcess",
+			"value": *c.MaxFilesPerProcess,
+		})
+	}
+	if c.MaxPreparedTransactions != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxPreparedTransactions",
+			"value": *c.MaxPreparedTransactions,
+		})
+	}
+	if c.MaxPredLocksPerTransaction != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxPredLocksPerTransaction",
+			"value": *c.MaxPredLocksPerTransaction,
+		})
+	}
+	if c.MaxLocksPerTransaction != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxLocksPerTransaction",
+			"value": *c.MaxLocksPerTransaction,
+		})
+	}
+	if c.MaxStackDepth != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxStackDepth",
+			"value": *c.MaxStackDepth,
+		})
+	}
+	if c.MaxStandbyArchiveDelay != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxStandbyArchiveDelay",
+			"value": *c.MaxStandbyArchiveDelay,
+		})
+	}
+	if c.MaxStandbyStreamingDelay != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxStandbyStreamingDelay",
+			"value": *c.MaxStandbyStreamingDelay,
+		})
+	}
+	if c.MaxReplicationSlots != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxReplicationSlots",
+			"value": *c.MaxReplicationSlots,
+		})
+	}
+	if c.MaxLogicalReplicationWorkers != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxLogicalReplicationWorkers",
+			"value": *c.MaxLogicalReplicationWorkers,
+		})
+	}
+	if c.MaxParallelWorkers != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxParallelWorkers",
+			"value": *c.MaxParallelWorkers,
+		})
+	}
+	if c.MaxParallelWorkersPerGather != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxParallelWorkersPerGather",
+			"value": *c.MaxParallelWorkersPerGather,
+		})
+	}
+	if c.MaxWorkerProcesses != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxWorkerProcesses",
+			"value": *c.MaxWorkerProcesses,
+		})
+	}
+	if c.PGPartmanBGWRole != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "PGPartmanBGWRole",
+			"value": *c.PGPartmanBGWRole,
+		})
+	}
+	if c.PGPartmanBGWInterval != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "PGPartmanBGWInterval",
+			"value": *c.PGPartmanBGWInterval,
+		})
+	}
+	if c.PGStatStatementsTrack != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "PGStatStatementsTrack",
+			"value": *c.PGStatStatementsTrack,
+		})
+	}
+	if c.TempFileLimit != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "TempFileLimit",
+			"value": *c.TempFileLimit,
+		})
+	}
+	if c.Timezone != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "Timezone",
+			"value": *c.Timezone,
+		})
+	}
+	if c.TrackActivityQuerySize != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "TrackActivityQuerySize",
+			"value": *c.TrackActivityQuerySize,
+		})
+	}
+	if c.TrackCommitTimestamp != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "TrackCommitTimestamp",
+			"value": *c.TrackCommitTimestamp,
+		})
+	}
+	if c.TrackFunctions != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "TrackFunctions",
+			"value": *c.TrackFunctions,
+		})
+	}
+	if c.TrackIOTiming != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "TrackIOTiming",
+			"value": *c.TrackIOTiming,
+		})
+	}
+	if c.MaxWalSenders != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "MaxWalSenders",
+			"value": *c.MaxWalSenders,
+		})
+	}
+	if c.WalSenderTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "WalSenderTimeout",
+			"value": *c.WalSenderTimeout,
+		})
+	}
+	if c.WalWriterDelay != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "WalWriterDelay",
+			"value": *c.WalWriterDelay,
+		})
+	}
+	if c.SharedBuffersPercentage != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "SharedBuffersPercentage",
+			"value": *c.SharedBuffersPercentage,
+		})
+	}
+	if c.PgBouncer != nil {
+		if c.PgBouncer.ServerResetQueryAlways != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.ServerResetQueryAlways",
+				"value": *c.PgBouncer.ServerResetQueryAlways,
+			})
+		}
+		if c.PgBouncer.IgnoreStartupParameters != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.IgnoreStartupParameters",
+				"value": strings.Join(*c.PgBouncer.IgnoreStartupParameters, ","),
+			})
+		}
+		if c.PgBouncer.MinPoolSize != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.MinPoolSize",
+				"value": *c.PgBouncer.MinPoolSize,
+			})
+		}
+		if c.PgBouncer.ServerLifetime != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.ServerLifetime",
+				"value": *c.PgBouncer.ServerLifetime,
+			})
+		}
+		if c.PgBouncer.ServerIdleTimeout != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.ServerIdleTimeout",
+				"value": *c.PgBouncer.ServerIdleTimeout,
+			})
+		}
+		if c.PgBouncer.AutodbPoolSize != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.AutodbPoolSize",
+				"value": *c.PgBouncer.AutodbPoolSize,
+			})
+		}
+		if c.PgBouncer.AutodbPoolMode != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.AutodbPoolMode",
+				"value": *c.PgBouncer.AutodbPoolMode,
+			})
+		}
+		if c.PgBouncer.AutodbMaxDbConnections != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.AutodbMaxDbConnections",
+				"value": *c.PgBouncer.AutodbMaxDbConnections,
+			})
+		}
+		if c.PgBouncer.AutodbIdleTimeout != nil {
+			o = append(o, map[string]interface{}{
+				"key":   "PgBouncer.AutodbIdleTimeout",
+				"value": *c.PgBouncer.AutodbIdleTimeout,
+			})
+		}
+	}
+	if c.BackupHour != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BackupHour",
+			"value": *c.BackupHour,
+		})
+	}
+	if c.BackupMinute != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "BackupMinute",
+			"value": *c.BackupMinute,
+		})
+	}
+	if c.WorkMem != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "WorkMem",
+			"value": *c.WorkMem,
+		})
+	}
+	if c.TimeScaleDB != nil && c.TimeScaleDB.MaxBackgroundWorkers != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "TimeScaleDB.MaxBackgroundWorkers",
+			"value": *c.TimeScaleDB.MaxBackgroundWorkers,
+		})
+	}
+	return o
+}
+
+type RedisConfiguration struct {
+	RedisConfig do.RedisConfig
+}
+
+var _ Displayable = &RedisConfiguration{}
+
+func (dc *RedisConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.RedisConfig, out)
+}
+
+func (dc *RedisConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *RedisConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *RedisConfiguration) KV() []map[string]interface{} {
+	c := dc.RedisConfig
+	o := []map[string]interface{}{}
+	if c.RedisMaxmemoryPolicy != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisMaxmemoryPolicy",
+			"value": *c.RedisMaxmemoryPolicy,
+		})
+	}
+	if c.RedisPubsubClientOutputBufferLimit != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisPubsubClientOutputBufferLimit",
+			"value": *c.RedisPubsubClientOutputBufferLimit,
+		})
+	}
+	if c.RedisNumberOfDatabases != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisNumberOfDatabases",
+			"value": *c.RedisNumberOfDatabases,
+		})
+	}
+	if c.RedisIOThreads != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisIOThreads",
+			"value": *c.RedisIOThreads,
+		})
+	}
+	if c.RedisLFULogFactor != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisLFULogFactor",
+			"value": *c.RedisLFULogFactor,
+		})
+	}
+	if c.RedisLFUDecayTime != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisLFUDecayTime",
+			"value": *c.RedisLFUDecayTime,
+		})
+	}
+	if c.RedisSSL != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisSSL",
+			"value": *c.RedisSSL,
+		})
+	}
+	if c.RedisTimeout != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisTimeout",
+			"value": *c.RedisTimeout,
+		})
+	}
+	if c.RedisNotifyKeyspaceEvents != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisNotifyKeyspaceEvents",
+			"value": *c.RedisNotifyKeyspaceEvents,
+		})
+	}
+	if c.RedisPersistence != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisPersistence",
+			"value": *c.RedisPersistence,
+		})
+	}
+	if c.RedisACLChannelsDefault != nil {
+		o = append(o, map[string]interface{}{
+			"key":   "RedisACLChannelsDefault",
+			"value": *c.RedisACLChannelsDefault,
+		})
+	}
+
+	return o
+}

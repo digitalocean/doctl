@@ -96,6 +96,21 @@ type DatabaseLayout struct {
 	*godo.DatabaseLayout
 }
 
+// MySQLConfig is a wrapper for godo.MySQLConfig
+type MySQLConfig struct {
+	*godo.MySQLConfig
+}
+
+// PostgreSQLConfig is a wrapper for godo.PostgreSQLConfig
+type PostgreSQLConfig struct {
+	*godo.PostgreSQLConfig
+}
+
+// RedisConfig is a wrapper for godo.RedisConfig
+type RedisConfig struct {
+	*godo.RedisConfig
+}
+
 // DatabasesService is an interface for interacting with DigitalOcean's Database API
 type DatabasesService interface {
 	List() (Databases, error)
@@ -140,6 +155,10 @@ type DatabasesService interface {
 	UpdateFirewallRules(databaseID string, req *godo.DatabaseUpdateFirewallRulesRequest) error
 
 	ListOptions() (*DatabaseOptions, error)
+
+	GetMySQLConfiguration(databaseID string) (*MySQLConfig, error)
+	GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error)
+	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
 }
 
 type databasesService struct {
@@ -565,4 +584,37 @@ func (ds *databasesService) ListOptions() (*DatabaseOptions, error) {
 		return nil, err
 	}
 	return &DatabaseOptions{DatabaseOptions: options}, nil
+}
+
+func (ds *databasesService) GetMySQLConfiguration(databaseID string) (*MySQLConfig, error) {
+	cfg, _, err := ds.client.Databases.GetMySQLConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MySQLConfig{
+		MySQLConfig: cfg,
+	}, nil
+}
+
+func (ds *databasesService) GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error) {
+	cfg, _, err := ds.client.Databases.GetPostgreSQLConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PostgreSQLConfig{
+		PostgreSQLConfig: cfg,
+	}, nil
+}
+
+func (ds *databasesService) GetRedisConfiguration(databaseID string) (*RedisConfig, error) {
+	cfg, _, err := ds.client.Databases.GetRedisConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RedisConfig{
+		RedisConfig: cfg,
+	}, nil
 }

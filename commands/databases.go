@@ -140,6 +140,7 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 	cmd.AddCommand(sqlMode())
 	cmd.AddCommand(databaseFirewalls())
 	cmd.AddCommand(databaseOptions())
+	cmd.AddCommand(databaseConfiguration())
 
 	return cmd
 }
@@ -1630,7 +1631,6 @@ This would remove the firewall rule of uuid 12345d-1234-123d-123x-123eee456e for
 	AddStringFlag(cmdDatabaseFirewallRemove, doctl.ArgDatabaseFirewallRuleUUID, "", "", "", requiredOpt())
 
 	return cmd
-
 }
 
 // displayDatabaseFirewallRules calls Get Firewall Rules to list all current rules.
@@ -1689,7 +1689,6 @@ func RunDatabaseFirewallRulesUpdate(c *CmdConfig) error {
 	}
 
 	return displayDatabaseFirewallRules(c, true, id)
-
 }
 
 // buildDatabaseUpdateFirewallRulesRequestFromArgs will ingest the --rules arguments into a DatabaseUpdateFirewallRulesRequest object.
@@ -1712,7 +1711,6 @@ func buildDatabaseUpdateFirewallRulesRequestFromArgs(c *CmdConfig) (*godo.Databa
 	r.Rules = firewallRulesList
 
 	return r, nil
-
 }
 
 // extractFirewallRules will ingest the --rules arguments into a list of DatabaseFirewallRule objects.
@@ -1731,7 +1729,6 @@ func extractFirewallRules(rulesStringList []string) (rules []*godo.DatabaseFirew
 	}
 
 	return rules, nil
-
 }
 
 // RunDatabaseFirewallRulesAppend creates a firewall rule for a database cluster.
@@ -1873,4 +1870,98 @@ func waitForDatabaseReady(dbs do.DatabasesService, dbID string) error {
 		"timeout waiting for database (%s) to enter `online` state",
 		dbID,
 	)
+}
+
+func databaseConfiguration() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "configuration",
+			Aliases: []string{"cfg"},
+			Short:   "View the configuration of a database cluster given its ID and Engine",
+			Long:    "The subcommands of `doctl databases configuration` are used to view a database cluster's configuration.",
+		},
+	}
+	getMySQLConfigurationLongDesc := `
+		This will get a database cluster's configuration given its ID and Engine
+	`
+	getMySQLCfgCommand := CmdBuilder(
+		cmd,
+		RunDatabaseConfigurationGet,
+		"get <db-id>",
+		"Get a database cluster's configuration",
+		getMySQLConfigurationLongDesc,
+		Writer,
+		aliasOpt("g"),
+		displayerType(&displayers.MySQLConfiguration{}),
+		displayerType(&displayers.PostgreSQLConfiguration{}),
+		displayerType(&displayers.RedisConfiguration{}),
+	)
+	AddStringFlag(
+		getMySQLCfgCommand,
+		doctl.ArgDatabaseEngine,
+		"e",
+		"",
+		"the engine of the database you want to get the configuration for",
+		requiredOpt(),
+	)
+
+	return cmd
+}
+
+func RunDatabaseConfigurationGet(c *CmdConfig) error {
+	args := c.Args
+	if len(args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	if len(args) > 1 {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+
+	engine, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+	if err != nil {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	allowedEngines := map[string]any{
+		"mysql": nil,
+		"pg":    nil,
+		"redis": nil,
+	}
+	if _, ok := allowedEngines[engine]; !ok {
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+	}
+
+	dbId := args[0]
+	if engine == "mysql" {
+		config, err := c.Databases().GetMySQLConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.MySQLConfiguration{
+			MySQLConfiguration: *config,
+		}
+		return c.Display(&displayer)
+	} else if engine == "pg" {
+		config, err := c.Databases().GetPostgreSQLConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.PostgreSQLConfiguration{
+			PostgreSQLConfig: *config,
+		}
+		return c.Display(&displayer)
+	} else if engine == "redis" {
+		config, err := c.Databases().GetRedisConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.RedisConfiguration{
+			RedisConfig: *config,
+		}
+		return c.Display(&displayer)
+	}
+	return nil
 }
