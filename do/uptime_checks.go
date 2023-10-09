@@ -24,12 +24,17 @@ type UptimeCheck struct {
 	*godo.UptimeCheck
 }
 
+// UptimeAlert is a wrapper for godo.UptimeAlert.
+type UptimeAlert struct {
+	*godo.UptimeAlert
+}
+
 // UptimeCheckState is a wrapper for godo.UptimeCheckState.
 type UptimeCheckState struct {
 	*godo.UptimeCheckState
 }
 
-// UptimeChecksService is an interface for interacting with DigitalOcean's volume api.
+// UptimeChecksService is an interface for interacting with DigitalOcean's uptime check api.
 type UptimeChecksService interface {
 	Create(*godo.CreateUptimeCheckRequest) (*UptimeCheck, error)
 	List() ([]UptimeCheck, error)
@@ -37,6 +42,11 @@ type UptimeChecksService interface {
 	GetState(string) (*UptimeCheckState, error)
 	Update(string, *godo.UpdateUptimeCheckRequest) (*UptimeCheck, error)
 	Delete(string) error
+	CreateAlert(string, *godo.CreateUptimeAlertRequest) (*UptimeAlert, error)
+	ListAlerts(string) ([]UptimeAlert, error)
+	GetAlert(string, string) (*UptimeAlert, error)
+	UpdateAlert(string, string, *godo.UpdateUptimeAlertRequest) (*UptimeAlert, error)
+	DeleteAlert(string, string) error
 }
 
 type uptimeChecksService struct {
@@ -114,5 +124,62 @@ func (ucs *uptimeChecksService) Update(id string, req *godo.UpdateUptimeCheckReq
 
 func (ucs *uptimeChecksService) Delete(id string) error {
 	_, err := ucs.client.UptimeChecks.Delete(context.TODO(), id)
+	return err
+}
+
+func (ucs *uptimeChecksService) CreateAlert(id string, req *godo.CreateUptimeAlertRequest) (*UptimeAlert, error) {
+	uptimeAlert, _, err := ucs.client.UptimeChecks.CreateAlert(context.TODO(), id, req)
+	if err != nil {
+		return nil, err
+	}
+	return &UptimeAlert{uptimeAlert}, nil
+}
+
+func (ucs *uptimeChecksService) ListAlerts(id string) ([]UptimeAlert, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := ucs.client.UptimeChecks.ListAlerts(context.TODO(), id, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]UptimeAlert, len(si))
+	for i := range si {
+		ua := si[i].(godo.UptimeAlert)
+		list[i] = UptimeAlert{UptimeAlert: &ua}
+	}
+	return list, nil
+}
+
+func (ucs *uptimeChecksService) GetAlert(checkID string, alertID string) (*UptimeAlert, error) {
+	uptimeAlert, _, err := ucs.client.UptimeChecks.GetAlert(context.TODO(), checkID, alertID)
+	if err != nil {
+		return nil, err
+	}
+	return &UptimeAlert{uptimeAlert}, nil
+}
+
+func (ucs *uptimeChecksService) UpdateAlert(checkID string, alertID string, req *godo.UpdateUptimeAlertRequest) (*UptimeAlert, error) {
+	uptimeAlert, _, err := ucs.client.UptimeChecks.UpdateAlert(context.TODO(), checkID, alertID, req)
+	if err != nil {
+		return nil, err
+	}
+	return &UptimeAlert{uptimeAlert}, nil
+}
+
+func (ucs *uptimeChecksService) DeleteAlert(checkID string, alertID string) error {
+	_, err := ucs.client.UptimeChecks.DeleteAlert(context.TODO(), checkID, alertID)
 	return err
 }
