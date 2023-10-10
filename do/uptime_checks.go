@@ -29,7 +29,7 @@ type UptimeCheckState struct {
 	*godo.UptimeCheckState
 }
 
-// UptimeChecksService is an interface for interacting with DigitalOcean's volume api.
+// UptimeChecksService is an interface for interacting with DigitalOcean's uptime checks API.
 type UptimeChecksService interface {
 	Create(*godo.CreateUptimeCheckRequest) (*UptimeCheck, error)
 	List() ([]UptimeCheck, error)
@@ -45,7 +45,7 @@ type uptimeChecksService struct {
 
 var _ UptimeChecksService = &uptimeChecksService{}
 
-// NewUptimeChecksService builds an NewUptimeChecksService instance.
+// NewUptimeChecksService builds an UptimeChecksService instance.
 func NewUptimeChecksService(godoClient *godo.Client) UptimeChecksService {
 	return &uptimeChecksService{
 		client: godoClient,
