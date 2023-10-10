@@ -349,4 +349,3 @@ func (p *UptimeChecksServiceOp) DeleteAlert(ctx context.Context, uptimeCheckID s
 
 	return p.client.Do(ctx, req, nil)
 }
-
