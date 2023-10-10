@@ -79,9 +79,9 @@ You can use flags to specify the uptime alert, type, threshold, comparison, noti
 func getUptimeAlertComparator(compareStr string) (godo.UptimeAlertComp, error) {
 	var compare godo.UptimeAlertComp
 	if strings.EqualFold("less_than", compareStr) {
-		compare = godo.UptimeAlertGreaterThan
-	} else if strings.EqualFold("greater_than", compareStr) {
 		compare = godo.UptimeAlertLessThan
+	} else if strings.EqualFold("greater_than", compareStr) {
+		compare = godo.UptimeAlertGreaterThan
 	} else {
 		return "", errors.New("comparator must be greater_than or less_than")
 	}
@@ -109,6 +109,7 @@ func validateUptimeAlertPeriod(t string) error {
 	validUptimeAlertPeriods := map[string]struct{}{
 		"2m":  {},
 		"3m":  {},
+		"5m":  {},
 		"10m": {},
 		"15m": {},
 		"30m": {},

@@ -123,3 +123,76 @@ func (mr *MockUptimeChecksServiceMockRecorder) Update(arg0, arg1 interface{}) *g
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockUptimeChecksService)(nil).Update), arg0, arg1)
 }
+
+// CreateAlert mocks base method.
+func (m *MockUptimeChecksService) CreateAlert(arg0 string, arg1 *godo.CreateUptimeAlertRequest) (*do.UptimeAlert, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAlert", arg0, arg1)
+	ret0, _ := ret[0].(*do.UptimeAlert)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateAlert indicates an expected call of CreateAlert.
+func (mr *MockUptimeChecksServiceMockRecorder) CreateAlert(arg0 interface{}, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAlert", reflect.TypeOf((*MockUptimeChecksService)(nil).CreateAlert), arg0, arg1)
+}
+
+// ListAlerts mocks base method.
+func (m *MockUptimeChecksService) ListAlerts(arg0 string) ([]do.UptimeAlert, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAlerts", arg0)
+	ret0, _ := ret[0].([]do.UptimeAlert)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAlerts indicates an expected call of ListAlerts.
+func (mr *MockUptimeChecksServiceMockRecorder) ListAlerts(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAlerts", reflect.TypeOf((*MockUptimeChecksService)(nil).ListAlerts), arg0)
+}
+
+// GetAlert mocks base method.
+func (m *MockUptimeChecksService) GetAlert(arg0 string, arg1 string) (*do.UptimeAlert, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAlert", arg0, arg1)
+	ret0, _ := ret[0].(*do.UptimeAlert)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAlert indicates an expected call of GetAlert.
+func (mr *MockUptimeChecksServiceMockRecorder) GetAlert(arg0 interface{}, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAlert", reflect.TypeOf((*MockUptimeChecksService)(nil).GetAlert), arg0, arg1)
+}
+// UpdateAlert mocks base method.
+func (m *MockUptimeChecksService) UpdateAlert(arg0 string, arg1 string, arg2 *godo.UpdateUptimeAlertRequest) (*do.UptimeAlert, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAlert", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*do.UptimeAlert)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateAlert indicates an expected call of UpdateAlert.
+func (mr *MockUptimeChecksServiceMockRecorder) UpdateAlert(arg0 interface{}, arg1 interface{}, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAlert", reflect.TypeOf((*MockUptimeChecksService)(nil).UpdateAlert), arg0, arg1, arg2)
+}
+
+// DeleteAlert mocks base method.
+func (m *MockUptimeChecksService) DeleteAlert(arg0 string, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAlert", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAlert indicates an expected call of DeleteAlert.
+func (mr *MockUptimeChecksServiceMockRecorder) DeleteAlert(arg0 interface{}, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAlert", reflect.TypeOf((*MockUptimeChecksService)(nil).DeleteAlert), arg0, arg1)
+}
