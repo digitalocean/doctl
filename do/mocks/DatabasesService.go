@@ -259,6 +259,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetMaintenance(arg0 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintenance", reflect.TypeOf((*MockDatabasesService)(nil).GetMaintenance), arg0)
 }
 
+// GetMySQLConfiguration mocks base method.
+func (m *MockDatabasesService) GetMySQLConfiguration(databaseID string) (*do.MySQLConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMySQLConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.MySQLConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMySQLConfiguration indicates an expected call of GetMySQLConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetMySQLConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetMySQLConfiguration), databaseID)
+}
+
 // GetPool mocks base method.
 func (m *MockDatabasesService) GetPool(arg0, arg1 string) (*do.DatabasePool, error) {
 	m.ctrl.T.Helper()
@@ -272,6 +287,36 @@ func (m *MockDatabasesService) GetPool(arg0, arg1 string) (*do.DatabasePool, err
 func (mr *MockDatabasesServiceMockRecorder) GetPool(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPool", reflect.TypeOf((*MockDatabasesService)(nil).GetPool), arg0, arg1)
+}
+
+// GetPostgreSQLConfiguration mocks base method.
+func (m *MockDatabasesService) GetPostgreSQLConfiguration(databaseID string) (*do.PostgreSQLConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPostgreSQLConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.PostgreSQLConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPostgreSQLConfiguration indicates an expected call of GetPostgreSQLConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetPostgreSQLConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPostgreSQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetPostgreSQLConfiguration), databaseID)
+}
+
+// GetRedisConfiguration mocks base method.
+func (m *MockDatabasesService) GetRedisConfiguration(databaseID string) (*do.RedisConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRedisConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.RedisConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRedisConfiguration indicates an expected call of GetRedisConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetRedisConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRedisConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetRedisConfiguration), databaseID)
 }
 
 // GetReplica mocks base method.

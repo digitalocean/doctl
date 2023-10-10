@@ -405,10 +405,10 @@ func RunRegistryLogin(c *CmdConfig) error {
 
 	regCredReq := godo.RegistryDockerCredentialsRequest{
 		ReadWrite:     !readOnly,
-		ExpirySeconds: godo.Int(defaultRegistryAPITokenExpirySeconds),
+		ExpirySeconds: godo.PtrTo(defaultRegistryAPITokenExpirySeconds),
 	}
 	if expirySeconds != 0 {
-		regCredReq.ExpirySeconds = godo.Int(expirySeconds)
+		regCredReq.ExpirySeconds = godo.PtrTo(expirySeconds)
 	}
 	if neverExpire {
 		regCredReq.ExpirySeconds = nil
@@ -548,7 +548,7 @@ func RunDockerConfig(c *CmdConfig) error {
 		ReadWrite: readWrite,
 	}
 	if expirySeconds != 0 {
-		regCredReq.ExpirySeconds = godo.Int(expirySeconds)
+		regCredReq.ExpirySeconds = godo.PtrTo(expirySeconds)
 	}
 
 	dockerCreds, err := c.Registry().DockerCredentials(&regCredReq)
