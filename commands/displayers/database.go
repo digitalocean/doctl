@@ -333,19 +333,22 @@ func (do *DatabaseOptions) ColMap() map[string]string {
 
 func (do *DatabaseOptions) KV() []map[string]interface{} {
 	engines := make([]string, 0)
-	if &do.DatabaseOptions.MongoDBOptions != nil {
+	nonEmptyOptionsFn := func(opt godo.DatabaseEngineOptions) bool {
+		return len(opt.Layouts) > 0 || len(opt.Regions) > 0 || len(opt.Versions) > 0
+	}
+	if nonEmptyOptionsFn(do.DatabaseOptions.MongoDBOptions) {
 		engines = append(engines, "mongodb")
 	}
-	if &do.DatabaseOptions.RedisOptions != nil {
+	if nonEmptyOptionsFn(do.DatabaseOptions.RedisOptions) {
 		engines = append(engines, "redis")
 	}
-	if &do.DatabaseOptions.MySQLOptions != nil {
+	if nonEmptyOptionsFn(do.DatabaseOptions.MySQLOptions) {
 		engines = append(engines, "mysql")
 	}
-	if &do.DatabaseOptions.PostgresSQLOptions != nil {
+	if nonEmptyOptionsFn(do.DatabaseOptions.PostgresSQLOptions) {
 		engines = append(engines, "pg")
 	}
-	if &do.DatabaseOptions.KafkaOptions != nil {
+	if nonEmptyOptionsFn(do.DatabaseOptions.KafkaOptions) {
 		engines = append(engines, "kafka")
 	}
 
