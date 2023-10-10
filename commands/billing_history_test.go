@@ -28,8 +28,8 @@ var testBillingHistoryList = &do.BillingHistory{
 			{
 				Description: "Invoice for May 2018",
 				Amount:      "12.34",
-				InvoiceID:   godo.String("123"),
-				InvoiceUUID: godo.String("example-uuid"),
+				InvoiceID:   godo.PtrTo("123"),
+				InvoiceUUID: godo.PtrTo("example-uuid"),
 				Date:        time.Date(2018, 6, 1, 8, 44, 38, 0, time.UTC),
 				Type:        "Invoice",
 			},
