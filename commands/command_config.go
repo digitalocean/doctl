@@ -56,6 +56,7 @@ type CmdConfig struct {
 	Invoices          func() do.InvoicesService
 	Tags              func() do.TagsService
 	UptimeChecks      func() do.UptimeChecksService
+	UptimeAlerts      func() do.UptimeAlertsService
 	Volumes           func() do.VolumesService
 	VolumeActions     func() do.VolumeActionsService
 	Snapshots         func() do.SnapshotsService
@@ -107,6 +108,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Invoices = func() do.InvoicesService { return do.NewInvoicesService(godoClient) }
 			c.Tags = func() do.TagsService { return do.NewTagsService(godoClient) }
 			c.UptimeChecks = func() do.UptimeChecksService { return do.NewUptimeChecksService(godoClient) }
+			c.UptimeAlerts = func() do.UptimeAlertsService { return do.NewUptimeAlertsService(godoClient) }
 			c.Volumes = func() do.VolumesService { return do.NewVolumesService(godoClient) }
 			c.VolumeActions = func() do.VolumeActionsService { return do.NewVolumeActionsService(godoClient) }
 			c.Snapshots = func() do.SnapshotsService { return do.NewSnapshotsService(godoClient) }

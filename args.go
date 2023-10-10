@@ -251,6 +251,23 @@ const (
 	// ArgUptimeCheckEnabled is whether or not an uptime check is enabled.
 	ArgUptimeCheckEnabled = "enabled"
 
+	// ArgUptimeAlertName is the name of an uptime alert.
+	ArgUptimeAlertName = "name"
+	// ArgUptimeAlertType is the type of an uptime alert.
+	ArgUptimeAlertType = "type"
+	// ArgUptimeAlertThreshold is the threshold at which the alert will enter a trigger state.
+	ArgUptimeAlertThreshold = "threshold"
+	// ArgUptimeAlertComparison is the comparison operator used against the alert's threshold.
+	ArgUptimeAlertComparison = "comparison"
+	// ArgUptimeAlertEmails are the emails to send alerts to.
+	ArgUptimeAlertEmails = "emails"
+	// ArgUptimeAlertSlackChannels are the Slack channels to send alerts to.
+	ArgUptimeAlertSlackChannels = "slack-channels"
+	// ArgUptimeAlertSlackURLs are the Slack URLs to send alerts to.
+	ArgUptimeAlertSlackURLs = "slack-urls"
+	// ArgUptimeAlertPeriod is the period of time the threshold must be exceeded to trigger the alert.
+	ArgUptimeAlertPeriod = "period"
+
 	// ArgVolumeSize is the size of a volume.
 	ArgVolumeSize = "size"
 	// ArgVolumeDesc is the description of a volume.

@@ -166,6 +166,7 @@ type tcMocks struct {
 	reservedIPActions     *domocks.MockReservedIPActionsService
 	domains               *domocks.MockDomainsService
 	uptimeChecks          *domocks.MockUptimeChecksService
+	uptimeAlerts          *domocks.MockUptimeAlertsService
 	volumes               *domocks.MockVolumesService
 	volumeActions         *domocks.MockVolumeActionsService
 	tags                  *domocks.MockTagsService
@@ -212,6 +213,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		domains:               domocks.NewMockDomainsService(ctrl),
 		tags:                  domocks.NewMockTagsService(ctrl),
 		uptimeChecks:          domocks.NewMockUptimeChecksService(ctrl),
+		uptimeAlerts:          domocks.NewMockUptimeAlertsService(ctrl),
 		volumes:               domocks.NewMockVolumesService(ctrl),
 		volumeActions:         domocks.NewMockVolumeActionsService(ctrl),
 		snapshots:             domocks.NewMockSnapshotsService(ctrl),
@@ -271,6 +273,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Invoices:          func() do.InvoicesService { return tm.invoices },
 		Tags:              func() do.TagsService { return tm.tags },
 		UptimeChecks:      func() do.UptimeChecksService { return tm.uptimeChecks },
+		UptimeAlerts:      func() do.UptimeAlertsService { return tm.uptimeAlerts },
 		Volumes:           func() do.VolumesService { return tm.volumes },
 		VolumeActions:     func() do.VolumeActionsService { return tm.volumeActions },
 		Snapshots:         func() do.SnapshotsService { return tm.snapshots },
