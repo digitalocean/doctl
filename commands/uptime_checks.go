@@ -64,6 +64,8 @@ You can use flags to specify an updated uptime check name, target, type, and reg
 	CmdBuilder(cmd, RunUptimeChecksDelete, "delete <uptime-check-id>", "Delete an uptime check", `Use this command to delete an uptime check on your account by ID.`, Writer,
 		aliasOpt("d", "del", "rm"))
 
+	cmd.AddCommand(UptimeAlert())
+
 	return cmd
 }
 
