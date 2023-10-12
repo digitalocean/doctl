@@ -231,6 +231,9 @@ func (b *CNBComponentBuilder) buildStaticSiteImage(ctx context.Context) error {
 		return err
 	}
 	assetsPath, err = filepath.Rel(workspacePath, assetsPath)
+	if err != nil {
+		return err
+	}
 	if assetsPath == "." {
 		assetsPath = "./"
 	} else {
