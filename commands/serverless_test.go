@@ -147,6 +147,33 @@ func TestServerlessStatusWhenConnected(t *testing.T) {
 	})
 }
 
+func TestServerlessStatusDisplayCredentials(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+		config.Doit.Set(config.NS, "credentials", true)
+
+		tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "hello",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"hello": do.ServerlessCredential{
+						Auth: "here-are-some-credentials",
+					},
+				},
+			},
+		}, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "here-are-some-credentials").Return("hello", nil)
+		tm.serverless.EXPECT().CredentialsPath().Return("/path")
+
+		err := RunServerlessStatus(config)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"apihost":"https://api.example.com","auth":"here-are-some-credentials","namespace":"hello","path":"/path"}`, buf.String())
+	})
+}
+
 func TestServerlessStatusWithLanguages(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		buf := &bytes.Buffer{}
