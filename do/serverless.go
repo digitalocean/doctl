@@ -777,6 +777,9 @@ func (s *serverlessService) GetHostInfo(APIHost string) (ServerlessHostInfo, err
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ServerlessHostInfo{}, err
+	}
 	var result ServerlessHostInfo
 	err = json.Unmarshal(body, &result)
 	return result, err
