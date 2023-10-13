@@ -119,7 +119,7 @@ A valid URN has the format: ` + "`" + `do:resource_type:resource_id` + "`" + `. 
 		"List all of the resources assigned to the specified project displaying their uniform resource names (\"URNs\").",
 		Writer, aliasOpt("ls"), displayerType(&displayers.ProjectResource{}))
 	CmdBuilder(cmd, RunProjectResourcesGet, "get <urn>", "Retrieve a resource by its URN",
-		"Retrieve information about a resource by specifying its uniform resource name (\"URN\"). Currently, ony Droplets, floating IPs, load balancers, domains, volumes, and App Platform apps are supported."+urnDesc,
+		"Retrieve information about a resource by specifying its uniform resource name (\"URN\"). Currently, only Droplets, floating IPs, load balancers, domains, volumes, and App Platform apps are supported."+urnDesc,
 		Writer, aliasOpt("g"), displayerType(&displayers.ProjectResource{}))
 
 	cmdProjectResourcesAssign := CmdBuilder(cmd, RunProjectResourcesAssign,
