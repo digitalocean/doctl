@@ -504,7 +504,7 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 
 	cmdKubeNodePoolDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolDelete,
 		"delete <cluster-id|cluster-name> <pool-id|pool-name>",
-		"Delete a node pool", `This command deletes the specified node pool in the specified cluster, which also removes all the nodes inside that pool. This action is irreversable.`, Writer, aliasOpt("d", "rm"))
+		"Delete a node pool", `This command deletes the specified node pool in the specified cluster, which also removes all the nodes inside that pool. This action is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "Delete node pool without confirmation prompt")
 
