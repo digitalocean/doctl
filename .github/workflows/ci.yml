@@ -16,19 +16,12 @@ jobs:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Restore cache
-      uses: actions/cache@v2
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
     - name: Ensure code is formatted with gofmt
       run: make gofmt_check
       if: matrix.os == 'ubuntu-latest'

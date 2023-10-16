@@ -11,7 +11,7 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           # https://github.com/marketplace/actions/goreleaser-action#usage
           # note the fetch-depth: 0 input in Checkout step. It is required for
@@ -19,26 +19,18 @@ jobs:
           fetch-depth: 0
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Install Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: 1.21.x
 
-      - name: Restore cache
-        uses: actions/cache@v2
-        with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v5
         with:
           distribution: goreleaser
           version: latest
@@ -51,18 +43,18 @@ jobs:
     runs-on: 'ubuntu-latest'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           # fetch-depth: 0 fetches all history for all branches and tags
           fetch-depth: 0
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Buld snap
+      - name: Build snap
         id: build
         run: |
           make _build_snap && \
