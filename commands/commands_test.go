@@ -15,7 +15,6 @@ package commands
 
 import (
 	"io"
-	"sort"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -140,9 +139,7 @@ func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
 		}
 	}
 
-	sort.Strings(expected)
-	sort.Strings(names)
-	assert.Equal(t, expected, names)
+	assert.ElementsMatch(t, expected, names)
 }
 
 type testFn func(c *CmdConfig, tm *tcMocks)

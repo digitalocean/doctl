@@ -16,7 +16,6 @@ package commands
 import (
 	"bytes"
 	"errors"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -37,9 +36,7 @@ func TestActivationsCommand(t *testing.T) {
 		names = append(names, c.Name())
 	}
 
-	sort.Strings(expected)
-	sort.Strings(names)
-	assert.Equal(t, expected, names)
+	assert.ElementsMatch(t, expected, names)
 }
 
 var hello1Result = whisk.Result(map[string]interface{}{

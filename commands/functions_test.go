@@ -16,7 +16,6 @@ package commands
 import (
 	"bytes"
 	"os"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -37,9 +36,7 @@ func TestFunctionsCommand(t *testing.T) {
 		names = append(names, c.Name())
 	}
 
-	sort.Strings(expected)
-	sort.Strings(names)
-	assert.Equal(t, expected, names)
+	assert.ElementsMatch(t, expected, names)
 }
 
 func TestFunctionsGet(t *testing.T) {
