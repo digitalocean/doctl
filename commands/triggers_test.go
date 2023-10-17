@@ -16,7 +16,6 @@ package commands
 import (
 	"bytes"
 	"context"
-	"sort"
 	"testing"
 	"time"
 
@@ -35,9 +34,7 @@ func TestTriggersCommand(t *testing.T) {
 		names = append(names, c.Name())
 	}
 
-	sort.Strings(expected)
-	sort.Strings(names)
-	assert.Equal(t, expected, names)
+	assert.ElementsMatch(t, expected, names)
 }
 
 func TestTriggersGet(t *testing.T) {

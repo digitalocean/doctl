@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"sort"
 	"testing"
 
 	"github.com/digitalocean/doctl/do"
@@ -35,9 +34,7 @@ func TestNamespacesCommand(t *testing.T) {
 		names = append(names, c.Name())
 	}
 
-	sort.Strings(expected)
-	sort.Strings(names)
-	assert.Equal(t, expected, names)
+	assert.ElementsMatch(t, expected, names)
 }
 
 func TestNamespacesCreate(t *testing.T) {
