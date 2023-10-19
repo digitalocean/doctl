@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -35,7 +34,7 @@ func TestMain(m *testing.M) {
 	}
 	defer os.RemoveAll(tmpDir) // yes, this is the best effort only
 
-	builtBinaryPath = filepath.Join(tmpDir, path.Base(packagePath))
+	builtBinaryPath = filepath.Join(tmpDir, filepath.Base(filepath.FromSlash(packagePath)))
 	if runtime.GOOS == "windows" {
 		builtBinaryPath += ".exe"
 	}
