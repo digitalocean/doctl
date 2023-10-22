@@ -813,9 +813,9 @@ func RunAppsSpecValidate(c *CmdConfig) error {
 	}
 
 	if schemaOnly {
-		ymlSpec, err := yaml.Marshal(appSpec)
+		ymlSpec, err := ValidateAppSpecSchema(appSpec)
 		if err != nil {
-			return fmt.Errorf("marshaling the spec as yaml: %v", err)
+			return err
 		}
 		_, err = c.Out.Write(ymlSpec)
 		return err
