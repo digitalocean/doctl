@@ -709,6 +709,11 @@ Optionally, pass a deployment ID to get the spec of that specific deployment.`, 
 You may pass - as the filename to read from stdin.`, Writer)
 	AddBoolFlag(validateCmd, doctl.ArgSchemaOnly, "", false, "Only validate the spec schema and not the correctness of the spec.")
 
+	cmdBuilderWithInit(cmd, RunAppsSpecValidateOffline, "validate-offline <spec file>", "Validate an application spec offline (schema-only)", `Use this command to check whether a given app spec (YAML or JSON) is valid
+without connecting to DigitalOcean API. (schema-only)
+
+You may pass - as the filename to read from stdin.`, Writer, false)
+
 	return cmd
 }
 
@@ -759,6 +764,35 @@ func RunAppsSpecGet(c *CmdConfig) error {
 	default:
 		return fmt.Errorf("invalid spec format %q, must be one of: json, yaml", format)
 	}
+}
+
+// ValidateAppSpecSchema validates an app spec (schema-only)
+// returns the marshaled yaml spec as a byte array, or error
+func ValidateAppSpecSchema(appSpec *godo.AppSpec) ([]byte, error) {
+	ymlSpec, err := yaml.Marshal(appSpec)
+	if err != nil {
+		return []byte{}, fmt.Errorf("marshaling the spec as yaml: %v", err)
+	}
+	return ymlSpec, err
+}
+
+// RunAppsSpecValidateOffline validates an app spec file without requiring auth & connection to the API
+func RunAppsSpecValidateOffline(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	specPath := c.Args[0]
+	appSpec, err := apps.ReadAppSpec(os.Stdin, specPath)
+	if err != nil {
+		return err
+	}
+	ymlSpec, err := ValidateAppSpecSchema(appSpec)
+	if err != nil {
+		return err
+	}
+	_, err = c.Out.Write(ymlSpec)
+	return err
 }
 
 // RunAppsSpecValidate validates an app spec file
