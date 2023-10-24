@@ -54,6 +54,7 @@ func (d *Domain) KV() []map[string]interface{} {
 
 type DomainRecord struct {
 	DomainRecords do.DomainRecords
+	Short         bool
 }
 
 func (dr *DomainRecord) JSON(out io.Writer) error {
@@ -61,16 +62,31 @@ func (dr *DomainRecord) JSON(out io.Writer) error {
 }
 
 func (dr *DomainRecord) Cols() []string {
-	return []string{
+	defaultCols := []string{
 		"ID", "Type", "Name", "Data", "Priority", "Port", "TTL", "Weight",
 	}
+
+	if dr.Short {
+		return defaultCols
+	}
+
+	return append(defaultCols, "Flags", "Tag")
 }
 
 func (dr *DomainRecord) ColMap() map[string]string {
-	return map[string]string{
+	defaultColMap := map[string]string{
 		"ID": "ID", "Type": "Type", "Name": "Name", "Data": "Data",
 		"Priority": "Priority", "Port": "Port", "TTL": "TTL", "Weight": "Weight",
 	}
+
+	if dr.Short {
+		return defaultColMap
+	}
+
+	defaultColMap["Flags"] = "Flags"
+	defaultColMap["Tag"] = "Tag"
+
+	return defaultColMap
 }
 
 func (dr *DomainRecord) KV() []map[string]interface{} {
@@ -81,6 +97,7 @@ func (dr *DomainRecord) KV() []map[string]interface{} {
 			"ID": d.ID, "Type": d.Type, "Name": d.Name,
 			"Data": d.Data, "Priority": d.Priority,
 			"Port": d.Port, "TTL": d.TTL, "Weight": d.Weight,
+			"Flags": d.Flags, "Tag": d.Tag,
 		}
 		out = append(out, o)
 	}
