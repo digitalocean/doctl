@@ -64,14 +64,14 @@ func NewInvoicesService(client *godo.Client) InvoicesService {
 func (is *invoicesService) List() (*InvoiceList, error) {
 	var invoicePreview godo.InvoiceListItem
 
-	listFn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	listFn := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		invoiceList, resp, err := is.client.Invoices.List(context.Background(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 		invoicePreview = invoiceList.InvoicePreview
 
-		si := make([]interface{}, len(invoiceList.Invoices))
+		si := make([]any, len(invoiceList.Invoices))
 		for i := range invoiceList.Invoices {
 			si[i] = invoiceList.Invoices[i]
 		}
@@ -96,12 +96,12 @@ func (is *invoicesService) List() (*InvoiceList, error) {
 }
 
 func (is *invoicesService) Get(uuid string) (*Invoice, error) {
-	listFn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	listFn := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		invoice, resp, err := is.client.Invoices.Get(context.Background(), uuid, opt)
 		if err != nil {
 			return nil, nil, err
 		}
-		si := make([]interface{}, len(invoice.InvoiceItems))
+		si := make([]any, len(invoice.InvoiceItems))
 		for i := range invoice.InvoiceItems {
 			si[i] = invoice.InvoiceItems[i]
 		}

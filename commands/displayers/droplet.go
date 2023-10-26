@@ -49,8 +49,8 @@ func (d *Droplet) ColMap() map[string]string {
 	}
 }
 
-func (d *Droplet) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(d.Droplets))
+func (d *Droplet) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(d.Droplets))
 	for _, d := range d.Droplets {
 		sort.Strings(d.Tags)
 		tags := strings.Join(d.Tags, ",")
@@ -60,7 +60,7 @@ func (d *Droplet) KV() []map[string]interface{} {
 		ip6, _ := d.PublicIPv6()
 		features := strings.Join(d.Features, ",")
 		volumes := strings.Join(d.VolumeIDs, ",")
-		m := map[string]interface{}{
+		m := map[string]any{
 			"ID": d.ID, "Name": d.Name, "PublicIPv4": ip, "PrivateIPv4": privIP, "PublicIPv6": ip6,
 			"Memory": d.Memory, "VCPUs": d.Vcpus, "Disk": d.Disk,
 			"Region": d.Region.Slug, "Image": image, "VPCUUID": d.VPCUUID, "Status": d.Status,

@@ -50,13 +50,13 @@ func NewSnapshotsService(client *godo.Client) SnapshotsService {
 }
 
 func (ss *snapshotsService) List() (Snapshots, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ss.client.Snapshots.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -79,13 +79,13 @@ func (ss *snapshotsService) List() (Snapshots, error) {
 }
 
 func (ss *snapshotsService) ListVolume() (Snapshots, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ss.client.Snapshots.ListVolume(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -108,13 +108,13 @@ func (ss *snapshotsService) ListVolume() (Snapshots, error) {
 }
 
 func (ss *snapshotsService) ListDroplet() (Snapshots, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ss.client.Snapshots.ListDroplet(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

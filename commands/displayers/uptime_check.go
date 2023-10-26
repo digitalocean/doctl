@@ -48,10 +48,10 @@ func (uc *UptimeCheck) ColMap() map[string]string {
 	}
 }
 
-func (uc *UptimeCheck) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(uc.UptimeChecks))
+func (uc *UptimeCheck) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(uc.UptimeChecks))
 	for _, uptimeCheck := range uc.UptimeChecks {
-		m := map[string]interface{}{
+		m := map[string]any{
 			"ID":      uptimeCheck.ID,
 			"Name":    uptimeCheck.Name,
 			"Type":    uptimeCheck.Type,

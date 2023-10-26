@@ -47,11 +47,11 @@ func (r *Registry) ColMap() map[string]string {
 	}
 }
 
-func (r *Registry) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(r.Registries))
+func (r *Registry) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(r.Registries))
 
 	for _, reg := range r.Registries {
-		m := map[string]interface{}{
+		m := map[string]any{
 			"Name":     reg.Name,
 			"Endpoint": reg.Endpoint(),
 			"Region":   reg.Region,
@@ -91,11 +91,11 @@ func (r *Repository) ColMap() map[string]string {
 	}
 }
 
-func (r *Repository) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(r.Repositories))
+func (r *Repository) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(r.Repositories))
 
 	for _, reg := range r.Repositories {
-		m := map[string]interface{}{
+		m := map[string]any{
 			"Name":      reg.Name,
 			"LatestTag": reg.LatestTag.Tag,
 			"TagCount":  reg.TagCount,
@@ -140,8 +140,8 @@ func (r *RepositoryV2) ColMap() map[string]string {
 	}
 }
 
-func (r *RepositoryV2) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(r.Repositories))
+func (r *RepositoryV2) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(r.Repositories))
 
 	for _, reg := range r.Repositories {
 		var latestManifest string
@@ -156,7 +156,7 @@ func (r *RepositoryV2) KV() []map[string]interface{} {
 			latestUpdate = &reg.LatestManifest.UpdatedAt
 		}
 
-		m := map[string]interface{}{
+		m := map[string]any{
 			"Name":           reg.Name,
 			"LatestManifest": latestManifest,
 			"LatestTag":      latestTag,
@@ -199,11 +199,11 @@ func (r *RepositoryTag) ColMap() map[string]string {
 	}
 }
 
-func (r *RepositoryTag) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(r.Tags))
+func (r *RepositoryTag) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(r.Tags))
 
 	for _, tag := range r.Tags {
-		m := map[string]interface{}{
+		m := map[string]any{
 			"Tag":                 tag.Tag,
 			"CompressedSizeBytes": BytesToHumanReadableUnit(tag.CompressedSizeBytes),
 			"UpdatedAt":           tag.UpdatedAt,
@@ -246,11 +246,11 @@ func (r *RepositoryManifest) ColMap() map[string]string {
 	}
 }
 
-func (r *RepositoryManifest) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(r.Manifests))
+func (r *RepositoryManifest) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(r.Manifests))
 
 	for _, manifest := range r.Manifests {
-		m := map[string]interface{}{
+		m := map[string]any{
 			"Digest":              manifest.Digest,
 			"CompressedSizeBytes": BytesToHumanReadableUnit(manifest.CompressedSizeBytes),
 			"SizeBytes":           BytesToHumanReadableUnit(manifest.SizeBytes),
@@ -298,11 +298,11 @@ func (g *GarbageCollection) ColMap() map[string]string {
 	}
 }
 
-func (g *GarbageCollection) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(g.GarbageCollections))
+func (g *GarbageCollection) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(g.GarbageCollections))
 
 	for _, gc := range g.GarbageCollections {
-		out = append(out, map[string]interface{}{
+		out = append(out, map[string]any{
 			"UUID":         gc.UUID,
 			"RegistryName": gc.RegistryName,
 			"Status":       gc.Status,
@@ -352,11 +352,11 @@ func (t *RegistrySubscriptionTiers) ColMap() map[string]string {
 	}
 }
 
-func (t *RegistrySubscriptionTiers) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(t.SubscriptionTiers))
+func (t *RegistrySubscriptionTiers) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(t.SubscriptionTiers))
 
 	for _, tier := range t.SubscriptionTiers {
-		out = append(out, map[string]interface{}{
+		out = append(out, map[string]any{
 			"Name":                   tier.Name,
 			"Slug":                   tier.Slug,
 			"IncludedRepositories":   tier.IncludedRepositories,
@@ -392,11 +392,11 @@ func (t *RegistryAvailableRegions) ColMap() map[string]string {
 	}
 }
 
-func (t *RegistryAvailableRegions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(t.Regions))
+func (t *RegistryAvailableRegions) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(t.Regions))
 
 	for _, region := range t.Regions {
-		out = append(out, map[string]interface{}{
+		out = append(out, map[string]any{
 			"Slug": region,
 		})
 	}

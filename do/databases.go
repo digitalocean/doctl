@@ -199,13 +199,13 @@ func NewDatabasesService(client *godo.Client) DatabasesService {
 }
 
 func (ds *databasesService) List() (Databases, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ds.client.Databases.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -297,13 +297,13 @@ func (ds *databasesService) UpdateMaintenance(databaseID string, req *godo.Datab
 }
 
 func (ds *databasesService) ListBackups(databaseID string) (DatabaseBackups, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ds.client.Databases.ListBackups(context.TODO(), databaseID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -334,13 +334,13 @@ func (ds *databasesService) GetUser(databaseID, userName string) (*DatabaseUser,
 }
 
 func (ds *databasesService) ListUsers(databaseID string) (DatabaseUsers, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ds.client.Databases.ListUsers(context.TODO(), databaseID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -385,13 +385,13 @@ func (ds *databasesService) ResetUserAuth(databaseID, userID string, req *godo.D
 }
 
 func (ds *databasesService) ListDBs(databaseID string) (DatabaseDBs, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ds.client.Databases.ListDBs(context.TODO(), databaseID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -437,13 +437,13 @@ func (ds *databasesService) DeleteDB(databaseID, dbID string) error {
 }
 
 func (ds *databasesService) ListPools(databaseID string) (DatabasePools, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ds.client.Databases.ListPools(context.TODO(), databaseID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -498,13 +498,13 @@ func (ds *databasesService) GetReplica(databaseID, replicaID string) (*DatabaseR
 }
 
 func (ds *databasesService) ListReplicas(databaseID string) (DatabaseReplicas, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ds.client.Databases.ListReplicas(context.TODO(), databaseID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -568,13 +568,13 @@ func (ds *databasesService) SetSQLMode(databaseID string, sqlModes ...string) er
 }
 
 func (ds *databasesService) GetFirewallRules(databaseID string) (DatabaseFirewallRules, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ds.client.Databases.GetFirewallRules(context.TODO(), databaseID)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -689,13 +689,13 @@ func (ds *databasesService) UpdateRedisConfiguration(databaseID string, confStri
 }
 
 func (ds *databasesService) ListTopics(databaseID string) (DatabaseTopics, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ds.client.Databases.ListTopics(context.TODO(), databaseID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

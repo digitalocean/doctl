@@ -240,9 +240,9 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 	}
 	web, _ := c.Doit.GetBool(c.NS, flagWeb)
 	if web {
-		var mapParams map[string]interface{} = nil
+		var mapParams map[string]any = nil
 		if params != nil {
-			p, ok := params.(map[string]interface{})
+			p, ok := params.(map[string]any)
 			if !ok {
 				return fmt.Errorf("cannot invoke via web: parameters do not form a dictionary")
 			}
@@ -258,7 +258,7 @@ func RunFunctionsInvoke(c *CmdConfig) error {
 
 	if err != nil {
 		if response != nil {
-			activationResponse := response.(map[string]interface{})
+			activationResponse := response.(map[string]any)
 			template.Print(`Request accepted, but processing not completed yet. {{nl}}All functions invocation >= 30s will get demoted to an asynchronous invocation. Use {{highlight "--no-wait"}} flag to immediately return the activation id. {{nl}}
 Use this command to view the results.
 {{bold "doctl sls activations result" }} {{bold .}} {{nl 2}}`, activationResponse["activationId"])
@@ -323,8 +323,8 @@ func sortFunctionList(list []whisk.Action) {
 
 // consolidateParams accepts parameters from a file, the command line, or both, and consolidates all
 // such parameters into a simple dictionary.
-func consolidateParams(paramFile string, params []string) (interface{}, error) {
-	consolidated := map[string]interface{}{}
+func consolidateParams(paramFile string, params []string) (any, error) {
+	consolidated := map[string]any{}
 	if len(paramFile) > 0 {
 		contents, err := os.ReadFile(paramFile)
 		if err != nil {

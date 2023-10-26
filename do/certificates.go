@@ -67,13 +67,13 @@ func (cs *certificatesService) Create(cr *godo.CertificateRequest) (*Certificate
 }
 
 func (cs *certificatesService) List() (Certificates, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := cs.client.Certificates.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
