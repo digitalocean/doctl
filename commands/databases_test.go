@@ -177,6 +177,18 @@ var (
 		DatabaseOptions: &godo.DatabaseOptions{},
 	}
 
+	testMySQLConfiguration = do.MySQLConfig{
+		MySQLConfig: &godo.MySQLConfig{},
+	}
+
+	testPostgreSQLConfiguration = do.PostgreSQLConfig{
+		PostgreSQLConfig: &godo.PostgreSQLConfig{},
+	}
+
+	testRedisConfiguration = do.RedisConfig{
+		RedisConfig: &godo.RedisConfig{},
+	}
+
 	errTest = errors.New("error")
 )
 
@@ -201,6 +213,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"pool",
 		"db",
 		"sql-mode",
+		"configuration",
 	)
 }
 
@@ -269,6 +282,12 @@ func TestDatabaseOptionsCommand(t *testing.T) {
 		"slugs",
 		"versions",
 	)
+}
+
+func TestDatabaseConfigurationCommand(t *testing.T) {
+	cmd := databaseConfiguration()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd, "get")
 }
 
 func TestDatabasesGet(t *testing.T) {
@@ -1235,4 +1254,58 @@ func TestConvertUTCtoISO8601(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, "2023-02-01T17:32:15Z", isoTime)
+}
+
+func TestDatabaseConfigurationGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetMySQLConfiguration(testDBCluster.ID).Return(&testMySQLConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mysql")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetPostgreSQLConfiguration(testDBCluster.ID).Return(&testPostgreSQLConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "pg")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetRedisConfiguration(testDBCluster.ID).Return(&testRedisConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "redis")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.Equal(t, err, doctl.NewMissingArgsErr(config.NS))
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testDBCluster.ID, "extra arg")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.Equal(t, err, doctl.NewTooManyArgsErr(config.NS))
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.Error(t, err)
+	})
 }

@@ -54,10 +54,10 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 	}
 
 	CmdBuilder(cmd, RunProjectsList, "list", "List existing projects",
-		"List details for for your DigitalOcean projects, including:"+projectDetails,
+		"List details for your DigitalOcean projects, including:"+projectDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Project{}))
 	CmdBuilder(cmd, RunProjectsGet, "get <id>", "Retrieve details for a specific project",
-		"Display the following details for an existing project specified by its ID (use `default` for <id> to retieve your default project):"+projectDetails,
+		"Display the following details for an existing project specified by its ID (use `default` for <id> to retrieve your default project):"+projectDetails,
 		Writer, aliasOpt("g"), displayerType(&displayers.Project{}))
 
 	cmdProjectsCreate := CmdBuilder(cmd, RunProjectsCreate, "create",
@@ -119,7 +119,7 @@ A valid URN has the format: ` + "`" + `do:resource_type:resource_id` + "`" + `. 
 		"List all of the resources assigned to the specified project displaying their uniform resource names (\"URNs\").",
 		Writer, aliasOpt("ls"), displayerType(&displayers.ProjectResource{}))
 	CmdBuilder(cmd, RunProjectResourcesGet, "get <urn>", "Retrieve a resource by its URN",
-		"Retrieve information about a resource by specifying its uniform resource name (\"URN\"). Currently, ony Droplets, floating IPs, load balancers, domains, volumes, and App Platform apps are supported."+urnDesc,
+		"Retrieve information about a resource by specifying its uniform resource name (\"URN\"). Currently, only Droplets, floating IPs, load balancers, domains, volumes, and App Platform apps are supported."+urnDesc,
 		Writer, aliasOpt("g"), displayerType(&displayers.ProjectResource{}))
 
 	cmdProjectResourcesAssign := CmdBuilder(cmd, RunProjectResourcesAssign,

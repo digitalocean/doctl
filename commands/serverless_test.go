@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -145,6 +144,33 @@ func TestServerlessStatusWhenConnected(t *testing.T) {
 		err := RunServerlessStatus(config)
 		require.NoError(t, err)
 		assert.Contains(t, buf.String(), "Connected to functions namespace 'hello' on API host 'https://api.example.com'\nServerless software version is")
+	})
+}
+
+func TestServerlessStatusDisplayCredentials(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		buf := &bytes.Buffer{}
+		config.Out = buf
+		config.Doit.Set(config.NS, "credentials", true)
+
+		tm.serverless.EXPECT().CheckServerlessStatus().MinTimes(1).Return(nil)
+		tm.serverless.EXPECT().ReadCredentials().Return(do.ServerlessCredentials{
+			APIHost:   "https://api.example.com",
+			Namespace: "hello",
+			Credentials: map[string]map[string]do.ServerlessCredential{
+				"https://api.example.com": {
+					"hello": do.ServerlessCredential{
+						Auth: "here-are-some-credentials",
+					},
+				},
+			},
+		}, nil)
+		tm.serverless.EXPECT().GetNamespaceFromCluster("https://api.example.com", "here-are-some-credentials").Return("hello", nil)
+		tm.serverless.EXPECT().CredentialsPath().Return("/path")
+
+		err := RunServerlessStatus(config)
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"apihost":"https://api.example.com","auth":"here-are-some-credentials","namespace":"hello","path":"/path"}`, buf.String())
 	})
 }
 
@@ -688,17 +714,12 @@ func TestGetCredentialDirectory(t *testing.T) {
 
 func TestPreserveCredsMovesExistingToStaging(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tmp, err := ioutil.TempDir("", "test-dir")
-		require.NoError(t, err)
-		defer func() {
-			err := os.RemoveAll(tmp)
-			require.NoError(t, err, "error cleaning tmp dir")
-		}()
+		tmp := t.TempDir()
 
 		// Set up "existing" creds in the "sandbox" dir
 		serverlessDir := filepath.Join(tmp, "sandbox")
 		serverlessCredsDir := filepath.Join(serverlessDir, "creds", "d5b388f2")
-		err = os.MkdirAll(serverlessCredsDir, os.FileMode(0755))
+		err := os.MkdirAll(serverlessCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
 		serverlessCreds := filepath.Join(serverlessCredsDir, "credentials.json")
 		creds, err := os.Create(serverlessCreds)
@@ -726,17 +747,12 @@ func TestPreserveCredsMovesLegacyCreds(t *testing.T) {
 			return "a7bbe7e8af7411ec912e47a270a2ee78a7bbe7e8af7411ec912e47a270a2ee78"
 		}
 
-		tmp, err := ioutil.TempDir("", "test-dir")
-		require.NoError(t, err)
-		defer func() {
-			err := os.RemoveAll(tmp)
-			require.NoError(t, err, "error cleaning tmp dir")
-		}()
+		tmp := t.TempDir()
 
 		// Set up "existing" legacy creds in the "sandbox" dir
 		serverlessDir := filepath.Join(tmp, "sandbox")
 		legacyCredsDir := filepath.Join(serverlessDir, ".nimbella")
-		err = os.MkdirAll(legacyCredsDir, os.FileMode(0755))
+		err := os.MkdirAll(legacyCredsDir, os.FileMode(0755))
 		require.NoError(t, err)
 		legacyCreds := filepath.Join(legacyCredsDir, "credentials.json")
 		creds, err := os.Create(legacyCreds)

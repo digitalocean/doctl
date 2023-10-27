@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -133,12 +133,12 @@ var _ = suite("compute/image/list", func(t *testing.T, when spec.G, it spec.S) {
 				t.Fatal(err)
 			}
 
-			stdoutString, err := ioutil.ReadAll(stdout)
+			stdoutString, err := io.ReadAll(stdout)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			stderrString, err := ioutil.ReadAll(stderr)
+			stderrString, err := io.ReadAll(stderr)
 			if err != nil {
 				t.Fatal(err)
 			}

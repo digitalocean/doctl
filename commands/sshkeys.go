@@ -14,7 +14,7 @@ limitations under the License.
 package commands
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -149,7 +149,7 @@ func RunKeyImport(c *CmdConfig) error {
 
 	keyName := c.Args[0]
 
-	keyFile, err := ioutil.ReadFile(keyPath)
+	keyFile, err := os.ReadFile(keyPath)
 	if err != nil {
 		return err
 	}

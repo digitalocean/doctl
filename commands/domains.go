@@ -203,9 +203,7 @@ func RunRecordList(c *CmdConfig) error {
 		return err
 	}
 
-	items := &displayers.DomainRecord{DomainRecords: list}
-	return c.Display(items)
-
+	return displayDomainRecords(c, list...)
 }
 
 // RunRecordCreate creates a domain record.
@@ -284,8 +282,7 @@ func RunRecordCreate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.DomainRecord{DomainRecords: do.DomainRecords{*r}}
-	return c.Display(item)
+	return displayDomainRecords(c, *r)
 
 }
 
@@ -404,6 +401,22 @@ func RunRecordUpdate(c *CmdConfig) error {
 		return err
 	}
 
-	item := &displayers.DomainRecord{DomainRecords: do.DomainRecords{*r}}
+	return displayDomainRecords(c, *r)
+}
+
+func displayDomainRecords(c *CmdConfig, records ...do.DomainRecord) error {
+	// Check the format flag to determine if the displayer should use the short
+	// layout of the record display.The short version is used by default, but to format
+	// output that includes columns not in the short layout we need the full version.
+	var short = true
+	format, err := c.Doit.GetStringSlice(c.NS, doctl.ArgFormat)
+	if err != nil {
+		return err
+	}
+	if len(format) > 0 {
+		short = false
+	}
+
+	item := &displayers.DomainRecord{DomainRecords: do.DomainRecords(records), Short: short}
 	return c.Display(item)
 }

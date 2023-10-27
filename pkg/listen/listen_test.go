@@ -23,9 +23,7 @@ var (
 func wsHandler(t *testing.T) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			require.NoError(t, err)
-		}
+		require.NoError(t, err)
 		defer c.Close()
 		i := 0
 		finish := 5
@@ -43,9 +41,7 @@ func wsHandler(t *testing.T) http.HandlerFunc {
 			json.NewEncoder(buf).Encode(data)
 
 			err = c.WriteMessage(websocket.TextMessage, buf.Bytes())
-			if err != nil {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 
 			if i == finish {
 				break
@@ -60,17 +56,13 @@ func TestListener(t *testing.T) {
 
 	u := "ws" + strings.TrimPrefix(server.URL, "http")
 	url, err := url.Parse(u)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	buffer := &bytes.Buffer{}
 
 	listener := NewListener(url, "", nil, buffer)
 	err = listener.Start()
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	want := `{"message":"1\n"}
 {"message":"2\n"}
@@ -87,9 +79,7 @@ func TestListenerWithSchemaFunc(t *testing.T) {
 
 	u := "ws" + strings.TrimPrefix(server.URL, "http")
 	url, err := url.Parse(u)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	buffer := &bytes.Buffer{}
 
@@ -108,9 +98,7 @@ func TestListenerWithSchemaFunc(t *testing.T) {
 
 	listener := NewListener(url, "", schemaFunc, buffer)
 	err = listener.Start()
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+	require.NoError(t, err)
 
 	want := `1
 2
@@ -127,9 +115,7 @@ func TestListenerStop(t *testing.T) {
 
 	u := "ws" + strings.TrimPrefix(server.URL, "http")
 	url, err := url.Parse(u)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	buffer := &bytes.Buffer{}
 

@@ -504,7 +504,7 @@ This command creates a new node pool for the specified cluster. At a minimum, yo
 
 	cmdKubeNodePoolDelete := CmdBuilder(cmd, k8sCmdService.RunKubernetesNodePoolDelete,
 		"delete <cluster-id|cluster-name> <pool-id|pool-name>",
-		"Delete a node pool", `This command deletes the specified node pool in the specified cluster, which also removes all the nodes inside that pool. This action is irreversable.`, Writer, aliasOpt("d", "rm"))
+		"Delete a node pool", `This command deletes the specified node pool in the specified cluster, which also removes all the nodes inside that pool. This action is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdKubeNodePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
 		false, "Delete node pool without confirmation prompt")
 
@@ -1778,11 +1778,11 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 		case "size":
 			out.Size = value
 		case "count":
-			count, err := strconv.ParseInt(value, 10, 64)
+			count, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, errors.New("Node pool count must be a valid integer.")
 			}
-			out.Count = int(count)
+			out.Count = count
 		case "tag":
 			out.Tags = append(out.Tags, value)
 		case "label":
@@ -1806,17 +1806,17 @@ func parseNodePoolString(nodePool, defaultName, defaultSize string, defaultCount
 			}
 			out.AutoScale = autoScale
 		case "min-nodes":
-			minNodes, err := strconv.ParseInt(value, 10, 64)
+			minNodes, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, errors.New("Node pool min-nodes must be a valid integer.")
 			}
-			out.MinNodes = int(minNodes)
+			out.MinNodes = minNodes
 		case "max-nodes":
-			maxNodes, err := strconv.ParseInt(value, 10, 64)
+			maxNodes, err := strconv.Atoi(value)
 			if err != nil {
 				return nil, errors.New("Node pool max-nodes must be a valid integer.")
 			}
-			out.MaxNodes = int(maxNodes)
+			out.MaxNodes = maxNodes
 		default:
 			return nil, fmt.Errorf("Unsupported node pool argument %q", key)
 		}

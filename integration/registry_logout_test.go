@@ -2,7 +2,6 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -64,7 +63,7 @@ var _ = suite("registry/logout", func(t *testing.T, when spec.G, it spec.S) {
 		tmpDir := t.TempDir()
 
 		config := filepath.Join(tmpDir, "config.json")
-		err := ioutil.WriteFile(config, []byte(registryDockerCredentialsResponse), 0600)
+		err := os.WriteFile(config, []byte(registryDockerCredentialsResponse), 0600)
 		expect.NoError(err)
 
 		cmd := exec.Command(builtBinaryPath,
@@ -80,7 +79,7 @@ var _ = suite("registry/logout", func(t *testing.T, when spec.G, it spec.S) {
 		output, err := cmd.CombinedOutput()
 		expect.NoError(err, string(output))
 
-		fileBytes, err := ioutil.ReadFile(config)
+		fileBytes, err := os.ReadFile(config)
 		expect.NoError(err)
 
 		expect.Equal("Removing login credentials for registry.digitalocean.com\n", string(output))

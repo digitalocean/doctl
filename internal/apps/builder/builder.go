@@ -266,7 +266,7 @@ func (f *DefaultComponentBuilderFactory) NewComponentBuilder(cli DockerEngineCli
 		return nil, fmt.Errorf("component %s does not exist", opts.Component)
 	}
 
-	// NOTE(ntate); We don't provide this as a configureable argument today.
+	// NOTE(ntate); We don't provide this as a configurable argument today.
 	// We always assume we want copy-on-write. Caching occurs through re-use of the built OCI image.
 	// This may change in the future so we provide as an argument to the baseComponentBuilder.
 	copyOnWriteSemantics := true

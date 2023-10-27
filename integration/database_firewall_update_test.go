@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -30,7 +30,7 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 					return
 				}
 				if req.Method == http.MethodPut {
-					reqBody, err := ioutil.ReadAll(req.Body)
+					reqBody, err := io.ReadAll(req.Body)
 					expect.NoError(err)
 					t.Log(string(reqBody))
 					t.Log(databasesUpdateFirewallUpdateRequest)

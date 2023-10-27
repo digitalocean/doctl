@@ -14,7 +14,6 @@ limitations under the License.
 package commands
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -185,7 +184,7 @@ func TestInvoicesGetPDF(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Assert the file exists
-		result, err := ioutil.ReadFile(fpath)
+		result, err := os.ReadFile(fpath)
 		assert.NoError(t, err)
 		assert.Equal(t, content, result)
 
@@ -208,7 +207,7 @@ func TestInvoicesGetCSV(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Assert the file exists
-		result, err := ioutil.ReadFile(fpath)
+		result, err := os.ReadFile(fpath)
 		assert.NoError(t, err)
 		assert.Equal(t, content, result)
 

@@ -119,7 +119,7 @@ With the `+"`"+`--version flag, it will show just version information about the 
 namespace.  In general, deploying new content does not remove old content although it may overwrite it.
 Use `+"`"+`doctl serverless undeploy`+"`"+` to effect removal.  The command accepts a list of functions or packages.
 Functions should be listed in `+"`"+`pkgName/fnName`+"`"+` form, or `+"`"+`fnName`+"`"+` for a function not in any package.
-The `+"`"+`--packages`+"`"+` flag causes arguments without slash separators to be intepreted as packages, in which case
+The `+"`"+`--packages`+"`"+` flag causes arguments without slash separators to be interpreted as packages, in which case
 the entire packages are removed.`, Writer)
 	AddBoolFlag(undeploy, "packages", "p", false, "interpret simple name arguments as packages")
 	AddBoolFlag(undeploy, "triggers", "", false, "interpret all arguments as triggers")
@@ -392,17 +392,17 @@ func RunServerlessStatus(c *CmdConfig) error {
 	credentials, _ := c.Doit.GetBool(c.NS, "credentials")
 	if credentials {
 		type showCreds struct {
-			Auth      string `json:auth`
-			APIHost   string `json:apihost`
-			Namespace string `json:namespace`
-			Path      string `json:path`
+			Auth      string `json:"auth"`
+			APIHost   string `json:"apihost"`
+			Namespace string `json:"namespace"`
+			Path      string `json:"path"`
 		}
 		toShow := showCreds{Auth: auth, APIHost: creds.APIHost, Namespace: creds.Namespace, Path: sls.CredentialsPath()}
 		credsOutput, err := json.MarshalIndent(toShow, "", "  ")
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(credsOutput))
+		fmt.Fprintln(c.Out, string(credsOutput))
 		return nil
 	}
 

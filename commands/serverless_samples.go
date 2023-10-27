@@ -167,7 +167,7 @@ namespace Nimbella.Example.Dotnet
 		"typescript": typescriptSample,
 	}
 
-	// gitignores contains the contents of a "standard" .gitigore file
+	// gitignores contains the contents of a "standard" .gitignore file
 	// Note that we do not attempt to list typical IDE and editor temporaries here.
 	// It is considered best practice for developers to list these in a personal global
 	// ignore file (`core.excludesfile` in the git config) and not in a committed .gitignore.

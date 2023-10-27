@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -171,7 +170,7 @@ func TestDockerComponentBuild(t *testing.T) {
 			},
 			NoCache: true,
 		}).Return(types.ImageBuildResponse{
-			Body: ioutil.NopCloser(strings.NewReader("")),
+			Body: io.NopCloser(strings.NewReader("")),
 		}, nil)
 
 		_, err := builder.Build(ctx)
@@ -211,7 +210,7 @@ func TestDockerComponentBuild(t *testing.T) {
 		err := os.Mkdir(filepath.Join(contextDir, "subdir"), 0775)
 		require.NoError(t, err)
 		// Dockerfile is outside of source_dir
-		err = ioutil.WriteFile(filepath.Join(contextDir, "Dockerfile"), []byte("FROM scratch"), 0664)
+		err = os.WriteFile(filepath.Join(contextDir, "Dockerfile"), []byte("FROM scratch"), 0664)
 		require.NoError(t, err)
 
 		builder := &DockerComponentBuilder{
@@ -394,7 +393,7 @@ func assertArchiveContents(t *testing.T, archive io.Reader, tcs map[string]func(
 			t.Fatalf("unexpected file %s", name)
 		}
 
-		content, err := ioutil.ReadAll(r)
+		content, err := io.ReadAll(r)
 		require.NoError(t, err, "reading %s", name)
 
 		filesFound[name] = struct{}{}

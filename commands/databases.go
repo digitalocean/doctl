@@ -55,7 +55,7 @@ func Databases() *Command {
 
 - The database ID, in UUID format
 - The name you gave the database cluster
-- The database engine (e.g. ` + "`redis`, `pg`, `mysql` , or `mongodb`" + `)
+- The database engine (e.g. ` + "`redis`, `pg`, `mysql` , `mongodb`, or `kafka`" + `)
 - The engine version (e.g. ` + "`14`" + ` for PostgreSQL version 14)
 - The number of nodes in the database cluster
 - The region the database cluster resides in (e.g. ` + "`sfo2`, " + "`nyc1`" + `)
@@ -68,7 +68,7 @@ func Databases() *Command {
 - The date and time when the database cluster was created`+databaseListDetails, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
 
 	nodeSizeDetails := "The size of the nodes in the database cluster, e.g. `db-s-1vcpu-1gb`` for a 1 CPU, 1GB node. For a list of available size slugs, visit: https://docs.digitalocean.com/reference/api/api-reference/#tag/Databases"
-	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
+	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
 	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseCreate, "create <name>", "Create a database cluster", `This command creates a database cluster with the specified name.
 
 There are a number of flags that customize the configuration, all of which are optional. Without any flags set, a single-node, single-CPU PostgreSQL database cluster will be created.`, Writer,
@@ -76,7 +76,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseNumNodes, "", defaultDatabaseNodeCount, nodeNumberDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The region where the database cluster will be created, e.g. `nyc1` or `sfo2`")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, and `mongodb`.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, `mongodb`, and `kafka`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster from which the backup will be restored.")
@@ -140,6 +140,7 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 	cmd.AddCommand(sqlMode())
 	cmd.AddCommand(databaseFirewalls())
 	cmd.AddCommand(databaseOptions())
+	cmd.AddCommand(databaseConfiguration())
 
 	return cmd
 }
@@ -547,7 +548,7 @@ Maintenance windows are hour-long blocks of time during which DigitalOcean perfo
 
 - The day of the week the maintenance window occurs
 - The hour in UTC when maintenance updates will be applied, in 24 hour format (e.g. "16:00")
-- A boolean representing whether maintence updates are currently pending
+- A boolean representing whether maintenance updates are currently pending
 
 To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+"`"+`.`, Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseMaintenanceWindow{}))
@@ -819,7 +820,7 @@ func databaseOptions() *Command {
 	databaseOptionEngines := `
 This command lists the available database engines:
 
-- The key of the database engine. Possible values are: "pg" for PostgreSQL, "mysql"" for MySQL, "redis"" for Redis, and "mongodb" for MongoDB
+- The key of the database engine. Possible values are: "pg" for PostgreSQL, "mysql" for MySQL, "redis" for Redis, "mongodb" for MongoDB, and "kafka" for Kafka
 `
 	databaseOptionRegions := `
 - The region of the database engine.
@@ -900,11 +901,14 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["pg"] = options.PostgresSQLOptions.Regions
 	case "redis":
 		regions["redis"] = options.RedisOptions.Regions
+	case "kafka":
+		regions["kafka"] = options.KafkaOptions.Regions
 	case "":
 		regions["mongodb"] = options.MongoDBOptions.Regions
 		regions["mysql"] = options.MySQLOptions.Regions
 		regions["pg"] = options.PostgresSQLOptions.Regions
 		regions["redis"] = options.RedisOptions.Regions
+		regions["kafka"] = options.KafkaOptions.Regions
 	}
 
 	return displayDatabaseRegionOptions(c, regions)
@@ -929,11 +933,14 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["pg"] = options.PostgresSQLOptions.Versions
 	case "redis":
 		versions["redis"] = options.RedisOptions.Versions
+	case "kafka":
+		versions["kafka"] = options.KafkaOptions.Versions
 	case "":
 		versions["mongodb"] = options.MongoDBOptions.Versions
 		versions["mysql"] = options.MySQLOptions.Versions
 		versions["pg"] = options.PostgresSQLOptions.Versions
 		versions["redis"] = options.RedisOptions.Versions
+		versions["kafka"] = options.KafkaOptions.Versions
 	}
 
 	return displayDatabaseVersionOptions(c, versions)
@@ -961,6 +968,8 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		layouts = options.PostgresSQLOptions.Layouts
 	case "redis":
 		layouts = options.RedisOptions.Layouts
+	case "kafka":
+		layouts = options.KafkaOptions.Layouts
 	}
 
 	return displayDatabaseLayoutOptions(c, layouts)
@@ -1622,7 +1631,6 @@ This would remove the firewall rule of uuid 12345d-1234-123d-123x-123eee456e for
 	AddStringFlag(cmdDatabaseFirewallRemove, doctl.ArgDatabaseFirewallRuleUUID, "", "", "", requiredOpt())
 
 	return cmd
-
 }
 
 // displayDatabaseFirewallRules calls Get Firewall Rules to list all current rules.
@@ -1681,7 +1689,6 @@ func RunDatabaseFirewallRulesUpdate(c *CmdConfig) error {
 	}
 
 	return displayDatabaseFirewallRules(c, true, id)
-
 }
 
 // buildDatabaseUpdateFirewallRulesRequestFromArgs will ingest the --rules arguments into a DatabaseUpdateFirewallRulesRequest object.
@@ -1704,7 +1711,6 @@ func buildDatabaseUpdateFirewallRulesRequestFromArgs(c *CmdConfig) (*godo.Databa
 	r.Rules = firewallRulesList
 
 	return r, nil
-
 }
 
 // extractFirewallRules will ingest the --rules arguments into a list of DatabaseFirewallRule objects.
@@ -1723,7 +1729,6 @@ func extractFirewallRules(rulesStringList []string) (rules []*godo.DatabaseFirew
 	}
 
 	return rules, nil
-
 }
 
 // RunDatabaseFirewallRulesAppend creates a firewall rule for a database cluster.
@@ -1865,4 +1870,98 @@ func waitForDatabaseReady(dbs do.DatabasesService, dbID string) error {
 		"timeout waiting for database (%s) to enter `online` state",
 		dbID,
 	)
+}
+
+func databaseConfiguration() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "configuration",
+			Aliases: []string{"cfg"},
+			Short:   "View the configuration of a database cluster given its ID and Engine",
+			Long:    "The subcommands of `doctl databases configuration` are used to view a database cluster's configuration.",
+		},
+	}
+	getMySQLConfigurationLongDesc := `
+		This will get a database cluster's configuration given its ID and Engine
+	`
+	getMySQLCfgCommand := CmdBuilder(
+		cmd,
+		RunDatabaseConfigurationGet,
+		"get <db-id>",
+		"Get a database cluster's configuration",
+		getMySQLConfigurationLongDesc,
+		Writer,
+		aliasOpt("g"),
+		displayerType(&displayers.MySQLConfiguration{}),
+		displayerType(&displayers.PostgreSQLConfiguration{}),
+		displayerType(&displayers.RedisConfiguration{}),
+	)
+	AddStringFlag(
+		getMySQLCfgCommand,
+		doctl.ArgDatabaseEngine,
+		"e",
+		"",
+		"the engine of the database you want to get the configuration for",
+		requiredOpt(),
+	)
+
+	return cmd
+}
+
+func RunDatabaseConfigurationGet(c *CmdConfig) error {
+	args := c.Args
+	if len(args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	if len(args) > 1 {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+
+	engine, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+	if err != nil {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	allowedEngines := map[string]any{
+		"mysql": nil,
+		"pg":    nil,
+		"redis": nil,
+	}
+	if _, ok := allowedEngines[engine]; !ok {
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+	}
+
+	dbId := args[0]
+	if engine == "mysql" {
+		config, err := c.Databases().GetMySQLConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.MySQLConfiguration{
+			MySQLConfiguration: *config,
+		}
+		return c.Display(&displayer)
+	} else if engine == "pg" {
+		config, err := c.Databases().GetPostgreSQLConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.PostgreSQLConfiguration{
+			PostgreSQLConfig: *config,
+		}
+		return c.Display(&displayer)
+	} else if engine == "redis" {
+		config, err := c.Databases().GetRedisConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.RedisConfiguration{
+			RedisConfig: *config,
+		}
+		return c.Display(&displayer)
+	}
+	return nil
 }

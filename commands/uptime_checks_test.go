@@ -41,7 +41,7 @@ var (
 func TestUptimeCheckCommand(t *testing.T) {
 	cmd := UptimeCheck()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "list", "get", "update", "delete")
+	assertCommandNames(t, cmd, "create", "list", "get", "update", "delete", "alert")
 }
 
 func TestUptimeChecksCreate(t *testing.T) {

@@ -3,7 +3,7 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -44,7 +44,7 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 				}
 
 				var err error
-				reqBody, err = ioutil.ReadAll(req.Body)
+				reqBody, err = io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				var dr dropletRequest

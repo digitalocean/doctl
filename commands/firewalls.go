@@ -80,7 +80,7 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 
 	CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "List firewalls by Droplet", `Use this command to list cloud firewalls by the ID of a Droplet assigned to the firewall.`, Writer, displayerType(&displayers.Firewall{}))
 
-	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id>...", "Permanently delete a cloud firewall", `Use this command to permanently delete a cloud firewall. This is irreversable, but does not delete any Droplets assigned to the cloud firewall.`, Writer, aliasOpt("d", "rm"))
+	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id>...", "Permanently delete a cloud firewall", `Use this command to permanently delete a cloud firewall. This is irreversible, but does not delete any Droplets assigned to the cloud firewall.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete firewall without confirmation prompt")
 
 	cmdAddDroplets := CmdBuilder(cmd, RunFirewallAddDroplets, "add-droplets <id>", "Add Droplets to a cloud firewall", `Use this command to add Droplets to the cloud firewall.`, Writer)

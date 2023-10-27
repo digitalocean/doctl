@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -50,7 +50,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				expect.JSONEq(`{"type":"unassign"}`, string(reqBody))
@@ -68,7 +68,7 @@ var _ = suite("compute/floating-ip-action", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				expect.JSONEq(`{"droplet_id":1414,"type":"assign"}`, string(reqBody))

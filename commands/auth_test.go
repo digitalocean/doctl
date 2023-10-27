@@ -17,7 +17,6 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"io/ioutil"
 	"path/filepath"
 	"testing"
 
@@ -48,7 +47,7 @@ func TestAuthInit(t *testing.T) {
 		return "valid-token", nil
 	}
 
-	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
@@ -98,7 +97,7 @@ func TestAuthInitConfig(t *testing.T) {
 				"unset": map[interface{}]interface{}{"dev-config": ""},
 			},
 		)
-		assert.Equal(t, devConfigSetting, expectedConfigSetting, "unexpected setting for 'dev.config'")
+		assert.Equal(t, expectedConfigSetting, devConfigSetting, "unexpected setting for 'dev.config'")
 	})
 }
 
@@ -114,7 +113,7 @@ func TestAuthInitWithProvidedToken(t *testing.T) {
 		return "", errors.New("should not have called this")
 	}
 
-	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
@@ -136,7 +135,7 @@ func TestAuthForcesLowercase(t *testing.T) {
 		return "", errors.New("should not have called this")
 	}
 
-	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: ioutil.Discard}, nil }
+	cfgFileWriter = func() (io.WriteCloser, error) { return &nopWriteCloser{Writer: io.Discard}, nil }
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)

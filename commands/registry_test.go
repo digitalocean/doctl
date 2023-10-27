@@ -247,7 +247,7 @@ func TestDockerConfig(t *testing.T) {
 			expect: func(m *mocks.MockRegistryService) {
 				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 					ReadWrite:     false,
-					ExpirySeconds: godo.Int(3600),
+					ExpirySeconds: godo.PtrTo(3600),
 				}).Return(testDockerCredentials, nil)
 			},
 		},
@@ -258,7 +258,7 @@ func TestDockerConfig(t *testing.T) {
 			expect: func(m *mocks.MockRegistryService) {
 				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 					ReadWrite:     true,
-					ExpirySeconds: godo.Int(3600),
+					ExpirySeconds: godo.PtrTo(3600),
 				}).Return(testDockerCredentials, nil)
 			},
 		},
@@ -662,7 +662,7 @@ func TestRegistryLogin(t *testing.T) {
 				m.EXPECT().Endpoint().Return(do.RegistryHostname)
 				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 					ReadWrite:     true,
-					ExpirySeconds: godo.Int(3600),
+					ExpirySeconds: godo.PtrTo(3600),
 				}).Return(testDockerCredentials, nil)
 			},
 		},
@@ -674,7 +674,7 @@ func TestRegistryLogin(t *testing.T) {
 				m.EXPECT().Endpoint().Return(do.RegistryHostname)
 				m.EXPECT().DockerCredentials(&godo.RegistryDockerCredentialsRequest{
 					ReadWrite:     false,
-					ExpirySeconds: godo.Int(defaultRegistryAPITokenExpirySeconds),
+					ExpirySeconds: godo.PtrTo(defaultRegistryAPITokenExpirySeconds),
 				}).Return(testDockerCredentials, nil)
 			},
 		},
@@ -700,11 +700,7 @@ func TestRegistryLogin(t *testing.T) {
 
 				config.Out = os.Stderr
 				err := RunRegistryLogin(config)
-				if test.err != nil {
-					assert.Error(t, test.err, err)
-				} else {
-					assert.NoError(t, err)
-				}
+				assert.Equal(t, test.err, err)
 			})
 		})
 	}

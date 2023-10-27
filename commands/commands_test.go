@@ -14,8 +14,7 @@ limitations under the License.
 package commands
 
 import (
-	"io/ioutil"
-	"sort"
+	"io"
 	"testing"
 
 	"github.com/digitalocean/doctl"
@@ -140,9 +139,7 @@ func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
 		}
 	}
 
-	sort.Strings(expected)
-	sort.Strings(names)
-	assert.Equal(t, expected, names)
+	assert.ElementsMatch(t, expected, names)
 }
 
 type testFn func(c *CmdConfig, tm *tcMocks)
@@ -241,7 +238,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 	config := &CmdConfig{
 		NS:   "test",
 		Doit: testConfig,
-		Out:  ioutil.Discard,
+		Out:  io.Discard,
 
 		// can stub this out, since the return is dictated by the mocks.
 		initServices: func(c *CmdConfig) error { return nil },

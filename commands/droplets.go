@@ -15,7 +15,7 @@ package commands
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -413,7 +413,7 @@ func extractSSHKeys(keys []string) []godo.DropletCreateSSHKey {
 
 func extractUserData(userData, filename string) (string, error) {
 	if userData == "" && filename != "" {
-		data, err := ioutil.ReadFile(filename)
+		data, err := os.ReadFile(filename)
 		if err != nil {
 			return "", err
 		}

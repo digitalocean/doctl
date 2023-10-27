@@ -197,6 +197,24 @@ var _ = suite("apps/spec/validate", func(t *testing.T, when spec.G, it spec.S) {
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
 	})
 
+	it("schema-only works without auth", func() {
+		cmd := exec.Command(builtBinaryPath,
+			"-u", server.URL,
+			"apps", "spec", "validate",
+			"--schema-only", "-",
+		)
+		byt, err := json.Marshal(testAppSpec)
+		expect.NoError(err)
+
+		cmd.Stdin = bytes.NewReader(byt)
+
+		output, err := cmd.CombinedOutput()
+		expect.NoError(err)
+
+		expectedOutput := "name: test\nservices:\n- github:\n    branch: main\n    repo: digitalocean/doctl\n  name: service"
+		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))
+	})
+
 	it("calls proposeapp", func() {
 		cmd := exec.Command(builtBinaryPath,
 			"-t", "some-magic-token",

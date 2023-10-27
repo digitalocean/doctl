@@ -2,7 +2,7 @@ package integration
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -37,7 +37,7 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				expect.JSONEq(`{"region":"moonbase","size_gigabytes":100,"type":"resize"}`, string(reqBody))
@@ -55,7 +55,7 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				expect.JSONEq(`{"droplet_id":11,"type":"attach"}`, string(reqBody))
@@ -73,7 +73,7 @@ var _ = suite("compute/volume-action", func(t *testing.T, when spec.G, it spec.S
 					return
 				}
 
-				reqBody, err := ioutil.ReadAll(req.Body)
+				reqBody, err := io.ReadAll(req.Body)
 				expect.NoError(err)
 
 				expect.JSONEq(`{"droplet_id":14,"type":"detach"}`, string(reqBody))
