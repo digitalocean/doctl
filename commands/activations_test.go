@@ -16,7 +16,6 @@ package commands
 import (
 	"bytes"
 	"errors"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -37,9 +36,7 @@ func TestActivationsCommand(t *testing.T) {
 		names = append(names, c.Name())
 	}
 
-	sort.Strings(expected)
-	sort.Strings(names)
-	assert.Equal(t, expected, names)
+	assert.ElementsMatch(t, expected, names)
 }
 
 var hello1Result = whisk.Result(map[string]interface{}{
@@ -369,7 +366,7 @@ func TestActivationsList(t *testing.T) {
 						}
 
 						if k == "limit" {
-							limit, _ = strconv.ParseInt(v, 0, 64)
+							limit, _ = strconv.Atoi(v)
 						}
 
 						if k == "since" {
@@ -381,7 +378,7 @@ func TestActivationsList(t *testing.T) {
 						}
 
 						if k == "skip" {
-							skip, _ = strconv.ParseInt(v, 0, 64)
+							skip, _ = strconv.Atoi(v)
 						}
 
 						if v == "" {
@@ -417,11 +414,11 @@ func TestActivationsList(t *testing.T) {
 						expectedListOptions.Name = config.Args[0]
 					}
 					if limit != nil {
-						expectedListOptions.Limit = int(limit.(int64))
+						expectedListOptions.Limit = limit.(int)
 					}
 
 					if skip != nil {
-						expectedListOptions.Skip = int(skip.(int64))
+						expectedListOptions.Skip = skip.(int)
 					}
 					tm.serverless.EXPECT().ListActivations(expectedListOptions).Return(theActivations, nil)
 				}
@@ -475,7 +472,7 @@ func TestActivationsLogs(t *testing.T) {
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {
 						if k == "limit" {
-							limit, _ = strconv.ParseInt(v, 0, 64)
+							limit, _ = strconv.Atoi(v)
 						}
 
 						if k == "follow" {
@@ -507,7 +504,7 @@ func TestActivationsLogs(t *testing.T) {
 				} else {
 					expectedListOptions := whisk.ActivationListOptions{Docs: true}
 					if limit != nil {
-						expectedListOptions.Limit = int(limit.(int64))
+						expectedListOptions.Limit = limit.(int)
 					}
 
 					if funcName != nil {
