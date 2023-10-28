@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/digitalocean/godo"
@@ -159,6 +160,10 @@ type DatabasesService interface {
 	GetMySQLConfiguration(databaseID string) (*MySQLConfig, error)
 	GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error)
 	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
+
+	UpdateMySQLConfiguration(databaseID string, confString string) error
+	UpdatePostgreSQLConfiguration(databaseID string, confString string) error
+	UpdateRedisConfiguration(databaseID string, confString string) error
 }
 
 type databasesService struct {
@@ -617,4 +622,49 @@ func (ds *databasesService) GetRedisConfiguration(databaseID string) (*RedisConf
 	return &RedisConfig{
 		RedisConfig: cfg,
 	}, nil
+}
+
+func (ds *databasesService) UpdateMySQLConfiguration(databaseID string, confString string) error {
+	var conf godo.MySQLConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateMySQLConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdatePostgreSQLConfiguration(databaseID string, confString string) error {
+	var conf godo.PostgreSQLConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdatePostgreSQLConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdateRedisConfiguration(databaseID string, confString string) error {
+	var conf godo.RedisConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateRedisConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

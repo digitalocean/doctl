@@ -366,6 +366,8 @@ const (
 	ArgDatabaseRestoreFromTimestamp = "restore-from-timestamp"
 	// ArgDatabaseEngine is a flag for specifying which database engine to use
 	ArgDatabaseEngine = "engine"
+	// ArgDatabaseConfigJson is a flag for specifying the database configuration in JSON format for an update
+	ArgDatabaseConfigJson = "config-json"
 	// ArgDatabaseNumNodes is the number of nodes in the database cluster
 	ArgDatabaseNumNodes = "num-nodes"
 	// ArgDatabaseMaintenanceDay is the new day for the maintenance window
