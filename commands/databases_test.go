@@ -287,7 +287,7 @@ func TestDatabaseOptionsCommand(t *testing.T) {
 func TestDatabaseConfigurationCommand(t *testing.T) {
 	cmd := databaseConfiguration()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "get")
+	assertCommandNames(t, cmd, "get", "update")
 }
 
 func TestDatabasesGet(t *testing.T) {
