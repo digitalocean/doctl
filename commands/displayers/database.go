@@ -75,7 +75,7 @@ func (d *Databases) ColMap() map[string]string {
 			"Region":     "Region",
 			"Status":     "Status",
 			"Size":       "Size",
-			"StorageMib": "StorageMib",
+			"StorageMib": "Storage (MiB)",
 		}
 	}
 
@@ -88,7 +88,7 @@ func (d *Databases) ColMap() map[string]string {
 		"Region":     "Region",
 		"Status":     "Status",
 		"Size":       "Size",
-		"StorageMib": "Storage Size - MiB",
+		"StorageMib": "Storage (MiB)",
 		"URI":        "URI",
 		"Created":    "Created At",
 	}
