@@ -70,6 +70,7 @@ func Databases() *Command {
 
 	nodeSizeDetails := "The size of the nodes in the database cluster, e.g. `db-s-1vcpu-1gb`` for a 1 CPU, 1GB node. For a list of available size slugs, visit: https://docs.digitalocean.com/reference/api/api-reference/#tag/Databases"
 	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
+	storageSizeMiBDetails := "The amount of disk space allocated to the cluster. Applicable for PostgreSQL and MySQL clusters. This will be set to a default level based on the plan size selected, but can be increased in increments up to a maximum amount. For ranges, visit: https://www.digitalocean.com/pricing/managed-databases"
 	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseCreate, "create <name>", "Create a database cluster", `This command creates a database cluster with the specified name.
 
 There are a number of flags that customize the configuration, all of which are optional. Without any flags set, a single-node, single-CPU PostgreSQL database cluster will be created.`, Writer,
@@ -77,6 +78,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseNumNodes, "", defaultDatabaseNodeCount, nodeNumberDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The region where the database cluster will be created, e.g. `nyc1` or `sfo2`")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
+	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, `mongodb`, and `kafka`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
@@ -116,10 +118,15 @@ You must specify the desired number of nodes and size of the nodes. For example:
 
 	doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb
 
-Database nodes cannot be resized to smaller sizes due to the risk of data loss.`, Writer,
+Database nodes cannot be resized to smaller sizes due to the risk of data loss.
+
+In addition, for PostgreSQL and MySQL clusters, you can provide a disk size in MiB, which will set the total storage (up to a certain range) to the cluster independently. Storage cannot be reduced from its current levels. For example:
+
+	doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000`, Writer,
 		aliasOpt("rs"))
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())
+	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
 
 	cmdDatabaseMigrate := CmdBuilder(cmd, RunDatabaseMigrate, "migrate <database-id>", "Migrate a database cluster to a new region", `This command migrates the specified database cluster to a new region`, Writer,
 		aliasOpt("m"))
@@ -293,6 +300,12 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 	}
 
 	r.PrivateNetworkUUID = privateNetworkUUID
+
+	storageSizeMibInt, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseStorageSizeMib)
+	if err != nil {
+		return nil, err
+	}
+	r.StorageSizeMib = uint64(storageSizeMibInt)
 
 	return r, nil
 }
@@ -495,6 +508,12 @@ func buildDatabaseResizeRequestFromArgs(c *CmdConfig) (*godo.DatabaseResizeReque
 		return nil, err
 	}
 	r.SizeSlug = size
+
+	storageSizeMibInt, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseStorageSizeMib)
+	if err != nil {
+		return nil, err
+	}
+	r.StorageSizeMib = uint64(storageSizeMibInt)
 
 	return r, nil
 }

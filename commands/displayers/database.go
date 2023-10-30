@@ -45,6 +45,7 @@ func (d *Databases) Cols() []string {
 			"Region",
 			"Status",
 			"Size",
+			"StorageMib",
 		}
 	}
 
@@ -59,34 +60,37 @@ func (d *Databases) Cols() []string {
 		"Size",
 		"URI",
 		"Created",
+		"StorageMib",
 	}
 }
 
 func (d *Databases) ColMap() map[string]string {
 	if d.Short {
 		return map[string]string{
-			"ID":       "ID",
-			"Name":     "Name",
-			"Engine":   "Engine",
-			"Version":  "Version",
-			"NumNodes": "Number of Nodes",
-			"Region":   "Region",
-			"Status":   "Status",
-			"Size":     "Size",
+			"ID":         "ID",
+			"Name":       "Name",
+			"Engine":     "Engine",
+			"Version":    "Version",
+			"NumNodes":   "Number of Nodes",
+			"Region":     "Region",
+			"Status":     "Status",
+			"Size":       "Size",
+			"StorageMib": "Storage (MiB)",
 		}
 	}
 
 	return map[string]string{
-		"ID":       "ID",
-		"Name":     "Name",
-		"Engine":   "Engine",
-		"Version":  "Version",
-		"NumNodes": "Number of Nodes",
-		"Region":   "Region",
-		"Status":   "Status",
-		"Size":     "Size",
-		"URI":      "URI",
-		"Created":  "Created At",
+		"ID":         "ID",
+		"Name":       "Name",
+		"Engine":     "Engine",
+		"Version":    "Version",
+		"NumNodes":   "Number of Nodes",
+		"Region":     "Region",
+		"Status":     "Status",
+		"Size":       "Size",
+		"StorageMib": "Storage (MiB)",
+		"URI":        "URI",
+		"Created":    "Created At",
 	}
 }
 
@@ -95,16 +99,17 @@ func (d *Databases) KV() []map[string]interface{} {
 
 	for _, db := range d.Databases {
 		o := map[string]interface{}{
-			"ID":       db.ID,
-			"Name":     db.Name,
-			"Engine":   db.EngineSlug,
-			"Version":  db.VersionSlug,
-			"NumNodes": db.NumNodes,
-			"Region":   db.RegionSlug,
-			"Status":   db.Status,
-			"Size":     db.SizeSlug,
-			"URI":      db.Connection.URI,
-			"Created":  db.CreatedAt,
+			"ID":         db.ID,
+			"Name":       db.Name,
+			"Engine":     db.EngineSlug,
+			"Version":    db.VersionSlug,
+			"NumNodes":   db.NumNodes,
+			"Region":     db.RegionSlug,
+			"Status":     db.Status,
+			"Size":       db.SizeSlug,
+			"StorageMib": db.StorageSizeMib,
+			"URI":        db.Connection.URI,
+			"Created":    db.CreatedAt,
 		}
 		out = append(out, o)
 	}

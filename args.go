@@ -368,6 +368,8 @@ const (
 	ArgDatabaseEngine = "engine"
 	// ArgDatabaseNumNodes is the number of nodes in the database cluster
 	ArgDatabaseNumNodes = "num-nodes"
+	// ArgDatabaseStorageSizeMib is the amount of disk space, in MiB, that should be allocated to the database cluster
+	ArgDatabaseStorageSizeMib = "storage-size-mib"
 	// ArgDatabaseMaintenanceDay is the new day for the maintenance window
 	ArgDatabaseMaintenanceDay = "day"
 	// ArgDatabaseMaintenanceHour is the new hour for the maintenance window
