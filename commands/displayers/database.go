@@ -691,6 +691,191 @@ func (dr *DatabaseFirewallRules) KV() []map[string]interface{} {
 	return out
 }
 
+type DatabaseKafkaTopics struct {
+	DatabaseTopics do.DatabaseTopics
+}
+
+var _ Displayable = &DatabaseKafkaTopics{}
+
+func (dt *DatabaseKafkaTopics) JSON(out io.Writer) error {
+	return writeJSON(dt.DatabaseTopics, out)
+}
+
+func (dt *DatabaseKafkaTopics) Cols() []string {
+	return []string{
+		"Name",
+		"State",
+		"ReplicationFactor",
+	}
+}
+
+func (dt *DatabaseKafkaTopics) ColMap() map[string]string {
+
+	return map[string]string{
+		"Name":              "Name",
+		"State":             "State",
+		"ReplicationFactor": "ReplicationFactor",
+	}
+}
+
+func (dt *DatabaseKafkaTopics) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dt.DatabaseTopics))
+
+	for _, t := range dt.DatabaseTopics {
+		o := map[string]interface{}{
+			"Name":              t.Name,
+			"State":             t.State,
+			"ReplicationFactor": *t.ReplicationFactor,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
+type DatabaseKafkaTopic struct {
+	DatabaseTopic do.DatabaseTopic
+}
+
+var _ Displayable = &DatabaseKafkaTopic{}
+
+func (dt *DatabaseKafkaTopic) JSON(out io.Writer) error {
+	return writeJSON(dt.DatabaseTopic, out)
+}
+
+func (dt *DatabaseKafkaTopic) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dt *DatabaseKafkaTopic) ColMap() map[string]string {
+
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dt *DatabaseKafkaTopic) KV() []map[string]interface{} {
+	t := dt.DatabaseTopic
+	o := []map[string]interface{}{
+		{
+			"key":   "Name",
+			"value": t.Name,
+		},
+		{
+			"key":   "State",
+			"value": t.State,
+		},
+		{
+			"key":   "ReplicationFactor",
+			"value": *t.ReplicationFactor,
+		},
+		{
+			"key":   "PartitionCount",
+			"value": len(t.Partitions),
+		},
+	}
+
+	if t.Config != nil {
+		cfg := []map[string]interface{}{
+			{
+				"key":   "CleanupPolicy",
+				"value": t.Config.CleanupPolicy,
+			},
+			{
+				"key":   "CompressionType",
+				"value": t.Config.CompressionType,
+			},
+			{
+				"key":   "DeleteRetentionMS",
+				"value": *t.Config.DeleteRetentionMS,
+			},
+			{
+				"key":   "FileDeleteDelayMS",
+				"value": *t.Config.FileDeleteDelayMS,
+			},
+			{
+				"key":   "FlushMessages",
+				"value": *t.Config.FlushMessages,
+			},
+			{
+				"key":   "FlushMS",
+				"value": *t.Config.FlushMS,
+			},
+			{
+				"key":   "IndexIntervalBytes",
+				"value": *t.Config.IndexIntervalBytes,
+			},
+			{
+				"key":   "MaxCompactionLagMS",
+				"value": *t.Config.MaxCompactionLagMS,
+			},
+			{
+				"key":   "MessageDownConversionEnable",
+				"value": *t.Config.MessageDownConversionEnable,
+			},
+			{
+				"key":   "MessageFormatVersion",
+				"value": t.Config.MessageFormatVersion,
+			},
+			{
+				"key":   "MessageTimestampDifferentMaxMS",
+				"value": *t.Config.MessageTimestampDifferenceMaxMS,
+			},
+			{
+				"key":   "MessageTimestampType",
+				"value": t.Config.MessageTimestampType,
+			},
+			{
+				"key":   "MinCleanableDirtyRatio",
+				"value": *t.Config.MinCleanableDirtyRatio,
+			},
+			{
+				"key":   "MinCompactionLagMS",
+				"value": *t.Config.MinCompactionLagMS,
+			},
+			{
+				"key":   "MinInsyncReplicas",
+				"value": *t.Config.MinInsyncReplicas,
+			},
+			{
+				"key":   "Preallocate",
+				"value": *t.Config.Preallocate,
+			},
+			{
+				"key":   "RetentionBytes",
+				"value": *t.Config.RetentionBytes,
+			},
+			{
+				"key":   "RetentionMS",
+				"value": *t.Config.RetentionMS,
+			},
+			{
+				"key":   "SegmentBytes",
+				"value": *t.Config.SegmentBytes,
+			},
+			{
+				"key":   "SegmentIndexBytes",
+				"value": *t.Config.SegmentIndexBytes,
+			},
+			{
+				"key":   "SegmentJitterMS",
+				"value": *t.Config.SegmentJitterMS,
+			},
+			{
+				"key":   "SegmentMS",
+				"value": *t.Config.SegmentMS,
+			},
+		}
+		o = append(o, cfg...)
+	}
+
+	return o
+}
+
 type MySQLConfiguration struct {
 	MySQLConfiguration do.MySQLConfig
 }
