@@ -752,7 +752,7 @@ func (dp *DatabaseKafkaTopicPartitions) Cols() []string {
 	}
 }
 
-func (dt *DatabaseKafkaTopicPartitions) ColMap() map[string]string {
+func (dp *DatabaseKafkaTopicPartitions) ColMap() map[string]string {
 
 	return map[string]string{
 		"Id":             "Id",
@@ -762,10 +762,10 @@ func (dt *DatabaseKafkaTopicPartitions) ColMap() map[string]string {
 	}
 }
 
-func (dt *DatabaseKafkaTopicPartitions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dt.DatabaseTopicPartitions))
+func (dp *DatabaseKafkaTopicPartitions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dp.DatabaseTopicPartitions))
 
-	for _, p := range dt.DatabaseTopicPartitions {
+	for _, p := range dp.DatabaseTopicPartitions {
 		o := map[string]interface{}{
 			"Id":             p.Id,
 			"InSyncReplicas": p.InSyncReplicas,
