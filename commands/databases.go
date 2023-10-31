@@ -141,6 +141,7 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 	cmd.AddCommand(databaseFirewalls())
 	cmd.AddCommand(databaseOptions())
 	cmd.AddCommand(databaseConfiguration())
+	cmd.AddCommand(databaseTopic())
 
 	return cmd
 }
@@ -1533,6 +1534,96 @@ func RunDatabaseSetSQLModes(c *CmdConfig) error {
 	sqlModes := c.Args[1:]
 
 	return c.Databases().SetSQLMode(databaseID, sqlModes...)
+}
+
+func RunDatabaseTopicList(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topics, err := c.Databases().ListTopics(databaseID)
+	if err != nil {
+		return err
+	}
+	item := &displayers.DatabaseKafkaTopics{DatabaseTopics: topics}
+	return c.Display(item)
+}
+
+func RunDatabaseTopicGet(c *CmdConfig) error {
+	args := c.Args
+	if len(args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+	topic, err := c.Databases().GetTopic(databaseID, topicName)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.DatabaseKafkaTopic{DatabaseTopic: *topic}
+	return c.Display(item)
+}
+
+func RunDatabaseTopicListPartition(c *CmdConfig) error {
+	args := c.Args
+	if len(args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+	topic, err := c.Databases().GetTopic(databaseID, topicName)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.DatabaseKafkaTopicPartitions{DatabaseTopicPartitions: topic.Partitions}
+	return c.Display(item)
+}
+
+func databaseTopic() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "topics",
+			Short: `Display commands to manage topics for kafka database clusters`,
+			Long:  `The subcommands under ` + "`" + `doctl databases topics` + "`" + ` enable the management of topics for kafka database clusters`,
+		},
+	}
+
+	topicListDetails := `
+This command lists the following details for each topic in a kafka database cluster:
+
+	- The Name of the topic.
+	- The State of the topic - The possible values are: "topicstate_active", "configuring", "deleting".
+	- The Replication Factor of the topic - number of brokers the topic's partitions are replicated across.
+	`
+
+	topicGetDetails := `
+This command lists the following details for a given topic in a kafka database cluster:
+
+	- The Name of the topic.
+	- The Partitions of the topic - the number of partitions in the topics
+	- The Replication Factor of the topic - number of brokers the topic's partitions are replicated across.
+	- Additional advanced configuration for the topic.
+
+The details of the topic are listed in key/value pairs
+		`
+	topicGetPartitionDetails := `
+This command lists the following details for each partition of a given topic in a kafka database cluster:
+
+	- The Id - identifier of the topic partition.
+	- The Size - size of the topic partition, in bytes.
+	- The InSyncReplicas - number of brokers that are in sync with the partition leader.
+	- The EarliestOffset - earliest offset read amongst all consumers of the partition.
+	`
+
+	CmdBuilder(cmd, RunDatabaseTopicList, "list <database-id>", "Retrieve a list of topics for a given kafka database", topicListDetails, Writer, aliasOpt("ls"))
+	CmdBuilder(cmd, RunDatabaseTopicGet, "get <database-id> <topic-name>", "Retrieve the configuration for a given kafka topic", topicGetDetails, Writer, aliasOpt("g"))
+	CmdBuilder(cmd, RunDatabaseTopicListPartition, "partitions <database-id> <topic-name>", "Retrieve the partitions for a given kafka topic", topicGetPartitionDetails, Writer, aliasOpt("p"))
+	return cmd
 }
 
 func databaseFirewalls() *Command {

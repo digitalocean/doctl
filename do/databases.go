@@ -119,6 +119,11 @@ type DatabaseTopic struct {
 	*godo.DatabaseTopic
 }
 
+// DatabaseTopicPartitions is a slice of *godo.TopicPartition
+type DatabaseTopicPartitions struct {
+	Partitions []*godo.TopicPartition
+}
+
 // DatabasesService is an interface for interacting with DigitalOcean's Database API
 type DatabasesService interface {
 	List() (Databases, error)

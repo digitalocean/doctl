@@ -733,6 +733,51 @@ func (dt *DatabaseKafkaTopics) KV() []map[string]interface{} {
 	return out
 }
 
+type DatabaseKafkaTopicPartitions struct {
+	DatabaseTopicPartitions []*godo.TopicPartition
+}
+
+var _ Displayable = &DatabaseKafkaTopicPartitions{}
+
+func (dp *DatabaseKafkaTopicPartitions) JSON(out io.Writer) error {
+	return writeJSON(dp.DatabaseTopicPartitions, out)
+}
+
+func (dp *DatabaseKafkaTopicPartitions) Cols() []string {
+	return []string{
+		"Id",
+		"InSyncReplicas",
+		"EarliestOffset",
+		"Size",
+	}
+}
+
+func (dt *DatabaseKafkaTopicPartitions) ColMap() map[string]string {
+
+	return map[string]string{
+		"Id":             "Id",
+		"InSyncReplicas": "InSyncReplicas",
+		"EarliestOffset": "EarliestOffset",
+		"Size":           "Size",
+	}
+}
+
+func (dt *DatabaseKafkaTopicPartitions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dt.DatabaseTopicPartitions))
+
+	for _, p := range dt.DatabaseTopicPartitions {
+		o := map[string]interface{}{
+			"Id":             p.Id,
+			"InSyncReplicas": p.InSyncReplicas,
+			"EarliestOffset": p.EarliestOffset,
+			"Size":           p.Size,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
 type DatabaseKafkaTopic struct {
 	DatabaseTopic do.DatabaseTopic
 }
