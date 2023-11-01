@@ -907,7 +907,7 @@ func (dt *DatabaseKafkaTopic) KV() []map[string]interface{} {
 		if t.Config.MinCompactionLagMS != nil {
 			cfg = append(cfg, map[string]interface{}{
 				"key":   "MinCompactionLagMS",
-				"value": t.Config.MinCompactionLagMS,
+				"value": *t.Config.MinCompactionLagMS,
 			})
 		}
 		if t.Config.MinInsyncReplicas != nil {
