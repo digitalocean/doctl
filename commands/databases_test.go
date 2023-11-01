@@ -62,6 +62,7 @@ var (
 			},
 			PrivateNetworkUUID: "1fe49b6c-ac8e-11e9-98cb-3bec94f411bc",
 			Tags:               []string{"testing"},
+			StorageSizeMib:     20480,
 		},
 	}
 
@@ -341,6 +342,7 @@ func TestDatabasesCreate(t *testing.T) {
 		SizeSlug:           testDBCluster.SizeSlug,
 		PrivateNetworkUUID: testDBCluster.PrivateNetworkUUID,
 		Tags:               testDBCluster.Tags,
+		StorageSizeMib:     testDBCluster.StorageSizeMib,
 	}
 
 	// Successful call
@@ -355,6 +357,7 @@ func TestDatabasesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
 		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
 		config.Doit.Set(config.NS, doctl.ArgTag, testDBCluster.Tags)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseStorageSizeMib, testDBCluster.StorageSizeMib)
 
 		err := RunDatabaseCreate(config)
 		assert.NoError(t, err)
@@ -507,8 +510,9 @@ func TestDatabaseMigrate(t *testing.T) {
 
 func TestDatabaseResize(t *testing.T) {
 	r := &godo.DatabaseResizeRequest{
-		SizeSlug: testDBCluster.SizeSlug,
-		NumNodes: testDBCluster.NumNodes,
+		SizeSlug:       testDBCluster.SizeSlug,
+		NumNodes:       testDBCluster.NumNodes,
+		StorageSizeMib: testDBCluster.StorageSizeMib,
 	}
 
 	// Success
@@ -517,6 +521,7 @@ func TestDatabaseResize(t *testing.T) {
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseStorageSizeMib, testDBCluster.StorageSizeMib)
 
 		err := RunDatabaseResize(config)
 		assert.NoError(t, err)
@@ -528,6 +533,7 @@ func TestDatabaseResize(t *testing.T) {
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseStorageSizeMib, testDBCluster.StorageSizeMib)
 
 		err := RunDatabaseResize(config)
 		assert.EqualError(t, err, errTest.Error())
