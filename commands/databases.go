@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1551,8 +1552,7 @@ func RunDatabaseTopicList(c *CmdConfig) error {
 }
 
 func RunDatabaseTopicGet(c *CmdConfig) error {
-	args := c.Args
-	if len(args) < 2 {
+	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
@@ -1568,8 +1568,7 @@ func RunDatabaseTopicGet(c *CmdConfig) error {
 }
 
 func RunDatabaseTopicListPartition(c *CmdConfig) error {
-	args := c.Args
-	if len(args) < 2 {
+	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 
@@ -1582,6 +1581,198 @@ func RunDatabaseTopicListPartition(c *CmdConfig) error {
 
 	item := &displayers.DatabaseKafkaTopicPartitions{DatabaseTopicPartitions: topic.Partitions}
 	return c.Display(item)
+}
+
+func RunDatabaseTopicDelete(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("kafka topic", 1) == nil {
+		databaseID := c.Args[0]
+		topicName := c.Args[1]
+		return c.Databases().DeleteTopic(databaseID, topicName)
+	}
+
+	return errOperationAborted
+}
+
+func RunDatabaseTopicCreate(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+
+	pc, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseTopicPartitionCount)
+	if err != nil {
+		return err
+	}
+	pcUInt32 := uint32(pc)
+	rf, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseTopicReplicationFactor)
+	if err != nil {
+		return err
+	}
+	rfUInt32 := uint32(rf)
+
+	_, err = c.Databases().CreateTopic(databaseID, &godo.DatabaseCreateTopicRequest{
+		Name:              topicName,
+		ReplicationFactor: &rfUInt32,
+		PartitionCount:    &pcUInt32,
+		Config:            getDatabaseTopicConfigArgs(c),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getDatabaseTopicConfigArgs(c *CmdConfig) *godo.TopicConfig {
+	res := &godo.TopicConfig{}
+	val, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicCleanupPolicy)
+	if err == nil {
+		res.CleanupPolicy = val
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicCompressionType)
+	if err == nil {
+		res.CompressionType = val
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicDeleteRetentionMS)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.DeleteRetentionMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicFileDeleteDelayMS)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.FileDeleteDelayMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicFlushMessages)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.FlushMessages = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicFlushMS)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.FlushMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicIntervalIndexBytes)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.IndexIntervalBytes = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMaxCompactionLagMS)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.MaxCompactionLagMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMaxMessageBytes)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.MaxMessageBytes = &i
+		}
+	}
+	bVal, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicMesssageDownConversionEnable)
+	if err == nil {
+		res.MessageDownConversionEnable = bVal
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMessageFormatVersion)
+	if err == nil {
+		res.MessageFormatVersion = val
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMessageTimestampType)
+	if err == nil {
+		res.MessageTimestampType = val
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMinCleanableDirtyRatio)
+	if err == nil {
+		i, err := strconv.ParseFloat(val, 32)
+		if err == nil {
+			iFloat32 := float32(i)
+			res.MinCleanableDirtyRatio = &iFloat32
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMinCompactionLagMS)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.MinCompactionLagMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMinInsyncReplicas)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 32)
+		if err == nil {
+			iUint32 := uint32(i)
+			res.MinInsyncReplicas = &iUint32
+		}
+	}
+	bVal, err = c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicPreallocate)
+	if err == nil {
+		res.Preallocate = bVal
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicRetentionBytes)
+	if err == nil {
+		i, err := strconv.ParseInt(val, 10, 64)
+		if err == nil {
+			res.RetentionBytes = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicRetentionMS)
+	if err == nil {
+		i, err := strconv.ParseInt(val, 10, 64)
+		if err == nil {
+			res.RetentionMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicSegmentBytes)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.SegmentBytes = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicSegmentJitterMS)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.SegmentJitterMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicSegmentMS)
+	if err == nil {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.SegmentMS = &i
+		}
+	}
+	bVal, err = c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicUncleanLeaderElectionEnable)
+	if err == nil {
+		res.UncleanLeaderElectionEnable = bVal
+	}
+
+	return res
 }
 
 func databaseTopic() *Command {
@@ -1623,6 +1814,59 @@ This command lists the following details for each partition of a given topic in 
 	CmdBuilder(cmd, RunDatabaseTopicList, "list <database-id>", "Retrieve a list of topics for a given kafka database", topicListDetails, Writer, aliasOpt("ls"))
 	CmdBuilder(cmd, RunDatabaseTopicGet, "get <database-id> <topic-name>", "Retrieve the configuration for a given kafka topic", topicGetDetails, Writer, aliasOpt("g"))
 	CmdBuilder(cmd, RunDatabaseTopicListPartition, "partitions <database-id> <topic-name>", "Retrieve the partitions for a given kafka topic", topicGetPartitionDetails, Writer, aliasOpt("p"))
+	cmdDatabaseTopicDelete := CmdBuilder(cmd, RunDatabaseTopicDelete, "delete <database-id> <topic-name>", "Deletes a kafka topic by topic name", "", Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdDatabaseTopicDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the kafka topic without a confirmation prompt")
+	cmdDatabaseTopicCreate := CmdBuilder(cmd, RunDatabaseTopicCreate, "create <database-id>", "Creates a topic for a given kafka database",
+		"This command creates a kafka topic for the specified kafka database cluster, giving it the specified name. Example: doctl databases topics create <cluster_uuid> <topic_name>", Writer, aliasOpt("c"))
+	AddIntFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicReplicationFactor, "", 2, "Specifies the number of nodes to replicate data across the kafka cluster")
+	AddIntFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicPartitionCount, "", 1, "Specifies the number of partitions available for the topic")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicCleanupPolicy, "", "delete",
+		"Specifies the retention policy to use on log segments: Possible values are 'delete', 'compact_delete', 'compact'")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicCompressionType, "", "producer",
+		"Specifies the compression type for a kafka topic: Possible values are 'producer', 'gzip', 'snappy', 'Iz4', 'zstd', 'uncompressed'")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicDeleteRetentionMS, "", "",
+		"Specifies how long (in ms) to retain delete tombstone markers for topics")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicFileDeleteDelayMS, "", "",
+		"Specifies the minimum time (in ms) to wait before deleting a file from the filesystem")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicFlushMessages, "", "",
+		"Specifies the maximum number of messages to accumulate on a log partition before messages are flushed to disk")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicFlushMS, "", "",
+		"Specifies the maximum time (in ms) that a message is kept in memory before being flushed to disk")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicIntervalIndexBytes, "", "",
+		"Specifies the number of bytes between entries being added into the offset index")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicMaxCompactionLagMS, "", "",
+		"Specifies the maximum time (in ms) that a message will remain uncompacted. This is only applicable if the logs have compaction enabled")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicMaxMessageBytes, "", "",
+		"Specifies the largest record batch (in bytes) that can be sent to the server. This is calculated after compression, if compression is enabled")
+	AddBoolFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicMesssageDownConversionEnable, "", true,
+		"Specifies whether down-conversion of message formats is enabled to satisfy consumer requests")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicMessageFormatVersion, "", "",
+		`Specifies the message format version used by the broker to append messages to the logs. By setting a format version, all existing messages on disk must be
+		smaller or equal to the specified version`)
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicMessageTimestampType, "", "",
+		"Specifies whether to use the create time or log append time as the timestamp on a message")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicMinCleanableDirtyRatio, "", "",
+		`Specifies the frequenty of log compaction (if enabled) in relation to duplicates present in the logs. For example, 0.5 would mean at most half of the log
+		could be duplicates before compaction would begin`)
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicMinCompactionLagMS, "", "",
+		"Specifies the minimum time (in ms) that a message will remain uncompacted. This is only applicable if the logs have compaction enabled")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicMinInsyncReplicas, "", "",
+		"Specifies the minimum number of replicas that must ACK a write for it to be considered successful")
+	AddBoolFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicPreallocate, "", false,
+		"Specifies whether a file should be preallocated on disk when creating a new log segment")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicRetentionBytes, "", "",
+		"Specifies the maximum size (in bytes) before deleting messages. '-1' indicates that there is no limit")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicRetentionMS, "", "",
+		"Specifies the maximum time (in ms) to store a message before deleting it. '-1' indicates that there is no limit")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicSegmentBytes, "", "",
+		"Specifies the maximum size (in bytes) of a single log file")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicSegmentJitterMS, "", "",
+		"Specifies the maximum time (in ms) for random jitter that is subtracted from the scheduled segment roll time to avoid thundering herd problems")
+	AddStringFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicSegmentMS, "", "",
+		"Specifies the maximum time (in ms) to wait to force a log roll if the segment file isn't full. After this period, the log will be forced to roll")
+	AddBoolFlag(cmdDatabaseTopicCreate, doctl.ArgDatabaseTopicUncleanLeaderElectionEnable, "", false,
+		"Specifies whether to allow replicas that are not insync to be elected as leader as a last resort. This may result in data loss since those leaders are not in sync")
+
 	return cmd
 }
 

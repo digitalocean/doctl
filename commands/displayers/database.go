@@ -825,95 +825,144 @@ func (dt *DatabaseKafkaTopic) KV() []map[string]interface{} {
 	}
 
 	if t.Config != nil {
-		cfg := []map[string]interface{}{
-			{
+		cfg := make([]map[string]interface{}, 0)
+		if t.Config.CleanupPolicy != "" {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "CleanupPolicy",
 				"value": t.Config.CleanupPolicy,
-			},
-			{
+			})
+		}
+		if t.Config.CompressionType != "" {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "CompressionType",
 				"value": t.Config.CompressionType,
-			},
-			{
+			})
+		}
+		if t.Config.DeleteRetentionMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "DeleteRetentionMS",
 				"value": *t.Config.DeleteRetentionMS,
-			},
-			{
+			})
+		}
+		if t.Config.FileDeleteDelayMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "FileDeleteDelayMS",
 				"value": *t.Config.FileDeleteDelayMS,
-			},
-			{
+			})
+		}
+		if t.Config.FlushMessages != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "FlushMessages",
 				"value": *t.Config.FlushMessages,
-			},
-			{
+			})
+		}
+		if t.Config.FlushMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "FlushMS",
 				"value": *t.Config.FlushMS,
-			},
-			{
+			})
+		}
+		if t.Config.IndexIntervalBytes != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "IndexIntervalBytes",
 				"value": *t.Config.IndexIntervalBytes,
-			},
-			{
+			})
+		}
+		if t.Config.MaxCompactionLagMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "MaxCompactionLagMS",
 				"value": *t.Config.MaxCompactionLagMS,
-			},
-			{
+			})
+		}
+		if t.Config.MessageDownConversionEnable != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "MessageDownConversionEnable",
 				"value": *t.Config.MessageDownConversionEnable,
-			},
-			{
+			})
+		}
+		if t.Config.MessageFormatVersion != "" {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "MessageFormatVersion",
 				"value": t.Config.MessageFormatVersion,
-			},
-			{
+			})
+		}
+		if t.Config.MessageTimestampDifferenceMaxMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "MessageTimestampDifferentMaxMS",
 				"value": *t.Config.MessageTimestampDifferenceMaxMS,
-			},
-			{
+			})
+		}
+		if t.Config.MessageTimestampType != "" {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "MessageTimestampType",
 				"value": t.Config.MessageTimestampType,
-			},
-			{
+			})
+		}
+		if t.Config.MinCleanableDirtyRatio != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "MinCleanableDirtyRatio",
 				"value": *t.Config.MinCleanableDirtyRatio,
-			},
-			{
+			})
+		}
+		if t.Config.MinCompactionLagMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "MinCompactionLagMS",
-				"value": *t.Config.MinCompactionLagMS,
-			},
-			{
+				"value": t.Config.MinCompactionLagMS,
+			})
+		}
+		if t.Config.MinInsyncReplicas != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "MinInsyncReplicas",
 				"value": *t.Config.MinInsyncReplicas,
-			},
-			{
+			})
+		}
+		if t.Config.Preallocate != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "Preallocate",
 				"value": *t.Config.Preallocate,
-			},
-			{
+			})
+		}
+		if t.Config.RetentionBytes != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "RetentionBytes",
 				"value": *t.Config.RetentionBytes,
-			},
-			{
+			})
+		}
+		if t.Config.RetentionMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "RetentionMS",
 				"value": *t.Config.RetentionMS,
-			},
-			{
+			})
+		}
+		if t.Config.SegmentBytes != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "SegmentBytes",
 				"value": *t.Config.SegmentBytes,
-			},
-			{
+			})
+		}
+		if t.Config.SegmentIndexBytes != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "SegmentIndexBytes",
 				"value": *t.Config.SegmentIndexBytes,
-			},
-			{
+			})
+		}
+		if t.Config.SegmentJitterMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "SegmentJitterMS",
 				"value": *t.Config.SegmentJitterMS,
-			},
-			{
+			})
+		}
+		if t.Config.SegmentMS != nil {
+			cfg = append(cfg, map[string]interface{}{
 				"key":   "SegmentMS",
 				"value": *t.Config.SegmentMS,
-			},
+			})
+		}
+		if t.Config.UncleanLeaderElectionEnable != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "UncleanLeaderElectionEnable",
+				"value": *t.Config.UncleanLeaderElectionEnable,
+			})
 		}
 		o = append(o, cfg...)
 	}
