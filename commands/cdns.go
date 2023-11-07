@@ -55,7 +55,7 @@ The Time To Live (TTL) value is the length of time in seconds that a file is cac
 	CertIDDesc := "Specify a certificate ID for the custom domain"
 	cmdCDNList := CmdBuilder(cmd, RunCDNList, "list", "List CDNs that have already been created", `Retrieves a list of your existing Content Delivery Networks (CDNs) and their following details:`+CDNDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.CDN{}))
-	cmdCDNList.Example = "doctl compute cdn list"
+	cmdCDNList.Example = `The following example retrieves a list of CDNs associated with your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, endpoint, and custom domain details for each CDN listed: doctl compute cdn list --format ID,Endpoint,CustomDomain`
 
 	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `Creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`+CDNnotes, Writer,
 		aliasOpt("c"), displayerType(&displayers.CDN{}))
@@ -80,7 +80,7 @@ You can retrieve a list of CDN IDs by calling `+"`"+`doctl compute cdn list`+"`"
 	AddIntFlag(cmdCDNUpdate, doctl.ArgCDNTTL, "", 3600, TTLDesc)
 	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNDomain, "", "", DomainDesc)
 	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNCertificateID, "", "", CertIDDesc)
-	cmdCDNUpdate.Example = `The following example updates the TTL for a CDN with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` to 600 seconds: doctl compute cdn update 418b7972-fc67-41ea-ab4b-6f9477c4f7d8 --ttl 600`
+	cmdCDNUpdate.Example = `The following example updates the TTL to 600 second for a CDN with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + `: doctl compute cdn update 418b7972-fc67-41ea-ab4b-6f9477c4f7d8 --ttl 600`
 
 	cmdCDNFlushCache := CmdBuilder(cmd, RunCDNFlushCache, "flush <cdn-id>", "Flush the cache of a CDN", `Flushes the cache of a Content Delivery Network (CDN), which:
 
