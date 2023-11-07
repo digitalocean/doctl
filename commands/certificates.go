@@ -53,7 +53,7 @@ Once a certificate has been stored, it is assigned a unique certificate ID that 
 	cmdCertificateCreate := CmdBuilder(cmd, RunCertificateCreate, "create",
 		"Create a new certificate", `Creates a new Let's Encrypt certificate or adds an existing custom certificate to your team. There are two supported certificate types: Let's Encrypt certificates, and custom certificates.
 
-Let's Encrypt certificates are free and are auto-renewed and managed for you by DigitalOcean.
+Let's Encrypt certificates are free, auto-renewed and managed for you by DigitalOcean.
 
 To create a Let's Encrypt certificate, you need to add the domain(s) to your account at using the DigitalOcean control panel, or via `+"`"+`doctl compute domain create`+"`"+`, then provide a certificate name and a comma-separated list of the domain names you'd like to associate with the certificate:
 
@@ -63,17 +63,17 @@ To upload a custom certificate, you need to provide a certificate name, the path
 
 	doctl compute certificate create --type custom --name mycert --leaf-certificate-path cert.pem --certificate-chain-path fullchain.pem --private-key-path privkey.pem`, Writer, aliasOpt("c"))
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateName, "", "",
-		"Certificate name", requiredOpt())
+		"A user-specified name for the certificate.", requiredOpt())
 	AddStringSliceFlag(cmdCertificateCreate, doctl.ArgCertificateDNSNames, "",
 		[]string{}, "Comma-separated list of domains for which the certificate will be issued. The domains must be managed using DigitalOcean's DNS.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgPrivateKeyPath, "", "",
-		"The path to a PEM-formatted private-key corresponding to the SSL certificate.")
+		"The path on your local machine to a PEM-formatted private-key corresponding to the SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgLeafCertificatePath, "", "",
-		"The path to a PEM-formatted public SSL certificate.")
+		"The path on your local machine to a PEM-formatted public SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "",
-		"The path to a full PEM-formatted trust chain between the certificate authority's certificate and your domain's SSL certificate.")
+		"The path on your local machine to a full PEM-formatted trust chain between the certificate authority's certificate and your domain's SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "",
-		"Certificate type [custom|lets_encrypt]")
+		"The type of certificate, `custom` or `lets_encrypt`.")
 
 	cmdCertificateList := CmdBuilder(cmd, RunCertificateList, "list", "Retrieve list of the account's stored certificates", `This command retrieves a list of all certificates associated with the account. The following details are shown for each certificate:`+certDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Certificate{}))
