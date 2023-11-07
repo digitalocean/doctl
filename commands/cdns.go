@@ -39,30 +39,30 @@ To use a custom subdomain to access the CDN endpoint, provide the ID of a Digita
 
 	CDNnotes := `
 
-The Time To Live (TTL) value is the length of time in seconds that a file is cached by the CDN before being refreshed. If a request to access a file occurs after the TTL has expired, the CDN delivers the file by requesting it directly from the origin URL, re-caching the file, and resetting the TTL.`
+The Time To Live (TTL) value is the length of time, in seconds, that a file is cached by the CDN before being refreshed. If a request to access a file occurs after the TTL has expired, the CDN delivers the file by requesting it directly from the origin URL, re-caching the file, and resetting the TTL.`
 
 	CDNDetails := `
 
-- The ID for the CDN, in UUID format
+- The ID for the CDN, in UUID format.
 - The fully qualified domain name (FQDN) for the origin server, which provides the content to the CDN. Currently, only Spaces are supported with CDNs.
 - The fully qualified domain name (FQDN) of the endpoint from which the CDN-backed content is served.
 - The "Time To Live" (TTL) value for cached content, in seconds. The default is 3,600 (one hour).
-- An optional custom subdomain when the CDN can be accessed
+- An optional custom subdomain when the CDN can be accessed.
 - The ID of a DigitalOcean-managed TLS certificate used for SSL when a custom subdomain is provided.
-- The date and time when the CDN was created, in ISO8601 date/time format`
+- The date and time when the CDN was created, in ISO8601 date/time format.`
 	TTLDesc := "The \"Time To Live\" (TTL) value for cached content, in seconds"
-	DomainDesc := "Specify a custom domain to use with the CDN"
-	CertIDDesc := "Specify a certificate ID for the custom domain"
+	DomainDesc := "A custom domain to use with the CDN"
+	CertIDDesc := "An SSL certificate ID for the custom domain"
 	cmdCDNList := CmdBuilder(cmd, RunCDNList, "list", "List CDNs that have already been created", `Retrieves a list of your existing Content Delivery Networks (CDNs) and their following details:`+CDNDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.CDN{}))
 	cmdCDNList.Example = `The following example retrieves a list of CDNs associated with your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, endpoint, and custom domain details for each CDN listed: doctl compute cdn list --format ID,Endpoint,CustomDomain`
 
-	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `Creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`+CDNnotes, Writer,
+	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `Creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with an SSL.`+CDNnotes, Writer,
 		aliasOpt("c"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNCreate, doctl.ArgCDNTTL, "", 3600, TTLDesc)
 	AddStringFlag(cmdCDNCreate, doctl.ArgCDNDomain, "", "", DomainDesc)
 	AddStringFlag(cmdCDNCreate, doctl.ArgCDNCertificateID, "", "", CertIDDesc)
-	cmdCDNCreate.Example = `The following example creates a CDN for the custom domain ` + "`" + `cdn.example.com ` + "`" + ` using a DigitalOcean Spaces origin endpoint and SSL certificate ID for the custom domain: doctl compute cdn create https://tester-two.blr1.digitaloceanspaces.com --domain cdn.example.com --certificate-id f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+	cmdCDNCreate.Example = `The following example creates a CDN for the custom domain ` + "`" + `cdn.example.com` + "`" + ` using a DigitalOcean Spaces origin endpoint and SSL certificate ID: doctl compute cdn create https://tester-two.blr1.digitaloceanspaces.com --domain cdn.example.com --certificate-id f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdRunCDNDelete := CmdBuilder(cmd, RunCDNDelete, "delete <cdn-id>", "Delete a CDN", `Deletes the CDN specified by the ID.
 
