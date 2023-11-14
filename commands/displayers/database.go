@@ -963,12 +963,6 @@ func (dt *DatabaseKafkaTopic) KV() []map[string]interface{} {
 				"value": *t.Config.SegmentMS,
 			})
 		}
-		if t.Config.UncleanLeaderElectionEnable != nil {
-			cfg = append(cfg, map[string]interface{}{
-				"key":   "UncleanLeaderElectionEnable",
-				"value": *t.Config.UncleanLeaderElectionEnable,
-			})
-		}
 		o = append(o, cfg...)
 	}
 

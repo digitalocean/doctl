@@ -435,8 +435,6 @@ const (
 	ArgDatabaseTopicSegmentJitterMS = "segment-jitter-ms"
 	// ArgDatabaseTopicSegmentMS is the period of time, in ms, after which the log will be forced to roll if the segment file isn't full
 	ArgDatabaseTopicSegmentMS = "segment-ms"
-	// ArgDatabaseTopicUncleanLeaderElectionEnable determines whether to allow replicas that are not insync to be elected as leaders as last resort
-	ArgDatabaseTopicUncleanLeaderElectionEnable = "unclean-leader-election-enable"
 
 	// ArgPrivateNetworkUUID is the flag for VPC UUID
 	ArgPrivateNetworkUUID = "private-network-uuid"
