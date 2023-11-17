@@ -1852,7 +1852,7 @@ This command lists the following details for each partition of a given topic in 
 	cmdDatabaseTopicDelete := CmdBuilder(cmd, RunDatabaseTopicDelete, "delete <database-uuid> <topic-name>", "Deletes a kafka topic by topic name", "", Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseTopicDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the kafka topic without a confirmation prompt")
 	cmdDatabaseTopicCreate := CmdBuilder(cmd, RunDatabaseTopicCreate, "create <database-uuid> <topic-name>", "Creates a topic for a given kafka database",
-		"This command creates a kafka topic for the specified kafka database cluster, giving it the specified name. Example: doctl databases topics create <cluster_uuid> <topic_name>", Writer, aliasOpt("c"))
+		"This command creates a kafka topic for the specified kafka database cluster, giving it the specified name. Example: doctl databases topics create <database-uuid> <topic-name> --replication_factor 2 --partition_count 4", Writer, aliasOpt("c"))
 	cmdDatabaseTopicUpdate := CmdBuilder(cmd, RunDatabaseTopicUpdate, "update <database-id>", "Updates a topic for a given kafka database",
 		"This command updates a kafka topic for the specified kafka database cluster. Example: doctl databases topics update <cluster_uuid> <topic_name>", Writer, aliasOpt("u"))
 	cmdsWithConfig := []*Command{cmdDatabaseTopicCreate, cmdDatabaseTopicUpdate}
