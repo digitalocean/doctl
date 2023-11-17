@@ -1846,7 +1846,7 @@ This command lists the following details for each partition of a given topic in 
 	- The EarliestOffset - earliest offset read amongst all consumers of the partition.
 	`
 
-	CmdBuilder(cmd, RunDatabaseTopicList, "list <database-id>", "Retrieve a list of topics for a given kafka database", topicListDetails, Writer, displayerType(&displayers.DatabaseKafkaTopics{}), aliasOpt("ls"))
+	CmdBuilder(cmd, RunDatabaseTopicList, "list <database-uuid>", "Retrieve a list of topics for a given kafka database", topicListDetails, Writer, displayerType(&displayers.DatabaseKafkaTopics{}), aliasOpt("ls"))
 	CmdBuilder(cmd, RunDatabaseTopicGet, "get <database-id> <topic-name>", "Retrieve the configuration for a given kafka topic", topicGetDetails, Writer, displayerType(&displayers.DatabaseKafkaTopic{}), aliasOpt("g"))
 	CmdBuilder(cmd, RunDatabaseTopicListPartition, "partitions <database-id> <topic-name>", "Retrieve the partitions for a given kafka topic", topicGetPartitionDetails, Writer, aliasOpt("p"))
 	cmdDatabaseTopicDelete := CmdBuilder(cmd, RunDatabaseTopicDelete, "delete <database-id> <topic-name>", "Deletes a kafka topic by topic name", "", Writer, aliasOpt("rm"))
