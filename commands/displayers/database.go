@@ -45,6 +45,7 @@ func (d *Databases) Cols() []string {
 			"Region",
 			"Status",
 			"Size",
+			"StorageMib",
 		}
 	}
 
@@ -59,34 +60,37 @@ func (d *Databases) Cols() []string {
 		"Size",
 		"URI",
 		"Created",
+		"StorageMib",
 	}
 }
 
 func (d *Databases) ColMap() map[string]string {
 	if d.Short {
 		return map[string]string{
-			"ID":       "ID",
-			"Name":     "Name",
-			"Engine":   "Engine",
-			"Version":  "Version",
-			"NumNodes": "Number of Nodes",
-			"Region":   "Region",
-			"Status":   "Status",
-			"Size":     "Size",
+			"ID":         "ID",
+			"Name":       "Name",
+			"Engine":     "Engine",
+			"Version":    "Version",
+			"NumNodes":   "Number of Nodes",
+			"Region":     "Region",
+			"Status":     "Status",
+			"Size":       "Size",
+			"StorageMib": "Storage (MiB)",
 		}
 	}
 
 	return map[string]string{
-		"ID":       "ID",
-		"Name":     "Name",
-		"Engine":   "Engine",
-		"Version":  "Version",
-		"NumNodes": "Number of Nodes",
-		"Region":   "Region",
-		"Status":   "Status",
-		"Size":     "Size",
-		"URI":      "URI",
-		"Created":  "Created At",
+		"ID":         "ID",
+		"Name":       "Name",
+		"Engine":     "Engine",
+		"Version":    "Version",
+		"NumNodes":   "Number of Nodes",
+		"Region":     "Region",
+		"Status":     "Status",
+		"Size":       "Size",
+		"StorageMib": "Storage (MiB)",
+		"URI":        "URI",
+		"Created":    "Created At",
 	}
 }
 
@@ -95,16 +99,17 @@ func (d *Databases) KV() []map[string]interface{} {
 
 	for _, db := range d.Databases {
 		o := map[string]interface{}{
-			"ID":       db.ID,
-			"Name":     db.Name,
-			"Engine":   db.EngineSlug,
-			"Version":  db.VersionSlug,
-			"NumNodes": db.NumNodes,
-			"Region":   db.RegionSlug,
-			"Status":   db.Status,
-			"Size":     db.SizeSlug,
-			"URI":      db.Connection.URI,
-			"Created":  db.CreatedAt,
+			"ID":         db.ID,
+			"Name":       db.Name,
+			"Engine":     db.EngineSlug,
+			"Version":    db.VersionSlug,
+			"NumNodes":   db.NumNodes,
+			"Region":     db.RegionSlug,
+			"Status":     db.Status,
+			"Size":       db.SizeSlug,
+			"StorageMib": db.StorageSizeMib,
+			"URI":        db.Connection.URI,
+			"Created":    db.CreatedAt,
 		}
 		out = append(out, o)
 	}
@@ -689,6 +694,279 @@ func (dr *DatabaseFirewallRules) KV() []map[string]interface{} {
 	}
 
 	return out
+}
+
+type DatabaseKafkaTopics struct {
+	DatabaseTopics do.DatabaseTopics
+}
+
+var _ Displayable = &DatabaseKafkaTopics{}
+
+func (dt *DatabaseKafkaTopics) JSON(out io.Writer) error {
+	return writeJSON(dt.DatabaseTopics, out)
+}
+
+func (dt *DatabaseKafkaTopics) Cols() []string {
+	return []string{
+		"Name",
+		"State",
+		"ReplicationFactor",
+	}
+}
+
+func (dt *DatabaseKafkaTopics) ColMap() map[string]string {
+
+	return map[string]string{
+		"Name":              "Name",
+		"State":             "State",
+		"ReplicationFactor": "ReplicationFactor",
+	}
+}
+
+func (dt *DatabaseKafkaTopics) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dt.DatabaseTopics))
+
+	for _, t := range dt.DatabaseTopics {
+		o := map[string]interface{}{
+			"Name":              t.Name,
+			"State":             t.State,
+			"ReplicationFactor": *t.ReplicationFactor,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
+type DatabaseKafkaTopicPartitions struct {
+	DatabaseTopicPartitions []*godo.TopicPartition
+}
+
+var _ Displayable = &DatabaseKafkaTopicPartitions{}
+
+func (dp *DatabaseKafkaTopicPartitions) JSON(out io.Writer) error {
+	return writeJSON(dp.DatabaseTopicPartitions, out)
+}
+
+func (dp *DatabaseKafkaTopicPartitions) Cols() []string {
+	return []string{
+		"Id",
+		"InSyncReplicas",
+		"EarliestOffset",
+		"Size",
+	}
+}
+
+func (dp *DatabaseKafkaTopicPartitions) ColMap() map[string]string {
+
+	return map[string]string{
+		"Id":             "Id",
+		"InSyncReplicas": "InSyncReplicas",
+		"EarliestOffset": "EarliestOffset",
+		"Size":           "Size",
+	}
+}
+
+func (dp *DatabaseKafkaTopicPartitions) KV() []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(dp.DatabaseTopicPartitions))
+
+	for _, p := range dp.DatabaseTopicPartitions {
+		o := map[string]interface{}{
+			"Id":             p.Id,
+			"InSyncReplicas": p.InSyncReplicas,
+			"EarliestOffset": p.EarliestOffset,
+			"Size":           p.Size,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
+type DatabaseKafkaTopic struct {
+	DatabaseTopic do.DatabaseTopic
+}
+
+var _ Displayable = &DatabaseKafkaTopic{}
+
+func (dt *DatabaseKafkaTopic) JSON(out io.Writer) error {
+	return writeJSON(dt.DatabaseTopic, out)
+}
+
+func (dt *DatabaseKafkaTopic) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dt *DatabaseKafkaTopic) ColMap() map[string]string {
+
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dt *DatabaseKafkaTopic) KV() []map[string]interface{} {
+	t := dt.DatabaseTopic
+	o := []map[string]interface{}{
+		{
+			"key":   "Name",
+			"value": t.Name,
+		},
+		{
+			"key":   "State",
+			"value": t.State,
+		},
+		{
+			"key":   "ReplicationFactor",
+			"value": *t.ReplicationFactor,
+		},
+		{
+			"key":   "PartitionCount",
+			"value": len(t.Partitions),
+		},
+	}
+
+	if t.Config != nil {
+		cfg := make([]map[string]interface{}, 0)
+		if t.Config.CleanupPolicy != "" {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "CleanupPolicy",
+				"value": t.Config.CleanupPolicy,
+			})
+		}
+		if t.Config.CompressionType != "" {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "CompressionType",
+				"value": t.Config.CompressionType,
+			})
+		}
+		if t.Config.DeleteRetentionMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "DeleteRetentionMS",
+				"value": *t.Config.DeleteRetentionMS,
+			})
+		}
+		if t.Config.FileDeleteDelayMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "FileDeleteDelayMS",
+				"value": *t.Config.FileDeleteDelayMS,
+			})
+		}
+		if t.Config.FlushMessages != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "FlushMessages",
+				"value": *t.Config.FlushMessages,
+			})
+		}
+		if t.Config.FlushMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "FlushMS",
+				"value": *t.Config.FlushMS,
+			})
+		}
+		if t.Config.IndexIntervalBytes != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "IndexIntervalBytes",
+				"value": *t.Config.IndexIntervalBytes,
+			})
+		}
+		if t.Config.MaxCompactionLagMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "MaxCompactionLagMS",
+				"value": *t.Config.MaxCompactionLagMS,
+			})
+		}
+		if t.Config.MessageDownConversionEnable != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "MessageDownConversionEnable",
+				"value": *t.Config.MessageDownConversionEnable,
+			})
+		}
+		if t.Config.MessageFormatVersion != "" {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "MessageFormatVersion",
+				"value": t.Config.MessageFormatVersion,
+			})
+		}
+		if t.Config.MessageTimestampDifferenceMaxMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "MessageTimestampDifferentMaxMS",
+				"value": *t.Config.MessageTimestampDifferenceMaxMS,
+			})
+		}
+		if t.Config.MessageTimestampType != "" {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "MessageTimestampType",
+				"value": t.Config.MessageTimestampType,
+			})
+		}
+		if t.Config.MinCleanableDirtyRatio != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "MinCleanableDirtyRatio",
+				"value": *t.Config.MinCleanableDirtyRatio,
+			})
+		}
+		if t.Config.MinCompactionLagMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "MinCompactionLagMS",
+				"value": *t.Config.MinCompactionLagMS,
+			})
+		}
+		if t.Config.MinInsyncReplicas != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "MinInsyncReplicas",
+				"value": *t.Config.MinInsyncReplicas,
+			})
+		}
+		if t.Config.Preallocate != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "Preallocate",
+				"value": *t.Config.Preallocate,
+			})
+		}
+		if t.Config.RetentionBytes != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "RetentionBytes",
+				"value": *t.Config.RetentionBytes,
+			})
+		}
+		if t.Config.RetentionMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "RetentionMS",
+				"value": *t.Config.RetentionMS,
+			})
+		}
+		if t.Config.SegmentBytes != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "SegmentBytes",
+				"value": *t.Config.SegmentBytes,
+			})
+		}
+		if t.Config.SegmentIndexBytes != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "SegmentIndexBytes",
+				"value": *t.Config.SegmentIndexBytes,
+			})
+		}
+		if t.Config.SegmentJitterMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "SegmentJitterMS",
+				"value": *t.Config.SegmentJitterMS,
+			})
+		}
+		if t.Config.SegmentMS != nil {
+			cfg = append(cfg, map[string]interface{}{
+				"key":   "SegmentMS",
+				"value": *t.Config.SegmentMS,
+			})
+		}
+		o = append(o, cfg...)
+	}
+
+	return o
 }
 
 type MySQLConfiguration struct {

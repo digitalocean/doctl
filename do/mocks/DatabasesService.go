@@ -99,6 +99,21 @@ func (mr *MockDatabasesServiceMockRecorder) CreateReplica(arg0, arg1 any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateReplica", reflect.TypeOf((*MockDatabasesService)(nil).CreateReplica), arg0, arg1)
 }
 
+// CreateTopic mocks base method.
+func (m *MockDatabasesService) CreateTopic(arg0 string, arg1 *godo.DatabaseCreateTopicRequest) (*do.DatabaseTopic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateTopic", arg0, arg1)
+	ret0, _ := ret[0].(*do.DatabaseTopic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateTopic indicates an expected call of CreateTopic.
+func (mr *MockDatabasesServiceMockRecorder) CreateTopic(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTopic", reflect.TypeOf((*MockDatabasesService)(nil).CreateTopic), arg0, arg1)
+}
+
 // CreateUser mocks base method.
 func (m *MockDatabasesService) CreateUser(arg0 string, arg1 *godo.DatabaseCreateUserRequest) (*do.DatabaseUser, error) {
 	m.ctrl.T.Helper()
@@ -168,6 +183,20 @@ func (m *MockDatabasesService) DeleteReplica(arg0, arg1 string) error {
 func (mr *MockDatabasesServiceMockRecorder) DeleteReplica(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteReplica", reflect.TypeOf((*MockDatabasesService)(nil).DeleteReplica), arg0, arg1)
+}
+
+// DeleteTopic mocks base method.
+func (m *MockDatabasesService) DeleteTopic(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTopic", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteTopic indicates an expected call of DeleteTopic.
+func (mr *MockDatabasesServiceMockRecorder) DeleteTopic(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTopic", reflect.TypeOf((*MockDatabasesService)(nil).DeleteTopic), arg0, arg1)
 }
 
 // DeleteUser mocks base method.
@@ -364,6 +393,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetSQLMode(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSQLMode", reflect.TypeOf((*MockDatabasesService)(nil).GetSQLMode), arg0)
 }
 
+// GetTopic mocks base method.
+func (m *MockDatabasesService) GetTopic(arg0, arg1 string) (*do.DatabaseTopic, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTopic", arg0, arg1)
+	ret0, _ := ret[0].(*do.DatabaseTopic)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTopic indicates an expected call of GetTopic.
+func (mr *MockDatabasesServiceMockRecorder) GetTopic(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTopic", reflect.TypeOf((*MockDatabasesService)(nil).GetTopic), arg0, arg1)
+}
+
 // GetUser mocks base method.
 func (m *MockDatabasesService) GetUser(arg0, arg1 string) (*do.DatabaseUser, error) {
 	m.ctrl.T.Helper()
@@ -467,6 +511,21 @@ func (m *MockDatabasesService) ListReplicas(arg0 string) (do.DatabaseReplicas, e
 func (mr *MockDatabasesServiceMockRecorder) ListReplicas(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListReplicas", reflect.TypeOf((*MockDatabasesService)(nil).ListReplicas), arg0)
+}
+
+// ListTopics mocks base method.
+func (m *MockDatabasesService) ListTopics(arg0 string) (do.DatabaseTopics, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTopics", arg0)
+	ret0, _ := ret[0].(do.DatabaseTopics)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTopics indicates an expected call of ListTopics.
+func (mr *MockDatabasesServiceMockRecorder) ListTopics(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTopics", reflect.TypeOf((*MockDatabasesService)(nil).ListTopics), arg0)
 }
 
 // ListUsers mocks base method.
@@ -628,4 +687,18 @@ func (m *MockDatabasesService) UpdateRedisConfiguration(databaseID, confString s
 func (mr *MockDatabasesServiceMockRecorder) UpdateRedisConfiguration(databaseID, confString any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRedisConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateRedisConfiguration), databaseID, confString)
+}
+
+// UpdateTopic mocks base method.
+func (m *MockDatabasesService) UpdateTopic(arg0, arg1 string, arg2 *godo.DatabaseUpdateTopicRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTopic", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTopic indicates an expected call of UpdateTopic.
+func (mr *MockDatabasesServiceMockRecorder) UpdateTopic(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTopic", reflect.TypeOf((*MockDatabasesService)(nil).UpdateTopic), arg0, arg1, arg2)
 }

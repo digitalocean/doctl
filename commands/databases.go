@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -69,6 +70,7 @@ func Databases() *Command {
 
 	nodeSizeDetails := "The size of the nodes in the database cluster, e.g. `db-s-1vcpu-1gb`` for a 1 CPU, 1GB node. For a list of available size slugs, visit: https://docs.digitalocean.com/reference/api/api-reference/#tag/Databases"
 	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
+	storageSizeMiBDetails := "The amount of disk space allocated to the cluster. Applicable for PostgreSQL and MySQL clusters. This will be set to a default level based on the plan size selected, but can be increased in increments up to a maximum amount. For ranges, visit: https://www.digitalocean.com/pricing/managed-databases"
 	cmdDatabaseCreate := CmdBuilder(cmd, RunDatabaseCreate, "create <name>", "Create a database cluster", `This command creates a database cluster with the specified name.
 
 There are a number of flags that customize the configuration, all of which are optional. Without any flags set, a single-node, single-CPU PostgreSQL database cluster will be created.`, Writer,
@@ -76,6 +78,7 @@ There are a number of flags that customize the configuration, all of which are o
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseNumNodes, "", defaultDatabaseNodeCount, nodeNumberDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The region where the database cluster will be created, e.g. `nyc1` or `sfo2`")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
+	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database engine to be used for the cluster. Possible values are: `pg` for PostgreSQL, `mysql`, `redis`, `mongodb`, and `kafka`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine version, e.g. 14 for PostgreSQL version 14")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in; the default VPC for the region will be used if excluded")
@@ -115,10 +118,15 @@ You must specify the desired number of nodes and size of the nodes. For example:
 
 	doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb
 
-Database nodes cannot be resized to smaller sizes due to the risk of data loss.`, Writer,
+Database nodes cannot be resized to smaller sizes due to the risk of data loss.
+
+In addition, for PostgreSQL and MySQL clusters, you can provide a disk size in MiB, which will set the total storage (up to a certain range) to the cluster independently. Storage cannot be reduced from its current levels. For example:
+
+	doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000`, Writer,
 		aliasOpt("rs"))
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())
+	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
 
 	cmdDatabaseMigrate := CmdBuilder(cmd, RunDatabaseMigrate, "migrate <database-id>", "Migrate a database cluster to a new region", `This command migrates the specified database cluster to a new region`, Writer,
 		aliasOpt("m"))
@@ -141,6 +149,7 @@ Database nodes cannot be resized to smaller sizes due to the risk of data loss.`
 	cmd.AddCommand(databaseFirewalls())
 	cmd.AddCommand(databaseOptions())
 	cmd.AddCommand(databaseConfiguration())
+	cmd.AddCommand(databaseTopic())
 
 	return cmd
 }
@@ -291,6 +300,12 @@ func buildDatabaseCreateRequestFromArgs(c *CmdConfig) (*godo.DatabaseCreateReque
 	}
 
 	r.PrivateNetworkUUID = privateNetworkUUID
+
+	storageSizeMibInt, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseStorageSizeMib)
+	if err != nil {
+		return nil, err
+	}
+	r.StorageSizeMib = uint64(storageSizeMibInt)
 
 	return r, nil
 }
@@ -493,6 +508,12 @@ func buildDatabaseResizeRequestFromArgs(c *CmdConfig) (*godo.DatabaseResizeReque
 		return nil, err
 	}
 	r.SizeSlug = size
+
+	storageSizeMibInt, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseStorageSizeMib)
+	if err != nil {
+		return nil, err
+	}
+	r.StorageSizeMib = uint64(storageSizeMibInt)
 
 	return r, nil
 }
@@ -1533,6 +1554,355 @@ func RunDatabaseSetSQLModes(c *CmdConfig) error {
 	sqlModes := c.Args[1:]
 
 	return c.Databases().SetSQLMode(databaseID, sqlModes...)
+}
+
+func RunDatabaseTopicList(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topics, err := c.Databases().ListTopics(databaseID)
+	if err != nil {
+		return err
+	}
+	item := &displayers.DatabaseKafkaTopics{DatabaseTopics: topics}
+	return c.Display(item)
+}
+
+func RunDatabaseTopicGet(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+	topic, err := c.Databases().GetTopic(databaseID, topicName)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.DatabaseKafkaTopic{DatabaseTopic: *topic}
+	return c.Display(item)
+}
+
+func RunDatabaseTopicListPartition(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+	topic, err := c.Databases().GetTopic(databaseID, topicName)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.DatabaseKafkaTopicPartitions{DatabaseTopicPartitions: topic.Partitions}
+	return c.Display(item)
+}
+
+func RunDatabaseTopicDelete(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("kafka topic", 1) == nil {
+		databaseID := c.Args[0]
+		topicName := c.Args[1]
+		return c.Databases().DeleteTopic(databaseID, topicName)
+	}
+
+	return errOperationAborted
+}
+
+func RunDatabaseTopicCreate(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+
+	createReq := &godo.DatabaseCreateTopicRequest{Name: topicName}
+
+	pc, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseTopicPartitionCount)
+	if err == nil && pc != 0 {
+		pcUInt32 := uint32(pc)
+		createReq.PartitionCount = &pcUInt32
+	}
+	rf, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseTopicReplicationFactor)
+	if err == nil && rf != 0 {
+		rfUInt32 := uint32(rf)
+		createReq.ReplicationFactor = &rfUInt32
+	}
+	createReq.Config = getDatabaseTopicConfigArgs(c)
+
+	_, err = c.Databases().CreateTopic(databaseID, createReq)
+	return err
+}
+
+func RunDatabaseTopicUpdate(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	topicName := c.Args[1]
+
+	updateReq := &godo.DatabaseUpdateTopicRequest{}
+
+	pc, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseTopicPartitionCount)
+	if err == nil && pc != 0 {
+		pcUInt32 := uint32(pc)
+		updateReq.PartitionCount = &pcUInt32
+	}
+	rf, err := c.Doit.GetInt(c.NS, doctl.ArgDatabaseTopicReplicationFactor)
+	if err == nil && rf != 0 {
+		rfUInt32 := uint32(rf)
+		updateReq.ReplicationFactor = &rfUInt32
+	}
+	updateReq.Config = getDatabaseTopicConfigArgs(c)
+
+	err = c.Databases().UpdateTopic(databaseID, topicName, updateReq)
+	return err
+}
+
+func getDatabaseTopicConfigArgs(c *CmdConfig) *godo.TopicConfig {
+	res := &godo.TopicConfig{}
+	val, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicCleanupPolicy)
+	if err == nil {
+		res.CleanupPolicy = val
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicCompressionType)
+	if err == nil && val != "" {
+		res.CompressionType = val
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicDeleteRetentionMS)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.DeleteRetentionMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicFileDeleteDelayMS)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.FileDeleteDelayMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicFlushMessages)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.FlushMessages = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicFlushMS)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.FlushMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicIntervalIndexBytes)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.IndexIntervalBytes = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMaxCompactionLagMS)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.MaxCompactionLagMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMaxMessageBytes)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.MaxMessageBytes = &i
+		}
+	}
+	bVal, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicMesssageDownConversionEnable)
+	if err == nil && bVal != nil {
+		res.MessageDownConversionEnable = bVal
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMessageFormatVersion)
+	if err == nil && val != "" {
+		res.MessageFormatVersion = val
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMessageTimestampType)
+	if err == nil && val != "" {
+		res.MessageTimestampType = val
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMinCleanableDirtyRatio)
+	if err == nil && val != "" {
+		i, err := strconv.ParseFloat(val, 32)
+		if err == nil {
+			iFloat32 := float32(i)
+			res.MinCleanableDirtyRatio = &iFloat32
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMinCompactionLagMS)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.MinCompactionLagMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicMinInsyncReplicas)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 32)
+		if err == nil {
+			iUint32 := uint32(i)
+			res.MinInsyncReplicas = &iUint32
+		}
+	}
+	bVal, err = c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicPreallocate)
+	if err == nil && bVal != nil {
+		res.Preallocate = bVal
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicRetentionBytes)
+	if err == nil && val != "" {
+		i, err := strconv.ParseInt(val, 10, 64)
+		if err == nil {
+			res.RetentionBytes = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicRetentionMS)
+	if err == nil && val != "" {
+		i, err := strconv.ParseInt(val, 10, 64)
+		if err == nil {
+			res.RetentionMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicSegmentBytes)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.SegmentBytes = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicSegmentJitterMS)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.SegmentJitterMS = &i
+		}
+	}
+	val, err = c.Doit.GetString(c.NS, doctl.ArgDatabaseTopicSegmentMS)
+	if err == nil && val != "" {
+		i, err := strconv.ParseUint(val, 10, 64)
+		if err == nil {
+			res.SegmentMS = &i
+		}
+	}
+
+	return res
+}
+
+func databaseTopic() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "topics",
+			Short: `Display commands to manage topics for kafka database clusters`,
+			Long:  `The subcommands under ` + "`" + `doctl databases topics` + "`" + ` enable the management of topics for kafka database clusters`,
+		},
+	}
+
+	topicListDetails := `
+This command lists the following details for each topic in a kafka database cluster:
+
+	- The Name of the topic.
+	- The State of the topic.
+	- The Replication Factor of the topic - number of brokers the topic's partitions are replicated across.
+	`
+
+	topicGetDetails := `
+This command lists the following details for a given topic in a kafka database cluster:
+
+	- The Name of the topic.
+	- The Partitions of the topic - the number of partitions in the topics
+	- The Replication Factor of the topic - number of brokers the topic's partitions are replicated across.
+	- Additional advanced configuration for the topic.
+
+The details of the topic are listed in key/value pairs
+		`
+	topicGetPartitionDetails := `
+This command lists the following details for each partition of a given topic in a kafka database cluster:
+
+	- The Id - identifier of the topic partition.
+	- The Size - size of the topic partition, in bytes.
+	- The InSyncReplicas - number of brokers that are in sync with the partition leader.
+	- The EarliestOffset - earliest offset read amongst all consumers of the partition.
+	`
+
+	CmdBuilder(cmd, RunDatabaseTopicList, "list <database-uuid>", "Retrieve a list of topics for a given kafka database", topicListDetails, Writer, displayerType(&displayers.DatabaseKafkaTopics{}), aliasOpt("ls"))
+	CmdBuilder(cmd, RunDatabaseTopicGet, "get <database-uuid> <topic-name>", "Retrieve the configuration for a given kafka topic", topicGetDetails, Writer, displayerType(&displayers.DatabaseKafkaTopic{}), aliasOpt("g"))
+	CmdBuilder(cmd, RunDatabaseTopicListPartition, "partitions <database-id> <topic-name>", "Retrieve the partitions for a given kafka topic", topicGetPartitionDetails, Writer, aliasOpt("p"))
+	cmdDatabaseTopicDelete := CmdBuilder(cmd, RunDatabaseTopicDelete, "delete <database-uuid> <topic-name>", "Deletes a kafka topic by topic name", "", Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdDatabaseTopicDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the kafka topic without a confirmation prompt")
+	cmdDatabaseTopicCreate := CmdBuilder(cmd, RunDatabaseTopicCreate, "create <database-uuid> <topic-name>", "Creates a topic for a given kafka database",
+		"This command creates a kafka topic for the specified kafka database cluster, giving it the specified name. Example: doctl databases topics create <database-uuid> <topic-name> --replication_factor 2 --partition_count 4", Writer, aliasOpt("c"))
+	cmdDatabaseTopicUpdate := CmdBuilder(cmd, RunDatabaseTopicUpdate, "update <database-uuid> <topic-name>", "Updates a topic for a given kafka database",
+		"This command updates a kafka topic for the specified kafka database cluster. Example: doctl databases topics update <database-uuid> <topic-name>", Writer, aliasOpt("u"))
+	cmdsWithConfig := []*Command{cmdDatabaseTopicCreate, cmdDatabaseTopicUpdate}
+	for _, c := range cmdsWithConfig {
+		AddIntFlag(c, doctl.ArgDatabaseTopicReplicationFactor, "", 2, "Specifies the number of nodes to replicate data across the kafka cluster")
+		AddIntFlag(c, doctl.ArgDatabaseTopicPartitionCount, "", 1, "Specifies the number of partitions available for the topic")
+		AddStringFlag(c, doctl.ArgDatabaseTopicCleanupPolicy, "", "delete",
+			"Specifies the retention policy to use on log segments: Possible values are 'delete', 'compact_delete', 'compact'")
+		AddStringFlag(c, doctl.ArgDatabaseTopicCompressionType, "", "producer",
+			"Specifies the compression type for a kafka topic: Possible values are 'producer', 'gzip', 'snappy', 'Iz4', 'zstd', 'uncompressed'")
+		AddStringFlag(c, doctl.ArgDatabaseTopicDeleteRetentionMS, "", "",
+			"Specifies how long (in ms) to retain delete tombstone markers for topics")
+		AddStringFlag(c, doctl.ArgDatabaseTopicFileDeleteDelayMS, "", "",
+			"Specifies the minimum time (in ms) to wait before deleting a file from the filesystem")
+		AddStringFlag(c, doctl.ArgDatabaseTopicFlushMessages, "", "",
+			"Specifies the maximum number of messages to accumulate on a log partition before messages are flushed to disk")
+		AddStringFlag(c, doctl.ArgDatabaseTopicFlushMS, "", "",
+			"Specifies the maximum time (in ms) that a message is kept in memory before being flushed to disk")
+		AddStringFlag(c, doctl.ArgDatabaseTopicIntervalIndexBytes, "", "",
+			"Specifies the number of bytes between entries being added into the offset index")
+		AddStringFlag(c, doctl.ArgDatabaseTopicMaxCompactionLagMS, "", "",
+			"Specifies the maximum time (in ms) that a message will remain uncompacted. This is only applicable if the logs have compaction enabled")
+		AddStringFlag(c, doctl.ArgDatabaseTopicMaxMessageBytes, "", "",
+			"Specifies the largest record batch (in bytes) that can be sent to the server. This is calculated after compression, if compression is enabled")
+		AddBoolFlag(c, doctl.ArgDatabaseTopicMesssageDownConversionEnable, "", true,
+			"Specifies whether down-conversion of message formats is enabled to satisfy consumer requests")
+		AddStringFlag(c, doctl.ArgDatabaseTopicMessageFormatVersion, "", "",
+			"Specifies the message format version used by the broker to append messages to the logs. By setting a format version, all existing messages on disk must be smaller or equal to the specified version")
+		AddStringFlag(c, doctl.ArgDatabaseTopicMessageTimestampType, "", "",
+			"Specifies whether to use the create time or log append time as the timestamp on a message")
+		AddStringFlag(c, doctl.ArgDatabaseTopicMinCleanableDirtyRatio, "", "",
+			"Specifies the frequenty of log compaction (if enabled) in relation to duplicates present in the logs. For example, 0.5 would mean at most half of the log could be duplicates before compaction would begin")
+		AddStringFlag(c, doctl.ArgDatabaseTopicMinCompactionLagMS, "", "",
+			"Specifies the minimum time (in ms) that a message will remain uncompacted. This is only applicable if the logs have compaction enabled")
+		AddStringFlag(c, doctl.ArgDatabaseTopicMinInsyncReplicas, "", "",
+			"Specifies the minimum number of replicas that must ACK a write for it to be considered successful")
+		AddBoolFlag(c, doctl.ArgDatabaseTopicPreallocate, "", false,
+			"Specifies whether a file should be preallocated on disk when creating a new log segment")
+		AddStringFlag(c, doctl.ArgDatabaseTopicRetentionBytes, "", "",
+			"Specifies the maximum size (in bytes) before deleting messages. '-1' indicates that there is no limit")
+		AddStringFlag(c, doctl.ArgDatabaseTopicRetentionMS, "", "",
+			"Specifies the maximum time (in ms) to store a message before deleting it. '-1' indicates that there is no limit")
+		AddStringFlag(c, doctl.ArgDatabaseTopicSegmentBytes, "", "",
+			"Specifies the maximum size (in bytes) of a single log file")
+		AddStringFlag(c, doctl.ArgDatabaseTopicSegmentJitterMS, "", "",
+			"Specifies the maximum time (in ms) for random jitter that is subtracted from the scheduled segment roll time to avoid thundering herd problems")
+		AddStringFlag(c, doctl.ArgDatabaseTopicSegmentMS, "", "",
+			"Specifies the maximum time (in ms) to wait to force a log roll if the segment file isn't full. After this period, the log will be forced to roll")
+	}
+	return cmd
 }
 
 func databaseFirewalls() *Command {
