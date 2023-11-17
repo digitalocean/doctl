@@ -2246,7 +2246,7 @@ func databaseConfiguration() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "configuration",
-			Aliases: []string{"cfg"},
+			Aliases: []string{"cfg", "config"},
 			Short:   "View the configuration of a database cluster given its ID and Engine",
 			Long:    "The subcommands of `doctl databases configuration` are used to view a database cluster's configuration.",
 		},
