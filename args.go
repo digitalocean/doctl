@@ -387,8 +387,6 @@ const (
 	// ArgDatabasePrivateConnectionBool determine if the private connection details should be shown
 	ArgDatabasePrivateConnectionBool = "private"
 
-	// ArgDatabaseTopicName is the name of a kafka topic
-	ArgDatabaseTopicName = "name"
 	// ArgDatabaseTopicReplicationFactor is the replication factor of a kafka topic
 	ArgDatabaseTopicReplicationFactor = "replication-factor"
 	// ArgDatabaseTopicPartitionCount is the number of partitions that are associated with a kafka topic
