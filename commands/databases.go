@@ -1854,7 +1854,7 @@ This command lists the following details for each partition of a given topic in 
 	cmdDatabaseTopicCreate := CmdBuilder(cmd, RunDatabaseTopicCreate, "create <database-uuid> <topic-name>", "Creates a topic for a given kafka database",
 		"This command creates a kafka topic for the specified kafka database cluster, giving it the specified name. Example: doctl databases topics create <database-uuid> <topic-name> --replication_factor 2 --partition_count 4", Writer, aliasOpt("c"))
 	cmdDatabaseTopicUpdate := CmdBuilder(cmd, RunDatabaseTopicUpdate, "update <database-uuid> <topic-name>", "Updates a topic for a given kafka database",
-		"This command updates a kafka topic for the specified kafka database cluster. Example: doctl databases topics update <cluster_uuid> <topic_name>", Writer, aliasOpt("u"))
+		"This command updates a kafka topic for the specified kafka database cluster. Example: doctl databases topics update <database-uuid> <topic-name>", Writer, aliasOpt("u"))
 	cmdsWithConfig := []*Command{cmdDatabaseTopicCreate, cmdDatabaseTopicUpdate}
 	for _, c := range cmdsWithConfig {
 		AddIntFlag(c, doctl.ArgDatabaseTopicReplicationFactor, "", 2, "Specifies the number of nodes to replicate data across the kafka cluster")
