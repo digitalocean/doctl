@@ -2251,12 +2251,8 @@ func databaseConfiguration() *Command {
 			Long:    "The subcommands of `doctl databases configuration` are used to view a database cluster's configuration.",
 		},
 	}
-	getConfigurationLongDesc := `
-		This will get a database cluster's configuration given its ID and Engine
-	`
-	upadateConfigurationLongDesc := `
-		This will update a database cluster's configuration given its ID and Engine and Desired Configuration (as JSON string)
-	`
+	getConfigurationLongDesc := "This will get a database cluster's configuration given its ID and Engine"
+	updateConfigurationLongDesc := "This will update a database cluster's configuration given its ID and Engine and Desired Configuration (as JSON string)"
 
 	getDatabaseCfgCommand := CmdBuilder(
 		cmd,
@@ -2284,7 +2280,7 @@ func databaseConfiguration() *Command {
 		RunDatabaseConfigurationUpdate,
 		"update <db-id>",
 		"Update a database cluster's configuration",
-		upadateConfigurationLongDesc,
+		updateConfigurationLongDesc,
 		Writer,
 		aliasOpt("u"),
 	)
