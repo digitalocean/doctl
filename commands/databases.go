@@ -2246,20 +2246,20 @@ func databaseConfiguration() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "configuration",
-			Aliases: []string{"cfg"},
+			Aliases: []string{"cfg", "config"},
 			Short:   "View the configuration of a database cluster given its ID and Engine",
 			Long:    "The subcommands of `doctl databases configuration` are used to view a database cluster's configuration.",
 		},
 	}
-	getMySQLConfigurationLongDesc := `
-		This will get a database cluster's configuration given its ID and Engine
-	`
-	getMySQLCfgCommand := CmdBuilder(
+	getConfigurationLongDesc := "This will get a database cluster's configuration given its ID and Engine"
+	updateConfigurationLongDesc := "This will update a database cluster's configuration given its ID and Engine and Desired Configuration (as JSON string)"
+
+	getDatabaseCfgCommand := CmdBuilder(
 		cmd,
 		RunDatabaseConfigurationGet,
 		"get <db-id>",
 		"Get a database cluster's configuration",
-		getMySQLConfigurationLongDesc,
+		getConfigurationLongDesc,
 		Writer,
 		aliasOpt("g"),
 		displayerType(&displayers.MySQLConfiguration{}),
@@ -2267,11 +2267,37 @@ func databaseConfiguration() *Command {
 		displayerType(&displayers.RedisConfiguration{}),
 	)
 	AddStringFlag(
-		getMySQLCfgCommand,
+		getDatabaseCfgCommand,
 		doctl.ArgDatabaseEngine,
 		"e",
 		"",
 		"the engine of the database you want to get the configuration for",
+		requiredOpt(),
+	)
+
+	updateDatabaseCfgCommand := CmdBuilder(
+		cmd,
+		RunDatabaseConfigurationUpdate,
+		"update <db-id>",
+		"Update a database cluster's configuration",
+		updateConfigurationLongDesc,
+		Writer,
+		aliasOpt("u"),
+	)
+	AddStringFlag(
+		updateDatabaseCfgCommand,
+		doctl.ArgDatabaseEngine,
+		"e",
+		"",
+		"the engine of the database you want to update the configuration for",
+		requiredOpt(),
+	)
+	AddStringFlag(
+		updateDatabaseCfgCommand,
+		doctl.ArgDatabaseConfigJson,
+		"",
+		"{}",
+		"the desired configuration of the database cluster you want to update",
 		requiredOpt(),
 	)
 
@@ -2332,6 +2358,54 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 			RedisConfig: *config,
 		}
 		return c.Display(&displayer)
+	}
+	return nil
+}
+
+func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
+	args := c.Args
+	if len(args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	if len(args) > 1 {
+		return doctl.NewTooManyArgsErr(c.NS)
+	}
+
+	engine, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseEngine)
+	if err != nil {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	allowedEngines := map[string]any{
+		"mysql": nil,
+		"pg":    nil,
+		"redis": nil,
+	}
+	if _, ok := allowedEngines[engine]; !ok {
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+	}
+
+	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
+	if err != nil {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	dbId := args[0]
+	if engine == "mysql" {
+		err := c.Databases().UpdateMySQLConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "pg" {
+		err := c.Databases().UpdatePostgreSQLConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "redis" {
+		err := c.Databases().UpdateRedisConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -647,6 +647,48 @@ func (mr *MockDatabasesServiceMockRecorder) UpdateMaintenance(arg0, arg1 any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMaintenance", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMaintenance), arg0, arg1)
 }
 
+// UpdateMySQLConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateMySQLConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMySQLConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateMySQLConfiguration indicates an expected call of UpdateMySQLConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateMySQLConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMySQLConfiguration), databaseID, confString)
+}
+
+// UpdatePostgreSQLConfiguration mocks base method.
+func (m *MockDatabasesService) UpdatePostgreSQLConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePostgreSQLConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePostgreSQLConfiguration indicates an expected call of UpdatePostgreSQLConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdatePostgreSQLConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePostgreSQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdatePostgreSQLConfiguration), databaseID, confString)
+}
+
+// UpdateRedisConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateRedisConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRedisConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateRedisConfiguration indicates an expected call of UpdateRedisConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateRedisConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRedisConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateRedisConfiguration), databaseID, confString)
+}
+
 // UpdateTopic mocks base method.
 func (m *MockDatabasesService) UpdateTopic(arg0, arg1 string, arg2 *godo.DatabaseUpdateTopicRequest) error {
 	m.ctrl.T.Helper()

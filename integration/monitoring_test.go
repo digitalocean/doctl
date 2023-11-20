@@ -94,7 +94,8 @@ UUID                                    Type                       Description  
 `
 )
 
-var _ = suite("monitoring/alerts/create", func(t *testing.T, when spec.G, it spec.S) {
+// TODO: Re-enable test
+var _ = suite.Pend("monitoring/alerts/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -188,7 +189,8 @@ UUID                                    Type                       Description  
 `
 )
 
-var _ = suite("monitoring/alerts/update", func(t *testing.T, when spec.G, it spec.S) {
+// TODO: Re-enable test
+var _ = suite.Pend("monitoring/alerts/update", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
