@@ -66,6 +66,21 @@ var (
 		},
 	}
 
+	testKafkaDBCluster = do.Database{
+		Database: &godo.Database{
+			ID:          "ea93928g-8se0-929e-m1ns-029daj2k3j12",
+			Name:        "kafka-db-cluster",
+			RegionSlug:  "nyc1",
+			EngineSlug:  "kafka",
+			VersionSlug: "3.5",
+			NumNodes:    3,
+			SizeSlug:    "db-s-2vcpu-4gb",
+			CreatedAt:   time.Now(),
+			Status:      "online",
+			Tags:        []string{"testing"},
+		},
+	}
+
 	testDBBackUpCluster = do.Database{
 		Database: &godo.Database{
 			ID:                "ea4652de-4fe0-11e9-b7ab-df1ef30eab9e",
@@ -190,6 +205,36 @@ var (
 		RedisConfig: &godo.RedisConfig{},
 	}
 
+	topicReplicationFactor = uint32(3)
+	testKafkaTopic         = do.DatabaseTopic{
+		DatabaseTopic: &godo.DatabaseTopic{
+			Name:  "topic1",
+			State: "active",
+			Config: &godo.TopicConfig{
+				CleanupPolicy: "delete",
+			},
+			Partitions: []*godo.TopicPartition{
+				{
+					Id:             0,
+					Size:           4096,
+					EarliestOffset: 0,
+					InSyncReplicas: 2,
+				},
+				{
+					Id:             1,
+					Size:           4096,
+					EarliestOffset: 4,
+					InSyncReplicas: 2,
+				},
+			},
+			ReplicationFactor: &topicReplicationFactor,
+		},
+	}
+
+	testKafkaTopics = do.DatabaseTopics{
+		testKafkaTopic,
+	}
+
 	errTest = errors.New("error")
 )
 
@@ -215,6 +260,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"db",
 		"sql-mode",
 		"configuration",
+		"topics",
 	)
 }
 
@@ -288,7 +334,20 @@ func TestDatabaseOptionsCommand(t *testing.T) {
 func TestDatabaseConfigurationCommand(t *testing.T) {
 	cmd := databaseConfiguration()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "get")
+	assertCommandNames(t, cmd, "get", "update")
+}
+
+func TestDatabaseKafkaTopicCommand(t *testing.T) {
+	cmd := databaseTopic()
+	assert.NotNil(t, cmd)
+	assertCommandNames(t, cmd,
+		"get",
+		"list",
+		"delete",
+		"create",
+		"update",
+		"partitions",
+	)
 }
 
 func TestDatabasesGet(t *testing.T) {
@@ -556,6 +615,155 @@ func TestDatabaseListBackups(t *testing.T) {
 		config.Args = append(config.Args, testDBCluster.ID)
 
 		err := RunDatabaseBackupsList(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseListKafkaTopics(t *testing.T) {
+	// Success
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().ListTopics(testKafkaDBCluster.ID).Return(testKafkaTopics, nil)
+		config.Args = append(config.Args, testKafkaDBCluster.ID)
+
+		err := RunDatabaseTopicList(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().ListTopics(testKafkaDBCluster.ID).Return(nil, errTest)
+		config.Args = append(config.Args, testKafkaDBCluster.ID)
+
+		err := RunDatabaseTopicList(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseGetKafkaTopic(t *testing.T) {
+	// Success
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetTopic(testKafkaDBCluster.ID, testKafkaTopic.Name).Return(&testKafkaTopic, nil)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+
+		err := RunDatabaseTopicGet(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetTopic(testKafkaDBCluster.ID, testKafkaTopic.Name).Return(nil, errTest)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+
+		err := RunDatabaseTopicGet(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseCreateKafkaTopic(t *testing.T) {
+	// Success - only topic name
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		createReq := &godo.DatabaseCreateTopicRequest{
+			Name:   testKafkaTopic.Name,
+			Config: &godo.TopicConfig{},
+		}
+		tm.databases.EXPECT().CreateTopic(testKafkaDBCluster.ID, createReq).Return(&testKafkaTopic, nil)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+
+		err := RunDatabaseTopicCreate(config)
+		assert.NoError(t, err)
+	})
+	// Success - with additional config
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		pc := uint32(len(testKafkaTopic.Partitions))
+		createReq := &godo.DatabaseCreateTopicRequest{
+			Name:              testKafkaTopic.Name,
+			ReplicationFactor: testKafkaTopic.ReplicationFactor,
+			PartitionCount:    &pc,
+			Config: &godo.TopicConfig{
+				CleanupPolicy: testKafkaTopic.Config.CleanupPolicy,
+			},
+		}
+		tm.databases.EXPECT().CreateTopic(testKafkaDBCluster.ID, createReq).Return(&testKafkaTopic, nil)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseTopicPartitionCount, pc)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseTopicReplicationFactor, testKafkaTopic.ReplicationFactor)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseTopicCleanupPolicy, testKafkaTopic.Config.CleanupPolicy)
+
+		err := RunDatabaseTopicCreate(config)
+		assert.NoError(t, err)
+	})
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().CreateTopic(testKafkaDBCluster.ID, gomock.AssignableToTypeOf(&godo.DatabaseCreateTopicRequest{})).Return(nil, errTest)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+
+		err := RunDatabaseTopicCreate(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseUpdateKafkaTopic(t *testing.T) {
+	// Success - only partition count
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		currPC := uint32(len(testKafkaTopic.Partitions))
+		newPC := currPC + 1
+		updateReq := &godo.DatabaseUpdateTopicRequest{
+			PartitionCount: &newPC,
+			Config:         &godo.TopicConfig{},
+		}
+		tm.databases.EXPECT().UpdateTopic(testKafkaDBCluster.ID, testKafkaTopic.Name, updateReq).Return(nil)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseTopicPartitionCount, newPC)
+
+		err := RunDatabaseTopicUpdate(config)
+		assert.NoError(t, err)
+	})
+	// Success - with additional config
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		currPC := uint32(len(testKafkaTopic.Partitions))
+		newPC := currPC + 1
+		updateReq := &godo.DatabaseUpdateTopicRequest{
+			PartitionCount: &newPC,
+			Config: &godo.TopicConfig{
+				CleanupPolicy: testKafkaTopic.Config.CleanupPolicy,
+			},
+		}
+		tm.databases.EXPECT().UpdateTopic(testKafkaDBCluster.ID, testKafkaTopic.Name, updateReq).Return(nil)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseTopicPartitionCount, newPC)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseTopicCleanupPolicy, testKafkaTopic.Config.CleanupPolicy)
+
+		err := RunDatabaseTopicUpdate(config)
+		assert.NoError(t, err)
+	})
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateTopic(testKafkaDBCluster.ID, testKafkaTopic.Name, gomock.AssignableToTypeOf(&godo.DatabaseUpdateTopicRequest{})).Return(errTest)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+
+		err := RunDatabaseTopicUpdate(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseDeleteKafkaTopic(t *testing.T) {
+	// Successful
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().DeleteTopic(testKafkaDBCluster.ID, testKafkaTopic.Name).Return(nil)
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+		config.Doit.Set(config.NS, doctl.ArgForce, "true")
+
+		err := RunDatabaseTopicDelete(config)
+		assert.NoError(t, err)
+	})
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().DeleteTopic(testKafkaDBCluster.ID, testKafkaTopic.Name).Return(errTest)
+
+		config.Args = append(config.Args, testKafkaDBCluster.ID, testKafkaTopic.Name)
+		config.Doit.Set(config.NS, doctl.ArgForce, "true")
+
+		err := RunDatabaseTopicDelete(config)
 		assert.EqualError(t, err, errTest.Error())
 	})
 }

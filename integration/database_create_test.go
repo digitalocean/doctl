@@ -144,14 +144,14 @@ var _ = suite("database/create", func(t *testing.T, when spec.G, it spec.S) {
 const (
 	databasesCreateOutput = `
 Notice: Database created
-ID         Name                Engine    Version         Number of Nodes    Region    Status      Size       URI                                                                                     Created At
-some-id    my-database-name    mysql     what-version    100                nyc3      creating    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC
+ID         Name                Engine    Version         Number of Nodes    Region    Status      Size       URI                                                                                     Created At                       Storage (MiB)
+some-id    my-database-name    mysql     what-version    100                nyc3      creating    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC    100
 `
 	databasesWaitCreateOutput = `
 Notice: Database creation is in progress, waiting for database to be online
 Notice: Database created
-ID         Name                Engine    Version         Number of Nodes    Region    Status    Size       URI                                                                                     Created At
-some-id    my-database-name    mysql     what-version    100                nyc3      online    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC
+ID         Name                Engine    Version         Number of Nodes    Region    Status    Size       URI                                                                                     Created At                       Storage (MiB)
+some-id    my-database-name    mysql     what-version    100                nyc3      online    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC    100
 `
 	databaseCreateResponse = `
 {
@@ -172,7 +172,8 @@ some-id    my-database-name    mysql     what-version    100                nyc3
     "created_at": "2019-01-11T18:37:36Z",
     "maintenance_window": null,
     "size": "biggest",
-    "tags": ["{{.Tags}}"]
+    "tags": ["{{.Tags}}"],
+	"storage_size_mib": 100
   }
 }`
 
@@ -195,7 +196,8 @@ some-id    my-database-name    mysql     what-version    100                nyc3
     "size": "biggest",
     "tags": [
       "test"
-    ]
+    ],
+	"storage_size_mib": 100
   }
 }`
 )

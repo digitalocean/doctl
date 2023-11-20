@@ -366,6 +366,8 @@ const (
 	ArgDatabaseRestoreFromTimestamp = "restore-from-timestamp"
 	// ArgDatabaseEngine is a flag for specifying which database engine to use
 	ArgDatabaseEngine = "engine"
+	// ArgDatabaseConfigJson is a flag for specifying the database configuration in JSON format for an update
+	ArgDatabaseConfigJson = "config-json"
 	// ArgDatabaseNumNodes is the number of nodes in the database cluster
 	ArgDatabaseNumNodes = "num-nodes"
 	// ArgDatabaseStorageSizeMib is the amount of disk space, in MiB, that should be allocated to the database cluster
@@ -386,6 +388,53 @@ const (
 	ArgDatabaseUserMySQLAuthPlugin = "mysql-auth-plugin"
 	// ArgDatabasePrivateConnectionBool determine if the private connection details should be shown
 	ArgDatabasePrivateConnectionBool = "private"
+
+	// ArgDatabaseTopicReplicationFactor is the replication factor of a kafka topic
+	ArgDatabaseTopicReplicationFactor = "replication-factor"
+	// ArgDatabaseTopicPartitionCount is the number of partitions that are associated with a kafka topic
+	ArgDatabaseTopicPartitionCount = "partition-count"
+	// ArgDatabaseTopicCleanupPolicy is the cleanup policy associated with a kafka topic
+	ArgDatabaseTopicCleanupPolicy = "cleanup-policy"
+	// ArgDatabaseTopicCompressionType is the compression algorithm used for a kafka topic
+	ArgDatabaseTopicCompressionType = "compression-type"
+	// ArgDatabaseTopicDeleteRetentionMS is the amount of time, in ms, to retain delete tombstone markers for a kafka topic
+	ArgDatabaseTopicDeleteRetentionMS = "delete-retention-ms"
+	// ArgDatabaseTopicFileDeleteDelayMS is the amount of time, in ms, to wait before deleting a file from the filesystem
+	ArgDatabaseTopicFileDeleteDelayMS = "file-delete-delay-ms"
+	// ArgDatabaseTopicFlushMessages is the size, in bytes, of all messages to accumulate on a partition before flushing them to disk
+	ArgDatabaseTopicFlushMessages = "flush-messages"
+	// ArgDatabaseTopicFlushMS is the amount of time, in ms, a message is kept in memory before it is flushed to disk
+	ArgDatabaseTopicFlushMS = "flush-ms"
+	// ArgDatabaseTopicIntervalIndexBytes is the number of bytes between entries being added into the offset index
+	ArgDatabaseTopicIntervalIndexBytes = "interval-index-bytes"
+	// ArgDatabaseTopicMaxCompactionLagMS is the maximum amount of time, in ms, that a message will remain uncompacted (if compaction is enabled)
+	ArgDatabaseTopicMaxCompactionLagMS = "max-compaction-lag-ms"
+	// ArgDatabaseTopicMaxMessageBytes is the maximum size, in bytes, of the largest record batch that can be sent to the server
+	ArgDatabaseTopicMaxMessageBytes = "max-message-bytes"
+	// ArgDatabaseTopicMesssageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
+	ArgDatabaseTopicMesssageDownConversionEnable = "message-down-conversion-enable"
+	// ArgDatabaseTopicMessageFormatVersion is the version used by the broker to append messages to the kafka topic logs
+	ArgDatabaseTopicMessageFormatVersion = "message-format-version"
+	// ArgDatabaseTopicMessageTimestampType is the timestamp used for messages
+	ArgDatabaseTopicMessageTimestampType = "message-timestamp-type"
+	// ArgDatabaseTopicMinCleanableDirtyRatio is ratio, between 0 and 1, specifying the frequenty of log compaction
+	ArgDatabaseTopicMinCleanableDirtyRatio = "min-cleanable-dirty-ratio"
+	// ArgDatabaseTopicMinCompactionLagMS is the minimum time, in ms, that a message will remain uncompacted
+	ArgDatabaseTopicMinCompactionLagMS = "min-compaction-lag-ms"
+	// ArgDatabaseTopicMinInsyncReplicas is the minimum number of replicas that must ACK a write for the write to be considered successful
+	ArgDatabaseTopicMinInsyncReplicas = "min-insync-replicas"
+	// ArgDatabaseTopicPreallocate determines whether a file should be preallocated on disk when creating a new log segment
+	ArgDatabaseTopicPreallocate = "preallocate"
+	// ArgDatabaseTopicRetentionBytes is the maximum size, in bytes, of a topic log before messages are deleted
+	ArgDatabaseTopicRetentionBytes = "retention-bytes"
+	// ArgDatabaseTopicRetentionMS is the maximum time, in ms, that a message is retained before deleting it
+	ArgDatabaseTopicRetentionMS = "retention-ms"
+	// ArgDatabaseTopicSegmentBytes is the maximum size, in bytes, of a single log file
+	ArgDatabaseTopicSegmentBytes = "segment-bytes"
+	// ArgDatabaseTopicSegmentJitterMS is the maximum random jitter, in ms, subtracted from the scheduled segment roll time to avoid thundering herds of segment rolling
+	ArgDatabaseTopicSegmentJitterMS = "segment-jitter-ms"
+	// ArgDatabaseTopicSegmentMS is the period of time, in ms, after which the log will be forced to roll if the segment file isn't full
+	ArgDatabaseTopicSegmentMS = "segment-ms"
 
 	// ArgPrivateNetworkUUID is the flag for VPC UUID
 	ArgPrivateNetworkUUID = "private-network-uuid"

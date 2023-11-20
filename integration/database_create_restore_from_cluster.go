@@ -130,8 +130,8 @@ const (
 	restoreFromTimestampError          = "Error: Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC"
 	databasesCreateRestoreBackUpOutput = `
 Notice: Database created
-ID         Name           Engine    Version         Number of Nodes    Region    Status      Size       URI                                                                                     Created At
-some-id    new-db-name    mysql     what-version    100                nyc3      creating    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC
+ID         Name           Engine    Version         Number of Nodes    Region    Status      Size       URI                                                                                     Created At                       Storage (MiB)
+some-id    new-db-name    mysql     what-version    100                nyc3      creating    biggest    mysql://doadmin:secret@aaa-bbb-ccc-111-222-333.db.ondigitalocean.com:25060/defaultdb    2019-01-11 18:37:36 +0000 UTC    100
 `
 	databaseRestoreBackUpCreateRequestBody = `{
 	"name":"new-db-name",
@@ -165,7 +165,8 @@ some-id    new-db-name    mysql     what-version    100                nyc3     
 	  "size": "biggest",
 	  "tags": [
 		"production"
-	  ]
+	  ],
+	  "storage_size_mib": 100
 	}
   }`
 )

@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/digitalocean/godo"
@@ -111,6 +112,19 @@ type RedisConfig struct {
 	*godo.RedisConfig
 }
 
+// DatabaseTopics is a slice of DatabaseTopic
+type DatabaseTopics []DatabaseTopic
+
+// DatabaseTopic is a wrapper for godo.DatabaseTopic
+type DatabaseTopic struct {
+	*godo.DatabaseTopic
+}
+
+// DatabaseTopicPartitions is a slice of *godo.TopicPartition
+type DatabaseTopicPartitions struct {
+	Partitions []*godo.TopicPartition
+}
+
 // DatabasesService is an interface for interacting with DigitalOcean's Database API
 type DatabasesService interface {
 	List() (Databases, error)
@@ -159,6 +173,16 @@ type DatabasesService interface {
 	GetMySQLConfiguration(databaseID string) (*MySQLConfig, error)
 	GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error)
 	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
+
+	UpdateMySQLConfiguration(databaseID string, confString string) error
+	UpdatePostgreSQLConfiguration(databaseID string, confString string) error
+	UpdateRedisConfiguration(databaseID string, confString string) error
+
+	ListTopics(string) (DatabaseTopics, error)
+	GetTopic(string, string) (*DatabaseTopic, error)
+	CreateTopic(string, *godo.DatabaseCreateTopicRequest) (*DatabaseTopic, error)
+	UpdateTopic(string, string, *godo.DatabaseUpdateTopicRequest) error
+	DeleteTopic(string, string) error
 }
 
 type databasesService struct {
@@ -617,4 +641,107 @@ func (ds *databasesService) GetRedisConfiguration(databaseID string) (*RedisConf
 	return &RedisConfig{
 		RedisConfig: cfg,
 	}, nil
+}
+
+func (ds *databasesService) UpdateMySQLConfiguration(databaseID string, confString string) error {
+	var conf godo.MySQLConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateMySQLConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdatePostgreSQLConfiguration(databaseID string, confString string) error {
+	var conf godo.PostgreSQLConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdatePostgreSQLConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdateRedisConfiguration(databaseID string, confString string) error {
+	var conf godo.RedisConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateRedisConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) ListTopics(databaseID string) (DatabaseTopics, error) {
+	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+		list, resp, err := ds.client.Databases.ListTopics(context.TODO(), databaseID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]interface{}, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(DatabaseTopics, len(si))
+	for i := range si {
+		t := si[i].(godo.DatabaseTopic)
+		list[i] = DatabaseTopic{DatabaseTopic: &t}
+	}
+	return list, nil
+}
+
+func (ds *databasesService) CreateTopic(databaseID string, req *godo.DatabaseCreateTopicRequest) (*DatabaseTopic, error) {
+	t, _, err := ds.client.Databases.CreateTopic(context.TODO(), databaseID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DatabaseTopic{DatabaseTopic: t}, nil
+}
+
+func (ds *databasesService) UpdateTopic(databaseID, topicName string, req *godo.DatabaseUpdateTopicRequest) error {
+	_, err := ds.client.Databases.UpdateTopic(context.TODO(), databaseID, topicName, req)
+
+	return err
+}
+
+func (ds *databasesService) GetTopic(databaseID, topicName string) (*DatabaseTopic, error) {
+	t, _, err := ds.client.Databases.GetTopic(context.TODO(), databaseID, topicName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DatabaseTopic{DatabaseTopic: t}, nil
+}
+
+func (ds *databasesService) DeleteTopic(databaseID, topicName string) error {
+	_, err := ds.client.Databases.DeleteTopic(context.TODO(), databaseID, topicName)
+
+	return err
 }
