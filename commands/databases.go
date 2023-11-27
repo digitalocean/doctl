@@ -854,19 +854,19 @@ func databaseOptions() *Command {
 	cmdRegionOptions := CmdBuilder(cmd, RunDatabaseRegionOptions, "regions", "Retrieves a list of the available regions for a given database engine", `Lists the available regions for a given database engine. Some engines may not be available in certain regions.`,
 		Writer, aliasOpt("r"))
 	AddStringFlag(cmdRegionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql `+"`"+`,  `+"`"+`pg `+"`"+`,  `+"`"+`redis `+"`"+`,  `+"`"+`kafka `+"`"+`,  `+"`"+`mongodb `+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`mongodb`+"`"+``)
 	cmdRegionOptions.Example = `The following example retrieves a list of the available regions for the PostgreSQL engine: doctl databases options regions --engine pg`
 
 	cmdVersionOptions := CmdBuilder(cmd, RunDatabaseVersionOptions, "versions", "Retrieves a list of the available versions for a given database engine", `Lists the available versions for a given database engine.`,
 		Writer, aliasOpt("v"))
 	AddStringFlag(cmdVersionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql `+"`"+`,  `+"`"+`pg `+"`"+`,  `+"`"+`redis `+"`"+`,  `+"`"+`kafka `+"`"+`,  `+"`"+`mongodb `+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`mongodb`+"`"+``)
 	cmdVersionOptions.Example = `The following example retrieves a list of the available versions for the PostgreSQL engine: doctl databases options versions --engine pg`
 
 	cmdSlugOptions := CmdBuilder(cmd, RunDatabaseSlugOptions, "slugs", "Retrieves a list of the available slugs for a given database engine", `Lists the available slugs for a given database engine.`,
 		Writer, aliasOpt("s"))
 	AddStringFlag(cmdSlugOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql `+"`"+`,  `+"`"+`pg `+"`"+`,  `+"`"+`redis `+"`"+`,  `+"`"+`kafka `+"`"+`,  `+"`"+`mongodb `+"`"+``, requiredOpt())
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`mongodb`+"`"+``, requiredOpt())
 	cmdSlugOptions.Example = `The following example retrieves a list of the available slugs for the PostgreSQL engine: doctl databases options slugs --engine pg`
 
 	return cmd
@@ -1001,47 +1001,49 @@ func databasePool() *Command {
 			Use:     "pool",
 			Aliases: []string{"p"},
 			Short:   "Display commands for managing connection pools",
-			Long: `The subcommands under ` + "`" + `doctl databases pool` + "`" + ` are for managing connection pools for your database cluster.
+			Long: `The subcommands under ` + "`" + `doctl databases pool` + "`" + ` manage connection pools for your database cluster.
 
 A connection pool may be useful if your database:
 
-- Typically handles a large number of idle connections,
-- Has wide variability in the possible number of connections at any given time,
-- Drops connections due to max connection limits, or
+- Typically handles a large number of idle connections.
+- Has wide variability in the possible number of connections at any given time.
+- Drops connections due to max connection limits.
 - Experiences performance issues due to high CPU usage.
-
-Connection pools can be created and deleted with these commands, or you can simply retrieve information about them.`,
+`,
 		},
 	}
 
 	connectionPoolDetails := `
 
 - The database user that the connection pool uses. When excluded, all connections to the database use the inbound user.
-- The name of the connection pool
-- The size of the connection pool, i.e. the number of connections that will be allocated
-- The database within the cluster for which the connection pool is used
-- The pool mode for the connection pool, which can be 'session', 'transaction', or 'statement'
+- The connection pool's name.
+- The connection pool's size.
+- The database within the cluster that the connection pool connects to.
+- The pool mode for the connection pool. Possible values: ` + "`" + `session` + "`" + `, ` + "`" + `transaction` + "`" + `, or ` + "`" + `statement` + "`" + `
 - A connection string for the connection pool`
 	getPoolDetails := `
 
 You can get a list of existing connection pools by calling:
 
-	doctl databases pool list
+	doctl databases pool list <database-id>
 
 You can get a list of existing database clusters and their IDs by calling:
 
 	doctl databases list`
-	CmdBuilder(cmd, RunDatabasePoolList, "list <database-id>", "List connection pools for a database cluster", `This command lists the existing connection pools for the specified database. The following information will be returned:`+connectionPoolDetails,
+
+	cmdDatabasePoolList := CmdBuilder(cmd, RunDatabasePoolList, "list <database-id>", "List connection pools for a database cluster", `Lists the existing connection pools for the specified database. The command returns the following details about each connection pool:`+connectionPoolDetails,
 		Writer, aliasOpt("ls"), displayerType(&displayers.DatabasePools{}))
-	CmdBuilder(cmd, RunDatabasePoolGet, "get <database-id> <pool-name>",
+	cmdDatabasePoolList.Example = `The following example lists the connection pools for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only each pool's name and connection string: doctl databases pool list ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --format Name,URI`
+
+	cmdDatabasePoolGet := CmdBuilder(cmd, RunDatabasePoolGet, "get <database-id> <pool-name>",
 		"Retrieve information about a database connection pool", `This command retrieves the following information about the specified connection pool for the specified database cluster:`+connectionPoolDetails+getPoolDetails, Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabasePools{}))
+	cmdDatabasePoolGet.Example = `The following example retrieves the details for a connection pool named ` + "`" + `example-pool` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the pool's name and connection string: doctl databases pool get ca9f591d-fb58-5555-a0ef-1c02d1d1e352 example-pool --format Name,URI`
+
 	cmdDatabasePoolCreate := CmdBuilder(cmd, RunDatabasePoolCreate,
-		"create <database-id> <pool-name>", "Create a connection pool for a database", `This command creates a connection pool for the specified database cluster and gives it the specified name.
+		"create <database-id> <pool-name>", "Create a connection pool for a database", `Creates a connection pool for the specified database cluster.
 
-You must also use flags to specify the target database, pool size, and database user's username that will be used for the pool. An example call would be:
-
-	pool create ca9f591d-fb58-5555-a0ef-1c02d1d1e352 mypool --db defaultdb --size 10 --user doadmin
+In addition to the pool's name, you must also use flags to specify the pool's target database, its size, and a database user that the pool uses to authenticate. If you do not specify a user, the field is set to inbound user. An example call would be:
 
 The pool size is the minimum number of connections the pool can handle. The maximum pool size varies based on the size of the cluster.
 
@@ -1060,12 +1062,14 @@ We recommend starting with a pool size of about half your available connections 
 		"The username for the database user")
 	AddStringFlag(cmdDatabasePoolCreate, doctl.ArgDatabasePoolDBName, "", "",
 		"The name of the specific database within the database cluster", requiredOpt())
+	cmdDatabasePoolCreate.Example = `The following example creates a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The command uses the ` + "`" + `--size` + "`" + ` flag to set the pool size to 10 and sets the user to the database's default user: doctl databases pool create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool --size 10`
 
 	cmdDatabasePoolDelete := CmdBuilder(cmd, RunDatabasePoolDelete,
-		"delete <database-id> <pool-name>", "Delete a connection pool for a database", `This command deletes the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
+		"delete <database-id> <pool-name>", "Delete a connection pool for a database", `Deletes the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdDatabasePoolDelete, doctl.ArgForce, doctl.ArgShortForce,
-		false, "Delete connection pool without confirmation prompt")
+		false, "Delete connection pool without confirmation prompt.")
+	cmdDatabasePoolDelete.Example = `The following example deletes a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases pool delete ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool`
 
 	return cmd
 }
@@ -1190,28 +1194,32 @@ You can get a list of existing database clusters and their IDs by calling:
 
 You can get a list of existing databases that are hosted within a cluster by calling:
 
-	doctl databases db list {cluster-id}`
+	doctl databases db list <cluster-id>`
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "db",
 			Short: "Display commands for managing individual databases within a cluster",
-			Long: `The subcommands under ` + "`" + `doctl databases db` + "`" + ` are for managing specific databases that are served by a database cluster.
-
-You can use these commands to create and delete databases within a cluster, or simply get information about them.` + getClusterList,
+			Long:  `The subcommands under ` + "`" + `doctl databases db` + "`" + ` are for managing specific databases that are served by a database cluster.` + getClusterList,
 		},
 	}
 
-	CmdBuilder(cmd, RunDatabaseDBList, "list <database-id>", "Retrieve a list of databases within a cluster", "This command retrieves the names of all databases being hosted in the specified database cluster."+getClusterList, Writer,
+	cmdDatabaseDBList := CmdBuilder(cmd, RunDatabaseDBList, "list <database-id>", "Retrieve a list of databases within a cluster", "Retrieves a list of databases being hosted in the specified database cluster."+getClusterList, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DatabaseDBs{}))
-	CmdBuilder(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "Retrieve the name of a database within a cluster", "This command retrieves the name of the specified database hosted in the specified database cluster."+getClusterList+getDBList,
+	cmdDatabaseDBList.Example = `The following example retrieves a list of databases in a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases db list ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+
+	cmdDatabaseDBGet := CmdBuilder(cmd, RunDatabaseDBGet, "get <database-id> <db-name>", "Retrieve the name of a database within a cluster", "Retrieves the name of the specified database hosted in the specified database cluster."+getClusterList+getDBList,
 		Writer, aliasOpt("g"), displayerType(&displayers.DatabaseDBs{}))
-	CmdBuilder(cmd, RunDatabaseDBCreate, "create <database-id> <db-name>",
-		"Create a database within a cluster", "This command creates a database with the specified name in the specified database cluster."+getClusterList, Writer, aliasOpt("c"))
+	cmdDatabaseDBGet.Example = `The following example retrieves the name of a database in a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` and the name ` + "`" + `example-db` + "`" + `: doctl databases db get ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-db`
+
+	cmdDatabaseDBCreate := CmdBuilder(cmd, RunDatabaseDBCreate, "create <database-id> <db-name>",
+		"Create a database within a cluster", "Creates a database with the specified name in the specified database cluster."+getClusterList, Writer, aliasOpt("c"))
+	cmdDatabaseDBCreate.Example = `The following example creates a database named ` + "`" + `example-db` + "`" + ` in a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases db create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-db`
 
 	cmdDatabaseDBDelete := CmdBuilder(cmd, RunDatabaseDBDelete,
-		"delete <database-id> <db-name>", "Delete the specified database from the cluster", "This command deletes the specified database from the specified database cluster."+getClusterList+getDBList, Writer, aliasOpt("rm"))
+		"delete <database-id> <db-name>", "Delete the specified database from the cluster", "Deletes the specified database from the specified database cluster."+getClusterList+getDBList, Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseDBDelete, doctl.ArgForce, doctl.ArgShortForce,
-		false, "Delete the database without a confirmation prompt")
+		false, "Delete the database without a confirmation prompt.")
+	cmdDatabaseDBDelete.Example = `The following example deletes a database named ` + "`" + `example-db` + "`" + ` in a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases db delete ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-db`
 
 	return cmd
 }
@@ -1299,7 +1307,7 @@ func databaseReplica() *Command {
 			Use:     "replica",
 			Aliases: []string{"rep", "r"},
 			Short:   "Display commands to manage read-only database replicas",
-			Long: `The subcommands under ` + "`" + `doctl databases replica` + "`" + ` enable the management of read-only replicas associated with a database cluster.
+			Long: `The subcommands under ` + "`" + `doctl databases replica` + "`" + ` allow you to manage read-only replicas associated with a database cluster.
 
 In addition to primary nodes in a database cluster, you can create up to 2 read-only replica nodes (also referred to as "standby nodes") to maintain high availability.`,
 		},
@@ -1308,53 +1316,60 @@ In addition to primary nodes in a database cluster, you can create up to 2 read-
 
 This command requires that you pass in the replica's name, which you can retrieve by querying a database ID:
 
-	doctl databases replica list ca9f591d-5555-5555-a0ef-1c02d1d1e352`
+	doctl databases replica list <database-cluster-id>`
 	replicaDetails := `
 
-- The name of the replica
-- The region where the database cluster is located (e.g. ` + "`" + `nyc3` + "`" + `, ` + "`" + `sfo2` + "`" + `)
-- The status of the replica (possible values are ` + "`" + `forking` + "`" + ` and ` + "`" + `active` + "`" + `)
+- The replica's name.
+- The region where the database cluster is located, such as ` + "`" + `nyc3` + "`" + `, ` + "`" + `sfo2` + "`" + `
+- The replica's status. Possible values: ` + "`" + `forking` + "`" + ` and ` + "`" + `active` + "`" + `
 `
-	CmdBuilder(cmd, RunDatabaseReplicaList, "list <database-id>", "Retrieve list of read-only database replicas", `Lists the following details for read-only replicas for the specified database cluster.`+replicaDetails+databaseListDetails,
+	cmdDatabaseReplicaList := CmdBuilder(cmd, RunDatabaseReplicaList, "list <database-id>", "Retrieve list of read-only database replicas", `Lists the following details for read-only replicas for the specified database cluster.`+replicaDetails+databaseListDetails,
 		Writer, aliasOpt("ls"),
 		displayerType(&displayers.DatabaseReplicas{}))
-	CmdBuilder(cmd, RunDatabaseReplicaGet, "get <database-id> <replica-name>", "Retrieve information about a read-only database replica",
-		`Gets the following details for the specified read-only replica for the specified database cluster:
+	cmdDatabaseReplicaList.Example = `The following example retrieves a list of read-only replicas for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID and URI for each replica: doctl databases replica list ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --format ID,URI`
 
-- The name of the replica
-- Information required to connect to the read-only replica
-- The region where the database cluster is located (e.g. `+"`"+`nyc3`+"`"+`, `+"`"+`sfo2`+"`"+`)
-- The status of the replica (possible values are `+"`"+`creating`+"`"+`, `+"`"+`forking`+"`"+`, or `+"`"+`active`+"`"+`)
-- A time value given in ISO8601 combined date and time format that represents when the read-only replica was created.`+howToGetReplica+databaseListDetails,
+	DatabaseReplicaGet := CmdBuilder(cmd, RunDatabaseReplicaGet, "get <database-id> <replica-name>", "Retrieve information about a read-only database replica",
+		`Gets the following details for the specified read-only replica of the specified database cluster:
+
+- The name of the replica.
+- The information required to connect to the read-only replica.
+- The region where the database cluster is located, such as `+"`"+`nyc3`+"`"+` or `+"`"+`sfo2`+"`"+`.
+- The status of the replica. Possible values: `+"`"+`creating`+"`"+`, `+"`"+`forking`+"`"+`, `+"`"+`active`+"`"+`
+- When the read-only replica was created, in ISO8601 date/time format.`+howToGetReplica+databaseListDetails,
 		Writer, aliasOpt("g"),
 		displayerType(&displayers.DatabaseReplicas{}))
+	DatabaseReplicaGet.Example = `The following example retrieves the details for a read-only replica named ` + "`" + `example-replica` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases replica get ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-replica`
 
 	cmdDatabaseReplicaCreate := CmdBuilder(cmd, RunDatabaseReplicaCreate,
-		"create <database-id> <replica-name>", "Create a read-only database replica", `This command creates a read-only database replica for the specified database cluster, giving it the specified name.`+databaseListDetails,
+		"create <database-id> <replica-name>", "Create a read-only database replica", `Creates a read-only database replica for the specified database cluster, giving it the specified name.`+databaseListDetails,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgRegionSlug, "",
-		defaultDatabaseRegion, "Specifies the region (e.g. nyc3, sfo2) in which to create the replica")
+		defaultDatabaseRegion, `Specifies the region in which to create the replica, such as `+"`"+`nyc3`+"`"+` or `+"`"+`sfo2`+"`"+`.`)
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgSizeSlug, "",
-		defaultDatabaseNodeSize, "Specifies the machine size for the replica (e.g. db-s-1vcpu-1gb). Must be the same or equal to the original.")
+		defaultDatabaseNodeSize, `Specifies the machine size for the replica, such as `+"`"+`db-s-1vcpu-1gb`+"`"+`. Must be the same size or larger than the primary database cluster.`)
 	AddStringFlag(cmdDatabaseReplicaCreate, doctl.ArgPrivateNetworkUUID, "",
-		"", "The UUID of a VPC to create the replica in; the default VPC for the region will be used if excluded")
+		"", "The UUID of a VPC to create the replica in; the default VPC for the region will be used if excluded.")
+	cmdDatabaseReplicaCreate.Example = `The following example creates a read-only replica named ` + "`" + `example-replica` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases replica create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-replica --size db-s-1vcpu-1gb`
 
 	cmdDatabaseReplicaDelete := CmdBuilder(cmd, RunDatabaseReplicaDelete,
 		"delete <database-id> <replica-name>", "Delete a read-only database replica",
-		`Delete the specified read-only replica for the specified database cluster.`+howToGetReplica+databaseListDetails,
+		`Deletes the specified read-only replica for the specified database cluster.`+howToGetReplica+databaseListDetails,
 		Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseReplicaDelete, doctl.ArgForce, doctl.ArgShortForce,
-		false, "Deletes the replica without a confirmation prompt")
+		false, "Deletes the replica without a confirmation prompt.")
+	cmdDatabaseReplicaDelete.Example = `The following example deletes a read-only replica named ` + "`" + `example-replica` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases replica delete ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-replica`
 
-	CmdBuilder(cmd, RunDatabaseReplicaPromote,
+	cmdDatabaseReplicaPromote := CmdBuilder(cmd, RunDatabaseReplicaPromote,
 		"promote <database-id> <replica-name>", "Promote a read-only database replica to become a primary cluster",
-		`This command promotes a read-only database replica to become a primary cluster.`+howToGetReplica+databaseListDetails,
+		`Promotes a read-only database replica to become its own independent primary cluster. Promoted replicas no longer stay in sync with primary cluster they were forked from.`+howToGetReplica+databaseListDetails,
 		Writer, aliasOpt("p"))
+	cmdDatabaseReplicaPromote.Example = `The following example promotes a read-only replica named ` + "`" + `example-replica` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases replica promote ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-replica`
 
-	CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
+	cmdDatabaseReplicaConnectionGet := CmdBuilder(cmd, RunDatabaseReplicaConnectionGet,
 		"connection <database-id> <replica-name>",
 		"Retrieve information for connecting to a read-only database replica",
-		`This command retrieves information for connecting to the specified read-only database replica in the specified database cluster`+howToGetReplica+databaseListDetails, Writer, aliasOpt("conn"))
+		`Retrieves information for connecting to the specified read-only database replica in the specified database cluster`+howToGetReplica+databaseListDetails, Writer, aliasOpt("conn"))
+	cmdDatabaseReplicaConnectionGet.Example = `The following example retrieves the connection details for a read-only replica named ` + "`" + `example-replica` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases replica connection get ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-replica`
 
 	return cmd
 }
@@ -1504,21 +1519,23 @@ func sqlMode() *Command {
 			Use:     "sql-mode",
 			Aliases: []string{"sm"},
 			Short:   "Display commands to configure a MySQL database cluster's SQL modes",
-			Long:    "The subcommands of `doctl databases sql-mode` are used to view and configure a MySQL database cluster's global SQL modes.",
+			Long:    "The subcommands of `doctl databases sql-mode` are used to view and configure a MySQL database cluster's global SQL modes. Global SQL modes affect the SQL syntax MySQL supports and the data validation checks it performs.",
 		},
 	}
 
-	getSqlModeDesc := "This command displays the configured SQL modes for the specified MySQL database cluster."
-	CmdBuilder(cmd, RunDatabaseGetSQLModes, "get <database-id>",
+	getSqlModeDesc := "Displays the configured SQL modes for the specified MySQL database cluster."
+	cmdDatabaseGetSQLModes := CmdBuilder(cmd, RunDatabaseGetSQLModes, "get <database-id>",
 		"Get a MySQL database cluster's SQL modes", getSqlModeDesc, Writer,
 		displayerType(&displayers.DatabaseSQLModes{}), aliasOpt("g"))
+	cmdDatabaseGetSQLModes.Example = `The following example retrieves the SQL modes for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases sql-mode get ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+
 	setSqlModeDesc := `This command configures the SQL modes for the specified MySQL database cluster. The SQL modes should be provided as a space separated list.
 
-This will replace the existing SQL mode configuration completely. Include all of the current values when adding a new one.
+This command replaces the existing SQL mode configuration completely. Include all of the current values when adding a new one.
 `
-	CmdBuilder(cmd, RunDatabaseSetSQLModes, "set <database-id> <sql-mode-1> ... <sql-mode-n>",
+	cmdDatabaseSetSQLModes := CmdBuilder(cmd, RunDatabaseSetSQLModes, "set <database-id> <sql-mode-1> ... <sql-mode-n>",
 		"Set a MySQL database cluster's SQL modes", setSqlModeDesc, Writer, aliasOpt("s"))
-
+	cmdDatabaseSetSQLModes.Example = `The following example sets the SQL mode ALLOW_INVALID_DATES for an existing database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The cluster already has the modes ` + "`" + `NO_ZERO_DATE` + "`" + `, ` + "`" + `NO_ZERO_IN_DATE` + "`" + `, ` + "`" + `STRICT_ALL_TABLES` + "`" + ` set, but they must be included in the command to avoid being overwritten by the additional mode: doctl databases sql-mode set ca9f591d-f38h-5555-a0ef-1c02d1d1e35 NO_ZERO_DATE NO_ZERO_IN_DATE STRICT_ALL_TABLES ALLOW_INVALID_DATES`
 	return cmd
 }
 
@@ -1561,7 +1578,7 @@ func databaseFirewalls() *Command {
 			Use:     "firewalls",
 			Aliases: []string{"fw"},
 			Short:   `Display commands to manage firewall rules (called` + "`" + `trusted sources` + "`" + ` in the control panel) for database clusters`,
-			Long:    `The subcommands under ` + "`" + `doctl databases firewalls` + "`" + ` enable the management of firewalls for database clusters`,
+			Long:    `The subcommands under ` + "`" + `doctl databases firewalls` + "`" + ` enable the management of firewalls for database clusters.`,
 		},
 	}
 
@@ -1569,10 +1586,10 @@ func databaseFirewalls() *Command {
 This command lists the following details for each firewall rule in a given database:
 
 	- The UUID of the firewall rule.
-	- The Cluster UUID for the database cluster to which the rule is applied.
-	- The Type of resource that the firewall rule allows to access the database cluster. The possible values are: "droplet", "k8s", "ip_addr", "tag", or "app".
-	- The Value, which is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster.
-	- The Time value given in ISO8601 combined date and time format that represents when the firewall rule was created.
+	- The cluster UUID for the database cluster to which the rule is applied.
+	- The type of resource that the firewall rule allows to access the database cluster. Possible values are: ` + "`" + `droplet` + "`" + `, ` + "`" + `k8s` + "`" + `, ` + "`" + `ip_addr` + "`" + `, "tag", ` + "`" + `app` + "`" + `
+	- The value, which specifies the resource or resources allowed to access the database cluster. Possible values are either the ID of the specific resource, the name of a tag applied to a group of resources, or an IP address.
+	- When the firewall rule was created, in ISO8601 date/time format.
 	`
 	databaseFirewallRuleDetails := `
 
@@ -1580,75 +1597,48 @@ This command requires the ID of a database cluster, which you can retrieve by ca
 
 	doctl databases list`
 
-	databaseFirewallRulesTxt := "A comma-separated list of firewall rules of format type:value, e.g.: `type:value`"
+	databaseFirewallRulesTxt := `A comma-separated list of firewall rules, in ` + "`" + `type:value` + "`" + ` format.`
 
 	databaseFirewallUpdateDetails := `
-Use this command to replace the firewall rules of a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
+Use this command to replace the firewall rules of a given database. This command requires the ` + "`" + `--rule` + "`" + ` flag. 
 
-	doctl databases list
-
-This command also requires a --rule flag. You can pass in multiple --rule flags. Each rule passed in to the --rule flag must be of format type:value
-	- "type" is the type of resource that the firewall rule allows to access the database cluster. The possible values for type are:  "droplet", "k8s", "ip_addr", "tag", or "app"
-	- "value" is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster
-
-For example:
-
-	doctl databases firewalls replace d1234-1c12-1234-b123-12345c4789 --rule tag:backend --rule ip_addr:0.0.0.0
-
-	or
-
-	databases firewalls replace d1234-1c12-1234-b123-12345c4789 --rule tag:backend,ip_addr:0.0.0.0
-
-This would replace the firewall rules for database of id d1234-1c12-1234-b123-12345c4789 with the two rules passed above (tag:backend, ip_addr:0.0.0.0)
+You can configure multiple rules for the firewall by passing additional arguments in a comma-separated list with the ` + "`" + `--rule` + "`" + ` flag. Each rule passed using the ` + "`" + `--rule` + "`" + ` flag must be in a ` + "`" + `<type>:<value>` + "`" + ` format where:
+	- ` + "`" + `type` + "`" + ` is the type of resource that the firewall rule allows to access the database cluster. Possible values are:  ` + "`" + `droplet` + "`" + `, ` + "`" + `k8s", ` + "`" + `ip_addr` + "`" + `, ` + "`" + `tag` + "`" + `, ` + "`" + `app` + "`" + `
+	- ` + "`" + `value` + "`" + ` is either the ID of a specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster.
 	`
 
 	databaseFirewallAddDetails :=
 		`
-Use this command to append a single rule to the existing firewall rules of a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
+Use this command to append a single rule to the existing firewall rules of the specified database. 
 
-	doctl databases list
-
-This command also requires a --rule flag. Each rule passed in to the --rule flag must be of format type:value
-	- "type" is the type of resource that the firewall rule allows to access the database cluster. The possible values for type are:  "droplet", "k8s", "ip_addr", "tag", or "app"
-	- "value" is either the ID of the specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster
-
-For example:
-
-	doctl databases firewalls append d1234-1c12-1234-b123-12345c4789 --rule tag:backend
-
-This would append the firewall rule "tag:backend" for database of id d1234-1c12-1234-b123-12345c4789`
+This command requires a ` + "`" + `--rule` + "`" + ` flag specifying the resource or resources allowed to access the database cluster. The rule passed in to the --rule flag must be in a <type>:<value> format where:
+	- ` + "`" + `type` + "`" + ` is the type of resource that the firewall rule allows to access the database cluster. Possible values are:  ` + "`" + `droplet` + "`" + `, ` + "`" + `k8s", ` + "`" + `ip_addr` + "`" + `, ` + "`" + `tag` + "`" + `, ` + "`" + `app` + "`" + `
+	- ` + "`" + `value` + "`" + ` is either the ID of a specific resource, the name of a tag applied to a group of resources, or the IP address that the firewall rule allows to access the database cluster.`
 
 	databaseFirewallRemoveDetails :=
 		`
-Use this command to remove an existing, single rule from the list of firewall rules for a given database. This command requires the ID of a database cluster, which you can retrieve by calling:
+Removes single rule from the list of firewall rules for a specified database. You can retrieve a firewall rule's UUIDs by calling:
 
-	doctl databases list
+	doctl database firewalls list <database-id>`
 
-This command also requires a --uuid flag. You must pass in the UUID of the firewall rule you'd like to remove. You can retrieve the firewall rule's UUIDs by calling:
-
-	doctl database firewalls list <db-id>
-
-For example:
-
-	doctl databases firewalls remove d1234-1c12-1234-b123-12345c4789 --uuid 12345d-1234-123d-123x-123eee456e
-
-This would remove the firewall rule of uuid 12345d-1234-123d-123x-123eee456e for database of id d1234-1c12-1234-b123-12345c4789
-			`
-
-	CmdBuilder(cmd, RunDatabaseFirewallRulesList, "list <database-id>", "Retrieve a list of firewall rules for a given database", firewallRuleDetails+databaseFirewallRuleDetails,
+	cmdDatabaseFirewallRulesList := CmdBuilder(cmd, RunDatabaseFirewallRulesList, "list <database-id>", "Retrieve a list of firewall rules for a given database", firewallRuleDetails+databaseFirewallRuleDetails,
 		Writer, aliasOpt("ls"))
+	cmdDatabaseFirewallRulesList.Example = `The following example retrieves a list of firewall rules for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases firewalls list ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
 
 	cmdDatabaseFirewallUpdate := CmdBuilder(cmd, RunDatabaseFirewallRulesUpdate, "replace <db-id> --rules type:value [--rule type:value]", "Replaces the firewall rules for a given database. The rules passed in to the --rules flag will replace the firewall rules previously assigned to the database,", databaseFirewallUpdateDetails,
 		Writer, aliasOpt("r"))
 	AddStringSliceFlag(cmdDatabaseFirewallUpdate, doctl.ArgDatabaseFirewallRule, "", []string{}, databaseFirewallRulesTxt, requiredOpt())
+	cmdDatabaseFirewallUpdate.Example = `The following example replaces the firewall rules for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` with rules that allow a specific Droplet, a specific IP address, and any resources with the ` + "`" + `example-tag` + "`" + ` to access the database: doctl databases firewalls replace ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --rules droplet:f81d4fae-7dec-11d0-a765-00a0c91e6bf6,ip_addr:192.168.1.1,tag:example-tag`
 
-	cmdDatabaseFirewallCreate := CmdBuilder(cmd, RunDatabaseFirewallRulesAppend, "append <db-id> --rule type:value", "Add a database firewall rule to a given database", databaseFirewallAddDetails,
+	cmdDatabaseFirewallCreate := CmdBuilder(cmd, RunDatabaseFirewallRulesAppend, "append <database-id> --rule <type>:<value>", "Add a database firewall rule to a given database", databaseFirewallAddDetails,
 		Writer, aliasOpt("a"))
 	AddStringFlag(cmdDatabaseFirewallCreate, doctl.ArgDatabaseFirewallRule, "", "", "", requiredOpt())
+	cmdDatabaseFirewallCreate.Example = `The following example appends a firewall rule to a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + ` that allows any resources with the ` + "`" + `example-tag` + "`" + ` to access the database: doctl databases firewalls append ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --rule tag:example-tag`
 
-	cmdDatabaseFirewallRemove := CmdBuilder(cmd, RunDatabaseFirewallRulesRemove, "remove <firerule-uuid>", "Remove a firewall rule for a given database", databaseFirewallRemoveDetails,
+	cmdDatabaseFirewallRemove := CmdBuilder(cmd, RunDatabaseFirewallRulesRemove, "remove <database-cluster-id> --uuid <firerule-uuid>", "Remove a firewall rule for a given database", databaseFirewallRemoveDetails,
 		Writer, aliasOpt("rm"))
 	AddStringFlag(cmdDatabaseFirewallRemove, doctl.ArgDatabaseFirewallRuleUUID, "", "", "", requiredOpt())
+	cmdDatabaseFirewallRemove.Example = `The following example removes a firewall rule with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` from a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases firewalls remove ca9f591d-f38h-5555-a0ef-1c02d1d1e35 f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	return cmd
 }
