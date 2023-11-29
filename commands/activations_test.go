@@ -39,15 +39,15 @@ func TestActivationsCommand(t *testing.T) {
 	assert.ElementsMatch(t, expected, names)
 }
 
-var hello1Result = whisk.Result(map[string]interface{}{
+var hello1Result = whisk.Result(map[string]any{
 	"body": "Hello stranger!",
 })
 
-var hello2Result = whisk.Result(map[string]interface{}{
+var hello2Result = whisk.Result(map[string]any{
 	"body": "Hello Archie!",
 })
 
-var hello3Result = whisk.Result(map[string]interface{}{
+var hello3Result = whisk.Result(map[string]any{
 	"error": "Missing main/no code to execute.",
 })
 
@@ -354,10 +354,10 @@ func TestActivationsList(t *testing.T) {
 				}
 
 				count := false
-				var limit interface{}
-				var since interface{}
-				var upto interface{}
-				var skip interface{}
+				var limit any
+				var since any
+				var upto any
+				var skip any
 
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {
@@ -466,8 +466,8 @@ func TestActivationsLogs(t *testing.T) {
 					activationId = config.Args[0]
 				}
 
-				var limit interface{}
-				var funcName interface{}
+				var limit any
+				var funcName any
 
 				if tt.doctlFlags != nil {
 					for k, v := range tt.doctlFlags {

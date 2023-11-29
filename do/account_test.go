@@ -58,7 +58,7 @@ func (m *MockAccountService) Get(arg0 context.Context) (*godo.Account, *godo.Res
 }
 
 // Get indicates an expected call of Get
-func (mr *MockAccountServiceMockRecorder) Get(arg0 interface{}) *gomock.Call {
+func (mr *MockAccountServiceMockRecorder) Get(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAccountService)(nil).Get), arg0)
 }

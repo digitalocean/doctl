@@ -53,10 +53,10 @@ func (a *Volume) ColMap() map[string]string {
 
 }
 
-func (a *Volume) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(a.Volumes))
+func (a *Volume) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(a.Volumes))
 	for _, volume := range a.Volumes {
-		m := map[string]interface{}{
+		m := map[string]any{
 			"ID":               volume.ID,
 			"Name":             volume.Name,
 			"Size":             strconv.FormatInt(volume.SizeGigaBytes, 10) + " GiB",

@@ -342,7 +342,7 @@ type testingT struct {
 	errors []string
 }
 
-func (t *testingT) Errorf(format string, args ...interface{}) {
+func (t *testingT) Errorf(format string, args ...any) {
 	t.mtx.Lock()
 	defer t.mtx.Unlock()
 	t.failed = true

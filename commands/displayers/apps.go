@@ -38,8 +38,8 @@ func (a Apps) ColMap() map[string]string {
 	}
 }
 
-func (a Apps) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(a))
+func (a Apps) KV() []map[string]any {
+	out := make([]map[string]any, len(a))
 
 	for i, app := range a {
 		var (
@@ -55,7 +55,7 @@ func (a Apps) KV() []map[string]interface{} {
 			inProgressDeploymentID = app.InProgressDeployment.ID
 		}
 
-		out[i] = map[string]interface{}{
+		out[i] = map[string]any{
 			"ID":                      app.ID,
 			"Spec.Name":               app.Spec.Name,
 			"DefaultIngress":          app.DefaultIngress,
@@ -98,8 +98,8 @@ func (d Deployments) ColMap() map[string]string {
 	}
 }
 
-func (d Deployments) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(d))
+func (d Deployments) KV() []map[string]any {
+	out := make([]map[string]any, len(d))
 
 	for i, deployment := range d {
 		var progress string
@@ -111,7 +111,7 @@ func (d Deployments) KV() []map[string]interface{} {
 			}
 		}
 
-		out[i] = map[string]interface{}{
+		out[i] = map[string]any{
 			"ID":       deployment.ID,
 			"Cause":    deployment.Cause,
 			"Progress": progress,
@@ -156,11 +156,11 @@ func (r AppRegions) ColMap() map[string]string {
 	}
 }
 
-func (r AppRegions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(r))
+func (r AppRegions) KV() []map[string]any {
+	out := make([]map[string]any, len(r))
 
 	for i, region := range r {
-		out[i] = map[string]interface{}{
+		out[i] = map[string]any{
 			"Slug":        region.Slug,
 			"Label":       region.Label,
 			"Continent":   region.Continent,
@@ -201,12 +201,12 @@ func (t AppTiers) ColMap() map[string]string {
 	}
 }
 
-func (t AppTiers) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(t))
+func (t AppTiers) KV() []map[string]any {
+	out := make([]map[string]any, len(t))
 
 	for i, tier := range t {
 		egressBandwidth, _ := strconv.ParseUint(tier.EgressBandwidthBytes, 10, 64)
-		out[i] = map[string]interface{}{
+		out[i] = map[string]any{
 			"Name":                 tier.Name,
 			"Slug":                 tier.Slug,
 			"EgressBandwidthBytes": BytesToHumanReadableUnitBinary(egressBandwidth),
@@ -252,8 +252,8 @@ func (is AppInstanceSizes) ColMap() map[string]string {
 	}
 }
 
-func (is AppInstanceSizes) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(is))
+func (is AppInstanceSizes) KV() []map[string]any {
+	out := make([]map[string]any, len(is))
 
 	for i, instanceSize := range is {
 		memory, _ := strconv.ParseUint(instanceSize.MemoryBytes, 10, 64)
@@ -269,7 +269,7 @@ func (is AppInstanceSizes) KV() []map[string]interface{} {
 			upgradeDowngradePath = upgradeDowngradePath + " -> " + instanceSize.TierUpgradeTo
 		}
 
-		out[i] = map[string]interface{}{
+		out[i] = map[string]any{
 			"Name":                     instanceSize.Name,
 			"Slug":                     instanceSize.Slug,
 			"CPUs":                     cpus,
@@ -327,7 +327,7 @@ func (r AppProposeResponse) ColMap() map[string]string {
 	}
 }
 
-func (r AppProposeResponse) KV() []map[string]interface{} {
+func (r AppProposeResponse) KV() []map[string]any {
 	existingStatic, _ := strconv.ParseInt(r.Res.ExistingStaticApps, 10, 64)
 	maxFreeStatic, _ := strconv.ParseInt(r.Res.MaxFreeStaticApps, 10, 64)
 	var paidStatic int64
@@ -352,7 +352,7 @@ func (r AppProposeResponse) KV() []map[string]interface{} {
 		upgradeCost = fmt.Sprintf("%0.2f", r.Res.AppTierUpgradeCost)
 	}
 
-	out := map[string]interface{}{
+	out := map[string]any{
 		"AppNameAvailable":     boolToYesNo(r.Res.AppNameAvailable),
 		"AppIsStatic":          boolToYesNo(r.Res.AppIsStatic),
 		"StaticApps":           staticApps,
@@ -365,7 +365,7 @@ func (r AppProposeResponse) KV() []map[string]interface{} {
 		out["AppNameSuggestion"] = r.Res.AppNameSuggestion
 	}
 
-	return []map[string]interface{}{out}
+	return []map[string]any{out}
 }
 
 func (r AppProposeResponse) JSON(w io.Writer) error {
@@ -402,8 +402,8 @@ func (a AppAlerts) ColMap() map[string]string {
 	}
 }
 
-func (a AppAlerts) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(a))
+func (a AppAlerts) KV() []map[string]any {
+	out := make([]map[string]any, len(a))
 
 	for i, alert := range a {
 		var trigger string
@@ -439,7 +439,7 @@ func (a AppAlerts) KV() []map[string]interface{} {
 			trigger = "Unknown"
 		}
 
-		out[i] = map[string]interface{}{
+		out[i] = map[string]any{
 			"ID":            alert.ID,
 			"Spec.Rule":     alert.Spec.Rule,
 			"Trigger":       trigger,
@@ -480,11 +480,11 @@ func (b Buildpacks) ColMap() map[string]string {
 	}
 }
 
-func (b Buildpacks) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, len(b))
+func (b Buildpacks) KV() []map[string]any {
+	out := make([]map[string]any, len(b))
 
 	for i, bp := range b {
-		out[i] = map[string]interface{}{
+		out[i] = map[string]any{
 			"Name":          bp.Name,
 			"ID":            bp.ID,
 			"Version":       bp.Version,

@@ -74,7 +74,7 @@ func TestNewURN(t *testing.T) {
 		name       string
 		namespace  string
 		collection string
-		identifier interface{}
+		identifier any
 		expected   *URN
 		asString   string
 	}{

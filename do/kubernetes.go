@@ -169,13 +169,13 @@ func (k8s *kubernetesClusterService) GetUpgrades(clusterID string) (KubernetesVe
 }
 
 func (k8s *kubernetesClusterService) List() (KubernetesClusters, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := k8s.client.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, 0, len(list))
+		si := make([]any, 0, len(list))
 		for _, item := range list {
 			si = append(si, item)
 		}
@@ -262,13 +262,13 @@ func (k8s *kubernetesClusterService) GetNodePool(clusterID, poolID string) (*Kub
 }
 
 func (k8s *kubernetesClusterService) ListNodePools(clusterID string) (KubernetesNodePools, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := k8s.client.ListNodePools(context.TODO(), clusterID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, 0, len(list))
+		si := make([]any, 0, len(list))
 		for _, item := range list {
 			si = append(si, item)
 		}

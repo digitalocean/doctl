@@ -191,7 +191,7 @@ func (glv *GithubLatestVersioner) LatestVersion() (string, error) {
 
 	defer res.Body.Close()
 
-	var m map[string]interface{}
+	var m map[string]any
 	if err = json.NewDecoder(res.Body).Decode(&m); err != nil {
 		return "", err
 	}
@@ -211,7 +211,7 @@ type Config interface {
 	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
-	Set(ns, key string, val interface{})
+	Set(ns, key string, val any)
 	IsSet(key string) bool
 	GetString(ns, key string) (string, error)
 	GetBool(ns, key string) (bool, error)
@@ -329,7 +329,7 @@ func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.Schema
 }
 
 // Set sets a config key.
-func (c *LiveConfig) Set(ns, key string, val interface{}) {
+func (c *LiveConfig) Set(ns, key string, val any) {
 	viper.Set(nskey(ns, key), val)
 }
 
@@ -517,7 +517,7 @@ func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.Schema
 }
 
 // Set sets a config key.
-func (c *TestConfig) Set(ns, key string, val interface{}) {
+func (c *TestConfig) Set(ns, key string, val any) {
 	nskey := nskey(ns, key)
 	c.v.Set(nskey, val)
 	c.IsSetMap[key] = true

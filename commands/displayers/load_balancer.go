@@ -74,8 +74,8 @@ func (lb *LoadBalancer) ColMap() map[string]string {
 	}
 }
 
-func (lb *LoadBalancer) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(lb.LoadBalancers))
+func (lb *LoadBalancer) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(lb.LoadBalancers))
 
 	for _, l := range lb.LoadBalancers {
 		forwardingRules := make([]string, 0, len(l.ForwardingRules))
@@ -83,7 +83,7 @@ func (lb *LoadBalancer) KV() []map[string]interface{} {
 			forwardingRules = append(forwardingRules, prettyPrintStruct(r))
 		}
 
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID":                           l.ID,
 			"IP":                           l.IP,
 			"Name":                         l.Name,
@@ -118,7 +118,7 @@ func toBool(b *bool) bool {
 	return *b
 }
 
-func prettyPrintStruct(obj interface{}) string {
+func prettyPrintStruct(obj any) string {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Printf("Recovered from %v", err)

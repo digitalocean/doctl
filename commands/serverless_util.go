@@ -129,7 +129,7 @@ func isServerlessConnected(leafCredsDir string, serverlessDir string) bool {
 // Converts something "object-like" but untyped to generic JSON
 // Designed for human eyes; does not provide an explicit error
 // result
-func genericJSON(toFormat interface{}) string {
+func genericJSON(toFormat any) string {
 	bytes, err := json.MarshalIndent(&toFormat, "", "  ")
 	if err != nil {
 		return "<not representable as JSON>"

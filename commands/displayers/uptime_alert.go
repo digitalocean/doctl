@@ -47,8 +47,8 @@ func (ua *UptimeAlert) ColMap() map[string]string {
 	}
 }
 
-func (ua *UptimeAlert) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(ua.UptimeAlerts))
+func (ua *UptimeAlert) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(ua.UptimeAlerts))
 	for _, uptimeAlert := range ua.UptimeAlerts {
 		emails := ""
 		if uptimeAlert.Notifications.Email != nil {
@@ -62,7 +62,7 @@ func (ua *UptimeAlert) KV() []map[string]interface{} {
 		}
 		slacks := strings.Join(slackChannels, ",")
 
-		m := map[string]interface{}{
+		m := map[string]any{
 			"ID":             uptimeAlert.ID,
 			"Name":           uptimeAlert.Name,
 			"Type":           uptimeAlert.Type,
