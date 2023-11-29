@@ -48,15 +48,15 @@ func (i *Triggers) ColMap() map[string]string {
 }
 
 // KV is the displayer KV method specialized for triggers list
-func (i *Triggers) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(i.List))
+func (i *Triggers) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(i.List))
 	for _, ii := range i.List {
 		lastRun := "_"
 		if ii.ScheduledRuns != nil && ii.ScheduledRuns.LastRunAt != nil && !ii.ScheduledRuns.LastRunAt.IsZero() {
 			lastRun = ii.ScheduledRuns.LastRunAt.String()
 		}
 
-		x := map[string]interface{}{
+		x := map[string]any{
 			"Name":     ii.Name,
 			"Cron":     ii.ScheduledDetails.Cron,
 			"Function": ii.Function,

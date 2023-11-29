@@ -1415,7 +1415,7 @@ func TestDatabaseGetSQLModes(t *testing.T) {
 }
 
 func TestDatabaseSetSQLModes(t *testing.T) {
-	testSQLModesInterface := make([]interface{}, 0, len(testSQLModes))
+	testSQLModesInterface := make([]any, 0, len(testSQLModes))
 	for _, sqlMode := range testSQLModes {
 		testSQLModesInterface = append(testSQLModesInterface, sqlMode)
 	}

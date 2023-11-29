@@ -42,8 +42,8 @@ func (gi *Image) ColMap() map[string]string {
 	}
 }
 
-func (gi *Image) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(gi.Images))
+func (gi *Image) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(gi.Images))
 
 	for _, i := range gi.Images {
 		publicStatus := false
@@ -51,7 +51,7 @@ func (gi *Image) KV() []map[string]interface{} {
 			publicStatus = true
 		}
 
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID": i.ID, "Name": i.Name, "Type": i.Type, "Distribution": i.Distribution,
 			"Slug": i.Slug, "Public": publicStatus, "MinDisk": i.MinDiskSize,
 		}

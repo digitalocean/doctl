@@ -69,13 +69,13 @@ func (fia *reservedIPActionsService) Get(ip string, actionID int) (*Action, erro
 }
 
 func (fia *reservedIPActionsService) List(ip string, opt *godo.ListOptions) ([]Action, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := fia.client.ReservedIPActions.List(context.TODO(), ip, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

@@ -81,14 +81,14 @@ func (s *appsService) Get(appID string) (*godo.App, error) {
 }
 
 func (s *appsService) List(withProjects bool) ([]*godo.App, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		opt.WithProjects = withProjects
 		list, resp, err := s.client.Apps.List(s.ctx, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, 0, len(list))
+		si := make([]any, 0, len(list))
 		for _, item := range list {
 			si = append(si, item)
 		}
@@ -150,13 +150,13 @@ func (s *appsService) GetDeployment(appID, deploymentID string) (*godo.Deploymen
 }
 
 func (s *appsService) ListDeployments(appID string) ([]*godo.Deployment, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := s.client.Apps.ListDeployments(s.ctx, appID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, 0, len(list))
+		si := make([]any, 0, len(list))
 		for _, item := range list {
 			si = append(si, item)
 		}

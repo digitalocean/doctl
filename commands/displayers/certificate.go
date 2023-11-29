@@ -56,11 +56,11 @@ func (c *Certificate) ColMap() map[string]string {
 	}
 }
 
-func (c *Certificate) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(c.Certificates))
+func (c *Certificate) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(c.Certificates))
 
 	for _, c := range c.Certificates {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID":              c.ID,
 			"Name":            c.Name,
 			"DNSNames":        strings.Join(c.DNSNames, ","),

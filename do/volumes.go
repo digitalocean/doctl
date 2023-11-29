@@ -37,14 +37,14 @@ func NewVolumesService(godoClient *godo.Client) VolumesService {
 }
 
 func (a *volumesService) List() ([]Volume, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		params := &godo.ListVolumeParams{ListOptions: opt}
 		list, resp, err := a.client.Storage.ListVolumes(context.TODO(), params)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -111,13 +111,13 @@ func (a *volumesService) DeleteSnapshot(snapshotID string) error {
 }
 
 func (a *volumesService) ListSnapshots(volumeID string, opt *godo.ListOptions) ([]Snapshot, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := a.client.Storage.ListSnapshots(context.TODO(), volumeID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

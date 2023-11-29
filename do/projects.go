@@ -66,13 +66,13 @@ func NewProjectsService(client *godo.Client) ProjectsService {
 
 // List projects.
 func (ps *projectsService) List() (Projects, error) {
-	listFn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	listFn := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ps.client.Projects.List(ps.ctx, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -125,13 +125,13 @@ func (ps *projectsService) Delete(projectUUID string) error {
 }
 
 func (ps *projectsService) ListResources(projectUUID string) (ProjectResources, error) {
-	listFn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	listFn := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ps.client.Projects.ListResources(ps.ctx, projectUUID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -143,7 +143,7 @@ func (ps *projectsService) ListResources(projectUUID string) (ProjectResources, 
 }
 
 func (ps *projectsService) AssignResources(projectUUID string, resources []string) (ProjectResources, error) {
-	assignableResources := make([]interface{}, len(resources))
+	assignableResources := make([]any, len(resources))
 	for i, resource := range resources {
 		assignableResources[i] = resource
 	}
@@ -161,7 +161,7 @@ func (ps *projectsService) AssignResources(projectUUID string, resources []strin
 	return prs, err
 }
 
-func projectsPaginatedListHelper(listFn func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error)) (Projects, error) {
+func projectsPaginatedListHelper(listFn func(opt *godo.ListOptions) ([]any, *godo.Response, error)) (Projects, error) {
 	si, err := PaginateResp(listFn)
 	if err != nil {
 		return nil, err
@@ -180,7 +180,7 @@ func projectsPaginatedListHelper(listFn func(opt *godo.ListOptions) ([]interface
 	return list, nil
 }
 
-func projectResourcesPaginatedListHelper(listFn func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error)) (ProjectResources, error) {
+func projectResourcesPaginatedListHelper(listFn func(opt *godo.ListOptions) ([]any, *godo.Response, error)) (ProjectResources, error) {
 	si, err := PaginateResp(listFn)
 	if err != nil {
 		return nil, err

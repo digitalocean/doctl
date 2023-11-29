@@ -29,12 +29,12 @@ var perPage = 200
 var fetchFn = fetchPage
 
 type paginatedList struct {
-	list  [][]interface{}
+	list  [][]any
 	total int
 	mu    sync.Mutex
 }
 
-func (pl *paginatedList) set(page int, items []interface{}) {
+func (pl *paginatedList) set(page int, items []any) {
 	pl.mu.Lock()
 	defer pl.mu.Unlock()
 	pl.total += len(items)
@@ -42,10 +42,10 @@ func (pl *paginatedList) set(page int, items []interface{}) {
 }
 
 // Generator is a function that generates the list to be paginated.
-type Generator func(*godo.ListOptions) ([]interface{}, *godo.Response, error)
+type Generator func(*godo.ListOptions) ([]any, *godo.Response, error)
 
 // PaginateResp paginates a Response.
-func PaginateResp(gen Generator) ([]interface{}, error) {
+func PaginateResp(gen Generator) ([]any, error) {
 	opt := &godo.ListOptions{Page: 1, PerPage: perPage}
 
 	// fetch first page to get page count (x)
@@ -61,7 +61,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 	}
 
 	l := paginatedList{
-		list: make([][]interface{}, lp),
+		list: make([][]any, lp),
 	}
 
 	// set results from the first page
@@ -93,7 +93,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 	wg.Wait()
 
 	// flatten paginated list
-	items := make([]interface{}, l.total)[:0]
+	items := make([]any, l.total)[:0]
 	for _, page := range l.list {
 		if page == nil {
 			// must have been an error getting page results
@@ -107,7 +107,7 @@ func PaginateResp(gen Generator) ([]interface{}, error) {
 	return items, nil
 }
 
-func fetchPage(gen Generator, page int) ([]interface{}, error) {
+func fetchPage(gen Generator, page int) ([]any, error) {
 	opt := &godo.ListOptions{Page: page, PerPage: perPage}
 	items, _, err := gen(opt)
 	return items, err

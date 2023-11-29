@@ -94,11 +94,11 @@ func (d *Databases) ColMap() map[string]string {
 	}
 }
 
-func (d *Databases) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(d.Databases))
+func (d *Databases) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(d.Databases))
 
 	for _, db := range d.Databases {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID":         db.ID,
 			"Name":       db.Name,
 			"Engine":     db.EngineSlug,
@@ -141,11 +141,11 @@ func (db *DatabaseBackups) ColMap() map[string]string {
 	}
 }
 
-func (db *DatabaseBackups) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(db.DatabaseBackups))
+func (db *DatabaseBackups) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(db.DatabaseBackups))
 
 	for _, b := range db.DatabaseBackups {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Size":    b.SizeGigabytes,
 			"Created": b.CreatedAt,
 		}
@@ -181,11 +181,11 @@ func (du *DatabaseUsers) ColMap() map[string]string {
 	}
 }
 
-func (du *DatabaseUsers) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(du.DatabaseUsers))
+func (du *DatabaseUsers) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(du.DatabaseUsers))
 
 	for _, u := range du.DatabaseUsers {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Role":     u.Role,
 			"Name":     u.Name,
 			"Password": u.Password,
@@ -230,9 +230,9 @@ func (dc *DatabaseConnection) ColMap() map[string]string {
 	}
 }
 
-func (dc *DatabaseConnection) KV() []map[string]interface{} {
+func (dc *DatabaseConnection) KV() []map[string]any {
 	c := dc.DatabaseConnection
-	o := map[string]interface{}{
+	o := map[string]any{
 		"URI":      c.URI,
 		"Database": c.Database,
 		"Host":     c.Host,
@@ -242,7 +242,7 @@ func (dc *DatabaseConnection) KV() []map[string]interface{} {
 		"SSL":      c.SSL,
 	}
 
-	return []map[string]interface{}{o}
+	return []map[string]any{o}
 }
 
 type DatabaseReplicas struct {
@@ -296,11 +296,11 @@ func (dr *DatabaseReplicas) ColMap() map[string]string {
 	}
 }
 
-func (dr *DatabaseReplicas) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dr.DatabaseReplicas))
+func (dr *DatabaseReplicas) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dr.DatabaseReplicas))
 
 	for _, r := range dr.DatabaseReplicas {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Name":    r.Name,
 			"ID":      r.ID,
 			"Region":  r.Region,
@@ -336,7 +336,7 @@ func (do *DatabaseOptions) ColMap() map[string]string {
 	}
 }
 
-func (do *DatabaseOptions) KV() []map[string]interface{} {
+func (do *DatabaseOptions) KV() []map[string]any {
 	engines := make([]string, 0)
 	nonEmptyOptionsFn := func(opt godo.DatabaseEngineOptions) bool {
 		return len(opt.Layouts) > 0 || len(opt.Regions) > 0 || len(opt.Versions) > 0
@@ -357,9 +357,9 @@ func (do *DatabaseOptions) KV() []map[string]interface{} {
 		engines = append(engines, "kafka")
 	}
 
-	out := make([]map[string]interface{}, 0, len(engines))
+	out := make([]map[string]any, 0, len(engines))
 	for _, eng := range engines {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Engine": eng,
 		}
 		out = append(out, o)
@@ -391,8 +391,8 @@ func (dbr *DatabaseRegionOptions) ColMap() map[string]string {
 	}
 }
 
-func (dbr *DatabaseRegionOptions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0)
+func (dbr *DatabaseRegionOptions) KV() []map[string]any {
+	out := make([]map[string]any, 0)
 	regionEngineMap := make(map[string][]string, 0)
 	for eng, regions := range dbr.RegionMap {
 		for _, r := range regions {
@@ -400,7 +400,7 @@ func (dbr *DatabaseRegionOptions) KV() []map[string]interface{} {
 		}
 	}
 	for r, engines := range regionEngineMap {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Region":  r,
 			"Engines": "[" + strings.Join(engines, ",") + "]",
 		}
@@ -433,10 +433,10 @@ func (dbv *DatabaseVersionOptions) ColMap() map[string]string {
 	}
 }
 
-func (dbv *DatabaseVersionOptions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0)
+func (dbv *DatabaseVersionOptions) KV() []map[string]any {
+	out := make([]map[string]any, 0)
 	for eng, versions := range dbv.VersionMap {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Engine":   eng,
 			"Versions": "[" + strings.Join(versions, ",") + "]",
 		}
@@ -469,8 +469,8 @@ func (dbl *DatabaseLayoutOptions) ColMap() map[string]string {
 	}
 }
 
-func (dbl *DatabaseLayoutOptions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0)
+func (dbl *DatabaseLayoutOptions) KV() []map[string]any {
+	out := make([]map[string]any, 0)
 	slugNodeMap := make(map[string][]string, 0)
 	for _, layout := range dbl.Layouts {
 		for _, s := range layout.Sizes {
@@ -485,7 +485,7 @@ func (dbl *DatabaseLayoutOptions) KV() []map[string]interface{} {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Slug":     k,
 			"NodeNums": "[" + strings.Join(slugNodeMap[k], ",") + "]",
 		}
@@ -526,11 +526,11 @@ func (dp *DatabasePools) ColMap() map[string]string {
 	}
 }
 
-func (dp *DatabasePools) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dp.DatabasePools))
+func (dp *DatabasePools) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dp.DatabasePools))
 
 	for _, p := range dp.DatabasePools {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"User":     p.User,
 			"Name":     p.Name,
 			"Size":     p.Size,
@@ -570,15 +570,15 @@ func (dmw *DatabaseMaintenanceWindow) ColMap() map[string]string {
 	}
 }
 
-func (dmw *DatabaseMaintenanceWindow) KV() []map[string]interface{} {
+func (dmw *DatabaseMaintenanceWindow) KV() []map[string]any {
 	mw := dmw.DatabaseMaintenanceWindow
-	o := map[string]interface{}{
+	o := map[string]any{
 		"Day":     mw.Day,
 		"Hour":    mw.Hour,
 		"Pending": mw.Pending,
 	}
 
-	return []map[string]interface{}{o}
+	return []map[string]any{o}
 }
 
 type DatabaseDBs struct {
@@ -603,11 +603,11 @@ func (db *DatabaseDBs) ColMap() map[string]string {
 	}
 }
 
-func (db *DatabaseDBs) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(db.DatabaseDBs))
+func (db *DatabaseDBs) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(db.DatabaseDBs))
 
 	for _, p := range db.DatabaseDBs {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Name": p.Name,
 		}
 		out = append(out, o)
@@ -638,11 +638,11 @@ func (dsm *DatabaseSQLModes) ColMap() map[string]string {
 	}
 }
 
-func (dsm *DatabaseSQLModes) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dsm.DatabaseSQLModes))
+func (dsm *DatabaseSQLModes) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dsm.DatabaseSQLModes))
 
 	for _, p := range dsm.DatabaseSQLModes {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Name": p,
 		}
 		out = append(out, o)
@@ -680,11 +680,11 @@ func (dr *DatabaseFirewallRules) ColMap() map[string]string {
 	}
 }
 
-func (dr *DatabaseFirewallRules) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dr.DatabaseFirewallRules))
+func (dr *DatabaseFirewallRules) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dr.DatabaseFirewallRules))
 
 	for _, r := range dr.DatabaseFirewallRules {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"UUID":        r.UUID,
 			"ClusterUUID": r.ClusterUUID,
 			"Type":        r.Type,
@@ -723,11 +723,11 @@ func (dt *DatabaseKafkaTopics) ColMap() map[string]string {
 	}
 }
 
-func (dt *DatabaseKafkaTopics) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dt.DatabaseTopics))
+func (dt *DatabaseKafkaTopics) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dt.DatabaseTopics))
 
 	for _, t := range dt.DatabaseTopics {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Name":              t.Name,
 			"State":             t.State,
 			"ReplicationFactor": *t.ReplicationFactor,
@@ -767,11 +767,11 @@ func (dp *DatabaseKafkaTopicPartitions) ColMap() map[string]string {
 	}
 }
 
-func (dp *DatabaseKafkaTopicPartitions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dp.DatabaseTopicPartitions))
+func (dp *DatabaseKafkaTopicPartitions) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dp.DatabaseTopicPartitions))
 
 	for _, p := range dp.DatabaseTopicPartitions {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Id":             p.Id,
 			"InSyncReplicas": p.InSyncReplicas,
 			"EarliestOffset": p.EarliestOffset,
@@ -808,9 +808,9 @@ func (dt *DatabaseKafkaTopic) ColMap() map[string]string {
 	}
 }
 
-func (dt *DatabaseKafkaTopic) KV() []map[string]interface{} {
+func (dt *DatabaseKafkaTopic) KV() []map[string]any {
 	t := dt.DatabaseTopic
-	o := []map[string]interface{}{
+	o := []map[string]any{
 		{
 			"key":   "Name",
 			"value": t.Name,
@@ -830,135 +830,135 @@ func (dt *DatabaseKafkaTopic) KV() []map[string]interface{} {
 	}
 
 	if t.Config != nil {
-		cfg := make([]map[string]interface{}, 0)
+		cfg := make([]map[string]any, 0)
 		if t.Config.CleanupPolicy != "" {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "CleanupPolicy",
 				"value": t.Config.CleanupPolicy,
 			})
 		}
 		if t.Config.CompressionType != "" {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "CompressionType",
 				"value": t.Config.CompressionType,
 			})
 		}
 		if t.Config.DeleteRetentionMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "DeleteRetentionMS",
 				"value": *t.Config.DeleteRetentionMS,
 			})
 		}
 		if t.Config.FileDeleteDelayMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "FileDeleteDelayMS",
 				"value": *t.Config.FileDeleteDelayMS,
 			})
 		}
 		if t.Config.FlushMessages != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "FlushMessages",
 				"value": *t.Config.FlushMessages,
 			})
 		}
 		if t.Config.FlushMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "FlushMS",
 				"value": *t.Config.FlushMS,
 			})
 		}
 		if t.Config.IndexIntervalBytes != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "IndexIntervalBytes",
 				"value": *t.Config.IndexIntervalBytes,
 			})
 		}
 		if t.Config.MaxCompactionLagMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "MaxCompactionLagMS",
 				"value": *t.Config.MaxCompactionLagMS,
 			})
 		}
 		if t.Config.MessageDownConversionEnable != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "MessageDownConversionEnable",
 				"value": *t.Config.MessageDownConversionEnable,
 			})
 		}
 		if t.Config.MessageFormatVersion != "" {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "MessageFormatVersion",
 				"value": t.Config.MessageFormatVersion,
 			})
 		}
 		if t.Config.MessageTimestampDifferenceMaxMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "MessageTimestampDifferentMaxMS",
 				"value": *t.Config.MessageTimestampDifferenceMaxMS,
 			})
 		}
 		if t.Config.MessageTimestampType != "" {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "MessageTimestampType",
 				"value": t.Config.MessageTimestampType,
 			})
 		}
 		if t.Config.MinCleanableDirtyRatio != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "MinCleanableDirtyRatio",
 				"value": *t.Config.MinCleanableDirtyRatio,
 			})
 		}
 		if t.Config.MinCompactionLagMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "MinCompactionLagMS",
 				"value": *t.Config.MinCompactionLagMS,
 			})
 		}
 		if t.Config.MinInsyncReplicas != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "MinInsyncReplicas",
 				"value": *t.Config.MinInsyncReplicas,
 			})
 		}
 		if t.Config.Preallocate != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "Preallocate",
 				"value": *t.Config.Preallocate,
 			})
 		}
 		if t.Config.RetentionBytes != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "RetentionBytes",
 				"value": *t.Config.RetentionBytes,
 			})
 		}
 		if t.Config.RetentionMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "RetentionMS",
 				"value": *t.Config.RetentionMS,
 			})
 		}
 		if t.Config.SegmentBytes != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "SegmentBytes",
 				"value": *t.Config.SegmentBytes,
 			})
 		}
 		if t.Config.SegmentIndexBytes != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "SegmentIndexBytes",
 				"value": *t.Config.SegmentIndexBytes,
 			})
 		}
 		if t.Config.SegmentJitterMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "SegmentJitterMS",
 				"value": *t.Config.SegmentJitterMS,
 			})
 		}
 		if t.Config.SegmentMS != nil {
-			cfg = append(cfg, map[string]interface{}{
+			cfg = append(cfg, map[string]any{
 				"key":   "SegmentMS",
 				"value": *t.Config.SegmentMS,
 			})
@@ -993,167 +993,167 @@ func (dc *MySQLConfiguration) ColMap() map[string]string {
 	}
 }
 
-func (dc *MySQLConfiguration) KV() []map[string]interface{} {
+func (dc *MySQLConfiguration) KV() []map[string]any {
 	c := dc.MySQLConfiguration
-	o := []map[string]interface{}{}
+	o := []map[string]any{}
 	if c.ConnectTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "ConnectTimeout",
 			"value": *c.ConnectTimeout,
 		})
 	}
 	if c.DefaultTimeZone != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "DefaultTimeZone",
 			"value": *c.DefaultTimeZone,
 		})
 	}
 	if c.InnodbLogBufferSize != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InnodbLogBufferSize",
 			"value": *c.InnodbLogBufferSize,
 		})
 	}
 	if c.InnodbOnlineAlterLogMaxSize != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InnodbOnlineAlterLogMaxSize",
 			"value": *c.InnodbOnlineAlterLogMaxSize,
 		})
 	}
 	if c.InnodbLockWaitTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InnodbLockWaitTimeout",
 			"value": *c.InnodbLockWaitTimeout,
 		})
 	}
 	if c.InteractiveTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InteractiveTimeout",
 			"value": *c.InteractiveTimeout,
 		})
 	}
 	if c.MaxAllowedPacket != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxAllowedPacket",
 			"value": *c.MaxAllowedPacket,
 		})
 	}
 	if c.NetReadTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "NetReadTimeout",
 			"value": *c.NetReadTimeout,
 		})
 	}
 	if c.SortBufferSize != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "SortBufferSize",
 			"value": *c.SortBufferSize,
 		})
 	}
 	if c.SQLMode != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "SQLMode",
 			"value": *c.SQLMode,
 		})
 	}
 	if c.SQLRequirePrimaryKey != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "SQLRequirePrimaryKey",
 			"value": *c.SQLRequirePrimaryKey,
 		})
 	}
 	if c.WaitTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "WaitTimeout",
 			"value": *c.WaitTimeout,
 		})
 	}
 	if c.NetWriteTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "NetWriteTimeout",
 			"value": *c.NetWriteTimeout,
 		})
 	}
 	if c.GroupConcatMaxLen != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "GroupConcatMaxLen",
 			"value": *c.GroupConcatMaxLen,
 		})
 	}
 	if c.InformationSchemaStatsExpiry != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InformationSchemaStatsExpiry",
 			"value": *c.InformationSchemaStatsExpiry,
 		})
 	}
 	if c.InnodbFtMinTokenSize != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InnodbFtMinTokenSize",
 			"value": *c.InnodbFtMinTokenSize,
 		})
 	}
 	if c.InnodbFtServerStopwordTable != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InnodbFtServerStopwordTable",
 			"value": *c.InnodbFtServerStopwordTable,
 		})
 	}
 	if c.InnodbPrintAllDeadlocks != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InnodbPrintAllDeadlocks",
 			"value": *c.InnodbPrintAllDeadlocks,
 		})
 	}
 	if c.InnodbRollbackOnTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InnodbRollbackOnTimeout",
 			"value": *c.InnodbRollbackOnTimeout,
 		})
 	}
 	if c.InternalTmpMemStorageEngine != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "InternalTmpMemStorageEngine",
 			"value": *c.InternalTmpMemStorageEngine,
 		})
 	}
 	if c.MaxHeapTableSize != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxHeapTableSize",
 			"value": *c.MaxHeapTableSize,
 		})
 	}
 	if c.TmpTableSize != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "TmpTableSize",
 			"value": *c.TmpTableSize,
 		})
 	}
 	if c.SlowQueryLog != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "SlowQueryLog",
 			"value": *c.SlowQueryLog,
 		})
 	}
 	if c.LongQueryTime != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "LongQueryTime",
 			"value": *c.LongQueryTime,
 		})
 	}
 	if c.BackupHour != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BackupHour",
 			"value": *c.BackupHour,
 		})
 	}
 	if c.BackupMinute != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BackupMinute",
 			"value": *c.BackupMinute,
 		})
 	}
 	if c.BinlogRetentionPeriod != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BinlogRetentionPeriod",
 			"value": *c.BinlogRetentionPeriod,
 		})
@@ -1186,361 +1186,361 @@ func (dc *PostgreSQLConfiguration) ColMap() map[string]string {
 	}
 }
 
-func (dc *PostgreSQLConfiguration) KV() []map[string]interface{} {
+func (dc *PostgreSQLConfiguration) KV() []map[string]any {
 	c := dc.PostgreSQLConfig
-	o := []map[string]interface{}{}
+	o := []map[string]any{}
 	if c.AutovacuumFreezeMaxAge != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumFreezeMaxAge",
 			"value": *c.AutovacuumFreezeMaxAge,
 		})
 	}
 	if c.AutovacuumMaxWorkers != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumMaxWorkers",
 			"value": *c.AutovacuumMaxWorkers,
 		})
 	}
 	if c.AutovacuumNaptime != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumNaptime",
 			"value": *c.AutovacuumNaptime,
 		})
 	}
 	if c.AutovacuumVacuumThreshold != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumVacuumThreshold",
 			"value": *c.AutovacuumVacuumThreshold,
 		})
 	}
 	if c.AutovacuumAnalyzeThreshold != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumAnalyzeThreshold",
 			"value": *c.AutovacuumAnalyzeThreshold,
 		})
 	}
 	if c.AutovacuumVacuumScaleFactor != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumVacuumScaleFactor",
 			"value": *c.AutovacuumVacuumScaleFactor,
 		})
 	}
 	if c.AutovacuumAnalyzeScaleFactor != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumAnalyzeScaleFactor",
 			"value": *c.AutovacuumAnalyzeScaleFactor,
 		})
 	}
 	if c.AutovacuumVacuumCostDelay != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumVacuumCostDelay",
 			"value": *c.AutovacuumVacuumCostDelay,
 		})
 	}
 	if c.AutovacuumVacuumCostLimit != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "AutovacuumVacuumCostLimit",
 			"value": *c.AutovacuumVacuumCostLimit,
 		})
 	}
 	if c.BGWriterDelay != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BGWriterDelay",
 			"value": *c.BGWriterDelay,
 		})
 	}
 	if c.BGWriterFlushAfter != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BGWriterFlushAfter",
 			"value": *c.BGWriterFlushAfter,
 		})
 	}
 	if c.BGWriterLRUMaxpages != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BGWriterLRUMaxpages",
 			"value": *c.BGWriterLRUMaxpages,
 		})
 	}
 	if c.BGWriterLRUMultiplier != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BGWriterLRUMultiplier",
 			"value": *c.BGWriterLRUMultiplier,
 		})
 	}
 	if c.DeadlockTimeoutMillis != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "DeadlockTimeoutMillis",
 			"value": *c.DeadlockTimeoutMillis,
 		})
 	}
 	if c.DefaultToastCompression != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "DefaultToastCompression",
 			"value": *c.DefaultToastCompression,
 		})
 	}
 	if c.IdleInTransactionSessionTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "IdleInTransactionSessionTimeout",
 			"value": *c.IdleInTransactionSessionTimeout,
 		})
 	}
 	if c.JIT != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "JIT",
 			"value": *c.JIT,
 		})
 	}
 	if c.LogAutovacuumMinDuration != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "LogAutovacuumMinDuration",
 			"value": *c.LogAutovacuumMinDuration,
 		})
 	}
 	if c.LogErrorVerbosity != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "LogErrorVerbosity",
 			"value": *c.LogErrorVerbosity,
 		})
 	}
 	if c.LogLinePrefix != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "LogLinePrefix",
 			"value": *c.LogLinePrefix,
 		})
 	}
 	if c.LogMinDurationStatement != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "LogMinDurationStatement",
 			"value": *c.LogMinDurationStatement,
 		})
 	}
 	if c.MaxFilesPerProcess != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxFilesPerProcess",
 			"value": *c.MaxFilesPerProcess,
 		})
 	}
 	if c.MaxPreparedTransactions != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxPreparedTransactions",
 			"value": *c.MaxPreparedTransactions,
 		})
 	}
 	if c.MaxPredLocksPerTransaction != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxPredLocksPerTransaction",
 			"value": *c.MaxPredLocksPerTransaction,
 		})
 	}
 	if c.MaxLocksPerTransaction != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxLocksPerTransaction",
 			"value": *c.MaxLocksPerTransaction,
 		})
 	}
 	if c.MaxStackDepth != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxStackDepth",
 			"value": *c.MaxStackDepth,
 		})
 	}
 	if c.MaxStandbyArchiveDelay != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxStandbyArchiveDelay",
 			"value": *c.MaxStandbyArchiveDelay,
 		})
 	}
 	if c.MaxStandbyStreamingDelay != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxStandbyStreamingDelay",
 			"value": *c.MaxStandbyStreamingDelay,
 		})
 	}
 	if c.MaxReplicationSlots != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxReplicationSlots",
 			"value": *c.MaxReplicationSlots,
 		})
 	}
 	if c.MaxLogicalReplicationWorkers != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxLogicalReplicationWorkers",
 			"value": *c.MaxLogicalReplicationWorkers,
 		})
 	}
 	if c.MaxParallelWorkers != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxParallelWorkers",
 			"value": *c.MaxParallelWorkers,
 		})
 	}
 	if c.MaxParallelWorkersPerGather != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxParallelWorkersPerGather",
 			"value": *c.MaxParallelWorkersPerGather,
 		})
 	}
 	if c.MaxWorkerProcesses != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxWorkerProcesses",
 			"value": *c.MaxWorkerProcesses,
 		})
 	}
 	if c.PGPartmanBGWRole != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "PGPartmanBGWRole",
 			"value": *c.PGPartmanBGWRole,
 		})
 	}
 	if c.PGPartmanBGWInterval != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "PGPartmanBGWInterval",
 			"value": *c.PGPartmanBGWInterval,
 		})
 	}
 	if c.PGStatStatementsTrack != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "PGStatStatementsTrack",
 			"value": *c.PGStatStatementsTrack,
 		})
 	}
 	if c.TempFileLimit != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "TempFileLimit",
 			"value": *c.TempFileLimit,
 		})
 	}
 	if c.Timezone != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "Timezone",
 			"value": *c.Timezone,
 		})
 	}
 	if c.TrackActivityQuerySize != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "TrackActivityQuerySize",
 			"value": *c.TrackActivityQuerySize,
 		})
 	}
 	if c.TrackCommitTimestamp != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "TrackCommitTimestamp",
 			"value": *c.TrackCommitTimestamp,
 		})
 	}
 	if c.TrackFunctions != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "TrackFunctions",
 			"value": *c.TrackFunctions,
 		})
 	}
 	if c.TrackIOTiming != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "TrackIOTiming",
 			"value": *c.TrackIOTiming,
 		})
 	}
 	if c.MaxWalSenders != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "MaxWalSenders",
 			"value": *c.MaxWalSenders,
 		})
 	}
 	if c.WalSenderTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "WalSenderTimeout",
 			"value": *c.WalSenderTimeout,
 		})
 	}
 	if c.WalWriterDelay != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "WalWriterDelay",
 			"value": *c.WalWriterDelay,
 		})
 	}
 	if c.SharedBuffersPercentage != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "SharedBuffersPercentage",
 			"value": *c.SharedBuffersPercentage,
 		})
 	}
 	if c.PgBouncer != nil {
 		if c.PgBouncer.ServerResetQueryAlways != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.ServerResetQueryAlways",
 				"value": *c.PgBouncer.ServerResetQueryAlways,
 			})
 		}
 		if c.PgBouncer.IgnoreStartupParameters != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.IgnoreStartupParameters",
 				"value": strings.Join(*c.PgBouncer.IgnoreStartupParameters, ","),
 			})
 		}
 		if c.PgBouncer.MinPoolSize != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.MinPoolSize",
 				"value": *c.PgBouncer.MinPoolSize,
 			})
 		}
 		if c.PgBouncer.ServerLifetime != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.ServerLifetime",
 				"value": *c.PgBouncer.ServerLifetime,
 			})
 		}
 		if c.PgBouncer.ServerIdleTimeout != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.ServerIdleTimeout",
 				"value": *c.PgBouncer.ServerIdleTimeout,
 			})
 		}
 		if c.PgBouncer.AutodbPoolSize != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.AutodbPoolSize",
 				"value": *c.PgBouncer.AutodbPoolSize,
 			})
 		}
 		if c.PgBouncer.AutodbPoolMode != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.AutodbPoolMode",
 				"value": *c.PgBouncer.AutodbPoolMode,
 			})
 		}
 		if c.PgBouncer.AutodbMaxDbConnections != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.AutodbMaxDbConnections",
 				"value": *c.PgBouncer.AutodbMaxDbConnections,
 			})
 		}
 		if c.PgBouncer.AutodbIdleTimeout != nil {
-			o = append(o, map[string]interface{}{
+			o = append(o, map[string]any{
 				"key":   "PgBouncer.AutodbIdleTimeout",
 				"value": *c.PgBouncer.AutodbIdleTimeout,
 			})
 		}
 	}
 	if c.BackupHour != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BackupHour",
 			"value": *c.BackupHour,
 		})
 	}
 	if c.BackupMinute != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "BackupMinute",
 			"value": *c.BackupMinute,
 		})
 	}
 	if c.WorkMem != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "WorkMem",
 			"value": *c.WorkMem,
 		})
 	}
 	if c.TimeScaleDB != nil && c.TimeScaleDB.MaxBackgroundWorkers != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "TimeScaleDB.MaxBackgroundWorkers",
 			"value": *c.TimeScaleDB.MaxBackgroundWorkers,
 		})
@@ -1572,71 +1572,71 @@ func (dc *RedisConfiguration) ColMap() map[string]string {
 	}
 }
 
-func (dc *RedisConfiguration) KV() []map[string]interface{} {
+func (dc *RedisConfiguration) KV() []map[string]any {
 	c := dc.RedisConfig
-	o := []map[string]interface{}{}
+	o := []map[string]any{}
 	if c.RedisMaxmemoryPolicy != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisMaxmemoryPolicy",
 			"value": *c.RedisMaxmemoryPolicy,
 		})
 	}
 	if c.RedisPubsubClientOutputBufferLimit != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisPubsubClientOutputBufferLimit",
 			"value": *c.RedisPubsubClientOutputBufferLimit,
 		})
 	}
 	if c.RedisNumberOfDatabases != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisNumberOfDatabases",
 			"value": *c.RedisNumberOfDatabases,
 		})
 	}
 	if c.RedisIOThreads != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisIOThreads",
 			"value": *c.RedisIOThreads,
 		})
 	}
 	if c.RedisLFULogFactor != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisLFULogFactor",
 			"value": *c.RedisLFULogFactor,
 		})
 	}
 	if c.RedisLFUDecayTime != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisLFUDecayTime",
 			"value": *c.RedisLFUDecayTime,
 		})
 	}
 	if c.RedisSSL != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisSSL",
 			"value": *c.RedisSSL,
 		})
 	}
 	if c.RedisTimeout != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisTimeout",
 			"value": *c.RedisTimeout,
 		})
 	}
 	if c.RedisNotifyKeyspaceEvents != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisNotifyKeyspaceEvents",
 			"value": *c.RedisNotifyKeyspaceEvents,
 		})
 	}
 	if c.RedisPersistence != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisPersistence",
 			"value": *c.RedisPersistence,
 		})
 	}
 	if c.RedisACLChannelsDefault != nil {
-		o = append(o, map[string]interface{}{
+		o = append(o, map[string]any{
 			"key":   "RedisACLChannelsDefault",
 			"value": *c.RedisACLChannelsDefault,
 		})

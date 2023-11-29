@@ -51,10 +51,10 @@ func (i *Functions) ColMap() map[string]string {
 }
 
 // KV is the displayer KV method specialized for functions list
-func (i *Functions) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(i.Info))
+func (i *Functions) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(i.Info))
 	for _, ii := range i.Info {
-		x := map[string]interface{}{
+		x := map[string]any{
 			"Update":   time.UnixMilli(ii.Updated).Format("01/02 03:04:05"),
 			"Runtime":  findRuntime(ii.Annotations),
 			"Version":  ii.Version,
