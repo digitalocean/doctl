@@ -44,12 +44,12 @@ var _ = suite("database/create/fork", func(t *testing.T, when spec.G, it spec.S)
 				expect.NoError(err)
 
 				request := struct {
-					Name          string      `json:"name"`
-					Engine        string      `json:"engine"`
-					Version       string      `json:"version"`
-					Region        string      `json:"region"`
-					Nodes         int         `json:"num_nodes"`
-					BackupRestore interface{} `json:"backup_restore"`
+					Name          string `json:"name"`
+					Engine        string `json:"engine"`
+					Version       string `json:"version"`
+					Region        string `json:"region"`
+					Nodes         int    `json:"num_nodes"`
+					BackupRestore any    `json:"backup_restore"`
 				}{}
 
 				err = json.Unmarshal(reqBody, &request)

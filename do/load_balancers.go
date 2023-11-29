@@ -63,13 +63,13 @@ func (lbs *loadBalancersService) Get(lbID string) (*LoadBalancer, error) {
 }
 
 func (lbs *loadBalancersService) List() (LoadBalancers, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := lbs.client.LoadBalancers.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

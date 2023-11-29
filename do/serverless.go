@@ -129,19 +129,19 @@ type ServerlessProject struct {
 // ServerlessSpec describes a project.yml spec
 // reference: https://docs.nimbella.com/configuration/
 type ServerlessSpec struct {
-	Parameters  map[string]interface{} `json:"parameters,omitempty"`
-	Environment map[string]interface{} `json:"environment,omitempty"`
-	Packages    []*ServerlessPackage   `json:"packages,omitempty"`
+	Parameters  map[string]any       `json:"parameters,omitempty"`
+	Environment map[string]any       `json:"environment,omitempty"`
+	Packages    []*ServerlessPackage `json:"packages,omitempty"`
 }
 
 // ServerlessPackage ...
 type ServerlessPackage struct {
-	Name        string                 `json:"name,omitempty"`
-	Shared      bool                   `json:"shared,omitempty"`
-	Environment map[string]interface{} `json:"environment,omitempty"`
-	Parameters  map[string]interface{} `json:"parameters,omitempty"`
-	Annotations map[string]interface{} `json:"annotations,omitempty"`
-	Functions   []*ServerlessFunction  `json:"functions,omitempty"`
+	Name        string                `json:"name,omitempty"`
+	Shared      bool                  `json:"shared,omitempty"`
+	Environment map[string]any        `json:"environment,omitempty"`
+	Parameters  map[string]any        `json:"parameters,omitempty"`
+	Annotations map[string]any        `json:"annotations,omitempty"`
+	Functions   []*ServerlessFunction `json:"functions,omitempty"`
 }
 
 // ServerlessFunction ...
@@ -152,12 +152,12 @@ type ServerlessFunction struct {
 	Runtime string `json:"runtime,omitempty"`
 	// `web` can be either true or "raw". We use interface{} to support both types. If we start consuming the value we
 	// should probably define a custom type with proper validation.
-	Web         interface{}            `json:"web,omitempty"`
-	WebSecure   interface{}            `json:"webSecure,omitempty" yaml:"webSecure"`
-	Parameters  map[string]interface{} `json:"parameters,omitempty"`
-	Environment map[string]interface{} `json:"environment,omitempty"`
-	Annotations map[string]interface{} `json:"annotations,omitempty"`
-	Limits      map[string]int         `json:"limits,omitempty"`
+	Web         any            `json:"web,omitempty"`
+	WebSecure   any            `json:"webSecure,omitempty" yaml:"webSecure"`
+	Parameters  map[string]any `json:"parameters,omitempty"`
+	Environment map[string]any `json:"environment,omitempty"`
+	Annotations map[string]any `json:"annotations,omitempty"`
+	Limits      map[string]int `json:"limits,omitempty"`
 }
 
 // ProjectMetadata describes the nim project:get-metadata output structure.
@@ -195,8 +195,8 @@ type ServerlessTrigger struct {
 }
 
 type TriggerScheduledDetails struct {
-	Cron string                 `json:"cron,omitempty"`
-	Body map[string]interface{} `json:"body,omitempty"`
+	Cron string         `json:"cron,omitempty"`
+	Body map[string]any `json:"body,omitempty"`
 }
 
 type TriggerScheduledRuns struct {
@@ -231,8 +231,8 @@ type ServerlessService interface {
 	GetFunction(string, bool) (whisk.Action, []FunctionParameter, error)
 	ListFunctions(string, int, int) ([]whisk.Action, error)
 	DeleteFunction(string, bool) error
-	InvokeFunction(string, interface{}, bool, bool) (interface{}, error)
-	InvokeFunctionViaWeb(string, interface{}) error
+	InvokeFunction(string, any, bool, bool) (any, error)
+	InvokeFunctionViaWeb(string, any) error
 	ListActivations(whisk.ActivationListOptions) ([]whisk.Activation, error)
 	GetActivationCount(whisk.ActivationCountOptions) (whisk.ActivationCount, error)
 	GetActivation(string) (whisk.Activation, error)
@@ -315,11 +315,11 @@ var (
 
 // ServerlessOutput contains the output returned from calls to the sandbox plugin.
 type ServerlessOutput struct {
-	Table     []map[string]interface{} `json:"table,omitempty"`
-	Captured  []string                 `json:"captured,omitempty"`
-	Formatted []string                 `json:"formatted,omitempty"`
-	Entity    interface{}              `json:"entity,omitempty"`
-	Error     string                   `json:"error,omitempty"`
+	Table     []map[string]any `json:"table,omitempty"`
+	Captured  []string         `json:"captured,omitempty"`
+	Formatted []string         `json:"formatted,omitempty"`
+	Entity    any              `json:"entity,omitempty"`
+	Error     string           `json:"error,omitempty"`
 }
 
 // NewServerlessService returns a configured ServerlessService.
@@ -898,8 +898,8 @@ func (s *serverlessService) DeletePackage(name string, recursive bool) error {
 }
 
 // InvokeFunction invokes a function via POST with authentication
-func (s *serverlessService) InvokeFunction(name string, params interface{}, blocking bool, result bool) (interface{}, error) {
-	var empty map[string]interface{}
+func (s *serverlessService) InvokeFunction(name string, params any, blocking bool, result bool) (any, error) {
+	var empty map[string]any
 	err := initWhisk(s)
 	if err != nil {
 		return empty, err
@@ -909,7 +909,7 @@ func (s *serverlessService) InvokeFunction(name string, params interface{}, bloc
 }
 
 // InvokeFunctionViaWeb invokes a function via GET using its web URL (or error if not a web function)
-func (s *serverlessService) InvokeFunctionViaWeb(name string, params interface{}) error {
+func (s *serverlessService) InvokeFunctionViaWeb(name string, params any) error {
 	// Get the function so we can use its metadata in formulating the request
 	theFunction, _, err := s.GetFunction(name, false)
 	if err != nil {
@@ -941,7 +941,7 @@ func (s *serverlessService) InvokeFunctionViaWeb(name string, params interface{}
 	// Add params, if any
 	if params != nil {
 		encoded := url.Values{}
-		for key, val := range params.(map[string]interface{}) {
+		for key, val := range params.(map[string]any) {
 			stringVal, ok := val.(string)
 			if !ok {
 				return fmt.Errorf("the value of '%s' is not a string; web invocation is not possible", key)

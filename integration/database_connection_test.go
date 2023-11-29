@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var _ = suite.Focus("database/connection", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("database/connection", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server

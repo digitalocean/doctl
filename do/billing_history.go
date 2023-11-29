@@ -43,13 +43,13 @@ func NewBillingHistoryService(client *godo.Client) BillingHistoryService {
 }
 
 func (is *billingHistoryService) List() (*BillingHistory, error) {
-	listFn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	listFn := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		historyList, resp, err := is.client.BillingHistory.List(context.Background(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(historyList.BillingHistory))
+		si := make([]any, len(historyList.BillingHistory))
 		for i := range historyList.BillingHistory {
 			si[i] = historyList.BillingHistory[i]
 		}

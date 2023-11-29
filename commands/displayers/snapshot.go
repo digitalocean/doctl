@@ -42,11 +42,11 @@ func (s *Snapshot) ColMap() map[string]string {
 		"ResourceId": "Resource ID", "ResourceType": "Resource Type", "MinDiskSize": "Min Disk Size", "Size": "Size", "Tags": "Tags"}
 }
 
-func (s *Snapshot) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(s.Snapshots))
+func (s *Snapshot) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(s.Snapshots))
 
 	for _, ss := range s.Snapshots {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID": ss.ID, "Name": ss.Name, "ResourceId": ss.ResourceID,
 			"ResourceType": ss.ResourceType, "Regions": ss.Regions, "MinDiskSize": ss.MinDiskSize,
 			"Size": strconv.FormatFloat(ss.SizeGigaBytes, 'f', 2, 64) + " GiB", "CreatedAt": ss.Created,

@@ -43,15 +43,15 @@ func (a *Action) ColMap() map[string]string {
 	}
 }
 
-func (a *Action) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(a.Actions))
+func (a *Action) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(a.Actions))
 
 	for _, x := range a.Actions {
 		region := ""
 		if x.Region != nil {
 			region = x.Region.Slug
 		}
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID": x.ID, "Status": x.Status, "Type": x.Type,
 			"StartedAt": x.StartedAt, "CompletedAt": x.CompletedAt,
 			"ResourceID": x.ResourceID, "ResourceType": x.ResourceType,

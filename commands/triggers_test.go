@@ -54,7 +54,7 @@ func TestTriggersGet(t *testing.T) {
 			UpdatedAt: time.Date(2022, 10, 17, 18, 41, 30, 0, time.UTC),
 			ScheduledDetails: &do.TriggerScheduledDetails{
 				Cron: "5 * * * *",
-				Body: map[string]interface{}{
+				Body: map[string]any{
 					"foo": "bar",
 				},
 			},
@@ -85,7 +85,7 @@ func TestTriggersList(t *testing.T) {
 			Type:      "SCHEDULED",
 			ScheduledDetails: &do.TriggerScheduledDetails{
 				Cron: "* * * * *",
-				Body: map[string]interface{}{},
+				Body: map[string]any{},
 			},
 			IsEnabled: true,
 			CreatedAt: time.Date(2022, 10, 5, 13, 46, 59, 0, time.UTC),
@@ -115,14 +115,14 @@ func TestTriggersList(t *testing.T) {
 	}
 	tests := []struct {
 		name           string
-		doctlFlags     map[string]interface{}
+		doctlFlags     map[string]any
 		expectedOutput string
 		listArg        string
 		listResult     []do.ServerlessTrigger
 	}{
 		{
 			name: "simple list",
-			doctlFlags: map[string]interface{}{
+			doctlFlags: map[string]any{
 				"no-header": "",
 			},
 			listResult: theList,
@@ -133,7 +133,7 @@ firePoll2    10 * * * *    misc/pollStatus        false    _
 		},
 		{
 			name: "filtered list",
-			doctlFlags: map[string]interface{}{
+			doctlFlags: map[string]any{
 				"function":  "misc/pollStatus",
 				"no-header": "",
 			},

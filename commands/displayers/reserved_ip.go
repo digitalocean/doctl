@@ -42,8 +42,8 @@ func (rip *ReservedIP) ColMap() map[string]string {
 	}
 }
 
-func (rip *ReservedIP) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(rip.ReservedIPs))
+func (rip *ReservedIP) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(rip.ReservedIPs))
 
 	for _, f := range rip.ReservedIPs {
 		var dropletID, dropletName string
@@ -52,7 +52,7 @@ func (rip *ReservedIP) KV() []map[string]interface{} {
 			dropletName = f.Droplet.Name
 		}
 
-		o := map[string]interface{}{
+		o := map[string]any{
 			"IP": f.IP, "Region": f.Region.Slug,
 			"DropletID": dropletID, "DropletName": dropletName,
 			"ProjectID": f.ProjectID,

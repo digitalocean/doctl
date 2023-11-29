@@ -59,11 +59,11 @@ func (p *Project) ColMap() map[string]string {
 	}
 }
 
-func (p *Project) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(p.Projects))
+func (p *Project) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(p.Projects))
 
 	for _, pr := range p.Projects {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID":          pr.ID,
 			"OwnerUUID":   pr.OwnerUUID,
 			"OwnerID":     pr.OwnerID,
@@ -107,8 +107,8 @@ func (p *ProjectResource) ColMap() map[string]string {
 	}
 }
 
-func (p *ProjectResource) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(p.ProjectResources))
+func (p *ProjectResource) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(p.ProjectResources))
 
 	for _, pr := range p.ProjectResources {
 		assignedAt := pr.AssignedAt
@@ -116,7 +116,7 @@ func (p *ProjectResource) KV() []map[string]interface{} {
 			assignedAt = "N/A"
 		}
 
-		o := map[string]interface{}{
+		o := map[string]any{
 			"URN":        pr.URN,
 			"AssignedAt": assignedAt,
 			"Status":     pr.Status,
