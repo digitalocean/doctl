@@ -29,9 +29,9 @@ func CDN() *Command {
 		Command: &cobra.Command{
 			Use:   "cdn",
 			Short: "Display commands that manage CDNs",
-			Long: `The subcommands of ` + "`" + `doctl compute cdn` + "`" + ` enable management of Content Delivery Networks (CDNs).
+			Long: `The subcommands of ` + "`" + `doctl compute cdn` + "`" + ` are for managing Content Delivery Networks (CDNs).
 
-Content hosted in DigitalOcean's object storage solution, Spaces, can optionally be served by our globally distributed Content Delivery Networks (CDNs). This allows you to deliver content to users based on their geographic location.
+Content hosted in DigitalOcean's object storage solution, Spaces, can optionally be served by our globally distributed CDNs. This allows you to deliver content to users based on their geographic location.
 
 To use a custom subdomain to access the CDN endpoint, provide the ID of a DigitalOcean-managed TLS certificate and the fully qualified domain name (FQDN) for the custom subdomain.`,
 		},
@@ -39,7 +39,7 @@ To use a custom subdomain to access the CDN endpoint, provide the ID of a Digita
 
 	CDNnotes := `
 
-The Time To Live (TTL) value is the length of time in seconds that a file is cached by the CDN before being refreshed. If a request to access a file occurs after the TTL has expired, the CDN will deliver the file by requesting it directly from the origin URL, re-caching the file, and resetting the TTL.`
+The Time To Live (TTL) value is the length of time in seconds that a file is cached by the CDN before being refreshed. If a request to access a file occurs after the TTL has expired, the CDN delivers the file by requesting it directly from the origin URL, re-caching the file, and resetting the TTL.`
 
 	CDNDetails := `
 
@@ -52,42 +52,45 @@ The Time To Live (TTL) value is the length of time in seconds that a file is cac
 - The date and time when the CDN was created, in ISO8601 date/time format`
 	TTLDesc := "The \"Time To Live\" (TTL) value for cached content, in seconds"
 	DomainDesc := "Specify a custom domain to use with the CDN"
-	CertIDDesc := "Specify a Certificate ID for the custom domain"
-	CmdBuilder(cmd, RunCDNList, "list", "List CDNs that have already been created", `Lists the following details for Content Delivery Networks (CDNs) that have already been created:`+CDNDetails, Writer,
+	CertIDDesc := "Specify a certificate ID for the custom domain"
+	cmdCDNList := CmdBuilder(cmd, RunCDNList, "list", "List CDNs that have already been created", `Retrieves a list of your existing Content Delivery Networks (CDNs) and their following details:`+CDNDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.CDN{}))
+	cmdCDNList.Example = "doctl compute cdn list"
 
-	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `This command creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`+CDNnotes, Writer,
+	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `Creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`+CDNnotes, Writer,
 		aliasOpt("c"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNCreate, doctl.ArgCDNTTL, "", 3600, TTLDesc)
 	AddStringFlag(cmdCDNCreate, doctl.ArgCDNDomain, "", "", DomainDesc)
 	AddStringFlag(cmdCDNCreate, doctl.ArgCDNCertificateID, "", "", CertIDDesc)
+	cmdCDNCreate.Example = `The following example creates a CDN for the custom domain ` + "`" + `cdn.example.com ` + "`" + ` using a DigitalOcean Spaces origin endpoint and SSL certificate ID for the custom domain: doctl compute cdn create https://tester-two.blr1.digitaloceanspaces.com --domain cdn.example.com --certificate-id f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdRunCDNDelete := CmdBuilder(cmd, RunCDNDelete, "delete <cdn-id>", "Delete a CDN", `This command deletes the CDN specified by the ID.
+	cmdRunCDNDelete := CmdBuilder(cmd, RunCDNDelete, "delete <cdn-id>", "Delete a CDN", `Deletes the CDN specified by the ID.
 
-You can retrieve the ID by calling `+"`"+`doctl compute cdn list`+"`"+` if needed.`, Writer,
+You can retrieve a list of CDN IDs by calling `+"`"+`doctl compute cdn list`+"`"+``, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdRunCDNDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the specified CDN without prompting for confirmation")
+	cmdRunCDNDelete.Example = `The following example deletes a CDN with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + `: doctl compute cdn delete 418b7972-fc67-41ea-ab4b-6f9477c4f7d8`
 
-	CmdBuilder(cmd, RunCDNGet, "get <cdn-id>", "Retrieve details about a specific CDN", `This command lists the following details for the Content Delivery Network (CDNs) specified by the ID:`+CDNDetails+CDNnotes, Writer, aliasOpt("g"),
+	cmdRunCDNGet := CmdBuilder(cmd, RunCDNGet, "get <cdn-id>", "Retrieve details about a specific CDN", `Lists the following details for the specified Content Delivery Network (CDNs):`+CDNDetails+CDNnotes, Writer, aliasOpt("g"),
 		displayerType(&displayers.CDN{}))
+	cmdRunCDNGet.Example = `The following example retrieves the origin endpoint, CDN endpoint, and certificate ID for a CDN with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + `: doctl compute cdn get 418b7972-fc67-41ea-ab4b-6f9477c4f7d8 --format ID,Origin,Endpoint,CertificateID`
 
-	cmdCDNUpdate := CmdBuilder(cmd, RunCDNUpdate, "update <cdn-id>", "Update the configuration for a CDN", `This command allows you to update the configuration details of an existing Content Delivery Network (CDN).
-
-Currently, you can only update the custom domain and its certificate ID with this command.`, Writer,
+	cmdCDNUpdate := CmdBuilder(cmd, RunCDNUpdate, "update <cdn-id>", "Update the configuration for a CDN", `Updates the configuration details of an existing Content Delivery Network (CDN).`, Writer,
 		aliasOpt("u"), displayerType(&displayers.CDN{}))
 	AddIntFlag(cmdCDNUpdate, doctl.ArgCDNTTL, "", 3600, TTLDesc)
 	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNDomain, "", "", DomainDesc)
 	AddStringFlag(cmdCDNUpdate, doctl.ArgCDNCertificateID, "", "", CertIDDesc)
+	cmdCDNUpdate.Example = `The following example updates the TTL for a CDN with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` to 600 seconds: doctl compute cdn update 418b7972-fc67-41ea-ab4b-6f9477c4f7d8 --ttl 600`
 
-	cmdCDNFlushCache := CmdBuilder(cmd, RunCDNFlushCache, "flush <cdn-id>", "Flush the cache of a CDN", `This command flushes the cache of a Content Delivery Network (CDN), which:
+	cmdCDNFlushCache := CmdBuilder(cmd, RunCDNFlushCache, "flush <cdn-id>", "Flush the cache of a CDN", `Flushes the cache of a Content Delivery Network (CDN), which:
 
 - purges all copies of the files in the cache
 - re-caches the files
 - retrieves files from the origin server for any requests that hit the CDN endpoint until all the files are re-cached
 
-This is useful when you need to ensure that files which were recently changed on the origin server are immediately available via the CDN.
+This ensures that recently updated files on the origin server are immediately available via the CDN.
 
-To purge specific files, you can use the `+"`"+`--files`+"`"+` flag and supply a path. The path may be for a single file or may contain a wildcard (`+"`"+`*`+"`"+`) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.
+To purge specific files, you can use the `+"`"+`--files`+"`"+` flag and supply a path to the file in the Spaces bucket. The path may be for a single file or may contain a wildcard (`+"`"+`*`+"`"+`) to recursively purge all files under a directory. When only a wildcard is provided, or no path is provided, all cached files will be purged.
 Examples:		
  doctl compute cdn flush <cdn-id>  --files /path/to/assets/*
  doctl compute cdn flush <cdn-id>  --files "/path/to/file.one, /path/to/file.two"
@@ -95,6 +98,7 @@ Examples:
  doctl compute cdn flush <cdn-id>  --files * `, Writer,
 		aliasOpt("fc"))
 	AddStringSliceFlag(cmdCDNFlushCache, doctl.ArgCDNFiles, "", []string{"*"}, "cdn files")
+	cmdCDNFlushCache.Example = `The following example flushes the cache of the ` + "`" + `/path/to/assets` + "`" + ` directory in a CDN: doctl compute cdn flush 418b7972-fc67-41ea-ab4b-6f9477c4f7d8 --files /path/to/assets/*`
 
 	return cmd
 }

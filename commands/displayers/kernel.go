@@ -41,11 +41,11 @@ func (ke *Kernel) ColMap() map[string]string {
 	}
 }
 
-func (ke *Kernel) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(ke.Kernels))
+func (ke *Kernel) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(ke.Kernels))
 
 	for _, k := range ke.Kernels {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID": k.ID, "Name": k.Name, "Version": k.Version,
 		}
 

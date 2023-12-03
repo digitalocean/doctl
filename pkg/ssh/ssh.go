@@ -24,7 +24,7 @@ import (
 )
 
 // Options is the type used to specify options passed to the SSH command
-type Options map[string]interface{}
+type Options map[string]any
 
 // Runner runs ssh commands.
 type Runner struct {

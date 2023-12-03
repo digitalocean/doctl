@@ -51,11 +51,11 @@ func (a *Activation) JSON(out io.Writer) error {
 }
 
 // KV implements Displayable
-func (a *Activation) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(a.Activations))
+func (a *Activation) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(a.Activations))
 
 	for _, actv := range a.Activations {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Datetime":     time.UnixMilli(actv.Start).Format("01/02 03:04:05"),
 			"Status":       GetActivationStatus(actv.StatusCode),
 			"Kind":         getActivationAnnotationValue(actv, "kind"),
@@ -117,7 +117,7 @@ func GetActivationPackageName(a whisk.Activation) string {
 
 	return ""
 }
-func getActivationAnnotationValue(a whisk.Activation, key string) interface{} {
+func getActivationAnnotationValue(a whisk.Activation, key string) any {
 	if a.Annotations == nil {
 		return nil
 	}

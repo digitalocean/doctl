@@ -40,7 +40,7 @@ func TestNamespacesCommand(t *testing.T) {
 func TestNamespacesCreate(t *testing.T) {
 	tests := []struct {
 		name           string
-		doctlFlags     map[string]interface{}
+		doctlFlags     map[string]any
 		expectedOutput string
 		expectedError  error
 		expectList     bool
@@ -52,7 +52,7 @@ func TestNamespacesCreate(t *testing.T) {
 		},
 		{
 			name: "invalid region",
-			doctlFlags: map[string]interface{}{
+			doctlFlags: map[string]any{
 				"label":  "my_dog",
 				"region": "dog",
 			},
@@ -60,7 +60,7 @@ func TestNamespacesCreate(t *testing.T) {
 		},
 		{
 			name: "legal flags, with no-connect",
-			doctlFlags: map[string]interface{}{
+			doctlFlags: map[string]any{
 				"label":      "something",
 				"region":     "lon",
 				"no-connect": true,
@@ -70,7 +70,7 @@ func TestNamespacesCreate(t *testing.T) {
 		},
 		{
 			name: "legal flags, with label conflict",
-			doctlFlags: map[string]interface{}{
+			doctlFlags: map[string]any{
 				"label":  "my_dog",
 				"region": "lon",
 			},
@@ -79,7 +79,7 @@ func TestNamespacesCreate(t *testing.T) {
 		},
 		{
 			name: "legal flags, should connect",
-			doctlFlags: map[string]interface{}{
+			doctlFlags: map[string]any{
 				"label":  "something",
 				"region": "lon",
 			},
@@ -184,7 +184,7 @@ func TestNamespacesList(t *testing.T) {
 func TestNamespacesDelete(t *testing.T) {
 	tests := []struct {
 		name               string
-		doctlFlags         map[string]interface{}
+		doctlFlags         map[string]any
 		doctlArg           string
 		expectedOutput     string
 		expectedError      error
@@ -203,7 +203,7 @@ func TestNamespacesDelete(t *testing.T) {
 		{
 			name:       "valid argument with force",
 			doctlArg:   "my_dog",
-			doctlFlags: map[string]interface{}{"force": true},
+			doctlFlags: map[string]any{"force": true},
 		},
 		{
 			name:               "valid argument with prompt",

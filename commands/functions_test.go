@@ -173,9 +173,9 @@ func TestFunctionsInvoke(t *testing.T) {
 	tests := []struct {
 		name          string
 		doctlArgs     string
-		doctlFlags    map[string]interface{}
+		doctlFlags    map[string]any
 		requestResult bool
-		passedParams  interface{}
+		passedParams  any
 	}{
 		{
 			name:          "no flags",
@@ -186,34 +186,34 @@ func TestFunctionsInvoke(t *testing.T) {
 		{
 			name:          "full flag",
 			doctlArgs:     "hello",
-			doctlFlags:    map[string]interface{}{"full": ""},
+			doctlFlags:    map[string]any{"full": ""},
 			requestResult: false,
 			passedParams:  nil,
 		},
 		{
 			name:          "param flag",
 			doctlArgs:     "hello",
-			doctlFlags:    map[string]interface{}{"param": "name:world"},
+			doctlFlags:    map[string]any{"param": "name:world"},
 			requestResult: true,
-			passedParams:  map[string]interface{}{"name": "world"},
+			passedParams:  map[string]any{"name": "world"},
 		},
 		{
 			name:          "param flag list",
 			doctlArgs:     "hello",
-			doctlFlags:    map[string]interface{}{"param": []string{"name:world", "address:everywhere"}},
+			doctlFlags:    map[string]any{"param": []string{"name:world", "address:everywhere"}},
 			requestResult: true,
-			passedParams:  map[string]interface{}{"name": "world", "address": "everywhere"},
+			passedParams:  map[string]any{"name": "world", "address": "everywhere"},
 		},
 		{
 			name:          "param flag colon-value",
 			doctlArgs:     "hello",
-			doctlFlags:    map[string]interface{}{"param": []string{"url:https://example.com"}},
+			doctlFlags:    map[string]any{"param": []string{"url:https://example.com"}},
 			requestResult: true,
-			passedParams:  map[string]interface{}{"url": "https://example.com"},
+			passedParams:  map[string]any{"url": "https://example.com"},
 		},
 	}
 
-	expectedRemoteResult := map[string]interface{}{
+	expectedRemoteResult := map[string]any{
 		"body": "Hello world!",
 	}
 

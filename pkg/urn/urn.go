@@ -36,7 +36,7 @@ func ParseURN(s string) (*URN, error) {
 }
 
 // NewURN constructs an *URN from a namespace, resource type, and identifier.
-func NewURN(namespace string, collection string, id interface{}) *URN {
+func NewURN(namespace string, collection string, id any) *URN {
 	return &URN{
 		namespace:  strings.ToLower(namespace),
 		collection: strings.ToLower(collection),

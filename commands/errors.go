@@ -97,13 +97,13 @@ func ensureOneArg(c *CmdConfig) error {
 	}
 }
 
-func warn(msg string, args ...interface{}) {
+func warn(msg string, args ...any) {
 	fmt.Fprintf(color.Output, "%s: %s\n", colorWarn, fmt.Sprintf(msg, args...))
 }
-func warnConfirm(msg string, args ...interface{}) {
+func warnConfirm(msg string, args ...any) {
 	fmt.Fprintf(color.Output, "%s: %s", colorWarn, fmt.Sprintf(msg, args...))
 }
 
-func notice(msg string, args ...interface{}) {
+func notice(msg string, args ...any) {
 	fmt.Fprintf(color.Output, "%s: %s\n", colorNotice, fmt.Sprintf(msg, args...))
 }

@@ -41,48 +41,51 @@ Once a certificate has been stored, it is assigned a unique certificate ID that 
 - The name you gave the certificate
 - A comma-separated list of domain names associated with the certificate
 - The SHA-1 fingerprint of the certificate
-- The certificate's expiration date given in ISO8601 date/time format
-- The certificate's creation date given in ISO8601 date/time format
+- The certificate's expiration date, in ISO8601 date/time format
+- The certificate's creation date, in ISO8601 date/time format
 - The certificate type (` + "`" + `custom` + "`" + ` or ` + "`" + `lets_encrypt` + "`" + `)
 - The certificate state (` + "`" + `pending` + "`" + `, ` + "`" + `verified` + "`" + `, or ` + "`" + `error` + "`" + `)`
 
-	CmdBuilder(cmd, RunCertificateGet, "get <id>", "Retrieve details about a certificate", `This command retrieves the following details about a certificate:`+certDetails, Writer,
+	cmdCertificateGet := CmdBuilder(cmd, RunCertificateGet, "get <id>", "Retrieve details about a certificate", `This command retrieves the following details about a certificate:`+certDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Certificate{}))
+	cmdCertificateGet.Example = "The following example retrieves the ID, name, and domains associated with a certificate: doctl compute certificate get f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Name,DNSNames"
+
 	cmdCertificateCreate := CmdBuilder(cmd, RunCertificateCreate, "create",
-		"Create a new certificate", `This command allows you to create a certificate. There are two supported certificate types: Let's Encrypt certificates, and custom certificates.
+		"Create a new certificate", `Creates a new Let's Encrypt certificate or adds an existing custom certificate to your team. There are two supported certificate types: Let's Encrypt certificates, and custom certificates.
 
-Let's Encrypt certificates are free and will be auto-renewed and managed for you by DigitalOcean.
+Let's Encrypt certificates are free, auto-renewed and managed for you by DigitalOcean.
 
-To create a Let's Encrypt certificate, you'll need to add the domain(s) to your account at cloud.digitalocean.com, or via `+"`"+`doctl compute domain create`+"`"+`, then provide a certificate name and a comma-separated list of the domain names you'd like to associate with the certificate:
+To create a Let's Encrypt certificate, you need to add the domain(s) to your account at using the DigitalOcean control panel, or via `+"`"+`doctl compute domain create`+"`"+`, then provide a certificate name and a comma-separated list of the domain names you'd like to associate with the certificate:
 
 	doctl compute certificate create --type lets_encrypt --name mycert --dns-names example.org
 
-To upload a custom certificate, you'll need to provide a certificate name, the path to the certificate, the path to the private key for the certificate, and the path to the certificate chain, all in PEM format:
+To upload a custom certificate, you need to provide a certificate name, the path to the certificate, the path to the certificate's private key, and the path to the certificate chain, all in PEM format:
 
 	doctl compute certificate create --type custom --name mycert --leaf-certificate-path cert.pem --certificate-chain-path fullchain.pem --private-key-path privkey.pem`, Writer, aliasOpt("c"))
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateName, "", "",
-		"Certificate name", requiredOpt())
+		"A user-specified name for the certificate.", requiredOpt())
 	AddStringSliceFlag(cmdCertificateCreate, doctl.ArgCertificateDNSNames, "",
 		[]string{}, "Comma-separated list of domains for which the certificate will be issued. The domains must be managed using DigitalOcean's DNS.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgPrivateKeyPath, "", "",
-		"The path to a PEM-formatted private-key corresponding to the SSL certificate.")
+		"The path on your local machine to a PEM-formatted private-key corresponding to the SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgLeafCertificatePath, "", "",
-		"The path to a PEM-formatted public SSL certificate.")
+		"The path on your local machine to a PEM-formatted public SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateChainPath, "", "",
-		"The path to a full PEM-formatted trust chain between the certificate authority's certificate and your domain's SSL certificate.")
+		"The path on your local machine to a full PEM-formatted trust chain between the certificate authority's certificate and your domain's SSL certificate.")
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "",
-		"Certificate type [custom|lets_encrypt]")
+		"The type of certificate, `custom` or `lets_encrypt`.")
 
-	CmdBuilder(cmd, RunCertificateList, "list", "Retrieve list of the account's stored certificates", `This command retrieves a list of all certificates associated with the account. The following details are shown for each certificate:`+certDetails, Writer,
+	cmdCertificateList := CmdBuilder(cmd, RunCertificateList, "list", "Retrieve list of the account's stored certificates", `This command retrieves a list of all certificates associated with the account. The following details are shown for each certificate:`+certDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Certificate{}))
+	cmdCertificateList.Example = `The following example retrieves a list of all certificates associated with your account and uses the ` + "`" + `--format` + "`" + ` flag return only the IDs, names, and the domains associated with each ticket: doctl compute certificate list --format ID,Name,DNSNames`
 
 	cmdCertificateDelete := CmdBuilder(cmd, RunCertificateDelete, "delete <id>",
-		"Delete the specified certificate", `This command deletes the specified certificate.
+		"Delete the specified certificate", `Deletes the specified certificate.
 
 Use `+"`"+`doctl compute certificate list`+"`"+` to see all available certificates associated with your account.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdCertificateDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the certificate without a confirmation prompt")
-
+	cmdCertificateDelete.Example = `The following example deletes the certificate with the ID  ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute certificate delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 	return cmd
 }
 

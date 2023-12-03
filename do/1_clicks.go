@@ -49,13 +49,13 @@ func NewOneClickService(client *godo.Client) OneClickService {
 }
 
 func (ocs *oneClickService) List(oneClickType string) (OneClicks, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ocs.Client.OneClick.List(context.TODO(), oneClickType)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

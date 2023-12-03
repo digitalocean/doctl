@@ -55,13 +55,13 @@ func (vas *volumeActionsService) Get(volumeID string, actionID int) (*Action, er
 }
 
 func (vas *volumeActionsService) List(volumeID string) ([]Action, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := vas.client.StorageActions.List(context.TODO(), volumeID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

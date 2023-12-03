@@ -44,12 +44,12 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 				expect.NoError(err)
 
 				request := struct {
-					Name          string      `json:"name"`
-					Engine        string      `json:"engine"`
-					Version       string      `json:"version"`
-					Region        string      `json:"region"`
-					Nodes         int         `json:"num_nodes"`
-					BackupRestore interface{} `json:"backup_restore"`
+					Name          string `json:"name"`
+					Engine        string `json:"engine"`
+					Version       string `json:"version"`
+					Region        string `json:"region"`
+					Nodes         int    `json:"num_nodes"`
+					BackupRestore any    `json:"backup_restore"`
 				}{}
 
 				err = json.Unmarshal(reqBody, &request)

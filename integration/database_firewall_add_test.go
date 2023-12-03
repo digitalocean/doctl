@@ -36,7 +36,7 @@ func (ms *mockServer) Get(t *testing.T, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	data, err := json.Marshal(map[string]interface{}{
+	data, err := json.Marshal(map[string]any{
 		"rules": ms.rules,
 	})
 	if err != nil {
