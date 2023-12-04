@@ -29,9 +29,10 @@ import (
 func UptimeAlert() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "alert",
-			Short: "Display commands to manage uptime alerts",
-			Long: `The sub-commands of ` + "`" + `doctl uptime alert` + "`" + ` manage your uptime alerts.
+			Use:     "alert",
+			Aliases: []string{"alerts"},
+			Short:   "Display commands to manage uptime alerts",
+			Long: `The sub-commands of ` + "`" + `doctl monitoring uptime alert` + "`" + ` manage your uptime alerts.
 
 DigitalOcean Uptime Alerts provide the ability to monitor your endpoints from around the world,
 and alert you when they're slow, unavailable, or SSL certificates are expiring.`,
