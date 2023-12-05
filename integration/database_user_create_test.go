@@ -101,7 +101,6 @@ var _ = suite("database/user/create", func(t *testing.T, when spec.G, it spec.S)
 			)
 
 			output, err := cmd.CombinedOutput()
-			t.Log(string(output))
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
 			expect.Equal(strings.TrimSpace(databaseUserCreateOutput), strings.TrimSpace(string(output)))
 		})
