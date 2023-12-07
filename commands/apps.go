@@ -595,6 +595,8 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		logType = godo.AppLogTypeDeploy
 	case strings.ToLower(string(godo.AppLogTypeRun)):
 		logType = godo.AppLogTypeRun
+	case strings.ToLower(string(godo.AppLogTypeRunRestarted)):
+		logType = godo.AppLogTypeRunRestarted
 	default:
 		return fmt.Errorf("Invalid log type %s", logTypeStr)
 	}
