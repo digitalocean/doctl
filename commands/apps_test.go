@@ -248,6 +248,7 @@ func TestRunAppsCreateDeployment(t *testing.T) {
 				SourceCommitHash: "commit",
 			}},
 			Cause: "Manual",
+			Phase: godo.DeploymentPhase_PendingDeploy,
 			Progress: &godo.DeploymentProgress{
 				PendingSteps: 1,
 				RunningSteps: 0,
@@ -351,6 +352,7 @@ func TestRunAppsGetDeployment(t *testing.T) {
 				SourceCommitHash: "commit",
 			}},
 			Cause: "Manual",
+			Phase: godo.DeploymentPhase_PendingDeploy,
 			Progress: &godo.DeploymentProgress{
 				PendingSteps: 1,
 				RunningSteps: 0,
@@ -388,6 +390,7 @@ func TestRunAppsListDeployments(t *testing.T) {
 				SourceCommitHash: "commit",
 			}},
 			Cause: "Manual",
+			Phase: godo.DeploymentPhase_PendingDeploy,
 			Progress: &godo.DeploymentProgress{
 				PendingSteps: 1,
 				RunningSteps: 0,

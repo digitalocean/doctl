@@ -153,12 +153,13 @@ var (
 			Default:     true,
 		}},
 	}
+
 	testAppsOutput = `ID                                      Spec Name    Default Ingress    Active Deployment ID                    In Progress Deployment ID    Created At                       Updated At
 93a37175-f520-4a12-a7ad-26e63491dbf4    test                            f4e37431-a0f4-458f-8f9f-5c9a61d8562f                                 1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
-	testDeploymentsOutput = `ID                                      Cause     Progress    Created At                       Updated At
-f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
-	testActiveDeploymentOutput = `ID                                      Cause     Progress    Created At                       Updated At
-f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    1/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
+	testDeploymentsOutput = `ID                                      Cause     Progress    Phase             Created At                       Updated At
+f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         PENDING_DEPLOY    1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
+	testActiveDeploymentOutput = `ID                                      Cause     Progress    Phase     Created At                       Updated At
+f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    1/1         ACTIVE    1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC`
 	testRegionsOutput = `Region    Label        Continent    Data Centers    Is Disabled?    Reason (if disabled)    Is Default?
 ams       Amsterdam    Europe       [ams3]          false                                   true`
 )
@@ -1339,8 +1340,8 @@ var _ = suite("apps/upgrade-buildpack", func(t *testing.T, when spec.G, it spec.
 			upgraded buildpack digitalocean/go. 2 components were affected: [api www].
 			triggered a new deployment to apply the upgrade:
 			
-			ID                                      Cause     Progress    Created At                       Updated At
-			f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC
+			ID                                      Cause     Progress    Phase             Created At                       Updated At
+			f4e37431-a0f4-458f-8f9f-5c9a61d8562f    Manual    0/1         PENDING_DEPLOY    1970-01-01 00:00:01 +0000 UTC    1970-01-01 00:00:01 +0000 UTC
 		`), string(output))
 		expect.NoError(err)
 	})
