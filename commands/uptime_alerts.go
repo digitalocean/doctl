@@ -42,7 +42,8 @@ and alert you when they're slow, unavailable, or SSL certificates are expiring.`
 	cmdUptimeAlertsCreate := CmdBuilder(cmd, RunUptimeAlertsCreate, "create <uptime-check-id>", "Create an uptime alert", `Use this command to create an uptime alert on your account.
 
 You can use flags to specify the uptime alert, type, threshold, comparison, notifications, and period.`, Writer,
-		aliasOpt("c"), displayerType(&displayers.UptimeAlert{}))
+		aliasOpt("c"), displayerType(&displayers.UptimeAlert{}), overrideCmdNS("uptime-alert"))
+
 	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertName, "", "", "Uptime alert name", requiredOpt())
 	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertType, "", "", "Uptime alert type, must be one of latency, down, down_global or ssl_expiry", requiredOpt())
 	AddIntFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertThreshold, "", 0, "Uptime alert threshold at which the alert will enter a trigger state. The specific threshold is dependent on the alert type.")
@@ -61,7 +62,7 @@ You can use flags to specify the uptime alert, type, threshold, comparison, noti
 	cmdUptimeAlertsUpdate := CmdBuilder(cmd, RunUptimeAlertsUpdate, "update <uptime-check-id> <uptime-alert-id>", "Update an uptime alert", `Use this command to update an uptime alert on your account.
 
 You can use flags to specify the uptime alert, type, threshold, comparison, notifications, and period.`, Writer,
-		aliasOpt("u"), displayerType(&displayers.UptimeAlert{}))
+		aliasOpt("u"), displayerType(&displayers.UptimeAlert{}), overrideCmdNS("uptime-alert"))
 	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertName, "", "", "Uptime alert name", requiredOpt())
 	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertType, "", "", "Uptime alert type, must be one of latency, down, down_global or ssl_expiry", requiredOpt())
 	AddIntFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertThreshold, "", 0, "Uptime alert threshold at which the alert will enter a trigger state. The specific threshold is dependent on the alert type.")

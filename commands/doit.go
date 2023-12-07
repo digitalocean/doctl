@@ -326,16 +326,25 @@ func AddDurationFlag(cmd *Command, name, shorthand string, def time.Duration, de
 
 func flagName(cmd *Command, name string) string {
 	if cmd.Parent() != nil {
-		return fmt.Sprintf("%s.%s.%s", cmd.Parent().Name(), cmd.Name(), name)
+		p := cmd.Parent().Name()
+		if cmd.overrideNS != "" {
+			p = cmd.overrideNS
+		}
+		return fmt.Sprintf("%s.%s.%s", p, cmd.Name(), name)
 	}
+
 	return fmt.Sprintf("%s.%s", cmd.Name(), name)
 }
 
-func cmdNS(cmd *cobra.Command) string {
+func cmdNS(cmd *Command) string {
 	if cmd.Parent() != nil {
+		if cmd.overrideNS != "" {
+			return fmt.Sprintf("%s.%s", cmd.overrideNS, cmd.Name())
+		}
+
 		return fmt.Sprintf("%s.%s", cmd.Parent().Name(), cmd.Name())
 	}
-	return fmt.Sprintf("%s", cmd.Name())
+	return cmd.Name()
 }
 
 func isTerminal(f *os.File) bool {
