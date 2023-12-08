@@ -42,3 +42,13 @@ func hiddenCmd() cmdOption {
 		c.Hidden = true
 	}
 }
+
+// overrideCmdNS specifies a namespace to use in config overriding the
+// normal usage of the parent command's name. This is useful in cases
+// where deeply nested subcommands have conflicting names. See uptime_alerts.go
+// for example usage.
+func overrideCmdNS(ns string) cmdOption {
+	return func(c *Command) {
+		c.overrideNS = ns
+	}
+}

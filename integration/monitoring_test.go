@@ -60,7 +60,7 @@ var _ = suite("monitoring/alerts/get", func(t *testing.T, when spec.G, it spec.S
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, string(output))
 
 		expect.Equal(strings.TrimSpace(getAlertPolicyOutput), strings.TrimSpace(string(output)))
 	})
@@ -94,8 +94,7 @@ UUID                                    Type                       Description  
 `
 )
 
-// TODO: Re-enable test
-var _ = suite.Pend("monitoring/alerts/create", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("monitoring/alerts/create", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -155,7 +154,7 @@ var _ = suite.Pend("monitoring/alerts/create", func(t *testing.T, when spec.G, i
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, string(output))
 
 		expect.Equal(strings.TrimSpace(createAlertPolicyOutput), strings.TrimSpace(string(output)))
 	})
@@ -189,8 +188,7 @@ UUID                                    Type                       Description  
 `
 )
 
-// TODO: Re-enable test
-var _ = suite.Pend("monitoring/alerts/update", func(t *testing.T, when spec.G, it spec.S) {
+var _ = suite("monitoring/alerts/update", func(t *testing.T, when spec.G, it spec.S) {
 	var (
 		expect *require.Assertions
 		server *httptest.Server
@@ -250,7 +248,7 @@ var _ = suite.Pend("monitoring/alerts/update", func(t *testing.T, when spec.G, i
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, string(output))
 
 		expect.Equal(strings.TrimSpace(updateAlertPolicyOutput), strings.TrimSpace(string(output)))
 	})
