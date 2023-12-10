@@ -83,6 +83,7 @@ func (d Deployments) Cols() []string {
 		"ID",
 		"Cause",
 		"Progress",
+		"Phase",
 		"Created",
 		"Updated",
 	}
@@ -93,6 +94,7 @@ func (d Deployments) ColMap() map[string]string {
 		"ID":       "ID",
 		"Cause":    "Cause",
 		"Progress": "Progress",
+		"Phase":    "Phase",
 		"Created":  "Created At",
 		"Updated":  "Updated At",
 	}
@@ -115,6 +117,7 @@ func (d Deployments) KV() []map[string]any {
 			"ID":       deployment.ID,
 			"Cause":    deployment.Cause,
 			"Progress": progress,
+			"Phase":    deployment.Phase,
 			"Created":  deployment.CreatedAt,
 			"Updated":  deployment.UpdatedAt,
 		}

@@ -118,6 +118,10 @@ gofmt_check:
 		echo "gofmt checking failed:\n"; echo "$${GOFMT} \n"; exit 1; \
 	fi
 
+.PHONY: check_focused
+check_focused:
+	@scripts/check_focused_test.sh
+
 .PHONY: snap_image
 snap_image:
 	@echo "==> build docker image for releasing snap"

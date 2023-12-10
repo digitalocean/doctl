@@ -132,6 +132,7 @@ func (ucs *uptimeChecksService) CreateAlert(id string, req *godo.CreateUptimeAle
 	if err != nil {
 		return nil, err
 	}
+
 	return &UptimeAlert{uptimeAlert}, nil
 }
 

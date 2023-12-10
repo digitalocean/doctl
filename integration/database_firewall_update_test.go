@@ -32,8 +32,6 @@ var _ = suite("database/firewalls", func(t *testing.T, when spec.G, it spec.S) {
 				if req.Method == http.MethodPut {
 					reqBody, err := io.ReadAll(req.Body)
 					expect.NoError(err)
-					t.Log(string(reqBody))
-					t.Log(databasesUpdateFirewallUpdateRequest)
 					expect.JSONEq(databasesUpdateFirewallUpdateRequest, string(reqBody))
 					w.Write([]byte(databasesUpdateFirewallRuleResponse))
 				} else if req.Method == http.MethodGet {
