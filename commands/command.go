@@ -34,6 +34,10 @@ type Command struct {
 	fmtCols []string
 
 	childCommands []*Command
+
+	// overrideNS specifies a namespace to use in config.
+	// Set using the overrideCmdNS cmdOption when calling CmdBuilder
+	overrideNS string
 }
 
 // AddCommand adds child commands and adds child commands for cobra as well.
@@ -72,19 +76,6 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 		Use:   cliText,
 		Short: shortdesc,
 		Long:  longdesc,
-		Run: func(cmd *cobra.Command, args []string) {
-			c, err := NewCmdConfig(
-				cmdNS(cmd),
-				&doctl.LiveConfig{},
-				out,
-				args,
-				initCmd,
-			)
-			checkErr(err)
-
-			err = cr(c)
-			checkErr(err)
-		},
 	}
 
 	c := &Command{Command: cc}
@@ -95,6 +86,22 @@ func cmdBuilderWithInit(parent *Command, cr CmdRunner, cliText, shortdesc string
 
 	for _, co := range options {
 		co(c)
+	}
+
+	// This must be defined after the options have been applied
+	// so that changes made by the options are accessible here.
+	c.Command.Run = func(cmd *cobra.Command, args []string) {
+		c, err := NewCmdConfig(
+			cmdNS(c),
+			&doctl.LiveConfig{},
+			out,
+			args,
+			initCmd,
+		)
+		checkErr(err)
+
+		err = cr(c)
+		checkErr(err)
 	}
 
 	if cols := c.fmtCols; cols != nil {

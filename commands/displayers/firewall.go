@@ -60,12 +60,12 @@ func (f *Firewall) ColMap() map[string]string {
 	}
 }
 
-func (f *Firewall) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(f.Firewalls))
+func (f *Firewall) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(f.Firewalls))
 
 	for _, fw := range f.Firewalls {
 		irs, ors := firewallRulesPrintHelper(fw)
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID":             fw.ID,
 			"Name":           fw.Name,
 			"Status":         fw.Status,

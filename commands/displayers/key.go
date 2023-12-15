@@ -42,11 +42,11 @@ func (ke *Key) ColMap() map[string]string {
 	}
 }
 
-func (ke *Key) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(ke.Keys))
+func (ke *Key) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(ke.Keys))
 
 	for _, k := range ke.Keys {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID": k.ID, "Name": k.Name, "FingerPrint": k.Fingerprint,
 		}
 
@@ -81,11 +81,11 @@ func (ke *KeyGet) ColMap() map[string]string {
 	}
 }
 
-func (ke *KeyGet) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(ke.Keys))
+func (ke *KeyGet) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(ke.Keys))
 
 	for _, k := range ke.Keys {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID": k.ID, "Name": k.Name, "FingerPrint": k.Fingerprint, "PublicKey": k.PublicKey,
 		}
 

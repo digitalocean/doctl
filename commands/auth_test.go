@@ -90,11 +90,11 @@ func TestAuthInitConfig(t *testing.T) {
 		// Ensure that the dev.config.set.dev-config setting is correct to prevent
 		// a conflict with the base config setting.
 		devConfig := configFile["dev"]
-		devConfigSetting := devConfig.(map[interface{}]interface{})["config"]
-		expectedConfigSetting := map[interface{}]interface{}(
-			map[interface{}]interface{}{
-				"set":   map[interface{}]interface{}{"dev-config": ""},
-				"unset": map[interface{}]interface{}{"dev-config": ""},
+		devConfigSetting := devConfig.(map[any]any)["config"]
+		expectedConfigSetting := map[any]any(
+			map[any]any{
+				"set":   map[any]any{"dev-config": ""},
+				"unset": map[any]any{"dev-config": ""},
 			},
 		)
 		assert.Equal(t, expectedConfigSetting, devConfigSetting, "unexpected setting for 'dev.config'")
@@ -140,7 +140,7 @@ func TestAuthForcesLowercase(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.oauth.EXPECT().TokenInfo(gomock.Any()).Return(&do.OAuthTokenInfo{}, nil)
 
-		contexts := map[string]interface{}{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
+		contexts := map[string]any{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
 		context := "TestCapitalCase"
 		viper.Set("auth-contexts", contexts)
 		viper.Set("context", context)
@@ -148,7 +148,7 @@ func TestAuthForcesLowercase(t *testing.T) {
 		err := RunAuthInit(retrieveUserTokenFunc)(config)
 		assert.NoError(t, err)
 
-		contexts = map[string]interface{}{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
+		contexts = map[string]any{doctl.ArgDefaultContext: true, "TestCapitalCase": true}
 		viper.Set("auth-contexts", contexts)
 		viper.Set("context", "contextDoesntExist")
 		err = RunAuthSwitch(config)
@@ -175,14 +175,14 @@ func Test_displayAuthContexts(t *testing.T) {
 		Name     string
 		Out      *bytes.Buffer
 		Context  string
-		Contexts map[string]interface{}
+		Contexts map[string]any
 		Expected string
 	}{
 		{
 			Name:    "default context only",
 			Out:     &bytes.Buffer{},
 			Context: doctl.ArgDefaultContext,
-			Contexts: map[string]interface{}{
+			Contexts: map[string]any{
 				doctl.ArgDefaultContext: true,
 			},
 			Expected: "default (current)\n",
@@ -191,7 +191,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Name:    "default context and additional context",
 			Out:     &bytes.Buffer{},
 			Context: doctl.ArgDefaultContext,
-			Contexts: map[string]interface{}{
+			Contexts: map[string]any{
 				doctl.ArgDefaultContext: true,
 				"test":                  true,
 			},
@@ -201,7 +201,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Name:    "default context and additional context set to additional context",
 			Out:     &bytes.Buffer{},
 			Context: "test",
-			Contexts: map[string]interface{}{
+			Contexts: map[string]any{
 				doctl.ArgDefaultContext: true,
 				"test":                  true,
 			},
@@ -211,7 +211,7 @@ func Test_displayAuthContexts(t *testing.T) {
 			Name:    "unset context",
 			Out:     &bytes.Buffer{},
 			Context: "missing",
-			Contexts: map[string]interface{}{
+			Contexts: map[string]any{
 				doctl.ArgDefaultContext: true,
 				"test":                  true,
 			},
@@ -284,7 +284,7 @@ func TestTokenInputValidator(t *testing.T) {
 	}
 }
 
-type testConfig map[string]interface{}
+type testConfig map[string]any
 
 type nopWriteCloser struct {
 	io.Writer

@@ -49,10 +49,10 @@ func (i *Namespaces) ColMap() map[string]string {
 }
 
 // KV is the displayer KV method specialized for namespaces list
-func (i *Namespaces) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(i.Info))
+func (i *Namespaces) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(i.Info))
 	for _, ii := range i.Info {
-		x := map[string]interface{}{
+		x := map[string]any{
 			"Label":  ii.Label,
 			"Region": ii.Region,
 			"ID":     ii.Namespace,

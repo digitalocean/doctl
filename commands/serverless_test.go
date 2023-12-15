@@ -359,7 +359,7 @@ func TestServerlessInit(t *testing.T) {
 		name            string
 		doctlArgs       string
 		doctlFlags      map[string]string
-		out             map[string]interface{}
+		out             map[string]any
 		expectCheck     bool
 		expectOverwrite bool
 	}{
@@ -368,21 +368,21 @@ func TestServerlessInit(t *testing.T) {
 			doctlArgs: "path/to/foo",
 			// The language flag has a default normally applied by cobra
 			doctlFlags: map[string]string{"language": "javascript"},
-			out:        map[string]interface{}{"project": "foo"},
+			out:        map[string]any{"project": "foo"},
 		},
 		{
 			name:      "overwrite",
 			doctlArgs: "path/to/foo",
 			// The language flag has a default normally applied by cobra
 			doctlFlags:      map[string]string{"overwrite": "", "language": "javascript"},
-			out:             map[string]interface{}{"project": "foo"},
+			out:             map[string]any{"project": "foo"},
 			expectOverwrite: true,
 		},
 		{
 			name:        "language flag",
 			doctlArgs:   "path/to/foo",
 			doctlFlags:  map[string]string{"language": "go"},
-			out:         map[string]interface{}{"project": "foo"},
+			out:         map[string]any{"project": "foo"},
 			expectCheck: true,
 		},
 	}

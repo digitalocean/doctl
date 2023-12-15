@@ -222,7 +222,7 @@ func RunAuthList(c *CmdConfig) error {
 	return nil
 }
 
-func displayAuthContexts(out io.Writer, currentContext string, contexts map[string]interface{}) {
+func displayAuthContexts(out io.Writer, currentContext string, contexts map[string]any) {
 	// Because the default context isn't present on the auth-contexts field,
 	// we add it manually so that it's always included in the output, and so
 	// we can check if it's the current context.

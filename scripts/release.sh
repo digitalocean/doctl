@@ -10,6 +10,6 @@ fi
 echo "generating changelog"
 release_notes="$(make _changelog)"
 
-goreleaser --rm-dist --release-notes="${release_notes}"
+goreleaser --clean --release-notes="${release_notes}"
 
 rm -f "$release_notes"

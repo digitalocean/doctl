@@ -49,13 +49,13 @@ func NewReservedIPsService(client *godo.Client) ReservedIPsService {
 }
 
 func (fis *reservedIPsService) List() (ReservedIPs, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := fis.client.ReservedIPs.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

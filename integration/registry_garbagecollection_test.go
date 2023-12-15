@@ -265,7 +265,7 @@ var _ = suite("registry/garbage-collection", func(t *testing.T, when spec.G, it 
 	})
 })
 
-func reifyTemplateStr(t *testing.T, tmplStr string, v interface{}) string {
+func reifyTemplateStr(t *testing.T, tmplStr string, v any) string {
 	tmpl, err := template.New("meow").Parse(tmplStr)
 	require.NoError(t, err)
 

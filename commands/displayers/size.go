@@ -45,11 +45,11 @@ func (si *Size) ColMap() map[string]string {
 	}
 }
 
-func (si *Size) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(si.Sizes))
+func (si *Size) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(si.Sizes))
 
 	for _, s := range si.Sizes {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Slug": s.Slug, "Description": s.Description,
 			"Memory": s.Memory, "VCPUs": s.Vcpus,
 			"Disk": s.Disk, "PriceMonthly": fmt.Sprintf("%0.2f", s.PriceMonthly),

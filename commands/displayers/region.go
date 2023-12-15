@@ -41,11 +41,11 @@ func (re *Region) ColMap() map[string]string {
 	}
 }
 
-func (re *Region) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(re.Regions))
+func (re *Region) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(re.Regions))
 
 	for _, r := range re.Regions {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Slug": r.Slug, "Name": r.Name, "Available": r.Available,
 		}
 

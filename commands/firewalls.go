@@ -448,8 +448,8 @@ func extractOutboundRules(s string) (rules []godo.OutboundRule, err error) {
 	return rules, nil
 }
 
-func extractRule(ruleStr string, sd string) (map[string]interface{}, error) {
-	rule := map[string]interface{}{}
+func extractRule(ruleStr string, sd string) (map[string]any, error) {
+	rule := map[string]any{}
 	var dropletIDs []int
 	var addresses, lbUIDs, k8sIDs, tags []string
 
@@ -480,7 +480,7 @@ func extractRule(ruleStr string, sd string) (map[string]interface{}, error) {
 		}
 	}
 
-	rule[sd] = map[string]interface{}{
+	rule[sd] = map[string]any{
 		"addresses":          addresses,
 		"droplet_ids":        dropletIDs,
 		"load_balancer_uids": lbUIDs,

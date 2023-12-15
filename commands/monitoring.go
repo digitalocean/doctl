@@ -110,6 +110,7 @@ func RunCmdAlertPolicyCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
+
 	err = validateAlertPolicyType(alertType)
 	if err != nil {
 		return err

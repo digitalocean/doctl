@@ -378,7 +378,7 @@ func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, er
 	return forwardingRules, err
 }
 
-func fillStructFromStringSliceArgs(obj interface{}, s string) error {
+func fillStructFromStringSliceArgs(obj any, s string) error {
 	if len(s) == 0 {
 		return nil
 	}

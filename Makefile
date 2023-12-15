@@ -27,7 +27,7 @@ DOCS_OUT = $(shell echo $${DOCS_OUT:-$(my_d)/builds/docs/yaml})
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 
-GOFILES_NOVENDOR = $(shell find . -type f -name '*.go' -not -path "./vendor/*")
+GOFILES_NOVENDOR_NOMOCK = $(shell find . -type f -name '*.go' -not -path "./vendor/*" -not -path "*_mock.go")
 
 GOOS = linux
 ifeq ($(UNAME_S),Darwin)
@@ -113,10 +113,14 @@ shellcheck:
 gofmt_check:
 	@echo "==> ensure code adheres to gofmt (with vendor directory excluded)"
 	@echo ""
-	@GOFMT=$$(gofmt -l ${GOFILES_NOVENDOR}); \
+	@GOFMT=$$(gofmt -w -r 'interface{} -> any' -l ${GOFILES_NOVENDOR_NOMOCK}); \
 	if [ -n "$${GOFMT}" ]; then \
 		echo "gofmt checking failed:\n"; echo "$${GOFMT} \n"; exit 1; \
 	fi
+
+.PHONY: check_focused
+check_focused:
+	@scripts/check_focused_test.sh
 
 .PHONY: snap_image
 snap_image:

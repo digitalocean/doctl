@@ -51,8 +51,8 @@ func (a *AlertPolicy) ColMap() map[string]string {
 	}
 }
 
-func (a *AlertPolicy) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(a.AlertPolicies))
+func (a *AlertPolicy) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(a.AlertPolicies))
 
 	for _, x := range a.AlertPolicies {
 		emails := ""
@@ -67,7 +67,7 @@ func (a *AlertPolicy) KV() []map[string]interface{} {
 		}
 		slacks := strings.Join(slackChannels, ",")
 
-		o := map[string]interface{}{
+		o := map[string]any{
 			"UUID":           x.UUID,
 			"Type":           x.Type,
 			"Description":    x.Description,

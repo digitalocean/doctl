@@ -71,13 +71,13 @@ func (ucs *uptimeChecksService) Create(req *godo.CreateUptimeCheckRequest) (*Upt
 }
 
 func (ucs *uptimeChecksService) List() ([]UptimeCheck, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ucs.client.UptimeChecks.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -132,17 +132,18 @@ func (ucs *uptimeChecksService) CreateAlert(id string, req *godo.CreateUptimeAle
 	if err != nil {
 		return nil, err
 	}
+
 	return &UptimeAlert{uptimeAlert}, nil
 }
 
 func (ucs *uptimeChecksService) ListAlerts(id string) ([]UptimeAlert, error) {
-	f := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := ucs.client.UptimeChecks.ListAlerts(context.TODO(), id, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}

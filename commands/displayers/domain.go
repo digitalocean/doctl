@@ -39,11 +39,11 @@ func (d *Domain) ColMap() map[string]string {
 	}
 }
 
-func (d *Domain) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(d.Domains))
+func (d *Domain) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(d.Domains))
 
 	for _, do := range d.Domains {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"Domain": do.Name, "TTL": do.TTL,
 		}
 		out = append(out, o)
@@ -89,11 +89,11 @@ func (dr *DomainRecord) ColMap() map[string]string {
 	return defaultColMap
 }
 
-func (dr *DomainRecord) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(dr.DomainRecords))
+func (dr *DomainRecord) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dr.DomainRecords))
 
 	for _, d := range dr.DomainRecords {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID": d.ID, "Type": d.Type, "Name": d.Name,
 			"Data": d.Data, "Priority": d.Priority,
 			"Port": d.Port, "TTL": d.TTL, "Weight": d.Weight,

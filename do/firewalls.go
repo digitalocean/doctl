@@ -83,13 +83,13 @@ func (fs *firewallsService) Update(fID string, fr *godo.FirewallRequest) (*Firew
 }
 
 func (fs *firewallsService) List() (Firewalls, error) {
-	listFn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	listFn := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := fs.client.Firewalls.List(context.TODO(), opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -101,13 +101,13 @@ func (fs *firewallsService) List() (Firewalls, error) {
 }
 
 func (fs *firewallsService) ListByDroplet(dID int) (Firewalls, error) {
-	listFn := func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error) {
+	listFn := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := fs.client.Firewalls.ListByDroplet(context.TODO(), dID, opt)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		si := make([]interface{}, len(list))
+		si := make([]any, len(list))
 		for i := range list {
 			si[i] = list[i]
 		}
@@ -153,7 +153,7 @@ func (fs *firewallsService) RemoveRules(fID string, rr *godo.FirewallRulesReques
 	return err
 }
 
-func paginatedListHelper(listFn func(opt *godo.ListOptions) ([]interface{}, *godo.Response, error)) (Firewalls, error) {
+func paginatedListHelper(listFn func(opt *godo.ListOptions) ([]any, *godo.Response, error)) (Firewalls, error) {
 	si, err := PaginateResp(listFn)
 	if err != nil {
 		return nil, err

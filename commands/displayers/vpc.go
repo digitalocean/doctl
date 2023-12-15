@@ -55,11 +55,11 @@ func (v *VPC) ColMap() map[string]string {
 	}
 }
 
-func (v *VPC) KV() []map[string]interface{} {
-	out := make([]map[string]interface{}, 0, len(v.VPCs))
+func (v *VPC) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(v.VPCs))
 
 	for _, v := range v.VPCs {
-		o := map[string]interface{}{
+		o := map[string]any{
 			"ID":          v.ID,
 			"URN":         v.URN,
 			"Name":        v.Name,

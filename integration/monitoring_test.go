@@ -60,7 +60,7 @@ var _ = suite("monitoring/alerts/get", func(t *testing.T, when spec.G, it spec.S
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, string(output))
 
 		expect.Equal(strings.TrimSpace(getAlertPolicyOutput), strings.TrimSpace(string(output)))
 	})
@@ -154,7 +154,7 @@ var _ = suite("monitoring/alerts/create", func(t *testing.T, when spec.G, it spe
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, string(output))
 
 		expect.Equal(strings.TrimSpace(createAlertPolicyOutput), strings.TrimSpace(string(output)))
 	})
@@ -248,7 +248,7 @@ var _ = suite("monitoring/alerts/update", func(t *testing.T, when spec.G, it spe
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, string(output))
 
 		expect.Equal(strings.TrimSpace(updateAlertPolicyOutput), strings.TrimSpace(string(output)))
 	})

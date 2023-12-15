@@ -42,8 +42,8 @@ func (a *Account) ColMap() map[string]string {
 	}
 }
 
-func (a *Account) KV() []map[string]interface{} {
-	x := map[string]interface{}{
+func (a *Account) KV() []map[string]any {
+	x := map[string]any{
 		"Email": a.Email, "DropletLimit": a.DropletLimit,
 		"EmailVerified": a.EmailVerified, "UUID": a.UUID,
 		"Status": a.Status,
@@ -53,5 +53,5 @@ func (a *Account) KV() []map[string]interface{} {
 		x["TeamUUID"] = a.Team.UUID
 	}
 
-	return []map[string]interface{}{x}
+	return []map[string]any{x}
 }
