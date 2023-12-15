@@ -1609,7 +1609,7 @@ You can configure multiple rules for the firewall by passing additional argument
 
 	databaseFirewallAddDetails :=
 		`
-Use this command to append a single rule to the existing firewall rules of the specified database. 
+Appends a single rule to the existing firewall rules of the specified database. 
 
 This command requires the ` + "`" + `--rule` + "`" + ` flag specifying the resource or resources allowed to access the database cluster. The rule passed to the ` + "`" + `--rule` + "`" + ` flag must be in a <type>:<value> format where:
 	- ` + "`" + `type` + "`" + ` is the type of resource that the firewall rule allows to access the database cluster. Possible values are:  ` + "`" + `droplet` + "`" + `, ` + "`" + `k8s", ` + "`" + `ip_addr` + "`" + `, ` + "`" + `tag` + "`" + `, ` + "`" + `app` + "`" + `
