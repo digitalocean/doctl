@@ -82,7 +82,7 @@ func Domain() *Command {
 	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "Delete a DNS record", `Deletes DNS records for a domain.`, Writer,
 		aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete record without confirmation prompt")
-	cmdRunRecordDelete.Example = `The following command deletes a DNS record with the ID ` + "`" + `98858618` + "`" + ` from the domain ` + "`" + `example.com` + "`" + `: doctl compute domain records delete example.com 1234567890`
+	cmdRunRecordDelete.Example = `The following command deletes a DNS record with the ID ` + "`" + `98858421` + "`" + ` from the domain ` + "`" + `example.com` + "`" + `: doctl compute domain records delete example.com 98858421`
 
 	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "Update a DNS record", `Updates or changes the properties of DNS records for a domain.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.DomainRecord{}))
@@ -97,7 +97,7 @@ func Domain() *Command {
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "The flag value of a CAA record. A valid is an unsigned integer between 0-255.")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
 
-	cmdRecordUpdate.Example = `The following command updates the record with the ID ` + "`" + `98858618` + "`" + ` for the domain ` + "`" + `example.com` + "`" + `: doctl compute domain records update example.com --record-id 98858618 --record-name example.com --record-data 198.51.100.215`
+	cmdRecordUpdate.Example = `The following command updates the record with the ID ` + "`" + `98858421` + "`" + ` for the domain ` + "`" + `example.com` + "`" + `: doctl compute domain records update example.com --record-id 98858421 --record-name example.com --record-data 198.51.100.215`
 
 	return cmd
 }
