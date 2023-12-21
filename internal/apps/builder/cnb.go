@@ -380,10 +380,10 @@ func (b *CNBComponentBuilder) builderImage() string {
 		return b.builderImageOverride
 	}
 	for _, f := range b.spec.Features {
-		if strings.EqualFold(f, "buildpack-stack=ubuntu-22") {
-			return CNBBuilderImage_Heroku22
+		if strings.EqualFold(f, "buildpack-stack=ubuntu-18") {
+			return CNBBuilderImage_Heroku18
 		}
 	}
 
-	return CNBBuilderImage_Heroku18
+	return CNBBuilderImage_Heroku22
 }
