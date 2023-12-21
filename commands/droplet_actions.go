@@ -96,9 +96,9 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 	cmdDropletActionShutdown := CmdBuilder(cmd, RunDropletActionShutdown,
 		"shutdown <droplet-id>", "Shut down a Droplet", `Shuts down a Droplet. 
 		
-		A shutdown action is an attempt to shutdown the Droplet in a graceful way, similar to using the shutdown command from the Droplet's console. Since a shutdown command can fail, this action guarantees that the command is issued, not that it succeeds. The preferred way to turn off a Droplet is to attempt a shutdown, with a reasonable timeout, followed by a `+"`"+`doctl compute droplet-action power_off`+"`"+` action to ensure the Droplet is off.
+A shutdown action is an attempt to shutdown the Droplet in a graceful way, similar to using the shutdown command from the Droplet's console. Since a shutdown command can fail, this action guarantees that the command is issued, not that it succeeds. The preferred way to turn off a Droplet is to attempt a shutdown, with a reasonable timeout, followed by a `+"`"+`doctl compute droplet-action power_off`+"`"+` action to ensure the Droplet is off.
 		
-		Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`, Writer,
+Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionShutdown, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionShutdown.Example = `The following example shuts down a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action shutdown 386734086`
@@ -106,9 +106,9 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 	cmdDropletActionPowerOff := CmdBuilder(cmd, RunDropletActionPowerOff,
 		"power-off <droplet-id>", "Power off a Droplet", `Use this command to power off a Droplet.
 		
-		A `+"`"+`power_off`+"`"+` event is a hard shutdown and should only be used if the shutdown action is not successful. It is similar to cutting the power on a server and could lead to complications.
+A `+"`"+`power_off`+"`"+` event is a hard shutdown and should only be used if the shutdown action is not successful. It is similar to cutting the power on a server and could lead to complications.
 
-		Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`, Writer,
+Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionPowerOff, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionPowerOff.Example = `The following example powers off a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action power-off 386734086`
@@ -121,24 +121,24 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 
 	cmdDropletActionPasswordReset := CmdBuilder(cmd, RunDropletActionPasswordReset,
 		"password-reset <droplet-id>", "Reset the root password for a Droplet", `Initiates a root password reset on a Droplet. We provide a new password for the Droplet via the accounts email address. The password must be changed after first use. 
-		
-		This also powercycles the Droplet.`, Writer,
+
+This also powercycles the Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionPasswordReset, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionPasswordReset.Example = `The following example resets the root password for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action password-reset 386734086`
 
 	cmdDropletActionEnableIPv6 := CmdBuilder(cmd, RunDropletActionEnableIPv6,
-		"enable-ipv6 <droplet-id>", "Enable IPv6 on a Droplet", `Enables IPv6 networking on a Droplet. When executed, we automatically assign an IPv6 address to the Droplet.
+		"enable-ipv6 <droplet-id>", "Enable IPv6 on a Droplet", `Enables IPv6 networking on a Droplet. When executed, we automatically assign an IPv6 address to the Droplet. 
 		
-		The Droplet may require additional network configuration to properly use the new IPv6 address. For more information, see: https://docs.digitalocean.com/products/networking/ipv6/how-to/enable/`, Writer,
+The Droplet may require additional network configuration to properly use the new IPv6 address. For more information, see: https://docs.digitalocean.com/products/networking/ipv6/how-to/enable`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionEnableIPv6, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionEnableIPv6.Example = `The following example enables IPv6 on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action enable-ipv6 386734086`
 
 	cmdDropletActionEnablePrivateNetworking := CmdBuilder(cmd, RunDropletActionEnablePrivateNetworking,
-		"enable-private-networking <droplet-id>", "Enable private networking on a Droplet", `Enables VPC networking on a Droplet. This adds a private IPv4 address to the Droplet that other resources inside the network can access. The Droplet is placed in the default VPC network for the region it resides in.
-		
-		The Droplet requires additional internal network configuration for it to become accessible through the private network. For more information, see: https://docs.digitalocean.com/products/networking/vpc/how-to/enable`, Writer,
+		"enable-private-networking <droplet-id>", "Enable private networking on a Droplet", `Enables VPC networking on a Droplet. This adds a private IPv4 address to the Droplet that other resources inside the its VPC network can access. The Droplet is placed in the default VPC network for the region it resides in.
+
+The Droplet requires additional internal network configuration for it to become accessible through the private network. For more information, see: https://docs.digitalocean.com/products/networking/vpc/how-to/enable`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionEnablePrivateNetworking, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionEnablePrivateNetworking.Example = `The following example enables private networking on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action enable-private-networking 386734086`
@@ -170,7 +170,7 @@ This command automatically powers off the Droplet before resizing it.`
 	cmdDropletActionRebuild := CmdBuilder(cmd, RunDropletActionRebuild,
 		"rebuild <droplet-id>", "Rebuild a Droplet", `Rebuilds a Droplet from an image. Set the image attribute to an image ID or slug.
 		
-		To retrieve a list of images on your account, use the `+"`"+`doctl compute image list`+"`"+` command. To retrieve a list of base images, use the `+"`"+`doctl compute image list-distribution`+"`"+` command.`, Writer,
+To retrieve a list of images on your account, use the `+"`"+`doctl compute image list`+"`"+` command. To retrieve a list of base images, use the `+"`"+`doctl compute image list-distribution`+"`"+` command.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdDropletActionRebuild, doctl.ArgImage, "", "", "An image ID or slug", requiredOpt())
 	AddBoolFlag(cmdDropletActionRebuild, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
@@ -184,9 +184,9 @@ This command automatically powers off the Droplet before resizing it.`
 	cmdDropletActionRename.Example = `The following example renames a Droplet with the ID ` + "`" + `386734086` + "`" + ` to ` + "`" + `example.com` + "`" + ` an FQDN: doctl compute droplet-action rename 386734086 --droplet-name example.com`
 
 	cmdDropletActionChangeKernel := CmdBuilder(cmd, RunDropletActionChangeKernel,
-		"change-kernel <droplet-id>", "Change a Droplet's kernel", `Changes a Droplet's kernel. 
+		"change-kernel <droplet-id>", "Change a Droplet's kernel", `Changes a Droplet's kernel. This only available for externally managed kernels. All Droplets created after 17 March 2017 have internally managed kernels by default.
 		
-		For a list of available kernels, use the DAN: ASK DOCTL PEOPLE IF THERE IS A COMMAND TO GET A LIST OF KERNELS`, Writer,
+Use the `+"`"+`doctl compute droplet kernels <droplet-id>`+"`"+` command to retrieve a list of kernels for the Droplet.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdDropletActionChangeKernel, doctl.ArgKernelID, "", 0, "Kernel ID", requiredOpt())
 	AddBoolFlag(cmdDropletActionChangeKernel, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
@@ -194,7 +194,7 @@ This command automatically powers off the Droplet before resizing it.`
 	cmdDropletActionSnapshot := CmdBuilder(cmd, RunDropletActionSnapshot,
 		"snapshot <droplet-id>", "Take a Droplet snapshot", `Takes a snapshot of a Droplet. Snapshots are complete disk images that contain all of the data on a Droplet at the time of the snapshot. This can be useful for restoring and rebuilding Droplets.
 		
-		We recommend that you power off the Droplet before taking a snapshot to ensure data consistency.`, Writer,
+We recommend that you power off the Droplet before taking a snapshot to ensure data consistency.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdDropletActionSnapshot, doctl.ArgSnapshotName, "", "", "The snapshot's name", requiredOpt())
 	AddBoolFlag(cmdDropletActionSnapshot, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
