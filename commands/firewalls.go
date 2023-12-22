@@ -57,16 +57,16 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 - The IDs of Droplets assigned to the firewall
 - The tags assigned to the firewall
 `
-	inboundRulesTxt := `A comma-separated key-value list that defines an inbound rule. The rule must define a communication protocol, a port number, and a traffic source location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that the specified Droplet can only receive TCP traffic on port 22: ` + "`" + `protocol:tcp,ports:22,droplet_id:386734086` + "`" + `. 
+	inboundRulesTxt := `A comma-separated key-value list that defines an inbound rule. The rule must define a communication protocol, a port number, and a traffic source location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that resources can only receive TCP traffic on port 22 from addresses in the specified CIDR: ` + "`" + `protocol:tcp,ports:22,address:192.0.2.0/24` + "`" + `. 
 	
 Use a quoted string of space-separated values for multiple rules. 
 
-If you want to add multiple ports or source locations, you must create a key value pair for each one, for example: ` + "`" + `protocol:tcp,ports:22,ports:443,droplet_id:386734086,addresses:192.168.1.1,addresses:192.168.1.2` + "`" + `.`
-	outboundRulesTxt := `A comma-separate key-value list the defines an outbound rule.  The rule must define a communication protocol, a port number, and a destination location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that the firewall only allows traffic to be sent to port 22 of any IPv4 address on the internet: ` + "`" + `protocol:tcp,ports:22,address:0.0.0.0/0` + "`" + `. The firewall blocks any other traffic from your resources to the public internet. 
+If you want to add multiple ports or source locations, you must create a key-value pair for each one, for example: ` + "`" + `protocol:tcp,ports:22,ports:443,droplet_id:386734086,addresses:192.168.1.1,addresses:192.168.1.2` + "`" + `.`
+	outboundRulesTxt := `A comma-separate key-value list that defines an outbound rule. The rule must define a communication protocol, a port number, and a destination location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that the firewall only allows traffic to be sent to port 22 of any IPv4 address on the internet: ` + "`" + `protocol:tcp,ports:22,address:0.0.0.0/0` + "`" + `.
 
 Use a quoted string of space-separated values for multiple rules. 
 
-If you want to add multiple ports or destination locations, you must create a key value pair for each one, for example: ` + "`" + `protocol:tcp,ports:22,ports:443,droplet_id:386734086,address:192.168.1.1,address:192.168.1.2` + "`" + `.`
+If you want to add multiple ports or destination locations, you must create a key-value pair for each one, for example: ` + "`" + `protocol:tcp,ports:22,ports:443,address:192.168.1.1,address:192.168.1.2` + "`" + `.`
 	dropletIDRulesTxt := "A comma-separated list of Droplet IDs to place behind the cloud firewall, for example: `386734086,391669331`"
 	tagNameRulesTxt := "A comma-separated list of tag names to apply to the cloud firewall, for example: `frontend,backend`"
 
@@ -74,24 +74,25 @@ If you want to add multiple ports or destination locations, you must create a ke
 	cmdFirewallGet.Example = `The following example retrieves information about the cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdFirewallCreate := CmdBuilder(cmd, RunFirewallCreate, "create", "Create a new cloud firewall", `Creates a cloud firewall. This command must contain at least one inbound or outbound access rule.`, Writer, aliasOpt("c"), displayerType(&displayers.Firewall{}))
-	AddStringFlag(cmdFirewallCreate, doctl.ArgFirewallName, "", "", "Firewall name", requiredOpt())
+	AddStringFlag(cmdFirewallCreate, doctl.ArgFirewallName, "", "", "The firewall's name", requiredOpt())
 	AddStringFlag(cmdFirewallCreate, doctl.ArgInboundRules, "", "", inboundRulesTxt)
 	AddStringFlag(cmdFirewallCreate, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
-	cmdFirewallCreate.Example = `The following example creates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplet: doctl compute firewall create --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0"`
+	cmdFirewallCreate.Example = `The following example creates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplet: doctl compute firewall create --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0" --droplet-ids "386734086,391669331"`
 
 	cmdFirewallUpdate := CmdBuilder(cmd, RunFirewallUpdate, "update <id>", "Update a cloud firewall's configuration", `Updates the configuration of an existing cloud firewall. The request should contain a full representation of the firewall, including existing attributes. Any attributes that are not provided are reset to their default values.`, Writer, aliasOpt("u"), displayerType(&displayers.Firewall{}))
-	AddStringFlag(cmdFirewallUpdate, doctl.ArgFirewallName, "", "", "Firewall name", requiredOpt())
+	AddStringFlag(cmdFirewallUpdate, doctl.ArgFirewallName, "", "", "The firewall's name", requiredOpt())
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgInboundRules, "", "", inboundRulesTxt)
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
+	cmdFirewallUpdate.Example = `The following example updates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplet: doctl compute firewall create --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0" --droplet-ids "386734086,391669331"`
 
 	cmdFirewallList := CmdBuilder(cmd, RunFirewallList, "list", "List the cloud firewalls on your account", `Retrieves a list of cloud firewalls on your account.`, Writer, aliasOpt("ls"), displayerType(&displayers.Firewall{}))
 	cmdFirewallList.Example = `The following example lists all cloud firewalls on your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, name and inbound rules for each firewall: doctl compute firewall list --format ID,Name,InboundRules`
 
-	cmdirewallListByDroplet := CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "List firewalls by Droplet", `Use this command to list cloud firewalls by the ID of a Droplet assigned to the firewall.`, Writer, displayerType(&displayers.Firewall{}))
+	cmdirewallListByDroplet := CmdBuilder(cmd, RunFirewallListByDroplet, "list-by-droplet <droplet_id>", "List firewalls by Droplet", `Lists the cloud firewalls assigned to a Droplet.`, Writer, displayerType(&displayers.Firewall{}))
 	cmdirewallListByDroplet.Example = `The following example lists all cloud firewalls assigned to the Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute firewall list-by-droplet 386734086`
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunFirewallDelete, "delete <id>...", "Permanently delete a cloud firewall", `Permanently deletes a cloud firewall. This is irreversible, but does not delete any Droplets assigned to the cloud firewall.`, Writer, aliasOpt("d", "rm"))
