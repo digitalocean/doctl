@@ -35,7 +35,9 @@ func Firewall() *Command {
 			Short: "Display commands to manage cloud firewalls",
 			Long: `The sub-commands of ` + "`" + `doctl compute firewall` + "`" + ` manage DigitalOcean cloud firewalls.
 
-Cloud firewalls allow you to restrict network access to and from a Droplet by defining which ports accept inbound or outbound connections. With these commands, you can list, create, or delete Cloud firewalls, as well as modify access rules. Cloud firewalls are not internal Droplet firewalls on Droplets, such as UFW or FirewallD.
+Cloud firewalls allow you to restrict network access to and from a Droplet by defining which ports accept inbound or outbound connections. With these commands, you can list, create, or delete Cloud firewalls, as well as modify access rules. 
+
+Note: Cloud firewalls are not internal Droplet firewalls on Droplets, such as UFW or FirewallD.
 
 A firewall's ` + "`" + `inbound_rules` + "`" + ` and ` + "`" + `outbound_rules` + "`" + ` attributes contain arrays of objects as their values. These objects contain the standard attributes of their associated types, which can be found below.
 
@@ -44,19 +46,27 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 	}
 	fwDetail := `
 
-	- The firewall's UUID
-	- The firewall's name
-	- The status of the firewall. Possible values: ` + "`" + `waiting` + "`" + `, ` + "`" + `succeeded` + "`" + `, ` + "`" + `failed` + "`" + `.
-	- The firewall's creation date, in ISO8601 combined date and time format.
-	- Any pending changes to the firewall. Possible values:` + "`" + `droplet_id` + "`" + `, ` + "`" + `removing` + "`" + `, ` + "`" + `status` + "`" + `.
+- The firewall's UUID
+- The firewall's name
+- The status of the firewall. Possible values: ` + "`" + `waiting` + "`" + `, ` + "`" + `succeeded` + "`" + `, ` + "`" + `failed` + "`" + `.
+- The firewall's creation date, in ISO8601 combined date and time format.
+- Any pending changes to the firewall. Possible values:` + "`" + `droplet_id` + "`" + `, ` + "`" + `removing` + "`" + `, ` + "`" + `status` + "`" + `.
 	  When empty, all changes have been successfully applied.
-	- The inbound rules for the firewall
-	- The outbound rules for the firewall
-	- The IDs of Droplets assigned to the firewall
-	- The tags assigned to the firewall
+- The inbound rules for the firewall
+- The outbound rules for the firewall
+- The IDs of Droplets assigned to the firewall
+- The tags assigned to the firewall
 `
-	inboundRulesTxt := "A comma-separated key-value list that defines an inbound rule, for example the following rule defines that the specified Droplet can only receive TCP traffic on port 22: `protocol:tcp,ports:22,droplet_id:386734086`. Use a quoted string of space-separated values for multiple rules."
-	outboundRulesTxt := "A comma-separate key-value list the defines an outbound rule, for example the following rule defines that the firewall only allows traffic to be sent to port 22 of any IPv4 address on the internet: `protocol:tcp,ports:22,address:0.0.0.0/0`. The firewall blocks any other traffic from your resources to the public internet. Use a quoted string of space-separated values for multiple rules."
+	inboundRulesTxt := `A comma-separated key-value list that defines an inbound rule. The rule must define a communication protocol, a port number, and a traffic source location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that the specified Droplet can only receive TCP traffic on port 22: ` + "`" + `protocol:tcp,ports:22,droplet_id:386734086` + "`" + `. 
+	
+Use a quoted string of space-separated values for multiple rules. 
+
+If you want to add multiple ports or source locations, you must create a key value pair for each one, for example: ` + "`" + `protocol:tcp,ports:22,ports:443,droplet_id:386734086,addresses:192.168.1.1,addresses:192.168.1.2` + "`" + `.`
+	outboundRulesTxt := `A comma-separate key-value list the defines an outbound rule.  The rule must define a communication protocol, a port number, and a destination location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that the firewall only allows traffic to be sent to port 22 of any IPv4 address on the internet: ` + "`" + `protocol:tcp,ports:22,address:0.0.0.0/0` + "`" + `. The firewall blocks any other traffic from your resources to the public internet. 
+
+Use a quoted string of space-separated values for multiple rules. 
+
+If you want to add multiple ports or destination locations, you must create a key value pair for each one, for example: ` + "`" + `protocol:tcp,ports:22,ports:443,droplet_id:386734086,address:192.168.1.1,address:192.168.1.2` + "`" + `.`
 	dropletIDRulesTxt := "A comma-separated list of Droplet IDs to place behind the cloud firewall, for example: `386734086,391669331`"
 	tagNameRulesTxt := "A comma-separated list of tag names to apply to the cloud firewall, for example: `frontend,backend`"
 
