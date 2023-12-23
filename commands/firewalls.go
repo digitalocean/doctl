@@ -59,14 +59,14 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 `
 	inboundRulesTxt := `A comma-separated key-value list that defines an inbound rule. The rule must define a communication protocol, a port number, and a traffic source location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that resources can only receive TCP traffic on port 22 from addresses in the specified CIDR: ` + "`" + `protocol:tcp,ports:22,address:192.0.2.0/24` + "`" + `. 
 	
-Use a quoted string of space-separated values for multiple rules. 
+Available source keys are: ` + "`" + `address` + "`" + `, ` + "`" + `droplet_id` + "`" + `, ` + "`" + `load_balancer_uid` + "`" + `, ` + "`" + `kubernetes_id` + "`" + `, and ` + "`" + `tag` + "`" + `. 
 
-If you want to add multiple ports or source locations, you must create a key-value pair for each one, for example: ` + "`" + `protocol:tcp,ports:22,ports:443,droplet_id:386734086,addresses:192.168.1.1,addresses:192.168.1.2` + "`" + `.`
+Use a quoted string of space-separated values for multiple rules.`
 	outboundRulesTxt := `A comma-separate key-value list that defines an outbound rule. The rule must define a communication protocol, a port number, and a destination location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that the firewall only allows traffic to be sent to port 22 of any IPv4 address on the internet: ` + "`" + `protocol:tcp,ports:22,address:0.0.0.0/0` + "`" + `.
 
-Use a quoted string of space-separated values for multiple rules. 
+Available destination keys are: ` + "`" + `address` + "`" + `, ` + "`" + `droplet_id` + "`" + `, ` + "`" + `load_balancer_uid` + "`" + `, ` + "`" + `kubernetes_id` + "`" + `, and ` + "`" + `tag` + "`" + `. 
 
-If you want to add multiple ports or destination locations, you must create a key-value pair for each one, for example: ` + "`" + `protocol:tcp,ports:22,ports:443,address:192.168.1.1,address:192.168.1.2` + "`" + `.`
+Use a quoted string of space-separated values for multiple rules.`
 	dropletIDRulesTxt := "A comma-separated list of Droplet IDs to place behind the cloud firewall, for example: `386734086,391669331`"
 	tagNameRulesTxt := "A comma-separated list of tag names to apply to the cloud firewall, for example: `frontend,backend`"
 
@@ -87,7 +87,7 @@ If you want to add multiple ports or destination locations, you must create a ke
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 	AddStringSliceFlag(cmdFirewallUpdate, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
-	cmdFirewallUpdate.Example = `The following example updates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplet: doctl compute firewall create --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0" --droplet-ids "386734086,391669331"`
+	cmdFirewallUpdate.Example = `The following example updates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplet: doctl compute firewall update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0" --droplet-ids "386734086,391669331"`
 
 	cmdFirewallList := CmdBuilder(cmd, RunFirewallList, "list", "List the cloud firewalls on your account", `Retrieves a list of cloud firewalls on your account.`, Writer, aliasOpt("ls"), displayerType(&displayers.Firewall{}))
 	cmdFirewallList.Example = `The following example lists all cloud firewalls on your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, name and inbound rules for each firewall: doctl compute firewall list --format ID,Name,InboundRules`
