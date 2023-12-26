@@ -59,9 +59,9 @@ func Droplet() *Command {
 	`
 	cmdDropletActions := CmdBuilder(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Retrieves a list of action taken on the Droplet, such as rebooting, resizing, and snapshotting the Droplet.
 
-To enable backups on a Droplet, use the ` + "`" + `doctl compute droplet-action enable-backups <droplet-id>` + "`" + ` command.`, Writer,
+To enable backups on a Droplet, use the `+"`"+`doctl compute droplet-action enable-backups <droplet-id>`+"`"+` command.`, Writer,
 		aliasOpt("a"), displayerType(&displayers.Action{}))
-	cmdDropletActions.Example = "The following retrieves a list of actions taken a Droplet with the ID ` + "`" + `386734086` + "`" + `. Additionally, the command uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, status, and type for each action: doctl compute droplet actions 386734086 --format ID,Status,Type"
+	cmdDropletActions.Example = `The following retrieves a list of actions taken a Droplet with the ID ` + "`" + `386734086` + "`" + `. Additionally, the command uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, status, and type for each action: doctl compute droplet actions 386734086 --format ID,Status,Type`
 
 	cmdDropletBackups := CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "List Droplet backups", `Lists backup images for a Droplet, including each image's slug and ID.`, Writer,
 		aliasOpt("b"), displayerType(&displayers.Image{}))
@@ -109,7 +109,6 @@ If you do not specify a region, the Droplet is created in the default region for
 	cmdDropletKernels := CmdBuilder(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Retrieves a list of all kernels available to a Droplet. This command is only available for Droplets with externally managed kernels. All Droplets created after March 2017 have internally managed kernels by default.`, Writer,
 		aliasOpt("k"), displayerType(&displayers.Kernel{}))
 	cmdDropletKernels.Example = `The following example retrieves a list of available kernels for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet kernels 386734086`
-
 
 	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "List Droplets on your account", `Retrieves a list of Droplets on your account, including the following information about each:`+dropletDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Droplet{}))
@@ -775,11 +774,11 @@ func dropletOneClicks() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunDropletOneClickList, "list", "Retrieve a list of Droplet 1-Click applications", "Retrieves a list of Droplet 1-Click applications.
+	cmdDropletOneClickList := CmdBuilder(cmd, RunDropletOneClickList, "list", "Retrieve a list of Droplet 1-Click applications", `Retrieves a list of Droplet 1-Click applications.
 	 
-You can use 1-click slugs to create Droplets by using them as the argument for the `--image` flag in the `doctl compute droplet create`. For example, the following command creates a Droplet with an Openblocks installation on it: 
-`doctl compute droplet create example-droplet --image openblocks --size s-2vcpu-2gb --region nyc1`", Writer,
+You can use 1-click slugs to create Droplets by using them as the argument for the `+"`"+`--image`+"`"+` flag in the `+"`"+`doctl compute droplet create`+"`"+` command. For example, the following command creates a Droplet with an Openblocks installation on it: `+"`"+`doctl compute droplet create example-droplet --image openblocks --size s-2vcpu-2gb --region nyc1`+"`"+``, Writer,
 		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
+	cmdDropletOneClickList.Example = `The following example retrieves a list of 1-clicks for Droplets: doctl compute droplet 1-click list`
 
 	return cmd
 }
