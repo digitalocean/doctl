@@ -49,7 +49,7 @@ func Functions() *Command {
 	AddStringFlag(get, "save-env", "E", "", "Saves the function's environment variables to a local file as key-value pairs")
 	AddStringFlag(get, "save-env-json", "J", "", "Saves the function's environment variables to a local file as JSON")
 	AddBoolFlag(get, "save", "", false, "Saves the function's code to a local file")
-	AddStringFlag(get, "save-as", "", "", "Optionally saves the file as a different name")
+	AddStringFlag(get, "save-as", "", "", "Saves the file as the specified name")
 	get.Example = `The following example retrieves the code for a function named "example/helloWorld" and saves it to a file named ` + "`" + `local-helloWorld.py` + "`" + `: doctl serverless functions get example/helloWorld --code --save-as local-helloWorld.py`
 
 	invoke := CmdBuilder(cmd, RunFunctionsInvoke, "invoke <functionName>", "Invokes a function",
