@@ -53,7 +53,7 @@ Use the ` + "`" + `doctl invoice list` + "`" + ` command to find the UUID of the
 	cmdInvoicesGet.Example = `The following example retrieves details about an invoice with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl invoice get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	listInvoiceDesc := "Lists all of the invoices on your account including the UUID, amount in USD, and time period for each."
-	cmdInvoicesList := (cmd, RunInvoicesList, "list", "List all of the invoices for your account",
+	cmdInvoicesList := CmdBuilder(cmd, RunInvoicesList, "list", "List all of the invoices for your account",
 		listInvoiceDesc, Writer, aliasOpt("ls"), displayerType(&displayers.Invoice{}))
 	cmdInvoicesList.Example = `The following example lists all of the invoices on your account and uses the ` + "`" + `--format` + "`" + ` flag to only return the product name and the amount charged for it: doctl invoice list --format Product,Amount`
 
