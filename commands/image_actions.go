@@ -35,25 +35,27 @@ func ImageAction() *Command {
 	}
 	actionDetail := `
 
-- The unique numeric ID used to identify and reference an image action.
-- The status of the image action. This will be either ` + "`" + `in-progress` + "`" + `, ` + "`" + `completed` + "`" + `, or ` + "`" + `errored` + "`" + `.
-- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
-- A time value given in ISO8601 combined date and time format that represents when the action was completed.
-- The resource ID, which is a unique identifier for the resource that the action is associated with.
-- The type of resource that the action is associated with.
-- The region where the action occurred.
-- The slug for the region where the action occurred.
+- The unique ID used to identify and reference an image action
+- The status of the image action. Possible values: ` + "`" + `in-progress` + "`" + `, ` + "`" + `completed` + "`" + `, ` + "`" + `errored` + "`" + `.
+- When the action was initiated, in ISO8601 combined date and time format
+- When the action was completed, in ISO8601 combined date and time format
+- The ID of the resource that the action was taken on
+- The type of resource that the action was taken on
+- The region where the action occurred
+- The region's slug
 `
 	cmdImageActionsGet := CmdBuilder(cmd, RunImageActionsGet,
-		"get <image-id>", "Retrieve the status of an image action", `Use this command to retrieve the status of an image action, including the following details:`+actionDetail, Writer,
+		"get <image-id>", "Retrieve the status of an image action", `Retrieves the status of an image action, including the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
 	AddIntFlag(cmdImageActionsGet, doctl.ArgActionID, "", 0, "action id", requiredOpt())
+	cmdImageActionsGet.Example = `The following example retrieves the details for an image-action with ID 191669331 take on an image with the ID 386734086: doctl compute image-action get 386734086 --action-id 191669331`
 
 	cmdImageActionsTransfer := CmdBuilder(cmd, RunImageActionsTransfer,
-		"transfer <image-id>", "Transfer an image to another datacenter region", `Use this command to transfer an image to a different datacenter region. Also outputs the following details:`+actionDetail, Writer,
+		"transfer <image-id>", "Transfer an image to another datacenter region", `Transfers an image to a different datacenter region. Also outputs the following details:`+actionDetail, Writer,
 		displayerType(&displayers.Action{}))
-	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "", "region", requiredOpt())
-	AddBoolFlag(cmdImageActionsTransfer, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	AddStringFlag(cmdImageActionsTransfer, doctl.ArgRegionSlug, "", "", "The target region to transfer the image to", requiredOpt())
+	AddBoolFlag(cmdImageActionsTransfer, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
+	cmdImageActionsTransfer.Example = `The following example transfers an image with the ID 386734086 to the region with the slug nyc3: doctl compute image-action transfer 386734086 --region nyc3`
 
 	return cmd
 }
