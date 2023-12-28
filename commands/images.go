@@ -32,67 +32,75 @@ func Images() *Command {
 			Short: "Display commands to manage images",
 			Long: `The sub-commands of ` + "`" + `doctl compute image` + "`" + ` manage images. A DigitalOcean image can be used to create a Droplet.
 
-Currently, there are five types of images: snapshots, backups, custom images, distributions, and One-Click Apps.
+Currently, there are five types of images: snapshots, backups, custom images, distributions, and one-click application.
 
 - Snapshots provide a full copy of an existing Droplet instance taken on demand.
 - Backups are similar to snapshots but are created automatically at regular intervals when enabled for a Droplet.
-- Custom images are Linux-based virtual machine images that you may upload for use on DigitalOcean. These can be in one of the following formats: raw, qcow2, vhdx, vdi, or vmdk.
+- Custom images are Linux-based virtual machine images that you may upload for use on DigitalOcean. We support the following formats: raw, qcow2, vhdx, vdi, or vmdk.
 - Distributions are the public Linux distributions that are available to be used as a base to create Droplets.
-- Applications, or One-Click Apps, are distributions pre-configured with additional software.`,
+- Applications, or one-click apps, are distributions pre-configured with additional software, such as WordPress, Django, or Flask.`,
 		},
 	}
 	imageDetail := `
 
 - The image's ID
 - The image's name
-- The type of image. This is either ` + "`" + `snapshot` + "`" + `, ` + "`" + `backup` + "`" + `, or ` + "`" + `custom` + "`" + `.
+- The type of image. Possible values: ` + "`" + `snapshot` + "`" + `, ` + "`" + `backup` + "`" + `, ` + "`" + `custom` + "`" + `.
 - The distribution of the image. For custom images, this is user defined.
-- The image's slug. This is a uniquely identifying string that is associated with each of the DigitalOcean-provided public images. These can be used to reference a public image as an alternative to the numeric id.
-- Whether the image is public or not. An image that is public is available to all accounts. A non-public image is only accessible from your account. This is boolean, true or false.
-- The region the image is available in. The regions are represented by their identifying slug values.
+- The image's slug. This is a unique string that identifies each DigitalOcean-provided public image. These can be used to reference a public image as an alternative to the numeric ID.
+- Whether the image is public or not. An public image is available to all accounts. A private image is only accessible from your account. This is boolean value, true or false.
+- The region the image is available in. Regions are represented by their identifying slug values.
 - The image's creation date, in ISO8601 combined date and time format.
-- The minimum Droplet disk size in GB required for a Droplet to use this image.
-- The size of the image in GB.
+- The minimum Droplet disk size required for a Droplet to use this image, in GB.
+- The size of the image, in GB.
 - The description of the image. (optional)
-- A status string indicating the state of a custom image. This may be ` + "`" + `NEW` + "`" + `, ` + "`" + `available` + "`" + `, ` + "`" + `pending` + "`" + `, or ` + "`" + `deleted` + "`" + `.
+- A status string indicating the state of a custom image. Possible values: ` + "`" + `NEW` + "`" + `, ` + "`" + `available` + "`" + `, ` + "`" + `pending` + "`" + `, ` + "`" + `deleted` + "`" + `.
 - A string containing information about errors that may occur when importing a custom image.
 `
-	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "List images on your account", `Use this command to list all private images on your account. To list public images, use the `+"`"+`--public`+"`"+` flag. This command returns the following information about each image:`+imageDetail, Writer,
+	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "List images on your account", `Lists all private images on your account. To list public images, use the `+"`"+`--public`+"`"+` flag. This command returns the following information about each image:`+imageDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Image{}))
-	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "List public images")
+	AddBoolFlag(cmdImagesList, doctl.ArgImagePublic, "", false, "Lists public images")
+	cmdImagesList.Example = `The following example lists all private images on your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, distribution, and slug for each image: doctl compute image list --format ID,Distribution,Slug`
 
 	cmdImagesListDistribution := CmdBuilder(cmd, RunImagesListDistribution,
-		"list-distribution", "List available distribution images", `Use this command to list the distribution images available from DigitalOcean. This command returns the following information about each image:`+imageDetail, Writer,
+		"list-distribution", "List available distribution images", `Lists the distribution images available from DigitalOcean. This command returns the following information about each image:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
-	AddBoolFlag(cmdImagesListDistribution, doctl.ArgImagePublic, "", true, "List public images")
+	AddBoolFlag(cmdImagesListDistribution, doctl.ArgImagePublic, "", true, "Lists public images")
+	cmdImagesListDistribution.Example = `The following example lists all public distribution images available from DigitalOcean and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, distribution, and slug for each image: doctl compute image list-distribution --format ID,Distribution,Slug`
 
 	cmdImagesListApplication := CmdBuilder(cmd, RunImagesListApplication,
-		"list-application", "List available One-Click Apps", `Use this command to list all public One-Click Apps that are currently available on the DigitalOcean Marketplace. This command returns the following information about each image:`+imageDetail, Writer,
+		"list-application", "List available One-Click Apps", `Lists all public one-click apps that are currently available on the DigitalOcean Marketplace. This command returns the following information about each image:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
-	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, "", true, "List public images")
+	AddBoolFlag(cmdImagesListApplication, doctl.ArgImagePublic, "", true, "Lists public images")
+	cmdImagesListApplication.Example = `The following example lists all public One-Click Apps available from DigitalOcean and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, name, distribution, and slug for each image: doctl compute image list-application --format ID,Name,Distribution,Slug`
 
 	cmdImagesListUser := CmdBuilder(cmd, RunImagesListUser,
 		"list-user", "List user-created images", `Use this command to list user-created images, such as snapshots or custom images that you have uploaded to your account. This command returns the following information about each image:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
-	AddBoolFlag(cmdImagesListUser, doctl.ArgImagePublic, "", false, "List public images")
+	AddBoolFlag(cmdImagesListUser, doctl.ArgImagePublic, "", false, "Lists public images")
+	cmdImagesListUser.Example = `The following example lists all user-created images on your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, name, distribution, and slug for each image: doctl compute image list-user --format ID,Name,Distribution,Slug`
 
-	CmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Retrieve information about an image", `Use this command to get the following information about the specified image:`+imageDetail, Writer,
+	cmdImagesGet := CmdBuilder(cmd, RunImagesGet, "get <image-id|image-slug>", "Retrieve information about an image", `Returns the following information about the specified image:`+imageDetail, Writer,
 		displayerType(&displayers.Image{}))
+	cmdImagesGet.Example = `The following example retrieves information about an image with the ID ` + "`" + `386734086` + "`" + `: doctl compute image get 386734086`
 
-	cmdImagesUpdate := CmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update an image's metadata", `Use this command to change an image's metadata, including its name, description, and distribution.`, Writer,
+	cmdImagesUpdate := CmdBuilder(cmd, RunImagesUpdate, "update <image-id>", "Update an image's metadata", `Updates an image's metadata, including its name, description, and distribution.`, Writer,
 		displayerType(&displayers.Image{}))
-	AddStringFlag(cmdImagesUpdate, doctl.ArgImageName, "", "", "Image name", requiredOpt())
+	AddStringFlag(cmdImagesUpdate, doctl.ArgImageName, "", "", "The name of the image to update", requiredOpt())
+	cmdImagesUpdate.Example = `The following example updates the name of an image with the ID ` + "`" + `386734086` + "`" + ` to ` + "`" + `New Image Name` + "`" + `: doctl compute image update 386734086 --name "Example Image Name"`
 
-	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Permanently delete an image from your account", `This command deletes the specified image from your account. This is irreversible.`, Writer,
+	cmdRunImagesDelete := CmdBuilder(cmd, RunImagesDelete, "delete <image-id>", "Permanently delete an image from your account", `Permanently deletes an image from your account. This is irreversible.`, Writer,
 		aliasOpt("rm"))
 	AddBoolFlag(cmdRunImagesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force image delete")
+	cmdRunImagesDelete.Example = `The following example deletes an image with the ID ` + "`" + `386734086` + "`" + `: doctl compute image delete 386734086`
 
-	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create <image-name>", "Create custom image", `This command creates an image in your DigitalOcean account. You can specify a URL for the image contents, the region at which to store the image, and image metadata.`, Writer)
-	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageExternalURL, "", "", "Custom image retrieval URL", requiredOpt())
-	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "Region slug identifier", requiredOpt())
-	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "Unknown", "Custom image distribution")
-	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDescription, "", "", "Description of image")
-	AddStringSliceFlag(cmdRunImagesCreate, doctl.ArgTagNames, "", []string{}, "List of tags applied to image")
+	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create <image-name>", "Create custom image", `Creates an image in your DigitalOcean account. Specify a URL to download the image from and the region to store the image in. You can add additional metadata to the image using the optional flags.`, Writer)
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageExternalURL, "", "", "The URL to retrieve the image from", requiredOpt())
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "The slug of the region you want to store the image in. For a list of region slugs, use the `doctl compute region list` command.", requiredOpt())
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "Unknown", "A custom image distribution slug to apply to the image")
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDescription, "", "", "An optional description of the image")
+	AddStringSliceFlag(cmdRunImagesCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to apply to the image")
+	cmdRunImagesCreate.Example = `The following example creates a custom image named ` + "`" + `Example Image` + "`" + ` from a URL and stores it in the ` + "`" + `nyc1` + "`" + ` region: doctl compute image create "Example Image" --image-url "https://example.com/image.iso" --region nyc1`
 
 	return cmd
 }
