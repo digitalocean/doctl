@@ -37,88 +37,99 @@ func Droplet() *Command {
 			Use:     "droplet",
 			Aliases: []string{"d"},
 			Short:   "Manage virtual machines (Droplets)",
-			Long:    "A Droplet is a DigitalOcean virtual machine. Use the subcommands of `doctl compute droplet` to list, create, or delete Droplets.",
+			Long:    "A Droplet is a DigitalOcean virtual machine. Use the subcommands of `doctl compute droplet` to create, manage, and retrieve information about Droplets.",
 		},
 	}
 	dropletDetails := `
 
-	- The Droplet's ID
-	- The Droplet's name
-	- The Droplet's Public IPv4 Address
-	- The Droplet's Private IPv4 Address
-	- The Droplet's IPv6 Address
-	- The memory size of the Droplet in MB
-	- The number of vCPUs on the Droplet
-	- The size of the Droplet's disk in GB
-	- The Droplet's region
-	- The image the Droplet was created from
-	- The status of the Droplet; can be ` + "`" + `new` + "`" + `, ` + "`" + `active` + "`" + `, ` + "`" + `off` + "`" + `, or ` + "`" + `archive` + "`" + `
-	- The tags assigned to the Droplet
-	- A list of features enabled for the Droplet. Examples are ` + "`" + `backups` + "`" + `, ` + "`" + `ipv6` + "`" + `, ` + "`" + `monitoring` + "`" + `, ` + "`" + `private_networking` + "`" + `
-	- The IDs of block storage volumes attached to the Droplet
+- The Droplet's ID
+- The Droplet's name
+- The Droplet's public IPv4 address
+- The Droplet's private IPv4 address
+- The Droplet's IPv6 address
+- The memory size of the Droplet in MB
+- The number of vCPUs on the Droplet
+- The size of the Droplet's disk in GB
+- The Droplet's data center region
+- The image the Droplet was created from
+- The status of the Droplet. Possible values: ` + "`" + `new` + "`" + `, ` + "`" + `active` + "`" + `, ` + "`" + `off` + "`" + `, or ` + "`" + `archive` + "`" + `
+- The tags assigned to the Droplet
+- A list of features enabled for the Droplet, such as ` + "`" + `backups` + "`" + `, ` + "`" + `ipv6` + "`" + `, ` + "`" + `monitoring` + "`" + `, and ` + "`" + `private_networking` + "`" + `
+- The IDs of block storage volumes attached to the Droplet
 	`
-	CmdBuilder(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Use this command to list the available actions that can be taken on a Droplet. These can be things like rebooting, resizing, and snapshotting the Droplet.`, Writer,
+	cmdDropletActions := CmdBuilder(cmd, RunDropletActions, "actions <droplet-id>", "List Droplet actions", `Retrieves a list of previous actions taken on the Droplet, such as reboots, resizes, and snapshots actions.`, Writer,
 		aliasOpt("a"), displayerType(&displayers.Action{}))
+	cmdDropletActions.Example = `The following example retrieves a list of actions taken on a Droplet with the ID ` + "`" + `386734086` + "`" + `. Additionally, the command uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, status, and type of action: doctl compute droplet actions 386734086 --format ID,Status,Type`
 
-	CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "List Droplet backups", `Use this command to list Droplet backups.`, Writer,
+	cmdDropletBackups := CmdBuilder(cmd, RunDropletBackups, "backups <droplet-id>", "List Droplet backups", `Lists backup images for a Droplet, including each image's slug and ID.`, Writer,
 		aliasOpt("b"), displayerType(&displayers.Image{}))
+	cmdDropletBackups.Example = `The following example retrieves a list of backups for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet backups 386734086`
 
-	dropletCreateLongDesc := `Use this command to create a new Droplet. Required values are name, size, and image. For example, to create an Ubuntu 20.04 with 1 vCPU and 1 GB of RAM in the NYC1 datacenter region, run:
+	dropletCreateLongDesc := `Creates a new Droplet on your account. The command requires values for the ` + "`" + `--size` + "`" + `, and ` + "`" + `--image` + "`" + ` flags. 
 
-	doctl compute droplet create --image ubuntu-20-04-x64 --size s-1vcpu-1gb --region nyc1 example.com
-`
+To retrieve a list of size slugs, use the ` + "`" + `doctl compute size list` + "`" + ` command. To retrieve a list of image slugs, use the ` + "`" + `doctl compute image list` + "`" + ` command.	
+
+If you do not specify a region, the Droplet is created in the default region for your account. If you do not specify any SSH keys, we email a temporary password to your account's email address.`
 
 	cmdDropletCreate := CmdBuilder(cmd, RunDropletCreate, "create <droplet-name>...", "Create a new Droplet", dropletCreateLongDesc, Writer,
 		aliasOpt("c"), displayerType(&displayers.Droplet{}))
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "A list of SSH key fingerprints or IDs of the SSH keys to embed in the Droplet's root account upon creation")
-	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "User-data to configure the Droplet on first boot")
-	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "The path to a file containing user-data to configure the Droplet on first boot")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Wait for Droplet creation to complete before returning")
-	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A slug indicating the region where the Droplet will be created (e.g. `nyc1`). Run `doctl compute region list` for a list of valid regions.")
-	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug indicating the size of the Droplet (e.g. `s-1vcpu-1gb`). Run `doctl compute size list` for a list of valid sizes.",
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgSSHKeys, "", []string{}, "A list of SSH key IDs or fingerprints to embed in the Droplet's root account upon creation")
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "A shell script to run on the Droplet's first boot")
+	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "The path to a file containing a shell script or Cloud-init YAML file to run on the Droplet's first boot. Example: `path/to/file.yaml`")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
+	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A slug specifying the region to create the Droplet in, such as `nyc1`. Use the `doctl compute region list` command for a list of valid regions.")
+	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug indicating the Droplet's number of vCPUs, RAM, and disk size. For example, `s-1vcpu-1gb` specifies a Droplet with one vCPU and 1 GiB of RAM. The disk size is defined by the slug's plan. Run `doctl compute size list` for a list of valid size slugs and their disk sizes.",
 		requiredOpt())
-	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet. Backups are created on a weekly basis.")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address to the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enables private networking for the Droplet by provisioning it inside of your account's default VPC for the region")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Install the DigitalOcean agent for additional monitoring")
-	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "An ID or slug indicating the image the Droplet will be based-on (e.g. `ubuntu-20-04-x64`). Use the commands under `doctl compute image` to find additional images.",
+	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Installs the DigitalOcean agent for additional monitoring")
+	AddStringFlag(cmdDropletCreate, doctl.ArgImage, "", "", "An ID or slug specifying the image to use to create the Droplet, such as `ubuntu-20-04-x64`. Use the commands under `doctl compute image` to find additional images.",
 		requiredOpt())
-	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "A tag name to be applied to the Droplet")
+	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "Applies a tag to the Droplet")
 	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of a non-default VPC to create the Droplet in")
-	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to be applied to the Droplet")
-	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "By default, the agent is installed on new Droplets but installation errors are ignored. Set --droplet-agent=false to prevent installation. Set `true` to make installation errors fatal.")
-
+	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "Applies a list of tags to the Droplet")
+	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "Specifies whether or not the Droplet monitoring agent should be installed. By default, the agent is installed on new Droplets but installation errors are ignored. Set `--droplet-agent=false` to prevent installation. Set to `true` to make installation errors fatal.")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "A list of block storage volume IDs to attach to the Droplet")
+	cmdDropletCreate.Example = `The following example creates a Droplet named ` + "`" + `example-droplet` + "`" + ` with a two vCPUs, two GiB of RAM, and 20 GBs of disk space. The Droplet is created in the ` + "`" + `nyc1` + "`" + ` region and is based on the ` + "`" + `ubuntu-20-04-x64` + "`" + ` image. Additionally, the command uses the ` + "`" + `--user-data` + "`" + ` flag to run a Bash script the first time the Droplet boots up: doctl compute droplet create example-droplet --size s-2vcpu-2gb --image ubuntu-20-04-x64 --region nyc1 --user-data $'#!/bin/bash\n touch /root/example.txt; sudo apt update;sudo snap install doctl'`
 
-	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Permanently delete a Droplet", `Use this command to permanently delete a Droplet. This is irreversible.`, Writer,
+	cmdRunDropletDelete := CmdBuilder(cmd, RunDropletDelete, "delete <droplet-id|droplet-name>...", "Permanently delete a Droplet", `Permanently deletes a Droplet. This is irreversible.`, Writer,
 		aliasOpt("d", "del", "rm"))
-	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the Droplet without a confirmation prompt")
+	AddBoolFlag(cmdRunDropletDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the Droplet without a confirmation prompt")
 	AddStringFlag(cmdRunDropletDelete, doctl.ArgTagName, "", "", "Tag name")
+	cmdRunDropletDelete.Example = `The following example deletes a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet delete 386734086`
 
-	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id|droplet-name>", "Retrieve information about a Droplet", `Use this command to retrieve information about a Droplet, including:`+dropletDetails, Writer,
+	cmdRunDropletGet := CmdBuilder(cmd, RunDropletGet, "get <droplet-id|droplet-name>", "Retrieve information about a Droplet", `Retrieves information about a Droplet, including:`+dropletDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.Droplet{}))
 	AddStringFlag(cmdRunDropletGet, doctl.ArgTemplate, "", "", "Go template format. Sample values: `{{.ID}}`, `{{.Name}}`, `{{.Memory}}`, `{{.Region.Name}}`, `{{.Image}}`, `{{.Tags}}`")
+	cmdRunDropletGet.Example = `The following example retrieves information about a Droplet with the ID ` + "`" + `386734086` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to only return the Droplet's name, ID, and public IPv4 address: doctl compute droplet get 386734086 --format Name,ID,PublicIPv4`
 
-	CmdBuilder(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Use this command to retrieve a list of all kernels available to a Droplet.`, Writer,
+	cmdDropletKernels := CmdBuilder(cmd, RunDropletKernels, "kernels <droplet-id>", "List available Droplet kernels", `Retrieves a list of all kernels available to a Droplet. This command is only available for Droplets with externally managed kernels. All Droplets created after March 2017 have internally managed kernels by default.`, Writer,
 		aliasOpt("k"), displayerType(&displayers.Kernel{}))
+	cmdDropletKernels.Example = `The following example retrieves a list of available kernels for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet kernels 386734086`
 
-	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "List Droplets on your account", `Use this command to retrieve a list of Droplets, including the following information about each:`+dropletDetails, Writer,
+	cmdRunDropletList := CmdBuilder(cmd, RunDropletList, "list [GLOB]", "List Droplets on your account", `Retrieves a list of Droplets on your account, including the following information about each:`+dropletDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Droplet{}))
-	AddStringFlag(cmdRunDropletList, doctl.ArgRegionSlug, "", "", "Droplet region")
-	AddStringFlag(cmdRunDropletList, doctl.ArgTagName, "", "", "Tag name")
+	AddStringFlag(cmdRunDropletList, doctl.ArgRegionSlug, "", "", "Retrieves a list of Droplets in a specified region")
+	AddStringFlag(cmdRunDropletList, doctl.ArgTagName, "", "", "Retrieves a list of Droplets with the specified tag name")
+	cmdRunDropletList.Example = `The following example retrieves a list of all Droplets in the ` + "`" + `nyc1` + "`" + ` region: doctl compute droplet list --region nyc1`
 
-	CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet-id>", "List a Droplet's neighbors on your account", `Use this command to get a list of your Droplets that are on the same physical hardware, including the following details:`+dropletDetails, Writer,
+	cmdDropletNeighbors := CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet-id>", "List a Droplet's neighbors on your account", `Lists your Droplets that are on the same physical hardware, including the following details:`+dropletDetails, Writer,
 		aliasOpt("n"), displayerType(&displayers.Droplet{}))
+	cmdDropletNeighbors.Example = `The following example retrieves a list of Droplets that are on the same physical hardware as the Droplet with the ID ` + "`" + `386734086` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only each Droplet's ID, name and public IPv4 address: doctl compute droplet neighbors 386734086 --format ID,Name,PublicIPv4`
 
-	CmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet-id>", "List all snapshots for a Droplet", `Use this command to get a list of snapshots created from this Droplet.`, Writer,
+	cmdDropletSnapshots := CmdBuilder(cmd, RunDropletSnapshots, "snapshots <droplet-id>", "List all snapshots for a Droplet", `Retrieves a list of snapshots created from this Droplet.`, Writer,
 		aliasOpt("s"), displayerType(&displayers.Image{}))
+	cmdDropletSnapshots.Example = `The following example retrieves a list of snapshots for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet snapshots 386734086`
 
-	cmdRunDropletTag := CmdBuilder(cmd, RunDropletTag, "tag <droplet-id|droplet-name>", "Add a tag to a Droplet", "Use this command to tag a Droplet. Specify the tag with the `--tag-name` flag.", Writer)
-	AddStringFlag(cmdRunDropletTag, doctl.ArgTagName, "", "", "Tag name to use; can be a new or existing tag",
+	cmdRunDropletTag := CmdBuilder(cmd, RunDropletTag, "tag <droplet-id|droplet-name>", "Add a tag to a Droplet", "Applies a tag to a Droplet. Specify the tag with the `--tag-name` flag.", Writer)
+	AddStringFlag(cmdRunDropletTag, doctl.ArgTagName, "", "", "the tag name apply to the Droplet. You can use a new or existing tag.",
 		requiredOpt())
+	cmdRunDropletTag.Example = `The following example applies the tag ` + "`" + `frontend` + "`" + ` to a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet tag 386734086 --tag-name frontend`
 
-	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet-id|droplet-name>", "Remove a tag from a Droplet", "Use this command to remove a tag from a Droplet, specified with the `--tag-name` flag.", Writer)
-	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "Tag name to remove from Droplet")
+	cmdRunDropletUntag := CmdBuilder(cmd, RunDropletUntag, "untag <droplet-id|droplet-name>", "Remove a tag from a Droplet", "Removes a tag from a Droplet. Specify the tag with the `--tag-name` flag.", Writer)
+	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "The tag name to remove from Droplet")
+	cmdRunDropletUntag.Example = `The following example removes the tag ` + "`" + `frontend` + "`" + ` from a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet untag 386734086 --tag-name frontend`
 
 	cmd.AddCommand(dropletOneClicks())
 
@@ -763,8 +774,11 @@ func dropletOneClicks() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunDropletOneClickList, "list", "Retrieve a list of Droplet 1-Click applications", "Use this command to retrieve a list of Droplet 1-Click applications.", Writer,
+	cmdDropletOneClickList := CmdBuilder(cmd, RunDropletOneClickList, "list", "Retrieve a list of Droplet 1-Click applications", `Retrieves a list of Droplet 1-Click application slugs.
+	 
+You can use 1-click slugs to create Droplets by using them as the argument for the `+"`"+`--image`+"`"+` flag in the `+"`"+`doctl compute droplet create`+"`"+` command. For example, the following command creates a Droplet with an Openblocks installation on it: `+"`"+`doctl compute droplet create example-droplet --image openblocks --size s-2vcpu-2gb --region nyc1`+"`"+``, Writer,
 		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
+	cmdDropletOneClickList.Example = `The following example retrieves a list of 1-clicks for Droplets: doctl compute droplet 1-click list`
 
 	return cmd
 }

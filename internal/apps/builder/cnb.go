@@ -25,8 +25,8 @@ import (
 
 const (
 	// CNBBuilderImage represents the local cnb builder.
-	CNBBuilderImage_Heroku18 = "digitaloceanapps/cnb-local-builder:heroku-18_da24158"
-	CNBBuilderImage_Heroku22 = "digitaloceanapps/cnb-local-builder:heroku-22_da24158"
+	CNBBuilderImage_Heroku18 = "digitaloceanapps/cnb-local-builder:heroku-18_v0.64.0"
+	CNBBuilderImage_Heroku22 = "digitaloceanapps/cnb-local-builder:heroku-22_v0.64.0"
 
 	appVarAllowListKey = "APP_VARS"
 	appVarPrefix       = "APP_VAR_"
@@ -380,10 +380,10 @@ func (b *CNBComponentBuilder) builderImage() string {
 		return b.builderImageOverride
 	}
 	for _, f := range b.spec.Features {
-		if strings.EqualFold(f, "buildpack-stack=ubuntu-22") {
-			return CNBBuilderImage_Heroku22
+		if strings.EqualFold(f, "buildpack-stack=ubuntu-18") {
+			return CNBBuilderImage_Heroku18
 		}
 	}
 
-	return CNBBuilderImage_Heroku18
+	return CNBBuilderImage_Heroku22
 }

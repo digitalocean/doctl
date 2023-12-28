@@ -34,44 +34,44 @@ import (
 func Functions() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "functions",
-			Short: "Work with the functions in your namespace",
-			Long: `The subcommands of ` + "`" + `doctl serverless functions` + "`" + ` operate on your functions namespace.
-You are able to inspect and list these functions to know what is deployed.  You can also invoke functions to test them.`,
+			Use:     "functions",
+			Short:   "Work with the functions in your namespace",
+			Long:    `The subcommands of ` + "`" + `doctl serverless functions` + "`" + ` manage your functions namespace, such as listing, reviewing, and invoking your functions.`,
 			Aliases: []string{"function", "fn"},
 		},
 	}
 
-	get := CmdBuilder(cmd, RunFunctionsGet, "get <functionName>", "Retrieves the deployed copy of a function (code or metadata)",
-		`Use `+"`"+`doctl serverless functions get`+"`"+` to obtain the code or metadata of a deployed function.
-This allows you to inspect the deployed copy and ascertain whether it corresponds to what
-is in your functions project in the local file system.`,
+	get := CmdBuilder(cmd, RunFunctionsGet, "get <functionName>", "Retrieve the metadata or code of a deployed function",
+		`Retrieves the code or metadata of a deployed function.`,
 		Writer)
-	AddBoolFlag(get, "url", "r", false, "get function url")
-	AddBoolFlag(get, "code", "", false, "show function code (only works if code is not a zip file)")
-	AddStringFlag(get, "save-env", "E", "", "save environment variables to FILE as key-value pairs")
-	AddStringFlag(get, "save-env-json", "J", "", "save environment variables to FILE as JSON")
-	AddBoolFlag(get, "save", "", false, "save function code to file corresponding to the function name")
-	AddStringFlag(get, "save-as", "", "", "file to save function code to")
+	AddBoolFlag(get, "url", "r", false, "Retrieves function URL")
+	AddBoolFlag(get, "code", "", false, "Retrieves the functions code. This does not work if the function is saved as a zip file.")
+	AddStringFlag(get, "save-env", "E", "", "Saves the function's environment variables to a local file as key-value pairs")
+	AddStringFlag(get, "save-env-json", "J", "", "Saves the function's environment variables to a local file as JSON")
+	AddBoolFlag(get, "save", "", false, "Saves the function's code to a local file")
+	AddStringFlag(get, "save-as", "", "", "Saves the file as the specified name")
+	get.Example = `The following example retrieves the code for a function named "example/helloWorld" and saves it to a file named ` + "`" + `local-helloWorld.py` + "`" + `: doctl serverless functions get example/helloWorld --code --save-as local-helloWorld.py`
 
 	invoke := CmdBuilder(cmd, RunFunctionsInvoke, "invoke <functionName>", "Invokes a function",
-		`Use `+"`"+`doctl serverless functions invoke`+"`"+` to invoke a function in your functions namespace.
+		`Invokes a function in your functions namespace.
 You can provide inputs and inspect outputs.`,
 		Writer)
-	AddBoolFlag(invoke, "web", "", false, "Invoke as a web function, show result as web page")
-	AddStringSliceFlag(invoke, "param", "p", []string{}, "parameter values in KEY:VALUE format, list allowed")
-	AddStringFlag(invoke, "param-file", "P", "", "FILE containing parameter values in JSON format")
-	AddBoolFlag(invoke, "full", "f", false, "wait for full activation record")
-	AddBoolFlag(invoke, "no-wait", "n", false, "fire and forget (asynchronous invoke, does not wait for the result)")
+	AddBoolFlag(invoke, "web", "", false, "Invokes the function as a web function and displays the result in your browser")
+	AddStringSliceFlag(invoke, "param", "p", []string{}, "Key-value pairs of input parameters. For example, if your function takes two parameters called `name` and `place`, you would provide them as `name:John,place:NY`.")
+	AddStringFlag(invoke, "param-file", "P", "", "A path to a file containing parameter values in JSON format, such as `path/to/file.json`.")
+	AddBoolFlag(invoke, "full", "f", false, "Waits for the function to complete and then outputs the function's response along with its complete activation record. The record contains log information, duration time, and other information about the function's execution.")
+	AddBoolFlag(invoke, "no-wait", "n", false, "Asynchronously invokes the function and does not wait for the result to be returned. An activation ID is returned in the response, instead.")
+	invoke.Example = `The following example invokes a function named "example/helloWorld" with the parameters ` + "`" + `name:John,place:NY` + "`" + `: doctl serverless functions invoke example/helloWorld --param name:John,place:NY`
 
 	list := CmdBuilder(cmd, RunFunctionsList, "list [<packageName>]", "Lists the functions in your functions namespace",
-		`Use `+"`"+`doctl serverless functions list`+"`"+` to list the functions in your functions namespace.`,
+		`Lists the functions in your functions namespace.`,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Functions{}))
-	AddStringFlag(list, "limit", "l", "", "only return LIMIT number of functions (default 30, max 200)")
-	AddStringFlag(list, "skip", "s", "", "exclude the first SKIP number of functions from the result")
-	AddBoolFlag(list, "count", "", false, "show only the total number of functions")
-	AddBoolFlag(list, "name-sort", "", false, "sort results by name")
-	AddBoolFlag(list, "name", "n", false, "sort results by name")
+	AddStringFlag(list, "limit", "l", "", "Returns the specified number of functions in the result, starting with the most recently updated function.")
+	AddStringFlag(list, "skip", "s", "", "Excludes the specified number of functions from the result, starting with the most recently updated function. For example, if you specify `2`, the most recently updated function and the function updated before that are excluded from the result.")
+	AddBoolFlag(list, "count", "", false, "Returns only the total number of functions in the namespace")
+	AddBoolFlag(list, "name-sort", "", false, "Sorts results by name in alphabetical order")
+	AddBoolFlag(list, "name", "n", false, "Sorts results by name in alphabetical order")
+	list.Example = `The following example lists the three most recently updated functions in the ` + "`" + `example` + "`" + ` package: doctl serverless functions list example --limit 3`
 
 	return cmd
 }
