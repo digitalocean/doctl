@@ -134,7 +134,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 
 	cmdLoadBalancerList := CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Retrieves a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
-	cmdLoadBalancerList.Example = `The following example lists all of the load balancers on your account and used the --format flag to return only each load balancer's ID, IP address, and status: doctl compute load-balancer list --format "ID,IP,Status"`
+	cmdLoadBalancerList.Example = `The following example lists all of the load balancers on your account and used the ` + "`" + `--format` + "`" + ` flag to return only each load balancer's ID, IP address, and status: doctl compute load-balancer list --format "ID,IP,Status"`
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <load-balancer-id>",
 		"Permanently delete a load balancer", `Permanently deletes the specified load balancer and disassociates any Droplets assigned to it. This is irreversible.`, Writer, aliasOpt("d", "rm"))
