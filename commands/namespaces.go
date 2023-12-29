@@ -41,35 +41,38 @@ func Namespaces() *Command {
 		Command: &cobra.Command{
 			Use:   "namespaces",
 			Short: "Manage your functions namespaces",
-			Long: `Functions namespaces (in the cloud) contain the result of deploying packages and functions with ` + "`" + `doctl serverless deploy` + "`" + `.
+			Long: `Functions namespaces (in the cloud) contain your deployed packages and functions with.
+
 The subcommands of ` + "`" + `doctl serverless namespaces` + "`" + ` are used to manage multiple functions namespaces within your account.
-Use ` + "`" + `doctl serverless connect` + "`" + ` with an explicit argument to connect to a specific namespace.  You are connected to one namespace at a time.`,
+Use ` + "`" + `doctl serverless connect` + "`" + ` to connect to a specific namespace.  You can only connect to one namespace at a time.`,
 			Aliases: []string{"namespace", "ns"},
 		},
 	}
 	create := CmdBuilder(cmd, RunNamespacesCreate, "create", "Creates a namespace",
-		``+"`"+`Use `+"`"+`doctl serverless namespaces create`+"`"+` to create a new functions namespace.
+		`Creates a new functions namespace. A namespace is a collection of functions and their associated packages, triggers, and project specifications. 
+
 Both a region and a label must be specified.`,
 		Writer)
-	AddStringFlag(create, "region", "r", "", "the region for the namespace", requiredOpt())
-	AddStringFlag(create, "label", "l", "", "the label for the namespace", requiredOpt())
-	AddBoolFlag(create, "no-connect", "n", false, "don't immediately connect to the created namespace")
+	AddStringFlag(create, "region", "r", "", "A region for the namespace to reside in", requiredOpt())
+	AddStringFlag(create, "label", "l", "", "The namespace's unique name", requiredOpt())
+	AddBoolFlag(create, "no-connect", "n", false, "Instructs the doctl client to not immediately connect to the newly created namespace")
+	create.Example = `The following example creates a namespace named ` + "`" + `example-namespace` + "`" + ` in the 'nyc1' region: doctl serverless namespaces create --label example-namespace --region nyc1`
 
-	delete := CmdBuilder(cmd, RunNamespacesDelete, "delete <namespaceIdOrLabel>", "Deletes a namespace",
-		`Use `+"`"+`doctl serverless namespaces delete`+"`"+` to delete a functions namespace.
-The full label or full id of the namespace is required as an argument.
-You are prompted for confirmation unless `+"`"+`--force`+"`"+` is specified.`,
+	delete := CmdBuilder(cmd, RunNamespacesDelete, "delete <namespace-id|label>", "Deletes a namespace",
+		`Deletes a functions namespace.`,
 		Writer, aliasOpt("rm"))
-	AddBoolFlag(delete, "force", "f", false, "Just do it, omitting confirmatory prompt")
+	AddBoolFlag(delete, "force", "f", false, "Deletes the namespace without a confirmation prompt")
+	delete.Example = `The following example deletes the namespace with the label ` + "`" + `example-namespace` + "`" + `: doctl serverless namespaces delete example-namespace`
 
-	CmdBuilder(cmd, RunNamespacesList, "list", "Lists your namespaces",
-		`Use `+"`"+`doctl serverless namespaces list`+"`"+` to list your functions namespaces.`,
+	cmdNamespacesList := CmdBuilder(cmd, RunNamespacesList, "list", "Lists your namespaces",
+		`Retrieves a list of your functions namespaces.`,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Namespaces{}))
+	cmdNamespacesList.Example = `The following example lists your functions namespaces and uses the --format flag to return only the ID and region for each namespace: doctl serverless namespaces list --format ID,Region`
 
-	CmdBuilder(cmd, RunNamespacesListRegions, "list-regions", "Lists the accepted 'region' values",
-		`Use `+"`"+`doctl serverless namespaces list-regions`+"`"+` to list the values that are accepted
-in the `+"`"+`--region`+"`"+` flag of `+"`"+`doctl serverless namespaces create`+"`"+`.`,
+	NamespacesListRegions := CmdBuilder(cmd, RunNamespacesListRegions, "list-regions", "Lists the accepted 'region' values",
+		`Retrieves a list of region slugs that you can create functions namespaces in.`,
 		Writer)
+	NamespacesListRegions.Example = `The following example lists of region slugs for functions namespaces: doctl serverless namespaces list-regions`
 	return cmd
 }
 
