@@ -50,111 +50,120 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		},
 	}
 
-	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, e.g.: `entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306`."
-	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:\n\n"+lbDetail, Writer,
+	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, such as `entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306`."
+	cmdLoadBalancerGet := CmdBuilder(cmd, RunLoadBalancerGet, "get <load-balancer-id>", "Retrieve a load balancer", "Retrieves information about a load balancer instance, including:\n\n"+lbDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
+	cmdLoadBalancerGet.Example = `The following example retrieves information about a load balancer with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute load-balancer get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdLoadBalancerCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
-		"Create a new load balancer", "Use this command to create a new load balancer on your account. Valid forwarding rules are:\n"+forwardingDetail, Writer, aliasOpt("c"))
+		"Create a new load balancer", "Creates a new load balancer on your account. Valid forwarding rules are:\n"+forwardingDetail, Writer, aliasOpt("c"))
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgRegionSlug, "", "",
-		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
+		"The load balancer's region, for example: `nyc1`", requiredOpt())
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgSizeSlug, "", "",
-		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
+		fmt.Sprintf("DEPRECATED. A slug indicating the load balancer's, size, for example: `lb-small`. This flag is not compatible with the `--size-unit` flag. You can only use one or the other.", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgSizeUnit, "", 0,
-		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerType, "", "", "The type of load balancer, e.g.: `REGIONAL` or `GLOBAL`")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
+		fmt.Sprintf("The number of nodes to add to the load balancer, for example: 3. This flag is not compatible with the `--size-unit` flag. You can only use one or the other.", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in. If not specified, the load balancer is placed in the default VPC for the region.")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerAlgorithm, "",
-		"round_robin", "This field has been deprecated. You can no longer specify an algorithm for load balancers.")
+		"round_robin", "DEPRECATED. You can no longer specify an algorithm for load balancers.")
 	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgRedirectHTTPToHTTPS, "", false,
 		"Redirects HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgEnableProxyProtocol, "", false,
-		"enable proxy protocol")
+		"Enables proxy protocol")
 	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgEnableBackendKeepalive, "", false,
-		"enable keepalive connections to backend target droplets")
+		"Enable keepalive connections to backend target Droplets")
 	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
-		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgTagName, "", "", "The name of a tag. All Droplets with this tag applied will be assigned to the load balancer.")
+		"Disables automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgTagName, "", "", "Assigns Droplets with the specified tag to the load balancer")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDropletIDs, "", []string{},
-		"A comma-separated list of Droplet IDs to add to the load balancer, e.g.: `12,33`")
+		"A comma-separated list of Droplet IDs to add to the load balancer, for example: `386734086,191669331`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgStickySessions, "", "",
-		"A comma-separated list of key-value pairs representing a list of active sessions, e.g.: `type:cookies, cookie_name:DO-LB, cookie_ttl_seconds:5`")
+		"A comma-separated list of key-value pairs representing a list of active sessions, for example: `type:cookies, cookie_name:DO-LB, cookie_ttl_seconds:5`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgHealthCheck, "", "",
-		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3`")
+		"A comma-separated list of key-value pairs representing recent health check results, for example: `protocol:http,port:80,path:/index.html,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgForwardingRules, "", "",
-		forwardingRulesTxt)
-	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a load balancer to complete before returning control to the terminal")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgProjectID, "", "", "Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
-	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgHTTPIdleTimeoutSeconds, "", 0, "HTTP idle timeout that configures the idle timeout for http connections on the load balancer")
+		forwardingRulesTxt, requiredOpt())
+	AddBoolFlag(cmdLoadBalancerCreate, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the command to complete before returning access to the user")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgProjectID, "", "", "Specifies which project to associate the load balancer with. If you do not specify a project, the load balancer is placed in your default project.")
+	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgHTTPIdleTimeoutSeconds, "", 0, "HTTP idle timeout that configures the idle timeout for HTTP connections on the load balancer")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgAllowList, "", []string{},
-		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+		"A comma-separated list of ALLOW rules for the load balancer,for example: `ip:203.0.113.10,cidr:192.0.2.0/24`")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDenyList, "", []string{},
-		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+		"A comma-separated list of DENY rules for the load balancer, for example: `ip:203.0.113.10,cidr:192.0.2.0/24`")
 	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
+	cmdLoadBalancerCreate.Example = `The following example creates a load balancer named ` + "`" + `example-lb` + "`" + ` in the ` + "`" + `nyc1` + "`" + ` region with a forwarding rule that routes traffic from port 80 to port 8080 on the Droplets behind the load balancer. The command also adds two Droplets to the load balancer's backend pool: doctl compute load-balancer create --name example-lb --region nyc1 --forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:8080 --droplet-ids 386734086,191669331`
 
-	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
-		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer. Using all applicable flags, the command should contain a full representation of the load balancer including existing attributes, such as the load balancer's name, region, forwarding rules, and Droplet IDs. Any attribute that is not provided is reset to its default value.`, Writer, aliasOpt("u"))
+	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <load-balancer-id>",
+		"Update a load balancer's configuration", `Updates the configuration of a specified load balancer. Using all applicable flags, the command should contain a full representation of the load balancer including existing attributes, such as the load balancer's name, region, forwarding rules, and Droplet IDs. Any attribute that is not provided is reset to its default value.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "",
-		"The load balancer's region, e.g.: `nyc1`")
+		"The load balancer's region, for example: `nyc1`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgSizeSlug, "", "",
-		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
+		fmt.Sprintf("DEPRECATED. A slug indicating the load balancer's, size, for example: `lb-small`. This flag is not compatible with the `--size-unit` flag. You can only use one or the other.", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdRecordUpdate, doctl.ArgSizeUnit, "", 0,
-		fmt.Sprintf("The load balancer's size, e.g.: 1. Only one of %s and %s should be used", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
+		fmt.Sprintf("The number of nodes to add to the load balancer, for example: 3. This flag is not compatible with the `--size-unit` flag. You can only use one or the other", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "",
-		"round_robin", "This field has been deprecated. You can no longer specify an algorithm for load balancers.")
+		"round_robin", "DEPRECATED. You can no longer specify an algorithm for load balancers.")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgRedirectHTTPToHTTPS, "", false,
-		"Flag to redirect HTTP requests to the load balancer on port 80 to HTTPS on port 443")
+		"Redirects HTTP requests to the load balancer on port 80 to HTTPS on port 443")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgEnableProxyProtocol, "", false,
-		"enable proxy protocol")
+		"Enables proxy protocol")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgEnableBackendKeepalive, "", false,
-		"enable keepalive connections to backend target droplets")
+		"Enables keepalive connections to backend target Droplets")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgTagName, "", "", "Assigns Droplets with the specified tag to the load balancer")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDropletIDs, "", []string{},
-		"A comma-separated list of Droplet IDs, e.g.: `215,378`")
+		"A comma-separated list of Droplet IDs to add to the load balancer's pool, for example: `386734086,191669331`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgStickySessions, "", "",
-		"A comma-separated list of key-value pairs representing a list of active sessions, e.g.: `type:cookies, cookie_name:DO-LB, cookie_ttl_seconds:5`")
+		"A comma-separated list of key-value pairs representing a list of active sessions, for example: `type:cookies, cookie_name:DO-LB, cookie_ttl_seconds:5`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgHealthCheck, "", "",
-		"A comma-separated list of key-value pairs representing recent health check results, e.g.: `protocol:http, port:80, path:/index.html, check_interval_seconds:10, response_timeout_seconds:5, healthy_threshold:5, unhealthy_threshold:3`")
+		"A comma-separated list of key-value pairs representing recent health check results, for example: `protocol:http, port:80, path:/index.html, check_interval_seconds:10, response_timeout_seconds:5, healthy_threshold:5, unhealthy_threshold:3`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgDisableLetsEncryptDNSRecords, "", false,
-		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
+		"Disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgProjectID, "", "",
-		"Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
+		"Specifies which project to associate the load balancer with. If you do not specify a project, the load balancer is placed in your default project.")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgAllowList, "", []string{},
-		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+		"A comma-separated list of ALLOW rules for the load balancer, for example: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", []string{},
-		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+		"A comma-separated list of DENY rules for the load balancer, for example: `ip:203.0.113.10,cidr:192.0.2.0/24`")
+	cmdRecordUpdate.Example = `The following example updates the load balancer with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to have the name ` + "`" + `example-lb` + "`" + ` and to add the Droplet with the ID ` + "`" + `386734086` + "`" + ` to the load balancer's pool: doctl compute load-balancer update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name example-lb --droplet-ids 386734086`
 
-	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
+	cmdLoadBalancerList := CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Retrieves a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
+	cmdLoadBalancerList.Example = `The following example lists all of the load balancers on your account and used the --format flag to return only each load balancer's ID, IP address, and status: doctl compute load-balancer list --format "ID,IP,Status"`
 
-	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>",
-		"Permanently delete a load balancer", `Use this command to permanently delete the specified load balancer. This is irreversible.`, Writer, aliasOpt("d", "rm"))
+	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <load-balancer-id>",
+		"Permanently delete a load balancer", `Permanently deletes the specified load balancer and disassociates any Droplets assigned to it. This is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false,
-		"Delete the load balancer without a confirmation prompt")
+		"Deletes the load balancer without a confirmation prompt")
+	cmdRunRecordDelete.Example = `The following example deletes the load balancer with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute load-balancer delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>",
-		"Add Droplets to a load balancer", `Use this command to add Droplets to a load balancer.`, Writer)
+	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <load-balancer-id>",
+		"Add Droplets to a load balancer", `Adds Droplets to a load balancer's backend pool.`, Writer)
 	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{},
-		"A comma-separated list of IDs of Droplet to add to the load balancer, example value: `12,33`")
+		"A comma-separated list of Droplet IDs to add to the load balancer, for example: `386734086,191669331`")
+	cmdAddDroplets.Example = `The following example adds the Droplets with the IDs ` + "`" + `386734086` + "`" + ` and ` + "`" + `191669331` + "`" + ` to a load balancer with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute load-balancer add-droplets f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --droplet-ids 386734086,191669331`
 
 	cmdRemoveDroplets := CmdBuilder(cmd, RunLoadBalancerRemoveDroplets,
-		"remove-droplets <id>", "Remove Droplets from a load balancer", `Use this command to remove Droplets from a load balancer. This command does not destroy any Droplets.`, Writer)
+		"remove-droplets <id>", "Remove Droplets from a load balancer", `Removes Droplets from a load balancer. This command does not destroy any Droplets.`, Writer)
 	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{},
-		"A comma-separated list of IDs of Droplets to remove from the load balancer, example value: `12,33`")
+		"A comma-separated list of IDs of Droplets to remove from the load balancer, for example: `386734086,191669331`")
+	cmdRemoveDroplets.Example = `The following example removes the Droplets with the IDs ` + "`" + `386734086` + "`" + ` and ` + "`" + `191669331` + "`" + ` from a load balancer with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute load-balancer remove-droplets f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --droplet-ids 386734086,191669331`
 
 	cmdAddForwardingRules := CmdBuilder(cmd, RunLoadBalancerAddForwardingRules,
-		"add-forwarding-rules <id>", "Add forwarding rules to a load balancer", "Use this command to add forwarding rules to a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
+		"add-forwarding-rules <id>", "Add forwarding rules to a load balancer", "Adds forwarding rules to a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
 	AddStringFlag(cmdAddForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
+	cmdAddForwardingRules.Example = `The following example adds a forwarding rule that routes traffic from port 80 to port 8080 on the Droplets behind the load balancer: doctl compute load-balancer add-forwarding-rules f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:8080`
 
 	cmdRemoveForwardingRules := CmdBuilder(cmd, RunLoadBalancerRemoveForwardingRules,
-		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
+		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Removes forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
 	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
+
+	cmdRemoveForwardingRules.Example = `The following example removes a forwarding rule that routes traffic from port 80 to port 8080 on the Droplets behind the load balancer: doctl compute load-balancer remove-forwarding-rules f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --forwarding-rules entry_protocol:TCP,entry_port:80,target_protocol:TCP,target_port:8080`
 
 	return cmd
 }
