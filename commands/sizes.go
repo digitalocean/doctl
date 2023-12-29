@@ -35,7 +35,7 @@ Use these slugs to specify the size of Droplet in other commands, such as ` + "`
 	cmdSizeList := CmdBuilder(cmd, RunSizeList, "list", "List available Droplet sizes", sizeDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Size{}))
 	cmdSizeList.Example = "The following example retrieves a list of Droplet sizes and uses the --format flag to return only the slug for each size and its monthly price: doctl compute size list --format Slug,PriceMonthly"
-≈	return cmd
+	return cmd
 }
 
 // RunSizeList all sizes.
