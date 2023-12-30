@@ -28,29 +28,32 @@ func Triggers() *Command {
 		Command: &cobra.Command{
 			Use:   "triggers",
 			Short: "Manage triggers associated with your functions",
-			Long: `When Functions are deployed by ` + "`" + `doctl serverless deploy` + "`" + `, they may have associated triggers.
-The subcommands of ` + "`" + `doctl serverless triggers` + "`" + ` are used to list and inspect
-triggers.  Each trigger has an event source type, and invokes its associated function
-when events from that source type occur.  Currently, only the ` + "`" + `scheduler` + "`" + ` event source type is supported.`,
+			Long: `The subcommands of ` + "`" + `doctl serverless triggers` + "`" + ` are used to list and inspect
+triggers.  Each trigger has an event source type, and invokes its associated function when events from that source type occur.  Currently, only the ` + "`" + `scheduler` + "`" + ` event source type is supported.`,
 			Aliases: []string{"trigger", "trig"},
 			Hidden:  true, // trigger support uses APIs that are not yet universally available
 		},
 	}
-	list := CmdBuilder(cmd, RunTriggersList, "list", "Lists your triggers",
-		`Use `+"`"+`doctl serverless triggers list`+"`"+` to list your triggers.`,
+	cmdTriggersList := CmdBuilder(cmd, RunTriggersList, "list", "Lists your triggers",
+		`Retrieves a lists of triggers and their details, such as cron schedule, last invocation time, and whether they are enabled.`,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Triggers{}))
-	AddStringFlag(list, "function", "f", "", "list only triggers for the chosen function")
+	AddStringFlag(list, "function", "f", "", "Lists only triggers for a specific function")
+	cmdTriggersList.Example = `doctl serverless triggers list --function <functionName>`
 
-	CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>",
-		"Enable a trigger", "Use `doctl serverless triggers enable <triggerName>` to enable a trigger",
+	cmdTriggerEnable := CmdBuilder(cmd, RunTriggerToggle(true), "enable <triggerName>",
+		"Enable a trigger", "Enables a trigger making it active.",
 		Writer, displayerType(&displayers.Triggers{}))
-	CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>",
-		"Disable a trigger", "Use `doctl serverless triggers disable <triggerName>` to disable a trigger",
-		Writer, displayerType(&displayers.Triggers{}))
+	cmdTriggerEnable.Example = `The following example activates a trigger named ` + "`" + `cron-example` + "`" + `: doctl serverless triggers enable cron-example`
 
-	CmdBuilder(cmd, RunTriggersGet, "get <triggerName>", "Get the details for a trigger",
-		`Use `+"`"+`doctl serverless triggers get <triggerName>`+"`"+` for details about <triggerName>.`,
+	cmdTriggerDisable := CmdBuilder(cmd, RunTriggerToggle(false), "disable <triggerName>",
+		"Disable a trigger", "Disables a trigger making it inactive.",
 		Writer, displayerType(&displayers.Triggers{}))
+	cmdTriggerDisable.Example = `The following example deactivates a trigger named ` + "`" + `cron-example` + "`" + `: doctl serverless triggers disable cron-example`
+
+	cmdTriggersGet := CmdBuilder(cmd, RunTriggersGet, "get <triggerName>", "Get the details for a trigger",
+		`Retrieves details about a trigger, including its cron schedule, last invocation time, and whether it is enabled`,
+		Writer, displayerType(&displayers.Triggers{}))
+	cmdTriggersGet.Example = `The following example retrieves details about a trigger named ` + "`" + `cron-example` + "`" + `: doctl serverless triggers get cron-example`
 
 	return cmd
 }
