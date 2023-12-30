@@ -63,36 +63,31 @@ func Serverless() *Command {
 		Command: &cobra.Command{
 			Use:   "serverless",
 			Short: "Develop, test, and deploy serverless functions",
-			Long: `The ` + "`" + `doctl serverless` + "`" + ` commands provide an environment for developing, testing, and deploying serverless functions.
-One or more local file system areas are employed, along with one or more 'functions namespaces' in the cloud.
-A one-time install of the serverless software is needed (use ` + "`" + `doctl serverless install` + "`" + ` to install the software,
-then ` + "`" + `doctl serverless connect` + "`" + ` to connect to a functions namespace associated with your account).
-Other ` + "`" + `doctl serverless` + "`" + ` commands are used to develop, test, and deploy.`,
+			Long: `The ` + "`" + `doctl serverless` + "`" + ` commands allow you to manage, develop, test, and deploying serverless functions.
+
+To use these commands, you must install the serverless support software.  Run ` + "`" + `doctl serverless install` + "`" + ` to install the software, then run ` + "`" + `doctl serverless connect` + "`" + ` to connect to a functions namespace associated with your account.`,
 			Aliases: []string{"sandbox", "sbx", "sls"},
 			GroupID: manageResourcesGroup,
 		},
 	}
 
-	cmdBuilderWithInit(cmd, RunServerlessInstall, "install", "Installs the serverless support",
-		`This command installs additional software under `+"`"+`doctl`+"`"+` needed to make the other serverless commands work.
-The install operation is long-running, and a network connection is required.`,
+	cmdServerlessInstall := cmdBuilderWithInit(cmd, RunServerlessInstall, "install", "Installs the serverless support",
+		`Installs the additional `+"`"+`doctl`+"`"+` software needed to support serverless development.`,
 		Writer, false)
+	cmdServerlessInstall.Example = `The following example installs the serverless support: doctl serverless install`
 
-	CmdBuilder(cmd, RunServerlessUpgrade, "upgrade", "Upgrades serverless support to match this version of doctl",
-		`This command upgrades the serverless support software under `+"`"+`doctl`+"`"+` by installing over the existing version.
-The install operation is long-running, and a network connection is required.`,
+	cmdServerlessUpgrade := CmdBuilder(cmd, RunServerlessUpgrade, "upgrade", "Upgrades serverless support to match this version of doctl",
+		`Upgrades the `+"`"+`doctl`+"`"+` serverless support software under to the latest version.`,
 		Writer)
+	cmdServerlessUpgrade.Example = `The following example upgrades the serverless support: doctl serverless upgrade`
 
-	CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support from `+"`"+`doctl`+"`",
+	cmdServerlessUninstall := CmdBuilder(cmd, RunServerlessUninstall, "uninstall", "Removes the serverless support", `Removes serverless support software from `+"`"+`doctl`+"`"+`.`,
 		Writer)
+	cmdServerlessUninstall.Example = `The following example uninstalls the serverless support: doctl serverless uninstall`
 
-	connect := CmdBuilder(cmd, RunServerlessConnect, "connect [<hint>]", "Connects local serverless support to a functions namespace",
-		`This command connects `+"`"+`doctl serverless`+"`"+` support to a functions namespace of your choice.
-The optional argument should be a (complete or partial) match to a namespace label or id.
-If there is no argument, all namespaces are matched.  If the result is exactly one namespace,
-you are connected to it.  If there are multiple namespaces, you have an opportunity to choose
-the one you want from a dialog.  Use `+"`"+`doctl serverless namespaces`+"`"+` to create, delete, and
-list your namespaces.`,
+	connect := CmdBuilder(cmd, RunServerlessConnect, "connect <namespace-id|label>", "Connects local serverless support to a functions namespace",
+		`Connects to a specified functions namespace. If no namespace is specified, a list of available namespaces is presented for selection.
+You can retrieve a list of available namespaces by running `+"`"+`doctl serverless namespaces list`+"`"+`.`,
 		Writer)
 	// The apihost and auth flags will always be hidden.  They support testing using doctl on clusters that are not in production
 	// and hence are unknown to the portal.
@@ -100,30 +95,26 @@ list your namespaces.`,
 	AddStringFlag(connect, "auth", "", "", "")
 	connect.Flags().MarkHidden("apihost")
 	connect.Flags().MarkHidden("auth")
+	connect.Example = `The following example connects to a namespace with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl serverless connect f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	status := CmdBuilder(cmd, RunServerlessStatus, "status", "Provide information about serverless support",
-		`This command reports the status of serverless support and some details concerning its connected functions namespace.
-With the `+"`"+`--languages flag, it will report the supported languages.
-With the `+"`"+`--version flag, it will show just version information about the serverless component`, Writer)
-	AddBoolFlag(status, "languages", "l", false, "show available languages (if connected to the cloud)")
-	AddBoolFlag(status, "version", "", false, "just show the version, don't check status")
-	AddBoolFlag(status, "credentials", "", false, "")
+		`Retrieves information about the current version of the `+"`"+`doctl`+"`"+` serverless software on your system. Use the flags to review various aspects of the installation.`, Writer)
+	AddBoolFlag(status, "languages", "l", false, "Returns supported programming languages")
+	AddBoolFlag(status, "version", "", false, "Returns the version of the serverless support software")
+	AddBoolFlag(status, "credentials", "", false, "Returns the credentials for the current connection, in JSON format")
 	// The --credentials flag is needed when working on clusters that are not in production.
 	// It captures the current credentials to be restored later using 'connect --apihost --auth'.
 	// It is hidden since this kind of low level manipulation should not normally be necessary.
 	status.Flags().MarkHidden("credentials")
+	status.Example = `The following example returns the version of the serverless support software: doctl serverless status --version`
 
-	undeploy := CmdBuilder(cmd, RunServerlessUndeploy, "undeploy [<package|function>...]",
-		"Removes resources from your functions namespace",
-		`This command removes functions, entire packages, or all functions and packages, from your function
-namespace.  In general, deploying new content does not remove old content although it may overwrite it.
-Use `+"`"+`doctl serverless undeploy`+"`"+` to effect removal.  The command accepts a list of functions or packages.
-Functions should be listed in `+"`"+`pkgName/fnName`+"`"+` form, or `+"`"+`fnName`+"`"+` for a function not in any package.
-The `+"`"+`--packages`+"`"+` flag causes arguments without slash separators to be interpreted as packages, in which case
-the entire packages are removed.`, Writer)
-	AddBoolFlag(undeploy, "packages", "p", false, "interpret simple name arguments as packages")
-	AddBoolFlag(undeploy, "triggers", "", false, "interpret all arguments as triggers")
-	AddBoolFlag(undeploy, "all", "", false, "remove all packages and functions")
+	undeploy := CmdBuilder(cmd, RunServerlessUndeploy, "undeploy <package|function>",
+		"Remove resources from your functions namespace",
+		`Deletes specified functions, packages, or all functions and packages, from your function
+namespace. Use `+"`"+`doctl serverless undeploy`+"`"+` to effect removal.  The command accepts a list of functions or packages.`, Writer)
+	AddBoolFlag(undeploy, "packages", "p", false, "Removes an entire package, including all functions in the package. For example, `doctl serverless undeploy --packages example-package` removes the package named 'example-package' and all functions in it.")
+	AddBoolFlag(undeploy, "triggers", "", false, "Interpret all arguments as triggers")
+	AddBoolFlag(undeploy, "all", "", false, "Removes all packages and functions from a namespace")
 	AddBoolFlag(undeploy, doctl.ArgForce, doctl.ArgShortForce, false, "Delete namespace resources without confirmation prompt")
 	undeploy.Flags().MarkHidden(doctl.ArgForce)
 	undeploy.Flags().MarkHidden("triggers") // support is experimental at this point
@@ -133,6 +124,7 @@ the entire packages are removed.`, Writer)
 	AddStringFlag(undeploy, "auth", "", "", "")
 	undeploy.Flags().MarkHidden("apihost")
 	undeploy.Flags().MarkHidden("auth")
+	undeploy.Example = `The following example removes the function ` + "`" + `example-function` + "`" + ` from the ` + "`" + `sample` + "`" + ` package: doctl serverless undeploy sample/example-function`
 
 	cmd.AddCommand(Activations())
 	cmd.AddCommand(Functions())
