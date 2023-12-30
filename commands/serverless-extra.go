@@ -27,63 +27,59 @@ import (
 // oclif equivalents and subsequently modified.
 func ServerlessExtras(cmd *Command) {
 
-	create := CmdBuilder(cmd, RunServerlessExtraCreate, "init <path>", "Initialize a 'functions project' directory in your local file system",
-		`The `+"`"+`doctl serverless init`+"`"+` command specifies a directory in your file system which will hold functions and
-supporting artifacts while you're developing them.  This 'functions project' can be uploaded to your functions namespace for testing.
-Later, after the functions project is committed to a `+"`"+`git`+"`"+` repository, you can create an app, or an app component, from it.
-
-Type `+"`"+`doctl serverless status --languages`+"`"+` for a list of supported languages.  Use one of the displayed keywords
-to choose your sample language for `+"`"+`doctl serverless init`+"`"+`.`,
+	create := CmdBuilder(cmd, RunServerlessExtraCreate, "init <path>", "Initialize a 'functions project' directory on your local file system",
+		`Creates and initializes a functions project folder on your local machine. The folder contains the necessary
+supporting artifacts you need to develop serverless functions. You can upload this project folder to your functions namespace for testing.`,
 		Writer)
-	AddStringFlag(create, "language", "l", "javascript", "Language for the initial sample code")
+	AddStringFlag(create, "language", "l", "javascript", "Language for the initial sample code. Use the `doctl serverless status --languages` command to see a list of supported languages")
 	AddBoolFlag(create, "overwrite", "", false, "Clears and reuses an existing directory")
+	create.Example = `The following example creates a functions project directory named ` + "`" + `example-project` + "`" + ` in the current directory and uses the ` + "`" + `--language` + "`" + ` flag to specify the sample code's language: doctl serverless init example-project --language python`
 
 	deploy := CmdBuilder(cmd, RunServerlessExtraDeploy, "deploy <directory>", "Deploy a functions project to your functions namespace",
-		`At any time you can use `+"`"+`doctl serverless deploy`+"`"+` to upload the contents of a functions project in your file system for
-testing in your serverless namespace.  The project must be organized in the fashion expected by an App Platform Functions
-component.  The `+"`"+`doctl serverless init`+"`"+` command will create a properly organized directory for you to work in.`,
+		`Uploads the contents of a functions project folder to your serverless namespace. The project must be organized in the fashion expected by an App Platform Functions
+component.  Use the `+"`"+`doctl serverless init`+"`"+` command to create a properly organized directory for you to develop functions in.`,
 		Writer)
 	AddStringFlag(deploy, "env", "", "", "Path to runtime environment file")
 	AddStringFlag(deploy, "build-env", "", "", "Path to build-time environment file")
 	AddStringFlag(deploy, "apihost", "", "", "API host to use")
 	AddStringFlag(deploy, "auth", "", "", "OpenWhisk auth token to use")
-	AddBoolFlag(deploy, "insecure", "", false, "Ignore SSL Certificates")
-	AddBoolFlag(deploy, "verbose-build", "", false, "Display build details")
-	AddBoolFlag(deploy, "verbose-zip", "", false, "Display start/end of zipping phase for each function")
-	AddBoolFlag(deploy, "yarn", "", false, "Use yarn instead of npm for node builds")
-	AddStringFlag(deploy, "include", "", "", "Functions and/or packages to include")
-	AddStringFlag(deploy, "exclude", "", "", "Functions and/or packages to exclude")
+	AddBoolFlag(deploy, "insecure", "", false, "Ignores SSL Certificates")
+	AddBoolFlag(deploy, "verbose-build", "", false, "Displays build details")
+	AddBoolFlag(deploy, "verbose-zip", "", false, "Displays the details of each function's zipping phase")
+	AddBoolFlag(deploy, "yarn", "", false, "Use `yarn` instead of `npm` for Node.js builds")
+	AddStringFlag(deploy, "include", "", "", "Functions or packages to include in the deployment")
+	AddStringFlag(deploy, "exclude", "", "", "Functions or packages to exclude from deployment")
 	AddBoolFlag(deploy, "remote-build", "", false, "Run builds remotely")
-	AddBoolFlag(deploy, "incremental", "", false, "Deploy only changes since last deploy")
+	AddBoolFlag(deploy, "incremental", "", false, "Deploys only the changes that have been made since the last deployment")
 	AddBoolFlag(deploy, "no-triggers", "", false, "")
 	deploy.Flags().MarkHidden("no-triggers")
+	deploy.Example = `The following example deploys the contents of the functions project directory named ` + "`" + `example-project` + "`" + ` to the namespace named ` + "`" + `example-namespace` + "`" + `. The command also specifies that the build should use ` + "`" + `yarn` + "`" + ` instead of ` + "`" + `npm` + "`" + `: doctl serverless deploy example-project --namespace example-namespace --yarn=true`
 
-	getMetadata := cmdBuilderWithInit(cmd, RunServerlessExtraGetMetadata, "get-metadata <directory>", "Obtain metadata of a functions project",
-		`The `+"`"+`doctl serverless get-metadata`+"`"+` command produces a JSON structure that summarizes the contents of a functions
-project (a directory you have designated for functions development).  This can be useful for feeding into other tools.`,
+	getMetadata := cmdBuilderWithInit(cmd, RunServerlessExtraGetMetadata, "get-metadata <directory>", "Retrieve metadata about a functions project",
+		`Retrieves a functions project's metadata, in JSON format. This includes the project's name, description, information about its functions and packages, and more.`,
 		Writer, false)
-	AddStringFlag(getMetadata, "env", "", "", "Path to environment file")
-	AddStringFlag(getMetadata, "include", "", "", "Functions or packages to include")
-	AddStringFlag(getMetadata, "exclude", "", "", "Functions or packages to exclude")
+	AddStringFlag(getMetadata, "env", "", "", "A path to an environment file, such as `path/to/.env`")
+	AddStringFlag(getMetadata, "include", "", "", "Functions or packages to include in the output")
+	AddStringFlag(getMetadata, "exclude", "", "", "Functions or packages to exclude from the output")
 	AddBoolFlag(getMetadata, "no-triggers", "", false, "")
 	deploy.Flags().MarkHidden("no-triggers")
+	getMetadata.Example = `The following example retrieves the metadata for the functions project directory named ` + "`" + `example-project` + "`" + `: doctl serverless get-metadata example-project --env example-project/.env`
 
 	watch := CmdBuilder(cmd, RunServerlessExtraWatch, "watch <directory>", "Watch a functions project directory, deploying incrementally on change",
-		`Type `+"`"+`doctl serverless watch <directory>`+"`"+` in a separate terminal window.  It will run until interrupted.
-It will watch the directory (which should be one you initialized for serverless development) and will deploy
-the contents to the cloud incrementally as it detects changes.`,
+		`Incrementally deploys code changes to the cloud as they're detected. Run this command in a separate window terminal window as you continue to develop your functions.`,
 		Writer)
-	AddStringFlag(watch, "env", "", "", "Path to runtime environment file")
-	AddStringFlag(watch, "build-env", "", "", "Path to build-time environment file")
+	AddStringFlag(watch, "env", "", "", "Path to runtime environment file, such as `path/to/.env`")
+	AddStringFlag(watch, "build-env", "", "", "Path to build-time environment file, such as `path/to/package.json`")
 	AddStringFlag(watch, "apihost", "", "", "API host to use")
 	AddStringFlag(watch, "auth", "", "", "OpenWhisk auth token to use")
-	AddBoolFlag(watch, "insecure", "", false, "Ignore SSL Certificates")
-	AddBoolFlag(watch, "verbose-build", "", false, "Display build details")
-	AddBoolFlag(watch, "verbose-zip", "", false, "Display start/end of zipping phase for each function")
-	AddBoolFlag(watch, "yarn", "", false, "Use yarn instead of npm for node builds")
-	AddStringFlag(watch, "include", "", "", "Functions and/or packages to include")
-	AddStringFlag(watch, "exclude", "", "", "Functions and/or packages to exclude")
-	AddBoolFlag(watch, "remote-build", "", false, "Run builds remotely")
+	AddBoolFlag(watch, "insecure", "", false, "Ignores SSL certificates")
+	AddBoolFlag(watch, "verbose-build", "", false, "Displays build details")
+	AddBoolFlag(watch, "verbose-zip", "", false, "Displays the details of each function's zipping phase")
+	AddBoolFlag(watch, "yarn", "", false, "Use `yarn` instead of `npm` for Node.js builds")
+	AddStringFlag(watch, "include", "", "", "Functions or packages to include in the deployment")
+	AddStringFlag(watch, "exclude", "", "", "Functions or packages to exclude from the deployment")
+	AddBoolFlag(watch, "remote-build", "", false, "Runs builds remotely")
+	watch.Example = `The following example watches the functions project directory named ` + "`" + `example-project` + "`" + ` for changes and deploys them incrementally to the namespace named ` + "`" + `example-namespace` + "`" + `: doctl serverless watch example-project --namespace example-namespace`
 }
 
 // RunServerlessExtraCreate supports the 'serverless init' command
