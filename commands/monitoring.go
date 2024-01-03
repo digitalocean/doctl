@@ -59,7 +59,7 @@ If you'd like to alert on the uptime of a specific URL or IP address, use ` + "`
 
 	cmdAlertPolicyCreate := CmdBuilder(cmd, RunCmdAlertPolicyCreate, "create", "Create an alert policy", `Create a new alert policy.`, Writer)
 	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyDescription, "", "", "A description of the alert policy")
-	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyType, "", "", "The type of alert policy")
+	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyType, "", "", "The type of alert policy. For example,`v1/insights/droplet/memory_utilization_percent` alerts on the percent of memory utilization. For a full list of alert types, see https://docs.digitalocean.com/reference/api/api-reference/#operation/monitoring_create_alertPolicy")
 	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyCompare, "", "", "The comparator of the alert policy. Possible values: `GreaterThan` or `LessThan`")
 	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyWindow, "", "5m", "The amount of time the resource must exceed the threshold value before an alert is triggered. Possible values: `5m`, `10m`, `30m`, or `1h`")
 	AddIntFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyValue, "", 0, "The threshold value of the alert policy to compare against. For example, if the alert policy is of type `DropletCPUUtilizationPercent` and the value is set to `80`, an alert is triggered if the Droplet's CPU usage exceeds 80% for the specified window.")
@@ -67,13 +67,13 @@ If you'd like to alert on the uptime of a specific URL or IP address, use ` + "`
 	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyEmails, "", nil, "Email address to send alerts to")
 	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyTags, "", nil, "Tags to apply the alert policy to. If set to a tag, all Droplet with that tag are monitored by the alert policy.")
 	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyEntities, "", nil, "Resources to apply the alert against, such as a Droplet ID.")
-	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicySlackChannels, "", nil, "Slack channels to send alerts to.")
-	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicySlackURLs, "", nil, "Slack URLs to send alerts to.")
-	cmdAlertPolicyCreate.Example = `doctl monitoring alert create --type DropletCPUUtilizationPercent --value 80 --window 5m --entities 386734086,191669331 --emails admin@example.com`
+	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicySlackChannels, "", nil, "A Slack channel to send alerts to. For example, `production-alerts`")
+	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicySlackURLs, "", nil, "A Slack webhook URL to send alerts to, for example, `https://hooks.slack.com/services/T1234567/AAAAAAAA/ZZZZZZ`.")
+	cmdAlertPolicyCreate.Example = `The following example creates an alert policy that sends an email to ` + "`" + `admin@example.com` + "`" + ` whenever the memory usage on the listed Droplets (entities) exceeds 80% for more than five minutes: doctl monitoring alert create --type "v1/insights/droplet/memory_utilization_percent" --compare GreaterThan --value 80 --window 5m --entities 386734086,191669331 --emails admin@example.com`
 
 	cmdAlertPolicyUpdate := CmdBuilder(cmd, RunCmdAlertPolicyUpdate, "update <alert-policy-uuid>...", "Update an alert policy", `Use this command to update an existing alert policy.`, Writer)
 	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyDescription, "", "", "A description of the alert policy.")
-	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyType, "", "", "The type of alert policy.")
+	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyType, "", "", "The type of alert policy. For example,`v1/insights/droplet/memory_utilization_percent` alerts on the percent of memory utilization. For a full list of alert types, see https://docs.digitalocean.com/reference/api/api-reference/#operation/monitoring_create_alertPolicy")
 	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyCompare, "", "", "The comparator of the alert policy. Either `GreaterThan` or `LessThan`")
 	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyWindow, "", "5m", "The window to apply the alert policy conditions against.")
 	AddIntFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyValue, "", 0, "The value of the alert policy to compare against.")
@@ -81,8 +81,9 @@ If you'd like to alert on the uptime of a specific URL or IP address, use ` + "`
 	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyEmails, "", nil, "Email addresses to send alerts to")
 	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyTags, "", nil, "Tags to apply the alert against")
 	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyEntities, "", nil, "Resources to apply the policy to")
-	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicySlackChannels, "", nil, "A Slack channel to send alerts to. Must be used with `--slack-url`.")
-	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicySlackURLs, "", nil, "A Slack webhook URL to send alerts to")
+	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicySlackChannels, "", nil, "A Slack channel to send alerts to, for example, `production-alerts`. Must be used with `--slack-url`.")
+	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicySlackURLs, "", nil, "A Slack webhook URL to send alerts to, for example, `https://hooks.slack.com/services/T1234567/AAAAAAAA/ZZZZZZ`.")
+	cmdAlertPolicyUpdate.Example = `The following example updates an alert policy's details: doctl monitoring alert update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --type "v1/insights/droplet/memory_utilization_percent" --compare GreaterThan --value 80 --window 10m --entities 386734086,191669331 --emails admin@example.com`
 
 	AlertPolicyGet := CmdBuilder(cmd, RunCmdAlertPolicyGet, "get <alert-policy-uuid>", "Retrieve information about an alert policy", `Retrieve an alert policy and its configuration.`, Writer,
 		displayerType(&displayers.AlertPolicy{}))
