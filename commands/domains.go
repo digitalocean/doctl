@@ -35,18 +35,22 @@ func Domain() *Command {
 		},
 	}
 
-	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "Add a domain to your account", `Use this command to add a domain to your account.`, Writer,
+	cmdDomainCreate := CmdBuilder(cmd, RunDomainCreate, "create <domain>", "Add a domain to your account", `Adds a domain to your account that you can assign to Droplets, load balancers, and other resources.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Domain{}))
-	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "Creates an A record when an IPv4 address is provided")
+	AddStringFlag(cmdDomainCreate, doctl.ArgIPAddress, "", "", "Creates an A record for a IPv4 address")
+	cmdDomainCreate.Example = `The following command creates a domain named example.com and adds an A record to the domain: doctl compute domain create example.com --ip-address 198.51.100.215`
 
-	CmdBuilder(cmd, RunDomainList, "list", "List all domains on your account", `Use this command to retrieve a list of domains on your account.`, Writer,
+	cmdDomainList := CmdBuilder(cmd, RunDomainList, "list", "List all domains on your account", `Retrieves a list of domains on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Domain{}))
+	cmdDomainList.Example = `The following command lists all domains on your account: doctl compute domain list`
 
-	CmdBuilder(cmd, RunDomainGet, "get <domain>", "Retrieve information about a domain", `Use this command to retrieve information about the specified domain on your account.`, Writer,
+	cmdDomainGet := CmdBuilder(cmd, RunDomainGet, "get <domain>", "Retrieve information about a domain", `Retrieves information about a domain on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Domain{}))
+	cmdDomainGet.Example = `The following command retrieves information about the domain example.com: doctl compute domain get example.com`
 
-	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "Permanently delete a domain from your account", `Use this command to delete a domain from your account. This is irreversible.`, Writer, aliasOpt("d", "rm"))
-	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete domain without confirmation prompt")
+	cmdRunDomainDelete := CmdBuilder(cmd, RunDomainDelete, "delete <domain>", "Permanently delete a domain from your account", `Permanently deletes a domain from your account. You cannot undo this command once done.`, Writer, aliasOpt("d", "rm"))
+	AddBoolFlag(cmdRunDomainDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the domain without a confirmation prompt")
+	cmdRunDomainDelete.Example = `The following command deletes the domain example.com: doctl compute domain delete example.com`
 
 	cmdRecord := &Command{
 		Command: &cobra.Command{
@@ -57,37 +61,43 @@ func Domain() *Command {
 	}
 	cmd.AddCommand(cmdRecord)
 
-	CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "List the DNS records for a domain", `Use this command to list the DNS records for a domain.`, Writer,
+	cmdRecordList := CmdBuilder(cmdRecord, RunRecordList, "list <domain>", "List the DNS records for a domain", `Lists the DNS records for a domain.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.DomainRecord{}))
+	cmdRecordList.Example = `The following command lists the DNS records for the domain example.com. The command also uses the ` + "`" + `--format` + "`" + ` flag to only return each record's ID, type, and TTL: doctl compute domain records list example.com --format ID,Type,TTL`
 
-	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "Create a DNS record", `Use this command to create DNS records for a domain.`, Writer,
+	cmdRecordCreate := CmdBuilder(cmdRecord, RunRecordCreate, "create <domain>", "Create a DNS record", `Create DNS records for a domain.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.DomainRecord{}))
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", "The type of DNS record")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordType, "", "", `The type of DNS record. Valid values are: `+"`"+`A`+"`"+`, `+"`"+`AAAA`+"`"+`, `+"`"+`CAA`+"`"+`, `+"`"+`CNAME`+"`"+`, `+"`"+`MX`+"`"+`, `+"`"+`NS`+"`"+`, `+"`"+`SOA`+"`"+`, `+"`"+`SRV`+"`"+`, and `+"`"+`TXT`+"`"+`.`)
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordName, "", "", "The host name, alias, or service being defined by the record")
-	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "", "Record data; varies depending on record type")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPriority, "", 0, "Record priority")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRecordData, "", "", "The record's data. This value varies depending on record type.")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPriority, "", 0, "The priority for an MX or SRV record")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordPort, "", 0, "The port value for an SRV record")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordTTL, "", 1800, "The record's Time To Live value, in seconds")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordTTL, "", 1800, "The record's Time To Live (TTL) value, in seconds")
 	AddIntFlag(cmdRecordCreate, doctl.ArgRecordWeight, "", 0, "The weight value for an SRV record")
-	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
+	AddIntFlag(cmdRecordCreate, doctl.ArgRecordFlags, "", 0, "The flag value of a CAA record. A valid is an unsigned integer between 0-255.")
 	AddStringFlag(cmdRecordCreate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
 
-	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "Delete a DNS record", `Use this command to delete DNS records for a domain.`, Writer,
+	cmdRecordCreate.Example = `The following command creates an A record for the domain example.com: doctl compute domain records create example.com --record-type A --record-name example.com --record-data 198.51.100.215`
+
+	cmdRunRecordDelete := CmdBuilder(cmdRecord, RunRecordDelete, "delete <domain> <record-id>...", "Delete a DNS record", `Deletes DNS records for a domain.`, Writer,
 		aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete record without confirmation prompt")
+	cmdRunRecordDelete.Example = `The following command deletes a DNS record with the ID ` + "`" + `98858421` + "`" + ` from the domain ` + "`" + `example.com` + "`" + `: doctl compute domain records delete example.com 98858421`
 
-	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "Update a DNS record", `Use this command to update or change DNS records for a domain.`, Writer,
+	cmdRecordUpdate := CmdBuilder(cmdRecord, RunRecordUpdate, "update <domain>", "Update a DNS record", `Updates or changes the properties of DNS records for a domain.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.DomainRecord{}))
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, "", 0, "Record ID")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordID, "", 0, "The record's ID")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordType, "", "", "The type of DNS record")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordName, "", "", "The host name, alias, or service being defined by the record")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "", "Record data; varies depending on record type")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, "", 0, "Record priority")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordData, "", "", "The record's data. This value varies depending on record type.")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPriority, "", 0, "The priority for an MX or SRV record")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordPort, "", 0, "The port value for an SRV record")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 0, "The record's Time To Live value, in seconds")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordTTL, "", 0, "The record's Time To Live (TTL) value, in seconds")
 	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordWeight, "", 0, "The weight value for an SRV record")
-	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "An unsigned integer between 0-255 used for CAA records")
+	AddIntFlag(cmdRecordUpdate, doctl.ArgRecordFlags, "", 0, "The flag value of a CAA record. A valid is an unsigned integer between 0-255.")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRecordTag, "", "", "The parameter tag for CAA records. Valid values are `issue`, `issuewild`, or `iodef`")
+
+	cmdRecordUpdate.Example = `The following command updates the record with the ID ` + "`" + `98858421` + "`" + ` for the domain ` + "`" + `example.com` + "`" + `: doctl compute domain records update example.com --record-id 98858421 --record-name example.com --record-data 198.51.100.215`
 
 	return cmd
 }
