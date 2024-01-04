@@ -37,32 +37,37 @@ and alert you when they're slow, unavailable, or SSL certificates are expiring.`
 		},
 	}
 
-	cmdUptimeChecksCreate := CmdBuilder(cmd, RunUptimeChecksCreate, "create <uptime-check-name>", "Create an uptime check", `Use this command to create an uptime check on your account.
-
-You can use flags to specify the uptime check, target, type, regions, and whether or not the check is enabled.`, Writer,
+	cmdUptimeChecksCreate := CmdBuilder(cmd, RunUptimeChecksCreate, "create <uptime-check-name>", "Create an uptime check", `Creates an uptime check on your account. Uptime checks monitor any endpoint that is accessible over HTTP, HTTPS, ping (ICMP).
+	
+	You can use this check to set up an alert policy using the `+"`"+`doctl monitoring uptime alert`+"`"+` commands.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.UptimeCheck{}))
-	AddStringFlag(cmdUptimeChecksCreate, doctl.ArgUptimeCheckTarget, "", "", "Uptime check target, must be a valid URL", requiredOpt())
-	AddStringFlag(cmdUptimeChecksCreate, doctl.ArgUptimeCheckType, "", "", "Uptime check type, must be one of ping, http, or https. Defaults to either http or https, depending on the URL target provided")
-	AddStringSliceFlag(cmdUptimeChecksCreate, doctl.ArgUptimeCheckRegions, "", []string{"us_east"}, "Uptime check regions, must be a comma-separated list from any of us_east, us_west, eu_west, or se_asia. Defaults to [us_east]")
-	AddBoolFlag(cmdUptimeChecksCreate, doctl.ArgUptimeCheckEnabled, "", true, "Whether or not the uptime check is enabled, defaults to true")
+	AddStringFlag(cmdUptimeChecksCreate, doctl.ArgUptimeCheckTarget, "", "", "A valid URL to monitor", requiredOpt())
+	AddStringFlag(cmdUptimeChecksCreate, doctl.ArgUptimeCheckType, "", "", "The protocol to use to monitor the target URL. Possible values: `ping`, `http`, `https`. Defaults to either `http` or `https`, depending on the URL target provided")
+	AddStringSliceFlag(cmdUptimeChecksCreate, doctl.ArgUptimeCheckRegions, "", []string{"us_east"}, "A comma-separated list of regions to monitor the target from. Possible values: `us_east`, `us_west`, `eu_west`, `se_asia`. Defaults to `us_east`")
+	AddBoolFlag(cmdUptimeChecksCreate, doctl.ArgUptimeCheckEnabled, "", true, "Whether or not the uptime check is enabled. Defaults to true")
+	cmdUptimeChecksCreate.Example = `The following example creates an uptime check that monitors the URL, ` + "`" + `example.com` + "`" + ` from the eastern and western regions of the Unites States: doctl monitoring uptime create --target https://example.com --type https --regions us_east,us_west --enabled true`
 
-	CmdBuilder(cmd, RunUptimeChecksGet, "get <uptime-check-id>", "Get an uptime check", `Use this command to get an uptime check on your account by ID.`, Writer,
+	cmdUptimeChecksGet := CmdBuilder(cmd, RunUptimeChecksGet, "get <uptime-check-id>", "Get an uptime check", `Retrieves information about an uptime check on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.UptimeCheck{}))
+	cmdUptimeChecksGet.Example = `The following example retrieves the ID, name, and target of an uptime check: doctl monitoring uptime get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	CmdBuilder(cmd, RunUptimeChecksList, "list", "List uptime checks", `Use this command to list all of the uptime checks on your account.`, Writer,
+	cmdUptimeChecksList := CmdBuilder(cmd, RunUptimeChecksList, "list", "List uptime checks", `Retrieves a list of all of the uptime checks on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.UptimeCheck{}))
+	cmdUptimeChecksList.Example = `The following example retrieves a list of all of the uptime checks on your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, name, and target of each check: doctl monitoring uptime list --format ID,Name,Target`
 
-	cmdUptimeCheckUpdate := CmdBuilder(cmd, RunUptimeChecksUpdate, "update <uptime-check-id>", "Update an uptime check", `Use this command to update an uptime check on your account.
+	cmdUptimeCheckUpdate := CmdBuilder(cmd, RunUptimeChecksUpdate, "update <uptime-check-id>", "Update an uptime check", `Updates an uptime check on your account.
 
-You can use flags to specify an updated uptime check name, target, type, and regions. All of these flags are required. An uptime check cannot be disabled via doctl, you must do so through the Cloud control panel or through the public API directly`, Writer,
+All of these flags are required. Uptime checks cannot be disabled via `+"`"+`doctl`+"`"+`. You can only disable them using the control panel or the public API.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.UptimeCheck{}))
-	AddStringFlag(cmdUptimeCheckUpdate, doctl.ArgUptimeCheckName, "", "", "Uptime check name", requiredOpt())
-	AddStringFlag(cmdUptimeCheckUpdate, doctl.ArgUptimeCheckTarget, "", "", "Uptime check target, must be a valid URL", requiredOpt())
-	AddStringFlag(cmdUptimeCheckUpdate, doctl.ArgUptimeCheckType, "", "", "Uptime check type, must be one of ping, http, or https", requiredOpt())
-	AddStringSliceFlag(cmdUptimeCheckUpdate, doctl.ArgUptimeCheckRegions, "", []string{"us_east"}, "Uptime check regions, must be a comma-separated list from any of us_east, us_west, eu_west, or se_asia", requiredOpt())
+	AddStringFlag(cmdUptimeCheckUpdate, doctl.ArgUptimeCheckName, "", "", "A name for the check", requiredOpt())
+	AddStringFlag(cmdUptimeCheckUpdate, doctl.ArgUptimeCheckTarget, "", "", "A valid URL to monitor", requiredOpt())
+	AddStringFlag(cmdUptimeCheckUpdate, doctl.ArgUptimeCheckType, "", "", "The protocol to use to monitor the target URL. Possible values: `ping`, `http`, `https`. Defaults to either `http` or `https`, depending on the URL target provided", requiredOpt())
+	AddStringSliceFlag(cmdUptimeCheckUpdate, doctl.ArgUptimeCheckRegions, "", []string{"us_east"}, "A comma-separated list of regions to monitor the target from. Possible values: `us_east`, `us_west`, `eu_west`, `se_asia`. Defaults to `us_east`", requiredOpt())
+	cmdUptimeCheckUpdate.Example = `The following example updates the name, target, type, and regions of an uptime check: doctl monitoring uptime update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name example --target https://example.com --type https --regions us_east,us_west`
 
-	CmdBuilder(cmd, RunUptimeChecksDelete, "delete <uptime-check-id>", "Delete an uptime check", `Use this command to delete an uptime check on your account by ID.`, Writer,
+	cmdUptimeChecksDelete := CmdBuilder(cmd, RunUptimeChecksDelete, "delete <uptime-check-id>", "Delete an uptime check", `Deletes an uptime check on your account.`, Writer,
 		aliasOpt("d", "del", "rm"))
+	cmdUptimeChecksDelete.Example = `The following example deletes an uptime check with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl monitoring uptime delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmd.AddCommand(UptimeAlert())
 
