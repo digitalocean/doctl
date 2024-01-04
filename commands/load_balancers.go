@@ -62,9 +62,9 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgRegionSlug, "", "",
 		"The load balancer's region, for example: `nyc1`", requiredOpt())
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgSizeSlug, "", "",
-		fmt.Sprintf("DEPRECATED. A slug indicating the load balancer's, size, for example: `lb-small`. This flag is not compatible with the `--size-unit` flag. You can only use one or the other.", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
+		fmt.Sprintf("DEPRECATED. A slug indicating the load balancer's, size, for example: `lb-small`. This flag is not compatible with the `--size-unit` flag. You can only use one or the other."))
 	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgSizeUnit, "", 0,
-		fmt.Sprintf("The number of nodes to add to the load balancer, for example: 3. This flag is not compatible with the `--size-unit` flag. You can only use one or the other.", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
+		fmt.Sprintf("The number of nodes to add to the load balancer, for example: 3. This flag is not compatible with the `--size-unit` flag. You can only use one or the other."))
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in. If not specified, the load balancer is placed in the default VPC for the region.")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "DEPRECATED. You can no longer specify an algorithm for load balancers.")
@@ -102,9 +102,9 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdRecordUpdate, doctl.ArgRegionSlug, "", "",
 		"The load balancer's region, for example: `nyc1`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgSizeSlug, "", "",
-		fmt.Sprintf("DEPRECATED. A slug indicating the load balancer's, size, for example: `lb-small`. This flag is not compatible with the `--size-unit` flag. You can only use one or the other.", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
+		fmt.Sprintf("DEPRECATED. A slug indicating the load balancer's, size, for example: `lb-small`. This flag is not compatible with the `--size-unit` flag. You can only use one or the other."))
 	AddIntFlag(cmdRecordUpdate, doctl.ArgSizeUnit, "", 0,
-		fmt.Sprintf("The number of nodes to add to the load balancer, for example: 3. This flag is not compatible with the `--size-unit` flag. You can only use one or the other", doctl.ArgSizeUnit, doctl.ArgSizeSlug))
+		fmt.Sprintf("The number of nodes to add to the load balancer, for example: 3. This flag is not compatible with the `--size-unit` flag. You can only use one or the other"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCUUID, "", "", "The UUID of the VPC to create the load balancer in")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerAlgorithm, "",
 		"round_robin", "DEPRECATED. You can no longer specify an algorithm for load balancers.")
