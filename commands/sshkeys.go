@@ -33,39 +33,52 @@ func SSHKeys() *Command {
 			Short:   "Display commands to manage SSH keys on your account",
 			Long: `The sub-commands of ` + "`" + `doctl compute ssh-key` + "`" + ` manage the SSH keys on your account.
 
-DigitalOcean allows you to add SSH public keys to the interface so that you can embed your public key into a Droplet at the time of creation. Only the public key is required to take advantage of this functionality. Note that this command does not add, delete, or otherwise modify any ssh keys that may be on existing Droplets.`,
+DigitalOcean allows you to add SSH public keys to the interface so that you can embed your public key into a Droplet at the time of creation. Only the public key is required to take advantage of this functionality. Note that this command does not add, delete, or otherwise modify any SSH keys that may be on existing Droplets.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunKeyList, "list", "List all SSH keys on your account", `Use this command to list the id, fingerprint, public_key, and name of all SSH keys on your account.`, Writer,
+	cmdKeyList := CmdBuilder(cmd, RunKeyList, "list", "List all SSH keys on your account", `Retrieves a list of SSH keys associated with your account and their details, such as their IDs, fingerprints, public keys, and names.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Key{}))
+	cmdKeyList.Example = `The following example lists all SSH keys on your account and use the ` + "`" + `--format` + "`" + ` flag to return only the ID and name of each key: doctl compute ssh-key list --format ID,Name`
 
-	CmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "Retrieve information about an SSH key on your account", `Use this command to get the id, fingerprint, public_key, and name of a specific SSH key on your account.`, Writer,
+	cmdKeyGet := CmdBuilder(cmd, RunKeyGet, "get <key-id|key-fingerprint>", "Retrieve information about an SSH key on your account", `Retrieves the ID, fingerprint, public key, and name of a specific SSH key on your account.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.Key{}))
+	cmdKeyGet.Example = `The following example retrieves information about the SSH key with the ID ` + "`" + `386734086` + "`" + `: doctl compute ssh-key get 386734086`
 
-	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "Create a new SSH key on your account", `Use this command to add a new SSH key to your account.
+	cmdSSHKeysCreate := CmdBuilder(cmd, RunKeyCreate, "create <key-name>", "Adds a new SSH key on your account", `Adds a new SSH key to your account. 
+
+Before adding a key to your account, you must create a public and private key pair on your local machine using your preferred SSH client. Once you have created the key pair, you can add the public key to your DigitalOcean account so that you can embed your public key into a Droplet at the time of creation.
 
 Specify a `+"`"+`<key-name>`+"`"+` for the key, and set the `+"`"+`--public-key`+"`"+` flag to a string with the contents of the key.
 
-Note that creating a key will not add it to any Droplets.`, Writer,
+Adding a key to your account does not automatically add it to any Droplets. To add SSH keys to Droplets at Droplet creation time, using the `+"`"+`--ssh-keys <ssh-key-id>`+"`"+` flag with the `+"`"+`doctl compute droplet create`+"`"+` command.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Key{}))
-	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "", "Key contents", requiredOpt())
+	AddStringFlag(cmdSSHKeysCreate, doctl.ArgKeyPublicKey, "", "", "The content's of the public key", requiredOpt())
+	cmdSSHKeysCreate.Example = `The following example adds a new SSH key to your account with the name ` + "`" + `example-key` + "`" + `: doctl compute ssh-key create example-key --public-key="ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAklOUpkDHrfHY17SbrmTIpNLTGK9Tjom/BWDSU
+	GPl+nafzlHDTYW7hdI4yZ5ew18JH4JW9jbhUFrviQzM7xlELEVf4h9lFX5QVkbPppSwg0cda3
+	Pbv7kOdJ/MTyBlWXFCR+HAo3FXRitBqxiX1nKhXpHAZsMciLq8V6RjsNAQwdsdMFvSlVK/7XA
+	t3FaoJoAsncM1Q9x5+3V0Ww68/eIFmb1zuUFljQJKprrX88XypNDvjYNby6vw/Pb0rwert/En
+	mZ+AW4OZPnTPI89ZPmVMLuayrD2cE86Z/il8b+gw3r3+1nKatmIkjn2so1d01QraTlMqVSsbx
+	NrRFi9wrf+M7Q== user@mylaptop.local"`
 
-	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "Import an SSH key from your computer to your account", `Use this command to add a new SSH key to your account, using a local public key file.
+	cmdSSHKeysImport := CmdBuilder(cmd, RunKeyImport, "import <key-name>", "Imports an SSH key from your computer to your account", `Imports a new SSH key to your account using a local public key file.
 
-Note that importing a key to your account will not add it to any Droplets`, Writer,
+Adding a key to your account does not automatically add it to any Droplets. To add SSH keys to Droplets at Droplet creation time, using the `+"`"+`--ssh-keys <ssh-key-id>`+"`"+` flag with the `+"`"+`doctl compute droplet create`+"`"+` command.`, Writer,
 		aliasOpt("i"), displayerType(&displayers.Key{}))
-	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "Public key file", requiredOpt())
+	AddStringFlag(cmdSSHKeysImport, doctl.ArgKeyPublicKeyFile, "", "", "A path to a public key file, such as `path/to/public-key.pub", requiredOpt())
+	cmdSSHKeysImport.Example = `The following example imports a new SSH key into your account with the name ` + "`" + `example-key` + "`" + `: doctl compute ssh-key import example-key --public-key-file example-key.pub`
 
-	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "Permanently delete an SSH key from your account", `Use this command to permanently delete an SSH key from your account.
+	cmdRunKeyDelete := CmdBuilder(cmd, RunKeyDelete, "delete <key-id|key-fingerprint>", "Permanently delete an SSH key from your account", `Permanently deletes an SSH key from your account.
 
-Note that this does not delete an SSH key from any Droplets.`, Writer,
+This does not delete an SSH key from any Droplets and you can re-add the key to your account at anytime if you still have a copy of the public and private keys.`, Writer,
 		aliasOpt("d", "rm"))
-	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the key without a confirmation prompt")
+	AddBoolFlag(cmdRunKeyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the key without a confirmation prompt")
+	cmdRunKeyDelete.Example = `The following example deletes the SSH key with the ID ` + "`" + `386734086` + "`" + `: doctl compute ssh-key delete 386734086`
 
-	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "Update an SSH key's name", `Use this command to update the name of an SSH key.`, Writer,
+	cmdSSHKeysUpdate := CmdBuilder(cmd, RunKeyUpdate, "update <key-id|key-fingerprint>", "Update an SSH key's name", `Updates the name of an SSH key.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.Key{}))
 	AddStringFlag(cmdSSHKeysUpdate, doctl.ArgKeyName, "", "", "Key name", requiredOpt())
+	cmdSSHKeysUpdate.Example = `The following example updates the name of the SSH key with the ID ` + "`" + `386734086` + "`" + ` to ` + "`" + `new-key-name` + "`" + `: doctl compute ssh-key update 386734086 --key-name new-key-name`
 
 	return cmd
 }
