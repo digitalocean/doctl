@@ -29,8 +29,6 @@ import (
 
 var (
 	sshHostRE = regexp.MustCompile(`^((?P<m1>\w+)@)?(?P<m2>.*?)(:(?P<m3>\d+))?$`)
-	// number of retrys to attempt to successfully SSH into droplet
-	retries = 15
 )
 
 // SSH creates the ssh commands hierarchy
