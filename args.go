@@ -98,8 +98,6 @@ const (
 	ArgCommandUpsert = "upsert"
 	// ArgCommandWait is a wait for a resource to be created argument.
 	ArgCommandWait = "wait"
-	// ArgCommandRetry is a retry for an action to be successful argument.
-	ArgCommandRetry = "retry"
 	// ArgSetCurrentContext is a flag to set the new kubeconfig context as current.
 	ArgSetCurrentContext = "set-current-context"
 	// ArgDropletID is a droplet id argument.
