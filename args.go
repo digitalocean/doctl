@@ -190,6 +190,8 @@ const (
 	ArgsSSHPrivateIP = "ssh-private-ip"
 	// ArgSSHCommand is a ssh argument.
 	ArgSSHCommand = "ssh-command"
+	// ArgSSHRetryMax is a ssh argument.
+	ArgSSHRetryMax = "ssh-retry-max"
 	// ArgUserData is a user data argument.
 	ArgUserData = "user-data"
 	// ArgUserDataFile is a user data file location argument.

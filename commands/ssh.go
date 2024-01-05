@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -53,7 +52,7 @@ You may specify the user to login with by passing the `+"`"+`--%s`+"`"+` flag. T
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, "", false, "Enable SSH agent forwarding")
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, "", false, "SSH to Droplet's private IP address")
 	AddStringFlag(cmdSSH, doctl.ArgSSHCommand, "", "", "Command to execute on Droplet")
-	AddBoolFlag(cmdSSH, doctl.ArgCommandRetry, "", false, "Retry for a successful SSH connection with Droplet")
+	AddIntFlag(cmdSSH, doctl.ArgSSHRetryMax, "", 0, "Max number of retries for a successful SSH connection to a Droplet (default is 0)")
 
 	return cmdSSH
 }
@@ -92,6 +91,11 @@ func RunSSH(c *CmdConfig) error {
 	}
 
 	opts[doctl.ArgSSHCommand], err = c.Doit.GetString(c.NS, doctl.ArgSSHCommand)
+	if err != nil {
+		return nil
+	}
+
+	opts[doctl.ArgSSHRetryMax], err = c.Doit.GetInt(c.NS, doctl.ArgSSHRetryMax)
 	if err != nil {
 		return nil
 	}
@@ -160,32 +164,7 @@ func RunSSH(c *CmdConfig) error {
 		return errors.New("Could not find Droplet address")
 	}
 
-	retry, err := c.Doit.GetBool(c.NS, doctl.ArgCommandRetry)
-	if err != nil {
-		return err
-	}
-
 	runner := c.Doit.SSH(user, ip, keyPath, port, opts)
-
-	if retry {
-		// runner returns err if fails, returns nil if successful
-		err = runner.Run()
-
-		attempts := 1
-		if err != nil {
-			for attempts <= retries {
-				err = runner.Run()
-				// if err is nil, ssh was successful. Breaks loop.
-				if err == nil {
-					return err
-				}
-				fmt.Println("Retrying ssh...")
-				time.Sleep(1 * time.Second)
-				attempts++
-			}
-		}
-	}
-
 	return runner.Run()
 }
 
