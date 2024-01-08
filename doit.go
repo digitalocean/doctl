@@ -320,6 +320,7 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 		Port:            port,
 		AgentForwarding: opts[ArgsSSHAgentForwarding].(bool),
 		Command:         opts[ArgSSHCommand].(string),
+		RetriesMax:      opts[ArgSSHRetryMax].(int),
 	}
 }
 
