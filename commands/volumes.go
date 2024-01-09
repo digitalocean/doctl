@@ -39,37 +39,44 @@ Volumes function as raw block devices, meaning they appear to the operating syst
 		},
 	}
 
-	cmdRunVolumeList := CmdBuilder(cmd, RunVolumeList, "list", "List block storage volumes by ID", `Use this command to list all of the block storage volumes on your account.`, Writer,
+	cmdRunVolumeList := CmdBuilder(cmd, RunVolumeList, "list", "List block storage volumes by ID", `Lists all of the block storage volumes on your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Volume{}))
-	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "", "Volume region")
+	AddStringFlag(cmdRunVolumeList, doctl.ArgRegionSlug, "", "", "Filter's volumes by the specified region")
+	cmdRunVolumeList.Example = `The following example retrieves a list of volumes on your account in the ` + "`" + `nyc1` + "`" + ` region. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the name and size of each volume: doctl compute volume list --region nyc1 --format Name,Size`
 
-	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create <volume-name>", "Create a block storage volume", `Use this command to create a block storage volume on your account.
+	cmdVolumeCreate := CmdBuilder(cmd, RunVolumeCreate, "create <volume-name>", "Create a block storage volume", `Creates a block storage volume on your account.
 
-You can use flags to specify the volume size, region, description, filesystem type, tags, and to create a volume from an existing volume snapshot.`, Writer,
+You can use flags to specify the volume size, region, description, filesystem type, tags, and to create a volume from an existing volume snapshot.
+
+Use the `+"`"+`doctl compute volume-action attach <volume-id> <droplet-id>`+"`"+` command to attach a new volume to a Droplet.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.Volume{}))
 	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSize, "", "4TiB", "Volume size",
 		requiredOpt())
-	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeDesc, "", "", "Volume description")
-	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "Volume region; should not be specified with a snapshot")
-	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSnapshot, "", "", "Volume snapshot; should not be specified with a region")
-	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemType, "", "", "Volume filesystem type (ext4 or xfs)")
-	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "Volume filesystem label")
-	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "Tags to apply to the volume; comma separate or repeat `--tag` to add multiple tags at once")
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeDesc, "", "", "A description of the volume")
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeRegion, "", "", "The volume's region. Not compatible with the `--snapshot` flag")
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeSnapshot, "", "", "Creates a volume from the specified snapshot ID. Not compatible with the `--region` flag")
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemType, "", "", "The volume's filesystem type: ext4 or xfs. If not specified, the volume is left unformatted")
+	AddStringFlag(cmdVolumeCreate, doctl.ArgVolumeFilesystemLabel, "", "", "The volume's filesystem label")
+	AddStringSliceFlag(cmdVolumeCreate, doctl.ArgTag, "", []string{}, "A comma-separated list of tags to apply to the volume. For example, `--tag frontend` or `--tag frontend,backend`")
+	cmdVolumeCreate.Example = `The following example creates a 4TiB volume named ` + "`" + `example-volume` + "`" + ` in the ` + "`" + `nyc1` + "`" + ` region. The command also applies two tags to the volume: doctl compute volume create example-volume --region nyc1 --size 4TiB --tag frontend,backend`
 
-	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "Delete a block storage volume", `Use this command to delete a block storage volume by ID, destroying all of its data and removing it from your account.`, Writer,
+	cmdRunVolumeDelete := CmdBuilder(cmd, RunVolumeDelete, "delete <volume-id>", "Delete a block storage volume", `Deletes a block storage volume by ID, destroying all of its data and removing it from your account. This is irreversible.`, Writer,
 		aliasOpt("d", "rm"))
-	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Force volume delete")
+	AddBoolFlag(cmdRunVolumeDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the volume without prompting for confirmation")
+	cmdRunVolumeDelete.Example = `The following example deletes a volume with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute volume delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing block storage volume", `Use this command to retrieve information about a block storage volume using its ID.`, Writer, aliasOpt("g"),
+	cmdVolumeGet := CmdBuilder(cmd, RunVolumeGet, "get <volume-id>", "Retrieve an existing block storage volume", `Retrieves information about a block storage volume.`, Writer, aliasOpt("g"),
 		displayerType(&displayers.Volume{}))
+	cmdVolumeGet.Example = `The following example retrieves information about a volume with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute volume get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdRunVolumeSnapshot := CmdBuilder(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "Create a block storage volume snapshot", `Use this command to create a snapshot of a block storage volume by ID.
+	cmdRunVolumeSnapshot := CmdBuilder(cmd, RunVolumeSnapshot, "snapshot <volume-id>", "Create a block storage volume snapshot", `Creates a snapshot of a block storage volume by ID.
 
 You can use a block storage volume snapshot ID as a flag with `+"`"+`doctl volume create`+"`"+` to create a new block storage volume with the same data as the volume the snapshot was taken from.`, Writer,
 		aliasOpt("s"), displayerType(&displayers.Volume{}))
-	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "Snapshot name", requiredOpt())
-	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "Snapshot description")
-	AddStringSliceFlag(cmdRunVolumeSnapshot, doctl.ArgTag, "", []string{}, "Tags to apply to the snapshot; comma separate or repeat `--tag` to add multiple tags at once")
+	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotName, "", "", "The snapshot name", requiredOpt())
+	AddStringFlag(cmdRunVolumeSnapshot, doctl.ArgSnapshotDesc, "", "", "A description of the snapshot")
+	AddStringSliceFlag(cmdRunVolumeSnapshot, doctl.ArgTag, "", []string{}, "A comma-separate list of tags to apply to the snapshot. For example, `--tag frontend` or `--tag frontend,backend`")
+	cmdRunVolumeSnapshot.Example = `The following example creates a snapshot of a volume with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute volume snapshot f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --snapshot-name example-snapshot --tag frontend,backend`
 
 	return cmd
 
