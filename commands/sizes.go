@@ -28,13 +28,13 @@ func Size() *Command {
 		},
 	}
 
-	sizeDesc := `List the slug identifier, RAM, VCPU count, disk size, and pricing details for each Droplet size.
+	sizeDesc := `Retrieves a list of slug identifiers, RAM amounts, vCPU counts, disk sizes, and pricing details for each Droplet size.
 
-Use the slugs displayed by this command to specify the type of Droplet in other commands.
+Use these slugs to specify the size of Droplet in other commands, such as ` + "`" + `doctl compute droplet create <droplet-name> --size <size-slug>` + "`" + `.
 `
-	CmdBuilder(cmd, RunSizeList, "list", "List available Droplet sizes", sizeDesc,
+	cmdSizeList := CmdBuilder(cmd, RunSizeList, "list", "List available Droplet sizes", sizeDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Size{}))
-
+	cmdSizeList.Example = "The following example retrieves a list of Droplet sizes and uses the --format flag to return only the slug for each size and its monthly price: doctl compute size list --format Slug,PriceMonthly"
 	return cmd
 }
 
