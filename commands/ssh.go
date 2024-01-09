@@ -50,6 +50,7 @@ You may specify the user to login with by passing the `+"`"+`--%s`+"`"+` flag. T
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, "", false, "Enable SSH agent forwarding")
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, "", false, "SSH to Droplet's private IP address")
 	AddStringFlag(cmdSSH, doctl.ArgSSHCommand, "", "", "Command to execute on Droplet")
+	AddIntFlag(cmdSSH, doctl.ArgSSHRetryMax, "", 0, "Max number of retries for a successful SSH connection to a Droplet (default is 0)")
 
 	return cmdSSH
 }
@@ -88,6 +89,11 @@ func RunSSH(c *CmdConfig) error {
 	}
 
 	opts[doctl.ArgSSHCommand], err = c.Doit.GetString(c.NS, doctl.ArgSSHCommand)
+	if err != nil {
+		return nil
+	}
+
+	opts[doctl.ArgSSHRetryMax], err = c.Doit.GetInt(c.NS, doctl.ArgSSHRetryMax)
 	if err != nil {
 		return nil
 	}
