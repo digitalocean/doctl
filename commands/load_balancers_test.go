@@ -209,6 +209,123 @@ func TestLoadBalancerUpdateNoID(t *testing.T) {
 	})
 }
 
+func TestLoadBalancerUpdateNoFirewallFlags(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
+		timeout := uint64(120)
+		r := godo.LoadBalancerRequest{
+			Name:       "lb-name",
+			Region:     "nyc1",
+			DropletIDs: []int{1, 2},
+			SizeUnit:   4,
+			StickySessions: &godo.StickySessions{
+				Type:             "cookies",
+				CookieName:       "DO-LB",
+				CookieTtlSeconds: 5,
+			},
+			HealthCheck: &godo.HealthCheck{
+				Protocol:               "http",
+				Port:                   80,
+				CheckIntervalSeconds:   4,
+				ResponseTimeoutSeconds: 23,
+				HealthyThreshold:       5,
+				UnhealthyThreshold:     10,
+			},
+			ForwardingRules: []godo.ForwardingRule{
+				{
+					EntryProtocol:  "http",
+					EntryPort:      80,
+					TargetProtocol: "http",
+					TargetPort:     80,
+				},
+			},
+			ProjectID:              "project-id-uuid",
+			HTTPIdleTimeoutSeconds: &timeout,
+			Firewall:               nil,
+		}
+		disableLetsEncryptDNSRecords := true
+		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
+		tm.loadBalancers.EXPECT().Update(lbID, &r).Return(&testLoadBalancer, nil)
+
+		config.Args = append(config.Args, lbID)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "")
+		config.Doit.Set(config.NS, doctl.ArgSizeUnit, 4)
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
+		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
+		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
+		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,check_interval_seconds:4,response_timeout_seconds:23,healthy_threshold:5,unhealthy_threshold:10")
+		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80")
+		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
+		config.Doit.Set(config.NS, doctl.ArgProjectID, "project-id-uuid")
+		config.Doit.Set(config.NS, doctl.ArgHTTPIdleTimeoutSeconds, 120)
+
+		err := RunLoadBalancerUpdate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestLoadBalancerUpdateEmptyFirewallFlags(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
+		timeout := uint64(120)
+		r := godo.LoadBalancerRequest{
+			Name:       "lb-name",
+			Region:     "nyc1",
+			DropletIDs: []int{1, 2},
+			SizeUnit:   4,
+			StickySessions: &godo.StickySessions{
+				Type:             "cookies",
+				CookieName:       "DO-LB",
+				CookieTtlSeconds: 5,
+			},
+			HealthCheck: &godo.HealthCheck{
+				Protocol:               "http",
+				Port:                   80,
+				CheckIntervalSeconds:   4,
+				ResponseTimeoutSeconds: 23,
+				HealthyThreshold:       5,
+				UnhealthyThreshold:     10,
+			},
+			ForwardingRules: []godo.ForwardingRule{
+				{
+					EntryProtocol:  "http",
+					EntryPort:      80,
+					TargetProtocol: "http",
+					TargetPort:     80,
+				},
+			},
+			ProjectID:              "project-id-uuid",
+			HTTPIdleTimeoutSeconds: &timeout,
+			Firewall: &godo.LBFirewall{
+				Deny:  []string{},
+				Allow: []string{},
+			},
+		}
+		disableLetsEncryptDNSRecords := true
+		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
+		tm.loadBalancers.EXPECT().Update(lbID, &r).Return(&testLoadBalancer, nil)
+
+		config.Args = append(config.Args, lbID)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "nyc1")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "")
+		config.Doit.Set(config.NS, doctl.ArgSizeUnit, 4)
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
+		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
+		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:cookies,cookie_name:DO-LB,cookie_ttl_seconds:5")
+		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,check_interval_seconds:4,response_timeout_seconds:23,healthy_threshold:5,unhealthy_threshold:10")
+		config.Doit.Set(config.NS, doctl.ArgForwardingRules, "entry_protocol:http,entry_port:80,target_protocol:http,target_port:80")
+		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
+		config.Doit.Set(config.NS, doctl.ArgProjectID, "project-id-uuid")
+		config.Doit.Set(config.NS, doctl.ArgHTTPIdleTimeoutSeconds, 120)
+		config.Doit.Set(config.NS, doctl.ArgDenyList, []string{})
+		config.Doit.Set(config.NS, doctl.ArgAllowList, []string{})
+
+		err := RunLoadBalancerUpdate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestLoadBalancerDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
