@@ -32,9 +32,9 @@ func Region() *Command {
 
 Use the slugs displayed by this command to specify regions in other commands.
 `
-	CmdBuilder(cmd, RunRegionList, "list", "List datacenter regions", regionDesc,
+	cmdRegionList := CmdBuilder(cmd, RunRegionList, "list", "Retrieves a list of datacenter regions", regionDesc,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Region{}))
-
+	cmdRegionList.Example = "The following example retrieves a list of regions and uses the --format flag to return only the slug for each region: doctl compute region list --format Slug"
 	return cmd
 }
 
