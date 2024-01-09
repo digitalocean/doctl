@@ -219,6 +219,7 @@ type Config interface {
 	GetInt(ns, key string) (int, error)
 	GetIntPtr(ns, key string) (*int, error)
 	GetStringSlice(ns, key string) ([]string, error)
+	GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error)
 	GetStringMapString(ns, key string) (map[string]string, error)
 	GetDuration(ns, key string) (time.Duration, error)
 }
@@ -426,6 +427,15 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	return out, nil
 }
 
+// GetStringSliceIsFlagSet returns a config value as a string slice and a bool representing the existence of the flag.
+func (c *LiveConfig) GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error) {
+	if !c.IsSet(key) {
+		return nil, false, nil
+	}
+	strSlice, err := c.GetStringSlice(ns, key)
+	return strSlice, true, err
+}
+
 // GetStringMapString returns a config value as a string to string map.
 func (c *LiveConfig) GetStringMapString(ns, key string) (map[string]string, error) {
 	nskey := nskey(ns, key)
@@ -560,6 +570,17 @@ func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
 func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
 	nskey := nskey(ns, key)
 	return c.v.GetStringSlice(nskey), nil
+}
+
+// GetStringSliceIsFlagSet returns the string slice value for the key in the given
+// namespace and a bool representing the existence of the flag. Because this is a mock implementation,
+// and error will never be returned.
+func (c *TestConfig) GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error) {
+	nskey := nskey(ns, key)
+	if !c.v.IsSet(nskey) {
+		return nil, false, nil
+	}
+	return c.v.GetStringSlice(nskey), true, nil
 }
 
 // GetStringMapString returns the string-to-string value for the key in the
