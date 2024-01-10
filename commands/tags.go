@@ -33,6 +33,8 @@ func Tags() *Command {
 
 Tags are labels that you can apply to resources to better organize them and more efficiently take actions on them. For example, if you have a group of Droplets that you want to place behind the same set of cloud firewall rules, you can tag those Droplets with a common tag and then apply the firewall rules to all Droplets with that tag.
 
+You can tag Droplets, images, volumes, volume snapshots, and database clusters.
+
 Tags have two attributes: a user defined name attribute and an embedded
 resources attribute with information about resources that have been tagged.`,
 		},
@@ -54,7 +56,9 @@ Deleting a tag also removes the tag from all the resources that had been tagged 
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete tag without confirmation prompt")
 	cmdRunTagDelete.Example = `The following example deletes the tag named ` + "`" + `web` + "`" + `: doctl compute tag delete web`
 
-	cmdApplyTag := CmdBuilder(cmd, RunCmdApplyTag, "apply <tag-name> --resource=<urn> [--resource=<urn> ...]", "Apply a tag to resources", `Tag one or more resources. Resources must be specified as Uniform Resource Names (URNs) and has the following syntax: `+"`"+`do:<resource_type>:<identifier>`+"`"+`.`, Writer)
+	cmdApplyTag := CmdBuilder(cmd, RunCmdApplyTag, "apply <tag-name> --resource=<urn> [--resource=<urn> ...]", "Apply a tag to resources", `Tag one or more resources. You can tag Droplets, images, volumes, volume snapshots, and database clusters.
+	
+Resources must be specified as Uniform Resource Names (URNs) and has the following syntax: `+"`"+`do:<resource_type>:<identifier>`+"`"+`.`, Writer)
 	AddStringSliceFlag(cmdApplyTag, doctl.ArgResourceType, "", []string{}, "The resource to tag in URN format", requiredOpt())
 	cmdApplyTag.Example = `The following example tags two Droplet with the tag named ` + "`" + `web` + "`" + `: doctl compute tag apply web --resource=do:droplet:386734086,do:droplet:191669331`
 
