@@ -164,7 +164,7 @@ func Repository() *Command {
 		Writer, aliasOpt("ls"), displayerType(&displayers.Repository{}),
 		hiddenCmd(),
 	)
-	cmdListRepositories.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the digest and update time of each repository: doctl registry repository list example-registry --format Digest,UpdatedAt`
+	cmdListRepositories.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the name and update time of each repository: doctl registry repository list example-registry --format Name,UpdatedAt`
 
 	listRepositoriesV2Desc := `Retrieves information about repositories in a registry, including:
   - The repository name
@@ -180,7 +180,7 @@ func Repository() *Command {
 		"List repositories for a container registry", listRepositoriesV2Desc,
 		Writer, aliasOpt("ls2"), displayerType(&displayers.Repository{}),
 	)
-	cmdListRepositoriesV2.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the digest and update time of each repository: doctl registry repository list-v2 example-registry --format Digest,UpdatedAt`
+	cmdListRepositoriesV2.Example = `The following example lists repositories in a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the name and update time of each repository: doctl registry repository list-v2 example-registry --format Name,UpdatedAt`
 
 	listRepositoryTagsDesc := `Retrieves information about tags in a repository, including:
   - The tag name
