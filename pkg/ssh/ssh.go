@@ -34,6 +34,7 @@ type Runner struct {
 	Port            int
 	AgentForwarding bool
 	Command         string
+	RetriesMax      int
 }
 
 var _ runner.Runner = &Runner{}
@@ -61,6 +62,11 @@ func (r *Runner) Run() error {
 	args = append(args, sshHost)
 	if r.Command != "" {
 		args = append(args, r.Command)
+	}
+
+	if r.RetriesMax > 0 {
+		connAttemptsOpt := fmt.Sprintf("ConnectionAttempts=%d", r.RetriesMax)
+		args = append(args, "-o", connAttemptsOpt)
 	}
 
 	cmd := exec.Command("ssh", args...)
