@@ -30,53 +30,60 @@ func VPCs() *Command {
 		Command: &cobra.Command{
 			Use:   "vpcs",
 			Short: "Display commands that manage VPCs",
-			Long: `The commands under ` + "`" + `doctl vpcs` + "`" + ` are for managing your VPCs.
+			Long: `The commands under ` + "`" + `doctl vpcs` + "`" + ` are for managing your VPC networks.
 
-With the vpcs command, you can list, create, or delete VPCs, and manage their configuration details.`,
+With the VPC commands, you can list, create, or delete VPCs, and manage their configuration details.`,
 			GroupID: manageResourcesGroup,
 		},
 	}
 
 	vpcDetail := `
 
-- The VPC's ID
-- The uniform resource name (URN) for the VPC
-- The VPC's name
-- The VPC's description
-- The range of IP addresses in the VPC in CIDR notation
-- The datacenter region slug the VPC is located in
-- The VPC's default boolean value indicating whether or not the VPC is the default one for the region
-- The VPC's creation date, in ISO8601 combined date and time format
+- The VPC network's ID
+- The uniform resource name (URN) for the VPC network
+- The VPC network's name
+- The VPC network's description
+- The range of IP addresses in the VPC network, in CIDR notation
+- The datacenter region slug the VPC network is located in
+- The VPC network's default boolean value indicating whether or not it is the default one for the region
+- The VPC network's creation date, in ISO8601 combined date and time format
 `
 
-	CmdBuilder(cmd, RunVPCGet, "get <id>", "Retrieve a VPC", "Use this command to retrieve information about a VPC, including:"+vpcDetail, Writer,
+	cmdVPCGet := CmdBuilder(cmd, RunVPCGet, "get <id>", "Retrieve a VPC network", "Retrieve information about a VPC network, including:"+vpcDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.VPC{}))
+	cmdVPCGet.Example = `The following example retrieves information about a VPC network with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpcs get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdRecordCreate := CmdBuilder(cmd, RunVPCCreate, "create",
-		"Create a new VPC", "Use this command to create a new VPC on your account.", Writer, aliasOpt("c"))
+		"Create a new VPC network", "Use this command to create a new VPC network on your account.", Writer, aliasOpt("c"))
 	AddStringFlag(cmdRecordCreate, doctl.ArgVPCName, "", "",
-		"The VPC's name", requiredOpt())
-	AddStringFlag(cmdRecordCreate, doctl.ArgVPCDescription, "", "", "The VPC's name")
+		"The VPC network's name", requiredOpt())
+	AddStringFlag(cmdRecordCreate, doctl.ArgVPCDescription, "", "", "A description of the VPC network")
 	AddStringFlag(cmdRecordCreate, doctl.ArgVPCIPRange, "", "",
-		"The range of IP addresses in the VPC in CIDR notation, e.g.: `10.116.0.0/20`")
-	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "", "The VPC's region slug, e.g.: `nyc1`", requiredOpt())
+		"The range of IP addresses in the VPC network, in CIDR notation, such as `10.116.0.0/20`. If not specified, we generate a range for you.")
+	AddStringFlag(cmdRecordCreate, doctl.ArgRegionSlug, "", "", "The VPC network's region slug, such as `nyc1`", requiredOpt())
+	cmdRecordCreate.Example = `The following example creates a VPC network named ` + "`" + `example-vpc` + "`" + ` in the ` + "`" + `nyc1` + "`" + ` region: doctl vpcs create --name example-vpc --region nyc1`
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunVPCUpdate, "update <id>",
-		"Update a VPC's configuration", `Use this command to update the configuration of a specified VPC.`, Writer, aliasOpt("u"))
+		"Update a VPC network's configuration", `Updates a VPC network's configuration. You can update its name, description, and default state.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCName, "", "",
-		"The VPC's name")
+		"The VPC network's name")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgVPCDescription, "", "",
-		"The VPC's description")
+		"The VPC network's description")
 	AddBoolFlag(cmdRecordUpdate, doctl.ArgVPCDefault, "", false,
-		"The VPC's default state")
+		"A boolean value indicating whether or not the VPC network is the default one for the region")
+	cmdRecordUpdate.Example = `The following example updates the name of a VPC network with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" + `: doctl vpcs update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name new-name --default=true`
 
-	CmdBuilder(cmd, RunVPCList, "list", "List VPCs", "Use this command to get a list of the VPCs on your account, including the following information for each:"+vpcDetail, Writer,
+	cmdVPCList := CmdBuilder(cmd, RunVPCList, "list", "List VPC networks", "Retrieves a list of the VPCs on your account, including the following information for each:"+vpcDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.VPC{}))
+	cmdVPCList.Example = `The following example lists the VPCs on your account and uses the --format flag to return only the name, IP range, and region for each VPC network: doctl vpcs list --format Name,IPRange,Region`
 
 	cmdRunRecordDelete := CmdBuilder(cmd, RunVPCDelete, "delete <id>",
-		"Permanently delete a VPC", `Use this command to permanently delete the specified VPC. This is irreversible.`, Writer, aliasOpt("d", "rm"))
+		"Permanently delete a VPC network", `Permanently deletes the specified VPC. This is irreversible.
+		
+		You cannot delete VPCs that are default networks for a region. To delete a default VPC network, make another VPC network the default for the region using the `+"`"+`doctl vpcs update <vpc-network-id> --default=true`+"`"+` command, and then delete the target VPC network.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the VPC without a confirmation prompt")
+	cmdRunRecordDelete.Example = `The following example deletes the VPC network with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpcs delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	return cmd
 }
