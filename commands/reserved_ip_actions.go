@@ -35,26 +35,29 @@ func ReservedIPAction() *Command {
 	}
 	flipActionDetail := `
 
-	- The unique numeric ID used to identify and reference a reserved IP action.
-	- The status of the reserved IP action. This will be either "in-progress", "completed", or "errored".
-	- A time value given in ISO8601 combined date and time format that represents when the action was initiated.
-	- A time value given in ISO8601 combined date and time format that represents when the action was completed.
-	- The resource ID, which is a unique identifier for the resource that the action is associated with.
-	- The type of resource that the action is associated with.
-	- The region where the action occurred.
-	- The slug for the region where the action occurred.
+- The unique numeric ID used to identify and reference a reserved IP action
+- The status of the reserved IP action. Possible values: "in-progress", "completed", "errored"
+- When the action was initiated, in ISO8601 combined date and time format
+- When the action was completed, in ISO8601 combined date and time format
+- The ID of the resource that the action is associated with
+- The type of resource that the action is associated with
+- The region where the action occurred
+- The slug for the region where the action occurred
 `
-	CmdBuilder(cmd, RunReservedIPActionsGet,
-		"get <reserved-ip> <action-id>", "Retrieve the status of a reserved IP action", `Use this command to retrieve the status of a reserved IP action. Outputs the following information:`+flipActionDetail, Writer,
+	cmdReservedIPActionsGet := CmdBuilder(cmd, RunReservedIPActionsGet,
+		"get <reserved-ip> <action-id>", "Retrieve the status of a reserved IP action", `Retrieves the status of a reserved IP action. Outputs the following information:`+flipActionDetail, Writer,
 		displayerType(&displayers.Action{}))
+	cmdReservedIPActionsGet.Example = `The following example retrieves the status of an action, that has the ID ` + "`" + `191669331` + "`" + `, that was taken on the reserved IP address ` + "`" + `203.0.113.25` + "`" + `: doctl compute reserved-ip-action get 203.0.113.25 191669331`
 
-	CmdBuilder(cmd, RunReservedIPActionsAssign,
-		"assign <reserved-ip> <droplet-id>", "Assign a reserved IP address to a Droplet", "Use this command to assign a reserved IP address to a Droplet by specifying the `droplet_id`.", Writer,
+	cmdReservedIPActionsAssign := CmdBuilder(cmd, RunReservedIPActionsAssign,
+		"assign <reserved-ip> <droplet-id>", "Assign a reserved IP address to a Droplet", "Assigns a reserved IP address to the specified Droplet.", Writer,
 		displayerType(&displayers.Action{}))
+	cmdReservedIPActionsAssign.Example = `The following example assigns the reserved IP address ` + "`" + `203.0.113.25` + "`" + ` to a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute reserved-ip-action assign 203.0.113.25 386734086`
 
-	CmdBuilder(cmd, RunReservedIPActionsUnassign,
-		"unassign <reserved-ip>", "Unassign a reserved IP address from a Droplet", `Use this command to unassign a reserved IP address from a Droplet. The reserved IP address will be reserved in the region but not assigned to a Droplet.`, Writer,
+	cmdReservedIPActionsUnassign := CmdBuilder(cmd, RunReservedIPActionsUnassign,
+		"unassign <reserved-ip>", "Unassign a reserved IP address from a Droplet", `Unassigns a reserved IP address from a Droplet. Due to a shortage on IPv4 addresses, unassigned reserved IP addresses remain available on your account but accumulate charges for not being assigned.`, Writer,
 		displayerType(&displayers.Action{}))
+	cmdReservedIPActionsUnassign.Example = `The following example unassigns the reserved IP address ` + "`" + `203.0.113.25` + "`" + ` from a resource: doctl compute reserved-ip-action unassign 203.0.113.25`
 
 	return cmd
 }

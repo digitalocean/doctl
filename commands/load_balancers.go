@@ -131,7 +131,6 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", []string{},
 		"A comma-separated list of DENY rules for the load balancer, for example: `ip:203.0.113.10,cidr:192.0.2.0/24`")
 	cmdRecordUpdate.Example = `The following example updates the load balancer with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to have the name ` + "`" + `example-lb` + "`" + ` and to add the Droplet with the ID ` + "`" + `386734086` + "`" + ` to the load balancer's pool: doctl compute load-balancer update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name example-lb --droplet-ids 386734086`
-
 	cmdLoadBalancerList := CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Retrieves a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 	cmdLoadBalancerList.Example = `The following example lists all of the load balancers on your account and used the ` + "`" + `--format` + "`" + ` flag to return only each load balancer's ID, IP address, and status: doctl compute load-balancer list --format "ID,IP,Status"`
@@ -566,17 +565,17 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		r.HTTPIdleTimeoutSeconds = &t
 	}
 
-	allowRules, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAllowList)
+	allowRules, allowflagSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgAllowList)
 	if err != nil {
 		return err
 	}
 
-	denyRules, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDenyList)
+	denyRules, denyFlagSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgDenyList)
 	if err != nil {
 		return err
 	}
 
-	if len(allowRules) > 0 || len(denyRules) > 0 {
+	if allowflagSet || denyFlagSet {
 		firewall := new(godo.LBFirewall)
 		firewall.Allow = allowRules
 		firewall.Deny = denyRules
