@@ -125,9 +125,9 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgProjectID, "", "",
 		"Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
-	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgAllowList, "", []string{},
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgAllowList, "", nil,
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
-	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", []string{},
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", nil,
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
@@ -557,17 +557,17 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		r.HTTPIdleTimeoutSeconds = &t
 	}
 
-	allowRules, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAllowList)
+	allowRules, allowflagSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgAllowList)
 	if err != nil {
 		return err
 	}
 
-	denyRules, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDenyList)
+	denyRules, denyFlagSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgDenyList)
 	if err != nil {
 		return err
 	}
 
-	if len(allowRules) > 0 || len(denyRules) > 0 {
+	if allowflagSet || denyFlagSet {
 		firewall := new(godo.LBFirewall)
 		firewall.Allow = allowRules
 		firewall.Deny = denyRules
