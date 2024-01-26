@@ -335,12 +335,8 @@ func RunDropletCreate(c *CmdConfig) error {
 		}
 	}
 
-	if projectUUID != "" {
-		dropletURNs := make([]string, 0, len(createdList))
-		for _, createdDroplet := range createdList {
-			dropletURNs = append(dropletURNs, createdDroplet.URN())
-		}
-		if _, err := c.Projects().AssignResources(projectUUID, dropletURNs); err != nil {
+	for _, createdDroplet := range createdList {
+		if err := c.moveToProject(projectUUID, createdDroplet); err != nil {
 			return err
 		}
 	}
