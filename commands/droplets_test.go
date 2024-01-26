@@ -199,6 +199,33 @@ coreos:
 	})
 }
 
+func TestDropletCreateWithProjectID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		projectUUID := "00000000-0000-4000-8000-000000000000"
+
+		dcr := &godo.DropletCreateRequest{
+			Name:    "droplet",
+			Region:  "dev0",
+			Size:    "1gb",
+			Image:   godo.DropletCreateImage{ID: 0, Slug: "image"},
+			SSHKeys: []godo.DropletCreateSSHKey{},
+		}
+		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+		tm.projects.EXPECT().
+			AssignResources(projectUUID, []string{testDroplet.URN()}).
+			Return(do.ProjectResources{}, nil)
+
+		config.Args = append(config.Args, "droplet")
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
+		config.Doit.Set(config.NS, doctl.ArgImage, "image")
+		config.Doit.Set(config.NS, doctl.ArgProjectID, projectUUID)
+
+		err := RunDropletCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestDropletDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.droplets.EXPECT().Delete(1).Return(nil)

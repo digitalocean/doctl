@@ -225,3 +225,19 @@ func (c *CmdConfig) Display(d displayers.Displayable) error {
 
 	return dc.Display()
 }
+
+// An urner implements the URN method, wihich returns a valid uniform resource
+// name.
+type urner interface {
+	URN() string
+}
+
+// moveToProject moves the given resource to the project with the given
+// project UUID.
+func (c *CmdConfig) moveToProject(projectUUID string, u urner) error {
+	if projectUUID == "" {
+		return nil
+	}
+	_, err := c.Projects().AssignResources(projectUUID, []string{u.URN()})
+	return err
+}

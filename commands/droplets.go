@@ -65,9 +65,9 @@ func Droplet() *Command {
 		aliasOpt("b"), displayerType(&displayers.Image{}))
 	cmdDropletBackups.Example = `The following example retrieves a list of backups for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet backups 386734086`
 
-	dropletCreateLongDesc := `Creates a new Droplet on your account. The command requires values for the ` + "`" + `--size` + "`" + `, and ` + "`" + `--image` + "`" + ` flags. 
+	dropletCreateLongDesc := `Creates a new Droplet on your account. The command requires values for the ` + "`" + `--size` + "`" + `, and ` + "`" + `--image` + "`" + ` flags.
 
-To retrieve a list of size slugs, use the ` + "`" + `doctl compute size list` + "`" + ` command. To retrieve a list of image slugs, use the ` + "`" + `doctl compute image list` + "`" + ` command.	
+To retrieve a list of size slugs, use the ` + "`" + `doctl compute size list` + "`" + ` command. To retrieve a list of image slugs, use the ` + "`" + `doctl compute image list` + "`" + ` command.
 
 If you do not specify a region, the Droplet is created in the default region for your account. If you do not specify any SSH keys, we email a temporary password to your account's email address.`
 
@@ -88,6 +88,7 @@ If you do not specify a region, the Droplet is created in the default region for
 		requiredOpt())
 	AddStringFlag(cmdDropletCreate, doctl.ArgTagName, "", "", "Applies a tag to the Droplet")
 	AddStringFlag(cmdDropletCreate, doctl.ArgVPCUUID, "", "", "The UUID of a non-default VPC to create the Droplet in")
+	AddStringFlag(cmdDropletCreate, doctl.ArgProjectID, "", "", "The UUID of the project to assign the Droplet to")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgTagNames, "", []string{}, "Applies a list of tags to the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgDropletAgent, "", false, "Specifies whether or not the Droplet monitoring agent should be installed. By default, the agent is installed on new Droplets but installation errors are ignored. Set `--droplet-agent=false` to prevent installation. Set to `true` to make installation errors fatal.")
 	AddStringSliceFlag(cmdDropletCreate, doctl.ArgVolumeList, "", []string{}, "A list of block storage volume IDs to attach to the Droplet")
@@ -230,6 +231,11 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
+	projectUUID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
+	if err != nil {
+		return err
+	}
+
 	tagNames, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTagNames)
 	if err != nil {
 		return err
@@ -325,6 +331,12 @@ func RunDropletCreate(c *CmdConfig) error {
 
 	for err := range errs {
 		if err != nil {
+			return err
+		}
+	}
+
+	for _, createdDroplet := range createdList {
+		if err := c.moveToProject(projectUUID, createdDroplet); err != nil {
 			return err
 		}
 	}
@@ -775,7 +787,7 @@ func dropletOneClicks() *Command {
 	}
 
 	cmdDropletOneClickList := CmdBuilder(cmd, RunDropletOneClickList, "list", "Retrieve a list of Droplet 1-Click applications", `Retrieves a list of Droplet 1-Click application slugs.
-	 
+
 You can use 1-click slugs to create Droplets by using them as the argument for the `+"`"+`--image`+"`"+` flag in the `+"`"+`doctl compute droplet create`+"`"+` command. For example, the following command creates a Droplet with an Openblocks installation on it: `+"`"+`doctl compute droplet create example-droplet --image openblocks --size s-2vcpu-2gb --region nyc1`+"`"+``, Writer,
 		aliasOpt("ls"), displayerType(&displayers.OneClick{}))
 	cmdDropletOneClickList.Example = `The following example retrieves a list of 1-clicks for Droplets: doctl compute droplet 1-click list`
