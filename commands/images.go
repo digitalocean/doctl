@@ -49,13 +49,7 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 - The distribution of the image. For custom images, this is user defined.
 - The image's slug. This is a unique string that identifies each DigitalOcean-provided public image. These can be used to reference a public image as an alternative to the numeric ID.
 - Whether the image is public or not. An public image is available to all accounts. A private image is only accessible from your account. This is boolean value, true or false.
-- The region the image is available in. Regions are represented by their identifying slug values.
-- The image's creation date, in ISO8601 combined date and time format.
 - The minimum Droplet disk size required for a Droplet to use this image, in GB.
-- The size of the image, in GB.
-- The description of the image. (optional)
-- A status string indicating the state of a custom image. Possible values: ` + "`" + `NEW` + "`" + `, ` + "`" + `available` + "`" + `, ` + "`" + `pending` + "`" + `, ` + "`" + `deleted` + "`" + `.
-- A string containing information about errors that may occur when importing a custom image.
 `
 	cmdImagesList := CmdBuilder(cmd, RunImagesList, "list", "List images on your account", `Lists all private images on your account. To list public images, use the `+"`"+`--public`+"`"+` flag. This command returns the following information about each image:`+imageDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Image{}))
