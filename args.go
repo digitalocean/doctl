@@ -390,6 +390,8 @@ const (
 	ArgDatabaseUserMySQLAuthPlugin = "mysql-auth-plugin"
 	// ArgDatabasePrivateConnectionBool determine if the private connection details should be shown
 	ArgDatabasePrivateConnectionBool = "private"
+	// ArgDatabaseUserKafkaACLs will specify permissions on topics in kafka clsuter
+	ArgDatabaseUserKafkaACLs = "acl"
 
 	// ArgDatabaseTopicReplicationFactor is the replication factor of a kafka topic
 	ArgDatabaseTopicReplicationFactor = "replication-factor"
