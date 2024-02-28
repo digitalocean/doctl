@@ -78,6 +78,8 @@ To upload a custom certificate, you need to provide a certificate name, the path
 	cmdCertificateList := CmdBuilder(cmd, RunCertificateList, "list", "Retrieve list of the account's stored certificates", `This command retrieves a list of all certificates associated with the account. The following details are shown for each certificate:`+certDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Certificate{}))
 	cmdCertificateList.Example = `The following example retrieves a list of all certificates associated with your account and uses the ` + "`" + `--format` + "`" + ` flag return only the IDs, names, and the domains associated with each ticket: doctl compute certificate list --format ID,Name,DNSNames`
+	AddStringFlag(cmdCertificateList, doctl.ArgCertificateName, "", "",
+		"name of the certificate to be listed")
 
 	cmdCertificateDelete := CmdBuilder(cmd, RunCertificateDelete, "delete <id>",
 		"Delete the specified certificate", `Deletes the specified certificate.
@@ -184,8 +186,16 @@ func RunCertificateCreate(c *CmdConfig) error {
 
 // RunCertificateList lists certificates.
 func RunCertificateList(c *CmdConfig) error {
+
+	cName := c.Args[0]
 	cs := c.Certificates()
-	list, err := cs.List()
+
+	var list do.Certificates
+	if cName == "" {
+		list, err := cs.List()
+	} else {
+		list, err := cs.ListByName(cName)
+	}
 	if err != nil {
 		return err
 	}

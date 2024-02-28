@@ -32,6 +32,7 @@ type CertificatesService interface {
 	Get(cID string) (*Certificate, error)
 	Create(cr *godo.CertificateRequest) (*Certificate, error)
 	List() (Certificates, error)
+	ListByName(cName string) (Certificates, error)
 	Delete(cID string) error
 }
 
@@ -93,6 +94,11 @@ func (cs *certificatesService) List() (Certificates, error) {
 	}
 
 	return list, nil
+}
+
+func (cs *certificatesService) ListByName(cName string) (Certificates, error) {
+	c, _, err := cs.client.Certificates.ListByName(context.TODO(), cName, nil)
+	return Certificates{c}, err
 }
 
 func (cs *certificatesService) Delete(cID string) error {
