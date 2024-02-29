@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.107.0
+	github.com/digitalocean/godo v1.109.1-0.20240228180303-16a4709be517
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -124,8 +124,4 @@ require (
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-)
-
-replace (
-	github.com/digitalocean/godo v1.107.0 => /Users/deepaks/Desktop/gocode/godo
 )
