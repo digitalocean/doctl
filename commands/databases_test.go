@@ -936,6 +936,29 @@ func TestDatabaseUserCreate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Successful call with kafka acl set
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := &godo.DatabaseCreateUserRequest{
+			Name: testDBUser.Name,
+			Settings: &godo.DatabaseUserSettings{
+				ACL: []*godo.KafkaACL{
+					{
+						Permission: "admin",
+						Topic:      "test",
+					},
+				},
+			},
+		}
+
+		tm.databases.EXPECT().CreateUser(testDBCluster.ID, r).Return(&testDBUser, nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBUser.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseUserKafkaACLs, "test:admin")
+
+		err := RunDatabaseUserCreate(config)
+		assert.NoError(t, err)
+	})
+
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().CreateUser(
