@@ -165,6 +165,17 @@ func TestCertificateList(t *testing.T) {
 	})
 }
 
+func TestCertificateListByName(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		name := "web-cert-01"
+		tm.certificates.EXPECT().ListByName(name).Return(testCertificateList, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgCertificateName, name)
+		err := RunCertificateList(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestCertificateDelete(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		cID := "892071a0-bb95-49bc-8021-3afd67a210bf"
