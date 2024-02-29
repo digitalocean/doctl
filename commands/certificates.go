@@ -79,7 +79,7 @@ To upload a custom certificate, you need to provide a certificate name, the path
 		aliasOpt("ls"), displayerType(&displayers.Certificate{}))
 	cmdCertificateList.Example = `The following example retrieves a list of all certificates associated with your account and uses the ` + "`" + `--format` + "`" + ` flag return only the IDs, names, and the domains associated with each ticket: doctl compute certificate list --format ID,Name,DNSNames`
 	AddStringFlag(cmdCertificateList, doctl.ArgCertificateName, "", "",
-		"name of the certificate to be listed")
+		"Filter certificates by the specified name")
 
 	cmdCertificateDelete := CmdBuilder(cmd, RunCertificateDelete, "delete <id>",
 		"Delete the specified certificate", `Deletes the specified certificate.
