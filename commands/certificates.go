@@ -75,7 +75,7 @@ To upload a custom certificate, you need to provide a certificate name, the path
 	AddStringFlag(cmdCertificateCreate, doctl.ArgCertificateType, "", "",
 		"The type of certificate, `custom` or `lets_encrypt`.")
 
-	cmdCertificateList := CmdBuilder(cmd, RunCertificateList, "list", "Retrieve list of the account's stored certificates", `This command retrieves a list of all certificates associated with the account. The following details are shown for each certificate:`+certDetails, Writer,
+	cmdCertificateList := CmdBuilder(cmd, RunCertificateList, "list <id>", "Retrieve list of the account's stored certificates", `This command retrieves a list of all certificates associated with the account. The following details are shown for each certificate:`+certDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Certificate{}))
 	cmdCertificateList.Example = `The following example retrieves a list of all certificates associated with your account and uses the ` + "`" + `--format` + "`" + ` flag return only the IDs, names, and the domains associated with each ticket: doctl compute certificate list --format ID,Name,DNSNames`
 	AddStringFlag(cmdCertificateList, doctl.ArgCertificateName, "", "",
@@ -191,10 +191,11 @@ func RunCertificateList(c *CmdConfig) error {
 	cs := c.Certificates()
 
 	var list do.Certificates
+	var err error
 	if cName == "" {
-		list, err := cs.List()
+		list, err = cs.List()
 	} else {
-		list, err := cs.ListByName(cName)
+		list, err = cs.ListByName(cName)
 	}
 	if err != nil {
 		return err

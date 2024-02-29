@@ -98,7 +98,13 @@ func (cs *certificatesService) List() (Certificates, error) {
 
 func (cs *certificatesService) ListByName(cName string) (Certificates, error) {
 	c, _, err := cs.client.Certificates.ListByName(context.TODO(), cName, nil)
-	return Certificates{c}, err
+
+	list := make([]Certificate, len(c))
+	for i := range c {
+		list[i] = Certificate{Certificate: &c[i]}
+	}
+
+	return list, err
 }
 
 func (cs *certificatesService) Delete(cID string) error {
