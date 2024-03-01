@@ -664,7 +664,7 @@ func databaseUser() *Command {
 Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password.`,
 		},
 	}
-
+	databaseKafkaACLsTxt := `A comma-separated list of kafka ACL rules, in ` + "`" + `topic:permission` + "`" + ` format.`
 	userDetailsDesc := `
 
 - The username for the user
@@ -692,6 +692,7 @@ To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases 
 
 	AddStringFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserMySQLAuthPlugin, "", "",
 		"Sets authorization plugin for a MySQL user. Possible values: `caching_sha2_password` or `mysql_native_password`")
+	AddStringSliceFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserKafkaACLs, "", []string{}, databaseKafkaACLsTxt)
 	cmdDatabaseUserCreate.Example = `The following example creates a new user with the username ` + "`" + `example-user` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases user create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-user`
 
 	cmdDatabaseUserResetAuth := CmdBuilder(cmd, RunDatabaseUserResetAuth, "reset <database-cluster-id> <user-name> <new-auth-mode>",
@@ -767,12 +768,43 @@ func RunDatabaseUserCreate(c *CmdConfig) error {
 		}
 	}
 
+	kafkaAcls, err := buildDatabaseCreateKafkaUserACls(c)
+	if err != nil {
+		return err
+	}
+
+	if len(kafkaAcls) != 0 {
+		req.Settings = &godo.DatabaseUserSettings{
+			ACL: kafkaAcls,
+		}
+	}
+
 	user, err := c.Databases().CreateUser(databaseID, req)
 	if err != nil {
 		return err
 	}
 
 	return displayDatabaseUsers(c, *user)
+}
+
+func buildDatabaseCreateKafkaUserACls(c *CmdConfig) (kafkaACls []*godo.KafkaACL, err error) {
+	acls, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDatabaseUserKafkaACLs)
+	if err != nil {
+		return nil, err
+	}
+	for _, acl := range acls {
+		pair := strings.SplitN(acl, ":", 2)
+		if len(pair) != 2 {
+			return nil, fmt.Errorf("Unexpected input value [%v], must be a topic:permission pair", pair)
+		}
+
+		kafkaACl := new(godo.KafkaACL)
+		kafkaACl.Topic = pair[0]
+		kafkaACl.Permission = pair[1]
+
+		kafkaACls = append(kafkaACls, kafkaACl)
+	}
+	return kafkaACls, nil
 }
 
 func RunDatabaseUserResetAuth(c *CmdConfig) error {

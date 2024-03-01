@@ -5,6 +5,7 @@
 //
 //	mockgen -source cdns.go -package=mocks CDNsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

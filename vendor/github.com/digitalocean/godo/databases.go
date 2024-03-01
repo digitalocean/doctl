@@ -170,24 +170,26 @@ var _ DatabasesService = &DatabasesServiceOp{}
 // "pg", "mysql" or "redis". A Database also includes connection information and other
 // properties of the service like region, size and current status.
 type Database struct {
-	ID                 string                     `json:"id,omitempty"`
-	Name               string                     `json:"name,omitempty"`
-	EngineSlug         string                     `json:"engine,omitempty"`
-	VersionSlug        string                     `json:"version,omitempty"`
-	Connection         *DatabaseConnection        `json:"connection,omitempty"`
-	PrivateConnection  *DatabaseConnection        `json:"private_connection,omitempty"`
-	Users              []DatabaseUser             `json:"users,omitempty"`
-	NumNodes           int                        `json:"num_nodes,omitempty"`
-	SizeSlug           string                     `json:"size,omitempty"`
-	DBNames            []string                   `json:"db_names,omitempty"`
-	RegionSlug         string                     `json:"region,omitempty"`
-	Status             string                     `json:"status,omitempty"`
-	MaintenanceWindow  *DatabaseMaintenanceWindow `json:"maintenance_window,omitempty"`
-	CreatedAt          time.Time                  `json:"created_at,omitempty"`
-	PrivateNetworkUUID string                     `json:"private_network_uuid,omitempty"`
-	Tags               []string                   `json:"tags,omitempty"`
-	ProjectID          string                     `json:"project_id,omitempty"`
-	StorageSizeMib     uint64                     `json:"storage_size_mib,omitempty"`
+	ID                       string                     `json:"id,omitempty"`
+	Name                     string                     `json:"name,omitempty"`
+	EngineSlug               string                     `json:"engine,omitempty"`
+	VersionSlug              string                     `json:"version,omitempty"`
+	Connection               *DatabaseConnection        `json:"connection,omitempty"`
+	PrivateConnection        *DatabaseConnection        `json:"private_connection,omitempty"`
+	StandbyConnection        *DatabaseConnection        `json:"standby_connection,omitempty"`
+	StandbyPrivateConnection *DatabaseConnection        `json:"standby_private_connection,omitempty"`
+	Users                    []DatabaseUser             `json:"users,omitempty"`
+	NumNodes                 int                        `json:"num_nodes,omitempty"`
+	SizeSlug                 string                     `json:"size,omitempty"`
+	DBNames                  []string                   `json:"db_names,omitempty"`
+	RegionSlug               string                     `json:"region,omitempty"`
+	Status                   string                     `json:"status,omitempty"`
+	MaintenanceWindow        *DatabaseMaintenanceWindow `json:"maintenance_window,omitempty"`
+	CreatedAt                time.Time                  `json:"created_at,omitempty"`
+	PrivateNetworkUUID       string                     `json:"private_network_uuid,omitempty"`
+	Tags                     []string                   `json:"tags,omitempty"`
+	ProjectID                string                     `json:"project_id,omitempty"`
+	StorageSizeMib           uint64                     `json:"storage_size_mib,omitempty"`
 }
 
 // DatabaseCA represents a database ca.
@@ -376,17 +378,20 @@ type DatabaseReplica struct {
 	CreatedAt          time.Time           `json:"created_at"`
 	PrivateNetworkUUID string              `json:"private_network_uuid,omitempty"`
 	Tags               []string            `json:"tags,omitempty"`
+	StorageSizeMib     uint64              `json:"storage_size_mib,omitempty"`
 }
 
 // DatabasePool represents a database connection pool
 type DatabasePool struct {
-	User              string              `json:"user"`
-	Name              string              `json:"name"`
-	Size              int                 `json:"size"`
-	Database          string              `json:"db"`
-	Mode              string              `json:"mode"`
-	Connection        *DatabaseConnection `json:"connection"`
-	PrivateConnection *DatabaseConnection `json:"private_connection,omitempty"`
+	User                     string              `json:"user"`
+	Name                     string              `json:"name"`
+	Size                     int                 `json:"size"`
+	Database                 string              `json:"db"`
+	Mode                     string              `json:"mode"`
+	Connection               *DatabaseConnection `json:"connection"`
+	PrivateConnection        *DatabaseConnection `json:"private_connection,omitempty"`
+	StandbyConnection        *DatabaseConnection `json:"standby_connection,omitempty"`
+	StandbyPrivateConnection *DatabaseConnection `json:"standby_private_connection,omitempty"`
 }
 
 // DatabaseCreatePoolRequest is used to create a new database connection pool
@@ -436,6 +441,7 @@ type DatabaseCreateReplicaRequest struct {
 	Size               string   `json:"size"`
 	PrivateNetworkUUID string   `json:"private_network_uuid"`
 	Tags               []string `json:"tags,omitempty"`
+	StorageSizeMib     uint64   `json:"storage_size_mib,omitempty"`
 }
 
 // DatabaseUpdateFirewallRulesRequest is used to set the firewall rules for a database
