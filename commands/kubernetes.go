@@ -271,9 +271,9 @@ If no configuration flags are used, a three-node cluster with a single node pool
 After creating a cluster, a configuration context is added to kubectl and made active so that you can begin managing your new cluster immediately.`,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion,
-		"A slug indicating which region to create the cluster in. Use the `doctl kubernetes options regions` command for a list of options", requiredOpt())
+		"A `slug` indicating which region to create the cluster in. Use the `doctl kubernetes options regions` command for a list of options", requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest",
-		"A slug indicating which Kubernetes version to use when creating the cluster. Use the `doctl kubernetes options versions` command for a list of options")
+		"A `slug` indicating which Kubernetes version to use when creating the cluster. Use the `doctl kubernetes options versions` command for a list of options")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVPCUUID, "", "",
 		"The UUID of a VPC network to create the cluster in. Must be the UUID of a valid VPC in the same region specified for the cluster. If a VPC is not specified, the cluster is placed in the default VPC network for the region.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
@@ -283,16 +283,16 @@ After creating a cluster, a configuration context is added to kubectl and made a
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. Defaults to false. To enable the HA control plane, supply --ha=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
-		"A comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
+		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
-		"The machine size to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Use the `doctl kubernetes options sizes` command for a list of possible values.")
-	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks, "", nil, "A comma-separated list of 1-click applications to install on the Kubernetes cluster. Use the `doctl kubernetes 1-click list` command for a list of available 1-click applications.")
+		"The machine `size` to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Use the `doctl kubernetes options sizes` command for a list of possible values.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks, "", nil, "A comma-separated list of 1-click `applications` to install on the Kubernetes cluster. Use the `doctl kubernetes 1-click list` command for a list of available 1-click applications.")
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"The number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
-		`A comma-separated list of node pools, defined using semicolon-separated configuration values and surrounded by quotes (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`).
+		`A comma-separated list of `+"`node-pools`"+`, defined using semicolon-separated configuration values and surrounded by quotes (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`).
 Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2;taint=key1=value1:NoSchedule;taint=key2:NoExecute"`+"`"+` where:
 
 - `+"`"+`name`+"`"+`: The name of the node pool, which must be unique in the cluster
@@ -312,7 +312,7 @@ Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=ke
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
 		"Sets the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"Sets the beginning of the four hour maintenance window for the cluster. The syntax format is: `day=HH:MM`, where time is in UTC. Day can be: `any`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday"+"`.")
+		"Sets the beginning of the `schedule` for the four hour maintenance window for the cluster. The syntax format is: `day=HH:MM`, where time is in UTC. Day can be: `any`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday"+"`.")
 	cmdKubeClusterCreate.Example = `The following example creates a cluster named ` + "`" + `example-cluster` + "`" + ` in the ` + "`" + `nyc1` + "`" + ` region with a node pool, using Kubernetes version ` + "`" + `1.28.2-do.0` + "`" + `: doctl kubernetes cluster create example-cluster --region nyc1 --version 1.28.2-do.0 --maintenance-window saturday=02:00 --node-pool "name=example-pool;size=s-2vcpu-2gb;count=5;tag=web;tag=frontend;label=key1=value1;label=key2=label2;taint=key1=value1:NoSchedule;taint=key2:NoExecute"`
 
 	cmdKubeClusterUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
@@ -478,7 +478,7 @@ Creates a new node pool for the specified cluster. The command requires values f
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "",
 		"The name of the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "",
-		"The size of the nodes in the node pool. Use the `doctl kubernetes options sizes` command for a list of possible values.", requiredOpt())
+		"The `size` of the nodes in the node pool. Use the `doctl kubernetes options sizes` command for a list of possible values.", requiredOpt())
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0,
 		"The number of nodes in the node pool", requiredOpt())
 	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", nil,
