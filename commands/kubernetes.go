@@ -264,46 +264,46 @@ Retrieves a list of slugs representing Kubernetes upgrade versions you can use t
 
 	cmdKubeClusterCreate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterCreate(defaultKubernetesNodeSize,
 		defaultKubernetesNodeCount), "create <name>", "Create a Kubernetes cluster", `
-Creates a Kubernetes cluster given the specified options and using the specified name. Before creating the cluster, you can use `+"`"+`doctl kubernetes options`+"`"+` to see possible values for the various configuration flags.
+Creates a Kubernetes cluster given the specified options and using the specified name. Before creating the cluster, you can use doctl kubernetes options to see possible values for the various configuration flags.
 
 If no configuration flags are used, a three-node cluster with a single node pool is created in the `+"`"+`nyc1`+"`"+` region, using the latest Kubernetes version.
 
 After creating a cluster, a configuration context is added to kubectl and made active so that you can begin managing your new cluster immediately.`,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion,
-		"A slug indicating which region to create the cluster in. Use the `doctl kubernetes options regions` command for a list of options", requiredOpt())
+		"A slug indicating which region to create the cluster in. Use the doctl kubernetes options regions command for a list of options", requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest",
-		"A slug indicating which Kubernetes version to use when creating the cluster. Use the `doctl kubernetes options versions` command for a list of options")
+		"A slug indicating which Kubernetes version to use when creating the cluster. Use the doctl kubernetes options versions command for a list of options")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVPCUUID, "", "",
 		"The UUID of a VPC network to create the cluster in. Must be the UUID of a valid VPC in the same region specified for the cluster. If a VPC is not specified, the cluster is placed in the default VPC network for the region.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
-		"Enables automatic upgrades to new patch releases during the cluster's maintenance window. Defaults to `false`. To enable automatic upgrade, supply `--auto-upgrade=true`.")
+		"Enables automatic upgrades to new patch releases during the cluster's maintenance window. Defaults to false. To enable automatic upgrade, supply --auto-upgrade=true.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. Defaults to false. To enable the HA control plane, supply --ha=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
-		"A comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
+		"A comma-separated list of tags to apply to the cluster, in addition to the default tags of k8s and k8s:$K8S_CLUSTER_ID.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
-		"The machine size to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Use the `doctl kubernetes options sizes` command for a list of possible values.")
-	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks, "", nil, "A comma-separated list of 1-click applications to install on the Kubernetes cluster. Use the `doctl kubernetes 1-click list` command for a list of available 1-click applications.")
+		"The machine size to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Use the doctl kubernetes options sizes command for a list of possible values.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks, "", nil, "A comma-separated list of 1-click applications to install on the Kubernetes cluster. Use the doctl kubernetes 1-click list command for a list of available 1-click applications.")
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"The number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
 		`A comma-separated list of node pools, defined using semicolon-separated configuration values and surrounded by quotes (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`).
-Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2;taint=key1=value1:NoSchedule;taint=key2:NoExecute"`+"`"+` where:
+Format: name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2;taint=key1=value1:NoSchedule;taint=key2:NoExecute where:
 
-- `+"`"+`name`+"`"+`: The name of the node pool, which must be unique in the cluster
-- `+"`"+`size`+"`"+`: The machine size of the nodes to use. Use the `+"`"+`doctl kubernetes options sizes`+"`"+` command for a list of available options.
-- `+"`"+`count`+"`"+`: The number of nodes to create
-- `+"`"+`tag`+"`"+`: A comma-separated list of tags to apply to nodes in the pool
-- `+"`"+`label`+"`"+`: A label in `+"`"+`key=value`+"`"+` notation. Repeat to add multiple labels at once.
-- `+"`"+`taint`+"`"+`: Taint in `+"`"+`key=value:effect`+"`"+` notation. Repeat to add multiple taints at once.
-- `+"`"+`auto-scale`+"`"+`: Enables cluster auto-scaling on the node pool (boolean)
-- `+"`"+`min-nodes`+"`"+`: The minimum number of nodes that the cluster can be auto-scaled to.
-- `+"`"+`max-nodes`+"`"+`: The maximum number of nodes that can be auto-scaled to.`)
+- name: The name of the node pool, which must be unique in the cluster
+- size: The machine size of the nodes to use. Use the doctl kubernetes options sizes command for a list of available options.
+- count: The number of nodes to create
+- tag: A comma-separated list of tags to apply to nodes in the pool
+- label: A label in key=value notation. Repeat to add multiple labels at once.
+- taint: Taint in key=value:effect notation. Repeat to add multiple taints at once.
+- auto-scale: Enables cluster auto-scaling on the node pool (boolean)
+- min-nodes: The minimum number of nodes that the cluster can be auto-scaled to.
+- max-nodes: The maximum number of nodes that can be auto-scaled to.`)
 
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
 		"Adds a configuration context for the new cluster to your kubectl")
@@ -312,7 +312,7 @@ Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=ke
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
 		"Sets the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"Sets the beginning of the four hour maintenance window for the cluster. The syntax format is: `day=HH:MM`, where time is in UTC. Day can be: `any`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday"+"`.")
+		"Sets the beginning of the four hour maintenance window for the cluster. The syntax format is: day=HH:MM, where time is in UTC. Day can be: any, monday, tuesday, wednesday, thursday, friday, saturday, sunday.")
 	cmdKubeClusterCreate.Example = `The following example creates a cluster named ` + "`" + `example-cluster` + "`" + ` in the ` + "`" + `nyc1` + "`" + ` region with a node pool, using Kubernetes version ` + "`" + `1.28.2-do.0` + "`" + `: doctl kubernetes cluster create example-cluster --region nyc1 --version 1.28.2-do.0 --maintenance-window saturday=02:00 --node-pool "name=example-pool;size=s-2vcpu-2gb;count=5;tag=web;tag=frontend;label=key1=value1;label=key2=label2;taint=key1=value1:NoSchedule;taint=key2:NoExecute"`
 
 	cmdKubeClusterUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
@@ -478,7 +478,7 @@ Creates a new node pool for the specified cluster. The command requires values f
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "",
 		"The name of the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "",
-		"The size of the nodes in the node pool. Use the `doctl kubernetes options sizes` command for a list of possible values.", requiredOpt())
+		"The size of the nodes in the node pool. Use the doctl kubernetes options sizes command for a list of possible values.", requiredOpt())
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0,
 		"The number of nodes in the node pool", requiredOpt())
 	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", nil,
@@ -486,7 +486,7 @@ Creates a new node pool for the specified cluster. The command requires values f
 	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgKubernetesLabel, "", nil,
 		"A label in key=value notation to apply to the node pool. Repeat this flag to specify additional labels. An existing label is removed from the node pool if it is not specified by any flag.")
 	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgKubernetesTaint, "", nil,
-		"Taint in `key=value:effect` notation to apply to the node pool. Repeat this flag to specify additional taints. Set to an empty string (\"\") to clear all taints. An existing taint is removed from the node pool if it is not specified by any flag.")
+		"Taint in key=value:effect notation to apply to the node pool. Repeat this flag to specify additional taints. Set to an empty string (\"\") to clear all taints. An existing taint is removed from the node pool if it is not specified by any flag.")
 	AddBoolFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolAutoScale, "", false,
 		"Enables auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMinNodes, "", 0,
