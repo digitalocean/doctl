@@ -19,7 +19,7 @@ RUN cd /go/src/github.com/digitalocean/doctl && \
     make build GOARCH=$GOARCH
 
 # Step 2: App
-FROM alpine:3.12
+FROM alpine:3.14
 
 RUN apk add --update --no-cache \
         ca-certificates \
