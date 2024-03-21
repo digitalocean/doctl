@@ -301,8 +301,8 @@ Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=ke
 - `+"`"+`tag`+"`"+`: A comma-separated list of tags to apply to nodes in the pool
 - `+"`"+`label`+"`"+`: A label in `+"`"+`key=value`+"`"+` notation. Repeat to add multiple labels at once.
 - `+"`"+`taint`+"`"+`: Taint in `+"`"+`key=value:effect`+"`"+` notation. Repeat to add multiple taints at once.
-- `+"`"+`auto-scale`+"`"+`: Enables cluster auto-scaling on the node pool (boolean). Scale-to-zero is not supported. 
-- `+"`"+`min-nodes`+"`"+`: The minimum number of nodes that the cluster can be auto-scaled to. The value will be 0 if auto_scale is set to false.
+- `+"`"+`auto-scale`+"`"+`: Enables cluster auto-scaling on the node pool (boolean).
+- `+"`"+`min-nodes`+"`"+`: The minimum number of nodes that the cluster can be auto-scaled to. The value will be 0 if auto_scale is set to false. Scale-to-zero is not supported.
 - `+"`"+`max-nodes`+"`"+`: The maximum number of nodes that can be auto-scaled to.`)
 
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
