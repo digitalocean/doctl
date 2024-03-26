@@ -490,7 +490,7 @@ Creates a new node pool for the specified cluster. The command requires values f
 	AddBoolFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolAutoScale, "", false,
 		"Enables auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMinNodes, "", 0,
-		"The minimum number of nodes in the node pool when autoscaling is enabled")
+		"The minimum number of nodes in the node pool when autoscaling (auto_scale) is enabled. If auto_scale is set to false, the default value will be 0. Scale-to-zero is not supported.")
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMaxNodes, "", 0,
 		"The maximum number of nodes in the node pool when autoscaling is enabled")
 	cmdKubeNodePoolCreate.Example = `The following example creates a node pool named ` + "`" + `example-pool` + "`" + ` in a cluster named ` + "`" + `example-cluster` + "`" + `: doctl kubernetes cluster node-pool create example-cluster --name example-pool --size s-1vcpu-2gb --count 3 --taint "key1=value1:NoSchedule" --taint "key2:NoExecute"`
