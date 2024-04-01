@@ -55,7 +55,7 @@ The Time To Live (TTL) value is the length of time in seconds that a file is cac
 	CertIDDesc := "Specify a certificate ID for the custom domain"
 	cmdCDNList := CmdBuilder(cmd, RunCDNList, "list", "List CDNs that have already been created", `Retrieves a list of your existing Content Delivery Networks (CDNs) and their following details:`+CDNDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.CDN{}))
-	cmdCDNList.Example = "doctl compute cdn list"
+	cmdCDNList.Example = `The following example retrieves a list of CDNs for your account. The command uses the ` + "`" + `--format` + "`" + ` flag to only return each CDN` + "`" + `'` + "`" + `s origin endpoint, CDN endpoint, and certificate ID: doctl compute cdn list --format ID,Origin,Endpoint,CertificateID`
 
 	cmdCDNCreate := CmdBuilder(cmd, RunCDNCreate, "create <cdn-origin>", "Create a CDN", `Creates a Content Delivery Network (CDN) on the origin server you specify and automatically generates an endpoint. You can also use a custom subdomain you own to create an additional endpoint, which must be secured with SSL.`+CDNnotes, Writer,
 		aliasOpt("c"), displayerType(&displayers.CDN{}))
