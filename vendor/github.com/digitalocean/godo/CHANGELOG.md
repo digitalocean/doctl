@@ -1,5 +1,15 @@
 # Change Log
 
+## [v1.111.0] - 2024-04-02
+
+- #674 - @asaha2 - load balancers: introduce glb settings in godo, currently in closed beta
+
+## [v1.110.0] - 2024-03-14
+
+- #667 - @dwilsondo - Include DBaaS metrics credential endpoint operations
+- #670 - @guptado - [NETPROD-3583] Added name param in ListOption to get resource by name
+- #671 - @greeshmapill - APPS-8383: Add deprecation intent and bandwidth allowance to app instance size spec
+
 ## [v1.109.0] - 2024-02-09
 
 - #668 - @greeshmapill - APPS-8315: Update app instance size spec
