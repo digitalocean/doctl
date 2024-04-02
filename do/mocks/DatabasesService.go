@@ -5,6 +5,7 @@
 //
 //	mockgen -source databases.go -package=mocks DatabasesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

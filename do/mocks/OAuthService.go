@@ -5,6 +5,7 @@
 //
 //	mockgen -source oauth.go -package=mocks OAuthService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

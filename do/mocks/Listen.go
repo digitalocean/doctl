@@ -5,6 +5,7 @@
 //
 //	mockgen -source ../pkg/listen/listen.go -package=mocks Listen
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

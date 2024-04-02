@@ -38,6 +38,7 @@ type LoadBalancersService interface {
 	RemoveDroplets(lbID string, dIDs ...int) error
 	AddForwardingRules(lbID string, rules ...godo.ForwardingRule) error
 	RemoveForwardingRules(lbID string, rules ...godo.ForwardingRule) error
+	PurgeCache(lbID string) error
 }
 
 var _ LoadBalancersService = &loadBalancersService{}
@@ -131,5 +132,10 @@ func (lbs *loadBalancersService) AddForwardingRules(lbID string, rules ...godo.F
 
 func (lbs *loadBalancersService) RemoveForwardingRules(lbID string, rules ...godo.ForwardingRule) error {
 	_, err := lbs.client.LoadBalancers.RemoveForwardingRules(context.TODO(), lbID, rules...)
+	return err
+}
+
+func (lbs *loadBalancersService) PurgeCache(lbID string) error {
+	_, err := lbs.client.LoadBalancers.PurgeCache(context.TODO(), lbID)
 	return err
 }

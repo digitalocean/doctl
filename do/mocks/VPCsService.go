@@ -5,6 +5,7 @@
 //
 //	mockgen -source vpcs.go -package=mocks VPCsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

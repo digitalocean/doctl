@@ -5,6 +5,7 @@
 //
 //	mockgen -source apps.go -package=mocks AppsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

@@ -337,6 +337,14 @@ const (
 	ArgDenyList = "deny-list"
 	// ArgLoadBalancerType is the type of the load balancer.
 	ArgLoadBalancerType = "type"
+	// ArgLoadBalancerDomains is list of domains supported for global load balancer.
+	ArgLoadBalancerDomains = "domains"
+	// ArgGlobalLoadBalancerSettings is global load balancer settings.
+	ArgGlobalLoadBalancerSettings = "glb-settings"
+	// ArgGlobalLoadBalancerCDNSettings is global load balancer CDN settings.
+	ArgGlobalLoadBalancerCDNSettings = "glb-cdn-settings"
+	// ArgLoadBalancerIDs is a list of load balancer IDs.
+	ArgLoadBalancerIDs = "lb-ids"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
