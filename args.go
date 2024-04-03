@@ -343,8 +343,8 @@ const (
 	ArgGlobalLoadBalancerSettings = "glb-settings"
 	// ArgGlobalLoadBalancerCDNSettings is global load balancer CDN settings.
 	ArgGlobalLoadBalancerCDNSettings = "glb-cdn-settings"
-	// ArgLoadBalancerIDs is a list of load balancer IDs.
-	ArgLoadBalancerIDs = "lb-ids"
+	// ArgTargetLoadBalancerIDs is a list of target load balancer IDs.
+	ArgTargetLoadBalancerIDs = "target-lb-ids"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"

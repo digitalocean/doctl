@@ -92,14 +92,14 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDenyList, "", []string{},
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerDomains, "", "",
-		"A comma-separated list of domains required to ingress traffic to a global load balancer")
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerDomains, "", []string{},
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain,is_managed:true,certificate_id:test-cert-id`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerSettings, "", "",
-		"Global load balancer settings")
+		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerCDNSettings, "", "",
-		"Global load balancer CDN settings")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerIDs, "", "",
-		"A comma-separated list of Load Balancer IDs to add to the global load balancer")
+		"CDN cache settings global load balancer, e.g.: `is_enabled:true`")
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
+		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer")
 	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
@@ -137,14 +137,14 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", nil,
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerDomains, "", "",
-		"A comma-separated list of domains required to ingress traffic to a global load balancer")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgLoadBalancerDomains, "", []string{},
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain,is_managed:true,certificate_id:test-cert-id`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerSettings, "", "",
-		"Global load balancer settings")
+		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80`")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerCDNSettings, "", "",
-		"Global load balancer CDN settings")
-	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerIDs, "", "",
-		"A comma-separated list of Load Balancer IDs to add to the global load balancer")
+		"CDN cache settings global load balancer, e.g.: `is_enabled:true`")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
+		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
@@ -424,14 +424,12 @@ func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, er
 	return forwardingRules, err
 }
 
-func extractDomains(s string) (domains []*godo.LBDomain, err error) {
+func extractDomains(s []string) (domains []*godo.LBDomain, err error) {
 	if len(s) == 0 {
 		return domains, err
 	}
 
-	list := strings.Split(s, " ")
-
-	for _, v := range list {
+	for _, v := range s {
 		domain := new(godo.LBDomain)
 		if err := fillStructFromStringSliceArgs(domain, v); err != nil {
 			return nil, err
@@ -484,7 +482,6 @@ func fillStructFromStringSliceArgs(obj any, s string) error {
 			case reflect.String:
 				f.Set(reflect.ValueOf(val))
 			default:
-				fmt.Println("debug kv pairs", jv, val)
 				return fmt.Errorf("Unexpected type for struct field %v", val)
 			}
 		}
@@ -644,7 +641,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		r.Firewall = firewall
 	}
 
-	dms, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerDomains)
+	dms, err := c.Doit.GetStringSlice(c.NS, doctl.ArgLoadBalancerDomains)
 	if err != nil {
 		return err
 	}
@@ -681,7 +678,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		r.GLBSettings.CDN = cdnSettings
 	}
 
-	lbIDsList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgLoadBalancerIDs)
+	lbIDsList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTargetLoadBalancerIDs)
 	if err != nil {
 		return err
 	}
