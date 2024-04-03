@@ -35,6 +35,7 @@ const (
 	databaseTopicPath                   = databaseBasePath + "/%s/topics/%s"
 	databaseTopicsPath                  = databaseBasePath + "/%s/topics"
 	databaseMetricsCredentialsPath      = databaseBasePath + "/metrics/credentials"
+	databaseEvents                      = databaseBasePath + "/%s/events"
 )
 
 // SQL Mode constants allow for MySQL-specific SQL flavor configuration.
@@ -157,6 +158,7 @@ type DatabasesService interface {
 	UpdateTopic(context.Context, string, string, *DatabaseUpdateTopicRequest) (*Response, error)
 	GetMetricsCredentials(context.Context) (*DatabaseMetricsCredentials, *Response, error)
 	UpdateMetricsCredentials(context.Context, *DatabaseUpdateMetricsCredentialsRequest) (*Response, error)
+	ListDatabaseEvents(context.Context, string, *ListOptions) ([]DatabaseEvent, *Response, error)
 }
 
 // DatabasesServiceOp handles communication with the Databases related methods
@@ -178,6 +180,7 @@ type Database struct {
 	EngineSlug               string                     `json:"engine,omitempty"`
 	VersionSlug              string                     `json:"version,omitempty"`
 	Connection               *DatabaseConnection        `json:"connection,omitempty"`
+	UIConnection             *DatabaseConnection        `json:"ui_connection,omitempty"`
 	PrivateConnection        *DatabaseConnection        `json:"private_connection,omitempty"`
 	StandbyConnection        *DatabaseConnection        `json:"standby_connection,omitempty"`
 	StandbyPrivateConnection *DatabaseConnection        `json:"standby_private_connection,omitempty"`
@@ -696,6 +699,7 @@ type DatabaseOptions struct {
 	PostgresSQLOptions DatabaseEngineOptions `json:"pg"`
 	RedisOptions       DatabaseEngineOptions `json:"redis"`
 	KafkaOptions       DatabaseEngineOptions `json:"kafka"`
+	OpensearchOptions  DatabaseEngineOptions `json:"opensearch"`
 }
 
 // DatabaseEngineOptions represents the configuration options that are available for a given database engine
@@ -709,6 +713,23 @@ type DatabaseEngineOptions struct {
 type DatabaseLayout struct {
 	NodeNum int      `json:"num_nodes"`
 	Sizes   []string `json:"sizes"`
+}
+
+// ListDatabaseEvents contains a list of project events.
+type ListDatabaseEvents struct {
+	Events []DatabaseEvent `json:"events"`
+}
+
+// DatbaseEvent contains the information about a Datbase event.
+type DatabaseEvent struct {
+	ID          string `json:"id"`
+	ServiceName string `json:"cluster_name"`
+	EventType   string `json:"event_type"`
+	CreateTime  string `json:"create_time"`
+}
+
+type ListDatabaseEventsRoot struct {
+	Events []DatabaseEvent `json:"events"`
 }
 
 // URN returns a URN identifier for the database
@@ -1516,4 +1537,25 @@ func (svc *DatabasesServiceOp) UpdateMetricsCredentials(ctx context.Context, upd
 		return resp, err
 	}
 	return resp, nil
+}
+
+// ListDatabaseEvents returns all the events for a given cluster
+func (svc *DatabasesServiceOp) ListDatabaseEvents(ctx context.Context, databaseID string, opts *ListOptions) ([]DatabaseEvent, *Response, error) {
+	path := fmt.Sprintf(databaseEvents, databaseID)
+	path, err := addOptions(path, opts)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(ListDatabaseEventsRoot)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return root.Events, resp, nil
 }
