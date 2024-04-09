@@ -59,7 +59,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgRegionSlug, "", "",
-		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
+		"The load balancer's region, e.g.: `nyc1`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgSizeSlug, "", "",
 		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgSizeUnit, "", 0,
@@ -93,7 +93,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDenyList, "", []string{},
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerDomains, "", []string{},
-		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain,is_managed:true,certificate_id:test-cert-id` "+
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` "+
 			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerSettings, "", "",
 		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` "+
@@ -142,7 +142,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", nil,
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgLoadBalancerDomains, "", []string{},
-		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain,is_managed:true,certificate_id:test-cert-id` "+
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` "+
 			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerSettings, "", "",
 		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` "+
@@ -402,7 +402,7 @@ func RunLoadBalancerPurgeCache(c *CmdConfig) error {
 		return err
 	}
 
-	if force || AskForConfirmDelete("load balancer", 1) == nil {
+	if force || AskForConfirm("purge CDN cache for global load balancer") == nil {
 		lbs := c.LoadBalancers()
 		if err := lbs.PurgeCache(lbID); err != nil {
 			return err
@@ -423,7 +423,7 @@ func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, er
 
 	for _, v := range list {
 		forwardingRule := new(godo.ForwardingRule)
-		if err := fillStructFromStringSliceArgs(forwardingRule, v); err != nil {
+		if err := fillStructFromStringSliceArgs(forwardingRule, v, ","); err != nil {
 			return nil, err
 		}
 
@@ -440,7 +440,7 @@ func extractDomains(s []string) (domains []*godo.LBDomain, err error) {
 
 	for _, v := range s {
 		domain := new(godo.LBDomain)
-		if err := fillStructFromStringSliceArgs(domain, v); err != nil {
+		if err := fillStructFromStringSliceArgs(domain, v, " "); err != nil {
 			return nil, err
 		}
 
@@ -450,12 +450,12 @@ func extractDomains(s []string) (domains []*godo.LBDomain, err error) {
 	return domains, err
 }
 
-func fillStructFromStringSliceArgs(obj any, s string) error {
+func fillStructFromStringSliceArgs(obj any, s string, delimiter string) error {
 	if len(s) == 0 {
 		return nil
 	}
 
-	kvs := strings.Split(s, ",")
+	kvs := strings.Split(s, delimiter)
 	m := map[string]string{}
 
 	for _, v := range kvs {
@@ -589,7 +589,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	stickySession := new(godo.StickySessions)
-	if err := fillStructFromStringSliceArgs(stickySession, ssa); err != nil {
+	if err := fillStructFromStringSliceArgs(stickySession, ssa, ","); err != nil {
 		return err
 	}
 	r.StickySessions = stickySession
@@ -600,7 +600,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	healthCheck := new(godo.HealthCheck)
-	if err := fillStructFromStringSliceArgs(healthCheck, hca); err != nil {
+	if err := fillStructFromStringSliceArgs(healthCheck, hca, ","); err != nil {
 		return err
 	}
 	r.HealthCheck = healthCheck
@@ -667,7 +667,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	glbSettings := new(godo.GLBSettings)
-	if err := fillStructFromStringSliceArgs(glbSettings, glbs); err != nil {
+	if err := fillStructFromStringSliceArgs(glbSettings, glbs, ","); err != nil {
 		return err
 	}
 	if glbSettings.TargetProtocol != "" && glbSettings.TargetPort != 0 {
@@ -680,7 +680,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	cdnSettings := new(godo.CDNSettings)
-	if err := fillStructFromStringSliceArgs(cdnSettings, cdns); err != nil {
+	if err := fillStructFromStringSliceArgs(cdnSettings, cdns, ","); err != nil {
 		return err
 	}
 	if r.GLBSettings != nil {

@@ -193,8 +193,8 @@ func TestLoadBalancerCreateGLB(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerCDNSettings, "is_enabled:true")
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerDomains, []string{
-			"name:test-domain-1,is_managed:true,certificate_id:test-cert-id-1",
-			"name:test-domain-2,is_managed:false,certificate_id:test-cert-id-2",
+			"name:test-domain-1 is_managed:true certificate_id:test-cert-id-1",
+			"name:test-domain-2 is_managed:false certificate_id:test-cert-id-2",
 		})
 		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
 		config.Doit.Set(config.NS, doctl.ArgTargetLoadBalancerIDs, []string{
@@ -321,8 +321,8 @@ func TestLoadBalancerUpdateGLB(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerCDNSettings, "is_enabled:true")
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerDomains, []string{
-			"name:test-domain-1,is_managed:true,certificate_id:test-cert-id-1",
-			"name:test-domain-2,is_managed:false,certificate_id:test-cert-id-2",
+			"name:test-domain-1 is_managed:true certificate_id:test-cert-id-1",
+			"name:test-domain-2 is_managed:false certificate_id:test-cert-id-2",
 		})
 		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
 		config.Doit.Set(config.NS, doctl.ArgTargetLoadBalancerIDs, []string{
