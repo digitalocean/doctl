@@ -174,7 +174,8 @@ Only basic information is included with the text output format. For complete app
 Three types of logs are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
 - build
 - deploy
-- run 
+- run
+- run_restarted 
 
 For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
 `,
