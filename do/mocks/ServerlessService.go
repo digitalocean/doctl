@@ -5,6 +5,7 @@
 //
 //	mockgen -source serverless.go -package=mocks ServerlessService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

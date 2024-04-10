@@ -59,7 +59,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgRegionSlug, "", "",
-		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
+		"The load balancer's region, e.g.: `nyc1`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgSizeSlug, "", "",
 		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgSizeUnit, "", 0,
@@ -92,6 +92,18 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDenyList, "", []string{},
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerDomains, "", []string{},
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerSettings, "", "",
+		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerCDNSettings, "", "",
+		"CDN cache settings global load balancer, e.g.: `is_enabled:true` "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
+		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
 	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
@@ -129,6 +141,18 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", nil,
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgLoadBalancerDomains, "", []string{},
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerSettings, "", "",
+		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerCDNSettings, "", "",
+		"CDN cache settings global load balancer, e.g.: `is_enabled:true` "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
+		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
@@ -155,6 +179,12 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	cmdRemoveForwardingRules := CmdBuilder(cmd, RunLoadBalancerRemoveForwardingRules,
 		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
 	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
+
+	cmdRunCachePurge := CmdBuilder(cmd, RunLoadBalancerPurgeCache, "purge-cache <id>",
+		"Purges CDN cache for a global load balancer", `Use this command to purge the CDN cache for specified global load balancer.`, Writer)
+	AddBoolFlag(cmdRunCachePurge, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Purge the global load balancer CDN cache without a confirmation prompt "+
+			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
 
 	return cmd
 }
@@ -359,6 +389,31 @@ func RunLoadBalancerRemoveForwardingRules(c *CmdConfig) error {
 	return c.LoadBalancers().RemoveForwardingRules(lbID, forwardingRules...)
 }
 
+// RunLoadBalancerPurgeCache purges cache for a global load balancer by its identifier.
+func RunLoadBalancerPurgeCache(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	lbID := c.Args[0]
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirm("purge CDN cache for global load balancer") == nil {
+		lbs := c.LoadBalancers()
+		if err := lbs.PurgeCache(lbID); err != nil {
+			return err
+		}
+	} else {
+		return errOperationAborted
+	}
+
+	return nil
+}
+
 func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, err error) {
 	if len(s) == 0 {
 		return forwardingRules, err
@@ -368,7 +423,7 @@ func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, er
 
 	for _, v := range list {
 		forwardingRule := new(godo.ForwardingRule)
-		if err := fillStructFromStringSliceArgs(forwardingRule, v); err != nil {
+		if err := fillStructFromStringSliceArgs(forwardingRule, v, ","); err != nil {
 			return nil, err
 		}
 
@@ -378,12 +433,29 @@ func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, er
 	return forwardingRules, err
 }
 
-func fillStructFromStringSliceArgs(obj any, s string) error {
+func extractDomains(s []string) (domains []*godo.LBDomain, err error) {
+	if len(s) == 0 {
+		return domains, err
+	}
+
+	for _, v := range s {
+		domain := new(godo.LBDomain)
+		if err := fillStructFromStringSliceArgs(domain, v, " "); err != nil {
+			return nil, err
+		}
+
+		domains = append(domains, domain)
+	}
+
+	return domains, err
+}
+
+func fillStructFromStringSliceArgs(obj any, s string, delimiter string) error {
 	if len(s) == 0 {
 		return nil
 	}
 
-	kvs := strings.Split(s, ",")
+	kvs := strings.Split(s, delimiter)
 	m := map[string]string{}
 
 	for _, v := range kvs {
@@ -411,6 +483,10 @@ func fillStructFromStringSliceArgs(obj any, s string) error {
 			case reflect.Int:
 				if v, err := strconv.Atoi(val); err == nil {
 					f.Set(reflect.ValueOf(v))
+				}
+			case reflect.Uint32:
+				if v64, err := strconv.ParseUint(val, 10, 32); err == nil {
+					f.Set(reflect.ValueOf(uint32(v64)))
 				}
 			case reflect.String:
 				f.Set(reflect.ValueOf(val))
@@ -513,7 +589,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	stickySession := new(godo.StickySessions)
-	if err := fillStructFromStringSliceArgs(stickySession, ssa); err != nil {
+	if err := fillStructFromStringSliceArgs(stickySession, ssa, ","); err != nil {
 		return err
 	}
 	r.StickySessions = stickySession
@@ -524,7 +600,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	healthCheck := new(godo.HealthCheck)
-	if err := fillStructFromStringSliceArgs(healthCheck, hca); err != nil {
+	if err := fillStructFromStringSliceArgs(healthCheck, hca, ","); err != nil {
 		return err
 	}
 	r.HealthCheck = healthCheck
@@ -573,6 +649,49 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		firewall.Deny = denyRules
 		r.Firewall = firewall
 	}
+
+	dms, err := c.Doit.GetStringSlice(c.NS, doctl.ArgLoadBalancerDomains)
+	if err != nil {
+		return err
+	}
+
+	domains, err := extractDomains(dms)
+	if err != nil {
+		return err
+	}
+	r.Domains = domains
+
+	glbs, err := c.Doit.GetString(c.NS, doctl.ArgGlobalLoadBalancerSettings)
+	if err != nil {
+		return err
+	}
+
+	glbSettings := new(godo.GLBSettings)
+	if err := fillStructFromStringSliceArgs(glbSettings, glbs, ","); err != nil {
+		return err
+	}
+	if glbSettings.TargetProtocol != "" && glbSettings.TargetPort != 0 {
+		r.GLBSettings = glbSettings
+	}
+
+	cdns, err := c.Doit.GetString(c.NS, doctl.ArgGlobalLoadBalancerCDNSettings)
+	if err != nil {
+		return err
+	}
+
+	cdnSettings := new(godo.CDNSettings)
+	if err := fillStructFromStringSliceArgs(cdnSettings, cdns, ","); err != nil {
+		return err
+	}
+	if r.GLBSettings != nil {
+		r.GLBSettings.CDN = cdnSettings
+	}
+
+	lbIDsList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTargetLoadBalancerIDs)
+	if err != nil {
+		return err
+	}
+	r.TargetLoadBalancerIDs = lbIDsList
 
 	return nil
 }

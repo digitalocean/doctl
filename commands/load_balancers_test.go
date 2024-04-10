@@ -30,7 +30,7 @@ var (
 func TestLoadBalancerCommand(t *testing.T) {
 	cmd := LoadBalancer()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "get", "list", "create", "update", "delete", "add-droplets", "remove-droplets", "add-forwarding-rules", "remove-forwarding-rules")
+	assertCommandNames(t, cmd, "get", "list", "create", "update", "delete", "add-droplets", "remove-droplets", "add-forwarding-rules", "remove-forwarding-rules", "purge-cache")
 }
 
 func TestLoadBalancerGet(t *testing.T) {
@@ -141,6 +141,72 @@ func TestLoadBalancerCreate(t *testing.T) {
 	})
 }
 
+func TestLoadBalancerCreateGLB(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		r := godo.LoadBalancerRequest{
+			Name: "lb-name",
+			Type: "GLOBAL",
+			StickySessions: &godo.StickySessions{
+				Type: "none",
+			},
+			HealthCheck: &godo.HealthCheck{
+				Protocol:               "http",
+				Port:                   80,
+				Path:                   "/",
+				CheckIntervalSeconds:   10,
+				ResponseTimeoutSeconds: 5,
+				HealthyThreshold:       5,
+				UnhealthyThreshold:     3,
+			},
+			GLBSettings: &godo.GLBSettings{
+				TargetProtocol: "http",
+				TargetPort:     80,
+				CDN:            &godo.CDNSettings{IsEnabled: true},
+			},
+			DropletIDs: []int{1, 2},
+			Domains: []*godo.LBDomain{
+				{
+					Name:          "test-domain-1",
+					IsManaged:     true,
+					CertificateID: "test-cert-id-1",
+				},
+				{
+					Name:          "test-domain-2",
+					IsManaged:     false,
+					CertificateID: "test-cert-id-2",
+				},
+			},
+			TargetLoadBalancerIDs: []string{
+				"019cb059-603f-4828-8be4-641a20f25006",
+				"023da268-bc81-468f-aa4d-9abdc4f69935",
+			},
+		}
+		disableLetsEncryptDNSRecords := true
+		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
+		tm.loadBalancers.EXPECT().Create(&r).Return(&testLoadBalancer, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerType, "GLOBAL")
+		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:none")
+		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
+		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerSettings, "target_protocol:http,target_port:80")
+		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerCDNSettings, "is_enabled:true")
+		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerDomains, []string{
+			"name:test-domain-1 is_managed:true certificate_id:test-cert-id-1",
+			"name:test-domain-2 is_managed:false certificate_id:test-cert-id-2",
+		})
+		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
+		config.Doit.Set(config.NS, doctl.ArgTargetLoadBalancerIDs, []string{
+			"019cb059-603f-4828-8be4-641a20f25006",
+			"023da268-bc81-468f-aa4d-9abdc4f69935",
+		})
+
+		err := RunLoadBalancerCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestLoadBalancerUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
@@ -196,6 +262,73 @@ func TestLoadBalancerUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgHTTPIdleTimeoutSeconds, 120)
 		config.Doit.Set(config.NS, doctl.ArgDenyList, []string{"cidr:1.2.0.0/16"})
 		config.Doit.Set(config.NS, doctl.ArgAllowList, []string{"ip:1.2.3.4", "ip:1.2.3.5"})
+
+		err := RunLoadBalancerUpdate(config)
+		assert.NoError(t, err)
+	})
+}
+func TestLoadBalancerUpdateGLB(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
+		r := godo.LoadBalancerRequest{
+			Name: "lb-name",
+			Type: "GLOBAL",
+			StickySessions: &godo.StickySessions{
+				Type: "none",
+			},
+			HealthCheck: &godo.HealthCheck{
+				Protocol:               "http",
+				Port:                   80,
+				Path:                   "/",
+				CheckIntervalSeconds:   10,
+				ResponseTimeoutSeconds: 5,
+				HealthyThreshold:       5,
+				UnhealthyThreshold:     3,
+			},
+			GLBSettings: &godo.GLBSettings{
+				TargetProtocol: "http",
+				TargetPort:     80,
+				CDN:            &godo.CDNSettings{IsEnabled: true},
+			},
+			DropletIDs: []int{1, 2},
+			Domains: []*godo.LBDomain{
+				{
+					Name:          "test-domain-1",
+					IsManaged:     true,
+					CertificateID: "test-cert-id-1",
+				},
+				{
+					Name:          "test-domain-2",
+					IsManaged:     false,
+					CertificateID: "test-cert-id-2",
+				},
+			},
+			TargetLoadBalancerIDs: []string{
+				"019cb059-603f-4828-8be4-641a20f25006",
+				"023da268-bc81-468f-aa4d-9abdc4f69935",
+			},
+		}
+		disableLetsEncryptDNSRecords := true
+		r.DisableLetsEncryptDNSRecords = &disableLetsEncryptDNSRecords
+		tm.loadBalancers.EXPECT().Update(lbID, &r).Return(&testLoadBalancer, nil)
+
+		config.Args = append(config.Args, lbID)
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerName, "lb-name")
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerType, "GLOBAL")
+		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:none")
+		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
+		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerSettings, "target_protocol:http,target_port:80")
+		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerCDNSettings, "is_enabled:true")
+		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerDomains, []string{
+			"name:test-domain-1 is_managed:true certificate_id:test-cert-id-1",
+			"name:test-domain-2 is_managed:false certificate_id:test-cert-id-2",
+		})
+		config.Doit.Set(config.NS, doctl.ArgDisableLetsEncryptDNSRecords, true)
+		config.Doit.Set(config.NS, doctl.ArgTargetLoadBalancerIDs, []string{
+			"019cb059-603f-4828-8be4-641a20f25006",
+			"023da268-bc81-468f-aa4d-9abdc4f69935",
+		})
 
 		err := RunLoadBalancerUpdate(config)
 		assert.NoError(t, err)
@@ -335,6 +468,19 @@ func TestLoadBalancerDelete(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		err := RunLoadBalancerDelete(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestLoadBalancerPurgeCache(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		lbID := "cde2c0d6-41e3-479e-ba60-ad971227232c"
+		tm.loadBalancers.EXPECT().PurgeCache(lbID).Return(nil)
+
+		config.Args = append(config.Args, lbID)
+		config.Doit.Set(config.NS, doctl.ArgForce, true)
+
+		err := RunLoadBalancerPurgeCache(config)
 		assert.NoError(t, err)
 	})
 }

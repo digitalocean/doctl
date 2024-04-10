@@ -5,6 +5,7 @@
 //
 //	mockgen -source balance.go -package=mocks BalanceService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

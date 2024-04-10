@@ -5,6 +5,7 @@
 //
 //	mockgen -source domains.go -package=mocks DomainService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -source reserved_ip_actions.go -package=mocks ReservedIPActionsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

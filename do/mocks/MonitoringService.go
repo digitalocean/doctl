@@ -5,6 +5,7 @@
 //
 //	mockgen -source monitoring.go -package=mocks MonitoringService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

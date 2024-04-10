@@ -5,6 +5,7 @@
 //
 //	mockgen -source volumes.go -package=mocks VolumesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

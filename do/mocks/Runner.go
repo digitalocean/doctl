@@ -5,6 +5,7 @@
 //
 //	mockgen -source ../pkg/runner/runner.go -package=mocks Runner
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

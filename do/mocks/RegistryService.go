@@ -5,6 +5,7 @@
 //
 //	mockgen -source registry.go -package=mocks RegistryService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

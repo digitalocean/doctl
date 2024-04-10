@@ -5,6 +5,7 @@
 //
 //	mockgen -source kubernetes.go -package=mocks KubernetesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

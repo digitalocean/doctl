@@ -5,6 +5,7 @@
 //
 //	mockgen -source images.go -package=mocks ImageService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -source billing_history.go -package=mocks BillingHistoryService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

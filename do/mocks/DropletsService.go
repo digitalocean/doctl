@@ -5,6 +5,7 @@
 //
 //	mockgen -source droplets.go -package=mocks DropletsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

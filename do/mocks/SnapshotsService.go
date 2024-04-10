@@ -5,6 +5,7 @@
 //
 //	mockgen -source snapshots.go -package=mocks SnapshotsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

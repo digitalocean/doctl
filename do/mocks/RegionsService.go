@@ -5,6 +5,7 @@
 //
 //	mockgen -source regions.go -package=mocks RegionsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
