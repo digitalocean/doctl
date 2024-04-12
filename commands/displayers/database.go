@@ -356,6 +356,9 @@ func (do *DatabaseOptions) KV() []map[string]any {
 	if nonEmptyOptionsFn(do.DatabaseOptions.KafkaOptions) {
 		engines = append(engines, "kafka")
 	}
+	if nonEmptyOptionsFn(do.DatabaseOptions.OpensearchOptions) {
+		engines = append(engines, "opensearch")
+	}
 
 	out := make([]map[string]any, 0, len(engines))
 	for _, eng := range engines {
