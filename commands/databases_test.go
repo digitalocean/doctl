@@ -249,6 +249,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"connection",
 		"migrate",
 		"resize",
+		"events",
 		"firewalls",
 		"fork",
 		"backups",
