@@ -155,6 +155,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	cmd.AddCommand(databaseOptions())
 	cmd.AddCommand(databaseConfiguration())
 	cmd.AddCommand(databaseTopic())
+	cmd.AddCommand(databaseEvents())
 
 	return cmd
 }
@@ -2440,4 +2441,41 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		}
 	}
 	return nil
+}
+
+func databaseEvents() *Command {
+	listDatabaseEvents := `
+
+You can get a list of database events by calling:
+
+	doctl databases events list <cluster-id>`
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "events",
+			Short: "Display commands for listing database cluster events",
+			Long:  `The subcommands under ` + "`" + `doctl databases events` + "`" + ` are for listing database cluster events.` + listDatabaseEvents,
+		},
+	}
+	cmdDatabaseEventsList := CmdBuilder(cmd, RunDatabaseEvents, "list <database-cluster-id>", "List your database cluster events", `Retrieves a list of database clusters events:`+listDatabaseEvents, Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseEvents{}))
+
+	cmdDatabaseEventsList.Example = `The following example retrieves a list of databases events in a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases events list ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+
+	return cmd
+}
+
+// RunDatabaseDBList retrieves a list of databases for specific database cluster
+func RunDatabaseEvents(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	id := c.Args[0]
+
+	dbEvents, err := c.Databases().ListDatabaseEvents(id)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.DatabaseEvents{DatabaseEvents: dbEvents}
+	return c.Display(item)
 }
