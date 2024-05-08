@@ -490,6 +490,18 @@ func fillStructFromStringSliceArgs(obj any, s string, delimiter string) error {
 				}
 			case reflect.String:
 				f.Set(reflect.ValueOf(val))
+			case reflect.Map:
+				for _, kvPair := range strings.Split(val, " ") {
+					kv := strings.Split(kvPair, "=")
+					if len(kv) == 2 {
+						if v32, err := strconv.ParseUint(kv[1], 10, 32); err == nil {
+							if f.IsZero() {
+								f.Set(reflect.MakeMap(f.Type()))
+							}
+							f.SetMapIndex(reflect.ValueOf(kv[0]), reflect.ValueOf(uint32(v32)))
+						}
+					}
+				}
 			default:
 				return fmt.Errorf("Unexpected type for struct field %v", val)
 			}

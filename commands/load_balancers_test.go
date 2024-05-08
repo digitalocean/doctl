@@ -159,9 +159,11 @@ func TestLoadBalancerCreateGLB(t *testing.T) {
 				UnhealthyThreshold:     3,
 			},
 			GLBSettings: &godo.GLBSettings{
-				TargetProtocol: "http",
-				TargetPort:     80,
-				CDN:            &godo.CDNSettings{IsEnabled: true},
+				TargetProtocol:    "http",
+				TargetPort:        80,
+				CDN:               &godo.CDNSettings{IsEnabled: true},
+				RegionPriorities:  map[string]uint32{"nyc1": 1, "nyc2": 2},
+				FailoverThreshold: 10,
 			},
 			DropletIDs: []int{1, 2},
 			Domains: []*godo.LBDomain{
@@ -189,7 +191,7 @@ func TestLoadBalancerCreateGLB(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerType, "GLOBAL")
 		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:none")
 		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
-		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerSettings, "target_protocol:http,target_port:80")
+		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerSettings, "target_protocol:http,target_port:80,region_priorities:nyc1=1 nyc2=2,failover_threshold:10")
 		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerCDNSettings, "is_enabled:true")
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerDomains, []string{
@@ -286,9 +288,11 @@ func TestLoadBalancerUpdateGLB(t *testing.T) {
 				UnhealthyThreshold:     3,
 			},
 			GLBSettings: &godo.GLBSettings{
-				TargetProtocol: "http",
-				TargetPort:     80,
-				CDN:            &godo.CDNSettings{IsEnabled: true},
+				TargetProtocol:    "http",
+				TargetPort:        80,
+				CDN:               &godo.CDNSettings{IsEnabled: true},
+				RegionPriorities:  map[string]uint32{"nyc1": 1, "nyc2": 2},
+				FailoverThreshold: 10,
 			},
 			DropletIDs: []int{1, 2},
 			Domains: []*godo.LBDomain{
@@ -317,7 +321,7 @@ func TestLoadBalancerUpdateGLB(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerType, "GLOBAL")
 		config.Doit.Set(config.NS, doctl.ArgStickySessions, "type:none")
 		config.Doit.Set(config.NS, doctl.ArgHealthCheck, "protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3")
-		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerSettings, "target_protocol:http,target_port:80")
+		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerSettings, "target_protocol:http,target_port:80,region_priorities:nyc1=1 nyc2=2,failover_threshold:10")
 		config.Doit.Set(config.NS, doctl.ArgGlobalLoadBalancerCDNSettings, "is_enabled:true")
 		config.Doit.Set(config.NS, doctl.ArgDropletIDs, []string{"1", "2"})
 		config.Doit.Set(config.NS, doctl.ArgLoadBalancerDomains, []string{
