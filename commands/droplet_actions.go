@@ -109,7 +109,7 @@ Droplets that are powered off are still billable. To stop incurring charges on a
   A `+"`"+`power_off`+"`"+` event is a hard shutdown and should only be used if the shutdown action is not successful.
   It is similar to cutting the power on a server and could lead to complications.
 
-  Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`+"\n\nScopes:"+"\n"+"  actions:read, droplet:update", Writer,
+  Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`+"\n\nCustom Scopes:"+"\n"+"  actions:read, droplet:update", Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionPowerOff, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionPowerOff.Example = `The following example powers off a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action power-off 386734086`
