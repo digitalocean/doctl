@@ -104,11 +104,12 @@ Droplets that are powered off are still billable. To stop incurring charges on a
 	cmdDropletActionShutdown.Example = `The following example shuts down a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action shutdown 386734086`
 
 	cmdDropletActionPowerOff := CmdBuilder(cmd, RunDropletActionPowerOff,
-		"power-off <droplet-id>", "Power off a Droplet", `Use this command to power off a Droplet.
+		"power-off <droplet-id>", "Power off a Droplet", "\nDescription:"+"\n"+`  Use this command to power off a Droplet.
 		
-A `+"`"+`power_off`+"`"+` event is a hard shutdown and should only be used if the shutdown action is not successful. It is similar to cutting the power on a server and could lead to complications.
+  A `+"`"+`power_off`+"`"+` event is a hard shutdown and should only be used if the shutdown action is not successful.
+  It is similar to cutting the power on a server and could lead to complications.
 
-Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`, Writer,
+  Droplets that are powered off are still billable. To stop incurring charges on a Droplet, destroy it.`+"\n\nScopes:"+"\n"+"  actions:read, droplet:update", Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionPowerOff, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionPowerOff.Example = `The following example powers off a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action power-off 386734086`
