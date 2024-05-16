@@ -468,6 +468,17 @@ const (
 	// ArgVPCIPRange is a VPC range of IP addresses in CIDR notation.
 	ArgVPCIPRange = "ip-range"
 
+	// ArgVPCPeeringName is a name of the VPC Peering.
+	ArgVPCPeeringName = "name"
+	// ArgVPCPeeringFirstVPCID is the first vpc id of the peering
+	ArgVPCPeeringFirstVPCID = "first-vpc-id"
+	// ArgVPCPeeringSecondVPCID is the second vpc id of the peering
+	ArgVPCPeeringSecondVPCID = "second-vpc-id"
+	// ArgVPCPeeringID is id of the VPC Peering.
+	ArgVPCPeeringID = "peering-id"
+	// ArgVPCPeeringVPCID is id of the VPC.
+	ArgVPCPeeringVPCID = "vpc-id"
+
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
 	// ArgRegistry indicates the name of the registry.
