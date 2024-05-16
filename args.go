@@ -474,8 +474,6 @@ const (
 	ArgVPCPeeringFirstVPCID = "first-vpc-id"
 	// ArgVPCPeeringSecondVPCID is the second vpc id of the peering
 	ArgVPCPeeringSecondVPCID = "second-vpc-id"
-	// ArgVPCPeeringID is id of the VPC Peering.
-	ArgVPCPeeringID = "peering-id"
 	// ArgVPCPeeringVPCID is id of the VPC.
 	ArgVPCPeeringVPCID = "vpc-id"
 
