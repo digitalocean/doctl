@@ -37,7 +37,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 		aliasOpt("g"), displayerType(&displayers.VPCPeering{}))
 	cmdPeeringGet.Example = `The following example retrieves information about a VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpc-peerings get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdPeeringList := CmdBuilder(cmd, RunVPCPeeringList, "list", "List VPC Peerings", "Retrieves a list of the VPC Peerings on your account, including the following information for each:"+peeringDetails, Writer,
+	cmdPeeringList := CmdBuilder(cmd, RunVPCPeeringList, "list", "List VPC Peerings", "Retrieves a list of the VPC Peerings on your account, including the following informations for each:"+peeringDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.VPC{}))
 	AddStringFlag(cmdPeeringList, doctl.ArgVPCPeeringVPCID, "", "",
 		"VPC ID")
