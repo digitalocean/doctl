@@ -1,7 +1,9 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -103,9 +105,17 @@ func RunVPCPeeringCreate(c *CmdConfig) error {
 		return err
 	}
 
+	if firstVpcID == "" {
+		return errors.New("first VPC ID is empty")
+	}
+
 	secondVPCID, err := c.Doit.GetString(c.NS, doctl.ArgVPCPeeringSecondVPCID)
 	if err != nil {
 		return err
+	}
+
+	if secondVPCID == "" {
+		return errors.New("second VPC ID is empty")
 	}
 
 	r.VPCIDs = []string{firstVpcID, secondVPCID}
