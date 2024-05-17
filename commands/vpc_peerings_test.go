@@ -83,6 +83,21 @@ func TestVPCPeeringCreate(t *testing.T) {
 		err := RunVPCPeeringCreate(config)
 		assert.NoError(t, err)
 	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgVPCPeeringName, "peering-name")
+
+		err := RunVPCPeeringCreate(config)
+		assert.EqualError(t, err, "first VPC ID is empty")
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgVPCPeeringName, "peering-name")
+		config.Doit.Set(config.NS, doctl.ArgVPCPeeringFirstVPCID, "f81d4fae-7dec-11d0-a765-00a0c91e6bf6")
+
+		err := RunVPCPeeringCreate(config)
+		assert.EqualError(t, err, "second VPC ID is empty")
+	})
 }
 
 func TestVPCPeeringUpdate(t *testing.T) {

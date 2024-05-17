@@ -33,7 +33,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 - The VPC Peering creation date, in ISO8601 combined date and time format
 `
 	cmdPeeringGet := CmdBuilder(cmd, RunVPCPeeringGet, "get <id>",
-		"Retrieve a VPC network", "Retrieve information about a VPC Peering, including:"+peeringDetails, Writer,
+		"Retrieve a VPC network", "Retrieves information about a VPC Peering, including:"+peeringDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.VPCPeering{}))
 	cmdPeeringGet.Example = `The following example retrieves information about a VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpc-peerings get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
@@ -56,7 +56,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 		` : doctl vpc-peerings create --name example-peering --first-vpc-id f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --second-vpc-id 3f900b61-30d7-40d8-9711-8c5d6264b268`
 
 	cmdPeeringUpdate := CmdBuilder(cmd, RunVPCPeeringUpdate, "update <id>",
-		"Update a VPC Peering's configuration", `Updates a VPC network's configuration. You can update its name.`, Writer, aliasOpt("u"))
+		"Update a VPC Peering's configuration", `Updates a VPC Peering's configuration. You can update its name.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdPeeringUpdate, doctl.ArgVPCPeeringName, "", "",
 		"The VPC network's name")
 	cmdPeeringUpdate.Example = `The following example updates the name of a VPC Peering with the ID ` +
@@ -92,7 +92,6 @@ func RunVPCPeeringGet(c *CmdConfig) error {
 
 // RunVPCPeeringCreate creates a new VPC Peering with a given configuration.
 func RunVPCPeeringCreate(c *CmdConfig) error {
-
 	r := new(godo.VPCPeeringCreateRequest)
 	name, err := c.Doit.GetString(c.NS, doctl.ArgVPCPeeringName)
 	if err != nil {
@@ -131,7 +130,6 @@ func RunVPCPeeringCreate(c *CmdConfig) error {
 
 // RunVPCPeeringList lists VPC Peerings
 func RunVPCPeeringList(c *CmdConfig) error {
-
 	vpcID, err := c.Doit.GetString(c.NS, doctl.ArgVPCPeeringVPCID)
 	if err != nil {
 		return err

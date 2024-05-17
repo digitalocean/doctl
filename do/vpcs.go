@@ -143,7 +143,6 @@ func (v *vpcsService) GetPeering(peeringID string) (*VPCPeering, error) {
 }
 
 func (v *vpcsService) ListVPCPeerings() (VPCPeerings, error) {
-
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := v.client.VPCs.ListVPCPeerings(context.TODO(), opt)
 		if err != nil {
@@ -195,7 +194,6 @@ func (v *vpcsService) CreateVPCPeering(req *godo.VPCPeeringCreateRequest) (*VPCP
 }
 
 func (v *vpcsService) ListVPCPeeringsByVPCID(vpcID string) (VPCPeerings, error) {
-
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
 		list, resp, err := v.client.VPCs.ListVPCPeeringsByVPCID(context.TODO(), vpcID, opt)
 		if err != nil {
