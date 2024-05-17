@@ -33,7 +33,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 - The VPC Peering creation date, in ISO8601 combined date and time format
 `
 	cmdPeeringGet := CmdBuilder(cmd, RunVPCPeeringGet, "get <id>",
-		"Retrieve a VPC network", "Retrieves information about a VPC Peering, including:"+peeringDetails, Writer,
+		"Retrieves a VPC Peering", "Retrieves information about a VPC Peering, including:"+peeringDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.VPCPeering{}))
 	cmdPeeringGet.Example = `The following example retrieves information about a VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpc-peerings get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
