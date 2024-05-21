@@ -3,6 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -27,8 +28,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 	peeringDetails := `
 - The VPC Peering ID
 - The VPC Peering Name
-- The First VPC network's ID
-- The Second VPC network's ID
+- The Peered VPC network IDs
 - The VPC Peering Status
 - The VPC Peering creation date, in ISO8601 combined date and time format
 `
@@ -38,22 +38,20 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 	cmdPeeringGet.Example = `The following example retrieves information about a VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpc-peerings get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPeeringList := CmdBuilder(cmd, RunVPCPeeringList, "list", "List VPC Peerings", "Retrieves a list of the VPC Peerings on your account, including the following informations for each:"+peeringDetails, Writer,
-		aliasOpt("ls"), displayerType(&displayers.VPC{}))
+		aliasOpt("ls"), displayerType(&displayers.VPCPeering{}))
 	AddStringFlag(cmdPeeringList, doctl.ArgVPCPeeringVPCID, "", "",
 		"VPC ID")
-	cmdPeeringList.Example = `The following example lists the VPC Peerings on your account : doctl vpc-peerings list --format Name,FirstVpcID,SecondVpcID`
+	cmdPeeringList.Example = `The following example lists the VPC Peerings on your account : doctl vpc-peerings list --format Name,VPCIDs`
 
 	cmdPeeringCreate := CmdBuilder(cmd, RunVPCPeeringCreate, "create",
 		"Create a new VPC Peering", "Use this command to create a new VPC Peering on your account.", Writer, aliasOpt("c"))
 	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringName, "", "",
 		"The VPC Peering's name", requiredOpt())
-	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringFirstVPCID, "", "",
-		"First VPC ID")
-	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringSecondVPCID, "", "",
-		"Second VPC ID")
+	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringVPCIDs, "", "",
+		"Peering VPC IDs")
 	cmdPeeringCreate.Example = `The following example creates a VPC Peering named ` +
 		"`" + `example-peering` + "`" +
-		` : doctl vpc-peerings create --name example-peering --first-vpc-id f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --second-vpc-id 3f900b61-30d7-40d8-9711-8c5d6264b268`
+		` : doctl vpc-peerings create --name example-peering --vpc-ids f81d4fae-7dec-11d0-a765-00a0c91e6bf6,3f900b61-30d7-40d8-9711-8c5d6264b268`
 
 	cmdPeeringUpdate := CmdBuilder(cmd, RunVPCPeeringUpdate, "update <id>",
 		"Update a VPC Peering's name", `Use this command to update the name of a VPC Peering`, Writer, aliasOpt("u"))
@@ -99,25 +97,22 @@ func RunVPCPeeringCreate(c *CmdConfig) error {
 	}
 	r.Name = name
 
-	firstVpcID, err := c.Doit.GetString(c.NS, doctl.ArgVPCPeeringFirstVPCID)
+	vpcIDs, err := c.Doit.GetString(c.NS, doctl.ArgVPCPeeringVPCIDs)
 	if err != nil {
 		return err
 	}
 
-	if firstVpcID == "" {
-		return errors.New("first VPC ID is empty")
+	for _, v := range strings.Split(vpcIDs, ",") {
+		if v == "" {
+			return errors.New("VPC ID is empty")
+		}
+
+		r.VPCIDs = append(r.VPCIDs, strings.TrimSpace(v))
 	}
 
-	secondVPCID, err := c.Doit.GetString(c.NS, doctl.ArgVPCPeeringSecondVPCID)
-	if err != nil {
-		return err
+	if len(r.VPCIDs) != 2 {
+		return errors.New("VPC IDs length should be 2")
 	}
-
-	if secondVPCID == "" {
-		return errors.New("second VPC ID is empty")
-	}
-
-	r.VPCIDs = []string{firstVpcID, secondVPCID}
 
 	peering, err := c.VPCs().CreateVPCPeering(r)
 	if err != nil {
