@@ -58,7 +58,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 	cmdPeeringUpdate := CmdBuilder(cmd, RunVPCPeeringUpdate, "update <id>",
 		"Update a VPC Peering's name", `Use this command to update the name of a VPC Peering`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdPeeringUpdate, doctl.ArgVPCPeeringName, "", "",
-		"The VPC Peering's name")
+		"The VPC Peering's name", requiredOpt())
 	cmdPeeringUpdate.Example = `The following example updates the name of a VPC Peering with the ID ` +
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
 		`: doctl vpc-peerings update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name new-name`
