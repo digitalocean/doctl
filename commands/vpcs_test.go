@@ -27,7 +27,7 @@ var (
 func TestVPCsCommand(t *testing.T) {
 	cmd := VPCs()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "get", "list", "create", "update", "delete")
+	assertCommandNames(t, cmd, "get", "list", "create", "update", "delete", "vpc-peerings")
 }
 
 func TestVPCGet(t *testing.T) {

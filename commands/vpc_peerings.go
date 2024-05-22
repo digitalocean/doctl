@@ -20,10 +20,9 @@ func VPCPeerings() *Command {
 		Command: &cobra.Command{
 			Use:   "vpc-peerings",
 			Short: "Display commands that manage VPC Peerings",
-			Long: `The commands under ` + "`" + `doctl vpc peerings` + "`" + ` are for managing your VPC Peerings.
+			Long: `The commands under ` + "`" + `doctl vpc-peerings` + "`" + ` are for managing your VPC Peerings.
 
 With the VPC Peerings commands, you can get, list, create, update, or delete VPC Peerings, and manage their configuration details.`,
-			GroupID: manageResourcesGroup,
 		},
 	}
 
@@ -50,7 +49,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringName, "", "",
 		"The VPC Peering's name", requiredOpt())
 	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringVPCIDs, "", "",
-		"Peering VPC IDs should be comma separated")
+		"Peering VPC IDs should be comma separated", requiredOpt())
 	AddBoolFlag(cmdPeeringCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a VPC Peering creation to complete before returning control to the terminal")
 	cmdPeeringCreate.Example = `The following example creates a VPC Peering named ` +
 		"`" + `example-peering` + "`" +
@@ -229,6 +228,7 @@ func RunVPCPeeringDelete(c *CmdConfig) error {
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
+	notice("VPC Peering is successfully deleted")
 	return nil
 }
 
