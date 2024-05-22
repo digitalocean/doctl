@@ -233,7 +233,7 @@ func RunVPCPeeringDelete(c *CmdConfig) error {
 }
 
 func waitForVPCPeering(vpcService do.VPCsService, peeringID string, wantStatus string, terminateOnNotFound bool) error {
-	const maxAttempts = 180
+	const maxAttempts = 360
 	const errStatus = "ERROR"
 	attempts := 0
 	printNewLineSet := false
@@ -264,7 +264,7 @@ func waitForVPCPeering(vpcService do.VPCsService, peeringID string, wantStatus s
 		}
 
 		attempts++
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	return fmt.Errorf("timeout waiting for VPC Peering (%s) to become %s", peeringID, wantStatus)
