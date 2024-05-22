@@ -470,7 +470,7 @@ const (
 
 	// ArgVPCPeeringName is a name of the VPC Peering.
 	ArgVPCPeeringName = "name"
-	// ArgVPCPeeringVPCIDs is the first vpc id of the peering
+	// ArgVPCPeeringVPCIDs is the vpc ids of the peering
 	ArgVPCPeeringVPCIDs = "vpc-ids"
 	// ArgVPCPeeringVPCID is id of the VPC.
 	ArgVPCPeeringVPCID = "vpc-id"
