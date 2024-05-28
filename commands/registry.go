@@ -223,7 +223,7 @@ func Repository() *Command {
 		"List manifests for a repository in a container registry", listRepositoryManifests,
 		Writer, aliasOpt("lm"), displayerType(&displayers.RepositoryManifest{}),
 	)
-	cmdListRepositoryManifests.Example = `The following example lists manifests in a repository named ` + "`" + `example-repository` + "`" + ` in a registry named ` + "`" + `example-registry` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the digest and update time for each manifest: doctl registry repository list-manifests example-registry/example-repository --format Digest,UpdatedAt`
+	cmdListRepositoryManifests.Example = `The following example lists manifests in a repository named ` + "`" + `example-repository` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the digest and update time for each manifest: doctl registry repository list-manifests example-repository --format Digest,UpdatedAt`
 
 	deleteManifestDesc := "Permanently deletes one or more repository manifests by digest."
 	cmdRunRepositoryDeleteManifest := CmdBuilder(
