@@ -18,11 +18,11 @@ import (
 func VPCPeerings() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:   "vpc-peerings",
+			Use:   "peerings",
 			Short: "Display commands that manage VPC Peerings",
-			Long: `The commands under ` + "`" + `doctl vpc-peerings` + "`" + ` are for managing your VPC Peerings.
-
+			Long: `The commands under ` + "`" + `doctl vpcs peerings` + "`" + ` are for managing your VPC Peerings.
 With the VPC Peerings commands, you can get, list, create, update, or delete VPC Peerings, and manage their configuration details.`,
+			Hidden: true,
 		},
 	}
 
@@ -36,24 +36,22 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 	cmdPeeringGet := CmdBuilder(cmd, RunVPCPeeringGet, "get <id>",
 		"Retrieves a VPC Peering", "Retrieves information about a VPC Peering, including:"+peeringDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.VPCPeering{}))
-	cmdPeeringGet.Example = `The following example retrieves information about a VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpc-peerings get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+	cmdPeeringGet.Example = `The following example retrieves information about a VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpcs peerings get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdPeeringList := CmdBuilder(cmd, RunVPCPeeringList, "list", "List VPC Peerings", "Retrieves a list of the VPC Peerings on your account, including the following informations for each:"+peeringDetails, Writer,
+	cmdPeeringList := CmdBuilder(cmd, RunVPCPeeringList, "list", "List VPC Peerings", "Retrieves a list of the VPC Peerings on your account, including the following information for each:"+peeringDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.VPCPeering{}))
 	AddStringFlag(cmdPeeringList, doctl.ArgVPCPeeringVPCID, "", "",
 		"VPC ID")
-	cmdPeeringList.Example = `The following example lists the VPC Peerings on your account : doctl vpc-peerings list --format Name,VPCIDs`
+	cmdPeeringList.Example = `The following example lists the VPC Peerings on your account : doctl vpcs peerings list --format Name,VPCIDs`
 
 	cmdPeeringCreate := CmdBuilder(cmd, RunVPCPeeringCreate, "create",
 		"Create a new VPC Peering", "Use this command to create a new VPC Peering on your account.", Writer, aliasOpt("c"))
-	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringName, "", "",
-		"The VPC Peering's name", requiredOpt())
 	AddStringFlag(cmdPeeringCreate, doctl.ArgVPCPeeringVPCIDs, "", "",
 		"Peering VPC IDs should be comma separated", requiredOpt())
 	AddBoolFlag(cmdPeeringCreate, doctl.ArgCommandWait, "", false, "Boolean that specifies whether to wait for a VPC Peering creation to complete before returning control to the terminal")
 	cmdPeeringCreate.Example = `The following example creates a VPC Peering named ` +
-		"`" + `example-peering` + "`" +
-		` : doctl vpc-peerings create --name example-peering --vpc-ids f81d4fae-7dec-11d0-a765-00a0c91e6bf6,3f900b61-30d7-40d8-9711-8c5d6264b268`
+		"`" + `example-peering-name` + "`" +
+		` : doctl vpcs peerings create example-peering-name --vpc-ids f81d4fae-7dec-11d0-a765-00a0c91e6bf6,3f900b61-30d7-40d8-9711-8c5d6264b268`
 
 	cmdPeeringUpdate := CmdBuilder(cmd, RunVPCPeeringUpdate, "update <id>",
 		"Update a VPC Peering's name", `Use this command to update the name of a VPC Peering`, Writer, aliasOpt("u"))
@@ -61,7 +59,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 		"The VPC Peering's name", requiredOpt())
 	cmdPeeringUpdate.Example = `The following example updates the name of a VPC Peering with the ID ` +
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
-		`: doctl vpc-peerings update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name new-name`
+		`: doctl vpcs peerings update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name new-name`
 
 	cmdPeeringDelete := CmdBuilder(cmd, RunVPCPeeringDelete, "delete <id>",
 		"Permanently delete a VPC Peering", `Permanently deletes the specified VPC Peering. This is irreversible.`, Writer, aliasOpt("d", "rm"))
@@ -70,7 +68,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 	AddBoolFlag(cmdPeeringDelete, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for a VPC Peering deletion to complete before returning control to the terminal")
 	cmdPeeringDelete.Example = `The following example deletes the VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
-		`: doctl vpc-peerings delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+		`: doctl vpcs peerings delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	return cmd
 }
@@ -94,12 +92,13 @@ func RunVPCPeeringGet(c *CmdConfig) error {
 
 // RunVPCPeeringCreate creates a new VPC Peering with a given configuration.
 func RunVPCPeeringCreate(c *CmdConfig) error {
-	r := new(godo.VPCPeeringCreateRequest)
-	name, err := c.Doit.GetString(c.NS, doctl.ArgVPCPeeringName)
-	if err != nil {
-		return err
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
 	}
-	r.Name = name
+	peeringName := c.Args[0]
+
+	r := new(godo.VPCPeeringCreateRequest)
+	r.Name = peeringName
 
 	vpcIDs, err := c.Doit.GetString(c.NS, doctl.ArgVPCPeeringVPCIDs)
 	if err != nil {
