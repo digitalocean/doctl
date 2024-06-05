@@ -104,7 +104,8 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
 		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer "+
 			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetwork, "", "", "The type of network the load balancer is accessible from, e.g.: `EXTERNAL` or `INTERNAL`")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetwork, "", "", "The type of network the load balancer is accessible from, e.g.: `EXTERNAL` or `INTERNAL`"+
+		"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
 	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
 	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerNetwork)
 
