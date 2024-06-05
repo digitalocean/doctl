@@ -104,7 +104,9 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
 		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer "+
 			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetworkType, "", "", "The network type of load balancer, e.g.: `EXTERNAL` or `INTERNAL`")
 	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
+	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerNetworkType)
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer. Using all applicable flags, the command should contain a full representation of the load balancer including existing attributes, such as the load balancer's name, region, forwarding rules, and Droplet IDs. Any attribute that is not provided is reset to its default value.`, Writer, aliasOpt("u"))
@@ -704,6 +706,12 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		return err
 	}
 	r.TargetLoadBalancerIDs = lbIDsList
+
+	network, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerNetworkType)
+	if err != nil {
+		return err
+	}
+	r.Network = strings.ToUpper(network)
 
 	return nil
 }

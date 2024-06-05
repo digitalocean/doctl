@@ -345,6 +345,8 @@ const (
 	ArgGlobalLoadBalancerCDNSettings = "glb-cdn-settings"
 	// ArgTargetLoadBalancerIDs is a list of target load balancer IDs.
 	ArgTargetLoadBalancerIDs = "target-lb-ids"
+	// ArgLoadBalancerNetworkType is the network type of the load balancer.
+	ArgLoadBalancerNetworkType = "network-type"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
