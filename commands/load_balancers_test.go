@@ -136,7 +136,7 @@ func TestLoadBalancerCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgHTTPIdleTimeoutSeconds, 120)
 		config.Doit.Set(config.NS, doctl.ArgDenyList, []string{"cidr:1.2.0.0/16"})
 		config.Doit.Set(config.NS, doctl.ArgAllowList, []string{"ip:1.2.3.4", "ip:1.2.3.5"})
-		config.Doit.Set(config.NS, doctl.ArgLoadBalancerNetworkType, "EXTERNAL")
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerNetwork, "EXTERNAL")
 
 		err := RunLoadBalancerCreate(config)
 		assert.NoError(t, err)
@@ -206,7 +206,7 @@ func TestLoadBalancerCreateGLB(t *testing.T) {
 			"019cb059-603f-4828-8be4-641a20f25006",
 			"023da268-bc81-468f-aa4d-9abdc4f69935",
 		})
-		config.Doit.Set(config.NS, doctl.ArgLoadBalancerNetworkType, "EXTERNAL")
+		config.Doit.Set(config.NS, doctl.ArgLoadBalancerNetwork, "EXTERNAL")
 
 		err := RunLoadBalancerCreate(config)
 		assert.NoError(t, err)
