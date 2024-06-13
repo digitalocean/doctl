@@ -1671,11 +1671,11 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
-	controlPlanePermissionAllowedAddresses, err := c.Doit.GetStringSlice(c.NS, doctl.ArgControlPlanePermissionAllowedAddresses)
+	controlPlanePermissionAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlanePermissionAllowedAddresses)
 	if err != nil {
 		return err
 	}
-	if len(controlPlanePermissionAllowedAddresses) > 0 {
+	if isSet {
 		if r.ControlPlanePermission == nil {
 			r.ControlPlanePermission = &godo.KubernetesControlPlanePermission{}
 		}
@@ -1786,11 +1786,11 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		}
 	}
 
-	controlPlanePermissionAllowedAddresses, err := c.Doit.GetStringSlice(c.NS, doctl.ArgControlPlanePermissionAllowedAddresses)
+	controlPlanePermissionAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlanePermissionAllowedAddresses)
 	if err != nil {
 		return err
 	}
-	if len(controlPlanePermissionAllowedAddresses) > 0 {
+	if isSet {
 		if r.ControlPlanePermission == nil {
 			r.ControlPlanePermission = &godo.KubernetesControlPlanePermission{}
 		}
