@@ -92,6 +92,10 @@ const (
 	ArgAutoUpgrade = "auto-upgrade"
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
+	// ArgControlPlanePermissionEnable enable control plane permission.
+	ArgControlPlanePermissionEnable = "control-plane-permission-enable"
+	// ArgControlPlanePermissionAllowedAddresses list of allowed addresses that can access the control plane.
+	ArgControlPlanePermissionAllowedAddresses = "control-plane-permission-allowed-addresses"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.

@@ -26,13 +26,14 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/displayers"
-	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -282,6 +283,10 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. Defaults to false. To enable the HA control plane, supply --ha=true.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgControlPlanePermissionEnable, "", "",
+		"Creates the cluster with a control plane permission. Defaults to false. To enable the control plane permission, supply --enable-control-plane-permission=true.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgControlPlanePermissionAllowedAddresses, "", nil,
+		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -328,6 +333,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
 		"Enables the highly-available control plane for the cluster")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgControlPlanePermissionEnable, "", "",
+		"Creates the cluster with a control plane permission. Defaults to false. To enable the control plane permission, supply --enable-control-plane-permission=true.")
+	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgControlPlanePermissionAllowedAddresses, "", nil,
+		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Updates the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
@@ -1648,6 +1657,31 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.HA = ha
 
+	enableControlPlanePermission, err := c.Doit.GetString(c.NS, doctl.ArgControlPlanePermissionEnable)
+	if err != nil {
+		return err
+	}
+	if enableControlPlanePermission != "" {
+		enableControlPlanePermissionBool, err := strconv.ParseBool(enableControlPlanePermission)
+		if err != nil {
+			return err
+		}
+		r.ControlPlanePermission = &godo.KubernetesControlPlanePermission{
+			Enabled: &enableControlPlanePermissionBool,
+		}
+	}
+
+	controlPlanePermissionAllowedAddresses, err := c.Doit.GetStringSlice(c.NS, doctl.ArgControlPlanePermissionAllowedAddresses)
+	if err != nil {
+		return err
+	}
+	if len(controlPlanePermissionAllowedAddresses) > 0 {
+		if r.ControlPlanePermission == nil {
+			r.ControlPlanePermission = &godo.KubernetesControlPlanePermission{}
+		}
+		r.ControlPlanePermission.AllowedAddresses = controlPlanePermissionAllowedAddresses
+	}
+
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
@@ -1737,6 +1771,32 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.HA = ha
+
+	enableControlPlanePermission, err := c.Doit.GetString(c.NS, doctl.ArgControlPlanePermissionEnable)
+	if err != nil {
+		return err
+	}
+	if enableControlPlanePermission != "" {
+		enableControlPlanePermissionBool, err := strconv.ParseBool(enableControlPlanePermission)
+		if err != nil {
+			return err
+		}
+		r.ControlPlanePermission = &godo.KubernetesControlPlanePermission{
+			Enabled: &enableControlPlanePermissionBool,
+		}
+	}
+
+	controlPlanePermissionAllowedAddresses, err := c.Doit.GetStringSlice(c.NS, doctl.ArgControlPlanePermissionAllowedAddresses)
+	if err != nil {
+		return err
+	}
+	if len(controlPlanePermissionAllowedAddresses) > 0 {
+		if r.ControlPlanePermission == nil {
+			r.ControlPlanePermission = &godo.KubernetesControlPlanePermission{}
+		}
+		r.ControlPlanePermission.AllowedAddresses = controlPlanePermissionAllowedAddresses
+	}
+
 	return nil
 }
 
