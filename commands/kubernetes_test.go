@@ -31,7 +31,7 @@ var (
 			},
 			AutoUpgrade: true,
 			HA:          true,
-			ControlPlanePermission: &godo.KubernetesControlPlanePermission{
+			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
 				Enabled: boolPtr(true),
 				AllowedAddresses: []string{
 					"1.2.3.4",
@@ -505,7 +505,7 @@ func TestKubernetesCreate(t *testing.T) {
 			},
 			AutoUpgrade: true,
 			HA:          true,
-			ControlPlanePermission: &godo.KubernetesControlPlanePermission{
+			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
 				Enabled: boolPtr(true),
 				AllowedAddresses: []string{
 					"1.2.3.4",
@@ -532,8 +532,8 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
 		config.Doit.Set(config.NS, doctl.ArgHA, testCluster.HA)
 
-		config.Doit.Set(config.NS, doctl.ArgControlPlanePermissionEnable, testCluster.ControlPlanePermission.Enabled)
-		config.Doit.Set(config.NS, doctl.ArgControlPlanePermissionAllowedAddresses, testCluster.ControlPlanePermission.AllowedAddresses)
+		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -568,7 +568,7 @@ func TestKubernetesUpdate(t *testing.T) {
 			},
 			AutoUpgrade: boolPtr(false),
 			HA:          boolPtr(true),
-			ControlPlanePermission: &godo.KubernetesControlPlanePermission{
+			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
 				Enabled: boolPtr(true),
 				AllowedAddresses: []string{
 					"1.2.3.4",
@@ -584,8 +584,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
 		config.Doit.Set(config.NS, doctl.ArgHA, true)
-		config.Doit.Set(config.NS, doctl.ArgControlPlanePermissionEnable, testCluster.ControlPlanePermission.Enabled)
-		config.Doit.Set(config.NS, doctl.ArgControlPlanePermissionAllowedAddresses, testCluster.ControlPlanePermission.AllowedAddresses)
+		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -601,7 +601,7 @@ func TestKubernetesUpdate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: boolPtr(false),
-			ControlPlanePermission: &godo.KubernetesControlPlanePermission{
+			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
 				Enabled: boolPtr(true),
 				AllowedAddresses: []string{
 					"1.2.3.4",
@@ -617,8 +617,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
-		config.Doit.Set(config.NS, doctl.ArgControlPlanePermissionEnable, testCluster.ControlPlanePermission.Enabled)
-		config.Doit.Set(config.NS, doctl.ArgControlPlanePermissionAllowedAddresses, testCluster.ControlPlanePermission.AllowedAddresses)
+		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
