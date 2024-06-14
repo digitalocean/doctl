@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/creack/pty v1.1.11
+	github.com/creack/pty v1.1.21
 	github.com/digitalocean/godo v1.118.0
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v24.0.9+incompatible
