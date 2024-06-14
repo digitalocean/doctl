@@ -7,11 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/digitalocean/godo"
+	"github.com/spf13/cobra"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
-	"github.com/digitalocean/godo"
-	"github.com/spf13/cobra"
 )
 
 // VPCPeerings creates the vpc peerings command.
@@ -222,12 +223,15 @@ func RunVPCPeeringDelete(c *CmdConfig) error {
 			if err != nil {
 				return fmt.Errorf("VPC Peering couldn't be deleted : %v", err)
 			}
+			notice("VPC Peering is successfully deleted")
+		} else {
+			notice("VPC Peering deletion request accepted")
 		}
 
 	} else {
 		return fmt.Errorf("operation aborted")
 	}
-	notice("VPC Peering is successfully deleted")
+
 	return nil
 }
 
