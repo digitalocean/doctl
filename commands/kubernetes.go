@@ -26,13 +26,14 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/displayers"
-	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -282,6 +283,10 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. Defaults to false. To enable the HA control plane, supply --ha=true.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", "",
+		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
+		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -328,6 +333,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
 		"Enables the highly-available control plane for the cluster")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", "",
+		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
+	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
+		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Updates the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
@@ -1648,6 +1657,31 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.HA = ha
 
+	enableControlPlaneFirewall, err := c.Doit.GetString(c.NS, doctl.ArgEnableControlPlaneFirewall)
+	if err != nil {
+		return err
+	}
+	if enableControlPlaneFirewall != "" {
+		enableControlPlaneFirewallBool, err := strconv.ParseBool(enableControlPlaneFirewall)
+		if err != nil {
+			return err
+		}
+		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
+			Enabled: &enableControlPlaneFirewallBool,
+		}
+	}
+
+	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
+	if err != nil {
+		return err
+	}
+	if isSet {
+		if r.ControlPlaneFirewall == nil {
+			r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{}
+		}
+		r.ControlPlaneFirewall.AllowedAddresses = controlPlaneFirewallAllowedAddresses
+	}
+
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
 		return err
@@ -1737,6 +1771,32 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.HA = ha
+
+	enableControlPlaneFirewall, err := c.Doit.GetString(c.NS, doctl.ArgEnableControlPlaneFirewall)
+	if err != nil {
+		return err
+	}
+	if enableControlPlaneFirewall != "" {
+		enableControlPlaneFirewallBool, err := strconv.ParseBool(enableControlPlaneFirewall)
+		if err != nil {
+			return err
+		}
+		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
+			Enabled: &enableControlPlaneFirewallBool,
+		}
+	}
+
+	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
+	if err != nil {
+		return err
+	}
+	if isSet {
+		if r.ControlPlaneFirewall == nil {
+			r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{}
+		}
+		r.ControlPlaneFirewall.AllowedAddresses = controlPlaneFirewallAllowedAddresses
+	}
+
 	return nil
 }
 
