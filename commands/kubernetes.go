@@ -283,7 +283,7 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. Defaults to false. To enable the HA control plane, supply --ha=true.")
-	AddStringFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", "",
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", false,
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
 		"A comma-separated list of allowed addresses that can access the control plane.")
@@ -333,7 +333,7 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
 		"Enables the highly-available control plane for the cluster")
-	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", "",
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", false,
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
 		"A comma-separated list of allowed addresses that can access the control plane.")
@@ -1657,17 +1657,13 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	r.HA = ha
 
-	enableControlPlaneFirewall, err := c.Doit.GetString(c.NS, doctl.ArgEnableControlPlaneFirewall)
+	enableControlPlaneFirewall, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableControlPlaneFirewall)
 	if err != nil {
 		return err
 	}
-	if enableControlPlaneFirewall != "" {
-		enableControlPlaneFirewallBool, err := strconv.ParseBool(enableControlPlaneFirewall)
-		if err != nil {
-			return err
-		}
+	if enableControlPlaneFirewall != nil {
 		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
-			Enabled: &enableControlPlaneFirewallBool,
+			Enabled: enableControlPlaneFirewall,
 		}
 	}
 
@@ -1772,17 +1768,13 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 	}
 	r.HA = ha
 
-	enableControlPlaneFirewall, err := c.Doit.GetString(c.NS, doctl.ArgEnableControlPlaneFirewall)
+	enableControlPlaneFirewall, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableControlPlaneFirewall)
 	if err != nil {
 		return err
 	}
-	if enableControlPlaneFirewall != "" {
-		enableControlPlaneFirewallBool, err := strconv.ParseBool(enableControlPlaneFirewall)
-		if err != nil {
-			return err
-		}
+	if enableControlPlaneFirewall != nil {
 		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
-			Enabled: &enableControlPlaneFirewallBool,
+			Enabled: enableControlPlaneFirewall,
 		}
 	}
 
