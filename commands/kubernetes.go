@@ -596,7 +596,7 @@ func kubernetesOneClicks() *Command {
 	cmdKubernetesOneClickList.Example = `The following example lists all available 1-click apps for Kubernetes: doctl kubernetes 1-click list`
 	cmdKubeOneClickInstall := CmdBuilder(cmd, RunKubernetesOneClickInstall, "install <cluster-id>", "Install 1-click apps on a Kubernetes cluster", "Installs 1-click applications on a Kubernetes cluster. Use the `--1-click` flag to specify one or multiple pieces of software to install on the cluster.", Writer, aliasOpt("in"), displayerType(&displayers.OneClick{}))
 	AddStringSliceFlag(cmdKubeOneClickInstall, doctl.ArgOneClicks, "", nil, "The 1-clicks application to install on the cluster. Multiple 1-clicks can be added simultaneously, for example: `--1-clicks moon,loki,netdata`")
-	cmdKubeOneClickInstall.Example = `The following example installs Loki and Netdata on a Kubernetes cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl kubernetes 1-click install f81d4fae-7dec-11d0-a765-00a0c91e6bf6> --1-clicks loki,netdata`
+	cmdKubeOneClickInstall.Example = `The following example installs Loki and Netdata on a Kubernetes cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl kubernetes 1-click install f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --1-clicks loki,netdata`
 
 	return cmd
 }
