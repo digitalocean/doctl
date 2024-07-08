@@ -23,7 +23,6 @@ func VPCPeerings() *Command {
 			Short: "Display commands that manage VPC Peerings",
 			Long: `The commands under ` + "`" + `doctl vpcs peerings` + "`" + ` are for managing your VPC Peerings.
 With the VPC Peerings commands, you can get, list, create, update, or delete VPC Peerings, and manage their configuration details.`,
-			Hidden: true,
 		},
 	}
 
