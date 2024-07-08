@@ -92,6 +92,10 @@ const (
 	ArgAutoUpgrade = "auto-upgrade"
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
+	// ArgEnableControlPlaneFirewall enable control plane firewall.
+	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
+	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
+	ArgControlPlaneFirewallAllowedAddresses = "control-plane-firewall-allowed-addresses"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
@@ -345,6 +349,8 @@ const (
 	ArgGlobalLoadBalancerCDNSettings = "glb-cdn-settings"
 	// ArgTargetLoadBalancerIDs is a list of target load balancer IDs.
 	ArgTargetLoadBalancerIDs = "target-lb-ids"
+	// ArgLoadBalancerNetwork is the type of network the load balancer is accessible from.
+	ArgLoadBalancerNetwork = "network"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
