@@ -172,11 +172,12 @@ func TestAuthList(t *testing.T) {
 
 func Test_displayAuthContexts(t *testing.T) {
 	testCases := []struct {
-		Name     string
-		Out      *bytes.Buffer
-		Context  string
-		Contexts map[string]any
-		Expected string
+		Name         string
+		Out          *bytes.Buffer
+		Context      string
+		Contexts     map[string]any
+		Expected     string
+		ExpectedJSON string
 	}{
 		{
 			Name:    "default context only",
@@ -227,6 +228,62 @@ func Test_displayAuthContexts(t *testing.T) {
 	}
 }
 
+func Test_displayAuthContextsJSON(t *testing.T) {
+	testCases := []struct {
+		Name         string
+		Out          *bytes.Buffer
+		Context      string
+		Contexts     map[string]any
+		ExpectedJSON string
+	}{
+		{
+			Name:    "default context only",
+			Out:     &bytes.Buffer{},
+			Context: doctl.ArgDefaultContext,
+			Contexts: map[string]any{
+				doctl.ArgDefaultContext: true,
+			},
+			ExpectedJSON: "[\n  {\n    \"name\": \"default\",\n    \"current\": true\n  }\n]\n",
+		},
+		{
+			Name:    "default context and additional context",
+			Out:     &bytes.Buffer{},
+			Context: doctl.ArgDefaultContext,
+			Contexts: map[string]any{
+				doctl.ArgDefaultContext: true,
+				"test":                  true,
+			},
+			ExpectedJSON: "[\n  {\n    \"name\": \"default\",\n    \"current\": true\n  },\n  {\n    \"name\": \"test\",\n    \"current\": false\n  }\n]\n",
+		},
+		{
+			Name:    "default context and additional context set to additional context",
+			Out:     &bytes.Buffer{},
+			Context: "test",
+			Contexts: map[string]any{
+				doctl.ArgDefaultContext: true,
+				"test":                  true,
+			},
+			ExpectedJSON: "[\n  {\n    \"name\": \"default\",\n    \"current\": false\n  },\n  {\n    \"name\": \"test\",\n    \"current\": true\n  }\n]\n",
+		},
+		{
+			Name:    "unset context",
+			Out:     &bytes.Buffer{},
+			Context: "missing",
+			Contexts: map[string]any{
+				doctl.ArgDefaultContext: true,
+				"test":                  true,
+			},
+			ExpectedJSON: "[\n  {\n    \"name\": \"default\",\n    \"current\": false\n  },\n  {\n    \"name\": \"test\",\n    \"current\": false\n  }\n]\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			displayAuthContextsJSON(tc.Out, tc.Context, tc.Contexts)
+			assert.Equal(t, tc.ExpectedJSON, tc.Out.String())
+		})
+	}
+}
 func TestTokenInputValidator(t *testing.T) {
 	tests := []struct {
 		name  string
