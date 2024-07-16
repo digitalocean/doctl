@@ -1791,7 +1791,7 @@ func getDatabaseTopicConfigArgs(c *CmdConfig) *godo.TopicConfig {
 			res.MaxMessageBytes = &i
 		}
 	}
-	bVal, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicMesssageDownConversionEnable)
+	bVal, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicMessageDownConversionEnable)
 	if err == nil && bVal != nil {
 		res.MessageDownConversionEnable = bVal
 	}
@@ -1936,7 +1936,7 @@ This command lists the following details for each partition of a given topic in 
 			"Specifies the maximum time (in ms) that a message will remain uncompacted. This is only applicable if the logs have compaction enabled")
 		AddStringFlag(c, doctl.ArgDatabaseTopicMaxMessageBytes, "", "",
 			"Specifies the largest record batch (in bytes) that can be sent to the server. This is calculated after compression, if compression is enabled")
-		AddBoolFlag(c, doctl.ArgDatabaseTopicMesssageDownConversionEnable, "", true,
+		AddBoolFlag(c, doctl.ArgDatabaseTopicMessageDownConversionEnable, "", true,
 			"Specifies whether down-conversion of message formats is enabled to satisfy consumer requests")
 		AddStringFlag(c, doctl.ArgDatabaseTopicMessageFormatVersion, "", "",
 			"Specifies the message format version used by the broker to append messages to the logs. By setting a format version, all existing messages on disk must be smaller or equal to the specified version")

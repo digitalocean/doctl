@@ -84,7 +84,7 @@ var _ = suite("compute/droplet/neighbors", func(t *testing.T, when spec.G, it sp
 	})
 
 	when("asking for particular headers", func() {
-		it("only lists thoses headers", func() {
+		it("only lists those headers", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"compute",
 				"droplet",
