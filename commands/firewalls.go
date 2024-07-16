@@ -55,7 +55,7 @@ Inbound access rules specify the protocol (TCP, UDP, or ICMP), ports, and source
 - The inbound rules for the firewall
 - The outbound rules for the firewall
 - The IDs of Droplets assigned to the firewall
-- The tags assigned to the firewall
+- The tags of the Droplets assigned to the firewall
 `
 	inboundRulesTxt := `A comma-separated key-value list that defines an inbound rule. The rule must define a communication protocol, a port number, and a traffic source location, such as a Droplet ID, IP address, or a tag. For example, the following rule defines that resources can only receive TCP traffic on port 22 from addresses in the specified CIDR: ` + "`" + `protocol:tcp,ports:22,address:192.0.2.0/24` + "`" + `. 
 	
@@ -68,7 +68,7 @@ Available destination keys are: ` + "`" + `address` + "`" + `, ` + "`" + `drople
 
 Use a quoted string of space-separated values for multiple rules.`
 	dropletIDRulesTxt := "A comma-separated list of Droplet IDs to place behind the cloud firewall, for example: `386734086,391669331`"
-	tagNameRulesTxt := "A comma-separated list of tag names to apply to the cloud firewall, for example: `frontend,backend`"
+	tagNameRulesTxt := "A comma-separated list of existing tags, for example: `frontend,backend`. Droplets with these tags will be placed behind the cloud firewal"
 
 	cmdFirewallGet := CmdBuilder(cmd, RunFirewallGet, "get <id>", "Retrieve information about a cloud firewall", `Retrieves information about an existing cloud firewall, including:`+fwDetail, Writer, aliasOpt("g"), displayerType(&displayers.Firewall{}))
 	cmdFirewallGet.Example = `The following example retrieves information about the cloud firewall with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl compute firewall get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
