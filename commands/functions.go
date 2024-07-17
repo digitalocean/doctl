@@ -23,11 +23,12 @@ import (
 	"strings"
 
 	"github.com/apache/openwhisk-client-go/whisk"
+	"github.com/spf13/cobra"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
-	"github.com/spf13/cobra"
 )
 
 // Functions generates the serverless 'functions' subtree for addition to the doctl command

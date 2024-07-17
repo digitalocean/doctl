@@ -408,7 +408,7 @@ func TestServerlessInit(t *testing.T) {
 				}
 
 				sawOverwrite := false
-				// Grab the overrideable commands so they can be mocked
+				// Grab the overridable commands so they can be mocked
 				writeAFile = func(path string, contents []byte) error {
 					return nil
 				}

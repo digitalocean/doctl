@@ -429,8 +429,8 @@ const (
 	ArgDatabaseTopicMaxCompactionLagMS = "max-compaction-lag-ms"
 	// ArgDatabaseTopicMaxMessageBytes is the maximum size, in bytes, of the largest record batch that can be sent to the server
 	ArgDatabaseTopicMaxMessageBytes = "max-message-bytes"
-	// ArgDatabaseTopicMesssageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
-	ArgDatabaseTopicMesssageDownConversionEnable = "message-down-conversion-enable"
+	// ArgDatabaseTopicMessageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
+	ArgDatabaseTopicMessageDownConversionEnable = "message-down-conversion-enable"
 	// ArgDatabaseTopicMessageFormatVersion is the version used by the broker to append messages to the kafka topic logs
 	ArgDatabaseTopicMessageFormatVersion = "message-format-version"
 	// ArgDatabaseTopicMessageTimestampType is the timestamp used for messages
