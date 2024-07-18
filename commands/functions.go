@@ -92,7 +92,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	fetchCode := codeFlag || saveFlag || saveAsFlag != ""
 
 	sls := c.Serverless()
-	action, parms, err := sls.GetFunction(c.Args[0], fetchCode)
+	action, params, err := sls.GetFunction(c.Args[0], fetchCode)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	}
 
 	if saveEnvFlag != "" || saveEnvJSONFlag != "" {
-		return doSaveFunctionEnvironment(saveEnvFlag, saveEnvJSONFlag, parms)
+		return doSaveFunctionEnvironment(saveEnvFlag, saveEnvJSONFlag, params)
 	}
 
 	if codeFlag {
@@ -156,14 +156,14 @@ func doSaveFunctionCode(action whisk.Action, save bool, saveAs string) error {
 
 // doSaveFunctionEnvironment saves the environment variables for a function to file,
 // either as key-value pairs or JSON.  Could do both if both are specified.
-func doSaveFunctionEnvironment(saveEnv string, saveEnvJSON string, parms []do.FunctionParameter) error {
+func doSaveFunctionEnvironment(saveEnv string, saveEnvJSON string, params []do.FunctionParameter) error {
 	keyVals := []string{}
 	envMap := map[string]string{}
-	for _, parm := range parms {
-		if parm.Init {
-			keyVal := parm.Key + "=" + parm.Value
+	for _, param := range params {
+		if param.Init {
+			keyVal := param.Key + "=" + param.Value
 			keyVals = append(keyVals, keyVal)
-			envMap[parm.Key] = parm.Value
+			envMap[param.Key] = param.Value
 		}
 	}
 
