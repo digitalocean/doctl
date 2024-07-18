@@ -18,7 +18,7 @@ Options:
   -i, --image  snap image version
   -b, --branch branch only
   -c, --commit commit only
-  --snap, returns the version formated for a snap release
+  --snap, returns the version formatted for a snap release
 "
 
 semver() {

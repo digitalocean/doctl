@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -218,11 +219,16 @@ func RunAuthList(c *CmdConfig) error {
 	}
 	contexts := viper.GetStringMap("auth-contexts")
 
-	displayAuthContexts(c.Out, context, contexts)
+	if viper.GetString("output") == "json" {
+		displayAuthContextsJSON(c.Out, context, contexts)
+	} else {
+		displayAuthContexts(c.Out, context, contexts)
+	}
+
 	return nil
 }
 
-func displayAuthContexts(out io.Writer, currentContext string, contexts map[string]any) {
+func ensureDefaultContextAndKeysOrder(contexts map[string]any) []string {
 	// Because the default context isn't present on the auth-contexts field,
 	// we add it manually so that it's always included in the output, and so
 	// we can check if it's the current context.
@@ -236,6 +242,31 @@ func displayAuthContexts(out io.Writer, currentContext string, contexts map[stri
 	}
 	sort.Strings(keys)
 
+	return keys
+}
+
+func displayAuthContextsJSON(out io.Writer, currentContext string, contexts map[string]any) {
+	type contextJSON struct {
+		Name    string `json:"name"`
+		Current bool   `json:"current"`
+	}
+
+	var contextsJSON []contextJSON
+
+	keys := ensureDefaultContextAndKeysOrder(contexts)
+	for _, ctx := range keys {
+		contextsJSON = append(contextsJSON, contextJSON{
+			Name:    ctx,
+			Current: ctx == currentContext,
+		})
+	}
+
+	jsonData, _ := json.MarshalIndent(contextsJSON, "", "  ")
+	fmt.Fprintln(out, string(jsonData))
+}
+
+func displayAuthContexts(out io.Writer, currentContext string, contexts map[string]any) {
+	keys := ensureDefaultContextAndKeysOrder(contexts)
 	for _, ctx := range keys {
 		if ctx == currentContext {
 			fmt.Fprintln(out, ctx, "(current)")
