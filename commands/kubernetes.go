@@ -1676,7 +1676,7 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 			r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{}
 		}
 		for i := range controlPlaneFirewallAllowedAddresses {
-			controlPlaneFirewallAllowedAddresses[i] = strings.ReplaceAll(controlPlaneFirewallAllowedAddresses[i], " ", "")
+			controlPlaneFirewallAllowedAddresses[i] = strings.TrimSpace(controlPlaneFirewallAllowedAddresses[i])
 		}
 		r.ControlPlaneFirewall.AllowedAddresses = controlPlaneFirewallAllowedAddresses
 	}
@@ -1790,7 +1790,7 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 			r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{}
 		}
 		for i := range controlPlaneFirewallAllowedAddresses {
-			controlPlaneFirewallAllowedAddresses[i] = strings.ReplaceAll(controlPlaneFirewallAllowedAddresses[i], " ", "")
+			controlPlaneFirewallAllowedAddresses[i] = strings.TrimSpace(controlPlaneFirewallAllowedAddresses[i])
 		}
 		r.ControlPlaneFirewall.AllowedAddresses = controlPlaneFirewallAllowedAddresses
 	}
