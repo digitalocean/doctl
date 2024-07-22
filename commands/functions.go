@@ -159,11 +159,11 @@ func doSaveFunctionCode(action whisk.Action, save bool, saveAs string) error {
 func doSaveFunctionEnvironment(saveEnv string, saveEnvJSON string, params []do.FunctionParameter) error {
 	keyVals := []string{}
 	envMap := map[string]string{}
-	for _, param := range params {
-		if param.Init {
-			keyVal := param.Key + "=" + param.Value
+	for _, p := range params {
+		if p.Init {
+			keyVal := p.Key + "=" + p.Value
 			keyVals = append(keyVals, keyVal)
-			envMap[param.Key] = param.Value
+			envMap[p.Key] = p.Value
 		}
 	}
 
