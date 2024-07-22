@@ -161,6 +161,7 @@ type DatabasesService interface {
 	ListPools(string) (DatabasePools, error)
 	CreatePool(string, *godo.DatabaseCreatePoolRequest) (*DatabasePool, error)
 	GetPool(string, string) (*DatabasePool, error)
+	UpdatePool(string, string, *godo.DatabaseUpdatePoolRequest) (*DatabasePool, error)
 	DeletePool(string, string) error
 
 	GetReplica(string, string) (*DatabaseReplica, error)
@@ -488,6 +489,22 @@ func (ds *databasesService) GetPool(databaseID, poolName string) (*DatabasePool,
 	if err != nil {
 		return nil, err
 	}
+
+	return &DatabasePool{DatabasePool: p}, nil
+}
+
+func (ds *databasesService) UpdatePool(databaseID, poolName string, req *godo.DatabaseUpdatePoolRequest) (*DatabasePool, error) {
+	_, err := ds.client.Databases.UpdatePool(context.TODO(), databaseID, poolName, req)
+	if err != nil {
+		return nil, err
+	}
+
+	p, _, err := ds.client.Databases.GetPool(context.TODO(), databaseID, poolName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DatabasePool{DatabasePool: p}, nil
 
 	return &DatabasePool{DatabasePool: p}, nil
 }
