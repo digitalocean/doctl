@@ -5,6 +5,7 @@
 //
 //	mockgen -source uptime_checks.go -package=mocks UptimeChecksService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

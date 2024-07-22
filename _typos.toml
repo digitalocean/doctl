@@ -1,0 +1,16 @@
+[files]
+extend-exclude = [
+  "vendor/**",
+  "go.mod"
+]
+
+[default.extend-identifiers]
+vas = "vas"
+splitted = "splitted"
+
+[default.extend-words]
+# Its not perfect at hashes yet
+cace = "cace"
+Wqs = "Wqs"
+# example and exmaple as two domain examples
+exmaple = "exmaple"

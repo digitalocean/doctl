@@ -37,6 +37,8 @@ With the VPC commands, you can list, create, or delete VPCs, and manage their co
 		},
 	}
 
+	cmd.AddCommand(VPCPeerings())
+
 	vpcDetail := `
 
 - The VPC network's ID

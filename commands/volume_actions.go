@@ -16,10 +16,11 @@ package commands
 import (
 	"strconv"
 
+	"github.com/spf13/cobra"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
-	"github.com/spf13/cobra"
 )
 
 type volumeActionFn func(das do.VolumeActionsService) (*do.Action, error)
@@ -78,7 +79,7 @@ func VolumeAction() *Command {
 
 	cmdVolumeActionsList := CmdBuilder(cmd, RunVolumeActionsList, "list <volume-id>", "Retrieve a list of actions taken on a volume", `Retrieves a list of actions taken on a volume. The following details are provided:`+actionDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Action{}))
-	cmdVolumeActionsList.Example = `The following example retrieves a list of actions taken on a volume with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return ony the resource ID and status for each action listed: doctl compute volume-action list f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ResourceID,Status`
+	cmdVolumeActionsList.Example = `The following example retrieves a list of actions taken on a volume with the UUID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to return only the resource ID and status for each action listed: doctl compute volume-action list f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ResourceID,Status`
 
 	cmdRunVolumeAttach := CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "Attach a volume to a Droplet", `Attaches a block storage volume to a Droplet.
 

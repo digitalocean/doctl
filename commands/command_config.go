@@ -226,7 +226,7 @@ func (c *CmdConfig) Display(d displayers.Displayable) error {
 	return dc.Display()
 }
 
-// An urner implements the URN method, wihich returns a valid uniform resource
+// An urner implements the URN method, which returns a valid uniform resource
 // name.
 type urner interface {
 	URN() string

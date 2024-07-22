@@ -5,6 +5,7 @@
 //
 //	mockgen -source sshkeys.go -package=mocks KeysService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

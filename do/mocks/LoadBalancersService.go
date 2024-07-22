@@ -5,6 +5,7 @@
 //
 //	mockgen -source load_balancers.go -package=mocks LoadBalancersService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -134,6 +135,20 @@ func (m *MockLoadBalancersService) List() (do.LoadBalancers, error) {
 func (mr *MockLoadBalancersServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockLoadBalancersService)(nil).List))
+}
+
+// PurgeCache mocks base method.
+func (m *MockLoadBalancersService) PurgeCache(lbID string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PurgeCache", lbID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PurgeCache indicates an expected call of PurgeCache.
+func (mr *MockLoadBalancersServiceMockRecorder) PurgeCache(lbID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeCache", reflect.TypeOf((*MockLoadBalancersService)(nil).PurgeCache), lbID)
 }
 
 // RemoveDroplets mocks base method.

@@ -5,6 +5,7 @@
 //
 //	mockgen -source databases.go -package=mocks DatabasesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -466,6 +467,21 @@ func (m *MockDatabasesService) ListDBs(arg0 string) (do.DatabaseDBs, error) {
 func (mr *MockDatabasesServiceMockRecorder) ListDBs(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDBs", reflect.TypeOf((*MockDatabasesService)(nil).ListDBs), arg0)
+}
+
+// ListDatabaseEvents mocks base method.
+func (m *MockDatabasesService) ListDatabaseEvents(arg0 string) (do.DatabaseEvents, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDatabaseEvents", arg0)
+	ret0, _ := ret[0].(do.DatabaseEvents)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDatabaseEvents indicates an expected call of ListDatabaseEvents.
+func (mr *MockDatabasesServiceMockRecorder) ListDatabaseEvents(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatabaseEvents", reflect.TypeOf((*MockDatabasesService)(nil).ListDatabaseEvents), arg0)
 }
 
 // ListOptions mocks base method.

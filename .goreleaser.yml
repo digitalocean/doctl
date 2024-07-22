@@ -1,5 +1,5 @@
 project_name: doctl
-
+version: 2
 builds:
 - main: ./cmd/doctl/main.go
   env:
@@ -50,4 +50,4 @@ release:
     name: doctl
 
 changelog:
-  skip: false
+  disable: false

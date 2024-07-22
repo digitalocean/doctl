@@ -4,20 +4,20 @@ go 1.21
 
 require (
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/creack/pty v1.1.11
-	github.com/digitalocean/godo v1.107.0
+	github.com/creack/pty v1.1.21
+	github.com/digitalocean/godo v1.118.0
 	github.com/docker/cli v24.0.5+incompatible
-	github.com/docker/docker v24.0.7+incompatible
+	github.com/docker/docker v24.0.9+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fatih/color v1.13.0
+	github.com/fatih/color v1.16.0
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/imdario/mergo v0.3.13 // indirect
-	github.com/mattn/go-isatty v0.0.14
+	github.com/mattn/go-isatty v0.0.20
 	github.com/mitchellh/copystructure v1.0.0
 	github.com/natefinch/pie v0.0.0-20170715172608-9a0d72014007
 	github.com/opencontainers/image-spec v1.1.0-rc3
@@ -29,11 +29,10 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.11.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/crypto v0.17.0
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/oauth2 v0.10.0
-	golang.org/x/sys v0.15.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	golang.org/x/crypto v0.22.0
+	golang.org/x/net v0.24.0 // indirect
+	golang.org/x/oauth2 v0.19.0
+	golang.org/x/sys v0.20.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
@@ -55,7 +54,7 @@ require (
 	github.com/muesli/termenv v0.12.0
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	go.uber.org/mock v0.2.0
-	golang.org/x/term v0.15.0
+	golang.org/x/term v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -74,11 +73,11 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
-	github.com/hashicorp/go-retryablehttp v0.7.4 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/hokaccha/go-prettyjson v0.0.0-20210113012101-fb4e108d2519 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -86,7 +85,7 @@ require (
 	github.com/klauspost/compress v1.17.2 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/mitchellh/reflectwalk v1.0.0 // indirect
@@ -115,9 +114,8 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	golang.org/x/mod v0.11.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.10.0 // indirect
-	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect

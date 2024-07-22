@@ -5,6 +5,7 @@
 //
 //	mockgen -source account.go -package=mocks AccountService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

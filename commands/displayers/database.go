@@ -356,6 +356,9 @@ func (do *DatabaseOptions) KV() []map[string]any {
 	if nonEmptyOptionsFn(do.DatabaseOptions.KafkaOptions) {
 		engines = append(engines, "kafka")
 	}
+	if nonEmptyOptionsFn(do.DatabaseOptions.OpensearchOptions) {
+		engines = append(engines, "opensearch")
+	}
 
 	out := make([]map[string]any, 0, len(engines))
 	for _, eng := range engines {
@@ -1643,4 +1646,48 @@ func (dc *RedisConfiguration) KV() []map[string]any {
 	}
 
 	return o
+}
+
+type DatabaseEvents struct {
+	DatabaseEvents do.DatabaseEvents
+}
+
+var _ Displayable = &DatabaseEvents{}
+
+func (dr *DatabaseEvents) JSON(out io.Writer) error {
+	return writeJSON(dr.DatabaseEvents, out)
+}
+
+func (dr *DatabaseEvents) Cols() []string {
+	return []string{
+		"ID",
+		"ServiceName",
+		"EventType",
+		"CreateTime",
+	}
+}
+
+func (dr *DatabaseEvents) ColMap() map[string]string {
+
+	return map[string]string{
+		"ID":          "ID",
+		"ServiceName": "Cluster Name",
+		"EventType":   "Type of Event",
+		"CreateTime":  "Create Time",
+	}
+}
+
+func (dr *DatabaseEvents) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dr.DatabaseEvents))
+
+	for _, r := range dr.DatabaseEvents {
+		o := map[string]any{
+			"ID":          r.ID,
+			"ServiceName": r.ServiceName,
+			"EventType":   r.EventType,
+			"CreateTime":  r.CreateTime,
+		}
+		out = append(out, o)
+	}
+	return out
 }

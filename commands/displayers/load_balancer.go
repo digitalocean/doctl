@@ -89,7 +89,6 @@ func (lb *LoadBalancer) KV() []map[string]any {
 			"Name":                         l.Name,
 			"Status":                       l.Status,
 			"Created":                      l.Created,
-			"Region":                       l.Region.Slug,
 			"VPCUUID":                      l.VPCUUID,
 			"Tag":                          l.Tag,
 			"DropletIDs":                   strings.Trim(strings.Replace(fmt.Sprint(l.DropletIDs), " ", ",", -1), "[]"),
@@ -98,6 +97,9 @@ func (lb *LoadBalancer) KV() []map[string]any {
 			"HealthCheck":                  prettyPrintStruct(l.HealthCheck),
 			"ForwardingRules":              strings.Join(forwardingRules, " "),
 			"DisableLetsEncryptDNSRecords": toBool(l.DisableLetsEncryptDNSRecords),
+		}
+		if l.Region != nil {
+			o["Region"] = l.Region.Slug
 		}
 		if l.SizeSlug != "" {
 			o["Size"] = l.SizeSlug

@@ -5,6 +5,7 @@
 //
 //	mockgen -source sizes.go -package=mocks SizesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

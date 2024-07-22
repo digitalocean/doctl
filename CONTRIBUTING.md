@@ -101,6 +101,11 @@ or `make help` for a list of available commands with descriptions.
 - Avoid the passive voice ("When a tag is provided, access is granted") and use the active voice ("Entering a tag provides access")
 - Be helpful when users have to enter a input that is from a list of possible values. Give examples, list the possible values inline (if the list is relatively short), or point them to a command that can list the possible values for them.
 
+## Spell Check
+
+`doctl` is setup to use the code aware spell checker called [typos](https://github.com/crate-ci/typos) to keep an eye on any spelling mistakes.
+
+To install your own copy,follow the instructions on the [typos readme](https://github.com/crate-ci/typos?tab=readme-ov-file#install), and then run the `typos` binary
 
 ### Go environment
 

@@ -5,6 +5,7 @@
 //
 //	mockgen -source tags.go -package=mocks TagsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

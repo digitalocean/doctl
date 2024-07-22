@@ -47,7 +47,7 @@ func Databases() *Command {
 			Use:     "databases",
 			Aliases: []string{"db", "dbs", "d", "database"},
 			Short:   "Display commands that manage databases",
-			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, PostgreSQL, MongoDB, and Kafka database services.",
+			Long:    "The commands under `doctl databases` are for managing your MySQL, Redis, PostgreSQL, MongoDB, Kafka and Opensearch database services.",
 			GroupID: manageResourcesGroup,
 		},
 	}
@@ -56,7 +56,7 @@ func Databases() *Command {
 
 - The database ID, in UUID format
 - The name you gave the database cluster
-- The database engine. Possible values: ` + "`redis`, `pg`, `mysql` , `mongodb`, or `kafka`" + `
+- The database engine. Possible values: ` + "`redis`, `pg`, `mysql` , `mongodb`, `kafka`, `opensearch`" + `
 - The engine version, such as ` + "`14`" + ` for PostgreSQL version 14
 - The number of nodes in the database cluster
 - The region the database cluster resides in, such as ` + "`sfo2`, " + "`nyc1`" + `
@@ -81,7 +81,7 @@ You can customize the configuration using the listed flags, all of which are opt
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgRegionSlug, "", defaultDatabaseRegion, "The data center region where the database cluster resides, such as `nyc1` or `sfo2`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgSizeSlug, "", defaultDatabaseNodeSize, nodeSizeDetails)
 	AddIntFlag(cmdDatabaseCreate, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
-	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database's engine. Possible values are: `pg`, `mysql`, `redis`, `mongodb`, and `kafka`.")
+	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseEngine, "", defaultDatabaseEngine, "The database's engine. Possible values are: `pg`, `mysql`, `redis`, `mongodb`, `kafka` and `opensearch`.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgVersion, "", "", "The database engine's version, such as 14 for PostgreSQL version 14.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC to create the database cluster in. The command uses the region's default VPC if excluded.")
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseRestoreFromClusterName, "", "", "The name of an existing database cluster to restore from.")
@@ -155,6 +155,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	cmd.AddCommand(databaseOptions())
 	cmd.AddCommand(databaseConfiguration())
 	cmd.AddCommand(databaseTopic())
+	cmd.AddCommand(databaseEvents())
 
 	return cmd
 }
@@ -664,7 +665,7 @@ func databaseUser() *Command {
 Database user accounts are scoped to one database cluster, to which they have full admin access, and are given an automatically-generated password.`,
 		},
 	}
-
+	databaseKafkaACLsTxt := `A comma-separated list of kafka ACL rules, in ` + "`" + `topic:permission` + "`" + ` format.`
 	userDetailsDesc := `
 
 - The username for the user
@@ -692,6 +693,7 @@ To retrieve a list of your databases and their IDs, call `+"`"+`doctl databases 
 
 	AddStringFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserMySQLAuthPlugin, "", "",
 		"Sets authorization plugin for a MySQL user. Possible values: `caching_sha2_password` or `mysql_native_password`")
+	AddStringSliceFlag(cmdDatabaseUserCreate, doctl.ArgDatabaseUserKafkaACLs, "", []string{}, databaseKafkaACLsTxt)
 	cmdDatabaseUserCreate.Example = `The following example creates a new user with the username ` + "`" + `example-user` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases user create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-user`
 
 	cmdDatabaseUserResetAuth := CmdBuilder(cmd, RunDatabaseUserResetAuth, "reset <database-cluster-id> <user-name> <new-auth-mode>",
@@ -767,12 +769,43 @@ func RunDatabaseUserCreate(c *CmdConfig) error {
 		}
 	}
 
+	kafkaAcls, err := buildDatabaseCreateKafkaUserACls(c)
+	if err != nil {
+		return err
+	}
+
+	if len(kafkaAcls) != 0 {
+		req.Settings = &godo.DatabaseUserSettings{
+			ACL: kafkaAcls,
+		}
+	}
+
 	user, err := c.Databases().CreateUser(databaseID, req)
 	if err != nil {
 		return err
 	}
 
 	return displayDatabaseUsers(c, *user)
+}
+
+func buildDatabaseCreateKafkaUserACls(c *CmdConfig) (kafkaACls []*godo.KafkaACL, err error) {
+	acls, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDatabaseUserKafkaACLs)
+	if err != nil {
+		return nil, err
+	}
+	for _, acl := range acls {
+		pair := strings.SplitN(acl, ":", 2)
+		if len(pair) != 2 {
+			return nil, fmt.Errorf("Unexpected input value [%v], must be a topic:permission pair", pair)
+		}
+
+		kafkaACl := new(godo.KafkaACL)
+		kafkaACl.Topic = pair[0]
+		kafkaACl.Permission = pair[1]
+
+		kafkaACls = append(kafkaACls, kafkaACl)
+	}
+	return kafkaACls, nil
 }
 
 func RunDatabaseUserResetAuth(c *CmdConfig) error {
@@ -856,19 +889,19 @@ func databaseOptions() *Command {
 	cmdRegionOptions := CmdBuilder(cmd, RunDatabaseRegionOptions, "regions", "Retrieves a list of the available regions for a given database engine", `Lists the available regions for a given database engine. Some engines may not be available in certain regions.`,
 		Writer, aliasOpt("r"))
 	AddStringFlag(cmdRegionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`mongodb`+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`, `+"`"+`opensearch`+"`"+`,  `+"`"+`mongodb`+"`"+``)
 	cmdRegionOptions.Example = `The following example retrieves a list of the available regions for the PostgreSQL engine: doctl databases options regions --engine pg`
 
 	cmdVersionOptions := CmdBuilder(cmd, RunDatabaseVersionOptions, "versions", "Retrieves a list of the available versions for a given database engine", `Lists the available versions for a given database engine.`,
 		Writer, aliasOpt("v"))
 	AddStringFlag(cmdVersionOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`mongodb`+"`"+``)
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``)
 	cmdVersionOptions.Example = `The following example retrieves a list of the available versions for the PostgreSQL engine: doctl databases options versions --engine pg`
 
 	cmdSlugOptions := CmdBuilder(cmd, RunDatabaseSlugOptions, "slugs", "Retrieves a list of the available slugs for a given database engine", `Lists the available slugs for a given database engine.`,
 		Writer, aliasOpt("s"))
 	AddStringFlag(cmdSlugOptions, doctl.ArgDatabaseEngine, "",
-		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`mongodb`+"`"+``, requiredOpt())
+		"", `The database engine. Possible values:  `+"`"+`mysql`+"`"+`,  `+"`"+`pg`+"`"+`,  `+"`"+`redis`+"`"+`,  `+"`"+`kafka`+"`"+`,  `+"`"+`opensearch`+"`"+`, `+"`"+`mongodb`+"`"+``, requiredOpt())
 	cmdSlugOptions.Example = `The following example retrieves a list of the available slugs for the PostgreSQL engine: doctl databases options slugs --engine pg`
 
 	return cmd
@@ -925,12 +958,15 @@ func RunDatabaseRegionOptions(c *CmdConfig) error {
 		regions["redis"] = options.RedisOptions.Regions
 	case "kafka":
 		regions["kafka"] = options.KafkaOptions.Regions
+	case "opensearch":
+		regions["opensearch"] = options.OpensearchOptions.Regions
 	case "":
 		regions["mongodb"] = options.MongoDBOptions.Regions
 		regions["mysql"] = options.MySQLOptions.Regions
 		regions["pg"] = options.PostgresSQLOptions.Regions
 		regions["redis"] = options.RedisOptions.Regions
 		regions["kafka"] = options.KafkaOptions.Regions
+		regions["opensearch"] = options.OpensearchOptions.Regions
 	}
 
 	return displayDatabaseRegionOptions(c, regions)
@@ -957,12 +993,15 @@ func RunDatabaseVersionOptions(c *CmdConfig) error {
 		versions["redis"] = options.RedisOptions.Versions
 	case "kafka":
 		versions["kafka"] = options.KafkaOptions.Versions
+	case "opensearch":
+		versions["opensearch"] = options.OpensearchOptions.Versions
 	case "":
 		versions["mongodb"] = options.MongoDBOptions.Versions
 		versions["mysql"] = options.MySQLOptions.Versions
 		versions["pg"] = options.PostgresSQLOptions.Versions
 		versions["redis"] = options.RedisOptions.Versions
 		versions["kafka"] = options.KafkaOptions.Versions
+		versions["opensearch"] = options.OpensearchOptions.Versions
 	}
 
 	return displayDatabaseVersionOptions(c, versions)
@@ -992,6 +1031,8 @@ func RunDatabaseSlugOptions(c *CmdConfig) error {
 		layouts = options.RedisOptions.Layouts
 	case "kafka":
 		layouts = options.KafkaOptions.Layouts
+	case "opensearch":
+		layouts = options.OpensearchOptions.Layouts
 	}
 
 	return displayDatabaseLayoutOptions(c, layouts)
@@ -1750,7 +1791,7 @@ func getDatabaseTopicConfigArgs(c *CmdConfig) *godo.TopicConfig {
 			res.MaxMessageBytes = &i
 		}
 	}
-	bVal, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicMesssageDownConversionEnable)
+	bVal, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgDatabaseTopicMessageDownConversionEnable)
 	if err == nil && bVal != nil {
 		res.MessageDownConversionEnable = bVal
 	}
@@ -1895,7 +1936,7 @@ This command lists the following details for each partition of a given topic in 
 			"Specifies the maximum time (in ms) that a message will remain uncompacted. This is only applicable if the logs have compaction enabled")
 		AddStringFlag(c, doctl.ArgDatabaseTopicMaxMessageBytes, "", "",
 			"Specifies the largest record batch (in bytes) that can be sent to the server. This is calculated after compression, if compression is enabled")
-		AddBoolFlag(c, doctl.ArgDatabaseTopicMesssageDownConversionEnable, "", true,
+		AddBoolFlag(c, doctl.ArgDatabaseTopicMessageDownConversionEnable, "", true,
 			"Specifies whether down-conversion of message formats is enabled to satisfy consumer requests")
 		AddStringFlag(c, doctl.ArgDatabaseTopicMessageFormatVersion, "", "",
 			"Specifies the message format version used by the broker to append messages to the logs. By setting a format version, all existing messages on disk must be smaller or equal to the specified version")
@@ -2400,4 +2441,41 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		}
 	}
 	return nil
+}
+
+func databaseEvents() *Command {
+	listDatabaseEvents := `
+
+You can get a list of database events by calling:
+
+	doctl databases events list <cluster-id>`
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "events",
+			Short: "Display commands for listing database cluster events",
+			Long:  `The subcommands under ` + "`" + `doctl databases events` + "`" + ` are for listing database cluster events.` + listDatabaseEvents,
+		},
+	}
+	cmdDatabaseEventsList := CmdBuilder(cmd, RunDatabaseEvents, "list <database-cluster-id>", "List your database cluster events", `Retrieves a list of database clusters events:`+listDatabaseEvents, Writer, aliasOpt("ls"), displayerType(&displayers.DatabaseEvents{}))
+
+	cmdDatabaseEventsList.Example = `The following example retrieves a list of databases events in a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases events list ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+
+	return cmd
+}
+
+// RunDatabaseDBList retrieves a list of databases for specific database cluster
+func RunDatabaseEvents(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	id := c.Args[0]
+
+	dbEvents, err := c.Databases().ListDatabaseEvents(id)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.DatabaseEvents{DatabaseEvents: dbEvents}
+	return c.Display(item)
 }

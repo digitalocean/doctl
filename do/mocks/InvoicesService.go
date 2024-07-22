@@ -5,6 +5,7 @@
 //
 //	mockgen -source invoices.go -package=mocks InvoicesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 

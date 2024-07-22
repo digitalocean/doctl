@@ -125,6 +125,14 @@ type DatabaseTopicPartitions struct {
 	Partitions []*godo.TopicPartition
 }
 
+// DatabaseEvent is a wrapper for godo.DatabaseEvent
+type DatabaseEvent struct {
+	*godo.DatabaseEvent
+}
+
+// DatabaseEvents is a slice of DatabaseEvent
+type DatabaseEvents []DatabaseEvent
+
 // DatabasesService is an interface for interacting with DigitalOcean's Database API
 type DatabasesService interface {
 	List() (Databases, error)
@@ -183,6 +191,8 @@ type DatabasesService interface {
 	CreateTopic(string, *godo.DatabaseCreateTopicRequest) (*DatabaseTopic, error)
 	UpdateTopic(string, string, *godo.DatabaseUpdateTopicRequest) error
 	DeleteTopic(string, string) error
+
+	ListDatabaseEvents(string) (DatabaseEvents, error)
 }
 
 type databasesService struct {
@@ -744,4 +754,32 @@ func (ds *databasesService) DeleteTopic(databaseID, topicName string) error {
 	_, err := ds.client.Databases.DeleteTopic(context.TODO(), databaseID, topicName)
 
 	return err
+}
+
+func (ds *databasesService) ListDatabaseEvents(databaseID string) (DatabaseEvents, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := ds.client.Databases.ListDatabaseEvents(context.TODO(), databaseID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(DatabaseEvents, len(si))
+	for i := range si {
+		r := si[i].(godo.DatabaseEvent)
+		list[i] = DatabaseEvent{DatabaseEvent: &r}
+	}
+	return list, nil
 }

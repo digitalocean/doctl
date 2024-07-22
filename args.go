@@ -92,6 +92,10 @@ const (
 	ArgAutoUpgrade = "auto-upgrade"
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
+	// ArgEnableControlPlaneFirewall enable control plane firewall.
+	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
+	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
+	ArgControlPlaneFirewallAllowedAddresses = "control-plane-firewall-allowed-addresses"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
@@ -337,6 +341,16 @@ const (
 	ArgDenyList = "deny-list"
 	// ArgLoadBalancerType is the type of the load balancer.
 	ArgLoadBalancerType = "type"
+	// ArgLoadBalancerDomains is list of domains supported for global load balancer.
+	ArgLoadBalancerDomains = "domains"
+	// ArgGlobalLoadBalancerSettings is global load balancer settings.
+	ArgGlobalLoadBalancerSettings = "glb-settings"
+	// ArgGlobalLoadBalancerCDNSettings is global load balancer CDN settings.
+	ArgGlobalLoadBalancerCDNSettings = "glb-cdn-settings"
+	// ArgTargetLoadBalancerIDs is a list of target load balancer IDs.
+	ArgTargetLoadBalancerIDs = "target-lb-ids"
+	// ArgLoadBalancerNetwork is the type of network the load balancer is accessible from.
+	ArgLoadBalancerNetwork = "network"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
@@ -390,6 +404,8 @@ const (
 	ArgDatabaseUserMySQLAuthPlugin = "mysql-auth-plugin"
 	// ArgDatabasePrivateConnectionBool determine if the private connection details should be shown
 	ArgDatabasePrivateConnectionBool = "private"
+	// ArgDatabaseUserKafkaACLs will specify permissions on topics in kafka clsuter
+	ArgDatabaseUserKafkaACLs = "acl"
 
 	// ArgDatabaseTopicReplicationFactor is the replication factor of a kafka topic
 	ArgDatabaseTopicReplicationFactor = "replication-factor"
@@ -413,8 +429,8 @@ const (
 	ArgDatabaseTopicMaxCompactionLagMS = "max-compaction-lag-ms"
 	// ArgDatabaseTopicMaxMessageBytes is the maximum size, in bytes, of the largest record batch that can be sent to the server
 	ArgDatabaseTopicMaxMessageBytes = "max-message-bytes"
-	// ArgDatabaseTopicMesssageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
-	ArgDatabaseTopicMesssageDownConversionEnable = "message-down-conversion-enable"
+	// ArgDatabaseTopicMessageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
+	ArgDatabaseTopicMessageDownConversionEnable = "message-down-conversion-enable"
 	// ArgDatabaseTopicMessageFormatVersion is the version used by the broker to append messages to the kafka topic logs
 	ArgDatabaseTopicMessageFormatVersion = "message-format-version"
 	// ArgDatabaseTopicMessageTimestampType is the timestamp used for messages
@@ -457,6 +473,13 @@ const (
 	ArgVPCDefault = "default"
 	// ArgVPCIPRange is a VPC range of IP addresses in CIDR notation.
 	ArgVPCIPRange = "ip-range"
+
+	// ArgVPCPeeringName is a name of the VPC Peering.
+	ArgVPCPeeringName = "name"
+	// ArgVPCPeeringVPCIDs is the vpc ids of the peering
+	ArgVPCPeeringVPCIDs = "vpc-ids"
+	// ArgVPCPeeringVPCID is id of the VPC.
+	ArgVPCPeeringVPCID = "vpc-id"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"

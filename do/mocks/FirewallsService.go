@@ -5,6 +5,7 @@
 //
 //	mockgen -source firewalls.go -package=mocks FirewallsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
