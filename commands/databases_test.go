@@ -293,6 +293,7 @@ func TestDatabasePoolCommand(t *testing.T) {
 		"list",
 		"get",
 		"create",
+		"update",
 		"delete",
 	)
 }
