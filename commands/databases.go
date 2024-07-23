@@ -1107,19 +1107,18 @@ We recommend starting with a pool size of about half your available connections 
 		"The name of the specific database within the database cluster", requiredOpt())
 	cmdDatabasePoolCreate.Example = `The following example creates a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The command uses the ` + "`" + `--size` + "`" + ` flag to set the pool size to 10 and sets the user to the database's default user: doctl databases pool create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool --size 10`
 
-	cmdDatabasePoolUpdate := CmdBuilder(cmd, RunDatabasePoolCreate,
+	cmdDatabasePoolUpdate := CmdBuilder(cmd, RunDatabasePoolUpdate,
 		"update <database-cluster-id> <pool-name>", "Update a connection pool for a database", `Updates the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
 		aliasOpt("u"),
 	)
 	AddStringFlag(cmdDatabasePoolUpdate, doctl.ArgDatabasePoolMode, "",
-		"transaction", "The pool mode for the connection pool, such as `session`, `transaction`, and `statement`", requiredOpt())
-	AddIntFlag(cmdDatabasePoolUpdate, doctl.ArgSizeSlug, "", 0, "pool size",
-		requiredOpt())
+		"transaction", "The pool mode for the connection pool, such as `session`, `transaction`, and `statement`")
+	AddIntFlag(cmdDatabasePoolUpdate, doctl.ArgSizeSlug, "", 0, "pool size")
 	AddStringFlag(cmdDatabasePoolUpdate, doctl.ArgDatabasePoolDBName, "", "",
-		"The name of the specific database within the database cluster", requiredOpt())
+		"The name of the specific database within the database cluster")
 	AddStringFlag(cmdDatabasePoolUpdate, doctl.ArgDatabasePoolUserName, "", "",
 		"The username for the database user")
-	cmdDatabasePoolUpdate.Example = `The following example updates a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The command uses the ` + "`" + `--size` + "`" + ` flag to set the pool size to 10 and sets the user to the database's default user: doctl databases pool create ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool --size 10`
+	cmdDatabasePoolUpdate.Example = `The following example updates a connection pool named ` + "`" + `example-pool` + "`" + ` for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `. The command uses the ` + "`" + `--size` + "`" + ` flag to set the pool size to 10 and sets the user to the database's default user: doctl databases pool update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 example-pool --size 10`
 
 	cmdDatabasePoolDelete := CmdBuilder(cmd, RunDatabasePoolDelete,
 		"delete <database-cluster-id> <pool-name>", "Delete a connection pool for a database", `Deletes the specified connection pool for the specified database cluster.`+getPoolDetails, Writer,
@@ -1225,31 +1224,51 @@ func RunDatabasePoolUpdate(c *CmdConfig) error {
 	databaseID := c.Args[0]
 	poolName := c.Args[1]
 
+	pool, err := c.Databases().GetPool(databaseID, poolName)
+	if err != nil {
+		return err
+	}
+
 	req := &godo.DatabaseUpdatePoolRequest{}
 	size, err := c.Doit.GetInt(c.NS, doctl.ArgDatabasePoolSize)
 	if err != nil {
 		return err
 	}
-	req.Size = size
+	if size != 0 {
+		req.Size = size
+	} else {
+		req.Size = pool.Size
+	}
 
 	db, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolDBName)
 	if err != nil {
 		return err
 	}
-	req.Database = db
+	if db != "" {
+		req.Database = db
+	} else {
+		req.Database = pool.Database
+	}
+
+	mode, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolMode)
+	if err != nil {
+		return err
+	}
+	if mode != "" {
+		req.Mode = mode
+	} else {
+		req.Mode = pool.Mode
+	}
 
 	user, err := c.Doit.GetString(c.NS, doctl.ArgDatabasePoolUserName)
 	if err != nil {
 		return err
 	}
-	req.User = user
-
-	pool, err := c.Databases().UpdatePool(databaseID, poolName, req)
-	if err != nil {
-		return err
+	if user != "" {
+		req.User = user
 	}
 
-	return displayDatabasePools(c, *pool)
+	return c.Databases().UpdatePool(databaseID, poolName, req)
 }
 
 // RunDatabasePoolDelete deletes a database pool
