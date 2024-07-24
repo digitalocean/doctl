@@ -293,6 +293,7 @@ func TestDatabasePoolCommand(t *testing.T) {
 		"list",
 		"get",
 		"create",
+		"update",
 		"delete",
 	)
 }
@@ -1166,6 +1167,55 @@ func TestDatabasePoolCreate_InboundUser(t *testing.T) {
 
 		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
 		err := RunDatabasePoolCreate(config)
+		assert.EqualError(t, err, "error")
+	})
+}
+
+func TestDatabasePoolUpdate(t *testing.T) {
+	pool := *(testDBPool.DatabasePool)
+	pool.Connection = nil
+
+	r := &godo.DatabaseUpdatePoolRequest{
+		User:     pool.User,
+		Mode:     pool.Mode,
+		Size:     pool.Size,
+		Database: pool.Database,
+	}
+
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetPool(testDBCluster.ID, pool.Name).Return(&do.DatabasePool{DatabasePool: &pool}, nil)
+		tm.databases.EXPECT().UpdatePool(testDBCluster.ID, pool.Name, r).Return(nil)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolMode, testDBPool.Mode)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolSize, testDBPool.Size)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolDBName, testDBPool.Database)
+		config.Doit.Set(config.NS, doctl.ArgDatabasePoolUserName, testDBPool.User)
+
+		err := RunDatabasePoolUpdate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetPool(testDBCluster.ID, pool.Name).Return(&do.DatabasePool{
+			DatabasePool: &godo.DatabasePool{
+				User:     pool.User,
+				Name:     pool.Name,
+				Mode:     pool.Mode,
+				Size:     pool.Size,
+				Database: pool.Database,
+			},
+		}, nil)
+		tm.databases.EXPECT().UpdatePool(
+			testDBCluster.ID,
+			pool.Name,
+			gomock.AssignableToTypeOf(&godo.DatabaseUpdatePoolRequest{}),
+		).Return(errTest)
+
+		config.Args = append(config.Args, testDBCluster.ID, testDBPool.Name)
+		err := RunDatabasePoolUpdate(config)
 		assert.EqualError(t, err, "error")
 	})
 }

@@ -677,6 +677,20 @@ func (mr *MockDatabasesServiceMockRecorder) UpdateMySQLConfiguration(databaseID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMySQLConfiguration), databaseID, confString)
 }
 
+// UpdatePool mocks base method.
+func (m *MockDatabasesService) UpdatePool(arg0, arg1 string, arg2 *godo.DatabaseUpdatePoolRequest) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdatePool", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdatePool indicates an expected call of UpdatePool.
+func (mr *MockDatabasesServiceMockRecorder) UpdatePool(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePool", reflect.TypeOf((*MockDatabasesService)(nil).UpdatePool), arg0, arg1, arg2)
+}
+
 // UpdatePostgreSQLConfiguration mocks base method.
 func (m *MockDatabasesService) UpdatePostgreSQLConfiguration(databaseID, confString string) error {
 	m.ctrl.T.Helper()
