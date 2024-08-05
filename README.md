@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://travis-ci.org/digitalocean/doctl">
-    <img src="https://travis-ci.org/digitalocean/doctl.svg?branch=main" alt="Build Status" />
+  <a href="https://github.com/brunograsselli/doctl/actions/workflows/ci.yml">
+    <img src="https://github.com/brunograsselli/doctl/actions/workflows/ci.yml/badge.svg" alt="Build Status" />
   </a>
   <a href="https://godoc.org/github.com/digitalocean/doctl">
     <img src="https://godoc.org/github.com/digitalocean/doctl?status.svg" alt="GoDoc" />
