@@ -831,8 +831,9 @@ func appsTier() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunAppsTierList, "list", "List all app tiers", `Use this command to list all the available app tiers.`, Writer, aliasOpt("ls"))
-	CmdBuilder(cmd, RunAppsTierGet, "get <tier slug>", "Retrieve an app tier", `Use this command to retrieve information about a specific app tier.`, Writer)
+	tierDeprecationMsg := "This command is deprecated and will be removed in a future release. Use `doctl apps tier instance-size <get|list>` instead.\n\n"
+	CmdBuilder(cmd, RunAppsTierList, "list", "List all app tiers", tierDeprecationMsg+`Use this command to list all the available app tiers.`, Writer, aliasOpt("ls"), hiddenCmd())
+	CmdBuilder(cmd, RunAppsTierGet, "get <tier slug>", "Retrieve an app tier", tierDeprecationMsg+`Use this command to retrieve information about a specific app tier.`, Writer, hiddenCmd())
 
 	cmd.AddCommand(appsTierInstanceSize())
 
