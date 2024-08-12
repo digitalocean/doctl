@@ -83,7 +83,7 @@ func VolumeAction() *Command {
 
 	cmdRunVolumeAttach := CmdBuilder(cmd, RunVolumeAttach, "attach <volume-id> <droplet-id>", "Attach a volume to a Droplet", `Attaches a block storage volume to a Droplet.
 
-You can only attach one Droplet to a volume at a time. However, you can attach up to five different volumes to a Droplet at a time.
+You can only attach one Droplet to a volume at a time. However, you can attach up to fifteen different volumes to a Droplet at a time.
 
 When you attach a pre-formatted volume to Ubuntu, Debian, Fedora, Fedora Atomic, and CentOS Droplets created on or after April 26, 2018, the volume automatically mounts. On older Droplets, additional configuration is required. Visit https://docs.digitalocean.com/products/volumes/how-to/mount/ for details`, Writer,
 		aliasOpt("a"))
