@@ -122,45 +122,12 @@ gofmt_check:
 check_focused:
 	@scripts/check_focused_test.sh
 
-.PHONY: snap_image
-snap_image:
-	@echo "==> build docker image for releasing snap"
-	@echo ""
-	@scripts/snap_image.sh
-
-.PHONY: _snap_image_version
-_snap_image_version:
-	@ORIGIN=${ORIGIN} SNAP_IMAGE=true scripts/version.sh
-
-.PHONY: build_local_snap
-build_local_snap:
-	@echo "==> build local snap using local image tagged doctl-snap-base"
-	@echo ""
-	@BUILD=local_snap scripts/snap_image.sh
-
-.PHONY: prerelease_snap_image
-prerelease_snap_image:
-	@echo "==> tag doctl-snap-base as a prerelease and push to dockerhub as latest"
-	@echo ""
-	@BUILD=pre scripts/snap_image.sh
-
-.PHONY: finalize_snap_image
-finalize_snap_image:
-	@echo "==> tag latest with most recent doctl version push to dockerhub"
-	@echo ""
-	@ORIGIN=${ORIGIN} BUILD=finalize scripts/snap_image.sh
-
-CHANNEL ?= stable
-
-.PHONY: _build_snap
-_build_snap:
-	@CHANNEL=${CHANNEL} scripts/_build_snap.sh
 
 .PHONY: snap
-snap:
-	@echo "==> publish snap (normally done by travis)"
+snap: clean
+	@echo "==> building snap"
 	@echo ""
-	@CHANNEL=${CHANNEL} scripts/snap.sh
+	@snapcraft
 
 .PHONY: mocks
 mocks:
@@ -234,7 +201,6 @@ _tag_and_release: tag
 	@echo "=> DEPRECATED: BUMP=${BUMP} tag and release"
 	@echo ""
 	@$(MAKE) _release
-	@$(MAKE) snap
 
 .PHONY: release
 release:
