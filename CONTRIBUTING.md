@@ -21,13 +21,7 @@
       - [Build Scripts](#build-scripts)
   - [Releasing](#releasing)
     - [Tagging a release](#tagging-a-release)
-        - [Prerequisites](#prerequisites)
-    - [If a release fails](#if-a-release-fails)
-      - [Github Releases & Dockerhub](#github-releases--dockerhub)
-        - [Prerequisites](#prerequisites-1)
-      - [Snap](#snap)
-        - [Prerequisites](#prerequisites-2)
-        - [Building a new snap base image](#building-a-new-snap-base-image)
+    - [Snap](#snap)
     - [Updating Homebrew](#updating-homebrew)
 
 <!-- markdown-toc end -->
@@ -204,8 +198,6 @@ To cut a release, push a new tag (versioning discussed below).
 
 ### Tagging a release
 
-##### Prerequisites
-
 1. Run `make changes` to review the changes since the last
    release. Based on the changes, decide what kind of release you are
    doing (bugfix, feature or breaking).
@@ -220,14 +212,26 @@ To cut a release, push a new tag (versioning discussed below).
 
 The new tag triggers the release.
 
-##### Building a new snap base image
+### Snap
 
-Occasionally, the snap build will break. When it does, it usually means that you need to update
-the custom base image we use to build the snap. The Dockerfile for that image lives in
-[dockerfiles/Dockerfile.snap](https://github.com/digitalocean/doctl/blob/main/dockerfiles/Dockerfile.snap).
-The header of the Dockerfile has hints for updating the image, as well as instructions for building
-the image using `make snap_image`. Once you've built the image, the snap_image target will provide
-instructions for next steps.
+Snap packages are automatically built and uploaded as part of the GitHub Actions
+release workflow.
+
+To build a snap package locally for testing, first install `snapcraft`.
+
+On Ubuntu, run:
+
+    sudo snap install snapcraft --classic
+
+Or on MacOS, run:
+
+    brew install snapcraft
+
+Finally, build the package by running:
+
+    make snap
+
+More details about the snap package can be found in the `snap/snapcraft.yaml` file.
 
 ### Updating Homebrew
 
