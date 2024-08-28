@@ -2560,15 +2560,19 @@ func databaseIndex() *Command {
 	}
 
 	indexListDetails := `
-This command lists the following details for each index in a kafka opensearch cluster:
+This command lists the following details for each index in an opensearch cluster:
 
 	- The Name of the index.
-	- The State of the topic.
-	- The Replication Factor of the topic - number of brokers the topic's partitions are replicated across.
+	- The Status of the index.
+	- The Health of the index.
+	- The Number of Shards in the index.
+	- The Number of Replicas in the index.
+	- The Number of Documents in the index.
+	- The Size of the index.
 	`
 
 	CmdBuilder(cmd, RunDatabaseIndexList, "list <database-uuid>", "Retrieve a list of indexes for a given opensearch cluster", indexListDetails, Writer, displayerType(&displayers.DatabaseOpenSearchIndexes{}), aliasOpt("ls"))
-	cmdDatabaseIndexDelete := CmdBuilder(cmd, RunDatabaseIndexDelete, "delete <database-uuid> <index-name>", "Deletes a opensearch index by index name", "", Writer, aliasOpt("rm"))
+	cmdDatabaseIndexDelete := CmdBuilder(cmd, RunDatabaseIndexDelete, "delete <database-uuid> <index-name>", "Deletes an opensearch index by index name", "", Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdDatabaseIndexDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the opensearch index without a confirmation prompt")
 
 	return cmd
