@@ -156,6 +156,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	cmd.AddCommand(databaseConfiguration())
 	cmd.AddCommand(databaseTopic())
 	cmd.AddCommand(databaseEvents())
+	cmd.AddCommand(databaseIndex())
 
 	return cmd
 }
@@ -2547,4 +2548,61 @@ func RunDatabaseEvents(c *CmdConfig) error {
 
 	item := &displayers.DatabaseEvents{DatabaseEvents: dbEvents}
 	return c.Display(item)
+}
+
+func databaseIndex() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "indexes",
+			Short: `Display commands to manage indexes for opensearch clusters`,
+			Long:  `The subcommands under ` + "`" + `doctl databases indexes` + "`" + ` enable the management of indexes for opensearch clusters`,
+		},
+	}
+
+	indexListDetails := `
+This command lists the following details for each index in a kafka opensearch cluster:
+
+	- The Name of the index.
+	- The State of the topic.
+	- The Replication Factor of the topic - number of brokers the topic's partitions are replicated across.
+	`
+
+	CmdBuilder(cmd, RunDatabaseIndexList, "list <database-uuid>", "Retrieve a list of indexes for a given opensearch cluster", indexListDetails, Writer, displayerType(&displayers.DatabaseOpenSearchIndexes{}), aliasOpt("ls"))
+	cmdDatabaseIndexDelete := CmdBuilder(cmd, RunDatabaseIndexDelete, "delete <database-uuid> <index-name>", "Deletes a opensearch index by index name", "", Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdDatabaseIndexDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the opensearch index without a confirmation prompt")
+
+	return cmd
+}
+
+func RunDatabaseIndexList(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	databaseID := c.Args[0]
+	indexes, err := c.Databases().ListIndexes(databaseID)
+	if err != nil {
+		return err
+	}
+	item := &displayers.DatabaseOpenSearchIndexes{DatabaseIndexes: indexes}
+	return c.Display(item)
+}
+
+func RunDatabaseIndexDelete(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirmDelete("opensearch index", 1) == nil {
+		databaseID := c.Args[0]
+		indexName := c.Args[1]
+		return c.Databases().DeleteIndex(databaseID, indexName)
+	}
+
+	return errOperationAborted
 }

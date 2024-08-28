@@ -262,6 +262,7 @@ func TestDatabasesCommand(t *testing.T) {
 		"sql-mode",
 		"configuration",
 		"topics",
+		"indexes",
 	)
 }
 

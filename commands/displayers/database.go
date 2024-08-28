@@ -1691,3 +1691,60 @@ func (dr *DatabaseEvents) KV() []map[string]any {
 	}
 	return out
 }
+
+type DatabaseOpenSearchIndexes struct {
+	DatabaseIndexes do.DatabaseIndexes
+}
+
+var _ Displayable = &DatabaseOpenSearchIndexes{}
+
+func (dt *DatabaseOpenSearchIndexes) JSON(out io.Writer) error {
+	return writeJSON(dt.DatabaseIndexes, out)
+}
+
+func (dt *DatabaseOpenSearchIndexes) Cols() []string {
+	return []string{
+		"Index Name",
+		"Status",
+		"Health",
+		"Size",
+		"Docs",
+		"Create At",
+		"Number of Shards",
+		"Number of Replica",
+	}
+}
+
+func (dt *DatabaseOpenSearchIndexes) ColMap() map[string]string {
+
+	return map[string]string{
+		"Index Name":        "Index Name",
+		"Status":            "Status",
+		"Health":            "Health",
+		"Size":              "Size",
+		"Docs":              "Docs",
+		"Create At":         "Create At",
+		"Number of Shards":  "Number of Shards",
+		"Number of Replica": "Number of Replica",
+	}
+}
+
+func (dt *DatabaseOpenSearchIndexes) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dt.DatabaseIndexes))
+
+	for _, t := range dt.DatabaseIndexes {
+		o := map[string]any{
+			"Index Name":        t.IndexName,
+			"Number of Shards":  t.NumberofShards,
+			"Number of Replica": t.NumberofReplicas,
+			"Status":            t.Status,
+			"Health":            t.Health,
+			"Size":              t.Size,
+			"Docs":              t.Docs,
+			"Create At":         t.CreateTime,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
