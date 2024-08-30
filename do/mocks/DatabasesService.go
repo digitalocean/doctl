@@ -158,6 +158,20 @@ func (mr *MockDatabasesServiceMockRecorder) DeleteDB(arg0, arg1 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteDB", reflect.TypeOf((*MockDatabasesService)(nil).DeleteDB), arg0, arg1)
 }
 
+// DeleteIndex mocks base method.
+func (m *MockDatabasesService) DeleteIndex(arg0, arg1 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteIndex", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteIndex indicates an expected call of DeleteIndex.
+func (mr *MockDatabasesServiceMockRecorder) DeleteIndex(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteIndex", reflect.TypeOf((*MockDatabasesService)(nil).DeleteIndex), arg0, arg1)
+}
+
 // DeletePool mocks base method.
 func (m *MockDatabasesService) DeletePool(arg0, arg1 string) error {
 	m.ctrl.T.Helper()
@@ -482,6 +496,21 @@ func (m *MockDatabasesService) ListDatabaseEvents(arg0 string) (do.DatabaseEvent
 func (mr *MockDatabasesServiceMockRecorder) ListDatabaseEvents(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatabaseEvents", reflect.TypeOf((*MockDatabasesService)(nil).ListDatabaseEvents), arg0)
+}
+
+// ListIndexes mocks base method.
+func (m *MockDatabasesService) ListIndexes(arg0 string) (do.DatabaseIndexes, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListIndexes", arg0)
+	ret0, _ := ret[0].(do.DatabaseIndexes)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListIndexes indicates an expected call of ListIndexes.
+func (mr *MockDatabasesServiceMockRecorder) ListIndexes(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexes", reflect.TypeOf((*MockDatabasesService)(nil).ListIndexes), arg0)
 }
 
 // ListOptions mocks base method.

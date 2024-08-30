@@ -133,6 +133,14 @@ type DatabaseEvent struct {
 // DatabaseEvents is a slice of DatabaseEvent
 type DatabaseEvents []DatabaseEvent
 
+// DatabaseIndexes is a slice of DatabaseIndex
+type DatabaseIndexes []DatabaseIndex
+
+// DatabaseIndex is a wrapper for godo.DatabaseIndex
+type DatabaseIndex struct {
+	*godo.DatabaseIndex
+}
+
 // DatabasesService is an interface for interacting with DigitalOcean's Database API
 type DatabasesService interface {
 	List() (Databases, error)
@@ -194,6 +202,9 @@ type DatabasesService interface {
 	DeleteTopic(string, string) error
 
 	ListDatabaseEvents(string) (DatabaseEvents, error)
+
+	ListIndexes(string) (DatabaseIndexes, error)
+	DeleteIndex(string, string) error
 }
 
 type databasesService struct {
@@ -788,4 +799,38 @@ func (ds *databasesService) ListDatabaseEvents(databaseID string) (DatabaseEvent
 		list[i] = DatabaseEvent{DatabaseEvent: &r}
 	}
 	return list, nil
+}
+
+func (ds *databasesService) ListIndexes(databaseID string) (DatabaseIndexes, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := ds.client.Databases.ListIndexes(context.TODO(), databaseID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(DatabaseIndexes, len(si))
+	for i := range si {
+		t := si[i].(godo.DatabaseIndex)
+		list[i] = DatabaseIndex{DatabaseIndex: &t}
+	}
+	return list, nil
+}
+
+func (ds *databasesService) DeleteIndex(databaseID, indexName string) error {
+	_, err := ds.client.Databases.DeleteIndex(context.TODO(), databaseID, indexName)
+
+	return err
 }
