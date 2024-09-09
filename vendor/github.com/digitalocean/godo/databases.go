@@ -252,9 +252,16 @@ type KafkaACL struct {
 	Topic      string `json:"topic,omitempty"`
 }
 
-// DatabaseUserSettings contains Kafka-specific user settings
+// OpenSearchACL contains OpenSearch specific user access control information
+type OpenSearchACL struct {
+	Permission string `json:"permission,omitempty"`
+	Index      string `json:"index,omitempty"`
+}
+
+// DatabaseUserSettings contains user settings
 type DatabaseUserSettings struct {
-	ACL []*KafkaACL `json:"acl,omitempty"`
+	ACL           []*KafkaACL      `json:"acl,omitempty"`
+	OpenSearchACL []*OpenSearchACL `json:"opensearch_acl,omitempty"`
 }
 
 // DatabaseMySQLUserSettings contains MySQL-specific user settings
@@ -505,19 +512,19 @@ type DatabaseUpdateLogsinkRequest struct {
 
 // DatabaseLogsinkConfig represents one of the configurable options (rsyslog_logsink, elasticsearch_logsink, or opensearch_logsink) for a logsink.
 type DatabaseLogsinkConfig struct {
-	URL          string `json:"url,omitempty"`
-	IndexPrefix  string `json:"index_prefix,omitempty"`
-	IndexDaysMax string `json:"index_days_max,omitempty"`
-	Timeout      string `json:"timeout,omitempty"`
-	Server       string `json:"server,omitempty"`
-	Port         int    `json:"port,omitempty"`
-	TLS          bool   `json:"tls,omitempty"`
-	Format       string `json:"format,omitempty"`
-	Logline      string `json:"logline,omitempty"`
-	SD           string `json:"sd,omitempty"`
-	CA           string `json:"ca,omitempty"`
-	Key          string `json:"key,omitempty"`
-	Cert         string `json:"cert,omitempty"`
+	URL          string  `json:"url,omitempty"`
+	IndexPrefix  string  `json:"index_prefix,omitempty"`
+	IndexDaysMax int     `json:"index_days_max,omitempty"`
+	Timeout      float32 `json:"timeout,omitempty"`
+	Server       string  `json:"server,omitempty"`
+	Port         int     `json:"port,omitempty"`
+	TLS          bool    `json:"tls,omitempty"`
+	Format       string  `json:"format,omitempty"`
+	Logline      string  `json:"logline,omitempty"`
+	SD           string  `json:"sd,omitempty"`
+	CA           string  `json:"ca,omitempty"`
+	Key          string  `json:"key,omitempty"`
+	Cert         string  `json:"cert,omitempty"`
 }
 
 // PostgreSQLConfig holds advanced configurations for PostgreSQL database clusters.
