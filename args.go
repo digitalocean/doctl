@@ -406,6 +406,8 @@ const (
 	ArgDatabasePrivateConnectionBool = "private"
 	// ArgDatabaseUserKafkaACLs will specify permissions on topics in kafka clsuter
 	ArgDatabaseUserKafkaACLs = "acl"
+	// ArgDatabaseUserOpenSearchACLs will specify permissions on indexes in opensearch clsuter
+	ArgDatabaseUserOpenSearchACLs = "opensearch-acl"
 
 	// ArgDatabaseTopicReplicationFactor is the replication factor of a kafka topic
 	ArgDatabaseTopicReplicationFactor = "replication-factor"
