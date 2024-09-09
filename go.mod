@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.21
-	github.com/digitalocean/godo v1.121.0
+	github.com/digitalocean/godo v1.123.0
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v25.0.6+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.22.0
 	golang.org/x/net v0.24.0 // indirect
-	golang.org/x/oauth2 v0.22.0
+	golang.org/x/oauth2 v0.23.0
 	golang.org/x/sys v0.20.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.2
