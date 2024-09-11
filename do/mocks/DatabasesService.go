@@ -702,7 +702,7 @@ func (m *MockDatabasesService) UpdateMySQLConfiguration(databaseID, confString s
 
 
 
-// InstallUpdate indicates an expected call of UpdateMaintenance.
+// InstallUpdate indicates an expected call of InstallUpdate.
 func (mr *MockDatabasesServiceMockRecorder) InstallUpdate(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallUpdate", reflect.TypeOf((*MockDatabasesService)(nil).InstallUpdate), arg0)
