@@ -160,7 +160,7 @@ clean:
 
 .PHONY: _install_github_release_notes
 _install_github_release_notes:
-	@GO111MODULE=off go get -u github.com/digitalocean/github-changelog-generator
+	go install github.com/digitalocean/github-changelog-generator@latest
 
 .PHONY: _changelog
 _changelog: _install_github_release_notes
