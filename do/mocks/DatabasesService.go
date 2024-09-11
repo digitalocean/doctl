@@ -243,6 +243,21 @@ func (mr *MockDatabasesServiceMockRecorder) Get(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDatabasesService)(nil).Get), arg0)
 }
 
+// GetCA mocks base method.
+func (m *MockDatabasesService) GetCA(arg0 string) (*do.DatabaseCA, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCA", arg0)
+	ret0, _ := ret[0].(*do.DatabaseCA)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCA indicates an expected call of GetCA.
+func (mr *MockDatabasesServiceMockRecorder) GetCA(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCA", reflect.TypeOf((*MockDatabasesService)(nil).GetCA), arg0)
+}
+
 // GetConnection mocks base method.
 func (m *MockDatabasesService) GetConnection(arg0 string, arg1 bool) (*do.DatabaseConnection, error) {
 	m.ctrl.T.Helper()
