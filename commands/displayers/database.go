@@ -14,7 +14,6 @@ limitations under the License.
 package displayers
 
 import (
-	"encoding/base64"
 	"io"
 	"sort"
 	"strconv"
@@ -179,10 +178,9 @@ func (dc *DatabaseCA) ColMap() map[string]string {
 }
 
 func (dc *DatabaseCA) KV() []map[string]any {
-	encoded := base64.StdEncoding.EncodeToString(dc.DatabaseCA.Certificate)
 	return []map[string]any{
 		{
-			"Certificate": encoded,
+			"Certificate": string(dc.DatabaseCA.Certificate),
 		},
 	}
 }
