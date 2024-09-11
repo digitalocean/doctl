@@ -147,6 +147,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 
 	cmd.AddCommand(databaseReplica())
 	cmd.AddCommand(databaseMaintenanceWindow())
+	cmd.AddCommand(databaseInstallUpdate())
 	cmd.AddCommand(databaseUser())
 	cmd.AddCommand(databaseDB())
 	cmd.AddCommand(databasePool())
@@ -406,7 +407,7 @@ func convertUTCtoISO8601(restoreFromTimestamp string) (string, error) {
 	// accepts UTC time format from user (to match db list output) and converts it to ISO8601 for api parity.
 	date, error := time.Parse("2006-01-02 15:04:05 +0000 UTC", restoreFromTimestamp)
 	if error != nil {
-		return "", fmt.Errorf("Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
+		return "", fmt.Errorf("invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
 	}
 	dateFormatted := date.Format(time.RFC3339)
 
@@ -599,6 +600,21 @@ To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+
 	return cmd
 }
 
+func databaseInstallUpdate() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "install_update",
+			Short: "Display commands for starting installation of updates",
+			Long:  `The ` + "`" + `doctl databases install_update` + "`" + ` commands allow you to starts installation of updates for your databases`,
+		},
+	}
+	cmdDatabaseInstallUpdate := CmdBuilder(cmd, RunDatabaseInstallUpdate, "install_update <database-cluster-id>", "Starts installation of updates ", "Starts installation of updates ", Writer)
+
+	cmdDatabaseInstallUpdate.Example = `The following example starts installation of updates for your databases with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases install_update ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
+
+	return cmd
+}
+
 // Database Maintenance Window
 
 // RunDatabaseMaintenanceGet retrieves the maintenance window info for a database cluster
@@ -635,6 +651,15 @@ func RunDatabaseMaintenanceUpdate(c *CmdConfig) error {
 	}
 
 	return c.Databases().UpdateMaintenance(id, r)
+}
+
+// RunDatabaseInstallUpdate starts installation of updates
+func RunDatabaseInstallUpdate(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	id := c.Args[0]
+	return c.Databases().InstallUpdate(id)
 }
 
 func buildDatabaseUpdateMaintenanceRequestFromArgs(c *CmdConfig) (*godo.DatabaseUpdateMaintenanceRequest, error) {
@@ -810,7 +835,7 @@ func buildDatabaseCreateKafkaUserACls(c *CmdConfig) (kafkaACls []*godo.KafkaACL,
 	for _, acl := range acls {
 		pair := strings.SplitN(acl, ":", 2)
 		if len(pair) != 2 {
-			return nil, fmt.Errorf("Unexpected input value [%v], must be a topic:permission pair", pair)
+			return nil, fmt.Errorf("unexpected input value [%v], must be a topic:permission pair", pair)
 		}
 
 		kafkaACl := new(godo.KafkaACL)

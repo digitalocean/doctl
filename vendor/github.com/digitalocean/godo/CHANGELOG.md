@@ -1,5 +1,9 @@
 # Change Log
 
+## [v1.124.0] - 2024-09-10
+
+- #721 - @vsharma6855 - [DBAAS] | Add API endpoint for applying cluster patches
+
 ## [v1.123.0] - 2024-09-06
 
 - #719 - @andrewsomething - apps: mark ListTiers and GetTier as deprecated
