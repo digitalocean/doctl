@@ -831,39 +831,9 @@ func appsTier() *Command {
 		},
 	}
 
-	tierDeprecationMsg := "This command is deprecated and will be removed in a future release. Use `doctl apps tier instance-size <get|list>` instead.\n\n"
-	CmdBuilder(cmd, RunAppsTierList, "list", "List all app tiers", tierDeprecationMsg+`Use this command to list all the available app tiers.`, Writer, aliasOpt("ls"), hiddenCmd())
-	CmdBuilder(cmd, RunAppsTierGet, "get <tier slug>", "Retrieve an app tier", tierDeprecationMsg+`Use this command to retrieve information about a specific app tier.`, Writer, hiddenCmd())
-
 	cmd.AddCommand(appsTierInstanceSize())
 
 	return cmd
-}
-
-// RunAppsTierList lists all app tiers.
-func RunAppsTierList(c *CmdConfig) error {
-	tiers, err := c.Apps().ListTiers()
-	if err != nil {
-		return err
-	}
-
-	return c.Display(displayers.AppTiers(tiers))
-}
-
-// RunAppsTierGet gets an app tier.
-func RunAppsTierGet(c *CmdConfig) error {
-	if len(c.Args) < 1 {
-		return doctl.NewMissingArgsErr(c.NS)
-	}
-
-	slug := c.Args[0]
-
-	tier, err := c.Apps().GetTier(slug)
-	if err != nil {
-		return err
-	}
-
-	return c.Display(displayers.AppTiers([]*godo.AppTier{tier}))
 }
 
 func appsTierInstanceSize() *Command {

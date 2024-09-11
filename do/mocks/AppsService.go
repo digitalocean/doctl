@@ -143,21 +143,6 @@ func (mr *MockAppsServiceMockRecorder) GetLogs(appID, deploymentID, component, l
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockAppsService)(nil).GetLogs), appID, deploymentID, component, logType, follow, tail)
 }
 
-// GetTier mocks base method.
-func (m *MockAppsService) GetTier(slug string) (*godo.AppTier, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTier", slug)
-	ret0, _ := ret[0].(*godo.AppTier)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetTier indicates an expected call of GetTier.
-func (mr *MockAppsServiceMockRecorder) GetTier(slug any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTier", reflect.TypeOf((*MockAppsService)(nil).GetTier), slug)
-}
-
 // List mocks base method.
 func (m *MockAppsService) List(withProjects bool) ([]*godo.App, error) {
 	m.ctrl.T.Helper()
@@ -246,21 +231,6 @@ func (m *MockAppsService) ListRegions() ([]*godo.AppRegion, error) {
 func (mr *MockAppsServiceMockRecorder) ListRegions() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRegions", reflect.TypeOf((*MockAppsService)(nil).ListRegions))
-}
-
-// ListTiers mocks base method.
-func (m *MockAppsService) ListTiers() ([]*godo.AppTier, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListTiers")
-	ret0, _ := ret[0].([]*godo.AppTier)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListTiers indicates an expected call of ListTiers.
-func (mr *MockAppsServiceMockRecorder) ListTiers() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTiers", reflect.TypeOf((*MockAppsService)(nil).ListTiers))
 }
 
 // Propose mocks base method.

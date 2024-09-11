@@ -710,27 +710,6 @@ func TestRunAppsListRegions(t *testing.T) {
 	})
 }
 
-func TestRunAppsTierList(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tiers := []*godo.AppTier{testAppTier}
-
-		tm.apps.EXPECT().ListTiers().Times(1).Return(tiers, nil)
-
-		err := RunAppsTierList(config)
-		require.NoError(t, err)
-	})
-}
-
-func TestRunAppsTierGet(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.apps.EXPECT().GetTier(testAppTier.Slug).Times(1).Return(testAppTier, nil)
-
-		config.Args = append(config.Args, testAppTier.Slug)
-		err := RunAppsTierGet(config)
-		require.NoError(t, err)
-	})
-}
-
 func TestRunAppsTierInstanceSizeList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		instanceSizes := []*godo.AppInstanceSize{testAppInstanceSize}

@@ -36,9 +36,6 @@ type AppsService interface {
 
 	ListRegions() ([]*godo.AppRegion, error)
 
-	ListTiers() ([]*godo.AppTier, error)
-	GetTier(slug string) (*godo.AppTier, error)
-
 	ListInstanceSizes() ([]*godo.AppInstanceSize, error)
 	GetInstanceSize(slug string) (*godo.AppInstanceSize, error)
 
@@ -192,22 +189,6 @@ func (s *appsService) ListRegions() ([]*godo.AppRegion, error) {
 		return nil, err
 	}
 	return regions, nil
-}
-
-func (s *appsService) ListTiers() ([]*godo.AppTier, error) {
-	tiers, _, err := s.client.Apps.ListTiers(s.ctx)
-	if err != nil {
-		return nil, err
-	}
-	return tiers, nil
-}
-
-func (s *appsService) GetTier(slug string) (*godo.AppTier, error) {
-	tier, _, err := s.client.Apps.GetTier(s.ctx, slug)
-	if err != nil {
-		return nil, err
-	}
-	return tier, nil
 }
 
 func (s *appsService) ListInstanceSizes() ([]*godo.AppInstanceSize, error) {
