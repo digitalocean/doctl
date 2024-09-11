@@ -155,6 +155,41 @@ func (db *DatabaseBackups) KV() []map[string]any {
 	return out
 }
 
+type DatabaseCAs struct {
+	DatabaseCAs do.DatabaseCAs
+}
+
+var _ Displayable = &DatabaseCAs{}
+
+func (dc *DatabaseCAs) JSON(out io.Writer) error {
+	return writeJSON(dc.DatabaseCAs, out)
+}
+
+func (dc *DatabaseCAs) Cols() []string {
+	return []string{
+		"Certificate",
+	}
+}
+
+func (dc *DatabaseCAs) ColMap() map[string]string {
+	return map[string]string{
+		"Certificate": "Certificate",
+	}
+}
+
+func (dc *DatabaseCAs) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(dc.DatabaseCAs))
+
+	for _, c := range dc.DatabaseCAs {
+		o := map[string]any{
+			"Certificate": string(c.Certificate),
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
+
 type DatabaseUsers struct {
 	DatabaseUsers do.DatabaseUsers
 }

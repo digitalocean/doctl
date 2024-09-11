@@ -70,6 +70,10 @@ func Databases() *Command {
 - The date and time when the database cluster was created`+databaseListDetails, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
 	cmdDatabaseGet.Example = `The following example retrieves the details for a database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the database's ID, engine, and engine version: doctl databases get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
+	// TODO: update draft descriptions, examples when ready
+	cmdDatabaseGetCA := CmdBuilder(cmd, RunDatabaseGetCA, "get-ca", "Provides the CA certificate for a DigitalOcean database", `Retrieves a list of database clusters and their following details:`+clusterDetails, Writer, aliasOpt("ls"), displayerType(&displayers.Databases{}))
+	cmdDatabaseGetCA.Example = `The following example lists all database associated with your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, engine, and engine version of each database: doctl databases list --format ID,Engine,Version`
+
 	nodeSizeDetails := "The size of the nodes in the database cluster, for example `db-s-1vcpu-1gb` indicates a 1 CPU, 1GB node. For a list of available size slugs, visit: https://docs.digitalocean.com/reference/api/api-reference/#tag/Databases"
 	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
 	storageSizeMiBDetails := "The amount of disk space allocated to the cluster. Applicable for PostgreSQL and MySQL clusters. Each plan size has a default value but can be increased in increments up to a maximum amount. For ranges, visit: https://www.digitalocean.com/pricing/managed-databases"
@@ -186,6 +190,21 @@ func RunDatabaseGet(c *CmdConfig) error {
 	}
 
 	return displayDatabases(c, false, *db)
+}
+
+// RunDatabaseGetCA returns a CA certificate for a database
+func RunDatabaseGetCA(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	id := c.Args[0]
+	dbCA, err := c.Databases().GetCA(id)
+	if err != nil {
+		return err
+	}
+
+	return displayDatabaseCA(c, *dbCA)
 }
 
 // RunDatabaseCreate creates a database cluster
@@ -903,6 +922,11 @@ func RunDatabaseUserDelete(c *CmdConfig) error {
 
 func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
 	item := &displayers.DatabaseUsers{DatabaseUsers: users}
+	return c.Display(item)
+}
+
+func displayDatabaseCA(c *CmdConfig, dbCAs ...do.DatabaseCA) error {
+	item := &displayers.DatabaseCAs{DatabaseCAs: dbCAs}
 	return c.Display(item)
 }
 
