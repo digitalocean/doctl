@@ -204,7 +204,7 @@ func RunDatabaseGetCA(c *CmdConfig) error {
 		return err
 	}
 
-	return displayDatabaseCA(c, *dbCA)
+	return displayDatabaseCA(c, dbCA)
 }
 
 // RunDatabaseCreate creates a database cluster
@@ -925,8 +925,8 @@ func displayDatabaseUsers(c *CmdConfig, users ...do.DatabaseUser) error {
 	return c.Display(item)
 }
 
-func displayDatabaseCA(c *CmdConfig, dbCAs ...do.DatabaseCA) error {
-	item := &displayers.DatabaseCAs{DatabaseCAs: dbCAs}
+func displayDatabaseCA(c *CmdConfig, dbCA *do.DatabaseCA) error {
+	item := &displayers.DatabaseCA{DatabaseCA: *dbCA}
 	return c.Display(item)
 }
 

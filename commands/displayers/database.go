@@ -14,6 +14,7 @@ limitations under the License.
 package displayers
 
 import (
+	"encoding/base64"
 	"io"
 	"sort"
 	"strconv"
@@ -155,39 +156,35 @@ func (db *DatabaseBackups) KV() []map[string]any {
 	return out
 }
 
-type DatabaseCAs struct {
-	DatabaseCAs do.DatabaseCAs
+type DatabaseCA struct {
+	DatabaseCA do.DatabaseCA
 }
 
-var _ Displayable = &DatabaseCAs{}
+var _ Displayable = &DatabaseCA{}
 
-func (dc *DatabaseCAs) JSON(out io.Writer) error {
-	return writeJSON(dc.DatabaseCAs, out)
+func (dc *DatabaseCA) JSON(out io.Writer) error {
+	return writeJSON(dc.DatabaseCA, out)
 }
 
-func (dc *DatabaseCAs) Cols() []string {
+func (dc *DatabaseCA) Cols() []string {
 	return []string{
 		"Certificate",
 	}
 }
 
-func (dc *DatabaseCAs) ColMap() map[string]string {
+func (dc *DatabaseCA) ColMap() map[string]string {
 	return map[string]string{
 		"Certificate": "Certificate",
 	}
 }
 
-func (dc *DatabaseCAs) KV() []map[string]any {
-	out := make([]map[string]any, 0, len(dc.DatabaseCAs))
-
-	for _, c := range dc.DatabaseCAs {
-		o := map[string]any{
-			"Certificate": string(c.Certificate),
-		}
-		out = append(out, o)
+func (dc *DatabaseCA) KV() []map[string]any {
+	encoded := base64.StdEncoding.EncodeToString(dc.DatabaseCA.Certificate)
+	return []map[string]any{
+		{
+			"Certificate": encoded,
+		},
 	}
-
-	return out
 }
 
 type DatabaseUsers struct {
