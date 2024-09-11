@@ -244,6 +244,7 @@ func TestDatabasesCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"list",
 		"get",
+		"get-ca",
 		"create",
 		"delete",
 		"connection",
