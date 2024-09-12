@@ -26,6 +26,14 @@ type Database struct {
 	*godo.Database
 }
 
+// DatabaseCA is a wrapper for godo.DatabaseCA
+type DatabaseCA struct {
+	*godo.DatabaseCA
+}
+
+// DatabaseCAs is a slice of DatabaseCA
+type DatabaseCAs []DatabaseCA
+
 // Databases is a slice of Database
 type Databases []Database
 
@@ -145,6 +153,7 @@ type DatabaseIndex struct {
 type DatabasesService interface {
 	List() (Databases, error)
 	Get(string) (*Database, error)
+	GetCA(string) (*DatabaseCA, error)
 	Create(*godo.DatabaseCreateRequest) (*Database, error)
 	Delete(string) error
 	GetConnection(string, bool) (*DatabaseConnection, error)
@@ -255,6 +264,15 @@ func (ds *databasesService) Get(databaseID string) (*Database, error) {
 	}
 
 	return &Database{Database: db}, nil
+}
+
+func (ds *databasesService) GetCA(databaseID string) (*DatabaseCA, error) {
+	dbCA, _, err := ds.client.Databases.GetCA(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DatabaseCA{DatabaseCA: dbCA}, nil
 }
 
 func (ds *databasesService) Create(req *godo.DatabaseCreateRequest) (*Database, error) {
