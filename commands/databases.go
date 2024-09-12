@@ -70,9 +70,9 @@ func Databases() *Command {
 - The date and time when the database cluster was created`+databaseListDetails, Writer, aliasOpt("g"), displayerType(&displayers.Databases{}))
 	cmdDatabaseGet.Example = `The following example retrieves the details for a database cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and uses the ` + "`" + `--format` + "`" + ` flag to return only the database's ID, engine, and engine version: doctl databases get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	// TODO: update draft descriptions, examples when ready
-	cmdDatabaseGetCA := CmdBuilder(cmd, RunDatabaseGetCA, "get-ca", "Provides the CA certificate for a DigitalOcean database", `Retrieves a list of database clusters and their following details:`+clusterDetails, Writer, aliasOpt("ls"), displayerType(&displayers.Databases{}))
-	cmdDatabaseGetCA.Example = `The following example lists all database associated with your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, engine, and engine version of each database: doctl databases list --format ID,Engine,Version`
+	cmdDatabaseGetCA := CmdBuilder(cmd, RunDatabaseGetCA, "get-ca <database-cluster-id>", "Provides the CA certificate for a DigitalOcean database", `Retrieves a database certificate`, Writer, aliasOpt("gc"), displayerType(&displayers.DatabaseCA{}))
+	cmdDatabaseGetCA.Example = `Retrieves the database certificate for the cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl databases get-ca f81d4fae-7dec-11d0-a765-00a0c91e6bf6
+With the -o json flag, decode the certificate to connect to the database: doctl databases get-ca <database-cluster-id> -o json | jq -r .certificate | base64 --decode`
 
 	nodeSizeDetails := "The size of the nodes in the database cluster, for example `db-s-1vcpu-1gb` indicates a 1 CPU, 1GB node. For a list of available size slugs, visit: https://docs.digitalocean.com/reference/api/api-reference/#tag/Databases"
 	nodeNumberDetails := "The number of nodes in the database cluster. Valid values are 1-3. In addition to the primary node, up to two standby nodes may be added for high availability."
