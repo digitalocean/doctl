@@ -194,9 +194,13 @@ to do so. Travis also runs shellcheck.
 
 ## Releasing
 
-1. Use [github-changelog-generator](https://github.com/digitalocean/github-changelog-generator) 
-   to list the changes since the last release 
-   and decide what kind of release you are doing (bugfix, feature or breaking).
+To cut a release, push a new tag (versioning discussed below).
+
+### Tagging a release
+
+1. Run `make changes` to review the changes since the last
+   release. Based on the changes, decide what kind of release you are
+   doing (bugfix, feature or breaking).
    `doctl` follows [semantic versioning](https://semver.org), ask if you aren't sure.
 
 1. Synchronize your local repository with all the tags that have been created or updated on the remote main branch
