@@ -66,6 +66,12 @@ var (
 		},
 	}
 
+	testDBClusterCA = do.DatabaseCA{
+		DatabaseCA: &godo.DatabaseCA{
+			Certificate: []byte("QQDDC9jMGIwYzNiZS0wZjY4LTRkY4OCCAaIwDQYJKoZIhvcNAQ"),
+		},
+	}
+
 	testKafkaDBCluster = do.Database{
 		Database: &godo.Database{
 			ID:          "ea93928g-8se0-929e-m1ns-029daj2k3j12",
@@ -244,6 +250,7 @@ func TestDatabasesCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"list",
 		"get",
+		"get-ca",
 		"create",
 		"delete",
 		"connection",
@@ -374,6 +381,31 @@ func TestDatabasesGet(t *testing.T) {
 	// ID not provided
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDatabaseGet(config)
+		assert.EqualError(t, doctl.NewMissingArgsErr(config.NS), err.Error())
+	})
+}
+
+func TestDatabasesGetCA(t *testing.T) {
+	// Successful call
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetCA(testDBCluster.ID).Return(&testDBClusterCA, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		err := RunDatabaseGetCA(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	notFound := "not-found"
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetCA(notFound).Return(nil, errTest)
+		config.Args = append(config.Args, notFound)
+		err := RunDatabaseGetCA(config)
+		assert.Error(t, err)
+	})
+
+	// ID not provided
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunDatabaseGetCA(config)
 		assert.EqualError(t, doctl.NewMissingArgsErr(config.NS), err.Error())
 	})
 }
