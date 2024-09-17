@@ -272,14 +272,7 @@ func TestDatabaseMaintenanceWindowCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"update",
 		"get",
-	)
-}
-
-func TestDatabaseInstallUpdateCommand(t *testing.T) {
-	cmd := databaseInstallUpdate()
-	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd,
-		"install_update",
+		"install",
 	)
 }
 
