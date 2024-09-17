@@ -147,7 +147,6 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 
 	cmd.AddCommand(databaseReplica())
 	cmd.AddCommand(databaseMaintenanceWindow())
-	cmd.AddCommand(databaseInstallUpdate())
 	cmd.AddCommand(databaseUser())
 	cmd.AddCommand(databaseDB())
 	cmd.AddCommand(databasePool())
