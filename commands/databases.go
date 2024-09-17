@@ -586,7 +586,9 @@ func databaseMaintenanceWindow() *Command {
 			Short:   "Display commands for scheduling automatic maintenance on your database cluster",
 			Long: `The ` + "`" + `doctl databases maintenance-window` + "`" + ` commands allow you to schedule, and check the schedule of, maintenance windows for your databases.
 
-Maintenance windows are hour-long blocks of time during which DigitalOcean performs automatic maintenance on databases every week. During this time, health checks, security updates, version upgrades, and more are performed.`,
+Maintenance windows are hour-long blocks of time during which DigitalOcean performs automatic maintenance on databases every week. During this time, health checks, security updates, version upgrades, and more are performed.
+
+To install an update outside of a maintenance window, use the ` + "`" + `doctl databases maintenance-window install` + "`" + ` command.`,
 		},
 	}
 
@@ -615,7 +617,7 @@ To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+
 		"The hour when maintenance updates are applied, in UTC 24-hour format. Example: '16:00')", requiredOpt())
 	cmdDatabaseCreate.Example = `The following example updates the maintenance window for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --day tuesday --hour 16:00`
 
-	cmdDatabaseInstallUpdate := CmdBuilder(cmd, RunDatabaseInstallUpdate, "install <database-cluster-id>", "Starts installation of updates ", "Starts installation of updates ", Writer, aliasOpt("i"))
+	cmdDatabaseInstallUpdate := CmdBuilder(cmd, RunDatabaseInstallUpdate, "install <database-cluster-id>", "Start installation of updates immediately", "Starts the installation of updates for the specified database cluster immediately outside of a maintenance window.", Writer, aliasOpt("i"))
 	cmdDatabaseInstallUpdate.Example = `The following example starts installation of updates for your databases with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window install ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
 
 	return cmd
