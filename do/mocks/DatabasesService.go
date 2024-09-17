@@ -453,6 +453,20 @@ func (mr *MockDatabasesServiceMockRecorder) GetUser(arg0, arg1 any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockDatabasesService)(nil).GetUser), arg0, arg1)
 }
 
+// InstallUpdate mocks base method.
+func (m *MockDatabasesService) InstallUpdate(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InstallUpdate", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InstallUpdate indicates an expected call of InstallUpdate.
+func (mr *MockDatabasesServiceMockRecorder) InstallUpdate(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallUpdate", reflect.TypeOf((*MockDatabasesService)(nil).InstallUpdate), arg0)
+}
+
 // List mocks base method.
 func (m *MockDatabasesService) List() (do.Databases, error) {
 	m.ctrl.T.Helper()
@@ -714,24 +728,6 @@ func (m *MockDatabasesService) UpdateMySQLConfiguration(databaseID, confString s
 	ret0, _ := ret[0].(error)
 	return ret0
 }
-
-
-
-// InstallUpdate indicates an expected call of InstallUpdate.
-func (mr *MockDatabasesServiceMockRecorder) InstallUpdate(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InstallUpdate", reflect.TypeOf((*MockDatabasesService)(nil).InstallUpdate), arg0)
-}
-
-// InstallUpdate mocks base method.
-func (m *MockDatabasesService) InstallUpdate(databaseID string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InstallUpdate", databaseID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-
 
 // UpdateMySQLConfiguration indicates an expected call of UpdateMySQLConfiguration.
 func (mr *MockDatabasesServiceMockRecorder) UpdateMySQLConfiguration(databaseID, confString any) *gomock.Call {
