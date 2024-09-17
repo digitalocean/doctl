@@ -279,6 +279,7 @@ func TestDatabaseMaintenanceWindowCommand(t *testing.T) {
 	assertCommandNames(t, cmd,
 		"update",
 		"get",
+		"install",
 	)
 }
 
@@ -890,6 +891,26 @@ func TestDatabaseUpdateMaintenance(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDatabaseMaintenanceHour, testDBMainWindow.Hour)
 
 		err := RunDatabaseMaintenanceUpdate(config)
+		assert.EqualError(t, err, errTest.Error())
+	})
+}
+
+func TestDatabaseInstallUpdate(t *testing.T) {
+
+	// Success
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().InstallUpdate(testDBCluster.ID).Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		err := RunDatabaseInstallUpdate(config)
+		assert.NoError(t, err)
+	})
+
+	// Error
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().InstallUpdate(testDBCluster.ID).Return(errTest)
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseInstallUpdate(config)
 		assert.EqualError(t, err, errTest.Error())
 	})
 }

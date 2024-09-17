@@ -163,6 +163,7 @@ type DatabasesService interface {
 
 	GetMaintenance(string) (*DatabaseMaintenanceWindow, error)
 	UpdateMaintenance(string, *godo.DatabaseUpdateMaintenanceRequest) error
+	InstallUpdate(string) error
 
 	GetUser(string, string) (*DatabaseUser, error)
 	ListUsers(string) (DatabaseUsers, error)
@@ -332,6 +333,12 @@ func (ds *databasesService) GetMaintenance(databaseID string) (*DatabaseMaintena
 
 func (ds *databasesService) UpdateMaintenance(databaseID string, req *godo.DatabaseUpdateMaintenanceRequest) error {
 	_, err := ds.client.Databases.UpdateMaintenance(context.TODO(), databaseID, req)
+
+	return err
+}
+
+func (ds *databasesService) InstallUpdate(databaseID string) error {
+	_, err := ds.client.Databases.InstallUpdate(context.TODO(), databaseID)
 
 	return err
 }
