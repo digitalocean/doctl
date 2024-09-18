@@ -211,6 +211,10 @@ var (
 		RedisConfig: &godo.RedisConfig{},
 	}
 
+	testMongoDBConfiguration = do.MongoDBConfig{
+		MongoDBConfig: &godo.MongoDBConfig{},
+	}
+
 	topicReplicationFactor = uint32(3)
 	testKafkaTopic         = do.DatabaseTopic{
 		DatabaseTopic: &godo.DatabaseTopic{
@@ -1653,6 +1657,16 @@ func TestDatabaseConfigurationGet(t *testing.T) {
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetMongoDBConfiguration(testDBCluster.ID).Return(&testMongoDBConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongodb")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDatabaseConfigurationGet(config)
 
 		assert.Equal(t, err, doctl.NewMissingArgsErr(config.NS))
@@ -1670,6 +1684,70 @@ func TestDatabaseConfigurationGet(t *testing.T) {
 		config.Args = append(config.Args, testDBCluster.ID)
 
 		err := RunDatabaseConfigurationGet(config)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestDatabaseConfigurationUpdate(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateMySQLConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mysql")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdatePostgreSQLConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "pg")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateRedisConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "redis")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateMongoDBConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongodb")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.Equal(t, err, doctl.NewMissingArgsErr(config.NS))
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testDBCluster.ID, "extra arg")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.Equal(t, err, doctl.NewTooManyArgsErr(config.NS))
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Args = append(config.Args, testDBCluster.ID)
+
+		err := RunDatabaseConfigurationUpdate(config)
 
 		assert.Error(t, err)
 	})
