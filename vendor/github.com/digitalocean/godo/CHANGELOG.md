@@ -1,5 +1,11 @@
 # Change Log
 
+## [v1.125.0] - 2024-09-17
+
+- #726 - @loosla - [databases]: add support for MongoDB advanced configuration
+- #724 - @andrewsomething - Bump go version to 1.22
+- #723 - @jauderho - Update Go dependencies and remove replace statements
+
 ## [v1.124.0] - 2024-09-10
 
 - #721 - @vsharma6855 - [DBAAS] | Add API endpoint for applying cluster patches
