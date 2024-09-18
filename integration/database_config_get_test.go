@@ -60,7 +60,7 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 				}
 
 				w.Write([]byte(databaseConfigRedisGetResponse))
-			case "/v2/databases/mongo-database-id/config":
+			case "/v2/databases/mongodb-database-id/config":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusTeapot)

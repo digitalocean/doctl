@@ -1659,7 +1659,7 @@ func TestDatabaseConfigurationGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().GetMongoDBConfiguration(testDBCluster.ID).Return(&testMongoDBConfiguration, nil)
 		config.Args = append(config.Args, testDBCluster.ID)
-		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongo")
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongodb")
 
 		err := RunDatabaseConfigurationGet(config)
 
@@ -1723,7 +1723,7 @@ func TestDatabaseConfigurationUpdate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().UpdateMongoDBConfiguration(testDBCluster.ID, "").Return(nil)
 		config.Args = append(config.Args, testDBCluster.ID)
-		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongo")
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongodb")
 
 		err := RunDatabaseConfigurationUpdate(config)
 

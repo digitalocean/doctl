@@ -85,7 +85,7 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 				expect.Equal(expected, strings.TrimSpace(string(b)))
 
 				w.WriteHeader(http.StatusOK)
-			case "/v2/databases/mongo-database-id/config":
+			case "/v2/databases/mongodb-database-id/config":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusTeapot)
@@ -174,15 +174,15 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 	})
 
 	when("all required flags are passed", func() {
-		it("updates the mongo database config", func() {
+		it("updates the mongodb database config", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"database",
 				"configuration",
 				"update",
-				"--engine", "mongo",
-				"mongo-database-id",
+				"--engine", "mongodb",
+				"mongodb-database-id",
 				"--config-json", `{"verbosity":2}`,
 			)
 
