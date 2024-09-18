@@ -1678,6 +1678,67 @@ func (dc *RedisConfiguration) KV() []map[string]any {
 	return o
 }
 
+type MongoDBConfiguration struct {
+	MongoDBConfig do.MongoDBConfig
+}
+
+var _ Displayable = &MongoDBConfiguration{}
+
+func (dc *MongoDBConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.MongoDBConfig, out)
+}
+
+func (dc *MongoDBConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *MongoDBConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *MongoDBConfiguration) KV() []map[string]any {
+	c := dc.MongoDBConfig
+	o := []map[string]any{}
+	if c.DefaultReadConcern != nil {
+		o = append(o, map[string]any{
+			"key":   "DefaultReadConcern",
+			"value": *c.DefaultReadConcern,
+		})
+	}
+	if c.DefaultWriteConcern != nil {
+		o = append(o, map[string]any{
+			"key":   "DefaultWriteConcern",
+			"value": *c.DefaultWriteConcern,
+		})
+	}
+	if c.SlowOpThresholdMs != nil {
+		o = append(o, map[string]any{
+			"key":   "SlowOpThresholdMs",
+			"value": *c.SlowOpThresholdMs,
+		})
+	}
+	if c.TransactionLifetimeLimitSeconds != nil {
+		o = append(o, map[string]any{
+			"key":   "TransactionLifetimeLimitSeconds",
+			"value": *c.TransactionLifetimeLimitSeconds,
+		})
+	}
+	if c.Verbosity != nil {
+		o = append(o, map[string]any{
+			"key":   "Verbosity",
+			"value": *c.Verbosity,
+		})
+	}
+
+	return o
+}
+
 type DatabaseEvents struct {
 	DatabaseEvents do.DatabaseEvents
 }

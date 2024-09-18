@@ -2442,6 +2442,7 @@ This command functions as a PATCH request, meaning that only the specified field
 		displayerType(&displayers.MySQLConfiguration{}),
 		displayerType(&displayers.PostgreSQLConfiguration{}),
 		displayerType(&displayers.RedisConfiguration{}),
+		displayerType(&displayers.MongoDBConfiguration{}),
 	)
 	AddStringFlag(
 		getDatabaseCfgCommand,
@@ -2496,12 +2497,13 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql": nil,
-		"pg":    nil,
-		"redis": nil,
+		"mysql":   nil,
+		"pg":      nil,
+		"redis":   nil,
+		"mongodb": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb'", c.NS)
 	}
 
 	dbId := args[0]
@@ -2535,7 +2537,18 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 			RedisConfig: *config,
 		}
 		return c.Display(&displayer)
+	} else if engine == "mongodb" {
+		config, err := c.Databases().GetMongoDBConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.MongoDBConfiguration{
+			MongoDBConfig: *config,
+		}
+		return c.Display(&displayer)
 	}
+
 	return nil
 }
 
@@ -2554,12 +2567,13 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql": nil,
-		"pg":    nil,
-		"redis": nil,
+		"mysql":   nil,
+		"pg":      nil,
+		"redis":   nil,
+		"mongodb": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb'", c.NS)
 	}
 
 	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
@@ -2583,7 +2597,13 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
+	} else if engine == "mongodb" {
+		err := c.Databases().UpdateMongoDBConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
