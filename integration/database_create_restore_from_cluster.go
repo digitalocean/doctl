@@ -127,7 +127,7 @@ var _ = suite("database/create/backup-restore", func(t *testing.T, when spec.G, 
 })
 
 const (
-	restoreFromTimestampError          = "Error: Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC"
+	restoreFromTimestampError          = "Error: invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC"
 	databasesCreateRestoreBackUpOutput = `
 Notice: Database created
 ID         Name           Engine    Version         Number of Nodes    Region    Status      Size       URI                                                                                     Created At                       Storage (MiB)

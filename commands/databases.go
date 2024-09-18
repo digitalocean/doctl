@@ -425,7 +425,7 @@ func convertUTCtoISO8601(restoreFromTimestamp string) (string, error) {
 	// accepts UTC time format from user (to match db list output) and converts it to ISO8601 for api parity.
 	date, error := time.Parse("2006-01-02 15:04:05 +0000 UTC", restoreFromTimestamp)
 	if error != nil {
-		return "", fmt.Errorf("Invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
+		return "", fmt.Errorf("invalid format for --restore-from-timestamp. Must be in UTC format: 2006-01-02 15:04:05 +0000 UTC")
 	}
 	dateFormatted := date.Format(time.RFC3339)
 
@@ -586,7 +586,9 @@ func databaseMaintenanceWindow() *Command {
 			Short:   "Display commands for scheduling automatic maintenance on your database cluster",
 			Long: `The ` + "`" + `doctl databases maintenance-window` + "`" + ` commands allow you to schedule, and check the schedule of, maintenance windows for your databases.
 
-Maintenance windows are hour-long blocks of time during which DigitalOcean performs automatic maintenance on databases every week. During this time, health checks, security updates, version upgrades, and more are performed.`,
+Maintenance windows are hour-long blocks of time during which DigitalOcean performs automatic maintenance on databases every week. During this time, health checks, security updates, version upgrades, and more are performed.
+
+To install an update outside of a maintenance window, use the ` + "`" + `doctl databases maintenance-window install` + "`" + ` command.`,
 		},
 	}
 
@@ -614,6 +616,9 @@ To see a list of your databases and their IDs, run `+"`"+`doctl databases list`+
 	AddStringFlag(cmdDatabaseCreate, doctl.ArgDatabaseMaintenanceHour, "", "",
 		"The hour when maintenance updates are applied, in UTC 24-hour format. Example: '16:00')", requiredOpt())
 	cmdDatabaseCreate.Example = `The following example updates the maintenance window for a database cluster with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window update ca9f591d-f38h-5555-a0ef-1c02d1d1e35 --day tuesday --hour 16:00`
+
+	cmdDatabaseInstallUpdate := CmdBuilder(cmd, RunDatabaseInstallUpdate, "install <database-cluster-id>", "Start installation of updates immediately", "Starts the installation of updates for the specified database cluster immediately outside of a maintenance window.", Writer, aliasOpt("i"))
+	cmdDatabaseInstallUpdate.Example = `The following example starts installation of updates for your databases with the ID ` + "`" + `ca9f591d-f38h-5555-a0ef-1c02d1d1e35` + "`" + `: doctl databases maintenance-window install ca9f591d-f38h-5555-a0ef-1c02d1d1e35`
 
 	return cmd
 }
@@ -654,6 +659,15 @@ func RunDatabaseMaintenanceUpdate(c *CmdConfig) error {
 	}
 
 	return c.Databases().UpdateMaintenance(id, r)
+}
+
+// RunDatabaseInstallUpdate starts installation of updates
+func RunDatabaseInstallUpdate(c *CmdConfig) error {
+	if len(c.Args) == 0 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	id := c.Args[0]
+	return c.Databases().InstallUpdate(id)
 }
 
 func buildDatabaseUpdateMaintenanceRequestFromArgs(c *CmdConfig) (*godo.DatabaseUpdateMaintenanceRequest, error) {
@@ -829,7 +843,7 @@ func buildDatabaseCreateKafkaUserACls(c *CmdConfig) (kafkaACls []*godo.KafkaACL,
 	for _, acl := range acls {
 		pair := strings.SplitN(acl, ":", 2)
 		if len(pair) != 2 {
-			return nil, fmt.Errorf("Unexpected input value [%v], must be a topic:permission pair", pair)
+			return nil, fmt.Errorf("unexpected input value [%v], must be a topic:permission pair", pair)
 		}
 
 		kafkaACl := new(godo.KafkaACL)
