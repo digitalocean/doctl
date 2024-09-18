@@ -60,6 +60,18 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 				}
 
 				w.Write([]byte(databaseConfigRedisGetResponse))
+			case "/v2/databases/mongo-database-id/config":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusTeapot)
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(databaseConfigMongoDBGetResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -256,6 +268,15 @@ RedisACLChannelsDefault      allchannels
 	  "redis_persistence": "rdb",
 	  "redis_acl_channels_default": "allchannels"
 	}
-  }
-`
+  }`
+
+	databaseConfigMongoDBGetResponse = `{
+	"config": {
+	  "default_read_concern": "local",
+	  "default_write_concern": "majority",
+	  "slow_op_threshold_ms": 100,
+	  "transaction_lifetime_limit_seconds": 60,
+	  "verbosity": 1
+	}
+  }`
 )

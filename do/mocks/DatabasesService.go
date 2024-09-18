@@ -318,6 +318,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetMaintenance(arg0 any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMaintenance", reflect.TypeOf((*MockDatabasesService)(nil).GetMaintenance), arg0)
 }
 
+// GetMongoDBConfiguration mocks base method.
+func (m *MockDatabasesService) GetMongoDBConfiguration(databaseID string) (*do.MongoDBConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMongoDBConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.MongoDBConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMongoDBConfiguration indicates an expected call of GetMongoDBConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetMongoDBConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMongoDBConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetMongoDBConfiguration), databaseID)
+}
+
 // GetMySQLConfiguration mocks base method.
 func (m *MockDatabasesService) GetMySQLConfiguration(databaseID string) (*do.MySQLConfig, error) {
 	m.ctrl.T.Helper()
@@ -719,6 +734,20 @@ func (m *MockDatabasesService) UpdateMaintenance(arg0 string, arg1 *godo.Databas
 func (mr *MockDatabasesServiceMockRecorder) UpdateMaintenance(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMaintenance", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMaintenance), arg0, arg1)
+}
+
+// UpdateMongoDBConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateMongoDBConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateMongoDBConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateMongoDBConfiguration indicates an expected call of UpdateMongoDBConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateMongoDBConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMongoDBConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMongoDBConfiguration), databaseID, confString)
 }
 
 // UpdateMySQLConfiguration mocks base method.
