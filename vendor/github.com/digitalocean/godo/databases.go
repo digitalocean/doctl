@@ -152,9 +152,11 @@ type DatabasesService interface {
 	GetPostgreSQLConfig(context.Context, string) (*PostgreSQLConfig, *Response, error)
 	GetRedisConfig(context.Context, string) (*RedisConfig, *Response, error)
 	GetMySQLConfig(context.Context, string) (*MySQLConfig, *Response, error)
+	GetMongoDBConfig(context.Context, string) (*MongoDBConfig, *Response, error)
 	UpdatePostgreSQLConfig(context.Context, string, *PostgreSQLConfig) (*Response, error)
 	UpdateRedisConfig(context.Context, string, *RedisConfig) (*Response, error)
 	UpdateMySQLConfig(context.Context, string, *MySQLConfig) (*Response, error)
+	UpdateMongoDBConfig(context.Context, string, *MongoDBConfig) (*Response, error)
 	ListOptions(todo context.Context) (*DatabaseOptions, *Response, error)
 	UpgradeMajorVersion(context.Context, string, *UpgradeVersionRequest) (*Response, error)
 	ListTopics(context.Context, string, *ListOptions) ([]DatabaseTopic, *Response, error)
@@ -648,6 +650,15 @@ type MySQLConfig struct {
 	BinlogRetentionPeriod        *int     `json:"binlog_retention_period,omitempty"`
 }
 
+// MongoDBConfig holds advanced configurations for MongoDB database clusters.
+type MongoDBConfig struct {
+	DefaultReadConcern              *string `json:"default_read_concern,omitempty"`
+	DefaultWriteConcern             *string `json:"default_write_concern,omitempty"`
+	TransactionLifetimeLimitSeconds *int    `json:"transaction_lifetime_limit_seconds,omitempty"`
+	SlowOpThresholdMs               *int    `json:"slow_op_threshold_ms,omitempty"`
+	Verbosity                       *int    `json:"verbosity,omitempty"`
+}
+
 type databaseUserRoot struct {
 	User *DatabaseUser `json:"user"`
 }
@@ -686,6 +697,10 @@ type databaseRedisConfigRoot struct {
 
 type databaseMySQLConfigRoot struct {
 	Config *MySQLConfig `json:"config"`
+}
+
+type databaseMongoDBConfigRoot struct {
+	Config *MongoDBConfig `json:"config"`
 }
 
 type databaseBackupsRoot struct {
@@ -1486,6 +1501,38 @@ func (svc *DatabasesServiceOp) GetMySQLConfig(ctx context.Context, databaseID st
 func (svc *DatabasesServiceOp) UpdateMySQLConfig(ctx context.Context, databaseID string, config *MySQLConfig) (*Response, error) {
 	path := fmt.Sprintf(databaseConfigPath, databaseID)
 	root := &databaseMySQLConfigRoot{
+		Config: config,
+	}
+	req, err := svc.client.NewRequest(ctx, http.MethodPatch, path, root)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// GetMongoDBConfig retrieves the config for a MongoDB database cluster.
+func (svc *DatabasesServiceOp) GetMongoDBConfig(ctx context.Context, databaseID string) (*MongoDBConfig, *Response, error) {
+	path := fmt.Sprintf(databaseConfigPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(databaseMongoDBConfigRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Config, resp, nil
+}
+
+// UpdateMongoDBConfig updates the config for a MongoDB database cluster.
+func (svc *DatabasesServiceOp) UpdateMongoDBConfig(ctx context.Context, databaseID string, config *MongoDBConfig) (*Response, error) {
+	path := fmt.Sprintf(databaseConfigPath, databaseID)
+	root := &databaseMongoDBConfigRoot{
 		Config: config,
 	}
 	req, err := svc.client.NewRequest(ctx, http.MethodPatch, path, root)
