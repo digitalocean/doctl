@@ -120,6 +120,11 @@ type RedisConfig struct {
 	*godo.RedisConfig
 }
 
+// MongoDBConfig is a wrapper for godo.MongoDBConfig
+type MongoDBConfig struct {
+	*godo.MongoDBConfig
+}
+
 // DatabaseTopics is a slice of DatabaseTopic
 type DatabaseTopics []DatabaseTopic
 
@@ -200,10 +205,12 @@ type DatabasesService interface {
 	GetMySQLConfiguration(databaseID string) (*MySQLConfig, error)
 	GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error)
 	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
+	GetMongoDBConfiguration(databaseID string) (*MongoDBConfig, error)
 
 	UpdateMySQLConfiguration(databaseID string, confString string) error
 	UpdatePostgreSQLConfiguration(databaseID string, confString string) error
 	UpdateRedisConfiguration(databaseID string, confString string) error
+	UpdateMongoDBConfiguration(databaseID string, confString string) error
 
 	ListTopics(string) (DatabaseTopics, error)
 	GetTopic(string, string) (*DatabaseTopic, error)
@@ -695,6 +702,17 @@ func (ds *databasesService) GetRedisConfiguration(databaseID string) (*RedisConf
 	}, nil
 }
 
+func (ds *databasesService) GetMongoDBConfiguration(databaseID string) (*MongoDBConfig, error) {
+	cfg, _, err := ds.client.Databases.GetMongoDBConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MongoDBConfig{
+		MongoDBConfig: cfg,
+	}, nil
+}
+
 func (ds *databasesService) UpdateMySQLConfiguration(databaseID string, confString string) error {
 	var conf godo.MySQLConfig
 	err := json.Unmarshal([]byte(confString), &conf)
@@ -733,6 +751,21 @@ func (ds *databasesService) UpdateRedisConfiguration(databaseID string, confStri
 	}
 
 	_, err = ds.client.Databases.UpdateRedisConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdateMongoDBConfiguration(databaseID string, confString string) error {
+	var conf godo.MongoDBConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateMongoDBConfig(context.TODO(), databaseID, &conf)
 	if err != nil {
 		return err
 	}

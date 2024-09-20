@@ -2424,8 +2424,11 @@ func databaseConfiguration() *Command {
 			Long:    "The subcommands of `doctl databases configuration` are used to view a database cluster's configuration.",
 		},
 	}
-	getConfigurationLongDesc := "Retrieves the configuration for the specified cluster, including its backup settings, temporary file limit, and session timeout values."
-	updateConfigurationLongDesc := "Updates the specified database cluster's configuration. Using this command, you can update varioous settings like backup times, temporary file limits, and session timeouts."
+	getConfigurationLongDesc := "Retrieves the advanced configuration for the specified cluster, including its backup settings, temporary file limit, and session timeout values."
+	updateConfigurationLongDesc := `Updates the specified database cluster's advanced configuration. Using this command, you can update various settings like backup times, temporary file limits, and session timeouts. Available settings vary by database engine.
+
+This command functions as a PATCH request, meaning that only the specified fields are updated. If a field is not specified, it will not be changed. The settings are passed using the ` + "`" + `--config-json` + "`" + ` flag, which takes a JSON object as its value.
+`
 
 	getDatabaseCfgCommand := CmdBuilder(
 
@@ -2439,6 +2442,7 @@ func databaseConfiguration() *Command {
 		displayerType(&displayers.MySQLConfiguration{}),
 		displayerType(&displayers.PostgreSQLConfiguration{}),
 		displayerType(&displayers.RedisConfiguration{}),
+		displayerType(&displayers.MongoDBConfiguration{}),
 	)
 	AddStringFlag(
 		getDatabaseCfgCommand,
@@ -2493,12 +2497,13 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql": nil,
-		"pg":    nil,
-		"redis": nil,
+		"mysql":   nil,
+		"pg":      nil,
+		"redis":   nil,
+		"mongodb": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb'", c.NS)
 	}
 
 	dbId := args[0]
@@ -2532,7 +2537,18 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 			RedisConfig: *config,
 		}
 		return c.Display(&displayer)
+	} else if engine == "mongodb" {
+		config, err := c.Databases().GetMongoDBConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.MongoDBConfiguration{
+			MongoDBConfig: *config,
+		}
+		return c.Display(&displayer)
 	}
+
 	return nil
 }
 
@@ -2551,12 +2567,13 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql": nil,
-		"pg":    nil,
-		"redis": nil,
+		"mysql":   nil,
+		"pg":      nil,
+		"redis":   nil,
+		"mongodb": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb'", c.NS)
 	}
 
 	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
@@ -2580,7 +2597,13 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		if err != nil {
 			return err
 		}
+	} else if engine == "mongodb" {
+		err := c.Databases().UpdateMongoDBConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
