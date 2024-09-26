@@ -295,22 +295,22 @@ RedisACLChannelsDefault      allchannels
 	databaseConfigKafkaGetResponse = `{
 	"config": {
 	  "group_initial_rebalance_delay_ms": 3000,
-      "group_min_session_timeout_ms": 6000,
-      "group_max_session_timeout_ms": 1800000,
-      "message_max_bytes": 1048588,
-      "log_cleaner_delete_retention_ms": 86400000,
-      "log_cleaner_min_compaction_lag_ms": 0,
-      "log_flush_interval_ms": 9223372036854776000,
-      "log_index_interval_bytes": 4096,
-      "log_message_downconversion_enable": true,
-      "log_message_timestamp_difference_max_ms": 9223372036854776000,
-      "log_preallocate": false,
-      "log_retention_bytes": -1,
-      "log_retention_hours": 168,
-      "log_retention_ms": 604800000,
-      "log_roll_jitter_ms": 0,
-      "log_segment_delete_delay_ms": 60000,
-      "auto_create_topics_enable": true
+	  "group_min_session_timeout_ms": 6000,
+	  "group_max_session_timeout_ms": 1800000,
+	  "message_max_bytes": 1048588,
+	  "log_cleaner_delete_retention_ms": 86400000,
+	  "log_cleaner_min_compaction_lag_ms": 0,
+	  "log_flush_interval_ms": 9223372036854776000,
+	  "log_index_interval_bytes": 4096,
+	  "log_message_downconversion_enable": true,
+	  "log_message_timestamp_difference_max_ms": 9223372036854776000,
+	  "log_preallocate": false,
+	  "log_retention_bytes": -1,
+	  "log_retention_hours": 168,
+	  "log_retention_ms": 604800000,
+	  "log_roll_jitter_ms": 0,
+	  "log_segment_delete_delay_ms": 60000,
+	  "auto_create_topics_enable": true
 	}
   }`
 )
