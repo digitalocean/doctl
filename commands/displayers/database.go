@@ -1835,7 +1835,7 @@ func (dc *KafkaConfiguration) KV() []map[string]any {
 	if c.LogRetentionBytes != nil {
 		o = append(o, map[string]any{
 			"key":   "LogRetentionBytes",
-			"value": *c.LogRetentionBytes,
+			"value": c.LogRetentionBytes.String(),
 		})
 	}
 	if c.LogRetentionHours != nil {
