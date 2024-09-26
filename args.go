@@ -66,6 +66,10 @@ const (
 	ArgVPCUUID = "vpc-uuid"
 	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
 	ArgClusterVPCUUID = "vpc-uuid"
+	// ArgClusterSubnet is a cluster pod CIDR argument.
+	ArgClusterSubnet = "cluster-subnet"
+	// ArgServiceSubnet is a cluster service CIDR argument.
+	ArgServiceSubnet = "service-subnet"
 	// ArgClusterNodePool are a cluster's node pools arguments.
 	ArgClusterNodePool = "node-pool"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.

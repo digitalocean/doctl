@@ -547,6 +547,19 @@ func TestKubernetesCreate(t *testing.T) {
 		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
 
+		// Test vpc-native
+		const podNetwork = "10.100.0.0/16"
+		const serviceNetwork = "10.101.0.0/16"
+		config.Doit.Set(config.NS, doctl.ArgClusterSubnet, podNetwork)
+		config.Doit.Set(config.NS, doctl.ArgServiceSubnet, serviceNetwork)
+		r.ClusterSubnet = podNetwork
+		r.ServiceSubnet = serviceNetwork
+		testCluster.ClusterSubnet = podNetwork
+		testCluster.ServiceSubnet = serviceNetwork
+		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
+		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
+		assert.NoError(t, err)
+
 		// Test with 1-clicks specified
 		config.Doit.Set(config.NS, doctl.ArgOneClicks, []string{"slug1", "slug2"})
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)

@@ -1,5 +1,10 @@
 # Change Log
 
+## [v1.126.0] - 2024-09-25
+
+- #732 - @gottwald - DOKS: add custom CIDR fields
+- #727 - @loosla - [databases]: add support for Kafka advanced configuration
+
 ## [v1.125.0] - 2024-09-17
 
 - #726 - @loosla - [databases]: add support for MongoDB advanced configuration

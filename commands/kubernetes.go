@@ -277,6 +277,10 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"A `slug` indicating which Kubernetes version to use when creating the cluster. Use the `doctl kubernetes options versions` command for a list of options")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVPCUUID, "", "",
 		"The UUID of a VPC network to create the cluster in. Must be the UUID of a valid VPC in the same region specified for the cluster. If a VPC is not specified, the cluster is placed in the default VPC network for the region.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterSubnet, "", "",
+		"The CIDR block to use for the pod network. Must be a valid CIDR block. Defaults to `10.244.0.0/16`. If left empty/default the cluster will be created with a virtual network. If a custom one is provided, the cluster will be created as vpc-native cluster. VPC-native CIDR blocks cannot overlap within an account.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgServiceSubnet, "", "",
+		"The CIDR block to use for the service network. Must be a valid CIDR block. Defaults to `10.245.0.0/16`. If left empty/default the cluster will be created with a virtual network. If a custom one is provided, the cluster will be created as vpc-native cluster. VPC-native CIDR blocks cannot overlap within an account.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
 		"Enables automatic upgrades to new patch releases during the cluster's maintenance window. Defaults to `false`. To enable automatic upgrade, supply `--auto-upgrade=true`.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
@@ -1632,6 +1636,22 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	}
 	// empty "" is fine, the default region VPC will be resolved
 	r.VPCUUID = vpcUUID
+
+	podCIDR, err := c.Doit.GetString(c.NS, doctl.ArgClusterSubnet)
+	if err != nil {
+		return err
+	}
+	r.ClusterSubnet = podCIDR
+	svcCIDR, err := c.Doit.GetString(c.NS, doctl.ArgServiceSubnet)
+	if err != nil {
+		return err
+	}
+	r.ServiceSubnet = svcCIDR
+	// empty "" is fine, the default is still to use a virtual network and not be vpc-native.
+	// either both have to be set (vpc-native) or none (virtual network)
+	if c.Doit.IsSet(doctl.ArgClusterSubnet) != c.Doit.IsSet(doctl.ArgServiceSubnet) {
+		return fmt.Errorf("flags %q and %q both have to be set for vpc-native clusters or both unset for virtual network clusters", doctl.ArgClusterSubnet, doctl.ArgServiceSubnet)
+	}
 
 	version, err := getVersionOrLatest(c)
 	if err != nil {
