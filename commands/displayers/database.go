@@ -1739,6 +1739,139 @@ func (dc *MongoDBConfiguration) KV() []map[string]any {
 	return o
 }
 
+type KafkaConfiguration struct {
+	KafkaConfig do.KafkaConfig
+}
+
+var _ Displayable = &KafkaConfiguration{}
+
+func (dc *KafkaConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.KafkaConfig, out)
+}
+
+func (dc *KafkaConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *KafkaConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *KafkaConfiguration) KV() []map[string]any {
+	c := dc.KafkaConfig
+	o := []map[string]any{}
+	if c.GroupInitialRebalanceDelayMs != nil {
+		o = append(o, map[string]any{
+			"key":   "GroupInitialRebalanceDelayMs",
+			"value": *c.GroupInitialRebalanceDelayMs,
+		})
+	}
+	if c.GroupMinSessionTimeoutMs != nil {
+		o = append(o, map[string]any{
+			"key":   "GroupMinSessionTimeoutMs",
+			"value": *c.GroupMinSessionTimeoutMs,
+		})
+	}
+	if c.GroupMaxSessionTimeoutMs != nil {
+		o = append(o, map[string]any{
+			"key":   "GroupMaxSessionTimeoutMs",
+			"value": *c.GroupMaxSessionTimeoutMs,
+		})
+	}
+	if c.MessageMaxBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "MessageMaxBytes",
+			"value": *c.MessageMaxBytes,
+		})
+	}
+	if c.LogCleanerDeleteRetentionMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogCleanerDeleteRetentionMs",
+			"value": *c.LogCleanerDeleteRetentionMs,
+		})
+	}
+	if c.LogCleanerMinCompactionLagMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogCleanerMinCompactionLagMs",
+			"value": *c.LogCleanerMinCompactionLagMs,
+		})
+	}
+	if c.LogFlushIntervalMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogFlushIntervalMs",
+			"value": *c.LogFlushIntervalMs,
+		})
+	}
+	if c.LogIndexIntervalBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "LogIndexIntervalBytes",
+			"value": *c.LogIndexIntervalBytes,
+		})
+	}
+	if c.LogMessageDownconversionEnable != nil {
+		o = append(o, map[string]any{
+			"key":   "LogMessageDownconversionEnable",
+			"value": *c.LogMessageDownconversionEnable,
+		})
+	}
+	if c.LogMessageTimestampDifferenceMaxMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogMessageTimestampDifferenceMaxMs",
+			"value": *c.LogMessageTimestampDifferenceMaxMs,
+		})
+	}
+	if c.LogPreallocate != nil {
+		o = append(o, map[string]any{
+			"key":   "LogPreallocate",
+			"value": *c.LogPreallocate,
+		})
+	}
+	if c.LogRetentionBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "LogRetentionBytes",
+			"value": c.LogRetentionBytes.String(),
+		})
+	}
+	if c.LogRetentionHours != nil {
+		o = append(o, map[string]any{
+			"key":   "LogRetentionHours",
+			"value": *c.LogRetentionHours,
+		})
+	}
+	if c.LogRetentionMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogRetentionMs",
+			"value": c.LogRetentionMs.String(),
+		})
+	}
+	if c.LogRollJitterMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogRollJitterMs",
+			"value": *c.LogRollJitterMs,
+		})
+	}
+	if c.LogSegmentDeleteDelayMs != nil {
+		o = append(o, map[string]any{
+			"key":   "LogSegmentDeleteDelayMs",
+			"value": *c.LogSegmentDeleteDelayMs,
+		})
+	}
+	if c.AutoCreateTopicsEnable != nil {
+		o = append(o, map[string]any{
+			"key":   "AutoCreateTopicsEnable",
+			"value": *c.AutoCreateTopicsEnable,
+		})
+	}
+
+	return o
+}
+
 type DatabaseEvents struct {
 	DatabaseEvents do.DatabaseEvents
 }

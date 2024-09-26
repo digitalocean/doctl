@@ -72,6 +72,18 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 				}
 
 				w.Write([]byte(databaseConfigMongoDBGetResponse))
+			case "/v2/databases/kafka-database-id/config":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusTeapot)
+				}
+
+				if req.Method != http.MethodGet {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				w.Write([]byte(databaseConfigKafkaGetResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -277,6 +289,28 @@ RedisACLChannelsDefault      allchannels
 	  "slow_op_threshold_ms": 100,
 	  "transaction_lifetime_limit_seconds": 60,
 	  "verbosity": 1
+	}
+  }`
+
+	databaseConfigKafkaGetResponse = `{
+	"config": {
+	  "group_initial_rebalance_delay_ms": 3000,
+	  "group_min_session_timeout_ms": 6000,
+	  "group_max_session_timeout_ms": 1800000,
+	  "message_max_bytes": 1048588,
+	  "log_cleaner_delete_retention_ms": 86400000,
+	  "log_cleaner_min_compaction_lag_ms": 0,
+	  "log_flush_interval_ms": 9223372036854776000,
+	  "log_index_interval_bytes": 4096,
+	  "log_message_downconversion_enable": true,
+	  "log_message_timestamp_difference_max_ms": 9223372036854776000,
+	  "log_preallocate": false,
+	  "log_retention_bytes": -1,
+	  "log_retention_hours": 168,
+	  "log_retention_ms": 604800000,
+	  "log_roll_jitter_ms": 0,
+	  "log_segment_delete_delay_ms": 60000,
+	  "auto_create_topics_enable": true
 	}
   }`
 )

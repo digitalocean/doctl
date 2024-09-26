@@ -125,6 +125,11 @@ type MongoDBConfig struct {
 	*godo.MongoDBConfig
 }
 
+// KafkaConfig is a wrapper for godo.KafkaConfig
+type KafkaConfig struct {
+	*godo.KafkaConfig
+}
+
 // DatabaseTopics is a slice of DatabaseTopic
 type DatabaseTopics []DatabaseTopic
 
@@ -206,11 +211,13 @@ type DatabasesService interface {
 	GetPostgreSQLConfiguration(databaseID string) (*PostgreSQLConfig, error)
 	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
 	GetMongoDBConfiguration(databaseID string) (*MongoDBConfig, error)
+	GetKafkaConfiguration(databaseID string) (*KafkaConfig, error)
 
 	UpdateMySQLConfiguration(databaseID string, confString string) error
 	UpdatePostgreSQLConfiguration(databaseID string, confString string) error
 	UpdateRedisConfiguration(databaseID string, confString string) error
 	UpdateMongoDBConfiguration(databaseID string, confString string) error
+	UpdateKafkaConfiguration(databaseID string, confString string) error
 
 	ListTopics(string) (DatabaseTopics, error)
 	GetTopic(string, string) (*DatabaseTopic, error)
@@ -713,6 +720,17 @@ func (ds *databasesService) GetMongoDBConfiguration(databaseID string) (*MongoDB
 	}, nil
 }
 
+func (ds *databasesService) GetKafkaConfiguration(databaseID string) (*KafkaConfig, error) {
+	cfg, _, err := ds.client.Databases.GetKafkaConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &KafkaConfig{
+		KafkaConfig: cfg,
+	}, nil
+}
+
 func (ds *databasesService) UpdateMySQLConfiguration(databaseID string, confString string) error {
 	var conf godo.MySQLConfig
 	err := json.Unmarshal([]byte(confString), &conf)
@@ -766,6 +784,21 @@ func (ds *databasesService) UpdateMongoDBConfiguration(databaseID string, confSt
 	}
 
 	_, err = ds.client.Databases.UpdateMongoDBConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdateKafkaConfiguration(databaseID string, confString string) error {
+	var conf godo.KafkaConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateKafkaConfig(context.TODO(), databaseID, &conf)
 	if err != nil {
 		return err
 	}
