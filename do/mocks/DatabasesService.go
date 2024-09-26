@@ -303,6 +303,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetFirewallRules(arg0 any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFirewallRules", reflect.TypeOf((*MockDatabasesService)(nil).GetFirewallRules), arg0)
 }
 
+// GetKafkaConfiguration mocks base method.
+func (m *MockDatabasesService) GetKafkaConfiguration(databaseID string) (*do.KafkaConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKafkaConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.KafkaConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetKafkaConfiguration indicates an expected call of GetKafkaConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetKafkaConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKafkaConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetKafkaConfiguration), databaseID)
+}
+
 // GetMaintenance mocks base method.
 func (m *MockDatabasesService) GetMaintenance(arg0 string) (*do.DatabaseMaintenanceWindow, error) {
 	m.ctrl.T.Helper()
@@ -720,6 +735,20 @@ func (m *MockDatabasesService) UpdateFirewallRules(databaseID string, req *godo.
 func (mr *MockDatabasesServiceMockRecorder) UpdateFirewallRules(databaseID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFirewallRules", reflect.TypeOf((*MockDatabasesService)(nil).UpdateFirewallRules), databaseID, req)
+}
+
+// UpdateKafkaConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateKafkaConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateKafkaConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateKafkaConfiguration indicates an expected call of UpdateKafkaConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateKafkaConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateKafkaConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateKafkaConfiguration), databaseID, confString)
 }
 
 // UpdateMaintenance mocks base method.

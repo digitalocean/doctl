@@ -2443,6 +2443,7 @@ This command functions as a PATCH request, meaning that only the specified field
 		displayerType(&displayers.PostgreSQLConfiguration{}),
 		displayerType(&displayers.RedisConfiguration{}),
 		displayerType(&displayers.MongoDBConfiguration{}),
+		displayerType(&displayers.KafkaConfiguration{}),
 	)
 	AddStringFlag(
 		getDatabaseCfgCommand,
@@ -2501,9 +2502,10 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 		"pg":      nil,
 		"redis":   nil,
 		"mongodb": nil,
+		"kafka":   nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka'", c.NS)
 	}
 
 	dbId := args[0]
@@ -2547,6 +2549,16 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 			MongoDBConfig: *config,
 		}
 		return c.Display(&displayer)
+	} else if engine == "kafka" {
+		config, err := c.Databases().GetKafkaConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.KafkaConfiguration{
+			KafkaConfig: *config,
+		}
+		return c.Display(&displayer)
 	}
 
 	return nil
@@ -2571,9 +2583,10 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		"pg":      nil,
 		"redis":   nil,
 		"mongodb": nil,
+		"kafka":   nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka'", c.NS)
 	}
 
 	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
@@ -2599,6 +2612,11 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		}
 	} else if engine == "mongodb" {
 		err := c.Databases().UpdateMongoDBConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "kafka" {
+		err := c.Databases().UpdateKafkaConfiguration(dbId, configJson)
 		if err != nil {
 			return err
 		}

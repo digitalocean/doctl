@@ -215,6 +215,10 @@ var (
 		MongoDBConfig: &godo.MongoDBConfig{},
 	}
 
+	testKafkaConfiguration = do.KafkaConfig{
+		KafkaConfig: &godo.KafkaConfig{},
+	}
+
 	topicReplicationFactor = uint32(3)
 	testKafkaTopic         = do.DatabaseTopic{
 		DatabaseTopic: &godo.DatabaseTopic{
@@ -1667,6 +1671,16 @@ func TestDatabaseConfigurationGet(t *testing.T) {
 	})
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().GetKafkaConfiguration(testDBCluster.ID).Return(&testKafkaConfiguration, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "kafka")
+
+		err := RunDatabaseConfigurationGet(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		err := RunDatabaseConfigurationGet(config)
 
 		assert.Equal(t, err, doctl.NewMissingArgsErr(config.NS))
@@ -1724,6 +1738,16 @@ func TestDatabaseConfigurationUpdate(t *testing.T) {
 		tm.databases.EXPECT().UpdateMongoDBConfiguration(testDBCluster.ID, "").Return(nil)
 		config.Args = append(config.Args, testDBCluster.ID)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "mongodb")
+
+		err := RunDatabaseConfigurationUpdate(config)
+
+		assert.NoError(t, err)
+	})
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().UpdateKafkaConfiguration(testDBCluster.ID, "").Return(nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseEngine, "kafka")
 
 		err := RunDatabaseConfigurationUpdate(config)
 
