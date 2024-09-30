@@ -2444,6 +2444,7 @@ This command functions as a PATCH request, meaning that only the specified field
 		displayerType(&displayers.RedisConfiguration{}),
 		displayerType(&displayers.MongoDBConfiguration{}),
 		displayerType(&displayers.KafkaConfiguration{}),
+		displayerType(&displayers.OpensearchConfiguration{}),
 	)
 	AddStringFlag(
 		getDatabaseCfgCommand,
@@ -2498,14 +2499,15 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql":   nil,
-		"pg":      nil,
-		"redis":   nil,
-		"mongodb": nil,
-		"kafka":   nil,
+		"mysql":      nil,
+		"pg":         nil,
+		"redis":      nil,
+		"mongodb":    nil,
+		"kafka":      nil,
+		"opensearch": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka', opensearch", c.NS)
 	}
 
 	dbId := args[0]
@@ -2559,6 +2561,16 @@ func RunDatabaseConfigurationGet(c *CmdConfig) error {
 			KafkaConfig: *config,
 		}
 		return c.Display(&displayer)
+	} else if engine == "opensearch" {
+		config, err := c.Databases().GetOpensearchConfiguration(dbId)
+		if err != nil {
+			return err
+		}
+
+		displayer := displayers.OpensearchConfiguration{
+			OpensearchConfig: *config,
+		}
+		return c.Display(&displayer)
 	}
 
 	return nil
@@ -2579,14 +2591,15 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 	}
 
 	allowedEngines := map[string]any{
-		"mysql":   nil,
-		"pg":      nil,
-		"redis":   nil,
-		"mongodb": nil,
-		"kafka":   nil,
+		"mysql":      nil,
+		"pg":         nil,
+		"redis":      nil,
+		"mongodb":    nil,
+		"kafka":      nil,
+		"opensearch": nil,
 	}
 	if _, ok := allowedEngines[engine]; !ok {
-		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka'", c.NS)
+		return fmt.Errorf("(%s) command: engine must be one of: 'pg', 'mysql', 'redis', 'mongodb', 'kafka', 'opensearch'", c.NS)
 	}
 
 	configJson, err := c.Doit.GetString(c.NS, doctl.ArgDatabaseConfigJson)
@@ -2617,6 +2630,11 @@ func RunDatabaseConfigurationUpdate(c *CmdConfig) error {
 		}
 	} else if engine == "kafka" {
 		err := c.Databases().UpdateKafkaConfiguration(dbId, configJson)
+		if err != nil {
+			return err
+		}
+	} else if engine == "opensearch" {
+		err := c.Databases().UpdateOpensearchConfiguration(dbId, configJson)
 		if err != nil {
 			return err
 		}

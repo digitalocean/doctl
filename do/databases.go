@@ -130,6 +130,11 @@ type KafkaConfig struct {
 	*godo.KafkaConfig
 }
 
+// OpensearchConfig is a wrapper for godo.OpensearchConfig
+type OpensearchConfig struct {
+	*godo.OpensearchConfig
+}
+
 // DatabaseTopics is a slice of DatabaseTopic
 type DatabaseTopics []DatabaseTopic
 
@@ -212,12 +217,14 @@ type DatabasesService interface {
 	GetRedisConfiguration(databaseID string) (*RedisConfig, error)
 	GetMongoDBConfiguration(databaseID string) (*MongoDBConfig, error)
 	GetKafkaConfiguration(databaseID string) (*KafkaConfig, error)
+	GetOpensearchConfiguration(databaseID string) (*OpensearchConfig, error)
 
 	UpdateMySQLConfiguration(databaseID string, confString string) error
 	UpdatePostgreSQLConfiguration(databaseID string, confString string) error
 	UpdateRedisConfiguration(databaseID string, confString string) error
 	UpdateMongoDBConfiguration(databaseID string, confString string) error
 	UpdateKafkaConfiguration(databaseID string, confString string) error
+	UpdateOpensearchConfiguration(databaseID string, confString string) error
 
 	ListTopics(string) (DatabaseTopics, error)
 	GetTopic(string, string) (*DatabaseTopic, error)
@@ -731,6 +738,17 @@ func (ds *databasesService) GetKafkaConfiguration(databaseID string) (*KafkaConf
 	}, nil
 }
 
+func (ds *databasesService) GetOpensearchConfiguration(databaseID string) (*OpensearchConfig, error) {
+	cfg, _, err := ds.client.Databases.GetOpensearchConfig(context.TODO(), databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &OpensearchConfig{
+		OpensearchConfig: cfg,
+	}, nil
+}
+
 func (ds *databasesService) UpdateMySQLConfiguration(databaseID string, confString string) error {
 	var conf godo.MySQLConfig
 	err := json.Unmarshal([]byte(confString), &conf)
@@ -799,6 +817,21 @@ func (ds *databasesService) UpdateKafkaConfiguration(databaseID string, confStri
 	}
 
 	_, err = ds.client.Databases.UpdateKafkaConfig(context.TODO(), databaseID, &conf)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ds *databasesService) UpdateOpensearchConfiguration(databaseID string, confString string) error {
+	var conf godo.OpensearchConfig
+	err := json.Unmarshal([]byte(confString), &conf)
+	if err != nil {
+		return err
+	}
+
+	_, err = ds.client.Databases.UpdateOpensearchConfig(context.TODO(), databaseID, &conf)
 	if err != nil {
 		return err
 	}

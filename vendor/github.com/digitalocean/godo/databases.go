@@ -154,11 +154,13 @@ type DatabasesService interface {
 	GetRedisConfig(context.Context, string) (*RedisConfig, *Response, error)
 	GetMySQLConfig(context.Context, string) (*MySQLConfig, *Response, error)
 	GetMongoDBConfig(context.Context, string) (*MongoDBConfig, *Response, error)
+	GetOpensearchConfig(context.Context, string) (*OpensearchConfig, *Response, error)
 	GetKafkaConfig(context.Context, string) (*KafkaConfig, *Response, error)
 	UpdatePostgreSQLConfig(context.Context, string, *PostgreSQLConfig) (*Response, error)
 	UpdateRedisConfig(context.Context, string, *RedisConfig) (*Response, error)
 	UpdateMySQLConfig(context.Context, string, *MySQLConfig) (*Response, error)
 	UpdateMongoDBConfig(context.Context, string, *MongoDBConfig) (*Response, error)
+	UpdateOpensearchConfig(context.Context, string, *OpensearchConfig) (*Response, error)
 	UpdateKafkaConfig(context.Context, string, *KafkaConfig) (*Response, error)
 	ListOptions(todo context.Context) (*DatabaseOptions, *Response, error)
 	UpgradeMajorVersion(context.Context, string, *UpgradeVersionRequest) (*Response, error)
@@ -683,6 +685,47 @@ type KafkaConfig struct {
 	AutoCreateTopicsEnable             *bool    `json:"auto_create_topics_enable,omitempty"`
 }
 
+// OpensearchConfig holds advanced configurations for Opensearch database clusters.
+type OpensearchConfig struct {
+	HttpMaxContentLengthBytes                        *int     `json:"http_max_content_length_bytes,omitempty"`
+	HttpMaxHeaderSizeBytes                           *int     `json:"http_max_header_size_bytes,omitempty"`
+	HttpMaxInitialLineLengthBytes                    *int     `json:"http_max_initial_line_length_bytes,omitempty"`
+	IndicesQueryBoolMaxClauseCount                   *int     `json:"indices_query_bool_max_clause_count,omitempty"`
+	IndicesFielddataCacheSizePercentage              *int     `json:"indices_fielddata_cache_size_percentage,omitempty"`
+	IndicesMemoryIndexBufferSizePercentage           *int     `json:"indices_memory_index_buffer_size_percentage,omitempty"`
+	IndicesMemoryMinIndexBufferSizeMb                *int     `json:"indices_memory_min_index_buffer_size_mb,omitempty"`
+	IndicesMemoryMaxIndexBufferSizeMb                *int     `json:"indices_memory_max_index_buffer_size_mb,omitempty"`
+	IndicesQueriesCacheSizePercentage                *int     `json:"indices_queries_cache_size_percentage,omitempty"`
+	IndicesRecoveryMaxMbPerSec                       *int     `json:"indices_recovery_max_mb_per_sec,omitempty"`
+	IndicesRecoveryMaxConcurrentFileChunks           *int     `json:"indices_recovery_max_concurrent_file_chunks,omitempty"`
+	ThreadPoolSearchSize                             *int     `json:"thread_pool_search_size,omitempty"`
+	ThreadPoolSearchThrottledSize                    *int     `json:"thread_pool_search_throttled_size,omitempty"`
+	ThreadPoolGetSize                                *int     `json:"thread_pool_get_size,omitempty"`
+	ThreadPoolAnalyzeSize                            *int     `json:"thread_pool_analyze_size,omitempty"`
+	ThreadPoolWriteSize                              *int     `json:"thread_pool_write_size,omitempty"`
+	ThreadPoolForceMergeSize                         *int     `json:"thread_pool_force_merge_size,omitempty"`
+	ThreadPoolSearchQueueSize                        *int     `json:"thread_pool_search_queue_size,omitempty"`
+	ThreadPoolSearchThrottledQueueSize               *int     `json:"thread_pool_search_throttled_queue_size,omitempty"`
+	ThreadPoolGetQueueSize                           *int     `json:"thread_pool_get_queue_size,omitempty"`
+	ThreadPoolAnalyzeQueueSize                       *int     `json:"thread_pool_analyze_queue_size,omitempty"`
+	ThreadPoolWriteQueueSize                         *int     `json:"thread_pool_write_queue_size,omitempty"`
+	IsmEnabled                                       *bool    `json:"ism_enabled,omitempty"`
+	IsmHistoryEnabled                                *bool    `json:"ism_history_enabled,omitempty"`
+	IsmHistoryMaxAgeHours                            *int     `json:"ism_history_max_age_hours,omitempty"`
+	IsmHistoryMaxDocs                                *uint64  `json:"ism_history_max_docs,omitempty"`
+	IsmHistoryRolloverCheckPeriodHours               *int     `json:"ism_history_rollover_check_period_hours,omitempty"`
+	IsmHistoryRolloverRetentionPeriodDays            *int     `json:"ism_history_rollover_retention_period_days,omitempty"`
+	SearchMaxBuckets                                 *int     `json:"search_max_buckets,omitempty"`
+	ActionAutoCreateIndexEnabled                     *bool    `json:"action_auto_create_index_enabled,omitempty"`
+	EnableSecurityAudit                              *bool    `json:"enable_security_audit,omitempty"`
+	ActionDestructiveRequiresName                    *bool    `json:"action_destructive_requires_name,omitempty"`
+	ClusterMaxShardsPerNode                          *int     `json:"cluster_max_shards_per_node,omitempty"`
+	OverrideMainResponseVersion                      *bool    `json:"override_main_response_version,omitempty"`
+	ScriptMaxCompilationsRate                        *string  `json:"script_max_compilations_rate,omitempty"`
+	ClusterRoutingAllocationNodeConcurrentRecoveries *int     `json:"cluster_routing_allocation_node_concurrent_recoveries,omitempty"`
+	ReindexRemoteWhitelist                           []string `json:"reindex_remote_whitelist,omitempty"`
+}
+
 type databaseUserRoot struct {
 	User *DatabaseUser `json:"user"`
 }
@@ -725,6 +768,10 @@ type databaseMySQLConfigRoot struct {
 
 type databaseMongoDBConfigRoot struct {
 	Config *MongoDBConfig `json:"config"`
+}
+
+type databaseOpensearchConfigRoot struct {
+	Config *OpensearchConfig `json:"config"`
 }
 
 type databaseKafkaConfigRoot struct {
@@ -1593,6 +1640,38 @@ func (svc *DatabasesServiceOp) GetKafkaConfig(ctx context.Context, databaseID st
 func (svc *DatabasesServiceOp) UpdateKafkaConfig(ctx context.Context, databaseID string, config *KafkaConfig) (*Response, error) {
 	path := fmt.Sprintf(databaseConfigPath, databaseID)
 	root := &databaseKafkaConfigRoot{
+		Config: config,
+	}
+	req, err := svc.client.NewRequest(ctx, http.MethodPatch, path, root)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := svc.client.Do(ctx, req, nil)
+	if err != nil {
+		return resp, err
+	}
+	return resp, nil
+}
+
+// GetOpensearchConfig retrieves the config for a Opensearch database cluster.
+func (svc *DatabasesServiceOp) GetOpensearchConfig(ctx context.Context, databaseID string) (*OpensearchConfig, *Response, error) {
+	path := fmt.Sprintf(databaseConfigPath, databaseID)
+	req, err := svc.client.NewRequest(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	root := new(databaseOpensearchConfigRoot)
+	resp, err := svc.client.Do(ctx, req, root)
+	if err != nil {
+		return nil, resp, err
+	}
+	return root.Config, resp, nil
+}
+
+// UpdateOpensearchConfig updates the config for a Opensearch database cluster.
+func (svc *DatabasesServiceOp) UpdateOpensearchConfig(ctx context.Context, databaseID string, config *OpensearchConfig) (*Response, error) {
+	path := fmt.Sprintf(databaseConfigPath, databaseID)
+	root := &databaseOpensearchConfigRoot{
 		Config: config,
 	}
 	req, err := svc.client.NewRequest(ctx, http.MethodPatch, path, root)

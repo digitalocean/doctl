@@ -363,6 +363,21 @@ func (mr *MockDatabasesServiceMockRecorder) GetMySQLConfiguration(databaseID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetMySQLConfiguration), databaseID)
 }
 
+// GetOpensearchConfiguration mocks base method.
+func (m *MockDatabasesService) GetOpensearchConfiguration(databaseID string) (*do.OpensearchConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpensearchConfiguration", databaseID)
+	ret0, _ := ret[0].(*do.OpensearchConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOpensearchConfiguration indicates an expected call of GetOpensearchConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) GetOpensearchConfiguration(databaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpensearchConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).GetOpensearchConfiguration), databaseID)
+}
+
 // GetPool mocks base method.
 func (m *MockDatabasesService) GetPool(arg0, arg1 string) (*do.DatabasePool, error) {
 	m.ctrl.T.Helper()
@@ -791,6 +806,20 @@ func (m *MockDatabasesService) UpdateMySQLConfiguration(databaseID, confString s
 func (mr *MockDatabasesServiceMockRecorder) UpdateMySQLConfiguration(databaseID, confString any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateMySQLConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateMySQLConfiguration), databaseID, confString)
+}
+
+// UpdateOpensearchConfiguration mocks base method.
+func (m *MockDatabasesService) UpdateOpensearchConfiguration(databaseID, confString string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateOpensearchConfiguration", databaseID, confString)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateOpensearchConfiguration indicates an expected call of UpdateOpensearchConfiguration.
+func (mr *MockDatabasesServiceMockRecorder) UpdateOpensearchConfiguration(databaseID, confString any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOpensearchConfiguration", reflect.TypeOf((*MockDatabasesService)(nil).UpdateOpensearchConfiguration), databaseID, confString)
 }
 
 // UpdatePool mocks base method.
