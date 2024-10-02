@@ -2121,6 +2121,12 @@ func (dc *OpensearchConfiguration) KV() []map[string]any {
 			"value": c.ReindexRemoteWhitelist,
 		})
 	}
+	if c.PluginsAlertingFilterByBackendRolesEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "PluginsAlertingFilterByBackendRolesEnabled",
+			"value": *c.PluginsAlertingFilterByBackendRolesEnabled,
+		})
+	}
 
 	return o
 }

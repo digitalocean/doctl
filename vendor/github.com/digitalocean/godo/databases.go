@@ -724,6 +724,7 @@ type OpensearchConfig struct {
 	ScriptMaxCompilationsRate                        *string  `json:"script_max_compilations_rate,omitempty"`
 	ClusterRoutingAllocationNodeConcurrentRecoveries *int     `json:"cluster_routing_allocation_node_concurrent_recoveries,omitempty"`
 	ReindexRemoteWhitelist                           []string `json:"reindex_remote_whitelist,omitempty"`
+	PluginsAlertingFilterByBackendRolesEnabled       *bool    `json:"plugins_alerting_filter_by_backend_roles_enabled,omitempty"`
 }
 
 type databaseUserRoot struct {
