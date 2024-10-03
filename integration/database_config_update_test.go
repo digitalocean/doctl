@@ -125,6 +125,26 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 				expect.Equal(expected, strings.TrimSpace(string(b)))
 
 				w.WriteHeader(http.StatusOK)
+			case "/v2/databases/opensearch-database-id/config":
+				auth := req.Header.Get("Authorization")
+				if auth != "Bearer some-magic-token" {
+					w.WriteHeader(http.StatusTeapot)
+				}
+
+				if req.Method != http.MethodPatch {
+					w.WriteHeader(http.StatusMethodNotAllowed)
+					return
+				}
+
+				expected := `{"config":{"ism_history_max_age_hours":12}}`
+				b, err := io.ReadAll(req.Body)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				expect.Equal(expected, strings.TrimSpace(string(b)))
+
+				w.WriteHeader(http.StatusOK)
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -223,6 +243,25 @@ var _ = suite("database/config/get", func(t *testing.T, when spec.G, it spec.S) 
 				"--engine", "kafka",
 				"kafka-database-id",
 				"--config-json", `{"group_initial_rebalance_delay_ms":3000}`,
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Empty(strings.TrimSpace(string(output)))
+		})
+	})
+
+	when("all required flags are passed", func() {
+		it("updates the opensearch database config", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"database",
+				"configuration",
+				"update",
+				"--engine", "opensearch",
+				"opensearch-database-id",
+				"--config-json", `{"ism_history_max_age_hours":12}`,
 			)
 
 			output, err := cmd.CombinedOutput()
