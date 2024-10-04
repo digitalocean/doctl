@@ -712,7 +712,7 @@ type OpensearchConfig struct {
 	IsmEnabled                                       *bool    `json:"ism_enabled,omitempty"`
 	IsmHistoryEnabled                                *bool    `json:"ism_history_enabled,omitempty"`
 	IsmHistoryMaxAgeHours                            *int     `json:"ism_history_max_age_hours,omitempty"`
-	IsmHistoryMaxDocs                                *uint64  `json:"ism_history_max_docs,omitempty"`
+	IsmHistoryMaxDocs                                *int64   `json:"ism_history_max_docs,omitempty"`
 	IsmHistoryRolloverCheckPeriodHours               *int     `json:"ism_history_rollover_check_period_hours,omitempty"`
 	IsmHistoryRolloverRetentionPeriodDays            *int     `json:"ism_history_rollover_retention_period_days,omitempty"`
 	SearchMaxBuckets                                 *int     `json:"search_max_buckets,omitempty"`
