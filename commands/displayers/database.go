@@ -1872,6 +1872,265 @@ func (dc *KafkaConfiguration) KV() []map[string]any {
 	return o
 }
 
+type OpensearchConfiguration struct {
+	OpensearchConfig do.OpensearchConfig
+}
+
+var _ Displayable = &OpensearchConfiguration{}
+
+func (dc *OpensearchConfiguration) JSON(out io.Writer) error {
+	return writeJSON(dc.OpensearchConfig, out)
+}
+
+func (dc *OpensearchConfiguration) Cols() []string {
+	return []string{
+		"key",
+		"value",
+	}
+}
+
+func (dc *OpensearchConfiguration) ColMap() map[string]string {
+	return map[string]string{
+		"key":   "key",
+		"value": "value",
+	}
+}
+
+func (dc *OpensearchConfiguration) KV() []map[string]any {
+	c := dc.OpensearchConfig
+	o := []map[string]any{}
+	if c.HttpMaxContentLengthBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "HttpMaxContentLengthBytes",
+			"value": *c.HttpMaxContentLengthBytes,
+		})
+	}
+	if c.HttpMaxHeaderSizeBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "HttpMaxHeaderSizeBytes",
+			"value": *c.HttpMaxHeaderSizeBytes,
+		})
+	}
+	if c.HttpMaxInitialLineLengthBytes != nil {
+		o = append(o, map[string]any{
+			"key":   "HttpMaxInitialLineLengthBytes",
+			"value": *c.HttpMaxInitialLineLengthBytes,
+		})
+	}
+	if c.IndicesQueryBoolMaxClauseCount != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesQueryBoolMaxClauseCount",
+			"value": *c.IndicesQueryBoolMaxClauseCount,
+		})
+	}
+	if c.IndicesFielddataCacheSizePercentage != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesFielddataCacheSizePercentage",
+			"value": *c.IndicesFielddataCacheSizePercentage,
+		})
+	}
+	if c.IndicesMemoryIndexBufferSizePercentage != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesMemoryIndexBufferSizePercentage",
+			"value": *c.IndicesMemoryIndexBufferSizePercentage,
+		})
+	}
+	if c.IndicesMemoryMinIndexBufferSizeMb != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesMemoryMinIndexBufferSizeMb",
+			"value": *c.IndicesMemoryMinIndexBufferSizeMb,
+		})
+	}
+	if c.IndicesMemoryMaxIndexBufferSizeMb != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesMemoryMaxIndexBufferSizeMb",
+			"value": *c.IndicesMemoryMaxIndexBufferSizeMb,
+		})
+	}
+	if c.IndicesQueriesCacheSizePercentage != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesQueriesCacheSizePercentage",
+			"value": *c.IndicesQueriesCacheSizePercentage,
+		})
+	}
+	if c.IndicesRecoveryMaxMbPerSec != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesRecoveryMaxMbPerSec",
+			"value": *c.IndicesRecoveryMaxMbPerSec,
+		})
+	}
+	if c.IndicesRecoveryMaxConcurrentFileChunks != nil {
+		o = append(o, map[string]any{
+			"key":   "IndicesRecoveryMaxConcurrentFileChunks",
+			"value": *c.IndicesRecoveryMaxConcurrentFileChunks,
+		})
+	}
+	if c.ThreadPoolSearchSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolSearchSize",
+			"value": *c.ThreadPoolSearchSize,
+		})
+	}
+	if c.ThreadPoolSearchThrottledSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolSearchThrottledSize",
+			"value": *c.ThreadPoolSearchThrottledSize,
+		})
+	}
+	if c.ThreadPoolGetSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolGetSize",
+			"value": *c.ThreadPoolGetSize,
+		})
+	}
+	if c.ThreadPoolAnalyzeSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolAnalyzeSize",
+			"value": *c.ThreadPoolAnalyzeSize,
+		})
+	}
+	if c.ThreadPoolWriteSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolWriteSize",
+			"value": *c.ThreadPoolWriteSize,
+		})
+	}
+	if c.ThreadPoolForceMergeSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolForceMergeSize",
+			"value": *c.ThreadPoolForceMergeSize,
+		})
+	}
+	if c.ThreadPoolSearchQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolSearchQueueSize",
+			"value": *c.ThreadPoolSearchQueueSize,
+		})
+	}
+	if c.ThreadPoolSearchThrottledQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolSearchThrottledQueueSize",
+			"value": *c.ThreadPoolSearchThrottledQueueSize,
+		})
+	}
+	if c.ThreadPoolGetQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolGetQueueSize",
+			"value": *c.ThreadPoolGetQueueSize,
+		})
+	}
+	if c.ThreadPoolAnalyzeQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolAnalyzeQueueSize",
+			"value": *c.ThreadPoolAnalyzeQueueSize,
+		})
+	}
+	if c.ThreadPoolWriteQueueSize != nil {
+		o = append(o, map[string]any{
+			"key":   "ThreadPoolWriteQueueSize",
+			"value": *c.ThreadPoolWriteQueueSize,
+		})
+	}
+	if c.IsmEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmEnabled",
+			"value": *c.IsmEnabled,
+		})
+	}
+	if c.IsmHistoryEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryEnabled",
+			"value": *c.IsmHistoryEnabled,
+		})
+	}
+	if c.IsmHistoryMaxAgeHours != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryMaxAgeHours",
+			"value": *c.IsmHistoryMaxAgeHours,
+		})
+	}
+	if c.IsmHistoryMaxDocs != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryMaxDocs",
+			"value": *c.IsmHistoryMaxDocs,
+		})
+	}
+	if c.IsmHistoryRolloverCheckPeriodHours != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryRolloverCheckPeriodHours",
+			"value": *c.IsmHistoryRolloverCheckPeriodHours,
+		})
+	}
+	if c.IsmHistoryRolloverRetentionPeriodDays != nil {
+		o = append(o, map[string]any{
+			"key":   "IsmHistoryRolloverRetentionPeriodDays",
+			"value": *c.IsmHistoryRolloverRetentionPeriodDays,
+		})
+	}
+	if c.SearchMaxBuckets != nil {
+		o = append(o, map[string]any{
+			"key":   "SearchMaxBuckets",
+			"value": *c.SearchMaxBuckets,
+		})
+	}
+	if c.ActionAutoCreateIndexEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "ActionAutoCreateIndexEnabled",
+			"value": *c.ActionAutoCreateIndexEnabled,
+		})
+	}
+	if c.EnableSecurityAudit != nil {
+		o = append(o, map[string]any{
+			"key":   "EnableSecurityAudit",
+			"value": *c.EnableSecurityAudit,
+		})
+	}
+	if c.ActionDestructiveRequiresName != nil {
+		o = append(o, map[string]any{
+			"key":   "ActionDestructiveRequiresName",
+			"value": *c.ActionDestructiveRequiresName,
+		})
+	}
+	if c.ClusterMaxShardsPerNode != nil {
+		o = append(o, map[string]any{
+			"key":   "ClusterMaxShardsPerNode",
+			"value": *c.ClusterMaxShardsPerNode,
+		})
+	}
+	if c.OverrideMainResponseVersion != nil {
+		o = append(o, map[string]any{
+			"key":   "OverrideMainResponseVersion",
+			"value": *c.OverrideMainResponseVersion,
+		})
+	}
+	if c.ScriptMaxCompilationsRate != nil {
+		o = append(o, map[string]any{
+			"key":   "ScriptMaxCompilationsRate",
+			"value": *c.ScriptMaxCompilationsRate,
+		})
+	}
+	if c.ClusterRoutingAllocationNodeConcurrentRecoveries != nil {
+		o = append(o, map[string]any{
+			"key":   "ClusterRoutingAllocationNodeConcurrentRecoveries",
+			"value": *c.ClusterRoutingAllocationNodeConcurrentRecoveries,
+		})
+	}
+	if c.ReindexRemoteWhitelist != nil {
+		o = append(o, map[string]any{
+			"key":   "ReindexRemoteWhitelist",
+			"value": c.ReindexRemoteWhitelist,
+		})
+	}
+	if c.PluginsAlertingFilterByBackendRolesEnabled != nil {
+		o = append(o, map[string]any{
+			"key":   "PluginsAlertingFilterByBackendRolesEnabled",
+			"value": *c.PluginsAlertingFilterByBackendRolesEnabled,
+		})
+	}
+
+	return o
+}
+
 type DatabaseEvents struct {
 	DatabaseEvents do.DatabaseEvents
 }
