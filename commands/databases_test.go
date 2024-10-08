@@ -63,6 +63,7 @@ var (
 			PrivateNetworkUUID: "1fe49b6c-ac8e-11e9-98cb-3bec94f411bc",
 			Tags:               []string{"testing"},
 			StorageSizeMib:     20480,
+			Wait:     false,
 		},
 	}
 
@@ -625,6 +626,7 @@ func TestDatabaseResize(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseStorageSizeMib, testDBCluster.StorageSizeMib)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, testDBCluster.Wait)
 
 		err := RunDatabaseResize(config)
 		assert.NoError(t, err)
@@ -637,6 +639,7 @@ func TestDatabaseResize(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
 		config.Doit.Set(config.NS, doctl.ArgDatabaseStorageSizeMib, testDBCluster.StorageSizeMib)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, testDBCluster.Wait)
 
 		err := RunDatabaseResize(config)
 		assert.EqualError(t, err, errTest.Error())
