@@ -521,35 +521,35 @@ func RunDatabaseResize(c *CmdConfig) error {
 	}
 
 	// Resize the database
-    err = dbs.Resize(id, r)
-    if err != nil {
-        return err
-    }
+	err = dbs.Resize(id, r)
+	if err != nil {
+		return err
+	}
 
 	// Retrieve the database object after resize (to check status or further actions)
-    db, err := dbs.Get(id)
-    if err != nil {
-        return fmt.Errorf("failed to retrieve the database after resize: %v", err)
-    }
+	db, err := dbs.Get(id)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve the database after resize: %v", err)
+	}
 
-    // Check if the --wait flag was passed
-    wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
-    if err != nil {
-        return err
-    }
+	// Check if the --wait flag was passed
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
 
-    if wait {
+	if wait {
 		connection := db.Connection
 
-        notice("Database resizing is in progress, waiting for database to be online")
+		notice("Database resizing is in progress, waiting for database to be online")
 
-        err := waitForDatabaseReady(dbs, id)
-        if err != nil {
-            return fmt.Errorf(
-                "database couldn't enter the `online` state after resizing: %v",
-                err,
-            )
-        }
+		err := waitForDatabaseReady(dbs, id)
+		if err != nil {
+			return fmt.Errorf(
+				"database couldn't enter the `online` state after resizing: %v",
+				err,
+			)
+		}
 
 		db, err = dbs.Get(id)
 		if err != nil {
@@ -559,9 +559,9 @@ func RunDatabaseResize(c *CmdConfig) error {
 			)
 		}
 		db.Connection = connection
-    }
+	}
 
-    notice("Database resized successfully")
+	notice("Database resized successfully")
 
 	return displayDatabases(c, false, *db)
 }
