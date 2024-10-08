@@ -63,7 +63,7 @@ var (
 			PrivateNetworkUUID: "1fe49b6c-ac8e-11e9-98cb-3bec94f411bc",
 			Tags:               []string{"testing"},
 			StorageSizeMib:     20480,
-			Wait:     false,
+			Wait:               false,
 		},
 	}
 
