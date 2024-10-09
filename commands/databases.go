@@ -526,12 +526,6 @@ func RunDatabaseResize(c *CmdConfig) error {
 		return err
 	}
 
-	// Retrieve the database object after resize (to check status or further actions)
-	db, err := dbs.Get(id)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve the database after resize: %v", err)
-	}
-
 	// Check if the --wait flag was passed
 	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
 	if err != nil {
@@ -539,8 +533,6 @@ func RunDatabaseResize(c *CmdConfig) error {
 	}
 
 	if wait {
-		connection := db.Connection
-
 		notice("Database resizing is in progress, waiting for database to be online")
 
 		err := waitForDatabaseReady(dbs, id)
@@ -550,20 +542,10 @@ func RunDatabaseResize(c *CmdConfig) error {
 				err,
 			)
 		}
-
-		db, err = dbs.Get(id)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to retrieve the resized database: %v",
-				err,
-			)
-		}
-		db.Connection = connection
 	}
-
 	notice("Database resized successfully")
 
-	return displayDatabases(c, false, *db)
+	return nil
 }
 
 func buildDatabaseResizeRequestFromArgs(c *CmdConfig) (*godo.DatabaseResizeRequest, error) {

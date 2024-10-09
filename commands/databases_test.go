@@ -634,6 +634,20 @@ func TestDatabaseResize(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Success with wait flag
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Resize(testDBCluster.ID, r).Return(nil)
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil)
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, testDBCluster.SizeSlug)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseNumNodes, testDBCluster.NumNodes)
+		config.Doit.Set(config.NS, doctl.ArgDatabaseStorageSizeMib, testDBCluster.StorageSizeMib)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
+
+		err := RunDatabaseResize(config)
+		assert.NoError(t, err)
+	})
+
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().Resize(testDBCluster.ID, r).Return(errTest)
