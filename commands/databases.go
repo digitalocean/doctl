@@ -136,7 +136,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
 	AddBoolFlag(cmdDatabaseResize, doctl.ArgCommandWait, "", false,
-		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
+		"Boolean that specifies whether to wait for the resize to complete before returning control to the terminal")
 	cmdDatabaseResize.Example = `The following example resizes a PostgreSQL or MySQL database to have two nodes, 16 vCPUs, 64 GB of memory, and 2048 GiB of storage space: doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000 --wait true`
 
 	cmdDatabaseMigrate := CmdBuilder(cmd, RunDatabaseMigrate, "migrate <database-cluster-id>", "Migrate a database cluster to a new region", `Migrates the specified database cluster to a new region.`, Writer,
@@ -542,8 +542,9 @@ func RunDatabaseResize(c *CmdConfig) error {
 				err,
 			)
 		}
+
+		notice("Database resized successfully")
 	}
-	notice("Database resized successfully")
 
 	return nil
 }
