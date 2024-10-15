@@ -628,7 +628,6 @@ func TestDatabaseMigrate(t *testing.T) {
 	})
 }
 
-
 func TestDatabaseResize(t *testing.T) {
 	r := &godo.DatabaseResizeRequest{
 		SizeSlug:       testDBCluster.SizeSlug,
