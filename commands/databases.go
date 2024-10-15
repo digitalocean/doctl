@@ -135,7 +135,9 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseNumNodes, "", 0, nodeNumberDetails, requiredOpt())
 	AddStringFlag(cmdDatabaseResize, doctl.ArgSizeSlug, "", "", nodeSizeDetails, requiredOpt())
 	AddIntFlag(cmdDatabaseResize, doctl.ArgDatabaseStorageSizeMib, "", 0, storageSizeMiBDetails)
-	cmdDatabaseResize.Example = `The following example resizes a PostgreSQL or MySQL database to have two nodes, 16 vCPUs, 64 GB of memory, and 2048 GiB of storage space: doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000`
+	AddBoolFlag(cmdDatabaseResize, doctl.ArgCommandWait, "", false,
+		"Boolean that specifies whether to wait for the resize to complete before returning control to the terminal")
+	cmdDatabaseResize.Example = `The following example resizes a PostgreSQL or MySQL database to have two nodes, 16 vCPUs, 64 GB of memory, and 2048 GiB of storage space: doctl databases resize ca9f591d-9999-5555-a0ef-1c02d1d1e352 --num-nodes 2 --size db-s-16vcpu-64gb --storage-size-mib 2048000 --wait true`
 
 	cmdDatabaseMigrate := CmdBuilder(cmd, RunDatabaseMigrate, "migrate <database-cluster-id>", "Migrate a database cluster to a new region", `Migrates the specified database cluster to a new region.`, Writer,
 		aliasOpt("m"))
@@ -512,13 +514,40 @@ func RunDatabaseResize(c *CmdConfig) error {
 	}
 
 	id := c.Args[0]
+	dbs := c.Databases()
 
 	r, err := buildDatabaseResizeRequestFromArgs(c)
 	if err != nil {
 		return err
 	}
 
-	return c.Databases().Resize(id, r)
+	// Resize the database
+	err = dbs.Resize(id, r)
+	if err != nil {
+		return err
+	}
+
+	// Check if the --wait flag was passed
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		notice("Database resizing is in progress, waiting for database to be online")
+
+		err := waitForDatabaseReady(dbs, id)
+		if err != nil {
+			return fmt.Errorf(
+				"database couldn't enter the `online` state after resizing: %v",
+				err,
+			)
+		}
+
+		notice("Database resized successfully")
+	}
+
+	return nil
 }
 
 func buildDatabaseResizeRequestFromArgs(c *CmdConfig) (*godo.DatabaseResizeRequest, error) {
