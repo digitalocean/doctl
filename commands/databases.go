@@ -143,6 +143,7 @@ For PostgreSQL and MySQL clusters, you can also provide a disk size in MiB to sc
 		aliasOpt("m"))
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgRegionSlug, "", "", "The region to which the database cluster should be migrated, such as `sfo2` or `nyc3`.", requiredOpt())
 	AddStringFlag(cmdDatabaseMigrate, doctl.ArgPrivateNetworkUUID, "", "", "The UUID of a VPC network to create the database cluster in. The command uses the region's default VPC network if not specified.")
+	AddBoolFlag(cmdDatabaseMigrate, doctl.ArgCommandWait, "", false, "A boolean value that specifies whether to wait for the database migration to complete before returning control to the terminal.")
 
 	cmdDatabaseFork := CmdBuilder(cmd, RunDatabaseFork, "fork <name>", "Create a new database cluster by forking an existing database cluster.", `Creates a new database cluster from an existing cluster. The forked database contains all of the data from the original database at the time the fork is created.`, Writer, aliasOpt("f"))
 	AddStringFlag(cmdDatabaseFork, doctl.ArgDatabaseRestoreFromClusterID, "", "", "The ID of an existing database cluster from which the new database will be forked from", requiredOpt())
@@ -586,7 +587,32 @@ func RunDatabaseMigrate(c *CmdConfig) error {
 		return err
 	}
 
-	return c.Databases().Migrate(id, r)
+	dbs := c.Databases()
+	err = dbs.Migrate(id, r)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	if wait {
+		notice("Database migration is in progress, waiting for database to be online")
+
+		err := waitForDatabaseReady(dbs, id)
+		if err != nil {
+			return fmt.Errorf(
+				"database couldn't enter the `online` state after migration: %v",
+				err,
+			)
+		}
+
+		notice("Database migrated successfully")
+	}
+
+	return nil
 }
 
 func buildDatabaseMigrateRequestFromArgs(c *CmdConfig) (*godo.DatabaseMigrateRequest, error) {
