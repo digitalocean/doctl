@@ -603,6 +603,19 @@ func TestDatabaseMigrate(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	// Success with wait flag
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.databases.EXPECT().Migrate(testDBCluster.ID, r).Return(nil)
+		tm.databases.EXPECT().Get(testDBCluster.ID).Return(&testDBCluster, nil).AnyTimes() // Polling for status
+		config.Args = append(config.Args, testDBCluster.ID)
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, testDBCluster.RegionSlug)
+		config.Doit.Set(config.NS, doctl.ArgPrivateNetworkUUID, testDBCluster.PrivateNetworkUUID)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
+
+		err := RunDatabaseMigrate(config)
+		assert.NoError(t, err)
+	})
+
 	// Error
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.databases.EXPECT().Migrate(testDBCluster.ID, r).Return(errTest)
@@ -614,6 +627,7 @@ func TestDatabaseMigrate(t *testing.T) {
 		assert.EqualError(t, err, errTest.Error())
 	})
 }
+
 
 func TestDatabaseResize(t *testing.T) {
 	r := &godo.DatabaseResizeRequest{
