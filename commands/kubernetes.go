@@ -764,6 +764,9 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			if err != nil {
 				warn("Cluster couldn't enter `running` state: %v", err)
 			}
+			if cluster == nil {
+				return errors.New("cluster vanished while waiting for creation")
+			}
 		}
 
 		if update {
