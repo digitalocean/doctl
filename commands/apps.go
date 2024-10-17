@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -610,6 +611,11 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		return err
 	}
 
+	outputJSON, err := c.Doit.GetBool(c.NS, "output-json")
+	if err != nil {
+		return err
+	}
+
 	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow, logTail)
 	if err != nil {
 		return err
@@ -630,6 +636,18 @@ func RunAppsGetLogs(c *CmdConfig) error {
 				return nil, err
 			}
 			r := strings.NewReader(data.Data)
+
+			if outputJSON {
+				content, err := io.ReadAll(r)
+				if err != nil {
+					return nil, err
+				}
+				logParts := strings.SplitN(string(content), " ", 3)
+				if len(logParts) > 2 {
+					jsonLog := logParts[2]
+					return strings.NewReader(jsonLog), nil
+				}
+			}
 
 			return r, nil
 		}
@@ -654,7 +672,20 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		}
 		defer resp.Body.Close()
 
-		io.Copy(c.Out, resp.Body)
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			logLine := scanner.Text()
+			if outputJSON {
+				logParts := strings.SplitN(logLine, " ", 3)
+				if len(logParts) > 2 {
+					logLine = logParts[2]
+				}
+			}
+			fmt.Fprintln(c.Out, logLine)
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
 	} else {
 		warn("No logs found for app component")
 	}
