@@ -77,8 +77,8 @@ If you do not specify a region, the Droplet is created in the default region for
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserData, "", "", "A shell script to run on the Droplet's first boot")
 	AddStringFlag(cmdDropletCreate, doctl.ArgUserDataFile, "", "", "The path to a file containing a shell script or Cloud-init YAML file to run on the Droplet's first boot. Example: `path/to/file.yaml`")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgCommandWait, "", false, "Instructs the terminal to wait for the action to complete before returning access to the user")
-	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A slug specifying the region to create the Droplet in, such as `nyc1`. Use the `doctl compute region list` command for a list of valid regions.")
-	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A slug indicating the Droplet's number of vCPUs, RAM, and disk size. For example, `s-1vcpu-1gb` specifies a Droplet with one vCPU and 1 GiB of RAM. The disk size is defined by the slug's plan. Run `doctl compute size list` for a list of valid size slugs and their disk sizes.",
+	AddStringFlag(cmdDropletCreate, doctl.ArgRegionSlug, "", "", "A `slug` specifying the region to create the Droplet in, such as `nyc1`. Use the `doctl compute region list` command for a list of valid regions.")
+	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A `slug` indicating the Droplet's number of vCPUs, RAM, and disk size. For example, `s-1vcpu-1gb` specifies a Droplet with one vCPU and 1 GiB of RAM. The disk size is defined by the slug's plan. Run `doctl compute size list` for a list of valid size slugs and their disk sizes.",
 		requiredOpt())
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet. Backups are created on a weekly basis.")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address to the Droplet")
