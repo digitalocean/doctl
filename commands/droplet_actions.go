@@ -167,7 +167,7 @@ This command automatically powers off the Droplet before resizing it.`
 		"resize <droplet-id>", "Resize a Droplet", dropletResizeDesc, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionResize, doctl.ArgResizeDisk, "", false, "Resize the Droplet's disk size in addition to its RAM and CPUs")
-	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "A slug indicating the new size for the Droplet, for example `s-2vcpu-2gb`. Run `doctl compute size list` for a list of valid sizes.", requiredOpt())
+	AddStringFlag(cmdDropletActionResize, doctl.ArgSizeSlug, "", "", "A `slug` indicating the new size for the Droplet, for example `s-2vcpu-2gb`. Run `doctl compute size list` for a list of valid sizes.", requiredOpt())
 	AddBoolFlag(cmdDropletActionResize, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionResize.Example = `The following example resizes a Droplet with the ID ` + "`" + `386734086` + "`" + ` to a Droplet with two CPUs, two GiB of RAM, and 60 GBs of disk space. The 60 GBs of disk space is the defined amount for the ` + "`" + `s-2vcpu-2gb` + "`" + ` plan: doctl compute droplet-action resize 386734086 --size s-2vcpu-2gb --resize-disk=true`
 

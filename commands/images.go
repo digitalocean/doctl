@@ -90,7 +90,7 @@ Currently, there are five types of images: snapshots, backups, custom images, di
 
 	cmdRunImagesCreate := CmdBuilder(cmd, RunImagesCreate, "create <image-name>", "Create custom image", `Creates an image in your DigitalOcean account. Specify a URL to download the image from and the region to store the image in. You can add additional metadata to the image using the optional flags.`, Writer)
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageExternalURL, "", "", "The URL to retrieve the image from", requiredOpt())
-	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "The slug of the region you want to store the image in. For a list of region slugs, use the `doctl compute region list` command.", requiredOpt())
+	AddStringFlag(cmdRunImagesCreate, doctl.ArgRegionSlug, "", "", "The `slug` of the region you want to store the image in. For a list of region slugs, use the `doctl compute region list` command.", requiredOpt())
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDistro, "", "Unknown", "A custom image distribution slug to apply to the image")
 	AddStringFlag(cmdRunImagesCreate, doctl.ArgImageDescription, "", "", "An optional description of the image")
 	AddStringSliceFlag(cmdRunImagesCreate, doctl.ArgTagNames, "", []string{}, "A list of tag names to apply to the image")
