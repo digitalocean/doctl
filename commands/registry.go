@@ -76,7 +76,7 @@ func Registry() *Command {
 	AddStringFlag(cmdRunRegistryCreate, doctl.ArgSubscriptionTier, "", "basic",
 		"Subscription tier for the new registry. For a list of possible values, use the `doctl registry options subscription-tiers` command.", requiredOpt())
 	AddStringFlag(cmdRunRegistryCreate, doctl.ArgRegionSlug, "", "",
-		"A slug indicating which datacenter region the registry reside in. For a list of supported region slugs, use the `doctl registry options available-regions` command")
+		"A `slug` indicating which datacenter region the registry reside in. For a list of supported region slugs, use the `doctl registry options available-regions` command")
 	cmdRunRegistryCreate.Example = `The following example creates a registry named ` + "`" + `example-registry` + "`" + ` in the NYC3 region: doctl registry create example-registry --region=nyc3`
 
 	getRegDesc := "Retrieves details about a private container registry, including its name and the endpoint used to access it."
