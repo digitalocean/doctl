@@ -54,6 +54,8 @@ const (
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.
 	ArgAppLogTail = "tail"
+	// ArgNoPrefix no prefix to json logs
+	ArgNoPrefix = "no-prefix"
 	// ArgAppForceRebuild forces a deployment rebuild
 	ArgAppForceRebuild = "force-rebuild"
 	// ArgAppAlertDestinations is a path to an app alert destination file.
