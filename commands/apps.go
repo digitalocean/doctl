@@ -187,7 +187,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "Retrieves logs for a specific log type. Defaults to run logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Returns logs as they are emitted by the app.")
 	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Specifies the number of lines to show from the end of the log.")
-	AddBoolFlag(logs, doctl.ArgNoPrefix, "", false, "Removes the prefix from JSON logs. Useful for JSON structured logs")
+	AddBoolFlag(logs, doctl.ArgNoPrefix, "", false, "Removes the prefix from logs. Useful for JSON structured logs")
 
 	logs.Example = `The following example retrieves the build logs for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps logs f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
 
