@@ -23,14 +23,14 @@ var _ = suite("database/replica", func(t *testing.T, when spec.G, it spec.S) {
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			switch req.URL.Path {
-			case "/v2/databases/1111/replicas/2222/promote":
+			case "/v2/databases/1111/replicas/2222":
 				auth := req.Header.Get("Authorization")
 				if auth != "Bearer some-magic-token" {
 					w.WriteHeader(http.StatusUnauthorized)
 					return
 				}
 
-				if req.Method != http.MethodPut {
+				if req.Method != http.MethodDelete {
 					w.WriteHeader(http.StatusMethodNotAllowed)
 					return
 				}
@@ -48,14 +48,16 @@ var _ = suite("database/replica", func(t *testing.T, when spec.G, it spec.S) {
 		}))
 	})
 
-	when("command is promote", func() {
-		it("promote a replica database to primary", func() {
+	when("command is delete", func() {
+		it("delete a replica database", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-t", "some-magic-token",
 				"-u", server.URL,
 				"databases",
 				"replica",
-				"promote",
+				"delete",
+				// Need to force to forego the prompt.
+				"--force",
 				"1111",
 				"2222",
 			)
@@ -66,8 +68,3 @@ var _ = suite("database/replica", func(t *testing.T, when spec.G, it spec.S) {
 
 	})
 })
-
-const (
-	databasesReplicaPromoteOutput = `
-	`
-)
