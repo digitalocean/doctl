@@ -14,6 +14,7 @@ limitations under the License.
 package commands
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -186,6 +187,8 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "Retrieves logs for a specific log type. Defaults to run logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Returns logs as they are emitted by the app.")
 	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Specifies the number of lines to show from the end of the log.")
+	AddBoolFlag(logs, doctl.ArgNoPrefix, "", false, "Removes the prefix from logs. Useful for JSON structured logs")
+
 	logs.Example = `The following example retrieves the build logs for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps logs f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
 
 	listRegions := CmdBuilder(
@@ -610,6 +613,11 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		return err
 	}
 
+	noPrefixFlag, err := c.Doit.GetBool(c.NS, doctl.ArgNoPrefix)
+	if err != nil {
+		return err
+	}
+
 	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow, logTail)
 	if err != nil {
 		return err
@@ -630,6 +638,18 @@ func RunAppsGetLogs(c *CmdConfig) error {
 				return nil, err
 			}
 			r := strings.NewReader(data.Data)
+
+			if noPrefixFlag {
+				content, err := io.ReadAll(r)
+				if err != nil {
+					return nil, err
+				}
+				logParts := strings.SplitN(string(content), " ", 3)
+				if len(logParts) > 2 {
+					jsonLog := logParts[2]
+					return strings.NewReader(jsonLog), nil
+				}
+			}
 
 			return r, nil
 		}
@@ -654,7 +674,20 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		}
 		defer resp.Body.Close()
 
-		io.Copy(c.Out, resp.Body)
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			logLine := scanner.Text()
+			if noPrefixFlag {
+				logParts := strings.SplitN(logLine, " ", 3)
+				if len(logParts) > 2 {
+					logLine = logParts[2]
+				}
+			}
+			fmt.Fprintln(c.Out, logLine)
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
 	} else {
 		warn("No logs found for app component")
 	}
