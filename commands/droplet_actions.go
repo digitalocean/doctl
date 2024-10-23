@@ -70,7 +70,7 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 	cmdDropletActionGet.Example = `The following example retrieves information about an action, with the ID ` + "`" + `1978716488` + "`" + `, performed on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action get 1978716488 --action-id 386734086`
 
 	cmdDropletActionEnableBackups := CmdBuilder(cmd, RunDropletActionEnableBackups,
-		"enable-backups <droplet-id>", "Enable backups on a Droplet", `Enables backups on a Droplet. This automatically creates and stores a disk image of the Droplet at weekly intervals.`, Writer,
+		"enable-backups <droplet-id>", "Enable backups on a Droplet", `Enables backups on a Droplet. This automatically creates and stores a disk image of the Droplet. By default, backups happen daily.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionEnableBackups, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 	cmdDropletActionEnableBackups.Example = `The following example enables backups on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action enable-backups 386734086`
