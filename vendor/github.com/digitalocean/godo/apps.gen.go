@@ -462,6 +462,15 @@ type AppLogDestinationSpecPapertrail struct {
 	Endpoint string `json:"endpoint"`
 }
 
+// AppMaintenanceSpec struct for AppMaintenanceSpec
+type AppMaintenanceSpec struct {
+	// Indicates whether maintenance mode should be enabled for the app.
+	Enabled bool `json:"enabled,omitempty"`
+	// Indicates whether the app should be archived. Setting this to true implies that enabled is set to true.
+	// Note that this feature is currently in closed beta.
+	Archive bool `json:"archive,omitempty"`
+}
+
 // AppRouteSpec struct for AppRouteSpec
 type AppRouteSpec struct {
 	// (Deprecated) An HTTP path prefix. Paths must start with / and must be unique across all components within an app.
@@ -495,7 +504,8 @@ type AppServiceSpec struct {
 	InstanceCount int64               `json:"instance_count,omitempty"`
 	Autoscaling   *AppAutoscalingSpec `json:"autoscaling,omitempty"`
 	// The internal port on which this service's run command will listen. Default: 8080 If there is not an environment variable with the name `PORT`, one will be automatically added with its value set to the value of this field.
-	HTTPPort int64 `json:"http_port,omitempty"`
+	HTTPPort int64           `json:"http_port,omitempty"`
+	Protocol ServingProtocol `json:"protocol,omitempty"`
 	// (Deprecated) A list of HTTP routes that should be routed to this component.
 	Routes      []*AppRouteSpec            `json:"routes,omitempty"`
 	HealthCheck *AppServiceSpecHealthCheck `json:"health_check,omitempty"`
@@ -559,10 +569,11 @@ type AppSpec struct {
 	// A list of environment variables made available to all components in the app.
 	Envs []*AppVariableDefinition `json:"envs,omitempty"`
 	// A list of alerts which apply to the app.
-	Alerts   []*AppAlertSpec `json:"alerts,omitempty"`
-	Ingress  *AppIngressSpec `json:"ingress,omitempty"`
-	Egress   *AppEgressSpec  `json:"egress,omitempty"`
-	Features []string        `json:"features,omitempty"`
+	Alerts      []*AppAlertSpec     `json:"alerts,omitempty"`
+	Ingress     *AppIngressSpec     `json:"ingress,omitempty"`
+	Egress      *AppEgressSpec      `json:"egress,omitempty"`
+	Features    []string            `json:"features,omitempty"`
+	Maintenance *AppMaintenanceSpec `json:"maintenance,omitempty"`
 }
 
 // AppStaticSiteSpec struct for AppStaticSiteSpec
@@ -917,6 +928,8 @@ type DetectResponse struct {
 	TemplateFound bool                       `json:"template_found,omitempty"`
 	TemplateValid bool                       `json:"template_valid,omitempty"`
 	TemplateError string                     `json:"template_error,omitempty"`
+	// Whether or not the underlying detection is still pending. If true, the request can be retried as-is until this field is false and the response contains the detection result.
+	Pending bool `json:"pending,omitempty"`
 }
 
 // DetectResponseComponent struct for DetectResponseComponent
@@ -1251,6 +1264,15 @@ type ResetDatabasePasswordRequest struct {
 type ResetDatabasePasswordResponse struct {
 	Deployment *Deployment `json:"deployment,omitempty"`
 }
+
+// ServingProtocol  - HTTP: The app is serving the HTTP protocol. Default.  - HTTP2: The app is serving the HTTP/2 protocol. Currently, this needs to be implemented in the service by serving HTTP/2 with prior knowledge.
+type ServingProtocol string
+
+// List of ServingProtocol
+const (
+	SERVINGPROTOCOL_HTTP  ServingProtocol = "HTTP"
+	SERVINGPROTOCOL_HTTP2 ServingProtocol = "HTTP2"
+)
 
 // AppStringMatch struct for AppStringMatch
 type AppStringMatch struct {
