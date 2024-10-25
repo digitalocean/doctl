@@ -21,6 +21,7 @@ import (
 type MockDropletsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockDropletsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockDropletsServiceMockRecorder is the mock recorder for MockDropletsService.
@@ -186,6 +187,21 @@ func (m *MockDropletsService) ListByTag(arg0 string) (do.Droplets, error) {
 func (mr *MockDropletsServiceMockRecorder) ListByTag(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTag", reflect.TypeOf((*MockDropletsService)(nil).ListByTag), arg0)
+}
+
+// ListWithGPUs mocks base method.
+func (m *MockDropletsService) ListWithGPUs() (do.Droplets, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWithGPUs")
+	ret0, _ := ret[0].(do.Droplets)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWithGPUs indicates an expected call of ListWithGPUs.
+func (mr *MockDropletsServiceMockRecorder) ListWithGPUs() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWithGPUs", reflect.TypeOf((*MockDropletsService)(nil).ListWithGPUs))
 }
 
 // Neighbors mocks base method.
