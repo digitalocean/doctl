@@ -17,6 +17,7 @@ var errNoNetworks = errors.New("no networks have been defined")
 // See: https://docs.digitalocean.com/reference/api/api-reference/#tag/Droplets
 type DropletsService interface {
 	List(context.Context, *ListOptions) ([]Droplet, *Response, error)
+	ListWithGPUs(context.Context, *ListOptions) ([]Droplet, *Response, error)
 	ListByName(context.Context, string, *ListOptions) ([]Droplet, *Response, error)
 	ListByTag(context.Context, string, *ListOptions) ([]Droplet, *Response, error)
 	Get(context.Context, int) (*Droplet, *Response, error)
@@ -313,6 +314,17 @@ func (s *DropletsServiceOp) list(ctx context.Context, path string) ([]Droplet, *
 // List all Droplets.
 func (s *DropletsServiceOp) List(ctx context.Context, opt *ListOptions) ([]Droplet, *Response, error) {
 	path := dropletBasePath
+	path, err := addOptions(path, opt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return s.list(ctx, path)
+}
+
+// ListWithGPUs lists all Droplets with GPUs.
+func (s *DropletsServiceOp) ListWithGPUs(ctx context.Context, opt *ListOptions) ([]Droplet, *Response, error) {
+	path := fmt.Sprintf("%s?type=gpus", dropletBasePath)
 	path, err := addOptions(path, opt)
 	if err != nil {
 		return nil, nil, err

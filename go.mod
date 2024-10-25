@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.21
-	github.com/digitalocean/godo v1.128.0
+	github.com/digitalocean/godo v1.128.1-0.20241025145008-2654a9d1e887
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v25.0.6+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
