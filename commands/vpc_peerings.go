@@ -33,7 +33,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 - The VPC Peering Status
 - The VPC Peering creation date, in ISO8601 combined date and time format
 `
-	cmdPeeringGet := CmdBuilder(cmd, RunVPCPeeringGet, "get <id>",
+	cmdPeeringGet := CmdBuilder(cmd, RunVPCPeeringGet, "get <peering-id>",
 		"Retrieves a VPC Peering", "Retrieves information about a VPC Peering, including:"+peeringDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.VPCPeering{}))
 	cmdPeeringGet.Example = `The following example retrieves information about a VPC Peering with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl vpcs peerings get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
@@ -53,7 +53,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 		"`" + `example-peering-name` + "`" +
 		` : doctl vpcs peerings create example-peering-name --vpc-ids f81d4fae-7dec-11d0-a765-00a0c91e6bf6,3f900b61-30d7-40d8-9711-8c5d6264b268`
 
-	cmdPeeringUpdate := CmdBuilder(cmd, RunVPCPeeringUpdate, "update <id>",
+	cmdPeeringUpdate := CmdBuilder(cmd, RunVPCPeeringUpdate, "update <peering-id>",
 		"Update a VPC Peering's name", `Use this command to update the name of a VPC Peering`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdPeeringUpdate, doctl.ArgVPCPeeringName, "", "",
 		"The VPC Peering's name", requiredOpt())
@@ -61,7 +61,7 @@ With the VPC Peerings commands, you can get, list, create, update, or delete VPC
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
 		`: doctl vpcs peerings update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name new-name`
 
-	cmdPeeringDelete := CmdBuilder(cmd, RunVPCPeeringDelete, "delete <id>",
+	cmdPeeringDelete := CmdBuilder(cmd, RunVPCPeeringDelete, "delete <peering-id>",
 		"Permanently delete a VPC Peering", `Permanently deletes the specified VPC Peering. This is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdPeeringDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the VPC Peering without any confirmation prompt")
