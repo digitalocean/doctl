@@ -58,8 +58,8 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 		Writer, aliasOpt("ls"), displayerType(&displayers.Project{}))
 	cmdProjectsList.Example = `The following example retrieves a list of projects on your account and uses the ` + "`" + `--format` + "`" + ` flag to return only the ID, name, and purpose of each project: doctl projects list --format ID,Name,Purpose`
 
-	cmdProjectsGet := CmdBuilder(cmd, RunProjectsGet, "get <id>", "Retrieve details for a specific project",
-		"Retrieves the following details for an existing project (use `default` as the <id> to retrieve details about your default project):"+projectDetails,
+	cmdProjectsGet := CmdBuilder(cmd, RunProjectsGet, "get <project-id>", "Retrieve details for a specific project",
+		"Retrieves the following details for an existing project (use `default` as the <project-id> to retrieve details about your default project):"+projectDetails,
 		Writer, aliasOpt("g"), displayerType(&displayers.Project{}))
 	cmdProjectsGet.Example = `The following example retrieves details for a project with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl projects get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
@@ -73,24 +73,24 @@ Projects allow you to organize your DigitalOcean resources (like Droplets, Space
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectDescription, "", "",
 		"A description of the project")
 	AddStringFlag(cmdProjectsCreate, doctl.ArgProjectEnvironment, "", "",
-		"The environment in which your project resides. Possible values: `Development`, `Staging`, or `Production`")
+		"The environment in which your project resides. Possible `enum` values: `Development`, `Staging`, `Production`.")
 	cmdProjectsCreate.Example = `The following example creates a project named ` + "`" + `Example Project` + "`" + ` with the purpose "Frontend development": doctl projects create --name "Example Project" --purpose "Frontend development"`
 
-	cmdProjectsUpdate := CmdBuilder(cmd, RunProjectsUpdate, "update <id>",
+	cmdProjectsUpdate := CmdBuilder(cmd, RunProjectsUpdate, "update <project-id>",
 		"Update an existing project",
-		"Updates information about an existing project. Use `default` as the <id> to update your default project.",
+		"Updates information about an existing project. Use `default` as the <project-id> to update your default project.",
 		Writer, aliasOpt("u"), displayerType(&displayers.Project{}))
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectName, "", "", "The project's name")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectPurpose, "", "", "The project's purpose")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectDescription, "", "",
 		"A description of the project")
 	AddStringFlag(cmdProjectsUpdate, doctl.ArgProjectEnvironment, "", "",
-		"The environment in which your project resides. Possible values: `Development`, `Staging`, or `Production`")
+		"The environment in which your project resides. Possible `enum` values: `Development`, `Staging`, or `Production`")
 	AddBoolFlag(cmdProjectsUpdate, doctl.ArgProjectIsDefault, "", false,
 		"Sets the specified project as your default project")
 	cmdProjectsUpdate.Example = `The following example updates the project with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to have the name ` + "`" + `API Project` + "`" + ` and the purpose "Backend development": doctl projects update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "API Project" --purpose "Backend development"`
 
-	cmdProjectsDelete := CmdBuilder(cmd, RunProjectsDelete, "delete <id> [<id> ...]",
+	cmdProjectsDelete := CmdBuilder(cmd, RunProjectsDelete, "delete <project-id> [<project-id> ...]",
 		"Delete the specified project", "Deletes a project. To be deleted, a project must not have any resources assigned to it.",
 		Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdProjectsDelete, doctl.ArgForce, doctl.ArgShortForce, false,
