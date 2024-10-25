@@ -113,6 +113,7 @@ If you do not specify a region, the Droplet is created in the default region for
 		aliasOpt("ls"), displayerType(&displayers.Droplet{}))
 	AddStringFlag(cmdRunDropletList, doctl.ArgRegionSlug, "", "", "Retrieves a list of Droplets in a specified region")
 	AddStringFlag(cmdRunDropletList, doctl.ArgTagName, "", "", "Retrieves a list of Droplets with the specified tag name")
+	AddBoolFlag(cmdRunDropletList, doctl.ArgGPUs, "", false, "List GPU Droplets only. By default, only non-GPU Droplets are returned.")
 	cmdRunDropletList.Example = `The following example retrieves a list of all Droplets in the ` + "`" + `nyc1` + "`" + ` region: doctl compute droplet list --region nyc1`
 
 	cmdDropletNeighbors := CmdBuilder(cmd, RunDropletNeighbors, "neighbors <droplet-id>", "List a Droplet's neighbors on your account", `Lists your Droplets that are on the same physical hardware, including the following details:`+dropletDetails, Writer,
@@ -656,6 +657,15 @@ func RunDropletList(c *CmdConfig) error {
 		return err
 	}
 
+	gpus, err := c.Doit.GetBool(c.NS, doctl.ArgGPUs)
+	if err != nil {
+		return err
+	}
+
+	if gpus && tagName != "" {
+		return fmt.Errorf("The --gpus and --tag-name flags are mutually exclusive.")
+	}
+
 	matches := make([]glob.Glob, 0, len(c.Args))
 	for _, globStr := range c.Args {
 		g, err := glob.Compile(globStr)
@@ -669,7 +679,9 @@ func RunDropletList(c *CmdConfig) error {
 	var matchedList do.Droplets
 
 	var list do.Droplets
-	if tagName == "" {
+	if gpus {
+		list, err = ds.ListWithGPUs()
+	} else if tagName == "" {
 		list, err = ds.List()
 	} else {
 		list, err = ds.ListByTag(tagName)

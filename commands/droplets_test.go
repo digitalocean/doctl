@@ -398,6 +398,16 @@ func TestDropletsListByTag(t *testing.T) {
 	})
 }
 
+func TestDropletsListGPUs(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.EXPECT().ListWithGPUs().Return(testDropletList, nil)
+
+		config.Doit.Set(config.NS, doctl.ArgGPUs, true)
+		err := RunDropletList(config)
+		assert.NoError(t, err)
+	})
+}
+
 func TestDropletsTag(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		trr := &godo.TagResourcesRequest{
@@ -412,6 +422,15 @@ func TestDropletsTag(t *testing.T) {
 
 		err := RunDropletTag(config)
 		assert.NoError(t, err)
+	})
+}
+
+func TestDropletsListGPUsAndTagsExclusive(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		config.Doit.Set(config.NS, doctl.ArgGPUs, true)
+		config.Doit.Set(config.NS, doctl.ArgTagName, "my-tag")
+		err := RunDropletList(config)
+		assert.Error(t, err)
 	})
 }
 

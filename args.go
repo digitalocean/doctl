@@ -565,4 +565,7 @@ const (
 
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
+
+	// ArgGPUs specifies to list GPU Droplets
+	ArgGPUs = "gpus"
 )

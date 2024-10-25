@@ -53,6 +53,7 @@ type Kernels []Kernel
 type DropletsService interface {
 	List() (Droplets, error)
 	ListByTag(string) (Droplets, error)
+	ListWithGPUs() (Droplets, error)
 	Get(int) (*Droplet, error)
 	Create(*godo.DropletCreateRequest, bool) (*Droplet, error)
 	CreateMultiple(*godo.DropletMultiCreateRequest) (Droplets, error)
@@ -93,18 +94,25 @@ func (ds *dropletsService) List() (Droplets, error) {
 		return si, resp, err
 	}
 
-	si, err := PaginateResp(f)
-	if err != nil {
-		return nil, err
+	return ds.list(f)
+}
+
+func (ds *dropletsService) ListWithGPUs() (Droplets, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := ds.client.Droplets.ListWithGPUs(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
 	}
 
-	list := make(Droplets, len(si))
-	for i := range si {
-		a := si[i].(godo.Droplet)
-		list[i] = Droplet{Droplet: &a}
-	}
-
-	return list, nil
+	return ds.list(f)
 }
 
 func (ds *dropletsService) ListByTag(tagName string) (Droplets, error) {
@@ -122,6 +130,10 @@ func (ds *dropletsService) ListByTag(tagName string) (Droplets, error) {
 		return si, resp, err
 	}
 
+	return ds.list(f)
+}
+
+func (ds *dropletsService) list(f Generator) (Droplets, error) {
 	si, err := PaginateResp(f)
 	if err != nil {
 		return nil, err
