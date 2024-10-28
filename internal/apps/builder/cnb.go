@@ -92,7 +92,7 @@ func (b *CNBComponentBuilder) Build(ctx context.Context) (res ComponentBuilderRe
 		})
 	}
 
-	if b.localCacheDir != "" {
+	if b.localCacheDir != "" && !b.baseComponentBuilder.noCache {
 		mounts = append(mounts, mount.Mount{
 			Type:   mount.TypeBind,
 			Source: b.localCacheDir,
@@ -348,7 +348,7 @@ func (b *CNBComponentBuilder) cnbEnv(ctx context.Context) ([]string, error) {
 		envs = append(envs, "PREVIOUS_APP_IMAGE_URL="+b.AppImageOutputName())
 	}
 
-	if b.localCacheDir != "" {
+	if b.localCacheDir != "" && !b.baseComponentBuilder.noCache {
 		envs = append(envs, "APP_CACHE_DIR="+cnbCacheDir)
 	}
 
