@@ -93,19 +93,14 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDenyList, "", []string{},
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerDomains, "", []string{},
-		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` ")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerSettings, "", "",
-		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` ")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerCDNSettings, "", "",
-		"CDN cache settings global load balancer, e.g.: `is_enabled:true` "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"CDN cache settings global load balancer, e.g.: `is_enabled:true` ")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
-		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
-	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetwork, "", "", "The type of network the load balancer is accessible from, e.g.: `EXTERNAL` or `INTERNAL`"+
-		"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer ")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetwork, "", "", "The type of network the load balancer is accessible from, e.g.: `EXTERNAL` or `INTERNAL`")
 	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
 	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerNetwork)
 
@@ -145,17 +140,13 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", nil,
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgLoadBalancerDomains, "", []string{},
-		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` ")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerSettings, "", "",
-		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` ")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerCDNSettings, "", "",
-		"CDN cache settings global load balancer, e.g.: `is_enabled:true` "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"CDN cache settings global load balancer, e.g.: `is_enabled:true` ")
 	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
-		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer ")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
@@ -186,8 +177,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	cmdRunCachePurge := CmdBuilder(cmd, RunLoadBalancerPurgeCache, "purge-cache <load-balancer-id>",
 		"Purges CDN cache for a global load balancer", `Use this command to purge the CDN cache for specified global load balancer.`, Writer)
 	AddBoolFlag(cmdRunCachePurge, doctl.ArgForce, doctl.ArgShortForce, false,
-		"Purge the global load balancer CDN cache without a confirmation prompt "+
-			"(NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		"Purge the global load balancer CDN cache without a confirmation prompt ")
 
 	return cmd
 }
