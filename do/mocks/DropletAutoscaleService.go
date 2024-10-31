@@ -99,48 +99,48 @@ func (mr *MockDropletAutoscaleServiceMockRecorder) Get(arg0 any) *gomock.Call {
 }
 
 // List mocks base method.
-func (m *MockDropletAutoscaleService) List(arg0 *godo.ListOptions) ([]*godo.DropletAutoscalePool, error) {
+func (m *MockDropletAutoscaleService) List() ([]*godo.DropletAutoscalePool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0)
+	ret := m.ctrl.Call(m, "List")
 	ret0, _ := ret[0].([]*godo.DropletAutoscalePool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List.
-func (mr *MockDropletAutoscaleServiceMockRecorder) List(arg0 any) *gomock.Call {
+func (mr *MockDropletAutoscaleServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDropletAutoscaleService)(nil).List), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDropletAutoscaleService)(nil).List))
 }
 
 // ListHistory mocks base method.
-func (m *MockDropletAutoscaleService) ListHistory(arg0 string, arg1 *godo.ListOptions) ([]*godo.DropletAutoscaleHistoryEvent, error) {
+func (m *MockDropletAutoscaleService) ListHistory(arg0 string) ([]*godo.DropletAutoscaleHistoryEvent, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListHistory", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListHistory", arg0)
 	ret0, _ := ret[0].([]*godo.DropletAutoscaleHistoryEvent)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListHistory indicates an expected call of ListHistory.
-func (mr *MockDropletAutoscaleServiceMockRecorder) ListHistory(arg0, arg1 any) *gomock.Call {
+func (mr *MockDropletAutoscaleServiceMockRecorder) ListHistory(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListHistory", reflect.TypeOf((*MockDropletAutoscaleService)(nil).ListHistory), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListHistory", reflect.TypeOf((*MockDropletAutoscaleService)(nil).ListHistory), arg0)
 }
 
 // ListMembers mocks base method.
-func (m *MockDropletAutoscaleService) ListMembers(arg0 string, arg1 *godo.ListOptions) ([]*godo.DropletAutoscaleResource, error) {
+func (m *MockDropletAutoscaleService) ListMembers(arg0 string) ([]*godo.DropletAutoscaleResource, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListMembers", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListMembers", arg0)
 	ret0, _ := ret[0].([]*godo.DropletAutoscaleResource)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListMembers indicates an expected call of ListMembers.
-func (mr *MockDropletAutoscaleServiceMockRecorder) ListMembers(arg0, arg1 any) *gomock.Call {
+func (mr *MockDropletAutoscaleServiceMockRecorder) ListMembers(arg0 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMembers", reflect.TypeOf((*MockDropletAutoscaleService)(nil).ListMembers), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMembers", reflect.TypeOf((*MockDropletAutoscaleService)(nil).ListMembers), arg0)
 }
 
 // Update mocks base method.

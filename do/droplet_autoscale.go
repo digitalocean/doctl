@@ -22,9 +22,9 @@ import (
 type DropletAutoscaleService interface {
 	Create(*godo.DropletAutoscalePoolRequest) (*godo.DropletAutoscalePool, error)
 	Get(string) (*godo.DropletAutoscalePool, error)
-	List(*godo.ListOptions) ([]*godo.DropletAutoscalePool, error)
-	ListMembers(string, *godo.ListOptions) ([]*godo.DropletAutoscaleResource, error)
-	ListHistory(string, *godo.ListOptions) ([]*godo.DropletAutoscaleHistoryEvent, error)
+	List() ([]*godo.DropletAutoscalePool, error)
+	ListMembers(string) ([]*godo.DropletAutoscaleResource, error)
+	ListHistory(string) ([]*godo.DropletAutoscaleHistoryEvent, error)
 	Update(string, *godo.DropletAutoscalePoolRequest) (*godo.DropletAutoscalePool, error)
 	Delete(string) error
 	DeleteDangerous(string) error
@@ -62,8 +62,8 @@ func (d *dropletAutoscaleService) Get(poolID string) (*godo.DropletAutoscalePool
 }
 
 // List lists all existing droplet autoscale pools
-func (d *dropletAutoscaleService) List(opts *godo.ListOptions) ([]*godo.DropletAutoscalePool, error) {
-	listResp, err := PaginateResp(func(options *godo.ListOptions) ([]any, *godo.Response, error) {
+func (d *dropletAutoscaleService) List() ([]*godo.DropletAutoscalePool, error) {
+	listResp, err := PaginateResp(func(opts *godo.ListOptions) ([]any, *godo.Response, error) {
 		pools, resp, err := d.client.DropletAutoscale.List(context.Background(), opts)
 		if err != nil {
 			return nil, nil, err
@@ -85,8 +85,8 @@ func (d *dropletAutoscaleService) List(opts *godo.ListOptions) ([]*godo.DropletA
 }
 
 // ListMembers lists all droplet autoscale resources for an existing pool
-func (d *dropletAutoscaleService) ListMembers(poolID string, opts *godo.ListOptions) ([]*godo.DropletAutoscaleResource, error) {
-	listResp, err := PaginateResp(func(options *godo.ListOptions) ([]any, *godo.Response, error) {
+func (d *dropletAutoscaleService) ListMembers(poolID string) ([]*godo.DropletAutoscaleResource, error) {
+	listResp, err := PaginateResp(func(opts *godo.ListOptions) ([]any, *godo.Response, error) {
 		members, resp, err := d.client.DropletAutoscale.ListMembers(context.Background(), poolID, opts)
 		if err != nil {
 			return nil, nil, err
@@ -108,8 +108,8 @@ func (d *dropletAutoscaleService) ListMembers(poolID string, opts *godo.ListOpti
 }
 
 // ListHistory lists all droplet autoscale history events for an existing pool
-func (d *dropletAutoscaleService) ListHistory(poolID string, opts *godo.ListOptions) ([]*godo.DropletAutoscaleHistoryEvent, error) {
-	listResp, err := PaginateResp(func(options *godo.ListOptions) ([]any, *godo.Response, error) {
+func (d *dropletAutoscaleService) ListHistory(poolID string) ([]*godo.DropletAutoscaleHistoryEvent, error) {
+	listResp, err := PaginateResp(func(opts *godo.ListOptions) ([]any, *godo.Response, error) {
 		events, resp, err := d.client.DropletAutoscale.ListHistory(context.Background(), poolID, opts)
 		if err != nil {
 			return nil, nil, err

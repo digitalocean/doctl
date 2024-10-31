@@ -48,6 +48,7 @@ type CmdConfig struct {
 	ReservedIPActions func() do.ReservedIPActionsService
 	Droplets          func() do.DropletsService
 	DropletActions    func() do.DropletActionsService
+	DropletAutoscale  func() do.DropletAutoscaleService
 	Domains           func() do.DomainsService
 	Actions           func() do.ActionsService
 	Account           func() do.AccountService
@@ -99,6 +100,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.ReservedIPActions = func() do.ReservedIPActionsService { return do.NewReservedIPActionsService(godoClient) }
 			c.Droplets = func() do.DropletsService { return do.NewDropletsService(godoClient) }
 			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
+			c.DropletAutoscale = func() do.DropletAutoscaleService { return do.NewDropletAutoscaleService(godoClient) }
 			c.Domains = func() do.DomainsService { return do.NewDomainsService(godoClient) }
 			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
