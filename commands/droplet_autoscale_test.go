@@ -83,11 +83,77 @@ func TestDropletAutoscaleCommand(t *testing.T) {
 
 func TestDropletAutoscaleCreate(t *testing.T) {
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
+		createReq := godo.DropletAutoscalePoolRequest{
+			Name: "test-droplet-autoscale-pool-01",
+			Config: &godo.DropletAutoscaleConfiguration{
+				TargetNumberInstances: 3,
+			},
+			DropletTemplate: &godo.DropletAutoscaleResourceTemplate{
+				Size:             "s-1vcpu-512mb-10gb",
+				Region:           "s2r1",
+				Image:            "547864",
+				Tags:             []string{"test-pool-01"},
+				SSHKeys:          []string{"key-1", "key-2"},
+				VpcUUID:          "05790d02-c7e0-47d6-a917-5b4cf68cf5b7",
+				WithDropletAgent: true,
+				UserData:         "\n#cloud-config\nruncmd:\n- apt-get update\n- apt-get install -y stress-ng\n",
+			},
+		}
+
+		tm.dropletAutoscale.EXPECT().Create(&createReq).Return(testAutoscalePools[0], nil)
+
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleName, "test-droplet-autoscale-pool-01")
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleTargetInstances, "3")
+		c.Doit.Set(c.NS, doctl.ArgSizeSlug, "s-1vcpu-512mb-10gb")
+		c.Doit.Set(c.NS, doctl.ArgRegionSlug, "s2r1")
+		c.Doit.Set(c.NS, doctl.ArgImage, "547864")
+		c.Doit.Set(c.NS, doctl.ArgTag, "test-pool-01")
+		c.Doit.Set(c.NS, doctl.ArgSSHKeys, []string{"key-1", "key-2"})
+		c.Doit.Set(c.NS, doctl.ArgVPCUUID, "05790d02-c7e0-47d6-a917-5b4cf68cf5b7")
+		c.Doit.Set(c.NS, doctl.ArgDropletAgent, "true")
+		c.Doit.Set(c.NS, doctl.ArgUserData, "\n#cloud-config\nruncmd:\n- apt-get update\n- apt-get install -y stress-ng\n")
+
+		err := RunDropletAutoscaleCreate(c)
+		assert.NoError(t, err)
 	})
 }
 
 func TestDropletAutoscaleUpdate(t *testing.T) {
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
+		poolID := "51154959-e07b-4093-98fb-828590ecc76d"
+		updateReq := godo.DropletAutoscalePoolRequest{
+			Name: "test-droplet-autoscale-pool-01",
+			Config: &godo.DropletAutoscaleConfiguration{
+				TargetNumberInstances: 3,
+			},
+			DropletTemplate: &godo.DropletAutoscaleResourceTemplate{
+				Size:             "s-1vcpu-512mb-10gb",
+				Region:           "s2r1",
+				Image:            "547864",
+				Tags:             []string{"test-pool-01"},
+				SSHKeys:          []string{"key-1", "key-2"},
+				VpcUUID:          "05790d02-c7e0-47d6-a917-5b4cf68cf5b7",
+				WithDropletAgent: true,
+				UserData:         "\n#cloud-config\nruncmd:\n- apt-get update\n- apt-get install -y stress-ng\n",
+			},
+		}
+
+		tm.dropletAutoscale.EXPECT().Update(poolID, &updateReq).Return(testAutoscalePools[0], nil)
+		c.Args = append(c.Args, poolID)
+
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleName, "test-droplet-autoscale-pool-01")
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleTargetInstances, "3")
+		c.Doit.Set(c.NS, doctl.ArgSizeSlug, "s-1vcpu-512mb-10gb")
+		c.Doit.Set(c.NS, doctl.ArgRegionSlug, "s2r1")
+		c.Doit.Set(c.NS, doctl.ArgImage, "547864")
+		c.Doit.Set(c.NS, doctl.ArgTag, "test-pool-01")
+		c.Doit.Set(c.NS, doctl.ArgSSHKeys, []string{"key-1", "key-2"})
+		c.Doit.Set(c.NS, doctl.ArgVPCUUID, "05790d02-c7e0-47d6-a917-5b4cf68cf5b7")
+		c.Doit.Set(c.NS, doctl.ArgDropletAgent, "true")
+		c.Doit.Set(c.NS, doctl.ArgUserData, "\n#cloud-config\nruncmd:\n- apt-get update\n- apt-get install -y stress-ng\n")
+
+		err := RunDropletAutoscaleUpdate(c)
+		assert.NoError(t, err)
 	})
 }
 
