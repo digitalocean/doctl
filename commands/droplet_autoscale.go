@@ -64,8 +64,10 @@ You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale 
 
 	cmdDropletAutoscaleGet := CmdBuilder(cmd, RunDropletAutoscaleGet, "get", "Get an active droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscale{}))
 	AddStringFlag(cmdDropletAutoscaleGet, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
+	AddStringFlag(cmdDropletAutoscaleGet, doctl.ArgFormat, "", "", "Format of the output data")
 
-	CmdBuilder(cmd, RunDropletAutoscaleList, "list", "List all active droplet autoscale pools", "", Writer, displayerType(&displayers.DropletAutoscale{}))
+	cmdDropletAutoscaleList := CmdBuilder(cmd, RunDropletAutoscaleList, "list", "List all active droplet autoscale pools", "", Writer, displayerType(&displayers.DropletAutoscale{}), aliasOpt("ls"))
+	AddStringFlag(cmdDropletAutoscaleList, doctl.ArgFormat, "", "", "Format of the output data")
 
 	cmdDropletAutoscaleListMembers := CmdBuilder(cmd, RunDropletAutoscaleListMembers, "list-members", "List all droplet autoscale pool members", "", Writer, displayerType(&displayers.DropletAutoscale{}))
 	AddStringFlag(cmdDropletAutoscaleListMembers, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
@@ -73,7 +75,7 @@ You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale 
 	cmdDropletAutoscaleListHistory := CmdBuilder(cmd, RunDropletAutoscaleListHistory, "list-history", "List all droplet autoscale pool history events", "", Writer, displayerType(&displayers.DropletAutoscale{}))
 	AddStringFlag(cmdDropletAutoscaleListHistory, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
 
-	cmdDropletAutoscaleDelete := CmdBuilder(cmd, RunDropletAutoscaleDelete, "delete", "Delete an active droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscale{}))
+	cmdDropletAutoscaleDelete := CmdBuilder(cmd, RunDropletAutoscaleDelete, "delete", "Delete an active droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscale{}), aliasOpt("d", "rm"))
 	AddStringFlag(cmdDropletAutoscaleDelete, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
 	AddBoolFlag(cmdDropletAutoscaleDelete, doctl.ArgForce, "", false, "Force delete without a confirmation prompt")
 
