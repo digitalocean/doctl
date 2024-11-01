@@ -101,8 +101,6 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
 		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer ")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetwork, "", "", "The type of network the load balancer is accessible from, e.g.: `EXTERNAL` or `INTERNAL`")
-	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
-	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerNetwork)
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <load-balancer-id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer. Using all applicable flags, the command should contain a full representation of the load balancer including existing attributes, such as the load balancer's name, region, forwarding rules, and Droplet IDs. Any attribute that is not provided is reset to its default value.`, Writer, aliasOpt("u"))
