@@ -28,6 +28,7 @@ type AppsService interface {
 	Delete(appID string) error
 	Propose(req *godo.AppProposeRequest) (*godo.AppProposeResponse, error)
 
+	Restart(appID string, components []string) (*godo.Deployment, error)
 	CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error)
 	GetDeployment(appID, deploymentID string) (*godo.Deployment, error)
 	ListDeployments(appID string) ([]*godo.Deployment, error)
@@ -130,6 +131,16 @@ func (s *appsService) Propose(req *godo.AppProposeRequest) (*godo.AppProposeResp
 		return nil, err
 	}
 	return res, nil
+}
+
+func (s *appsService) Restart(appID string, components []string) (*godo.Deployment, error) {
+	deployment, _, err := s.client.Apps.Restart(s.ctx, appID, &godo.AppRestartRequest{
+		Components: components,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return deployment, nil
 }
 
 func (s *appsService) CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error) {

@@ -127,6 +127,21 @@ This permanently deletes the app and all of its associated deployments.`,
 	AddBoolFlag(deleteApp, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the App without a confirmation prompt")
 	deleteApp.Example = `The following example deletes an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
+	restartApp := CmdBuilder(
+		cmd,
+		RunAppsRestart,
+		"restart <app id>",
+		"Restarts an app",
+		`Restarts the specified app or some of its components.`,
+		Writer,
+		aliasOpt("r"),
+		displayerType(&displayers.Deployments{}),
+	)
+	AddStringSliceFlag(restartApp, doctl.ArgAppComponents, "", nil, "The components to restart. If not provided, all components are restarted.")
+	AddBoolFlag(restartApp, doctl.ArgCommandWait, "", false,
+		"Boolean that specifies whether to wait for the restart to complete before allowing further terminal input. This can be helpful for scripting.")
+	restartApp.Example = `The following example restarts an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. Additionally, the command returns the app's ID and status: doctl apps restart f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Status`
+
 	deploymentCreate := CmdBuilder(
 		cmd,
 		RunAppsCreateDeployment,
@@ -467,6 +482,48 @@ func RunAppsDelete(c *CmdConfig) error {
 	notice("App deleted")
 
 	return nil
+}
+
+// RunAppsRestart restarts an app.
+func RunAppsRestart(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	components, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAppComponents)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	deployment, err := c.Apps().Restart(appID, components)
+	if err != nil {
+		return err
+	}
+
+	var errs error
+
+	if wait {
+		apps := c.Apps()
+		notice("Restart is in progress, waiting for the restart to complete")
+		err := waitForActiveDeployment(apps, appID, deployment.ID)
+		if err != nil {
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			if err := c.Display(displayers.Deployments{deployment}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+			return errs
+		}
+		deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
+	}
+
+	notice("Restarted")
+
+	return c.Display(displayers.Deployments{deployment})
 }
 
 // RunAppsCreateDeployment creates a deployment for an app.
