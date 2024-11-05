@@ -150,6 +150,8 @@ const (
 	ArgResourceType = "resource"
 	// ArgBackups is an enable backups argument.
 	ArgBackups = "enable-backups"
+	// ArgDropletBackupPolicy is a path to a droplet backup policy.
+	ArgDropletBackupPolicy = "backup-policy"
 	// ArgIPv6 is an enable IPv6 argument.
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.

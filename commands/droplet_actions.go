@@ -14,9 +14,12 @@ limitations under the License.
 package commands
 
 import (
+	"os"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/doctl/internal/droplets"
 	"github.com/spf13/cobra"
 )
 
@@ -80,6 +83,13 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionDisableBackups, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionDisableBackups.Example = `The following example disables backups on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action disable-backups 386734086`
+
+	cmdDropletActionChangeBackupPolicy := CmdBuilder(cmd, RunDropletActionChangeBackupPolicy,
+		"change_backup_policy <droplet-id>", "Change backup policy on a Droplet", `Changes backup policy for a Droplet with enabled backups.`, Writer,
+		displayerType(&displayers.Action{}))
+	AddStringFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicy, "", "", `Path to a new backup policy in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
+	// AddBoolFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgCommandWait, "", false, "Wait for action to complete") // TODO: Add this flag when the doctl supports reading policy.
+	cmdDropletActionChangeBackupPolicy.Example = `The following example changes backup policy on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action change_backup_policy 386734086 --backup-policy src/your-backup-policy.yaml`
 
 	cmdDropletActionReboot := CmdBuilder(cmd, RunDropletActionReboot,
 		"reboot <droplet-id>", "Reboot a Droplet", `Reboots a Droplet. A reboot action is an attempt to reboot the Droplet in a graceful way, similar to using the reboot command from the Droplet's console.`, Writer,
@@ -262,6 +272,31 @@ func RunDropletActionDisableBackups(c *CmdConfig) error {
 		}
 
 		a, err := das.DisableBackups(id)
+		return a, err
+	}
+
+	return performAction(c, fn)
+}
+
+// RunDropletActionChangeBackupPolicy changes backup policy for a droplet.
+func RunDropletActionChangeBackupPolicy(c *CmdConfig) error {
+	fn := func(das do.DropletActionsService) (*do.Action, error) {
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
+		if err != nil {
+			return nil, err
+		}
+
+		policyPath, err := c.Doit.GetString(c.NS, doctl.ArgDropletBackupPolicy)
+		if err != nil {
+			return nil, err
+		}
+
+		policy, err := droplets.ReadDropletBackupPolicy(os.Stdin, policyPath)
+		if err != nil {
+			return nil, err
+		}
+
+		a, err := das.ChangeBackupPolicy(id, policy)
 		return a, err
 	}
 
