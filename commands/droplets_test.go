@@ -15,6 +15,7 @@ package commands
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"strconv"
 	"testing"
@@ -23,6 +24,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -113,6 +115,61 @@ func TestDropletCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"one", "two"})
 
 		err := RunDropletCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDropletCreateWithBackupPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dropletPolicy := godo.DropletBackupPolicyRequest{
+			Plan:    "weekly",
+			Weekday: "SAT",
+			Hour:    godo.PtrTo(0),
+		}
+		volumeUUID := "00000000-0000-4000-8000-000000000000"
+		vpcUUID := "00000000-0000-4000-8000-000000000000"
+		dcr := &godo.DropletCreateRequest{
+			Name:    "droplet",
+			Region:  "dev0",
+			Size:    "1gb",
+			Image:   godo.DropletCreateImage{ID: 0, Slug: "image"},
+			SSHKeys: []godo.DropletCreateSSHKey{},
+			Volumes: []godo.DropletCreateVolume{
+				{Name: "test-volume"},
+				{ID: volumeUUID},
+			},
+			Backups:           true,
+			IPv6:              false,
+			PrivateNetworking: false,
+			Monitoring:        false,
+			VPCUUID:           vpcUUID,
+			UserData:          "#cloud-config",
+			Tags:              []string{"one", "two"},
+			BackupPolicy:      &dropletPolicy,
+		}
+
+		policyFile, err := os.CreateTemp(t.TempDir(), "policy-cfg")
+		require.NoError(t, err)
+		defer policyFile.Close()
+
+		err = json.NewEncoder(policyFile).Encode(&dropletPolicy)
+		require.NoError(t, err)
+
+		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+
+		config.Args = append(config.Args, "droplet")
+
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
+		config.Doit.Set(config.NS, doctl.ArgImage, "image")
+		config.Doit.Set(config.NS, doctl.ArgUserData, "#cloud-config")
+		config.Doit.Set(config.NS, doctl.ArgVPCUUID, vpcUUID)
+		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{"test-volume", volumeUUID})
+		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"one", "two"})
+		config.Doit.Set(config.NS, doctl.ArgBackups, true)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicy, policyFile.Name())
+
+		err = RunDropletCreate(config)
 		assert.NoError(t, err)
 	})
 }
