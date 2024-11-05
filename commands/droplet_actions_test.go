@@ -14,16 +14,20 @@ limitations under the License.
 package commands
 
 import (
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDropletActionCommand(t *testing.T) {
 	cmd := DropletAction()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "change-kernel", "enable-backups", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
+	assertCommandNames(t, cmd, "change-kernel", "change_backup_policy", "enable-backups", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
 }
 
 func TestDropletActionsChangeKernel(t *testing.T) {
@@ -75,6 +79,37 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 
 		err := RunDropletActionDisableBackups(config)
 		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
+	})
+}
+
+func TestDropletChangeBackupPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dropletPolicy := godo.DropletBackupPolicyRequest{
+			Plan:    "weekly",
+			Weekday: "SAT",
+			Hour:    godo.PtrTo(0),
+		}
+
+		policyFile, err := os.CreateTemp(t.TempDir(), "policy-cfg")
+		require.NoError(t, err)
+		defer policyFile.Close()
+
+		err = json.NewEncoder(policyFile).Encode(&dropletPolicy)
+		require.NoError(t, err)
+
+		policyReq := &godo.DropletBackupPolicyRequest{
+			Plan:    dropletPolicy.Plan,
+			Weekday: dropletPolicy.Weekday,
+			Hour:    dropletPolicy.Hour,
+		}
+
+		tm.dropletActions.EXPECT().ChangeBackupPolicy(1, policyReq).Times(1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, "1")
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicy, policyFile.Name())
+
+		err = RunDropletActionChangeBackupPolicy(config)
+		require.NoError(t, err)
 	})
 }
 
