@@ -85,11 +85,11 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 	cmdDropletActionDisableBackups.Example = `The following example disables backups on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action disable-backups 386734086`
 
 	cmdDropletActionChangeBackupPolicy := CmdBuilder(cmd, RunDropletActionChangeBackupPolicy,
-		"change_backup_policy <droplet-id>", "Change backup policy on a Droplet", `Changes backup policy for a Droplet with enabled backups.`, Writer,
+		"change-backup-policy <droplet-id>", "Change backup policy on a Droplet", `Changes backup policy for a Droplet with enabled backups.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicy, "", "", `Path to a new backup policy in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	// AddBoolFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgCommandWait, "", false, "Wait for action to complete") // TODO: Add this flag when the doctl supports reading policy.
-	cmdDropletActionChangeBackupPolicy.Example = `The following example changes backup policy on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action change_backup_policy 386734086 --backup-policy src/your-backup-policy.yaml`
+	cmdDropletActionChangeBackupPolicy.Example = `The following example changes backup policy on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action change-backup-policy 386734086 --backup-policy src/your-backup-policy.yaml`
 
 	cmdDropletActionReboot := CmdBuilder(cmd, RunDropletActionReboot,
 		"reboot <droplet-id>", "Reboot a Droplet", `Reboots a Droplet. A reboot action is an attempt to reboot the Droplet in a graceful way, similar to using the reboot command from the Droplet's console.`, Writer,
