@@ -91,6 +91,13 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 	// AddBoolFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgCommandWait, "", false, "Wait for action to complete") // TODO: Add this flag when the doctl supports reading policy.
 	cmdDropletActionChangeBackupPolicy.Example = `The following example changes backup policy on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action change-backup-policy 386734086 --backup-policy src/your-backup-policy.yaml`
 
+	cmdDropletActionEnableBackupsWithPolicy := CmdBuilder(cmd, RunDropletActionEnableBackupsWithPolicy,
+		"enable-backups-with-policy <droplet-id>", "Enable backups with a policy on a Droplet", `Enables backups and apply a backup policy for a Droplet.`, Writer,
+		displayerType(&displayers.Action{}))
+	AddStringFlag(cmdDropletActionEnableBackupsWithPolicy, doctl.ArgDropletBackupPolicy, "", "", `Path to a new backup policy in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
+	// AddBoolFlag(cmdDropletActionEnableBackupsWithPolicy, doctl.ArgCommandWait, "", false, "Wait for action to complete") // TODO: Add this flag when the doctl supports reading policy.
+	cmdDropletActionEnableBackupsWithPolicy.Example = `The following example changes backup policy on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action enable-backups-with-policy 386734086 --backup-policy src/your-backup-policy.yaml`
+
 	cmdDropletActionReboot := CmdBuilder(cmd, RunDropletActionReboot,
 		"reboot <droplet-id>", "Reboot a Droplet", `Reboots a Droplet. A reboot action is an attempt to reboot the Droplet in a graceful way, similar to using the reboot command from the Droplet's console.`, Writer,
 		displayerType(&displayers.Action{}))
@@ -297,6 +304,31 @@ func RunDropletActionChangeBackupPolicy(c *CmdConfig) error {
 		}
 
 		a, err := das.ChangeBackupPolicy(id, policy)
+		return a, err
+	}
+
+	return performAction(c, fn)
+}
+
+// RunDropletActionEnableBackupsWithPolicy enables backups with a policy for a droplet.
+func RunDropletActionEnableBackupsWithPolicy(c *CmdConfig) error {
+	fn := func(das do.DropletActionsService) (*do.Action, error) {
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
+		if err != nil {
+			return nil, err
+		}
+
+		policyPath, err := c.Doit.GetString(c.NS, doctl.ArgDropletBackupPolicy)
+		if err != nil {
+			return nil, err
+		}
+
+		policy, err := droplets.ReadDropletBackupPolicy(os.Stdin, policyPath)
+		if err != nil {
+			return nil, err
+		}
+
+		a, err := das.EnableBackupsWithPolicy(id, policy)
 		return a, err
 	}
 
