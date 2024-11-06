@@ -82,7 +82,7 @@ func TestDropletActionsDisableBackups(t *testing.T) {
 	})
 }
 
-func TestDropletChangeBackupPolicy(t *testing.T) {
+func TestDropletActionsChangeBackupPolicy(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		dropletPolicy := godo.DropletBackupPolicyRequest{
 			Plan:    "weekly",
@@ -109,6 +109,37 @@ func TestDropletChangeBackupPolicy(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicy, policyFile.Name())
 
 		err = RunDropletActionChangeBackupPolicy(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestDropletActionsEnableBackupsWithPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dropletPolicy := godo.DropletBackupPolicyRequest{
+			Plan:    "weekly",
+			Weekday: "SAT",
+			Hour:    godo.PtrTo(0),
+		}
+
+		policyFile, err := os.CreateTemp(t.TempDir(), "policy-cfg")
+		require.NoError(t, err)
+		defer policyFile.Close()
+
+		err = json.NewEncoder(policyFile).Encode(&dropletPolicy)
+		require.NoError(t, err)
+
+		policyReq := &godo.DropletBackupPolicyRequest{
+			Plan:    dropletPolicy.Plan,
+			Weekday: dropletPolicy.Weekday,
+			Hour:    dropletPolicy.Hour,
+		}
+
+		tm.dropletActions.EXPECT().EnableBackupsWithPolicy(1, policyReq).Times(1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, "1")
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicy, policyFile.Name())
+
+		err = RunDropletActionEnableBackupsWithPolicy(config)
 		require.NoError(t, err)
 	})
 }

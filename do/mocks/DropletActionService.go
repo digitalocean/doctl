@@ -131,6 +131,21 @@ func (mr *MockDropletActionsServiceMockRecorder) EnableBackupsByTag(arg0 any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableBackupsByTag", reflect.TypeOf((*MockDropletActionsService)(nil).EnableBackupsByTag), arg0)
 }
 
+// EnableBackupsWithPolicy mocks base method.
+func (m *MockDropletActionsService) EnableBackupsWithPolicy(arg0 int, arg1 *godo.DropletBackupPolicyRequest) (*do.Action, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnableBackupsWithPolicy", arg0, arg1)
+	ret0, _ := ret[0].(*do.Action)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// EnableBackupsWithPolicy indicates an expected call of EnableBackupsWithPolicy.
+func (mr *MockDropletActionsServiceMockRecorder) EnableBackupsWithPolicy(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableBackupsWithPolicy", reflect.TypeOf((*MockDropletActionsService)(nil).EnableBackupsWithPolicy), arg0, arg1)
+}
+
 // EnableIPv6 mocks base method.
 func (m *MockDropletActionsService) EnableIPv6(arg0 int) (*do.Action, error) {
 	m.ctrl.T.Helper()
