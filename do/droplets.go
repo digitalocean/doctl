@@ -49,6 +49,10 @@ type Kernel struct {
 // Kernels is a slice of Kernel.
 type Kernels []Kernel
 
+type DropletBackupPolicy struct {
+	*godo.DropletBackupPolicy
+}
+
 // DropletsService is an interface for interacting with DigitalOcean's droplet api.
 type DropletsService interface {
 	List() (Droplets, error)
@@ -64,6 +68,7 @@ type DropletsService interface {
 	Backups(int) (Images, error)
 	Actions(int) (Actions, error)
 	Neighbors(int) (Droplets, error)
+	GetBackupPolicy(int) (*DropletBackupPolicy, error)
 }
 
 type dropletsService struct {
@@ -337,4 +342,14 @@ func (ds *dropletsService) Neighbors(id int) (Droplets, error) {
 	}
 
 	return droplets, nil
+}
+
+func (ds *dropletsService) GetBackupPolicy(id int) (*DropletBackupPolicy, error) {
+	policy, _, err := ds.client.Droplets.GetBackupPolicy(context.TODO(), id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DropletBackupPolicy{policy}, nil
+
 }

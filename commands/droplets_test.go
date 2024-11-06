@@ -55,7 +55,7 @@ var (
 func TestDropletCommand(t *testing.T) {
 	cmd := Droplet()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "1-click", "actions", "backups", "create", "delete", "get", "kernels", "list", "neighbors", "snapshots", "tag", "untag")
+	assertCommandNames(t, cmd, "1-click", "actions", "backups", "create", "delete", "get", "get-backup-policy", "kernels", "list", "neighbors", "snapshots", "tag", "untag")
 }
 
 func TestDropletActionList(t *testing.T) {
@@ -657,4 +657,15 @@ func TestDropletCreateWithAgent(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestDropletGetBackupPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.EXPECT().GetBackupPolicy(testDropletBackupPolicy.DropletID).Return(&testDropletBackupPolicy, nil)
+
+		config.Args = append(config.Args, strconv.Itoa(testDropletBackupPolicy.DropletID))
+
+		err := RunDropletGetBackupPolicy(config)
+		assert.NoError(t, err)
+	})
 }

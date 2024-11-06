@@ -137,6 +137,9 @@ If you do not specify a region, the Droplet is created in the default region for
 	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "The tag name to remove from Droplet")
 	cmdRunDropletUntag.Example = `The following example removes the tag ` + "`" + `frontend` + "`" + ` from a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet untag 386734086 --tag-name frontend`
 
+	cmdDropletGetBackupPolicy := CmdBuilder(cmd, RunDropletGetBackupPolicy, "get-backup-policy <droplet-id>", "Get droplet's backup policy", `Retrieves a backup policy of a Droplet.`, Writer)
+	cmdDropletGetBackupPolicy.Example = `The following example retrieves a backup policy for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet get-backup-policy 386734086`
+
 	cmd.AddCommand(dropletOneClicks())
 
 	return cmd
@@ -837,4 +840,22 @@ func RunDropletOneClickList(c *CmdConfig) error {
 	items := &displayers.OneClick{OneClicks: oneClickList}
 
 	return c.Display(items)
+}
+
+// RunDropletGetBackupPolicy retrieves a backup policy for a Droplet.
+func RunDropletGetBackupPolicy(c *CmdConfig) error {
+	ds := c.Droplets()
+
+	id, err := getDropletIDArg(c.NS, c.Args)
+	if err != nil {
+		return err
+	}
+
+	policy, err := ds.GetBackupPolicy(id)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.DropletBackupPolicy{DropletBackupPolicies: []do.DropletBackupPolicy{*policy}}
+	return c.Display(item)
 }

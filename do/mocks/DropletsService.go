@@ -144,6 +144,21 @@ func (mr *MockDropletsServiceMockRecorder) Get(arg0 any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDropletsService)(nil).Get), arg0)
 }
 
+// GetBackupPolicy mocks base method.
+func (m *MockDropletsService) GetBackupPolicy(arg0 int) (*do.DropletBackupPolicy, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBackupPolicy", arg0)
+	ret0, _ := ret[0].(*do.DropletBackupPolicy)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBackupPolicy indicates an expected call of GetBackupPolicy.
+func (mr *MockDropletsServiceMockRecorder) GetBackupPolicy(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackupPolicy", reflect.TypeOf((*MockDropletsService)(nil).GetBackupPolicy), arg0)
+}
+
 // Kernels mocks base method.
 func (m *MockDropletsService) Kernels(arg0 int) (do.Kernels, error) {
 	m.ctrl.T.Helper()

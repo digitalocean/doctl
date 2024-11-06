@@ -16,6 +16,7 @@ package commands
 import (
 	"io"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -123,6 +124,23 @@ var (
 	}
 
 	testSnapshotList = do.Snapshots{testSnapshot, testSnapshotSecondary}
+
+	testDropletBackupPolicy = do.DropletBackupPolicy{
+		DropletBackupPolicy: &godo.DropletBackupPolicy{
+			DropletID: 123,
+			BackupPolicy: &godo.DropletBackupPolicyConfig{
+				Plan:                "weekly",
+				Weekday:             "monday",
+				Hour:                1,
+				WindowLengthHours:   2,
+				RetentionPeriodDays: 3,
+			},
+			NextBackupWindow: &godo.BackupWindow{
+				Start: &godo.Timestamp{Time: time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)},
+				End:   &godo.Timestamp{Time: time.Date(2024, time.February, 1, 12, 0, 0, 0, time.UTC)},
+			},
+		},
+	}
 )
 
 func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
