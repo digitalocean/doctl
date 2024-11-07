@@ -130,10 +130,10 @@ var (
 			DropletID: 123,
 			BackupPolicy: &godo.DropletBackupPolicyConfig{
 				Plan:                "weekly",
-				Weekday:             "monday",
-				Hour:                1,
-				WindowLengthHours:   2,
-				RetentionPeriodDays: 3,
+				Weekday:             "MON",
+				Hour:                0,
+				WindowLengthHours:   4,
+				RetentionPeriodDays: 28,
 			},
 			NextBackupWindow: &godo.BackupWindow{
 				Start: &godo.Timestamp{Time: time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)},
@@ -141,6 +141,24 @@ var (
 			},
 		},
 	}
+
+	anotherTestDropletBackupPolicy = do.DropletBackupPolicy{
+		DropletBackupPolicy: &godo.DropletBackupPolicy{
+			DropletID: 123,
+			BackupPolicy: &godo.DropletBackupPolicyConfig{
+				Plan:                "daily",
+				Hour:                12,
+				WindowLengthHours:   4,
+				RetentionPeriodDays: 7,
+			},
+			NextBackupWindow: &godo.BackupWindow{
+				Start: &godo.Timestamp{Time: time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)},
+				End:   &godo.Timestamp{Time: time.Date(2024, time.February, 1, 12, 0, 0, 0, time.UTC)},
+			},
+		},
+	}
+
+	testDropletBackupPolicies = do.DropletBackupPolicies{testDropletBackupPolicy, anotherTestDropletBackupPolicy}
 )
 
 func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {

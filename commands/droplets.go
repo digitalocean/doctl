@@ -140,6 +140,9 @@ If you do not specify a region, the Droplet is created in the default region for
 	cmdDropletGetBackupPolicy := CmdBuilder(cmd, RunDropletGetBackupPolicy, "get-backup-policy <droplet-id>", "Get droplet's backup policy", `Retrieves a backup policy of a Droplet.`, Writer)
 	cmdDropletGetBackupPolicy.Example = `The following example retrieves a backup policy for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet get-backup-policy 386734086`
 
+	cmdDropletListBackupPolicies := CmdBuilder(cmd, RunDropletListBackupPolicies, "list-backup-policies", "List backup policies for all Droplets", `List droplet backup policies for all existing Droplets.`, Writer)
+	cmdDropletListBackupPolicies.Example = `The following example list backup policies for all existing Droplets: doctl compute droplet list-backup-policies`
+
 	cmd.AddCommand(dropletOneClicks())
 
 	return cmd
@@ -858,4 +861,17 @@ func RunDropletGetBackupPolicy(c *CmdConfig) error {
 
 	item := &displayers.DropletBackupPolicy{DropletBackupPolicies: []do.DropletBackupPolicy{*policy}}
 	return c.Display(item)
+}
+
+// RunDropletListBackupPolicies list backup policies for all existing Droplets.
+func RunDropletListBackupPolicies(c *CmdConfig) error {
+	ds := c.Droplets()
+
+	policies, err := ds.ListBackupPolicies()
+	if err != nil {
+		return err
+	}
+
+	items := &displayers.DropletBackupPolicy{DropletBackupPolicies: policies}
+	return c.Display(items)
 }

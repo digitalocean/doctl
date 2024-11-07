@@ -15,6 +15,7 @@ package do
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/digitalocean/godo"
 	"github.com/digitalocean/godo/util"
@@ -49,9 +50,13 @@ type Kernel struct {
 // Kernels is a slice of Kernel.
 type Kernels []Kernel
 
+// DropletBackupPolicy is a wrapper for godo.DropletBackupPolicy.
 type DropletBackupPolicy struct {
 	*godo.DropletBackupPolicy
 }
+
+// DropletBackupPolicies is a slice of DropletBackupPolicy.
+type DropletBackupPolicies []DropletBackupPolicy
 
 // DropletsService is an interface for interacting with DigitalOcean's droplet api.
 type DropletsService interface {
@@ -69,6 +74,7 @@ type DropletsService interface {
 	Actions(int) (Actions, error)
 	Neighbors(int) (Droplets, error)
 	GetBackupPolicy(int) (*DropletBackupPolicy, error)
+	ListBackupPolicies() (DropletBackupPolicies, error)
 }
 
 type dropletsService struct {
@@ -351,5 +357,36 @@ func (ds *dropletsService) GetBackupPolicy(id int) (*DropletBackupPolicy, error)
 	}
 
 	return &DropletBackupPolicy{policy}, nil
+}
 
+func (ds *dropletsService) ListBackupPolicies() (DropletBackupPolicies, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		policies, resp, err := ds.client.Droplets.ListBackupPolicies(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		pl := make([]any, len(policies))
+		i := 0
+		for _, value := range policies {
+			pl[i] = value
+			i++
+		}
+
+		return pl, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(DropletBackupPolicies, len(si))
+	fmt.Println("si: ", si)
+	for i := range si {
+		p := si[i].(*godo.DropletBackupPolicy)
+		list[i] = DropletBackupPolicy{DropletBackupPolicy: p}
+	}
+
+	return list, nil
 }
