@@ -58,6 +58,14 @@ type DropletBackupPolicy struct {
 // DropletBackupPolicies is a slice of DropletBackupPolicy.
 type DropletBackupPolicies []DropletBackupPolicy
 
+// DropletSupportedBackupPolicy is a wrapper for godo.SupportedBackupPolicy.
+type DropletSupportedBackupPolicy struct {
+	*godo.SupportedBackupPolicy
+}
+
+// DropletSupportedBackupPolicies is a slice of DropletSupportedBackupPolicy.
+type DropletSupportedBackupPolicies []DropletSupportedBackupPolicy
+
 // DropletsService is an interface for interacting with DigitalOcean's droplet api.
 type DropletsService interface {
 	List() (Droplets, error)
@@ -75,6 +83,7 @@ type DropletsService interface {
 	Neighbors(int) (Droplets, error)
 	GetBackupPolicy(int) (*DropletBackupPolicy, error)
 	ListBackupPolicies() (DropletBackupPolicies, error)
+	ListSupportedBackupPolicies() (DropletSupportedBackupPolicies, error)
 }
 
 type dropletsService struct {
@@ -386,6 +395,20 @@ func (ds *dropletsService) ListBackupPolicies() (DropletBackupPolicies, error) {
 	for i := range si {
 		p := si[i].(*godo.DropletBackupPolicy)
 		list[i] = DropletBackupPolicy{DropletBackupPolicy: p}
+	}
+
+	return list, nil
+}
+
+func (ds *dropletsService) ListSupportedBackupPolicies() (DropletSupportedBackupPolicies, error) {
+	policies, _, err := ds.client.Droplets.ListSupportedBackupPolicies(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(DropletSupportedBackupPolicies, len(policies))
+	for i := range policies {
+		list[i] = DropletSupportedBackupPolicy{SupportedBackupPolicy: policies[i]}
 	}
 
 	return list, nil

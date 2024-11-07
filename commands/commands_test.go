@@ -159,6 +159,28 @@ var (
 	}
 
 	testDropletBackupPolicies = do.DropletBackupPolicies{testDropletBackupPolicy, anotherTestDropletBackupPolicy}
+
+	testDropletSupportedBackupPolicy = do.DropletSupportedBackupPolicy{
+		SupportedBackupPolicy: &godo.SupportedBackupPolicy{
+			Name:                 "daily",
+			PossibleWindowStarts: []int{0, 4, 8, 12, 16, 20},
+			WindowLengthHours:    4,
+			RetentionPeriodDays:  7,
+			PossibleDays:         []string{},
+		},
+	}
+
+	anotherTestDropletSupportedBackupPolicy = do.DropletSupportedBackupPolicy{
+		SupportedBackupPolicy: &godo.SupportedBackupPolicy{
+			Name:                 "weekly",
+			PossibleWindowStarts: []int{0, 4, 8, 12, 16, 20},
+			WindowLengthHours:    4,
+			RetentionPeriodDays:  28,
+			PossibleDays:         []string{"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"},
+		},
+	}
+
+	testDropletSupportedBackupPolicies = do.DropletSupportedBackupPolicies{testDropletSupportedBackupPolicy, anotherTestDropletSupportedBackupPolicy}
 )
 
 func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
