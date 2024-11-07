@@ -77,7 +77,7 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdDropletActionEnableBackups, doctl.ArgDropletBackupPolicy, "", "", `Path to a new backup policy in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(cmdDropletActionEnableBackups, doctl.ArgCommandWait, "", false, "Wait for action to complete")
-	cmdDropletActionEnableBackups.Example = `The following example enables backups on a Droplet with the ID ` + "`" + `386734086` + " with a backup policy`" + `: doctl compute droplet-action enable-backups 386734086 --backup-policy src/your-backup-policy.yaml`
+	cmdDropletActionEnableBackups.Example = `The following example enables backups on a Droplet with the ID ` + "`" + `386734086` + "` with a backup policy flag" + `: doctl compute droplet-action enable-backups 386734086 --backup-policy src/your-backup-policy.yaml`
 
 	cmdDropletActionDisableBackups := CmdBuilder(cmd, RunDropletActionDisableBackups,
 		"disable-backups <droplet-id>", "Disable backups on a Droplet", `Disables backups on a Droplet. This does not delete existing backups.`, Writer,
@@ -89,7 +89,7 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 		"change-backup-policy <droplet-id>", "Change backup policy on a Droplet", `Changes backup policy for a Droplet with enabled backups.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddStringFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicy, "", "", `Path to a new backup policy in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
-	// AddBoolFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgCommandWait, "", false, "Wait for action to complete") // TODO: Add this flag when the doctl supports reading policy.
+	AddBoolFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgCommandWait, "", false, "Wait for action to complete")
 	cmdDropletActionChangeBackupPolicy.Example = `The following example changes backup policy on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action change-backup-policy 386734086 --backup-policy src/your-backup-policy.yaml`
 
 	cmdDropletActionReboot := CmdBuilder(cmd, RunDropletActionReboot,
@@ -318,6 +318,11 @@ func RunDropletActionDisableBackups(c *CmdConfig) error {
 // RunDropletActionChangeBackupPolicy changes backup policy for a droplet.
 func RunDropletActionChangeBackupPolicy(c *CmdConfig) error {
 	fn := func(das do.DropletActionsService) (*do.Action, error) {
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
+		}
+
 		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
 		if err != nil {
 			return nil, err
