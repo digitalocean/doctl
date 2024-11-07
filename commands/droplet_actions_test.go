@@ -27,7 +27,7 @@ import (
 func TestDropletActionCommand(t *testing.T) {
 	cmd := DropletAction()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "change-kernel", "change-backup-policy", "enable-backups", "enable-backups-with-policy", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
+	assertCommandNames(t, cmd, "change-kernel", "change-backup-policy", "enable-backups", "disable-backups", "enable-ipv6", "enable-private-networking", "get", "power-cycle", "power-off", "power-on", "password-reset", "reboot", "rebuild", "rename", "resize", "restore", "shutdown", "snapshot")
 }
 
 func TestDropletActionsChangeKernel(t *testing.T) {
@@ -62,6 +62,35 @@ func TestDropletActionsEnableBackups(t *testing.T) {
 
 		err := RunDropletActionEnableBackups(config)
 		assert.EqualError(t, err, `expected <droplet-id> to be a positive integer, got "my-test-id"`)
+	})
+	// Enable backups with a backup policy applied.
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dropletPolicy := godo.DropletBackupPolicyRequest{
+			Plan:    "weekly",
+			Weekday: "SAT",
+			Hour:    godo.PtrTo(0),
+		}
+
+		policyFile, err := os.CreateTemp(t.TempDir(), "policy-cfg")
+		require.NoError(t, err)
+		defer policyFile.Close()
+
+		err = json.NewEncoder(policyFile).Encode(&dropletPolicy)
+		require.NoError(t, err)
+
+		policyReq := &godo.DropletBackupPolicyRequest{
+			Plan:    dropletPolicy.Plan,
+			Weekday: dropletPolicy.Weekday,
+			Hour:    dropletPolicy.Hour,
+		}
+
+		tm.dropletActions.EXPECT().EnableBackupsWithPolicy(1, policyReq).Times(1).Return(&testAction, nil)
+
+		config.Args = append(config.Args, "1")
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicy, policyFile.Name())
+
+		err = RunDropletActionEnableBackups(config)
+		require.NoError(t, err)
 	})
 }
 
@@ -109,37 +138,6 @@ func TestDropletActionsChangeBackupPolicy(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicy, policyFile.Name())
 
 		err = RunDropletActionChangeBackupPolicy(config)
-		require.NoError(t, err)
-	})
-}
-
-func TestDropletActionsEnableBackupsWithPolicy(t *testing.T) {
-	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		dropletPolicy := godo.DropletBackupPolicyRequest{
-			Plan:    "weekly",
-			Weekday: "SAT",
-			Hour:    godo.PtrTo(0),
-		}
-
-		policyFile, err := os.CreateTemp(t.TempDir(), "policy-cfg")
-		require.NoError(t, err)
-		defer policyFile.Close()
-
-		err = json.NewEncoder(policyFile).Encode(&dropletPolicy)
-		require.NoError(t, err)
-
-		policyReq := &godo.DropletBackupPolicyRequest{
-			Plan:    dropletPolicy.Plan,
-			Weekday: dropletPolicy.Weekday,
-			Hour:    dropletPolicy.Hour,
-		}
-
-		tm.dropletActions.EXPECT().EnableBackupsWithPolicy(1, policyReq).Times(1).Return(&testAction, nil)
-
-		config.Args = append(config.Args, "1")
-		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicy, policyFile.Name())
-
-		err = RunDropletActionEnableBackupsWithPolicy(config)
 		require.NoError(t, err)
 	})
 }
