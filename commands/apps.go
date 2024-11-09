@@ -32,6 +32,7 @@ import (
 	"github.com/digitalocean/godo"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 	"sigs.k8s.io/yaml"
 )
 
@@ -743,6 +744,87 @@ func RunAppsGetExec(c *CmdConfig) error {
 		return err
 	}
 
+	inputSchemaFunc := func(data any) ([]byte, error) {
+		b, err := json.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
+		return b, nil
+	}
+
+	// Set terminal to raw mode
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		return fmt.Errorf("error setting terminal to raw mode: %v", err)
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState) // Restore terminal on exit
+	type stdinOp struct {
+		Op   string `json:"op"`
+		Data string `json:"data"`
+	}
+	stdinCh := make(chan []byte)
+	go func() {
+		for {
+			var b [1]byte
+			_, err := os.Stdin.Read(b[:]) // Read one byte at a time
+			if err != nil {
+				fmt.Println("Error reading from stdin:", err)
+				break
+			}
+
+			v, err := inputSchemaFunc(stdinOp{Op: "stdin", Data: string(b[:])})
+			if err != nil {
+				fmt.Println("Error encoding stdin keepalive:", err)
+				return
+			}
+			stdinCh <- v
+		}
+	}()
+	keepaliveTicker := time.NewTicker(30 * time.Second)
+	resizeChecker := time.NewTicker(250 * time.Millisecond)
+	defer keepaliveTicker.Stop()
+	defer resizeChecker.Stop()
+	go func() {
+		type resizeOp struct {
+			Op     string `json:"op"`
+			Width  int    `json:"width"`
+			Height int    `json:"height"`
+		}
+		var prevSize resizeOp
+		resizeIfTermResized := func() {
+			width, height, err := term.GetSize(0)
+			if err != nil {
+				fmt.Println("error getting terminal size:", err)
+				return
+			}
+			data := resizeOp{Op: "resize", Width: width, Height: height}
+			if prevSize != data {
+				b, err := inputSchemaFunc(data)
+				if err != nil {
+					fmt.Println("Error encoding stdin resize:", err)
+					return
+				}
+				prevSize = data
+				stdinCh <- b
+			}
+		}
+		resizeIfTermResized()
+		for {
+			select {
+			case <-keepaliveTicker.C:
+				data := stdinOp{Op: "stdin", Data: ""}
+				b, err := inputSchemaFunc(data)
+				if err != nil {
+					fmt.Println("Error encoding stdin keepalive:", err)
+					return
+				}
+				stdinCh <- b
+			case <-resizeChecker.C:
+				resizeIfTermResized()
+			}
+		}
+	}()
+
 	schemaFunc := func(message []byte) (io.Reader, error) {
 		data := struct {
 			Data string `json:"data"`
@@ -757,7 +839,7 @@ func RunAppsGetExec(c *CmdConfig) error {
 
 	token := url.Query().Get("token")
 
-	listener := c.Doit.Listen(url, token, schemaFunc, c.Out, os.Stdin)
+	listener := c.Doit.Listen(url, token, schemaFunc, c.Out, stdinCh)
 	err = listener.Start()
 	if err != nil {
 		return err

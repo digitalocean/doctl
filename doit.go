@@ -210,7 +210,7 @@ type Config interface {
 	GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error)
 	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in *os.File) listen.ListenerService
+	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
 	Set(ns, key string, val any)
 	IsSet(key string) bool
 	GetString(ns, key string) (string, error)
@@ -326,8 +326,8 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 }
 
 // Listen creates a websocket connection
-func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in *os.File) listen.ListenerService {
-	return listen.NewListener(url, token, schemaFunc, out, in)
+func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
+	return listen.NewListener(url, token, schemaFunc, out, inCh)
 }
 
 // Set sets a config key.
@@ -483,7 +483,7 @@ func isRequired(key string) bool {
 // TestConfig is an implementation of Config for testing.
 type TestConfig struct {
 	SSHFn              func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	ListenFn           func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in *os.File) listen.ListenerService
+	ListenFn           func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
 	v                  *viper.Viper
 	IsSetMap           map[string]bool
 	DockerEngineClient builder.DockerEngineClient
@@ -497,7 +497,7 @@ func NewTestConfig() *TestConfig {
 		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
 			return &MockRunner{}
 		},
-		ListenFn: func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in *os.File) listen.ListenerService {
+		ListenFn: func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
 			return &MockListener{}
 		},
 		v:        viper.New(),
@@ -523,8 +523,8 @@ func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 }
 
 // Listen returns a mock websocket listener
-func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in *os.File) listen.ListenerService {
-	return c.ListenFn(url, token, schemaFunc, out, in)
+func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
+	return c.ListenFn(url, token, schemaFunc, out, inCh)
 }
 
 // Set sets a config key.

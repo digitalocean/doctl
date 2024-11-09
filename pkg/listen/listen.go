@@ -7,10 +7,8 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"time"
 
 	"github.com/gorilla/websocket"
-	"golang.org/x/term"
 )
 
 // SchemaFunc takes a slice of bytes and returns an io.Reader (See Listener.SchemaFunc)
@@ -30,9 +28,8 @@ type Listener struct {
 	// Out is an io.Writer to output to.
 	// doctl hint: this should usually be commands.CmdConfig.Out
 	Out io.Writer
-	// In is an io.Reader to read from.
-	// doctl hint: this should usually be os.Stdin
-	In *os.File
+	// InputCh is a channel to send input to the websocket
+	InCh <-chan []byte
 
 	done chan bool
 	stop chan bool
@@ -47,13 +44,13 @@ type ListenerService interface {
 var _ ListenerService = &Listener{}
 
 // NewListener returns a configured Listener
-func NewListener(url *url.URL, token string, schemaFunc SchemaFunc, out io.Writer, in *os.File) ListenerService {
+func NewListener(url *url.URL, token string, schemaFunc SchemaFunc, out io.Writer, inCh <-chan []byte) ListenerService {
 	return &Listener{
 		URL:        url,
 		Token:      token,
 		SchemaFunc: schemaFunc,
 		Out:        out,
-		In:         in,
+		InCh:       inCh,
 
 		done: make(chan bool),
 		stop: make(chan bool),
@@ -99,100 +96,13 @@ func (l *Listener) Start() error {
 		}
 	}()
 
-	prevWidth, prevHeight := 0, 0
-	resizeTerminal := func() error {
-		width, height, err := term.GetSize(0)
-		if err != nil {
-			return fmt.Errorf("error getting terminal size: %w", err)
-		}
-		if width == prevWidth && height == prevHeight {
-			return nil
-		}
-		prevWidth = width
-		prevHeight = height
-
-		data := struct {
-			Op     string `json:"op"`
-			Width  uint16 `json:"width"`
-			Height uint16 `json:"height"`
-		}{
-			Op:     "resize",
-			Width:  uint16(width),
-			Height: uint16(height),
-		}
-		if err := c.WriteJSON(data); err != nil {
-			return fmt.Errorf("error writing to websocket: %w", err)
-		}
-		return nil
-	}
-
-	var keepaliveTickerC <-chan time.Time
-	var resizeCheckerC <-chan time.Time
-	var stdinCh chan string
-
-	if l.In != nil {
-		keepaliveTicker := time.NewTicker(30 * time.Second)
-		resizeChecker := time.NewTicker(250 * time.Millisecond)
-		keepaliveTickerC = keepaliveTicker.C
-		resizeCheckerC = resizeChecker.C
-		stdinCh = make(chan string)
-		go func() {
-			// Set terminal to raw mode
-			oldState, err := term.MakeRaw(int(l.In.Fd()))
-			if err != nil {
-				fmt.Println("Error setting terminal to raw mode:", err)
-				return
-			}
-			defer term.Restore(int(l.In.Fd()), oldState) // Restore terminal on exit
-
-			for {
-				var b [1]byte
-				_, err := l.In.Read(b[:]) // Read one byte at a time
-				if err != nil {
-					fmt.Println("Error reading from stdin:", err)
-					break
-				}
-
-				stdinCh <- string(b[0])
-			}
-		}()
-
-		if err := resizeTerminal(); err != nil {
-			fmt.Println(err)
-		}
-	}
-
-	writeStdin := func(v string) error {
-		data := struct {
-			Op   string `json:"op"`
-			Data string `json:"data"`
-		}{
-			Op:   "stdin",
-			Data: v,
-		}
-		if err := c.WriteJSON(data); err != nil {
-			return fmt.Errorf("error writing to websocket: %w", err)
-		}
-		return nil
-	}
-
 	for {
 		select {
-		case b := <-stdinCh:
-			if err := writeStdin(string(b[0])); err != nil {
-				fmt.Println("Error writing to websocket:", err)
+		case data := <-l.InCh:
+			// fmt.Println(data)
+			if err := c.WriteMessage(websocket.TextMessage, data); err != nil {
+				return fmt.Errorf("error writing to websocket: %w", err)
 			}
-		case <-resizeCheckerC:
-			if err := resizeTerminal(); err != nil {
-				fmt.Println(err)
-			}
-		case <-keepaliveTickerC:
-			if err := writeStdin(string("")); err != nil {
-				fmt.Println("Error writing to websocket:", err)
-			}
-			// if err := c.WriteMessage(websocket.PingMessage, nil); err != nil {
-			// 	return err
-			// }
 		case <-done:
 			return nil
 		case <-interrupt:
