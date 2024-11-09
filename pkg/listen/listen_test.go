@@ -60,7 +60,7 @@ func TestListener(t *testing.T) {
 
 	buffer := &bytes.Buffer{}
 
-	listener := NewListener(url, "", nil, buffer)
+	listener := NewListener(url, "", nil, buffer, nil)
 	err = listener.Start()
 	require.NoError(t, err)
 
@@ -96,7 +96,7 @@ func TestListenerWithSchemaFunc(t *testing.T) {
 		return r, nil
 	}
 
-	listener := NewListener(url, "", schemaFunc, buffer)
+	listener := NewListener(url, "", schemaFunc, buffer, nil)
 	err = listener.Start()
 	require.NoError(t, err)
 
@@ -119,7 +119,7 @@ func TestListenerStop(t *testing.T) {
 
 	buffer := &bytes.Buffer{}
 
-	listener := NewListener(url, "", nil, buffer)
+	listener := NewListener(url, "", nil, buffer, nil)
 	go listener.Start()
 	// Stop before any messages have been sent
 	listener.Stop()

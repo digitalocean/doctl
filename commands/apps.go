@@ -191,6 +191,28 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 
 	logs.Example = `The following example retrieves the build logs for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps logs f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
 
+	exec := CmdBuilder(
+		cmd,
+		RunAppsGetExec,
+		"exec <app id> <component name (defaults to all components)>",
+		"Retrieves exec",
+		`Retrieves component exec for a deployment of an app.
+
+Three types of exec are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
+- build
+- deploy
+- run
+- run_restarted 
+
+For more information about exec, see [How to View exec](https://www.digitalocean.com/docs/app-platform/how-to/view-exec/).
+`,
+		Writer,
+		aliasOpt("l"),
+	)
+	AddStringFlag(exec, doctl.ArgAppDeployment, "", "", "Retrieves exec for a specific deployment ID. Defaults to current deployment.")
+
+	exec.Example = `The following example retrieves the build exec for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps exec f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
+
 	listRegions := CmdBuilder(
 		cmd,
 		RunAppsListRegions,
@@ -662,7 +684,7 @@ func RunAppsGetLogs(c *CmdConfig) error {
 			url.Scheme = "wss"
 		}
 
-		listener := c.Doit.Listen(url, token, schemaFunc, c.Out)
+		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, nil)
 		err = listener.Start()
 		if err != nil {
 			return err
@@ -690,6 +712,55 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		}
 	} else {
 		warn("No logs found for app component")
+	}
+
+	return nil
+}
+
+// RunAppsGetExec executes a command in an app.
+func RunAppsGetExec(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	var component string
+	if len(c.Args) >= 2 {
+		component = c.Args[1]
+	}
+
+	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
+	if err != nil {
+		return err
+	}
+
+	exec, err := c.Apps().GetExec(appID, deploymentID, component)
+	if err != nil {
+		return err
+	}
+
+	url, err := url.Parse(exec.URL)
+	if err != nil {
+		return err
+	}
+
+	schemaFunc := func(message []byte) (io.Reader, error) {
+		data := struct {
+			Data string `json:"data"`
+		}{}
+		err = json.Unmarshal(message, &data)
+		if err != nil {
+			return nil, err
+		}
+		r := strings.NewReader(data.Data)
+		return r, nil
+	}
+
+	token := url.Query().Get("token")
+
+	listener := c.Doit.Listen(url, token, schemaFunc, c.Out, os.Stdin)
+	err = listener.Start()
+	if err != nil {
+		return err
 	}
 
 	return nil

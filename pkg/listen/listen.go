@@ -27,6 +27,9 @@ type Listener struct {
 	// Out is an io.Writer to output to.
 	// doctl hint: this should usually be commands.CmdConfig.Out
 	Out io.Writer
+	// In is an io.Reader to read from.
+	// doctl hint: this should usually be os.Stdin
+	In *os.File
 
 	done chan bool
 	stop chan bool
@@ -41,12 +44,13 @@ type ListenerService interface {
 var _ ListenerService = &Listener{}
 
 // NewListener returns a configured Listener
-func NewListener(url *url.URL, token string, schemaFunc SchemaFunc, out io.Writer) ListenerService {
+func NewListener(url *url.URL, token string, schemaFunc SchemaFunc, out io.Writer, in *os.File) ListenerService {
 	return &Listener{
 		URL:        url,
 		Token:      token,
 		SchemaFunc: schemaFunc,
 		Out:        out,
+		In:         in,
 
 		done: make(chan bool),
 		stop: make(chan bool),
