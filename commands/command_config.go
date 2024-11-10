@@ -66,6 +66,7 @@ type CmdConfig struct {
 	Kubernetes        func() do.KubernetesService
 	Databases         func() do.DatabasesService
 	Registry          func() do.RegistryService
+	Registries        func() do.RegistriesService
 	VPCs              func() do.VPCsService
 	OneClicks         func() do.OneClickService
 	Apps              func() do.AppsService
@@ -118,6 +119,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.Kubernetes = func() do.KubernetesService { return do.NewKubernetesService(godoClient) }
 			c.Databases = func() do.DatabasesService { return do.NewDatabasesService(godoClient) }
 			c.Registry = func() do.RegistryService { return do.NewRegistryService(godoClient) }
+			c.Registries = func() do.RegistriesService { return do.NewRegistriesService(godoClient) }
 			c.VPCs = func() do.VPCsService { return do.NewVPCsService(godoClient) }
 			c.OneClicks = func() do.OneClickService { return do.NewOneClickService(godoClient) }
 			c.Apps = func() do.AppsService { return do.NewAppsService(godoClient) }

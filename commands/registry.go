@@ -974,3 +974,190 @@ func RunGetRegistryOptionsRegions(c *CmdConfig) error {
 	}
 	return c.Display(item)
 }
+
+// Multi-registry Open Beta commands
+
+// Registries creates the registries sub-command
+func Registries() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:     "registries",
+			Aliases: []string{"regs", "rs"},
+			Short:   "[BETA] Display commands for working with multiple container registries",
+			Long:    "The subcommands of `doctl registries` allow you to manage multiple registries. Note that this feature is in open beta and may change in the future.",
+			GroupID: manageResourcesGroup,
+		},
+	}
+
+	listRegistriesDesc := `Lists information about all registries in your account, including:
+  - The registry name
+  - The endpoint used to access it
+  - The region where it resides
+`
+	cmdRunRegistriesList := CmdBuilder(
+		cmd,
+		RunRegistriesList, "list",
+		"List all registries in your account", listRegistriesDesc,
+		Writer, aliasOpt("ls"), displayerType(&displayers.Registry{}),
+	)
+	cmdRunRegistriesList.Example = `The following example lists all registries in your account: doctl registries list`
+
+	createRegistriesDesc := `Creates a new registry in your account. The registry name must be unique and can contain only lowercase letters, numbers, and hyphens.`
+	cmdRunRegistriesCreate := CmdBuilder(
+		cmd,
+		RunRegistriesCreate, "create <registry-name>",
+		"Create a private container registry",
+		createRegistriesDesc,
+		Writer, aliasOpt("c"),
+	)
+	AddStringFlag(cmdRunRegistriesCreate, doctl.ArgRegionSlug, "", "",
+		"A `slug` indicating which datacenter region the registry reside in. For a list of supported region slugs, use the `doctl registry options available-regions` command")
+	cmdRunRegistriesCreate.Example = `The following example creates a registry named ` + "`" + `example-registry` + "`" + ` in the NYC3 region: doctl registries create example-registry --region=nyc3`
+
+	getRegistryDesc := `Retrieves information about a registry in your account, including:
+  - The registry name
+  - The endpoint used to access it
+  - The region where it resides
+`
+	cmdRunRegistriesGet := CmdBuilder(
+		cmd,
+		RunRegistriesGet, "get <registry-name>",
+		"Get information about a registry",
+		getRegistryDesc,
+		Writer, aliasOpt("g"), displayerType(&displayers.Registry{}),
+	)
+	cmdRunRegistriesGet.Example = `The following example retrieves information about a registry named ` + "`" + `example-registry` + "`" + `: doctl registries get example-registry`
+
+	deleteRegistryDesc := "Permanently deletes a registry from your account."
+	cmdRunRegistriesDelete := CmdBuilder(
+		cmd,
+		RunRegistriesDelete, "delete <registry-name>",
+		"Delete a registry",
+		deleteRegistryDesc,
+		Writer, aliasOpt("d", "del", "rm"),
+	)
+	AddBoolFlag(cmdRunRegistriesDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete registry without confirmation prompt")
+	cmdRunRegistriesDelete.Example = `The following example deletes a registry named ` + "`" + `example-registry` + "`" + `: doctl registries delete example-registry. Note that you can delete only one registry at a time.`
+
+	dockerConfigDesc := `Outputs a JSON-formatted Docker configuration that you can use to configure a Docker client to authenticate with your private container registry. This configuration is useful for configuring third-party tools that need access to your registry.
+
+By default this command generates read-only credentials. Use the ` + "`" + `--read-write` + "`" + ` flag to generate credentials that can push. The configuration produced by this command contains a DigitalOcean API token that can be used to access your account and should be treated as sensitive information.`
+
+	cmdRunRegistriesDockerConfig := CmdBuilder(cmd, RunRegistriesDockerConfig, "docker-config <registry-name>",
+		"Generate a Docker auth configuration for a registry",
+		dockerConfigDesc, Writer, aliasOpt("config"))
+	AddBoolFlag(cmdRunRegistriesDockerConfig, doctl.ArgReadWrite, "", false,
+		"Generates credentials that can push to your registry")
+	AddIntFlag(cmdRunRegistriesDockerConfig, doctl.ArgRegistryExpirySeconds, "", 0,
+		"The length of time the registry credentials are valid for, in seconds. By default, the credentials do not expire.")
+	cmdRunRegistriesDockerConfig.Example = `The following example generates a Docker configuration for a registry named ` + "`" + `example-registry` + "`" + ` and uses the ` + "`" + `--expiry-seconds` + "`" + ` to set the credentials to expire after one day: doctl registries docker-config example-registry --expiry-seconds=86400`
+
+	return cmd
+}
+
+// RunRegistriesList lists all registries in the account.
+func RunRegistriesList(c *CmdConfig) error {
+	registries, err := c.Registries().List()
+	if err != nil {
+		return err
+	}
+
+	return displayRegistries(c, registries...)
+}
+
+// RunRegistriesCreate creates a new registry.
+func RunRegistriesCreate(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+
+	name := c.Args[0]
+	region, err := c.Doit.GetString(c.NS, doctl.ArgRegionSlug)
+	if err != nil {
+		return err
+	}
+
+	createRequest := &godo.RegistriesCreateRequest{
+		Name:   name,
+		Region: region,
+	}
+	registry, err := c.Registries().Create(createRequest)
+	if err != nil {
+		return err
+	}
+
+	return displayRegistries(c, *registry)
+}
+
+// RunRegistriesGet retrieves information about specific registries.
+func RunRegistriesGet(c *CmdConfig) error {
+	var list []*do.Registry
+
+	for _, name := range c.Args {
+		registry, err := c.Registries().Get(name)
+		if err != nil {
+			return err
+		}
+		list = append(list, registry)
+	}
+
+	ret := make([]do.Registry, len(list))
+	for i, r := range list {
+		ret[i] = *r
+	}
+
+	return displayRegistries(c, ret...)
+}
+
+// RunRegistriesDelete deletes a specific registry.
+func RunRegistriesDelete(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+
+	name := c.Args[0]
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if !force && AskForConfirm("delete this registry") != nil {
+		return fmt.Errorf("operation aborted")
+	}
+
+	return c.Registries().Delete(name)
+}
+
+// RunRegistriesDockerConfig generates a Docker configuration for a registry.
+func RunRegistriesDockerConfig(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+
+	registryName := c.Args[0]
+	readWrite, err := c.Doit.GetBool(c.NS, doctl.ArgReadWrite)
+	if err != nil {
+		return err
+	}
+	expirySeconds, err := c.Doit.GetInt(c.NS, doctl.ArgRegistryExpirySeconds)
+	if err != nil {
+		return err
+	}
+	regCredReq := godo.RegistryDockerCredentialsRequest{
+		ReadWrite: readWrite,
+	}
+	if expirySeconds != 0 {
+		regCredReq.ExpirySeconds = godo.PtrTo(expirySeconds)
+	}
+
+	dockerCreds, err := c.Registries().DockerCredentials(registryName, &regCredReq)
+	if err != nil {
+		return err
+	}
+
+	_, err = c.Out.Write(append(dockerCreds.DockerConfigJSON, '\n'))
+	return err
+}

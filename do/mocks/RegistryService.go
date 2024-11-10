@@ -21,6 +21,7 @@ import (
 type MockRegistryService struct {
 	ctrl     *gomock.Controller
 	recorder *MockRegistryServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockRegistryServiceMockRecorder is the mock recorder for MockRegistryService.
@@ -303,4 +304,102 @@ func (m *MockRegistryService) StartGarbageCollection(arg0 string, arg1 *godo.Sta
 func (mr *MockRegistryServiceMockRecorder) StartGarbageCollection(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartGarbageCollection", reflect.TypeOf((*MockRegistryService)(nil).StartGarbageCollection), arg0, arg1)
+}
+
+// MockRegistriesService is a mock of RegistriesService interface.
+type MockRegistriesService struct {
+	ctrl     *gomock.Controller
+	recorder *MockRegistriesServiceMockRecorder
+	isgomock struct{}
+}
+
+// MockRegistriesServiceMockRecorder is the mock recorder for MockRegistriesService.
+type MockRegistriesServiceMockRecorder struct {
+	mock *MockRegistriesService
+}
+
+// NewMockRegistriesService creates a new mock instance.
+func NewMockRegistriesService(ctrl *gomock.Controller) *MockRegistriesService {
+	mock := &MockRegistriesService{ctrl: ctrl}
+	mock.recorder = &MockRegistriesServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRegistriesService) EXPECT() *MockRegistriesServiceMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockRegistriesService) Create(arg0 *godo.RegistriesCreateRequest) (*do.Registry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", arg0)
+	ret0, _ := ret[0].(*do.Registry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockRegistriesServiceMockRecorder) Create(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRegistriesService)(nil).Create), arg0)
+}
+
+// Delete mocks base method.
+func (m *MockRegistriesService) Delete(arg0 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockRegistriesServiceMockRecorder) Delete(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRegistriesService)(nil).Delete), arg0)
+}
+
+// DockerCredentials mocks base method.
+func (m *MockRegistriesService) DockerCredentials(arg0 string, arg1 *godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DockerCredentials", arg0, arg1)
+	ret0, _ := ret[0].(*godo.DockerCredentials)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DockerCredentials indicates an expected call of DockerCredentials.
+func (mr *MockRegistriesServiceMockRecorder) DockerCredentials(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DockerCredentials", reflect.TypeOf((*MockRegistriesService)(nil).DockerCredentials), arg0, arg1)
+}
+
+// Get mocks base method.
+func (m *MockRegistriesService) Get(arg0 string) (*do.Registry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0)
+	ret0, _ := ret[0].(*do.Registry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockRegistriesServiceMockRecorder) Get(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRegistriesService)(nil).Get), arg0)
+}
+
+// List mocks base method.
+func (m *MockRegistriesService) List() ([]do.Registry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List")
+	ret0, _ := ret[0].([]do.Registry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockRegistriesServiceMockRecorder) List() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRegistriesService)(nil).List))
 }

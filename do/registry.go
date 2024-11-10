@@ -375,3 +375,80 @@ func (rs *registryService) RevokeOAuthToken(token string, endpoint string) error
 
 	return err
 }
+
+// Multi-registry Open Beta service and methods
+
+// RegistriesService is the godo RegistriesService interface.
+type RegistriesService interface {
+	Get(string) (*Registry, error)
+	List() ([]Registry, error)
+	Create(*godo.RegistriesCreateRequest) (*Registry, error)
+	Delete(string) error
+	DockerCredentials(string, *godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error)
+}
+
+type registriesService struct {
+	client *godo.Client
+	ctx    context.Context
+}
+
+var _ RegistriesService = &registriesService{}
+
+// NewRegistriesService builds an instance of RegistriesService.
+func NewRegistriesService(client *godo.Client) RegistriesService {
+	return &registriesService{
+		client: client,
+		ctx:    context.Background(),
+	}
+}
+
+// Get retrieves a registry by name.
+func (rs *registriesService) Get(name string) (*Registry, error) {
+	r, _, err := rs.client.Registries.Get(rs.ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Registry{Registry: r}, nil
+}
+
+// List retrieves all secondary registries.
+func (rs *registriesService) List() ([]Registry, error) {
+	list, _, err := rs.client.Registries.List(rs.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]Registry, len(list))
+	for i, r := range list {
+		ret[i] = Registry{Registry: r}
+	}
+
+	return ret, nil
+}
+
+// Create creates a secondary registry.
+func (rs *registriesService) Create(cr *godo.RegistriesCreateRequest) (*Registry, error) {
+	r, _, err := rs.client.Registries.Create(rs.ctx, cr)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Registry{Registry: r}, nil
+}
+
+// Delete deletes a secondary registry.
+func (rs *registriesService) Delete(name string) error {
+	_, err := rs.client.Registries.Delete(rs.ctx, name)
+	return err
+}
+
+// DockerCredentials retrieves docker credentials for a secondary registry.
+func (rs *registriesService) DockerCredentials(name string, request *godo.RegistryDockerCredentialsRequest) (*godo.DockerCredentials, error) {
+	dockerConfig, _, err := rs.client.Registries.DockerCredentials(rs.ctx, name, request)
+	if err != nil {
+		return nil, err
+	}
+
+	return dockerConfig, nil
+}
