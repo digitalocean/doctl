@@ -29,6 +29,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps"
+	"github.com/digitalocean/doctl/internal/apps/console"
 	"github.com/digitalocean/godo"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
@@ -752,6 +753,10 @@ func RunAppsGetExec(c *CmdConfig) error {
 		return b, nil
 	}
 
+	stopCh := make(chan struct{})
+	resizeEvents := make(chan console.TerminalSize)
+	console.MonitorResizeEvents(int(os.Stdin.Fd()), resizeEvents, stopCh)
+
 	// Set terminal to raw mode
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -781,34 +786,13 @@ func RunAppsGetExec(c *CmdConfig) error {
 		}
 	}()
 	keepaliveTicker := time.NewTicker(30 * time.Second)
-	resizeChecker := time.NewTicker(250 * time.Millisecond)
 	defer keepaliveTicker.Stop()
-	defer resizeChecker.Stop()
 	go func() {
 		type resizeOp struct {
 			Op     string `json:"op"`
 			Width  int    `json:"width"`
 			Height int    `json:"height"`
 		}
-		var prevSize resizeOp
-		resizeIfTermResized := func() {
-			width, height, err := term.GetSize(0)
-			if err != nil {
-				fmt.Println("error getting terminal size:", err)
-				return
-			}
-			data := resizeOp{Op: "resize", Width: width, Height: height}
-			if prevSize != data {
-				b, err := inputSchemaFunc(data)
-				if err != nil {
-					fmt.Println("Error encoding stdin resize:", err)
-					return
-				}
-				prevSize = data
-				stdinCh <- b
-			}
-		}
-		resizeIfTermResized()
 		for {
 			select {
 			case <-keepaliveTicker.C:
@@ -819,8 +803,14 @@ func RunAppsGetExec(c *CmdConfig) error {
 					return
 				}
 				stdinCh <- b
-			case <-resizeChecker.C:
-				resizeIfTermResized()
+			case ev := <-resizeEvents:
+				data := resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height}
+				b, err := inputSchemaFunc(data)
+				if err != nil {
+					fmt.Println("Error encoding stdin resize:", err)
+					return
+				}
+				stdinCh <- b
 			}
 		}
 	}()
