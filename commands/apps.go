@@ -193,27 +193,18 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 
 	logs.Example = `The following example retrieves the build logs for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps logs f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
 
-	exec := CmdBuilder(
+	console := CmdBuilder(
 		cmd,
-		RunAppsGetExec,
-		"exec <app id> <component name (defaults to all components)>",
-		"Retrieves exec",
-		`Retrieves component exec for a deployment of an app.
-
-Three types of exec are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
-- build
-- deploy
-- run
-- run_restarted 
-
-For more information about exec, see [How to View exec](https://www.digitalocean.com/docs/app-platform/how-to/view-exec/).
-`,
+		RunAppsConsole,
+		"console <app id> <component name>",
+		"Starts a console session",
+		`Instantiates a console session for a component of an app.`,
 		Writer,
 		aliasOpt("l"),
 	)
-	AddStringFlag(exec, doctl.ArgAppDeployment, "", "", "Retrieves exec for a specific deployment ID. Defaults to current deployment.")
+	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
 
-	exec.Example = `The following example retrieves the build exec for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps exec f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
+	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
 
 	listRegions := CmdBuilder(
 		cmd,
@@ -719,8 +710,8 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	return nil
 }
 
-// RunAppsGetExec executes a command in an app.
-func RunAppsGetExec(c *CmdConfig) error {
+// RunAppsConsole initiates a console session for an app.
+func RunAppsConsole(c *CmdConfig) error {
 	if len(c.Args) < 1 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
