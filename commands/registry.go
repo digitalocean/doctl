@@ -1092,22 +1092,33 @@ func RunRegistriesCreate(c *CmdConfig) error {
 
 // RunRegistriesGet retrieves information about specific registries.
 func RunRegistriesGet(c *CmdConfig) error {
-	var list []*do.Registry
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	var registries []do.Registry
+	var errors []string
 
 	for _, name := range c.Args {
 		registry, err := c.Registries().Get(name)
 		if err != nil {
+			errors = append(errors, fmt.Sprintf("failed to fetch registry %s: %v", name, err))
+			continue
+		}
+		registries = append(registries, *registry)
+	}
+
+	if len(registries) > 0 {
+		if err := displayRegistries(c, registries...); err != nil {
 			return err
 		}
-		list = append(list, registry)
 	}
 
-	ret := make([]do.Registry, len(list))
-	for i, r := range list {
-		ret[i] = *r
+	if len(errors) > 0 {
+		return fmt.Errorf("%s", strings.Join(errors, "\n"))
 	}
 
-	return displayRegistries(c, ret...)
+	return nil
 }
 
 // RunRegistriesDelete deletes a specific registry.
