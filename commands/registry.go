@@ -983,7 +983,7 @@ func Registries() *Command {
 		Command: &cobra.Command{
 			Use:     "registries",
 			Aliases: []string{"regs", "rs"},
-			Short:   "[BETA] Display commands for working with multiple container registries",
+			Short:   "[Beta] Display commands for working with multiple container registries",
 			Long:    "The subcommands of `doctl registries` allow you to manage multiple registries. Note that this feature is in open beta and may change in the future.",
 			GroupID: manageResourcesGroup,
 		},
