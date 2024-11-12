@@ -27,22 +27,22 @@ func DropletAutoscale() *Command {
 		Command: &cobra.Command{
 			Use:     "droplet-autoscale",
 			Aliases: []string{"das"},
-			Short:   "Display commands to manage droplet autoscale pools",
+			Short:   "Display commands to manage Droplet autoscale pools",
 			Long: `Use the subcommands of ` + "`" + `doctl compute droplet-autoscale` + "`" + ` to perform actions on Droplet Autoscale Pools.
 
 You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale Pools.`,
 		},
 	}
-	cmdDropletAutoscaleCreate := CmdBuilder(cmd, RunDropletAutoscaleCreate, "create", "Create new droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscale{}))
+	cmdDropletAutoscaleCreate := CmdBuilder(cmd, RunDropletAutoscaleCreate, "create", "Create a new Droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscalePools{}))
 
-	cmdDropletAutoscaleUpdate := CmdBuilder(cmd, RunDropletAutoscaleUpdate, "update", "Update an active droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscale{}))
-	AddStringFlag(cmdDropletAutoscaleUpdate, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
+	cmdDropletAutoscaleUpdate := CmdBuilder(cmd, RunDropletAutoscaleUpdate, "update", "Update an active Droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscalePools{}))
+	AddStringFlag(cmdDropletAutoscaleUpdate, doctl.ArgAutoscaleID, "", "", "ID of the Droplet autoscale pool", requiredOpt())
 
 	for _, c := range []*Command{
 		cmdDropletAutoscaleCreate,
 		cmdDropletAutoscaleUpdate,
 	} {
-		AddStringFlag(c, doctl.ArgAutoscaleName, "", "", "Name of the droplet autoscale pool", requiredOpt())
+		AddStringFlag(c, doctl.ArgAutoscaleName, "", "", "Name of the Droplet autoscale pool", requiredOpt())
 		AddIntFlag(c, doctl.ArgAutoscaleMinInstances, "", 0, "Min number of members")
 		AddIntFlag(c, doctl.ArgAutoscaleMaxInstances, "", 0, "Max number of members")
 		AddStringFlag(c, doctl.ArgAutoscaleCpuTarget, "", "", "CPU target threshold")
@@ -62,25 +62,23 @@ You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale 
 		AddStringFlag(c, doctl.ArgUserData, "", "", "Droplet user data")
 	}
 
-	cmdDropletAutoscaleGet := CmdBuilder(cmd, RunDropletAutoscaleGet, "get", "Get an active droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscale{}))
-	AddStringFlag(cmdDropletAutoscaleGet, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
-	AddStringFlag(cmdDropletAutoscaleGet, doctl.ArgFormat, "", "", "Format of the output data")
+	cmdDropletAutoscaleGet := CmdBuilder(cmd, RunDropletAutoscaleGet, "get", "Get an active Droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscalePools{}))
+	AddStringFlag(cmdDropletAutoscaleGet, doctl.ArgAutoscaleID, "", "", "ID of the Droplet autoscale pool", requiredOpt())
 
-	cmdDropletAutoscaleList := CmdBuilder(cmd, RunDropletAutoscaleList, "list", "List all active droplet autoscale pools", "", Writer, displayerType(&displayers.DropletAutoscale{}), aliasOpt("ls"))
-	AddStringFlag(cmdDropletAutoscaleList, doctl.ArgFormat, "", "", "Format of the output data")
+	CmdBuilder(cmd, RunDropletAutoscaleList, "list", "List all active Droplet autoscale pools", "", Writer, displayerType(&displayers.DropletAutoscalePools{}), aliasOpt("ls"))
 
-	cmdDropletAutoscaleListMembers := CmdBuilder(cmd, RunDropletAutoscaleListMembers, "list-members", "List all droplet autoscale pool members", "", Writer, displayerType(&displayers.DropletAutoscale{}))
-	AddStringFlag(cmdDropletAutoscaleListMembers, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
+	cmdDropletAutoscaleListMembers := CmdBuilder(cmd, RunDropletAutoscaleListMembers, "list-members", "List all members of a Droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscaleResources{}))
+	AddStringFlag(cmdDropletAutoscaleListMembers, doctl.ArgAutoscaleID, "", "", "ID of the Droplet autoscale pool", requiredOpt())
 
-	cmdDropletAutoscaleListHistory := CmdBuilder(cmd, RunDropletAutoscaleListHistory, "list-history", "List all droplet autoscale pool history events", "", Writer, displayerType(&displayers.DropletAutoscale{}))
-	AddStringFlag(cmdDropletAutoscaleListHistory, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
+	cmdDropletAutoscaleListHistory := CmdBuilder(cmd, RunDropletAutoscaleListHistory, "list-history", "List all history events for a Droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscaleHistoryEvents{}))
+	AddStringFlag(cmdDropletAutoscaleListHistory, doctl.ArgAutoscaleID, "", "", "ID of the Droplet autoscale pool", requiredOpt())
 
-	cmdDropletAutoscaleDelete := CmdBuilder(cmd, RunDropletAutoscaleDelete, "delete", "Delete an active droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscale{}), aliasOpt("d", "rm"))
-	AddStringFlag(cmdDropletAutoscaleDelete, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
+	cmdDropletAutoscaleDelete := CmdBuilder(cmd, RunDropletAutoscaleDelete, "delete", "Delete an active Droplet autoscale pool", "", Writer, aliasOpt("d", "rm"))
+	AddStringFlag(cmdDropletAutoscaleDelete, doctl.ArgAutoscaleID, "", "", "ID of the Droplet autoscale pool", requiredOpt())
 	AddBoolFlag(cmdDropletAutoscaleDelete, doctl.ArgForce, "", false, "Force delete without a confirmation prompt")
 
-	cmdDropletAutoscaleDeleteDangerous := CmdBuilder(cmd, RunDropletAutoscaleDeleteDangerous, "delete-dangerous", "Delete an active droplet autoscale pool and all its members", "", Writer, displayerType(&displayers.DropletAutoscale{}))
-	AddStringFlag(cmdDropletAutoscaleDeleteDangerous, doctl.ArgAutoscaleID, "", "", "ID of the droplet autoscale pool", requiredOpt())
+	cmdDropletAutoscaleDeleteDangerous := CmdBuilder(cmd, RunDropletAutoscaleDeleteDangerous, "delete-dangerous", "Delete an active Droplet autoscale pool and all its members", "", Writer)
+	AddStringFlag(cmdDropletAutoscaleDeleteDangerous, doctl.ArgAutoscaleID, "", "", "ID of the Droplet autoscale pool", requiredOpt())
 	AddBoolFlag(cmdDropletAutoscaleDeleteDangerous, doctl.ArgForce, "", false, "Force delete without a confirmation prompt")
 
 	return cmd
@@ -257,16 +255,16 @@ func RunDropletAutoscaleCreate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	item := &displayers.DropletAutoscale{AutoscalePools: []*godo.DropletAutoscalePool{pool}}
+	item := &displayers.DropletAutoscalePools{AutoscalePools: []*godo.DropletAutoscalePool{pool}}
 	return c.Display(item)
 }
 
 // RunDropletAutoscaleUpdate updates an autoscale pool
 func RunDropletAutoscaleUpdate(c *CmdConfig) error {
-	if len(c.Args) == 0 {
-		return doctl.NewMissingArgsErr(c.NS)
+	id, err := c.Doit.GetString(c.NS, doctl.ArgAutoscaleID)
+	if err != nil {
+		return err
 	}
-	id := c.Args[0]
 	updateReq := new(godo.DropletAutoscalePoolRequest)
 	updateReq.Config = new(godo.DropletAutoscaleConfiguration)
 	updateReq.DropletTemplate = new(godo.DropletAutoscaleResourceTemplate)
@@ -277,22 +275,21 @@ func RunDropletAutoscaleUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	item := &displayers.DropletAutoscale{AutoscalePools: []*godo.DropletAutoscalePool{pool}}
+	item := &displayers.DropletAutoscalePools{AutoscalePools: []*godo.DropletAutoscalePool{pool}}
 	return c.Display(item)
 }
 
 // RunDropletAutoscaleGet retrieves an autoscale pool
 func RunDropletAutoscaleGet(c *CmdConfig) error {
-	err := ensureOneArg(c)
+	id, err := c.Doit.GetString(c.NS, doctl.ArgAutoscaleID)
 	if err != nil {
 		return err
 	}
-	id := c.Args[0]
 	pool, err := c.DropletAutoscale().Get(id)
 	if err != nil {
 		return err
 	}
-	item := &displayers.DropletAutoscale{AutoscalePools: []*godo.DropletAutoscalePool{pool}}
+	item := &displayers.DropletAutoscalePools{AutoscalePools: []*godo.DropletAutoscalePool{pool}}
 	return c.Display(item)
 }
 
@@ -302,47 +299,44 @@ func RunDropletAutoscaleList(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	item := &displayers.DropletAutoscale{AutoscalePools: pools}
+	item := &displayers.DropletAutoscalePools{AutoscalePools: pools}
 	return c.Display(item)
 }
 
 // RunDropletAutoscaleListMembers lists autoscale pool members
 func RunDropletAutoscaleListMembers(c *CmdConfig) error {
-	err := ensureOneArg(c)
+	id, err := c.Doit.GetString(c.NS, doctl.ArgAutoscaleID)
 	if err != nil {
 		return err
 	}
-	id := c.Args[0]
 	members, err := c.DropletAutoscale().ListMembers(id)
 	if err != nil {
 		return err
 	}
-	item := &displayers.DropletAutoscale{Droplets: members}
+	item := &displayers.DropletAutoscaleResources{Droplets: members}
 	return c.Display(item)
 }
 
 // RunDropletAutoscaleListHistory lists autoscale pool history events
 func RunDropletAutoscaleListHistory(c *CmdConfig) error {
-	err := ensureOneArg(c)
+	id, err := c.Doit.GetString(c.NS, doctl.ArgAutoscaleID)
 	if err != nil {
 		return err
 	}
-	id := c.Args[0]
 	history, err := c.DropletAutoscale().ListHistory(id)
 	if err != nil {
 		return err
 	}
-	item := &displayers.DropletAutoscale{History: history}
+	item := &displayers.DropletAutoscaleHistoryEvents{History: history}
 	return c.Display(item)
 }
 
 // RunDropletAutoscaleDelete deletes an autoscale pool
 func RunDropletAutoscaleDelete(c *CmdConfig) error {
-	err := ensureOneArg(c)
+	id, err := c.Doit.GetString(c.NS, doctl.ArgAutoscaleID)
 	if err != nil {
 		return err
 	}
-	id := c.Args[0]
 	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err
@@ -359,11 +353,10 @@ func RunDropletAutoscaleDelete(c *CmdConfig) error {
 
 // RunDropletAutoscaleDeleteDangerous deletes an autoscale pool and all underlying members
 func RunDropletAutoscaleDeleteDangerous(c *CmdConfig) error {
-	err := ensureOneArg(c)
+	id, err := c.Doit.GetString(c.NS, doctl.ArgAutoscaleID)
 	if err != nil {
 		return err
 	}
-	id := c.Args[0]
 	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
 	if err != nil {
 		return err

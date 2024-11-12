@@ -139,7 +139,7 @@ func TestDropletAutoscaleUpdate(t *testing.T) {
 		}
 
 		tm.dropletAutoscale.EXPECT().Update(poolID, &updateReq).Return(testAutoscalePools[0], nil)
-		c.Args = append(c.Args, poolID)
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleID, poolID)
 
 		c.Doit.Set(c.NS, doctl.ArgAutoscaleName, "test-droplet-autoscale-pool-01")
 		c.Doit.Set(c.NS, doctl.ArgAutoscaleTargetInstances, "3")
@@ -161,7 +161,7 @@ func TestDropletAutoscaleGet(t *testing.T) {
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		poolID := "51154959-e07b-4093-98fb-828590ecc76d"
 		tm.dropletAutoscale.EXPECT().Get(poolID).Return(testAutoscalePools[0], nil)
-		c.Args = append(c.Args, poolID)
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleID, poolID)
 
 		err := RunDropletAutoscaleGet(c)
 		assert.NoError(t, err)
@@ -181,7 +181,7 @@ func TestDropletAutoscaleListMembers(t *testing.T) {
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		poolID := "51154959-e07b-4093-98fb-828590ecc76d"
 		tm.dropletAutoscale.EXPECT().ListMembers(poolID).Return(testAutoscaleMembers, nil)
-		c.Args = append(c.Args, poolID)
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleID, poolID)
 
 		err := RunDropletAutoscaleListMembers(c)
 		assert.NoError(t, err)
@@ -192,7 +192,7 @@ func TestDropletAutoscaleListHistory(t *testing.T) {
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		poolID := "51154959-e07b-4093-98fb-828590ecc76d"
 		tm.dropletAutoscale.EXPECT().ListHistory(poolID).Return(testAutoscaleHistory, nil)
-		c.Args = append(c.Args, poolID)
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleID, poolID)
 
 		err := RunDropletAutoscaleListHistory(c)
 		assert.NoError(t, err)
@@ -203,7 +203,7 @@ func TestDropletAutoscaleDelete(t *testing.T) {
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		poolID := "51154959-e07b-4093-98fb-828590ecc76d"
 		tm.dropletAutoscale.EXPECT().Delete(poolID).Return(nil)
-		c.Args = append(c.Args, poolID)
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleID, poolID)
 		c.Doit.Set(c.NS, doctl.ArgForce, "true")
 
 		err := RunDropletAutoscaleDelete(c)
@@ -215,7 +215,7 @@ func TestDropletAutoscaleDeleteDangerous(t *testing.T) {
 	withTestClient(t, func(c *CmdConfig, tm *tcMocks) {
 		poolID := "51154959-e07b-4093-98fb-828590ecc76d"
 		tm.dropletAutoscale.EXPECT().DeleteDangerous(poolID).Return(nil)
-		c.Args = append(c.Args, poolID)
+		c.Doit.Set(c.NS, doctl.ArgAutoscaleID, poolID)
 		c.Doit.Set(c.NS, doctl.ArgForce, "true")
 
 		err := RunDropletAutoscaleDeleteDangerous(c)

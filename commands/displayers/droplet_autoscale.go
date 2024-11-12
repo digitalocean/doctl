@@ -6,158 +6,168 @@ import (
 	"github.com/digitalocean/godo"
 )
 
-type DropletAutoscale struct {
-	AutoscalePools []*godo.DropletAutoscalePool         `json:"autoscale_pools"`
-	Droplets       []*godo.DropletAutoscaleResource     `json:"droplets"`
-	History        []*godo.DropletAutoscaleHistoryEvent `json:"history"`
+type DropletAutoscalePools struct {
+	AutoscalePools []*godo.DropletAutoscalePool `json:"autoscale_pools"`
 }
 
-var _ Displayable = &DropletAutoscale{}
+var _ Displayable = &DropletAutoscalePools{}
 
-func (d *DropletAutoscale) JSON(out io.Writer) error {
-	switch {
-	case d.AutoscalePools != nil:
-		return writeJSON(d.AutoscalePools, out)
-	case d.Droplets != nil:
-		return writeJSON(d.Droplets, out)
-	case d.History != nil:
-		return writeJSON(d.History, out)
+func (d *DropletAutoscalePools) Cols() []string {
+	return []string{
+		"ID",
+		"Name",
+		"Region",
+		"Status",
+		"Min Instance",
+		"Max Instance",
+		"Target Instance",
+		"Avg CPU Util",
+		"Avg Mem Util",
+		"Target CPU Util",
+		"Target Mem Util",
 	}
-	return nil
 }
 
-func (d *DropletAutoscale) Cols() []string {
-	switch {
-	case d.AutoscalePools != nil:
-		return []string{
-			"ID",
-			"NAME",
-			"REGION",
-			"STATUS",
-			"MIN INSTANCE",
-			"MAX INSTANCE",
-			"TARGET INSTANCE",
-			"AVG CPU UTIL",
-			"AVG MEM UTIL",
-			"TARGET CPU UTIL",
-			"TARGET MEM UTIL",
-		}
-	case d.Droplets != nil:
-		return []string{
-			"ID",
-			"STATUS",
-			"HEALTH STATUS",
-			"UNHEALTHY REASON",
-			"CPU UTIL",
-			"MEM UTIL",
-		}
-	case d.History != nil:
-		return []string{
-			"ID",
-			"CURRENT INSTANCE",
-			"TARGET INSTANCE",
-			"STATUS",
-			"REASON",
-			"ERROR REASON",
-		}
+func (d *DropletAutoscalePools) ColMap() map[string]string {
+	return map[string]string{
+		"ID":              "ID",
+		"Name":            "Name",
+		"Region":          "Region",
+		"Status":          "Status",
+		"Min Instance":    "Min Instance",
+		"Max Instance":    "Max Instance",
+		"Target Instance": "Target Instance",
+		"Avg CPU Util":    "Avg CPU Util",
+		"Avg Mem Util":    "Avg Mem Util",
+		"Target CPU Util": "Target CPU Util",
+		"Target Mem Util": "Target Mem Util",
 	}
-	return nil
 }
 
-func (d *DropletAutoscale) ColMap() map[string]string {
-	switch {
-	case d.AutoscalePools != nil:
-		return map[string]string{
-			"ID":              "ID",
-			"NAME":            "NAME",
-			"REGION":          "REGION",
-			"STATUS":          "STATUS",
-			"MIN INSTANCE":    "MIN INSTANCE",
-			"MAX INSTANCE":    "MAX INSTANCE",
-			"TARGET INSTANCE": "TARGET INSTANCE",
-			"AVG CPU UTIL":    "AVG CPU UTIL",
-			"AVG MEM UTIL":    "AVG MEM UTIL",
-			"TARGET CPU UTIL": "TARGET CPU UTIL",
-			"TARGET MEM UTIL": "TARGET MEM UTIL",
+func (d *DropletAutoscalePools) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(d.AutoscalePools))
+	for _, pool := range d.AutoscalePools {
+		var cpuUtil, memUtil any
+		if pool.CurrentUtilization != nil {
+			cpuUtil = pool.CurrentUtilization.CPU
+			memUtil = pool.CurrentUtilization.Memory
 		}
-	case d.Droplets != nil:
-		return map[string]string{
-			"ID":               "ID",
-			"STATUS":           "STATUS",
-			"HEALTH STATUS":    "HEALTH STATUS",
-			"UNHEALTHY REASON": "UNHEALTHY REASON",
-			"CPU UTIL":         "CPU UTIL",
-			"MEM UTIL":         "MEM UTIL",
-		}
-	case d.History != nil:
-		return map[string]string{
-			"ID":               "ID",
-			"CURRENT INSTANCE": "CURRENT INSTANCE",
-			"TARGET INSTANCE":  "TARGET INSTANCE",
-			"STATUS":           "STATUS",
-			"REASON":           "REASON",
-			"ERROR REASON":     "ERROR REASON",
-		}
+		out = append(out, map[string]any{
+			"ID":              pool.ID,
+			"Name":            pool.Name,
+			"Region":          pool.DropletTemplate.Region,
+			"Status":          pool.Status,
+			"Min Instance":    pool.Config.MinInstances,
+			"Max Instance":    pool.Config.MaxInstances,
+			"Target Instance": pool.Config.TargetNumberInstances,
+			"Avg CPU Util":    cpuUtil,
+			"Avg Mem Util":    memUtil,
+			"Target CPU Util": pool.Config.TargetCPUUtilization,
+			"Target Mem Util": pool.Config.TargetMemoryUtilization,
+		})
 	}
-	return nil
+	return out
 }
 
-func (d *DropletAutoscale) KV() []map[string]any {
-	switch {
-	case d.AutoscalePools != nil:
-		out := make([]map[string]any, 0, len(d.AutoscalePools))
-		for _, pool := range d.AutoscalePools {
-			var cpuUtil, memUtil any
-			if pool.CurrentUtilization != nil {
-				cpuUtil = pool.CurrentUtilization.CPU
-				memUtil = pool.CurrentUtilization.Memory
-			}
-			out = append(out, map[string]any{
-				"ID":              pool.ID,
-				"NAME":            pool.Name,
-				"REGION":          pool.DropletTemplate.Region,
-				"STATUS":          pool.Status,
-				"MIN INSTANCE":    pool.Config.MinInstances,
-				"MAX INSTANCE":    pool.Config.MaxInstances,
-				"TARGET INSTANCE": pool.Config.TargetNumberInstances,
-				"AVG CPU UTIL":    cpuUtil,
-				"AVG MEM UTIL":    memUtil,
-				"TARGET CPU UTIL": pool.Config.TargetCPUUtilization,
-				"TARGET MEM UTIL": pool.Config.TargetCPUUtilization,
-			})
-		}
-		return out
-	case d.Droplets != nil:
-		out := make([]map[string]any, 0, len(d.Droplets))
-		for _, droplet := range d.Droplets {
-			var cpuUtil, memUtil any
-			if droplet.CurrentUtilization != nil {
-				cpuUtil = droplet.CurrentUtilization.CPU
-				memUtil = droplet.CurrentUtilization.Memory
-			}
-			out = append(out, map[string]any{
-				"ID":               droplet.DropletID,
-				"STATUS":           droplet.Status,
-				"HEALTH STATUS":    droplet.HealthStatus,
-				"UNHEALTHY REASON": droplet.UnhealthyReason,
-				"CPU UTIL":         cpuUtil,
-				"MEM UTIL":         memUtil,
-			})
-		}
-		return out
-	case d.History != nil:
-		out := make([]map[string]any, 0, len(d.History))
-		for _, history := range d.History {
-			out = append(out, map[string]any{
-				"ID":               history.HistoryEventID,
-				"CURRENT INSTANCE": history.CurrentInstanceCount,
-				"TARGET INSTANCE":  history.DesiredInstanceCount,
-				"STATUS":           history.Status,
-				"REASON":           history.Reason,
-				"ERROR REASON":     history.ErrorReason,
-			})
-		}
-		return out
+func (d *DropletAutoscalePools) JSON(out io.Writer) error {
+	return writeJSON(d.AutoscalePools, out)
+}
+
+type DropletAutoscaleResources struct {
+	Droplets []*godo.DropletAutoscaleResource `json:"droplets"`
+}
+
+var _ Displayable = &DropletAutoscaleResources{}
+
+func (d *DropletAutoscaleResources) Cols() []string {
+	return []string{
+		"ID",
+		"Status",
+		"Health Status",
+		"Unhealthy Reason",
+		"CPU Util",
+		"Mem Util",
 	}
-	return nil
+}
+
+func (d *DropletAutoscaleResources) ColMap() map[string]string {
+	return map[string]string{
+		"ID":               "ID",
+		"Status":           "Status",
+		"Health Status":    "Health Status",
+		"Unhealthy Reason": "Unhealthy Reason",
+		"CPU Util":         "CPU Util",
+		"Mem Util":         "Mem Util",
+	}
+}
+
+func (d *DropletAutoscaleResources) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(d.Droplets))
+	for _, droplet := range d.Droplets {
+		var cpuUtil, memUtil any
+		if droplet.CurrentUtilization != nil {
+			cpuUtil = droplet.CurrentUtilization.CPU
+			memUtil = droplet.CurrentUtilization.Memory
+		}
+		out = append(out, map[string]any{
+			"ID":               droplet.DropletID,
+			"Status":           droplet.Status,
+			"Health Status":    droplet.HealthStatus,
+			"Unhealthy Reason": droplet.UnhealthyReason,
+			"CPU Util":         cpuUtil,
+			"Mem Util":         memUtil,
+		})
+	}
+	return out
+}
+
+func (d *DropletAutoscaleResources) JSON(out io.Writer) error {
+	return writeJSON(d.Droplets, out)
+}
+
+type DropletAutoscaleHistoryEvents struct {
+	History []*godo.DropletAutoscaleHistoryEvent `json:"history"`
+}
+
+var _ Displayable = &DropletAutoscaleHistoryEvents{}
+
+func (d *DropletAutoscaleHistoryEvents) Cols() []string {
+	return []string{
+		"ID",
+		"Current Instance",
+		"Target Instance",
+		"Status",
+		"Reason",
+		"Error Reason",
+	}
+}
+
+func (d *DropletAutoscaleHistoryEvents) ColMap() map[string]string {
+	return map[string]string{
+		"ID":               "ID",
+		"Current Instance": "Current Instance",
+		"Target Instance":  "Target Instance",
+		"Status":           "Status",
+		"Reason":           "Reason",
+		"Error Reason":     "Error Reason",
+	}
+}
+
+func (d *DropletAutoscaleHistoryEvents) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(d.History))
+	for _, history := range d.History {
+		out = append(out, map[string]any{
+			"ID":               history.HistoryEventID,
+			"Current Instance": history.CurrentInstanceCount,
+			"Target Instance":  history.DesiredInstanceCount,
+			"Status":           history.Status,
+			"Reason":           history.Reason,
+			"Error Reason":     history.ErrorReason,
+		})
+	}
+	return out
+}
+
+func (d *DropletAutoscaleHistoryEvents) JSON(out io.Writer) error {
+	return writeJSON(d.History, out)
 }
