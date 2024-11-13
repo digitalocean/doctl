@@ -22,11 +22,7 @@ func (l *Listener) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- 
 		terminalSize := TerminalSize{Width: width, Height: height}
 		if terminalSize != prevTerminalSize {
 			prevTerminalSize = terminalSize
-			select {
-			case resizeEvents <- terminalSize:
-			case <-ctx.Done():
-				return nil
-			}
+			resizeEvents <- terminalSize
 		}
 
 		// sleep to avoid hot looping
