@@ -758,7 +758,7 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	grp, ctx := errgroup.WithContext(ctx)
 
-	stdinCh := make(chan byte)
+	stdinCh := make(chan []byte)
 	grp.Go(func() error {
 		return listener.ReadRawStdin(ctx, stdinCh)
 	})

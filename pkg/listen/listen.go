@@ -37,7 +37,7 @@ type Listener struct {
 // ListenerService listens to a websocket connection and outputs to the provided io.Writer
 type ListenerService interface {
 	Listen(ctx context.Context) error
-	ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error
+	ReadRawStdin(ctx context.Context, stdinCh chan<- []byte) error
 	MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- TerminalSize) error
 }
 
@@ -119,7 +119,7 @@ func (l *Listener) Listen(ctx context.Context) error {
 }
 
 // ReadRawStdin reads raw stdin.
-func (l *Listener) ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error {
+func (l *Listener) ReadRawStdin(ctx context.Context, stdinCh chan<- []byte) error {
 	// Set terminal to raw mode
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -135,7 +135,7 @@ func (l *Listener) ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error 
 		}
 
 		select {
-		case stdinCh <- b[0]:
+		case stdinCh <- b[:]:
 		case <-ctx.Done():
 			return nil
 		default:

@@ -45,7 +45,7 @@ func (tr *MockListener) Listen(ctx context.Context) error {
 }
 
 // ReadRawStdin mocks ListenerService.ReadRawStdin
-func (tr *MockListener) ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error {
+func (tr *MockListener) ReadRawStdin(ctx context.Context, stdinCh chan<- []byte) error {
 	return tr.Err
 }
 
