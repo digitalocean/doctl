@@ -279,18 +279,16 @@ func RunDropletActionEnableBackups(c *CmdConfig) error {
 		}
 
 		policyPath, err := c.Doit.GetString(c.NS, doctl.ArgDropletBackupPolicy)
-		if err != nil {
-			return nil, err
-		}
-		if policyPath != "" {
+		if err == nil && policyPath != "" {
 			policy, err := droplets.ReadDropletBackupPolicy(os.Stdin, policyPath)
 			if err != nil {
 				return nil, err
 			}
+
 			return das.EnableBackupsWithPolicy(id, policy)
-		} else {
-			return das.EnableBackups(id)
 		}
+
+		return das.EnableBackups(id)
 	}
 
 	return performAction(c, fn)
