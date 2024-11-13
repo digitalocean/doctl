@@ -27,10 +27,10 @@ func (d *DropletBackupPolicy) Cols() []string {
 
 func (d *DropletBackupPolicy) ColMap() map[string]string {
 	return map[string]string{
-		"DropletID": "Droplet ID", "BackupEnabled": "Backup Enabled",
-		"BackupPolicyPlan": "Backup Policy Plan", "BackupPolicyWeekday": "Backup Policy Weekday", "BackupPolicyHour": "Backup Policy Hour",
-		"BackupPolicyWindowLengthHours": "Backup Policy Window Length Hours", "BackupPolicyRetentionPeriodDays": "Backup Policy Retention Period Days",
-		"NextBackupWindowStart": "Next Backup Window Start", "NextBackupWindowEnd": "Next Backup Window End",
+		"DropletID": "Droplet ID", "BackupEnabled": "Enabled",
+		"BackupPolicyPlan": "Plan", "BackupPolicyWeekday": "Weekday", "BackupPolicyHour": "Hour",
+		"BackupPolicyWindowLengthHours": "Window Length Hours", "BackupPolicyRetentionPeriodDays": "Retention Period Days",
+		"NextBackupWindowStart": "Next Window Start", "NextBackupWindowEnd": "Next Window End",
 	}
 }
 
