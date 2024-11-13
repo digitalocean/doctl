@@ -15,7 +15,6 @@ package do
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/digitalocean/godo"
 	"github.com/digitalocean/godo/util"
@@ -391,7 +390,6 @@ func (ds *dropletsService) ListBackupPolicies() (DropletBackupPolicies, error) {
 	}
 
 	list := make(DropletBackupPolicies, len(si))
-	fmt.Println("si: ", si)
 	for i := range si {
 		p := si[i].(*godo.DropletBackupPolicy)
 		list[i] = DropletBackupPolicy{DropletBackupPolicy: p}

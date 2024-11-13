@@ -37,13 +37,16 @@ func (d *DropletBackupPolicy) ColMap() map[string]string {
 func (d *DropletBackupPolicy) KV() []map[string]any {
 	out := make([]map[string]any, 0)
 	for _, policy := range d.DropletBackupPolicies {
-		m := map[string]any{
-			"DropletID": policy.DropletID, "BackupEnabled": policy.BackupEnabled, "BackupPolicyPlan": policy.BackupPolicy.Plan,
-			"BackupPolicyWeekday": policy.BackupPolicy.Weekday, "BackupPolicyHour": policy.BackupPolicy.Hour,
-			"BackupPolicyWindowLengthHours": policy.BackupPolicy.WindowLengthHours, "BackupPolicyRetentionPeriodDays": policy.BackupPolicy.RetentionPeriodDays,
-			"NextBackupWindowStart": policy.NextBackupWindow.Start, "NextBackupWindowEnd": policy.NextBackupWindow.End,
+		if policy.BackupPolicy != nil && policy.NextBackupWindow != nil {
+			m := map[string]any{
+				"DropletID": policy.DropletID, "BackupEnabled": policy.BackupEnabled,
+				"BackupPolicyPlan":    policy.BackupPolicy.Plan,
+				"BackupPolicyWeekday": policy.BackupPolicy.Weekday, "BackupPolicyHour": policy.BackupPolicy.Hour,
+				"BackupPolicyWindowLengthHours": policy.BackupPolicy.WindowLengthHours, "BackupPolicyRetentionPeriodDays": policy.BackupPolicy.RetentionPeriodDays,
+				"NextBackupWindowStart": policy.NextBackupWindow.Start, "NextBackupWindowEnd": policy.NextBackupWindow.End,
+			}
+			out = append(out, m)
 		}
-		out = append(out, m)
 	}
 
 	return out
