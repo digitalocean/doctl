@@ -55,7 +55,7 @@ var (
 func TestDropletCommand(t *testing.T) {
 	cmd := Droplet()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "1-click", "actions", "backups", "create", "delete", "get", "get-backup-policy", "kernels", "list", "list-backup-policies", "list-supported-backup-policies", "neighbors", "snapshots", "tag", "untag")
+	assertCommandNames(t, cmd, "1-click", "actions", "backups", "backup-policies", "create", "delete", "get", "kernels", "list", "neighbors", "snapshots", "tag", "untag")
 }
 
 func TestDropletActionList(t *testing.T) {

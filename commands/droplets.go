@@ -137,16 +137,8 @@ If you do not specify a region, the Droplet is created in the default region for
 	AddStringSliceFlag(cmdRunDropletUntag, doctl.ArgTagName, "", []string{}, "The tag name to remove from Droplet")
 	cmdRunDropletUntag.Example = `The following example removes the tag ` + "`" + `frontend` + "`" + ` from a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet untag 386734086 --tag-name frontend`
 
-	cmdDropletGetBackupPolicy := CmdBuilder(cmd, RunDropletGetBackupPolicy, "get-backup-policy <droplet-id>", "Get droplet's backup policy", `Retrieves a backup policy of a Droplet.`, Writer)
-	cmdDropletGetBackupPolicy.Example = `The following example retrieves a backup policy for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet get-backup-policy 386734086`
-
-	cmdDropletListBackupPolicies := CmdBuilder(cmd, RunDropletListBackupPolicies, "list-backup-policies", "List backup policies for all Droplets", `List droplet backup policies for all existing Droplets.`, Writer)
-	cmdDropletListBackupPolicies.Example = `The following example list backup policies for all existing Droplets: doctl compute droplet list-backup-policies`
-
-	cmdDropletListSupportedBackupPolicies := CmdBuilder(cmd, RunDropletListSupportedBackupPolicies, "list-supported-backup-policies", "List of all supported droplet backup policies", `List of all supported droplet backup policies.`, Writer)
-	cmdDropletListSupportedBackupPolicies.Example = `The following example list all supported backup policies for Droplets: doctl compute droplet list-supported-backup-policies`
-
 	cmd.AddCommand(dropletOneClicks())
+	cmd.AddCommand(dropletBackupPolicies())
 
 	return cmd
 }
@@ -814,6 +806,28 @@ func buildDropletSummary(ds do.DropletsService) (*dropletSummary, error) {
 	}
 
 	return &sum, nil
+}
+
+// dropletBackupPolicies creates the backup-policies command subtree.
+func dropletBackupPolicies() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "backup-policies",
+			Short: "Display commands for Droplet's backup policies.",
+			Long:  "The commands under `doctl compute droplet backup-policies` are for displaying the commands for Droplet's backup policies.",
+		},
+	}
+
+	cmdDropletGetBackupPolicy := CmdBuilder(cmd, RunDropletGetBackupPolicy, "get <droplet-id>", "Get droplet's backup policy", `Retrieves a backup policy of a Droplet.`, Writer)
+	cmdDropletGetBackupPolicy.Example = `The following example retrieves a backup policy for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet backup-policies get 386734086`
+
+	cmdDropletListBackupPolicies := CmdBuilder(cmd, RunDropletListBackupPolicies, "list", "List backup policies for all Droplets", `List droplet backup policies for all existing Droplets.`, Writer, aliasOpt("ls"))
+	cmdDropletListBackupPolicies.Example = `The following example list backup policies for all existing Droplets: doctl compute droplet backup-policies list`
+
+	cmdDropletListSupportedBackupPolicies := CmdBuilder(cmd, RunDropletListSupportedBackupPolicies, "list-supported", "List of all supported droplet backup policies", `List of all supported droplet backup policies.`, Writer)
+	cmdDropletListSupportedBackupPolicies.Example = `The following example list all supported backup policies for Droplets: doctl compute droplet backup-policies list-supported`
+
+	return cmd
 }
 
 // kubernetesOneClicks creates the 1-click command.
