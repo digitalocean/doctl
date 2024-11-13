@@ -754,21 +754,19 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	grp, ctx := errgroup.WithContext(ctx)
 
-	// Set terminal to raw mode
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		return fmt.Errorf("error setting terminal to raw mode: %v", err)
-	}
-	defer term.Restore(int(os.Stdin.Fd()), oldState) // Restore terminal on exit
 	type stdinOp struct {
 		Op   string `json:"op"`
 		Data string `json:"data"`
 	}
 	inputCh := make(chan []byte)
-	go func() error {
-		// This goroutine is not part of the errgroup because os.Stdin.Read blocks and cannot be interrupted.
-		// An extra keystroke is needed to exit the console session.
-		// To avoid this and exit the console immediately after the end of the session, the goroutine is not part of the errgroup.
+	grp.Go(func() error {
+		// Set terminal to raw mode
+		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			return fmt.Errorf("error setting terminal to raw mode: %v", err)
+		}
+		defer term.Restore(int(os.Stdin.Fd()), oldState) // Restore terminal on exit
+
 		for {
 			var b [1]byte
 			_, err := os.Stdin.Read(b[:]) // Read one byte at a time
@@ -787,7 +785,7 @@ func RunAppsConsole(c *CmdConfig) error {
 			default:
 			}
 		}
-	}()
+	})
 
 	resizeEvents := make(chan console.TerminalSize)
 	grp.Go(func() error {
@@ -838,6 +836,12 @@ func RunAppsConsole(c *CmdConfig) error {
 	token := url.Query().Get("token")
 
 	grp.Go(func() error {
+		defer func() {
+			// An extra key press is needed to exit the console session because the terminal is in raw mode,
+			// and os.Stdin.Read blocks until a key is pressed. So an extra keystroke is required to exit that goroutine.
+			fmt.Fprintln(c.Out)
+			fmt.Fprint(c.Out, "Press any key to exit.")
+		}()
 		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, inputCh)
 		err = listener.Listen(ctx)
 		if err != nil {
@@ -850,6 +854,10 @@ func RunAppsConsole(c *CmdConfig) error {
 	if err := grp.Wait(); err != nil {
 		return err
 	}
+
+	// Print a newline after the "Press any key to exit." message
+	fmt.Fprintln(c.Out)
+
 	return nil
 }
 
