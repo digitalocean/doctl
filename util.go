@@ -50,6 +50,6 @@ func (tr *MockListener) ReadRawStdin(ctx context.Context, stdinCh chan<- string)
 }
 
 // MonitorResizeEvents mocks ListenerService.MonitorResizeEvents
-func (tr *MockListener) MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- listen.TerminalSize) error {
+func (tr *MockListener) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- listen.TerminalSize) error {
 	return tr.Err
 }

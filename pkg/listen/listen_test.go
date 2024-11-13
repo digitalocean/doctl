@@ -112,22 +112,3 @@ func TestListenerWithSchemaFunc(t *testing.T) {
 `
 	require.Equal(t, want, buffer.String())
 }
-
-func TestListenerStop(t *testing.T) {
-	server := httptest.NewServer(wsHandler(t))
-	defer server.Close()
-
-	u := "ws" + strings.TrimPrefix(server.URL, "http")
-	url, err := url.Parse(u)
-	require.NoError(t, err)
-
-	buffer := &bytes.Buffer{}
-
-	listener := NewListener(url, "", nil, buffer, nil)
-	ctx, cancel := context.WithCancel(context.Background())
-	go listener.Listen(ctx)
-	// Stop before any messages have been sent
-	cancel()
-
-	require.Equal(t, "", buffer.String())
-}

@@ -765,7 +765,7 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	resizeEvents := make(chan listen.TerminalSize)
 	grp.Go(func() error {
-		return listener.MonitorResizeEvents(ctx, int(os.Stdin.Fd()), resizeEvents)
+		return listener.MonitorResizeEvents(ctx, resizeEvents)
 	})
 
 	grp.Go(func() error {

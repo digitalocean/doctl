@@ -56,17 +56,17 @@ func (mr *MockListenerServiceMockRecorder) Listen(ctx any) *gomock.Call {
 }
 
 // MonitorResizeEvents mocks base method.
-func (m *MockListenerService) MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- listen.TerminalSize) error {
+func (m *MockListenerService) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- listen.TerminalSize) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MonitorResizeEvents", ctx, fd, resizeEvents)
+	ret := m.ctrl.Call(m, "MonitorResizeEvents", ctx, resizeEvents)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MonitorResizeEvents indicates an expected call of MonitorResizeEvents.
-func (mr *MockListenerServiceMockRecorder) MonitorResizeEvents(ctx, fd, resizeEvents any) *gomock.Call {
+func (mr *MockListenerServiceMockRecorder) MonitorResizeEvents(ctx, resizeEvents any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MonitorResizeEvents", reflect.TypeOf((*MockListenerService)(nil).MonitorResizeEvents), ctx, fd, resizeEvents)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MonitorResizeEvents", reflect.TypeOf((*MockListenerService)(nil).MonitorResizeEvents), ctx, resizeEvents)
 }
 
 // ReadRawStdin mocks base method.

@@ -38,7 +38,7 @@ type Listener struct {
 type ListenerService interface {
 	Listen(ctx context.Context) error
 	ReadRawStdin(ctx context.Context, stdinCh chan<- string) error
-	MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- TerminalSize) error
+	MonitorResizeEvents(ctx context.Context, resizeEvents chan<- TerminalSize) error
 }
 
 var _ ListenerService = &Listener{}
