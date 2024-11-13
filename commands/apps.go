@@ -36,7 +36,6 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/term"
 	"sigs.k8s.io/yaml"
 )
 
@@ -717,74 +716,35 @@ func RunAppsGetLogs(c *CmdConfig) error {
 
 // RunAppsConsole initiates a console session for an app.
 func RunAppsConsole(c *CmdConfig) error {
-	if len(c.Args) < 1 {
+	if len(c.Args) < 2 {
 		return doctl.NewMissingArgsErr(c.NS)
 	}
 	appID := c.Args[0]
-	var component string
-	if len(c.Args) >= 2 {
-		component = c.Args[1]
-	}
+	component := c.Args[1]
 
 	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
 	if err != nil {
 		return err
 	}
 
-	exec, err := c.Apps().GetExec(appID, deploymentID, component)
+	execResp, err := c.Apps().GetExec(appID, deploymentID, component)
 	if err != nil {
 		return err
 	}
-
-	url, err := url.Parse(exec.URL)
+	url, err := url.Parse(execResp.URL)
 	if err != nil {
 		return err
 	}
+	token := url.Query().Get("token")
 
-	inputSchemaFunc := func(data any) ([]byte, error) {
-		b, err := json.Marshal(data)
-		if err != nil {
-			return nil, err
-		}
-		return b, nil
-	}
-
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	grp, ctx := errgroup.WithContext(ctx)
 
-	type stdinOp struct {
-		Op   string `json:"op"`
-		Data string `json:"data"`
-	}
-	inputCh := make(chan []byte)
+	stdinCh := make(chan byte)
 	grp.Go(func() error {
-		// Set terminal to raw mode
-		oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-		if err != nil {
-			return fmt.Errorf("error setting terminal to raw mode: %v", err)
-		}
-		defer term.Restore(int(os.Stdin.Fd()), oldState) // Restore terminal on exit
-
-		for {
-			var b [1]byte
-			_, err := os.Stdin.Read(b[:]) // Read one byte at a time
-			if err != nil {
-				return fmt.Errorf("error reading stdin: %v", err)
-			}
-
-			v, err := inputSchemaFunc(stdinOp{Op: "stdin", Data: string(b[:])})
-			if err != nil {
-				return fmt.Errorf("error encoding stdin: %v", err)
-			}
-			select {
-			case inputCh <- v:
-			case <-ctx.Done():
-				return nil
-			default:
-			}
-		}
+		return c.Doit.ReadRawStdin(ctx, stdinCh)
 	})
 
 	resizeEvents := make(chan console.TerminalSize)
@@ -792,9 +752,14 @@ func RunAppsConsole(c *CmdConfig) error {
 		return console.MonitorResizeEvents(ctx, int(os.Stdin.Fd()), resizeEvents)
 	})
 
+	inputCh := make(chan []byte)
 	grp.Go(func() error {
 		keepaliveTicker := time.NewTicker(30 * time.Second)
 		defer keepaliveTicker.Stop()
+		type stdinOp struct {
+			Op   string `json:"op"`
+			Data string `json:"data"`
+		}
 		type resizeOp struct {
 			Op     string `json:"op"`
 			Width  int    `json:"width"`
@@ -804,15 +769,21 @@ func RunAppsConsole(c *CmdConfig) error {
 			select {
 			case <-ctx.Done():
 				return nil
+			case in := <-stdinCh:
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: string(in)})
+				if err != nil {
+					return fmt.Errorf("error encoding stdin keepalive: %v", err)
+				}
+				inputCh <- b
 			case <-keepaliveTicker.C:
-				b, err := inputSchemaFunc(stdinOp{Op: "stdin", Data: ""})
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: ""})
 				if err != nil {
 					return fmt.Errorf("error encoding stdin keepalive: %v", err)
 				}
 				inputCh <- b
 			case ev := <-resizeEvents:
 				data := resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height}
-				b, err := inputSchemaFunc(data)
+				b, err := json.Marshal(data)
 				if err != nil {
 					return fmt.Errorf("error encoding stdin resize: %v", err)
 				}
@@ -833,12 +804,10 @@ func RunAppsConsole(c *CmdConfig) error {
 		return r, nil
 	}
 
-	token := url.Query().Get("token")
-
 	grp.Go(func() error {
 		defer func() {
-			// An extra key press is needed to exit the console session because the terminal is in raw mode,
-			// and os.Stdin.Read blocks until a key is pressed. So an extra keystroke is required to exit that goroutine.
+			// An extra key press is needed to exit the console session because os.Stdin.Read blocks until a key is pressed.
+			// So an extra keystroke is required to unblock os.Stdin.Read and exit that goroutine.
 			fmt.Fprintln(c.Out)
 			fmt.Fprint(c.Out, "Press any key to exit.")
 		}()
@@ -851,12 +820,14 @@ func RunAppsConsole(c *CmdConfig) error {
 		return nil
 	})
 
+	defer func() {
+		// Print a newline after the "Press any key to exit." message
+		fmt.Fprintln(c.Out)
+	}()
+
 	if err := grp.Wait(); err != nil {
 		return err
 	}
-
-	// Print a newline after the "Press any key to exit." message
-	fmt.Fprintln(c.Out)
 
 	return nil
 }

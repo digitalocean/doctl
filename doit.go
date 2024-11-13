@@ -38,6 +38,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
+	"golang.org/x/term"
 
 	"github.com/digitalocean/doctl/internal/apps/builder"
 )
@@ -211,6 +212,7 @@ type Config interface {
 	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
 	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
+	ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error
 	Set(ns, key string, val any)
 	IsSet(key string) bool
 	GetString(ns, key string) (string, error)
@@ -328,6 +330,31 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 // Listen creates a websocket connection
 func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
 	return listen.NewListener(url, token, schemaFunc, out, inCh)
+}
+
+// ReadRawStdin reads raw stdin.
+func (c *LiveConfig) ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error {
+	// Set terminal to raw mode
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		return fmt.Errorf("error setting terminal to raw mode: %v", err)
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState) // Restore terminal on exit
+
+	for {
+		var b [1]byte
+		_, err := os.Stdin.Read(b[:]) // Read one byte at a time
+		if err != nil {
+			return fmt.Errorf("error reading stdin: %v", err)
+		}
+
+		select {
+		case stdinCh <- b[0]:
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+	}
 }
 
 // Set sets a config key.
@@ -525,6 +552,11 @@ func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 // Listen returns a mock websocket listener
 func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
 	return c.ListenFn(url, token, schemaFunc, out, inCh)
+}
+
+// ReadRawStdin returns a mock websocket listener
+func (c *TestConfig) ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error {
+	return nil
 }
 
 // Set sets a config key.
