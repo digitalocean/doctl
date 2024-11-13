@@ -70,7 +70,7 @@ func (mr *MockListenerServiceMockRecorder) MonitorResizeEvents(ctx, fd, resizeEv
 }
 
 // ReadRawStdin mocks base method.
-func (m *MockListenerService) ReadRawStdin(ctx context.Context, stdinCh chan<- []byte) error {
+func (m *MockListenerService) ReadRawStdin(ctx context.Context, stdinCh chan<- string) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadRawStdin", ctx, stdinCh)
 	ret0, _ := ret[0].(error)

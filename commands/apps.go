@@ -758,7 +758,7 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	grp, ctx := errgroup.WithContext(ctx)
 
-	stdinCh := make(chan []byte)
+	stdinCh := make(chan string)
 	grp.Go(func() error {
 		return listener.ReadRawStdin(ctx, stdinCh)
 	})
@@ -785,7 +785,7 @@ func RunAppsConsole(c *CmdConfig) error {
 			case <-ctx.Done():
 				return nil
 			case in := <-stdinCh:
-				b, err := json.Marshal(stdinOp{Op: "stdin", Data: string(in)})
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: in})
 				if err != nil {
 					return fmt.Errorf("error encoding stdin keepalive: %v", err)
 				}
