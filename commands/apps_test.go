@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestAppsCommand(t *testing.T) {
@@ -431,7 +432,7 @@ func TestRunAppsGetLogs(t *testing.T) {
 	for typeStr, logType := range types {
 		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 			tm.apps.EXPECT().GetLogs(appID, deploymentID, component, logType, true, 1).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
-			tm.listen.EXPECT().Start().Times(1).Return(nil)
+			tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
 
 			tc := config.Doit.(*doctl.TestConfig)
 			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {

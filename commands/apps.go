@@ -16,12 +16,14 @@ package commands
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -33,6 +35,7 @@ import (
 	"github.com/digitalocean/godo"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/term"
 	"sigs.k8s.io/yaml"
 )
@@ -678,7 +681,9 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		}
 
 		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, nil)
-		err = listener.Start()
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		err = listener.Listen(ctx)
 		if err != nil {
 			return err
 		}
@@ -744,10 +749,6 @@ func RunAppsConsole(c *CmdConfig) error {
 		return b, nil
 	}
 
-	stopCh := make(chan struct{})
-	resizeEvents := make(chan console.TerminalSize)
-	console.MonitorResizeEvents(int(os.Stdin.Fd()), resizeEvents, stopCh)
-
 	// Set terminal to raw mode
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -759,26 +760,35 @@ func RunAppsConsole(c *CmdConfig) error {
 		Data string `json:"data"`
 	}
 	stdinCh := make(chan []byte)
-	go func() {
+	go func() error {
+		// this goroutine is not part of the errgroup because os.Stdin.Read blocks and cannot be interrupted
 		for {
 			var b [1]byte
 			_, err := os.Stdin.Read(b[:]) // Read one byte at a time
 			if err != nil {
-				fmt.Println("Error reading from stdin:", err)
-				break
+				return fmt.Errorf("error reading stdin: %v", err)
 			}
 
 			v, err := inputSchemaFunc(stdinOp{Op: "stdin", Data: string(b[:])})
 			if err != nil {
-				fmt.Println("Error encoding stdin keepalive:", err)
-				return
+				return fmt.Errorf("error encoding stdin: %v", err)
 			}
 			stdinCh <- v
 		}
 	}()
-	keepaliveTicker := time.NewTicker(30 * time.Second)
-	defer keepaliveTicker.Stop()
-	go func() {
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	grp, ctx := errgroup.WithContext(ctx)
+	resizeEvents := make(chan console.TerminalSize)
+	grp.Go(func() error {
+		return console.MonitorResizeEvents(ctx, int(os.Stdin.Fd()), resizeEvents)
+	})
+
+	grp.Go(func() error {
+		keepaliveTicker := time.NewTicker(30 * time.Second)
+		defer keepaliveTicker.Stop()
 		type resizeOp struct {
 			Op     string `json:"op"`
 			Width  int    `json:"width"`
@@ -786,25 +796,24 @@ func RunAppsConsole(c *CmdConfig) error {
 		}
 		for {
 			select {
+			case <-ctx.Done():
+				return nil
 			case <-keepaliveTicker.C:
-				data := stdinOp{Op: "stdin", Data: ""}
-				b, err := inputSchemaFunc(data)
+				b, err := inputSchemaFunc(stdinOp{Op: "stdin", Data: ""})
 				if err != nil {
-					fmt.Println("Error encoding stdin keepalive:", err)
-					return
+					return fmt.Errorf("error encoding stdin keepalive: %v", err)
 				}
 				stdinCh <- b
 			case ev := <-resizeEvents:
 				data := resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height}
 				b, err := inputSchemaFunc(data)
 				if err != nil {
-					fmt.Println("Error encoding stdin resize:", err)
-					return
+					return fmt.Errorf("error encoding stdin resize: %v", err)
 				}
 				stdinCh <- b
 			}
 		}
-	}()
+	})
 
 	schemaFunc := func(message []byte) (io.Reader, error) {
 		data := struct {
@@ -820,12 +829,19 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	token := url.Query().Get("token")
 
-	listener := c.Doit.Listen(url, token, schemaFunc, c.Out, stdinCh)
-	err = listener.Start()
-	if err != nil {
+	grp.Go(func() error {
+		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, stdinCh)
+		err = listener.Listen(ctx)
+		if err != nil {
+			return err
+		}
+		cancel() // cancel the context to stop the other goroutines
+		return nil
+	})
+
+	if err := grp.Wait(); err != nil {
 		return err
 	}
-
 	return nil
 }
 

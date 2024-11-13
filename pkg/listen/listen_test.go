@@ -2,6 +2,7 @@ package listen
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -38,7 +39,8 @@ func wsHandler(t *testing.T) http.HandlerFunc {
 				Message: fmt.Sprintf("%d\n", i),
 			}
 			buf := new(bytes.Buffer)
-			json.NewEncoder(buf).Encode(data)
+			err := json.NewEncoder(buf).Encode(data)
+			require.NoError(t, err)
 
 			err = c.WriteMessage(websocket.TextMessage, buf.Bytes())
 			require.NoError(t, err)
@@ -47,6 +49,8 @@ func wsHandler(t *testing.T) http.HandlerFunc {
 				break
 			}
 		}
+		err = c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		require.NoError(t, err)
 	}
 }
 
@@ -61,7 +65,7 @@ func TestListener(t *testing.T) {
 	buffer := &bytes.Buffer{}
 
 	listener := NewListener(url, "", nil, buffer, nil)
-	err = listener.Start()
+	err = listener.Listen(context.Background())
 	require.NoError(t, err)
 
 	want := `{"message":"1\n"}
@@ -97,7 +101,7 @@ func TestListenerWithSchemaFunc(t *testing.T) {
 	}
 
 	listener := NewListener(url, "", schemaFunc, buffer, nil)
-	err = listener.Start()
+	err = listener.Listen(context.Background())
 	require.NoError(t, err)
 
 	want := `1
@@ -120,9 +124,10 @@ func TestListenerStop(t *testing.T) {
 	buffer := &bytes.Buffer{}
 
 	listener := NewListener(url, "", nil, buffer, nil)
-	go listener.Start()
+	ctx, cancel := context.WithCancel(context.Background())
+	go listener.Listen(ctx)
 	// Stop before any messages have been sent
-	listener.Stop()
+	cancel()
 
 	require.Equal(t, "", buffer.String())
 }

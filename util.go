@@ -14,6 +14,8 @@ limitations under the License.
 package doctl
 
 import (
+	"context"
+
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
 )
@@ -37,12 +39,7 @@ type MockListener struct {
 
 var _ listen.ListenerService = &MockListener{}
 
-// Start mocks ListenerService.Start
-func (tr *MockListener) Start() error {
+// Listen mocks ListenerService.Listen
+func (tr *MockListener) Listen(ctx context.Context) error {
 	return tr.Err
-}
-
-// Stop mocks ListenerService.Stop
-func (tr *MockListener) Stop() {
-	return
 }
