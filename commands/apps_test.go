@@ -459,8 +459,10 @@ func TestRunAppsConsole(t *testing.T) {
 	component := "service"
 
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		tm.apps.EXPECT().GetExec(appID, deploymentID, component).Times(1).Return(&godo.AppExec{URL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+		tm.apps.EXPECT().GetExec(appID, deploymentID, component).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
 		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+		tm.listen.EXPECT().ReadRawStdin(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		tm.listen.EXPECT().MonitorResizeEvents(gomock.Any(), gomock.Any(), gomock.Any()).Times(1).Return(nil)
 
 		tc := config.Doit.(*doctl.TestConfig)
 		tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {

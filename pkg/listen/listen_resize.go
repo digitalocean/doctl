@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-package console
+package listen
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 )
 
 // MonitorResizeEvents monitors the terminal for resize events and sends them to the provided channel.
-func MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- TerminalSize) error {
+func (l *Listener) MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- TerminalSize) error {
 	winch := make(chan os.Signal, 1)
 	signal.Notify(winch, unix.SIGWINCH)
 	defer signal.Stop(winch)
@@ -26,11 +26,7 @@ func MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- Termin
 		}
 		terminalSize := TerminalSize{Width: width, Height: height}
 
-		select {
-		case resizeEvents <- terminalSize:
-		case <-ctx.Done():
-			return nil
-		}
+		resizeEvents <- terminalSize
 
 		select {
 		case <-winch:

@@ -1,4 +1,4 @@
-package console
+package listen
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 )
 
 // MonitorResizeEvents monitors the terminal for resize events and sends them to the provided channel.
-func MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- TerminalSize) error {
+func (l *Listener) MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- TerminalSize) error {
 	var prevTerminalSize TerminalSize
 
 	ticker := time.NewTicker(250 * time.Millisecond)

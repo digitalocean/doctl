@@ -31,7 +31,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps"
-	"github.com/digitalocean/doctl/internal/apps/console"
+	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/godo"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
@@ -737,6 +737,22 @@ func RunAppsConsole(c *CmdConfig) error {
 	}
 	token := url.Query().Get("token")
 
+	schemaFunc := func(message []byte) (io.Reader, error) {
+		data := struct {
+			Data string `json:"data"`
+		}{}
+		err = json.Unmarshal(message, &data)
+		if err != nil {
+			return nil, err
+		}
+		r := strings.NewReader(data.Data)
+		return r, nil
+	}
+
+	inputCh := make(chan []byte)
+
+	listener := c.Doit.Listen(url, token, schemaFunc, c.Out, inputCh)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -744,15 +760,14 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	stdinCh := make(chan byte)
 	grp.Go(func() error {
-		return c.Doit.ReadRawStdin(ctx, stdinCh)
+		return listener.ReadRawStdin(ctx, stdinCh)
 	})
 
-	resizeEvents := make(chan console.TerminalSize)
+	resizeEvents := make(chan listen.TerminalSize)
 	grp.Go(func() error {
-		return console.MonitorResizeEvents(ctx, int(os.Stdin.Fd()), resizeEvents)
+		return listener.MonitorResizeEvents(ctx, int(os.Stdin.Fd()), resizeEvents)
 	})
 
-	inputCh := make(chan []byte)
 	grp.Go(func() error {
 		keepaliveTicker := time.NewTicker(30 * time.Second)
 		defer keepaliveTicker.Stop()
@@ -782,8 +797,7 @@ func RunAppsConsole(c *CmdConfig) error {
 				}
 				inputCh <- b
 			case ev := <-resizeEvents:
-				data := resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height}
-				b, err := json.Marshal(data)
+				b, err := json.Marshal(resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height})
 				if err != nil {
 					return fmt.Errorf("error encoding stdin resize: %v", err)
 				}
@@ -792,18 +806,6 @@ func RunAppsConsole(c *CmdConfig) error {
 		}
 	})
 
-	schemaFunc := func(message []byte) (io.Reader, error) {
-		data := struct {
-			Data string `json:"data"`
-		}{}
-		err = json.Unmarshal(message, &data)
-		if err != nil {
-			return nil, err
-		}
-		r := strings.NewReader(data.Data)
-		return r, nil
-	}
-
 	grp.Go(func() error {
 		defer func() {
 			// An extra key press is needed to exit the console session because os.Stdin.Read blocks until a key is pressed.
@@ -811,7 +813,6 @@ func RunAppsConsole(c *CmdConfig) error {
 			fmt.Fprintln(c.Out)
 			fmt.Fprint(c.Out, "Press any key to exit.")
 		}()
-		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, inputCh)
 		err = listener.Listen(ctx)
 		if err != nil {
 			return err

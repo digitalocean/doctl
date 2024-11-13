@@ -43,3 +43,13 @@ var _ listen.ListenerService = &MockListener{}
 func (tr *MockListener) Listen(ctx context.Context) error {
 	return tr.Err
 }
+
+// ReadRawStdin mocks ListenerService.ReadRawStdin
+func (tr *MockListener) ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error {
+	return tr.Err
+}
+
+// MonitorResizeEvents mocks ListenerService.MonitorResizeEvents
+func (tr *MockListener) MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- listen.TerminalSize) error {
+	return tr.Err
+}

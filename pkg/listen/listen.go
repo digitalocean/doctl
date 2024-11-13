@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/term"
 )
 
 // SchemaFunc takes a slice of bytes and returns an io.Reader (See Listener.SchemaFunc)
@@ -35,6 +37,8 @@ type Listener struct {
 // ListenerService listens to a websocket connection and outputs to the provided io.Writer
 type ListenerService interface {
 	Listen(ctx context.Context) error
+	ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error
+	MonitorResizeEvents(ctx context.Context, fd int, resizeEvents chan<- TerminalSize) error
 }
 
 var _ ListenerService = &Listener{}
@@ -112,4 +116,29 @@ func (l *Listener) Listen(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+// ReadRawStdin reads raw stdin.
+func (l *Listener) ReadRawStdin(ctx context.Context, stdinCh chan<- byte) error {
+	// Set terminal to raw mode
+	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		return fmt.Errorf("error setting terminal to raw mode: %v", err)
+	}
+	defer term.Restore(int(os.Stdin.Fd()), oldState) // Restore terminal on exit
+
+	for {
+		var b [1]byte
+		_, err := os.Stdin.Read(b[:]) // Read one byte at a time
+		if err != nil {
+			return fmt.Errorf("error reading stdin: %v", err)
+		}
+
+		select {
+		case stdinCh <- b[0]:
+		case <-ctx.Done():
+			return nil
+		default:
+		}
+	}
 }
