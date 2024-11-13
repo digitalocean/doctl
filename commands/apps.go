@@ -749,6 +749,11 @@ func RunAppsConsole(c *CmdConfig) error {
 		return b, nil
 	}
 
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	grp, ctx := errgroup.WithContext(ctx)
+
 	// Set terminal to raw mode
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -759,9 +764,11 @@ func RunAppsConsole(c *CmdConfig) error {
 		Op   string `json:"op"`
 		Data string `json:"data"`
 	}
-	stdinCh := make(chan []byte)
+	inputCh := make(chan []byte)
 	go func() error {
-		// this goroutine is not part of the errgroup because os.Stdin.Read blocks and cannot be interrupted
+		// This goroutine is not part of the errgroup because os.Stdin.Read blocks and cannot be interrupted.
+		// An extra keystroke is needed to exit the console session.
+		// To avoid this and exit the console immediately after the end of the session, the goroutine is not part of the errgroup.
 		for {
 			var b [1]byte
 			_, err := os.Stdin.Read(b[:]) // Read one byte at a time
@@ -773,14 +780,15 @@ func RunAppsConsole(c *CmdConfig) error {
 			if err != nil {
 				return fmt.Errorf("error encoding stdin: %v", err)
 			}
-			stdinCh <- v
+			select {
+			case inputCh <- v:
+			case <-ctx.Done():
+				return nil
+			default:
+			}
 		}
 	}()
 
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-
-	grp, ctx := errgroup.WithContext(ctx)
 	resizeEvents := make(chan console.TerminalSize)
 	grp.Go(func() error {
 		return console.MonitorResizeEvents(ctx, int(os.Stdin.Fd()), resizeEvents)
@@ -803,14 +811,14 @@ func RunAppsConsole(c *CmdConfig) error {
 				if err != nil {
 					return fmt.Errorf("error encoding stdin keepalive: %v", err)
 				}
-				stdinCh <- b
+				inputCh <- b
 			case ev := <-resizeEvents:
 				data := resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height}
 				b, err := inputSchemaFunc(data)
 				if err != nil {
 					return fmt.Errorf("error encoding stdin resize: %v", err)
 				}
-				stdinCh <- b
+				inputCh <- b
 			}
 		}
 	})
@@ -830,7 +838,7 @@ func RunAppsConsole(c *CmdConfig) error {
 	token := url.Query().Get("token")
 
 	grp.Go(func() error {
-		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, stdinCh)
+		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, inputCh)
 		err = listener.Listen(ctx)
 		if err != nil {
 			return err

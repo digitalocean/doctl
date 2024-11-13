@@ -453,6 +453,30 @@ func TestRunAppsGetLogs(t *testing.T) {
 	}
 }
 
+func TestRunAppsConsole(t *testing.T) {
+	appID := uuid.New().String()
+	deploymentID := uuid.New().String()
+	component := "service"
+
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.apps.EXPECT().GetExec(appID, deploymentID, component).Times(1).Return(&godo.AppExec{URL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+
+		tc := config.Doit.(*doctl.TestConfig)
+		tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
+			assert.Equal(t, "aa-bb-11-cc-33", token)
+			assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
+			return tm.listen
+		}
+
+		config.Args = append(config.Args, appID, component)
+		config.Doit.Set(config.NS, doctl.ArgAppDeployment, deploymentID)
+
+		err := RunAppsConsole(config)
+		require.NoError(t, err)
+	})
+}
+
 const (
 	validJSONSpec = `{
 	"name": "test",
