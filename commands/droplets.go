@@ -25,7 +25,6 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
-	"github.com/digitalocean/doctl/internal/droplets"
 	"github.com/digitalocean/godo"
 	"github.com/gobwas/glob"
 	"github.com/spf13/cobra"
@@ -82,9 +81,9 @@ If you do not specify a region, the Droplet is created in the default region for
 	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A `slug` indicating the Droplet's number of vCPUs, RAM, and disk size. For example, `s-1vcpu-1gb` specifies a Droplet with one vCPU and 1 GiB of RAM. The disk size is defined by the slug's plan. Run `doctl compute size list` for a list of valid size slugs and their disk sizes.",
 		requiredOpt())
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet. By default, backups are created on a daily basis.")
-	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicy, "", "",
-		`Path to a droplet backup policy in JSON or YAML format. Set to "-" to read from stdin. Backups must be enabled for the Droplet to apply the backup policy. 
-	Example: doctl compute droplet create my-droplet --size s-1vcpu-1gb --image ubuntu-20-04-x64 --region nyc1 --enable-backups --backup-policy path-to-policy/policy-cfg.yaml`)
+	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyPlan, "", "daily", `Backup policy frequency plan.`)
+	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`)
+	AddIntFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address to the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enables private networking for the Droplet by provisioning it inside of your account's default VPC for the region")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Installs the DigitalOcean agent for additional monitoring")
@@ -202,18 +201,9 @@ func RunDropletCreate(c *CmdConfig) error {
 		return err
 	}
 
-	backupPolicyPath, err := c.Doit.GetString(c.NS, doctl.ArgDropletBackupPolicy)
+	backupPolicy, err := readDropletBackupPolicy(c)
 	if err != nil {
 		return err
-	}
-
-	var backupPolicy *godo.DropletBackupPolicyRequest
-
-	if backupPolicyPath != "" {
-		backupPolicy, err = droplets.ReadDropletBackupPolicy(os.Stdin, backupPolicyPath)
-		if err != nil {
-			return err
-		}
 	}
 
 	ipv6, err := c.Doit.GetBool(c.NS, doctl.ArgIPv6)

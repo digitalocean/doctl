@@ -15,7 +15,6 @@ package commands
 
 import (
 	"bytes"
-	"encoding/json"
 	"os"
 	"strconv"
 	"testing"
@@ -24,7 +23,6 @@ import (
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -148,13 +146,6 @@ func TestDropletCreateWithBackupPolicy(t *testing.T) {
 			BackupPolicy:      &dropletPolicy,
 		}
 
-		policyFile, err := os.CreateTemp(t.TempDir(), "policy-cfg")
-		require.NoError(t, err)
-		defer policyFile.Close()
-
-		err = json.NewEncoder(policyFile).Encode(&dropletPolicy)
-		require.NoError(t, err)
-
 		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
 
 		config.Args = append(config.Args, "droplet")
@@ -167,9 +158,11 @@ func TestDropletCreateWithBackupPolicy(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{"test-volume", volumeUUID})
 		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"one", "two"})
 		config.Doit.Set(config.NS, doctl.ArgBackups, true)
-		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicy, policyFile.Name())
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyPlan, dropletPolicy.Plan)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyWeekday, dropletPolicy.Weekday)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyHour, dropletPolicy.Hour)
 
-		err = RunDropletCreate(config)
+		err := RunDropletCreate(config)
 		assert.NoError(t, err)
 	})
 }
