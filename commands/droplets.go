@@ -808,8 +808,10 @@ func dropletBackupPolicies() *Command {
 		},
 	}
 
-	cmdDropletGetBackupPolicy := CmdBuilder(cmd, RunDropletGetBackupPolicy, "get <droplet-id>", "Get droplet's backup policy", `Retrieves a backup policy of a Droplet.`, Writer)
-	cmdDropletGetBackupPolicy.Example = `The following example retrieves a backup policy for a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet backup-policies get 386734086`
+	cmdDropletGetBackupPolicy := CmdBuilder(cmd, RunDropletGetBackupPolicy, "get <droplet-id>", "Get droplet's backup policy", `Retrieves a backup policy of a Droplet.`, Writer,
+		displayerType(&displayers.DropletBackupPolicy{}))
+	cmdDropletGetBackupPolicy.Example = `The following example retrieves a backup policy for a Droplet with the ID ` + "`" + `386734086` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to only return the Droplet's id and backup policy plan: doctl compute droplet backup-policies get 386734086 --format DropletID,BackupPolicyPlan`
+	AddStringFlag(cmdDropletGetBackupPolicy, doctl.ArgTemplate, "", "", "Go template format. Sample values: ```{{.DropletID}}`, `{{.BackupEnabled}}`, `{{.BackupPolicy.Plan}}`, `{{.BackupPolicy.Weekday}}`, `{{.BackupPolicy.Hour}}`, `{{.BackupPolicy.Plan}}`, `{{.BackupPolicy.WindowLengthHours}}`, `{{.BackupPolicy.RetentionPeriodDays}}`, `{{.NextBackupWindow.Start}}`, `{{.NextBackupWindow.End}}`")
 
 	cmdDropletListBackupPolicies := CmdBuilder(cmd, RunDropletListBackupPolicies, "list", "List backup policies for all Droplets", `List droplet backup policies for all existing Droplets.`, Writer, aliasOpt("ls"))
 	cmdDropletListBackupPolicies.Example = `The following example list backup policies for all existing Droplets: doctl compute droplet backup-policies list`
@@ -867,6 +869,21 @@ func RunDropletGetBackupPolicy(c *CmdConfig) error {
 	}
 
 	item := &displayers.DropletBackupPolicy{DropletBackupPolicies: []do.DropletBackupPolicy{*policy}}
+
+	getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)
+	if err != nil {
+		return err
+	}
+
+	if getTemplate != "" {
+		t := template.New("Get template")
+		t, err = t.Parse(getTemplate)
+		if err != nil {
+			return err
+		}
+		return t.Execute(c.Out, policy)
+	}
+
 	return c.Display(item)
 }
 
