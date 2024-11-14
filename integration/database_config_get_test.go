@@ -177,6 +177,14 @@ SlowQueryLog                   false
 LongQueryTime                  10
 BackupHour                     18
 BackupMinute                   3
+BinlogRetentionPeriod          600
+InnodbChangeBufferMaxSize      25
+InnodbFlushNeighbors           0
+InnodbReadIoThreads            16
+InnodbThreadConcurrency        1000
+InnodbWriteIoThreads           16
+NetBufferLength                4096
+LogOutput                      NONE
 `
 
 	databaseConfigMySQLGetResponse = `
@@ -199,7 +207,15 @@ BackupMinute                   3
 		"slow_query_log": false,
 		"long_query_time": 10,
 		"backup_hour": 18,
-		"backup_minute": 3
+		"backup_minute": 3,
+		"binlog_retention_period": 600,
+		"innodb_change_buffer_max_size": 25,
+		"innodb_flush_neighbors": 0,
+		"innodb_read_io_threads": 16,
+		"innodb_thread_concurrency": 1000,
+		"innodb_write_io_threads": 16,
+		"net_buffer_length": 4096,
+		"log_output": "NONE"
 	}
 }`
 
@@ -231,7 +247,12 @@ PgBouncer.AutodbPoolSize            0
 PgBouncer.AutodbMaxDbConnections    0
 PgBouncer.AutodbIdleTimeout         0
 BackupHour                          18
-BackupMinute                        26`
+BackupMinute                        26
+WorkMem								4
+TimeScaleDB							off
+SynchronousReplication				off
+StatMonitorEnable					false
+MaxFailoverReplicationTimeLag		NONE`
 
 	databaseConfigPGGetResponse = `{
 "config": {
@@ -264,8 +285,11 @@ BackupMinute                        26`
 	},
 	"backup_hour": 18,
 	"backup_minute": 26,
-	"timescaledb": {},
-	"stat_monitor_enable": false
+	"timescaledb": "NONE",
+	"stat_monitor_enable": false,
+	"work_mem": 4,
+	"synchronous_replication": "off,
+	"max_failover_replication_time_lag": "NONE
 }
 }`
 
