@@ -248,11 +248,11 @@ PgBouncer.AutodbMaxDbConnections    0
 PgBouncer.AutodbIdleTimeout         0
 BackupHour                          18
 BackupMinute                        26
-WorkMem								4
-TimeScaleDB							off
-SynchronousReplication				off
-StatMonitorEnable					false
-MaxFailoverReplicationTimeLag		NONE`
+WorkMem                             4
+TimeScaleDB                         off
+SynchronousReplication              off
+StatMonitorEnable                   false
+MaxFailoverReplicationTimeLag       NONE`
 
 	databaseConfigPGGetResponse = `{
 "config": {
