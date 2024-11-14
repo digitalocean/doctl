@@ -14,6 +14,8 @@ limitations under the License.
 package commands
 
 import (
+	"reflect"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
@@ -255,8 +257,13 @@ func RunDropletActionEnableBackups(c *CmdConfig) error {
 			return nil, err
 		}
 
+		var defaultPolicyOnEnablingBackups = &godo.DropletBackupPolicyRequest{
+			Plan: "daily",
+			Hour: godo.PtrTo(0),
+		}
+
 		policy, err := readDropletBackupPolicy(c)
-		if err == nil && policy != nil {
+		if err == nil && policy != nil && !reflect.DeepEqual(policy, defaultPolicyOnEnablingBackups) {
 			return das.EnableBackupsWithPolicy(id, policy)
 		}
 
