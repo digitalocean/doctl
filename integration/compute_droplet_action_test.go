@@ -48,6 +48,7 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 				"/v2/droplets/4743/actions":    {method: http.MethodPost, body: `{"image":9999,"type":"rebuild"}`},
 				"/v2/droplets/884/actions":     {method: http.MethodPost, body: `{"disk":true,"size":"bigger","type":"resize"}`},
 				"/v2/droplets/789/actions/954": {method: http.MethodGet, body: `{}`},
+				"/v2/droplets/66/actions":      {method: http.MethodPost, body: `{"type":"enable_backups","backup_policy":{"plan":"weekly","weekday":"TUE","hour":16}}`},
 			}
 
 			auth := req.Header.Get("Authorization")
@@ -110,6 +111,7 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 		{desc: "snapshot", args: []string{"snapshot", "48", "--snapshot-name", "best-snapshot"}},
 		{desc: "get", args: []string{"get", "789", "--action-id", "954"}},
 		{desc: "g", args: []string{"get", "789", "--action-id", "954"}},
+		{desc: "enable backups with policy", args: []string{"enable-backups", "66", "--backup-policy-plan", "weekly", "--backup-policy-weekday", "TUE", "--backup-policy-hour", "16"}},
 	}
 
 	for _, c := range cases {

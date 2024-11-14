@@ -298,6 +298,7 @@ func readDropletBackupPolicy(c *CmdConfig) (*godo.DropletBackupPolicyRequest, er
 		return nil, err
 	}
 
+	// For cases when backup policy is not specified.
 	if policyPlan == "" {
 		return nil, nil
 	}
