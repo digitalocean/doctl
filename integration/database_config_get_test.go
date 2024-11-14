@@ -249,7 +249,7 @@ PgBouncer.AutodbIdleTimeout         0
 BackupHour                          18
 BackupMinute                        26
 WorkMem                             4
-TimeScaleDB                         off
+TimeScaleDB                         {}
 SynchronousReplication              off
 StatMonitorEnable                   false
 MaxFailoverReplicationTimeLag       NONE`
@@ -285,7 +285,7 @@ MaxFailoverReplicationTimeLag       NONE`
         },
         "backup_hour": 18,
         "backup_minute": 26,
-        "timescaledb": "NONE",
+        "timescaledb": {},
         "stat_monitor_enable": false,
         "work_mem": 4,
         "synchronous_replication": "off",
