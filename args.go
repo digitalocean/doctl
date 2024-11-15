@@ -96,6 +96,24 @@ const (
 	ArgMajorVersion = "major-version"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
+
+	// ArgAutoscaleID is an autoscale id argument.
+	ArgAutoscaleID = "id"
+	// ArgAutoscaleName is an autoscale name argument.
+	ArgAutoscaleName = "name"
+	// ArgAutoscaleMinInstances is an autoscale min instance argument.
+	ArgAutoscaleMinInstances = "min-instances"
+	// ArgAutoscaleMaxInstances is an autoscale max instance argument.
+	ArgAutoscaleMaxInstances = "max-instances"
+	// ArgAutoscaleCpuTarget is an autoscale target cpu utilization argument.
+	ArgAutoscaleCpuTarget = "cpu-target"
+	// ArgAutoscaleMemTarget is an autoscale target memory utilization argument.
+	ArgAutoscaleMemTarget = "mem-target"
+	// ArgAutoscaleCooldownMinutes is an autoscale cooldown duration (minutes) argument.
+	ArgAutoscaleCooldownMinutes = "cooldown-minutes"
+	// ArgAutoscaleTargetInstances is an autoscale target instance argument.
+	ArgAutoscaleTargetInstances = "target-instances"
+
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
 	// ArgEnableControlPlaneFirewall enable control plane firewall.
