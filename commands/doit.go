@@ -206,6 +206,7 @@ func computeCmd() *Command {
 	cmd.AddCommand(Certificate())
 	cmd.AddCommand(DropletAction())
 	cmd.AddCommand(Droplet())
+	cmd.AddCommand(DropletAutoscale())
 	cmd.AddCommand(Domain())
 	cmd.AddCommand(Firewall())
 	cmd.AddCommand(ReservedIP())
