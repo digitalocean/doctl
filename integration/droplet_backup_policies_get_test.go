@@ -29,7 +29,7 @@ var _ = suite("compute/droplet/backup-policies/get", func(t *testing.T, when spe
 
 		configPath = filepath.Join(dir, "config.yaml")
 
-		err := os.WriteFile(configPath, []byte(dropletBackupPolicyGetConfig), 0644)
+		err := os.WriteFile(configPath, []byte(dropletBackupPoliciesGetConfig), 0644)
 		expect.NoError(err)
 
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -46,7 +46,7 @@ var _ = suite("compute/droplet/backup-policies/get", func(t *testing.T, when spe
 					return
 				}
 
-				w.Write([]byte(dropletBackupPolicyGetResponse))
+				w.Write([]byte(dropletBackupPoliciesGetResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -64,7 +64,7 @@ var _ = suite("compute/droplet/backup-policies/get", func(t *testing.T, when spe
 	})
 
 	when("all required flags are passed", func() {
-		it("gets the specified droplet ID", func() {
+		it("gets backup policy for the specified droplet ID", func() {
 			cmd := exec.Command(builtBinaryPath,
 				"-c", configPath,
 				"-u", server.URL,
@@ -77,7 +77,7 @@ var _ = suite("compute/droplet/backup-policies/get", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(dropletBackupPolicyGetOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(dropletBackupPoliciesGetOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -96,7 +96,7 @@ var _ = suite("compute/droplet/backup-policies/get", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(dropletBackupPolicyGetFormatOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(dropletBackupPoliciesGetFormatOutput), strings.TrimSpace(string(output)))
 		})
 	})
 
@@ -115,29 +115,29 @@ var _ = suite("compute/droplet/backup-policies/get", func(t *testing.T, when spe
 
 			output, err := cmd.CombinedOutput()
 			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-			expect.Equal(strings.TrimSpace(dropletBackupPolicyGetTemplateOutput), strings.TrimSpace(string(output)))
+			expect.Equal(strings.TrimSpace(dropletBackupPoliciesGetTemplateOutput), strings.TrimSpace(string(output)))
 		})
 	})
 })
 
 const (
-	dropletBackupPolicyGetConfig = `
+	dropletBackupPoliciesGetConfig = `
 ---
 access-token: special-broken
 `
-	dropletBackupPolicyGetOutput = `
+	dropletBackupPoliciesGetOutput = `
 Droplet ID    Enabled    Plan      Weekday    Hour    Window Length Hours    Retention Period Days    Next Window Start                Next Window End
 5555          true       weekly    SUN        20      4                      28                       2024-11-17 20:00:00 +0000 UTC    2024-11-18 00:00:00 +0000 UTC
 `
-	dropletBackupPolicyGetFormatOutput = `
+	dropletBackupPoliciesGetFormatOutput = `
 Droplet ID    Plan
 5555          weekly
 	`
 
-	dropletBackupPolicyGetTemplateOutput = `
+	dropletBackupPoliciesGetTemplateOutput = `
 	this droplet id 5555 is making a backup weekly
 	`
-	dropletBackupPolicyGetResponse = `
+	dropletBackupPoliciesGetResponse = `
 {
   "policy": {
     "droplet_id": 5555,
