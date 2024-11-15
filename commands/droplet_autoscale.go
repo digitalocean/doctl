@@ -25,6 +25,7 @@ import (
 func DropletAutoscale() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
+			Hidden:  true,
 			Use:     "droplet-autoscale",
 			Aliases: []string{"das"},
 			Short:   "Display commands to manage Droplet autoscale pools",
