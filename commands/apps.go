@@ -790,19 +790,19 @@ func RunAppsConsole(c *CmdConfig) error {
 			case in := <-stdinCh:
 				b, err := json.Marshal(stdinOp{Op: "stdin", Data: in})
 				if err != nil {
-					return fmt.Errorf("error encoding stdin keepalive: %v", err)
+					return fmt.Errorf("error encoding stdin: %v", err)
 				}
 				inputCh <- b
 			case <-keepaliveTicker.C:
 				b, err := json.Marshal(stdinOp{Op: "stdin", Data: ""})
 				if err != nil {
-					return fmt.Errorf("error encoding stdin keepalive: %v", err)
+					return fmt.Errorf("error encoding keepalive event: %v", err)
 				}
 				inputCh <- b
 			case ev := <-resizeEvents:
 				b, err := json.Marshal(resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height})
 				if err != nil {
-					return fmt.Errorf("error encoding stdin resize: %v", err)
+					return fmt.Errorf("error encoding resize event: %v", err)
 				}
 				inputCh <- b
 			}
