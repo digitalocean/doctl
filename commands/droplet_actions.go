@@ -17,6 +17,7 @@ import (
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 )
 
@@ -72,14 +73,26 @@ You can use Droplet actions to perform tasks on a Droplet, such as rebooting, re
 	cmdDropletActionEnableBackups := CmdBuilder(cmd, RunDropletActionEnableBackups,
 		"enable-backups <droplet-id>", "Enable backups on a Droplet", `Enables backups on a Droplet. This automatically creates and stores a disk image of the Droplet. By default, backups happen daily.`, Writer,
 		displayerType(&displayers.Action{}))
+	AddStringFlag(cmdDropletActionEnableBackups, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`)
+	AddStringFlag(cmdDropletActionEnableBackups, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`)
+	AddIntFlag(cmdDropletActionEnableBackups, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
 	AddBoolFlag(cmdDropletActionEnableBackups, doctl.ArgCommandWait, "", false, "Wait for action to complete")
-	cmdDropletActionEnableBackups.Example = `The following example enables backups on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action enable-backups 386734086`
+	cmdDropletActionEnableBackups.Example = `The following example enables backups on a Droplet with the ID ` + "`" + `386734086` + "` with a backup policy flag" + `: doctl compute droplet-action enable-backups 386734086 --backup-policy-plan weekly --backup-policy-weekday SUN --backup-policy-hour 4`
 
 	cmdDropletActionDisableBackups := CmdBuilder(cmd, RunDropletActionDisableBackups,
 		"disable-backups <droplet-id>", "Disable backups on a Droplet", `Disables backups on a Droplet. This does not delete existing backups.`, Writer,
 		displayerType(&displayers.Action{}))
 	AddBoolFlag(cmdDropletActionDisableBackups, doctl.ArgCommandWait, "", false, "Instruct the terminal to wait for the action to complete before returning access to the user")
 	cmdDropletActionDisableBackups.Example = `The following example disables backups on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action disable-backups 386734086`
+
+	cmdDropletActionChangeBackupPolicy := CmdBuilder(cmd, RunDropletActionChangeBackupPolicy,
+		"change-backup-policy <droplet-id>", "Change backup policy on a Droplet", `Changes backup policy for a Droplet with enabled backups.`, Writer,
+		displayerType(&displayers.Action{}))
+	AddStringFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`, requiredOpt())
+	AddStringFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`)
+	AddIntFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
+	AddBoolFlag(cmdDropletActionChangeBackupPolicy, doctl.ArgCommandWait, "", false, "Wait for action to complete")
+	cmdDropletActionChangeBackupPolicy.Example = `The following example changes backup policy on a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet-action change-backup-policy 386734086 --backup-policy-plan weekly --backup-policy-weekday SUN --backup-policy-hour 4`
 
 	cmdDropletActionReboot := CmdBuilder(cmd, RunDropletActionReboot,
 		"reboot <droplet-id>", "Reboot a Droplet", `Reboots a Droplet. A reboot action is an attempt to reboot the Droplet in a graceful way, similar to using the reboot command from the Droplet's console.`, Writer,
@@ -242,8 +255,12 @@ func RunDropletActionEnableBackups(c *CmdConfig) error {
 			return nil, err
 		}
 
-		a, err := das.EnableBackups(id)
-		return a, err
+		policy, err := readDropletBackupPolicy(c)
+		if err == nil && policy != nil {
+			return das.EnableBackupsWithPolicy(id, policy)
+		}
+
+		return das.EnableBackups(id)
 	}
 
 	return performAction(c, fn)
@@ -262,6 +279,63 @@ func RunDropletActionDisableBackups(c *CmdConfig) error {
 		}
 
 		a, err := das.DisableBackups(id)
+		return a, err
+	}
+
+	return performAction(c, fn)
+}
+
+func readDropletBackupPolicy(c *CmdConfig) (*godo.DropletBackupPolicyRequest, error) {
+	policyPlan, err := c.Doit.GetString(c.NS, doctl.ArgDropletBackupPolicyPlan)
+	if err != nil {
+		return nil, err
+	}
+
+	// For cases when backup policy is not specified.
+	if policyPlan == "" {
+		return nil, nil
+	}
+
+	policyHour, err := c.Doit.GetInt(c.NS, doctl.ArgDropletBackupPolicyHour)
+	if err != nil {
+		return nil, err
+	}
+
+	policy := godo.DropletBackupPolicyRequest{
+		Plan: policyPlan,
+		Hour: &policyHour,
+	}
+
+	if policyPlan == "weekly" {
+		policyWeekday, err := c.Doit.GetString(c.NS, doctl.ArgDropletBackupPolicyWeekday)
+		if err != nil {
+			return nil, err
+		}
+		policy.Weekday = policyWeekday
+	}
+
+	return &policy, nil
+}
+
+// RunDropletActionChangeBackupPolicy changes backup policy for a droplet.
+func RunDropletActionChangeBackupPolicy(c *CmdConfig) error {
+	fn := func(das do.DropletActionsService) (*do.Action, error) {
+		err := ensureOneArg(c)
+		if err != nil {
+			return nil, err
+		}
+
+		id, err := ContextualAtoi(c.Args[0], dropletIDResource)
+		if err != nil {
+			return nil, err
+		}
+
+		policy, err := readDropletBackupPolicy(c)
+		if err != nil {
+			return nil, err
+		}
+
+		a, err := das.ChangeBackupPolicy(id, policy)
 		return a, err
 	}
 

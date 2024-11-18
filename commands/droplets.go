@@ -81,6 +81,9 @@ If you do not specify a region, the Droplet is created in the default region for
 	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A `slug` indicating the Droplet's number of vCPUs, RAM, and disk size. For example, `s-1vcpu-1gb` specifies a Droplet with one vCPU and 1 GiB of RAM. The disk size is defined by the slug's plan. Run `doctl compute size list` for a list of valid size slugs and their disk sizes.",
 		requiredOpt())
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet. By default, backups are created on a daily basis.")
+	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`)
+	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`)
+	AddIntFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address to the Droplet")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgPrivateNetworking, "", false, "Enables private networking for the Droplet by provisioning it inside of your account's default VPC for the region")
 	AddBoolFlag(cmdDropletCreate, doctl.ArgMonitoring, "", false, "Installs the DigitalOcean agent for additional monitoring")
@@ -134,6 +137,7 @@ If you do not specify a region, the Droplet is created in the default region for
 	cmdRunDropletUntag.Example = `The following example removes the tag ` + "`" + `frontend` + "`" + ` from a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute droplet untag 386734086 --tag-name frontend`
 
 	cmd.AddCommand(dropletOneClicks())
+	cmd.AddCommand(dropletBackupPolicies())
 
 	return cmd
 }
@@ -193,6 +197,11 @@ func RunDropletCreate(c *CmdConfig) error {
 	}
 
 	backups, err := c.Doit.GetBool(c.NS, doctl.ArgBackups)
+	if err != nil {
+		return err
+	}
+
+	backupPolicy, err := readDropletBackupPolicy(c)
 	if err != nil {
 		return err
 	}
@@ -298,6 +307,7 @@ func RunDropletCreate(c *CmdConfig) error {
 			Image:             createImage,
 			Volumes:           volumes,
 			Backups:           backups,
+			BackupPolicy:      backupPolicy,
 			IPv6:              ipv6,
 			PrivateNetworking: privateNetworking,
 			Monitoring:        monitoring,
@@ -788,6 +798,30 @@ func buildDropletSummary(ds do.DropletsService) (*dropletSummary, error) {
 	return &sum, nil
 }
 
+// dropletBackupPolicies creates the backup-policies command subtree.
+func dropletBackupPolicies() *Command {
+	cmd := &Command{
+		Command: &cobra.Command{
+			Use:   "backup-policies",
+			Short: "Display commands for Droplet's backup policies.",
+			Long:  "The commands under `doctl compute droplet backup-policies` are for displaying the commands for Droplet's backup policies.",
+		},
+	}
+
+	cmdDropletGetBackupPolicy := CmdBuilder(cmd, RunDropletGetBackupPolicy, "get <droplet-id>", "Get droplet's backup policy", `Retrieves a backup policy of a Droplet.`, Writer,
+		displayerType(&displayers.DropletBackupPolicy{}))
+	cmdDropletGetBackupPolicy.Example = `The following example retrieves a backup policy for a Droplet with the ID ` + "`" + `386734086` + "`" + `. The command also uses the ` + "`" + `--format` + "`" + ` flag to only return the Droplet's id and backup policy plan: doctl compute droplet backup-policies get 386734086 --format DropletID,BackupPolicyPlan`
+	AddStringFlag(cmdDropletGetBackupPolicy, doctl.ArgTemplate, "", "", "Go template format. Sample values: ```{{.DropletID}}`, `{{.BackupEnabled}}`, `{{.BackupPolicy.Plan}}`, `{{.BackupPolicy.Weekday}}`, `{{.BackupPolicy.Hour}}`, `{{.BackupPolicy.Plan}}`, `{{.BackupPolicy.WindowLengthHours}}`, `{{.BackupPolicy.RetentionPeriodDays}}`, `{{.NextBackupWindow.Start}}`, `{{.NextBackupWindow.End}}`")
+
+	cmdDropletListBackupPolicies := CmdBuilder(cmd, RunDropletListBackupPolicies, "list", "List backup policies for all Droplets", `List droplet backup policies for all existing Droplets.`, Writer, aliasOpt("ls"))
+	cmdDropletListBackupPolicies.Example = `The following example list backup policies for all existing Droplets: doctl compute droplet backup-policies list`
+
+	cmdDropletListSupportedBackupPolicies := CmdBuilder(cmd, RunDropletListSupportedBackupPolicies, "list-supported", "List of all supported droplet backup policies", `List of all supported droplet backup policies.`, Writer)
+	cmdDropletListSupportedBackupPolicies.Example = `The following example list all supported backup policies for Droplets: doctl compute droplet backup-policies list-supported`
+
+	return cmd
+}
+
 // kubernetesOneClicks creates the 1-click command.
 func dropletOneClicks() *Command {
 	cmd := &Command{
@@ -817,5 +851,64 @@ func RunDropletOneClickList(c *CmdConfig) error {
 
 	items := &displayers.OneClick{OneClicks: oneClickList}
 
+	return c.Display(items)
+}
+
+// RunDropletGetBackupPolicy retrieves a backup policy for a Droplet.
+func RunDropletGetBackupPolicy(c *CmdConfig) error {
+	ds := c.Droplets()
+
+	id, err := getDropletIDArg(c.NS, c.Args)
+	if err != nil {
+		return err
+	}
+
+	policy, err := ds.GetBackupPolicy(id)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.DropletBackupPolicy{DropletBackupPolicies: []do.DropletBackupPolicy{*policy}}
+
+	getTemplate, err := c.Doit.GetString(c.NS, doctl.ArgTemplate)
+	if err != nil {
+		return err
+	}
+
+	if getTemplate != "" {
+		t := template.New("Get template")
+		t, err = t.Parse(getTemplate)
+		if err != nil {
+			return err
+		}
+		return t.Execute(c.Out, policy)
+	}
+
+	return c.Display(item)
+}
+
+// RunDropletListBackupPolicies list backup policies for all existing Droplets.
+func RunDropletListBackupPolicies(c *CmdConfig) error {
+	ds := c.Droplets()
+
+	policies, err := ds.ListBackupPolicies()
+	if err != nil {
+		return err
+	}
+
+	items := &displayers.DropletBackupPolicy{DropletBackupPolicies: policies}
+	return c.Display(items)
+}
+
+// RunDropletListSupportedBackupPolicies list all supported backup policies for Droplets.
+func RunDropletListSupportedBackupPolicies(c *CmdConfig) error {
+	ds := c.Droplets()
+
+	policies, err := ds.ListSupportedBackupPolicies()
+	if err != nil {
+		return err
+	}
+
+	items := &displayers.DropletSupportedBackupPolicy{DropletSupportedBackupPolicies: policies}
 	return c.Display(items)
 }

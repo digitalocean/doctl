@@ -16,6 +16,7 @@ package commands
 import (
 	"io"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -123,6 +124,63 @@ var (
 	}
 
 	testSnapshotList = do.Snapshots{testSnapshot, testSnapshotSecondary}
+
+	testDropletBackupPolicy = do.DropletBackupPolicy{
+		DropletBackupPolicy: &godo.DropletBackupPolicy{
+			DropletID: 123,
+			BackupPolicy: &godo.DropletBackupPolicyConfig{
+				Plan:                "weekly",
+				Weekday:             "MON",
+				Hour:                0,
+				WindowLengthHours:   4,
+				RetentionPeriodDays: 28,
+			},
+			NextBackupWindow: &godo.BackupWindow{
+				Start: &godo.Timestamp{Time: time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)},
+				End:   &godo.Timestamp{Time: time.Date(2024, time.February, 1, 12, 0, 0, 0, time.UTC)},
+			},
+		},
+	}
+
+	anotherTestDropletBackupPolicy = do.DropletBackupPolicy{
+		DropletBackupPolicy: &godo.DropletBackupPolicy{
+			DropletID: 123,
+			BackupPolicy: &godo.DropletBackupPolicyConfig{
+				Plan:                "daily",
+				Hour:                12,
+				WindowLengthHours:   4,
+				RetentionPeriodDays: 7,
+			},
+			NextBackupWindow: &godo.BackupWindow{
+				Start: &godo.Timestamp{Time: time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)},
+				End:   &godo.Timestamp{Time: time.Date(2024, time.February, 1, 12, 0, 0, 0, time.UTC)},
+			},
+		},
+	}
+
+	testDropletBackupPolicies = do.DropletBackupPolicies{testDropletBackupPolicy, anotherTestDropletBackupPolicy}
+
+	testDropletSupportedBackupPolicy = do.DropletSupportedBackupPolicy{
+		SupportedBackupPolicy: &godo.SupportedBackupPolicy{
+			Name:                 "daily",
+			PossibleWindowStarts: []int{0, 4, 8, 12, 16, 20},
+			WindowLengthHours:    4,
+			RetentionPeriodDays:  7,
+			PossibleDays:         []string{},
+		},
+	}
+
+	anotherTestDropletSupportedBackupPolicy = do.DropletSupportedBackupPolicy{
+		SupportedBackupPolicy: &godo.SupportedBackupPolicy{
+			Name:                 "weekly",
+			PossibleWindowStarts: []int{0, 4, 8, 12, 16, 20},
+			WindowLengthHours:    4,
+			RetentionPeriodDays:  28,
+			PossibleDays:         []string{"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"},
+		},
+	}
+
+	testDropletSupportedBackupPolicies = do.DropletSupportedBackupPolicies{testDropletSupportedBackupPolicy, anotherTestDropletSupportedBackupPolicy}
 )
 
 func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {

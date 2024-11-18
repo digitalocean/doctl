@@ -168,6 +168,12 @@ const (
 	ArgResourceType = "resource"
 	// ArgBackups is an enable backups argument.
 	ArgBackups = "enable-backups"
+	// ArgDropletBackupPolicyPlan sets a frequency plan for backups.
+	ArgDropletBackupPolicyPlan = "backup-policy-plan"
+	// ArgDropletBackupPolicyWeekday sets backup policy day of the week.
+	ArgDropletBackupPolicyWeekday = "backup-policy-weekday"
+	// ArgDropletBackupPolicyHour sets backup policy hour.
+	ArgDropletBackupPolicyHour = "backup-policy-hour"
 	// ArgIPv6 is an enable IPv6 argument.
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.

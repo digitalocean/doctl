@@ -235,6 +235,47 @@ var _ = suite("compute/droplet/create", func(t *testing.T, when spec.G, it spec.
 			})
 		}
 	})
+	when("the backup policy is passed", func() {
+		it("polls until the droplet is created", func() {
+			cmd := exec.Command(builtBinaryPath,
+				"-t", "some-magic-token",
+				"-u", server.URL,
+				"compute",
+				"droplet",
+				"create",
+				"backup-policy-on-name",
+				"--image", "a-test-image",
+				"--region", "a-test-region",
+				"--size", "a-test-size",
+				"--vpc-uuid", "00000000-0000-4000-8000-000000000000",
+				"--enable-backups",
+				"--backup-policy-plan", "weekly",
+				"--backup-policy-hour", "4",
+				"--backup-policy-weekday", "MON",
+			)
+
+			output, err := cmd.CombinedOutput()
+			expect.NoError(err, fmt.Sprintf("received error output: %s", output))
+			expect.Equal(strings.TrimSpace(dropletCreateOutput), strings.TrimSpace(string(output)))
+
+			request := &struct {
+				Name    string
+				Image   string
+				Region  string
+				Size    string
+				VPCUUID string `json:"vpc_uuid"`
+			}{}
+
+			err = json.Unmarshal(reqBody, request)
+			expect.NoError(err)
+
+			expect.Equal("backup-policy-on-name", request.Name)
+			expect.Equal("a-test-image", request.Image)
+			expect.Equal("a-test-region", request.Region)
+			expect.Equal("a-test-size", request.Size)
+			expect.Equal("00000000-0000-4000-8000-000000000000", request.VPCUUID)
+		})
+	})
 })
 
 const (
