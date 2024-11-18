@@ -991,14 +991,14 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 				json.NewEncoder(buf).Encode(data)
 
 				err = c.WriteMessage(websocket.TextMessage, buf.Bytes())
-				if err != nil {
-					require.NoError(t, err)
-				}
+				require.NoError(t, err)
 
 				if i == finish {
 					break
 				}
 			}
+			err = c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			require.NoError(t, err)
 		}))
 		logsURL = wsServer.URL
 	})
@@ -1018,7 +1018,7 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, "output: %v", string(output))
 
 		logLine := fmt.Sprintf("foo-service %v fake logs", now)
 		expectedOutput := fmt.Sprintf("%s\n%s\n%s\n%s\n%s", logLine, logLine, logLine, logLine, logLine)
@@ -1040,7 +1040,7 @@ var _ = suite("apps/get-logs", func(t *testing.T, when spec.G, it spec.S) {
 		)
 
 		output, err := cmd.CombinedOutput()
-		expect.NoError(err)
+		expect.NoError(err, "output: %v", string(output))
 
 		expectedOutput := "fake logs\nfake logs\nfake logs\nfake logs\nfake logs"
 		expect.Equal(expectedOutput, strings.TrimSpace(string(output)))

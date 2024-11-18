@@ -179,6 +179,7 @@ type tcMocks struct {
 	vpcs                  *domocks.MockVPCsService
 	oneClick              *domocks.MockOneClickService
 	listen                *domocks.MockListenerService
+	terminal              *domocks.MockTerminal
 	monitoring            *domocks.MockMonitoringService
 	serverless            *domocks.MockServerlessService
 	appBuilderFactory     *builder.MockComponentBuilderFactory
@@ -226,6 +227,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		vpcs:                  domocks.NewMockVPCsService(ctrl),
 		oneClick:              domocks.NewMockOneClickService(ctrl),
 		listen:                domocks.NewMockListenerService(ctrl),
+		terminal:              domocks.NewMockTerminal(ctrl),
 		monitoring:            domocks.NewMockMonitoringService(ctrl),
 		serverless:            domocks.NewMockServerlessService(ctrl),
 		appBuilderFactory:     builder.NewMockComponentBuilderFactory(ctrl),

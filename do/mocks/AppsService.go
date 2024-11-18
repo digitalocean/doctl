@@ -114,6 +114,21 @@ func (mr *MockAppsServiceMockRecorder) GetDeployment(appID, deploymentID any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployment", reflect.TypeOf((*MockAppsService)(nil).GetDeployment), appID, deploymentID)
 }
 
+// GetExec mocks base method.
+func (m *MockAppsService) GetExec(appID, deploymentID, component string) (*godo.AppExec, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExec", appID, deploymentID, component)
+	ret0, _ := ret[0].(*godo.AppExec)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExec indicates an expected call of GetExec.
+func (mr *MockAppsServiceMockRecorder) GetExec(appID, deploymentID, component any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExec", reflect.TypeOf((*MockAppsService)(nil).GetExec), appID, deploymentID, component)
+}
+
 // GetInstanceSize mocks base method.
 func (m *MockAppsService) GetInstanceSize(slug string) (*godo.AppInstanceSize, error) {
 	m.ctrl.T.Helper()
