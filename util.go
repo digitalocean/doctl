@@ -18,6 +18,7 @@ import (
 
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/terminal"
 )
 
 // MockRunner is an implementation of Runner for mocking.
@@ -44,12 +45,19 @@ func (tr *MockListener) Listen(ctx context.Context) error {
 	return tr.Err
 }
 
-// ReadRawStdin mocks ListenerService.ReadRawStdin
-func (tr *MockListener) ReadRawStdin(ctx context.Context, stdinCh chan<- string) error {
+// MockTerminal is an implementation of Terminal for mocking.
+type MockTerminal struct {
+	Err error
+}
+
+var _ terminal.Terminal = &MockTerminal{}
+
+// ReadRawStdin mocks Terminal.ReadRawStdin
+func (tr *MockTerminal) ReadRawStdin(ctx context.Context, stdinCh chan<- string) error {
 	return tr.Err
 }
 
-// MonitorResizeEvents mocks ListenerService.MonitorResizeEvents
-func (tr *MockListener) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- listen.TerminalSize) error {
+// MonitorResizeEvents mocks Terminal.MonitorResizeEvents
+func (tr *MockTerminal) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- terminal.TerminalSize) error {
 	return tr.Err
 }

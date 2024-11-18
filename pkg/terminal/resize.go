@@ -14,7 +14,7 @@ import (
 )
 
 // MonitorResizeEvents monitors the terminal for resize events and sends them to the provided channel.
-func MonitorResizeEvents(ctx context.Context, resizeEvents chan<- TerminalSize) error {
+func (t *terminal) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- TerminalSize) error {
 	winch := make(chan os.Signal, 1)
 	signal.Notify(winch, unix.SIGWINCH)
 	defer signal.Stop(winch)

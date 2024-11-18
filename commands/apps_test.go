@@ -11,6 +11,7 @@ import (
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/pkg/listen"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -462,14 +463,17 @@ func TestRunAppsConsole(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.apps.EXPECT().GetExec(appID, deploymentID, component).Times(1).Return(&godo.AppExec{URL: "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
 		tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
-		tm.listen.EXPECT().ReadRawStdin(gomock.Any(), gomock.Any()).Times(1).Return(nil)
-		tm.listen.EXPECT().MonitorResizeEvents(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		tm.terminal.EXPECT().ReadRawStdin(gomock.Any(), gomock.Any()).Times(1).Return(nil)
+		tm.terminal.EXPECT().MonitorResizeEvents(gomock.Any(), gomock.Any()).Times(1).Return(nil)
 
 		tc := config.Doit.(*doctl.TestConfig)
 		tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
 			assert.Equal(t, "aa-bb-11-cc-33", token)
 			assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
 			return tm.listen
+		}
+		tc.TerminalFn = func() terminal.Terminal {
+			return tm.terminal
 		}
 
 		config.Args = append(config.Args, appID, component)

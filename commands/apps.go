@@ -758,14 +758,15 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	grp, ctx := errgroup.WithContext(ctx)
 
+	term := c.Doit.Terminal()
 	stdinCh := make(chan string)
 	grp.Go(func() error {
-		return terminal.ReadRawStdin(ctx, stdinCh)
+		return term.ReadRawStdin(ctx, stdinCh)
 	})
 
 	resizeEvents := make(chan terminal.TerminalSize)
 	grp.Go(func() error {
-		return terminal.MonitorResizeEvents(ctx, resizeEvents)
+		return term.MonitorResizeEvents(ctx, resizeEvents)
 	})
 
 	grp.Go(func() error {

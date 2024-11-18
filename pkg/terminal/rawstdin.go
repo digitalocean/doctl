@@ -8,8 +8,8 @@ import (
 	"golang.org/x/term"
 )
 
-// ReadRawStdin reads raw stdin.
-func ReadRawStdin(ctx context.Context, stdinCh chan<- string) error {
+// ReadRawStdin sets the terminal to raw mode and reads from stdin one byte at a time, sending each byte to the provided channel.
+func (t *terminal) ReadRawStdin(ctx context.Context, stdinCh chan<- string) error {
 	// Set terminal to raw mode
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {

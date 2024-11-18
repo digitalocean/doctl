@@ -40,6 +40,7 @@ mockgen -source vpcs.go -package=mocks VPCsService > mocks/VPCsService.go
 mockgen -source 1_clicks.go -package=mocks OneClickService > mocks/OneClickService.go
 mockgen -source ../pkg/runner/runner.go -package=mocks Runner > mocks/Runner.go
 mockgen -source ../pkg/listen/listen.go -package=mocks Listen > mocks/Listen.go
+mockgen -source ../pkg/terminal/terminal.go -package=mocks Terminal > mocks/Terminal.go
 mockgen -source monitoring.go -package=mocks MonitoringService > mocks/MonitoringService.go
 mockgen -source reserved_ip_actions.go -package=mocks ReservedIPActionsService > mocks/ReservedIPActionsService.go
 mockgen -source reserved_ips.go -package=mocks ReservedIPsService > mocks/ReservedIPsService.go

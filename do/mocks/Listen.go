@@ -13,7 +13,6 @@ import (
 	context "context"
 	reflect "reflect"
 
-	listen "github.com/digitalocean/doctl/pkg/listen"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -53,32 +52,4 @@ func (m *MockListenerService) Listen(ctx context.Context) error {
 func (mr *MockListenerServiceMockRecorder) Listen(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Listen", reflect.TypeOf((*MockListenerService)(nil).Listen), ctx)
-}
-
-// MonitorResizeEvents mocks base method.
-func (m *MockListenerService) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- listen.TerminalSize) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MonitorResizeEvents", ctx, resizeEvents)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// MonitorResizeEvents indicates an expected call of MonitorResizeEvents.
-func (mr *MockListenerServiceMockRecorder) MonitorResizeEvents(ctx, resizeEvents any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MonitorResizeEvents", reflect.TypeOf((*MockListenerService)(nil).MonitorResizeEvents), ctx, resizeEvents)
-}
-
-// ReadRawStdin mocks base method.
-func (m *MockListenerService) ReadRawStdin(ctx context.Context, stdinCh chan<- string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ReadRawStdin", ctx, stdinCh)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ReadRawStdin indicates an expected call of ReadRawStdin.
-func (mr *MockListenerServiceMockRecorder) ReadRawStdin(ctx, stdinCh any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadRawStdin", reflect.TypeOf((*MockListenerService)(nil).ReadRawStdin), ctx, stdinCh)
 }

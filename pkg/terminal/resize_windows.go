@@ -10,7 +10,7 @@ import (
 )
 
 // MonitorResizeEvents monitors the terminal for resize events and sends them to the provided channel.
-func MonitorResizeEvents(ctx context.Context, resizeEvents chan<- TerminalSize) error {
+func (t *terminal) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- TerminalSize) error {
 	var prevTerminalSize TerminalSize
 
 	ticker := time.NewTicker(250 * time.Millisecond)
