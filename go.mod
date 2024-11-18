@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.21
-	github.com/digitalocean/godo v1.128.1-0.20241105142035-a379869c286c
+	github.com/digitalocean/godo v1.129.1-0.20241113153826-8f5ac1bc9671
 	github.com/docker/cli v24.0.5+incompatible
 	github.com/docker/docker v25.0.6+incompatible
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
@@ -31,7 +31,7 @@ require (
 	golang.org/x/crypto v0.22.0
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/oauth2 v0.23.0
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.25.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
@@ -53,6 +53,7 @@ require (
 	github.com/muesli/termenv v0.12.0
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	go.uber.org/mock v0.2.0
+	golang.org/x/sync v0.3.0
 	golang.org/x/term v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
 )
