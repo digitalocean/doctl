@@ -152,6 +152,7 @@ type tcMocks struct {
 	billingHistory        *domocks.MockBillingHistoryService
 	databases             *domocks.MockDatabasesService
 	dropletActions        *domocks.MockDropletActionsService
+	dropletAutoscale      *domocks.MockDropletAutoscaleService
 	droplets              *domocks.MockDropletsService
 	keys                  *domocks.MockKeysService
 	sizes                 *domocks.MockSizesService
@@ -207,6 +208,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		reservedIPActions:     domocks.NewMockReservedIPActionsService(ctrl),
 		droplets:              domocks.NewMockDropletsService(ctrl),
 		dropletActions:        domocks.NewMockDropletActionsService(ctrl),
+		dropletAutoscale:      domocks.NewMockDropletAutoscaleService(ctrl),
 		domains:               domocks.NewMockDomainsService(ctrl),
 		tags:                  domocks.NewMockTagsService(ctrl),
 		uptimeChecks:          domocks.NewMockUptimeChecksService(ctrl),
@@ -262,6 +264,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		ReservedIPActions: func() do.ReservedIPActionsService { return tm.reservedIPActions },
 		Droplets:          func() do.DropletsService { return tm.droplets },
 		DropletActions:    func() do.DropletActionsService { return tm.dropletActions },
+		DropletAutoscale:  func() do.DropletAutoscaleService { return tm.dropletAutoscale },
 		Domains:           func() do.DomainsService { return tm.domains },
 		Actions:           func() do.ActionsService { return tm.actions },
 		Account:           func() do.AccountService { return tm.account },

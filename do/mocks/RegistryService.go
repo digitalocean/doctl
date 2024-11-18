@@ -21,6 +21,7 @@ import (
 type MockRegistryService struct {
 	ctrl     *gomock.Controller
 	recorder *MockRegistryServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockRegistryServiceMockRecorder is the mock recorder for MockRegistryService.
