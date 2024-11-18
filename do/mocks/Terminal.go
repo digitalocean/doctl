@@ -56,11 +56,12 @@ func (mr *MockTerminalMockRecorder) MonitorResizeEvents(ctx, resizeEvents any) *
 }
 
 // ReadRawStdin mocks base method.
-func (m *MockTerminal) ReadRawStdin(ctx context.Context, stdinCh chan<- string) error {
+func (m *MockTerminal) ReadRawStdin(ctx context.Context, stdinCh chan<- string) (func(), error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ReadRawStdin", ctx, stdinCh)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(func())
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // ReadRawStdin indicates an expected call of ReadRawStdin.

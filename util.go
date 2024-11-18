@@ -53,8 +53,8 @@ type MockTerminal struct {
 var _ terminal.Terminal = &MockTerminal{}
 
 // ReadRawStdin mocks Terminal.ReadRawStdin
-func (tr *MockTerminal) ReadRawStdin(ctx context.Context, stdinCh chan<- string) error {
-	return tr.Err
+func (tr *MockTerminal) ReadRawStdin(ctx context.Context, stdinCh chan<- string) (restoreFn func(), err error) {
+	return func() {}, tr.Err
 }
 
 // MonitorResizeEvents mocks Terminal.MonitorResizeEvents

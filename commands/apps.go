@@ -760,9 +760,11 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	term := c.Doit.Terminal()
 	stdinCh := make(chan string)
-	grp.Go(func() error {
-		return term.ReadRawStdin(ctx, stdinCh)
-	})
+	restoreTerminal, err := term.ReadRawStdin(ctx, stdinCh)
+	if err != nil {
+		return err
+	}
+	defer restoreTerminal()
 
 	resizeEvents := make(chan terminal.TerminalSize)
 	grp.Go(func() error {
@@ -808,12 +810,6 @@ func RunAppsConsole(c *CmdConfig) error {
 	})
 
 	grp.Go(func() error {
-		defer func() {
-			// An extra key press is needed to exit the console session because os.Stdin.Read blocks until a key is pressed.
-			// So an extra keystroke is required to unblock os.Stdin.Read and exit that goroutine.
-			fmt.Fprintln(c.Out)
-			fmt.Fprint(c.Out, "Press any key to exit.")
-		}()
 		err = listener.Listen(ctx)
 		if err != nil {
 			return err
@@ -821,11 +817,6 @@ func RunAppsConsole(c *CmdConfig) error {
 		cancel() // cancel the context to stop the other goroutines
 		return nil
 	})
-
-	defer func() {
-		// Print a newline after the "Press any key to exit." message
-		fmt.Fprintln(c.Out)
-	}()
 
 	if err := grp.Wait(); err != nil {
 		return err

@@ -4,7 +4,7 @@ import "context"
 
 // Terminal provides an interface for interacting with the terminal
 type Terminal interface {
-	ReadRawStdin(ctx context.Context, stdinCh chan<- string) error
+	ReadRawStdin(ctx context.Context, stdinCh chan<- string) (restoreTerminalFn func(), err error)
 	MonitorResizeEvents(ctx context.Context, resizeEvents chan<- TerminalSize) error
 }
 
