@@ -81,7 +81,7 @@ If you do not specify a region, the Droplet is created in the default region for
 	AddStringFlag(cmdDropletCreate, doctl.ArgSizeSlug, "", "", "A `slug` indicating the Droplet's number of vCPUs, RAM, and disk size. For example, `s-1vcpu-1gb` specifies a Droplet with one vCPU and 1 GiB of RAM. The disk size is defined by the slug's plan. Run `doctl compute size list` for a list of valid size slugs and their disk sizes.",
 		requiredOpt())
 	AddBoolFlag(cmdDropletCreate, doctl.ArgBackups, "", false, "Enables backups for the Droplet. By default, backups are created on a daily basis.")
-	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyPlan, "", "daily", `Backup policy frequency plan.`)
+	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyPlan, "", "", `Backup policy frequency plan.`)
 	AddStringFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyWeekday, "", "", `Backup policy weekday.`)
 	AddIntFlag(cmdDropletCreate, doctl.ArgDropletBackupPolicyHour, "", 0, `Backup policy hour.`)
 	AddBoolFlag(cmdDropletCreate, doctl.ArgIPv6, "", false, "Enables IPv6 support and assigns an IPv6 address to the Droplet")
