@@ -31,7 +31,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps"
-	"github.com/digitalocean/doctl/pkg/listen"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
@@ -760,12 +760,12 @@ func RunAppsConsole(c *CmdConfig) error {
 
 	stdinCh := make(chan string)
 	grp.Go(func() error {
-		return listener.ReadRawStdin(ctx, stdinCh)
+		return terminal.ReadRawStdin(ctx, stdinCh)
 	})
 
-	resizeEvents := make(chan listen.TerminalSize)
+	resizeEvents := make(chan terminal.TerminalSize)
 	grp.Go(func() error {
-		return listener.MonitorResizeEvents(ctx, resizeEvents)
+		return terminal.MonitorResizeEvents(ctx, resizeEvents)
 	})
 
 	grp.Go(func() error {
