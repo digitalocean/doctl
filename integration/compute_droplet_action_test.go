@@ -44,7 +44,7 @@ var _ = suite("compute/droplet-action", func(t *testing.T, when spec.G, it spec.
 				"/v2/droplets/247/actions":     {method: http.MethodPost, body: `{"type":"enable_ipv6"}`},
 				"/v2/droplets/45/actions":      {method: http.MethodPost, body: `{"type":"power_on"}`},
 				"/v2/droplets/1111/actions":    {method: http.MethodPost, body: `{"kernel":7777,"type":"change_kernel"}`},
-				"/v2/droplets/65/actions":      {method: http.MethodPost, body: `{"type":"enable_backup"}`},
+				"/v2/droplets/65/actions":      {method: http.MethodPost, body: `{"type":"enable_backups"}`},
 				"/v2/droplets/4743/actions":    {method: http.MethodPost, body: `{"image":9999,"type":"rebuild"}`},
 				"/v2/droplets/884/actions":     {method: http.MethodPost, body: `{"disk":true,"size":"bigger","type":"resize"}`},
 				"/v2/droplets/789/actions/954": {method: http.MethodGet, body: `{}`},
