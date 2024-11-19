@@ -1,5 +1,10 @@
 # Change Log
 
+## [v1.130.0] - 2024-11-14
+
+- #755 - @vsharma6855  - Add Missing Database Configs for Postgresql and MYSQL
+- #754 - @blesswinsamuel - APPS-9858 Add method to obtain websocket URL to get console access into components
+
 ## [v1.129.0] - 2024-11-06
 
 - #752 - @andrewsomething - Support maps in Stringify
