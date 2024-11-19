@@ -58,6 +58,8 @@ const (
 	ArgNoPrefix = "no-prefix"
 	// ArgAppForceRebuild forces a deployment rebuild
 	ArgAppForceRebuild = "force-rebuild"
+	// ArgAppComponents is a list of components to restart.
+	ArgAppComponents = "components"
 	// ArgAppAlertDestinations is a path to an app alert destination file.
 	ArgAppAlertDestinations = "app-alert-destinations"
 	// ArgClusterName is a cluster name argument.

@@ -36,6 +36,7 @@ func TestAppsCommand(t *testing.T) {
 		"list-regions",
 		"logs",
 		"propose",
+		"restart",
 		"spec",
 		"tier",
 		"list-alerts",
@@ -340,6 +341,110 @@ func TestRunAppsCreateDeploymentWithWait(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
 
 		err := RunAppsCreateDeployment(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsRestart(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		deployment := &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+			Services: []*godo.DeploymentService{{
+				Name:             "service",
+				SourceCommitHash: "commit",
+			}},
+			Cause: "Manual",
+			Phase: godo.DeploymentPhase_PendingDeploy,
+			Progress: &godo.DeploymentProgress{
+				PendingSteps: 1,
+				RunningSteps: 0,
+				SuccessSteps: 0,
+				ErrorSteps:   0,
+				TotalSteps:   1,
+
+				Steps: []*godo.DeploymentProgressStep{{
+					Name:      "name",
+					Status:    "pending",
+					StartedAt: time.Now(),
+				}},
+			},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		tm.apps.EXPECT().Restart(appID, []string{"component1", "component2"}).Times(1).Return(deployment, nil)
+
+		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgAppComponents, []string{"component1", "component2"})
+
+		err := RunAppsRestart(config)
+		require.NoError(t, err)
+	})
+}
+
+func TestRunAppsRestartWithWait(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		appID := uuid.New().String()
+		deployment := &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+			Services: []*godo.DeploymentService{{
+				Name:             "service",
+				SourceCommitHash: "commit",
+			}},
+			Cause: "Manual",
+			Phase: godo.DeploymentPhase_PendingDeploy,
+			Progress: &godo.DeploymentProgress{
+				PendingSteps: 1,
+				RunningSteps: 0,
+				SuccessSteps: 0,
+				ErrorSteps:   0,
+				TotalSteps:   1,
+
+				Steps: []*godo.DeploymentProgressStep{{
+					Name:      "name",
+					Status:    "pending",
+					StartedAt: time.Now(),
+				}},
+			},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		activeDeployment := &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+			Services: []*godo.DeploymentService{{
+				Name:             "service",
+				SourceCommitHash: "commit",
+			}},
+			Cause: "Manual",
+			Phase: godo.DeploymentPhase_Active,
+			Progress: &godo.DeploymentProgress{
+				PendingSteps: 1,
+				RunningSteps: 0,
+				SuccessSteps: 1,
+				ErrorSteps:   0,
+				TotalSteps:   1,
+
+				Steps: []*godo.DeploymentProgressStep{{
+					Name:      "name",
+					Status:    "pending",
+					StartedAt: time.Now(),
+				}},
+			},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		tm.apps.EXPECT().Restart(appID, nil).Times(1).Return(deployment, nil)
+		tm.apps.EXPECT().GetDeployment(appID, deployment.ID).Times(2).Return(activeDeployment, nil)
+
+		config.Args = append(config.Args, appID)
+		config.Doit.Set(config.NS, doctl.ArgCommandWait, true)
+
+		err := RunAppsRestart(config)
 		require.NoError(t, err)
 	})
 }
