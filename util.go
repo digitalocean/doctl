@@ -14,8 +14,11 @@ limitations under the License.
 package doctl
 
 import (
+	"context"
+
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
+	"github.com/digitalocean/doctl/pkg/terminal"
 )
 
 // MockRunner is an implementation of Runner for mocking.
@@ -37,12 +40,24 @@ type MockListener struct {
 
 var _ listen.ListenerService = &MockListener{}
 
-// Start mocks ListenerService.Start
-func (tr *MockListener) Start() error {
+// Listen mocks ListenerService.Listen
+func (tr *MockListener) Listen(ctx context.Context) error {
 	return tr.Err
 }
 
-// Stop mocks ListenerService.Stop
-func (tr *MockListener) Stop() {
-	return
+// MockTerminal is an implementation of Terminal for mocking.
+type MockTerminal struct {
+	Err error
+}
+
+var _ terminal.Terminal = &MockTerminal{}
+
+// ReadRawStdin mocks Terminal.ReadRawStdin
+func (tr *MockTerminal) ReadRawStdin(ctx context.Context, stdinCh chan<- string) (restoreFn func(), err error) {
+	return func() {}, tr.Err
+}
+
+// MonitorResizeEvents mocks Terminal.MonitorResizeEvents
+func (tr *MockTerminal) MonitorResizeEvents(ctx context.Context, resizeEvents chan<- terminal.TerminalSize) error {
+	return tr.Err
 }

@@ -53,7 +53,7 @@ var (
 func TestDropletCommand(t *testing.T) {
 	cmd := Droplet()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "1-click", "actions", "backups", "create", "delete", "get", "kernels", "list", "neighbors", "snapshots", "tag", "untag")
+	assertCommandNames(t, cmd, "1-click", "actions", "backups", "backup-policies", "create", "delete", "get", "kernels", "list", "neighbors", "snapshots", "tag", "untag")
 }
 
 func TestDropletActionList(t *testing.T) {
@@ -111,6 +111,56 @@ func TestDropletCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgVPCUUID, vpcUUID)
 		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{"test-volume", volumeUUID})
 		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"one", "two"})
+
+		err := RunDropletCreate(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDropletCreateWithBackupPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		dropletPolicy := godo.DropletBackupPolicyRequest{
+			Plan:    "weekly",
+			Weekday: "SAT",
+			Hour:    godo.PtrTo(0),
+		}
+		volumeUUID := "00000000-0000-4000-8000-000000000000"
+		vpcUUID := "00000000-0000-4000-8000-000000000000"
+		dcr := &godo.DropletCreateRequest{
+			Name:    "droplet",
+			Region:  "dev0",
+			Size:    "1gb",
+			Image:   godo.DropletCreateImage{ID: 0, Slug: "image"},
+			SSHKeys: []godo.DropletCreateSSHKey{},
+			Volumes: []godo.DropletCreateVolume{
+				{Name: "test-volume"},
+				{ID: volumeUUID},
+			},
+			Backups:           true,
+			IPv6:              false,
+			PrivateNetworking: false,
+			Monitoring:        false,
+			VPCUUID:           vpcUUID,
+			UserData:          "#cloud-config",
+			Tags:              []string{"one", "two"},
+			BackupPolicy:      &dropletPolicy,
+		}
+
+		tm.droplets.EXPECT().Create(dcr, false).Return(&testDroplet, nil)
+
+		config.Args = append(config.Args, "droplet")
+
+		config.Doit.Set(config.NS, doctl.ArgRegionSlug, "dev0")
+		config.Doit.Set(config.NS, doctl.ArgSizeSlug, "1gb")
+		config.Doit.Set(config.NS, doctl.ArgImage, "image")
+		config.Doit.Set(config.NS, doctl.ArgUserData, "#cloud-config")
+		config.Doit.Set(config.NS, doctl.ArgVPCUUID, vpcUUID)
+		config.Doit.Set(config.NS, doctl.ArgVolumeList, []string{"test-volume", volumeUUID})
+		config.Doit.Set(config.NS, doctl.ArgTagNames, []string{"one", "two"})
+		config.Doit.Set(config.NS, doctl.ArgBackups, true)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyPlan, dropletPolicy.Plan)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyWeekday, dropletPolicy.Weekday)
+		config.Doit.Set(config.NS, doctl.ArgDropletBackupPolicyHour, dropletPolicy.Hour)
 
 		err := RunDropletCreate(config)
 		assert.NoError(t, err)
@@ -600,4 +650,31 @@ func TestDropletCreateWithAgent(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestDropletGetBackupPolicy(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.EXPECT().GetBackupPolicy(testDropletBackupPolicy.DropletID).Return(&testDropletBackupPolicy, nil)
+
+		config.Args = append(config.Args, strconv.Itoa(testDropletBackupPolicy.DropletID))
+
+		err := RunDropletGetBackupPolicy(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDropletListBackupPolicies(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.EXPECT().ListBackupPolicies().Return(testDropletBackupPolicies, nil)
+		err := RunDropletListBackupPolicies(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDropletListSupportedBackupPolicies(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.droplets.EXPECT().ListSupportedBackupPolicies().Return(testDropletSupportedBackupPolicies, nil)
+		err := RunDropletListSupportedBackupPolicies(config)
+		assert.NoError(t, err)
+	})
 }

@@ -16,12 +16,14 @@ package commands
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -29,9 +31,11 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/yaml"
 )
 
@@ -190,6 +194,19 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	AddBoolFlag(logs, doctl.ArgNoPrefix, "", false, "Removes the prefix from logs. Useful for JSON structured logs")
 
 	logs.Example = `The following example retrieves the build logs for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps logs f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
+
+	console := CmdBuilder(
+		cmd,
+		RunAppsConsole,
+		"console <app id> <component name>",
+		"Starts a console session",
+		`Instantiates a console session for a component of an app.`,
+		Writer,
+		aliasOpt("l"),
+	)
+	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
+
+	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
 
 	listRegions := CmdBuilder(
 		cmd,
@@ -662,8 +679,10 @@ func RunAppsGetLogs(c *CmdConfig) error {
 			url.Scheme = "wss"
 		}
 
-		listener := c.Doit.Listen(url, token, schemaFunc, c.Out)
-		err = listener.Start()
+		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, nil)
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		err = listener.Listen(ctx)
 		if err != nil {
 			return err
 		}
@@ -690,6 +709,117 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		}
 	} else {
 		warn("No logs found for app component")
+	}
+
+	return nil
+}
+
+// RunAppsConsole initiates a console session for an app.
+func RunAppsConsole(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	component := c.Args[1]
+
+	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
+	if err != nil {
+		return err
+	}
+
+	execResp, err := c.Apps().GetExec(appID, deploymentID, component)
+	if err != nil {
+		return err
+	}
+	url, err := url.Parse(execResp.URL)
+	if err != nil {
+		return err
+	}
+	token := url.Query().Get("token")
+
+	schemaFunc := func(message []byte) (io.Reader, error) {
+		data := struct {
+			Data string `json:"data"`
+		}{}
+		err = json.Unmarshal(message, &data)
+		if err != nil {
+			return nil, err
+		}
+		r := strings.NewReader(data.Data)
+		return r, nil
+	}
+
+	inputCh := make(chan []byte)
+
+	listener := c.Doit.Listen(url, token, schemaFunc, c.Out, inputCh)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	grp, ctx := errgroup.WithContext(ctx)
+
+	term := c.Doit.Terminal()
+	stdinCh := make(chan string)
+	restoreTerminal, err := term.ReadRawStdin(ctx, stdinCh)
+	if err != nil {
+		return err
+	}
+	defer restoreTerminal()
+
+	resizeEvents := make(chan terminal.TerminalSize)
+	grp.Go(func() error {
+		return term.MonitorResizeEvents(ctx, resizeEvents)
+	})
+
+	grp.Go(func() error {
+		keepaliveTicker := time.NewTicker(30 * time.Second)
+		defer keepaliveTicker.Stop()
+		type stdinOp struct {
+			Op   string `json:"op"`
+			Data string `json:"data"`
+		}
+		type resizeOp struct {
+			Op     string `json:"op"`
+			Width  int    `json:"width"`
+			Height int    `json:"height"`
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case in := <-stdinCh:
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: in})
+				if err != nil {
+					return fmt.Errorf("error encoding stdin: %v", err)
+				}
+				inputCh <- b
+			case <-keepaliveTicker.C:
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: ""})
+				if err != nil {
+					return fmt.Errorf("error encoding keepalive event: %v", err)
+				}
+				inputCh <- b
+			case ev := <-resizeEvents:
+				b, err := json.Marshal(resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height})
+				if err != nil {
+					return fmt.Errorf("error encoding resize event: %v", err)
+				}
+				inputCh <- b
+			}
+		}
+	})
+
+	grp.Go(func() error {
+		err = listener.Listen(ctx)
+		if err != nil {
+			return err
+		}
+		cancel() // cancel the context to stop the other goroutines
+		return nil
+	})
+
+	if err := grp.Wait(); err != nil {
+		return err
 	}
 
 	return nil

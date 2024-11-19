@@ -49,6 +49,22 @@ type Kernel struct {
 // Kernels is a slice of Kernel.
 type Kernels []Kernel
 
+// DropletBackupPolicy is a wrapper for godo.DropletBackupPolicy.
+type DropletBackupPolicy struct {
+	*godo.DropletBackupPolicy
+}
+
+// DropletBackupPolicies is a slice of DropletBackupPolicy.
+type DropletBackupPolicies []DropletBackupPolicy
+
+// DropletSupportedBackupPolicy is a wrapper for godo.SupportedBackupPolicy.
+type DropletSupportedBackupPolicy struct {
+	*godo.SupportedBackupPolicy
+}
+
+// DropletSupportedBackupPolicies is a slice of DropletSupportedBackupPolicy.
+type DropletSupportedBackupPolicies []DropletSupportedBackupPolicy
+
 // DropletsService is an interface for interacting with DigitalOcean's droplet api.
 type DropletsService interface {
 	List() (Droplets, error)
@@ -64,6 +80,9 @@ type DropletsService interface {
 	Backups(int) (Images, error)
 	Actions(int) (Actions, error)
 	Neighbors(int) (Droplets, error)
+	GetBackupPolicy(int) (*DropletBackupPolicy, error)
+	ListBackupPolicies() (DropletBackupPolicies, error)
+	ListSupportedBackupPolicies() (DropletSupportedBackupPolicies, error)
 }
 
 type dropletsService struct {
@@ -337,4 +356,58 @@ func (ds *dropletsService) Neighbors(id int) (Droplets, error) {
 	}
 
 	return droplets, nil
+}
+
+func (ds *dropletsService) GetBackupPolicy(id int) (*DropletBackupPolicy, error) {
+	policy, _, err := ds.client.Droplets.GetBackupPolicy(context.TODO(), id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DropletBackupPolicy{policy}, nil
+}
+
+func (ds *dropletsService) ListBackupPolicies() (DropletBackupPolicies, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		policies, resp, err := ds.client.Droplets.ListBackupPolicies(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		pl := make([]any, len(policies))
+		i := 0
+		for _, value := range policies {
+			pl[i] = value
+			i++
+		}
+
+		return pl, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(DropletBackupPolicies, len(si))
+	for i := range si {
+		p := si[i].(*godo.DropletBackupPolicy)
+		list[i] = DropletBackupPolicy{DropletBackupPolicy: p}
+	}
+
+	return list, nil
+}
+
+func (ds *dropletsService) ListSupportedBackupPolicies() (DropletSupportedBackupPolicies, error) {
+	policies, _, err := ds.client.Droplets.ListSupportedBackupPolicies(context.TODO())
+	if err != nil {
+		return nil, err
+	}
+
+	list := make(DropletSupportedBackupPolicies, len(policies))
+	for i := range policies {
+		list[i] = DropletSupportedBackupPolicy{SupportedBackupPolicy: policies[i]}
+	}
+
+	return list, nil
 }

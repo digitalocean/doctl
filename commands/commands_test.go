@@ -16,6 +16,7 @@ package commands
 import (
 	"io"
 	"testing"
+	"time"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
@@ -123,6 +124,63 @@ var (
 	}
 
 	testSnapshotList = do.Snapshots{testSnapshot, testSnapshotSecondary}
+
+	testDropletBackupPolicy = do.DropletBackupPolicy{
+		DropletBackupPolicy: &godo.DropletBackupPolicy{
+			DropletID: 123,
+			BackupPolicy: &godo.DropletBackupPolicyConfig{
+				Plan:                "weekly",
+				Weekday:             "MON",
+				Hour:                0,
+				WindowLengthHours:   4,
+				RetentionPeriodDays: 28,
+			},
+			NextBackupWindow: &godo.BackupWindow{
+				Start: &godo.Timestamp{Time: time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)},
+				End:   &godo.Timestamp{Time: time.Date(2024, time.February, 1, 12, 0, 0, 0, time.UTC)},
+			},
+		},
+	}
+
+	anotherTestDropletBackupPolicy = do.DropletBackupPolicy{
+		DropletBackupPolicy: &godo.DropletBackupPolicy{
+			DropletID: 123,
+			BackupPolicy: &godo.DropletBackupPolicyConfig{
+				Plan:                "daily",
+				Hour:                12,
+				WindowLengthHours:   4,
+				RetentionPeriodDays: 7,
+			},
+			NextBackupWindow: &godo.BackupWindow{
+				Start: &godo.Timestamp{Time: time.Date(2024, time.January, 1, 12, 0, 0, 0, time.UTC)},
+				End:   &godo.Timestamp{Time: time.Date(2024, time.February, 1, 12, 0, 0, 0, time.UTC)},
+			},
+		},
+	}
+
+	testDropletBackupPolicies = do.DropletBackupPolicies{testDropletBackupPolicy, anotherTestDropletBackupPolicy}
+
+	testDropletSupportedBackupPolicy = do.DropletSupportedBackupPolicy{
+		SupportedBackupPolicy: &godo.SupportedBackupPolicy{
+			Name:                 "daily",
+			PossibleWindowStarts: []int{0, 4, 8, 12, 16, 20},
+			WindowLengthHours:    4,
+			RetentionPeriodDays:  7,
+			PossibleDays:         []string{},
+		},
+	}
+
+	anotherTestDropletSupportedBackupPolicy = do.DropletSupportedBackupPolicy{
+		SupportedBackupPolicy: &godo.SupportedBackupPolicy{
+			Name:                 "weekly",
+			PossibleWindowStarts: []int{0, 4, 8, 12, 16, 20},
+			WindowLengthHours:    4,
+			RetentionPeriodDays:  28,
+			PossibleDays:         []string{"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"},
+		},
+	}
+
+	testDropletSupportedBackupPolicies = do.DropletSupportedBackupPolicies{testDropletSupportedBackupPolicy, anotherTestDropletSupportedBackupPolicy}
 )
 
 func assertCommandNames(t *testing.T, cmd *Command, expected ...string) {
@@ -152,6 +210,7 @@ type tcMocks struct {
 	billingHistory        *domocks.MockBillingHistoryService
 	databases             *domocks.MockDatabasesService
 	dropletActions        *domocks.MockDropletActionsService
+	dropletAutoscale      *domocks.MockDropletAutoscaleService
 	droplets              *domocks.MockDropletsService
 	keys                  *domocks.MockKeysService
 	sizes                 *domocks.MockSizesService
@@ -178,6 +237,7 @@ type tcMocks struct {
 	vpcs                  *domocks.MockVPCsService
 	oneClick              *domocks.MockOneClickService
 	listen                *domocks.MockListenerService
+	terminal              *domocks.MockTerminal
 	monitoring            *domocks.MockMonitoringService
 	serverless            *domocks.MockServerlessService
 	appBuilderFactory     *builder.MockComponentBuilderFactory
@@ -206,6 +266,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		reservedIPActions:     domocks.NewMockReservedIPActionsService(ctrl),
 		droplets:              domocks.NewMockDropletsService(ctrl),
 		dropletActions:        domocks.NewMockDropletActionsService(ctrl),
+		dropletAutoscale:      domocks.NewMockDropletAutoscaleService(ctrl),
 		domains:               domocks.NewMockDomainsService(ctrl),
 		tags:                  domocks.NewMockTagsService(ctrl),
 		uptimeChecks:          domocks.NewMockUptimeChecksService(ctrl),
@@ -224,6 +285,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		vpcs:                  domocks.NewMockVPCsService(ctrl),
 		oneClick:              domocks.NewMockOneClickService(ctrl),
 		listen:                domocks.NewMockListenerService(ctrl),
+		terminal:              domocks.NewMockTerminal(ctrl),
 		monitoring:            domocks.NewMockMonitoringService(ctrl),
 		serverless:            domocks.NewMockServerlessService(ctrl),
 		appBuilderFactory:     builder.NewMockComponentBuilderFactory(ctrl),
@@ -260,6 +322,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		ReservedIPActions: func() do.ReservedIPActionsService { return tm.reservedIPActions },
 		Droplets:          func() do.DropletsService { return tm.droplets },
 		DropletActions:    func() do.DropletActionsService { return tm.dropletActions },
+		DropletAutoscale:  func() do.DropletAutoscaleService { return tm.dropletAutoscale },
 		Domains:           func() do.DomainsService { return tm.domains },
 		Actions:           func() do.ActionsService { return tm.actions },
 		Account:           func() do.AccountService { return tm.account },

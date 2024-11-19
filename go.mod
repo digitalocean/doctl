@@ -31,7 +31,7 @@ require (
 	golang.org/x/crypto v0.22.0
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/oauth2 v0.24.0
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.25.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
@@ -53,6 +53,7 @@ require (
 	github.com/muesli/termenv v0.12.0
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 	go.uber.org/mock v0.2.0
+	golang.org/x/sync v0.3.0
 	golang.org/x/term v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
 )
