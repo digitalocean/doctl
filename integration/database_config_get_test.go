@@ -249,7 +249,6 @@ PgBouncer.AutodbIdleTimeout         0
 BackupHour                          18
 BackupMinute                        26
 WorkMem                             4
-TimeScaleDB                         {}
 SynchronousReplication              off
 StatMonitorEnable                   false
 MaxFailoverReplicationTimeLag       12`
