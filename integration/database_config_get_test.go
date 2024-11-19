@@ -252,7 +252,7 @@ WorkMem                             4
 TimeScaleDB                         {}
 SynchronousReplication              off
 StatMonitorEnable                   false
-MaxFailoverReplicationTimeLag       10`
+MaxFailoverReplicationTimeLag       12`
 
 	databaseConfigPGGetResponse = `{
     "config": {
@@ -289,7 +289,7 @@ MaxFailoverReplicationTimeLag       10`
         "stat_monitor_enable": false,
         "work_mem": 4,
         "synchronous_replication": "off",
-        "max_failover_replication_time_lag": 10
+        "max_failover_replication_time_lag": 12
     }
 }`
 
