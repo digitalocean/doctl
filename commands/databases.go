@@ -2483,6 +2483,8 @@ func databaseConfiguration() *Command {
 	updateConfigurationLongDesc := `Updates the specified database cluster's advanced configuration. Using this command, you can update various settings like backup times, temporary file limits, and session timeouts. Available settings vary by database engine.
 
 This command functions as a PATCH request, meaning that only the specified fields are updated. If a field is not specified, it will not be changed. The settings are passed using the ` + "`" + `--config-json` + "`" + ` flag, which takes a JSON object as its value.
+
+For a full list of available fields, see the API documentation: https://docs.digitalocean.com/reference/api/api-reference/#operation/databases_patch_config
 `
 
 	getDatabaseCfgCommand := CmdBuilder(
@@ -2535,6 +2537,7 @@ This command functions as a PATCH request, meaning that only the specified field
 		"the desired configuration of the database cluster you want to update",
 		requiredOpt(),
 	)
+	updateDatabaseCfgCommand.Example = `The following command updates a MySQL database's time zone: doctl databases configuration update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --engine mysql --config-json '{"default_time_zone":"Africa/Maputo"}'`
 
 	return cmd
 }
