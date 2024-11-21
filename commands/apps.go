@@ -217,7 +217,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 		"Starts a console session",
 		`Instantiates a console session for a component of an app.`,
 		Writer,
-		aliasOpt("l"),
+		aliasOpt("cs"),
 	)
 	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
 
@@ -243,7 +243,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 
 Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
-		aliasOpt("c"),
+		aliasOpt("p"),
 		displayerType(&displayers.Apps{}),
 	)
 	AddStringFlag(propose, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)", requiredOpt())
