@@ -23,11 +23,12 @@ import (
 	"strings"
 
 	"github.com/apache/openwhisk-client-go/whisk"
+	"github.com/spf13/cobra"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/charm/template"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
-	"github.com/spf13/cobra"
 )
 
 // Functions generates the serverless 'functions' subtree for addition to the doctl command
@@ -91,7 +92,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	fetchCode := codeFlag || saveFlag || saveAsFlag != ""
 
 	sls := c.Serverless()
-	action, parms, err := sls.GetFunction(c.Args[0], fetchCode)
+	action, params, err := sls.GetFunction(c.Args[0], fetchCode)
 	if err != nil {
 		return err
 	}
@@ -110,7 +111,7 @@ func RunFunctionsGet(c *CmdConfig) error {
 	}
 
 	if saveEnvFlag != "" || saveEnvJSONFlag != "" {
-		return doSaveFunctionEnvironment(saveEnvFlag, saveEnvJSONFlag, parms)
+		return doSaveFunctionEnvironment(saveEnvFlag, saveEnvJSONFlag, params)
 	}
 
 	if codeFlag {
@@ -155,14 +156,14 @@ func doSaveFunctionCode(action whisk.Action, save bool, saveAs string) error {
 
 // doSaveFunctionEnvironment saves the environment variables for a function to file,
 // either as key-value pairs or JSON.  Could do both if both are specified.
-func doSaveFunctionEnvironment(saveEnv string, saveEnvJSON string, parms []do.FunctionParameter) error {
+func doSaveFunctionEnvironment(saveEnv string, saveEnvJSON string, params []do.FunctionParameter) error {
 	keyVals := []string{}
 	envMap := map[string]string{}
-	for _, parm := range parms {
-		if parm.Init {
-			keyVal := parm.Key + "=" + parm.Value
+	for _, p := range params {
+		if p.Init {
+			keyVal := p.Key + "=" + p.Value
 			keyVals = append(keyVals, keyVal)
-			envMap[parm.Key] = parm.Value
+			envMap[p.Key] = p.Value
 		}
 	}
 

@@ -51,7 +51,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	}
 
 	forwardingRulesTxt := "A comma-separated list of key-value pairs representing forwarding rules, which define how traffic is routed, e.g.: `entry_protocol:tcp,entry_port:3306,target_protocol:tcp,target_port:3306`."
-	CmdBuilder(cmd, RunLoadBalancerGet, "get <id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:\n\n"+lbDetail, Writer,
+	CmdBuilder(cmd, RunLoadBalancerGet, "get <load-balancer-id>", "Retrieve a load balancer", "Use this command to retrieve information about a load balancer instance, including:\n\n"+lbDetail, Writer,
 		aliasOpt("g"), displayerType(&displayers.LoadBalancer{}))
 
 	cmdLoadBalancerCreate := CmdBuilder(cmd, RunLoadBalancerCreate, "create",
@@ -59,7 +59,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name", requiredOpt())
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgRegionSlug, "", "",
-		"The load balancer's region, e.g.: `nyc1`", requiredOpt())
+		"The load balancer's region, e.g.: `nyc1`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgSizeSlug, "", "",
 		fmt.Sprintf("The load balancer's size, e.g.: `lb-small`. Only one of %s and %s should be used", doctl.ArgSizeSlug, doctl.ArgSizeUnit))
 	AddIntFlag(cmdLoadBalancerCreate, doctl.ArgSizeUnit, "", 0,
@@ -92,9 +92,17 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
 	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgDenyList, "", []string{},
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
-	cmdLoadBalancerCreate.Flags().MarkHidden(doctl.ArgLoadBalancerType)
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerDomains, "", []string{},
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` ")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerSettings, "", "",
+		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` ")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgGlobalLoadBalancerCDNSettings, "", "",
+		"CDN cache settings global load balancer, e.g.: `is_enabled:true` ")
+	AddStringSliceFlag(cmdLoadBalancerCreate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
+		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer ")
+	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetwork, "", "", "The type of network the load balancer is accessible from, e.g.: `EXTERNAL` or `INTERNAL`")
 
-	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <id>",
+	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <load-balancer-id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer. Using all applicable flags, the command should contain a full representation of the load balancer including existing attributes, such as the load balancer's name, region, forwarding rules, and Droplet IDs. Any attribute that is not provided is reset to its default value.`, Writer, aliasOpt("u"))
 	AddStringFlag(cmdRecordUpdate, doctl.ArgLoadBalancerName, "", "",
 		"The load balancer's name")
@@ -125,36 +133,49 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"disable automatic DNS record creation for Let's Encrypt certificates that are added to the load balancer")
 	AddStringFlag(cmdRecordUpdate, doctl.ArgProjectID, "", "",
 		"Indicates which project to associate the Load Balancer with. If not specified, the Load Balancer will be placed in your default project.")
-	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgAllowList, "", []string{},
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgAllowList, "", nil,
 		"A comma-separated list of ALLOW rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
-	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", []string{},
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgDenyList, "", nil,
 		"A comma-separated list of DENY rules for the load balancer, e.g.: `ip:1.2.3.4,cidr:1.2.0.0/16`")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgLoadBalancerDomains, "", []string{},
+		"A comma-separated list of domains required to ingress traffic to a global load balancer, e.g.: `name:test-domain-1 is_managed:true certificate_id:test-cert-id-1` ")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerSettings, "", "",
+		"Target protocol and port settings for ingressing traffic to a global load balancer, e.g.: `target_protocol:http,target_port:80` ")
+	AddStringFlag(cmdRecordUpdate, doctl.ArgGlobalLoadBalancerCDNSettings, "", "",
+		"CDN cache settings global load balancer, e.g.: `is_enabled:true` ")
+	AddStringSliceFlag(cmdRecordUpdate, doctl.ArgTargetLoadBalancerIDs, "", []string{},
+		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer ")
 
 	CmdBuilder(cmd, RunLoadBalancerList, "list", "List load balancers", "Use this command to get a list of the load balancers on your account, including the following information for each:\n\n"+lbDetail, Writer,
 		aliasOpt("ls"), displayerType(&displayers.LoadBalancer{}))
 
-	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <id>",
+	cmdRunRecordDelete := CmdBuilder(cmd, RunLoadBalancerDelete, "delete <load-balancer-id>",
 		"Permanently delete a load balancer", `Use this command to permanently delete the specified load balancer. This is irreversible.`, Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunRecordDelete, doctl.ArgForce, doctl.ArgShortForce, false,
 		"Delete the load balancer without a confirmation prompt")
 
-	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <id>",
+	cmdAddDroplets := CmdBuilder(cmd, RunLoadBalancerAddDroplets, "add-droplets <load-balancer-id>",
 		"Add Droplets to a load balancer", `Use this command to add Droplets to a load balancer.`, Writer)
 	AddStringSliceFlag(cmdAddDroplets, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of IDs of Droplet to add to the load balancer, example value: `12,33`")
 
 	cmdRemoveDroplets := CmdBuilder(cmd, RunLoadBalancerRemoveDroplets,
-		"remove-droplets <id>", "Remove Droplets from a load balancer", `Use this command to remove Droplets from a load balancer. This command does not destroy any Droplets.`, Writer)
+		"remove-droplets <load-balancer-id>", "Remove Droplets from a load balancer", `Use this command to remove Droplets from a load balancer. This command does not destroy any Droplets.`, Writer)
 	AddStringSliceFlag(cmdRemoveDroplets, doctl.ArgDropletIDs, "", []string{},
 		"A comma-separated list of IDs of Droplets to remove from the load balancer, example value: `12,33`")
 
 	cmdAddForwardingRules := CmdBuilder(cmd, RunLoadBalancerAddForwardingRules,
-		"add-forwarding-rules <id>", "Add forwarding rules to a load balancer", "Use this command to add forwarding rules to a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
+		"add-forwarding-rules <load-balancer-id>", "Add forwarding rules to a load balancer", "Use this command to add forwarding rules to a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
 	AddStringFlag(cmdAddForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
 
 	cmdRemoveForwardingRules := CmdBuilder(cmd, RunLoadBalancerRemoveForwardingRules,
-		"remove-forwarding-rules <id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
+		"remove-forwarding-rules <load-balancer-id>", "Remove forwarding rules from a load balancer", "Use this command to remove forwarding rules from a load balancer, specified with the `--forwarding-rules` flag. Valid rules include:\n"+forwardingDetail, Writer)
 	AddStringFlag(cmdRemoveForwardingRules, doctl.ArgForwardingRules, "", "", forwardingRulesTxt)
+
+	cmdRunCachePurge := CmdBuilder(cmd, RunLoadBalancerPurgeCache, "purge-cache <load-balancer-id>",
+		"Purges CDN cache for a global load balancer", `Use this command to purge the CDN cache for specified global load balancer.`, Writer)
+	AddBoolFlag(cmdRunCachePurge, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Purge the global load balancer CDN cache without a confirmation prompt ")
 
 	return cmd
 }
@@ -359,6 +380,31 @@ func RunLoadBalancerRemoveForwardingRules(c *CmdConfig) error {
 	return c.LoadBalancers().RemoveForwardingRules(lbID, forwardingRules...)
 }
 
+// RunLoadBalancerPurgeCache purges cache for a global load balancer by its identifier.
+func RunLoadBalancerPurgeCache(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	lbID := c.Args[0]
+
+	force, err := c.Doit.GetBool(c.NS, doctl.ArgForce)
+	if err != nil {
+		return err
+	}
+
+	if force || AskForConfirm("purge CDN cache for global load balancer") == nil {
+		lbs := c.LoadBalancers()
+		if err := lbs.PurgeCache(lbID); err != nil {
+			return err
+		}
+	} else {
+		return errOperationAborted
+	}
+
+	return nil
+}
+
 func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, err error) {
 	if len(s) == 0 {
 		return forwardingRules, err
@@ -368,7 +414,7 @@ func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, er
 
 	for _, v := range list {
 		forwardingRule := new(godo.ForwardingRule)
-		if err := fillStructFromStringSliceArgs(forwardingRule, v); err != nil {
+		if err := fillStructFromStringSliceArgs(forwardingRule, v, ","); err != nil {
 			return nil, err
 		}
 
@@ -378,12 +424,29 @@ func extractForwardingRules(s string) (forwardingRules []godo.ForwardingRule, er
 	return forwardingRules, err
 }
 
-func fillStructFromStringSliceArgs(obj any, s string) error {
+func extractDomains(s []string) (domains []*godo.LBDomain, err error) {
+	if len(s) == 0 {
+		return domains, err
+	}
+
+	for _, v := range s {
+		domain := new(godo.LBDomain)
+		if err := fillStructFromStringSliceArgs(domain, v, " "); err != nil {
+			return nil, err
+		}
+
+		domains = append(domains, domain)
+	}
+
+	return domains, err
+}
+
+func fillStructFromStringSliceArgs(obj any, s string, delimiter string) error {
 	if len(s) == 0 {
 		return nil
 	}
 
-	kvs := strings.Split(s, ",")
+	kvs := strings.Split(s, delimiter)
 	m := map[string]string{}
 
 	for _, v := range kvs {
@@ -412,8 +475,24 @@ func fillStructFromStringSliceArgs(obj any, s string) error {
 				if v, err := strconv.Atoi(val); err == nil {
 					f.Set(reflect.ValueOf(v))
 				}
+			case reflect.Uint32:
+				if v64, err := strconv.ParseUint(val, 10, 32); err == nil {
+					f.Set(reflect.ValueOf(uint32(v64)))
+				}
 			case reflect.String:
 				f.Set(reflect.ValueOf(val))
+			case reflect.Map:
+				for _, kvPair := range strings.Split(val, " ") {
+					kv := strings.Split(kvPair, "=")
+					if len(kv) == 2 {
+						if v32, err := strconv.ParseUint(kv[1], 10, 32); err == nil {
+							if f.IsZero() {
+								f.Set(reflect.MakeMap(f.Type()))
+							}
+							f.SetMapIndex(reflect.ValueOf(kv[0]), reflect.ValueOf(uint32(v32)))
+						}
+					}
+				}
 			default:
 				return fmt.Errorf("Unexpected type for struct field %v", val)
 			}
@@ -513,7 +592,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	stickySession := new(godo.StickySessions)
-	if err := fillStructFromStringSliceArgs(stickySession, ssa); err != nil {
+	if err := fillStructFromStringSliceArgs(stickySession, ssa, ","); err != nil {
 		return err
 	}
 	r.StickySessions = stickySession
@@ -524,7 +603,7 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 	}
 
 	healthCheck := new(godo.HealthCheck)
-	if err := fillStructFromStringSliceArgs(healthCheck, hca); err != nil {
+	if err := fillStructFromStringSliceArgs(healthCheck, hca, ","); err != nil {
 		return err
 	}
 	r.HealthCheck = healthCheck
@@ -557,22 +636,71 @@ func buildRequestFromArgs(c *CmdConfig, r *godo.LoadBalancerRequest) error {
 		r.HTTPIdleTimeoutSeconds = &t
 	}
 
-	allowRules, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAllowList)
+	allowRules, allowflagSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgAllowList)
 	if err != nil {
 		return err
 	}
 
-	denyRules, err := c.Doit.GetStringSlice(c.NS, doctl.ArgDenyList)
+	denyRules, denyFlagSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgDenyList)
 	if err != nil {
 		return err
 	}
 
-	if len(allowRules) > 0 || len(denyRules) > 0 {
+	if allowflagSet || denyFlagSet {
 		firewall := new(godo.LBFirewall)
 		firewall.Allow = allowRules
 		firewall.Deny = denyRules
 		r.Firewall = firewall
 	}
+
+	dms, err := c.Doit.GetStringSlice(c.NS, doctl.ArgLoadBalancerDomains)
+	if err != nil {
+		return err
+	}
+
+	domains, err := extractDomains(dms)
+	if err != nil {
+		return err
+	}
+	r.Domains = domains
+
+	glbs, err := c.Doit.GetString(c.NS, doctl.ArgGlobalLoadBalancerSettings)
+	if err != nil {
+		return err
+	}
+
+	glbSettings := new(godo.GLBSettings)
+	if err := fillStructFromStringSliceArgs(glbSettings, glbs, ","); err != nil {
+		return err
+	}
+	if glbSettings.TargetProtocol != "" && glbSettings.TargetPort != 0 {
+		r.GLBSettings = glbSettings
+	}
+
+	cdns, err := c.Doit.GetString(c.NS, doctl.ArgGlobalLoadBalancerCDNSettings)
+	if err != nil {
+		return err
+	}
+
+	cdnSettings := new(godo.CDNSettings)
+	if err := fillStructFromStringSliceArgs(cdnSettings, cdns, ","); err != nil {
+		return err
+	}
+	if r.GLBSettings != nil {
+		r.GLBSettings.CDN = cdnSettings
+	}
+
+	lbIDsList, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTargetLoadBalancerIDs)
+	if err != nil {
+		return err
+	}
+	r.TargetLoadBalancerIDs = lbIDsList
+
+	network, err := c.Doit.GetString(c.NS, doctl.ArgLoadBalancerNetwork)
+	if err != nil {
+		return err
+	}
+	r.Network = strings.ToUpper(network)
 
 	return nil
 }

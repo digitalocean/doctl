@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.107.0"
+	libraryVersion = "1.130.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -65,6 +65,7 @@ type Client struct {
 	Domains           DomainsService
 	Droplets          DropletsService
 	DropletActions    DropletActionsService
+	DropletAutoscale  DropletAutoscaleService
 	Firewalls         FirewallsService
 	FloatingIPs       FloatingIPsService
 	FloatingIPActions FloatingIPActionsService
@@ -80,6 +81,7 @@ type Client struct {
 	Projects          ProjectsService
 	Regions           RegionsService
 	Registry          RegistryService
+	Registries        RegistriesService
 	ReservedIPs       ReservedIPsService
 	ReservedIPActions ReservedIPActionsService
 	Sizes             SizesService
@@ -275,6 +277,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Domains = &DomainsServiceOp{client: c}
 	c.Droplets = &DropletsServiceOp{client: c}
 	c.DropletActions = &DropletActionsServiceOp{client: c}
+	c.DropletAutoscale = &DropletAutoscaleServiceOp{client: c}
 	c.Firewalls = &FirewallsServiceOp{client: c}
 	c.FloatingIPs = &FloatingIPsServiceOp{client: c}
 	c.FloatingIPActions = &FloatingIPActionsServiceOp{client: c}
@@ -290,6 +293,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Projects = &ProjectsServiceOp{client: c}
 	c.Regions = &RegionsServiceOp{client: c}
 	c.Registry = &RegistryServiceOp{client: c}
+	c.Registries = &RegistriesServiceOp{client: c}
 	c.ReservedIPs = &ReservedIPsServiceOp{client: c}
 	c.ReservedIPActions = &ReservedIPActionsServiceOp{client: c}
 	c.Sizes = &SizesServiceOp{client: c}

@@ -21,13 +21,7 @@
       - [Build Scripts](#build-scripts)
   - [Releasing](#releasing)
     - [Tagging a release](#tagging-a-release)
-        - [Prerequisites](#prerequisites)
-    - [If a release fails](#if-a-release-fails)
-      - [Github Releases & Dockerhub](#github-releases--dockerhub)
-        - [Prerequisites](#prerequisites-1)
-      - [Snap](#snap)
-        - [Prerequisites](#prerequisites-2)
-        - [Building a new snap base image](#building-a-new-snap-base-image)
+    - [Snap](#snap)
     - [Updating Homebrew](#updating-homebrew)
 
 <!-- markdown-toc end -->
@@ -101,6 +95,11 @@ or `make help` for a list of available commands with descriptions.
 - Avoid the passive voice ("When a tag is provided, access is granted") and use the active voice ("Entering a tag provides access")
 - Be helpful when users have to enter a input that is from a list of possible values. Give examples, list the possible values inline (if the list is relatively short), or point them to a command that can list the possible values for them.
 
+## Spell Check
+
+`doctl` is setup to use the code aware spell checker called [typos](https://github.com/crate-ci/typos) to keep an eye on any spelling mistakes.
+
+To install your own copy,follow the instructions on the [typos readme](https://github.com/crate-ci/typos?tab=readme-ov-file#install), and then run the `typos` binary
 
 ### Go environment
 
@@ -199,39 +198,22 @@ To cut a release, push a new tag (versioning discussed below).
 
 ### Tagging a release
 
-##### Prerequisites
-
 1. Run `make changes` to review the changes since the last
    release. Based on the changes, decide what kind of release you are
    doing (bugfix, feature or breaking).
    `doctl` follows [semantic versioning](https://semver.org), ask if you aren't sure.
 
-1. Tag the release using `BUMP=(bugfix|feature|breaking) make tag`.
-   (Bugfix, feature and breaking are aliases for semver's patch, minor and major.
-   BUMP will also accept `patch`, `minor` and `major`, if you prefer). The command
-   assumes you have a remote repository named `origin` pointing to this
-   repository. If you'd prefer to specify a different remote repository, you can
-   do so by setting `ORIGIN=(preferred remote name)`.
+1. Synchronize your local repository with all the tags that have been created or updated on the remote main branch
+    ```bash
+    git checkout main
+    git pull --tags
+    ```
 
-The new tag triggers the release.
+1. Creates a new tag and push the tag to the remote repository named origin
+    ```bash
+    git tag <new-tag> # Example: git tag v1.113.0
+    git push origin tag <new-tag> # Example: git push origin tag v1.113.0
+    ```
 
-##### Building a new snap base image
-
-Occasionally, the snap build will break. When it does, it usually means that you need to update
-the custom base image we use to build the snap. The Dockerfile for that image lives in
-[dockerfiles/Dockerfile.snap](https://github.com/digitalocean/doctl/blob/main/dockerfiles/Dockerfile.snap).
-The header of the Dockerfile has hints for updating the image, as well as instructions for building
-the image using `make snap_image`. Once you've built the image, the snap_image target will provide
-instructions for next steps.
-
-### Updating Homebrew
-
-Using the url and sha from the github release, update the
-[homebrew formula](https://github.com/Homebrew/homebrew-core/blob/master/Formula/doctl.rb).
-You can use `brew bump-formula-pr doctl`, or
-
-1. fork `homebrew-core`
-1. create a branch named `doctl-<version>`
-1. update the url and the sha256 using the values for the archive in the github release
-1. commit your changes
-1. submit a PR to homebrew
+To learn a bit more about how that all works, check out [goreleaser](https://goreleaser.com/intro) 
+and the config we use for it: [.goreleaser.yml](https://github.com/digitalocean/doctl/blob/main/.goreleaser.yml)

@@ -33,8 +33,7 @@ func Monitoring() *Command {
 			Short: "[Beta] Display commands to manage monitoring",
 			Long: `The sub-commands of ` + "`" + `doctl monitoring` + "`" + ` manage the monitoring on your account.
 
-An alert policy can be applied to resource(s) (currently Droplets)
-in order to alert on resource consumption.`,
+You can create alert policies to monitor the resource consumption of your Droplets, and uptime checks to monitor the availability of your websites and services`,
 			GroupID: manageResourcesGroup,
 		},
 	}
@@ -50,49 +49,57 @@ func alertPolicies() *Command {
 			Use:     "alert",
 			Aliases: []string{"alerts", "a"},
 			Short:   "Display commands for managing alert policies",
-			Long: `The commands under ` + "`" + `doctl monitoring alert` + "`" + ` are for the management of alert policies.
+			Long: `The commands under ` + "`" + `doctl monitoring alert` + "`" + ` are for managing alert policies.
 
-An alert policy can be applied to resource(s) (currently Droplets)
-in order to alert on resource consumption. 
+You can apply alert policies to resources in order to receive alerts on resource consumption. 
 			
 If you'd like to alert on the uptime of a specific URL or IP address, use ` + "`" + `doctl monitoring uptime alert` + "` instead",
 		},
 	}
 
-	cmdAlertPolicyCreate := CmdBuilder(cmd, RunCmdAlertPolicyCreate, "create", "Create an alert policy", `Use this command to create a new alert policy.`, Writer)
-	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyDescription, "", "", "A description of the alert policy.")
-	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyType, "", "", "The type of alert policy.")
-	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyCompare, "", "", "The comparator of the alert policy. Either `GreaterThan` or `LessThan`")
-	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyWindow, "", "5m", "The window to apply the alert policy conditions against.")
-	AddIntFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyValue, "", 0, "The value of the alert policy to compare against.")
-	AddBoolFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyEnabled, "", true, "Whether the alert policy is enabled.")
-	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyEmails, "", nil, "Emails to send alerts to.")
-	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyTags, "", nil, "Tags to apply the alert against.")
-	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyEntities, "", nil, "Entities to apply the alert against. (e.g. a droplet ID for a droplet alert policy)")
-	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicySlackChannels, "", nil, "Slack channels to send alerts to.")
-	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicySlackURLs, "", nil, "Slack URLs to send alerts to.")
+	cmdAlertPolicyCreate := CmdBuilder(cmd, RunCmdAlertPolicyCreate, "create", "Create an alert policy", `Creates a new alert policy. You can create policies that monitor various metrics of your Droplets and send you alerts when a metric exceeds a specified threshold.
+	
+	For example, you can create a policy that monitors a Droplet's CPU usage and triggers an alert when the Droplet's CPU usage exceeds more than 80% for more than 10 minutes.
+	
+	For a full list of policy types you can set up, see our API documentation: https://docs.digitalocean.com/reference/api/api-reference/#operation/monitoring_create_alertPolicy`, Writer)
+	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyDescription, "", "", "A description of the alert policy")
+	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyType, "", "", "The type of alert policy. For example,`v1/insights/droplet/memory_utilization_percent` alerts on the percent of memory utilization. For a full list of alert types, see https://docs.digitalocean.com/reference/api/api-reference/#operation/monitoring_create_alertPolicy")
+	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyCompare, "", "", "The comparator of the alert policy. Possible values: `GreaterThan` or `LessThan`")
+	AddStringFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyWindow, "", "5m", "The amount of time the resource must exceed the threshold value before an alert is triggered. Possible values: `5m`, `10m`, `30m`, or `1h`")
+	AddIntFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyValue, "", 0, "The threshold value of the alert policy to compare against. For example, if the alert policy is of type `DropletCPUUtilizationPercent` and the value is set to `80`, an alert is triggered if the Droplet's CPU usage exceeds 80% for the specified window.")
+	AddBoolFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyEnabled, "", true, "Enables the alert policy")
+	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyEmails, "", nil, "Email address to send alerts to")
+	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyTags, "", nil, "Tags to apply the alert policy to. If set to a tag, all Droplet with that tag are monitored by the alert policy.")
+	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicyEntities, "", nil, "Resources to apply the alert against, such as a Droplet ID.")
+	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicySlackChannels, "", nil, "A Slack channel to send alerts to. For example, `production-alerts`")
+	AddStringSliceFlag(cmdAlertPolicyCreate, doctl.ArgAlertPolicySlackURLs, "", nil, "A Slack webhook URL to send alerts to, for example, `https://hooks.slack.com/services/T1234567/AAAAAAAA/ZZZZZZ`.")
+	cmdAlertPolicyCreate.Example = `The following example creates an alert policy that sends an email to ` + "`" + `admin@example.com` + "`" + ` whenever the memory usage on the listed Droplets (entities) exceeds 80% for more than five minutes: doctl monitoring alert create --type "v1/insights/droplet/memory_utilization_percent" --compare GreaterThan --value 80 --window 5m --entities 386734086,191669331 --emails admin@example.com`
 
-	cmdAlertPolicyUpdate := CmdBuilder(cmd, RunCmdAlertPolicyUpdate, "update <alert-policy-uuid>...", "Update an alert policy", `Use this command to update an existing alert policy.`, Writer)
+	cmdAlertPolicyUpdate := CmdBuilder(cmd, RunCmdAlertPolicyUpdate, "update <alert-policy-uuid>...", "Update an alert policy", `Updates an existing alert policy.`, Writer)
 	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyDescription, "", "", "A description of the alert policy.")
-	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyType, "", "", "The type of alert policy.")
+	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyType, "", "", "The type of alert policy. For example,`v1/insights/droplet/memory_utilization_percent` alerts on the percent of memory utilization. For a full list of alert types, see https://docs.digitalocean.com/reference/api/api-reference/#operation/monitoring_create_alertPolicy")
 	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyCompare, "", "", "The comparator of the alert policy. Either `GreaterThan` or `LessThan`")
 	AddStringFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyWindow, "", "5m", "The window to apply the alert policy conditions against.")
 	AddIntFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyValue, "", 0, "The value of the alert policy to compare against.")
 	AddBoolFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyEnabled, "", true, "Whether the alert policy is enabled.")
-	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyEmails, "", nil, "Emails to send alerts to.")
-	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyTags, "", nil, "Tags to apply the alert against.")
-	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyEntities, "", nil, "Entities to apply the alert against. (e.g. a droplet ID for a droplet alert policy)")
-	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicySlackChannels, "", nil, "Slack channels to send alerts to.")
-	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicySlackURLs, "", nil, "Slack URLs to send alerts to.")
+	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyEmails, "", nil, "Email addresses to send alerts to")
+	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyTags, "", nil, "Tags to apply the alert against")
+	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicyEntities, "", nil, "Resources to apply the policy to")
+	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicySlackChannels, "", nil, "A Slack channel to send alerts to, for example, `production-alerts`. Must be used with `--slack-url`.")
+	AddStringSliceFlag(cmdAlertPolicyUpdate, doctl.ArgAlertPolicySlackURLs, "", nil, "A Slack webhook URL to send alerts to, for example, `https://hooks.slack.com/services/T1234567/AAAAAAAA/ZZZZZZ`.")
+	cmdAlertPolicyUpdate.Example = `The following example updates an alert policy's details: doctl monitoring alert update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --type "v1/insights/droplet/memory_utilization_percent" --compare GreaterThan --value 80 --window 10m --entities 386734086,191669331 --emails admin@example.com`
 
-	CmdBuilder(cmd, RunCmdAlertPolicyGet, "get <alert-policy-uuid>", "Retrieve information about an alert policy", `Use this command to retrieve an alert policy and see its configuration.`, Writer,
+	AlertPolicyGet := CmdBuilder(cmd, RunCmdAlertPolicyGet, "get <alert-policy-uuid>", "Retrieve information about an alert policy", `Retrieves an alert policy and its configuration.`, Writer,
 		displayerType(&displayers.AlertPolicy{}))
+	AlertPolicyGet.Example = `The following example retrieves information about a policy with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl monitoring alert get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	CmdBuilder(cmd, RunCmdAlertPolicyList, "list", "List all alert policies", `Use this command to retrieve a list of all the alert policies in your account.`, Writer,
+	cmdAlertPolicyList := CmdBuilder(cmd, RunCmdAlertPolicyList, "list", "List all alert policies", `Retrieves a list of all the alert policies in your account.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.AlertPolicy{}))
+	cmdAlertPolicyList.Example = `The following example lists all alert policies in your account: doctl monitoring alert list`
 
-	cmdRunAlertPolicyDelete := CmdBuilder(cmd, RunCmdAlertPolicyDelete, "delete <alert-policy-uuid>...", "Delete an alert policy", `Use this command to delete an alert policy.`, Writer, aliasOpt("rm"))
-	AddBoolFlag(cmdRunAlertPolicyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete an alert policy without confirmation prompt")
+	cmdRunAlertPolicyDelete := CmdBuilder(cmd, RunCmdAlertPolicyDelete, "delete <alert-policy-uuid>...", "Delete an alert policy", `Deletes an alert policy.`, Writer, aliasOpt("rm"))
+	AddBoolFlag(cmdRunAlertPolicyDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete an alert policy without a confirmation prompt")
+	cmdRunAlertPolicyDelete.Example = `The following example deletes an alert policy with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl monitoring alert delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	return cmd
 }

@@ -48,6 +48,7 @@ type CmdConfig struct {
 	ReservedIPActions func() do.ReservedIPActionsService
 	Droplets          func() do.DropletsService
 	DropletActions    func() do.DropletActionsService
+	DropletAutoscale  func() do.DropletAutoscaleService
 	Domains           func() do.DomainsService
 	Actions           func() do.ActionsService
 	Account           func() do.AccountService
@@ -99,6 +100,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.ReservedIPActions = func() do.ReservedIPActionsService { return do.NewReservedIPActionsService(godoClient) }
 			c.Droplets = func() do.DropletsService { return do.NewDropletsService(godoClient) }
 			c.DropletActions = func() do.DropletActionsService { return do.NewDropletActionsService(godoClient) }
+			c.DropletAutoscale = func() do.DropletAutoscaleService { return do.NewDropletAutoscaleService(godoClient) }
 			c.Domains = func() do.DomainsService { return do.NewDomainsService(godoClient) }
 			c.Actions = func() do.ActionsService { return do.NewActionsService(godoClient) }
 			c.Account = func() do.AccountService { return do.NewAccountService(godoClient) }
@@ -224,4 +226,20 @@ func (c *CmdConfig) Display(d displayers.Displayable) error {
 	dc.OutputType = Output
 
 	return dc.Display()
+}
+
+// An urner implements the URN method, which returns a valid uniform resource
+// name.
+type urner interface {
+	URN() string
+}
+
+// moveToProject moves the given resource to the project with the given
+// project UUID.
+func (c *CmdConfig) moveToProject(projectUUID string, u urner) error {
+	if projectUUID == "" {
+		return nil
+	}
+	_, err := c.Projects().AssignResources(projectUUID, []string{u.URN()})
+	return err
 }

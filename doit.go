@@ -34,6 +34,7 @@ import (
 	"github.com/digitalocean/doctl/pkg/listen"
 	"github.com/digitalocean/doctl/pkg/runner"
 	"github.com/digitalocean/doctl/pkg/ssh"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
 	"github.com/docker/docker/client"
 	"github.com/spf13/viper"
@@ -210,7 +211,8 @@ type Config interface {
 	GetGodoClient(trace, allowRetries bool, accessToken string) (*godo.Client, error)
 	GetDockerEngineClient() (builder.DockerEngineClient, error)
 	SSH(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
+	Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
+	Terminal() terminal.Terminal
 	Set(ns, key string, val any)
 	IsSet(key string) bool
 	GetString(ns, key string) (string, error)
@@ -219,6 +221,7 @@ type Config interface {
 	GetInt(ns, key string) (int, error)
 	GetIntPtr(ns, key string) (*int, error)
 	GetStringSlice(ns, key string) ([]string, error)
+	GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error)
 	GetStringMapString(ns, key string) (map[string]string, error)
 	GetDuration(ns, key string) (time.Duration, error)
 }
@@ -320,12 +323,18 @@ func (c *LiveConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 		Port:            port,
 		AgentForwarding: opts[ArgsSSHAgentForwarding].(bool),
 		Command:         opts[ArgSSHCommand].(string),
+		RetriesMax:      opts[ArgSSHRetryMax].(int),
 	}
 }
 
 // Listen creates a websocket connection
-func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
-	return listen.NewListener(url, token, schemaFunc, out)
+func (c *LiveConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
+	return listen.NewListener(url, token, schemaFunc, out, inCh)
+}
+
+// Terminal returns a terminal.
+func (c *LiveConfig) Terminal() terminal.Terminal {
+	return terminal.New()
 }
 
 // Set sets a config key.
@@ -425,6 +434,15 @@ func (c *LiveConfig) GetStringSlice(ns, key string) ([]string, error) {
 	return out, nil
 }
 
+// GetStringSliceIsFlagSet returns a config value as a string slice and a bool representing the existence of the flag.
+func (c *LiveConfig) GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error) {
+	if !c.IsSet(key) {
+		return nil, false, nil
+	}
+	strSlice, err := c.GetStringSlice(ns, key)
+	return strSlice, true, err
+}
+
 // GetStringMapString returns a config value as a string to string map.
 func (c *LiveConfig) GetStringMapString(ns, key string) (map[string]string, error) {
 	nskey := nskey(ns, key)
@@ -472,7 +490,8 @@ func isRequired(key string) bool {
 // TestConfig is an implementation of Config for testing.
 type TestConfig struct {
 	SSHFn              func(user, host, keyPath string, port int, opts ssh.Options) runner.Runner
-	ListenFn           func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService
+	ListenFn           func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService
+	TerminalFn         func() terminal.Terminal
 	v                  *viper.Viper
 	IsSetMap           map[string]bool
 	DockerEngineClient builder.DockerEngineClient
@@ -486,8 +505,11 @@ func NewTestConfig() *TestConfig {
 		SSHFn: func(u, h, kp string, p int, opts ssh.Options) runner.Runner {
 			return &MockRunner{}
 		},
-		ListenFn: func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
+		ListenFn: func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
 			return &MockListener{}
+		},
+		TerminalFn: func() terminal.Terminal {
+			return &MockTerminal{}
 		},
 		v:        viper.New(),
 		IsSetMap: make(map[string]bool),
@@ -512,8 +534,13 @@ func (c *TestConfig) SSH(user, host, keyPath string, port int, opts ssh.Options)
 }
 
 // Listen returns a mock websocket listener
-func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer) listen.ListenerService {
-	return c.ListenFn(url, token, schemaFunc, out)
+func (c *TestConfig) Listen(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, inCh <-chan []byte) listen.ListenerService {
+	return c.ListenFn(url, token, schemaFunc, out, inCh)
+}
+
+// Terminal returns a mock terminal.
+func (c *TestConfig) Terminal() terminal.Terminal {
+	return c.TerminalFn()
 }
 
 // Set sets a config key.
@@ -559,6 +586,17 @@ func (c *TestConfig) GetIntPtr(ns, key string) (*int, error) {
 func (c *TestConfig) GetStringSlice(ns, key string) ([]string, error) {
 	nskey := nskey(ns, key)
 	return c.v.GetStringSlice(nskey), nil
+}
+
+// GetStringSliceIsFlagSet returns the string slice value for the key in the given
+// namespace and a bool representing the existence of the flag. Because this is a mock implementation,
+// and error will never be returned.
+func (c *TestConfig) GetStringSliceIsFlagSet(ns, key string) ([]string, bool, error) {
+	nskey := nskey(ns, key)
+	if !c.v.IsSet(nskey) {
+		return nil, false, nil
+	}
+	return c.v.GetStringSlice(nskey), true, nil
 }
 
 // GetStringMapString returns the string-to-string value for the key in the

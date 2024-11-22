@@ -26,13 +26,14 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/commands/displayers"
-	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/commands/displayers"
+	"github.com/digitalocean/doctl/do"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -271,28 +272,36 @@ If no configuration flags are used, a three-node cluster with a single node pool
 After creating a cluster, a configuration context is added to kubectl and made active so that you can begin managing your new cluster immediately.`,
 		Writer, aliasOpt("c"))
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgRegionSlug, "", defaultKubernetesRegion,
-		"A slug indicating which region to create the cluster in. Use the `doctl kubernetes options regions` command for a list of options", requiredOpt())
+		"A `slug` indicating which region to create the cluster in. Use the `doctl kubernetes options regions` command for a list of options", requiredOpt())
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVersionSlug, "", "latest",
-		"A slug indicating which Kubernetes version to use when creating the cluster. Use the `doctl kubernetes options versions` command for a list of options")
+		"A `slug` indicating which Kubernetes version to use when creating the cluster. Use the `doctl kubernetes options versions` command for a list of options")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterVPCUUID, "", "",
 		"The UUID of a VPC network to create the cluster in. Must be the UUID of a valid VPC in the same region specified for the cluster. If a VPC is not specified, the cluster is placed in the default VPC network for the region.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterSubnet, "", "",
+		"The CIDR block to use for the pod network. Must be a valid CIDR block. Defaults to `10.244.0.0/16`. If left empty/default the cluster will be created with a virtual network. If a custom one is provided, the cluster will be created as vpc-native cluster. VPC-native CIDR blocks cannot overlap within an account.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgServiceSubnet, "", "",
+		"The CIDR block to use for the service network. Must be a valid CIDR block. Defaults to `10.245.0.0/16`. If left empty/default the cluster will be created with a virtual network. If a custom one is provided, the cluster will be created as vpc-native cluster. VPC-native CIDR blocks cannot overlap within an account.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgAutoUpgrade, "", false,
 		"Enables automatic upgrades to new patch releases during the cluster's maintenance window. Defaults to `false`. To enable automatic upgrade, supply `--auto-upgrade=true`.")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSurgeUpgrade, "", true,
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgHA, "", false,
 		"Creates the cluster with a highly-available control plane. Defaults to false. To enable the HA control plane, supply --ha=true.")
+	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgEnableControlPlaneFirewall, "", false,
+		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
+		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
-		"A comma-separated list of tags to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
+		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
 		defaultKubernetesNodeSize,
-		"The machine size to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Use the `doctl kubernetes options sizes` command for a list of possible values.")
-	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks, "", nil, "A comma-separated list of 1-click applications to install on the Kubernetes cluster. Use the `doctl kubernetes 1-click list` command for a list of available 1-click applications.")
+		"The machine `size` to use when creating nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+"). Use the `doctl kubernetes options sizes` command for a list of possible values.")
+	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgOneClicks, "", nil, "A comma-separated list of 1-click `applications` to install on the Kubernetes cluster. Use the `doctl kubernetes 1-click list` command for a list of available 1-click applications.")
 	AddIntFlag(cmdKubeClusterCreate, doctl.ArgNodePoolCount, "",
 		defaultKubernetesNodeCount,
 		"The number of nodes in the default node pool (incompatible with --"+doctl.ArgClusterNodePool+")")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgClusterNodePool, "", nil,
-		`A comma-separated list of node pools, defined using semicolon-separated configuration values and surrounded by quotes (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`).
+		`A comma-separated list of `+"`node-pools`"+`, defined using semicolon-separated configuration values and surrounded by quotes (incompatible with --`+doctl.ArgSizeSlug+` and --`+doctl.ArgNodePoolCount+`).
 Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=key1=value1;label=key2=label2;taint=key1=value1:NoSchedule;taint=key2:NoExecute"`+"`"+` where:
 
 - `+"`"+`name`+"`"+`: The name of the node pool, which must be unique in the cluster
@@ -301,8 +310,8 @@ Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=ke
 - `+"`"+`tag`+"`"+`: A comma-separated list of tags to apply to nodes in the pool
 - `+"`"+`label`+"`"+`: A label in `+"`"+`key=value`+"`"+` notation. Repeat to add multiple labels at once.
 - `+"`"+`taint`+"`"+`: Taint in `+"`"+`key=value:effect`+"`"+` notation. Repeat to add multiple taints at once.
-- `+"`"+`auto-scale`+"`"+`: Enables cluster auto-scaling on the node pool (boolean)
-- `+"`"+`min-nodes`+"`"+`: The minimum number of nodes that the cluster can be auto-scaled to.
+- `+"`"+`auto-scale`+"`"+`: Enables cluster auto-scaling on the node pool (boolean).
+- `+"`"+`min-nodes`+"`"+`: The minimum number of nodes that the cluster can be auto-scaled to. The value will be 0 if auto_scale is set to false. Scale-to-zero is not supported.
 - `+"`"+`max-nodes`+"`"+`: The maximum number of nodes that can be auto-scaled to.`)
 
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgClusterUpdateKubeconfig, "", true,
@@ -312,7 +321,7 @@ Format: `+"`"+`"name=your-name;size=size_slug;count=5;tag=tag1;tag=tag2;label=ke
 	AddBoolFlag(cmdKubeClusterCreate, doctl.ArgSetCurrentContext, "", true,
 		"Sets the current kubectl context to that of the new cluster")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgMaintenanceWindow, "", "any=00:00",
-		"Sets the beginning of the four hour maintenance window for the cluster. The syntax format is: `day=HH:MM`, where time is in UTC. Day can be: `any`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday"+"`.")
+		"Sets the beginning of the `schedule` for the four hour maintenance window for the cluster. The syntax format is: `day=HH:MM`, where time is in UTC. Day can be: `any`, `monday`, `tuesday`, `wednesday`, `thursday`, `friday`, `saturday`, `sunday"+"`.")
 	cmdKubeClusterCreate.Example = `The following example creates a cluster named ` + "`" + `example-cluster` + "`" + ` in the ` + "`" + `nyc1` + "`" + ` region with a node pool, using Kubernetes version ` + "`" + `1.28.2-do.0` + "`" + `: doctl kubernetes cluster create example-cluster --region nyc1 --version 1.28.2-do.0 --maintenance-window saturday=02:00 --node-pool "name=example-pool;size=s-2vcpu-2gb;count=5;tag=web;tag=frontend;label=key1=value1;label=key2=label2;taint=key1=value1:NoSchedule;taint=key2:NoExecute"`
 
 	cmdKubeClusterUpdate := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpdate, "update <id|name>",
@@ -328,6 +337,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Enables surge-upgrade for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgHA, "", false,
 		"Enables the highly-available control plane for the cluster")
+	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", false,
+		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
+	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
+		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
 		true, "Updates the cluster in your kubeconfig")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgSetCurrentContext, "", true,
@@ -478,7 +491,7 @@ Creates a new node pool for the specified cluster. The command requires values f
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolName, "", "",
 		"The name of the node pool", requiredOpt())
 	AddStringFlag(cmdKubeNodePoolCreate, doctl.ArgSizeSlug, "", "",
-		"The size of the nodes in the node pool. Use the `doctl kubernetes options sizes` command for a list of possible values.", requiredOpt())
+		"The `size` of the nodes in the node pool. Use the `doctl kubernetes options sizes` command for a list of possible values.", requiredOpt())
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolCount, "", 0,
 		"The number of nodes in the node pool", requiredOpt())
 	AddStringSliceFlag(cmdKubeNodePoolCreate, doctl.ArgTag, "", nil,
@@ -490,7 +503,7 @@ Creates a new node pool for the specified cluster. The command requires values f
 	AddBoolFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolAutoScale, "", false,
 		"Enables auto-scaling on the node pool")
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMinNodes, "", 0,
-		"The minimum number of nodes in the node pool when autoscaling is enabled")
+		"The minimum number of nodes in the node pool when autoscaling (auto_scale) is enabled. If auto_scale is set to false, the default value will be 0. Scale-to-zero is not supported.")
 	AddIntFlag(cmdKubeNodePoolCreate, doctl.ArgNodePoolMaxNodes, "", 0,
 		"The maximum number of nodes in the node pool when autoscaling is enabled")
 	cmdKubeNodePoolCreate.Example = `The following example creates a node pool named ` + "`" + `example-pool` + "`" + ` in a cluster named ` + "`" + `example-cluster` + "`" + `: doctl kubernetes cluster node-pool create example-cluster --name example-pool --size s-1vcpu-2gb --count 3 --taint "key1=value1:NoSchedule" --taint "key2:NoExecute"`
@@ -587,7 +600,7 @@ func kubernetesOneClicks() *Command {
 	cmdKubernetesOneClickList.Example = `The following example lists all available 1-click apps for Kubernetes: doctl kubernetes 1-click list`
 	cmdKubeOneClickInstall := CmdBuilder(cmd, RunKubernetesOneClickInstall, "install <cluster-id>", "Install 1-click apps on a Kubernetes cluster", "Installs 1-click applications on a Kubernetes cluster. Use the `--1-click` flag to specify one or multiple pieces of software to install on the cluster.", Writer, aliasOpt("in"), displayerType(&displayers.OneClick{}))
 	AddStringSliceFlag(cmdKubeOneClickInstall, doctl.ArgOneClicks, "", nil, "The 1-clicks application to install on the cluster. Multiple 1-clicks can be added simultaneously, for example: `--1-clicks moon,loki,netdata`")
-	cmdKubeOneClickInstall.Example = `The following example installs Loki and Netdata on a Kubernetes cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl kubernetes 1-click install f81d4fae-7dec-11d0-a765-00a0c91e6bf6> --1-clicks loki,netdata`
+	cmdKubeOneClickInstall.Example = `The following example installs Loki and Netdata on a Kubernetes cluster with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl kubernetes 1-click install f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --1-clicks loki,netdata`
 
 	return cmd
 }
@@ -750,6 +763,9 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			cluster, err = waitForClusterRunning(kube, cluster.ID)
 			if err != nil {
 				warn("Cluster couldn't enter `running` state: %v", err)
+			}
+			if cluster == nil {
+				return errors.New("cluster vanished while waiting for creation")
 			}
 		}
 
@@ -1624,6 +1640,22 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 	// empty "" is fine, the default region VPC will be resolved
 	r.VPCUUID = vpcUUID
 
+	podCIDR, err := c.Doit.GetString(c.NS, doctl.ArgClusterSubnet)
+	if err != nil {
+		return err
+	}
+	r.ClusterSubnet = podCIDR
+	svcCIDR, err := c.Doit.GetString(c.NS, doctl.ArgServiceSubnet)
+	if err != nil {
+		return err
+	}
+	r.ServiceSubnet = svcCIDR
+	// empty "" is fine, the default is still to use a virtual network and not be vpc-native.
+	// either both have to be set (vpc-native) or none (virtual network)
+	if c.Doit.IsSet(doctl.ArgClusterSubnet) != c.Doit.IsSet(doctl.ArgServiceSubnet) {
+		return fmt.Errorf("flags %q and %q both have to be set for vpc-native clusters or both unset for virtual network clusters", doctl.ArgClusterSubnet, doctl.ArgServiceSubnet)
+	}
+
 	version, err := getVersionOrLatest(c)
 	if err != nil {
 		return err
@@ -1647,6 +1679,30 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		return err
 	}
 	r.HA = ha
+
+	enableControlPlaneFirewall, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableControlPlaneFirewall)
+	if err != nil {
+		return err
+	}
+	if enableControlPlaneFirewall != nil {
+		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
+			Enabled: enableControlPlaneFirewall,
+		}
+	}
+
+	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
+	if err != nil {
+		return err
+	}
+	if isSet {
+		if r.ControlPlaneFirewall == nil {
+			r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{}
+		}
+		for i := range controlPlaneFirewallAllowedAddresses {
+			controlPlaneFirewallAllowedAddresses[i] = strings.TrimSpace(controlPlaneFirewallAllowedAddresses[i])
+		}
+		r.ControlPlaneFirewall.AllowedAddresses = controlPlaneFirewallAllowedAddresses
+	}
 
 	tags, err := c.Doit.GetStringSlice(c.NS, doctl.ArgTag)
 	if err != nil {
@@ -1737,6 +1793,31 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		return err
 	}
 	r.HA = ha
+
+	enableControlPlaneFirewall, err := c.Doit.GetBoolPtr(c.NS, doctl.ArgEnableControlPlaneFirewall)
+	if err != nil {
+		return err
+	}
+	if enableControlPlaneFirewall != nil {
+		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
+			Enabled: enableControlPlaneFirewall,
+		}
+	}
+
+	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
+	if err != nil {
+		return err
+	}
+	if isSet {
+		if r.ControlPlaneFirewall == nil {
+			r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{}
+		}
+		for i := range controlPlaneFirewallAllowedAddresses {
+			controlPlaneFirewallAllowedAddresses[i] = strings.TrimSpace(controlPlaneFirewallAllowedAddresses[i])
+		}
+		r.ControlPlaneFirewall.AllowedAddresses = controlPlaneFirewallAllowedAddresses
+	}
+
 	return nil
 }
 

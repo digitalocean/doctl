@@ -5,6 +5,7 @@
 //
 //	mockgen -source 1_clicks.go -package=mocks OneClickService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -19,6 +20,7 @@ import (
 type MockOneClickService struct {
 	ctrl     *gomock.Controller
 	recorder *MockOneClickServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockOneClickServiceMockRecorder is the mock recorder for MockOneClickService.

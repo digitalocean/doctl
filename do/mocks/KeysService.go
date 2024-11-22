@@ -5,6 +5,7 @@
 //
 //	mockgen -source sshkeys.go -package=mocks KeysService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockKeysService struct {
 	ctrl     *gomock.Controller
 	recorder *MockKeysServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockKeysServiceMockRecorder is the mock recorder for MockKeysService.

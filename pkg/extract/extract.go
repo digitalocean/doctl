@@ -88,7 +88,7 @@ func extractTarGz(source, target string) error {
 				return err
 			}
 
-			f.Chmod(info.Mode())
+			err = f.Chmod(info.Mode())
 			if err != nil {
 				return err
 			}
@@ -142,7 +142,7 @@ func extractZip(source, target string) error {
 			return err
 		}
 
-		f.Chmod(zf.Mode())
+		err = f.Chmod(zf.Mode())
 		if err != nil {
 			return err
 		}

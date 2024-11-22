@@ -5,13 +5,14 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/digitalocean/doctl"
-	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	"github.com/digitalocean/doctl"
+	"github.com/digitalocean/doctl/do"
 )
 
 var (
@@ -30,6 +31,13 @@ var (
 			},
 			AutoUpgrade: true,
 			HA:          true,
+			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
+				Enabled: boolPtr(true),
+				AllowedAddresses: []string{
+					"1.2.3.4",
+					"4.3.2.1/32",
+				},
+			},
 		},
 	}
 
@@ -497,6 +505,13 @@ func TestKubernetesCreate(t *testing.T) {
 			},
 			AutoUpgrade: true,
 			HA:          true,
+			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
+				Enabled: boolPtr(true),
+				AllowedAddresses: []string{
+					"1.2.3.4",
+					"4.3.2.1/32",
+				},
+			},
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -517,6 +532,9 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, testCluster.AutoUpgrade)
 		config.Doit.Set(config.NS, doctl.ArgHA, testCluster.HA)
 
+		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
+
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
@@ -525,6 +543,19 @@ func TestKubernetesCreate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgClusterVPCUUID, "vpc-uuid")
 		r.VPCUUID = "vpc-uuid"
 		testCluster.VPCUUID = "vpc-uuid"
+		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
+		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
+		assert.NoError(t, err)
+
+		// Test vpc-native
+		const podNetwork = "10.100.0.0/16"
+		const serviceNetwork = "10.101.0.0/16"
+		config.Doit.Set(config.NS, doctl.ArgClusterSubnet, podNetwork)
+		config.Doit.Set(config.NS, doctl.ArgServiceSubnet, serviceNetwork)
+		r.ClusterSubnet = podNetwork
+		r.ServiceSubnet = serviceNetwork
+		testCluster.ClusterSubnet = podNetwork
+		testCluster.ServiceSubnet = serviceNetwork
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 		err = testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
 		assert.NoError(t, err)
@@ -550,6 +581,13 @@ func TestKubernetesUpdate(t *testing.T) {
 			},
 			AutoUpgrade: boolPtr(false),
 			HA:          boolPtr(true),
+			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
+				Enabled: boolPtr(true),
+				AllowedAddresses: []string{
+					"1.2.3.4",
+					"4.3.2.1/32",
+				},
+			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -559,6 +597,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
 		config.Doit.Set(config.NS, doctl.ArgHA, true)
+		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -574,6 +614,13 @@ func TestKubernetesUpdate(t *testing.T) {
 				Day:       godo.KubernetesMaintenanceDayAny,
 			},
 			AutoUpgrade: boolPtr(false),
+			ControlPlaneFirewall: &godo.KubernetesControlPlaneFirewall{
+				Enabled: boolPtr(true),
+				AllowedAddresses: []string{
+					"1.2.3.4",
+					"4.3.2.1/32",
+				},
+			},
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
@@ -583,6 +630,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgTag, testCluster.Tags)
 		config.Doit.Set(config.NS, doctl.ArgMaintenanceWindow, "any=00:00")
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
+		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
+		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)

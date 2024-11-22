@@ -36,29 +36,32 @@ func Snapshot() *Command {
 
 	snapshotDetail := `
 
-  - The snapshot's ID
-  - The snapshot's name
-  - The date and time when the snapshot was created
-  - The slugs of the datacenter regions in which the snapshot is available
-  - The type of resource the snapshot was made from, Droplet or volume, and its ID
-  - The minimum size in GB required for a Droplet or volume to use this snapshot
-  - The compressed, billable size of the snapshot
+- The snapshot's ID
+- The snapshot's name
+- The date and time when the snapshot was created
+- The slugs of the datacenter regions in which the snapshot is available
+- The type of resource the snapshot was made from (either from Droplet or volume) and its ID
+- The minimum size required for a Droplet or volume to use this snapshot, in GB
+- The compressed, billable size of the snapshot
 `
 
 	cmdRunSnapshotList := CmdBuilder(cmd, RunSnapshotList, "list [glob]",
-		"List Droplet and volume snapshots", "List information about Droplet and block storage volume snapshots, including:"+snapshotDetail,
+		"List Droplet and volume snapshots", "Retrieves a list of snapshots and their information, including:"+snapshotDetail,
 		Writer, aliasOpt("ls"), displayerType(&displayers.Snapshot{}))
-	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Filter by resource type (`droplet` or `volume`)")
-	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Filter by regional availability")
+	AddStringFlag(cmdRunSnapshotList, doctl.ArgResourceType, "", "", "Filters by resource type (`droplet` or `volume`)")
+	AddStringFlag(cmdRunSnapshotList, doctl.ArgRegionSlug, "", "", "Filters by regional availability")
+	cmdRunSnapshotList.Example = `The following example lists all Droplet snapshots in the ` + "`" + `nyc1` + "`" + ` region and uses the ` + "`" + `--format` + "`" + ` flag to return only name, ID, and resource type for each snapshot: doctl compute snapshot list --resource droplet --region nyc1 --format Name,ID,ResourceType`
 
-	CmdBuilder(cmd, RunSnapshotGet, "get <snapshot-id>...",
-		"Retrieve a Droplet or volume snapshot", "Retrieve information about a Droplet or block storage volume snapshot, including:"+snapshotDetail,
+	cmdSnapshotGet := CmdBuilder(cmd, RunSnapshotGet, "get <snapshot-id>...",
+		"Retrieve a Droplet or volume snapshot", "Retrieves information about a Droplet or block storage volume snapshot, including:"+snapshotDetail,
 		Writer, aliasOpt("g"), displayerType(&displayers.Snapshot{}))
+	cmdSnapshotGet.Example = `The following example retrieves information about a Droplet snapshot with ID ` + "`" + `386734086` + "`" + `: doctl compute snapshot get 386734086`
 
 	cmdRunSnapshotDelete := CmdBuilder(cmd, RunSnapshotDelete, "delete <snapshot-id>...",
-		"Delete a snapshot of a Droplet or volume", "Delete a snapshot of a Droplet or volume by specifying its ID.",
+		"Delete a snapshot of a Droplet or volume", "Deletes the specified snapshot or volume. This is irreversible.",
 		Writer, aliasOpt("d", "rm"), displayerType(&displayers.Snapshot{}))
 	AddBoolFlag(cmdRunSnapshotDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the snapshot without confirmation")
+	cmdRunSnapshotDelete.Example = `The following example deletes a Droplet snapshot with ID ` + "`" + `386734086` + "`" + `: doctl compute snapshot delete 386734086`
 
 	return cmd
 }

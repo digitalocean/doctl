@@ -52,8 +52,9 @@ To access the Droplet on a non-default port, use the `+"`"+`--%s`+"`"+` flag. By
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHAgentForwarding, "", false, "Enables SSH agent forwarding")
 	AddBoolFlag(cmdSSH, doctl.ArgsSSHPrivateIP, "", false, "Connects to the Droplet's private IP address via SSH")
 	AddStringFlag(cmdSSH, doctl.ArgSSHCommand, "", "", `Runs a command on the Droplet instead of logging the terminal into the Droplet. For example, `+"`"+`--ssh-command "sudo apt-get update;touch example.txt"`+"`"+` updates apt-get and creates an empty text file called `+"`"+`example.txt`+"`"+`.`)
-
 	cmdSSH.Example = `The following example connects to a Droplet with the ID ` + "`" + `386734086` + "`" + ` as the user ` + "`" + `example-user` + "`" + `: doctl compute ssh 386734086 --ssh-user example-user`
+	AddIntFlag(cmdSSH, doctl.ArgSSHRetryMax, "", 0, "Max number of retries for a successful SSH connection to a Droplet (default is 0)")
+
 
 	return cmdSSH
 }
@@ -92,6 +93,11 @@ func RunSSH(c *CmdConfig) error {
 	}
 
 	opts[doctl.ArgSSHCommand], err = c.Doit.GetString(c.NS, doctl.ArgSSHCommand)
+	if err != nil {
+		return nil
+	}
+
+	opts[doctl.ArgSSHRetryMax], err = c.Doit.GetInt(c.NS, doctl.ArgSSHRetryMax)
 	if err != nil {
 		return nil
 	}

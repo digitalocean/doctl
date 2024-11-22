@@ -98,6 +98,8 @@ type App struct {
 	BuildConfig             *AppBuildConfig `json:"build_config,omitempty"`
 	// The id of the project for the app. This will be empty if there is a fleet (project) lookup failure.
 	ProjectID string `json:"project_id,omitempty"`
+	// The dedicated egress ip addresses associated with the app.
+	DedicatedIps []*AppDedicatedIp `json:"dedicated_ips,omitempty"`
 }
 
 // AppAlertSpec Configuration of an alert for the app or a individual component.
@@ -191,7 +193,7 @@ type AppBuildConfigCNBVersioning struct {
 
 // AppDatabaseSpec struct for AppDatabaseSpec
 type AppDatabaseSpec struct {
-	// The name. Must be unique across all components within the same app.
+	// The database's name. The name must be unique across all components within the same app and cannot use capital letters.
 	Name    string                `json:"name"`
 	Engine  AppDatabaseSpecEngine `json:"engine,omitempty"`
 	Version string                `json:"version,omitempty"`
@@ -214,11 +216,33 @@ type AppDatabaseSpecEngine string
 
 // List of AppDatabaseSpecEngine
 const (
-	AppDatabaseSpecEngine_Unset   AppDatabaseSpecEngine = "UNSET"
-	AppDatabaseSpecEngine_MySQL   AppDatabaseSpecEngine = "MYSQL"
-	AppDatabaseSpecEngine_PG      AppDatabaseSpecEngine = "PG"
-	AppDatabaseSpecEngine_Redis   AppDatabaseSpecEngine = "REDIS"
-	AppDatabaseSpecEngine_MongoDB AppDatabaseSpecEngine = "MONGODB"
+	AppDatabaseSpecEngine_Unset      AppDatabaseSpecEngine = "UNSET"
+	AppDatabaseSpecEngine_MySQL      AppDatabaseSpecEngine = "MYSQL"
+	AppDatabaseSpecEngine_PG         AppDatabaseSpecEngine = "PG"
+	AppDatabaseSpecEngine_Redis      AppDatabaseSpecEngine = "REDIS"
+	AppDatabaseSpecEngine_MongoDB    AppDatabaseSpecEngine = "MONGODB"
+	AppDatabaseSpecEngine_Kafka      AppDatabaseSpecEngine = "KAFKA"
+	AppDatabaseSpecEngine_Opensearch AppDatabaseSpecEngine = "OPENSEARCH"
+)
+
+// AppDedicatedIp Represents a dedicated egress ip.
+type AppDedicatedIp struct {
+	// The ip address of the dedicated egress ip.
+	Ip string `json:"ip,omitempty"`
+	// The id of the dedictated egress ip.
+	ID     string               `json:"id,omitempty"`
+	Status AppDedicatedIpStatus `json:"status,omitempty"`
+}
+
+// AppDedicatedIpStatus the model 'AppDedicatedIpStatus'
+type AppDedicatedIpStatus string
+
+// List of AppDedicatedIPStatus
+const (
+	APPDEDICATEDIPSTATUS_Unknown   AppDedicatedIpStatus = "UNKNOWN"
+	APPDEDICATEDIPSTATUS_Assigning AppDedicatedIpStatus = "ASSIGNING"
+	APPDEDICATEDIPSTATUS_Assigned  AppDedicatedIpStatus = "ASSIGNED"
+	APPDEDICATEDIPSTATUS_Removed   AppDedicatedIpStatus = "REMOVED"
 )
 
 // AppDomainSpec struct for AppDomainSpec
@@ -366,6 +390,7 @@ type AppJobSpec struct {
 	Alerts []*AppAlertSpec `json:"alerts,omitempty"`
 	// A list of configured log forwarding destinations.
 	LogDestinations []*AppLogDestinationSpec `json:"log_destinations,omitempty"`
+	Termination     *AppJobSpecTermination   `json:"termination,omitempty"`
 }
 
 // AppJobSpecKind  - UNSPECIFIED: Default job type, will auto-complete to POST_DEPLOY kind.  - PRE_DEPLOY: Indicates a job that runs before an app deployment.  - POST_DEPLOY: Indicates a job that runs after an app deployment.  - FAILED_DEPLOY: Indicates a job that runs after a component fails to deploy.
@@ -379,6 +404,12 @@ const (
 	AppJobSpecKind_FailedDeploy AppJobSpecKind = "FAILED_DEPLOY"
 )
 
+// AppJobSpecTermination struct for AppJobSpecTermination
+type AppJobSpecTermination struct {
+	// The number of seconds to wait between sending a TERM signal to a container and issuing a KILL which causes immediate shutdown. Default: 120, Minimum 1, Maximum 600.
+	GracePeriodSeconds int32 `json:"grace_period_seconds,omitempty"`
+}
+
 // AppLogDestinationSpec struct for AppLogDestinationSpec
 type AppLogDestinationSpec struct {
 	// Name of the log destination.
@@ -386,6 +417,7 @@ type AppLogDestinationSpec struct {
 	Papertrail  *AppLogDestinationSpecPapertrail `json:"papertrail,omitempty"`
 	Datadog     *AppLogDestinationSpecDataDog    `json:"datadog,omitempty"`
 	Logtail     *AppLogDestinationSpecLogtail    `json:"logtail,omitempty"`
+	OpenSearch  *AppLogDestinationSpecOpenSearch `json:"open_search,omitempty"`
 	Endpoint    string                           `json:"endpoint,omitempty"`
 	TLSInsecure bool                             `json:"tls_insecure,omitempty"`
 	Headers     []*AppLogDestinationSpecHeader   `json:"headers,omitempty"`
@@ -413,10 +445,29 @@ type AppLogDestinationSpecLogtail struct {
 	Token string `json:"token"`
 }
 
+// AppLogDestinationSpecOpenSearch OpenSearch configuration.
+type AppLogDestinationSpecOpenSearch struct {
+	// OpenSearch API Endpoint. Only HTTPS is supported. Format: https://<host>:<port>. Cannot be specified if `cluster_name` is also specified.
+	Endpoint  string               `json:"endpoint,omitempty"`
+	BasicAuth *OpenSearchBasicAuth `json:"basic_auth,omitempty"`
+	// The index name to use for the logs. If not set, the default index name is \"logs\".
+	IndexName string `json:"index_name,omitempty"`
+	// The name of a DigitalOcean DBaaS OpenSearch cluster to use as a log forwarding destination. Cannot be specified if `endpoint` is also specified.
+	ClusterName string `json:"cluster_name,omitempty"`
+}
+
 // AppLogDestinationSpecPapertrail Papertrail configuration.
 type AppLogDestinationSpecPapertrail struct {
 	// Papertrail syslog endpoint.
 	Endpoint string `json:"endpoint"`
+}
+
+// AppMaintenanceSpec struct for AppMaintenanceSpec
+type AppMaintenanceSpec struct {
+	// Indicates whether maintenance mode should be enabled for the app.
+	Enabled bool `json:"enabled,omitempty"`
+	// Indicates whether the app should be archived. Setting this to true implies that enabled is set to true. Note that this feature is currently in closed beta.
+	Archive bool `json:"archive,omitempty"`
 }
 
 // AppRouteSpec struct for AppRouteSpec
@@ -452,7 +503,8 @@ type AppServiceSpec struct {
 	InstanceCount int64               `json:"instance_count,omitempty"`
 	Autoscaling   *AppAutoscalingSpec `json:"autoscaling,omitempty"`
 	// The internal port on which this service's run command will listen. Default: 8080 If there is not an environment variable with the name `PORT`, one will be automatically added with its value set to the value of this field.
-	HTTPPort int64 `json:"http_port,omitempty"`
+	HTTPPort int64           `json:"http_port,omitempty"`
+	Protocol ServingProtocol `json:"protocol,omitempty"`
 	// (Deprecated) A list of HTTP routes that should be routed to this component.
 	Routes      []*AppRouteSpec            `json:"routes,omitempty"`
 	HealthCheck *AppServiceSpecHealthCheck `json:"health_check,omitempty"`
@@ -462,27 +514,36 @@ type AppServiceSpec struct {
 	// A list of configured alerts which apply to the component.
 	Alerts []*AppAlertSpec `json:"alerts,omitempty"`
 	// A list of configured log forwarding destinations.
-	LogDestinations []*AppLogDestinationSpec `json:"log_destinations,omitempty"`
+	LogDestinations []*AppLogDestinationSpec   `json:"log_destinations,omitempty"`
+	Termination     *AppServiceSpecTermination `json:"termination,omitempty"`
 }
 
 // AppServiceSpecHealthCheck struct for AppServiceSpecHealthCheck
 type AppServiceSpecHealthCheck struct {
 	// Deprecated. Use http_path instead.
 	Path string `json:"path,omitempty"`
-	// The number of seconds to wait before beginning health checks. Default: 0 seconds; start health checks as soon as the service starts.
+	// The number of seconds to wait before beginning health checks. Default: 0 seconds, Minimum 0, Maximum 3600.
 	InitialDelaySeconds int32 `json:"initial_delay_seconds,omitempty"`
-	// The number of seconds to wait between health checks. Default: 10 seconds.
+	// The number of seconds to wait between health checks. Default: 10 seconds, Minimum 1, Maximum 300.
 	PeriodSeconds int32 `json:"period_seconds,omitempty"`
-	// The number of seconds after which the check times out. Default: 1 second.
+	// The number of seconds after which the check times out. Default: 1 second, Minimum 1, Maximum 120.
 	TimeoutSeconds int32 `json:"timeout_seconds,omitempty"`
-	// The number of successful health checks before considered healthy. Default: 1.
+	// The number of successful health checks before considered healthy. Default: 1, Minimum 1, Maximum 50.
 	SuccessThreshold int32 `json:"success_threshold,omitempty"`
-	// The number of failed health checks before considered unhealthy. Default: 9.
+	// The number of failed health checks before considered unhealthy. Default: 9, Minimum 1, Maximum 50.
 	FailureThreshold int32 `json:"failure_threshold,omitempty"`
 	// The route path used for the HTTP health check ping. If not set, the HTTP health check will be disabled and a TCP health check used instead.
 	HTTPPath string `json:"http_path,omitempty"`
 	// The port on which the health check will be performed. If not set, the health check will be performed on the component's http_port.
 	Port int64 `json:"port,omitempty"`
+}
+
+// AppServiceSpecTermination struct for AppServiceSpecTermination
+type AppServiceSpecTermination struct {
+	// The number of seconds to wait between selecting a container instance for termination and issuing the TERM signal. Selecting a container instance for termination begins an asynchronous drain of new requests on upstream load-balancers. Default: 15 seconds, Minimum 1, Maximum 110.
+	DrainSeconds int32 `json:"drain_seconds,omitempty"`
+	// The number of seconds to wait between sending a TERM signal to a container and issuing a KILL which causes immediate shutdown. Default: 120, Minimum 1, Maximum 600.
+	GracePeriodSeconds int32 `json:"grace_period_seconds,omitempty"`
 }
 
 // AppSpec The desired configuration of an application.
@@ -507,10 +568,11 @@ type AppSpec struct {
 	// A list of environment variables made available to all components in the app.
 	Envs []*AppVariableDefinition `json:"envs,omitempty"`
 	// A list of alerts which apply to the app.
-	Alerts   []*AppAlertSpec `json:"alerts,omitempty"`
-	Ingress  *AppIngressSpec `json:"ingress,omitempty"`
-	Egress   *AppEgressSpec  `json:"egress,omitempty"`
-	Features []string        `json:"features,omitempty"`
+	Alerts      []*AppAlertSpec     `json:"alerts,omitempty"`
+	Ingress     *AppIngressSpec     `json:"ingress,omitempty"`
+	Egress      *AppEgressSpec      `json:"egress,omitempty"`
+	Features    []string            `json:"features,omitempty"`
+	Maintenance *AppMaintenanceSpec `json:"maintenance,omitempty"`
 }
 
 // AppStaticSiteSpec struct for AppStaticSiteSpec
@@ -579,7 +641,14 @@ type AppWorkerSpec struct {
 	// A list of configured alerts which apply to the component.
 	Alerts []*AppAlertSpec `json:"alerts,omitempty"`
 	// A list of configured log forwarding destinations.
-	LogDestinations []*AppLogDestinationSpec `json:"log_destinations,omitempty"`
+	LogDestinations []*AppLogDestinationSpec  `json:"log_destinations,omitempty"`
+	Termination     *AppWorkerSpecTermination `json:"termination,omitempty"`
+}
+
+// AppWorkerSpecTermination struct for AppWorkerSpecTermination
+type AppWorkerSpecTermination struct {
+	// The number of seconds to wait between sending a TERM signal to a container and issuing a KILL which causes immediate shutdown. Default: 120, Minimum 1, Maximum 600.
+	GracePeriodSeconds int32 `json:"grace_period_seconds,omitempty"`
 }
 
 // Buildpack struct for Buildpack
@@ -858,6 +927,8 @@ type DetectResponse struct {
 	TemplateFound bool                       `json:"template_found,omitempty"`
 	TemplateValid bool                       `json:"template_valid,omitempty"`
 	TemplateError string                     `json:"template_error,omitempty"`
+	// Whether or not the underlying detection is still pending. If true, the request can be retried as-is until this field is false and the response contains the detection result.
+	Pending bool `json:"pending,omitempty"`
 }
 
 // DetectResponseComponent struct for DetectResponseComponent
@@ -932,6 +1003,7 @@ const (
 	DeploymentCauseDetailsDigitalOceanUserActionName_RollbackApp           DeploymentCauseDetailsDigitalOceanUserActionName = "ROLLBACK_APP"
 	DeploymentCauseDetailsDigitalOceanUserActionName_RevertAppRollback     DeploymentCauseDetailsDigitalOceanUserActionName = "REVERT_APP_ROLLBACK"
 	DeploymentCauseDetailsDigitalOceanUserActionName_UpgradeBuildpack      DeploymentCauseDetailsDigitalOceanUserActionName = "UPGRADE_BUILDPACK"
+	DeploymentCauseDetailsDigitalOceanUserActionName_Restart               DeploymentCauseDetailsDigitalOceanUserActionName = "RESTART"
 )
 
 // AppDomain struct for AppDomain
@@ -997,6 +1069,41 @@ type AppDomainValidation struct {
 	TXTValue string `json:"txt_value,omitempty"`
 }
 
+// GetAppDatabaseConnectionDetailsResponse struct for GetAppDatabaseConnectionDetailsResponse
+type GetAppDatabaseConnectionDetailsResponse struct {
+	ConnectionDetails []*GetDatabaseConnectionDetailsResponse `json:"connection_details,omitempty"`
+}
+
+// GetDatabaseConnectionDetailsResponse struct for GetDatabaseConnectionDetailsResponse
+type GetDatabaseConnectionDetailsResponse struct {
+	Host          string                                      `json:"host,omitempty"`
+	Port          int64                                       `json:"port,omitempty"`
+	Username      string                                      `json:"username,omitempty"`
+	Password      string                                      `json:"password,omitempty"`
+	DatabaseName  string                                      `json:"database_name,omitempty"`
+	SslMode       string                                      `json:"ssl_mode,omitempty"`
+	DatabaseURL   string                                      `json:"database_url,omitempty"`
+	ComponentName string                                      `json:"component_name,omitempty"`
+	Pools         []*GetDatabaseConnectionDetailsResponsePool `json:"pools,omitempty"`
+}
+
+// GetDatabaseConnectionDetailsResponsePool struct for GetDatabaseConnectionDetailsResponsePool
+type GetDatabaseConnectionDetailsResponsePool struct {
+	PoolName     string `json:"pool_name,omitempty"`
+	Host         string `json:"host,omitempty"`
+	Port         int64  `json:"port,omitempty"`
+	Username     string `json:"username,omitempty"`
+	Password     string `json:"password,omitempty"`
+	DatabaseName string `json:"database_name,omitempty"`
+	SslMode      string `json:"ssl_mode,omitempty"`
+	DatabaseURL  string `json:"database_url,omitempty"`
+}
+
+// GetDatabaseTrustedSourceResponse struct for GetDatabaseTrustedSourceResponse
+type GetDatabaseTrustedSourceResponse struct {
+	IsEnabled bool `json:"is_enabled,omitempty"`
+}
+
 // GitHubSourceSpec struct for GitHubSourceSpec
 type GitHubSourceSpec struct {
 	Repo         string `json:"repo,omitempty"`
@@ -1052,16 +1159,28 @@ const (
 
 // AppInstanceSize struct for AppInstanceSize
 type AppInstanceSize struct {
-	Name            string                 `json:"name,omitempty"`
-	Slug            string                 `json:"slug,omitempty"`
-	CPUType         AppInstanceSizeCPUType `json:"cpu_type,omitempty"`
-	CPUs            string                 `json:"cpus,omitempty"`
-	MemoryBytes     string                 `json:"memory_bytes,omitempty"`
-	USDPerMonth     string                 `json:"usd_per_month,omitempty"`
-	USDPerSecond    string                 `json:"usd_per_second,omitempty"`
-	TierSlug        string                 `json:"tier_slug,omitempty"`
-	TierUpgradeTo   string                 `json:"tier_upgrade_to,omitempty"`
-	TierDowngradeTo string                 `json:"tier_downgrade_to,omitempty"`
+	Name         string                 `json:"name,omitempty"`
+	Slug         string                 `json:"slug,omitempty"`
+	CPUType      AppInstanceSizeCPUType `json:"cpu_type,omitempty"`
+	CPUs         string                 `json:"cpus,omitempty"`
+	MemoryBytes  string                 `json:"memory_bytes,omitempty"`
+	USDPerMonth  string                 `json:"usd_per_month,omitempty"`
+	USDPerSecond string                 `json:"usd_per_second,omitempty"`
+	TierSlug     string                 `json:"tier_slug,omitempty"`
+	// (Deprecated) The slug of the corresponding upgradable instance size on the higher tier.
+	TierUpgradeTo string `json:"tier_upgrade_to,omitempty"`
+	// (Deprecated) The slug of the corresponding downgradable instance size on the lower tier.
+	TierDowngradeTo string `json:"tier_downgrade_to,omitempty"`
+	// Indicates if the tier instance size can enable autoscaling.
+	Scalable bool `json:"scalable,omitempty"`
+	// (Deprecated) Indicates if the tier instance size is in feature preview state.
+	FeaturePreview bool `json:"feature_preview,omitempty"`
+	// Indicates if the tier instance size allows more than one instance.
+	SingleInstanceOnly bool `json:"single_instance_only,omitempty"`
+	// Indicates if the tier instance size is intended for deprecation.
+	DeprecationIntent bool `json:"deprecation_intent,omitempty"`
+	// The bandwidth allowance in GiB for the tier instance size.
+	BandwidthAllowanceGib string `json:"bandwidth_allowance_gib,omitempty"`
 }
 
 // AppInstanceSizeCPUType the model 'AppInstanceSizeCPUType'
@@ -1078,6 +1197,14 @@ const (
 type ListBuildpacksResponse struct {
 	// List of the available buildpacks on App Platform.
 	Buildpacks []*Buildpack `json:"buildpacks,omitempty"`
+}
+
+// OpenSearchBasicAuth Configure Username and/or Password for Basic authentication.
+type OpenSearchBasicAuth struct {
+	// Username to authenticate with. Only required when `endpoint` is set. Defaults to `doadmin` when `cluster_name` is set.
+	User string `json:"user,omitempty"`
+	// Password for user defined in User. Is required when `endpoint` is set. Cannot be set if using a DigitalOcean DBaaS OpenSearch cluster.
+	Password string `json:"password,omitempty"`
 }
 
 // AppProposeRequest struct for AppProposeRequest
@@ -1102,9 +1229,9 @@ type AppProposeResponse struct {
 	Spec              *AppSpec `json:"spec,omitempty"`
 	// The monthly cost of the proposed app in USD.
 	AppCost float32 `json:"app_cost,omitempty"`
-	// The monthly cost of the proposed app in USD using the next pricing plan tier. For example, if you propose an app that uses the Basic tier, the `app_tier_upgrade_cost` field displays the monthly cost of the app if it were to use the Professional tier. If the proposed app already uses the most expensive tier, the field is empty.
+	// (Deprecated) The monthly cost of the proposed app in USD using the next pricing plan tier. For example, if you propose an app that uses the Basic tier, the `app_tier_upgrade_cost` field displays the monthly cost of the app if it were to use the Professional tier. If the proposed app already uses the most expensive tier, the field is empty.
 	AppTierUpgradeCost float32 `json:"app_tier_upgrade_cost,omitempty"`
-	// The monthly cost of the proposed app in USD using the previous pricing plan tier. For example, if you propose an app that uses the Professional tier, the `app_tier_downgrade_cost` field displays the monthly cost of the app if it were to use the Basic tier. If the proposed app already uses the lest expensive tier, the field is empty.
+	// (Deprecated) The monthly cost of the proposed app in USD using the previous pricing plan tier. For example, if you propose an app that uses the Professional tier, the `app_tier_downgrade_cost` field displays the monthly cost of the app if it were to use the Basic tier. If the proposed app already uses the lest expensive tier, the field is empty.
 	AppTierDowngradeCost float32 `json:"app_tier_downgrade_cost,omitempty"`
 	// The number of existing starter tier apps the account has.
 	ExistingStarterApps string `json:"existing_starter_apps,omitempty"`
@@ -1127,6 +1254,26 @@ type AppRegion struct {
 	Default bool `json:"default,omitempty"`
 }
 
+// ResetDatabasePasswordRequest struct for ResetDatabasePasswordRequest
+type ResetDatabasePasswordRequest struct {
+	AppID         string `json:"app_id,omitempty"`
+	ComponentName string `json:"component_name,omitempty"`
+}
+
+// ResetDatabasePasswordResponse struct for ResetDatabasePasswordResponse
+type ResetDatabasePasswordResponse struct {
+	Deployment *Deployment `json:"deployment,omitempty"`
+}
+
+// ServingProtocol  - HTTP: The app is serving the HTTP protocol. Default.  - HTTP2: The app is serving the HTTP/2 protocol. Currently, this needs to be implemented in the service by serving HTTP/2 with prior knowledge.
+type ServingProtocol string
+
+// List of ServingProtocol
+const (
+	SERVINGPROTOCOL_HTTP  ServingProtocol = "HTTP"
+	SERVINGPROTOCOL_HTTP2 ServingProtocol = "HTTP2"
+)
+
 // AppStringMatch struct for AppStringMatch
 type AppStringMatch struct {
 	// Exact string match. Only 1 of `exact`, `prefix`, or `regex` must be set.
@@ -1142,6 +1289,18 @@ type AppTier struct {
 	Slug                 string `json:"slug,omitempty"`
 	EgressBandwidthBytes string `json:"egress_bandwidth_bytes,omitempty"`
 	BuildSeconds         string `json:"build_seconds,omitempty"`
+}
+
+// ToggleDatabaseTrustedSourceRequest struct for ToggleDatabaseTrustedSourceRequest
+type ToggleDatabaseTrustedSourceRequest struct {
+	AppID         string `json:"app_id,omitempty"`
+	ComponentName string `json:"component_name,omitempty"`
+	Enable        bool   `json:"enable,omitempty"`
+}
+
+// ToggleDatabaseTrustedSourceResponse struct for ToggleDatabaseTrustedSourceResponse
+type ToggleDatabaseTrustedSourceResponse struct {
+	IsEnabled bool `json:"is_enabled,omitempty"`
 }
 
 // UpgradeBuildpackResponse struct for UpgradeBuildpackResponse

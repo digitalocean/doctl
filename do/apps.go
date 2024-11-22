@@ -28,11 +28,13 @@ type AppsService interface {
 	Delete(appID string) error
 	Propose(req *godo.AppProposeRequest) (*godo.AppProposeResponse, error)
 
+	Restart(appID string, components []string) (*godo.Deployment, error)
 	CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error)
 	GetDeployment(appID, deploymentID string) (*godo.Deployment, error)
 	ListDeployments(appID string) ([]*godo.Deployment, error)
 
 	GetLogs(appID, deploymentID, component string, logType godo.AppLogType, follow bool, tail int) (*godo.AppLogs, error)
+	GetExec(appID, deploymentID, component string) (*godo.AppExec, error)
 
 	ListRegions() ([]*godo.AppRegion, error)
 
@@ -131,6 +133,16 @@ func (s *appsService) Propose(req *godo.AppProposeRequest) (*godo.AppProposeResp
 	return res, nil
 }
 
+func (s *appsService) Restart(appID string, components []string) (*godo.Deployment, error) {
+	deployment, _, err := s.client.Apps.Restart(s.ctx, appID, &godo.AppRestartRequest{
+		Components: components,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return deployment, nil
+}
+
 func (s *appsService) CreateDeployment(appID string, forceRebuild bool) (*godo.Deployment, error) {
 	deployment, _, err := s.client.Apps.CreateDeployment(s.ctx, appID, &godo.DeploymentCreateRequest{
 		ForceBuild: forceRebuild,
@@ -184,6 +196,14 @@ func (s *appsService) GetLogs(appID, deploymentID, component string, logType god
 		return nil, err
 	}
 	return logs, nil
+}
+
+func (s *appsService) GetExec(appID, deploymentID, component string) (*godo.AppExec, error) {
+	exec, _, err := s.client.Apps.GetExec(s.ctx, appID, deploymentID, component)
+	if err != nil {
+		return nil, err
+	}
+	return exec, nil
 }
 
 func (s *appsService) ListRegions() ([]*godo.AppRegion, error) {

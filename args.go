@@ -54,8 +54,12 @@ const (
 	ArgAppLogFollow = "follow"
 	// ArgAppLogTail tail logs.
 	ArgAppLogTail = "tail"
+	// ArgNoPrefix no prefix to json logs
+	ArgNoPrefix = "no-prefix"
 	// ArgAppForceRebuild forces a deployment rebuild
 	ArgAppForceRebuild = "force-rebuild"
+	// ArgAppComponents is a list of components to restart.
+	ArgAppComponents = "components"
 	// ArgAppAlertDestinations is a path to an app alert destination file.
 	ArgAppAlertDestinations = "app-alert-destinations"
 	// ArgClusterName is a cluster name argument.
@@ -66,6 +70,10 @@ const (
 	ArgVPCUUID = "vpc-uuid"
 	// ArgClusterVPCUUID is a cluster vpc-uuid argument.
 	ArgClusterVPCUUID = "vpc-uuid"
+	// ArgClusterSubnet is a cluster pod CIDR argument.
+	ArgClusterSubnet = "cluster-subnet"
+	// ArgServiceSubnet is a cluster service CIDR argument.
+	ArgServiceSubnet = "service-subnet"
 	// ArgClusterNodePool are a cluster's node pools arguments.
 	ArgClusterNodePool = "node-pool"
 	// ArgClusterUpdateKubeconfig updates the local kubeconfig.
@@ -90,8 +98,30 @@ const (
 	ArgMajorVersion = "major-version"
 	// ArgAutoUpgrade is a cluster's auto-upgrade argument.
 	ArgAutoUpgrade = "auto-upgrade"
+
+	// ArgAutoscaleID is an autoscale id argument.
+	ArgAutoscaleID = "id"
+	// ArgAutoscaleName is an autoscale name argument.
+	ArgAutoscaleName = "name"
+	// ArgAutoscaleMinInstances is an autoscale min instance argument.
+	ArgAutoscaleMinInstances = "min-instances"
+	// ArgAutoscaleMaxInstances is an autoscale max instance argument.
+	ArgAutoscaleMaxInstances = "max-instances"
+	// ArgAutoscaleCpuTarget is an autoscale target cpu utilization argument.
+	ArgAutoscaleCpuTarget = "cpu-target"
+	// ArgAutoscaleMemTarget is an autoscale target memory utilization argument.
+	ArgAutoscaleMemTarget = "mem-target"
+	// ArgAutoscaleCooldownMinutes is an autoscale cooldown duration (minutes) argument.
+	ArgAutoscaleCooldownMinutes = "cooldown-minutes"
+	// ArgAutoscaleTargetInstances is an autoscale target instance argument.
+	ArgAutoscaleTargetInstances = "target-instances"
+
 	// ArgHA is a cluster's highly available control plane argument.
 	ArgHA = "ha"
+	// ArgEnableControlPlaneFirewall enable control plane firewall.
+	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
+	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
+	ArgControlPlaneFirewallAllowedAddresses = "control-plane-firewall-allowed-addresses"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
@@ -140,6 +170,12 @@ const (
 	ArgResourceType = "resource"
 	// ArgBackups is an enable backups argument.
 	ArgBackups = "enable-backups"
+	// ArgDropletBackupPolicyPlan sets a frequency plan for backups.
+	ArgDropletBackupPolicyPlan = "backup-policy-plan"
+	// ArgDropletBackupPolicyWeekday sets backup policy day of the week.
+	ArgDropletBackupPolicyWeekday = "backup-policy-weekday"
+	// ArgDropletBackupPolicyHour sets backup policy hour.
+	ArgDropletBackupPolicyHour = "backup-policy-hour"
 	// ArgIPv6 is an enable IPv6 argument.
 	ArgIPv6 = "enable-ipv6"
 	// ArgPrivateNetworking is an enable private networking argument.
@@ -188,6 +224,8 @@ const (
 	ArgsSSHPrivateIP = "ssh-private-ip"
 	// ArgSSHCommand is a ssh argument.
 	ArgSSHCommand = "ssh-command"
+	// ArgSSHRetryMax is a ssh argument.
+	ArgSSHRetryMax = "ssh-retry-max"
 	// ArgUserData is a user data argument.
 	ArgUserData = "user-data"
 	// ArgUserDataFile is a user data file location argument.
@@ -335,6 +373,16 @@ const (
 	ArgDenyList = "deny-list"
 	// ArgLoadBalancerType is the type of the load balancer.
 	ArgLoadBalancerType = "type"
+	// ArgLoadBalancerDomains is list of domains supported for global load balancer.
+	ArgLoadBalancerDomains = "domains"
+	// ArgGlobalLoadBalancerSettings is global load balancer settings.
+	ArgGlobalLoadBalancerSettings = "glb-settings"
+	// ArgGlobalLoadBalancerCDNSettings is global load balancer CDN settings.
+	ArgGlobalLoadBalancerCDNSettings = "glb-cdn-settings"
+	// ArgTargetLoadBalancerIDs is a list of target load balancer IDs.
+	ArgTargetLoadBalancerIDs = "target-lb-ids"
+	// ArgLoadBalancerNetwork is the type of network the load balancer is accessible from.
+	ArgLoadBalancerNetwork = "network"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
@@ -388,6 +436,10 @@ const (
 	ArgDatabaseUserMySQLAuthPlugin = "mysql-auth-plugin"
 	// ArgDatabasePrivateConnectionBool determine if the private connection details should be shown
 	ArgDatabasePrivateConnectionBool = "private"
+	// ArgDatabaseUserKafkaACLs will specify permissions on topics in kafka clsuter
+	ArgDatabaseUserKafkaACLs = "acl"
+	// ArgDatabaseUserOpenSearchACLs will specify permissions on indexes in opensearch clsuter
+	ArgDatabaseUserOpenSearchACLs = "opensearch-acl"
 
 	// ArgDatabaseTopicReplicationFactor is the replication factor of a kafka topic
 	ArgDatabaseTopicReplicationFactor = "replication-factor"
@@ -411,8 +463,8 @@ const (
 	ArgDatabaseTopicMaxCompactionLagMS = "max-compaction-lag-ms"
 	// ArgDatabaseTopicMaxMessageBytes is the maximum size, in bytes, of the largest record batch that can be sent to the server
 	ArgDatabaseTopicMaxMessageBytes = "max-message-bytes"
-	// ArgDatabaseTopicMesssageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
-	ArgDatabaseTopicMesssageDownConversionEnable = "message-down-conversion-enable"
+	// ArgDatabaseTopicMessageDownConversionEnable determines whether brokers should convert messages for consumers expecting older message formats
+	ArgDatabaseTopicMessageDownConversionEnable = "message-down-conversion-enable"
 	// ArgDatabaseTopicMessageFormatVersion is the version used by the broker to append messages to the kafka topic logs
 	ArgDatabaseTopicMessageFormatVersion = "message-format-version"
 	// ArgDatabaseTopicMessageTimestampType is the timestamp used for messages
@@ -455,6 +507,13 @@ const (
 	ArgVPCDefault = "default"
 	// ArgVPCIPRange is a VPC range of IP addresses in CIDR notation.
 	ArgVPCIPRange = "ip-range"
+
+	// ArgVPCPeeringName is a name of the VPC Peering.
+	ArgVPCPeeringName = "name"
+	// ArgVPCPeeringVPCIDs is the vpc ids of the peering
+	ArgVPCPeeringVPCIDs = "vpc-ids"
+	// ArgVPCPeeringVPCID is id of the VPC.
+	ArgVPCPeeringVPCID = "vpc-id"
 
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
@@ -532,4 +591,7 @@ const (
 
 	// ArgTokenValidationServer is the server used to validate an OAuth token
 	ArgTokenValidationServer = "token-validation-server"
+
+	// ArgGPUs specifies to list GPU Droplets
+	ArgGPUs = "gpus"
 )

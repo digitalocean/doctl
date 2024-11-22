@@ -5,6 +5,7 @@
 //
 //	mockgen -source ../pkg/runner/runner.go -package=mocks Runner
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -18,6 +19,7 @@ import (
 type MockRunner struct {
 	ctrl     *gomock.Controller
 	recorder *MockRunnerMockRecorder
+	isgomock struct{}
 }
 
 // MockRunnerMockRecorder is the mock recorder for MockRunner.

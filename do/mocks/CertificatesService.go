@@ -5,6 +5,7 @@
 //
 //	mockgen -source certificates.go -package=mocks CertificateSservice
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockCertificatesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockCertificatesServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockCertificatesServiceMockRecorder is the mock recorder for MockCertificatesService.
@@ -96,4 +98,19 @@ func (m *MockCertificatesService) List() (do.Certificates, error) {
 func (mr *MockCertificatesServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockCertificatesService)(nil).List))
+}
+
+// ListByName mocks base method.
+func (m *MockCertificatesService) ListByName(cName string) (do.Certificates, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByName", cName)
+	ret0, _ := ret[0].(do.Certificates)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListByName indicates an expected call of ListByName.
+func (mr *MockCertificatesServiceMockRecorder) ListByName(cName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByName", reflect.TypeOf((*MockCertificatesService)(nil).ListByName), cName)
 }

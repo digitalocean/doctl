@@ -5,6 +5,7 @@
 //
 //	mockgen -source image_actions.go -package=mocks ImageActionsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockImageActionsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockImageActionsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockImageActionsServiceMockRecorder is the mock recorder for MockImageActionsService.

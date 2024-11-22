@@ -5,6 +5,7 @@
 //
 //	mockgen -source cdns.go -package=mocks CDNsService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockCDNsService struct {
 	ctrl     *gomock.Controller
 	recorder *MockCDNsServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockCDNsServiceMockRecorder is the mock recorder for MockCDNsService.

@@ -14,13 +14,16 @@ limitations under the License.
 package commands
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -28,9 +31,11 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps"
+	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"sigs.k8s.io/yaml"
 )
 
@@ -122,6 +127,21 @@ This permanently deletes the app and all of its associated deployments.`,
 	AddBoolFlag(deleteApp, doctl.ArgForce, doctl.ArgShortForce, false, "Delete the App without a confirmation prompt")
 	deleteApp.Example = `The following example deletes an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl apps delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
+	restartApp := CmdBuilder(
+		cmd,
+		RunAppsRestart,
+		"restart <app id>",
+		"Restarts an app",
+		`Restarts the specified app or some of its components.`,
+		Writer,
+		aliasOpt("r"),
+		displayerType(&displayers.Deployments{}),
+	)
+	AddStringSliceFlag(restartApp, doctl.ArgAppComponents, "", nil, "The components to restart. If not provided, all components are restarted.")
+	AddBoolFlag(restartApp, doctl.ArgCommandWait, "", false,
+		"Boolean that specifies whether to wait for the restart to complete before allowing further terminal input. This can be helpful for scripting.")
+	restartApp.Example = `The following example restarts an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `. Additionally, the command returns the app's ID and status: doctl apps restart f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --format ID,Status`
+
 	deploymentCreate := CmdBuilder(
 		cmd,
 		RunAppsCreateDeployment,
@@ -174,7 +194,8 @@ Only basic information is included with the text output format. For complete app
 Three types of logs are supported and can be specified with the --`+doctl.ArgAppLogType+` flag:
 - build
 - deploy
-- run 
+- run
+- run_restarted 
 
 For more information about logs, see [How to View Logs](https://www.digitalocean.com/docs/app-platform/how-to/view-logs/).
 `,
@@ -185,7 +206,22 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 	AddStringFlag(logs, doctl.ArgAppLogType, "", strings.ToLower(string(godo.AppLogTypeRun)), "Retrieves logs for a specific log type. Defaults to run logs.")
 	AddBoolFlag(logs, doctl.ArgAppLogFollow, "f", false, "Returns logs as they are emitted by the app.")
 	AddIntFlag(logs, doctl.ArgAppLogTail, "", -1, "Specifies the number of lines to show from the end of the log.")
+	AddBoolFlag(logs, doctl.ArgNoPrefix, "", false, "Removes the prefix from logs. Useful for JSON structured logs")
+
 	logs.Example = `The following example retrieves the build logs for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps logs f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web --type build`
+
+	console := CmdBuilder(
+		cmd,
+		RunAppsConsole,
+		"console <app id> <component name>",
+		"Starts a console session",
+		`Instantiates a console session for a component of an app.`,
+		Writer,
+		aliasOpt("cs"),
+	)
+	AddStringFlag(console, doctl.ArgAppDeployment, "", "", "Starts a console session for a specific deployment ID. Defaults to current deployment.")
+
+	console.Example = `The following example initiates a console session for the app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` and the component ` + "`" + `web` + "`" + `: doctl apps console f81d4fae-7dec-11d0-a765-00a0c91e6bf6 web`
 
 	listRegions := CmdBuilder(
 		cmd,
@@ -207,7 +243,7 @@ For more information about logs, see [How to View Logs](https://www.digitalocean
 
 Only basic information is included with the text output format. For complete app details including an updated app spec, use the `+"`"+`--output`+"`"+` global flag and specify the JSON format.`,
 		Writer,
-		aliasOpt("c"),
+		aliasOpt("p"),
 		displayerType(&displayers.Apps{}),
 	)
 	AddStringFlag(propose, doctl.ArgAppSpec, "", "", "Path to an app spec in JSON or YAML format. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)", requiredOpt())
@@ -448,6 +484,48 @@ func RunAppsDelete(c *CmdConfig) error {
 	return nil
 }
 
+// RunAppsRestart restarts an app.
+func RunAppsRestart(c *CmdConfig) error {
+	if len(c.Args) < 1 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	components, err := c.Doit.GetStringSlice(c.NS, doctl.ArgAppComponents)
+	if err != nil {
+		return err
+	}
+
+	wait, err := c.Doit.GetBool(c.NS, doctl.ArgCommandWait)
+	if err != nil {
+		return err
+	}
+
+	deployment, err := c.Apps().Restart(appID, components)
+	if err != nil {
+		return err
+	}
+
+	var errs error
+
+	if wait {
+		apps := c.Apps()
+		notice("Restart is in progress, waiting for the restart to complete")
+		err := waitForActiveDeployment(apps, appID, deployment.ID)
+		if err != nil {
+			errs = multierror.Append(errs, fmt.Errorf("app deployment couldn't enter `running` state: %v", err))
+			if err := c.Display(displayers.Deployments{deployment}); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+			return errs
+		}
+		deployment, _ = c.Apps().GetDeployment(appID, deployment.ID)
+	}
+
+	notice("Restarted")
+
+	return c.Display(displayers.Deployments{deployment})
+}
+
 // RunAppsCreateDeployment creates a deployment for an app.
 func RunAppsCreateDeployment(c *CmdConfig) error {
 	if len(c.Args) < 1 {
@@ -609,6 +687,11 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		return err
 	}
 
+	noPrefixFlag, err := c.Doit.GetBool(c.NS, doctl.ArgNoPrefix)
+	if err != nil {
+		return err
+	}
+
 	logs, err := c.Apps().GetLogs(appID, deploymentID, component, logType, logFollow, logTail)
 	if err != nil {
 		return err
@@ -630,6 +713,18 @@ func RunAppsGetLogs(c *CmdConfig) error {
 			}
 			r := strings.NewReader(data.Data)
 
+			if noPrefixFlag {
+				content, err := io.ReadAll(r)
+				if err != nil {
+					return nil, err
+				}
+				logParts := strings.SplitN(string(content), " ", 3)
+				if len(logParts) > 2 {
+					jsonLog := logParts[2]
+					return strings.NewReader(jsonLog), nil
+				}
+			}
+
 			return r, nil
 		}
 
@@ -641,8 +736,10 @@ func RunAppsGetLogs(c *CmdConfig) error {
 			url.Scheme = "wss"
 		}
 
-		listener := c.Doit.Listen(url, token, schemaFunc, c.Out)
-		err = listener.Start()
+		listener := c.Doit.Listen(url, token, schemaFunc, c.Out, nil)
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		err = listener.Listen(ctx)
 		if err != nil {
 			return err
 		}
@@ -653,9 +750,133 @@ func RunAppsGetLogs(c *CmdConfig) error {
 		}
 		defer resp.Body.Close()
 
-		io.Copy(c.Out, resp.Body)
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			logLine := scanner.Text()
+			if noPrefixFlag {
+				logParts := strings.SplitN(logLine, " ", 3)
+				if len(logParts) > 2 {
+					logLine = logParts[2]
+				}
+			}
+			fmt.Fprintln(c.Out, logLine)
+		}
+		if err := scanner.Err(); err != nil {
+			return err
+		}
 	} else {
 		warn("No logs found for app component")
+	}
+
+	return nil
+}
+
+// RunAppsConsole initiates a console session for an app.
+func RunAppsConsole(c *CmdConfig) error {
+	if len(c.Args) < 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+	appID := c.Args[0]
+	component := c.Args[1]
+
+	deploymentID, err := c.Doit.GetString(c.NS, doctl.ArgAppDeployment)
+	if err != nil {
+		return err
+	}
+
+	execResp, err := c.Apps().GetExec(appID, deploymentID, component)
+	if err != nil {
+		return err
+	}
+	url, err := url.Parse(execResp.URL)
+	if err != nil {
+		return err
+	}
+	token := url.Query().Get("token")
+
+	schemaFunc := func(message []byte) (io.Reader, error) {
+		data := struct {
+			Data string `json:"data"`
+		}{}
+		err = json.Unmarshal(message, &data)
+		if err != nil {
+			return nil, err
+		}
+		r := strings.NewReader(data.Data)
+		return r, nil
+	}
+
+	inputCh := make(chan []byte)
+
+	listener := c.Doit.Listen(url, token, schemaFunc, c.Out, inputCh)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	grp, ctx := errgroup.WithContext(ctx)
+
+	term := c.Doit.Terminal()
+	stdinCh := make(chan string)
+	restoreTerminal, err := term.ReadRawStdin(ctx, stdinCh)
+	if err != nil {
+		return err
+	}
+	defer restoreTerminal()
+
+	resizeEvents := make(chan terminal.TerminalSize)
+	grp.Go(func() error {
+		return term.MonitorResizeEvents(ctx, resizeEvents)
+	})
+
+	grp.Go(func() error {
+		keepaliveTicker := time.NewTicker(30 * time.Second)
+		defer keepaliveTicker.Stop()
+		type stdinOp struct {
+			Op   string `json:"op"`
+			Data string `json:"data"`
+		}
+		type resizeOp struct {
+			Op     string `json:"op"`
+			Width  int    `json:"width"`
+			Height int    `json:"height"`
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case in := <-stdinCh:
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: in})
+				if err != nil {
+					return fmt.Errorf("error encoding stdin: %v", err)
+				}
+				inputCh <- b
+			case <-keepaliveTicker.C:
+				b, err := json.Marshal(stdinOp{Op: "stdin", Data: ""})
+				if err != nil {
+					return fmt.Errorf("error encoding keepalive event: %v", err)
+				}
+				inputCh <- b
+			case ev := <-resizeEvents:
+				b, err := json.Marshal(resizeOp{Op: "resize", Width: ev.Width, Height: ev.Height})
+				if err != nil {
+					return fmt.Errorf("error encoding resize event: %v", err)
+				}
+				inputCh <- b
+			}
+		}
+	})
+
+	grp.Go(func() error {
+		err = listener.Listen(ctx)
+		if err != nil {
+			return err
+		}
+		cancel() // cancel the context to stop the other goroutines
+		return nil
+	})
+
+	if err := grp.Wait(); err != nil {
+		return err
 	}
 
 	return nil
@@ -830,8 +1051,9 @@ func appsTier() *Command {
 		},
 	}
 
-	CmdBuilder(cmd, RunAppsTierList, "list", "List all app tiers", `Use this command to list all the available app tiers.`, Writer, aliasOpt("ls"))
-	CmdBuilder(cmd, RunAppsTierGet, "get <tier slug>", "Retrieve an app tier", `Use this command to retrieve information about a specific app tier.`, Writer)
+	tierDeprecationMsg := "This command is deprecated and will be removed in a future release. Use `doctl apps tier instance-size <get|list>` instead.\n\n"
+	CmdBuilder(cmd, RunAppsTierList, "list", "List all app tiers", tierDeprecationMsg+`Use this command to list all the available app tiers.`, Writer, aliasOpt("ls"), hiddenCmd())
+	CmdBuilder(cmd, RunAppsTierGet, "get <tier slug>", "Retrieve an app tier", tierDeprecationMsg+`Use this command to retrieve information about a specific app tier.`, Writer, hiddenCmd())
 
 	cmd.AddCommand(appsTierInstanceSize())
 

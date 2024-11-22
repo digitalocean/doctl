@@ -31,33 +31,40 @@ func Tags() *Command {
 			Short: "Display commands to manage tags",
 			Long: `The sub-commands of ` + "`" + `doctl compute tag` + "`" + ` manage the tags on your account.
 
-A tag is a label that can be applied to a resource (currently Droplets, images,
-volumes, volume snapshots, and database clusters) in order to better organize or
-facilitate the lookups and actions on it.
+Tags are labels that you can apply to resources to better organize them and more efficiently take actions on them. For example, if you have a group of Droplets that you want to place behind the same set of cloud firewall rules, you can tag those Droplets with a common tag and then apply the firewall rules to all Droplets with that tag.
+
+You can tag Droplets, images, volumes, volume snapshots, and database clusters.
 
 Tags have two attributes: a user defined name attribute and an embedded
 resources attribute with information about resources that have been tagged.`,
 		},
 	}
 
-	CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "Create a tag", `Use this command to create a new tag.`, Writer)
+	cmdTagCreate := CmdBuilder(cmd, RunCmdTagCreate, "create <tag-name>", "Create a tag", `Creates a new tag that you can apply to resources.`, Writer)
+	cmdTagCreate.Example = `The following example creates a tag name ` + "`" + `web` + "`" + `: doctl compute tag create web`
 
-	CmdBuilder(cmd, RunCmdTagGet, "get <tag-name>", "Retrieve information about a tag", `Use this command to retrieve a tag, display a count of how many resources are tagged with it, and show the most recently tagged resource.`, Writer,
+	cmdTagGet := CmdBuilder(cmd, RunCmdTagGet, "get <tag-name>", "Retrieve information about a tag", `Retrieves the number of resources using the tag.`, Writer,
 		displayerType(&displayers.Tag{}))
+	cmdTagGet.Example = `The following example retrieves information about the tag named ` + "`" + `web` + "`" + `: doctl compute tag get web`
 
-	CmdBuilder(cmd, RunCmdTagList, "list", "List all tags", `Use this command to retrieve a list of all the tags in your account.`, Writer,
+	CmdBuilder(cmd, RunCmdTagList, "list", "List all tags", `Retrieves a list of all the tags in your account and how many resources are using each tag.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.Tag{}))
 
-	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>...", "Delete a tag", `Use this command to delete a tag.
+	cmdRunTagDelete := CmdBuilder(cmd, RunCmdTagDelete, "delete <tag-name>...", "Delete a tag", `Deletes a tag from your account.
 
 Deleting a tag also removes the tag from all the resources that had been tagged with it.`, Writer, aliasOpt("rm"))
 	AddBoolFlag(cmdRunTagDelete, doctl.ArgForce, doctl.ArgShortForce, false, "Delete tag without confirmation prompt")
+	cmdRunTagDelete.Example = `The following example deletes the tag named ` + "`" + `web` + "`" + `: doctl compute tag delete web`
 
-	cmdApplyTag := CmdBuilder(cmd, RunCmdApplyTag, "apply <tag-name> --resource=<urn> [--resource=<urn> ...]", "Apply a tag to resources", `Use this command to tag one or more resources. Resources must be specified as URNs ("do:<resource_type>:<identifier>").`, Writer)
-	AddStringSliceFlag(cmdApplyTag, doctl.ArgResourceType, "", []string{}, "The resource to tag in URN format (do:<resource_type>:<identifier>)", requiredOpt())
+	cmdApplyTag := CmdBuilder(cmd, RunCmdApplyTag, "apply <tag-name> --resource=<urn> [--resource=<urn> ...]", "Apply a tag to resources", `Tag one or more resources. You can tag Droplets, images, volumes, volume snapshots, and database clusters.
+	
+Resources must be specified as Uniform Resource Names (URNs) and has the following syntax: `+"`"+`do:<resource_type>:<identifier>`+"`"+`.`, Writer)
+	AddStringSliceFlag(cmdApplyTag, doctl.ArgResourceType, "", []string{}, "The resource to tag in URN format", requiredOpt())
+	cmdApplyTag.Example = `The following example tags two Droplet with the tag named ` + "`" + `web` + "`" + `: doctl compute tag apply web --resource=do:droplet:386734086,do:droplet:191669331`
 
-	cmdRemoveTag := CmdBuilder(cmd, RunCmdRemoveTag, "remove <tag-name> --resource=<urn> [--resource=<urn> ...]", "Remove a tag from resources", `Use this command to remove a tag from one or more resources. Resources must be specified as URNs ("do:<resource_type>:<identifier>").`, Writer)
-	AddStringSliceFlag(cmdRemoveTag, doctl.ArgResourceType, "", []string{}, "The resource to tag in URN format (do:<resource_type>:<identifier>)", requiredOpt())
+	cmdRemoveTag := CmdBuilder(cmd, RunCmdRemoveTag, "remove <tag-name> --resource=<urn> [--resource=<urn> ...]", "Remove a tag from resources", `Removes a tag from one or more resources. Resources must be specified as Uniform Resource Names (URNs) and has the following syntax: `+"`"+`do:<resource_type>:<identifier>`+"`"+`.`, Writer)
+	AddStringSliceFlag(cmdRemoveTag, doctl.ArgResourceType, "", []string{}, "The resource to untag in URN format", requiredOpt())
+	cmdRemoveTag.Example = `The following example removes the tag named ` + "`" + `web` + "`" + ` from two Droplets: doctl compute tag remove web --resource=do:droplet:386734086,do:droplet:191669331`
 
 	return cmd
 }

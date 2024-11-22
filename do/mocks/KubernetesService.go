@@ -5,6 +5,7 @@
 //
 //	mockgen -source kubernetes.go -package=mocks KubernetesService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -20,6 +21,7 @@ import (
 type MockKubernetesService struct {
 	ctrl     *gomock.Controller
 	recorder *MockKubernetesServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockKubernetesServiceMockRecorder is the mock recorder for MockKubernetesService.

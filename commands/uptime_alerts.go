@@ -35,45 +35,55 @@ func UptimeAlert() *Command {
 			Long: `The sub-commands of ` + "`" + `doctl monitoring uptime alert` + "`" + ` manage your uptime alerts.
 
 DigitalOcean Uptime Alerts provide the ability to monitor your endpoints from around the world,
-and alert you when they're slow, unavailable, or SSL certificates are expiring.`,
+and alert you when they're slow, unavailable, or SSL certificates are expiring.
+
+In order to set up uptime alerts, you must first set up an uptime check. Uptime checks monitor and track the status of an endpoint while alerts notify you of status changes based on the thresholds you set.`,
 		},
 	}
 
-	cmdUptimeAlertsCreate := CmdBuilder(cmd, RunUptimeAlertsCreate, "create <uptime-check-id>", "Create an uptime alert", `Use this command to create an uptime alert on your account.
-
-You can use flags to specify the uptime alert, type, threshold, comparison, notifications, and period.`, Writer,
+	cmdUptimeAlertsCreate := CmdBuilder(cmd, RunUptimeAlertsCreate, "create <uptime-check-id>", "Create an uptime alert", `Creates an alert policy for an uptime check.
+	
+	You can create an alert policy based on the following metrics: 
+	
+	- `+"`"+`latency`+"`"+`: Alerts on the response latency. `+"`"+`--threshold`+"`"+` value is an integer representing milliseconds.
+	- `+"`"+`down`+"`"+`: Alerts on whether the endpoints registers as down from any of the configured regions. No `+"`"+`--threshold`+"`"+` value is necessary.
+	- `+"`"+`down_global`+"`"+`: Alerts on a target registering as down globally. No `+"`"+`--threshold`+"`"+` value is necessary.
+	- `+"`"+`ssl_expiry`+"`"+`: Alerts on an SSL certificate expiring within the set threshold of days. `+"`"+`--threshold`+"`"+` value is an integer representing days.`, Writer,
 		aliasOpt("c"), displayerType(&displayers.UptimeAlert{}), overrideCmdNS("uptime-alert"))
 
-	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertName, "", "", "Uptime alert name", requiredOpt())
-	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertType, "", "", "Uptime alert type, must be one of latency, down, down_global or ssl_expiry", requiredOpt())
-	AddIntFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertThreshold, "", 0, "Uptime alert threshold at which the alert will enter a trigger state. The specific threshold is dependent on the alert type.")
-	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertComparison, "", "", "Uptime alert comparison operator used against the alert's threshold. Must be either `greater_than` or `less_than`")
-	AddStringSliceFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertEmails, "", nil, "Emails to send uptime alerts to. Must be emails associated with the DigitalOcean account")
-	AddStringSliceFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertSlackChannels, "", nil, "Slack channels to send uptime alerts to.")
-	AddStringSliceFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertSlackURLs, "", nil, "Slack URLs to send uptime alerts to.")
-	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertPeriod, "", "", "Uptime alert period of time the threshold must be exceeded to trigger the alert. Must be one of 2m, 3m, 5m, 10m, 15m, 30m or 1h", requiredOpt())
+	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertName, "", "", "The name of the alert", requiredOpt())
+	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertType, "", "", "The metric to alert on. Possible values: `latency`, `down`, `down_global`, `ssl_expiry`", requiredOpt())
+	AddIntFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertThreshold, "", 0, "The threshold at which to trigger the alert. The specific threshold is dependent on the alert type.")
+	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertComparison, "", "", "A comparison operator used against the alert's threshold. Possible values: `greater_than` or `less_than`")
+	AddStringSliceFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertEmails, "", nil, "Emails addresses to send alerts. The addresses must be associated with your DigitalOcean account")
+	AddStringSliceFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertSlackChannels, "", nil, "Slack channels to send alerts to, for example, `production-alerts`. Must be used with the `--slack-urls` flag.")
+	AddStringSliceFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertSlackURLs, "", nil, "A Slack webhook URL to send alerts to, for example, `https://hooks.slack.com/services/T1234567/AAAAAAAA/ZZZZZZ`.")
+	AddStringFlag(cmdUptimeAlertsCreate, doctl.ArgUptimeAlertPeriod, "", "", "The period of time the threshold must be exceeded to trigger an alert. Possible values: `2m`, `3m`, `5m`, `10m`, `15m`, `30m`, `1h`", requiredOpt())
+	cmdUptimeAlertsCreate.Example = `The following example creates an alert for an uptime check with an ID of f81d4fae-7dec-11d0-a765-00a0c91e6bf6. The alert triggers if the endpoint's latency exceed 500ms for more than two minutes: doctl monitoring uptime alert create f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "Example Alert" --type latency --threshold 100 --comparison greater_than --period 2m --emails "admin@example.com"`
 
-	CmdBuilder(cmd, RunUptimeAlertsGet, "get <uptime-check-id> <uptime-alert-id>", "Get uptime alert", `Use this command to get an uptime alert on your account by ID.`, Writer,
+	cmdUptimeAlertsGet := CmdBuilder(cmd, RunUptimeAlertsGet, "get <uptime-check-id> <uptime-alert-id>", "Get uptime alert", `Retrieves information about an uptime alert policy.`, Writer,
 		aliasOpt("g"), displayerType(&displayers.UptimeAlert{}))
+	cmdUptimeAlertsGet.Example = `The following example retrieves the configuration for an alert policy with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` that is a policy of an uptime check with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl monitoring uptime alert get f81d4fae-7dec-11d0-a765-00a0c91e6bf6 418b7972-fc67-41ea-ab4b-6f9477c4f7d8`
 
-	CmdBuilder(cmd, RunUptimeAlertsList, "list <uptime-check-id>", "List uptime alerts", `Use this command to list all of the uptime alerts for an uptime check.`, Writer,
+	cmdUptimeAlertsList := CmdBuilder(cmd, RunUptimeAlertsList, "list <uptime-check-id>", "List uptime alerts", `Retrieves a list of the alert policies for an uptime check.`, Writer,
 		aliasOpt("ls"), displayerType(&displayers.UptimeAlert{}))
+	cmdUptimeAlertsList.Example = `The following example lists the alert policies for an uptime check with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl monitoring uptime alert list f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdUptimeAlertsUpdate := CmdBuilder(cmd, RunUptimeAlertsUpdate, "update <uptime-check-id> <uptime-alert-id>", "Update an uptime alert", `Use this command to update an uptime alert on your account.
-
-You can use flags to specify the uptime alert, type, threshold, comparison, notifications, and period.`, Writer,
+	cmdUptimeAlertsUpdate := CmdBuilder(cmd, RunUptimeAlertsUpdate, "update <uptime-check-id> <uptime-alert-id>", "Update an uptime alert", `Updates an uptime alert configuration.`, Writer,
 		aliasOpt("u"), displayerType(&displayers.UptimeAlert{}), overrideCmdNS("uptime-alert"))
-	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertName, "", "", "Uptime alert name", requiredOpt())
-	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertType, "", "", "Uptime alert type, must be one of latency, down, down_global or ssl_expiry", requiredOpt())
-	AddIntFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertThreshold, "", 0, "Uptime alert threshold at which the alert will enter a trigger state. The specific threshold is dependent on the alert type.")
-	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertComparison, "", "", "Uptime alert comparison operator used against the alert's threshold. Must be either `greater_than` or `less_than`")
-	AddStringSliceFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertEmails, "", nil, "Emails to send uptime alerts to. Must be emails associated with the DigitalOcean account")
-	AddStringSliceFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertSlackChannels, "", nil, "Slack channels to send uptime alerts to.")
-	AddStringSliceFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertSlackURLs, "", nil, "Slack URLs to send uptime alerts to.")
-	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertPeriod, "", "", "Uptime alert period of time the threshold must be exceeded to trigger the alert. Must be one of 2m, 3m, 5m, 10m, 15m, 30m or 1h", requiredOpt())
+	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertName, "", "", "The name of the alert", requiredOpt())
+	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertType, "", "", "The metric to alert on. Possible values: `latency`, `down`, `down_global`, `ssl_expiry`", requiredOpt())
+	AddIntFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertThreshold, "", 0, "The threshold at which to trigger the alert. The specific threshold is dependent on the alert type.")
+	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertComparison, "", "", "A comparison operator used against the alert's threshold. Possible values: `greater_than` or `less_than`")
+	AddStringSliceFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertEmails, "", nil, "Emails addresses to send alerts. The addresses must be associated with your DigitalOcean account")
+	AddStringSliceFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertSlackChannels, "", nil, "Slack channels to send uptime alerts to, for example, `production-alerts`. Must be used with the `--slack-urls` flag.")
+	AddStringSliceFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertSlackURLs, "", nil, "A Slack webhook URL to send alerts to, for example, `https://hooks.slack.com/services/T1234567/AAAAAAAA/ZZZZZZ`.")
+	AddStringFlag(cmdUptimeAlertsUpdate, doctl.ArgUptimeAlertPeriod, "", "", "The period of time the threshold must be exceeded to trigger an alert. Possible values: `2m`, `3m`, `5m`, `10m`, `15m`, `30m`, `1h`", requiredOpt())
+	cmdUptimeAlertsUpdate.Example = `The following example updates an alert policy with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` that is a policy of an uptime check with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl monitoring uptime alert update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 418b7972-fc67-41ea-ab4b-6f9477c4f7d8 --name "Example Alert" --type latency --threshold 100 --comparison greater_than --period 2m --emails "admin@example.com"`
 
-	CmdBuilder(cmd, RunUptimeAlertsDelete, "delete <uptime-check-id> <uptime-alert-id>", "Delete an uptime alert", `Use this command to delete an uptime check on your account by ID.`, Writer,
+	cmdUptimeAlertsDelete := CmdBuilder(cmd, RunUptimeAlertsDelete, "delete <uptime-check-id> <uptime-alert-id>", "Delete an uptime alert", `Deletes an uptime check on your account by ID.`, Writer,
 		aliasOpt("d", "del", "rm"))
+	cmdUptimeAlertsDelete.Example = `The following example deletes an alert policy with the ID ` + "`" + `418b7972-fc67-41ea-ab4b-6f9477c4f7d8` + "`" + ` that is a policy of an uptime check with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl monitoring uptime alert delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6 418b7972-fc67-41ea-ab4b-6f9477c4f7d8`
 
 	return cmd
 }

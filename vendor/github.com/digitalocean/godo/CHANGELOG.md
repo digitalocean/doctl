@@ -1,5 +1,133 @@
 # Change Log
 
+## [v1.130.0] - 2024-11-14
+
+- #755 - @vsharma6855  - Add Missing Database Configs for Postgresql and MYSQL
+- #754 - @blesswinsamuel - APPS-9858 Add method to obtain websocket URL to get console access into components
+
+## [v1.129.0] - 2024-11-06
+
+- #752 - @andrewsomething - Support maps in Stringify
+- #749 - @loosla - [droplets]: add droplet backup policies
+- #730 - @rak16 - DOCR-1201: Add new RegistriesService to support methods for multiple-registry open beta
+- #748 - @andrewsomething - Support Droplet GPU information
+
+## [v1.128.0] - 2024-10-24
+
+- #746 - @blesswinsamuel - Add archive field to AppSpec to archive/restore apps
+- #745 - @asaha2 - Add load balancer monitoring endpoints
+- #744 - @asaha2 - Adjust delete dangerous
+- #743 - @asaha2 - Introduce droplet autoscale godo methods
+- #740 - @blesswinsamuel - Add maintenance field to AppSpec to enable/disable maintenance mode
+- #739 - @markusthoemmes - Add protocol to AppSpec and pending to detect responses
+
+## [v1.127.0] - 2024-10-18
+
+- #737 - @loosla - [databases]: change Opensearch ism_history_max_docs type to int64 to …
+- #735 - @loosla - [databases]: add a missing field to Opensearch advanced configuration
+- #729 - @loosla - [databases]: add support for Opensearch advanced configuration
+
+## [v1.126.0] - 2024-09-25
+
+- #732 - @gottwald - DOKS: add custom CIDR fields
+- #727 - @loosla - [databases]: add support for Kafka advanced configuration
+
+## [v1.125.0] - 2024-09-17
+
+- #726 - @loosla - [databases]: add support for MongoDB advanced configuration
+- #724 - @andrewsomething - Bump go version to 1.22
+- #723 - @jauderho - Update Go dependencies and remove replace statements
+
+## [v1.124.0] - 2024-09-10
+
+- #721 - @vsharma6855 - [DBAAS] | Add API endpoint for applying cluster patches
+
+## [v1.123.0] - 2024-09-06
+
+- #719 - @andrewsomething - apps: mark ListTiers and GetTier as deprecated
+
+## [v1.122.0] - 2024-09-04
+
+- #717 - @danaelhe - DB: Fix Logsink Attribute Types
+- #716 - @bhardwajRahul - Databases: Add support for OpenSearch ACL
+
+## [v1.121.0] - 2024-08-20
+
+- #715 - @danaelhe - Databases: Bring back Logsink Support
+- #710 - @bhardwajRahul - Update GODO to include new Openseach index crud changes
+- #712 - @danaelhe - Database: Namespace logsink
+- #711 - @danaelhe - Databases: Add Logsinks CRUD support
+
+## [v1.120.0] - 2024-08-08
+
+- #708 - @markusthoemmes - APPS-9201 Add `UpdateAllSourceVersions` parameter to update app calls
+- #706 - @andrewsomething - database: Add Size to DatabaseReplica struct
+
+## [v1.119.0] - 2024-07-24
+
+- #704 - @ElanHasson - APPS-9133 - Add support for OPENSEARCH as a database engine option
+- #703 - @dependabot[bot] - Bump github.com/hashicorp/go-retryablehttp from 0.7.4 to 0.7.7
+- #699 - @ElanHasson - APPS-8790 Add support to App Platform Log Forwarding for an OpenSearch DBaaS cluster destination.
+
+## [v1.118.0] - 2024-06-04
+
+**Note**: This release contains features in closed beta (#700).
+
+- #701 - @llDrLove - Rename control plane permission to control plane firewall
+- #700 - @bbassingthwaite - Add ProxyProtocol to LoadBalancer HealthCheck
+
+## [v1.117.0] - 2024-06-04
+
+- #696 - @llDrLove - Support specifying control plane firewall rules when creating or updating DOKS clusters
+- #697 - @asaha2 - Add support for lb internal network type
+- #695 - @ElanHasson - APPS-8732 - Update documentation on App Platform OpenSearch endpoint structure.
+- #692 - @ElanHasson - APPS-8732 - Add OpenSearch as a Log Destination for App Platform.
+
+## [v1.116.0] - 2024-05-16
+
+- #693 - @guptado - Introduce VPC peering methods
+
+## [v1.115.0] - 2024-05-08
+
+- #688 - @asaha2 - load balancers: support glb active-passive fail-over settings, currently in closed beta
+
+## [v1.114.0] - 2024-04-12
+
+- #686 - @greeshmapill - APPS-8386: Add comments to mark deprecation of unused instance size fields
+- #685 - @jcodybaker - APPS-8711: container termination controls
+- #682 - @dependabot[bot] - Bump golang.org/x/net from 0.17.0 to 0.23.0
+
+## [v1.113.0] - 2024-04-12
+
+- #679 - @bhardwajRahul - Enable ui_connection parameter for Opensearch
+- #678 - @bhardwajRahul - Enable Opensearch option in Godo
+
+## [v1.112.0] - 2024-04-08
+
+- #672 - @dependabot[bot] - Bump google.golang.org/protobuf from 1.28.0 to 1.33.0
+- #675 - @bhardwajRahul - Add ListDatabaseEvents to Godo
+
+## [v1.111.0] - 2024-04-02
+
+- #674 - @asaha2 - load balancers: introduce glb settings in godo, currently in closed beta
+
+## [v1.110.0] - 2024-03-14
+
+- #667 - @dwilsondo - Include DBaaS metrics credential endpoint operations
+- #670 - @guptado - [NETPROD-3583] Added name param in ListOption to get resource by name
+- #671 - @greeshmapill - APPS-8383: Add deprecation intent and bandwidth allowance to app instance size spec
+
+## [v1.109.0] - 2024-02-09
+
+- #668 - @greeshmapill - APPS-8315: Update app instance size spec
+- #665 - @jcodybaker - APPS-8263: methods for managing App Platform dev DBs
+- #663 - @dwilsondo - Include replica connection info on DBaaS clusters & DBaaS PG pools
+- #662 - @ddatta-do - load balancer : add regional network as new LB type
+
+## [v1.108.0] - 2024-01-17
+
+- #660 - @dweinshenker - Enable CRUD operations for replicas with storage_size_mib
+
 ## [v1.107.0] - 2023-12-07
 
 - #658 - @markusthoemmes - APPS-8033 Add the RUN_RESTARTED log type

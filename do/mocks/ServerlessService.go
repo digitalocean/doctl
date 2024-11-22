@@ -5,6 +5,7 @@
 //
 //	mockgen -source serverless.go -package=mocks ServerlessService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -22,6 +23,7 @@ import (
 type MockServerlessService struct {
 	ctrl     *gomock.Controller
 	recorder *MockServerlessServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockServerlessServiceMockRecorder is the mock recorder for MockServerlessService.

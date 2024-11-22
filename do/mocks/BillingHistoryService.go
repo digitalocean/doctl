@@ -5,6 +5,7 @@
 //
 //	mockgen -source billing_history.go -package=mocks BillingHistoryService
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -19,6 +20,7 @@ import (
 type MockBillingHistoryService struct {
 	ctrl     *gomock.Controller
 	recorder *MockBillingHistoryServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockBillingHistoryServiceMockRecorder is the mock recorder for MockBillingHistoryService.
