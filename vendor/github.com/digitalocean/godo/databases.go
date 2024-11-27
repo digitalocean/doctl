@@ -299,19 +299,27 @@ type DatabaseBackupRestore struct {
 	BackupCreatedAt string `json:"backup_created_at,omitempty"`
 }
 
+// DatabaseCreateFirewallRule is a rule describing an inbound source to a database
+type DatabaseCreateFirewallRule struct {
+	UUID  string `json:"uuid"`
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
 // DatabaseCreateRequest represents a request to create a database cluster
 type DatabaseCreateRequest struct {
-	Name               string                 `json:"name,omitempty"`
-	EngineSlug         string                 `json:"engine,omitempty"`
-	Version            string                 `json:"version,omitempty"`
-	SizeSlug           string                 `json:"size,omitempty"`
-	Region             string                 `json:"region,omitempty"`
-	NumNodes           int                    `json:"num_nodes,omitempty"`
-	PrivateNetworkUUID string                 `json:"private_network_uuid"`
-	Tags               []string               `json:"tags,omitempty"`
-	BackupRestore      *DatabaseBackupRestore `json:"backup_restore,omitempty"`
-	ProjectID          string                 `json:"project_id"`
-	StorageSizeMib     uint64                 `json:"storage_size_mib,omitempty"`
+	Name               string                        `json:"name,omitempty"`
+	EngineSlug         string                        `json:"engine,omitempty"`
+	Version            string                        `json:"version,omitempty"`
+	SizeSlug           string                        `json:"size,omitempty"`
+	Region             string                        `json:"region,omitempty"`
+	NumNodes           int                           `json:"num_nodes,omitempty"`
+	PrivateNetworkUUID string                        `json:"private_network_uuid"`
+	Tags               []string                      `json:"tags,omitempty"`
+	BackupRestore      *DatabaseBackupRestore        `json:"backup_restore,omitempty"`
+	ProjectID          string                        `json:"project_id"`
+	StorageSizeMib     uint64                        `json:"storage_size_mib,omitempty"`
+	Rules              []*DatabaseCreateFirewallRule `json:"rules"`
 }
 
 // DatabaseResizeRequest can be used to initiate a database resize operation.
