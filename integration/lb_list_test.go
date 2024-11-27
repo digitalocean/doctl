@@ -80,9 +80,9 @@ var _ = suite("compute/load-balancer/list", func(t *testing.T, when spec.G, it s
 
 const (
 	lbListOutput = `
-ID        IP                 Name             Status    Created At              Region    Size         Size Unit    VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                                        Forwarding Rules                                                                                               Disable Lets Encrypt DNS Records
-lb-one    104.131.186.241    example-lb-01    new       2017-02-01T22:22:58Z    venus3    lb-small     <nil>        00000000-0000-4000-8000-000000000000           3164444        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3,proxy_protocol:<nil>    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false    true
-lb-two    104.131.188.204    example-lb-02    new       2017-02-01T20:44:58Z    mars1     lb-medium    <nil>        00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3,proxy_protocol:<nil>    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false    false
+ID        IP                 IPv6                   Name             Status    Created At              Region    Size         Size Unit    VPC UUID                                Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                                        Forwarding Rules                                                                                               Disable Lets Encrypt DNS Records
+lb-one    104.131.186.241    2001:db8::1234:5678    example-lb-01    new       2017-02-01T22:22:58Z    venus3    lb-small     <nil>        00000000-0000-4000-8000-000000000000           3164444        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3,proxy_protocol:<nil>    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false    true
+lb-two    104.131.188.204    2001:db8::1234:5679    example-lb-02    new       2017-02-01T20:44:58Z    mars1     lb-medium    <nil>        00000000-0000-4000-8000-000000000000           3164445        false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3,proxy_protocol:<nil>    entry_protocol:http,entry_port:80,target_protocol:http,target_port:80,certificate_id:,tls_passthrough:false    false
 `
 	lbListResponse = `
 {
@@ -91,6 +91,7 @@ lb-two    104.131.188.204    example-lb-02    new       2017-02-01T20:44:58Z    
       "id": "lb-one",
       "name": "example-lb-01",
       "ip": "104.131.186.241",
+      "ipv6": "2001:db8::1234:5678",
       "algorithm": "round_robin",
       "status": "new",
       "created_at": "2017-02-01T22:22:58Z",
@@ -135,6 +136,7 @@ lb-two    104.131.188.204    example-lb-02    new       2017-02-01T20:44:58Z    
       "id": "lb-two",
       "name": "example-lb-02",
       "ip": "104.131.188.204",
+      "ipv6": "2001:db8::1234:5679",
       "algorithm": "round_robin",
       "status": "new",
       "created_at": "2017-02-01T20:44:58Z",

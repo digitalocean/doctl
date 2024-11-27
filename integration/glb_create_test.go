@@ -178,7 +178,7 @@ const (
 }`
 	glbCreateOutput = `
 Notice: Load balancer created
-ID                                      IP    Name           Status    Created At              Region    Size        Size Unit    VPC UUID    Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                                        Forwarding Rules    Disable Lets Encrypt DNS Records
-cf9f1aa1-e1f8-4f3a-ad71-124c45e204b8          my-glb-name    new       2024-04-09T16:10:11Z    <nil>     lb-small    1                                              false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3,proxy_protocol:<nil>                        false
+ID                                      IP    IPv6    Name           Status    Created At              Region    Size        Size Unit    VPC UUID    Tag    Droplet IDs    SSL      Sticky Sessions                                Health Check                                                                                                                                        Forwarding Rules    Disable Lets Encrypt DNS Records
+cf9f1aa1-e1f8-4f3a-ad71-124c45e204b8                  my-glb-name    new       2024-04-09T16:10:11Z    <nil>     lb-small    1                                              false    type:none,cookie_name:,cookie_ttl_seconds:0    protocol:http,port:80,path:/,check_interval_seconds:10,response_timeout_seconds:5,healthy_threshold:5,unhealthy_threshold:3,proxy_protocol:<nil>                        false
 `
 )

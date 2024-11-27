@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.130.0"
+	libraryVersion = "1.131.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -54,43 +54,45 @@ type Client struct {
 	ratemtx sync.Mutex
 
 	// Services used for communicating with the API
-	Account           AccountService
-	Actions           ActionsService
-	Apps              AppsService
-	Balance           BalanceService
-	BillingHistory    BillingHistoryService
-	CDNs              CDNService
-	Certificates      CertificatesService
-	Databases         DatabasesService
-	Domains           DomainsService
-	Droplets          DropletsService
-	DropletActions    DropletActionsService
-	DropletAutoscale  DropletAutoscaleService
-	Firewalls         FirewallsService
-	FloatingIPs       FloatingIPsService
-	FloatingIPActions FloatingIPActionsService
-	Functions         FunctionsService
-	Images            ImagesService
-	ImageActions      ImageActionsService
-	Invoices          InvoicesService
-	Keys              KeysService
-	Kubernetes        KubernetesService
-	LoadBalancers     LoadBalancersService
-	Monitoring        MonitoringService
-	OneClick          OneClickService
-	Projects          ProjectsService
-	Regions           RegionsService
-	Registry          RegistryService
-	Registries        RegistriesService
-	ReservedIPs       ReservedIPsService
-	ReservedIPActions ReservedIPActionsService
-	Sizes             SizesService
-	Snapshots         SnapshotsService
-	Storage           StorageService
-	StorageActions    StorageActionsService
-	Tags              TagsService
-	UptimeChecks      UptimeChecksService
-	VPCs              VPCsService
+	Account             AccountService
+	Actions             ActionsService
+	Apps                AppsService
+	Balance             BalanceService
+	BillingHistory      BillingHistoryService
+	CDNs                CDNService
+	Certificates        CertificatesService
+	Databases           DatabasesService
+	Domains             DomainsService
+	Droplets            DropletsService
+	DropletActions      DropletActionsService
+	DropletAutoscale    DropletAutoscaleService
+	Firewalls           FirewallsService
+	FloatingIPs         FloatingIPsService
+	FloatingIPActions   FloatingIPActionsService
+	Functions           FunctionsService
+	Images              ImagesService
+	ImageActions        ImageActionsService
+	Invoices            InvoicesService
+	Keys                KeysService
+	Kubernetes          KubernetesService
+	LoadBalancers       LoadBalancersService
+	Monitoring          MonitoringService
+	OneClick            OneClickService
+	Projects            ProjectsService
+	Regions             RegionsService
+	Registry            RegistryService
+	Registries          RegistriesService
+	ReservedIPs         ReservedIPsService
+	ReservedIPV6s       ReservedIPV6sService
+	ReservedIPActions   ReservedIPActionsService
+	ReservedIPV6Actions ReservedIPV6ActionsService
+	Sizes               SizesService
+	Snapshots           SnapshotsService
+	Storage             StorageService
+	StorageActions      StorageActionsService
+	Tags                TagsService
+	UptimeChecks        UptimeChecksService
+	VPCs                VPCsService
 
 	// Optional function called after every successful request made to the DO APIs
 	onRequestCompleted RequestCompletionCallback
@@ -295,7 +297,9 @@ func NewClient(httpClient *http.Client) *Client {
 	c.Registry = &RegistryServiceOp{client: c}
 	c.Registries = &RegistriesServiceOp{client: c}
 	c.ReservedIPs = &ReservedIPsServiceOp{client: c}
+	c.ReservedIPV6s = &ReservedIPV6sServiceOp{client: c}
 	c.ReservedIPActions = &ReservedIPActionsServiceOp{client: c}
+	c.ReservedIPV6Actions = &ReservedIPV6ActionsServiceOp{client: c}
 	c.Sizes = &SizesServiceOp{client: c}
 	c.Snapshots = &SnapshotsServiceOp{client: c}
 	c.Storage = &StorageServiceOp{client: c}
