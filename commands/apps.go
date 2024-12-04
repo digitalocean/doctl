@@ -67,6 +67,7 @@ func Apps() *Command {
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
 	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
+	AddBoolFlag(create, doctl.ArgCommandUpdateSources, "", false, "Boolean that specifies whether, on update, the app should also update its source code")
 	AddStringFlag(create, doctl.ArgProjectID, "", "", "The ID of the project to assign the created app and resources to. If not provided, the default project will be used.")
 	create.Example = `The following example creates an app in a project named ` + "`" + `example-project` + "`" + ` using an app spec located in a directory called ` + "`" + `/src/your-app.yaml` + "`" + `. Additionally, the command returns the new app's ID, ingress information, and creation date: doctl apps create --spec src/your-app.yaml --format ID,DefaultIngress,Created`
 
@@ -109,6 +110,7 @@ Only basic information is included with the text output format. For complete app
 		displayerType(&displayers.Apps{}),
 	)
 	AddStringFlag(update, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
+	AddBoolFlag(update, doctl.ArgCommandUpdateSources, "", false, "Boolean that specifies whether the app should also update its source code")
 	AddBoolFlag(update, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete updating before allowing further terminal input. This can be helpful for scripting.")
 	update.Example = `The following example updates an app with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` using an app spec located in a directory called ` + "`" + `/src/your-app.yaml` + "`" + `. Additionally, the command returns the updated app's ID, ingress information, and creation date: doctl apps update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --spec src/your-app.yaml --format ID,DefaultIngress,Created`
@@ -326,6 +328,11 @@ func RunAppsCreate(c *CmdConfig) error {
 		return err
 	}
 
+	updateSources, err := c.Doit.GetBool(c.NS, doctl.ArgCommandUpdateSources)
+	if err != nil {
+		return err
+	}
+
 	projectID, err := c.Doit.GetString(c.NS, doctl.ArgProjectID)
 	if err != nil {
 		return err
@@ -346,7 +353,7 @@ func RunAppsCreate(c *CmdConfig) error {
 				return err
 			}
 
-			app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
+			app, err = c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec, UpdateAllSourceVersions: updateSources})
 			if err != nil {
 				return err
 			}
@@ -423,12 +430,17 @@ func RunAppsUpdate(c *CmdConfig) error {
 		return err
 	}
 
+	updateSources, err := c.Doit.GetBool(c.NS, doctl.ArgCommandUpdateSources)
+	if err != nil {
+		return err
+	}
+
 	appSpec, err := apps.ReadAppSpec(os.Stdin, specPath)
 	if err != nil {
 		return err
 	}
 
-	app, err := c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec})
+	app, err := c.Apps().Update(id, &godo.AppUpdateRequest{Spec: appSpec, UpdateAllSourceVersions: updateSources})
 	if err != nil {
 		return err
 	}
