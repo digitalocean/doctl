@@ -50,6 +50,7 @@ func (lb *LoadBalancer) Cols() []string {
 		"StickySessions",
 		"HealthCheck",
 		"ForwardingRules",
+		"Firewall",
 		"DisableLetsEncryptDNSRecords",
 	}
 }
@@ -72,6 +73,7 @@ func (lb *LoadBalancer) ColMap() map[string]string {
 		"StickySessions":               "Sticky Sessions",
 		"HealthCheck":                  "Health Check",
 		"ForwardingRules":              "Forwarding Rules",
+		"Firewall":                     "Firewall Rules",
 		"DisableLetsEncryptDNSRecords": "Disable Lets Encrypt DNS Records",
 	}
 }
@@ -109,6 +111,9 @@ func (lb *LoadBalancer) KV() []map[string]any {
 		}
 		if l.SizeUnit > 0 {
 			o["SizeUnit"] = l.SizeUnit
+		}
+		if l.Firewall != nil {
+			o["Firewall"] = prettyPrintStruct(l.Firewall)
 		}
 		out = append(out, o)
 	}
