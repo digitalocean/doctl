@@ -99,6 +99,6 @@ fd53:616d:6d60::1071:5001    nyc3
 `
 
 	reservedIPv6CreateRequest = `
-{"region":"nyc3"}
+{"region_slug":"nyc3"}
 `
 )
