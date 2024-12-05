@@ -79,7 +79,7 @@ Use a quoted string of space-separated values for multiple rules.`
 	AddStringFlag(cmdFirewallCreate, doctl.ArgOutboundRules, "", "", outboundRulesTxt)
 	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgDropletIDs, "", []string{}, dropletIDRulesTxt)
 	AddStringSliceFlag(cmdFirewallCreate, doctl.ArgTagNames, "", []string{}, tagNameRulesTxt)
-	cmdFirewallCreate.Example = `The following example creates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplet: doctl compute firewall create --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0" --droplet-ids "386734086,391669331"`
+	cmdFirewallCreate.Example = `The following example creates a cloud firewall named ` + "`" + `example-firewall` + "`" + ` that contains an inbound rule and an outbound rule and applies them to the specified Droplets: doctl compute firewall create --name "example-firewall" --inbound-rules "protocol:tcp,ports:22,droplet_id:386734086" --outbound-rules "protocol:tcp,ports:22,address:0.0.0.0/0" --droplet-ids "386734086,391669331" --tag-names "frontend,backend"`
 
 	cmdFirewallUpdate := CmdBuilder(cmd, RunFirewallUpdate, "update <firewall-id>", "Update a cloud firewall's configuration", `Updates the configuration of an existing cloud firewall. The request should contain a full representation of the firewall, including existing attributes. Any attributes that are not provided are reset to their default values.`, Writer, aliasOpt("u"), displayerType(&displayers.Firewall{}))
 	AddStringFlag(cmdFirewallUpdate, doctl.ArgFirewallName, "", "", "The firewall's name", requiredOpt())
