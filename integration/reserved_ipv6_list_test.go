@@ -37,7 +37,7 @@ var _ = suite("compute/reserved-ipv6/list", func(t *testing.T, when spec.G, it s
 					return
 				}
 
-				w.Write([]byte(reservedIPListResponse))
+				w.Write([]byte(reservedIPv6ListResponse))
 			default:
 				dump, err := httputil.DumpRequest(req, true)
 				if err != nil {
@@ -65,7 +65,7 @@ var _ = suite("compute/reserved-ipv6/list", func(t *testing.T, when spec.G, it s
 
 				output, err := cmd.CombinedOutput()
 				expect.NoError(err, fmt.Sprintf("received error output: %s", output))
-				expect.Equal(strings.TrimSpace(reservedIPListOutput), strings.TrimSpace(string(output)))
+				expect.Equal(strings.TrimSpace(reservedIPv6ListOutput), strings.TrimSpace(string(output)))
 			}
 		})
 	})
@@ -74,27 +74,25 @@ var _ = suite("compute/reserved-ipv6/list", func(t *testing.T, when spec.G, it s
 const (
 	reservedIPv6ListOutput = `
 IP                           Region    Droplet ID    Droplet Name
-fd53:616d:6d60::1071:5001    nyc3          
-fd53:616d:6d60::1071:5002    nyc3             
+fd53:616d:6d60::1071:5001    nyc3                    
+fd53:616d:6d60::1071:5002    nyc3                    
 `
-	reservedIPv6ListResponse = `
-{
-  "reserved_ips": [
+	reservedIPv6ListResponse = `{
+  "reserved_ipv6s": [
     {
       "ip": "fd53:616d:6d60::1071:5001",
       "region_slug": "nyc3",
-	  "reserved_at": "2021-10-01T00:00:00Z",
+	  "reserved_at": "2021-10-01T00:00:00Z"
     },
 	{
       "ip": "fd53:616d:6d60::1071:5002",
       "region_slug": "nyc3",
-	  "reserved_at": "2021-10-01T00:00:00Z",
+	  "reserved_at": "2021-10-01T00:00:00Z"
     }
   ],
   "links": {},
   "meta": {
     "total": 2
   }
-}
-`
+}`
 )
