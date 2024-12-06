@@ -45,16 +45,16 @@ Reserved IPv6 addresses can be held in the region they were created in on your a
 
 	cmdReservedIPv6Get := CmdBuilder(cmd, RunReservedIPv6Get, "get <reserved-ipv6>", "Retrieve information about a reserved IPv6 address", "Retrieves detailed information about a reserved IPv6 address, including its region and the ID of the Droplet its assigned to.", Writer,
 		aliasOpt("g"), displayerType(&displayers.ReservedIPv6{}))
-	cmdReservedIPv6Get.Example = `The following example retrieves information about the reserved IPv6 address ` + "`" + `5a11:a:b0a7` + "`" + `: doctl compute reserved-ip get 5a11:a:b0a7`
+	cmdReservedIPv6Get.Example = `The following example retrieves information about the reserved IPv6 address ` + "`" + `5a11:a:b0a7` + "`" + `: doctl compute reserved-ipv6 get 5a11:a:b0a7`
 
 	cmdRunReservedIPv6Delete := CmdBuilder(cmd, RunReservedIPv6Delete, "delete <reserved-ipv6>", "Permanently delete a reserved IPv6 address", "Permanently deletes a reserved IPv6 address. This is irreversible.", Writer, aliasOpt("d", "rm"))
 	AddBoolFlag(cmdRunReservedIPv6Delete, doctl.ArgForce, doctl.ArgShortForce, false, "Deletes the reserved IPv6 address without confirmation")
-	cmdRunReservedIPv6Delete.Example = `The following example deletes the reserved IPv6 address ` + "`" + `5a11:a:b0a7` + "`" + `: doctl compute reserved-ip delete 5a11:a:b0a7`
+	cmdRunReservedIPv6Delete.Example = `The following example deletes the reserved IPv6 address ` + "`" + `5a11:a:b0a7` + "`" + `: doctl compute reserved-ipv6 delete 5a11:a:b0a7`
 
 	cmdReservedIPv6List := CmdBuilder(cmd, RunReservedIPv6List, "list", "List all reserved IPv6 addresses on your account", "Retrieves a list of all the reserved IPv6 addresses on your account.", Writer,
 		aliasOpt("ls"), displayerType(&displayers.ReservedIPv6{}))
 	AddStringFlag(cmdReservedIPv6List, doctl.ArgRegionSlug, "", "", "Retrieves a list of reserved IPv6 addresses in the specified region")
-	cmdReservedIPv6List.Example = `The following example lists all reserved IPv6 addresses in the ` + "`" + `nyc1` + "`" + ` region: doctl compute reserved-ip list --region nyc1`
+	cmdReservedIPv6List.Example = `The following example lists all reserved IPv6 addresses in the ` + "`" + `nyc1` + "`" + ` region: doctl compute reserved-ipv6 list --region nyc1`
 
 	return cmd
 }
