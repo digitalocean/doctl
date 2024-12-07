@@ -15,13 +15,16 @@ package do
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 )
 
 // AppsService is the interface that wraps godo AppsService.
 type AppsService interface {
 	Create(req *godo.AppCreateRequest) (*godo.App, error)
+	Find(appRef string) (*godo.App, error)
 	Get(appID string) (*godo.App, error)
 	List(withProjects bool) ([]*godo.App, error)
 	Update(appID string, req *godo.AppUpdateRequest) (*godo.App, error)
@@ -74,11 +77,32 @@ func (s *appsService) Create(req *godo.AppCreateRequest) (*godo.App, error) {
 	return app, nil
 }
 
+func (s *appsService) Find(appRef string) (*godo.App, error) {
+	_, err := uuid.Parse(appRef)
+	if err == nil {
+		return s.Get(appRef)
+	}
+
+	apps, err := s.List(false)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, app := range apps {
+		if app.Spec.Name == appRef {
+			return app, nil
+		}
+	}
+
+	return nil, fmt.Errorf("Cannot find app %s", appRef)
+}
+
 func (s *appsService) Get(appID string) (*godo.App, error) {
 	app, _, err := s.client.Apps.Get(s.ctx, appID)
 	if err != nil {
 		return nil, err
 	}
+
 	return app, nil
 }
 
