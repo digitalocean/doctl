@@ -72,8 +72,6 @@ var (
 func init() {
 	var cfgFile string
 
-	initConfig()
-
 	rootPFlagSet := DoitCmd.PersistentFlags()
 	rootPFlagSet.StringVarP(&cfgFile, "config", "c",
 		filepath.Join(defaultConfigHome(), defaultConfigName), "Specify a custom config file")
