@@ -560,6 +560,94 @@ func TestRunAppsGetLogs(t *testing.T) {
 	}
 }
 
+func TestRunAppsGetLogsWithAppName(t *testing.T) {
+	appName := "test-app"
+	component := "service"
+
+	testApp := &godo.App{
+		ID:   uuid.New().String(),
+		Spec: &testAppSpec,
+		ActiveDeployment: &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+		},
+	}
+
+	types := map[string]godo.AppLogType{
+		"build":  godo.AppLogTypeBuild,
+		"deploy": godo.AppLogTypeDeploy,
+		"run":    godo.AppLogTypeRun,
+	}
+
+	for typeStr, logType := range types {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.apps.EXPECT().Find(appName).Times(1).Return(testApp, nil)
+			tm.apps.EXPECT().GetLogs(testApp.ID, testApp.ActiveDeployment.ID, component, logType, true, 1).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+			tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+
+			tc := config.Doit.(*doctl.TestConfig)
+			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
+				assert.Equal(t, "aa-bb-11-cc-33", token)
+				assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
+				return tm.listen
+			}
+
+			config.Args = append(config.Args, appName, component)
+			config.Doit.Set(config.NS, doctl.ArgAppDeployment, "")
+			config.Doit.Set(config.NS, doctl.ArgAppLogType, typeStr)
+			config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
+			config.Doit.Set(config.NS, doctl.ArgAppLogTail, 1)
+
+			err := RunAppsGetLogs(config)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestRunAppsGetLogsWithAppNameAndDeploymentID(t *testing.T) {
+	appName := "test-app"
+	component := "service"
+
+	testApp := &godo.App{
+		ID:   uuid.New().String(),
+		Spec: &testAppSpec,
+		ActiveDeployment: &godo.Deployment{
+			ID:   uuid.New().String(),
+			Spec: &testAppSpec,
+		},
+	}
+
+	types := map[string]godo.AppLogType{
+		"build":  godo.AppLogTypeBuild,
+		"deploy": godo.AppLogTypeDeploy,
+		"run":    godo.AppLogTypeRun,
+	}
+
+	for typeStr, logType := range types {
+		withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+			tm.apps.EXPECT().Find(appName).Times(1).Return(testApp, nil)
+			tm.apps.EXPECT().GetLogs(testApp.ID, testApp.ActiveDeployment.ID, component, logType, true, 1).Times(1).Return(&godo.AppLogs{LiveURL: "https://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33"}, nil)
+			tm.listen.EXPECT().Listen(gomock.Any()).Times(1).Return(nil)
+
+			tc := config.Doit.(*doctl.TestConfig)
+			tc.ListenFn = func(url *url.URL, token string, schemaFunc listen.SchemaFunc, out io.Writer, in <-chan []byte) listen.ListenerService {
+				assert.Equal(t, "aa-bb-11-cc-33", token)
+				assert.Equal(t, "wss://proxy-apps-prod-ams3-001.ondigitalocean.app/?token=aa-bb-11-cc-33", url.String())
+				return tm.listen
+			}
+
+			config.Args = append(config.Args, appName, component)
+			config.Doit.Set(config.NS, doctl.ArgAppDeployment, testApp.ActiveDeployment.ID)
+			config.Doit.Set(config.NS, doctl.ArgAppLogType, typeStr)
+			config.Doit.Set(config.NS, doctl.ArgAppLogFollow, true)
+			config.Doit.Set(config.NS, doctl.ArgAppLogTail, 1)
+
+			err := RunAppsGetLogs(config)
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestRunAppsConsole(t *testing.T) {
 	appID := uuid.New().String()
 	deploymentID := uuid.New().String()

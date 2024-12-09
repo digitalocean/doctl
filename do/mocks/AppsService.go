@@ -84,6 +84,21 @@ func (mr *MockAppsServiceMockRecorder) Delete(appID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockAppsService)(nil).Delete), appID)
 }
 
+// Find mocks base method.
+func (m *MockAppsService) Find(appRef string) (*godo.App, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Find", appRef)
+	ret0, _ := ret[0].(*godo.App)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Find indicates an expected call of Find.
+func (mr *MockAppsServiceMockRecorder) Find(appRef any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Find", reflect.TypeOf((*MockAppsService)(nil).Find), appRef)
+}
+
 // Get mocks base method.
 func (m *MockAppsService) Get(appID string) (*godo.App, error) {
 	m.ctrl.T.Helper()
