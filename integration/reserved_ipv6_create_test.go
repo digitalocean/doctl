@@ -92,7 +92,7 @@ fd53:616d:6d60::1071:5001    nyc3
   "reserved_ipv6": {
     "ip": "fd53:616d:6d60::1071:5001",
     "region_slug": "nyc3",
-	"reserved_at": "2021-10-01T00:00:00Z"
+    "reserved_at": "2021-10-01T00:00:00Z"
   },
   "links": {}
 }

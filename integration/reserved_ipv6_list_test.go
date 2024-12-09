@@ -82,12 +82,12 @@ fd53:616d:6d60::1071:5002    nyc3
     {
       "ip": "fd53:616d:6d60::1071:5001",
       "region_slug": "nyc3",
-	  "reserved_at": "2021-10-01T00:00:00Z"
+      "reserved_at": "2021-10-01T00:00:00Z"
     },
 	{
       "ip": "fd53:616d:6d60::1071:5002",
       "region_slug": "nyc3",
-	  "reserved_at": "2021-10-01T00:00:00Z"
+      "reserved_at": "2021-10-01T00:00:00Z"
     }
   ],
   "links": {},

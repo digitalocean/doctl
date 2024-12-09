@@ -149,10 +149,10 @@ ID            Status         Type         Started At                       Compl
   "action": {
     "id": 2208110887,
     "status": "in-progress",
-	"type": "remove_ip",
-	"started_at": "2021-10-01T01:00:00Z",
-	"resource_type": "reserved_ipv6",
-	"region_slug": "nyc3"
+    "type": "remove_ip",
+    "started_at": "2021-10-01T01:00:00Z",
+    "resource_type": "reserved_ipv6",
+    "region_slug": "nyc3"
   }
 }
 `
