@@ -116,8 +116,8 @@ You can build doctl in a local Docker container via `make docker_build`.
 
 ### Testing
 
-Run the tests locally via `make test`, or on Travis CI by pushing a branch to your fork
-on github.
+Run the tests locally via `make test`, or in [CI](.github/workflows/ci.yml) by pushing a branch to your fork
+on GitHub.
 
 #### Writing Tests
 

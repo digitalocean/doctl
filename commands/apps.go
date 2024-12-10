@@ -33,6 +33,7 @@ import (
 	"github.com/digitalocean/doctl/internal/apps"
 	"github.com/digitalocean/doctl/pkg/terminal"
 	"github.com/digitalocean/godo"
+	"github.com/google/uuid"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -189,7 +190,7 @@ Only basic information is included with the text output format. For complete app
 	logs := CmdBuilder(
 		cmd,
 		RunAppsGetLogs,
-		"logs <app id> <component name (defaults to all components)>",
+		"logs <app name or id> <component name (defaults to all components)>",
 		"Retrieves logs",
 		`Retrieves component logs for a deployment of an app.
 
@@ -659,17 +660,24 @@ func RunAppsGetLogs(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	if deploymentID == "" {
-		app, err := c.Apps().Get(appID)
+
+	_, err = uuid.Parse(appID)
+	if err != nil || deploymentID == "" {
+		app, err := c.Apps().Find(appID)
 		if err != nil {
 			return err
 		}
-		if app.ActiveDeployment != nil {
-			deploymentID = app.ActiveDeployment.ID
-		} else if app.InProgressDeployment != nil {
-			deploymentID = app.InProgressDeployment.ID
-		} else {
-			return fmt.Errorf("unable to retrieve logs; no deployment found for app %s", appID)
+
+		appID = app.ID
+
+		if deploymentID == "" {
+			if app.ActiveDeployment != nil {
+				deploymentID = app.ActiveDeployment.ID
+			} else if app.InProgressDeployment != nil {
+				deploymentID = app.InProgressDeployment.ID
+			} else {
+				return fmt.Errorf("unable to retrieve logs; no deployment found for app %s", appID)
+			}
 		}
 	}
 
