@@ -108,6 +108,15 @@ var (
 	}
 	testReservedIPList = do.ReservedIPs{testReservedIP}
 
+	testReservedIPv6 = do.ReservedIPv6{
+		ReservedIPV6: &godo.ReservedIPV6{
+			Droplet:    testDroplet.Droplet,
+			RegionSlug: testDroplet.Region.Slug,
+			IP:         "5a11:a:b0a7",
+		},
+	}
+	testReservedIPv6List = do.ReservedIPv6s{testReservedIPv6}
+
 	testSnapshot = do.Snapshot{
 		Snapshot: &godo.Snapshot{
 			ID:      "1",
@@ -220,6 +229,8 @@ type tcMocks struct {
 	invoices              *domocks.MockInvoicesService
 	reservedIPs           *domocks.MockReservedIPsService
 	reservedIPActions     *domocks.MockReservedIPActionsService
+	reservedIPv6s         *domocks.MockReservedIPv6sService
+	reservedIPv6Actions   *domocks.MockReservedIPv6ActionsService
 	domains               *domocks.MockDomainsService
 	uptimeChecks          *domocks.MockUptimeChecksService
 	volumes               *domocks.MockVolumesService
@@ -264,6 +275,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		invoices:              domocks.NewMockInvoicesService(ctrl),
 		reservedIPs:           domocks.NewMockReservedIPsService(ctrl),
 		reservedIPActions:     domocks.NewMockReservedIPActionsService(ctrl),
+		reservedIPv6s:         domocks.NewMockReservedIPv6sService(ctrl),
+		reservedIPv6Actions:   domocks.NewMockReservedIPv6ActionsService(ctrl),
 		droplets:              domocks.NewMockDropletsService(ctrl),
 		dropletActions:        domocks.NewMockDropletActionsService(ctrl),
 		dropletAutoscale:      domocks.NewMockDropletAutoscaleService(ctrl),
@@ -313,41 +326,43 @@ func withTestClient(t *testing.T, tFn testFn) {
 
 		componentBuilderFactory: tm.appBuilderFactory,
 
-		Keys:              func() do.KeysService { return tm.keys },
-		Sizes:             func() do.SizesService { return tm.sizes },
-		Regions:           func() do.RegionsService { return tm.regions },
-		Images:            func() do.ImagesService { return tm.images },
-		ImageActions:      func() do.ImageActionsService { return tm.imageActions },
-		ReservedIPs:       func() do.ReservedIPsService { return tm.reservedIPs },
-		ReservedIPActions: func() do.ReservedIPActionsService { return tm.reservedIPActions },
-		Droplets:          func() do.DropletsService { return tm.droplets },
-		DropletActions:    func() do.DropletActionsService { return tm.dropletActions },
-		DropletAutoscale:  func() do.DropletAutoscaleService { return tm.dropletAutoscale },
-		Domains:           func() do.DomainsService { return tm.domains },
-		Actions:           func() do.ActionsService { return tm.actions },
-		Account:           func() do.AccountService { return tm.account },
-		Balance:           func() do.BalanceService { return tm.balance },
-		BillingHistory:    func() do.BillingHistoryService { return tm.billingHistory },
-		Invoices:          func() do.InvoicesService { return tm.invoices },
-		Tags:              func() do.TagsService { return tm.tags },
-		UptimeChecks:      func() do.UptimeChecksService { return tm.uptimeChecks },
-		Volumes:           func() do.VolumesService { return tm.volumes },
-		VolumeActions:     func() do.VolumeActionsService { return tm.volumeActions },
-		Snapshots:         func() do.SnapshotsService { return tm.snapshots },
-		Certificates:      func() do.CertificatesService { return tm.certificates },
-		LoadBalancers:     func() do.LoadBalancersService { return tm.loadBalancers },
-		Firewalls:         func() do.FirewallsService { return tm.firewalls },
-		CDNs:              func() do.CDNsService { return tm.cdns },
-		Projects:          func() do.ProjectsService { return tm.projects },
-		Kubernetes:        func() do.KubernetesService { return tm.kubernetes },
-		Databases:         func() do.DatabasesService { return tm.databases },
-		Registry:          func() do.RegistryService { return tm.registry },
-		VPCs:              func() do.VPCsService { return tm.vpcs },
-		OneClicks:         func() do.OneClickService { return tm.oneClick },
-		Apps:              func() do.AppsService { return tm.apps },
-		Monitoring:        func() do.MonitoringService { return tm.monitoring },
-		Serverless:        func() do.ServerlessService { return tm.serverless },
-		OAuth:             func() do.OAuthService { return tm.oauth },
+		Keys:                func() do.KeysService { return tm.keys },
+		Sizes:               func() do.SizesService { return tm.sizes },
+		Regions:             func() do.RegionsService { return tm.regions },
+		Images:              func() do.ImagesService { return tm.images },
+		ImageActions:        func() do.ImageActionsService { return tm.imageActions },
+		ReservedIPs:         func() do.ReservedIPsService { return tm.reservedIPs },
+		ReservedIPActions:   func() do.ReservedIPActionsService { return tm.reservedIPActions },
+		ReservedIPv6s:       func() do.ReservedIPv6sService { return tm.reservedIPv6s },
+		ReservedIPv6Actions: func() do.ReservedIPv6ActionsService { return tm.reservedIPv6Actions },
+		Droplets:            func() do.DropletsService { return tm.droplets },
+		DropletActions:      func() do.DropletActionsService { return tm.dropletActions },
+		DropletAutoscale:    func() do.DropletAutoscaleService { return tm.dropletAutoscale },
+		Domains:             func() do.DomainsService { return tm.domains },
+		Actions:             func() do.ActionsService { return tm.actions },
+		Account:             func() do.AccountService { return tm.account },
+		Balance:             func() do.BalanceService { return tm.balance },
+		BillingHistory:      func() do.BillingHistoryService { return tm.billingHistory },
+		Invoices:            func() do.InvoicesService { return tm.invoices },
+		Tags:                func() do.TagsService { return tm.tags },
+		UptimeChecks:        func() do.UptimeChecksService { return tm.uptimeChecks },
+		Volumes:             func() do.VolumesService { return tm.volumes },
+		VolumeActions:       func() do.VolumeActionsService { return tm.volumeActions },
+		Snapshots:           func() do.SnapshotsService { return tm.snapshots },
+		Certificates:        func() do.CertificatesService { return tm.certificates },
+		LoadBalancers:       func() do.LoadBalancersService { return tm.loadBalancers },
+		Firewalls:           func() do.FirewallsService { return tm.firewalls },
+		CDNs:                func() do.CDNsService { return tm.cdns },
+		Projects:            func() do.ProjectsService { return tm.projects },
+		Kubernetes:          func() do.KubernetesService { return tm.kubernetes },
+		Databases:           func() do.DatabasesService { return tm.databases },
+		Registry:            func() do.RegistryService { return tm.registry },
+		VPCs:                func() do.VPCsService { return tm.vpcs },
+		OneClicks:           func() do.OneClickService { return tm.oneClick },
+		Apps:                func() do.AppsService { return tm.apps },
+		Monitoring:          func() do.MonitoringService { return tm.monitoring },
+		Serverless:          func() do.ServerlessService { return tm.serverless },
+		OAuth:               func() do.OAuthService { return tm.oauth },
 	}
 
 	tFn(config, tm)

@@ -211,6 +211,8 @@ func computeCmd() *Command {
 	cmd.AddCommand(Firewall())
 	cmd.AddCommand(ReservedIP())
 	cmd.AddCommand(ReservedIPAction())
+	cmd.AddCommand(ReservedIPv6())
+	cmd.AddCommand(ReservedIPv6Action())
 	cmd.AddCommand(Images())
 	cmd.AddCommand(ImageAction())
 	cmd.AddCommand(LoadBalancer())
