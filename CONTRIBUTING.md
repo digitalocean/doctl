@@ -178,6 +178,12 @@ Writing an integration test typically looks like this,
 Rather than providing an example here, please have a look at the [`integration/account_test.go`](/integration/account_test.go)
 file to see what an integration test typically looks like.
 
+Use `make test_integration` to run all integration tests, or run a single integration test as follows.
+
+```
+go test -v -mod=vendor ./integration -run TestRun/doctl/registry/login/all_required_flags_are_passed/writes_a_docker_config.json_file
+```
+
 #### `godo` mocks
 
 To upgrade `godo`, run `make upgrade_godo`. This will:
