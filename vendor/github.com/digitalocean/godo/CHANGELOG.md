@@ -1,5 +1,8 @@
 # Change Log
 
+##  [v1.131.1] - 2024-12-10
+- #762 - @imaskm - Updated list ipv6 response
+
 ##  [v1.131.0] - 2024-11-25
 
 - #760 - @jvasilevsky - LBAAS: add ipv6 field to loadbalancer model

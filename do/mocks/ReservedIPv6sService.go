@@ -40,6 +40,21 @@ func (m *MockReservedIPv6sService) EXPECT() *MockReservedIPv6sServiceMockRecorde
 	return m.recorder
 }
 
+// Assign mocks base method.
+func (m *MockReservedIPv6sService) Assign(ip string, dropletID int) (*do.Action, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Assign", ip, dropletID)
+	ret0, _ := ret[0].(*do.Action)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Assign indicates an expected call of Assign.
+func (mr *MockReservedIPv6sServiceMockRecorder) Assign(ip, dropletID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Assign", reflect.TypeOf((*MockReservedIPv6sService)(nil).Assign), ip, dropletID)
+}
+
 // Create mocks base method.
 func (m *MockReservedIPv6sService) Create(ficr *godo.ReservedIPV6CreateRequest) (*do.ReservedIPv6, error) {
 	m.ctrl.T.Helper()
@@ -97,4 +112,19 @@ func (m *MockReservedIPv6sService) List() (do.ReservedIPv6s, error) {
 func (mr *MockReservedIPv6sServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockReservedIPv6sService)(nil).List))
+}
+
+// Unassign mocks base method.
+func (m *MockReservedIPv6sService) Unassign(ip string) (*do.Action, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Unassign", ip)
+	ret0, _ := ret[0].(*do.Action)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Unassign indicates an expected call of Unassign.
+func (mr *MockReservedIPv6sServiceMockRecorder) Unassign(ip any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unassign", reflect.TypeOf((*MockReservedIPv6sService)(nil).Unassign), ip)
 }

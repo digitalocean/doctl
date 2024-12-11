@@ -16,6 +16,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
@@ -55,6 +56,16 @@ Reserved IPv6 addresses can be held in the region they were created in on your a
 		aliasOpt("ls"), displayerType(&displayers.ReservedIPv6{}))
 	AddStringFlag(cmdReservedIPv6List, doctl.ArgRegionSlug, "", "", "Retrieves a list of reserved IPv6 addresses in the specified region")
 	cmdReservedIPv6List.Example = `The following example lists all reserved IPv6 addresses in the ` + "`" + `nyc1` + "`" + ` region: doctl compute reserved-ipv6 list --region nyc1`
+
+	cmdReservedIPv6ActionsAssign := CmdBuilder(cmd, RunReservedIPv6sAssign,
+		"assign <reserved-ipv6> <droplet-id>", "Assign a reserved IPv6 address to a Droplet", "Assigns a reserved IPv6 address to the specified Droplet.", Writer,
+		displayerType(&displayers.Action{}))
+	cmdReservedIPv6ActionsAssign.Example = `The following example assigns the reserved IPv6 address ` + "`" + `5a11:a:b0a7` + "`" + ` to a Droplet with the ID ` + "`" + `386734086` + "`" + `: doctl compute reserved-ipv6 assign 5a11:a:b0a7 386734086`
+
+	cmdReservedIPv6ActionsUnassign := CmdBuilder(cmd, RunReservedIPv6sUnassign,
+		"unassign <reserved-ipv6>", "Unassign a reserved IPv6 address from a Droplet", `Unassigns a reserved IPv6 address from a Droplet.`, Writer,
+		displayerType(&displayers.Action{}))
+	cmdReservedIPv6ActionsUnassign.Example = `The following example unassigns the reserved IPv6 address ` + "`" + `5a11:a:b0a7` + "`" + ` from a resource: doctl compute reserved-ipv6 unassign 5a11:a:b0a7`
 
 	return cmd
 }
@@ -157,5 +168,49 @@ func RunReservedIPv6List(c *CmdConfig) error {
 	}
 
 	item := rips
+	return c.Display(item)
+}
+
+// RunReservedIPv6sAssign assigns a reserved IP to a droplet.
+func RunReservedIPv6sAssign(c *CmdConfig) error {
+	if len(c.Args) != 2 {
+		return doctl.NewMissingArgsErr(c.NS)
+	}
+
+	ip := c.Args[0]
+
+	fia := c.ReservedIPv6s()
+
+	dropletID, err := strconv.Atoi(c.Args[1])
+	if err != nil {
+		return err
+	}
+
+	a, err := fia.Assign(ip, dropletID)
+	if err != nil {
+		checkErr(fmt.Errorf("could not assign IP to droplet: %v", err))
+	}
+
+	item := &displayers.Action{Actions: do.Actions{*a}}
+	return c.Display(item)
+}
+
+// RunReservedIPv6sUnassign unassigns a reserved IP to a droplet.
+func RunReservedIPv6sUnassign(c *CmdConfig) error {
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+
+	ip := c.Args[0]
+
+	fia := c.ReservedIPv6s()
+
+	a, err := fia.Unassign(ip)
+	if err != nil {
+		checkErr(fmt.Errorf("could not unassign IP to droplet: %v", err))
+	}
+
+	item := &displayers.Action{Actions: do.Actions{*a}}
 	return c.Display(item)
 }

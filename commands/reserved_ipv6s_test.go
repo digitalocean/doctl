@@ -24,7 +24,7 @@ import (
 func TestReservedIPv6Commands(t *testing.T) {
 	cmd := ReservedIPv6()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "delete", "get", "list")
+	assertCommandNames(t, cmd, "create", "delete", "get", "list", "assign", "unassign")
 }
 
 func TestReservedIPv6sList(t *testing.T) {
@@ -73,5 +73,27 @@ func TestReservedIPv6sDelete(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgForce, true)
 
 		RunReservedIPv6Delete(config)
+	})
+}
+
+func TestReservedIPv6ActionsAssign(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.reservedIPv6s.EXPECT().Assign("5a11:a:b0a7", 2).Return(&testAction, nil)
+
+		config.Args = append(config.Args, "5a11:a:b0a7", "2")
+
+		err := RunReservedIPv6sAssign(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestReservedIPv6ActionsUnassign(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.reservedIPv6s.EXPECT().Unassign("5a11:a:b0a7").Return(&testAction, nil)
+
+		config.Args = append(config.Args, "5a11:a:b0a7")
+
+		err := RunReservedIPv6sUnassign(config)
+		assert.NoError(t, err)
 	})
 }
