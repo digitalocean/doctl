@@ -82,7 +82,7 @@ var _ = suite("compute/reserved-ipv6-action/assign", func(t *testing.T, when spe
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"compute",
-					"reserved-ipv6-action",
+					"reserved-ipv6",
 					alias,
 					"fd53:616d:6d60::1071:5001",
 					"1212",
@@ -104,7 +104,7 @@ var _ = suite("compute/reserved-ipv6-action/assign", func(t *testing.T, when spe
 					"-t", "some-magic-token",
 					"-u", server.URL,
 					"compute",
-					"reserved-ipv6-action",
+					"reserved-ipv6",
 					alias,
 					"fd53:616d:6d60::1071:5001",
 				)
