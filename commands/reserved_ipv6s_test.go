@@ -24,7 +24,7 @@ import (
 func TestReservedIPv6Commands(t *testing.T) {
 	cmd := ReservedIPv6()
 	assert.NotNil(t, cmd)
-	assertCommandNames(t, cmd, "create", "delete", "get", "list")
+	assertCommandNames(t, cmd, "create", "delete", "get", "list", "assign", "unassign")
 }
 
 func TestReservedIPv6sList(t *testing.T) {
