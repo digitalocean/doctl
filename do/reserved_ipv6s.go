@@ -33,6 +33,9 @@ type ReservedIPv6sService interface {
 	Get(ip string) (*ReservedIPv6, error)
 	Create(ficr *godo.ReservedIPV6CreateRequest) (*ReservedIPv6, error)
 	Delete(ip string) error
+
+	Assign(ip string, dropletID int) (*Action, error)
+	Unassign(ip string) (*Action, error)
 }
 
 type reservedIPv6sService struct {
@@ -98,4 +101,22 @@ func (fis *reservedIPv6sService) Create(ficr *godo.ReservedIPV6CreateRequest) (*
 func (fis *reservedIPv6sService) Delete(ip string) error {
 	_, err := fis.client.ReservedIPV6s.Delete(context.TODO(), ip)
 	return err
+}
+
+func (fia *reservedIPv6sService) Assign(ip string, dropletID int) (*Action, error) {
+	a, _, err := fia.client.ReservedIPV6Actions.Assign(context.TODO(), ip, dropletID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Action{Action: a}, nil
+}
+
+func (fia *reservedIPv6sService) Unassign(ip string) (*Action, error) {
+	a, _, err := fia.client.ReservedIPV6Actions.Unassign(context.TODO(), ip)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Action{Action: a}, nil
 }
