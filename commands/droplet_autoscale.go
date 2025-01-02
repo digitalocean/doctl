@@ -25,13 +25,12 @@ import (
 func DropletAutoscale() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Hidden:  true,
 			Use:     "droplet-autoscale",
 			Aliases: []string{"das"},
 			Short:   "Display commands to manage Droplet autoscale pools",
 			Long: `Use the subcommands of ` + "`" + `doctl compute droplet-autoscale` + "`" + ` to perform actions on Droplet Autoscale Pools.
 
-You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale Pools.`,
+You can use droplet-autoscale to perform CRUD operations on a Droplet Autoscale Pool.`,
 		},
 	}
 	cmdDropletAutoscaleCreate := CmdBuilder(cmd, RunDropletAutoscaleCreate, "create", "Create a new Droplet autoscale pool", "", Writer, displayerType(&displayers.DropletAutoscalePools{}))
