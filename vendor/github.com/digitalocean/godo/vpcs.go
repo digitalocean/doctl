@@ -48,7 +48,6 @@ type VPCCreateRequest struct {
 type VPCUpdateRequest struct {
 	Name        string `json:"name,omitempty"`
 	Description string `json:"description,omitempty"`
-	Default     *bool  `json:"default,omitempty"`
 }
 
 // VPCSetField allows one to set individual fields within a VPC configuration.
@@ -64,20 +63,9 @@ type VPCSetName string
 // Ex.: VPCs.Set(..., VPCSetDescription("vpc description"))
 type VPCSetDescription string
 
-// VPCSetDefault is used when one wants to enable the `default` field of a VPC, to
-// set a VPC as the default one in the region
-// Ex.: VPCs.Set(..., VPCSetDefault())
-func VPCSetDefault() VPCSetField {
-	return &vpcSetDefault{}
-}
-
-// vpcSetDefault satisfies the VPCSetField interface
-type vpcSetDefault struct{}
-
 // VPC represents a DigitalOcean Virtual Private Cloud configuration.
 type VPC struct {
 	ID          string    `json:"id,omitempty"`
-	URN         string    `json:"urn"`
 	Name        string    `json:"name,omitempty"`
 	Description string    `json:"description,omitempty"`
 	IPRange     string    `json:"ip_range,omitempty"`
@@ -168,7 +156,6 @@ func (v *VPCsServiceOp) List(ctx context.Context, opt *ListOptions) ([]*VPC, *Re
 	if m := root.Meta; m != nil {
 		resp.Meta = m
 	}
-
 	return root.VPCs, resp, nil
 }
 
@@ -195,10 +182,6 @@ func (n VPCSetName) vpcSetField(in map[string]interface{}) {
 
 func (n VPCSetDescription) vpcSetField(in map[string]interface{}) {
 	in["description"] = n
-}
-
-func (*vpcSetDefault) vpcSetField(in map[string]interface{}) {
-	in["default"] = true
 }
 
 // Set updates specific properties of a Virtual Private Cloud.
@@ -269,5 +252,4 @@ func (v *VPCsServiceOp) ListMembers(ctx context.Context, id string, request *VPC
 	}
 
 	return root.Members, resp, nil
-
 }

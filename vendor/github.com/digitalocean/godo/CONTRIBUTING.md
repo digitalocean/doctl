@@ -13,6 +13,12 @@ Once you are ready to open a PR, please keep the following guidelines in mind:
 
 `godo` uses go modules. Just fork this repo, clone your fork and off you go!
 
+If outside `$GOPATH`, just clone the repository:
+
+```sh
+git clone https://github.com/digitalocean/godo
+```
+
 ## Running tests
 
 When working on code in this repository, tests can be run via:
