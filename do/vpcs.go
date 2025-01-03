@@ -35,6 +35,14 @@ type VPCPeering struct {
 // VPCPeerings is a slice of VPCPeering
 type VPCPeerings []VPCPeering
 
+// PartnerInterconnectAttachment wraps a godo PartnerInterconnectAttachment
+type PartnerInterconnectAttachment struct {
+	*godo.PartnerInterconnectAttachment
+}
+
+// PartnerInterconnectAttachments is a slice of PartnerInterconnectAttachment
+type PartnerInterconnectAttachments []PartnerInterconnectAttachment
+
 // VPCsService is the godo VPCsService interface.
 type VPCsService interface {
 	Get(vpcUUID string) (*VPC, error)
@@ -49,6 +57,8 @@ type VPCsService interface {
 	UpdateVPCPeering(peeringID string, req *godo.VPCPeeringUpdateRequest) (*VPCPeering, error)
 	DeleteVPCPeering(peeringID string) error
 	ListVPCPeeringsByVPCID(vpcID string) (VPCPeerings, error)
+	GetPartnerInterconnectAttachment(iaID string) (*PartnerInterconnectAttachment, error)
+	ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error)
 }
 
 var _ VPCsService = &vpcsService{}
@@ -217,6 +227,43 @@ func (v *vpcsService) ListVPCPeeringsByVPCID(vpcID string) (VPCPeerings, error) 
 	for i := range si {
 		a := si[i].(*godo.VPCPeering)
 		list[i] = VPCPeering{VPCPeering: a}
+	}
+
+	return list, nil
+}
+
+func (v *vpcsService) GetPartnerInterconnectAttachment(iaID string) (*PartnerInterconnectAttachment, error) {
+	partnerIA, _, err := v.client.PartnerInterconnectAttachments.Get(context.TODO(), iaID)
+	if err != nil {
+		return nil, err
+	}
+	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
+}
+
+func (v *vpcsService) ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := v.client.PartnerInterconnectAttachments.List(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]PartnerInterconnectAttachment, len(si))
+	for i := range si {
+		a := si[i].(*godo.PartnerInterconnectAttachment)
+		list[i] = PartnerInterconnectAttachment{PartnerInterconnectAttachment: a}
 	}
 
 	return list, nil

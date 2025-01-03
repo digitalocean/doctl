@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"github.internal.digitalocean.com/digitalocean/godo"
+	
+	"github.com/digitalocean/godo"
 )
 
 const (
