@@ -223,6 +223,7 @@ func (kc KubernetesCluster) URN() string {
 
 // KubernetesClusterUser represents a Kubernetes cluster user.
 type KubernetesClusterUser struct {
+	ID       string   `json:"id,omitempty"`
 	Username string   `json:"username,omitempty"`
 	Groups   []string `json:"groups,omitempty"`
 }
@@ -315,7 +316,7 @@ var (
 
 // KubernetesMaintenanceToDay returns the appropriate KubernetesMaintenancePolicyDay for the given string.
 func KubernetesMaintenanceToDay(day string) (KubernetesMaintenancePolicyDay, error) {
-	d, ok := toDay[day]
+	d, ok := toDay[strings.ToLower(day)]
 	if !ok {
 		return 0, fmt.Errorf("unknown day: %q", day)
 	}

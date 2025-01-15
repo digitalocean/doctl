@@ -1,5 +1,16 @@
 # Change Log
 
+##  [v1.134.0] - 2025-01-15
+- #771 - @d-honeybadger - add ID field to KubernetesClusterUser response
+- #768 - @lee-aaron - support Spaces Keys API
+
+##  [v1.133.0] - 2025-01-10
+- #769 - @guptado - support partner interconnect attachment operations
+- #767 - @loosla - [kubernetes]: make kubernetes maintenance_policy day case insensitive
+
+##  [v1.132.0] - 2024-12-17
+- #764 - @greeshmapill - APPS-9365: Add bitbucket source to App Spec
+
 ##  [v1.131.1] - 2024-12-10
 - #762 - @imaskm - Updated list ipv6 response
 

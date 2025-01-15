@@ -689,6 +689,7 @@ type AppBuildableComponentSpec interface {
 	GetGit() *GitSourceSpec
 	GetGitHub() *GitHubSourceSpec
 	GetGitLab() *GitLabSourceSpec
+	GetBitbucket() *BitbucketSourceSpec
 
 	GetSourceDir() string
 
@@ -731,15 +732,21 @@ type AppRoutableComponentSpec interface {
 type AppSourceType string
 
 const (
-	AppSourceTypeGitHub AppSourceType = "github"
-	AppSourceTypeGitLab AppSourceType = "gitlab"
-	AppSourceTypeGit    AppSourceType = "git"
-	AppSourceTypeImage  AppSourceType = "image"
+	AppSourceTypeBitbucket AppSourceType = "bitbucket"
+	AppSourceTypeGitHub    AppSourceType = "github"
+	AppSourceTypeGitLab    AppSourceType = "gitlab"
+	AppSourceTypeGit       AppSourceType = "git"
+	AppSourceTypeImage     AppSourceType = "image"
 )
 
 // SourceSpec represents a source.
 type SourceSpec interface {
 	GetType() AppSourceType
+}
+
+// GetType returns the Bitbucket source type.
+func (s *BitbucketSourceSpec) GetType() AppSourceType {
+	return AppSourceTypeBitbucket
 }
 
 // GetType returns the GitHub source type.
