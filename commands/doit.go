@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/digitalocean/doctl"
+
 	"github.com/fatih/color"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
@@ -188,6 +189,7 @@ func addCommands() {
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Serverless())
+	DoitCmd.AddCommand(Spaces())
 }
 
 func computeCmd() *Command {

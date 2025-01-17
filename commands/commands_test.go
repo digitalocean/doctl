@@ -22,6 +22,7 @@ import (
 	"github.com/digitalocean/doctl/do"
 	domocks "github.com/digitalocean/doctl/do/mocks"
 	"github.com/digitalocean/doctl/internal/apps/builder"
+
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -255,6 +256,7 @@ type tcMocks struct {
 	appDockerEngineClient         *builder.MockDockerEngineClient
 	oauth                         *domocks.MockOAuthService
 	partnerInterconnectAttachment *domocks.MockPartnerInterconnectAttachmentsService
+	spacesKeys                    *domocks.MockSpacesKeysService
 }
 
 func withTestClient(t *testing.T, tFn testFn) {
@@ -305,7 +307,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		appDockerEngineClient:         builder.NewMockDockerEngineClient(ctrl),
 		oauth:                         domocks.NewMockOAuthService(ctrl),
 		partnerInterconnectAttachment: domocks.NewMockPartnerInterconnectAttachmentsService(ctrl),
-	}
+		spacesKeys:                    domocks.NewMockSpacesKeysService(ctrl)}
 
 	testConfig := doctl.NewTestConfig()
 	testConfig.DockerEngineClient = tm.appDockerEngineClient
@@ -363,6 +365,7 @@ func withTestClient(t *testing.T, tFn testFn) {
 		Serverless:                     func() do.ServerlessService { return tm.serverless },
 		OAuth:                          func() do.OAuthService { return tm.oauth },
 		PartnerInterconnectAttachments: func() do.PartnerInterconnectAttachmentsService { return tm.partnerInterconnectAttachment },
+		SpacesKeys:                     func() do.SpacesKeysService { return tm.spacesKeys },
 	}
 
 	tFn(config, tm)

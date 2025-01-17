@@ -21,6 +21,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps/builder"
+
 	"github.com/spf13/viper"
 )
 
@@ -75,6 +76,7 @@ type CmdConfig struct {
 	Serverless                     func() do.ServerlessService
 	OAuth                          func() do.OAuthService
 	PartnerInterconnectAttachments func() do.PartnerInterconnectAttachmentsService
+	SpacesKeys                     func() do.SpacesKeysService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -134,6 +136,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 			c.PartnerInterconnectAttachments = func() do.PartnerInterconnectAttachmentsService {
 				return do.NewPartnerInterconnectAttachmentsService(godoClient)
 			}
+			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 
 			return nil
 		},
