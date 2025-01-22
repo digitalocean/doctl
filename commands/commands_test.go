@@ -307,7 +307,8 @@ func withTestClient(t *testing.T, tFn testFn) {
 		appDockerEngineClient:         builder.NewMockDockerEngineClient(ctrl),
 		oauth:                         domocks.NewMockOAuthService(ctrl),
 		partnerInterconnectAttachment: domocks.NewMockPartnerInterconnectAttachmentsService(ctrl),
-		spacesKeys:                    domocks.NewMockSpacesKeysService(ctrl)}
+		spacesKeys:                    domocks.NewMockSpacesKeysService(ctrl),
+	}
 
 	testConfig := doctl.NewTestConfig()
 	testConfig.DockerEngineClient = tm.appDockerEngineClient

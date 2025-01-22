@@ -39,9 +39,11 @@ func SpacesKeys() *Command {
 	createSpacesKeyDesc := "Create a key for a Space with the provided name."
 	cmdSpacesKeysCreate := CmdBuilder(cmd, spacesKeysCreate, "create <name>", "Create a key for a Space.", createSpacesKeyDesc, Writer)
 	AddStringSliceFlag(cmdSpacesKeysCreate, "grants", "g", []string{},
-		`A list of grants to add to the key. The permission should be either 'read', 'readwrite', or 'fullaccess'.
+		`A comma-separated list of grants to add to the key. The permission should be either 'read', 'readwrite', or 'fullaccess'.
 Format: `+"`"+`"bucket=your-bucket;permission=your-permission"`+"`", requiredOpt())
-	cmdSpacesKeysCreate.Example = "doctl spaces keys create my-key --grants 'bucket=my-bucket;permission=readwrite'"
+	cmdSpacesKeysCreate.Example =
+		`doctl spaces keys create my-key --grants 'bucket=my-bucket;permission=readwrite,bucket=my-other-bucket;permission=read'
+doctl spaces keys create my-key --grants 'bucket=;permission=fullaccess'`
 
 	listSpacesKeysDesc := "List all keys for a Space."
 	cmdSpacesKeysList := CmdBuilder(
@@ -58,7 +60,7 @@ Format: `+"`"+`"bucket=your-bucket;permission=your-permission"`+"`", requiredOpt
 	cmdSpacesKeysDelete := CmdBuilder(
 		cmd,
 		spacesKeysDelete,
-		"delete <key>",
+		"delete <access key>",
 		"Delete a key for a Space.",
 		deleteSpacesKeyDesc,
 		Writer, aliasOpt("rm"),
@@ -66,12 +68,12 @@ Format: `+"`"+`"bucket=your-bucket;permission=your-permission"`+"`", requiredOpt
 	cmdSpacesKeysDelete.Example = "doctl spaces keys delete DOACCESSKEY"
 
 	updateSpacesKeyDesc := "Update a key for a Space."
-	cmdSpacesKeysUpdate := CmdBuilder(cmd, spacesKeysUpdate, "update <key>", "Update a key for a Space.", updateSpacesKeyDesc, Writer)
+	cmdSpacesKeysUpdate := CmdBuilder(cmd, spacesKeysUpdate, "update <access key>", "Update a key for a Space.", updateSpacesKeyDesc, Writer)
 	AddStringFlag(cmdSpacesKeysUpdate, "name", "n", "", "The new name for the key.", requiredOpt())
 	AddStringSliceFlag(cmdSpacesKeysUpdate, "grants", "g", []string{},
-		`A list of grants to set to the key. The permission should be either 'read', 'readwrite', or 'fullaccess'.
+		`A comma-separated list of grants to set to the key. The permission should be either 'read', 'readwrite', or 'fullaccess'.
 Format: `+"`"+`"bucket=your-bucket;permission=your-permission"`+"`", requiredOpt())
-	cmdSpacesKeysUpdate.Example = "doctl spaces keys update DOACCESSKEY --name new-key --grants 'bucket=my-bucket;permission=readwrite'"
+	cmdSpacesKeysUpdate.Example = "doctl spaces keys update DOACCESSKEY --name new-key --grants 'bucket=my-bucket;permission=readwrite,bucket=my-other-bucket;permission=read'"
 
 	return cmd
 }
