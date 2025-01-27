@@ -184,6 +184,7 @@ func addCommands() {
 	DoitCmd.AddCommand(Version())
 	DoitCmd.AddCommand(Registry())
 	DoitCmd.AddCommand(VPCs())
+	DoitCmd.AddCommand(Partner())
 	DoitCmd.AddCommand(OneClicks())
 	DoitCmd.AddCommand(Monitoring())
 	DoitCmd.AddCommand(Serverless())
