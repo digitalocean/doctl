@@ -98,29 +98,35 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 	}
 	r.VPCIDs = vpcIDs
 
+	bgpConfig := new(godo.BGP)
+
 	bgpLocalASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPLocalASN)
 	if err != nil {
 		return err
 	}
-	r.BGP.LocalASN = bgpLocalASN
+	bgpConfig.LocalASN = bgpLocalASN
 
 	bgpLocalRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPLocalRouterIP)
 	if err != nil {
 		return err
 	}
-	r.BGP.LocalRouterIP = bgpLocalRouterIP
+	bgpConfig.LocalRouterIP = bgpLocalRouterIP
 
 	bgpPeerASN, err := c.Doit.GetInt(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN)
 	if err != nil {
 		return err
 	}
-	r.BGP.PeerASN = bgpPeerASN
+	bgpConfig.PeerASN = bgpPeerASN
 
 	bgpPeerRouterIP, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP)
 	if err != nil {
 		return err
 	}
-	r.BGP.PeerRouterIP = bgpPeerRouterIP
+	bgpConfig.PeerRouterIP = bgpPeerRouterIP
+
+	if bgpConfig != nil {
+		r.BGP = bgpConfig
+	}
 
 	pias := c.PartnerInterconnectAttachments()
 	pia, err := pias.Create(r)
