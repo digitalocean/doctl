@@ -291,6 +291,10 @@ After creating a cluster, a configuration context is added to kubectl and made a
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
 		"A comma-separated list of allowed addresses that can access the control plane.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
+		"The threshold value for the Cluster Autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of cpu requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down.")
+	AddStringFlag(cmdKubeClusterCreate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
+		"The unneed time for the Cluster Autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down.")
 	AddStringSliceFlag(cmdKubeClusterCreate, doctl.ArgTag, "", nil,
 		"A comma-separated list of `tags` to apply to the cluster, in addition to the default tags of `k8s` and `k8s:$K8S_CLUSTER_ID`.")
 	AddStringFlag(cmdKubeClusterCreate, doctl.ArgSizeSlug, "",
@@ -339,6 +343,10 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 		"Enables the highly-available control plane for the cluster")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgEnableControlPlaneFirewall, "", false,
 		"Creates the cluster with control plane firewall enabled. Defaults to false. To enable the control plane firewall, supply --enable-control-plane-firewall=true.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, "", "",
+		"The threshold value for the Cluster Autoscaler's scale-down-utilization-threshold. It is the maximum value between the sum of cpu requests and sum of memory requests of all pods running on the node divided by node's corresponding allocatable resource, below which a node can be considered for scale down.")
+	AddStringFlag(cmdKubeClusterUpdate, doctl.ArgClusterAutoscalerScaleDownUnneededTime, "", "",
+		"The unneed time for the Cluster Autoscaler's scale-down-unneeded-time. It defines how long a node should be unneeded before it is eligible for scale down.")
 	AddStringSliceFlag(cmdKubeClusterUpdate, doctl.ArgControlPlaneFirewallAllowedAddresses, "", nil,
 		"A comma-separated list of allowed addresses that can access the control plane.")
 	AddBoolFlag(cmdKubeClusterUpdate, doctl.ArgClusterUpdateKubeconfig, "",
@@ -1690,6 +1698,31 @@ func buildClusterCreateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterCr
 		}
 	}
 
+	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
+	thresholdStr, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold)
+	if err != nil {
+		return err
+	}
+	if thresholdStr != "" {
+		scaleDownUtilizationThreshold, err := strconv.ParseFloat(thresholdStr, 64)
+		if err != nil {
+			return err
+		}
+		clusterAutoscalerConfiguration.ScaleDownUtilizationThreshold = &scaleDownUtilizationThreshold
+	}
+
+	unneededTime, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime)
+	if err != nil {
+		return err
+	}
+	if unneededTime != "" {
+		clusterAutoscalerConfiguration.ScaleDownUnneededTime = &unneededTime
+	}
+
+	if thresholdStr != "" || unneededTime != "" {
+		r.ClusterAutoscalerConfiguration = clusterAutoscalerConfiguration
+	}
+
 	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
 	if err != nil {
 		return err
@@ -1802,6 +1835,31 @@ func buildClusterUpdateRequestFromArgs(c *CmdConfig, r *godo.KubernetesClusterUp
 		r.ControlPlaneFirewall = &godo.KubernetesControlPlaneFirewall{
 			Enabled: enableControlPlaneFirewall,
 		}
+	}
+
+	var clusterAutoscalerConfiguration = &godo.KubernetesClusterAutoscalerConfiguration{}
+	thresholdStr, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold)
+	if err != nil {
+		return err
+	}
+	if thresholdStr != "" {
+		scaleDownUtilizationThreshold, err := strconv.ParseFloat(thresholdStr, 64)
+		if err != nil {
+			return err
+		}
+		clusterAutoscalerConfiguration.ScaleDownUtilizationThreshold = &scaleDownUtilizationThreshold
+	}
+
+	unneededTime, err := c.Doit.GetString(c.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime)
+	if err != nil {
+		return err
+	}
+	if unneededTime != "" {
+		clusterAutoscalerConfiguration.ScaleDownUnneededTime = &unneededTime
+	}
+
+	if thresholdStr != "" || unneededTime != "" {
+		r.ClusterAutoscalerConfiguration = clusterAutoscalerConfiguration
 	}
 
 	controlPlaneFirewallAllowedAddresses, isSet, err := c.Doit.GetStringSliceIsFlagSet(c.NS, doctl.ArgControlPlaneFirewallAllowedAddresses)
