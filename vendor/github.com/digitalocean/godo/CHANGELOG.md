@@ -1,5 +1,10 @@
 # Change Log
 
+##  [v1.135.0] - 2025-01-27
+- #766 - @dhij - kubernetes: add cluster autoscaler config
+- #775 - @jvasilevsky - LBASA-3620: add network_stack field to load balancers model
+- #773 - @blesswinsamuel - Add field to customize the offline page during app maintenance
+
 ##  [v1.134.0] - 2025-01-15
 - #771 - @d-honeybadger - add ID field to KubernetesClusterUser response
 - #768 - @lee-aaron - support Spaces Keys API
