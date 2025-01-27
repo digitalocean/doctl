@@ -47,8 +47,8 @@ func NewPartnerInterconnectAttachmentsService(client *godo.Client) PartnerInterc
 }
 
 // Create creates a partner interconnect attachment.
-func (p *partnerInterconnectAttachmentsService) Create(piar *godo.PartnerInterconnectAttachmentCreateRequest) (*PartnerInterconnectAttachment, error) {
-	pia, _, err := p.client.PartnerInterconnectAttachments.Create(context.TODO(), piar)
+func (p *partnerInterconnectAttachmentsService) Create(req *godo.PartnerInterconnectAttachmentCreateRequest) (*PartnerInterconnectAttachment, error) {
+	pia, _, err := p.client.PartnerInterconnectAttachments.Create(context.TODO(), req)
 	if err != nil {
 		return nil, err
 	}

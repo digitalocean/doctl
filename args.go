@@ -519,8 +519,8 @@ const (
 
 	// ArgPartnerInterconnectAttachmentName is a name of the Partner Interconnect Attachment.
 	ArgPartnerInterconnectAttachmentName = "name"
-	// ArgPartnerInterconnectAttachmentConnectionBandwithInMbps is the connection bandwidth in megabits per second.
-	ArgPartnerInterconnectAttachmentConnectionBandwithInMbps = "connection-bandwidth-in-mbps"
+	// ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps is the connection bandwidth in megabits per second.
+	ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps = "connection-bandwidth-in-mbps"
 	// ArgPartnerInterconnectAttachmentRegion is the region slug.
 	ArgPartnerInterconnectAttachmentRegion = "region"
 	// ArgPartnerInterconnectAttachmentNaaSProvider is the name of the Network as a Service provider
