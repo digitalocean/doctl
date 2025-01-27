@@ -635,7 +635,7 @@ func RunKubernetesOneClickInstall(c *CmdConfig) error {
 		return err
 	}
 
-	notice(oneClickInstall)
+	notice("%s", oneClickInstall)
 	return nil
 }
 
@@ -784,7 +784,7 @@ func (s *KubernetesCommandService) RunKubernetesClusterCreate(defaultNodeSize st
 			if err != nil {
 				warn("Failed to kick off 1-Click Application(s) install")
 			} else {
-				notice(messageResponse)
+				notice("%s", messageResponse)
 			}
 		}
 
