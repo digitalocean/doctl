@@ -386,7 +386,7 @@ const (
 	// ArgLoadBalancerNetwork is the type of network the load balancer is accessible from.
 	ArgLoadBalancerNetwork = "network"
 	// ArgLoadBalancerNetworkStack is the network stack type the load balancer will be configured with (e.g IPv4, Dual Stack: IPv4 and IPv6).
-	ArgLoadBalancerNetworkStack = "network_stack"
+	ArgLoadBalancerNetworkStack = "network-stack"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
