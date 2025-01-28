@@ -102,7 +102,7 @@ With the load-balancer command, you can list, create, or delete load balancers, 
 		"A comma-separated list of Load Balancer IDs to add as target to the global load balancer ")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetwork, "", "", "The type of network the load balancer is accessible from, e.g.: `EXTERNAL` or `INTERNAL`")
 	AddStringFlag(cmdLoadBalancerCreate, doctl.ArgLoadBalancerNetworkStack, "", "", "The network stack type determines the allocation of ipv4/ipv6 addresses to the load balancer, e.g.: `IPV4` or `DUALSTACK`"+
-		" (NOTE: this is a closed beta feature, contact DigitalOcean support to review its public availability.)")
+		" (NOTE: this feature is in private preview, contact DigitalOcean support to review its public availability.)")
 
 	cmdRecordUpdate := CmdBuilder(cmd, RunLoadBalancerUpdate, "update <load-balancer-id>",
 		"Update a load balancer's configuration", `Use this command to update the configuration of a specified load balancer. Using all applicable flags, the command should contain a full representation of the load balancer including existing attributes, such as the load balancer's name, region, forwarding rules, and Droplet IDs. Any attribute that is not provided is reset to its default value.`, Writer, aliasOpt("u"))
