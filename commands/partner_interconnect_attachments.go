@@ -124,10 +124,6 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 	}
 	bgpConfig.PeerRouterIP = bgpPeerRouterIP
 
-	if bgpConfig != nil {
-		r.BGP = bgpConfig
-	}
-
 	pias := c.PartnerInterconnectAttachments()
 	pia, err := pias.Create(r)
 	if err != nil {
