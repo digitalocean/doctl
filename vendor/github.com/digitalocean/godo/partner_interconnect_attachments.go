@@ -46,6 +46,37 @@ type PartnerInterconnectAttachmentCreateRequest struct {
 	BGP BGP `json:"bgp,omitempty"`
 }
 
+type partnerInterconnectAttachmentRequestBody struct {
+	// Name is the name of the Partner Interconnect Attachment
+	Name string `json:"name,omitempty"`
+	// ConnectionBandwidthInMbps is the bandwidth of the connection in Mbps
+	ConnectionBandwidthInMbps int `json:"connection_bandwidth_in_mbps,omitempty"`
+	// Region is the region where the Partner Interconnect Attachment is created
+	Region string `json:"region,omitempty"`
+	// NaaSProvider is the name of the Network as a Service provider
+	NaaSProvider string `json:"naas_provider,omitempty"`
+	// VPCIDs is the IDs of the VPCs to which the Partner Interconnect Attachment is connected
+	VPCIDs []string `json:"vpc_ids,omitempty"`
+	// BGP is the BGP configuration of the Partner Interconnect Attachment
+	BGP *BGP `json:"bgp,omitempty"`
+}
+
+func (req *PartnerInterconnectAttachmentCreateRequest) buildReq() *partnerInterconnectAttachmentRequestBody {
+	request := &partnerInterconnectAttachmentRequestBody{
+		Name:                      req.Name,
+		ConnectionBandwidthInMbps: req.ConnectionBandwidthInMbps,
+		Region:                    req.Region,
+		NaaSProvider:              req.NaaSProvider,
+		VPCIDs:                    req.VPCIDs,
+	}
+
+	if req.BGP != (BGP{}) {
+		request.BGP = &req.BGP
+	}
+
+	return request
+}
+
 // PartnerInterconnectAttachmentUpdateRequest represents a request to update a Partner Interconnect Attachment.
 type PartnerInterconnectAttachmentUpdateRequest struct {
 	// Name is the name of the Partner Interconnect Attachment
@@ -154,7 +185,8 @@ func (s *PartnerInterconnectAttachmentsServiceOp) List(ctx context.Context, opt 
 // Create creates a new Partner Interconnect Attachment.
 func (s *PartnerInterconnectAttachmentsServiceOp) Create(ctx context.Context, create *PartnerInterconnectAttachmentCreateRequest) (*PartnerInterconnectAttachment, *Response, error) {
 	path := partnerInterconnectAttachmentsBasePath
-	req, err := s.client.NewRequest(ctx, http.MethodPost, path, create)
+
+	req, err := s.client.NewRequest(ctx, http.MethodPost, path, create.buildReq())
 	if err != nil {
 		return nil, nil, err
 	}
