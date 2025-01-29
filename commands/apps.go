@@ -67,7 +67,7 @@ func Apps() *Command {
 	AddStringFlag(create, doctl.ArgAppSpec, "", "", `Path to an app spec in JSON or YAML format. Set to "-" to read from stdin.`, requiredOpt())
 	AddBoolFlag(create, doctl.ArgCommandWait, "", false,
 		"Boolean that specifies whether to wait for an app to complete before returning control to the terminal")
-	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, "Boolean that specifies whether the app should be updated if it already exists")
+	AddBoolFlag(create, doctl.ArgCommandUpsert, "", false, `A boolean value that creates or updates an app’s configuration with the attached app spec. This does not pull changes from the app’s container registry or source repository. Instead, App Platform uses the image from the app’s most recent deployment. To additionally pull the latest changes from the app’s source, set the `+"`"+`--update-sources`+"`"+` flag.`)
 	AddBoolFlag(create, doctl.ArgCommandUpdateSources, "", false, "Boolean that specifies whether, on update, the app should also update its source code")
 	AddStringFlag(create, doctl.ArgProjectID, "", "", "The ID of the project to assign the created app and resources to. If not provided, the default project will be used.")
 	create.Example = `The following example creates an app in a project named ` + "`" + `example-project` + "`" + ` using an app spec located in a directory called ` + "`" + `/src/your-app.yaml` + "`" + `. Additionally, the command returns the new app's ID, ingress information, and creation date: doctl apps create --spec src/your-app.yaml --format ID,DefaultIngress,Created`
@@ -105,7 +105,7 @@ Only basic information is included with the text output format. For complete app
 		RunAppsUpdate,
 		"update <app id>",
 		"Updates an app",
-		`Updates the specified app with the given app spec. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)`,
+		`Updates an existing app with the attached app spec. By default, this does not retrieve the latest image from the app’s container registry or changes source repository. To deploy an app with changes from its source repository and app spec configuration, use the `+"`"+`--update-sources`+"`"+` flag. For more information about app specs, see the [app spec reference](https://www.digitalocean.com/docs/app-platform/concepts/app-spec)`,
 		Writer,
 		aliasOpt("u"),
 		displayerType(&displayers.Apps{}),
@@ -150,7 +150,8 @@ This permanently deletes the app and all of its associated deployments.`,
 		RunAppsCreateDeployment,
 		"create-deployment <app id>",
 		"Creates a deployment",
-		`Deploys the app with the latest changes from your repository.`,
+		`Creates an app using the provided app spec. To redeploy an existing app using its latest image or source code changes, use the --update-sources flag. To update an existing app’s spec configuration without pulling its latest changes or image, use the `+"`"+`--upsert`+"`"+` flag or `+"`"+`doctl apps update`+"`"+` command. 
+`,
 		Writer,
 		aliasOpt("cd"),
 		displayerType(&displayers.Deployments{}),
