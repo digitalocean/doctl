@@ -34,7 +34,6 @@ func ReservedIPv6() *Command {
 			Long: `The sub-commands of ` + "`" + `doctl compute reserved-ipv6` + "`" + ` manage reserved IPv6 addresses.
 Reserved IPv6s are publicly-accessible static IPv6 addresses that you can assign to one of your Droplets. They can be used to create highly available setups or other configurations requiring movable addresses. Reserved IPv6s are bound to the regions they are created in.`,
 			Aliases: []string{"reserved-ipv6s"},
-			Hidden:  true,
 		},
 	}
 
