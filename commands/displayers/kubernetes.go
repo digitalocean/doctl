@@ -100,26 +100,32 @@ func (clusters *KubernetesClusters) KV() []map[string]any {
 		}
 
 		o := map[string]any{
-			"ID":             cluster.ID,
-			"Name":           cluster.Name,
-			"Region":         cluster.RegionSlug,
-			"Version":        cluster.VersionSlug,
-			"AutoUpgrade":    cluster.AutoUpgrade,
-			"HAControlPlane": cluster.HA,
-			"ClusterSubnet":  cluster.ClusterSubnet,
-			"ServiceSubnet":  cluster.ServiceSubnet,
-			"IPv4":           cluster.IPv4,
-			"Endpoint":       cluster.Endpoint,
-			"Tags":           tags,
-			"Status":         cluster.Status.State,
-			"Created":        cluster.CreatedAt,
-			"Updated":        cluster.UpdatedAt,
-			"NodePools":      strings.Join(nodePools, " "),
+			"ID":                              cluster.ID,
+			"Name":                            cluster.Name,
+			"Region":                          cluster.RegionSlug,
+			"Version":                         cluster.VersionSlug,
+			"AutoUpgrade":                     cluster.AutoUpgrade,
+			"HAControlPlane":                  cluster.HA,
+			"ClusterSubnet":                   cluster.ClusterSubnet,
+			"ServiceSubnet":                   cluster.ServiceSubnet,
+			"IPv4":                            cluster.IPv4,
+			"Endpoint":                        cluster.Endpoint,
+			"Tags":                            tags,
+			"Status":                          cluster.Status.State,
+			"Created":                         cluster.CreatedAt,
+			"Updated":                         cluster.UpdatedAt,
+			"NodePools":                       strings.Join(nodePools, " "),
+			"Autoscaler.UtilizationThreshold": "",
+			"Autoscaler.UnneededTime":         "",
 		}
 
 		if cfg := cluster.ClusterAutoscalerConfiguration; cfg != nil {
-			o["Autoscaler.UtilizationThreshold"] = fmt.Sprintf("%d%%", int(*cfg.ScaleDownUtilizationThreshold*100))
-			o["Autoscaler.UnneededTime"] = *cfg.ScaleDownUnneededTime
+			if cluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold != nil {
+				o["Autoscaler.UtilizationThreshold"] = fmt.Sprintf("%d%%", int(*cfg.ScaleDownUtilizationThreshold*100))
+			}
+			if cluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime != nil {
+				o["Autoscaler.UnneededTime"] = *cfg.ScaleDownUnneededTime
+			}
 		}
 
 		out = append(out, o)
