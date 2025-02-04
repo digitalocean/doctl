@@ -122,6 +122,10 @@ const (
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
 	ArgControlPlaneFirewallAllowedAddresses = "control-plane-firewall-allowed-addresses"
+	// ArgClusterAutoscalerScaleDownUtilizationThreshold is the cluster autoscaler scale down utilization threshold
+	ArgClusterAutoscalerScaleDownUtilizationThreshold = "scale-down-utilization-threshold"
+	// ArgClusterAutoscalerScaleDownUnneededTime is the cluster autoscaler scale down unneeded time
+	ArgClusterAutoscalerScaleDownUnneededTime = "scale-down-unneeded-time"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
