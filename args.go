@@ -519,6 +519,8 @@ const (
 	// ArgVPCPeeringVPCID is id of the VPC.
 	ArgVPCPeeringVPCID = "vpc-id"
 
+	// ArgInterconnectAttachmentType is the type of the Interconnect Attachment e.g. "partner".
+	ArgInterconnectAttachmentType = "type"
 	// ArgPartnerInterconnectAttachmentName is a name of the Partner Interconnect Attachment.
 	ArgPartnerInterconnectAttachmentName = "name"
 	// ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps is the connection bandwidth in megabits per second.

@@ -14,36 +14,43 @@ limitations under the License.
 package commands
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-// Partner creates the partner interconnect attachments command.
-func Partner() *Command {
+// Network creates the network command.
+func Network() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "partner",
-			Short:   "Display commands that manage Partner products",
-			Long:    `The commands under ` + "`" + `doctl partner` + "`" + ` are for managing Partner products`,
+			Use:     "network",
+			Short:   "Display commands that manage network products",
+			Long:    `The commands under ` + "`" + `doctl network` + "`" + ` are for managing network products`,
 			GroupID: manageResourcesGroup,
 		},
 	}
 
-	cmd.AddCommand(InterconnectAttachments())
+	cmd.PersistentFlags().String(doctl.ArgInterconnectAttachmentType, "partner", "Specify interconnect attachment type (e.g., partner)")
+	viper.BindPFlag(strings.Join([]string{cmd.Use, doctl.ArgInterconnectAttachmentType}, "."), cmd.PersistentFlags().Lookup(doctl.ArgInterconnectAttachmentType))
+
+	cmd.AddCommand(PartnerInterconnectAttachments())
 
 	return cmd
 }
 
-// InterconnectAttachments creates the interconnect attachments command.
-func InterconnectAttachments() *Command {
+// PartnerInterconnectAttachments creates the interconnect attachments command.
+func PartnerInterconnectAttachments() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "interconnect-attachment",
 			Short: "Display commands that manage Partner Interconnect Attachments",
-			Long: `The commands under ` + "`" + `doctl partner interconnect-attachment` + "`" + ` are for managing your Partner Interconnect Attachments.
+			Long: `The commands under ` + "`" + `doctl network interconnect-attachment` + "`" + ` are for managing your Partner Interconnect Attachments.
 
 With the Partner Interconnect Attachments commands, you can get, list, create, update, or delete Partner Interconnect Attachments, and manage their configuration details.`,
 		},
@@ -60,13 +67,21 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPLocalRouterIP, "", "", "BGP Local Router IP")
 	AddIntFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN, "", 0, "BGP Peer ASN")
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
-	cmdPartnerIACreate.Example = `The following example creates a Partner Interconnect Attachment: doctl partner interconnect-attachment create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
+	cmdPartnerIACreate.Example = `The following example creates a Partner Interconnect Attachment: doctl network interconnect-attachment create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
 
 	return cmd
 }
 
 // RunPartnerInterconnectAttachmentCreate creates a new Partner Interconnect Attachment with a given configuration.
 func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
+	attachmentType, err := c.Doit.GetString("network", doctl.ArgInterconnectAttachmentType)
+	if err != nil {
+		return err
+	}
+	if attachmentType != "partner" {
+		return fmt.Errorf("unsupported attachment type: %s", attachmentType)
+	}
+
 	r := new(godo.PartnerInterconnectAttachmentCreateRequest)
 	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentName)
 	if err != nil {
