@@ -343,7 +343,7 @@ ID                                      Name       Size      Region    Filesyste
 }
 `
 	projectsResourcesGetKubernetesOutput = `
-ID    Name    Region    Version    Auto Upgrade    HA Control Plane    Status          Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags    Created At                       Updated At                       Node Pools
+ID    Name    Region    Version    Auto Upgrade    HA Control Plane    Status          Endpoint    IPv4    Cluster Subnet    Service Subnet    Tags    Created At                       Updated At                       Node Pools    Autoscaler Scale Down Utilization    Autoscaler Scale Down Unneeded Time
       1111                         false           false               provisioning                                                            k8s     2021-01-29 16:02:02 +0000 UTC    0001-01-01 00:00:00 +0000 UTC    pool-test
 `
 	projectsResourcesListKubernetesOutput = `
