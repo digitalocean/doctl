@@ -1,6 +1,7 @@
 package displayers
 
 import (
+	"fmt"
 	"io"
 	"strings"
 
@@ -47,6 +48,8 @@ func (clusters *KubernetesClusters) Cols() []string {
 		"Created",
 		"Updated",
 		"NodePools",
+		"Autoscaler.UtilizationThreshold",
+		"Autoscaler.UnneededTime",
 	}
 }
 
@@ -63,21 +66,23 @@ func (clusters *KubernetesClusters) ColMap() map[string]string {
 		}
 	}
 	return map[string]string{
-		"ID":             "ID",
-		"Name":           "Name",
-		"Region":         "Region",
-		"Version":        "Version",
-		"AutoUpgrade":    "Auto Upgrade",
-		"HAControlPlane": "HA Control Plane",
-		"ClusterSubnet":  "Cluster Subnet",
-		"ServiceSubnet":  "Service Subnet",
-		"IPv4":           "IPv4",
-		"Endpoint":       "Endpoint",
-		"Tags":           "Tags",
-		"Status":         "Status",
-		"Created":        "Created At",
-		"Updated":        "Updated At",
-		"NodePools":      "Node Pools",
+		"ID":                              "ID",
+		"Name":                            "Name",
+		"Region":                          "Region",
+		"Version":                         "Version",
+		"AutoUpgrade":                     "Auto Upgrade",
+		"HAControlPlane":                  "HA Control Plane",
+		"ClusterSubnet":                   "Cluster Subnet",
+		"ServiceSubnet":                   "Service Subnet",
+		"IPv4":                            "IPv4",
+		"Endpoint":                        "Endpoint",
+		"Tags":                            "Tags",
+		"Status":                          "Status",
+		"Created":                         "Created At",
+		"Updated":                         "Updated At",
+		"NodePools":                       "Node Pools",
+		"Autoscaler.UtilizationThreshold": "Autoscaler Scale Down Utilization",
+		"Autoscaler.UnneededTime":         "Autoscaler Scale Down Unneeded Time",
 	}
 }
 
@@ -111,6 +116,12 @@ func (clusters *KubernetesClusters) KV() []map[string]any {
 			"Updated":        cluster.UpdatedAt,
 			"NodePools":      strings.Join(nodePools, " "),
 		}
+
+		if cfg := cluster.ClusterAutoscalerConfiguration; cfg != nil {
+			o["Autoscaler.UtilizationThreshold"] = fmt.Sprintf("%d%%", int(*cfg.ScaleDownUtilizationThreshold*100))
+			o["Autoscaler.UnneededTime"] = *cfg.ScaleDownUnneededTime
+		}
+
 		out = append(out, o)
 	}
 
