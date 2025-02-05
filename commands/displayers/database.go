@@ -65,20 +65,6 @@ func (d *Databases) Cols() []string {
 }
 
 func (d *Databases) ColMap() map[string]string {
-	if d.Short {
-		return map[string]string{
-			"ID":         "ID",
-			"Name":       "Name",
-			"Engine":     "Engine",
-			"Version":    "Version",
-			"NumNodes":   "Number of Nodes",
-			"Region":     "Region",
-			"Status":     "Status",
-			"Size":       "Size",
-			"StorageMib": "Storage (MiB)",
-		}
-	}
-
 	return map[string]string{
 		"ID":         "ID",
 		"Name":       "Name",

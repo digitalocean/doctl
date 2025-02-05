@@ -122,6 +122,10 @@ const (
 	ArgEnableControlPlaneFirewall = "enable-control-plane-firewall"
 	// ArgControlPlaneFirewallAllowedAddresses list of allowed addresses that can access the control plane.
 	ArgControlPlaneFirewallAllowedAddresses = "control-plane-firewall-allowed-addresses"
+	// ArgClusterAutoscalerScaleDownUtilizationThreshold is the cluster autoscaler scale down utilization threshold
+	ArgClusterAutoscalerScaleDownUtilizationThreshold = "scale-down-utilization-threshold"
+	// ArgClusterAutoscalerScaleDownUnneededTime is the cluster autoscaler scale down unneeded time
+	ArgClusterAutoscalerScaleDownUnneededTime = "scale-down-unneeded-time"
 	// ArgSurgeUpgrade is a cluster's surge-upgrade argument.
 	ArgSurgeUpgrade = "surge-upgrade"
 	// ArgCommandUpsert is an upsert for a resource to be created or updated argument.
@@ -385,6 +389,8 @@ const (
 	ArgTargetLoadBalancerIDs = "target-lb-ids"
 	// ArgLoadBalancerNetwork is the type of network the load balancer is accessible from.
 	ArgLoadBalancerNetwork = "network"
+	// ArgLoadBalancerNetworkStack is the network stack type the load balancer will be configured with (e.g IPv4, Dual Stack: IPv4 and IPv6).
+	ArgLoadBalancerNetworkStack = "network-stack"
 
 	// ArgFirewallName is a name of the firewall.
 	ArgFirewallName = "name"
