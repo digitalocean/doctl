@@ -68,8 +68,8 @@ var _ = suite("compute/droplet/backups", func(t *testing.T, when spec.G, it spec
 
 const (
 	dropletBackupsOutput = `
-ID      Name     Type        Distribution    Slug      Public    Min Disk
-4444    magic    snapshot    Fedora          slimey    false     25
+ID      Name     Type        Distribution    Slug      Public    Min Disk    Created
+4444    magic    snapshot    Fedora          slimey    false     25          2018-09-20T19:28:00Z
 `
 	dropletBackupsResponse = `
 {"backups": [
@@ -79,7 +79,8 @@ ID      Name     Type        Distribution    Slug      Public    Min Disk
      "distribution": "Fedora",
      "type": "snapshot",
      "slug": "slimey",
-     "min_disk_size": 25
+     "min_disk_size": 25,
+	 "created_at": "2018-09-20T19:28:00Z"
     }
   ]
 }`

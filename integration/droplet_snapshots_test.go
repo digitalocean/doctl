@@ -68,9 +68,9 @@ var _ = suite("compute/droplet/snapshots", func(t *testing.T, when spec.G, it sp
 
 const (
 	dropletSnapshotsOutput = `
-ID      Name           Type        Distribution    Slug      Public    Min Disk
-4444    magic          snapshot    Fedora          slimey    false     25
-2222    other-magic    snapshot    Ubuntu          slimey    false     25
+ID      Name           Type        Distribution    Slug      Public    Min Disk    Created
+4444    magic          snapshot    Fedora          slimey    false     25          2018-09-20T19:28:00Z
+2222    other-magic    snapshot    Ubuntu          slimey    false     25          2018-09-20T19:28:00Z
 `
 	dropletSnapshotsResponse = `
 {"snapshots": [
@@ -80,7 +80,8 @@ ID      Name           Type        Distribution    Slug      Public    Min Disk
     "distribution": "Fedora",
     "type": "snapshot",
     "slug": "slimey",
-    "min_disk_size": 25
+    "min_disk_size": 25,
+	"created_at": "2018-09-20T19:28:00Z"
   },
   {
     "id": 2222,
@@ -88,7 +89,8 @@ ID      Name           Type        Distribution    Slug      Public    Min Disk
     "distribution": "Ubuntu",
     "type": "snapshot",
     "slug": "slimey",
-    "min_disk_size": 25
+    "min_disk_size": 25,
+	"created_at": "2018-09-20T19:28:00Z"
   }
 ]}
 `
