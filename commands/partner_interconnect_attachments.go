@@ -60,11 +60,13 @@ With the Partner Interconnect Attachments commands, you can get or list, create,
 	cmdPartnerIAGet := CmdBuilder(cmd, RunPartnerInterconnectAttachmentGet, "get <interconnect-attachment-id>",
 		"Retrieves a Partner Interconnect Attachment", "Retrieves information about a Partner Interconnect Attachment, including:"+interconnectAttachmentDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.PartnerInterconnectAttachment{}))
-	cmdPartnerIAGet.Example = `The following example retrieves information about a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl partner interconnect-attachment get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+	cmdPartnerIAGet.Example = `The following example retrieves information about a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" interconnect-attachment get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPartnerIAList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentList, "list", "List Network Interconnect Attachments", "Retrieves a list of the Network Interconnect Attachments on your account, including the following information for each:"+interconnectAttachmentDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.PartnerInterconnectAttachment{}))
-	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account : doctl network interconnect-attachment list --format Name,VPCIDs`
+	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account :" + 
+		" doctl network --type "partner" interconnect-attachment list --format Name,VPCIDs`
 
 	return cmd
 }
