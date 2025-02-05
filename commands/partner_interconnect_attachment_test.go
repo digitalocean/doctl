@@ -34,8 +34,7 @@ func TestPartnerInterconnectAttachmentsCommand(t *testing.T) {
 
 func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set("network", doctl.ArgInterconnectAttachmentType, "partner")
-
+		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "partner")
 		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentName, "doctl-pia")
 		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps, 50)
 		config.Doit.Set(config.NS, doctl.ArgPartnerInterconnectAttachmentRegion, "stage2")
@@ -63,7 +62,7 @@ func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
 
 func TestPartnerInterconnectAttachmentCreateUnsupportedType(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
-		config.Doit.Set("network", doctl.ArgInterconnectAttachmentType, "unsupported")
+		config.Doit.Set(config.NS, doctl.ArgInterconnectAttachmentType, "unsupported")
 		err := RunPartnerInterconnectAttachmentCreate(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported attachment type")

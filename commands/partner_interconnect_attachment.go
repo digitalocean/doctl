@@ -15,14 +15,12 @@ package commands
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/godo"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // Network creates the network command.
@@ -33,11 +31,9 @@ func Network() *Command {
 			Short:   "Display commands that manage network products",
 			Long:    `The commands under ` + "`" + `doctl network` + "`" + ` are for managing network products`,
 			GroupID: manageResourcesGroup,
+			Hidden:  true,
 		},
 	}
-
-	cmd.PersistentFlags().String(doctl.ArgInterconnectAttachmentType, "partner", "Specify interconnect attachment type (e.g., partner)")
-	viper.BindPFlag(strings.Join([]string{cmd.Use, doctl.ArgInterconnectAttachmentType}, "."), cmd.PersistentFlags().Lookup(doctl.ArgInterconnectAttachmentType))
 
 	cmd.AddCommand(PartnerInterconnectAttachments())
 
@@ -58,6 +54,8 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 
 	cmdPartnerIACreate := CmdBuilder(cmd, RunPartnerInterconnectAttachmentCreate, "create",
 		"Create a Partner Interconnect Attachment", "Use this command to create a new Partner Interconnect Attachment on your account.", Writer, aliasOpt("c"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+	AddStringFlag(cmdPartnerIACreate, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentName, "", "", "Name of the Partner Interconnect Attachment", requiredOpt())
 	AddIntFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentConnectionBandwidthInMbps, "", 0, "Connection Bandwidth in Mbps", requiredOpt())
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentRegion, "", "", "Region", requiredOpt())
@@ -72,14 +70,21 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 	return cmd
 }
 
-// RunPartnerInterconnectAttachmentCreate creates a new Partner Interconnect Attachment with a given configuration.
-func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
-	attachmentType, err := c.Doit.GetString("network", doctl.ArgInterconnectAttachmentType)
+func ensurePartnerAttachmentType(c *CmdConfig) error {
+	attachmentType, err := c.Doit.GetString(c.NS, doctl.ArgInterconnectAttachmentType)
 	if err != nil {
 		return err
 	}
 	if attachmentType != "partner" {
 		return fmt.Errorf("unsupported attachment type: %s", attachmentType)
+	}
+	return nil
+}
+
+// RunPartnerInterconnectAttachmentCreate creates a new Partner Interconnect Attachment with a given configuration.
+func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
 	}
 
 	r := new(godo.PartnerInterconnectAttachmentCreateRequest)
