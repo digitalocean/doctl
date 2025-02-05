@@ -16,6 +16,9 @@ import (
 )
 
 var (
+	scaleDownUtilizationThreshold = 0.5
+	scaleDownUnneededTime         = "1m30s"
+
 	testCluster = do.KubernetesCluster{
 		KubernetesCluster: &godo.KubernetesCluster{
 			ID:          "cde2c0d6-41e3-479e-ba60-ad971227232b",
@@ -37,6 +40,10 @@ var (
 					"1.2.3.4",
 					"4.3.2.1/32",
 				},
+			},
+			ClusterAutoscalerConfiguration: &godo.KubernetesClusterAutoscalerConfiguration{
+				ScaleDownUtilizationThreshold: &scaleDownUtilizationThreshold,
+				ScaleDownUnneededTime:         &scaleDownUnneededTime,
 			},
 		},
 	}
@@ -512,6 +519,10 @@ func TestKubernetesCreate(t *testing.T) {
 					"4.3.2.1/32",
 				},
 			},
+			ClusterAutoscalerConfiguration: &godo.KubernetesClusterAutoscalerConfiguration{
+				ScaleDownUtilizationThreshold: &scaleDownUtilizationThreshold,
+				ScaleDownUnneededTime:         &scaleDownUnneededTime,
+			},
 		}
 		tm.kubernetes.EXPECT().Create(&r).Return(&testCluster, nil)
 
@@ -534,6 +545,9 @@ func TestKubernetesCreate(t *testing.T) {
 
 		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
+
+		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
+		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
 
 		// Test with no vpc-uuid specified
 		err := testK8sCmdService().RunKubernetesClusterCreate("c-8", 3)(config)
@@ -588,6 +602,10 @@ func TestKubernetesUpdate(t *testing.T) {
 					"4.3.2.1/32",
 				},
 			},
+			ClusterAutoscalerConfiguration: &godo.KubernetesClusterAutoscalerConfiguration{
+				ScaleDownUtilizationThreshold: &scaleDownUtilizationThreshold,
+				ScaleDownUnneededTime:         &scaleDownUnneededTime,
+			},
 		}
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
 
@@ -599,6 +617,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgHA, true)
 		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
+		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
+		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
@@ -621,6 +641,10 @@ func TestKubernetesUpdate(t *testing.T) {
 					"4.3.2.1/32",
 				},
 			},
+			ClusterAutoscalerConfiguration: &godo.KubernetesClusterAutoscalerConfiguration{
+				ScaleDownUtilizationThreshold: &scaleDownUtilizationThreshold,
+				ScaleDownUnneededTime:         &scaleDownUnneededTime,
+			},
 		}
 		tm.kubernetes.EXPECT().List().Return(testClusterList, nil)
 		tm.kubernetes.EXPECT().Update(testCluster.ID, &r).Return(&testCluster, nil)
@@ -632,6 +656,8 @@ func TestKubernetesUpdate(t *testing.T) {
 		config.Doit.Set(config.NS, doctl.ArgAutoUpgrade, false)
 		config.Doit.Set(config.NS, doctl.ArgEnableControlPlaneFirewall, testCluster.ControlPlaneFirewall.Enabled)
 		config.Doit.Set(config.NS, doctl.ArgControlPlaneFirewallAllowedAddresses, testCluster.ControlPlaneFirewall.AllowedAddresses)
+		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUtilizationThreshold, testCluster.ClusterAutoscalerConfiguration.ScaleDownUtilizationThreshold)
+		config.Doit.Set(config.NS, doctl.ArgClusterAutoscalerScaleDownUnneededTime, testCluster.ClusterAutoscalerConfiguration.ScaleDownUnneededTime)
 
 		err := testK8sCmdService().RunKubernetesClusterUpdate(config)
 		assert.NoError(t, err)
