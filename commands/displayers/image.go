@@ -31,14 +31,14 @@ func (gi *Image) JSON(out io.Writer) error {
 
 func (gi *Image) Cols() []string {
 	return []string{
-		"ID", "Name", "Type", "Distribution", "Slug", "Public", "MinDisk",
+		"ID", "Name", "Type", "Distribution", "Slug", "Public", "MinDisk", "Created",
 	}
 }
 
 func (gi *Image) ColMap() map[string]string {
 	return map[string]string{
 		"ID": "ID", "Name": "Name", "Type": "Type", "Distribution": "Distribution",
-		"Slug": "Slug", "Public": "Public", "MinDisk": "Min Disk",
+		"Slug": "Slug", "Public": "Public", "MinDisk": "Min Disk", "Created": "Created",
 	}
 }
 
@@ -53,7 +53,7 @@ func (gi *Image) KV() []map[string]any {
 
 		o := map[string]any{
 			"ID": i.ID, "Name": i.Name, "Type": i.Type, "Distribution": i.Distribution,
-			"Slug": i.Slug, "Public": publicStatus, "MinDisk": i.MinDiskSize,
+			"Slug": i.Slug, "Public": publicStatus, "MinDisk": i.MinDiskSize, "Created": i.Created,
 		}
 
 		out = append(out, o)
