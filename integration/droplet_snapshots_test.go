@@ -81,7 +81,7 @@ ID      Name           Type        Distribution    Slug      Public    Min Disk 
     "type": "snapshot",
     "slug": "slimey",
     "min_disk_size": 25,
-	"created_at": "2018-09-20T19:28:00Z"
+    "created_at": "2018-09-20T19:28:00Z"
   },
   {
     "id": 2222,
@@ -90,7 +90,7 @@ ID      Name           Type        Distribution    Slug      Public    Min Disk 
     "type": "snapshot",
     "slug": "slimey",
     "min_disk_size": 25,
-	"created_at": "2018-09-20T19:28:00Z"
+    "created_at": "2018-09-20T19:28:00Z"
   }
 ]}
 `
