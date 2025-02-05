@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 // Network creates the partner commands
 func Network() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
-			Use:     "partner",
+			Use:     "network",
 			Short:   "Display commands that manage Network products",
 			Long:    `The commands under ` + "`" + `doctl network` + "`" + ` are for managing Network products`,
 			GroupID: manageResourcesGroup,
