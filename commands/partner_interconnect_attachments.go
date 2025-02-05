@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // Network creates the partner commands

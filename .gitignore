@@ -14,7 +14,6 @@ docs/content
 cmd/doctl/doctl
 
 _vendor-*
-vendor
 /out
 
 # Build artifacts
