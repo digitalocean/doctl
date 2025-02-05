@@ -43,7 +43,7 @@ func (v *PartnerInterconnectAttachment) ColMap() map[string]string {
 		"Region":                    "Region",
 		"NaaSProvider":              "NaaS Provider",
 		"VPCIDs":                    "VPCIDs",
-		"Created":                   "Created At",
+		"CreatedAt":                 "Created At",
 		"BGPLocalASN":               "BGP Local ASN",
 		"BGPLocalRouterIP":          "BGP Local Router IP",
 		"BGPPeerASN":                "BGP Peer ASN",

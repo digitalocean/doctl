@@ -43,25 +43,8 @@ You can then use your token to create a new client:
 package main
 
 import (
-	"context"
-	"github.com/digitalocean/godo"
-	"golang.org/x/oauth2"
+    "github.com/digitalocean/godo"
 )
-
-const (
-    pat = "mytoken"
-)
-
-type TokenSource struct {
-	AccessToken string
-}
-
-func (t *TokenSource) Token() (*oauth2.Token, error) {
-	token := &oauth2.Token{
-		AccessToken: t.AccessToken,
-	}
-	return token, nil
-}
 
 func main() {
     client := godo.NewFromToken("my-digitalocean-api-token")

@@ -517,6 +517,9 @@ const (
 	// ArgVPCPeeringVPCID is id of the VPC.
 	ArgVPCPeeringVPCID = "vpc-id"
 
+	// ArgInterconnectAttachmentType is the type of the Interconnect Attachment e.g. "partner".
+	ArgInterconnectAttachmentType = "type"
+
 	// ArgReadWrite indicates a generated token should be read/write.
 	ArgReadWrite = "read-write"
 	// ArgRegistry indicates the name of the registry.

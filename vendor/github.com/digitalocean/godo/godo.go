@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	libraryVersion = "1.131.1"
+	libraryVersion = "1.136.0"
 	defaultBaseURL = "https://api.digitalocean.com/"
 	userAgent      = "godo/" + libraryVersion
 	mediaType      = "application/json"
@@ -88,6 +88,7 @@ type Client struct {
 	ReservedIPV6Actions            ReservedIPV6ActionsService
 	Sizes                          SizesService
 	Snapshots                      SnapshotsService
+	SpacesKeys                     SpacesKeysService
 	Storage                        StorageService
 	StorageActions                 StorageActionsService
 	Tags                           TagsService
@@ -303,6 +304,7 @@ func NewClient(httpClient *http.Client) *Client {
 	c.ReservedIPV6Actions = &ReservedIPV6ActionsServiceOp{client: c}
 	c.Sizes = &SizesServiceOp{client: c}
 	c.Snapshots = &SnapshotsServiceOp{client: c}
+	c.SpacesKeys = &SpacesKeysServiceOp{client: c}
 	c.Storage = &StorageServiceOp{client: c}
 	c.StorageActions = &StorageActionsServiceOp{client: c}
 	c.Tags = &TagsServiceOp{client: c}

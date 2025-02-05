@@ -6,6 +6,7 @@ import (
 	"github.com/digitalocean/godo"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/do"
 )
 
@@ -23,7 +24,7 @@ var (
 )
 
 func TestInterconnectAttachmentsCommand(t *testing.T) {
-	cmd := InterconnectAttachments()
+	cmd := PartnerInterconnectAttachments()
 	assert.NotNil(t, cmd)
 	assertCommandNames(t, cmd, "get", "list")
 }
@@ -32,6 +33,8 @@ func TestInterconnectAttachmentsGet(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
 		tm.vpcs.EXPECT().GetPartnerInterconnectAttachment(iaID).Return(&testIA, nil)
+
+		config.Doit.Set("network", doctl.ArgInterconnectAttachmentType, "partner")
 
 		config.Args = append(config.Args, iaID)
 
@@ -50,6 +53,7 @@ func TestInterconnectAttachmentsGetNoID(t *testing.T) {
 func TestInterconnectAttachmentsList(t *testing.T) {
 	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
 		tm.vpcs.EXPECT().ListPartnerInterconnectAttachments().Return(testIAList, nil)
+		config.Doit.Set("network", doctl.ArgInterconnectAttachmentType, "partner")
 
 		err := RunPartnerInterconnectAttachmentList(config)
 		assert.NoError(t, err)

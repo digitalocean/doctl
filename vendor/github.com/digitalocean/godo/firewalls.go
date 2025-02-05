@@ -73,7 +73,6 @@ type FirewallRulesRequest struct {
 type InboundRule struct {
 	Protocol  string   `json:"protocol,omitempty"`
 	PortRange string   `json:"ports,omitempty"`
-	Action    string   `json:"action,omitempty"`
 	Sources   *Sources `json:"sources"`
 }
 
@@ -81,7 +80,6 @@ type InboundRule struct {
 type OutboundRule struct {
 	Protocol     string        `json:"protocol,omitempty"`
 	PortRange    string        `json:"ports,omitempty"`
-	Action       string        `json:"action,omitempty"`
 	Destinations *Destinations `json:"destinations"`
 }
 

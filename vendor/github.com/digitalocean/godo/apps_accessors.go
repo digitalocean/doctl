@@ -805,6 +805,14 @@ func (a *AppFunctionsSpec) GetAlerts() []*AppAlertSpec {
 	return a.Alerts
 }
 
+// GetBitbucket returns the Bitbucket field.
+func (a *AppFunctionsSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
+}
+
 // GetCORS returns the CORS field.
 func (a *AppFunctionsSpec) GetCORS() *AppCORSPolicy {
 	if a == nil {
@@ -1141,6 +1149,14 @@ func (a *AppJobSpec) GetAlerts() []*AppAlertSpec {
 	return a.Alerts
 }
 
+// GetBitbucket returns the Bitbucket field.
+func (a *AppJobSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
+}
+
 // GetBuildCommand returns the BuildCommand field.
 func (a *AppJobSpec) GetBuildCommand() string {
 	if a == nil {
@@ -1437,6 +1453,14 @@ func (a *AppMaintenanceSpec) GetEnabled() bool {
 	return a.Enabled
 }
 
+// GetOfflinePageURL returns the OfflinePageURL field.
+func (a *AppMaintenanceSpec) GetOfflinePageURL() string {
+	if a == nil {
+		return ""
+	}
+	return a.OfflinePageURL
+}
+
 // GetAppID returns the AppID field.
 func (a *AppProposeRequest) GetAppID() string {
 	if a == nil {
@@ -1643,6 +1667,14 @@ func (a *AppServiceSpec) GetAutoscaling() *AppAutoscalingSpec {
 		return nil
 	}
 	return a.Autoscaling
+}
+
+// GetBitbucket returns the Bitbucket field.
+func (a *AppServiceSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
 }
 
 // GetBuildCommand returns the BuildCommand field.
@@ -2013,6 +2045,14 @@ func (a *AppSpec) GetWorkers() []*AppWorkerSpec {
 	return a.Workers
 }
 
+// GetBitbucket returns the Bitbucket field.
+func (a *AppStaticSiteSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
+}
+
 // GetBuildCommand returns the BuildCommand field.
 func (a *AppStaticSiteSpec) GetBuildCommand() string {
 	if a == nil {
@@ -2237,6 +2277,14 @@ func (a *AppWorkerSpec) GetAutoscaling() *AppAutoscalingSpec {
 	return a.Autoscaling
 }
 
+// GetBitbucket returns the Bitbucket field.
+func (a *AppWorkerSpec) GetBitbucket() *BitbucketSourceSpec {
+	if a == nil {
+		return nil
+	}
+	return a.Bitbucket
+}
+
 // GetBuildCommand returns the BuildCommand field.
 func (a *AppWorkerSpec) GetBuildCommand() string {
 	if a == nil {
@@ -2363,6 +2411,30 @@ func (a *AppWorkerSpecTermination) GetGracePeriodSeconds() int32 {
 		return 0
 	}
 	return a.GracePeriodSeconds
+}
+
+// GetBranch returns the Branch field.
+func (b *BitbucketSourceSpec) GetBranch() string {
+	if b == nil {
+		return ""
+	}
+	return b.Branch
+}
+
+// GetDeployOnPush returns the DeployOnPush field.
+func (b *BitbucketSourceSpec) GetDeployOnPush() bool {
+	if b == nil {
+		return false
+	}
+	return b.DeployOnPush
+}
+
+// GetRepo returns the Repo field.
+func (b *BitbucketSourceSpec) GetRepo() string {
+	if b == nil {
+		return ""
+	}
+	return b.Repo
 }
 
 // GetDescription returns the Description field.
@@ -2699,6 +2771,14 @@ func (d *DeploymentCauseDetailsDOCRPush) GetTag() string {
 		return ""
 	}
 	return d.Tag
+}
+
+// GetBitbucket returns the Bitbucket field.
+func (d *DeploymentCauseDetailsGitPush) GetBitbucket() *BitbucketSourceSpec {
+	if d == nil {
+		return nil
+	}
+	return d.Bitbucket
 }
 
 // GetCommitAuthor returns the CommitAuthor field.
@@ -3075,6 +3155,14 @@ func (d *DeployTemplate) GetSpec() *AppSpec {
 		return nil
 	}
 	return d.Spec
+}
+
+// GetBitbucket returns the Bitbucket field.
+func (d *DetectRequest) GetBitbucket() *BitbucketSourceSpec {
+	if d == nil {
+		return nil
+	}
+	return d.Bitbucket
 }
 
 // GetCommitSHA returns the CommitSHA field.

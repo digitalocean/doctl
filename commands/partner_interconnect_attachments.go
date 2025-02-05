@@ -1,30 +1,38 @@
 package commands
 
 import (
-	"github.com/spf13/cobra"
+	"fmt"
+	"strings"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+
+	"github.com/digitalocean/doctl"
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 )
 
-// Partner creates the partner commands
-func Partner() *Command {
+// Network creates the partner commands
+func Network() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:     "partner",
-			Short:   "Display commands that manage Partner products",
-			Long:    `The commands under ` + "`" + `doctl partner` + "`" + ` are for managing Partner products`,
+			Short:   "Display commands that manage Network products",
+			Long:    `The commands under ` + "`" + `doctl network` + "`" + ` are for managing Network products`,
 			GroupID: manageResourcesGroup,
 		},
 	}
 
-	cmd.AddCommand(InterconnectAttachments())
+	cmd.PersistentFlags().String(doctl.ArgInterconnectAttachmentType, "partner", "Specify interconnect attachment type (e.g., partner)")
+	viper.BindPFlag(strings.Join([]string{cmd.Use, doctl.ArgInterconnectAttachmentType}, "."), cmd.PersistentFlags().Lookup(doctl.ArgInterconnectAttachmentType))
+
+	cmd.AddCommand(PartnerInterconnectAttachments())
 
 	return cmd
 }
 
-// InterconnectAttachments creates the interconnect attachment command
-func InterconnectAttachments() *Command {
+// PartnerInterconnectAttachments creates the partner interconnect attachment command
+func PartnerInterconnectAttachments() *Command {
 	cmd := &Command{
 		Command: &cobra.Command{
 			Use:   "interconnect-attachment",
@@ -54,15 +62,31 @@ With the Partner Interconnect Attachments commands, you can get or list, create,
 		aliasOpt("g"), displayerType(&displayers.PartnerInterconnectAttachment{}))
 	cmdPartnerIAGet.Example = `The following example retrieves information about a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + `: doctl partner interconnect-attachment get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
-	cmdPartnerIAList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentList, "list", "List Partner Interconnect Attachments", "Retrieves a list of the Partner Interconnect Attachments on your account, including the following information for each:"+interconnectAttachmentDetails, Writer,
+	cmdPartnerIAList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentList, "list", "List Network Interconnect Attachments", "Retrieves a list of the Network Interconnect Attachments on your account, including the following information for each:"+interconnectAttachmentDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.PartnerInterconnectAttachment{}))
-	cmdPartnerIAList.Example = `The following example lists the Partner Interconnect Attachments on your account : doctl partner interconnect-attachment list --format Name,VPCIDs`
+	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account : doctl network interconnect-attachment list --format Name,VPCIDs`
 
 	return cmd
 }
 
+func ensurePartnerAttachmentType(c *CmdConfig) error {
+	attachmentType, err := c.Doit.GetString("network", doctl.ArgInterconnectAttachmentType)
+	if err != nil {
+		return err
+	}
+	if attachmentType != "partner" {
+		return fmt.Errorf("unsupported attachment type: %s", attachmentType)
+	}
+	return nil
+}
+
 // RunPartnerInterconnectAttachmentGet retrieves an existing Partner Interconnect Attachment by its identifier.
 func RunPartnerInterconnectAttachmentGet(c *CmdConfig) error {
+
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
+	}
+
 	err := ensureOneArg(c)
 	if err != nil {
 		return err
@@ -82,6 +106,10 @@ func RunPartnerInterconnectAttachmentGet(c *CmdConfig) error {
 
 // RunPartnerInterconnectAttachmentList lists Partner Interconnect Attachment
 func RunPartnerInterconnectAttachmentList(c *CmdConfig) error {
+
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
+	}
 
 	list, err := c.VPCs().ListPartnerInterconnectAttachments()
 	if err != nil {

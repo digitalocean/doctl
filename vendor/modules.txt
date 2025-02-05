@@ -61,7 +61,7 @@ github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/digitalocean/godo v1.131.1 => ../../../dev/godo
+# github.com/digitalocean/godo v1.136.0
 ## explicit; go 1.22
 github.com/digitalocean/godo
 github.com/digitalocean/godo/metrics
@@ -387,9 +387,6 @@ github.com/stretchr/testify/require
 # github.com/subosito/gotenv v1.2.0
 ## explicit
 github.com/subosito/gotenv
-# github.internal.digitalocean.com/digitalocean/godo v0.0.0-20241210215916-c9673fbbdff0
-## explicit; go 1.22
-github.internal.digitalocean.com/digitalocean/godo
 # go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0
 ## explicit; go 1.19
 go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
@@ -642,3 +639,4 @@ sigs.k8s.io/structured-merge-diff/v4/value
 # sigs.k8s.io/yaml v1.3.0
 ## explicit; go 1.12
 sigs.k8s.io/yaml
+# github.com/digitalocean/godo v1.131.1 => ../../../dev/godo
