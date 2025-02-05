@@ -21,6 +21,7 @@ import (
 	"github.com/digitalocean/doctl/commands/displayers"
 	"github.com/digitalocean/doctl/do"
 	"github.com/digitalocean/doctl/internal/apps/builder"
+
 	"github.com/spf13/viper"
 )
 
@@ -74,6 +75,7 @@ type CmdConfig struct {
 	Monitoring        func() do.MonitoringService
 	Serverless        func() do.ServerlessService
 	OAuth             func() do.OAuthService
+	SpacesKeys        func() do.SpacesKeysService
 }
 
 // NewCmdConfig creates an instance of a CmdConfig.
@@ -130,6 +132,7 @@ func NewCmdConfig(ns string, dc doctl.Config, out io.Writer, args []string, init
 				return do.NewServerlessService(godoClient, getServerlessDirectory(), accessToken)
 			}
 			c.OAuth = func() do.OAuthService { return do.NewOAuthService(godoClient) }
+			c.SpacesKeys = func() do.SpacesKeysService { return do.NewSpacesKeysService(godoClient) }
 
 			return nil
 		},
