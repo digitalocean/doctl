@@ -1,5 +1,10 @@
 # Change Log
 
+## [v1.136.0] - 2025-01-28
+
+- #776 - @danaelhe - Databases: Support online-migrations
+- #777 - @apinonformoso - update bgp to be a pointer
+
 ##  [v1.135.0] - 2025-01-27
 - #766 - @dhij - kubernetes: add cluster autoscaler config
 - #775 - @jvasilevsky - LBASA-3620: add network_stack field to load balancers model
