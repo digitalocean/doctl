@@ -114,7 +114,8 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 		"The Partner Interconnect Attachment's vpc ids", requiredOpt())
 	cmdPartnerIAUpdate.Example = `The following example updates the name of a Partner Interconnect Attachment with the ID ` +
 		"`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" + ` to ` + "`" + `new-name` + "`" +
-		`: doctl network --type "partner" interconnect-attachment update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name new-name`
+		`: doctl network --type "partner" interconnect-attachment update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
+vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 
 	return cmd
 }
