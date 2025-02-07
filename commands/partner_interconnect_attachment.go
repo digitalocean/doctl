@@ -35,6 +35,9 @@ func Network() *Command {
 		},
 	}
 
+	//	cmd.PersistentFlags().String(doctl.ArgInterconnectAttachmentType, "partner", "Specify interconnect attachment type (e.g., partner)")
+	//	viper.BindPFlag(strings.Join([]string{cmd.Use, doctl.ArgInterconnectAttachmentType}, "."), cmd.PersistentFlags().Lookup(doctl.ArgInterconnectAttachmentType))
+
 	cmd.AddCommand(PartnerInterconnectAttachments())
 
 	return cmd
@@ -66,6 +69,31 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 	AddIntFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerASN, "", 0, "BGP Peer ASN")
 	AddStringFlag(cmdPartnerIACreate, doctl.ArgPartnerInterconnectAttachmentBGPPeerRouterIP, "", "", "BGP Peer Router IP")
 	cmdPartnerIACreate.Example = `The following example creates a Partner Interconnect Attachment: doctl network interconnect-attachment create --name "example-pia" --connection-bandwidth-in-mbps 50 --naas-provider "MEGAPORT" --region "nyc" --vpc-ids "c5537207-ebf0-47cb-bc10-6fac717cd672"`
+
+	interconnectAttachmentDetails := `
+- The Partner Interconnect Attachment ID
+- The Partner Interconnect Attachment Name
+- The Partner Interconnect Attachment State
+- The Partner Interconnect Attachment Connection Bandwidth in Mbps
+- The Partner Interconnect Attachment Region
+- The Partner Interconnect Attachment NaaS Provider
+- The Partner Interconnect Attachment VPC network IDs
+- The Partner Interconnect Attachment creation date, in ISO8601 combined date and time format
+- The Partner Interconnect Attachment BGP Local ASN
+- The Partner Interconnect Attachment BGP Local Router IP
+- The Partner Interconnect Attachment BGP Peer ASN
+- The Partner Interconnect Attachment BGP Peer Router IP`
+
+	cmdPartnerIAGet := CmdBuilder(cmd, RunPartnerInterconnectAttachmentGet, "get <interconnect-attachment-id>",
+		"Retrieves a Partner Interconnect Attachment", "Retrieves information about a Partner Interconnect Attachment, including:"+interconnectAttachmentDetails, Writer,
+		aliasOpt("g"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+	cmdPartnerIAGet.Example = `The following example retrieves information about a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
+		`: doctl network --type "partner" interconnect-attachment get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
+
+	cmdPartnerIAList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentList, "list", "List Network Interconnect Attachments", "Retrieves a list of the Network Interconnect Attachments on your account, including the following information for each:"+interconnectAttachmentDetails, Writer,
+		aliasOpt("ls"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account :" + 
+		" doctl network --type "partner" interconnect-attachment list --format Name,VPCIDs`
 
 	return cmd
 }
@@ -151,5 +179,47 @@ func RunPartnerInterconnectAttachmentCreate(c *CmdConfig) error {
 	}
 
 	item := &displayers.PartnerInterconnectAttachment{PartnerInterconnectAttachments: do.PartnerInterconnectAttachments{*pia}}
+	return c.Display(item)
+}
+
+// RunPartnerInterconnectAttachmentGet retrieves an existing Partner Interconnect Attachment by its identifier.
+func RunPartnerInterconnectAttachmentGet(c *CmdConfig) error {
+
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
+	}
+
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	iaID := c.Args[0]
+
+	pias := c.PartnerInterconnectAttachments()
+	interconnectAttachment, err := pias.GetPartnerInterconnectAttachment(iaID)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.PartnerInterconnectAttachment{
+		PartnerInterconnectAttachments: do.PartnerInterconnectAttachments{*interconnectAttachment},
+	}
+	return c.Display(item)
+}
+
+// RunPartnerInterconnectAttachmentList lists Partner Interconnect Attachment
+func RunPartnerInterconnectAttachmentList(c *CmdConfig) error {
+
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
+	}
+
+	pias := c.PartnerInterconnectAttachments()
+	list, err := pias.ListPartnerInterconnectAttachments()
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.PartnerInterconnectAttachment{PartnerInterconnectAttachments: list}
 	return c.Display(item)
 }

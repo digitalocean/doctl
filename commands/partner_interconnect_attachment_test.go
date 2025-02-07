@@ -23,13 +23,17 @@ var (
 			CreatedAt:                 time.Date(2025, 1, 30, 0, 0, 0, 0, time.UTC),
 		},
 	}
+
+	testPartnerIAList = do.PartnerInterconnectAttachments{
+		testPartnerAttachment,
+	}
 )
 
 func TestPartnerInterconnectAttachmentsCommand(t *testing.T) {
 	cmd := PartnerInterconnectAttachments()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create")
+	assertCommandNames(t, cmd, "create", "get", "list")
 }
 
 func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
@@ -66,5 +70,36 @@ func TestPartnerInterconnectAttachmentCreateUnsupportedType(t *testing.T) {
 		err := RunPartnerInterconnectAttachmentCreate(config)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported attachment type")
+	})
+}
+
+func TestInterconnectAttachmentsGet(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		iaID := "e819b321-a9a1-4078-b437-8e6b8bf13530"
+		tm.partnerInterconnectAttachment.EXPECT().GetPartnerInterconnectAttachment(iaID).Return(&testPartnerAttachment, nil)
+
+		config.Doit.Set("network", doctl.ArgInterconnectAttachmentType, "partner")
+
+		config.Args = append(config.Args, iaID)
+
+		err := RunPartnerInterconnectAttachmentGet(config)
+		assert.NoError(t, err)
+	})
+}
+
+func TestInterconnectAttachmentsGetNoID(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		err := RunPartnerInterconnectAttachmentGet(config)
+		assert.Error(t, err)
+	})
+}
+
+func TestInterconnectAttachmentsList(t *testing.T) {
+	withTestClient(t, func(config *CmdConfig, tm *tcMocks) {
+		tm.vpcs.EXPECT().ListPartnerInterconnectAttachments().Return(testPartnerIAList, nil)
+		config.Doit.Set("network", doctl.ArgInterconnectAttachmentType, "partner")
+
+		err := RunPartnerInterconnectAttachmentList(config)
+		assert.NoError(t, err)
 	})
 }

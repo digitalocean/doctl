@@ -114,21 +114,6 @@ func (mr *MockVPCsServiceMockRecorder) Get(vpcUUID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVPCsService)(nil).Get), vpcUUID)
 }
 
-// GetPartnerInterconnectAttachment mocks base method.
-func (m *MockVPCsService) GetPartnerInterconnectAttachment(iaID string) (*do.PartnerInterconnectAttachment, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPartnerInterconnectAttachment", iaID)
-	ret0, _ := ret[0].(*do.PartnerInterconnectAttachment)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetPartnerInterconnectAttachment indicates an expected call of GetPartnerInterconnectAttachment.
-func (mr *MockVPCsServiceMockRecorder) GetPartnerInterconnectAttachment(iaID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPartnerInterconnectAttachment", reflect.TypeOf((*MockVPCsService)(nil).GetPartnerInterconnectAttachment), iaID)
-}
-
 // GetPeering mocks base method.
 func (m *MockVPCsService) GetPeering(peeringID string) (*do.VPCPeering, error) {
 	m.ctrl.T.Helper()
@@ -157,21 +142,6 @@ func (m *MockVPCsService) List() (do.VPCs, error) {
 func (mr *MockVPCsServiceMockRecorder) List() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVPCsService)(nil).List))
-}
-
-// ListPartnerInterconnectAttachments mocks base method.
-func (m *MockVPCsService) ListPartnerInterconnectAttachments() (do.PartnerInterconnectAttachments, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListPartnerInterconnectAttachments")
-	ret0, _ := ret[0].(do.PartnerInterconnectAttachments)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListPartnerInterconnectAttachments indicates an expected call of ListPartnerInterconnectAttachments.
-func (mr *MockVPCsServiceMockRecorder) ListPartnerInterconnectAttachments() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPartnerInterconnectAttachments", reflect.TypeOf((*MockVPCsService)(nil).ListPartnerInterconnectAttachments))
 }
 
 // ListVPCPeerings mocks base method.
