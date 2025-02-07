@@ -151,12 +151,12 @@ var _ = suite("compute/image/list", func(t *testing.T, when spec.G, it spec.S) {
 
 const (
 	imageListPrivateOutput = `
-ID         Name                                        Type    Distribution    Slug             Public    Min Disk
-6376602    Ruby on Rails on 14.04 (Nginx + Unicorn)            Ubuntu          ruby-on-rails    false     20
-	`
+ID         Name                                        Type    Distribution    Slug             Public    Min Disk    Created
+6376602    Ruby on Rails on 14.04 (Nginx + Unicorn)            Ubuntu          ruby-on-rails    false     20          2014-09-26T20:20:24Z
+`
 	imageListNoticeWithHeader = `
 Notice: Listing private images. Use '--public' to include all images.
-ID    Name    Type    Distribution    Slug    Public    Min Disk
+ID    Name    Type    Distribution    Slug    Public    Min Disk    Created
 `
 	imageListNotice = `
 Notice: Listing private images. Use '--public' to include all images.

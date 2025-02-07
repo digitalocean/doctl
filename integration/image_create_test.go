@@ -149,6 +149,6 @@ const imageCreateResponse = `{
   }`
 
 const imageCreateOutput = `
-ID          Name                    Type      Distribution    Slug    Public    Min Disk
-38413969    ubuntu-18.04-minimal    custom    Ubuntu                  false     0
+ID          Name                    Type      Distribution    Slug    Public    Min Disk    Created
+38413969    ubuntu-18.04-minimal    custom    Ubuntu                  false     0           2018-09-20T19:28:00Z
 `
