@@ -46,3 +46,4 @@ mockgen -source monitoring.go -package=mocks MonitoringService > mocks/Monitorin
 mockgen -source reserved_ip_actions.go -package=mocks ReservedIPActionsService > mocks/ReservedIPActionsService.go
 mockgen -source reserved_ips.go -package=mocks ReservedIPsService > mocks/ReservedIPsService.go
 mockgen -source serverless.go -package=mocks ServerlessService > mocks/ServerlessService.go
+mockgen -source partner_interconnect_attachments.go  -package=mocks PartnerInterconnectAttachmentsService > mocks/PartnerInterconnectAttachmentsService.go

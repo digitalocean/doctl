@@ -33,6 +33,8 @@ type PartnerInterconnectAttachmentsService interface {
 	Create(*godo.PartnerInterconnectAttachmentCreateRequest) (*PartnerInterconnectAttachment, error)
 	GetPartnerInterconnectAttachment(iaID string) (*PartnerInterconnectAttachment, error)
 	ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error)
+	DeletePartnerInterconnectAttachment(iaID string) error
+	UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error)
 }
 
 var _ PartnerInterconnectAttachmentsService = &partnerInterconnectAttachmentsService{}
@@ -94,4 +96,18 @@ func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachmen
 	}
 
 	return list, nil
+}
+
+func (p *partnerInterconnectAttachmentsService) DeletePartnerInterconnectAttachment(iaID string) error {
+	_, err := p.client.PartnerInterconnectAttachments.Delete(context.TODO(), iaID)
+	return err
+}
+
+func (p *partnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error) {
+	partnerIA, _, err := p.client.PartnerInterconnectAttachments.Update(context.TODO(), iaID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
 }
