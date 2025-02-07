@@ -88,22 +88,26 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 	cmdPartnerIAGet := CmdBuilder(cmd, RunPartnerInterconnectAttachmentGet, "get <interconnect-attachment-id>",
 		"Retrieves a Partner Interconnect Attachment", "Retrieves information about a Partner Interconnect Attachment, including:"+interconnectAttachmentDetails, Writer,
 		aliasOpt("g"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+	AddStringFlag(cmdPartnerIAGet, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIAGet.Example = `The following example retrieves information about a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" interconnect-attachment get f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPartnerIAList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentList, "list", "List Network Interconnect Attachments", "Retrieves a list of the Network Interconnect Attachments on your account, including the following information for each:"+interconnectAttachmentDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+	AddStringFlag(cmdPartnerIAList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account :" + 
 		" doctl network --type "partner" interconnect-attachment list --format Name,VPCIDs`
 
 	cmdPartnerIADelete := CmdBuilder(cmd, RunPartnerInterconnectAttachmentDelete, "delete <interconnect-attachment-id>",
 		"Deletes a Partner Interconnect Attachment", "Deletes information about a Partner Interconnect Attachment. This is irreversible ", Writer,
 		aliasOpt("rm"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+	AddStringFlag(cmdPartnerIADelete, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIADelete.Example = `The following example deletes a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" interconnect-attachment delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
 
 	cmdPartnerIAUpdate := CmdBuilder(cmd, RunPartnerInterconnectAttachmentUpdate, "update <interconnect-attachment-id>",
 		"Update a Partner Interconnect Attachment's name and configuration", `Use this command to update the name and and configuration of a Partner Interconnect Attachment`, Writer, aliasOpt("u"))
+	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerInterconnectAttachmentName, "", "",
 		"The Partner Interconnect Attachment's name", requiredOpt())
 	AddStringFlag(cmdPartnerIAUpdate, doctl.ArgPartnerInterconnectAttachmentVPCIDs, "", "",
