@@ -31,6 +31,10 @@ type PartnerInterconnectAttachments []PartnerInterconnectAttachment
 // DigitalOcean's partner interconnect attachments api.
 type PartnerInterconnectAttachmentsService interface {
 	Create(*godo.PartnerInterconnectAttachmentCreateRequest) (*PartnerInterconnectAttachment, error)
+	GetPartnerInterconnectAttachment(iaID string) (*PartnerInterconnectAttachment, error)
+	ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error)
+	DeletePartnerInterconnectAttachment(iaID string) error
+	UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error)
 }
 
 var _ PartnerInterconnectAttachmentsService = &partnerInterconnectAttachmentsService{}
@@ -53,4 +57,57 @@ func (p *partnerInterconnectAttachmentsService) Create(req *godo.PartnerIntercon
 		return nil, err
 	}
 	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: pia}, nil
+}
+
+// GetPartnerInterconnectAttachment retrieves a partner interconnect attachment.
+func (p *partnerInterconnectAttachmentsService) GetPartnerInterconnectAttachment(iaID string) (*PartnerInterconnectAttachment, error) {
+	partnerIA, _, err := p.client.PartnerInterconnectAttachments.Get(context.TODO(), iaID)
+	if err != nil {
+		return nil, err
+	}
+	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
+}
+
+// ListPartnerInterconnectAttachments lists all partner interconnect attachments.
+func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := p.client.PartnerInterconnectAttachments.List(context.TODO(), opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]PartnerInterconnectAttachment, len(si))
+	for i := range si {
+		a := si[i].(*godo.PartnerInterconnectAttachment)
+		list[i] = PartnerInterconnectAttachment{PartnerInterconnectAttachment: a}
+	}
+
+	return list, nil
+}
+
+func (p *partnerInterconnectAttachmentsService) DeletePartnerInterconnectAttachment(iaID string) error {
+	_, err := p.client.PartnerInterconnectAttachments.Delete(context.TODO(), iaID)
+	return err
+}
+
+func (p *partnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error) {
+	partnerIA, _, err := p.client.PartnerInterconnectAttachments.Update(context.TODO(), iaID, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
 }
