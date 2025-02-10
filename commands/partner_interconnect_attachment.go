@@ -95,12 +95,16 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 	cmdPartnerIAList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentList, "list", "List Network Interconnect Attachments", "Retrieves a list of the Network Interconnect Attachments on your account, including the following information for each:"+interconnectAttachmentDetails, Writer,
 		aliasOpt("ls"), displayerType(&displayers.PartnerInterconnectAttachment{}))
 	AddStringFlag(cmdPartnerIAList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account :" + 
-		" doctl network --type "partner" interconnect-attachment list --format Name,VPCIDs`
+	cmdPartnerIAList.Example = `The following example lists the Network Interconnect Attachments on your account :` +
+		` doctl network --type "partner" interconnect-attachment list --format Name,VPCIDs `
 
 	cmdPartnerIADelete := CmdBuilder(cmd, RunPartnerInterconnectAttachmentDelete, "delete <interconnect-attachment-id>",
 		"Deletes a Partner Interconnect Attachment", "Deletes information about a Partner Interconnect Attachment. This is irreversible ", Writer,
 		aliasOpt("rm"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+	AddBoolFlag(cmdPartnerIADelete, doctl.ArgForce, doctl.ArgShortForce, false,
+		"Delete the VPC Peering without any confirmation prompt")
+	AddBoolFlag(cmdPartnerIADelete, doctl.ArgCommandWait, "", false,
+		"Boolean that specifies whether to wait for a VPC Peering deletion to complete before returning control to the terminal")
 	AddStringFlag(cmdPartnerIADelete, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIADelete.Example = `The following example deletes a Partner Interconnect Attachment with the ID ` + "`" + `f81d4fae-7dec-11d0-a765-00a0c91e6bf6` + "`" +
 		`: doctl network --type "partner" interconnect-attachment delete f81d4fae-7dec-11d0-a765-00a0c91e6bf6`
