@@ -128,7 +128,6 @@ vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 	cmdPartnerIARouteList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentRouteList, "list-routes", "List Network Interconnect Attachment Routes", "Retrieves a list of the Network Interconnect Attachment Routes on your account, including the following information for each:"+interconnectAttachmentRouteDetails, Writer,
 		aliasOpt("ls-routes"), displayerType(&displayers.PartnerInterconnectAttachment{}))
 	AddStringFlag(cmdPartnerIARouteList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
-	//AddStringFlag(cmdPartnerIARouteList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
 	cmdPartnerIARouteList.Example = `The following example lists the Network Interconnect Attachments on your account :` +
 		` doctl network --type "partner" interconnect-attachment list-routes --format ID,Cidr `
 
@@ -349,7 +348,6 @@ func RunPartnerInterconnectAttachmentDelete(c *CmdConfig) error {
 
 // RunPartnerInterconnectAttachmentRouteList lists Partner Interconnect Attachment routes
 func RunPartnerInterconnectAttachmentRouteList(c *CmdConfig) error {
-
 	if err := ensurePartnerAttachmentType(c); err != nil {
 		return err
 	}

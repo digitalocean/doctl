@@ -121,8 +121,6 @@ func (p *partnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachm
 	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
 }
 
-// ListRoutes(context.Context, string, *ListOptions) ([]*RemoteRoute, *Response, error)
-
 // ListPartnerInterconnectAttachmentRoutes lists all partner interconnect attachment routes.
 func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachmentRoutes(iaID string) (PartnerInterconnectAttachmentRoutes, error) {
 	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
