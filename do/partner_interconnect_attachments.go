@@ -27,6 +27,14 @@ type PartnerInterconnectAttachment struct {
 // PartnerInterconnectAttachments is a slice of PartnerInterconnectAttachment.
 type PartnerInterconnectAttachments []PartnerInterconnectAttachment
 
+// PartnerInterconnectAttachmentRoute wraps a godo RemoteRoute.
+type PartnerInterconnectAttachmentRoute struct {
+	*godo.RemoteRoute
+}
+
+// PartnerInterconnectAttachmentRoutes is a slice of PartnerInterconnectAttachmentRoute.
+type PartnerInterconnectAttachmentRoutes []PartnerInterconnectAttachmentRoute
+
 // PartnerInterconnectAttachmentsService is an interface for interacting with
 // DigitalOcean's partner interconnect attachments api.
 type PartnerInterconnectAttachmentsService interface {
@@ -35,6 +43,7 @@ type PartnerInterconnectAttachmentsService interface {
 	ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error)
 	DeletePartnerInterconnectAttachment(iaID string) error
 	UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error)
+	ListPartnerInterconnectAttachmentRoutes(iaID string) (PartnerInterconnectAttachmentRoutes, error)
 }
 
 var _ PartnerInterconnectAttachmentsService = &partnerInterconnectAttachmentsService{}
@@ -110,4 +119,36 @@ func (p *partnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachm
 	}
 
 	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
+}
+
+// ListRoutes(context.Context, string, *ListOptions) ([]*RemoteRoute, *Response, error)
+
+// ListPartnerInterconnectAttachmentRoutes lists all partner interconnect attachment routes.
+func (p *partnerInterconnectAttachmentsService) ListPartnerInterconnectAttachmentRoutes(iaID string) (PartnerInterconnectAttachmentRoutes, error) {
+	f := func(opt *godo.ListOptions) ([]any, *godo.Response, error) {
+		list, resp, err := p.client.PartnerInterconnectAttachments.ListRoutes(context.TODO(), iaID, opt)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		si := make([]any, len(list))
+		for i := range list {
+			si[i] = list[i]
+		}
+
+		return si, resp, err
+	}
+
+	si, err := PaginateResp(f)
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]PartnerInterconnectAttachmentRoute, len(si))
+	for i := range si {
+		a := si[i].(*godo.RemoteRoute)
+		list[i] = PartnerInterconnectAttachmentRoute{RemoteRoute: a}
+	}
+
+	return list, nil
 }

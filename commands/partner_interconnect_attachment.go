@@ -121,6 +121,17 @@ With the Partner Interconnect Attachments commands, you can get, list, create, u
 		`: doctl network --type "partner" interconnect-attachment update f81d4fae-7dec-11d0-a765-00a0c91e6bf6 --name "new-name" --
 vpc-ids "270a76ed-1bb7-4c5d-a6a5-e863de086940"`
 
+	interconnectAttachmentRouteDetails := `
+- The Partner Interconnect Attachment ID
+- The Partner Interconnect Attachment Cidr`
+
+	cmdPartnerIARouteList := CmdBuilder(cmd, RunPartnerInterconnectAttachmentRouteList, "list-routes", "List Network Interconnect Attachment Routes", "Retrieves a list of the Network Interconnect Attachment Routes on your account, including the following information for each:"+interconnectAttachmentRouteDetails, Writer,
+		aliasOpt("ls-routes"), displayerType(&displayers.PartnerInterconnectAttachment{}))
+	AddStringFlag(cmdPartnerIARouteList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+	//AddStringFlag(cmdPartnerIARouteList, doctl.ArgInterconnectAttachmentType, "", "partner", "Specify interconnect attachment type (e.g., partner)")
+	cmdPartnerIARouteList.Example = `The following example lists the Network Interconnect Attachments on your account :` +
+		` doctl network --type "partner" interconnect-attachment list-routes --format ID,Cidr `
+
 	return cmd
 }
 
@@ -260,7 +271,7 @@ func RunPartnerInterconnectAttachmentUpdate(c *CmdConfig) error {
 	if err != nil {
 		return err
 	}
-	peeringID := c.Args[0]
+	iaID := c.Args[0]
 
 	r := new(godo.PartnerInterconnectAttachmentUpdateRequest)
 	name, err := c.Doit.GetString(c.NS, doctl.ArgPartnerInterconnectAttachmentName)
@@ -275,7 +286,7 @@ func RunPartnerInterconnectAttachmentUpdate(c *CmdConfig) error {
 	}
 	r.VPCIDs = strings.Split(vpcIDs, ",")
 
-	interconnectAttachment, err := c.PartnerInterconnectAttachments().UpdatePartnerInterconnectAttachment(peeringID, r)
+	interconnectAttachment, err := c.PartnerInterconnectAttachments().UpdatePartnerInterconnectAttachment(iaID, r)
 	if err != nil {
 		return err
 	}
@@ -334,6 +345,29 @@ func RunPartnerInterconnectAttachmentDelete(c *CmdConfig) error {
 	}
 
 	return nil
+}
+
+// RunPartnerInterconnectAttachmentRouteList lists Partner Interconnect Attachment routes
+func RunPartnerInterconnectAttachmentRouteList(c *CmdConfig) error {
+
+	if err := ensurePartnerAttachmentType(c); err != nil {
+		return err
+	}
+
+	err := ensureOneArg(c)
+	if err != nil {
+		return err
+	}
+	iaID := c.Args[0]
+
+	pias := c.PartnerInterconnectAttachments()
+	routeList, err := pias.ListPartnerInterconnectAttachmentRoutes(iaID)
+	if err != nil {
+		return err
+	}
+
+	item := &displayers.PartnerInterconnectAttachmentRoute{PartnerInterconnectAttachmentRoutes: routeList}
+	return c.Display(item)
 }
 
 func waitForPIA(pias do.PartnerInterconnectAttachmentsService, iaID string, wantStatus string, terminateOnNotFound bool) error {
