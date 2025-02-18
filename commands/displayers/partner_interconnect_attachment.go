@@ -74,3 +74,41 @@ func (v *PartnerInterconnectAttachment) KV() []map[string]any {
 
 	return out
 }
+
+type PartnerInterconnectAttachmentRoute struct {
+	PartnerInterconnectAttachmentRoutes do.PartnerInterconnectAttachmentRoutes
+}
+
+var _ Displayable = &PartnerInterconnectAttachmentRoute{}
+
+func (v *PartnerInterconnectAttachmentRoute) JSON(out io.Writer) error {
+	return writeJSON(v.PartnerInterconnectAttachmentRoutes, out)
+}
+
+func (v *PartnerInterconnectAttachmentRoute) Cols() []string {
+	return []string{
+		"ID",
+		"Cidr",
+	}
+}
+
+func (v *PartnerInterconnectAttachmentRoute) ColMap() map[string]string {
+	return map[string]string{
+		"ID":   "ID",
+		"Cidr": "Cidr",
+	}
+}
+
+func (v *PartnerInterconnectAttachmentRoute) KV() []map[string]any {
+	out := make([]map[string]any, 0, len(v.PartnerInterconnectAttachmentRoutes))
+
+	for _, ia := range v.PartnerInterconnectAttachmentRoutes {
+		o := map[string]any{
+			"ID":   ia.ID,
+			"Cidr": ia.Cidr,
+		}
+		out = append(out, o)
+	}
+
+	return out
+}
