@@ -360,9 +360,9 @@ Updates the configuration values for a Kubernetes cluster. The cluster must be r
 	cmdKubeClusterUpgrade := CmdBuilder(cmd, k8sCmdService.RunKubernetesClusterUpgrade,
 		"upgrade <id|name>", "Upgrades a cluster to a new Kubernetes version", `
 
-Upgrades a Kubernetes cluster. By default, this upgrades the cluster to the latest available release, but you can also specify any version listed for your cluster by using `+"`"+`doctl k8s get-upgrades`+"`"+`.`, Writer)
+Upgrades a Kubernetes cluster. By default, this upgrades the cluster to the latest available release, but you can also specify any version listed for your cluster by using `+"`"+`doctl k8s cluster get-upgrades`+"`"+`.`, Writer)
 	AddStringFlag(cmdKubeClusterUpgrade, doctl.ArgClusterVersionSlug, "", "latest",
-		`The Kubernetes version to upgrade to. Use the `+"`"+`doctl k8s get-upgrades <cluster>`+"`"+` command for a list of available versions.
+		`The Kubernetes version to upgrade to. Use the `+"`"+`doctl k8s cluster get-upgrades <cluster>`+"`"+` command for a list of available versions.
 The special value `+"`"+`latest`+"`"+` selects the most recent patch version for your cluster's minor version.
 For example, if a cluster is on 1.12.1 and upgrades are available to 1.12.3 and 1.13.1, the `+"`"+`latest`+"`"+` flag upgrades the cluster to 1.12.3.`)
 	cmdKubeClusterUpgrade.Example = `The following example upgrades a cluster named ` + "`" + `example-cluster` + "`" + ` to version 1.28.2: doctl kubernetes cluster upgrade example-cluster --version 1.28.2-do.0`
