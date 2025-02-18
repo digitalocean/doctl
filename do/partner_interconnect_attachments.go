@@ -32,6 +32,16 @@ type PartnerInterconnectAttachmentServiceKey struct {
 	*godo.ServiceKey
 }
 
+// PartnerInterconnectAttachmentBGPAuthKey wrap a godo BgpAuthKey.
+type PartnerInterconnectAttachmentBGPAuthKey struct {
+	*godo.BgpAuthKey
+}
+
+// PartnerInterconnectAttachmentRegenerateServiceKey wraps a godo ServiceKey.
+type PartnerInterconnectAttachmentRegenerateServiceKey struct {
+	*godo.RegenerateServiceKey
+}
+
 // PartnerInterconnectAttachmentsService is an interface for interacting with
 // DigitalOcean's partner interconnect attachments api.
 type PartnerInterconnectAttachmentsService interface {
@@ -41,6 +51,8 @@ type PartnerInterconnectAttachmentsService interface {
 	DeletePartnerInterconnectAttachment(iaID string) error
 	UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error)
 	GetServiceKey(iaID string) (*PartnerInterconnectAttachmentServiceKey, error)
+	GetBGPAuthKey(iaID string) (*PartnerInterconnectAttachmentBGPAuthKey, error)
+	RegenerateServiceKey(iaID string) (*PartnerInterconnectAttachmentRegenerateServiceKey, error)
 }
 
 var _ PartnerInterconnectAttachmentsService = &partnerInterconnectAttachmentsService{}
@@ -124,4 +136,20 @@ func (p *partnerInterconnectAttachmentsService) GetServiceKey(iaID string) (*Par
 		return nil, err
 	}
 	return &PartnerInterconnectAttachmentServiceKey{ServiceKey: serviceKey}, nil
+}
+
+func (p *partnerInterconnectAttachmentsService) GetBGPAuthKey(iaID string) (*PartnerInterconnectAttachmentBGPAuthKey, error) {
+	bgpAuthKey, _, err := p.client.PartnerInterconnectAttachments.GetBGPAuthKey(context.TODO(), iaID)
+	if err != nil {
+		return nil, err
+	}
+	return &PartnerInterconnectAttachmentBGPAuthKey{BgpAuthKey: bgpAuthKey}, nil
+}
+
+func (p *partnerInterconnectAttachmentsService) RegenerateServiceKey(iaID string) (*PartnerInterconnectAttachmentRegenerateServiceKey, error) {
+	regenerateServiceKey, _, err := p.client.PartnerInterconnectAttachments.RegenerateServiceKey(context.TODO(), iaID)
+	if err != nil {
+		return nil, err
+	}
+	return &PartnerInterconnectAttachmentRegenerateServiceKey{RegenerateServiceKey: regenerateServiceKey}, nil
 }
