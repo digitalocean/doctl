@@ -27,6 +27,11 @@ type PartnerInterconnectAttachment struct {
 // PartnerInterconnectAttachments is a slice of PartnerInterconnectAttachment.
 type PartnerInterconnectAttachments []PartnerInterconnectAttachment
 
+// PartnerInterconnectAttachmentServiceKey wraps a godo ServiceKey.
+type PartnerInterconnectAttachmentServiceKey struct {
+	*godo.ServiceKey
+}
+
 // PartnerInterconnectAttachmentsService is an interface for interacting with
 // DigitalOcean's partner interconnect attachments api.
 type PartnerInterconnectAttachmentsService interface {
@@ -35,6 +40,7 @@ type PartnerInterconnectAttachmentsService interface {
 	ListPartnerInterconnectAttachments() (PartnerInterconnectAttachments, error)
 	DeletePartnerInterconnectAttachment(iaID string) error
 	UpdatePartnerInterconnectAttachment(iaID string, req *godo.PartnerInterconnectAttachmentUpdateRequest) (*PartnerInterconnectAttachment, error)
+	GetServiceKey(iaID string) (*PartnerInterconnectAttachmentServiceKey, error)
 }
 
 var _ PartnerInterconnectAttachmentsService = &partnerInterconnectAttachmentsService{}
@@ -110,4 +116,12 @@ func (p *partnerInterconnectAttachmentsService) UpdatePartnerInterconnectAttachm
 	}
 
 	return &PartnerInterconnectAttachment{PartnerInterconnectAttachment: partnerIA}, nil
+}
+
+func (p *partnerInterconnectAttachmentsService) GetServiceKey(iaID string) (*PartnerInterconnectAttachmentServiceKey, error) {
+	serviceKey, _, err := p.client.PartnerInterconnectAttachments.GetServiceKey(context.TODO(), iaID)
+	if err != nil {
+		return nil, err
+	}
+	return &PartnerInterconnectAttachmentServiceKey{ServiceKey: serviceKey}, nil
 }

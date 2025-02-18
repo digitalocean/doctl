@@ -1,5 +1,10 @@
 # Change Log
 
+## [v1.137.0] - 2025-02-12
+
+- #782 - @apinonformoso - fix partner interconnect json tag
+- #781 - @dylanrhysscott - CON-11810 Implement GetNodePoolTemplate endpoint for DOKS godo client
+
 ## [v1.136.0] - 2025-01-28
 
 - #776 - @danaelhe - Databases: Support online-migrations
