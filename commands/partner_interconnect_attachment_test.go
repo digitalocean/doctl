@@ -63,7 +63,7 @@ func TestPartnerInterconnectAttachmentsCommand(t *testing.T) {
 	cmd := PartnerInterconnectAttachments()
 	assert.NotNil(t, cmd)
 
-	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "list-routes", "get-service-key", "regenerate-service-key", "get-bgp-auth-key")
+	assertCommandNames(t, cmd, "create", "get", "list", "delete", "update", "list-routes", "regenerate-service-key", "get-bgp-auth-key")
 }
 
 func TestPartnerInterconnectAttachmentCreate(t *testing.T) {
